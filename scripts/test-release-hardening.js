@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const root = path.resolve(__dirname, '..');
 
@@ -12,20 +13,8 @@ function exists(relativePath) {
   return fs.existsSync(path.join(root, relativePath));
 }
 
-function size(relativePath) {
-  return fs.statSync(path.join(root, relativePath)).size;
-}
-
 function parseJson(relativePath) {
   return JSON.parse(read(relativePath));
-}
-
-function assertZipLike(relativePath) {
-  const signature = fs.readFileSync(path.join(root, relativePath)).subarray(0, 4).toString('binary');
-  assert.ok(
-    signature === 'PK\u0003\u0004' || signature === 'PK\u0005\u0006' || signature === 'PK\u0007\u0008',
-    `${relativePath} should have a ZIP/APK signature`
-  );
 }
 
 const packageJson = parseJson('package.json');
@@ -37,14 +26,9 @@ const srcIndex = read('src/index.html');
 const swRuntime = read('public/assets/js/service-worker-runtime.js');
 const worker = read('src/worker-dummy.js');
 const releaseWorkflow = read('.github/workflows/release-apps.yml');
+const betaWorkflow = read('.github/workflows/build-apps-beta.yml');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
-
-const hostedDownloads = [
-  'public/downloads/school-system-android-v1.0.apk',
-  'public/downloads/smartedu-windows-latest.zip',
-  'dist/downloads/school-system-android-v1.0.apk',
-  'dist/downloads/smartedu-windows-latest.zip'
-];
+const verifier = read('scripts/verify-release-assets.mjs');
 
 const userFacingReleaseFiles = [
   'public/site.webmanifest',
@@ -56,6 +40,23 @@ const userFacingReleaseFiles = [
 
 assert.strictEqual(scripts['test:release-hardening'], 'node scripts/test-release-hardening.js', 'release hardening script should be exposed');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-hardening'), 'fast release check should include release hardening');
+const requiredContractGate = 'test:release-surface && npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow';
+assert.ok(scripts['check:release-fast'].includes(requiredContractGate), 'fast release checks should run all package contracts immediately after release surface');
+const validateContractGate = 'test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow && npm run build';
+assert.ok(scripts.validate.includes(validateContractGate), 'validate should run all package contracts immediately before build');
+assert.match(verifier, /release-manifest\.json/, 'release verifier should load the published manifest');
+assert.match(verifier, /windows:[\s\S]*extension:\s*['"]\.exe['"][\s\S]*minimumBytes:\s*50\s*\*\s*1024\s*\*\s*1024/, 'Windows packages should be real EXE installers');
+assert.match(verifier, /android:[\s\S]*extension:\s*['"]\.apk['"][\s\S]*minimumBytes:\s*10\s*\*\s*1024\s*\*\s*1024/, 'Android packages should be real APK files');
+assert.match(verifier, /ios:[\s\S]*extension:\s*['"]\.ipa['"][\s\S]*minimumBytes:\s*5\s*\*\s*1024\s*\*\s*1024/, 'ready iOS packages should be real IPA files');
+assert.match(verifier, /method:\s*['"]HEAD['"]/, 'downloadable assets should receive a HEAD request');
+assert.match(verifier, /text\/html/, 'HTML responses masquerading as packages should be rejected');
+assert.match(verifier, /failures:\s*\[/, 'release verification should report structured failures');
+for (const workflow of [releaseWorkflow, betaWorkflow]) {
+  assert.ok(workflow.includes('npm run test:release-manifest'), 'native workflows should guard release manifests before builds');
+  assert.ok(workflow.includes('npm run test:desktop-package-contract'), 'native workflows should guard desktop packaging before builds');
+  assert.ok(workflow.includes('npm run test:capacitor-package-contract'), 'native workflows should guard Capacitor packaging before builds');
+  assert.ok(workflow.includes('npm run test:beta-release-workflow'), 'native workflows should guard workflow contracts before builds');
+}
 assert.strictEqual(manifest.name, '校衡台', 'manifest app name should be readable Chinese');
 assert.strictEqual(manifest.short_name, '校衡台', 'manifest short name should be readable Chinese');
 assert.ok(manifest.description.includes('教务'), 'manifest description should stay readable');
@@ -91,22 +92,56 @@ assert.ok(performanceWorkflow.includes('concurrency:'), 'performance workflow sh
 assert.ok(performanceWorkflow.includes('cancel-in-progress: true'), 'performance workflow should cancel stale trend runs');
 assert.ok(performanceWorkflow.includes('npm run check:release-fast'), 'performance trend workflow should run fast guards before smoke');
 
-hostedDownloads.forEach((relativePath) => {
-  assert.ok(exists(relativePath), `${relativePath} should exist`);
-  assertZipLike(relativePath);
+async function testManifestVerification() {
+  const { verifyReleaseManifest } = await import(pathToFileURL(path.join(root, 'scripts/verify-release-assets.mjs')).href);
+  const manifestFixture = {
+    schemaVersion: 1,
+    releaseTag: 'school-system-v2026.06.20',
+    channel: 'stable',
+    sourceSha: 'a'.repeat(40),
+    platforms: {
+      windows: {
+        status: 'ready', assetName: 'school-system.exe', assetUrl: 'https://example.com/school-system.exe',
+        bytes: 60 * 1024 * 1024, sha256: 'a'.repeat(64),
+      },
+      android: {
+        status: 'ready', assetName: 'school-system.apk', assetUrl: 'https://example.com/school-system.apk',
+        bytes: 20 * 1024 * 1024, sha256: 'b'.repeat(64),
+      },
+      ios: { status: 'awaiting-signing', assetName: '', assetUrl: '', bytes: 0, sha256: '' },
+    },
+  };
+  const packageRequest = async (url, options) => {
+    assert.strictEqual(options.method, 'HEAD');
+    const bytes = url.endsWith('.exe') ? 60 * 1024 * 1024 : 20 * 1024 * 1024;
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: (name) => name === 'content-type' ? 'application/octet-stream' : name === 'content-length' ? String(bytes) : '' },
+    };
+  };
+  const verified = await verifyReleaseManifest(manifestFixture, { request: packageRequest });
+  assert.strictEqual(verified.ok, true, JSON.stringify(verified.failures));
+  assert.strictEqual(verified.platforms.ios.ok, true);
+
+  const htmlResponse = await verifyReleaseManifest(manifestFixture, {
+    request: async () => ({ ok: true, status: 200, headers: { get: (name) => name === 'content-type' ? 'text/html; charset=utf-8' : '' } }),
+  });
+  assert.ok(htmlResponse.failures.some((failure) => failure.code === 'html-or-error-response'));
+
+  const exposedUnsignedIos = JSON.parse(JSON.stringify(manifestFixture));
+  exposedUnsignedIos.platforms.ios.assetUrl = 'https://example.com/not-signed.ipa';
+  const unsignedResult = await verifyReleaseManifest(exposedUnsignedIos, { request: packageRequest });
+  assert.ok(unsignedResult.failures.some((failure) => failure.code === 'unsigned-asset-exposed'));
+
+  console.log(JSON.stringify({
+    ok: true,
+    optimizationsGuarded: 24,
+    releasePackagesVerifiedFromManifest: true,
+  }, null, 2));
+}
+
+testManifestVerification().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
 });
-
-assert.ok(size('public/downloads/school-system-android-v1.0.apk') > 10_000_000, 'public APK should look real');
-assert.ok(size('dist/downloads/school-system-android-v1.0.apk') > 10_000_000, 'dist APK should look real');
-assert.ok(size('public/downloads/smartedu-windows-latest.zip') >= 500, 'public Windows package should not be a tiny placeholder');
-assert.ok(size('dist/downloads/smartedu-windows-latest.zip') >= 500, 'dist Windows package should not be a tiny placeholder');
-assert.ok(
-  size('dist/downloads/school-system-android-v1.0.apk') + size('dist/downloads/smartedu-windows-latest.zip') < 30_000_000,
-  'hosted download payload should stay below the Cloudflare budget'
-);
-
-console.log(JSON.stringify({
-  ok: true,
-  optimizationsGuarded: 24,
-  hostedDownloadBytes: size('dist/downloads/school-system-android-v1.0.apk') + size('dist/downloads/smartedu-windows-latest.zip')
-}, null, 2));

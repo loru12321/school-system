@@ -45,7 +45,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run package contracts
-        run: npm run test:desktop-package-contract && npm run test:release-manifest
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow
       - name: Build immutable Windows installer
         shell: pwsh
         run: |
@@ -83,7 +83,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run package contracts
-        run: npm run test:capacitor-package-contract && npm run test:release-manifest && node scripts/test-android-signing-contract.js
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow && node scripts/test-android-signing-contract.js
       - name: Restore Android test-signing keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_TEST_KEYSTORE_FILE }}
@@ -126,7 +126,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run package contracts
-        run: npm run test:capacitor-package-contract && npm run test:release-manifest
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow
       - name: Sync and compile unsigned iOS simulator application
         run: |
           npm run ios:sync

@@ -52,7 +52,7 @@ jobs:
         run: node scripts/resolve-app-version.mjs --channel stable --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
       - run: npm ci
       - name: Run Windows release contracts
-        run: npm run test:desktop-package-contract && npm run test:release-manifest
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow
       - name: Build Windows installer
         shell: pwsh
         run: |
@@ -89,7 +89,7 @@ jobs:
         run: node scripts/resolve-app-version.mjs --channel stable --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
       - run: npm ci
       - name: Run Android release contracts
-        run: npm run test:capacitor-package-contract && npm run test:release-manifest && node scripts/test-android-signing-contract.js
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow && node scripts/test-android-signing-contract.js
       - name: Restore Android test-signing keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_TEST_KEYSTORE_FILE }}
@@ -131,7 +131,7 @@ jobs:
         run: node scripts/resolve-app-version.mjs --channel stable --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
       - run: npm ci
       - name: Run iOS release contracts
-        run: npm run test:capacitor-package-contract && npm run test:release-manifest
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow
       - name: Sync and compile unsigned iOS simulator application
         run: |
           npm run ios:sync

@@ -18,14 +18,6 @@ function getSize(filePath) {
     return fs.statSync(filePath).size;
 }
 
-function assertZipLike(filePath, label) {
-    const signature = fs.readFileSync(filePath).subarray(0, 4).toString('binary');
-    assert.ok(
-        signature === 'PK\u0003\u0004' || signature === 'PK\u0005\u0006' || signature === 'PK\u0007\u0008',
-        `${label} should have a ZIP/APK file signature`
-    );
-}
-
 function getBuiltStylesheetSize() {
     const stylesheets = fs.readdirSync(path.join(projectRoot, 'dist'))
         .filter((name) => /^style-[\w-]+\.css$/.test(name));
@@ -43,11 +35,12 @@ const budgets = {
     publicAppJs: 910_000,
     // Boot auth now includes login cohort handoff before core modules load.
     publicBootJs: 133_000,
-    publicAppDownloadJs: 76_000,
+    // Three native platforms, release history, and verified-manifest handling.
+    publicAppDownloadJs: 100_000,
     // Current minified app bundle baseline after runtime splits, cache guards,
     // and the product redesign CSS layer being accounted in the singlefile build.
     distAppJs: 585_000,
-    distAppDownloadJs: 45_000,
+    distAppDownloadJs: 60_000,
     distReportRenderJs: 68_000,
     distTeacherAnalysisJs: 72_000
 };
@@ -71,32 +64,16 @@ const failures = Object.entries(actual)
 
 assert.deepStrictEqual(failures, [], failures.join('\n'));
 
-const distDownloadsPath = path.join(projectRoot, 'dist', 'downloads');
-const publicDownloadsPath = path.join(projectRoot, 'public', 'downloads');
-assert.ok(fs.existsSync(distDownloadsPath), 'dist/downloads should expose the current app packages');
-assert.ok(fs.existsSync(publicDownloadsPath), 'public/downloads should contain hosted app packages');
-const downloadFiles = fs.readdirSync(distDownloadsPath).sort();
-assert.deepStrictEqual(
-    downloadFiles,
-    ['school-system-android-v1.0.apk', 'smartedu-windows-latest.zip'],
-    'dist/downloads should only contain the current hosted APK and Windows package'
-);
-assert.ok(
-    getSize(path.join(distDownloadsPath, 'school-system-android-v1.0.apk')) > 10_000_000,
-    'hosted APK should look like a real application package'
-);
-assertZipLike(path.join(distDownloadsPath, 'school-system-android-v1.0.apk'), 'hosted APK');
-assertZipLike(path.join(publicDownloadsPath, 'school-system-android-v1.0.apk'), 'public hosted APK');
-assert.ok(
-    getSize(path.join(distDownloadsPath, 'smartedu-windows-latest.zip')) >= 500,
-    'hosted Windows package should look like a real zip package'
-);
-assertZipLike(path.join(distDownloadsPath, 'smartedu-windows-latest.zip'), 'hosted Windows package');
-assertZipLike(path.join(publicDownloadsPath, 'smartedu-windows-latest.zip'), 'public hosted Windows package');
-assert.ok(
-    getSize(path.join(distDownloadsPath, 'school-system-android-v1.0.apk')) +
-    getSize(path.join(distDownloadsPath, 'smartedu-windows-latest.zip')) < 30_000_000,
-    'hosted download payload should stay under 30MB'
-);
+const releasePackagePolicies = {
+    windows: { extension: '.exe', minimumBytes: 50 * 1024 * 1024 },
+    android: { extension: '.apk', minimumBytes: 10 * 1024 * 1024 },
+    ios: { downloadableOnlyWhenStatusReady: true, extension: '.ipa', minimumBytes: 5 * 1024 * 1024 }
+};
+const verifierSource = fs.readFileSync(path.join(projectRoot, 'scripts', 'verify-release-assets.mjs'), 'utf8');
+Object.entries(releasePackagePolicies).forEach(([platform, policy]) => {
+    assert.ok(verifierSource.includes(`${platform}: {`), `release verifier should define ${platform}`);
+    assert.ok(verifierSource.includes(`extension: '${policy.extension}'`), `${platform} should require ${policy.extension}`);
+    assert.ok(verifierSource.includes(`minimumBytes: ${policy.minimumBytes / (1024 * 1024)} * 1024 * 1024`), `${platform} should enforce a real package size`);
+});
 
 console.log('build-size-budget tests passed');
