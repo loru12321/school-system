@@ -69,7 +69,7 @@
     if (!asset || asset.status !== 'ready' || !asset.assetName || Number(asset.bytes) <= 0) return false;
     try {
       var parsedUrl = new URL(asString(asset.assetUrl));
-      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') return false;
+      if (parsedUrl.protocol !== 'https:' || !parsedUrl.hostname || parsedUrl.username || parsedUrl.password) return false;
     } catch (_) {
       return false;
     }

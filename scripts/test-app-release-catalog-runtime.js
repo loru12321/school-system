@@ -7,6 +7,9 @@ const source = fs.readFileSync(
   path.resolve(__dirname, '../public/assets/js/app-release-catalog-runtime.js'),
   'utf8'
 );
+const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../public/releases/release-manifest.json'), 'utf8'));
+const html = fs.readFileSync(path.resolve(__dirname, '../src/index.html'), 'utf8');
+const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
 const window = {};
 const sandbox = {
   window,
@@ -100,11 +103,19 @@ assert.strictEqual(releases[0].platforms.ios.signed, 'unsigned');
 assert.strictEqual(releases[1].platforms.windows.status, 'unavailable');
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.windows), true);
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.ios), false);
+const validWindowsAsset = releases[0].platforms.windows;
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { assetUrl: 'http://example.com/app.zip' })), false);
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { assetUrl: 'https://user:secret@example.com/app.zip' })), false);
 assert.strictEqual(
-  runtime.isDownloadable(Object.assign({}, releases[0].platforms.windows, { assetUrl: 'https://' })),
+  runtime.isDownloadable(Object.assign({}, validWindowsAsset, { assetUrl: 'https://' })),
   false,
   'download URLs should be structurally valid'
 );
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { assetUrl: 'file:///app.zip' })), false);
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { bytes: 0 })), false);
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { bytes: -1 })), false);
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { sha256: 'a'.repeat(63) })), false);
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { sha256: 'g'.repeat(64) })), false);
 assert.strictEqual(runtime.isExpired(releases[1], new Date('2099-01-01T00:00:00.000Z')), false);
 assert.strictEqual(
   runtime.isExpired(releases[0], new Date('2026-07-20T08:00:00.000Z')),
@@ -143,5 +154,28 @@ assert.strictEqual(trimmed.sourceSha, 'abcdef');
 assert.strictEqual(trimmed.platforms.android.buildNumber, '42');
 assert.deepStrictEqual(Array.from(trimmed.platforms.android.architectures), ['arm64-v8a', 'x86_64']);
 assert.deepStrictEqual(Array.from(trimmed.platforms.android.notes), ['Internal build', 'Test only']);
+
+assert.strictEqual(manifest.schemaVersion, 1);
+assert.ok(Array.isArray(manifest.releases));
+assert.strictEqual(manifest.releases.length, 1);
+assert.ok(String(manifest.releases[0].releaseTag || '').trim());
+const cachedReleases = runtime.normalizeCatalog(manifest);
+assert.strictEqual(cachedReleases.length, 1);
+assert.deepStrictEqual(
+  Array.from(runtime.PLATFORMS, (platform) => cachedReleases[0].platforms[platform].status),
+  ['unavailable', 'unavailable', 'unavailable']
+);
+
+const catalogScript = html.match(/<script defer src="\.\/assets\/js\/app-release-catalog-runtime\.js\?v=[^"]+"><\/script>/);
+const downloadScript = html.match(/<script defer src="\.\/assets\/js\/app-download-runtime\.js\?v=[^"]+"><\/script>/);
+assert.ok(catalogScript, 'index should defer the release catalog runtime with a cache key');
+assert.ok(downloadScript, 'index should defer the app download runtime with a cache key');
+assert.ok(catalogScript.index < downloadScript.index, 'catalog runtime should load before download runtime');
+
+assert.strictEqual(packageJson.scripts['test:app-release-catalog-runtime'], 'node scripts/test-app-release-catalog-runtime.js');
+const validateSteps = packageJson.scripts.validate.split('&&').map((step) => step.trim());
+const catalogStep = validateSteps.indexOf('npm run test:app-release-catalog-runtime');
+assert.ok(catalogStep >= 0, 'validate should invoke the release catalog test');
+assert.strictEqual(validateSteps[catalogStep + 1], 'npm run test:app-download-runtime-hygiene');
 
 console.log('app release catalog runtime tests passed');
