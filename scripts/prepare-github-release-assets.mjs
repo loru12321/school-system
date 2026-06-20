@@ -1,104 +1,73 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { buildReleaseManifest } from './build-release-manifest.mjs';
 
 const rootDir = path.resolve(import.meta.dirname, '..');
-const downloadsDir = path.join(rootDir, 'public', 'downloads');
+const inputDir = path.join(rootDir, 'release-assets', 'input');
 const outputDir = path.resolve(rootDir, process.env.RELEASE_ASSET_DIR || 'release-assets');
 const releaseTag = String(process.env.RELEASE_TAG || process.env.GITHUB_REF_NAME || '').trim();
-const sourceSha = String(process.env.GITHUB_SHA || '').trim();
+const normalizedTag = releaseTag.replace(/[^0-9A-Za-z._-]+/g, '-').replace(/^-+|-+$/g, '');
 
-const assets = [
-  {
-    key: 'android',
-    label: 'Android APK',
-    source: path.join(downloadsDir, 'school-system-android-v1.0.apk'),
-    latestName: 'school-system-android-latest.apk',
-    versionedPrefix: 'school-system-android'
-  },
-  {
-    key: 'windows',
-    label: 'Windows app package',
-    source: path.join(downloadsDir, 'smartedu-windows-latest.zip'),
-    latestName: 'smartedu-windows-latest.zip',
-    versionedPrefix: 'smartedu-windows'
-  }
+if (!normalizedTag) throw new Error('RELEASE_TAG (or GITHUB_REF_NAME) is required');
+if (!fs.existsSync(inputDir)) throw new Error(`Release input directory does not exist: ${path.relative(rootDir, inputDir)}`);
+
+const specs = [
+  { platform: 'windows', extension: '.exe' },
+  { platform: 'android', extension: '.apk' },
+  { platform: 'ios', extension: '.ipa', optional: true }
 ];
+const inputFiles = fs.readdirSync(inputDir, { withFileTypes: true }).filter((entry) => entry.isFile());
+fs.mkdirSync(outputDir, { recursive: true });
+for (const entry of fs.readdirSync(outputDir, { withFileTypes: true })) {
+  if (entry.isFile() && ['.exe', '.apk', '.ipa'].includes(path.extname(entry.name).toLowerCase())) {
+    fs.rmSync(path.join(outputDir, entry.name));
+  }
+}
+
+for (const spec of specs) {
+  const matches = inputFiles.filter((entry) => path.extname(entry.name).toLowerCase() === spec.extension);
+  if (matches.length > 1) throw new Error(`Multiple ${spec.platform} ${spec.extension} assets found in release-assets/input`);
+  if (!matches.length) {
+    if (!spec.optional) throw new Error(`Missing ${spec.platform} ${spec.extension} asset in release-assets/input`);
+    continue;
+  }
+  const outputName = `school-system-${spec.platform}-${normalizedTag}${spec.extension}`;
+  fs.copyFileSync(path.join(inputDir, matches[0].name), path.join(outputDir, outputName));
+}
+
+const manifest = buildReleaseManifest({
+  channel: process.env.RELEASE_CHANNEL || (releaseTag.startsWith('beta-') ? 'beta' : 'stable'),
+  releaseTag,
+  sourceSha: process.env.RELEASE_SOURCE_SHA || process.env.GITHUB_SHA,
+  assetDir: outputDir,
+  outputPath: path.join(outputDir, 'release-manifest.json'),
+  buildUrl: process.env.RELEASE_BUILD_URL || `${process.env.GITHUB_SERVER_URL || 'https://github.com'}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+  repository: process.env.GITHUB_REPOSITORY
+});
 
 function formatBytes(bytes) {
-  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${bytes} B`;
 }
 
-function sha256(filePath) {
-  const hash = crypto.createHash('sha256');
-  hash.update(fs.readFileSync(filePath));
-  return hash.digest('hex');
-}
-
-function sanitizeTag(tag) {
-  return String(tag || 'manual').replace(/[^0-9A-Za-z._-]+/g, '-').replace(/^-+|-+$/g, '') || 'manual';
-}
-
-fs.rmSync(outputDir, { recursive: true, force: true });
-fs.mkdirSync(outputDir, { recursive: true });
-
-const normalizedTag = sanitizeTag(releaseTag);
-const manifest = {
-  releaseTag: releaseTag || normalizedTag,
-  sourceSha,
-  generatedAt: new Date().toISOString(),
-  assets: []
-};
-
-for (const asset of assets) {
-  if (!fs.existsSync(asset.source)) {
-    throw new Error(`Missing ${asset.label} release source: ${path.relative(rootDir, asset.source)}`);
-  }
-
-  const ext = path.extname(asset.latestName);
-  const versionedName = `${asset.versionedPrefix}-${normalizedTag}${ext}`;
-  const latestPath = path.join(outputDir, asset.latestName);
-  const versionedPath = path.join(outputDir, versionedName);
-  fs.copyFileSync(asset.source, latestPath);
-  fs.copyFileSync(asset.source, versionedPath);
-
-  const stats = fs.statSync(asset.source);
-  manifest.assets.push({
-    key: asset.key,
-    label: asset.label,
-    source: path.relative(rootDir, asset.source).replace(/\\/g, '/'),
-    latestName: asset.latestName,
-    versionedName,
-    bytes: stats.size,
-    size: formatBytes(stats.size),
-    sha256: sha256(asset.source)
-  });
-}
-
+const readyAssets = Object.entries(manifest.platforms).filter(([, asset]) => asset.status === 'ready');
 const notes = [
   `# ${manifest.releaseTag}`,
   '',
   '## Downloads',
   '',
-  '| Platform | Latest asset | Versioned asset | Size | SHA256 |',
-  '| --- | --- | --- | ---: | --- |',
-  ...manifest.assets.map((asset) => (
-    `| ${asset.label} | \`${asset.latestName}\` | \`${asset.versionedName}\` | ${asset.size} | \`${asset.sha256}\` |`
-  )),
+  '| Platform | Asset | Size | SHA256 |',
+  '| --- | --- | ---: | --- |',
+  ...readyAssets.map(([platform, asset]) => `| ${platform} | \`${asset.assetName}\` | ${formatBytes(asset.bytes)} | \`${asset.sha256}\` |`),
   '',
   '## Verification',
   '',
-  '- Root build completed before packaging release assets.',
-  '- App download hygiene checks guard against stale APK/Windows links.',
-  '- The release contains both stable latest filenames and immutable tag-specific filenames.',
+  '- Release assets were discovered from `release-assets/input/` and hashed after tag-specific naming.',
+  '- SHA256 values in this note match the generated release manifest.',
   '',
-  sourceSha ? `Source commit: \`${sourceSha}\`` : ''
-].filter((line, index, lines) => line !== '' || lines[index - 1] !== '').join('\n');
+  `Source commit: \`${manifest.sourceSha}\``
+].join('\n');
 
-fs.writeFileSync(path.join(outputDir, 'release-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 fs.writeFileSync(path.join(outputDir, 'release-notes.md'), `${notes}\n`, 'utf8');
-
 console.log(JSON.stringify(manifest, null, 2));

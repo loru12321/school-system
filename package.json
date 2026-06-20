@@ -61,6 +61,7 @@
     "test:system-performance-scheduler": "node scripts/test-system-performance-scheduler.js",
     "test:cohort-exam-hydration-scheduler": "node scripts/test-cohort-exam-hydration-scheduler.js",
     "test:release-automation": "node scripts/test-release-automation.js",
+    "test:release-manifest": "node scripts/test-release-manifest.mjs",
     "test:release-hardening": "node scripts/test-release-hardening.js",
     "test:maintenance-priority-contract": "node scripts/test-maintenance-priority-contract.js",
     "test:vite-warning-contract": "node scripts/test-vite-warning-contract.js",
