@@ -1,0 +1,117 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const source = fs.readFileSync(
+  path.resolve(__dirname, '../public/assets/js/app-release-catalog-runtime.js'),
+  'utf8'
+);
+const window = {};
+const sandbox = {
+  window,
+  globalThis: window,
+  console,
+  URL,
+  Date,
+  setTimeout,
+  clearTimeout
+};
+
+vm.runInNewContext(source, sandbox, { filename: 'app-release-catalog-runtime.js' });
+
+const runtime = window.AppReleaseCatalogRuntime;
+assert.ok(runtime, 'AppReleaseCatalogRuntime should be exported');
+assert.deepStrictEqual(Array.from(runtime.PLATFORMS), ['windows', 'android', 'ios']);
+
+const releases = runtime.normalizeCatalog({
+  releases: [
+    {
+      schemaVersion: 1,
+      releaseTag: 'v2.0.0-beta.1',
+      channel: 'beta',
+      sourceSha: 'ABC123',
+      generatedAt: '2026-06-20T08:00:00.000Z',
+      expiresAt: '2026-07-20T08:00:00.000Z',
+      releaseUrl: 'https://example.com/releases/v2.0.0-beta.1',
+      platforms: {
+        windows: {
+          version: '2.0.0-beta.1',
+          buildNumber: 20,
+          status: 'ready',
+          signed: true,
+          minimumOs: 'Windows 10',
+          architectures: ['x64'],
+          assetName: 'school-system-windows.zip',
+          assetUrl: 'https://example.com/school-system-windows.zip',
+          bytes: 1024,
+          sha256: 'A'.repeat(64),
+          notes: ['Portable build'],
+          buildUrl: 'https://example.com/builds/20'
+        },
+        android: {
+          version: '2.0.0-beta.1',
+          buildNumber: '20',
+          status: 'ready',
+          signed: 'test-signed',
+          minimumOs: 'Android 10',
+          architectures: ['arm64-v8a'],
+          assetName: 'school-system.apk',
+          assetUrl: 'https://example.com/school-system.apk',
+          bytes: 2048,
+          sha256: 'b'.repeat(64),
+          notes: 'Internal testing',
+          buildUrl: 'https://example.com/builds/20'
+        },
+        ios: {
+          version: '2.0.0-beta.1',
+          buildNumber: 20,
+          status: 'awaiting-signing',
+          signed: false,
+          minimumOs: 'iOS 17',
+          architectures: ['arm64'],
+          assetName: 'school-system.ipa',
+          assetUrl: 'https://example.com/school-system.ipa',
+          bytes: 4096,
+          sha256: 'c'.repeat(64),
+          notes: [],
+          buildUrl: 'https://example.com/builds/20'
+        }
+      }
+    },
+    {
+      releaseTag: 'v1.0.0',
+      channel: 'stable',
+      generatedAt: '2026-06-01T08:00:00.000Z',
+      expiresAt: '2026-06-02T08:00:00.000Z',
+      platforms: {}
+    }
+  ]
+});
+
+assert.strictEqual(releases.length, 2);
+assert.strictEqual(releases[0].releaseTag, 'v2.0.0-beta.1', 'newest release should be first');
+assert.strictEqual(releases[0].platforms.windows.platform, 'windows');
+assert.strictEqual(releases[0].platforms.windows.signed, 'signed');
+assert.strictEqual(releases[0].platforms.windows.sha256, 'a'.repeat(64));
+assert.strictEqual(releases[0].platforms.android.signed, 'test-signed');
+assert.deepStrictEqual(Array.from(releases[0].platforms.android.notes), ['Internal testing']);
+assert.strictEqual(releases[0].platforms.ios.signed, 'unsigned');
+assert.strictEqual(releases[1].platforms.windows.status, 'unavailable');
+assert.strictEqual(runtime.isDownloadable(releases[0].platforms.windows), true);
+assert.strictEqual(runtime.isDownloadable(releases[0].platforms.ios), false);
+assert.strictEqual(
+  runtime.isDownloadable(Object.assign({}, releases[0].platforms.windows, { assetUrl: 'https://' })),
+  false,
+  'download URLs should be structurally valid'
+);
+assert.strictEqual(runtime.isExpired(releases[1], new Date('2099-01-01T00:00:00.000Z')), false);
+assert.deepStrictEqual(
+  Array.from(runtime.filterCatalog(releases, { platform: 'android', channel: 'beta' }), (release) => release.releaseTag),
+  ['v2.0.0-beta.1']
+);
+assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (Windows NT 10.0; Win64; x64)'), 'windows');
+assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (Linux; Android 15; Pixel 9)'), 'android');
+assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)'), 'ios');
+
+console.log('app release catalog runtime tests passed');

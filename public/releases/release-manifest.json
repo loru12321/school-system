@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "schemaVersion": 1,
+      "releaseTag": "cached-unavailable-v1",
+      "channel": "stable",
+      "sourceSha": "",
+      "generatedAt": "2026-06-20T00:00:00.000Z",
+      "expiresAt": "",
+      "releaseUrl": "",
+      "platforms": {
+        "windows": { "status": "unavailable" },
+        "android": { "status": "unavailable" },
+        "ios": { "status": "unavailable" }
+      }
+    }
+  ]
+}
