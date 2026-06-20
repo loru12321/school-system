@@ -79,6 +79,7 @@
     </script>
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
     <script defer src="./assets/js/runtime-registry-runtime.js?v=20260501-runtime-registry-v1"></script>
+    <script defer src="./assets/js/cohort-sync-status-runtime.js?v=20260620-sync-status-v1"></script>
     <script defer src="./assets/js/entrance-sound-runtime.js?v=20260618-waipoqiao-lite-v1"></script>
     <script defer src="./assets/js/report-insight-runtime.js?v=20260613-report-insight-v1"></script>
     <script defer src="./assets/js/report-render-runtime.js?v=20260613-report-render-preload-v1"></script>
@@ -646,6 +647,10 @@
                         <div class="shell-overview-pills shell-overview-pills--dock">
                             <span id="shell-cohort-chip">Cohort</span>
                             <span id="shell-mode-chip">Mode</span>
+                            <button type="button" id="shell-sync-chip" class="shell-sync-chip" data-sync-state="idle" title="查看或重试当前届别的云端同步">
+                                <i class="ti ti-cloud"></i>
+                                <span data-sync-label>待同步</span>
+                            </button>
                         </div>
                         <button type="button" class="shell-overview-launcher" data-workspace-toggle="true"
                             onclick="window.toggleWorkspaceDrawer(true)">

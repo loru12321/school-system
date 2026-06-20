@@ -54,6 +54,7 @@ jobs:
       - name: Run local smoke and save raw performance sample
         env:
           SMOKE_OUTPUT_PATH: docs/performance/latest-smoke.json
+          SMOKE_PERF_STRICT: "true"
         run: npm run smoke:modules:local
 
       - name: Update trend report

@@ -524,74 +524,23 @@ const AuthState = window.AuthState || {
 };
 
 function isParentLikeRole(role) {
-    const normalizedRole = String(role || '').trim();
-    return normalizedRole === 'parent' || normalizedRole === 'student';
+    return PermissionPolicy.isParentLikeRole(role);
 }
 
 function isParentLikeUser(user) {
-    if (!user || typeof user !== 'object') return false;
-    const roles = Array.isArray(user.roles) && user.roles.length
-        ? user.roles
-        : [user.role].filter(Boolean);
-    return roles.some(isParentLikeRole);
+    return PermissionPolicy.isParentLikeUser(user);
 }
 
 function applyRoleAllowVisibility(root = document) {
-    const user = typeof getCurrentUser === 'function'
-        ? getCurrentUser()
-        : (window.Auth?.currentUser || null);
-    const roles = window.RoleManager && typeof window.RoleManager.getUserRoles === 'function'
-        ? window.RoleManager.getUserRoles(user)
-        : (Array.isArray(user?.roles) && user.roles.length ? user.roles : [user?.role]);
-    const roleSet = new Set(
-        (roles || [])
-            .map(role => String(role || '').trim())
-            .filter(Boolean)
-    );
-    (root || document).querySelectorAll('[data-role-allow]').forEach(node => {
-        const allowed = String(node.dataset.roleAllow || '')
-            .split(',')
-            .map(role => role.trim())
-            .filter(Boolean);
-        const visible = allowed.length === 0 || allowed.some(role => roleSet.has(role));
-        node.hidden = !visible;
-        node.style.display = visible ? '' : 'none';
-        node.setAttribute('aria-hidden', visible ? 'false' : 'true');
-    });
+    return PermissionPolicy.applyRoleAllowVisibility(root);
 }
 
 const MASKED_PASSWORD_DISPLAY = AuthState.MASKED_PASSWORD_DISPLAY;
 const sanitizeLocalAuthDb = AuthState.sanitizeLocalAuthDb.bind(AuthState);
 const persistLocalAuthDb = AuthState.persistLocalAuthDb.bind(AuthState);
+const createManagedTemporaryPassword = AuthState.createManagedTemporaryPassword.bind(AuthState);
+const getRecoverableManagedPassword = AuthState.getRecoverableManagedPassword.bind(AuthState);
 const WorkspaceStateRuntime = window.WorkspaceState || null;
-
-function createManagedTemporaryPassword(role = 'user') {
-    const prefix = role === 'teacher' ? 'T' : 'U';
-    const bytes = new Uint8Array(9);
-    const cryptoApi = window.crypto || window.msCrypto;
-    if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
-        cryptoApi.getRandomValues(bytes);
-    } else {
-        for (let index = 0; index < bytes.length; index++) {
-            bytes[index] = Math.floor(Math.random() * 256);
-        }
-    }
-    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-    const body = Array.from(bytes, value => alphabet[value % alphabet.length]).join('');
-    return `${prefix}-${body}`;
-}
-
-function getRecoverableManagedPassword(record, role) {
-    const password = String(AuthState.getManagedAccountPassword(record, role) || '').trim();
-    if (password) return password;
-    if (record && typeof record === 'object') {
-        record.pass = createManagedTemporaryPassword(role);
-        record.password_mode = 'temporary';
-        record.must_change_password = true;
-        return record.pass;
-    }
-    return createManagedTemporaryPassword(role);
-}
 
 function readWorkspaceProjectKey() {
     if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.getCurrentProjectKey === 'function') {
@@ -7363,6 +7312,30 @@ const DB = {
     }
 };
 
+function setCohortSyncStatus(state = 'idle', options = {}) {
+    const cohortId = String(options.cohortId || CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+    const runtime = window.CohortSyncStatusRuntime;
+    if (!runtime?.setStatus) {
+        console.warn('cohort-sync-status-runtime.js 未加载，跳过同步状态展示。');
+        return { state: 'idle', cohortId, syncedAt: 0 };
+    }
+    return runtime.setStatus(state, { ...options, cohortId });
+}
+
+async function retryCurrentCohortSync() {
+    const cohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+    return window.CohortSyncStatusRuntime?.retry({
+        cohortId,
+        load: () => loadCloudData(),
+        restore: () => tryAutoRestoreWorkspaceExam({ cohortId }),
+        hasData: () => Array.isArray(RAW_DATA) && RAW_DATA.length > 0,
+        toast: (...args) => window.UI?.toast(...args)
+    }) ?? false;
+}
+
+window.setCohortSyncStatus = setCohortSyncStatus;
+window.retryCurrentCohortSync = retryCurrentCohortSync;
+
 async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
     const cohortKey = getCohortKey(cohortId);
@@ -7381,6 +7354,7 @@ async function switchCohort(cohortId, options = {}) {
     }
 
     window.__COHORT_SWITCH_IN_PROGRESS__ = true;
+    setCohortSyncStatus('syncing', { cohortId, detail: `正在同步 ${cohortKey}` });
     if (window.__STARTUP_CLOUD_HYDRATION_TIMER__) {
         clearTimeout(window.__STARTUP_CLOUD_HYDRATION_TIMER__);
         window.__STARTUP_CLOUD_HYDRATION_TIMER__ = null;
@@ -7413,9 +7387,12 @@ async function switchCohort(cohortId, options = {}) {
             const stillEmpty = !(Array.isArray(RAW_DATA) && RAW_DATA.length > 0);
             if (stillEmpty) {
                 switchCohort(cohortId,{skipConfirm:true,fastEnter:false,preloadedData:cloudData}).catch(error=>console.warn('[switchCohort] background project hydrate failed:',error));
+            } else {
+                setCohortSyncStatus('synced', { cohortId });
             }
         }).catch((error) => {
             console.warn('[switchCohort] background project fetch failed:', error);
+            setCohortSyncStatus('error', { cohortId, detail: String(error?.message || '云端项目数据拉取失败') });
         });
     }
 
@@ -7523,12 +7500,14 @@ async function switchCohort(cohortId, options = {}) {
                     UI.toast(`已从云端考试快照恢复 [${cohortKey}] 数据`, "success");
                     logAction('届别切换', `已从云端考试快照恢复 ${cohortKey}`);
                     updateStatusPanel();
+                    setCohortSyncStatus('synced', { cohortId });
                     return true;
                 }
                     return false;
                 })
                 .catch((e) => {
                 console.warn('[switchCohort] cloud exam snapshot restore failed:', e);
+                    setCohortSyncStatus('error', { cohortId, detail: String(e?.message || '云端考试快照恢复失败') });
                     return false;
                 });
             if (options.fastEnter === true) {
@@ -7576,6 +7555,12 @@ async function switchCohort(cohortId, options = {}) {
         UI.toast(`✨ 已切换到 [${cohortKey}] (新存档)，请开始上传数据`, "info");
         logAction('届别切换', `新建并切换到 ${cohortKey}`);
         updateStatusPanel();
+    }
+
+    if (options.fastEnter !== true && Array.isArray(RAW_DATA) && RAW_DATA.length > 0) {
+        setCohortSyncStatus('synced', { cohortId });
+    } else if (options.fastEnter === true && Array.isArray(RAW_DATA) && RAW_DATA.length > 0) {
+        setCohortSyncStatus('local', { cohortId, detail: '已使用本地数据进入，云端继续在后台同步' });
     }
 
     UI.loading(false);

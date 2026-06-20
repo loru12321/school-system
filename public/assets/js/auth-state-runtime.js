@@ -152,6 +152,31 @@
         return '';
     }
 
+    function createManagedTemporaryPassword(role = 'user') {
+        const prefix = role === 'teacher' ? 'T' : 'U';
+        const bytes = new Uint8Array(9);
+        const cryptoApi = root.crypto || root.msCrypto;
+        if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
+            cryptoApi.getRandomValues(bytes);
+        } else {
+            for (let index = 0; index < bytes.length; index++) bytes[index] = Math.floor(Math.random() * 256);
+        }
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+        return `${prefix}-${Array.from(bytes, value => alphabet[value % alphabet.length]).join('')}`;
+    }
+
+    function getRecoverableManagedPassword(record, role) {
+        const password = normalizeText(getManagedAccountPassword(record, role));
+        if (password) return password;
+        if (record && typeof record === 'object') {
+            record.pass = createManagedTemporaryPassword(role);
+            record.password_mode = 'temporary';
+            record.must_change_password = true;
+            return record.pass;
+        }
+        return createManagedTemporaryPassword(role);
+    }
+
     function matchesManagedPassword(record, role, password) {
         return normalizeText(password) === getManagedAccountPassword(record, role);
     }
@@ -365,6 +390,8 @@
         isDefaultManagedPassword,
         normalizeManagedLocalAccount,
         getManagedAccountPassword,
+        createManagedTemporaryPassword,
+        getRecoverableManagedPassword,
         matchesManagedPassword,
         sanitizeLocalAuthDb,
         readLocalAuthDb,

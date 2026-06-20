@@ -2102,6 +2102,56 @@ body[data-mobile-query="true"] #parent-view-container .fluent-card {
     font-weight: 800;
 }
 
+.shell-sync-chip {
+    min-height: 34px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    color: #64748b;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: default;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.shell-sync-chip[data-sync-state="syncing"] {
+    border-color: rgba(217, 119, 6, 0.28);
+    background: rgba(255, 247, 237, 0.94);
+    color: #b45309;
+}
+
+.shell-sync-chip[data-sync-state="syncing"] i {
+    animation: shell-sync-pulse 1.2s ease-in-out infinite;
+}
+
+.shell-sync-chip[data-sync-state="synced"] {
+    border-color: rgba(5, 150, 105, 0.24);
+    background: rgba(236, 253, 245, 0.94);
+    color: #047857;
+}
+
+.shell-sync-chip[data-sync-state="error"] {
+    border-color: rgba(220, 38, 38, 0.24);
+    background: rgba(254, 242, 242, 0.94);
+    color: #b91c1c;
+    cursor: pointer;
+}
+
+@keyframes shell-sync-pulse {
+    0%, 100% { opacity: 0.55; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-1px); }
+}
+
+.dark-mode .shell-sync-chip {
+    background: rgba(15, 23, 42, 0.72);
+    border-color: rgba(148, 163, 184, 0.26);
+}
+
 .shell-current-desc {
     margin: 0;
     max-width: 620px;

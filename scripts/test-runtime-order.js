@@ -942,6 +942,10 @@ assert.ok(
     appSource.includes('void hydrateFromExamArchive();'),
     'fast cohort entry should restore the downloaded cloud snapshot into the already-open workspace'
 );
+assert.ok(appSource.includes('function setCohortSyncStatus'), 'cohort cloud restore should expose visible sync state');
+assert.ok(indexHtml.includes('cohort-sync-status-runtime.js'), 'cohort sync status should load outside the main application bundle');
+assert.ok(appSource.includes('function retryCurrentCohortSync'), 'failed cohort cloud restore should provide an explicit retry path');
+assert.ok(indexHtml.includes('id="shell-sync-chip"'), 'workspace shell should render the cohort sync status chip');
 assert.ok(
     appSource.includes('latestOnly: true') && appSource.includes('后台历史考试补全失败'),
     'login cohort entry should restore the latest exam first and hydrate historical exams in the background'

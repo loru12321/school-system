@@ -15,6 +15,28 @@ const MODULE_ACCESS_ALIASES = {
 };
 
 const PermissionPolicy = {
+    isParentLikeRole(role) {
+        const normalizedRole = String(role || '').trim();
+        return normalizedRole === 'parent' || normalizedRole === 'student';
+    },
+    isParentLikeUser(user) {
+        if (!user || typeof user !== 'object') return false;
+        const roles = Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role].filter(Boolean);
+        return roles.some(role => this.isParentLikeRole(role));
+    },
+    applyRoleAllowVisibility(root = document) {
+        const user = typeof getCurrentUser === 'function' ? getCurrentUser() : (window.Auth?.currentUser || null);
+        const roles = window.RoleManager?.getUserRoles?.(user)
+            || (Array.isArray(user?.roles) && user.roles.length ? user.roles : [user?.role]);
+        const roleSet = new Set((roles || []).map(role => String(role || '').trim()).filter(Boolean));
+        (root || document).querySelectorAll('[data-role-allow]').forEach(node => {
+            const allowed = String(node.dataset.roleAllow || '').split(',').map(role => role.trim()).filter(Boolean);
+            const visible = allowed.length === 0 || allowed.some(role => roleSet.has(role));
+            node.hidden = !visible;
+            node.style.display = visible ? '' : 'none';
+            node.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        });
+    },
     normalizeName(value) {
         return String(value || '').trim().replace(/\s+/g, '').toLowerCase();
     },

@@ -68,12 +68,12 @@ const MODULE_SWITCH_TIMEOUT_MS = 12000;
 const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
 const PERFORMANCE_BUDGETS = {
-    loginMs: 90000,
-    appReadyMs: 90000,
-    moduleSwitchMs: MODULE_SWITCH_WRAPPER_TIMEOUT_MS,
-    moduleDeepCheckMs: MODULE_DEEP_CHECK_TIMEOUT_MS,
-    dataManagerTabMs: 15000,
-    longTaskMs: 1200
+    loginMs: 30000,
+    appReadyMs: 15000,
+    moduleSwitchMs: 6000,
+    moduleDeepCheckMs: 12000,
+    dataManagerTabMs: 5000,
+    longTaskMs: 800
 };
 const STRICT_PERFORMANCE_BUDGETS = process.env.SMOKE_PERF_STRICT === 'true';
 
