@@ -32,6 +32,42 @@ function isWithinOrEqual(parent, target) {
   return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
 }
 
+function pathKey(value) {
+  const resolved = path.resolve(value);
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+function assertTrustedAssetDirectory(assetDir) {
+  const resolved = path.resolve(assetDir);
+  if (!isWithinOrEqual(rootDir, resolved) && !isWithinOrEqual(tempRoot, resolved)) {
+    throw new Error('RELEASE_ASSET_DIR must be inside the repository or system temporary directory');
+  }
+  let current = path.parse(resolved).root;
+  for (const segment of resolved.slice(current.length).split(path.sep).filter(Boolean)) {
+    current = path.join(current, segment);
+    if (!fs.existsSync(current)) throw new Error(`Release asset directory does not exist: ${resolved}`);
+    const stats = fs.lstatSync(current);
+    if (stats.isSymbolicLink()) throw new Error(`Symbolic link, junction, or reparse path is not allowed: ${current}`);
+    if (pathKey(fs.realpathSync.native(current)) !== pathKey(current)) {
+      throw new Error(`Linked or reparse path is not allowed: ${current}`);
+    }
+  }
+  if (!fs.lstatSync(resolved).isDirectory()) throw new Error(`Release asset directory does not exist: ${resolved}`);
+  return resolved;
+}
+
+function assertOutputPathComponents(assetDir, outputPath) {
+  if (pathKey(path.dirname(outputPath)) !== pathKey(assetDir)) {
+    throw new Error('RELEASE_OUTPUT parent must be exactly RELEASE_ASSET_DIR');
+  }
+  if (fs.existsSync(outputPath)) {
+    const stats = fs.lstatSync(outputPath);
+    if (stats.isSymbolicLink() || pathKey(fs.realpathSync.native(outputPath)) !== pathKey(outputPath)) {
+      throw new Error(`Symbolic link, junction, or reparse output is not allowed: ${outputPath}`);
+    }
+  }
+}
+
 function writeJsonAtomic(outputPath, value) {
   const temporaryPath = `${outputPath}.${process.pid}.${crypto.randomBytes(8).toString('hex')}.tmp`;
   let descriptor;
@@ -71,11 +107,9 @@ export function buildReleaseManifest(options = {}) {
   const sourceSha = required(options.sourceSha, 'RELEASE_SOURCE_SHA').toLowerCase();
   if (!/^[0-9a-f]{40}$/.test(sourceSha)) throw new Error('RELEASE_SOURCE_SHA must be a 40-character hexadecimal SHA');
 
-  const assetDir = resolveFromRoot(options.assetDir, 'RELEASE_ASSET_DIR');
+  const assetDir = assertTrustedAssetDirectory(resolveFromRoot(options.assetDir, 'RELEASE_ASSET_DIR'));
   const outputPath = resolveFromRoot(options.outputPath, 'RELEASE_OUTPUT');
-  if (!isWithinOrEqual(rootDir, outputPath) && !isWithinOrEqual(tempRoot, outputPath)) {
-    throw new Error('RELEASE_OUTPUT must be inside the repository or system temporary directory');
-  }
+  assertOutputPathComponents(assetDir, outputPath);
   const buildUrl = required(options.buildUrl, 'RELEASE_BUILD_URL');
   try {
     const parsedBuildUrl = new URL(buildUrl);
@@ -85,8 +119,6 @@ export function buildReleaseManifest(options = {}) {
   }
   const repository = required(options.repository, 'GITHUB_REPOSITORY');
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error('GITHUB_REPOSITORY must use owner/repository format');
-  if (!fs.existsSync(assetDir) || !fs.statSync(assetDir).isDirectory()) throw new Error(`Release asset directory does not exist: ${assetDir}`);
-
   const generatedAtDate = options.generatedAt ? new Date(options.generatedAt) : new Date();
   if (!Number.isFinite(generatedAtDate.getTime())) throw new Error('generatedAt must be a valid date');
   const generatedAt = generatedAtDate.toISOString();
@@ -94,10 +126,16 @@ export function buildReleaseManifest(options = {}) {
     .filter((entry) => entry.isFile())
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right, 'en'));
-  if (names.some((name) => path.resolve(assetDir, name) === path.resolve(outputPath))) {
+  const outputName = path.basename(outputPath);
+  const collidingName = names.find((name) => pathKey(path.join(assetDir, name)) === pathKey(outputPath));
+  if (collidingName && Object.values(PLATFORM_SPECS).some((spec) => path.extname(collidingName).toLowerCase() === spec.extension)) {
     throw new Error('RELEASE_OUTPUT must not collide with a release asset or source file');
   }
-  if (path.extname(outputPath).toLowerCase() !== '.json') throw new Error('RELEASE_OUTPUT must end in .json');
+  const validOutputName = process.platform === 'win32'
+    ? outputName.toLowerCase() === 'release-manifest.json'
+    : outputName === 'release-manifest.json';
+  if (!validOutputName) throw new Error('RELEASE_OUTPUT basename must be release-manifest.json');
+  if (collidingName) throw new Error('RELEASE_OUTPUT must not collide with a release asset or source file');
 
   const version = releaseTag.replace(/^beta-/, '').replace(/^school-system-v/, '');
   const buildNumber = sourceSha.slice(0, 12);

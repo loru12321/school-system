@@ -25,7 +25,7 @@ function snapshotTree(directory) {
 
 try {
   const assetDir = path.join(fixtureDir, 'assets');
-  const outputPath = path.join(fixtureDir, 'release-manifest.json');
+  const outputPath = path.join(assetDir, 'release-manifest.json');
   fs.mkdirSync(assetDir);
   fs.writeFileSync(path.join(assetDir, 'school-system-windows-beta.exe'), 'windows-build-fixture');
   fs.writeFileSync(path.join(assetDir, 'school-system-android-beta.apk'), 'android-build-fixture');
@@ -133,7 +133,7 @@ try {
     fs.writeFileSync(path.join(duplicateDir, `one${extension}`), 'one');
     fs.writeFileSync(path.join(duplicateDir, `two${extension}`), 'two');
     assert.throws(
-      () => buildReleaseManifest(generatorOptions(duplicateDir, path.join(duplicateDir, 'manifest.json'))),
+      () => buildReleaseManifest(generatorOptions(duplicateDir, path.join(duplicateDir, 'release-manifest.json'))),
       /Multiple .* assets/
     );
   }
@@ -141,19 +141,51 @@ try {
   const emptyDir = path.join(fixtureDir, 'empty-asset');
   fs.mkdirSync(emptyDir);
   fs.writeFileSync(path.join(emptyDir, 'empty.exe'), '');
-  assert.throws(() => buildReleaseManifest(generatorOptions(emptyDir, path.join(emptyDir, 'manifest.json'))), /non-empty/);
+  assert.throws(() => buildReleaseManifest(generatorOptions(emptyDir, path.join(emptyDir, 'release-manifest.json'))), /non-empty/);
 
   const collisionDir = path.join(fixtureDir, 'collision');
   fs.mkdirSync(collisionDir);
   const collisionAsset = path.join(collisionDir, 'app.exe');
   fs.writeFileSync(collisionAsset, 'collision');
   assert.throws(() => buildReleaseManifest(generatorOptions(collisionDir, collisionAsset)), /collide/i);
+  const packageTarget = path.join(collisionDir, 'package.json');
+  fs.writeFileSync(packageTarget, 'do-not-touch');
   assert.throws(
-    () => buildReleaseManifest(generatorOptions(collisionDir, path.join(collisionDir, 'manifest.txt'))),
-    /\.json/
+    () => buildReleaseManifest(generatorOptions(collisionDir, packageTarget)),
+    /release-manifest\.json/
   );
-  const outsideDestination = path.join(path.parse(rootDir).root, 'school-release-invalid-destination.json');
-  assert.throws(() => buildReleaseManifest(generatorOptions(collisionDir, outsideDestination)), /repository or system temporary/);
+  assert.strictEqual(fs.readFileSync(packageTarget, 'utf8'), 'do-not-touch');
+  const siblingDestination = path.join(fixtureDir, 'release-manifest.json');
+  fs.writeFileSync(siblingDestination, 'sibling-do-not-touch');
+  assert.throws(() => buildReleaseManifest(generatorOptions(collisionDir, siblingDestination)), /parent.*RELEASE_ASSET_DIR/i);
+  assert.strictEqual(fs.readFileSync(siblingDestination, 'utf8'), 'sibling-do-not-touch');
+
+  const junctionTarget = path.join(fixtureDir, 'junction-target');
+  const junctionAssetDir = path.join(fixtureDir, 'junction-assets');
+  fs.mkdirSync(junctionTarget);
+  fs.writeFileSync(path.join(junctionTarget, 'app.exe'), 'junction-windows');
+  fs.writeFileSync(path.join(junctionTarget, 'app.apk'), 'junction-android');
+  let junctionSupported = true;
+  let junctionError = '';
+  try {
+    fs.symlinkSync(junctionTarget, junctionAssetDir, 'junction');
+  } catch (error) {
+    if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) {
+      junctionSupported = false;
+      junctionError = `${error.code}: ${error.message}`;
+    } else {
+      throw error;
+    }
+  }
+  if (junctionSupported) {
+    assert.throws(
+      () => buildReleaseManifest(generatorOptions(junctionAssetDir, path.join(junctionAssetDir, 'release-manifest.json'))),
+      /symbolic link|junction|reparse/i
+    );
+    assert.strictEqual(fs.existsSync(path.join(junctionTarget, 'release-manifest.json')), false);
+  } else {
+    console.log(`junction fixture skipped: ${junctionError}`);
+  }
 
   const failedOutputDir = path.join(fixtureDir, 'failed-preservation');
   const failedInputDir = path.join(failedOutputDir, 'input');
