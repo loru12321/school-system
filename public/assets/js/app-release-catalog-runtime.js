@@ -26,7 +26,7 @@
       architectures: Array.isArray(source.architectures) ? source.architectures.map(asString).filter(Boolean) : [],
       assetName: asString(source.assetName),
       assetUrl: asString(source.assetUrl),
-      bytes: Number.isFinite(Number(source.bytes)) ? Number(source.bytes) : 0,
+      bytes: typeof source.bytes === 'number' && Number.isFinite(source.bytes) ? source.bytes : 0,
       sha256: asString(source.sha256).toLowerCase(),
       notes: Array.isArray(source.notes)
         ? source.notes.map(asString).filter(Boolean)
@@ -66,7 +66,8 @@
   }
 
   function isDownloadable(asset) {
-    if (!asset || asset.status !== 'ready' || !asset.assetName || Number(asset.bytes) <= 0) return false;
+    if (!asset || asset.status !== 'ready' || !asString(asset.assetName)) return false;
+    if (typeof asset.bytes !== 'number' || !Number.isSafeInteger(asset.bytes) || asset.bytes <= 0) return false;
     try {
       var parsedUrl = new URL(asString(asset.assetUrl));
       if (parsedUrl.protocol !== 'https:' || !parsedUrl.hostname || parsedUrl.username || parsedUrl.password) return false;

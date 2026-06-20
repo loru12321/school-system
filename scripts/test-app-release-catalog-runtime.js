@@ -104,6 +104,7 @@ assert.strictEqual(releases[1].platforms.windows.status, 'unavailable');
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.windows), true);
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.ios), false);
 const validWindowsAsset = releases[0].platforms.windows;
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { assetName: '   ' })), false);
 assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { assetUrl: 'http://example.com/app.zip' })), false);
 assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { assetUrl: 'https://user:secret@example.com/app.zip' })), false);
 assert.strictEqual(
@@ -112,6 +113,10 @@ assert.strictEqual(
   'download URLs should be structurally valid'
 );
 assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { assetUrl: 'file:///app.zip' })), false);
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { bytes: Infinity })), false);
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { bytes: true })), false);
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { bytes: 1.5 })), false);
+assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { bytes: '1024' })), false);
 assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { bytes: 0 })), false);
 assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { bytes: -1 })), false);
 assert.strictEqual(runtime.isDownloadable(Object.assign({}, validWindowsAsset, { sha256: 'a'.repeat(63) })), false);
