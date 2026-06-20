@@ -7,6 +7,9 @@ const source = fs.readFileSync(
   path.resolve(__dirname, '../public/assets/js/app-release-catalog-runtime.js'),
   'utf8'
 );
+assert.match(source, /download-map\.json/, 'catalog runtime should use the first-party chunk map');
+assert.match(source, /showSaveFilePicker/, 'catalog runtime should stream large packages to disk when supported');
+assert.match(source, /saveChunksAsBlob/, 'catalog runtime should retain a browser fallback');
 const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../public/releases/release-manifest.json'), 'utf8'));
 const html = fs.readFileSync(path.resolve(__dirname, '../src/index.html'), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
