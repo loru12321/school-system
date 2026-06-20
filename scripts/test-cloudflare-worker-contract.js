@@ -14,6 +14,7 @@ function count(source, pattern) {
 
 const packageJson = JSON.parse(read('package.json'));
 const worker = read('src/worker-dummy.js');
+const releaseDownloads = read('src/worker-release-downloads.mjs');
 const gateway = read('src/worker-gateway-d1.js');
 const helpers = read('src/worker-http-helpers.js');
 const wrangler = JSON.parse(read('wrangler.jsonc'));
@@ -25,6 +26,7 @@ const requiredWorkerTokens = [
   "url.pathname === '/api/edu_gateway'",
   "url.pathname === SYSTEM_DATA_API_PATH",
   "url.pathname.startsWith('/sb/')",
+  "url.pathname.startsWith('/downloads/')",
   'env.ASSETS.fetch(request)',
   'protectHtmlResponse(request, response)',
   'buildCorsHeaders(request, env)',
@@ -47,6 +49,7 @@ assert.ok(gateway.includes("Director can only manage accounts in own school"), '
 assert.ok(gateway.includes("error: 'Invalid username or password'"), 'managed D1 account passwords should not fall back to stale legacy credentials');
 assert.ok(gateway.includes("if (remoteUser.role !== 'admin')"), 'legacy fallback must not recreate deleted non-admin accounts');
 assert.ok(worker.includes("from './worker-http-helpers.js'"), 'worker should import shared HTTP helpers');
+assert.ok(worker.includes("from './worker-release-downloads.mjs'"), 'worker should import the release download handler');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should import shared HTTP helpers');
 assert.ok(helpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared helpers must keep explicit CORS allowlist usage');
 assert.ok(helpers.includes('HOP_BY_HOP_HEADERS'), 'shared helpers must keep hop-by-hop header list');
@@ -58,6 +61,10 @@ assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(worker), 'worker mus
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gateway), 'gateway must not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(helpers), 'shared helpers must not emit wildcard CORS');
 assert.ok(worker.includes("return normalizeOrigin(env.LEGACY_GATEWAY_ORIGIN || env.SUPABASE_ORIGIN || DEFAULT_LEGACY_GATEWAY_ORIGIN);"), 'legacy origin resolution must prefer env values');
+assert.ok(releaseDownloads.includes("if (!['GET', 'HEAD'].includes(request.method))"), 'release downloads must reject unsupported methods');
+assert.ok(releaseDownloads.includes("return plainResponse(404, 'Not Found')"), 'release downloads must fail closed for unknown files');
+assert.ok(releaseDownloads.includes("'Content-Disposition': `attachment; filename=\"${entry.filename}\"`"), 'release downloads must preserve the package filename');
+assert.ok(releaseDownloads.includes("'X-Content-SHA256': entry.sha256"), 'release downloads must expose the verified SHA-256');
 assert.ok(worker.includes("headers['Cache-Control'] = 'no-store';"), 'JSON API responses should be no-store');
 assert.ok(worker.includes("headers['X-Content-Type-Options'] = 'nosniff';"), 'JSON API responses should set nosniff');
 assert.ok(worker.includes("headers['X-School-System-Gateway'] = 'cloudflare-worker';"), 'JSON API responses should identify the gateway');
@@ -97,6 +104,7 @@ console.log(JSON.stringify({
     '/api/edu-gateway',
     '/api/system-data',
     '/sb/*',
+    '/downloads/*',
     'ASSETS'
   ],
   proxyTimeoutMs: 15000

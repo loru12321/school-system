@@ -1,5 +1,6 @@
 import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway-d1.js';
 import { HOP_BY_HOP_HEADERS, buildCorsHeaders, normalizeOrigin } from './worker-http-helpers.js';
+import { handleReleaseDownload } from './worker-release-downloads.mjs';
 
 // Production Cloudflare Worker entrypoint.
 // This file owns routing, static asset protection, Supabase compatibility proxying,
@@ -943,6 +944,10 @@ export default {
 
       if (url.pathname.startsWith('/sb/')) {
         return await handleCloudRestProxy(request, env, url);
+      }
+
+      if (url.pathname.startsWith('/downloads/')) {
+        return await handleReleaseDownload(request, env);
       }
 
       try {
