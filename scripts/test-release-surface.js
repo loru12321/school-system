@@ -83,6 +83,11 @@ assert.ok(scripts.build && scripts.build.includes('prune-dist-assets.mjs'), 'bui
 assert.ok(scripts.build && scripts.build.includes('optimize-dist-html.mjs'), 'build script must optimize dist HTML');
 assert.ok(scripts.build && scripts.build.includes('inline-scripts.mjs'), 'build script must inline the release HTML script surface');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-surface'), 'fast release check must include release surface guard');
+['test:release-manifest', 'test:desktop-package-contract', 'test:capacitor-package-contract', 'test:beta-release-workflow'].forEach((scriptName) => {
+  assert.ok(scripts[scriptName], `${scriptName} must be exposed as a release contract`);
+  assert.ok(scripts['check:release-fast'].includes(scriptName), `fast release check must include ${scriptName}`);
+});
+assert.strictEqual(scripts['release:verify-assets'], 'node scripts/verify-release-assets.mjs', 'release verification should use the manifest-aware verifier');
 assert.ok(scripts['smoke:modules:prod'] === 'node scripts/run-prod-smoke.js', 'production smoke script should use the guarded production wrapper');
 assert.ok(prodSmoke.includes('https://schoolsystem.com.cn/'), 'production smoke wrapper should default to the canonical domain');
 assert.ok(prodSmoke.includes('Refusing to run production smoke'), 'production smoke wrapper should reject unexpected URLs');

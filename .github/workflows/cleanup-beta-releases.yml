@@ -1,0 +1,38 @@
+name: Cleanup Expired Beta Releases
+
+on:
+  schedule:
+    - cron: '27 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cleanup-expired-beta-releases
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Select and delete expired beta prereleases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cutoff="$(date -u -d '90 days ago' +'%Y-%m-%dT%H:%M:%SZ')"
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > release-pages.json
+          jq --arg cutoff "$cutoff" '[.[][] | select(.prerelease == true and (.tag_name | startswith("beta-")) and .created_at < $cutoff)]' release-pages.json > expired.json
+          count="$(jq 'length' expired.json)"
+          if [ "$count" -eq 0 ]; then
+            echo "No beta prereleases older than 90 days."
+            exit 0
+          fi
+          echo "Selected expired release IDs and tags:"
+          jq -r '.[] | "\(.id)\t\(.tag_name)"' expired.json
+          jq -r '.[] | [.id, .tag_name] | @tsv' expired.json | while IFS=$'\t' read -r release_id tag_name; do
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag_name" || true
+          done

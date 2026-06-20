@@ -195,3 +195,42 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 1. 用户最常用的路径还能不能走通？
 2. 关键数据有没有被错误覆盖或错口径展示？
 3. 线上站点是否已经用真实浏览器和真实下载验证过？
+
+## 多平台应用发布中心（2026）
+
+“应用服务”母模块现在统一展示 Windows、Android 与 iOS 的最新版、构建状态、系统要求、SHA-256 和历史版本。GitHub Releases 中的 `release-manifest.json` 是安装包状态的权威来源；Windows 与 Android 只有在包体、扩展名、哈希和下载响应全部通过后才标记为可下载，iOS 未完成 Apple 签名时只显示进度，不暴露伪造的 IPA 链接。
+
+### 发布节奏与保留策略
+
+- 每次推送到 `main`：`.github/workflows/build-apps-beta.yml` 并行构建 Windows、Android 和 iOS 验证任务，发布 `beta-YYYYMMDD-<short-sha>` 预发布版本。
+- Beta Release 保留 90 天；每周清理任务只删除同时满足“`beta-` 标签、GitHub prerelease、超过 90 天”的版本。
+- 推送 `school-system-v*` 标签：`.github/workflows/release-apps.yml` 创建永久稳定版，不参与 Beta 清理。
+- Windows 产物为 x64 NSIS `.exe`；Android 产物为测试签名 `.apk`；当前 iOS 只做无签名 Simulator 编译并记录 `awaiting-signing`。
+
+### 签名与安装提醒
+
+- Windows 当前没有代码签名证书，安装时可能出现 Microsoft Defender SmartScreen 提示。正式对外分发前应配置受信任的 Windows 代码签名证书。
+- Android CI 使用独立测试 keystore，不应当用于 Google Play 正式发布。仓库绝不保存 keystore 或密码。
+- Android Actions 需要四个 Secrets：`ANDROID_TEST_KEYSTORE_FILE`（keystore 的 Base64 内容）、`ANDROID_TEST_KEYSTORE_PASSWORD`、`ANDROID_TEST_KEY_ALIAS`、`ANDROID_TEST_KEY_PASSWORD`。
+- 只有在明确批准后，才运行 `node scripts/configure-android-test-signing.mjs <仓库外绝对路径>` 创建测试 keystore；脚本拒绝仓库内路径。
+- iOS 目前不会生成或展示 IPA，也不会上传 TestFlight/App Store。
+
+### TestFlight / App Store 前置条件
+
+启用 iOS 正式发布前，需要 Apple Developer Program 账号、App Store Connect 中的应用记录、`cn.com.schoolsystem.app` Bundle ID、Team ID，以及 Distribution Certificate 与 Provisioning Profile，或受限权限的 App Store Connect API Key（Issuer ID、Key ID、`.p8` 私钥）。这些凭据必须进入 GitHub Actions Secrets；配置完成后再增加 Archive、签名、IPA 导出与 TestFlight 上传步骤。
+
+### 手动构建与校验
+
+```powershell
+npm run build
+npm run test:release-manifest
+npm run test:desktop-package-contract
+npm run test:capacitor-package-contract
+npm run test:beta-release-workflow
+npm run desktop:build
+npm run mobile:sync
+cd android
+./gradlew.bat assembleDebug
+```
+
+Android 构建使用 Java 21。Windows 无法执行 Xcode 编译；请以 macOS GitHub Actions 的 `xcodebuild` 结果作为 iOS 工程验证依据。发布后可运行 `npm run release:verify-assets`，按平台返回结构化失败列表并阻止 HTML 错误页、过小包体或无效哈希进入下载中心。

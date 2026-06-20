@@ -69,7 +69,7 @@ const budgets = {
   publicProgressAnalysisJs: 95_000,
   publicTeacherAnalysisCoreJs: 85_000,
   publicReportRenderJs: 65_000,
-  publicAppDownloadJs: 76_000
+  publicAppDownloadJs: 100_000
 };
 
 const actual = {

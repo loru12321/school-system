@@ -19,6 +19,9 @@ function checkSyntax(relativePath) {
 const packageJson = JSON.parse(read('package.json'));
 const scripts = packageJson.scripts || {};
 const releaseWorkflow = read('.github/workflows/release-apps.yml');
+const cleanupWorkflowPath = path.join(root, '.github/workflows/cleanup-beta-releases.yml');
+assert.ok(fs.existsSync(cleanupWorkflowPath), 'beta cleanup workflow should exist');
+const cleanupWorkflow = fs.readFileSync(cleanupWorkflowPath, 'utf8');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
 
 checkSyntax('scripts/prepare-github-release-assets.mjs');
@@ -38,6 +41,20 @@ assert.ok(releaseWorkflow.includes('npm run release:prepare-assets'), 'release w
 assert.ok(releaseWorkflow.includes('gh release upload'), 'release workflow should update existing releases');
 assert.ok(releaseWorkflow.includes('gh release create'), 'release workflow should create missing releases');
 assert.ok(releaseWorkflow.includes('concurrency:'), 'release workflow should serialize release jobs');
+assert.ok(releaseWorkflow.includes('runs-on: windows-latest'), 'stable release should build Windows');
+assert.ok(releaseWorkflow.includes('runs-on: ubuntu-latest'), 'stable release should build Android and publish');
+assert.ok(releaseWorkflow.includes('runs-on: macos-latest'), 'stable release should validate iOS');
+assert.ok((releaseWorkflow.match(/node scripts\/resolve-app-version\.mjs/g) || []).length >= 3, 'stable platform jobs should resolve versions');
+assert.ok(releaseWorkflow.includes('assembleRelease'), 'stable release should build an Android APK');
+assert.ok(releaseWorkflow.includes('CODE_SIGNING_ALLOWED=NO'), 'stable iOS validation should not require Apple credentials');
+assert.ok(!releaseWorkflow.includes('--prerelease'), 'stable releases must never be marked prerelease');
+assert.ok(cleanupWorkflow.includes('schedule:'), 'beta cleanup should run on a schedule');
+assert.ok(cleanupWorkflow.includes('workflow_dispatch:'), 'beta cleanup should support manual execution');
+assert.ok(cleanupWorkflow.includes('90 days ago'), 'beta retention should be exactly 90 days');
+assert.ok(cleanupWorkflow.includes('.prerelease == true'), 'cleanup must select prereleases only');
+assert.ok(cleanupWorkflow.includes('startswith("beta-")'), 'cleanup must select beta tags only');
+assert.ok(cleanupWorkflow.includes('gh api --paginate'), 'cleanup should inspect every releases page');
+assert.ok(cleanupWorkflow.includes('releases/$release_id'), 'cleanup should delete only selected release IDs');
 assert.ok(performanceWorkflow.includes('npm run performance:record'), 'performance workflow should record trend output');
 assert.ok(performanceWorkflow.includes('npm run check:release-fast'), 'performance workflow should run fast guards before smoke');
 assert.ok(performanceWorkflow.includes('cancel-in-progress: true'), 'performance workflow should cancel stale trend runs');

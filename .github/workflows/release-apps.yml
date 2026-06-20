@@ -4,12 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag, for example school-system-v2026.05.20
+        description: Stable release tag, for example school-system-v2026.06.20
         required: true
-      prerelease:
-        description: Mark this release as a prerelease
-        required: false
-        default: "false"
   push:
     tags:
       - "school-system-v*"
@@ -25,69 +21,178 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish-app-assets:
-    name: Publish APK and Windows assets
+  metadata:
+    name: Resolve stable release tag
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-
+    outputs:
+      release-tag: ${{ steps.tag.outputs.RELEASE_TAG }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Validate stable tag
+        id: tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          [[ "$RELEASE_TAG" == school-system-v* ]] || { echo 'Stable tag must start with school-system-v'; exit 1; }
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+  windows:
+    name: Build stable Windows installer
+    needs: metadata
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: package-lock.json
+      - name: Resolve stable application version
+        id: version
+        shell: bash
+        run: node scripts/resolve-app-version.mjs --channel stable --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
+      - run: npm ci
+      - name: Run Windows release contracts
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          npm pkg set version="${{ steps.version.outputs.APP_VERSION_NAME }}"
+          npm run desktop:build
+          New-Item -ItemType Directory -Force release-out | Out-Null
+          $installer = Get-ChildItem native-builds -Filter *.exe | Select-Object -First 1
+          if (-not $installer) { throw 'Windows installer was not produced' }
+          Copy-Item $installer.FullName "release-out/school-system-windows-${{ needs.metadata.outputs.release-tag }}-x64.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stable-windows-${{ needs.metadata.outputs.release-tag }}
+          path: release-out/*.exe
+          if-no-files-found: error
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build web package
-        run: npm run build
-
-      - name: Guard app download links
-        run: npm run test:app-download-runtime-hygiene
-
-      - name: Guard release surface
-        run: npm run test:release-surface
-
-      - name: Guard hosted package budgets
-        run: npm run test:build-size-budget
-
-      - name: Smoke hosted download clicks
-        run: npm run test:app-download-clicks
-
-      - name: Prepare release assets
+  android:
+    name: Build stable test-signed Android APK
+    needs: metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: Resolve stable application version
+        id: version
+        run: node scripts/resolve-app-version.mjs --channel stable --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
+      - run: npm ci
+      - name: Run Android release contracts
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow && node scripts/test-android-signing-contract.js
+      - name: Restore Android test-signing keystore
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-          RELEASE_ASSET_DIR: release-assets
-        run: npm run release:prepare-assets
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_TEST_KEYSTORE_FILE }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo 'ANDROID_TEST_KEYSTORE_FILE secret is required'; exit 1; }
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android-test.keystore"
+          echo "ANDROID_TEST_KEYSTORE_FILE=$RUNNER_TEMP/android-test.keystore" >> "$GITHUB_ENV"
+      - name: Sync and build Android APK
+        env:
+          ANDROID_TEST_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_TEST_KEYSTORE_PASSWORD }}
+          ANDROID_TEST_KEY_ALIAS: ${{ secrets.ANDROID_TEST_KEY_ALIAS }}
+          ANDROID_TEST_KEY_PASSWORD: ${{ secrets.ANDROID_TEST_KEY_PASSWORD }}
+        run: |
+          npm run mobile:sync
+          cd android
+          ./gradlew assembleRelease -PappVersionName="${{ steps.version.outputs.APP_VERSION_NAME }}" -PappVersionCode="${{ steps.version.outputs.APP_BUILD_NUMBER }}"
+          cd ..
+          mkdir -p release-out
+          cp android/app/build/outputs/apk/release/app-release.apk "release-out/school-system-android-${{ needs.metadata.outputs.release-tag }}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stable-android-${{ needs.metadata.outputs.release-tag }}
+          path: release-out/*.apk
+          if-no-files-found: error
 
-      - name: Upload release asset bundle as workflow artifact
+  ios:
+    name: Validate stable iOS simulator build
+    needs: metadata
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Resolve stable application version
+        id: version
+        run: node scripts/resolve-app-version.mjs --channel stable --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
+      - run: npm ci
+      - name: Run iOS release contracts
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow
+      - name: Sync and compile unsigned iOS simulator application
+        run: |
+          npm run ios:sync
+          mkdir -p release-out
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO MARKETING_VERSION="${{ steps.version.outputs.APP_VERSION_NAME }}" CURRENT_PROJECT_VERSION="${{ steps.version.outputs.APP_BUILD_NUMBER }}" build | tee release-out/ios-build.log
+          ditto -c -k --keepParent ios/App/App.xcodeproj "release-out/school-system-ios-${{ needs.metadata.outputs.release-tag }}-project.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stable-ios-${{ needs.metadata.outputs.release-tag }}
+          path: release-out/
+          if-no-files-found: error
+
+  publish:
+    name: Publish permanent stable release
+    needs: [metadata, windows, android, ios]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'stable-*-${{ needs.metadata.outputs.release-tag }}'
+          path: release-input
+          merge-multiple: true
+      - name: Run stable web and release guards
+        run: |
+          npm run build
+          npm run test:app-download-runtime-hygiene
+          npm run test:release-surface
+          npm run test:build-size-budget
+          npm run test:app-download-clicks
+      - name: Prepare immutable stable assets
+        env:
+          RELEASE_INPUT_DIR: release-input
+          RELEASE_ASSET_DIR: release-assets
+          RELEASE_CHANNEL: stable
+          RELEASE_TAG: ${{ needs.metadata.outputs.release-tag }}
+          RELEASE_SOURCE_SHA: ${{ github.sha }}
+          RELEASE_BUILD_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: npm run release:prepare-assets
+      - name: Upload stable release bundle
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-assets
+          name: stable-release-assets-${{ needs.metadata.outputs.release-tag }}
           path: release-assets/
-
-      - name: Create or update GitHub Release
+          if-no-files-found: error
+      - name: Create or update permanent GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-          PRERELEASE: ${{ inputs.prerelease || 'false' }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.release-tag }}
         run: |
-          set -euo pipefail
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release-assets/* --clobber
-            gh release edit "$RELEASE_TAG" --notes-file release-assets/release-notes.md
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-assets/release-notes.md --latest
           else
-            args=()
-            if [ "$PRERELEASE" = "true" ]; then
-              args+=(--prerelease)
-            fi
-            gh release create "$RELEASE_TAG" release-assets/* \
-              --title "$RELEASE_TAG" \
-              --notes-file release-assets/release-notes.md \
-              "${args[@]}"
+            gh release create "$RELEASE_TAG" release-assets/* --title "$RELEASE_TAG" --notes-file release-assets/release-notes.md --latest --target "$GITHUB_SHA"
           fi

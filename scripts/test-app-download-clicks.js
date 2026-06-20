@@ -1,3 +1,4 @@
+const assert = require('assert');
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
@@ -6,17 +7,22 @@ const { chromium } = require('playwright');
 const distDir = path.resolve(__dirname, '../dist');
 const port = Number(process.env.APP_DOWNLOAD_SMOKE_PORT || 4189);
 
-const expectedDownloads = {
-    windows: {
-        hrefPart: '/downloads/smartedu-windows-latest.zip',
-        fileName: 'smartedu-windows-latest.zip',
-        minBytes: 500
-    },
-    android: {
-        hrefPart: '/downloads/school-system-android-v1.0.apk',
-        fileName: 'school-system-android-v1.0.apk',
-        minBytes: 1024 * 1024
-    }
+const testReleaseManifest = {
+    schemaVersion: 1,
+    releases: [{
+        schemaVersion: 1,
+        releaseTag: 'beta-20260620-cb785f5',
+        channel: 'beta',
+        sourceSha: 'cb785f5'.padEnd(40, '0'),
+        generatedAt: '2026-06-20T08:00:00.000Z',
+        expiresAt: '2026-09-18T08:00:00.000Z',
+        releaseUrl: 'https://github.com/hka123321/school-system/releases/tag/beta-20260620-cb785f5',
+        platforms: {
+            windows: { platform: 'windows', version: '2026.6.20-beta.42', buildNumber: '42', status: 'ready', signed: 'unsigned', minimumOs: 'Windows 10 22H2', architectures: ['x64'], assetName: 'school-system-windows-beta.exe', assetUrl: 'https://example.test/school-system-windows-beta.exe', bytes: 90000000, sha256: 'a'.repeat(64), notes: ['内部测试版本'], buildUrl: 'https://github.com/hka123321/school-system/actions/runs/42' },
+            android: { platform: 'android', version: '2026.6.20-beta.42', buildNumber: '42', status: 'ready', signed: 'test-signed', minimumOs: 'Android 10', architectures: ['arm64-v8a'], assetName: 'school-system-android-beta.apk', assetUrl: 'https://example.test/school-system-android-beta.apk', bytes: 24000000, sha256: 'b'.repeat(64), notes: ['测试签名安装包'], buildUrl: 'https://github.com/hka123321/school-system/actions/runs/42' },
+            ios: { platform: 'ios', version: '2026.6.20-beta.42', buildNumber: '42', status: 'awaiting-signing', signed: 'unsigned', minimumOs: 'iOS 16', architectures: ['arm64'], assetName: '', assetUrl: '', bytes: 0, sha256: '', notes: ['等待 Apple 签名'], buildUrl: 'https://github.com/hka123321/school-system/actions/runs/42' }
+        }
+    }]
 };
 
 const mimeTypes = {
@@ -45,6 +51,12 @@ function resolveFilePath(urlPath) {
 function startServer() {
     if (!fs.existsSync(distDir)) throw new Error(`dist not found: ${distDir}`);
     const server = http.createServer((req, res) => {
+        if (String(req.url || '').split('?')[0] === '/releases/release-manifest.json') {
+            const body = Buffer.from(JSON.stringify(testReleaseManifest));
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': body.length });
+            res.end(body);
+            return;
+        }
         const filePath = resolveFilePath(req.url || '/');
         if (!filePath.startsWith(distDir)) {
             res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -155,52 +167,14 @@ async function openDownloadCenter(page) {
         if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
             await window.SystemRuntimeLoader.load('app-download');
         }
-        if (typeof window.renderAppDownloadCenter === 'function') window.renderAppDownloadCenter('desktop');
+        if (typeof window.renderAppDownloadCenter === 'function') window.renderAppDownloadCenter('windows');
     });
     await page.waitForFunction(() => {
         const section = document.getElementById('app-download-center');
         return !!section && section.classList.contains('active') && getComputedStyle(section).display !== 'none';
     }, null, { timeout: 30000 });
-    await page.waitForSelector('#app-download-primary-link[href]', { state: 'visible', timeout: 30000 });
-    await page.waitForSelector('#app-download-secondary-link[href]', { state: 'visible', timeout: 30000 });
-}
-
-async function verifyLinkResponse(page, selector, expected) {
-    const href = await page.getAttribute(selector, 'href');
-    if (!href || !href.includes(expected.hrefPart)) {
-        throw new Error(`${selector} href mismatch: ${href}`);
-    }
-    const response = await page.evaluate(async (url) => {
-        const result = await fetch(url, { cache: 'no-store' });
-        const buffer = await result.arrayBuffer();
-        return {
-            ok: result.ok,
-            status: result.status,
-            type: result.headers.get('content-type') || '',
-            bytes: buffer.byteLength
-        };
-    }, href);
-    if (!response.ok || response.bytes < expected.minBytes) {
-        throw new Error(`${selector} fetch failed: ${JSON.stringify(response)}`);
-    }
-    return { href, ...response };
-}
-
-async function clickAndVerifyDownload(page, selector, expected) {
-    const [download] = await Promise.all([
-        page.waitForEvent('download', { timeout: 30000 }),
-        page.click(selector)
-    ]);
-    const suggested = download.suggestedFilename();
-    const filePath = await download.path();
-    const bytes = fs.statSync(filePath).size;
-    if (suggested !== expected.fileName) {
-        throw new Error(`${selector} downloaded ${suggested}, expected ${expected.fileName}`);
-    }
-    if (bytes < expected.minBytes) {
-        throw new Error(`${selector} downloaded too few bytes: ${bytes}`);
-    }
-    return { suggested, bytes };
+    await page.waitForSelector('[data-app-download-platform="windows"]', { state: 'visible', timeout: 30000 });
+    await page.waitForFunction(() => document.getElementById('app-release-focused-detail')?.textContent?.includes('2026.6.20-beta.42'), null, { timeout: 30000 });
 }
 
 async function main() {
@@ -209,19 +183,36 @@ async function main() {
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({ acceptDownloads: true });
     const page = await context.newPage();
+    await page.route('https://api.github.com/**', (route) => route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: '[]'
+    }));
     try {
         await login(page, baseUrl);
         await openDownloadCenter(page);
-        const primaryResponse = await verifyLinkResponse(page, '#app-download-primary-link', expectedDownloads.windows);
-        const secondaryResponse = await verifyLinkResponse(page, '#app-download-secondary-link', expectedDownloads.android);
-        const primaryDownload = await clickAndVerifyDownload(page, '#app-download-primary-link', expectedDownloads.windows);
-        const secondaryDownload = await clickAndVerifyDownload(page, '#app-download-secondary-link', expectedDownloads.android);
+        await page.locator('[data-app-download-platform="ios"]').click();
+        const iosDetail = await page.locator('#app-release-focused-detail').textContent();
+        assert.match(iosDetail || '', /等待 Apple 签名/);
+        assert.equal(await page.locator('#app-download-primary-link').getAttribute('aria-disabled'), 'true');
+
+        await page.locator('[data-app-download-platform="android"]').click();
+        const androidDetail = await page.locator('#app-release-focused-detail').textContent();
+        assert.match(androidDetail || '', /测试签名/);
+        assert.equal(await page.locator('[data-app-download-platform="android"]').getAttribute('aria-selected'), 'true');
+
+        await page.locator('[data-open-release-history]').click();
+        assert.equal(await page.locator('#app-release-history-drawer').isVisible(), true);
+        await page.locator('#app-release-history-platform').selectOption('android');
+        assert.match(await page.locator('#app-release-history-list').textContent() || '', /beta-20260620-cb785f5/);
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('#app-release-history-drawer').isHidden(), true);
+
         console.log(JSON.stringify({
             ok: true,
-            primaryResponse,
-            secondaryResponse,
-            primaryDownload,
-            secondaryDownload
+            selectedPlatform: 'android',
+            iosAwaitingSigning: true,
+            historyDrawer: true
         }, null, 2));
     } finally {
         await browser.close();
