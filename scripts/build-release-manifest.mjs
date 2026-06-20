@@ -1,10 +1,12 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { pathToFileURL } from 'node:url';
 
 const rootDir = path.resolve(import.meta.dirname, '..');
 const DAY_MS = 86400000;
+const tempRoot = path.resolve(os.tmpdir());
 const PLATFORM_SPECS = Object.freeze({
   windows: { extension: '.exe', minimumOs: 'Windows 10 22H2', architectures: ['x64'], signed: 'unsigned' },
   android: { extension: '.apk', minimumOs: 'Android 10', architectures: ['arm64-v8a', 'armeabi-v7a', 'x86_64'], signed: 'test-signed' },
@@ -19,7 +21,31 @@ function required(value, name) {
 
 function resolveFromRoot(value, name) {
   const text = required(value, name);
+  if (!path.isAbsolute(text) && text.split(/[\\/]+/).some((segment) => segment === '.' || segment === '..')) {
+    throw new Error(`${name} contains a suspicious path segment`);
+  }
   return path.isAbsolute(text) ? path.normalize(text) : path.resolve(rootDir, text);
+}
+
+function isWithinOrEqual(parent, target) {
+  const relative = path.relative(parent, target);
+  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
+}
+
+function writeJsonAtomic(outputPath, value) {
+  const temporaryPath = `${outputPath}.${process.pid}.${crypto.randomBytes(8).toString('hex')}.tmp`;
+  let descriptor;
+  try {
+    descriptor = fs.openSync(temporaryPath, 'wx');
+    fs.writeFileSync(descriptor, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    fs.fsyncSync(descriptor);
+    fs.closeSync(descriptor);
+    descriptor = undefined;
+    fs.renameSync(temporaryPath, outputPath);
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+    fs.rmSync(temporaryPath, { force: true });
+  }
 }
 
 function sha256(filePath) {
@@ -47,6 +73,9 @@ export function buildReleaseManifest(options = {}) {
 
   const assetDir = resolveFromRoot(options.assetDir, 'RELEASE_ASSET_DIR');
   const outputPath = resolveFromRoot(options.outputPath, 'RELEASE_OUTPUT');
+  if (!isWithinOrEqual(rootDir, outputPath) && !isWithinOrEqual(tempRoot, outputPath)) {
+    throw new Error('RELEASE_OUTPUT must be inside the repository or system temporary directory');
+  }
   const buildUrl = required(options.buildUrl, 'RELEASE_BUILD_URL');
   try {
     const parsedBuildUrl = new URL(buildUrl);
@@ -65,12 +94,27 @@ export function buildReleaseManifest(options = {}) {
     .filter((entry) => entry.isFile())
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right, 'en'));
+  if (names.some((name) => path.resolve(assetDir, name) === path.resolve(outputPath))) {
+    throw new Error('RELEASE_OUTPUT must not collide with a release asset or source file');
+  }
+  if (path.extname(outputPath).toLowerCase() !== '.json') throw new Error('RELEASE_OUTPUT must end in .json');
+
+  const version = releaseTag.replace(/^beta-/, '').replace(/^school-system-v/, '');
+  const buildNumber = sourceSha.slice(0, 12);
 
   const platforms = {};
   for (const [platform, spec] of Object.entries(PLATFORM_SPECS)) {
-    const assetName = names.find((name) => path.extname(name).toLowerCase() === spec.extension);
+    const matches = names.filter((name) => path.extname(name).toLowerCase() === spec.extension);
+    if (matches.length > 1) throw new Error(`Multiple ${platform} assets with extension ${spec.extension} found in ${assetDir}`);
+    if (options.requireCoreAssets && platform !== 'ios' && matches.length !== 1) {
+      throw new Error(`Exactly one ${platform} ${spec.extension} asset is required`);
+    }
+    const assetName = matches[0];
     if (!assetName) {
       platforms[platform] = {
+        platform,
+        version,
+        buildNumber,
         status: platform === 'ios' ? 'awaiting-signing' : 'unavailable',
         signed: spec.signed,
         minimumOs: spec.minimumOs,
@@ -79,6 +123,7 @@ export function buildReleaseManifest(options = {}) {
         assetUrl: '',
         bytes: 0,
         sha256: '',
+        notes: [],
         buildUrl
       };
       continue;
@@ -87,6 +132,9 @@ export function buildReleaseManifest(options = {}) {
     const stats = fs.statSync(assetPath);
     if (!stats.isFile() || stats.size <= 0) throw new Error(`Release asset must be a non-empty file: ${assetPath}`);
     platforms[platform] = {
+      platform,
+      version,
+      buildNumber,
       status: 'ready',
       signed: spec.signed,
       minimumOs: spec.minimumOs,
@@ -95,6 +143,7 @@ export function buildReleaseManifest(options = {}) {
       assetUrl: releaseAssetUrl(repository, releaseTag, assetName),
       bytes: stats.size,
       sha256: sha256(assetPath),
+      notes: [],
       buildUrl
     };
   }
@@ -110,7 +159,7 @@ export function buildReleaseManifest(options = {}) {
     platforms
   };
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  writeJsonAtomic(outputPath, manifest);
   return manifest;
 }
 

@@ -2,10 +2,26 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
+import { buildReleaseManifest } from './build-release-manifest.mjs';
 
 const rootDir = path.resolve(import.meta.dirname, '..');
 const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'school-release-manifest-'));
+
+function snapshotTree(directory) {
+  const snapshot = {};
+  const visit = (current, relative = '') => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, 'en'))) {
+      const entryRelative = path.join(relative, entry.name).replace(/\\/g, '/');
+      const entryPath = path.join(current, entry.name);
+      snapshot[entryRelative] = entry.isDirectory() ? '<directory>' : fs.readFileSync(entryPath).toString('hex');
+      if (entry.isDirectory()) visit(entryPath, entryRelative);
+    }
+  };
+  visit(directory);
+  return snapshot;
+}
 
 try {
   const assetDir = path.join(fixtureDir, 'assets');
@@ -35,6 +51,14 @@ try {
   assert.strictEqual(manifest.channel, 'beta');
   assert.match(manifest.releaseTag, /^beta-/);
   assert.strictEqual(manifest.platforms.windows.status, 'ready');
+  for (const [platform, asset] of Object.entries(manifest.platforms)) {
+    assert.strictEqual(asset.platform, platform);
+    assert.ok(asset.version);
+    assert.ok(asset.buildNumber);
+    assert.ok(Array.isArray(asset.notes));
+  }
+  assert.strictEqual(manifest.platforms.windows.version, '20260620-0123456');
+  assert.strictEqual(manifest.platforms.windows.buildNumber, '0123456789ab');
   assert.strictEqual(manifest.platforms.android.signed, 'test-signed');
   assert.strictEqual(manifest.platforms.ios.status, 'awaiting-signing');
   assert.strictEqual(manifest.platforms.ios.assetName, '');
@@ -46,12 +70,19 @@ try {
   );
   assert.ok(manifest.platforms.windows.assetUrl.endsWith(`/${manifest.platforms.windows.assetName}`));
   assert.strictEqual(manifest.platforms.windows.bytes, Buffer.byteLength('windows-build-fixture'));
+  const runtimeSandbox = { URL };
+  vm.runInNewContext(fs.readFileSync(path.join(rootDir, 'public/assets/js/app-release-catalog-runtime.js'), 'utf8'), runtimeSandbox);
+  const normalized = runtimeSandbox.AppReleaseCatalogRuntime.normalizeCatalog(manifest)[0];
+  assert.strictEqual(normalized.platforms.windows.platform, 'windows');
+  assert.strictEqual(normalized.platforms.windows.version, manifest.platforms.windows.version);
+  assert.strictEqual(normalized.platforms.windows.buildNumber, manifest.platforms.windows.buildNumber);
 
   const preparedDir = path.join(fixtureDir, 'prepared');
   const inputDir = path.join(preparedDir, 'input');
   fs.mkdirSync(inputDir, { recursive: true });
   fs.writeFileSync(path.join(inputDir, 'desktop-build.exe'), 'fresh-windows');
   fs.writeFileSync(path.join(inputDir, 'mobile-build.apk'), 'fresh-android');
+  fs.writeFileSync(path.join(inputDir, 'ios-build.ipa'), 'fresh-ios');
   fs.writeFileSync(path.join(preparedDir, 'stale-package.zip'), 'stale-zip');
   fs.writeFileSync(path.join(preparedDir, 'school-system-windows-old.exe'), 'stale-windows');
 
@@ -74,10 +105,113 @@ try {
     'release-manifest.json',
     'release-notes.md',
     'school-system-android-school-system-v2026.06.20.apk',
+    'school-system-ios-school-system-v2026.06.20.ipa',
     'school-system-windows-school-system-v2026.06.20.exe'
   ]);
   assert.strictEqual(fs.existsSync(path.join(preparedDir, 'input')), false);
   assert.strictEqual(fs.existsSync(path.join(preparedDir, 'stale-package.zip')), false);
+  assert.deepStrictEqual(fs.readdirSync(fixtureDir).filter((name) => name.startsWith('.prepared.')), []);
+  const stableManifest = JSON.parse(fs.readFileSync(path.join(preparedDir, 'release-manifest.json'), 'utf8'));
+  assert.strictEqual(stableManifest.expiresAt, '');
+  assert.strictEqual(stableManifest.platforms.ios.status, 'ready');
+  assert.strictEqual(stableManifest.platforms.ios.signed, false);
+  assert.match(stableManifest.platforms.ios.sha256, /^[a-f0-9]{64}$/);
+  assert.strictEqual(stableManifest.platforms.ios.minimumOs, 'iOS 16');
+
+  const generatorOptions = (dir, outputPath) => ({
+    channel: 'stable',
+    releaseTag: 'school-system-v2026.06.20',
+    sourceSha: '0123456789abcdef0123456789abcdef01234567',
+    assetDir: dir,
+    outputPath,
+    buildUrl: 'https://github.com/example/school-system/actions/runs/789',
+    repository: 'example/school-system'
+  });
+  for (const extension of ['.exe', '.apk', '.ipa']) {
+    const duplicateDir = path.join(fixtureDir, `duplicate-${extension.slice(1)}`);
+    fs.mkdirSync(duplicateDir);
+    fs.writeFileSync(path.join(duplicateDir, `one${extension}`), 'one');
+    fs.writeFileSync(path.join(duplicateDir, `two${extension}`), 'two');
+    assert.throws(
+      () => buildReleaseManifest(generatorOptions(duplicateDir, path.join(duplicateDir, 'manifest.json'))),
+      /Multiple .* assets/
+    );
+  }
+
+  const emptyDir = path.join(fixtureDir, 'empty-asset');
+  fs.mkdirSync(emptyDir);
+  fs.writeFileSync(path.join(emptyDir, 'empty.exe'), '');
+  assert.throws(() => buildReleaseManifest(generatorOptions(emptyDir, path.join(emptyDir, 'manifest.json'))), /non-empty/);
+
+  const collisionDir = path.join(fixtureDir, 'collision');
+  fs.mkdirSync(collisionDir);
+  const collisionAsset = path.join(collisionDir, 'app.exe');
+  fs.writeFileSync(collisionAsset, 'collision');
+  assert.throws(() => buildReleaseManifest(generatorOptions(collisionDir, collisionAsset)), /collide/i);
+  assert.throws(
+    () => buildReleaseManifest(generatorOptions(collisionDir, path.join(collisionDir, 'manifest.txt'))),
+    /\.json/
+  );
+  const outsideDestination = path.join(path.parse(rootDir).root, 'school-release-invalid-destination.json');
+  assert.throws(() => buildReleaseManifest(generatorOptions(collisionDir, outsideDestination)), /repository or system temporary/);
+
+  const failedOutputDir = path.join(fixtureDir, 'failed-preservation');
+  const failedInputDir = path.join(failedOutputDir, 'input');
+  fs.mkdirSync(failedInputDir, { recursive: true });
+  fs.writeFileSync(path.join(failedInputDir, 'app.exe'), 'valid-windows');
+  fs.writeFileSync(path.join(failedInputDir, 'app.apk'), 'valid-android');
+  fs.writeFileSync(path.join(failedOutputDir, 'existing.zip'), 'keep-me');
+  const beforeFailure = snapshotTree(failedOutputDir);
+  const failedPrepare = spawnSync(process.execPath, ['scripts/prepare-github-release-assets.mjs'], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      RELEASE_INPUT_DIR: failedInputDir,
+      RELEASE_ASSET_DIR: failedOutputDir,
+      RELEASE_CHANNEL: 'stable',
+      RELEASE_TAG: 'school-system-v2026.06.20',
+      RELEASE_SOURCE_SHA: 'bad-sha',
+      RELEASE_BUILD_URL: 'https://github.com/example/school-system/actions/runs/999',
+      GITHUB_REPOSITORY: 'example/school-system'
+    }
+  });
+  assert.notStrictEqual(failedPrepare.status, 0);
+  assert.deepStrictEqual(snapshotTree(failedOutputDir), beforeFailure);
+
+  const linkedDir = path.join(fixtureDir, 'linked-output');
+  const linkedInput = path.join(linkedDir, 'input');
+  fs.mkdirSync(linkedInput, { recursive: true });
+  fs.writeFileSync(path.join(linkedInput, 'app.exe'), 'windows');
+  fs.writeFileSync(path.join(linkedInput, 'app.apk'), 'android');
+  const linkTarget = path.join(fixtureDir, 'link-target.txt');
+  fs.writeFileSync(linkTarget, 'outside');
+  let symlinkSupported = true;
+  try {
+    fs.symlinkSync(linkTarget, path.join(linkedInput, 'unsafe-link'));
+  } catch (error) {
+    if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) symlinkSupported = false;
+    else throw error;
+  }
+  if (symlinkSupported) {
+    const linkedPrepare = spawnSync(process.execPath, ['scripts/prepare-github-release-assets.mjs'], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        RELEASE_INPUT_DIR: linkedInput,
+        RELEASE_ASSET_DIR: linkedDir,
+        RELEASE_CHANNEL: 'stable',
+        RELEASE_TAG: 'school-system-v2026.06.20',
+        RELEASE_SOURCE_SHA: '0123456789abcdef0123456789abcdef01234567',
+        RELEASE_BUILD_URL: 'https://github.com/example/school-system/actions/runs/1000',
+        GITHUB_REPOSITORY: 'example/school-system'
+      }
+    });
+    assert.notStrictEqual(linkedPrepare.status, 0, 'prepare must reject linked input trees');
+  } else {
+    console.log('symlink fixture skipped: platform did not permit symlink creation');
+  }
 
   console.log(JSON.stringify({ ok: true, fixtureCleaned: true }, null, 2));
 } finally {
