@@ -10,6 +10,11 @@ def androidTestSigningMissing = androidTestSigningEnvironment.findAll { key, val
 def releasePackagingRequested = gradle.startParameter.taskNames.any { taskName ->
     taskName.toLowerCase().contains('release')
 }
+def workflowVersionName = project.findProperty('appVersionName') ?: '1.0'
+def workflowVersionCodeValue = project.findProperty('appVersionCode') ?: '1'
+if (!workflowVersionCodeValue.toString().matches(/^[1-9][0-9]*$/)) {
+    throw new GradleException('appVersionCode must be a positive integer')
+}
 
 android {
     namespace = "cn.com.schoolsystem.app"
@@ -18,8 +23,8 @@ android {
         applicationId "cn.com.schoolsystem.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode workflowVersionCodeValue.toInteger()
+        versionName workflowVersionName.toString()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

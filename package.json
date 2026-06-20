@@ -13,6 +13,7 @@
     "android:build:test": "npm run mobile:sync && cd android && gradlew.bat assembleDebug",
     "ios:sync": "npm run mobile:sync",
     "test:capacitor-package-contract": "node scripts/test-capacitor-package-contract.js",
+    "test:beta-release-workflow": "node scripts/test-beta-release-workflow.js",
     "check:syntax": "node scripts/test-syntax.js",
     "test:auth-state": "node scripts/test-auth-state.js",
     "test:login-cohort-runtime": "node scripts/test-login-cohort-runtime.js",
