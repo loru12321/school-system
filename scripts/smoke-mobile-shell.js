@@ -96,6 +96,38 @@ async function waitForMobileShellReady(page) {
     return state;
 }
 
+async function inspectMobileReleaseCenter(page) {
+    await page.evaluate(() => window.switchTab?.('app-download-center'));
+    await page.waitForSelector('#app-release-focused-detail', { state: 'visible', timeout: 45000 });
+    const firstTab = page.locator('[data-app-download-platform="windows"]');
+    await firstTab.focus();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    const keyboardSelectedPlatform = await page.locator('[data-app-download-platform][aria-selected="true"]').getAttribute('data-app-download-platform');
+    await page.locator('[data-open-release-history]').click();
+    await page.waitForSelector('#app-release-history-drawer:not([hidden])', { state: 'visible', timeout: 10000 });
+    const state = await page.evaluate(() => {
+        const rect = (selector) => {
+            const node = document.querySelector(selector);
+            if (!node) return null;
+            const value = node.getBoundingClientRect();
+            return { left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width };
+        };
+        const tabs = document.querySelector('.app-release-platform-tabs');
+        return {
+            viewportWidth: window.innerWidth,
+            detail: rect('#app-release-focused-detail'),
+            timeline: rect('#app-release-timeline'),
+            tabCount: document.querySelectorAll('[data-app-download-platform]').length,
+            tabsScrollable: !!tabs && getComputedStyle(tabs).overflowX === 'auto' && tabs.scrollWidth > tabs.clientWidth,
+            drawer: rect('.app-release-history-sheet'),
+            drawerVisible: !document.getElementById('app-release-history-drawer')?.hidden,
+        };
+    });
+    await page.locator('[data-close-release-history]').click();
+    return { ...state, keyboardSelectedPlatform };
+}
+
 async function main() {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({
@@ -119,6 +151,7 @@ async function main() {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
     const state = await waitForMobileShellReady(page);
+    const releaseCenterState = await inspectMobileReleaseCenter(page);
 
     await browser.close();
 
@@ -134,12 +167,18 @@ async function main() {
     assert.strictEqual(state.perfRuntimeLoaded, false, 'perf-mobile runtime should not load during normal mobile bootstrap');
     assert.ok(state.currentCohortId, 'cohort was not selected');
     assert.ok(state.rawDataLen > 0, 'exam data was not loaded');
+    assert.strictEqual(releaseCenterState.tabCount, 3, 'release center should expose all three native platforms');
+    assert.strictEqual(releaseCenterState.keyboardSelectedPlatform, 'ios', 'arrow keys should reach every platform tab');
+    assert.ok(releaseCenterState.timeline.top >= releaseCenterState.detail.bottom - 1, 'mobile release timeline should follow focused detail');
+    assert.ok(releaseCenterState.tabsScrollable, 'mobile platform tabs should scroll horizontally');
+    assert.ok(releaseCenterState.drawerVisible, 'mobile release history drawer should open');
+    assert.ok(releaseCenterState.drawer.width >= releaseCenterState.viewportWidth - 2, 'mobile release history drawer should fill the viewport width');
     assert.ok(
         !actionableMessages.some((message) => /ReferenceError|TypeError|scrollActiveRailChipIntoView|pageerror/i.test(message)),
         `mobile shell console errors found: ${actionableMessages.join('\n')}`
     );
 
-    console.log(JSON.stringify({ state, actionableMessages }, null, 2));
+    console.log(JSON.stringify({ state, releaseCenterState, actionableMessages }, null, 2));
 }
 
 main().catch((error) => {
