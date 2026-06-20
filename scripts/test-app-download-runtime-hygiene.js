@@ -9,6 +9,18 @@ const html = fs.readFileSync(path.resolve(__dirname, '../src/index.html'), 'utf8
 const verifier = fs.readFileSync(path.resolve(__dirname, '../scripts/verify-release-assets.mjs'), 'utf8');
 const scripts = packageJson.scripts || {};
 
+['windows', 'android', 'ios'].forEach((platform) => {
+    assert.ok(html.includes(`data-app-download-platform="${platform}"`), `download center should expose the ${platform} tab`);
+});
+assert.ok(html.includes('id="app-release-focused-detail"'), 'download center should expose the focused platform detail');
+assert.ok(html.includes('id="app-release-timeline"'), 'download center should expose the release timeline');
+assert.ok(html.includes('id="app-release-history-drawer"'), 'download center should expose the release history drawer');
+assert.ok(html.includes('id="app-release-history-platform"'), 'history drawer should expose a platform filter');
+assert.ok(html.includes('id="app-release-history-channel"'), 'history drawer should expose a channel filter');
+['loadReleaseCatalog', 'renderFocusedPlatform', 'renderReleaseTimeline', 'openReleaseHistory', 'filterReleaseHistory'].forEach((name) => {
+    assert.ok(source.includes(`function ${name}`), `download runtime should define ${name}`);
+});
+
 assert.ok(source.includes('getDownloadAssetModel'), 'download center should resolve an explicit asset model');
 assert.ok(source.includes('isVerifiedReleaseAsset'), 'download center should distinguish verified release assets from fallback links');
 assert.ok(source.includes('getPeerDownloadChannelKey'), 'download center should expose both Android and Windows download actions');
@@ -35,8 +47,9 @@ assert.ok(source.includes('window.PUBLIC_DOWNLOAD_ALLOW_UNVERIFIED_LINKS === tru
 assert.ok(!source.includes('return !!state.lastError || !state.lastFetchedAt || !state.releases.length;'), 'download center should not enable fallback download links before release verification');
 assert.ok(!source.includes('state.releases)[0] || null'), 'download center should not silently use the first release when platform asset is missing');
 assert.ok(html.includes('id="app-download-primary-link" class="btn btn-blue is-disabled"'), 'download center template should start with the primary download disabled');
-assert.ok(html.includes('id="app-download-secondary-link" class="btn btn-blue is-disabled"'), 'download center template should start with the secondary download disabled');
-assert.ok(html.includes('id="app-download-link-input" type="text" readonly value=""'), 'download center template should not seed an unverified asset URL');
+const downloadTemplate = html.match(/<script type="text\/html" id="lazy-section-template-app-download-center">([\s\S]*?)<\/script>/)?.[1] || '';
+assert.ok(downloadTemplate, 'download center lazy template should exist');
+assert.ok(!/\sonclick=/.test(downloadTemplate), 'download center interactions should not use inline click handlers');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:app-download-runtime-hygiene'), 'fast release check should guard the download center');
 assert.ok(verifier.includes("process.env.RELEASE_ASSETS_ALLOW_MISSING === 'true'"), 'release asset verifier should support non-failing report mode');
 assert.ok(verifier.includes("reason: 'release-unavailable'"), 'release asset verifier should report missing latest releases explicitly');

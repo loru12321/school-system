@@ -5,7 +5,7 @@
         window.PUBLIC_DOWNLOAD_RELEASE_PAGE_URL
         || 'https://github.com/hka123321/school-system/releases/latest'
     ).trim();
-    const RELEASES_API_URL = 'https://api.github.com/repos/hka123321/school-system/releases?per_page=12';
+    const RELEASES_API_URL = 'https://api.github.com/repos/hka123321/school-system/releases?per_page=50';
     const RELEASE_CACHE_TTL_MS = 5 * 60 * 1000;
 
     function isLocalFileRuntime() {
@@ -273,6 +273,475 @@
 
     function ensureArray(value) {
         return Array.isArray(value) ? value : [];
+    }
+
+    const PLATFORM_KEYS = Object.freeze(['windows', 'android', 'ios']);
+    const PLATFORM_LABELS = Object.freeze({ windows: 'Windows', android: 'Android', ios: 'iOS' });
+    const SELECTED_PLATFORM_STORAGE_KEY = 'APP_RELEASE_SELECTED_PLATFORM';
+    const CATALOG_STORAGE_KEY = 'APP_RELEASE_CATALOG_CACHE';
+    let historyTrigger = null;
+    let releaseCatalogPromise = null;
+
+    function getReleaseCatalogRuntime() {
+        return window.AppReleaseCatalogRuntime || null;
+    }
+
+    function getBrowserStorage(name) {
+        try {
+            return window[name] || null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function readStorage(storage, key) {
+        try {
+            return storage?.getItem(key) || '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function writeStorage(storage, key, value) {
+        try {
+            storage?.setItem(key, value);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function getInitialReleasePlatform() {
+        const saved = readStorage(getBrowserStorage('sessionStorage'), SELECTED_PLATFORM_STORAGE_KEY);
+        if (PLATFORM_KEYS.includes(saved)) return saved;
+        const detected = getReleaseCatalogRuntime()?.detectPlatform?.(window.navigator?.userAgent || '');
+        return PLATFORM_KEYS.includes(detected) ? detected : 'windows';
+    }
+
+    const releaseCatalogState = {
+        selectedPlatform: getInitialReleasePlatform(),
+        releases: [],
+        loading: false,
+        lastError: '',
+        lastFetchedAt: 0,
+        historyFilters: { platform: '', channel: '' }
+    };
+
+    function normalizeReleaseCatalog(payload) {
+        const runtime = getReleaseCatalogRuntime();
+        return runtime ? runtime.normalizeCatalog(payload) : [];
+    }
+
+    function mergeReleaseCatalog(...groups) {
+        const releasesByTag = new Map();
+        groups.flat().forEach((release) => {
+            if (!release?.releaseTag) return;
+            const previous = releasesByTag.get(release.releaseTag) || {};
+            const previousPlatforms = previous.platforms || {};
+            const nextPlatforms = release.platforms || {};
+            releasesByTag.set(release.releaseTag, {
+                ...previous,
+                ...release,
+                platforms: {
+                    windows: { ...(previousPlatforms.windows || {}), ...(nextPlatforms.windows || {}) },
+                    android: { ...(previousPlatforms.android || {}), ...(nextPlatforms.android || {}) },
+                    ios: { ...(previousPlatforms.ios || {}), ...(nextPlatforms.ios || {}) }
+                }
+            });
+        });
+        return Array.from(releasesByTag.values()).sort((left, right) => {
+            return (Date.parse(right.generatedAt || '') || 0) - (Date.parse(left.generatedAt || '') || 0);
+        });
+    }
+
+    function mapGitHubAsset(platform, release, definition) {
+        const assets = ensureArray(release?.assets);
+        const source = assets.find((asset) => definition.pattern.test(String(asset?.name || '')));
+        if (!source) {
+            return {
+                platform,
+                version: String(release?.tag_name || ''),
+                buildNumber: '',
+                status: platform === 'ios' ? 'awaiting-signing' : 'unavailable',
+                signed: platform === 'ios' ? 'unsigned' : definition.signed,
+                minimumOs: definition.minimumOs,
+                architectures: definition.architectures,
+                assetName: '',
+                assetUrl: '',
+                bytes: 0,
+                sha256: '',
+                notes: [],
+                buildUrl: String(release?.html_url || '')
+            };
+        }
+        return {
+            platform,
+            version: String(release?.tag_name || ''),
+            buildNumber: '',
+            status: 'available-unverified',
+            signed: definition.signed,
+            minimumOs: definition.minimumOs,
+            architectures: definition.architectures,
+            assetName: String(source.name || ''),
+            assetUrl: String(source.browser_download_url || ''),
+            bytes: Number(source.size || 0),
+            sha256: '',
+            notes: ['等待发布清单完成 SHA-256 校验'],
+            buildUrl: String(release?.html_url || '')
+        };
+    }
+
+    function mapGitHubReleaseToCatalog(release) {
+        const definitions = {
+            windows: { pattern: /\.exe$/i, minimumOs: 'Windows 10 22H2', architectures: ['x64'], signed: 'unsigned' },
+            android: { pattern: /\.apk$/i, minimumOs: 'Android 10', architectures: ['arm64-v8a', 'armeabi-v7a', 'x86_64'], signed: 'test-signed' },
+            ios: { pattern: /\.ipa$/i, minimumOs: 'iOS 16', architectures: ['arm64'], signed: 'unsigned' }
+        };
+        const releaseTag = String(release?.tag_name || '').trim();
+        if (!releaseTag) return null;
+        return {
+            schemaVersion: 1,
+            releaseTag,
+            channel: release?.prerelease || /^beta-/i.test(releaseTag) ? 'beta' : 'stable',
+            sourceSha: '',
+            generatedAt: String(release?.published_at || release?.created_at || ''),
+            expiresAt: '',
+            releaseUrl: String(release?.html_url || ''),
+            platforms: Object.fromEntries(PLATFORM_KEYS.map((platform) => [
+                platform,
+                mapGitHubAsset(platform, release, definitions[platform])
+            ]))
+        };
+    }
+
+    async function fetchJson(url) {
+        const response = await fetch(url, {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store'
+        });
+        if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+        return response.json();
+    }
+
+    async function fetchAttachedReleaseManifests(githubReleases) {
+        const manifestUrls = ensureArray(githubReleases).map((release) => {
+            const asset = ensureArray(release?.assets).find((item) => String(item?.name || '').toLowerCase() === 'release-manifest.json');
+            return String(asset?.browser_download_url || '');
+        }).filter((url) => /^https:\/\//i.test(url));
+        if (!manifestUrls.length) return [];
+        const results = await Promise.allSettled(manifestUrls.map((url) => fetchJson(url)));
+        return results.flatMap((result) => result.status === 'fulfilled' ? normalizeReleaseCatalog(result.value) : []);
+    }
+
+    function restoreCachedReleaseCatalog() {
+        const raw = readStorage(getBrowserStorage('localStorage'), CATALOG_STORAGE_KEY);
+        if (!raw) return [];
+        try {
+            return normalizeReleaseCatalog({ releases: JSON.parse(raw) });
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function persistReleaseCatalog(releases) {
+        if (!releases.length) return;
+        writeStorage(getBrowserStorage('localStorage'), CATALOG_STORAGE_KEY, JSON.stringify(releases));
+    }
+
+    async function loadReleaseCatalog(force = false) {
+        const runtime = getReleaseCatalogRuntime();
+        if (!runtime) {
+            releaseCatalogState.lastError = '版本目录运行时未加载';
+            renderReleaseCenter();
+            return releaseCatalogState.releases;
+        }
+        if (!force && releaseCatalogState.lastFetchedAt
+            && Date.now() - releaseCatalogState.lastFetchedAt < RELEASE_CACHE_TTL_MS
+            && releaseCatalogState.releases.length) {
+            return releaseCatalogState.releases;
+        }
+        if (releaseCatalogPromise) return releaseCatalogPromise;
+
+        releaseCatalogState.loading = true;
+        releaseCatalogState.lastError = '';
+        renderReleaseCenter();
+        releaseCatalogPromise = Promise.allSettled([
+            fetchJson('./releases/release-manifest.json'),
+            fetchJson(RELEASES_API_URL)
+        ]).then(async ([cachedResult, githubResult]) => {
+            const cachedManifest = cachedResult.status === 'fulfilled'
+                ? normalizeReleaseCatalog(cachedResult.value)
+                : [];
+            const githubPayload = githubResult.status === 'fulfilled' ? ensureArray(githubResult.value) : [];
+            const githubCatalog = normalizeReleaseCatalog({
+                releases: githubPayload.map(mapGitHubReleaseToCatalog).filter(Boolean)
+            });
+            const attachedManifests = await fetchAttachedReleaseManifests(githubPayload);
+            const fallback = restoreCachedReleaseCatalog();
+            const merged = mergeReleaseCatalog(githubCatalog, fallback, cachedManifest, attachedManifests)
+                .filter((release) => !runtime.isExpired(release));
+            if (!merged.length) {
+                throw new Error('没有读取到可用的版本目录');
+            }
+            releaseCatalogState.releases = merged;
+            releaseCatalogState.lastFetchedAt = Date.now();
+            persistReleaseCatalog(merged);
+            if (cachedResult.status === 'rejected' && githubResult.status === 'rejected') {
+                releaseCatalogState.lastError = '网络不可用，正在显示上次成功读取的版本';
+            }
+            return merged;
+        }).catch((error) => {
+            const fallback = restoreCachedReleaseCatalog();
+            if (fallback.length) releaseCatalogState.releases = fallback;
+            releaseCatalogState.lastError = error instanceof Error ? error.message : String(error);
+            return releaseCatalogState.releases;
+        }).finally(() => {
+            releaseCatalogState.loading = false;
+            releaseCatalogPromise = null;
+            renderReleaseCenter();
+        });
+        return releaseCatalogPromise;
+    }
+
+    function getLatestReleaseForPlatform(platform) {
+        return releaseCatalogState.releases.find((release) => {
+            const status = release?.platforms?.[platform]?.status || 'unavailable';
+            return status !== 'unavailable';
+        }) || null;
+    }
+
+    function getAssetStatusLabel(asset) {
+        if (asset?.status === 'ready') return '安装包已就绪';
+        if (asset?.status === 'awaiting-signing') return '等待签名';
+        if (asset?.status === 'available-unverified') return '等待完整性校验';
+        return '暂无安装包';
+    }
+
+    function getPlatformDescription(platform, asset) {
+        if (platform === 'ios' && asset?.status !== 'ready') {
+            return 'iOS 工程已就绪，正在等待 Apple 签名、TestFlight 与 App Store 配置。';
+        }
+        if (platform === 'android' && asset?.signed === 'test-signed') {
+            return '当前为测试签名安装包，适合内部验证；正式发布后会在这里保留对应历史版本。';
+        }
+        if (platform === 'windows' && asset?.signed === 'unsigned') {
+            return '当前为未签名测试安装包，Windows 可能显示安全提示；正式证书配置后状态会同步更新。';
+        }
+        return ensureArray(asset?.notes)[0] || '当前平台尚无通过完整性校验的安装包。';
+    }
+
+    function buildAppleProgressHtml(asset) {
+        const ready = asset?.status === 'ready';
+        const steps = [
+            ['01', '工程已就绪'],
+            ['02', '构建配置'],
+            ['03', 'Apple Developer'],
+            ['04', '签名与上传'],
+            ['05', 'TestFlight / App Store']
+        ];
+        return `<div class="app-release-progress" aria-label="iOS 发布进度">${steps.map((step, index) => {
+            const current = !ready && index === 2 ? ' is-current' : '';
+            return `<div class="app-release-progress-item${current}"><span>${escapeHtml(step[0])}</span><strong>${escapeHtml(step[1])}</strong></div>`;
+        }).join('')}</div>`;
+    }
+
+    function renderFocusedPlatform(platform = releaseCatalogState.selectedPlatform) {
+        const root = document.getElementById('app-release-focused-detail');
+        if (!root) return;
+        const runtime = getReleaseCatalogRuntime();
+        const release = getLatestReleaseForPlatform(platform);
+        const asset = release?.platforms?.[platform] || { status: 'unavailable' };
+        const downloadable = !!runtime?.isDownloadable(asset);
+        const version = asset.version || (platform === 'ios' ? '工程已就绪' : '暂无可用版本');
+        const architectures = ensureArray(asset.architectures).join(' · ') || '待公布';
+        const checksum = String(asset.sha256 || '');
+        const appleProgress = platform === 'ios' && !downloadable ? buildAppleProgressHtml(asset) : '';
+        const downloadAction = downloadable
+            ? `<a id="app-download-primary-link" class="btn btn-blue" href="${escapeHtml(asset.assetUrl)}" download="${escapeHtml(asset.assetName)}"><i class="ti ti-download"></i> 下载最新版本</a>`
+            : '<a id="app-download-primary-link" class="btn btn-blue is-disabled" aria-disabled="true" tabindex="-1"><i class="ti ti-clock"></i> 查看构建状态</a>';
+        const checksumAction = checksum
+            ? `<button type="button" class="btn btn-gray" data-copy-release-checksum="${escapeHtml(checksum)}"><i class="ti ti-copy"></i> 复制 SHA-256</button>`
+            : '';
+
+        root.innerHTML = `
+            <p class="app-release-eyebrow">${escapeHtml(PLATFORM_LABELS[platform])} · ${escapeHtml(release?.channel || 'catalog')}</p>
+            <h3>${escapeHtml(version)}</h3>
+            <p>${escapeHtml(getPlatformDescription(platform, asset))}</p>
+            ${appleProgress}
+            <div class="app-release-meta">
+                <div><span>发布标签</span><strong>${escapeHtml(release?.releaseTag || '等待发布')}</strong></div>
+                <div><span>构建号</span><strong>${escapeHtml(asset.buildNumber || '待公布')}</strong></div>
+                <div><span>最低系统</span><strong>${escapeHtml(asset.minimumOs || '待公布')}</strong></div>
+                <div><span>架构</span><strong>${escapeHtml(architectures)}</strong></div>
+                <div><span>签名</span><strong>${escapeHtml(asset.signed || '待配置')}</strong></div>
+                <div><span>文件大小</span><strong>${escapeHtml(formatSize(asset.bytes))}</strong></div>
+                <div><span>状态</span><strong>${escapeHtml(getAssetStatusLabel(asset))}</strong></div>
+                <div><span>SHA-256</span><strong title="${escapeHtml(checksum)}">${escapeHtml(checksum ? `${checksum.slice(0, 12)}…` : '等待校验')}</strong></div>
+            </div>
+            <div class="app-release-actions">${downloadAction}${checksumAction}</div>`;
+    }
+
+    function renderReleaseTimeline(platform = releaseCatalogState.selectedPlatform) {
+        const root = document.getElementById('app-release-timeline');
+        if (!root) return;
+        const releases = releaseCatalogState.releases.filter((release) => {
+            return release?.platforms?.[platform]?.status !== 'unavailable';
+        }).slice(0, 6);
+        root.innerHTML = releases.length ? releases.map((release) => {
+            const asset = release.platforms?.[platform] || {};
+            return `<article class="app-release-timeline-item">
+                <strong>${escapeHtml(release.releaseTag)}</strong>
+                <span>${escapeHtml(release.channel === 'stable' ? '稳定版' : '测试版')} · ${escapeHtml(formatDate(release.generatedAt))}</span>
+                <p>${escapeHtml(getAssetStatusLabel(asset))}</p>
+            </article>`;
+        }).join('') : '<p class="app-release-empty">当前平台还没有发布记录。</p>';
+    }
+
+    function updateReleaseSyncStatus() {
+        const status = document.getElementById('app-release-sync-status');
+        if (!status) return;
+        if (releaseCatalogState.loading) {
+            status.textContent = '正在读取版本目录…';
+        } else if (releaseCatalogState.lastError) {
+            status.textContent = releaseCatalogState.lastError;
+        } else if (releaseCatalogState.lastFetchedAt) {
+            status.textContent = `已同步 ${formatDate(releaseCatalogState.lastFetchedAt, true)}`;
+        } else {
+            status.textContent = '等待同步版本目录';
+        }
+    }
+
+    function setSelectedPlatform(platform) {
+        const normalized = platform === 'desktop' ? 'windows' : platform;
+        if (!PLATFORM_KEYS.includes(normalized)) return false;
+        releaseCatalogState.selectedPlatform = normalized;
+        writeStorage(getBrowserStorage('sessionStorage'), SELECTED_PLATFORM_STORAGE_KEY, normalized);
+        renderFocusedPlatform(normalized);
+        renderReleaseTimeline(normalized);
+        document.querySelectorAll('[data-app-download-platform]').forEach((button) => {
+            const selected = button.dataset.appDownloadPlatform === normalized;
+            button.setAttribute('aria-selected', String(selected));
+            button.tabIndex = selected ? 0 : -1;
+        });
+        return true;
+    }
+
+    function openReleaseHistory(event) {
+        const drawer = document.getElementById('app-release-history-drawer');
+        if (!drawer) return;
+        historyTrigger = event?.currentTarget || document.activeElement;
+        drawer.hidden = false;
+        document.body.classList.add('app-release-history-open');
+        filterReleaseHistory();
+        drawer.querySelector('[data-close-release-history]')?.focus();
+    }
+
+    function closeReleaseHistory() {
+        const drawer = document.getElementById('app-release-history-drawer');
+        if (!drawer || drawer.hidden) return;
+        drawer.hidden = true;
+        document.body.classList.remove('app-release-history-open');
+        historyTrigger?.focus?.();
+        historyTrigger = null;
+    }
+
+    function filterReleaseHistory() {
+        const runtime = getReleaseCatalogRuntime();
+        const platform = document.getElementById('app-release-history-platform')?.value || '';
+        const channel = document.getElementById('app-release-history-channel')?.value || '';
+        const list = document.getElementById('app-release-history-list');
+        if (!list || !runtime) return;
+        releaseCatalogState.historyFilters = { platform, channel };
+        const releases = runtime.filterCatalog(releaseCatalogState.releases, { platform, channel });
+        list.innerHTML = releases.length ? releases.map((release) => {
+            const selectedPlatform = platform || releaseCatalogState.selectedPlatform;
+            const asset = release.platforms?.[selectedPlatform] || {};
+            return `<article class="app-release-history-item">
+                <strong>${escapeHtml(release.releaseTag)}</strong>
+                <span>${escapeHtml(release.channel === 'stable' ? '稳定版' : '测试版')} · ${escapeHtml(formatDate(release.generatedAt))}</span>
+                <p>${escapeHtml(PLATFORM_LABELS[selectedPlatform] || '全部平台')} · ${escapeHtml(asset.version || getAssetStatusLabel(asset))}</p>
+            </article>`;
+        }).join('') : '<p class="app-release-empty">没有符合条件的历史版本。</p>';
+    }
+
+    function trapReleaseHistoryFocus(event) {
+        const drawer = document.getElementById('app-release-history-drawer');
+        if (!drawer || drawer.hidden || event.key !== 'Tab') return;
+        const focusable = Array.from(drawer.querySelectorAll('button:not([disabled]), select:not([disabled]), a[href]'));
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
+    function bindReleaseCenterEvents() {
+        const root = document.getElementById('app-download-center');
+        if (!root || root.dataset.releaseCenterBound === '1') return;
+        root.dataset.releaseCenterBound = '1';
+        root.addEventListener('click', (event) => {
+            const tab = event.target.closest('[data-app-download-platform]');
+            if (tab) {
+                setSelectedPlatform(tab.dataset.appDownloadPlatform || 'windows');
+                return;
+            }
+            const historyButton = event.target.closest('[data-open-release-history]');
+            if (historyButton) {
+                openReleaseHistory({ currentTarget: historyButton });
+                return;
+            }
+            if (event.target.closest('[data-close-release-history]')) {
+                closeReleaseHistory();
+                return;
+            }
+            if (event.target.closest('[data-retry-release-catalog]')) {
+                loadReleaseCatalog(true);
+                return;
+            }
+            const checksumButton = event.target.closest('[data-copy-release-checksum]');
+            if (checksumButton) {
+                copyText(checksumButton.dataset.copyReleaseChecksum || '', 'SHA-256 已复制');
+                return;
+            }
+            const drawer = event.target.closest('#app-release-history-drawer');
+            if (drawer && event.target === drawer) closeReleaseHistory();
+        });
+        root.addEventListener('keydown', (event) => {
+            const tab = event.target.closest('[data-app-download-platform]');
+            if (tab && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                const tabs = Array.from(root.querySelectorAll('[data-app-download-platform]'));
+                const current = tabs.indexOf(tab);
+                const next = event.key === 'Home' ? 0
+                    : event.key === 'End' ? tabs.length - 1
+                        : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+                event.preventDefault();
+                tabs[next]?.focus();
+                tabs[next]?.click();
+                return;
+            }
+            trapReleaseHistoryFocus(event);
+        });
+        root.querySelector('#app-release-history-platform')?.addEventListener('change', filterReleaseHistory);
+        root.querySelector('#app-release-history-channel')?.addEventListener('change', filterReleaseHistory);
+    }
+
+    function renderReleaseCenter() {
+        const root = document.getElementById('app-download-center');
+        if (!root) return false;
+        bindReleaseCenterEvents();
+        setSelectedPlatform(releaseCatalogState.selectedPlatform);
+        updateReleaseSyncStatus();
+        const iosStatus = root.querySelector('[data-ios-status]');
+        if (iosStatus) {
+            const iosRelease = getLatestReleaseForPlatform('ios');
+            iosStatus.textContent = iosRelease?.platforms?.ios?.status === 'ready' ? '已上架' : '待签名';
+        }
+        return true;
     }
 
     function normalizePlatformVersion(entry, fallbackLabel = '') {
@@ -1208,26 +1677,9 @@
             root = window.ensureLazySectionLoaded('app-download-center') || root;
         }
         if (!root) return false;
-
-        state.pagePlatform = selected === 'desktop' ? 'desktop' : 'android';
-        const channel = getChannel(state.pagePlatform);
-
-        renderPlatformGrid(root, state.pagePlatform);
-        renderHero(root, channel);
-        renderStatusGrid(root, state.pagePlatform);
-        renderMetaGrid(root, channel);
-        renderFeatures(root, channel);
-        renderScenes(root, channel);
-        renderInstallSteps(root, channel);
-        renderReleases(root, state.pagePlatform);
-        renderSpecs(root, channel);
-        bindActions(root, channel);
-
-        if (!state.releases.length && !state.loading) {
-            refreshReleaseCatalog(false);
-        }
-
-        return true;
+        const requested = selected === 'desktop' ? 'windows' : selected;
+        if (PLATFORM_KEYS.includes(requested)) releaseCatalogState.selectedPlatform = requested;
+        return renderReleaseCenter();
     }
 
     function ensureModal() {
@@ -1494,7 +1946,7 @@
     }
 
     function refreshSurfaces() {
-        renderAppDownloadCenter(state.pagePlatform);
+        renderAppDownloadCenter(releaseCatalogState.selectedPlatform);
         const backdrop = document.getElementById('version-center-backdrop');
         if (backdrop && backdrop.style.display !== 'none') renderModal();
         syncToolbarButton();
@@ -1566,31 +2018,42 @@
     }
 
     document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeReleaseHistory();
         if (event.key === 'Escape' && document.body.classList.contains('version-center-open')) {
             closeModal();
         }
     });
 
     window.renderAppDownloadCenter = renderAppDownloadCenter;
-    window.setAppDownloadPlatform = function (type = 'android') {
-        state.pagePlatform = type === 'desktop' ? 'desktop' : 'android';
-        return renderAppDownloadCenter(state.pagePlatform);
+    window.setAppDownloadPlatform = function (type = releaseCatalogState.selectedPlatform) {
+        return setSelectedPlatform(type);
     };
-    window.copyAppDownloadLink = function (type = state.pagePlatform) {
-        const channel = getChannel(type);
-        const latestRelease = getLatestReleaseForChannel(channel.key);
-        return copyText(latestRelease?.assets?.[channel.key]?.url || channel.url, `${channel.label}链接已复制`);
+    window.copyAppDownloadLink = function (type = releaseCatalogState.selectedPlatform) {
+        const platform = type === 'desktop' ? 'windows' : type;
+        const release = getLatestReleaseForPlatform(platform);
+        const asset = release?.platforms?.[platform] || {};
+        return copyText(asset.assetUrl || '', `${PLATFORM_LABELS[platform] || '应用'}链接已复制`);
     };
-    window.copyAppDownloadChecksum = function (type = state.pagePlatform) {
-        const channel = getChannel(type);
-        const latestRelease = getLatestReleaseForChannel(channel.key);
-        return copyText(buildDigest(channel, latestRelease), `${channel.shortLabel}说明已复制`);
+    window.copyAppDownloadChecksum = function (type = releaseCatalogState.selectedPlatform) {
+        const platform = type === 'desktop' ? 'windows' : type;
+        const release = getLatestReleaseForPlatform(platform);
+        return copyText(release?.platforms?.[platform]?.sha256 || '', `${PLATFORM_LABELS[platform] || '应用'}校验值已复制`);
     };
+    window.AppReleaseCenter = Object.freeze({
+        loadReleaseCatalog,
+        renderFocusedPlatform,
+        renderReleaseTimeline,
+        openReleaseHistory,
+        closeReleaseHistory,
+        filterReleaseHistory,
+        setSelectedPlatform,
+        getReleases: () => releaseCatalogState.releases.slice()
+    });
     window.VersionCenter = {
         openModal,
         closeModal,
         checkForUpdates: (options = {}) => performVersionCheck(options),
-        refresh: () => refreshReleaseCatalog(true),
+        refresh: () => Promise.all([refreshReleaseCatalog(true), loadReleaseCatalog(true)]),
         getCurrentBuildInfo: () => getBuildInfo(detectRuntimeChannel()),
         getReleases: () => state.releases.slice()
     };
@@ -1599,7 +2062,7 @@
         window.Auth.openVersionCenterModal = openModal;
     }
     installToolbarObserver();
-    renderAppDownloadCenter(state.pagePlatform);
-    refreshReleaseCatalog(false);
+    renderAppDownloadCenter(releaseCatalogState.selectedPlatform);
+    loadReleaseCatalog(false);
     window.__APP_DOWNLOAD_RUNTIME_PATCHED__ = true;
 })();

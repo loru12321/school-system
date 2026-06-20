@@ -4099,114 +4099,89 @@
         <script type="text/html" id="lazy-section-template-app-download-center">
             <div id="app-download-center" class="section card-box analysis-workspace analysis-workspace-version">
                 <div class="module-desc-bar analysis-hero" style="border-color:#16a34a;">
-                    <h3><i class="ti ti-download"></i> 应用下载中心 <span class="badge" style="background:#16a34a;">Android + Desktop</span></h3>
-                    <p><strong>一句话目的：</strong>在同一个入口里统一分发安卓 APK 和 Windows 桌面 EXE。</p>
-                    <p><strong>推荐顺序：</strong>先选择终端，再复制链接或直接下载；如需统一转发，优先使用 GitHub release 最新链接。</p>
+                    <h3><i class="ti ti-download"></i> 应用下载中心 <span class="badge" style="background:#16a34a;">Windows · Android · iOS</span></h3>
+                    <p><strong>一句话目的：</strong>在同一个版本中心查找三端最新安装包、签名状态与历史版本。</p>
+                    <p><strong>推荐顺序：</strong>先选择平台，再核对版本、校验值与系统要求；需要旧版本时打开完整历史。</p>
                     <div class="analysis-scan-strip">
                         <div class="analysis-scan-item">
                             <span class="analysis-scan-label">Platform</span>
-                            <strong class="analysis-scan-value">Android / Desktop</strong>
-                            <span class="analysis-scan-note">同一页面切换安卓下载与桌面端下载，避免手机包和电脑包发混。</span>
+                            <strong class="analysis-scan-value">三端统一</strong>
+                            <span class="analysis-scan-note">Windows、Android 与 iOS 使用同一版本目录，避免安装包发混。</span>
                         </div>
                         <div class="analysis-scan-item">
                             <span class="analysis-scan-label">Release</span>
-                            <strong class="analysis-scan-value">Latest GitHub Release</strong>
-                            <span class="analysis-scan-note">网页版入口、APK 与 EXE 会统一跟随最新 release 更新。</span>
+                            <strong class="analysis-scan-value">最新与历史</strong>
+                            <span class="analysis-scan-note">测试版保留 90 天，稳定版永久保留，并展示每次源码对应版本。</span>
                         </div>
                         <div class="analysis-scan-item">
-                            <span class="analysis-scan-label">Delivery</span>
-                            <strong class="analysis-scan-value">链接 / 说明 / 分发</strong>
-                            <span class="analysis-scan-note">先点平台卡片，再拿对应链接，适合学校统一转发给教师和电脑端使用者。</span>
+                            <span class="analysis-scan-label">Integrity</span>
+                            <strong class="analysis-scan-value">状态 / SHA-256</strong>
+                            <span class="analysis-scan-note">只有已生成且通过完整性校验的安装包才会开放下载。</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="sec-head analysis-shell-head app-download-shell-head">
-                    <h2><i class="ti ti-download"></i> 双端下载分发中心</h2>
+                    <h2><i class="ti ti-devices"></i> 三端版本中心</h2>
                     <div class="analysis-action-stack">
-                        <div class="analysis-action-note">保留安卓 APK 与桌面端 EXE 的统一入口，同时继续兼容现有模块冒烟与巡检校验。</div>
+                        <div class="analysis-action-note">每次源码变更对应一个测试版；正式标签对应长期保留的稳定版。</div>
                     </div>
                 </div>
 
-                <section class="app-download-stage">
-                    <div class="app-download-stage-surface">
-                        <div class="app-download-stage-head">
-                            <span class="app-download-kicker">Unified Download Hub</span>
-                            <h2 id="app-download-hero-title">一个入口，同时分发安卓与桌面端</h2>
-                            <p id="app-download-hero-copy">点击下方平台卡片，即可切换 Android APK 与 Windows EXE 的对应下载链接。</p>
+                <section class="app-release-center" aria-labelledby="app-release-center-title">
+                    <div class="app-release-center-head">
+                        <div>
+                            <span class="app-release-kicker">Release Center</span>
+                            <h2 id="app-release-center-title">选择系统端，查看对应最新版本</h2>
                         </div>
-
-                        <div id="app-download-platform-grid" class="app-download-platform-grid"></div>
-
-                        <div class="app-download-stage-actions">
-                            <a id="app-download-primary-link" class="btn btn-blue is-disabled" aria-disabled="true" tabindex="-1" data-app-download-primary="true"><i class="ti ti-download"></i> 等待校验安装包</a>
-                            <button type="button" class="btn btn-gray" id="app-download-copy-link"><i class="ti ti-link"></i> 复制下载链接</button>
-                            <a id="app-download-release-link" class="btn btn-green" href="https://github.com/hka123321/school-system/releases/latest" target="_blank" rel="noopener"><i class="ti ti-brand-github"></i> 查看 Release</a>
+                        <div class="app-release-center-actions">
+                            <span id="app-release-sync-status" role="status">正在读取版本目录…</span>
+                            <button type="button" class="btn btn-gray" data-retry-release-catalog><i class="ti ti-refresh"></i> 刷新</button>
+                            <button type="button" class="btn btn-gray" data-open-release-history><i class="ti ti-history"></i> 完整历史</button>
                         </div>
+                    </div>
 
-                        <div class="app-download-linkbar">
-                            <label>当前下载链接</label>
-                            <div class="app-download-linkfield">
-                                <input id="app-download-link-input" type="text" readonly value="">
-                                <button type="button" class="btn btn-gray" onclick="copyAppDownloadLink()"><i class="ti ti-copy"></i> 复制</button>
+                    <div class="app-release-platform-tabs" role="tablist" aria-label="选择应用平台">
+                        <button type="button" role="tab" data-app-download-platform="windows" aria-selected="false" tabindex="-1"><i class="ti ti-brand-windows"></i><span>Windows</span></button>
+                        <button type="button" role="tab" data-app-download-platform="android" aria-selected="false" tabindex="-1"><i class="ti ti-brand-android"></i><span>Android</span></button>
+                        <button type="button" role="tab" data-app-download-platform="ios" aria-selected="false" tabindex="-1"><i class="ti ti-brand-apple"></i><span>iOS</span><small data-ios-status>待签名</small></button>
+                    </div>
+
+                    <div class="app-release-focus-grid">
+                        <section id="app-release-focused-detail" class="app-release-focused-detail" aria-live="polite">
+                            <p class="app-release-eyebrow">LOADING</p>
+                            <h3>正在核对最新安装包</h3>
+                            <p>版本目录加载完成后，会在这里显示下载、签名和系统要求。</p>
+                            <a id="app-download-primary-link" class="btn btn-blue is-disabled" aria-disabled="true" tabindex="-1">等待校验安装包</a>
+                        </section>
+                        <aside id="app-release-timeline" class="app-release-timeline" aria-label="发布轨迹"></aside>
+                    </div>
+                </section>
+
+                <div id="app-release-history-drawer" class="app-release-history-drawer" role="dialog" aria-modal="true" aria-labelledby="app-release-history-title" hidden>
+                    <div class="app-release-history-sheet">
+                        <div class="app-release-history-head">
+                            <div>
+                                <span class="app-release-kicker">Release History</span>
+                                <h2 id="app-release-history-title">全部平台历史版本</h2>
                             </div>
+                            <button type="button" class="app-release-history-close" data-close-release-history aria-label="关闭历史版本"><i class="ti ti-x"></i></button>
                         </div>
-
-                        <div class="info-bar analysis-info-band app-download-summary-note">
-                            <span id="app-download-summary">当前页会跟随所选平台切换对应的下载链接、分发说明、安装步骤和更新记录。</span>
-                            <code id="app-download-short-checksum">Android / Desktop</code>
+                        <div class="app-release-history-filters">
+                            <label>平台
+                                <select id="app-release-history-platform">
+                                    <option value="">全部平台</option><option value="windows">Windows</option><option value="android">Android</option><option value="ios">iOS</option>
+                                </select>
+                            </label>
+                            <label>渠道
+                                <select id="app-release-history-channel">
+                                    <option value="">全部渠道</option><option value="beta">测试版</option><option value="stable">稳定版</option>
+                                </select>
+                            </label>
                         </div>
+                        <div id="app-release-history-list" class="app-release-history-list"></div>
                     </div>
-                </section>
-
-                <div class="app-download-layout">
-                    <section class="app-download-panel">
-                        <div class="analysis-section-head">
-                            <h3>当前平台概览</h3>
-                            <span>Selected Platform</span>
-                        </div>
-                        <div id="app-download-meta-grid" class="app-download-meta-grid"></div>
-                    </section>
-
-                    <aside class="app-download-side-panel">
-                        <div class="app-download-side-card">
-                            <h3>安装 / 打开步骤</h3>
-                            <ol id="app-download-install-list" style="padding:0; margin:0; list-style:none;"></ol>
-                        </div>
-                        <div class="app-download-side-card">
-                            <h3>版本更新</h3>
-                            <div id="app-download-release-list"></div>
-                        </div>
-                    </aside>
                 </div>
-
-                <div class="app-download-section-grid">
-                    <section class="app-download-panel">
-                        <div class="analysis-section-head">
-                            <h3>为什么这样分发</h3>
-                            <span>Delivery Logic</span>
-                        </div>
-                        <div id="app-download-feature-grid" class="app-download-feature-grid"></div>
-                    </section>
-                    <section class="app-download-panel">
-                        <div class="analysis-section-head">
-                            <h3>适用场景</h3>
-                            <span>Who It's For</span>
-                        </div>
-                        <div id="app-download-scene-list" class="app-download-scene-list"></div>
-                    </section>
-                </div>
-
-                <section class="app-download-panel">
-                    <div class="analysis-section-head">
-                        <h3>版本信息与链接</h3>
-                        <div class="analysis-actions">
-                            <a id="app-download-secondary-link" class="btn btn-blue is-disabled" aria-disabled="true" tabindex="-1"><i class="ti ti-download"></i> 等待校验安装包</a>
-                            <button type="button" class="btn btn-gray" id="app-download-copy-checksum"><i class="ti ti-copy"></i> 复制当前说明</button>
-                        </div>
-                    </div>
-                    <div id="app-download-spec-grid" class="app-download-spec-grid"></div>
-                </section>
             </div>
         </script>
 
