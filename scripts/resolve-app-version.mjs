@@ -10,7 +10,7 @@ export function resolveAppVersion(input) {
   const dateMatch = releaseTag.match(DATE_PATTERN);
 
   if (!dateMatch) {
-    throw new Error(`release tag must contain a date: ${releaseTag}`);
+    throw new Error(`Release tag must contain YYYYMMDD or YYYY.MM.DD: ${releaseTag}`);
   }
 
   const [, yearText, monthText, dayText] = dateMatch;

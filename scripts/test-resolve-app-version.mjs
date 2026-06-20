@@ -37,10 +37,14 @@ test('resolves stable release metadata without a prerelease suffix', () => {
 });
 
 test('rejects tags without a valid calendar date', () => {
+  assert.throws(
+    () => resolveAppVersion({ channel: 'beta', tag: 'beta-latest', sha: 'abc', runNumber: '1' }),
+    { message: 'Release tag must contain YYYYMMDD or YYYY.MM.DD: beta-latest' },
+  );
   for (const tag of ['', 'beta-latest', 'beta-20260230-deadbee', 'v2026-13-01']) {
     assert.throws(
       () => resolveAppVersion({ channel: 'beta', tag, sha: 'abc', runNumber: '1' }),
-      /date/i,
+      /YYYYMMDD|invalid calendar date/i,
       tag,
     );
   }
