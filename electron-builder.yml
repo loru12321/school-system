@@ -1,0 +1,24 @@
+appId: cn.com.schoolsystem.app
+productName: 校衡台
+artifactName: school-system-windows-${version}-${arch}.${ext}
+directories:
+  output: native-builds/windows
+files:
+  - desktop/**/*
+  - package.json
+asar: true
+compression: maximum
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  executableName: school-system
+  verifyUpdateCodeSignature: false
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 校衡台
+  deleteAppDataOnUninstall: false

@@ -5,6 +5,7 @@ dist/
 .playwright-cli/
 output/
 release-assets/
+native-builds/
 .wrangler/
 scratch/
 
