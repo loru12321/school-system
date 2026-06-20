@@ -7532,10 +7532,10 @@ async function switchCohort(cohortId, options = {}) {
                     return false;
                 });
             if (options.fastEnter === true) {
-                CohortExamHydrationScheduler.schedule(cohortId, {
-                    delay: 250,
-                    background: true
-                });
+                // Do not block the shell, but keep the restore step attached to
+                // the download. A scheduler-only fetch updates local storage and
+                // leaves the already-open workspace empty until another switch.
+                void hydrateFromExamArchive();
             } else {
                 const restored = await hydrateFromExamArchive();
                 if (restored) {
@@ -17210,7 +17210,10 @@ async function enterCohortFromMask() {
     const startGrade = 6;
     if (!year || year < 2000) return alert('请输入有效的入学年份');
     setManualCohortSelectionGate(false);
-    await CohortManager.addCohort({ year, startGrade }, { skipConfirm: true, fastEnter: false });
+    // Open the locally cached workspace immediately. CohortManager keeps the
+    // authoritative cloud refresh in the background and reapplies it only when
+    // the user is still viewing this cohort.
+    await CohortManager.addCohort({ year, startGrade }, { skipConfirm: true, fastEnter: true });
     refreshAuthRoleViewFromSession();
 }
 
