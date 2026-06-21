@@ -57,7 +57,23 @@ const ico = await readFile(at('desktop', 'assets', 'icon.ico'));
 assert.ok(ico.length > 1_000, 'desktop ICO must be nonempty');
 assert.equal(ico.readUInt16LE(0), 0, 'ICO reserved header');
 assert.equal(ico.readUInt16LE(2), 1, 'ICO image type');
-assert.ok(ico.readUInt16LE(4) >= 5, 'ICO must contain multiple image sizes');
+const icoCount = ico.readUInt16LE(4);
+const icoSizes = [];
+for (let index = 0; index < icoCount; index++) {
+  const directoryOffset = 6 + index * 16;
+  assert.ok(directoryOffset + 16 <= ico.length, `ICO directory entry ${index} must be within the file`);
+  const width = ico[directoryOffset] || 256;
+  const height = ico[directoryOffset + 1] || 256;
+  const dataLength = ico.readUInt32LE(directoryOffset + 8);
+  const dataOffset = ico.readUInt32LE(directoryOffset + 12);
+  assert.equal(height, width, `ICO entry ${index} must be square`);
+  assert.ok(dataLength > 0, `ICO entry ${index} data must be nonempty`);
+  assert.ok(dataOffset >= 6 + icoCount * 16, `ICO entry ${index} data must follow the directory`);
+  assert.ok(dataOffset + dataLength <= ico.length, `ICO entry ${index} data must be within the file`);
+  assert.ok(ico.subarray(dataOffset, dataOffset + dataLength).some((byte) => byte !== 0), `ICO entry ${index} must contain image data`);
+  icoSizes.push(width);
+}
+assert.deepEqual(icoSizes, [16, 24, 32, 48, 64, 128, 256], 'ICO must contain the exact required sizes');
 
 const android = [
   ['mdpi', 48, 108], ['hdpi', 72, 162], ['xhdpi', 96, 216],
@@ -66,12 +82,35 @@ const android = [
 for (const [density, legacySize, foregroundSize] of android) {
   await imageInfo(at('android', 'app', 'src', 'main', 'res', `mipmap-${density}`, 'ic_launcher.png'), legacySize, legacySize, { opaque: true });
   await imageInfo(at('android', 'app', 'src', 'main', 'res', `mipmap-${density}`, 'ic_launcher_round.png'), legacySize, legacySize, { opaque: true });
-  await imageInfo(at('android', 'app', 'src', 'main', 'res', `mipmap-${density}`, 'ic_launcher_foreground.png'), foregroundSize, foregroundSize);
+  const foreground = at('android', 'app', 'src', 'main', 'res', `mipmap-${density}`, 'ic_launcher_foreground.png');
+  await imageInfo(foreground, foregroundSize, foregroundSize);
+  const { data, info } = await sharp(foreground).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let minX = info.width; let minY = info.height; let maxX = -1; let maxY = -1;
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      if (data[(y * info.width + x) * info.channels + 3] > 8) {
+        minX = Math.min(minX, x); minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+      }
+    }
+  }
+  assert.ok(maxX >= minX && maxY >= minY, `${density} adaptive foreground must contain artwork`);
+  const widthFraction = (maxX - minX + 1) / foregroundSize;
+  const heightFraction = (maxY - minY + 1) / foregroundSize;
+  assert.ok(widthFraction >= 0.64 && widthFraction <= 0.68, `${density} artwork width must occupy the intended ~66% safe zone`);
+  assert.ok(heightFraction >= 0.64 && heightFraction <= 0.68, `${density} artwork height must occupy the intended ~66% safe zone`);
+  assert.ok(minX / foregroundSize >= 0.15 && minY / foregroundSize >= 0.15, `${density} foreground must retain transparent top/left margins`);
+  assert.ok((foregroundSize - 1 - maxX) / foregroundSize >= 0.15 && (foregroundSize - 1 - maxY) / foregroundSize >= 0.15, `${density} foreground must retain transparent bottom/right margins`);
 }
-const adaptiveXml = await readFile(at('android', 'app', 'src', 'main', 'res', 'mipmap-anydpi-v26', 'ic_launcher.xml'), 'utf8');
-assert.match(adaptiveXml, /@color\/ic_launcher_background/);
-assert.match(adaptiveXml, /@mipmap\/ic_launcher_foreground/);
-await stat(at('android', 'app', 'src', 'main', 'res', 'mipmap-anydpi-v26', 'ic_launcher_round.xml'));
+for (const file of ['ic_launcher.xml', 'ic_launcher_round.xml']) {
+  const adaptiveXml = await readFile(at('android', 'app', 'src', 'main', 'res', 'mipmap-anydpi-v26', file), 'utf8');
+  assert.match(adaptiveXml, /<background android:drawable="@color\/ic_launcher_background"\s*\/>/, `${file} background resource`);
+  assert.match(adaptiveXml, /<foreground android:drawable="@mipmap\/ic_launcher_foreground"\s*\/>/, `${file} foreground resource`);
+}
+
+const packageJson = JSON.parse(await readFile(at('package.json'), 'utf8'));
+assert.equal(packageJson.scripts?.['assets:app-icons'], 'node scripts/generate-app-icon-assets.mjs');
+assert.equal(packageJson.scripts?.['test:app-icon-assets'], 'node scripts/test-app-icon-assets.mjs');
 
 const iosProject = at('ios', 'App', 'App.xcodeproj');
 let iosPresent = true;
