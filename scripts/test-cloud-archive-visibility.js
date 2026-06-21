@@ -6,7 +6,15 @@ const rootDir = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(rootDir, 'src/index.html'), 'utf8');
 const cssPath = path.join(rootDir, 'src/assets/css/cloud-archive-visibility.css');
 const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
+const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
 const createDataCloudRuntime = require(path.join(rootDir, 'public/assets/js/data-cloud-runtime.js'));
+
+function getRuleDeclarations(source, selector) {
+    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = source.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`));
+    assert.ok(match, `missing CSS rule for ${selector}`);
+    return match[1].replace(/\s+/g, ' ');
+}
 
 function createElement() {
     const listeners = {};
@@ -38,11 +46,23 @@ async function run() {
     assert.match(html, /id="dm-cloud-summary"[^>]*aria-live="polite"/);
     assert.match(html, /<tbody\s+id="dm-cloud-tbody"/);
 
-    assert.match(css, /\.dm-cloud-table-shell\s*\{[^}]*min-height:\s*2(?:1\d|2\d|3\d)px/s);
-    assert.match(css, /\.dm-cloud-table-scroll\s*\{[^}]*min-height:\s*1(?:7\d|8\d|9\d)px[^}]*overflow:\s*auto/s);
-    assert.match(css, /max-height:\s*min\(52dvh,\s*560px\)/);
+    const shellRule = getRuleDeclarations(css, '.dm-cloud-table-shell');
+    assert.match(shellRule, /flex:\s*1 1 0/);
+    assert.match(shellRule, /min-height:\s*0/);
+    assert.match(shellRule, /min-width:\s*0/);
+
+    const scrollRule = getRuleDeclarations(css, '.dm-cloud-table-scroll');
+    assert.match(scrollRule, /height:\s*100%/);
+    assert.match(scrollRule, /min-height:\s*0/);
+    assert.match(scrollRule, /max-height:\s*min\(52dvh,\s*560px\)/);
+    assert.match(scrollRule, /overflow:\s*auto/);
+    assert.match(scrollRule, /overscroll-behavior:\s*contain/);
+    assert.match(css, /@media\s*\(min-height:\s*\d+px\)[\s\S]*\.dm-cloud-table-shell\s*\{[^}]*min-height:\s*2\d\dpx/);
     assert.match(css, /#dm-cloud-table\s*\{[^}]*min-width:\s*7[4-9]\dpx/s);
     assert.match(css, /position:\s*sticky/);
+
+    assert.match(packageJson.scripts.validate, /npm run test:cloud-archive-visibility/);
+    assert.match(packageJson.scripts['check:p1'], /npm run test:cloud-archive-visibility/);
 
     const tbody = createElement();
     const shell = createElement();
