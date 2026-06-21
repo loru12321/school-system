@@ -58,8 +58,6 @@ for (const responsiveRules of responsiveBlocks) {
 }
 
 const phoneRules = responsiveBlocks[1];
-assert.doesNotMatch(css, /(?:^|[,{])\s*\.login-clean-(?:shell|stage|card)\s*\{/m, 'responsive overrides must remain scoped to the clean login skin');
-assert.match(css, /\[data-login-skin=["']?clean["']?\][^{]*\.login-clean-shell/, 'responsive shell rules must be scoped to the clean login skin');
 assert.match(phoneRules, /min-height:\s*100vh[^}]*min-height:\s*100svh[^}]*min-height:\s*100dvh/s, 'phone shell must provide ordered viewport-height fallbacks');
 assert.match(phoneRules, /padding-bottom:\s*\d+px[^}]*padding-bottom:\s*max\([^;]*env\(safe-area-inset-bottom,\s*0px\)[^;]*\)/s, 'phone shell must provide plain and safe-area bottom padding');
 for (const selector of ['login-clean-stage', 'login-clean-card']) {

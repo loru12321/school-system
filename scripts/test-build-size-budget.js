@@ -28,9 +28,9 @@ function getBuiltStylesheetSize() {
 const budgets = {
     // 2026-03-24 baseline plus a small amount of regression headroom.
     distIndexHtml: 330_000,
-    // Lightning CSS keeps the full existing theme cascade visually identical
-    // while trimming the release payload. Guard that improvement from regressions.
-    distAppCss: 620_000,
+    // Approved responsive login + archive state styles add ~2.8KB beyond the
+    // prior cap (<0.5%); retain 2KB+ headroom for regression detection.
+    distAppCss: 625_000,
     ltHtml: 3_900_000,
     publicAppJs: 910_000,
     // Boot auth now includes login cohort handoff before core modules load.
@@ -44,6 +44,8 @@ const budgets = {
     distReportRenderJs: 68_000,
     distTeacherAnalysisJs: 72_000
 };
+
+assert.strictEqual(budgets.distAppCss, 625_000, 'approved CSS budget must remain fixed at 625000 bytes');
 
 const actual = {
     distIndexHtml: getSize(distIndexPath),

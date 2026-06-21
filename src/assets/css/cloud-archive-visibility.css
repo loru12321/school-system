@@ -18,7 +18,9 @@
 }
 
 #dm-cloud-table {
+    width: 100%;
     min-width: 760px;
+    margin: 0;
 }
 
 #dm-cloud-table thead th {
@@ -29,7 +31,7 @@
     box-shadow: 0 1px 0 #cbd7e3;
 }
 
-.dm-cloud-state-cell {
+#dm-cloud-table .dm-cloud-state-cell {
     height: 180px;
     padding: 28px 20px;
     color: #475569;
@@ -38,44 +40,44 @@
     background: #fffdf7;
 }
 
-.dm-cloud-state-title {
+#dm-cloud-table .dm-cloud-state-title {
     display: block;
     margin-bottom: 6px;
     color: #1e3a5f;
     font-weight: 700;
 }
 
-.dm-cloud-state-message {
+#dm-cloud-table .dm-cloud-state-message {
     display: block;
     line-height: 1.6;
 }
 
-.dm-cloud-retry-button {
+#dm-cloud-table .dm-cloud-retry-button {
     margin-top: 14px;
 }
 
-[data-cloud-state="error"] .dm-cloud-state-title {
+.dm-cloud-table-shell[data-cloud-state="error"] .dm-cloud-state-title {
     color: #b42318;
 }
 
-.dark-mode .dm-cloud-table-shell,
-.dark-mode .dm-cloud-state-cell {
+body.dark-mode .dm-cloud-table-shell,
+body.dark-mode #dm-cloud-table .dm-cloud-state-cell {
     border-color: #475569;
     background: #182230;
     color: #dbe7f2;
 }
 
-.dark-mode #dm-cloud-table thead th {
+body.dark-mode #dm-cloud-table thead th {
     background: #243447;
     color: #f8fafc;
     box-shadow: 0 1px 0 #475569;
 }
 
-.dark-mode .dm-cloud-state-title {
+body.dark-mode #dm-cloud-table .dm-cloud-state-title {
     color: #d8eaff;
 }
 
-.dark-mode [data-cloud-state="error"] .dm-cloud-state-title {
+body.dark-mode .dm-cloud-table-shell[data-cloud-state="error"] .dm-cloud-state-title {
     color: #fda4af;
 }
 
