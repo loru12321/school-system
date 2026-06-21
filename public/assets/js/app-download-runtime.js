@@ -7,6 +7,7 @@
     ).trim();
     const RELEASES_API_URL = 'https://api.github.com/repos/hka123321/school-system/releases?per_page=50';
     const RELEASE_CACHE_TTL_MS = 5 * 60 * 1000;
+    const RELEASE_BRAND_ICON_URL = './assets/brand/app-icon-128.png';
 
     function isLocalFileRuntime() {
         return String(window.location?.protocol || '').trim().toLowerCase() === 'file:';
@@ -37,6 +38,7 @@
     const DEFAULT_CHANNELS = {
         android: {
             key: 'android',
+            iconUrl: RELEASE_BRAND_ICON_URL,
             label: '安卓下载',
             shortLabel: 'Android APK',
             badge: '手机 / 平板',
@@ -98,6 +100,7 @@
         },
         desktop: {
             key: 'desktop',
+            iconUrl: RELEASE_BRAND_ICON_URL,
             label: '桌面端下载',
             shortLabel: 'Windows EXE',
             badge: 'Windows 10 / 11',
@@ -275,6 +278,13 @@
         return Array.isArray(value) ? value : [];
     }
 
+    function renderReleaseBrandIcon(channel, className = 'app-release-brand-icon') {
+        const iconUrl = String(channel?.iconUrl || RELEASE_BRAND_ICON_URL).trim();
+        const alt = className === 'app-release-brand-icon' ? '校衡台应用图标' : '';
+        const decorative = alt ? '' : ' aria-hidden="true"';
+        return `<img class="${escapeHtml(className)}" src="${escapeHtml(iconUrl)}" width="${className === 'app-release-brand-icon' ? '72' : '42'}" height="${className === 'app-release-brand-icon' ? '72' : '42'}" alt="${escapeHtml(alt)}"${decorative}>`;
+    }
+
     const PLATFORM_KEYS = Object.freeze(['windows', 'android', 'ios']);
     const PLATFORM_LABELS = Object.freeze({ windows: 'Windows', android: 'Android', ios: 'iOS' });
     const SELECTED_PLATFORM_STORAGE_KEY = 'APP_RELEASE_SELECTED_PLATFORM';
@@ -360,6 +370,7 @@
         if (!source) {
             return {
                 platform,
+                iconUrl: RELEASE_BRAND_ICON_URL,
                 version: String(release?.tag_name || ''),
                 buildNumber: '',
                 status: platform === 'ios' ? 'awaiting-signing' : 'unavailable',
@@ -376,6 +387,7 @@
         }
         return {
             platform,
+            iconUrl: RELEASE_BRAND_ICON_URL,
             version: String(release?.tag_name || ''),
             buildNumber: '',
             status: 'available-unverified',
@@ -393,9 +405,9 @@
 
     function mapGitHubReleaseToCatalog(release) {
         const definitions = {
-            windows: { pattern: /\.exe$/i, minimumOs: 'Windows 10 22H2', architectures: ['x64'], signed: 'unsigned' },
-            android: { pattern: /\.apk$/i, minimumOs: 'Android 10', architectures: ['arm64-v8a', 'armeabi-v7a', 'x86_64'], signed: 'test-signed' },
-            ios: { pattern: /\.ipa$/i, minimumOs: 'iOS 16', architectures: ['arm64'], signed: 'unsigned' }
+            windows: { iconUrl: RELEASE_BRAND_ICON_URL, pattern: /\.exe$/i, minimumOs: 'Windows 10 22H2', architectures: ['x64'], signed: 'unsigned' },
+            android: { iconUrl: RELEASE_BRAND_ICON_URL, pattern: /\.apk$/i, minimumOs: 'Android 10', architectures: ['arm64-v8a', 'armeabi-v7a', 'x86_64'], signed: 'test-signed' },
+            ios: { iconUrl: RELEASE_BRAND_ICON_URL, pattern: /\.ipa$/i, minimumOs: 'iOS 16', architectures: ['arm64'], signed: 'unsigned' }
         };
         const releaseTag = String(release?.tag_name || '').trim();
         if (!releaseTag) return null;
@@ -565,11 +577,13 @@
 
         root.innerHTML = `
             <p class="app-release-eyebrow">${escapeHtml(PLATFORM_LABELS[platform])} · ${escapeHtml(release?.channel || 'catalog')}</p>
+            ${renderReleaseBrandIcon(asset)}
             <h3>${escapeHtml(version)}</h3>
             <p>${escapeHtml(getPlatformDescription(platform, asset))}</p>
             ${appleProgress}
             <div class="app-release-meta">
                 <div><span>发布标签</span><strong>${escapeHtml(release?.releaseTag || '等待发布')}</strong></div>
+                <div><span>发布日期</span><strong>${escapeHtml(formatDate(release?.generatedAt))}</strong></div>
                 <div><span>构建号</span><strong>${escapeHtml(asset.buildNumber || '待公布')}</strong></div>
                 <div><span>最低系统</span><strong>${escapeHtml(asset.minimumOs || '待公布')}</strong></div>
                 <div><span>架构</span><strong>${escapeHtml(architectures)}</strong></div>
@@ -590,6 +604,7 @@
         root.innerHTML = releases.length ? releases.map((release) => {
             const asset = release.platforms?.[platform] || {};
             return `<article class="app-release-timeline-item">
+                ${renderReleaseBrandIcon(asset, 'app-release-timeline-icon')}
                 <strong>${escapeHtml(release.releaseTag)}</strong>
                 <span>${escapeHtml(release.channel === 'stable' ? '稳定版' : '测试版')} · ${escapeHtml(formatDate(release.generatedAt))}</span>
                 <p>${escapeHtml(getAssetStatusLabel(asset))}</p>
@@ -656,10 +671,17 @@
         list.innerHTML = releases.length ? releases.map((release) => {
             const selectedPlatform = platform || releaseCatalogState.selectedPlatform;
             const asset = release.platforms?.[selectedPlatform] || {};
+            const downloadable = !!runtime.isDownloadable(asset);
+            const historyAction = downloadable
+                ? `<a class="btn btn-blue" href="${escapeHtml(asset.assetUrl)}" download="${escapeHtml(asset.assetName)}"><i class="ti ti-download"></i> 下载此版本</a>`
+                : '<a class="btn btn-blue is-disabled" aria-disabled="true" tabindex="-1"><i class="ti ti-clock"></i> 暂不可下载</a>';
             return `<article class="app-release-history-item">
+                ${renderReleaseBrandIcon(asset, 'app-release-history-icon')}
                 <strong>${escapeHtml(release.releaseTag)}</strong>
                 <span>${escapeHtml(release.channel === 'stable' ? '稳定版' : '测试版')} · ${escapeHtml(formatDate(release.generatedAt))}</span>
-                <p>${escapeHtml(PLATFORM_LABELS[selectedPlatform] || '全部平台')} · ${escapeHtml(asset.version || getAssetStatusLabel(asset))}</p>
+                <p class="app-release-history-status">${escapeHtml(PLATFORM_LABELS[selectedPlatform] || '全部平台')} · ${escapeHtml(asset.version || '版本待公布')} · ${escapeHtml(getAssetStatusLabel(asset))}</p>
+                <span class="app-release-history-size">${escapeHtml(formatSize(asset.bytes))}</span>
+                <div class="app-release-history-actions">${historyAction}</div>
             </article>`;
         }).join('') : '<p class="app-release-empty">没有符合条件的历史版本。</p>';
     }

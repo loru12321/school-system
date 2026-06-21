@@ -17,9 +17,22 @@ assert.ok(html.includes('id="app-release-timeline"'), 'download center should ex
 assert.ok(html.includes('id="app-release-history-drawer"'), 'download center should expose the release history drawer');
 assert.ok(html.includes('id="app-release-history-platform"'), 'history drawer should expose a platform filter');
 assert.ok(html.includes('id="app-release-history-channel"'), 'history drawer should expose a channel filter');
+assert.ok(html.includes('<img class="app-release-brand-icon"'), 'focused release template should expose the real app icon image');
+assert.ok(html.includes('src="./assets/brand/app-icon-128.png"'), 'focused release template should use the shared app icon asset');
+assert.ok(html.includes('alt="校衡台应用图标"'), 'focused release icon should have a meaningful accessible name');
 ['loadReleaseCatalog', 'renderFocusedPlatform', 'renderReleaseTimeline', 'openReleaseHistory', 'filterReleaseHistory'].forEach((name) => {
     assert.ok(source.includes(`function ${name}`), `download runtime should define ${name}`);
 });
+assert.ok(source.includes("const RELEASE_BRAND_ICON_URL = './assets/brand/app-icon-128.png';"), 'download runtime should define one release icon URL');
+assert.ok((source.match(/iconUrl: RELEASE_BRAND_ICON_URL/g) || []).length >= 5, 'all channel and catalog platform models should share the release icon URL');
+assert.ok(source.includes("function renderReleaseBrandIcon(channel, className = 'app-release-brand-icon')"), 'download runtime should share release icon rendering');
+assert.ok(source.includes('className === \'app-release-brand-icon\' ? \'校衡台应用图标\' : \'\''), 'focused icon should be named while repeated icons stay decorative');
+assert.ok(source.includes("renderReleaseBrandIcon(asset, 'app-release-history-icon')"), 'history rows should render decorative release icons');
+assert.ok(source.includes("renderReleaseBrandIcon(asset, 'app-release-timeline-icon')"), 'timeline rows should render decorative release icons');
+assert.ok(source.includes('class="app-release-history-size"'), 'history rows should retain file size details');
+assert.ok(source.includes('class="app-release-history-actions"'), 'history rows should retain download actions');
+assert.ok(source.includes('class="app-release-history-status"'), 'history rows should retain release status');
+assert.ok(source.includes('formatDate(release?.generatedAt)'), 'focused release should retain its release date');
 
 assert.ok(source.includes('getDownloadAssetModel'), 'download center should resolve an explicit asset model');
 assert.ok(source.includes('isVerifiedReleaseAsset'), 'download center should distinguish verified release assets from fallback links');
