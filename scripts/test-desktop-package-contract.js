@@ -31,5 +31,6 @@ assert.ok(builder.includes('school-system-windows-${version}-${arch}.${ext}'), '
 assert.equal(packageJson.main, 'desktop/main.cjs', 'Electron must package the secure desktop entry point');
 assert.equal(packageJson.scripts?.['desktop:start'], 'electron desktop/main.cjs');
 assert.equal(packageJson.scripts?.['desktop:build'], 'electron-builder --win nsis --x64');
+assert.equal(packageJson.build?.win?.icon, 'desktop/assets/icon.ico', 'Electron Builder must package the branded Windows icon');
 
 console.log('desktop package contract tests passed');

@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
+import { promisify } from 'node:util';
 import sharp from 'sharp';
 
 const root = process.cwd();
 const at = (...parts) => path.join(root, ...parts);
 const sha256 = (buffer) => createHash('sha256').update(buffer).digest('hex');
+const execFileAsync = promisify(execFile);
 async function mustRead(file, encoding) {
   try { return await readFile(file, encoding); }
   catch (error) { assert.fail(`required icon asset is missing: ${file} (${error.code})`); }
@@ -111,6 +115,7 @@ for (const file of ['ic_launcher.xml', 'ic_launcher_round.xml']) {
 const packageJson = JSON.parse(await readFile(at('package.json'), 'utf8'));
 assert.equal(packageJson.scripts?.['assets:app-icons'], 'node scripts/generate-app-icon-assets.mjs');
 assert.equal(packageJson.scripts?.['test:app-icon-assets'], 'node scripts/test-app-icon-assets.mjs');
+assert.match(packageJson.scripts?.['check:release-fast'] || '', /(?:^|&&\s*)npm run test:app-icon-assets(?:\s*&&|$)/, 'fast release checks must verify committed app icon assets');
 
 const iosProject = at('ios', 'App', 'App.xcodeproj');
 let iosPresent = true;
@@ -126,6 +131,36 @@ if (iosPresent) {
 } else {
   assert.equal(status.ios.state, 'ready-for-macos');
   assert.equal(status.ios.source, 'public/assets/brand/app-icon-1024.png');
+}
+
+const generatedFiles = [
+  'public/assets/brand/app-icon-source.png',
+  ...[16, 24, 32, 48, 64, 128, 256, 512, 1024].map((size) => `public/assets/brand/app-icon-${size}.png`),
+  'public/assets/brand/app-icon-platform-status.json',
+  'desktop/assets/icon.ico',
+  ...android.flatMap(([density]) => [
+    `android/app/src/main/res/mipmap-${density}/ic_launcher.png`,
+    `android/app/src/main/res/mipmap-${density}/ic_launcher_round.png`,
+    `android/app/src/main/res/mipmap-${density}/ic_launcher_foreground.png`,
+  ]),
+  'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml',
+  'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml',
+  'android/app/src/main/res/values/ic_launcher_colors.xml',
+  ...(iosPresent ? [
+    'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png',
+    'ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json',
+  ] : []),
+];
+const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'school-system-app-icons-'));
+try {
+  await execFileAsync(process.execPath, [at('scripts', 'generate-app-icon-assets.mjs'), '--output-root', temporaryRoot], { cwd: root });
+  for (const relativeFile of generatedFiles) {
+    const committed = await mustRead(at(relativeFile));
+    const regenerated = await mustRead(path.join(temporaryRoot, relativeFile));
+    assert.equal(sha256(committed), sha256(regenerated), `${relativeFile} must match deterministic generated output`);
+  }
+} finally {
+  await rm(temporaryRoot, { recursive: true, force: true });
 }
 
 console.log('App icon assets verified.');

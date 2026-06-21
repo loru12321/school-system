@@ -6,8 +6,14 @@ import sharp from 'sharp';
 
 const root = process.cwd();
 const at = (...parts) => path.join(root, ...parts);
+const outputRootArgument = process.argv.indexOf('--output-root');
+if (outputRootArgument >= 0 && !process.argv[outputRootArgument + 1]) {
+  throw new Error('--output-root requires a directory');
+}
+const outputRoot = outputRootArgument >= 0 ? path.resolve(process.argv[outputRootArgument + 1]) : root;
+const outputAt = (...parts) => path.join(outputRoot, ...parts);
 const source = at('docs', 'design-assets', 'app-icon-knowledge-bloom-reference.png');
-const brandDir = at('public', 'assets', 'brand');
+const brandDir = outputAt('public', 'assets', 'brand');
 const background = '#f8f5ee';
 
 async function artworkWithoutDarkCornerMatte() {
@@ -73,11 +79,11 @@ for (const size of webSizes) await flattenedPng(size, path.join(brandDir, `app-i
 
 const icoInputs = [16, 24, 32, 48, 64, 128, 256].map((size) => path.join(brandDir, `app-icon-${size}.png`));
 const ico = await pngToIco(icoInputs);
-const desktopDir = at('desktop', 'assets');
+const desktopDir = outputAt('desktop', 'assets');
 await ensureDir(desktopDir);
 await writeFile(path.join(desktopDir, 'icon.ico'), ico);
 
-const androidRoot = at('android', 'app', 'src', 'main', 'res');
+const androidRoot = outputAt('android', 'app', 'src', 'main', 'res');
 const densities = [
   ['mdpi', 48, 108], ['hdpi', 72, 162], ['xhdpi', 96, 216],
   ['xxhdpi', 144, 324], ['xxxhdpi', 192, 432],
@@ -109,7 +115,7 @@ const status = {
     : { state: 'ready-for-macos', source: 'public/assets/brand/app-icon-1024.png' },
 };
 if (iosPresent) {
-  const appIconDir = at('ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset');
+  const appIconDir = outputAt('ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset');
   await ensureDir(appIconDir);
   await flattenedPng(1024, path.join(appIconDir, 'AppIcon-512@2x.png'));
   const contents = {
