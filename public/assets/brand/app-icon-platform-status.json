@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "source": "public/assets/brand/app-icon-source.png",
+  "ios": {
+    "state": "generated",
+    "assetSet": "ios/App/App/Assets.xcassets/AppIcon.appiconset"
+  }
+}

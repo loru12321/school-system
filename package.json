@@ -4,6 +4,8 @@
   "description": "校衡台 Windows 客户端",
   "main": "desktop/main.cjs",
   "scripts": {
+    "assets:app-icons": "node scripts/generate-app-icon-assets.mjs",
+    "test:app-icon-assets": "node scripts/test-app-icon-assets.mjs",
     "dev": "vite",
     "build": "vite build && node scripts/build/sync-public-assets.mjs && node scripts/build/prune-dist-assets.mjs && node scripts/build/optimize-dist-html.mjs && node scripts/build/inline-scripts.mjs",
     "desktop:start": "electron desktop/main.cjs",
@@ -152,6 +154,8 @@
     "electron-builder": "^26.15.3",
     "lightningcss": "^1.32.0",
     "playwright": "^1.58.2",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.35.2",
     "typescript": "^6.0.3",
     "vite": "^7.3.1",
     "vite-plugin-singlefile": "^2.3.0",
