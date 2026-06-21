@@ -663,32 +663,64 @@
         console.error(label, error);
     }
 
+    const CLOUD_TABLE_STATES = {
+        loading: { title: '正在读取云端存档', message: '请稍候，正在连接云端数据库。' },
+        empty: { title: '暂无存档记录', message: '云端数据库目前没有可显示的存档。' },
+        'filtered-empty': { title: '没有匹配的存档', message: '当前筛选条件下暂无可显示的工作区快照。' },
+        error: { title: '云端存档加载失败', message: '暂时无法读取云端存档，请重试。' }
+    };
+
+    function renderCloudTableState(tbody, shell, state, options = {}) {
+        const normalizedState = state === 'ready' || CLOUD_TABLE_STATES[state] ? state : 'error';
+        if (shell && shell.dataset) shell.dataset.cloudState = normalizedState;
+        if (normalizedState === 'ready' || !tbody) return;
+
+        const copy = CLOUD_TABLE_STATES[normalizedState];
+        const title = escapeHtml(options.title || copy.title);
+        const message = escapeHtml(options.message || copy.message);
+        const retry = normalizedState === 'error' && options.retry !== false
+            ? '<button type="button" class="btn btn-sm btn-primary dm-cloud-retry-button" data-cloud-retry>重新加载</button>'
+            : '';
+        tbody.innerHTML = `<tr class="dm-cloud-state-row"><td class="dm-cloud-state-cell" colspan="5"><span class="dm-cloud-state-title">${title}</span><span class="dm-cloud-state-message">${message}</span>${retry}</td></tr>`;
+
+        const summaryEl = options.summaryEl;
+        if (summaryEl && options.summaryText) summaryEl.textContent = String(options.summaryText);
+    }
+
+    async function retryCloudBackups(manager) {
+        return api.renderCloudBackups(manager);
+    }
+
+    function bindCloudTableRetry(manager, shell) {
+        if (!shell || typeof shell.addEventListener !== 'function' || shell.dataset.cloudRetryBound === 'true') return;
+        shell.dataset.cloudRetryBound = 'true';
+        shell.addEventListener('click', (event) => {
+            const target = event && event.target;
+            const retryButton = target && typeof target.closest === 'function' ? target.closest('[data-cloud-retry]') : null;
+            if (retryButton) api.retryCloudBackups(manager);
+        });
+    }
+
     async function renderCloudBackups(manager) {
         if (!root.sbClient && !root.CloudApi) return;
         const doc = getDocument();
         const tbody = doc ? doc.querySelector('#dm-cloud-table tbody') : null;
+        const shell = doc ? doc.getElementById('dm-cloud-table-shell') : null;
         const summaryEl = doc ? doc.getElementById('dm-cloud-summary') : null;
         const filterCurrent = doc ? doc.getElementById('cloud-filter-current')?.checked !== false : true;
         const filterSnapshotsOnly = doc ? doc.getElementById('cloud-filter-snapshots')?.checked !== false : true;
+        bindCloudTableRetry(manager, shell);
 
         // 检测演示模式 (Demo Mode)
-        const isDemoMode = (sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1') === 'DEMO_TOKEN') || 
-                          (localStorage.getItem('DEV_MODE') === 'true');
+        const isDemoMode = (root.sessionStorage?.getItem('EDGE_GATEWAY_TOKEN_V1') === 'DEMO_TOKEN') ||
+                          (root.localStorage?.getItem('DEV_MODE') === 'true');
 
         if (isDemoMode) {
-            if (tbody) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align:center; padding:40px; color:#64748b;">
-                            <div style="font-size:24px; margin-bottom:12px;">🚧 演示模式限制</div>
-                            <div style="font-size:14px; line-height:1.6;">
-                                当前处于离线演示模式或本地开发环境，无法访问生产环境云端数据库。<br>
-                                <span style="opacity:0.8;">请恢复网络连接并使用真实账号登录以访问云端存档。</span>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }
+            renderCloudTableState(tbody, shell, 'error', {
+                title: '演示模式无法访问云端存档',
+                message: '请恢复网络连接并使用真实账号登录。',
+                retry: false
+            });
             if (summaryEl) {
                 summaryEl.style.display = 'block';
                 summaryEl.innerHTML = '⚠️ 演示模式：云端同步功能已禁用';
@@ -697,7 +729,7 @@
             return;
         }
 
-        if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">⏳ 正在读取云端数据库...</td></tr>';
+        renderCloudTableState(tbody, shell, 'loading');
         if (summaryEl) {
             summaryEl.style.display = 'block';
             summaryEl.innerHTML = '⏳ 正在分析数据...';
@@ -735,7 +767,7 @@
 
             if (!allRows.length) {
                 manager.cloudSelection.clear();
-                if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#64748b;">☁️ 云端数据库为空</td></tr>';
+                renderCloudTableState(tbody, shell, 'empty');
                 if (summaryEl) {
                     summaryEl.innerHTML = `
                         <div>📌 暂无存档记录</div>
@@ -748,7 +780,7 @@
 
             if (!visibleRows.length) {
                 manager.cloudSelection.clear();
-                if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#64748b;">当前筛选条件下暂无可显示的工作区快照</td></tr>';
+                renderCloudTableState(tbody, shell, 'filtered-empty');
                 if (summaryEl) {
                     const filterText = [
                         filterCurrent ? '当前届别/工作区' : '',
@@ -833,14 +865,19 @@
             });
 
             if (tbody) {
+                renderCloudTableState(tbody, shell, 'ready');
                 tbody.innerHTML = rows;
                 bindCloudBackupRowActions(manager, tbody);
             }
             api.updateCloudSelectionUI(manager);
         } catch (error) {
-            console.error(error);
+            root.console?.error?.(error);
             manager.cloudBackupRows = new Map();
-            if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#ef4444;">❌ 加载失败: ${escapeHtml(error.message)}</td></tr>`;
+            renderCloudTableState(tbody, shell, 'error', {
+                message: error && error.message ? error.message : '未知错误',
+                summaryEl,
+                summaryText: '云端存档加载失败。请检查连接后重试。'
+            });
             api.updateCloudSelectionUI(manager);
         }
     }
@@ -1662,6 +1699,8 @@
 
     const api = {
         renderCloudBackups,
+        renderCloudTableState,
+        retryCloudBackups,
         toggleCloudSelection,
         toggleCloudSelectAll,
         updateCloudSelectionUI,

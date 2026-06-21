@@ -47,6 +47,7 @@
     <link rel="stylesheet" href="./assets/css/readable-pop-workspace.css?v=20260618-readable-pop-v1">
     <link rel="stylesheet" href="./assets/css/designer-studio-workspace.css?v=20260618-designer-studio-v1">
     <link rel="stylesheet" href="./assets/css/douyin-editorial-system.css?v=20260619-postlogin-v2">
+    <link rel="stylesheet" href="./assets/css/cloud-archive-visibility.css?v=20260621-cloud-archive-v1">
     <link rel="stylesheet" href="./assets/css/responsive-login-final.css?v=20260621-responsive-login-v1">
     <script>
         (function () {
@@ -4037,7 +4038,7 @@
                         此处列出您上传到云端的所有备份（包括自动保存和手动备份）。您可以删除旧的存档以释放空间。
                         <br><span style="color:red; font-size:11px;">* 注意：删除操作不可恢复，请谨慎操作。</span>
                     </div>
-                    <div id="dm-cloud-summary"
+                    <div id="dm-cloud-summary" aria-live="polite" role="status"
                         style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:10px; font-size:12px; color:#475569; margin:10px 0;">
                         📌 云端摘要将在此显示
                     </div>
@@ -4063,22 +4064,24 @@
                         <input type="file" id="dm-cloud-upload-input" accept=".json,application/json" multiple hidden
                             onchange="DataManager.handleCloudArchiveUpload(this)">
                     </div>
-                    <div class="table-wrap" style="flex:1; min-height:0; overflow:auto;">
-                        <table class="comparison-table" id="dm-cloud-table">
-                            <thead>
-                                <tr>
-                                    <th style="width:44px; text-align:center;"><input type="checkbox"
-                                            id="dm-cloud-select-all"
-                                            onchange="DataManager.toggleCloudSelectAll(this.checked)" title="全选/取消全选">
-                                    </th>
-                                    <th>存档 Key (项目名)</th>
-                                    <th>上传时间</th>
-                                    <th>数据大小</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                    <div class="dm-cloud-table-shell" id="dm-cloud-table-shell" data-cloud-state="loading">
+                        <div class="dm-cloud-table-scroll" tabindex="0" aria-label="云端存档记录，可横向和纵向滚动">
+                            <table class="comparison-table" id="dm-cloud-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:44px; text-align:center;"><input type="checkbox"
+                                                id="dm-cloud-select-all"
+                                                onchange="DataManager.toggleCloudSelectAll(this.checked)" title="全选/取消全选">
+                                        </th>
+                                        <th>存档 Key (项目名)</th>
+                                        <th>上传时间</th>
+                                        <th>数据大小</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dm-cloud-tbody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 

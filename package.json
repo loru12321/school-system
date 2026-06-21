@@ -79,6 +79,7 @@
     "test:vite-warning-contract": "node scripts/test-vite-warning-contract.js",
     "check:performance": "npm run test:performance-budget && npm run test:report-performance-caches && npm run test:summary-report-performance-caches && npm run test:student-flow-performance-caches && npm run test:system-performance-scheduler && npm run test:cohort-exam-hydration-scheduler",
     "test:cloud-api-runtime": "node scripts/test-cloud-api-runtime.js",
+    "test:cloud-archive-visibility": "node scripts/test-cloud-archive-visibility.js",
     "test:cloud-data-service-runtime": "node scripts/test-cloud-data-service-runtime.js",
     "test:cloud-workspace-normalization": "node scripts/test-cloud-workspace-normalization.js",
     "test:issue-manager-runtime": "node scripts/test-issue-manager-runtime.js",

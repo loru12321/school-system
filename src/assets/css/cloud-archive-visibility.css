@@ -1,0 +1,90 @@
+.dm-cloud-table-shell {
+    min-height: 220px;
+    border: 1px solid #cbd7e3;
+    border-radius: 10px;
+    background: #fffdf7;
+    overflow: hidden;
+}
+
+.dm-cloud-table-scroll {
+    min-height: 180px;
+    max-height: min(52dvh, 560px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+#dm-cloud-table {
+    width: 100%;
+    min-width: 760px;
+    margin: 0;
+}
+
+#dm-cloud-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #edf4fa;
+    box-shadow: 0 1px 0 #cbd7e3;
+}
+
+#dm-cloud-table .dm-cloud-state-cell {
+    height: 180px;
+    padding: 28px 20px;
+    color: #475569;
+    text-align: center;
+    vertical-align: middle;
+    background: #fffdf7;
+}
+
+#dm-cloud-table .dm-cloud-state-title {
+    display: block;
+    margin-bottom: 6px;
+    color: #1e3a5f;
+    font-weight: 700;
+}
+
+#dm-cloud-table .dm-cloud-state-message {
+    display: block;
+    line-height: 1.6;
+}
+
+#dm-cloud-table .dm-cloud-retry-button {
+    margin-top: 14px;
+}
+
+.dm-cloud-table-shell[data-cloud-state="error"] .dm-cloud-state-title {
+    color: #b42318;
+}
+
+body.dark-mode .dm-cloud-table-shell,
+body.dark-mode #dm-cloud-table .dm-cloud-state-cell {
+    border-color: #475569;
+    background: #182230;
+    color: #dbe7f2;
+}
+
+body.dark-mode #dm-cloud-table thead th {
+    background: #243447;
+    color: #f8fafc;
+    box-shadow: 0 1px 0 #475569;
+}
+
+body.dark-mode #dm-cloud-table .dm-cloud-state-title {
+    color: #d8eaff;
+}
+
+body.dark-mode .dm-cloud-table-shell[data-cloud-state="error"] .dm-cloud-state-title {
+    color: #fda4af;
+}
+
+@media (max-width: 720px) {
+    .dm-cloud-table-shell {
+        min-height: 200px;
+    }
+
+    .dm-cloud-table-scroll {
+        min-height: 180px;
+        max-height: min(46dvh, 440px);
+    }
+}
