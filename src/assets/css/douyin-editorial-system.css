@@ -328,13 +328,6 @@ html body #app #starter-hub.active .starter-grid { animation: de-workspace-enter
     #login-overlay[data-login-skin="clean"] :is(.login-clean-copy,.login-styleboard) { grid-column: 1 !important; max-width: none !important; padding-bottom: 0 !important; }
     #login-overlay[data-login-skin="clean"] .login-clean-copy h1 { font-size: clamp(54px,12vw,82px) !important; }
 }
-@media (max-width:720px) {
-    #login-overlay[data-login-skin="clean"] .login-clean-shell { width: 100% !important; min-height: 100svh !important; border: 0 !important; border-radius: 0 !important; }
-    #login-overlay[data-login-skin="clean"] .login-clean-stage { gap: 30px !important; padding: 28px 22px 38px !important; }
-    #login-overlay[data-login-skin="clean"] .login-styleboard { display: none !important; }
-    #login-overlay[data-login-skin="clean"] .login-clean-copy p { font-size: 14px !important; line-height: 1.7 !important; }
-}
-
 /* Post-login visual language distilled from the user's saved references. */
 :root {
     --de-ink: #292735; --de-text: #494657; --de-muted: #817d8d;
