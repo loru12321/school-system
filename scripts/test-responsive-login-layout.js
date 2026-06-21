@@ -17,6 +17,7 @@ async function inspectLayout(page, viewport) {
 
     return page.evaluate(() => {
         const stage = document.querySelector('.login-clean-stage');
+        const shell = document.querySelector('.login-clean-shell');
         const card = document.querySelector('.login-clean-card');
         const submit = document.querySelector('#login-submit-button');
         const rect = node => {
@@ -32,6 +33,7 @@ async function inspectLayout(page, viewport) {
             };
         };
         return {
+            shell: rect(shell),
             stage: rect(stage),
             card: rect(card),
             submit: rect(submit),
@@ -74,6 +76,8 @@ async function main() {
                 const intersectionWidth = Math.min(state.stage.right, state.card.right) - Math.max(state.stage.left, state.card.left);
                 const intersectionHeight = Math.min(state.stage.bottom, state.card.bottom) - Math.max(state.stage.top, state.card.top);
                 assert.ok(intersectionWidth <= 0 || intersectionHeight <= 0, `${label}: tablet stage and card must not overlap`);
+                assert.ok(Math.abs(state.stage.top - state.shell.top) <= 1 && Math.abs(state.stage.bottom - state.shell.bottom) <= 1, `${label}: tablet stage must stretch to the shell edges`);
+                assert.ok(Math.abs(state.card.top - state.shell.top) <= 1 && Math.abs(state.card.bottom - state.shell.bottom) <= 1, `${label}: tablet card must stretch to the shell edges`);
             } else {
                 assert.ok(state.card.top >= state.stage.bottom - 1, `${label}: phone card must follow the stage`);
             }

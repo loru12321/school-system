@@ -3,6 +3,7 @@
     min-height: 0;
     min-width: 0;
     border: 1px solid #cbd7e3;
+    border-radius: 10px;
     background: #fffdf7;
     overflow: hidden;
 }
@@ -13,6 +14,7 @@
     max-height: min(52dvh, 560px);
     overflow: auto;
     overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
 #dm-cloud-table {
@@ -30,17 +32,26 @@
 .dm-cloud-state-cell {
     height: 180px;
     padding: 28px 20px;
+    color: #475569;
+    text-align: center;
     vertical-align: middle;
+    background: #fffdf7;
 }
 
 .dm-cloud-state-title {
     display: block;
+    margin-bottom: 6px;
     color: #1e3a5f;
     font-weight: 700;
 }
 
 .dm-cloud-state-message {
     display: block;
+    line-height: 1.6;
+}
+
+.dm-cloud-retry-button {
+    margin-top: 14px;
 }
 
 [data-cloud-state="error"] .dm-cloud-state-title {

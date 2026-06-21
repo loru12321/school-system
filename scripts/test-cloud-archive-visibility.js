@@ -50,6 +50,7 @@ async function run() {
     assert.match(shellRule, /flex:\s*1 1 0/);
     assert.match(shellRule, /min-height:\s*0/);
     assert.match(shellRule, /min-width:\s*0/);
+    assert.match(shellRule, /border-radius:\s*10px/);
 
     const scrollRule = getRuleDeclarations(css, '.dm-cloud-table-scroll');
     assert.match(scrollRule, /height:\s*100%/);
@@ -57,6 +58,14 @@ async function run() {
     assert.match(scrollRule, /max-height:\s*min\(52dvh,\s*560px\)/);
     assert.match(scrollRule, /overflow:\s*auto/);
     assert.match(scrollRule, /overscroll-behavior:\s*contain/);
+    assert.match(scrollRule, /scrollbar-gutter:\s*stable/);
+    const stateCellRule = getRuleDeclarations(css, '.dm-cloud-state-cell');
+    assert.match(stateCellRule, /color:\s*#475569/);
+    assert.match(stateCellRule, /text-align:\s*center/);
+    assert.match(stateCellRule, /background:\s*#fffdf7/);
+    assert.match(getRuleDeclarations(css, '.dm-cloud-state-title'), /margin-bottom:\s*6px/);
+    assert.match(getRuleDeclarations(css, '.dm-cloud-state-message'), /line-height:\s*1\.6/);
+    assert.match(getRuleDeclarations(css, '.dm-cloud-retry-button'), /margin-top:\s*14px/);
     assert.match(css, /@media\s*\(min-height:\s*\d+px\)[\s\S]*\.dm-cloud-table-shell\s*\{[^}]*min-height:\s*2\d\dpx/);
     assert.match(css, /#dm-cloud-table\s*\{[^}]*min-width:\s*7[4-9]\dpx/s);
     assert.match(css, /position:\s*sticky/);

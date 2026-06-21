@@ -1,7 +1,7 @@
 @layer r {
 @media (max-width: 960px) {
-    #login-overlay { overflow: hidden auto !important; }
-    .login-clean-shell {
+    [data-login-skin="clean"] { overflow: hidden auto !important; }
+    [data-login-skin="clean"] .login-clean-shell {
         width: 100% !important;
         overflow: visible !important;
         border: 0 !important;
@@ -9,11 +9,11 @@
         background: #fffaf5 !important;
         box-shadow: none !important;
     }
-    .login-clean-stage { display: flex !important; }
-    .login-clean-stage::before,
-    .login-clean-stage::after,
-    :is(.login-clean-copy, .login-styleboard) { display: none !important; }
-    .login-clean-card {
+    [data-login-skin="clean"] .login-clean-stage { display: flex !important; }
+    [data-login-skin="clean"] .login-clean-stage::before,
+    [data-login-skin="clean"] .login-clean-stage::after,
+    [data-login-skin="clean"] :is(.login-clean-copy, .login-styleboard) { display: none !important; }
+    [data-login-skin="clean"] .login-clean-card {
         width: 100% !important;
         max-width: none !important;
         overflow: visible !important;
@@ -22,27 +22,30 @@
 }
 
 @media (min-width: 769px) and (max-width: 960px) {
-    .login-clean-shell {
+    [data-login-skin="clean"] .login-clean-shell {
         min-height: 100dvh !important;
         grid-template-columns: minmax(220px, 40fr) minmax(0, 60fr) !important;
     }
 
-    .login-clean-stage {
+    [data-login-skin="clean"] .login-clean-stage {
         min-width: 0 !important;
+        min-height: 100% !important;
         padding: 32px 24px !important;
         border-right: 1px solid #dce6eb !important;
         border-bottom: 0 !important;
         background: linear-gradient(160deg, #fff8f3, #edf5f8) !important;
     }
 
-    .login-clean-card {
+    [data-login-skin="clean"] .login-clean-card {
         min-width: 0 !important;
+        min-height: 100% !important;
+        align-self: stretch !important;
         padding: 40px clamp(28px, 5vw, 56px) !important;
     }
 }
 
 @media (max-width: 768px) {
-    .login-clean-shell {
+    [data-login-skin="clean"] .login-clean-shell {
         height: auto !important;
         min-height: 100vh !important;
         min-height: 100svh !important;
@@ -53,7 +56,7 @@
         padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)) !important;
     }
 
-    .login-clean-stage {
+    [data-login-skin="clean"] .login-clean-stage {
         flex: 0 0 auto !important;
         padding: 20px !important;
         padding-top: max(20px, env(safe-area-inset-top, 0px)) !important;
@@ -64,18 +67,18 @@
         background: linear-gradient(135deg, #fff4ef, #edf5f8) !important;
     }
 
-    .login-clean-card {
+    [data-login-skin="clean"] .login-clean-card {
         flex: 0 0 auto !important;
         padding: 28px 20px 16px !important;
         padding-left: max(20px, env(safe-area-inset-left, 0px)) !important;
         padding-right: max(20px, env(safe-area-inset-right, 0px)) !important;
     }
 
-    #login-overlay :is(.login-entry-field, input, select) {
+    [data-login-skin="clean"] :is(.login-entry-field, input, select) {
         min-height: 48px !important;
     }
 
-    #login-overlay :is(input, select) {
+    [data-login-skin="clean"] :is(input, select) {
         font-size: 16px !important;
     }
 
