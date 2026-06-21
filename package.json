@@ -17,6 +17,7 @@
     "check:syntax": "node scripts/test-syntax.js",
     "test:auth-state": "node scripts/test-auth-state.js",
     "test:login-cohort-runtime": "node scripts/test-login-cohort-runtime.js",
+    "test:responsive-login-contract": "node scripts/test-responsive-login-contract.js",
     "test:permission-policy-runtime": "node scripts/test-permission-policy-runtime.js",
     "test:analytics-kernel-runtime": "node scripts/test-analytics-kernel-runtime.js",
     "test:workspace-state": "node scripts/test-workspace-state.js",
