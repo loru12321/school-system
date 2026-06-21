@@ -42,6 +42,7 @@ const releases = runtime.normalizeCatalog({
       releaseUrl: 'https://example.com/releases/v2.0.0-beta.1',
       platforms: {
         windows: {
+          iconUrl: './assets/brand/windows-test.png',
           version: '2.0.0-beta.1',
           buildNumber: 20,
           status: 'ready',
@@ -56,6 +57,7 @@ const releases = runtime.normalizeCatalog({
           buildUrl: 'https://example.com/builds/20'
         },
         android: {
+          iconUrl: './assets/brand/android-test.png',
           version: '2.0.0-beta.1',
           buildNumber: '20',
           status: 'ready',
@@ -70,6 +72,7 @@ const releases = runtime.normalizeCatalog({
           buildUrl: 'https://example.com/builds/20'
         },
         ios: {
+          iconUrl: './assets/brand/ios-test.png',
           version: '2.0.0-beta.1',
           buildNumber: 20,
           status: 'awaiting-signing',
@@ -98,11 +101,14 @@ const releases = runtime.normalizeCatalog({
 assert.strictEqual(releases.length, 2);
 assert.strictEqual(releases[0].releaseTag, 'v2.0.0-beta.1', 'newest release should be first');
 assert.strictEqual(releases[0].platforms.windows.platform, 'windows');
+assert.strictEqual(releases[0].platforms.windows.iconUrl, './assets/brand/windows-test.png');
 assert.strictEqual(releases[0].platforms.windows.signed, 'signed');
 assert.strictEqual(releases[0].platforms.windows.sha256, 'a'.repeat(64));
 assert.strictEqual(releases[0].platforms.android.signed, 'test-signed');
+assert.strictEqual(releases[0].platforms.android.iconUrl, './assets/brand/android-test.png');
 assert.deepStrictEqual(Array.from(releases[0].platforms.android.notes), ['Internal testing']);
 assert.strictEqual(releases[0].platforms.ios.signed, 'unsigned');
+assert.strictEqual(releases[0].platforms.ios.iconUrl, './assets/brand/ios-test.png');
 assert.strictEqual(releases[1].platforms.windows.status, 'unavailable');
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.windows), true);
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.ios), false);
@@ -172,6 +178,11 @@ assert.strictEqual(cachedReleases.length, 1);
 assert.deepStrictEqual(
   Array.from(runtime.PLATFORMS, (platform) => cachedReleases[0].platforms[platform].status),
   ['ready', 'ready', 'awaiting-signing']
+);
+assert.deepStrictEqual(
+  Array.from(runtime.PLATFORMS, (platform) => cachedReleases[0].platforms[platform].iconUrl),
+  ['./assets/brand/app-icon-128.png', './assets/brand/app-icon-128.png', './assets/brand/app-icon-128.png'],
+  'cached manifest models should receive the shared release icon explicitly'
 );
 assert.match(cachedReleases[0].platforms.windows.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
 assert.match(cachedReleases[0].platforms.android.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);

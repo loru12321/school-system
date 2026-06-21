@@ -2,6 +2,7 @@
   'use strict';
 
   var PLATFORMS = Object.freeze(['windows', 'android', 'ios']);
+  var RELEASE_BRAND_ICON_URL = './assets/brand/app-icon-128.png';
 
   function asString(value) {
     return value == null ? '' : String(value).trim();
@@ -18,6 +19,7 @@
     var source = asset && typeof asset === 'object' ? asset : {};
     return {
       platform: platform,
+      iconUrl: asString(source.iconUrl) || RELEASE_BRAND_ICON_URL,
       version: asString(source.version),
       buildNumber: asString(source.buildNumber),
       status: asString(source.status) || 'unavailable',

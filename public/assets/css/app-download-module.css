@@ -454,8 +454,6 @@ body.app-release-history-open {
 
 @media (max-width: 768px) {
     #app-download-center .app-release-brand-icon {
-        width: 62px;
-        height: 62px;
         margin-bottom: 14px;
     }
 

@@ -370,7 +370,7 @@
         if (!source) {
             return {
                 platform,
-                iconUrl: RELEASE_BRAND_ICON_URL,
+                iconUrl: definition.iconUrl,
                 version: String(release?.tag_name || ''),
                 buildNumber: '',
                 status: platform === 'ios' ? 'awaiting-signing' : 'unavailable',
@@ -387,7 +387,7 @@
         }
         return {
             platform,
-            iconUrl: RELEASE_BRAND_ICON_URL,
+            iconUrl: definition.iconUrl,
             version: String(release?.tag_name || ''),
             buildNumber: '',
             status: 'available-unverified',
