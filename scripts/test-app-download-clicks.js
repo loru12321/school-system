@@ -22,6 +22,24 @@ const testReleaseManifest = {
             android: { platform: 'android', version: '2026.6.20-beta.42', buildNumber: '42', status: 'ready', signed: 'test-signed', minimumOs: 'Android 10', architectures: ['arm64-v8a'], assetName: 'school-system-android-beta.apk', assetUrl: 'https://example.test/school-system-android-beta.apk', bytes: 24000000, sha256: 'b'.repeat(64), notes: ['测试签名安装包'], buildUrl: 'https://github.com/hka123321/school-system/actions/runs/42' },
             ios: { platform: 'ios', version: '2026.6.20-beta.42', buildNumber: '42', status: 'awaiting-signing', signed: 'unsigned', minimumOs: 'iOS 16', architectures: ['arm64'], assetName: '', assetUrl: '', bytes: 0, sha256: '', notes: ['等待 Apple 签名'], buildUrl: 'https://github.com/hka123321/school-system/actions/runs/42' }
         }
+    }, {
+        schemaVersion: 1,
+        releaseTag: 'stable-windows-only',
+        channel: 'stable',
+        generatedAt: '2026-06-21T08:00:00.000Z',
+        releaseUrl: 'https://example.test/releases/stable-windows-only',
+        platforms: {
+            windows: { platform: 'windows', version: '3.0.0-win', buildNumber: '51', status: 'ready', signed: 'signed', minimumOs: 'Windows 10 22H2', architectures: ['x64'], assetName: 'windows-only.exe', assetUrl: 'https://example.test/windows-only.exe', bytes: 51000000, sha256: 'c'.repeat(64), notes: [], buildUrl: '' }
+        }
+    }, {
+        schemaVersion: 1,
+        releaseTag: 'beta-android-only',
+        channel: 'beta',
+        generatedAt: '2026-06-19T08:00:00.000Z',
+        releaseUrl: 'https://example.test/releases/beta-android-only',
+        platforms: {
+            android: { platform: 'android', version: '3.0.0-android', buildNumber: '49', status: 'ready', signed: 'test-signed', minimumOs: 'Android 10', architectures: ['arm64-v8a'], assetName: 'android-only.apk', assetUrl: 'https://example.test/android-only.apk', bytes: 19000000, sha256: 'd'.repeat(64), notes: [], buildUrl: '' }
+        }
     }]
 };
 
@@ -203,8 +221,33 @@ async function main() {
 
         await page.locator('[data-open-release-history]').click();
         assert.equal(await page.locator('#app-release-history-drawer').isVisible(), true);
+
+        await page.locator('#app-release-history-platform').selectOption('');
+        const allPlatformRows = page.locator('#app-release-history-list .app-release-history-item');
+        const windowsOnlyRow = allPlatformRows.filter({ hasText: 'stable-windows-only' });
+        const androidOnlyRow = allPlatformRows.filter({ hasText: 'beta-android-only' });
+        const iosPendingRow = allPlatformRows.filter({ hasText: 'beta-20260620-cb785f5' }).filter({ hasText: 'iOS' });
+        assert.equal(await windowsOnlyRow.count(), 1, 'all-platform history should render the Windows-only asset once');
+        assert.match(await windowsOnlyRow.textContent() || '', /Windows.*3\.0\.0-win.*安装包已就绪/s);
+        assert.equal(await windowsOnlyRow.locator('a[href]').getAttribute('href'), 'https://example.test/windows-only.exe');
+        assert.equal(await androidOnlyRow.count(), 1, 'all-platform history should render the Android-only asset once');
+        assert.match(await androidOnlyRow.textContent() || '', /Android.*3\.0\.0-android.*安装包已就绪/s);
+        assert.equal(await androidOnlyRow.locator('a[href]').getAttribute('href'), 'https://example.test/android-only.apk');
+        assert.equal(await iosPendingRow.count(), 1, 'all-platform history should retain unavailable-to-download platform status rows');
+        assert.equal(await iosPendingRow.locator('[aria-disabled="true"]').count(), 1, 'unverified or pending assets should stay disabled');
+        assert.match(await allPlatformRows.first().textContent() || '', /stable-windows-only/, 'history releases should remain newest-first');
+
         await page.locator('#app-release-history-platform').selectOption('android');
-        assert.match(await page.locator('#app-release-history-list').textContent() || '', /beta-20260620-cb785f5/);
+        const androidHistory = await page.locator('#app-release-history-list').textContent() || '';
+        assert.match(androidHistory, /beta-20260620-cb785f5/);
+        assert.match(androidHistory, /beta-android-only/);
+        assert.doesNotMatch(androidHistory, /stable-windows-only/, 'specific-platform filtering should omit releases missing that platform');
+        assert.equal(await page.locator('#app-release-history-list .app-release-history-item').count(), 2);
+
+        await page.locator('#app-release-history-platform').selectOption('');
+        await page.locator('#app-release-history-channel').selectOption('stable');
+        assert.match(await page.locator('#app-release-history-list').textContent() || '', /stable-windows-only/);
+        assert.doesNotMatch(await page.locator('#app-release-history-list').textContent() || '', /beta-android-only/, 'channel filtering should remain intact');
         await page.keyboard.press('Escape');
         assert.equal(await page.locator('#app-release-history-drawer').isHidden(), true);
 

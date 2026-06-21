@@ -668,9 +668,17 @@
         if (!list || !runtime) return;
         releaseCatalogState.historyFilters = { platform, channel };
         const releases = runtime.filterCatalog(releaseCatalogState.releases, { platform, channel });
-        list.innerHTML = releases.length ? releases.map((release) => {
-            const selectedPlatform = platform || releaseCatalogState.selectedPlatform;
-            const asset = release.platforms?.[selectedPlatform] || {};
+        const historyEntries = releases.flatMap((release) => {
+            const releasePlatforms = platform
+                ? [platform]
+                : PLATFORM_KEYS.filter((key) => release.platforms?.[key]?.status !== 'unavailable');
+            return releasePlatforms.map((selectedPlatform) => ({
+                release,
+                selectedPlatform,
+                asset: release.platforms?.[selectedPlatform] || {}
+            }));
+        });
+        list.innerHTML = historyEntries.length ? historyEntries.map(({ release, selectedPlatform, asset }) => {
             const downloadable = !!runtime.isDownloadable(asset);
             const historyAction = downloadable
                 ? `<a class="btn btn-blue" href="${escapeHtml(asset.assetUrl)}" download="${escapeHtml(asset.assetName)}"><i class="ti ti-download"></i> 下载此版本</a>`
