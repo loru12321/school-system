@@ -17,6 +17,15 @@ function parseJson(relativePath) {
   return JSON.parse(read(relativePath));
 }
 
+function assertContiguousScriptSequence(scriptName, expectedCommands, message) {
+  const commands = (scripts[scriptName] || '').split('&&').map((command) => command.trim());
+  const start = commands.findIndex((command) => command === expectedCommands[0]);
+  assert.ok(
+    start >= 0 && expectedCommands.every((command, offset) => commands[start + offset] === command),
+    message
+  );
+}
+
 const packageJson = parseJson('package.json');
 const scripts = packageJson.scripts || {};
 const manifestText = read('public/site.webmanifest');
@@ -40,10 +49,24 @@ const userFacingReleaseFiles = [
 
 assert.strictEqual(scripts['test:release-hardening'], 'node scripts/test-release-hardening.js', 'release hardening script should be exposed');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-hardening'), 'fast release check should include release hardening');
-const requiredContractGate = 'test:release-surface && npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow';
-assert.ok(scripts['check:release-fast'].includes(requiredContractGate), 'fast release checks should run all package contracts immediately after release surface');
-const validateContractGate = 'test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow && npm run build';
-assert.ok(scripts.validate.includes(validateContractGate), 'validate should run all package contracts immediately before build');
+const requiredContractGate = [
+  'npm run test:release-surface',
+  'npm run test:release-manifest',
+  'npm run test:app-icon-assets',
+  'npm run test:desktop-package-contract',
+  'npm run test:capacitor-package-contract',
+  'npm run test:beta-release-workflow',
+];
+assertContiguousScriptSequence('check:release-fast', requiredContractGate, 'fast release checks should verify icons before all package contracts immediately after release surface');
+const validateContractGate = [
+  'npm run test:release-manifest',
+  'npm run test:app-icon-assets',
+  'npm run test:desktop-package-contract',
+  'npm run test:capacitor-package-contract',
+  'npm run test:beta-release-workflow',
+  'npm run build',
+];
+assertContiguousScriptSequence('validate', validateContractGate, 'validate should verify icons before all package contracts immediately before build');
 assert.match(verifier, /release-manifest\.json/, 'release verifier should load the published manifest');
 assert.match(verifier, /windows:[\s\S]*extension:\s*['"]\.exe['"][\s\S]*minimumBytes:\s*50\s*\*\s*1024\s*\*\s*1024/, 'Windows packages should be real EXE installers');
 assert.match(verifier, /android:[\s\S]*extension:\s*['"]\.apk['"][\s\S]*minimumBytes:\s*10\s*\*\s*1024\s*\*\s*1024/, 'Android packages should be real APK files');
