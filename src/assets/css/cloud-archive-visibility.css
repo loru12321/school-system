@@ -1,6 +1,7 @@
 .dm-cloud-table-shell {
-    flex: 1 1 0;
-    min-height: 0;
+    flex: 0 0 auto;
+    min-height: 300px;
+    height: clamp(300px, 40dvh, 520px);
     min-width: 0;
     border: 1px solid #cbd7e3;
     border-radius: 10px;
@@ -10,8 +11,7 @@
 
 .dm-cloud-table-scroll {
     height: 100%;
-    min-height: 0;
-    max-height: min(52dvh, 560px);
+    min-height: 300px;
     overflow: auto;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
@@ -21,6 +21,9 @@
     width: 100%;
     min-width: 760px;
     margin: 0;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 #dm-cloud-table thead th {
@@ -29,6 +32,57 @@
     z-index: 2;
     background: #edf4fa;
     box-shadow: 0 1px 0 #cbd7e3;
+}
+
+#dm-cloud-table th,
+#dm-cloud-table td {
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+#dm-cloud-table tbody tr {
+    min-height: 74px;
+}
+
+#dm-cloud-table tbody td {
+    height: 74px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+#dm-cloud-table th:nth-child(1),
+#dm-cloud-table td:nth-child(1) {
+    width: 54px;
+}
+
+#dm-cloud-table th:nth-child(2),
+#dm-cloud-table td:nth-child(2) {
+    width: 34%;
+}
+
+#dm-cloud-table th:nth-child(3),
+#dm-cloud-table td:nth-child(3) {
+    width: 18%;
+}
+
+#dm-cloud-table th:nth-child(4),
+#dm-cloud-table td:nth-child(4) {
+    width: 14%;
+}
+
+#dm-cloud-table th:nth-child(5),
+#dm-cloud-table td:nth-child(5) {
+    width: 34%;
+}
+
+#dm-cloud-table td:last-child > div {
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+#dm-cloud-area {
+    overflow-y: auto !important;
+    padding-bottom: 20px !important;
 }
 
 #dm-cloud-table .dm-cloud-state-cell {
@@ -83,12 +137,15 @@ body.dark-mode .dm-cloud-table-shell[data-cloud-state="error"] .dm-cloud-state-t
 
 @media (min-height: 700px) {
     .dm-cloud-table-shell {
-        min-height: 220px;
+        min-height: 340px;
+        height: clamp(340px, 42dvh, 560px);
     }
 }
 
 @media (max-width: 720px) {
+    .dm-cloud-table-shell,
     .dm-cloud-table-scroll {
-        max-height: min(46dvh, 440px);
+        min-height: 300px;
+        height: min(58dvh, 440px);
     }
 }

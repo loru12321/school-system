@@ -47,17 +47,19 @@ async function run() {
     assert.match(html, /<tbody\s+id="dm-cloud-tbody"/);
 
     const shellRule = getRuleDeclarations(css, '.dm-cloud-table-shell');
-    assert.match(shellRule, /flex:\s*1 1 0/);
-    assert.match(shellRule, /min-height:\s*0/);
+    assert.match(shellRule, /flex:\s*0 0 auto/);
+    assert.match(shellRule, /min-height:\s*300px/);
+    assert.match(shellRule, /height:\s*clamp\(300px,\s*40dvh,\s*520px\)/);
     assert.match(shellRule, /min-width:\s*0/);
 
     const scrollRule = getRuleDeclarations(css, '.dm-cloud-table-scroll');
     assert.match(scrollRule, /height:\s*100%/);
-    assert.match(scrollRule, /min-height:\s*0/);
-    assert.match(scrollRule, /max-height:\s*min\(52dvh,\s*560px\)/);
+    assert.match(scrollRule, /min-height:\s*300px/);
     assert.match(scrollRule, /overflow:\s*auto/);
     assert.match(scrollRule, /overscroll-behavior:\s*contain/);
-    assert.match(css, /@media\s*\(min-height:\s*\d+px\)[\s\S]*\.dm-cloud-table-shell\s*\{[^}]*min-height:\s*2\d\dpx/);
+    assert.match(css, /#dm-cloud-area\s*\{[^}]*overflow-y:\s*auto\s*!important;/s);
+    assert.match(css, /#dm-cloud-table tbody td\s*\{[^}]*height:\s*74px;/s);
+    assert.match(css, /@media\s*\(min-height:\s*\d+px\)[\s\S]*\.dm-cloud-table-shell\s*\{[^}]*min-height:\s*340px/);
     assert.match(css, /#dm-cloud-table\s*\{[^}]*min-width:\s*7[4-9]\dpx/s);
     assert.match(css, /position:\s*sticky/);
 

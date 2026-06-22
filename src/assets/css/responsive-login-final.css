@@ -1,74 +1,185 @@
 /* Final responsive login guardrail. Desktop styling remains owned by the legacy theme. */
 
-@media (min-width: 769px) and (max-width: 960px) {
+@media (min-width: 769px) and (max-width: 1024px) {
+    html body #login-overlay[data-login-skin="clean"] {
+        position: fixed !important;
+        inset: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        place-content: flex-start flex-start !important;
+        transform: none !important;
+        margin: 0 !important;
+    }
+
     #login-overlay[data-login-skin="clean"] {
-        align-items: flex-start !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        place-content: flex-start flex-start !important;
+        min-height: 100dvh !important;
+        height: auto !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
+        padding: 18px !important;
         background: #eef4f7 !important;
+        box-sizing: border-box !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-shell {
-        width: 100% !important;
+        position: relative !important;
+        inset: auto !important;
+        width: min(100%, 760px) !important;
         height: auto !important;
-        min-height: 100vh !important;
-        min-height: 100svh !important;
-        min-height: 100dvh !important;
-        display: grid !important;
-        grid-template-columns: minmax(220px, 40fr) minmax(0, 60fr) !important;
+        min-height: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
         align-items: stretch !important;
+        gap: 0 !important;
         overflow: visible !important;
-        border: 0 !important;
-        border-radius: 0 !important;
-        background: #fffaf5 !important;
-        box-shadow: none !important;
+        margin: 0 auto !important;
+        transform: none !important;
+        border: 1px solid rgba(148, 163, 184, .28) !important;
+        border-radius: 28px !important;
+        background: #fffdfb !important;
+        box-shadow: 0 24px 60px rgba(31, 41, 55, .12) !important;
+        box-sizing: border-box !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-stage {
         position: relative !important;
         inset: auto !important;
+        flex: 0 0 auto !important;
         min-width: 0 !important;
-        min-height: 100% !important;
+        min-height: 0 !important;
         display: flex !important;
-        flex-direction: column !important;
-        justify-content: flex-start !important;
-        padding: 32px 24px !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 18px !important;
+        padding: 18px 28px !important;
         transform: none !important;
         overflow: hidden !important;
-        border-right: 1px solid #dce6eb !important;
-        border-bottom: 0 !important;
+        border-right: 0 !important;
+        border-bottom: 1px solid #dce6eb !important;
+        border-radius: 28px 28px 0 0 !important;
         background: linear-gradient(160deg, #fff8f3, #edf5f8) !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
     #login-overlay[data-login-skin="clean"] .login-clean-stage::after,
-    #login-overlay[data-login-skin="clean"] :is(.login-clean-copy, .login-styleboard, .login-spotlight, .login-showcase, .login-actions, .login-meta, .login-platforms) {
+    #login-overlay[data-login-skin="clean"] :is(.login-styleboard, .login-spotlight, .login-showcase, .login-actions, .login-meta, .login-platforms) {
         display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-brand {
+        margin: 0 !important;
+        min-width: max-content !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy {
+        display: block !important;
+        margin: 0 !important;
+        max-width: 360px !important;
+        text-align: right !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy span {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        margin: 0 0 4px !important;
+        font-size: clamp(24px, 3vw, 32px) !important;
+        line-height: 1.08 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy p {
+        margin: 0 !important;
+        font-size: 13px !important;
+        line-height: 1.55 !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-card {
         position: relative !important;
         inset: auto !important;
+        flex: 1 1 auto !important;
         width: 100% !important;
         max-width: none !important;
         min-width: 0 !important;
-        min-height: 100% !important;
+        min-height: 0 !important;
         display: flex !important;
         visibility: visible !important;
         justify-content: flex-start !important;
         align-self: stretch !important;
-        padding: 40px clamp(28px, 5vw, 56px) !important;
+        padding: 20px clamp(32px, 6vw, 60px) 24px !important;
         margin: 0 !important;
         transform: none !important;
         overflow: visible !important;
         background: #fffdfb !important;
+        box-sizing: border-box !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-card .login-form-header {
+        margin-bottom: 12px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-card h2 {
+        font-size: clamp(24px, 3vw, 30px) !important;
+        line-height: 1.15 !important;
+        margin: 6px 0 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-card .login-form-header p,
+    #login-overlay[data-login-skin="clean"] .login-clean-helper,
+    #login-overlay[data-login-skin="clean"] .login-graduate-cohort-helper {
+        margin-top: 4px !important;
+        line-height: 1.45 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-form {
+        gap: 8px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-switch {
+        margin-bottom: 12px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] :is(.login-entry-field, input, select) {
+        min-height: 44px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-submit {
+        min-height: 48px !important;
     }
 }
 
 @media (max-width: 768px) {
+    html body #login-overlay[data-login-skin="clean"] {
+        position: fixed !important;
+        inset: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        place-content: flex-start flex-start !important;
+        transform: none !important;
+        margin: 0 !important;
+    }
+
     #login-overlay[data-login-skin="clean"] {
         position: fixed !important;
+        display: flex !important;
+        flex-direction: column !important;
         align-items: flex-start !important;
+        justify-content: flex-start !important;
+        place-content: flex-start flex-start !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
         background: #fffaf5 !important;
@@ -101,8 +212,8 @@
         display: flex !important;
         flex-direction: column !important;
         gap: 0 !important;
-        padding: 20px !important;
-        padding-top: max(20px, env(safe-area-inset-top, 0px)) !important;
+        padding: 16px 20px !important;
+        padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
         padding-left: max(20px, env(safe-area-inset-left, 0px)) !important;
         padding-right: max(20px, env(safe-area-inset-right, 0px)) !important;
         margin: 0 !important;
@@ -136,7 +247,7 @@
         display: flex !important;
         visibility: visible !important;
         justify-content: flex-start !important;
-        padding: 28px 20px 16px !important;
+        padding: 20px 20px 10px !important;
         padding-left: max(20px, env(safe-area-inset-left, 0px)) !important;
         padding-right: max(20px, env(safe-area-inset-right, 0px)) !important;
         margin: 0 !important;
@@ -149,7 +260,7 @@
     }
 
     #login-overlay[data-login-skin="clean"] :is(.login-entry-field, input, select) {
-        min-height: 48px !important;
+        min-height: 46px !important;
     }
 
     #login-overlay[data-login-skin="clean"] :is(input, select) {
@@ -157,6 +268,26 @@
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-submit {
-        min-height: 50px !important;
+        min-height: 46px !important;
+        height: 46px !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        margin-top: 8px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-card .login-form-header {
+        margin-bottom: 10px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-card h2 {
+        margin: 4px 0 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-form {
+        gap: 7px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-switch {
+        margin: 10px 0 !important;
     }
 }

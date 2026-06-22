@@ -2,6 +2,8 @@ const assert = require('assert');
 const { chromium } = require('playwright');
 
 const viewports = [
+    { width: 1024, height: 768, mode: 'tablet-stacked' },
+    { width: 834, height: 1194, mode: 'tablet-stacked' },
     { width: 960, height: 900, mode: 'tablet' },
     { width: 769, height: 900, mode: 'tablet' },
     { width: 768, height: 900, mode: 'phone' },
@@ -18,6 +20,7 @@ async function inspectLayout(page, viewport) {
     return page.evaluate(() => {
         const stage = document.querySelector('.login-clean-stage');
         const card = document.querySelector('.login-clean-card');
+        const shell = document.querySelector('.login-clean-shell');
         const submit = document.querySelector('#login-submit-button');
         const rect = node => {
             const value = node.getBoundingClientRect();
@@ -34,6 +37,7 @@ async function inspectLayout(page, viewport) {
         return {
             stage: rect(stage),
             card: rect(card),
+            shell: rect(shell),
             submit: rect(submit),
             stageStyle: style(stage),
             cardStyle: style(card),
@@ -69,11 +73,14 @@ async function main() {
                 assert.ok(styles.marginTop >= 0, `${label}: ${name} must not have a negative top margin`);
             }
             assert.ok(state.horizontalOverflow <= 1, `${label}: document must not overflow horizontally`);
+            assert.ok(state.shell.top >= -1, `${label}: login shell must start inside the viewport`);
 
             if (viewport.mode === 'tablet') {
                 const intersectionWidth = Math.min(state.stage.right, state.card.right) - Math.max(state.stage.left, state.card.left);
                 const intersectionHeight = Math.min(state.stage.bottom, state.card.bottom) - Math.max(state.stage.top, state.card.top);
                 assert.ok(intersectionWidth <= 0 || intersectionHeight <= 0, `${label}: tablet stage and card must not overlap`);
+            } else if (viewport.mode === 'tablet-stacked') {
+                assert.ok(state.card.top >= state.stage.bottom - 1, `${label}: tablet card must follow the compact brand band`);
             } else {
                 assert.ok(state.card.top >= state.stage.bottom - 1, `${label}: phone card must follow the stage`);
             }
