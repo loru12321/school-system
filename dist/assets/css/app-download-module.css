@@ -149,6 +149,29 @@ body.app-release-history-open {
     line-height: 1.12;
 }
 
+#app-download-center .app-release-brand-icon,
+#app-download-center .app-release-history-icon,
+#app-download-center .app-release-timeline-icon {
+    display: block;
+    border: 1px solid #e5c8bd;
+    border-radius: 22%;
+    background: #fffaf3;
+    box-shadow: 0 8px 22px rgba(82, 105, 132, .13);
+    object-fit: cover;
+}
+
+#app-download-center .app-release-brand-icon {
+    width: 72px;
+    height: 72px;
+    margin: 4px 0 18px;
+}
+
+#app-download-center .app-release-history-icon,
+#app-download-center .app-release-timeline-icon {
+    width: 42px;
+    height: 42px;
+}
+
 #app-download-center .app-release-focused-detail > p:not(.app-release-eyebrow) {
     max-width: 720px;
     margin: 0 0 24px;
@@ -245,6 +268,10 @@ body.app-release-history-open {
     position: relative;
     padding: 0 0 22px 20px;
     border-left: 1px solid #cad3de;
+}
+
+#app-download-center .app-release-timeline-icon {
+    margin-bottom: 10px;
 }
 
 #app-download-center .app-release-timeline-item:last-child {
@@ -377,6 +404,29 @@ body.app-release-history-open {
     border-radius: 12px;
 }
 
+#app-download-center .app-release-history-icon {
+    float: left;
+    margin: 0 12px 8px 0;
+}
+
+#app-download-center .app-release-history-item::after {
+    display: block;
+    clear: both;
+    content: "";
+}
+
+#app-download-center .app-release-history-actions {
+    display: flex;
+    clear: both;
+    padding-top: 12px;
+}
+
+#app-download-center .app-release-history-actions .btn {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
 #app-download-center .app-release-history-item strong,
 #app-download-center .app-release-history-item span,
 #app-download-center .app-release-history-item p {
@@ -403,6 +453,10 @@ body.app-release-history-open {
 }
 
 @media (max-width: 768px) {
+    #app-download-center .app-release-brand-icon {
+        margin-bottom: 14px;
+    }
+
     #app-download-center .app-release-center-head {
         align-items: flex-start;
         flex-direction: column;
