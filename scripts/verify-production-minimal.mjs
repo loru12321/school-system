@@ -9,6 +9,7 @@ async function fetchWithTimeout(pathname, options = {}) {
   const timeout = setTimeout(() => controller.abort(), Number(options.timeoutMs || 15000));
   try {
     return await fetch(`${origin}${pathname}`, {
+      method: options.method || 'GET',
       redirect: 'follow',
       signal: controller.signal,
       headers: {
@@ -48,13 +49,33 @@ const serviceWorker = await fetchWithTimeout('/sw.js');
 checks.push(['service_worker_status', serviceWorker.status === 200]);
 checks.push(['service_worker_revalidate', /must-revalidate/.test(serviceWorker.headers.get('cache-control') || '')]);
 
-const apk = await fetchWithTimeout('/downloads/school-system-android-v1.0.apk');
-checks.push(['apk_status', apk.status === 200]);
-checks.push(['apk_size', Number(apk.headers.get('content-length') || 0) > 10000000]);
+const releaseManifest = await fetchWithTimeout('/releases/release-manifest.json');
+const releaseCatalog = await releaseManifest.json();
+const currentRelease = releaseCatalog?.releases?.[0] || {};
+const releasePlatforms = currentRelease.platforms || {};
+const androidRelease = releasePlatforms.android || {};
+const windowsRelease = releasePlatforms.windows || {};
+checks.push(['release_manifest_status', releaseManifest.status === 200]);
+checks.push(['release_android_ready', androidRelease.status === 'ready']);
+checks.push(['release_windows_ready', windowsRelease.status === 'ready']);
 
-const windowsExe = await fetchWithTimeout('/downloads/school-system-windows-latest.exe');
+const apk = await fetchWithTimeout(`/downloads/${androidRelease.assetName || 'school-system-android-v1.0.apk'}`, { method: 'HEAD' });
+checks.push(['apk_status', apk.status === 200]);
+checks.push(['apk_size', Number(apk.headers.get('content-length') || 0) === Number(androidRelease.bytes || 0)]);
+checks.push(['apk_sha', (apk.headers.get('x-content-sha256') || '').toLowerCase() === String(androidRelease.sha256 || '').toLowerCase()]);
+
+const windowsExe = await fetchWithTimeout(`/downloads/${windowsRelease.assetName || 'school-system-windows-latest.exe'}`, { method: 'HEAD' });
 checks.push(['windows_status', windowsExe.status === 200]);
-checks.push(['windows_size', Number(windowsExe.headers.get('content-length') || 0) > 100000]);
+let windowsBytes = Number(windowsExe.headers.get('content-length') || 0);
+let windowsSignature = '';
+if (!windowsBytes && windowsExe.status === 200) {
+  const windowsGet = await fetchWithTimeout(`/downloads/${windowsRelease.assetName || 'school-system-windows-latest.exe'}`);
+  const windowsBuffer = new Uint8Array(await windowsGet.arrayBuffer());
+  windowsBytes = windowsBuffer.byteLength;
+  windowsSignature = String.fromCharCode(windowsBuffer[0] || 0, windowsBuffer[1] || 0);
+}
+checks.push(['windows_size', windowsBytes === Number(windowsRelease.bytes || 0)]);
+checks.push(['windows_pe_header', !windowsSignature || windowsSignature === 'MZ']);
 
 const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
 assert(failed.length === 0, `Production verification failed: ${failed.join(', ')}`);
