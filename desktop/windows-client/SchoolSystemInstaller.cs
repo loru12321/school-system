@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
+using System.IO.Compression;
 using Microsoft.Win32;
 
 namespace SchoolSystemInstaller
@@ -32,9 +33,11 @@ namespace SchoolSystemInstaller
     internal static class InstallerShared
     {
         public const string AppName = "\u6821\u8861\u53f0";
+        public const string AppVersion = "1.0.2";
         public const string LauncherFileName = "\u6821\u8861\u53f0.exe";
         public const string UninstallerFileName = "\u5378\u8f7d\u6821\u8861\u53f0.exe";
         public const string LauncherResourceName = "school-system-client.exe";
+        public const string AppBundleResourceName = "school-system-app.zip";
         public const string UninstallKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\SchoolSystem";
 
         public static Font UiFont(float size, FontStyle style = FontStyle.Regular)
@@ -69,7 +72,7 @@ namespace SchoolSystemInstaller
             {
                 if (key == null) return;
                 key.SetValue("DisplayName", AppName);
-                key.SetValue("DisplayVersion", "1.0");
+                key.SetValue("DisplayVersion", AppVersion);
                 key.SetValue("Publisher", "School System");
                 key.SetValue("InstallLocation", installDir);
                 key.SetValue("DisplayIcon", Path.Combine(installDir, LauncherFileName));
@@ -77,7 +80,24 @@ namespace SchoolSystemInstaller
                 key.SetValue("QuietUninstallString", "\"" + uninstallerPath + "\" /uninstall /quiet");
                 key.SetValue("NoModify", 1, RegistryValueKind.DWord);
                 key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
-                key.SetValue("EstimatedSize", 1024, RegistryValueKind.DWord);
+                key.SetValue("EstimatedSize", EstimateInstalledSizeKb(installDir), RegistryValueKind.DWord);
+            }
+        }
+
+        private static int EstimateInstalledSizeKb(string installDir)
+        {
+            try
+            {
+                long bytes = 0;
+                foreach (var file in Directory.GetFiles(installDir))
+                {
+                    bytes += new FileInfo(file).Length;
+                }
+                return Math.Max(1, (int)Math.Ceiling(bytes / 1024.0));
+            }
+            catch
+            {
+                return 1;
             }
         }
 
@@ -288,6 +308,9 @@ namespace SchoolSystemInstaller
                     if (input == null) throw new InvalidOperationException("\u5b89\u88c5\u5305\u5185\u7f3a\u5c11\u5ba2\u6237\u7aef\u6587\u4ef6\u3002");
                     using (var output = File.Create(installedLauncher)) input.CopyTo(output);
                 }
+                progressBar.Value = 46;
+                statusLabel.Text = "\u6b63\u5728\u89e3\u538b\u672c\u5730\u7cfb\u7edf\u8d44\u6e90...";
+                ExtractAppBundle(Path.Combine(installDir, "app"));
                 File.Copy(Application.ExecutablePath, uninstallerPath, true);
                 progressBar.Value = 64;
                 statusLabel.Text = "\u6b63\u5728\u521b\u5efa\u5feb\u6377\u65b9\u5f0f...";
@@ -313,6 +336,32 @@ namespace SchoolSystemInstaller
                 MessageBox.Show(this, "\u5b89\u88c5\u5931\u8d25\uff1a\n" + ex.Message, InstallerShared.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 pageIndex = 1;
                 RenderPage();
+            }
+        }
+
+        private void ExtractAppBundle(string appDir)
+        {
+            if (Directory.Exists(appDir)) Directory.Delete(appDir, true);
+            Directory.CreateDirectory(appDir);
+            using (var input = Assembly.GetExecutingAssembly().GetManifestResourceStream(InstallerShared.AppBundleResourceName))
+            {
+                if (input == null) throw new InvalidOperationException("\u5b89\u88c5\u5305\u5185\u7f3a\u5c11\u672c\u5730\u7cfb\u7edf\u8d44\u6e90\u3002");
+                using (var archive = new ZipArchive(input, ZipArchiveMode.Read))
+                {
+                    foreach (var entry in archive.Entries)
+                    {
+                        var targetPath = Path.GetFullPath(Path.Combine(appDir, entry.FullName));
+                        if (!targetPath.StartsWith(Path.GetFullPath(appDir), StringComparison.OrdinalIgnoreCase))
+                            throw new InvalidOperationException("\u5b89\u88c5\u5305\u8d44\u6e90\u8def\u5f84\u4e0d\u5b89\u5168\u3002");
+                        if (String.IsNullOrEmpty(entry.Name))
+                        {
+                            Directory.CreateDirectory(targetPath);
+                            continue;
+                        }
+                        Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+                        entry.ExtractToFile(targetPath, true);
+                    }
+                }
             }
         }
 

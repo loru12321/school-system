@@ -6,6 +6,7 @@ const PRODUCTION_ORIGIN = new URL(PRODUCTION_URL).origin;
 const RELEASE_HOST = 'github.com';
 const RELEASE_PATH_PREFIX = '/hka123321/school-system/releases';
 const OFFLINE_PAGE = path.join(__dirname, 'offline.html');
+const LOCAL_APP_ENTRY = path.join(process.resourcesPath || path.join(__dirname, '..'), 'app', 'index.html');
 
 let mainWindow = null;
 let initialLoadComplete = false;
@@ -107,7 +108,11 @@ function createMainWindow() {
         mainWindow = null;
     });
 
-    mainWindow.loadURL(PRODUCTION_URL).catch(() => showOfflineFallback());
+    if (require('node:fs').existsSync(LOCAL_APP_ENTRY)) {
+        mainWindow.loadFile(LOCAL_APP_ENTRY).catch(() => showOfflineFallback());
+    } else {
+        mainWindow.loadURL(PRODUCTION_URL).catch(() => showOfflineFallback());
+    }
     return mainWindow;
 }
 

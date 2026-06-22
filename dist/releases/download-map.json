@@ -5,30 +5,40 @@
   "downloads": [
     {
       "platform": "windows",
-      "filename": "school-system-windows-latest.exe",
+      "filename": "school-system-windows-beta-20260621-9a362b3.exe",
       "contentType": "application/vnd.microsoft.portable-executable",
-      "bytes": 766976,
-      "sha256": "b9bfdc732f5911ab2aec4249d496980e8cea4f8f97104bfa33d68d195749a8ed",
+      "bytes": 123201275,
+      "sha256": "1460db4d204134b25bd496150bf25d43ac8132b7170d96ccc35e1bb9b28abf3d",
       "chunks": [
-        "packages/beta-20260621-9a362b3/windows/part-0001"
+        "packages/beta-20260621-9a362b3/windows/part-0001",
+        "packages/beta-20260621-9a362b3/windows/part-0002",
+        "packages/beta-20260621-9a362b3/windows/part-0003",
+        "packages/beta-20260621-9a362b3/windows/part-0004",
+        "packages/beta-20260621-9a362b3/windows/part-0005",
+        "packages/beta-20260621-9a362b3/windows/part-0006"
       ],
       "chunkBytes": [
-        766976
+        20971520,
+        20971520,
+        20971520,
+        20971520,
+        20971520,
+        18343675
       ]
     },
     {
       "platform": "android",
-      "filename": "school-system-android-v1.0.apk",
+      "filename": "school-system-android-beta-20260621-9a362b3.apk",
       "contentType": "application/vnd.android.package-archive",
-      "bytes": 29349781,
-      "sha256": "ce9fbd72efcf032035ba05773d0ae36b845ab0fe69324f85d8b8528af9fb364d",
+      "bytes": 29349489,
+      "sha256": "14cb89299fd27eb23e5056c0cac5eea09c9b8f5078dfdd1de2f24844e00e6ff3",
       "chunks": [
         "packages/beta-20260621-9a362b3/android/part-0001",
         "packages/beta-20260621-9a362b3/android/part-0002"
       ],
       "chunkBytes": [
         20971520,
-        8378261
+        8377969
       ]
     }
   ]

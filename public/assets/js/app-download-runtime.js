@@ -15,24 +15,24 @@
 
     const DEFAULT_BUILD_INFO = {
         shared: {
-            releaseTag: 'school-system-v2026.04.09-about-update-v59',
-            releaseDate: '2026-04-09'
+            releaseTag: 'beta-20260621-9a362b3',
+            releaseDate: '2026-06-22'
         },
         web: {
             label: 'Web 工作台',
-            version: '2026.04.09-v59',
-            notes: '当前打开的是网页端工作台构建。'
+            version: '1.0.2',
+            notes: '当前打开的是 1.0.2 系统工作台构建。'
         },
         android: {
             label: 'Android APK',
-            version: '1.0.1',
-            build: '2',
+            version: '1.0.2',
+            build: '3',
             notes: '安卓客户端会跟随 GitHub release 同步更新。'
         },
         desktop: {
-            label: 'Windows 客户端',
-            version: '1.0.1',
-            notes: 'Windows 客户端会跟随 GitHub release 同步更新。'
+            label: 'Windows 本地安装包',
+            version: '1.0.2',
+            notes: 'Windows 本地安装向导会跟随 GitHub release 同步更新。'
         }
     };
     const DEFAULT_CHANNELS = {
@@ -44,8 +44,8 @@
             badge: '手机 / 平板',
             icon: 'ti-brand-android',
             accent: '#22c55e',
-            url: './downloads/school-system-android-v1.0.apk',
-            fileName: 'school-system-android-v1.0.apk',
+            url: './downloads/school-system-android-beta-20260621-9a362b3.apk',
+            fileName: 'school-system-android-beta-20260621-9a362b3.apk',
             heroTitle: '安卓包与桌面端统一下载',
             heroCopy: '登录后可继续查看关于与更新；登录前也可以在这里直接下载安卓 APK 或 Windows 应用包。',
             summary: '当前会根据所选平台切换下载链接，历史更新记录已清空，后续新文件从这里开始记录。',
@@ -101,30 +101,31 @@
         desktop: {
             key: 'desktop',
             iconUrl: RELEASE_BRAND_ICON_URL,
-            label: '桌面端下载',
+            label: 'Windows 本地安装包',
             shortLabel: 'Windows EXE',
             badge: 'Windows 10 / 11',
             icon: 'ti-brand-windows',
             accent: '#60a5fa',
-            url: './downloads/school-system-windows-latest.exe',
-            fileName: 'school-system-windows-latest.exe',
-            heroTitle: '桌面端关于、更新检查与下载统一入口',
-            heroCopy: 'Windows 客户端、安卓客户端与网页端现在共用同一套版本中心；旧历史记录已清空，后续新版本从当前入口重新累积。',
-            summary: '当前选中 Windows 应用，会优先展示桌面端下载和更新状态。',
+            url: './downloads/school-system-windows-beta-20260621-9a362b3.exe',
+            fileName: 'school-system-windows-beta-20260621-9a362b3.exe',
+            heroTitle: 'Windows 本地安装包与安卓 APK 统一下载',
+            heroCopy: 'Windows 提供可一步步安装到本机的安装向导 EXE；Android 提供可在设备上直接安装的 APK，二者都与网页端共用当前系统版本。',
+            summary: '当前选中 Windows 本地安装包，会优先展示安装向导下载、安装步骤和更新状态。',
             releaseStamp: 'Latest · Desktop',
-            primaryActionLabel: '下载 Windows 客户端',
+            primaryActionLabel: '下载 Windows 本地安装包',
             secondaryActionLabel: '打开 Windows 下载',
             details: [
                 { label: '推荐设备', value: '办公室电脑 / 机房 / 固定工位' },
-                { label: '运行方式', value: '下载 EXE 后本地启动，单实例运行' },
-                { label: '升级方式', value: '重新下载最新客户端 EXE' },
+                { label: '安装方式', value: '双击 EXE 后按安装向导一步步安装到本机' },
+                { label: '本地入口', value: '安装目录、桌面快捷方式、开始菜单快捷方式' },
+                { label: '卸载方式', value: '写入 Windows 系统卸载入口' },
                 { label: '更新查看', value: '托盘菜单与页面右上角都可打开关于与更新' }
             ],
             features: [
                 {
                     icon: 'ti-device-desktop',
-                    title: '桌面端一键打开',
-                    body: '适合在 Windows 办公电脑里直接启动，减少每天先找浏览器入口的步骤。'
+                    title: '本地向导安装',
+                    body: '双击 EXE 后可选择安装目录、桌面快捷方式和开始菜单快捷方式，安装完成后从本机入口启动。'
                 },
                 {
                     icon: 'ti-app-window',
@@ -133,8 +134,8 @@
                 },
                 {
                     icon: 'ti-history',
-                    title: '从当前版本重新累积',
-                    body: '旧历史记录已清空，以后新发布的 APK 或 Windows 包会从这里开始记录。'
+                    title: '系统卸载入口',
+                    body: '安装向导会写入 Windows 卸载记录，后续可从系统应用列表或安装目录中的卸载程序移除。'
                 },
                 {
                     icon: 'ti-refresh-alert',
@@ -153,12 +154,13 @@
                 }
             ],
             installSteps: [
-                '点击当前 Windows 下载按钮，获取 Windows 客户端 EXE。',
-                '下载完成后双击 EXE，客户端会以独立窗口打开正式系统。',
-                '首次打开后可通过右上角“关于”或托盘菜单查看当前版本和更新记录。',
-                '若后续发布新版，重新下载最新 Windows 应用包覆盖使用即可。'
+                '点击当前 Windows 下载按钮，获取 Windows 本地安装向导 EXE。',
+                '下载完成后双击 EXE，按“下一步”进入安装向导。',
+                '选择安装目录，并按需要保留桌面快捷方式和开始菜单快捷方式。',
+                '点击“安装”，等待向导复制本地客户端并写入 Windows 卸载入口。',
+                '点击“完成”后从桌面、开始菜单或安装目录启动校衡台。'
             ],
-            specNote: 'Windows 应用包会优先用 Edge/Chrome 的应用窗口打开正式站点。'
+            specNote: 'Windows 本地安装包会创建安装目录、桌面/开始菜单入口和系统卸载入口；客户端会优先用 Edge/Chrome 的应用窗口打开正式站点。'
         }
     };
     const state = {

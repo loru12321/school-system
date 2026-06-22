@@ -13,26 +13,26 @@
         "windows": {
           "platform": "windows",
           "version": "1.0.2",
-          "buildNumber": "installer-20260622",
+          "buildNumber": "nsis-20260622",
           "status": "ready",
           "signed": "unsigned",
           "minimumOs": "Windows 10 22H2",
           "architectures": [
             "x64"
           ],
-          "assetName": "school-system-windows-latest.exe",
-          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-windows-latest.exe",
-          "bytes": 766976,
-          "sha256": "b9bfdc732f5911ab2aec4249d496980e8cea4f8f97104bfa33d68d195749a8ed",
+          "assetName": "school-system-windows-beta-20260621-9a362b3.exe",
+          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-windows-beta-20260621-9a362b3.exe",
+          "bytes": 123201275,
           "notes": [
-            "Windows 安装向导 EXE，支持桌面/开始菜单快捷方式和系统卸载入口。"
+            "Windows NSIS 本地安装器，内置 Electron 运行时与本地系统资源，可按步骤选择安装目录，创建桌面/开始菜单快捷方式，并写入系统卸载入口。"
           ],
-          "buildUrl": "https://schoolsystem.com.cn/"
+          "buildUrl": "https://schoolsystem.com.cn/",
+          "sha256": "1460db4d204134b25bd496150bf25d43ac8132b7170d96ccc35e1bb9b28abf3d"
         },
         "android": {
           "platform": "android",
           "version": "1.0.2",
-          "buildNumber": "3",
+          "buildNumber": "3-local",
           "status": "ready",
           "signed": "test-signed",
           "minimumOs": "Android 10",
@@ -41,12 +41,12 @@
             "armeabi-v7a",
             "x86_64"
           ],
-          "assetName": "school-system-android-v1.0.apk",
-          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-android-v1.0.apk",
-          "bytes": 29349781,
-          "sha256": "ce9fbd72efcf032035ba05773d0ae36b845ab0fe69324f85d8b8528af9fb364d",
+          "assetName": "school-system-android-beta-20260621-9a362b3.apk",
+          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-android-beta-20260621-9a362b3.apk",
+          "bytes": 29349489,
+          "sha256": "14cb89299fd27eb23e5056c0cac5eea09c9b8f5078dfdd1de2f24844e00e6ff3",
           "notes": [
-            "已同步最新网页端资源并重新打包 Android APK。"
+            "Android 本地安装 APK，内置 Capacitor 本地系统资源，已移除历史下载包和 release 分片资产，可直接在安卓设备安装。"
           ],
           "buildUrl": "https://schoolsystem.com.cn/"
         },

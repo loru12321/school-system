@@ -1849,24 +1849,24 @@ window.syncCompareSessionRuntimeState = syncCompareSessionRuntimeState;
 var PUBLIC_DOWNLOAD_RELEASE_PAGE_URL = 'https://github.com/hka123321/school-system/releases/latest';
 var PUBLIC_VERSION_CENTER_BUILD_INFO = {
     shared: {
-        releaseTag: 'school-system-v2026.04.09-about-update-v59',
-        releaseDate: '2026-04-09'
+        releaseTag: 'beta-20260621-9a362b3',
+        releaseDate: '2026-06-22'
     },
     web: {
         label: 'Web 工作台',
-        version: '2026.04.09-v59',
-        notes: '当前打开的是网页端工作台构建。'
+        version: '1.0.2',
+        notes: '当前打开的是 1.0.2 系统工作台构建。'
     },
     android: {
         label: 'Android APK',
-        version: '1.0.1',
-        build: '2',
+        version: '1.0.2',
+        build: '3',
         notes: '安卓客户端会跟随 GitHub release 同步更新。'
     },
     desktop: {
-        label: 'Windows 客户端',
-        version: '1.0.1',
-        notes: 'Windows 客户端会跟随 GitHub release 同步更新。'
+        label: 'Windows 本地安装包',
+        version: '1.0.2',
+        notes: 'Windows 本地安装向导会跟随 GitHub release 同步更新。'
     }
 };
 var PUBLIC_VERSION_CENTER_RELEASES = [];
@@ -1878,8 +1878,8 @@ var PUBLIC_DOWNLOAD_CHANNELS = {
         badge: '手机 / 平板',
         icon: 'ti-brand-android',
         accent: '#22c55e',
-        url: './downloads/school-system-android-v1.0.apk',
-        fileName: 'school-system-android-v1.0.apk',
+        url: './downloads/school-system-android-beta-20260621-9a362b3.apk',
+        fileName: 'school-system-android-beta-20260621-9a362b3.apk',
         helper: '适合安卓手机和平板直接安装，安装后沿用现有账号登录。',
         notes: [
             '适合教师、班主任、家长与学生在移动端直接打开系统。',
@@ -1890,17 +1890,17 @@ var PUBLIC_DOWNLOAD_CHANNELS = {
     desktop: {
         key: 'desktop',
         label: '桌面端下载',
-        shortLabel: 'Windows 应用',
+        shortLabel: 'Windows 安装包',
         badge: 'Windows 桌面',
         icon: 'ti-brand-windows',
         accent: '#60a5fa',
-        url: './downloads/school-system-windows-latest.exe',
-        fileName: 'school-system-windows-latest.exe',
-        helper: '适合 Windows 办公电脑本地打开，使用独立客户端窗口启动正式系统。',
+        url: './downloads/school-system-windows-beta-20260621-9a362b3.exe',
+        fileName: 'school-system-windows-beta-20260621-9a362b3.exe',
+        helper: '适合 Windows 办公电脑一步步安装到本机，创建桌面/开始菜单入口后启动正式系统。',
         notes: [
             '适合教务处、办公室、机房与固定工位使用。',
-            '下载 EXE 后双击打开，客户端会以独立窗口进入正式系统。',
-            '桌面端和网页端使用同一套数据口径与登录逻辑。'
+            '下载 EXE 后双击打开安装向导，选择安装目录并创建本地快捷方式。',
+            '安装完成后可从桌面、开始菜单或 Windows 系统卸载入口管理客户端。'
         ]
     }
 };
@@ -2070,7 +2070,7 @@ var Auth = {
     getPublicApkDownloadFileName: function (url = this.getPublicApkDownloadUrl()) {
         const normalizedUrl = String(url || '').split('#')[0].split('?')[0];
         const fileName = normalizedUrl.split('/').filter(Boolean).pop();
-        return fileName || this.getPublicDownloadChannel('android')?.fileName || 'school-system-android-v1.0.apk';
+        return fileName || this.getPublicDownloadChannel('android')?.fileName || 'school-system-android-beta-20260621-9a362b3.apk';
     },
 
     getPublicDesktopDownloadUrl: function () {
@@ -2080,7 +2080,7 @@ var Auth = {
     getPublicDesktopDownloadFileName: function (url = this.getPublicDesktopDownloadUrl()) {
         const normalizedUrl = String(url || '').split('#')[0].split('?')[0];
         const fileName = normalizedUrl.split('/').filter(Boolean).pop();
-        return fileName || this.getPublicDownloadChannel('desktop')?.fileName || 'school-system-windows-latest.exe';
+        return fileName || this.getPublicDownloadChannel('desktop')?.fileName || 'school-system-windows-beta-20260621-9a362b3.exe';
     },
 
     syncPublicDownloadLinks: function () {

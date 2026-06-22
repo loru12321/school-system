@@ -54,6 +54,7 @@ const requiredContractGate = [
   'npm run test:release-manifest',
   'npm run test:app-icon-assets',
   'npm run test:desktop-package-contract',
+  'npm run test:windows-installer-contract',
   'npm run test:capacitor-package-contract',
   'npm run test:beta-release-workflow',
 ];

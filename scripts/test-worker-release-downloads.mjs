@@ -4,7 +4,7 @@ import { handleReleaseDownload } from '../src/worker-release-downloads.mjs';
 const map = {
   schemaVersion: 1,
   downloads: [{
-    filename: 'school-system-windows-beta.exe',
+    filename: 'school-system-windows-beta-20260621-9a362b3.exe',
     contentType: 'application/vnd.microsoft.portable-executable',
     bytes: 6,
     sha256: 'a'.repeat(64),
@@ -39,7 +39,7 @@ function createEnv({ omitSecondChunk = false, omitMap = false } = {}) {
   };
 }
 
-const requestUrl = 'https://schoolsystem.com.cn/downloads/school-system-windows-beta.exe';
+const requestUrl = 'https://schoolsystem.com.cn/downloads/school-system-windows-beta-20260621-9a362b3.exe';
 const getEnv = createEnv();
 const getResponse = await handleReleaseDownload(new Request(requestUrl), getEnv);
 assert.equal(getResponse.status, 200);
@@ -72,7 +72,7 @@ const traversalResponse = await handleReleaseDownload(
 assert.equal(traversalResponse.status, 404);
 
 const hostedArchiveFallback = await handleReleaseDownload(
-  new Request('https://schoolsystem.com.cn/downloads/school-system-windows-latest.exe'),
+  new Request('https://schoolsystem.com.cn/downloads/school-system-windows-legacy.exe'),
   createEnv()
 );
 assert.equal(hostedArchiveFallback, null);

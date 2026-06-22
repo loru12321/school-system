@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const crypto = require('crypto');
 
 const root = path.resolve(__dirname, '..');
 const gradlePath = path.join(root, 'android', 'app', 'build.gradle');
@@ -36,5 +37,50 @@ assert.ok(!fs.existsSync(refusedOutput), 'refused bootstrap must not create a ke
 const gitignore = fs.readFileSync(path.join(root, '.gitignore'), 'utf8');
 assert.match(gitignore, /^\*\.keystore$/m, 'root ignore rules should exclude keystores');
 assert.match(gitignore, /^\*\.jks$/m, 'root ignore rules should exclude JKS files');
+
+const manifestPath = path.join(root, 'public', 'releases', 'release-manifest.json');
+const releaseManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+const currentRelease = releaseManifest.releases.find((release) => release.releaseTag === 'beta-20260621-9a362b3');
+assert.ok(currentRelease, 'public release manifest should include the current Android package');
+const androidAsset = currentRelease.platforms.android;
+const apkPath = path.join(root, 'public', 'downloads', androidAsset.assetName);
+assert.ok(fs.existsSync(apkPath), 'current Android APK should exist in public downloads');
+const apk = fs.readFileSync(apkPath);
+assert.equal(apk.subarray(0, 4).toString('hex'), '504b0304', 'Android package should be a ZIP/APK file');
+assert.equal(androidAsset.bytes, apk.length, 'Android manifest bytes should match the APK file');
+assert.equal(
+  androidAsset.sha256,
+  crypto.createHash('sha256').update(apk).digest('hex'),
+  'Android manifest sha256 should match the APK file'
+);
+const apkListingResult = spawnSync('jar', ['tf', apkPath], { cwd: root, encoding: 'utf8' });
+assert.equal(apkListingResult.status, 0, apkListingResult.stderr || apkListingResult.stdout);
+const apkEntries = new Set(apkListingResult.stdout.split(/\r?\n/).filter(Boolean));
+for (const requiredEntry of [
+  'AndroidManifest.xml',
+  'classes.dex',
+  'resources.arsc',
+  'assets/capacitor.config.json',
+  'assets/public/index.html',
+  'assets/public/assets/js/app.js',
+]) {
+  assert.ok(apkEntries.has(requiredEntry), `APK should contain ${requiredEntry}`);
+}
+assert.ok(
+  ![...apkEntries].some((entry) => entry.startsWith('assets/public/downloads/')),
+  'APK should not bundle historical downloadable installers inside the Android app'
+);
+assert.ok(
+  ![...apkEntries].some((entry) => entry.startsWith('assets/public/releases/')),
+  'APK should not bundle release chunk metadata inside the Android app'
+);
+assert.ok(
+  apk.includes(Buffer.from('APK Sig Block 42')) || [...apkEntries].some((entry) => /^META-INF\/.+\.(RSA|DSA|EC)$/.test(entry)),
+  'APK should include an APK signing block or legacy signing certificate block'
+);
+assert.ok(
+  androidAsset.notes.some((note) => /本地安装|Android APK/.test(note)),
+  'Android release notes should describe a locally installable APK'
+);
 
 console.log('android signing contract tests passed');

@@ -14,6 +14,8 @@ assert.ok(main.includes('contextIsolation: true'), 'renderer must use context is
 assert.ok(main.includes('nodeIntegration: false'), 'renderer must not expose Node.js');
 assert.ok(main.includes('sandbox: true'), 'renderer must use the Chromium sandbox');
 assert.ok(main.includes('https://schoolsystem.com.cn'), 'desktop shell must use the production origin');
+assert.ok(main.includes('LOCAL_APP_ENTRY'), 'desktop shell must prefer bundled local app resources');
+assert.ok(main.includes("loadFile(LOCAL_APP_ENTRY)"), 'desktop shell must load the bundled local app before falling back online');
 assert.ok(main.includes('setWindowOpenHandler'), 'new windows must be intercepted');
 assert.ok(main.includes('will-navigate'), 'top-level navigation must be allowlisted');
 assert.ok(main.includes('shell.openExternal'), 'approved release links should open outside the app');
@@ -28,9 +30,12 @@ assert.ok(main.includes('additionalArguments'), 'sandboxed preload metadata shou
 assert.ok(!preload.includes("require('../package.json')"), 'sandboxed preload must not require local files');
 assert.ok(offline.includes('Content-Security-Policy'), 'offline page should declare a CSP');
 assert.ok(builder.includes('school-system-windows-${version}-${arch}.${ext}'), 'installer artifact should carry version and architecture');
+assert.ok(builder.includes('extraResources:'), 'Electron Builder must bundle local app resources');
+assert.ok(builder.includes('from: dist'), 'Electron Builder must package the production dist app locally');
+assert.ok(builder.includes('to: app'), 'Electron Builder must install local resources under resources/app');
 assert.equal(packageJson.main, 'desktop/main.cjs', 'Electron must package the secure desktop entry point');
 assert.equal(packageJson.scripts?.['desktop:start'], 'electron desktop/main.cjs');
-assert.equal(packageJson.scripts?.['desktop:build'], 'electron-builder --win nsis --x64');
+assert.equal(packageJson.scripts?.['desktop:build'], 'electron-builder --config electron-builder.yml --win nsis --x64');
 assert.equal(packageJson.build?.win?.icon, 'desktop/assets/icon.ico', 'Electron Builder must package the branded Windows icon');
 
 console.log('desktop package contract tests passed');

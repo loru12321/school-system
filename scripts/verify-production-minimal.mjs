@@ -59,17 +59,17 @@ checks.push(['release_manifest_status', releaseManifest.status === 200]);
 checks.push(['release_android_ready', androidRelease.status === 'ready']);
 checks.push(['release_windows_ready', windowsRelease.status === 'ready']);
 
-const apk = await fetchWithTimeout(`/downloads/${androidRelease.assetName || 'school-system-android-v1.0.apk'}`, { method: 'HEAD' });
+const apk = await fetchWithTimeout(`/downloads/${androidRelease.assetName || 'school-system-android-beta-20260621-9a362b3.apk'}`, { method: 'HEAD' });
 checks.push(['apk_status', apk.status === 200]);
 checks.push(['apk_size', Number(apk.headers.get('content-length') || 0) === Number(androidRelease.bytes || 0)]);
 checks.push(['apk_sha', (apk.headers.get('x-content-sha256') || '').toLowerCase() === String(androidRelease.sha256 || '').toLowerCase()]);
 
-const windowsExe = await fetchWithTimeout(`/downloads/${windowsRelease.assetName || 'school-system-windows-latest.exe'}`, { method: 'HEAD' });
+const windowsExe = await fetchWithTimeout(`/downloads/${windowsRelease.assetName || 'school-system-windows-beta-20260621-9a362b3.exe'}`, { method: 'HEAD' });
 checks.push(['windows_status', windowsExe.status === 200]);
 let windowsBytes = Number(windowsExe.headers.get('content-length') || 0);
 let windowsSignature = '';
 if (!windowsBytes && windowsExe.status === 200) {
-  const windowsGet = await fetchWithTimeout(`/downloads/${windowsRelease.assetName || 'school-system-windows-latest.exe'}`);
+  const windowsGet = await fetchWithTimeout(`/downloads/${windowsRelease.assetName || 'school-system-windows-beta-20260621-9a362b3.exe'}`);
   const windowsBuffer = new Uint8Array(await windowsGet.arrayBuffer());
   windowsBytes = windowsBuffer.byteLength;
   windowsSignature = String.fromCharCode(windowsBuffer[0] || 0, windowsBuffer[1] || 0);

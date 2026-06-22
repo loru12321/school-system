@@ -25,11 +25,34 @@ function snapshotTree(directory) {
 }
 
 try {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
+  const androidGradle = fs.readFileSync(path.join(rootDir, 'android/app/build.gradle'), 'utf8');
   const publicCatalog = JSON.parse(fs.readFileSync(path.join(rootDir, 'public/releases/release-manifest.json'), 'utf8'));
   const currentPublicRelease = publicCatalog.releases.find((release) => release.releaseTag === 'beta-20260621-9a362b3');
   assert.ok(currentPublicRelease, 'public catalog must include the current beta');
+  assert.equal(currentPublicRelease.platforms.windows.version, packageJson.version, 'current Windows manifest version should match the system package version');
+  assert.equal(currentPublicRelease.platforms.android.version, packageJson.version, 'current Android manifest version should match the system package version');
+  assert.match(androidGradle, new RegExp(`findProperty\\(['"]appVersionName['"]\\) \\?: ['"]${packageJson.version.replace(/\./g, '\\.')}['"]`), 'Android local default versionName should match the system package version');
   assert.match(currentPublicRelease.platforms.windows.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
   assert.match(currentPublicRelease.platforms.android.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
+  assert.ok(
+    currentPublicRelease.platforms.windows.assetName.includes(currentPublicRelease.releaseTag),
+    'current Windows asset name should include the release tag instead of a stale latest alias'
+  );
+  assert.ok(
+    currentPublicRelease.platforms.android.assetName.includes(currentPublicRelease.releaseTag),
+    'current Android asset name should include the release tag instead of an old v1.0 filename'
+  );
+  assert.ok(!currentPublicRelease.platforms.windows.assetName.includes('latest'), 'current Windows manifest asset should not use the old latest alias');
+  assert.ok(!currentPublicRelease.platforms.android.assetName.includes('v1.0'), 'current Android manifest asset should not use the old v1.0 filename');
+  assert.ok(
+    currentPublicRelease.platforms.windows.notes.some((note) => /NSIS|安装器/.test(note) && /系统卸载入口/.test(note) && /本地系统资源/.test(note)),
+    'current Windows manifest notes should describe the NSIS local installer, bundled resources, and uninstall entry'
+  );
+  assert.ok(
+    currentPublicRelease.platforms.android.notes.some((note) => /Android/.test(note) && /本地安装/.test(note) && /APK/.test(note)),
+    'current Android manifest notes should describe a locally installable APK'
+  );
   assert.equal(currentPublicRelease.platforms.ios.status, 'awaiting-signing');
   for (const platform of ['windows', 'android']) {
     const asset = currentPublicRelease.platforms[platform];

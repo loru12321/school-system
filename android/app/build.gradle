@@ -10,8 +10,8 @@ def androidTestSigningMissing = androidTestSigningEnvironment.findAll { key, val
 def releasePackagingRequested = gradle.startParameter.taskNames.any { taskName ->
     taskName.toLowerCase().contains('release')
 }
-def workflowVersionName = project.findProperty('appVersionName') ?: '1.0'
-def workflowVersionCodeValue = project.findProperty('appVersionCode') ?: '1'
+def workflowVersionName = project.findProperty('appVersionName') ?: '1.0.2'
+def workflowVersionCodeValue = project.findProperty('appVersionCode') ?: '3'
 if (!workflowVersionCodeValue.toString().matches(/^[1-9][0-9]*$/)) {
     throw new GradleException('appVersionCode must be a positive integer')
 }

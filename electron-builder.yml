@@ -6,6 +6,13 @@ directories:
 files:
   - desktop/**/*
   - package.json
+extraResources:
+  - from: dist
+    to: app
+    filter:
+      - "**/*"
+      - "!downloads/**"
+      - "!releases/**"
 asar: true
 compression: maximum
 win:

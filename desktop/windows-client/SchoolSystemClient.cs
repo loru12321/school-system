@@ -33,6 +33,7 @@ namespace SchoolSystemClient
 
         private static bool LaunchAppMode()
         {
+            var launchUrl = GetLaunchUrl();
             foreach (var browserPath in GetBrowserCandidates())
             {
                 if (!File.Exists(browserPath)) continue;
@@ -40,13 +41,20 @@ namespace SchoolSystemClient
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = browserPath,
-                    Arguments = "--app=" + AppUrl,
+                    Arguments = "--app=\"" + launchUrl + "\"",
                     UseShellExecute = false
                 });
                 return true;
             }
 
             return false;
+        }
+
+        private static string GetLaunchUrl()
+        {
+            var localIndex = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app", "index.html");
+            if (File.Exists(localIndex)) return new Uri(localIndex).AbsoluteUri;
+            return AppUrl;
         }
 
         private static string[] GetBrowserCandidates()
