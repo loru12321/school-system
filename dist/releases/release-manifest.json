@@ -13,7 +13,7 @@
         "windows": {
           "platform": "windows",
           "version": "1.0.2",
-          "buildNumber": "nsis-20260622",
+          "buildNumber": "nsis-20260622-icon",
           "status": "ready",
           "signed": "unsigned",
           "minimumOs": "Windows 10 22H2",
@@ -22,12 +22,12 @@
           ],
           "assetName": "school-system-windows-beta-20260621-9a362b3.exe",
           "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-windows-beta-20260621-9a362b3.exe",
-          "bytes": 123201275,
+          "bytes": 123711973,
           "notes": [
-            "Windows NSIS 本地安装器，内置 Electron 运行时与本地系统资源，可按步骤选择安装目录，创建桌面/开始菜单快捷方式，并写入系统卸载入口。"
+            "Windows NSIS 本地安装器，内置 Electron 运行时、本地系统资源与校衡台图标，可按步骤选择安装目录，创建桌面/开始菜单快捷方式，并写入系统卸载入口。"
           ],
           "buildUrl": "https://schoolsystem.com.cn/",
-          "sha256": "1460db4d204134b25bd496150bf25d43ac8132b7170d96ccc35e1bb9b28abf3d"
+          "sha256": "3dbb73db6f9615f3fb9d10c52262a8f9611759faae736e85c4f1419c8f93c669"
         },
         "android": {
           "platform": "android",

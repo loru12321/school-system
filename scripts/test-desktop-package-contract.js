@@ -33,6 +33,9 @@ assert.ok(builder.includes('school-system-windows-${version}-${arch}.${ext}'), '
 assert.ok(builder.includes('extraResources:'), 'Electron Builder must bundle local app resources');
 assert.ok(builder.includes('from: dist'), 'Electron Builder must package the production dist app locally');
 assert.ok(builder.includes('to: app'), 'Electron Builder must install local resources under resources/app');
+assert.ok(builder.includes('icon: desktop/assets/icon.ico'), 'Electron Builder must apply the branded icon to the Windows executable');
+assert.ok(builder.includes('installerIcon: desktop/assets/icon.ico'), 'NSIS installer must use the branded icon');
+assert.ok(builder.includes('uninstallerIcon: desktop/assets/icon.ico'), 'NSIS uninstaller must use the branded icon');
 assert.equal(packageJson.main, 'desktop/main.cjs', 'Electron must package the secure desktop entry point');
 assert.equal(packageJson.scripts?.['desktop:start'], 'electron desktop/main.cjs');
 assert.equal(packageJson.scripts?.['desktop:build'], 'electron-builder --config electron-builder.yml --win nsis --x64');

@@ -7,8 +7,8 @@
       "platform": "windows",
       "filename": "school-system-windows-beta-20260621-9a362b3.exe",
       "contentType": "application/vnd.microsoft.portable-executable",
-      "bytes": 123201275,
-      "sha256": "1460db4d204134b25bd496150bf25d43ac8132b7170d96ccc35e1bb9b28abf3d",
+      "bytes": 123711973,
+      "sha256": "3dbb73db6f9615f3fb9d10c52262a8f9611759faae736e85c4f1419c8f93c669",
       "chunks": [
         "packages/beta-20260621-9a362b3/windows/part-0001",
         "packages/beta-20260621-9a362b3/windows/part-0002",
@@ -23,7 +23,7 @@
         20971520,
         20971520,
         20971520,
-        18343675
+        18854373
       ]
     },
     {

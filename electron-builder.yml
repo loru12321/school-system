@@ -1,4 +1,4 @@
-appId: cn.com.schoolsystem.app
+﻿appId: cn.com.schoolsystem.app
 productName: 校衡台
 artifactName: school-system-windows-${version}-${arch}.${ext}
 directories:
@@ -16,6 +16,7 @@ extraResources:
 asar: true
 compression: maximum
 win:
+  icon: desktop/assets/icon.ico
   target:
     - target: nsis
       arch:
@@ -28,4 +29,6 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: 校衡台
+  installerIcon: desktop/assets/icon.ico
+  uninstallerIcon: desktop/assets/icon.ico
   deleteAppDataOnUninstall: false

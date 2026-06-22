@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 
 const root = path.resolve(import.meta.dirname, '..');
 const installerSource = await readFile(path.join(root, 'desktop/windows-client/SchoolSystemInstaller.cs'), 'utf8');
@@ -26,6 +27,25 @@ assert.equal(
 );
 assert.ok(existsSync(path.join(root, 'native-builds/windows/win-unpacked/resources/app/index.html')), 'unpacked Windows build must include bundled local app resources');
 assert.ok(existsSync(path.join(root, 'native-builds/windows/win-unpacked/resources/app/assets/js/app.js')), 'unpacked Windows build must include bundled app runtime');
+
+const iconHashScript = `
+Add-Type -AssemblyName System.Drawing
+foreach ($p in @('desktop/assets/icon.ico','native-builds/windows/win-unpacked/school-system.exe','native-builds/windows/school-system-windows-1.0.2-x64.exe')) {
+  $icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path $p).Path)
+  $bmp = $icon.ToBitmap()
+  $ms = New-Object System.IO.MemoryStream
+  $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  [BitConverter]::ToString($sha.ComputeHash($ms.ToArray())).Replace('-', '').ToLowerInvariant()
+}
+`;
+const iconHashes = execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', iconHashScript], {
+  cwd: root,
+  encoding: 'utf8',
+}).trim().split(/\r?\n/).filter(Boolean);
+assert.equal(iconHashes.length, 3, 'Windows icon verification should read source, unpacked app, and installer icons');
+assert.equal(iconHashes[1], iconHashes[0], 'unpacked Windows executable must use the branded icon');
+assert.equal(iconHashes[2], iconHashes[0], 'Windows installer must use the branded icon');
 
 for (const required of [
   'InstallerForm',
