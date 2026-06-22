@@ -1,6 +1,6 @@
 /* Final responsive login guardrail. Desktop styling remains owned by the legacy theme. */
 
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1180px) {
     html body #login-overlay[data-login-skin="clean"] {
         position: fixed !important;
         inset: 0 !important;
@@ -66,12 +66,36 @@
         border-bottom: 1px solid #dce6eb !important;
         border-radius: 28px 28px 0 0 !important;
         background: linear-gradient(160deg, #fff8f3, #edf5f8) !important;
+        z-index: 1 !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
-    #login-overlay[data-login-skin="clean"] .login-clean-stage::after,
-    #login-overlay[data-login-skin="clean"] :is(.login-styleboard, .login-spotlight, .login-showcase, .login-actions, .login-meta, .login-platforms) {
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        content: none !important;
         display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard,
+    #login-overlay[data-login-skin="clean"] .login-styleboard *,
+    #login-overlay[data-login-skin="clean"] .login-styleboard::before,
+    #login-overlay[data-login-skin="clean"] .login-styleboard::after,
+    #login-overlay[data-login-skin="clean"] .login-spotlight,
+    #login-overlay[data-login-skin="clean"] .login-showcase,
+    #login-overlay[data-login-skin="clean"] .login-actions,
+    #login-overlay[data-login-skin="clean"] .login-meta,
+    #login-overlay[data-login-skin="clean"] .login-platforms {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        max-width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-brand {
@@ -124,6 +148,7 @@
         overflow: visible !important;
         background: #fffdfb !important;
         box-sizing: border-box !important;
+        z-index: 2 !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-card .login-form-header {
@@ -225,9 +250,33 @@
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
-    #login-overlay[data-login-skin="clean"] .login-clean-stage::after,
-    #login-overlay[data-login-skin="clean"] :is(.login-clean-copy, .login-styleboard, .login-spotlight, .login-showcase, .login-actions, .login-meta, .login-platforms) {
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        content: none !important;
         display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy,
+    #login-overlay[data-login-skin="clean"] .login-styleboard,
+    #login-overlay[data-login-skin="clean"] .login-styleboard *,
+    #login-overlay[data-login-skin="clean"] .login-styleboard::before,
+    #login-overlay[data-login-skin="clean"] .login-styleboard::after,
+    #login-overlay[data-login-skin="clean"] .login-spotlight,
+    #login-overlay[data-login-skin="clean"] .login-showcase,
+    #login-overlay[data-login-skin="clean"] .login-actions,
+    #login-overlay[data-login-skin="clean"] .login-meta,
+    #login-overlay[data-login-skin="clean"] .login-platforms {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        max-width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-brand {

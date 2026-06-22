@@ -72,7 +72,7 @@ const traversalResponse = await handleReleaseDownload(
 assert.equal(traversalResponse.status, 404);
 
 const hostedArchiveFallback = await handleReleaseDownload(
-  new Request('https://schoolsystem.com.cn/downloads/smartedu-windows-latest.zip'),
+  new Request('https://schoolsystem.com.cn/downloads/school-system-windows-latest.exe'),
   createEnv()
 );
 assert.equal(hostedArchiveFallback, null);

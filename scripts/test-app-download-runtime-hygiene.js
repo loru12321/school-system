@@ -48,11 +48,11 @@ assert.ok(source.includes('window.PUBLIC_DOWNLOAD_AUTO_FETCH_RELEASES === true')
 assert.ok(source.includes('preferHostedChannelDownload'), 'download center should prefer hosted app packages over stale embedded release assets');
 assert.ok(source.includes('remoteCatalogFetched'), 'download center should distinguish embedded releases from a freshly fetched release catalog');
 assert.ok(source.includes("pathname.startsWith('/downloads/')"), 'download center should recognize resolved same-origin download URLs');
-assert.ok(source.includes("name.endsWith('.zip') && /(?:win|windows|desktop|smartedu)/i.test(name)"), 'download center should recognize Windows release archives');
+assert.ok(source.includes("name.endsWith('.exe') && /(?:win|windows|desktop|smartedu|school-system)/i.test(name)"), 'download center should recognize Windows release installers');
 assert.ok(source.includes('./downloads/school-system-android-v1.0.apk'), 'download center should expose the locally hosted APK');
-assert.ok(source.includes('./downloads/smartedu-windows-latest.zip'), 'download center should expose the locally hosted Windows app package');
+assert.ok(source.includes('./downloads/school-system-windows-latest.exe'), 'download center should expose the locally hosted Windows client installer');
 assert.ok(appSource.includes("url: './downloads/school-system-android-v1.0.apk'"), 'public channel config should not override APK with a stale remote link');
-assert.ok(appSource.includes("url: './downloads/smartedu-windows-latest.zip'"), 'public channel config should not override Windows download with a stale remote link');
+assert.ok(appSource.includes("url: './downloads/school-system-windows-latest.exe'"), 'public channel config should not override Windows download with a stale remote link');
 assert.ok(appSource.includes('var PUBLIC_VERSION_CENTER_RELEASES = [];'), 'embedded historical release assets should stay cleared');
 assert.ok(!appSource.includes('releases/latest/download/school-system-android-latest.apk'), 'public app config should not keep the stale APK release URL');
 assert.ok(!appSource.includes('releases/latest/download/smartedu-desktop-windows-latest.exe'), 'public app config should not keep the stale Windows release URL');

@@ -30,13 +30,14 @@ const stylesheetLinks = [...html.matchAll(/<link\b[^>]*>/gi)]
 assert.ok(stylesheetLinks.some(href => href.split('?')[0] === stylesheet), 'index.html must load responsive-login-final.css');
 assert.strictEqual(stylesheetLinks.at(-1).split('?')[0], stylesheet, 'responsive-login-final.css must be the last stylesheet loaded');
 
-const tabletQuery = /@media\s*\(min-width:\s*769px\)\s*and\s*\(max-width:\s*1024px\)/i;
+const tabletQuery = /@media\s*\(min-width:\s*769px\)\s*and\s*\(max-width:\s*1180px\)/i;
 const phoneQuery = /@media\s*\(max-width:\s*768px\)/i;
-assert.match(css, tabletQuery, 'tablet breakpoint must target 769px through 1024px');
+assert.match(css, tabletQuery, 'tablet breakpoint must target 769px through 1180px');
 assert.match(css, /width:\s*min\(100%,\s*760px\)/, 'tablet shell must keep the form readable instead of stretching too wide');
 assert.match(css, /flex-direction:\s*column/, 'tablet shell must use a stacked premium layout');
 assert.match(css, /border-radius:\s*28px/, 'tablet shell must remain a polished card');
 assert.match(css, phoneQuery, 'phone breakpoint must target widths up to 768px');
+assert.match(css, /\.login-styleboard,\s*[\s\S]*?display:\s*none\s*!important/, 'responsive rules must explicitly hide the legacy styleboard');
 
 function readBlock(source, start) {
     const open = source.indexOf('{', start);

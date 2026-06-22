@@ -1894,12 +1894,12 @@ var PUBLIC_DOWNLOAD_CHANNELS = {
         badge: 'Windows 桌面',
         icon: 'ti-brand-windows',
         accent: '#60a5fa',
-        url: './downloads/smartedu-windows-latest.zip',
-        fileName: 'smartedu-windows-latest.zip',
-        helper: '适合 Windows 办公电脑本地打开，会优先用 Edge/Chrome 应用窗口启动正式系统。',
+        url: './downloads/school-system-windows-latest.exe',
+        fileName: 'school-system-windows-latest.exe',
+        helper: '适合 Windows 办公电脑本地打开，使用独立客户端窗口启动正式系统。',
         notes: [
             '适合教务处、办公室、机房与固定工位使用。',
-            '解压 ZIP 后双击启动脚本即可打开，避免反复找浏览器入口。',
+            '下载 EXE 后双击打开，客户端会以独立窗口进入正式系统。',
             '桌面端和网页端使用同一套数据口径与登录逻辑。'
         ]
     }
@@ -2080,7 +2080,7 @@ var Auth = {
     getPublicDesktopDownloadFileName: function (url = this.getPublicDesktopDownloadUrl()) {
         const normalizedUrl = String(url || '').split('#')[0].split('?')[0];
         const fileName = normalizedUrl.split('/').filter(Boolean).pop();
-        return fileName || this.getPublicDownloadChannel('desktop')?.fileName || 'smartedu-windows-latest.zip';
+        return fileName || this.getPublicDownloadChannel('desktop')?.fileName || 'school-system-windows-latest.exe';
     },
 
     syncPublicDownloadLinks: function () {

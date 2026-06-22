@@ -117,7 +117,7 @@ const guardedItems = [
   () => assertIncludes(appRuntime, 'alert: async', 'app runtime should expose shared alert modal API'),
   () => assertIncludes(freshmanExamRuntime, 'window.UI.prompt', 'freshman exam access password should use shared prompt API'),
   () => assert.ok(!freshmanExamRuntime.includes('例如: 123456'), 'freshman exam password prompt should not suggest weak defaults'),
-  () => assertIncludes(appDownloadRuntime, 'smartedu-windows-latest.zip', 'download runtime should keep Windows package URL'),
+  () => assertIncludes(appDownloadRuntime, 'school-system-windows-latest.exe', 'download runtime should keep Windows installer URL'),
   () => assertIncludes(sw, 'CACHE_VERSION', 'service worker cache version should remain explicit')
   ,() => ['123456', 'admin123', 'yssy2016'].forEach((token) => {
     [

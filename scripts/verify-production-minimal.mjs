@@ -52,9 +52,9 @@ const apk = await fetchWithTimeout('/downloads/school-system-android-v1.0.apk');
 checks.push(['apk_status', apk.status === 200]);
 checks.push(['apk_size', Number(apk.headers.get('content-length') || 0) > 10000000]);
 
-const windowsZip = await fetchWithTimeout('/downloads/smartedu-windows-latest.zip');
-checks.push(['windows_status', windowsZip.status === 200]);
-checks.push(['windows_size', Number(windowsZip.headers.get('content-length') || 0) >= 500]);
+const windowsExe = await fetchWithTimeout('/downloads/school-system-windows-latest.exe');
+checks.push(['windows_status', windowsExe.status === 200]);
+checks.push(['windows_size', Number(windowsExe.headers.get('content-length') || 0) > 100000]);
 
 const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
 assert(failed.length === 0, `Production verification failed: ${failed.join(', ')}`);

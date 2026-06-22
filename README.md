@@ -177,7 +177,7 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 
 “应用服务”保留当前可用下载入口：
 
-- Windows：`/downloads/smartedu-windows-latest.zip`
+- Windows：`/downloads/school-system-windows-latest.exe`
 - Android：`/downloads/school-system-android-v1.0.apk`
 
 旧的历史版本更新文件已清空。以后发布新的 APK 或 Windows 应用包时，版本记录从当前入口重新累积。

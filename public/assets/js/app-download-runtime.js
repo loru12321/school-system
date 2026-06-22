@@ -106,18 +106,18 @@
             badge: 'Windows 10 / 11',
             icon: 'ti-brand-windows',
             accent: '#60a5fa',
-            url: './downloads/smartedu-windows-latest.zip',
-            fileName: 'smartedu-windows-latest.zip',
+            url: './downloads/school-system-windows-latest.exe',
+            fileName: 'school-system-windows-latest.exe',
             heroTitle: '桌面端关于、更新检查与下载统一入口',
             heroCopy: 'Windows 客户端、安卓客户端与网页端现在共用同一套版本中心；旧历史记录已清空，后续新版本从当前入口重新累积。',
             summary: '当前选中 Windows 应用，会优先展示桌面端下载和更新状态。',
             releaseStamp: 'Latest · Desktop',
-            primaryActionLabel: '下载 Windows 应用',
+            primaryActionLabel: '下载 Windows 客户端',
             secondaryActionLabel: '打开 Windows 下载',
             details: [
                 { label: '推荐设备', value: '办公室电脑 / 机房 / 固定工位' },
-                { label: '运行方式', value: '下载安装包后本地启动，单实例运行' },
-                { label: '升级方式', value: '重新下载最新 EXE 覆盖使用' },
+                { label: '运行方式', value: '下载 EXE 后本地启动，单实例运行' },
+                { label: '升级方式', value: '重新下载最新客户端 EXE' },
                 { label: '更新查看', value: '托盘菜单与页面右上角都可打开关于与更新' }
             ],
             features: [
@@ -153,8 +153,8 @@
                 }
             ],
             installSteps: [
-                '点击当前 Windows 下载按钮，获取 Windows 应用启动包。',
-                '下载完成后解压 ZIP，双击“启动知衡云台.cmd”。',
+                '点击当前 Windows 下载按钮，获取 Windows 客户端 EXE。',
+                '下载完成后双击 EXE，客户端会以独立窗口打开正式系统。',
                 '首次打开后可通过右上角“关于”或托盘菜单查看当前版本和更新记录。',
                 '若后续发布新版，重新下载最新 Windows 应用包覆盖使用即可。'
             ],
@@ -1026,7 +1026,9 @@
             const name = String(asset?.name || '').trim().toLowerCase();
             if (!name) return false;
             if (channel === 'android') return name.endsWith('.apk');
-            return (/\.(exe|msi)$/i.test(name) || (name.endsWith('.zip') && /(?:win|windows|desktop|smartedu)/i.test(name)))
+            return (name.endsWith('.exe') && /(?:win|windows|desktop|smartedu|school-system)/i.test(name))
+                || (name.endsWith('.msi') && /(?:win|windows|desktop|smartedu|school-system)/i.test(name))
+                || (name.endsWith('.zip') && /(?:win|windows|desktop|smartedu)/i.test(name))
                 && /(?:win|windows|desktop|smartedu|setup|installer)/i.test(name);
         }) || null;
     }

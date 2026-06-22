@@ -22,6 +22,7 @@ async function inspectLayout(page, viewport) {
         const card = document.querySelector('.login-clean-card');
         const shell = document.querySelector('.login-clean-shell');
         const submit = document.querySelector('#login-submit-button');
+        const styleboard = document.querySelector('.login-styleboard');
         const rect = node => {
             const value = node.getBoundingClientRect();
             return { left: value.left, right: value.right, top: value.top, bottom: value.bottom };
@@ -39,8 +40,14 @@ async function inspectLayout(page, viewport) {
             card: rect(card),
             shell: rect(shell),
             submit: rect(submit),
+            styleboard: rect(styleboard),
             stageStyle: style(stage),
             cardStyle: style(card),
+            styleboardStyle: {
+                display: getComputedStyle(styleboard).display,
+                visibility: getComputedStyle(styleboard).visibility,
+                opacity: getComputedStyle(styleboard).opacity
+            },
             viewportWidth: window.innerWidth,
             horizontalOverflow: document.documentElement.scrollWidth - window.innerWidth
         };
@@ -74,6 +81,10 @@ async function main() {
             }
             assert.ok(state.horizontalOverflow <= 1, `${label}: document must not overflow horizontally`);
             assert.ok(state.shell.top >= -1, `${label}: login shell must start inside the viewport`);
+            assert.strictEqual(state.styleboardStyle.display, 'none', `${label}: decorative styleboard must be hidden on tablet and phone`);
+            assert.strictEqual(state.styleboardStyle.visibility, 'hidden', `${label}: decorative styleboard must not be visible on tablet and phone`);
+            assert.ok(state.styleboard.right - state.styleboard.left <= 1, `${label}: decorative styleboard must not reserve width`);
+            assert.ok(state.styleboard.bottom - state.styleboard.top <= 1, `${label}: decorative styleboard must not reserve height`);
 
             if (viewport.mode === 'tablet') {
                 const intersectionWidth = Math.min(state.stage.right, state.card.right) - Math.max(state.stage.left, state.card.left);
