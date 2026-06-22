@@ -223,7 +223,12 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'buildStudentHistoryIndexRowsForExam',
     'buildStudentHistoryIndexRowsForBundle',
     'i += 400',
-    'legacyHistoryIndexRows'
+    'legacyHistoryIndexRows',
+    'COHORT_EXAM_META_CACHE_MS',
+    'COHORT_EXAM_LATEST_META_LIMIT',
+    'fetchCohortExamMetaRows',
+    'offset',
+    'writeCachedCohortExamMetaRows'
 ].forEach((token) => assertContains(read('public/assets/js/cloud-workspace-runtime.js'), token, 'public/assets/js/cloud-workspace-runtime.js'));
 if (read('public/assets/js/cloud-workspace-runtime.js').includes("currentExamId && String(examRow?.key || '').trim() !== currentExamId")) {
     fail('workspace student history index should cover every split exam, not only the current exam');

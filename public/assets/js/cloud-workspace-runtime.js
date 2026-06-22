@@ -138,8 +138,82 @@
         if (Array.isArray(options.keyIn) && options.keyIn.length) query = query.in('key', options.keyIn);
         if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
         if (Number.isFinite(Number(options.limit)) && Number(options.limit) > 0) query = query.limit(Number(options.limit));
+        if (Number.isFinite(Number(options.offset)) && Number(options.offset) > 0 && typeof query.range === 'function' && Number.isFinite(Number(options.limit)) && Number(options.limit) > 0) {
+            const offset = Math.floor(Number(options.offset));
+            const limit = Math.floor(Number(options.limit));
+            query = query.range(offset, offset + limit - 1);
+        }
         if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
         return query;
+    }
+
+    function getCohortExamMetaMemoryCache(manager) {
+        if (!manager || typeof manager !== 'object') return null;
+        manager._cohortExamMetaCache = manager._cohortExamMetaCache && typeof manager._cohortExamMetaCache === 'object'
+            ? manager._cohortExamMetaCache
+            : {};
+        return manager._cohortExamMetaCache;
+    }
+
+    function readCachedCohortExamMetaRows(manager, cid, mode) {
+        const cache = getCohortExamMetaMemoryCache(manager);
+        if (!cache) return null;
+        const key = `${cid}:${mode || 'all'}`;
+        const entry = cache[key];
+        if (!entry || Date.now() - Number(entry.at || 0) > COHORT_EXAM_META_CACHE_MS) return null;
+        return Array.isArray(entry.rows) ? entry.rows.slice() : null;
+    }
+
+    function writeCachedCohortExamMetaRows(manager, cid, mode, rows) {
+        const cache = getCohortExamMetaMemoryCache(manager);
+        if (!cache) return rows;
+        cache[`${cid}:${mode || 'all'}`] = {
+            at: Date.now(),
+            rows: Array.isArray(rows) ? rows.slice() : []
+        };
+        return rows;
+    }
+
+    async function fetchCohortExamMetaRows(manager, cid, options = {}) {
+        const mode = options.latestOnly ? 'latest' : 'all';
+        const cached = !options.force ? readCachedCohortExamMetaRows(manager, cid, mode) : null;
+        if (cached) return cached;
+
+        const startedAt = nowMs();
+        const rows = [];
+        const latestLimit = Math.max(COHORT_EXAM_LATEST_META_LIMIT, Number(options.minCount || 0) + 4);
+        const firstLimit = options.latestOnly ? latestLimit : COHORT_EXAM_META_PAGE_SIZE;
+        let offset = 0;
+
+        while (true) {
+            const limit = offset === 0 ? firstLimit : COHORT_EXAM_META_PAGE_SIZE;
+            const { data, error } = await selectSystemData({
+                select: 'key,updated_at',
+                keyLike: `${cid}%`,
+                order: 'updated_at',
+                ascending: false,
+                limit,
+                offset
+            });
+            if (error) throw error;
+            const pageRows = (Array.isArray(data) ? data : []).filter((row) => {
+                if (isIgnoredExamKey(row?.key)) return false;
+                return extractCohortIdFromKey(row?.key) === cid;
+            });
+            rows.push(...pageRows);
+            if (options.latestOnly || !Array.isArray(data) || data.length < limit) break;
+            offset += limit;
+            if (offset >= 1000) break;
+        }
+
+        rememberWorkspacePerf('CloudWorkspace.fetchCohortExamMetaRows', startedAt, {
+            cache: options.force ? 'force' : 'miss',
+            rows: rows.length,
+            mode,
+            limit: firstLimit,
+            pages: Math.max(1, Math.ceil((offset + firstLimit) / COHORT_EXAM_META_PAGE_SIZE))
+        });
+        return writeCachedCohortExamMetaRows(manager, cid, mode, rows);
     }
 
     async function upsertSystemDataRecord(row) {
@@ -162,6 +236,44 @@
     const WORKSPACE_SYNC_QUEUE_KEY = 'CLOUD_WORKSPACE_SYNC_QUEUE_V2';
     const CACHE_MACHINE_ID_KEY = 'SCHOOL_SYSTEM_CACHE_MACHINE_ID_V1';
     const CACHE_READY_KEY = 'SCHOOL_SYSTEM_LOCAL_CACHE_READY_V1';
+    const COHORT_EXAM_META_CACHE_MS = 45 * 1000;
+    const COHORT_EXAM_META_PAGE_SIZE = 120;
+    const COHORT_EXAM_LATEST_META_LIMIT = 24;
+
+    function nowMs() {
+        return window.performance && typeof window.performance.now === 'function'
+            ? window.performance.now()
+            : Date.now();
+    }
+
+    function shouldLogPerf(durationMs) {
+        if (durationMs >= 250) return true;
+        try {
+            return window.localStorage && window.localStorage.getItem('SCHOOL_SYSTEM_PERF') === 'true';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function rememberWorkspacePerf(name, startedAt, detail = {}) {
+        const durationMs = Math.round((nowMs() - startedAt) * 10) / 10;
+        const entry = {
+            name,
+            durationMs,
+            at: new Date().toISOString(),
+            ...detail
+        };
+        if (Array.isArray(window.__SCHOOL_PERF_TIMINGS__)) {
+            window.__SCHOOL_PERF_TIMINGS__.push(entry);
+            while (window.__SCHOOL_PERF_TIMINGS__.length > 120) window.__SCHOOL_PERF_TIMINGS__.shift();
+        } else {
+            window.__SCHOOL_PERF_TIMINGS__ = [entry];
+        }
+        if (shouldLogPerf(durationMs)) {
+            console.info('[school-perf]', entry);
+        }
+        return entry;
+    }
     const STUDENT_HISTORY_INDEX_PREFIX = 'STUDENT_HISTORY_V1';
     const storedJsonCache = new Map();
 
@@ -1087,18 +1199,10 @@
 
                 try {
                     const chunkSize = 10;
-                    const { data: metaRows, error: metaErr } = await selectSystemData({
-                        select: 'key,updated_at',
-                        keyLike: `${cid}%`,
-                        order: 'updated_at',
-                        ascending: true
-                    });
-                    if (metaErr) throw metaErr;
-
-                    const candidates = (metaRows || []).filter(row => {
-                        if (isIgnoredExamKey(row.key)) return false;
-                        if (extractCohortIdFromKey(row.key) !== cid) return false;
-                        return true;
+                    const candidates = await fetchCohortExamMetaRows(this, cid, {
+                        force: forceSync,
+                        latestOnly,
+                        minCount
                     });
 
                     const keysToFetch = [];
