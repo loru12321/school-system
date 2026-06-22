@@ -19,7 +19,7 @@
     var source = asset && typeof asset === 'object' ? asset : {};
     return {
       platform: platform,
-      iconUrl: asString(source.iconUrl) || RELEASE_BRAND_ICON_URL,
+      iconUrl: RELEASE_BRAND_ICON_URL,
       version: asString(source.version),
       buildNumber: asString(source.buildNumber),
       status: asString(source.status) || 'unavailable',

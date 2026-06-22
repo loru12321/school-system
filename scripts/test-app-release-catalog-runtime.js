@@ -101,14 +101,14 @@ const releases = runtime.normalizeCatalog({
 assert.strictEqual(releases.length, 2);
 assert.strictEqual(releases[0].releaseTag, 'v2.0.0-beta.1', 'newest release should be first');
 assert.strictEqual(releases[0].platforms.windows.platform, 'windows');
-assert.strictEqual(releases[0].platforms.windows.iconUrl, './assets/brand/windows-test.png');
+assert.strictEqual(releases[0].platforms.windows.iconUrl, './assets/brand/app-icon-128.png');
 assert.strictEqual(releases[0].platforms.windows.signed, 'signed');
 assert.strictEqual(releases[0].platforms.windows.sha256, 'a'.repeat(64));
 assert.strictEqual(releases[0].platforms.android.signed, 'test-signed');
-assert.strictEqual(releases[0].platforms.android.iconUrl, './assets/brand/android-test.png');
+assert.strictEqual(releases[0].platforms.android.iconUrl, './assets/brand/app-icon-128.png');
 assert.deepStrictEqual(Array.from(releases[0].platforms.android.notes), ['Internal testing']);
 assert.strictEqual(releases[0].platforms.ios.signed, 'unsigned');
-assert.strictEqual(releases[0].platforms.ios.iconUrl, './assets/brand/ios-test.png');
+assert.strictEqual(releases[0].platforms.ios.iconUrl, './assets/brand/app-icon-128.png');
 assert.strictEqual(releases[1].platforms.windows.status, 'unavailable');
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.windows), true);
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.ios), false);

@@ -279,7 +279,7 @@
     }
 
     function renderReleaseBrandIcon(channel, className = 'app-release-brand-icon') {
-        const iconUrl = String(channel?.iconUrl || RELEASE_BRAND_ICON_URL).trim();
+        const iconUrl = RELEASE_BRAND_ICON_URL;
         const alt = className === 'app-release-brand-icon' ? '校衡台应用图标' : '';
         const decorative = alt ? '' : ' aria-hidden="true"';
         return `<img class="${escapeHtml(className)}" src="${escapeHtml(iconUrl)}" width="${className === 'app-release-brand-icon' ? '72' : '42'}" height="${className === 'app-release-brand-icon' ? '72' : '42'}" alt="${escapeHtml(alt)}"${decorative}>`;
@@ -370,7 +370,7 @@
         if (!source) {
             return {
                 platform,
-                iconUrl: definition.iconUrl,
+                iconUrl: RELEASE_BRAND_ICON_URL,
                 version: String(release?.tag_name || ''),
                 buildNumber: '',
                 status: platform === 'ios' ? 'awaiting-signing' : 'unavailable',
@@ -387,7 +387,7 @@
         }
         return {
             platform,
-            iconUrl: definition.iconUrl,
+            iconUrl: RELEASE_BRAND_ICON_URL,
             version: String(release?.tag_name || ''),
             buildNumber: '',
             status: 'available-unverified',

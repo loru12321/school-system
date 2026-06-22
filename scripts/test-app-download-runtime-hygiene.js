@@ -28,8 +28,8 @@ assert.match(source, /windows:\s*\{ iconUrl: RELEASE_BRAND_ICON_URL, pattern:/, 
 assert.match(source, /android:\s*\{ iconUrl: RELEASE_BRAND_ICON_URL, pattern:/, 'GitHub Android mapping should define the shared icon');
 assert.match(source, /ios:\s*\{ iconUrl: RELEASE_BRAND_ICON_URL, pattern:/, 'GitHub iOS mapping should define the shared icon');
 const githubAssetMapper = source.match(/function mapGitHubAsset\([\s\S]*?\n    \}/)?.[0] || '';
-assert.ok(githubAssetMapper.includes('iconUrl: definition.iconUrl'), 'GitHub asset mapping should preserve its platform definition icon URL');
-assert.ok(!githubAssetMapper.includes('iconUrl: RELEASE_BRAND_ICON_URL'), 'GitHub asset mapping should not ignore its platform definition icon URL');
+assert.ok(githubAssetMapper.includes('iconUrl: RELEASE_BRAND_ICON_URL'), 'GitHub asset mapping should force the shared app icon URL');
+assert.ok(!githubAssetMapper.includes('iconUrl: definition.iconUrl'), 'GitHub asset mapping should not preserve stale remote icon URLs');
 assert.ok(source.includes("function renderReleaseBrandIcon(channel, className = 'app-release-brand-icon')"), 'download runtime should share release icon rendering');
 assert.ok(source.includes('className === \'app-release-brand-icon\' ? \'校衡台应用图标\' : \'\''), 'focused icon should be named while repeated icons stay decorative');
 assert.ok(source.includes("renderReleaseBrandIcon(asset, 'app-release-history-icon')"), 'history rows should render decorative release icons');
