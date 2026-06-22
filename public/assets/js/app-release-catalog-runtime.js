@@ -200,7 +200,7 @@
     } catch (_) {
       return;
     }
-    if (url.origin !== root.location.origin || !/^\/downloads\/school-system-(windows|android)-[^/]+\.(exe|apk)$/.test(url.pathname)) return;
+    if (url.origin !== root.location.origin || !/^\/downloads\/school-system-(windows|android)-beta-[^/]+\.(exe|apk)$/.test(url.pathname)) return;
     event.preventDefault();
     if (anchor.dataset.chunkDownloadBusy === 'true') return;
     anchor.dataset.chunkDownloadBusy = 'true';

@@ -13,13 +13,14 @@ const map = {
   }]
 };
 
-function createEnv({ omitSecondChunk = false } = {}) {
+function createEnv({ omitSecondChunk = false, omitMap = false } = {}) {
   const stats = { chunkGets: 0 };
   const objects = new Map([
     ['/releases/download-map.json', JSON.stringify(map)],
     ['/releases/packages/beta-20260621-9a362b3/windows/part-0001', 'abc'],
     ['/releases/packages/beta-20260621-9a362b3/windows/part-0002', 'def']
   ]);
+  if (omitMap) objects.delete('/releases/download-map.json');
   if (omitSecondChunk) objects.delete('/releases/packages/beta-20260621-9a362b3/windows/part-0002');
   return {
     ASSETS: {
@@ -61,11 +62,20 @@ const missingResponse = await handleReleaseDownload(
 );
 assert.equal(missingResponse.status, 404);
 
+const staticFallbackResponse = await handleReleaseDownload(new Request(requestUrl), createEnv({ omitMap: true }));
+assert.equal(staticFallbackResponse, null);
+
 const traversalResponse = await handleReleaseDownload(
   new Request('https://schoolsystem.com.cn/downloads/%2E%2E%2Fsecret.exe'),
   createEnv()
 );
 assert.equal(traversalResponse.status, 404);
+
+const hostedArchiveFallback = await handleReleaseDownload(
+  new Request('https://schoolsystem.com.cn/downloads/smartedu-windows-latest.zip'),
+  createEnv()
+);
+assert.equal(hostedArchiveFallback, null);
 
 const unavailableResponse = await handleReleaseDownload(new Request(requestUrl), createEnv({ omitSecondChunk: true }));
 assert.equal(unavailableResponse.status, 503);

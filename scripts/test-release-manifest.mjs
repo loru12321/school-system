@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import { buildReleaseManifest } from './build-release-manifest.mjs';
 
 const rootDir = path.resolve(import.meta.dirname, '..');
@@ -30,6 +31,15 @@ try {
   assert.match(currentPublicRelease.platforms.windows.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
   assert.match(currentPublicRelease.platforms.android.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
   assert.equal(currentPublicRelease.platforms.ios.status, 'awaiting-signing');
+  for (const platform of ['windows', 'android']) {
+    const asset = currentPublicRelease.platforms[platform];
+    const assetPath = path.join(rootDir, 'public/downloads', asset.assetName);
+    assert.ok(fs.existsSync(assetPath), `${platform} catalog asset should exist in public/downloads`);
+    const bytes = fs.statSync(assetPath).size;
+    const sha256 = crypto.createHash('sha256').update(fs.readFileSync(assetPath)).digest('hex');
+    assert.strictEqual(asset.bytes, bytes, `${platform} catalog bytes should match the hosted file`);
+    assert.strictEqual(asset.sha256, sha256, `${platform} catalog sha256 should match the hosted file`);
+  }
 
   const assetDir = path.join(fixtureDir, 'assets');
   const outputPath = path.join(assetDir, 'release-manifest.json');

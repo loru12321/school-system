@@ -52,18 +52,18 @@ function validateDownloadEntry(entry, filename) {
 async function loadDownloadEntry(request, env, filename) {
   const mapUrl = new URL(RELEASE_MAP_PATH, request.url);
   const mapResponse = await env.ASSETS.fetch(new Request(mapUrl, { method: 'GET' }));
-  if (!mapResponse.ok) return { error: plainResponse(503, 'Release map unavailable') };
+  if (!mapResponse.ok) return { fallback: true };
   let map;
   try {
     map = await mapResponse.json();
   } catch {
-    return { error: plainResponse(503, 'Release map invalid') };
+    return { fallback: true };
   }
   if (map?.schemaVersion !== 1 || !Array.isArray(map.downloads)) {
-    return { error: plainResponse(503, 'Release map invalid') };
+    return { fallback: true };
   }
   const entry = map.downloads.find((item) => item?.filename === filename);
-  if (!entry) return { error: plainResponse(404, 'Not Found') };
+  if (!entry) return { fallback: true };
   if (!validateDownloadEntry(entry, filename)) return { error: plainResponse(503, 'Release map invalid') };
   return { entry };
 }
@@ -131,8 +131,13 @@ export async function handleReleaseDownload(request, env) {
     return plainResponse(503, 'Release assets unavailable');
   }
   const filename = parseFilename(request);
-  if (!filename) return plainResponse(404, 'Not Found');
+  if (!filename) {
+    const pathname = new URL(request.url).pathname;
+    if (/\.(?:exe|apk)$/i.test(pathname)) return plainResponse(404, 'Not Found');
+    return null;
+  }
   const loaded = await loadDownloadEntry(request, env, filename);
+  if (loaded.fallback) return null;
   if (loaded.error) return loaded.error;
   const chunkUrls = await preflightChunks(request, env, loaded.entry);
   if (!chunkUrls) return plainResponse(503, 'Release asset unavailable');

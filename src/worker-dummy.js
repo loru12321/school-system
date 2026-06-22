@@ -947,7 +947,8 @@ export default {
       }
 
       if (url.pathname.startsWith('/downloads/')) {
-        return await handleReleaseDownload(request, env);
+        const releaseDownload = await handleReleaseDownload(request, env);
+        if (releaseDownload) return releaseDownload;
       }
 
       try {
