@@ -9,6 +9,9 @@
         cache: new Map(),
         inflight: new Map()
     };
+    const perfTimings = [];
+    const PERF_TIMING_MAX = 80;
+    const PERF_SLOW_MS = 250;
 
     function stableStringify(value) {
         if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -18,6 +21,41 @@
 
     function getCacheKey(type, options) {
         return `${type}:${stableStringify(options || {})}`;
+    }
+
+    function nowMs() {
+        return window.performance && typeof window.performance.now === 'function'
+            ? window.performance.now()
+            : Date.now();
+    }
+
+    function shouldLogPerf(durationMs) {
+        if (durationMs >= PERF_SLOW_MS) return true;
+        try {
+            return window.localStorage && window.localStorage.getItem('SCHOOL_SYSTEM_PERF') === 'true';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function rememberPerfTiming(name, startedAt, detail = {}) {
+        const durationMs = Math.round((nowMs() - startedAt) * 10) / 10;
+        const entry = {
+            name,
+            durationMs,
+            at: new Date().toISOString(),
+            ...detail
+        };
+        perfTimings.push(entry);
+        while (perfTimings.length > PERF_TIMING_MAX) perfTimings.shift();
+        if (shouldLogPerf(durationMs)) {
+            window.console?.info?.('[school-perf]', entry);
+        }
+        return entry;
+    }
+
+    function summarizeRows(result) {
+        return Array.isArray(result?.data) ? result.data.length : (result?.data ? 1 : 0);
     }
 
     function cloneResult(result) {
@@ -81,10 +119,32 @@
     }
 
     async function runCached(type, options, task, config = {}) {
+        const startedAt = nowMs();
         const key = getCacheKey(type, options);
         const cached = getCached(key);
-        if (!config.force && cached) return cached;
-        if (!config.force && state.inflight.has(key)) return state.inflight.get(key);
+        if (!config.force && cached) {
+            rememberPerfTiming(`CloudDataService.${type}`, startedAt, {
+                cache: 'hit',
+                rows: summarizeRows(cached),
+                select: String(options?.select || ''),
+                keyMode: options?.keyEq ? 'eq' : options?.keyLike ? 'like' : Array.isArray(options?.keyIn) && options.keyIn.length ? 'in' : 'all',
+                limit: Number(options?.limit) || 0,
+                offset: Number(options?.offset) || 0
+            });
+            return cached;
+        }
+        if (!config.force && state.inflight.has(key)) {
+            const result = await state.inflight.get(key);
+            rememberPerfTiming(`CloudDataService.${type}`, startedAt, {
+                cache: 'inflight',
+                rows: summarizeRows(result),
+                select: String(options?.select || ''),
+                keyMode: options?.keyEq ? 'eq' : options?.keyLike ? 'like' : Array.isArray(options?.keyIn) && options.keyIn.length ? 'in' : 'all',
+                limit: Number(options?.limit) || 0,
+                offset: Number(options?.offset) || 0
+            });
+            return result;
+        }
         const promise = Promise.resolve()
             .then(task)
             .then((result) => {
@@ -96,7 +156,18 @@
                 state.inflight.delete(key);
             });
         state.inflight.set(key, promise);
-        return promise;
+        const result = await promise;
+        rememberPerfTiming(`CloudDataService.${type}`, startedAt, {
+            cache: config.force ? 'force' : 'miss',
+            source: result?.source || '',
+            rows: summarizeRows(result),
+            select: String(options?.select || ''),
+            keyMode: options?.keyEq ? 'eq' : options?.keyLike ? 'like' : Array.isArray(options?.keyIn) && options.keyIn.length ? 'in' : 'all',
+            limit: Number(options?.limit) || 0,
+            offset: Number(options?.offset) || 0,
+            error: result?.error ? String(result.error.message || result.error) : ''
+        });
+        return result;
     }
 
     function clear(pattern = '') {
@@ -225,6 +296,9 @@
                 },
                 max: CACHE_MAX
             };
+        },
+        getPerfTimings() {
+            return perfTimings.map((item) => ({ ...item }));
         }
     };
 })();

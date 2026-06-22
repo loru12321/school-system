@@ -25,6 +25,9 @@
         writes: 0,
         clears: 0
     };
+    const perfTimings = [];
+    const PERF_TIMING_MAX = 80;
+    const PERF_SLOW_MS = 250;
 
     function normalizeText(value) {
         return String(value || '').trim();
@@ -70,8 +73,40 @@
             order: normalizeText(options.order),
             ascending: options.ascending !== false,
             limit: Number.isFinite(Number(options.limit)) ? Number(options.limit) : 0,
+            offset: Number.isFinite(Number(options.offset)) ? Number(options.offset) : 0,
             maybeSingle: !!options.maybeSingle
         });
+    }
+
+    function nowMs() {
+        return root.performance && typeof root.performance.now === 'function'
+            ? root.performance.now()
+            : Date.now();
+    }
+
+    function shouldLogPerf(durationMs) {
+        if (durationMs >= PERF_SLOW_MS) return true;
+        try {
+            return root.localStorage && root.localStorage.getItem('SCHOOL_SYSTEM_PERF') === 'true';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function rememberPerfTiming(name, startedAt, detail = {}) {
+        const durationMs = Math.round((nowMs() - startedAt) * 10) / 10;
+        const entry = {
+            name,
+            durationMs,
+            at: new Date().toISOString(),
+            ...detail
+        };
+        perfTimings.push(entry);
+        while (perfTimings.length > PERF_TIMING_MAX) perfTimings.shift();
+        if (shouldLogPerf(durationMs)) {
+            root.console?.info?.('[school-perf]', entry);
+        }
+        return entry;
     }
 
     function cloneCloudRow(row) {
@@ -337,6 +372,7 @@
         const keyEq = normalizeText(options && options.keyEq);
         const keyLike = normalizeText(options && options.keyLike);
         const limit = Number(options && options.limit);
+        const offset = Number(options && options.offset);
         const keyIn = Array.isArray(options && options.keyIn)
             ? options.keyIn.map((item) => normalizeText(item)).filter(Boolean)
             : [];
@@ -354,6 +390,9 @@
         }
         if (Number.isFinite(limit) && limit > 0) {
             url.searchParams.set('limit', String(Math.floor(limit)));
+        }
+        if (Number.isFinite(offset) && offset > 0 && !(options && options.maybeSingle)) {
+            url.searchParams.set('offset', String(Math.floor(offset)));
         }
 
         return url.toString();
@@ -464,6 +503,11 @@
             if (Number.isFinite(limit) && limit > 0) {
                 query = query.limit(Math.floor(limit));
             }
+            const offset = Number(options && options.offset);
+            if (Number.isFinite(offset) && offset > 0 && !(options && options.maybeSingle) && typeof query.range === 'function' && Number.isFinite(limit) && limit > 0) {
+                const safeOffset = Math.floor(offset);
+                query = query.range(safeOffset, safeOffset + Math.floor(limit) - 1);
+            }
 
             if (options && options.maybeSingle) {
                 query = query.maybeSingle();
@@ -485,17 +529,37 @@
     }
 
     async function selectSystemData(options = {}) {
+        const startedAt = nowMs();
         const useCache = options && options.cache !== false && options.noCache !== true;
         const cacheKey = useCache ? buildSelectCacheKey(options) : '';
         if (cacheKey) {
             const cached = selectCache.get(cacheKey);
             if (cached && Date.now() - cached.time < SELECT_CACHE_TTL_MS) {
                 cacheStats.hits += 1;
+                rememberPerfTiming('CloudApi.selectSystemData', startedAt, {
+                    cache: 'hit',
+                    source: cached.result?.source || getBackendMode(),
+                    rows: Array.isArray(cached.result?.data) ? cached.result.data.length : (cached.result?.data ? 1 : 0),
+                    select: normalizeText(options.select || '*'),
+                    keyMode: options.keyEq ? 'eq' : options.keyLike ? 'like' : Array.isArray(options.keyIn) && options.keyIn.length ? 'in' : 'all',
+                    limit: Number(options.limit) || 0,
+                    offset: Number(options.offset) || 0
+                });
                 return cloneSelectResult(cached.result);
             }
             if (selectInflight.has(cacheKey)) {
                 cacheStats.inflightHits += 1;
-                return cloneSelectResult(await selectInflight.get(cacheKey));
+                const result = await selectInflight.get(cacheKey);
+                rememberPerfTiming('CloudApi.selectSystemData', startedAt, {
+                    cache: 'inflight',
+                    source: result?.source || getBackendMode(),
+                    rows: Array.isArray(result?.data) ? result.data.length : (result?.data ? 1 : 0),
+                    select: normalizeText(options.select || '*'),
+                    keyMode: options.keyEq ? 'eq' : options.keyLike ? 'like' : Array.isArray(options.keyIn) && options.keyIn.length ? 'in' : 'all',
+                    limit: Number(options.limit) || 0,
+                    offset: Number(options.offset) || 0
+                });
+                return cloneSelectResult(result);
             }
         }
         cacheStats.misses += 1;
@@ -511,7 +575,18 @@
                 if (cacheKey) selectInflight.delete(cacheKey);
             });
         if (cacheKey) selectInflight.set(cacheKey, request);
-        return await request;
+        const result = await request;
+        rememberPerfTiming('CloudApi.selectSystemData', startedAt, {
+            cache: useCache ? 'miss' : 'bypass',
+            source: result?.source || getBackendMode(),
+            rows: Array.isArray(result?.data) ? result.data.length : (result?.data ? 1 : 0),
+            select: normalizeText(options.select || '*'),
+            keyMode: options.keyEq ? 'eq' : options.keyLike ? 'like' : Array.isArray(options.keyIn) && options.keyIn.length ? 'in' : 'all',
+            limit: Number(options.limit) || 0,
+            offset: Number(options.offset) || 0,
+            error: result?.error ? normalizeText(result.error.message || result.error) : ''
+        });
+        return result;
     }
 
     async function readSystemDataRecord(key, select = 'content') {
@@ -665,6 +740,9 @@
         deleteSystemData,
         clearSystemDataCache,
         getSystemDataCacheStats,
+        getSystemDataPerfTimings() {
+            return perfTimings.map((item) => ({ ...item }));
+        },
         probeSystemData
     };
 });

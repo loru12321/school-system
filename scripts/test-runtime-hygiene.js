@@ -117,7 +117,7 @@ const dataCloudRuntime = fs.readFileSync(path.join(root, 'public/assets/js/data-
 assert.ok(!dataCloudRuntime.includes('onclick="DataManager.loadCloudBackup('), 'cloud backup rows should not inject keys into inline handlers');
 assert.ok(dataCloudRuntime.includes('data-cloud-backup-action="download"'), 'cloud backup rows should bind download actions through data attributes');
 assert.ok(dataCloudRuntime.includes('data-cloud-snapshot-key="${safeKey}"'), 'cloud snapshot rows should bind delete actions through data attributes');
-const renderCloudBackupsStart = dataCloudRuntime.indexOf('async function renderCloudBackups(manager)');
+const renderCloudBackupsStart = dataCloudRuntime.indexOf('async function renderCloudBackups(manager');
 const renderCloudBackupsEnd = dataCloudRuntime.indexOf('function toggleCloudSelection(manager, inputEl)', renderCloudBackupsStart);
 const renderCloudBackupsSource = renderCloudBackupsStart >= 0 && renderCloudBackupsEnd > renderCloudBackupsStart
     ? dataCloudRuntime.slice(renderCloudBackupsStart, renderCloudBackupsEnd)

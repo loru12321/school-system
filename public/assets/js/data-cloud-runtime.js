@@ -164,6 +164,47 @@
     }
 
     const MAX_CLOUD_BACKUP_RENDER_ROWS = 80;
+    const CLOUD_BACKUP_LIST_CACHE_MS = 45 * 1000;
+
+    function nowMs() {
+        return root.performance && typeof root.performance.now === 'function'
+            ? root.performance.now()
+            : Date.now();
+    }
+
+    function shouldLogPerf(durationMs) {
+        if (durationMs >= 250) return true;
+        try {
+            return root.localStorage && root.localStorage.getItem('SCHOOL_SYSTEM_PERF') === 'true';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function rememberDataCloudPerf(manager, name, startedAt, detail = {}) {
+        const durationMs = Math.round((nowMs() - startedAt) * 10) / 10;
+        const entry = {
+            name,
+            durationMs,
+            at: new Date().toISOString(),
+            ...detail
+        };
+        if (manager && typeof manager === 'object') {
+            manager.cloudPerfTimings = Array.isArray(manager.cloudPerfTimings) ? manager.cloudPerfTimings : [];
+            manager.cloudPerfTimings.push(entry);
+            while (manager.cloudPerfTimings.length > 80) manager.cloudPerfTimings.shift();
+        }
+        if (root.__SCHOOL_PERF_TIMINGS__ && Array.isArray(root.__SCHOOL_PERF_TIMINGS__)) {
+            root.__SCHOOL_PERF_TIMINGS__.push(entry);
+            while (root.__SCHOOL_PERF_TIMINGS__.length > 120) root.__SCHOOL_PERF_TIMINGS__.shift();
+        } else {
+            root.__SCHOOL_PERF_TIMINGS__ = [entry];
+        }
+        if (shouldLogPerf(durationMs)) {
+            root.console?.info?.('[school-perf]', entry);
+        }
+        return entry;
+    }
 
     function getCloudBackupListQueryOptions(filterCurrent) {
         const options = {
@@ -180,6 +221,41 @@
         if (cohortId) keys.add(`cohort::${cohortId}`);
         if (keys.size) options.keyIn = Array.from(keys);
         return options;
+    }
+
+    function getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly) {
+        const options = getCloudBackupListQueryOptions(filterCurrent);
+        return JSON.stringify({
+            filterCurrent: !!filterCurrent,
+            filterSnapshotsOnly: !!filterSnapshotsOnly,
+            workspaceKey: getWorkspaceProjectKey(),
+            currentExamKey: getCurrentExamKey(),
+            cohortId: getCurrentCloudCohortId(),
+            options
+        });
+    }
+
+    function clearCloudBackupListCache(manager) {
+        if (manager && typeof manager === 'object') {
+            manager.cloudBackupListCache = null;
+        }
+    }
+
+    function getCachedCloudBackupList(manager, cacheKey) {
+        const cached = manager && manager.cloudBackupListCache;
+        if (!cached || cached.key !== cacheKey) return null;
+        if (Date.now() - Number(cached.at || 0) > CLOUD_BACKUP_LIST_CACHE_MS) return null;
+        return cached;
+    }
+
+    function setCachedCloudBackupList(manager, cacheKey, payload) {
+        if (!manager || typeof manager !== 'object') return payload;
+        manager.cloudBackupListCache = {
+            key: cacheKey,
+            at: Date.now(),
+            ...payload
+        };
+        return manager.cloudBackupListCache;
     }
 
     function getCurrentCohortDb() {
@@ -688,7 +764,8 @@
     }
 
     async function retryCloudBackups(manager) {
-        return api.renderCloudBackups(manager);
+        clearCloudBackupListCache(manager);
+        return api.renderCloudBackups(manager, { force: true });
     }
 
     function bindCloudTableRetry(manager, shell) {
@@ -701,7 +778,8 @@
         });
     }
 
-    async function renderCloudBackups(manager) {
+    async function renderCloudBackups(manager, options = {}) {
+        const renderStartedAt = nowMs();
         if (!root.sbClient && !root.CloudApi) return;
         const doc = getDocument();
         const tbody = doc ? doc.querySelector('#dm-cloud-table tbody') : null;
@@ -742,28 +820,65 @@
             if (!selectSystemDataRecords) throw new Error('selectSystemDataRecords unavailable');
 
             const listQueryOptions = getCloudBackupListQueryOptions(filterCurrent);
-            const metaResult = await selectSystemDataRecords({
-                select: 'key, created_at, updated_at',
-                ...listQueryOptions
-            });
-            data = metaResult?.data || null;
-            error = metaResult?.error || null;
+            const cacheKey = getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly);
+            const cachedList = !options.force ? getCachedCloudBackupList(manager, cacheKey) : null;
+            let allRows = null;
+            let visibleRows = null;
 
-            if (error) throw error;
+            if (cachedList) {
+                allRows = cachedList.allRows;
+                visibleRows = cachedList.visibleRows;
+                rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.fetchMetadata', renderStartedAt, {
+                    cache: 'hit',
+                    rows: Array.isArray(allRows) ? allRows.length : 0,
+                    visibleRows: Array.isArray(visibleRows) ? visibleRows.length : 0,
+                    filterCurrent: !!filterCurrent,
+                    filterSnapshotsOnly: !!filterSnapshotsOnly
+                });
+            } else {
+                const fetchStartedAt = nowMs();
+                const metaResult = await selectSystemDataRecords({
+                    select: 'key, created_at, updated_at',
+                    ...listQueryOptions
+                }, { force: !!options.force });
+                rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.fetchMetadata', fetchStartedAt, {
+                    cache: options.force ? 'force' : 'miss',
+                    rows: Array.isArray(metaResult?.data) ? metaResult.data.length : 0,
+                    filterCurrent: !!filterCurrent,
+                    filterSnapshotsOnly: !!filterSnapshotsOnly,
+                    limit: Number(listQueryOptions.limit) || 0,
+                    keyMode: Array.isArray(listQueryOptions.keyIn) && listQueryOptions.keyIn.length ? 'in' : 'all'
+                });
+                data = metaResult?.data || null;
+                error = metaResult?.error || null;
 
-            const allRows = (Array.isArray(data) ? data : []).map((item) => ({
-                ...item,
-                size_bytes: Number(item?.size_bytes) || (typeof item?.content === 'string' ? item.content.length : 0)
-            }));
+                if (error) throw error;
+
+                const computeStartedAt = nowMs();
+                allRows = (Array.isArray(data) ? data : []).map((item) => ({
+                    ...item,
+                    size_bytes: Number(item?.size_bytes) || (typeof item?.content === 'string' ? item.content.length : 0)
+                }));
+
+                manager.cloudBackupRows = new Map(allRows.map((item) => [normalizeText(item.key), item]));
+                manager.cloudSelection = ensureSelection(manager.cloudSelection);
+
+                visibleRows = allRows.filter((item) => {
+                    if (filterSnapshotsOnly && typeof manager.isCloudWorkspaceSnapshotKey === 'function' && !manager.isCloudWorkspaceSnapshotKey(item.key)) return false;
+                    if (filterCurrent && typeof manager.isCloudRecordInCurrentWorkspace === 'function' && !manager.isCloudRecordInCurrentWorkspace(item.key)) return false;
+                    return true;
+                });
+                setCachedCloudBackupList(manager, cacheKey, { allRows, visibleRows });
+                rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.computeVisibleRows', computeStartedAt, {
+                    rows: allRows.length,
+                    visibleRows: visibleRows.length,
+                    filterCurrent: !!filterCurrent,
+                    filterSnapshotsOnly: !!filterSnapshotsOnly
+                });
+            }
 
             manager.cloudBackupRows = new Map(allRows.map((item) => [normalizeText(item.key), item]));
             manager.cloudSelection = ensureSelection(manager.cloudSelection);
-
-            const visibleRows = allRows.filter((item) => {
-                if (filterSnapshotsOnly && typeof manager.isCloudWorkspaceSnapshotKey === 'function' && !manager.isCloudWorkspaceSnapshotKey(item.key)) return false;
-                if (filterCurrent && typeof manager.isCloudRecordInCurrentWorkspace === 'function' && !manager.isCloudRecordInCurrentWorkspace(item.key)) return false;
-                return true;
-            });
 
             if (!allRows.length) {
                 manager.cloudSelection.clear();
@@ -870,6 +985,12 @@
                 bindCloudBackupRowActions(manager, tbody);
             }
             api.updateCloudSelectionUI(manager);
+            rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.total', renderStartedAt, {
+                rows: allRows.length,
+                visibleRows: visibleRows.length,
+                renderedRows: displayRows.length,
+                cache: cachedList ? 'hit' : options.force ? 'force' : 'miss'
+            });
         } catch (error) {
             root.console?.error?.(error);
             manager.cloudBackupRows = new Map();
@@ -950,9 +1071,10 @@
         try {
             const { error } = await deleteSystemDataRecords({ keyIn: keys });
             if (error) throw error;
+            clearCloudBackupListCache(manager);
             manager.cloudSelection.clear();
             safeToast(`✅ 批量删除成功（${keys.length}项）`, 'success');
-            await api.renderCloudBackups(manager);
+            await api.renderCloudBackups(manager, { force: true });
         } catch (e) {
             safeAlert(`批量删除失败: ${e.message}`);
         } finally {
@@ -1097,9 +1219,10 @@
 
             const { error } = await upsertSystemDataRecord(recordsToUpload);
             if (error) throw error;
+            clearCloudBackupListCache(manager);
 
             safeToast(`✅ 已上传 ${recordsToUpload.length} 份存档文档`, 'success');
-            await api.renderCloudBackups(manager);
+            await api.renderCloudBackups(manager, { force: true });
         } catch (e) {
             console.error(e);
             safeAlert(`上传存档文档失败: ${e.message}`);
@@ -1116,10 +1239,11 @@
         }
         if (!safeConfirm(`⚠️ 确定要切换到存档 [${key}] 吗？\n当前未保存的工作将会丢失。`)) return;
         writeWorkspaceProjectKey(key);
+        clearCloudBackupListCache(manager);
         if (root.CloudManager && typeof root.CloudManager.load === 'function') {
             await root.CloudManager.load();
         }
-        await api.renderCloudBackups(manager);
+        await api.renderCloudBackups(manager, { force: true });
     }
 
     async function deleteCloudBackup(manager, key) {
@@ -1136,7 +1260,7 @@
             manager.cloudSelection = ensureSelection(manager.cloudSelection);
             manager.cloudSelection.delete(key);
             safeToast('✅ 删除成功', 'success');
-            await api.renderCloudBackups(manager);
+            await api.renderCloudBackups(manager, { force: true });
         } catch (e) {
             safeAlert(`删除失败: ${e.message}`);
         } finally {
@@ -1198,6 +1322,7 @@
             manager.cloudSelection = ensureSelection(manager.cloudSelection);
             manager.cloudSelection.delete(currentExamKey);
             manager.cloudBackupRows.delete(currentExamKey);
+            clearCloudBackupListCache(manager);
 
             if (remoteDeleteError) {
                 safeAlert(`当前考试已从本地届别库和工作区快照中移除，但独立云端考试快照删除失败：${remoteDeleteError.message || remoteDeleteError}`);
@@ -1210,7 +1335,7 @@
                 );
             }
 
-            await api.renderCloudBackups(manager);
+            await api.renderCloudBackups(manager, { force: true });
         } catch (e) {
             safeAlert(`删除当前考试失败: ${e.message || e}`);
         } finally {

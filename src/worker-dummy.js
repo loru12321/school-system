@@ -184,6 +184,12 @@ function parseSystemDataLimit(searchParams, fallback = 100) {
   return Math.min(Math.floor(raw), 1000);
 }
 
+function parseSystemDataOffset(searchParams) {
+  const raw = Number(searchParams.get('offset') || 0);
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  return Math.min(Math.floor(raw), 100000);
+}
+
 async function readStoredSystemDataContent(env, row) {
   if (row && typeof row.content_text === 'string' && row.content_text.length > 0) {
     return row.content_text;
@@ -271,6 +277,7 @@ async function querySystemDataRows(env, request, url) {
   const keyFilter = parseSystemDataKeyFilter(url.searchParams.get('key'));
   const order = parseSystemDataOrder(url.searchParams);
   const limit = wantsSingleSystemDataObject(request) ? 2 : parseSystemDataLimit(url.searchParams, 100);
+  const offset = wantsSingleSystemDataObject(request) ? 0 : parseSystemDataOffset(url.searchParams);
   const whereClauses = [];
   const bindings = [];
 
@@ -286,10 +293,10 @@ async function querySystemDataRows(env, request, url) {
     `FROM ${SYSTEM_DATA_TABLE}`,
     whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '',
     `ORDER BY ${order.column} ${order.direction}`,
-    'LIMIT ?'
+    'LIMIT ? OFFSET ?'
   ].filter(Boolean).join(' ');
 
-  const result = await db.prepare(sql).bind(...bindings, limit).all();
+  const result = await db.prepare(sql).bind(...bindings, limit, offset).all();
   const rows = Array.isArray(result?.results) ? result.results : [];
   return { rows, selectSet };
 }

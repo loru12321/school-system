@@ -41,6 +41,8 @@ function createSupabaseClient(log, options = {}) {
                 order: '',
                 ascending: false,
                 limit: null,
+                rangeFrom: null,
+                rangeTo: null,
                 maybeSingle: false,
                 deleting: false,
                 updating: false,
@@ -90,6 +92,11 @@ function createSupabaseClient(log, options = {}) {
                 },
                 limit(value) {
                     state.limit = Number(value);
+                    return query;
+                },
+                range(from, to) {
+                    state.rangeFrom = Number(from);
+                    state.rangeTo = Number(to);
                     return query;
                 },
                 maybeSingle() {
@@ -164,7 +171,8 @@ async function run() {
         select: 'key,updated_at',
         keyLike: '2022%',
         order: 'updated_at',
-        limit: 50
+        limit: 50,
+        offset: 25
     });
 
     assert.strictEqual(apiResult.error, null);
@@ -174,6 +182,7 @@ async function run() {
     assert.ok(fetchLog[0].url.includes('key=like.2022%25'));
     assert.ok(fetchLog[0].url.includes('order=updated_at.desc'));
     assert.ok(fetchLog[0].url.includes('limit=50'));
+    assert.ok(fetchLog[0].url.includes('offset=25'));
     assert.strictEqual(fetchLog[0].headers.apikey, 'sb_publishable_example');
     assert.strictEqual(fetchLog[0].headers.Authorization, 'Bearer session-token-example');
 
@@ -182,7 +191,8 @@ async function run() {
         select: 'key,updated_at',
         keyLike: '2022%',
         order: 'updated_at',
-        limit: 50
+        limit: 50,
+        offset: 25
     });
     assert.strictEqual(fetchLog.length, 1, 'identical select should reuse cache');
     assert.deepStrictEqual(cachedApiResult.data, [{ key: 'REMOTE_KEY', updated_at: '2026-04-11T00:00:00.000Z' }]);
@@ -190,6 +200,8 @@ async function run() {
     assert.strictEqual(cacheStats.hits, 1);
     assert.strictEqual(cacheStats.misses, 1);
     assert.strictEqual(cacheStats.size, 1);
+    assert.ok(Array.isArray(apiRuntime.getSystemDataPerfTimings()));
+    assert.ok(apiRuntime.getSystemDataPerfTimings().some((entry) => entry.name === 'CloudApi.selectSystemData'));
 
     await apiRuntime.upsertSystemData({ key: 'REMOTE_KEY', content: '{}' });
     assert.strictEqual(fetchLog[1].method, 'POST');
@@ -219,23 +231,34 @@ async function run() {
     assert.strictEqual(compatRuntime.getBackendMode(), 'compat');
     assert.strictEqual(compatRuntime.getSystemDataApiUrl(), '');
 
+    const compatSelected = await compatRuntime.selectSystemData({
+        select: 'key',
+        order: 'updated_at',
+        limit: 20,
+        offset: 40
+    });
+    assert.strictEqual(compatSelected.error, null);
+    assert.strictEqual(compatLog[0].limit, 20);
+    assert.strictEqual(compatLog[0].rangeFrom, 40);
+    assert.strictEqual(compatLog[0].rangeTo, 59);
+
     const localRead = await compatRuntime.readSystemDataRecord('LOCAL_KEY', 'content');
     assert.strictEqual(localRead.error, null);
     assert.deepStrictEqual(localRead.data, { key: 'LOCAL_KEY', content: '{"hello":"world"}' });
-    assert.strictEqual(compatLog[0].select, 'content');
-    assert.strictEqual(compatLog[0].keyEq, 'LOCAL_KEY');
-    assert.strictEqual(compatLog[0].maybeSingle, true);
+    assert.strictEqual(compatLog[1].select, 'content');
+    assert.strictEqual(compatLog[1].keyEq, 'LOCAL_KEY');
+    assert.strictEqual(compatLog[1].maybeSingle, true);
 
     const localProbe = await compatRuntime.probeSystemData();
     assert.strictEqual(localProbe.ok, true);
 
     await compatRuntime.upsertSystemData({ key: 'LOCAL_KEY', content: '{}' });
-    assert.strictEqual(compatLog[2].type, 'upsert');
-    assert.deepStrictEqual(compatLog[2].payload, { key: 'LOCAL_KEY', content: '{}' });
+    assert.strictEqual(compatLog[3].type, 'upsert');
+    assert.deepStrictEqual(compatLog[3].payload, { key: 'LOCAL_KEY', content: '{}' });
 
     await compatRuntime.deleteSystemData({ keyEq: 'LOCAL_KEY' });
-    assert.strictEqual(compatLog[3].deleting, true);
-    assert.strictEqual(compatLog[3].keyEq, 'LOCAL_KEY');
+    assert.strictEqual(compatLog[4].deleting, true);
+    assert.strictEqual(compatLog[4].keyEq, 'LOCAL_KEY');
 
     const duplicateLog = [];
     const duplicateRoot = {

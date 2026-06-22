@@ -92,6 +92,9 @@ assert.ok(worker.includes("if (method === 'GET' || method === 'HEAD') return nul
 assert.ok(worker.includes("proxyInit.headers.set('x-forwarded-host', url.host);"), 'proxy requests should include forwarded host');
 assert.ok(worker.includes("proxyInit.headers.set('x-forwarded-proto', url.protocol.replace(':', ''));"), 'proxy requests should include forwarded proto');
 assert.ok(worker.includes("Math.min(Math.floor(raw), 1000)"), 'system_data read limit should be capped');
+assert.ok(worker.includes('function parseSystemDataOffset(searchParams)'), 'system_data reads should parse bounded offsets');
+assert.ok(worker.includes("'LIMIT ? OFFSET ?'"), 'system_data reads should push pagination into D1 instead of slicing in memory');
+assert.ok(worker.includes('bind(...bindings, limit, offset)'), 'system_data reads should bind offset into the D1 query');
 assert.ok(wrangler.vars && wrangler.vars.CLOUD_SYSTEM_DATA_MODE === 'supabase', 'production data mode should remain explicit');
 assert.ok(wrangler.vars && /^https:\/\/[^/]+\.supabase\.co$/.test(wrangler.vars.SUPABASE_ORIGIN || ''), 'Supabase origin should be an origin URL only');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:cloudflare-worker-contract'), 'fast release check must include Cloudflare Worker contract guard');
