@@ -7,7 +7,7 @@
     "assets:app-icons": "node scripts/generate-app-icon-assets.mjs",
     "test:app-icon-assets": "node scripts/test-app-icon-assets.mjs",
     "dev": "vite",
-    "build": "node scripts/build/preserve-dist-release-assets.mjs save && vite build && node scripts/build/preserve-dist-release-assets.mjs restore && node scripts/build/sync-public-assets.mjs && node scripts/build/prune-dist-assets.mjs && node scripts/build/optimize-dist-html.mjs && node scripts/build/inline-scripts.mjs",
+    "build": "node scripts/build/preserve-dist-release-assets.mjs save && vite build && node scripts/build/preserve-dist-release-assets.mjs restore && node scripts/build/sync-public-assets.mjs && node scripts/build/prune-dist-assets.mjs && node scripts/build/dedupe-dist-css.mjs && node scripts/build/optimize-dist-html.mjs && node scripts/build/inline-scripts.mjs",
     "desktop:start": "electron desktop/main.cjs",
     "desktop:build": "electron-builder --config electron-builder.yml --win nsis --x64",
     "test:desktop-package-contract": "node scripts/test-desktop-package-contract.js",
