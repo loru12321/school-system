@@ -17703,131 +17703,6 @@ const CohortDB = {
 
 window.CohortDB = CohortDB;
 
-const CohortGrowth = {
-    cache: { volatility: [], growth: [] },
-
-    render: function () {
-        if (!COHORT_DB || !COHORT_DB.exams || Object.keys(COHORT_DB.exams).length === 0) {
-            return alert('当前届别暂无历史考试数据');
-        }
-        const result = this.compute();
-        this.cache = result;
-        this.renderVolatility(result.volatility);
-        this.renderGrowth(result.growth);
-    },
-
-    compute: function () {
-        const exams = Object.values(COHORT_DB.exams || {}).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-        const studentSeries = {};
-
-        exams.forEach(exam => {
-            const data = exam.data || [];
-            const totals = data.map(s => Number(s.total)).filter(v => !isNaN(v));
-            if (!totals.length) return;
-            const mean = totals.reduce((a, b) => a + b, 0) / totals.length;
-            const variance = totals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / totals.length;
-            const std = Math.sqrt(variance) || 1;
-
-            const sorted = data.slice().sort((a, b) => (b.total || 0) - (a.total || 0));
-            const rankMap = new Map();
-            sorted.forEach((s, idx) => {
-                const key = this.getStudentKey(s);
-                if (!rankMap.has(key)) rankMap.set(key, idx + 1);
-            });
-
-            data.forEach(s => {
-                const key = this.getStudentKey(s);
-                if (!studentSeries[key]) studentSeries[key] = { name: s.name, class: s.class, z: [], p: [] };
-                studentSeries[key].name = s.name || studentSeries[key].name;
-                studentSeries[key].class = s.class || studentSeries[key].class;
-                const z = (Number(s.total) - mean) / std;
-                const rank = rankMap.get(key) || null;
-                const p = rank && sorted.length > 1 ? (1 - (rank - 1) / (sorted.length - 1)) : 0.5;
-                studentSeries[key].z.push(z);
-                studentSeries[key].p.push(p);
-            });
-        });
-
-        const volatility = [];
-        const growth = [];
-
-        Object.values(studentSeries).forEach(s => {
-            if (s.z.length >= 4) {
-                const sigma = this.std(s.z);
-                volatility.push({ name: s.name, class: s.class, count: s.z.length, sigma });
-            }
-            if (s.p.length >= 2) {
-                const start = s.p[0];
-                const end = s.p[s.p.length - 1];
-                const delta = end - start;
-                growth.push({ name: s.name, class: s.class, start, end, delta });
-            }
-        });
-
-        volatility.sort((a, b) => b.sigma - a.sigma);
-        growth.sort((a, b) => b.delta - a.delta);
-
-        return { volatility: volatility.slice(0, 50), growth: growth.slice(0, 50) };
-    },
-
-    renderVolatility: function (list) {
-        const tbody = document.querySelector('#cohort-volatility-table tbody');
-        if (!tbody) return;
-        if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">暂无足够数据</td></tr>';
-            return;
-        }
-        tbody.innerHTML = list.map(s => `
-                <tr>
-                    <td>${s.name}</td>
-                    <td>${s.class || '-'}</td>
-                    <td>${s.count}</td>
-                    <td style="font-weight:bold; color:#0ea5e9;">${s.sigma.toFixed(2)}</td>
-                </tr>
-            `).join('');
-    },
-
-    renderGrowth: function (list) {
-        const tbody = document.querySelector('#cohort-growth-table tbody');
-        if (!tbody) return;
-        if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">暂无足够数据</td></tr>';
-            return;
-        }
-        tbody.innerHTML = list.map(s => {
-            const delta = s.delta;
-            const color = delta >= 0 ? '#16a34a' : '#dc2626';
-            return `
-                <tr>
-                    <td>${s.name}</td>
-                    <td>${s.class || '-'}</td>
-                    <td>${(s.start * 100).toFixed(1)}%</td>
-                    <td>${(s.end * 100).toFixed(1)}%</td>
-                    <td style="font-weight:bold; color:${color};">${(delta * 100).toFixed(1)}%</td>
-                </tr>`;
-        }).join('');
-    },
-
-    exportVolatility: function () {
-        if (!this.cache.volatility || !this.cache.volatility.length) return alert('暂无可导出数据');
-        const wsData = [['姓名', '班级', '考试次数', '波动率(σ)']];
-        this.cache.volatility.forEach(s => wsData.push([s.name, s.class || '-', s.count, Number(s.sigma.toFixed(3))]));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wsData), 'Z-Score波动率');
-        XLSX.writeFile(wb, `纵向成长档案_波动率_${CURRENT_COHORT_ID || 'cohort'}.xlsx`);
-    },
-
-    std: function (arr) {
-        const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
-        const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length;
-        return Math.sqrt(variance);
-    },
-
-    getStudentKey: function (s) {
-        return s.uuid || `${s.name || ''}|${s.class || ''}|${s.school || ''}`;
-    }
-};
-
 function getCurrentSnapshotPayload() {
     window.getCurrentSnapshotPayload = getCurrentSnapshotPayload;
     const workspaceSnapshot = readWorkspaceSnapshot();
@@ -19239,7 +19114,9 @@ window.addEventListener('load', () => {
 });
 window.DataManager = DataManager;
 window.DrillSystem = DrillSystem;
-window.CohortGrowth = CohortGrowth;
+if (!window.CohortGrowth) {
+    console.warn('[cohort-growth] runtime unavailable; cohort growth module will lazy-load via boot runtime.');
+}
 if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
 
 (function autoTriggerDemoMode() {

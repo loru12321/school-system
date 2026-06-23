@@ -796,6 +796,8 @@ assert.strictEqual(gatewayUrlAssignments.length, 1, 'boot-runtime.js should reso
 assert.ok(bootRuntime.includes("return normalizeProxyOrigin(window.location.origin) + '/api/edu-gateway';"), 'HTTP runtimes should prefer the same-origin gateway proxy before direct Edge fallback');
 assert.strictEqual(switchTabDefinitions.length, 1, 'app.js should define switchTab exactly once');
 assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign switchTab after definition');
+assert.ok(!appSource.includes('const CohortGrowth = {'), 'app.js should not duplicate the dedicated cohort-growth runtime');
+assert.ok(!appSource.includes('window.CohortGrowth = CohortGrowth'), 'app.js should not overwrite the dedicated cohort-growth runtime');
 
 [
     cryptoJsVendorRef,
@@ -951,8 +953,10 @@ assert.ok(
     'login cohort entry should restore the latest exam first and hydrate historical exams in the background'
 );
 assert.ok(
-    cloudWorkspaceRuntime.includes('function getExamKeyRecencyScore') && cloudWorkspaceRuntime.includes('keysToFetch.length = 1'),
-    'latest-only cohort hydration should pick one recency-ranked exam snapshot'
+    cloudWorkspaceRuntime.includes('function getExamKeyRecencyScore')
+        && cloudWorkspaceRuntime.includes('const maxKeysToFetch = maxFetch > 0 ? maxFetch : (latestOnly ? 1 : 0)')
+        && cloudWorkspaceRuntime.includes('keysToFetch.length = maxKeysToFetch'),
+    'limited cohort hydration should pick recency-ranked exam snapshots'
 );
 assert.ok(authStateIndex < workspaceStateIndex, 'auth-state-runtime.js must load before workspace-state-runtime.js');
 assert.ok(workspaceStateIndex < examStateIndex, 'workspace-state-runtime.js must load before exam-state-runtime.js');
