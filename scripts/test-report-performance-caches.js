@@ -253,6 +253,10 @@ if (read('public/assets/js/cloud-workspace-runtime.js').includes("currentExamId 
 ].forEach((token) => assertContains(reportChart, token, reportChartFile));
 
 [
+    'renderCache: new Map()',
+    'function getCountyRenderCache(activeId)',
+    "clearCountyRenderCache('county-school-horizontal')",
+    'renderCache.fastSignature === fastSignature',
     'lastRenderHtmlSignature',
     'lastRenderHtml',
     'root.innerHTML !== html'

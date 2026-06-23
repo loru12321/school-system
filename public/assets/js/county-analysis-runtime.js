@@ -25,6 +25,7 @@
         teacherContextScheduledSignature: '',
         lastDataRankSignature: '',
         lastTeacherRankSignature: '',
+        renderCache: new Map(),
         lastRenderFastSignature: '',
         lastRenderHtmlSignature: '',
         lastRenderHtml: ''
@@ -368,7 +369,10 @@
         state.teacherSubjectTablesCache = [];
         state.countyTeacherStatsSignature = '';
         state.countyTeacherStats = {};
+        clearCountyRenderCache();
         state.lastRenderFastSignature = '';
+        state.lastRenderHtmlSignature = '';
+        state.lastRenderHtml = '';
     }
 
     function invalidateTeacherRankingViewCaches() {
@@ -376,7 +380,10 @@
         state.teacherRowsCache = [];
         state.teacherSubjectTablesCacheSignature = '';
         state.teacherSubjectTablesCache = [];
+        clearCountyRenderCache();
         state.lastRenderFastSignature = '';
+        state.lastRenderHtmlSignature = '';
+        state.lastRenderHtml = '';
     }
 
     function getScopeMap() {
@@ -629,6 +636,32 @@
             getTeacherStatsSignature(),
             window.__COUNTY_SCHOOL_HORIZONTAL_RUNTIME_PATCHED__ ? 'horizontal-runtime' : 'horizontal-boot'
         ].join('::');
+    }
+
+    function getCountyRenderCache(activeId) {
+        if (!(state.renderCache instanceof Map)) state.renderCache = new Map();
+        const key = String(activeId || 'county-teacher-portrait');
+        if (!state.renderCache.has(key)) {
+            state.renderCache.set(key, {
+                fastSignature: '',
+                htmlSignature: '',
+                html: ''
+            });
+        }
+        return state.renderCache.get(key);
+    }
+
+    function clearCountyRenderCache(activeId = '') {
+        if (!(state.renderCache instanceof Map)) {
+            state.renderCache = new Map();
+            return;
+        }
+        const key = String(activeId || '').trim();
+        if (key) {
+            state.renderCache.delete(key);
+            return;
+        }
+        state.renderCache.clear();
     }
 
     function getScopedTeacherAssignmentsForCounty() {
@@ -1884,6 +1917,7 @@
         state.subjectRowCacheSignature = '';
         state.horizontalTotalCache = [];
         state.horizontalTotalCacheSignature = '';
+        clearCountyRenderCache('county-school-horizontal');
         applyCountyRanks();
         saveCountySnapshot();
         renderCountyAnalysis('county-school-horizontal');
@@ -1955,7 +1989,8 @@
             const root = getCountyRootForSubmodule(activeId);
             if (!root) return;
             const fastSignature = getCountyRenderFastSignature(activeId);
-            if (state.lastRenderFastSignature === fastSignature
+            const renderCache = getCountyRenderCache(activeId);
+            if (renderCache.fastSignature === fastSignature
                 && root.dataset.countyRenderFastSignature === fastSignature
                 && String(root.innerHTML || '').trim()) {
                 return true;
@@ -1994,16 +2029,19 @@
             ${activeId === 'county-school-horizontal' ? renderCountySchoolHorizontal() : renderCountyTeacherModule()}
         `;
             const htmlSignature = `${activeId}::${getDataSignature()}::${getCurrentSchoolNameForTeacherScope()}::${html.length}`;
-            if (state.lastRenderHtmlSignature !== htmlSignature || state.lastRenderHtml !== html || root.innerHTML !== html) {
+            if (renderCache.htmlSignature !== htmlSignature || renderCache.html !== html || root.innerHTML !== html) {
                 root.innerHTML = html;
                 root.dataset.countyRenderFastSignature = fastSignature;
-                state.lastRenderFastSignature = fastSignature;
-                state.lastRenderHtmlSignature = htmlSignature;
-                state.lastRenderHtml = html;
+                renderCache.fastSignature = fastSignature;
+                renderCache.htmlSignature = htmlSignature;
+                renderCache.html = html;
             } else {
                 root.dataset.countyRenderFastSignature = fastSignature;
-                state.lastRenderFastSignature = fastSignature;
+                renderCache.fastSignature = fastSignature;
             }
+            state.lastRenderFastSignature = renderCache.fastSignature;
+            state.lastRenderHtmlSignature = renderCache.htmlSignature;
+            state.lastRenderHtml = renderCache.html;
         } finally {
             state.isRendering = false;
         }
