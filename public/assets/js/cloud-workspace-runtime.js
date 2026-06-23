@@ -155,6 +155,19 @@
         return manager._cohortExamMetaCache;
     }
 
+    function clearCohortExamMetaMemoryCache(manager, cohortId = '') {
+        const cache = getCohortExamMetaMemoryCache(manager);
+        if (!cache) return;
+        const cid = normalizeCohortId(cohortId);
+        if (!cid) {
+            Object.keys(cache).forEach((key) => delete cache[key]);
+            return;
+        }
+        Object.keys(cache).forEach((key) => {
+            if (String(key || '').startsWith(`${cid}:`)) delete cache[key];
+        });
+    }
+
     function readCachedCohortExamMetaRows(manager, cid, mode) {
         const cache = getCohortExamMetaMemoryCache(manager);
         if (!cache) return null;
@@ -236,7 +249,7 @@
     const WORKSPACE_SYNC_QUEUE_KEY = 'CLOUD_WORKSPACE_SYNC_QUEUE_V2';
     const CACHE_MACHINE_ID_KEY = 'SCHOOL_SYSTEM_CACHE_MACHINE_ID_V1';
     const CACHE_READY_KEY = 'SCHOOL_SYSTEM_LOCAL_CACHE_READY_V1';
-    const COHORT_EXAM_META_CACHE_MS = 45 * 1000;
+    const COHORT_EXAM_META_CACHE_MS = 2 * 60 * 1000;
     const COHORT_EXAM_META_PAGE_SIZE = 120;
     const COHORT_EXAM_LATEST_META_LIMIT = 24;
 
@@ -1536,6 +1549,10 @@
                             currentExamId: payload?.CURRENT_EXAM_ID || ''
                         });
                     }
+                    clearCohortExamMetaMemoryCache(
+                        this,
+                        payload?.CURRENT_COHORT_ID || payload?.cohortId || readWorkspaceCohortId()
+                    );
                     localStorage.setItem('CLOUD_SYNC_AT', syncedAt);
                     if (typeof logAction === 'function') {
                         logAction('云端同步', `全量数据已同步：${cacheKey}`);
