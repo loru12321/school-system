@@ -9,6 +9,7 @@ const distRoot = path.join(projectRoot, 'dist');
 const distIndexPath = path.join(distRoot, 'index.html');
 
 const prunablePaths = [];
+const WORKERS_MAX_ASSET_BYTES = 25 * 1024 * 1024;
 
 function isReferenced(relativePath, html) {
     const normalized = String(relativePath || '').replace(/\\/g, '/');
@@ -32,6 +33,27 @@ function main() {
     }
     const html = fs.existsSync(distIndexPath) ? fs.readFileSync(distIndexPath, 'utf8') : '';
     prunablePaths.forEach((relativePath) => prunePath(relativePath, html));
+    pruneOversizedDownloadAssets();
 }
 
 main();
+
+function pruneOversizedDownloadAssets() {
+    const releaseMapPath = path.join(distRoot, 'releases', 'download-map.json');
+    const releaseManifestPath = path.join(distRoot, 'releases', 'release-manifest.json');
+    const downloadsPath = path.join(distRoot, 'downloads');
+    const hasHostedReleaseCatalog = fs.existsSync(releaseMapPath) || fs.existsSync(releaseManifestPath);
+    if (!hasHostedReleaseCatalog || !fs.existsSync(downloadsPath)) return;
+
+    for (const entry of fs.readdirSync(downloadsPath, { withFileTypes: true })) {
+        if (!entry.isFile()) continue;
+        if (!/\.(?:apk|exe|msi|zip)$/i.test(entry.name)) continue;
+
+        const targetPath = path.join(downloadsPath, entry.name);
+        const stats = fs.statSync(targetPath);
+        if (stats.size <= WORKERS_MAX_ASSET_BYTES) continue;
+
+        fs.rmSync(targetPath, { force: true });
+        console.log(`Pruned oversized Worker asset: downloads/${entry.name} (${stats.size}B)`);
+    }
+}

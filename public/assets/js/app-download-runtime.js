@@ -479,9 +479,10 @@
         releaseCatalogState.loading = true;
         releaseCatalogState.lastError = '';
         renderReleaseCenter();
+        const shouldFetchGithubCatalog = force || shouldAutoFetchReleaseCatalog();
         releaseCatalogPromise = Promise.allSettled([
             fetchJson('./releases/release-manifest.json'),
-            fetchJson(RELEASES_API_URL)
+            shouldFetchGithubCatalog ? fetchJson(RELEASES_API_URL) : Promise.resolve([])
         ]).then(async ([cachedResult, githubResult]) => {
             const cachedManifest = cachedResult.status === 'fulfilled'
                 ? normalizeReleaseCatalog(cachedResult.value)

@@ -9,7 +9,6 @@ async function fetchWithTimeout(pathname, options = {}) {
   const timeout = setTimeout(() => controller.abort(), Number(options.timeoutMs || 15000));
   try {
     return await fetch(`${origin}${pathname}`, {
-      method: options.method || 'GET',
       redirect: 'follow',
       signal: controller.signal,
       headers: {
