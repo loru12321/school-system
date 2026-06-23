@@ -9,7 +9,11 @@ function read(relativePath) {
 }
 
 function parseJson(relativePath) {
-  return JSON.parse(read(relativePath));
+  let content = read(relativePath);
+  if (relativePath.endsWith('.jsonc')) {
+    content = content.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
+  }
+  return JSON.parse(content);
 }
 
 function fileSize(relativePath) {

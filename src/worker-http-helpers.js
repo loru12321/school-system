@@ -17,6 +17,42 @@ export const HOP_BY_HOP_HEADERS = [
   'upgrade'
 ];
 
+// ---------------------------------------------------------------------------
+// Shared text utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Trim a value to a plain string. Returns '' for null/undefined/falsy.
+ * Shared by all worker files to avoid duplicate definitions.
+ */
+export function normalizeText(value) {
+  return String(value || '').trim();
+}
+
+// ---------------------------------------------------------------------------
+// Fetch with timeout
+// ---------------------------------------------------------------------------
+
+/**
+ * Wraps fetch() with an AbortController-based timeout.
+ * @param {string} url
+ * @param {RequestInit} init
+ * @param {number} timeoutMs  Milliseconds before aborting (default 15 000).
+ */
+export async function fetchWithTimeout(url, init, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CORS helpers
+// ---------------------------------------------------------------------------
+
 export function normalizeOrigin(origin) {
   return String(origin || '').trim().replace(/\/+$/, '');
 }

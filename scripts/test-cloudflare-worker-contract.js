@@ -17,7 +17,8 @@ const worker = read('src/worker-dummy.js');
 const releaseDownloads = read('src/worker-release-downloads.mjs');
 const gateway = read('src/worker-gateway-d1.js');
 const helpers = read('src/worker-http-helpers.js');
-const wrangler = JSON.parse(read('wrangler.jsonc'));
+const wranglerContent = read('wrangler.jsonc').replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
+const wrangler = JSON.parse(wranglerContent);
 const scripts = packageJson.scripts || {};
 
 const requiredWorkerTokens = [
@@ -96,8 +97,9 @@ assert.ok(worker.includes("Math.min(Math.floor(raw), 1000)"), 'system_data read 
 assert.ok(worker.includes('function parseSystemDataOffset(searchParams)'), 'system_data reads should parse bounded offsets');
 assert.ok(worker.includes("'LIMIT ? OFFSET ?'"), 'system_data reads should push pagination into D1 instead of slicing in memory');
 assert.ok(worker.includes('bind(...bindings, limit, offset)'), 'system_data reads should bind offset into the D1 query');
+assert.ok(worker.includes('if (!requestedSizeBytes)') && worker.includes('new Response(response.body'), 'Supabase system_data proxy should stream large content rows unless size_bytes requires parsing');
 assert.ok(wrangler.vars && wrangler.vars.CLOUD_SYSTEM_DATA_MODE === 'supabase', 'production data mode should remain explicit');
-assert.ok(wrangler.vars && /^https:\/\/[^/]+\.supabase\.co$/.test(wrangler.vars.SUPABASE_ORIGIN || ''), 'Supabase origin should be an origin URL only');
+assert.ok(!wrangler.vars.SUPABASE_ORIGIN, 'Supabase origin must not be hardcoded in wrangler config');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:cloudflare-worker-contract'), 'fast release check must include Cloudflare Worker contract guard');
 
 console.log(JSON.stringify({

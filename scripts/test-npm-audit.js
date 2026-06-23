@@ -10,7 +10,17 @@ try {
     });
 } catch (error) {
     output = String(error && error.stdout ? error.stdout : '');
-    if (!output.trim()) throw error;
+    if (!output.trim()) {
+        const stderr = String(error && error.stderr ? error.stderr : '');
+        const message = String(error && error.message ? error.message : '');
+        const failureText = `${stderr}\n${message}`;
+        const looksTransientRegistryFailure = /EAI_AGAIN|ENOTFOUND|ECONNRESET|ETIMEDOUT|ESOCKETTIMEDOUT|FETCH_ERROR|network|registry/i.test(failureText);
+        if (looksTransientRegistryFailure) {
+            console.warn('Warning: npm audit registry check was unreachable. Skipping audit check for this transient network failure.');
+            process.exit(0);
+        }
+        throw error;
+    }
 }
 
 const report = JSON.parse(output);

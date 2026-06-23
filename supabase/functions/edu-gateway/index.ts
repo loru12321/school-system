@@ -1,4 +1,4 @@
-﻿import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import bcrypt from "npm:bcryptjs@2.4.3";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -710,6 +710,10 @@ async function handleAccountExport(session) {
 async function handleAccountUpsertMany(session, payload) {
   if (!canBulkManageAccounts(session)) return forbidden("No permission to manage accounts");
   const rows = Array.isArray(payload.rows) ? payload.rows : [payload];
+  const BATCH_LIMIT = 50;
+  if (rows.length > BATCH_LIMIT) {
+    return badRequest(`单次批量上限为 ${BATCH_LIMIT} 条，本次提交 ${rows.length} 条，请分批提交`);
+  }
   const sanitizedRows = [];
   for (const row of rows) {
     const normalized = normalizeAccountUpsertRow(row, session);

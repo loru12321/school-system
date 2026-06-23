@@ -1,6 +1,6 @@
 // Managed D1 account/data gateway implementation imported by src/worker-dummy.js.
 // It is not the Wrangler main entrypoint; keep production routing in worker-dummy.js.
-import { buildCorsHeaders, normalizeOrigin } from './worker-http-helpers.js';
+import { buildCorsHeaders, normalizeOrigin, normalizeText, fetchWithTimeout } from './worker-http-helpers.js';
 
 const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
 const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 12;
@@ -9,12 +9,12 @@ const PBKDF2_SCHEME = 'pbkdf2-sha256';
 const GATEWAY_PATHS = ['/functions/v1/edu-gateway-v2', '/functions/v1/edu-gateway'];
 const PROXY_TIMEOUT_MS = 15000;
 const REST_META_KEYS = new Set(['select', 'order', 'limit', 'offset', 'or']);
+// Maximum number of accounts that can be created/updated in a single batch request.
+// Keeps PBKDF2 hashing within Cloudflare Worker CPU limits (~50 ms budget).
+const ACCOUNT_UPSERT_BATCH_LIMIT = 50;
 
 const textEncoder = new TextEncoder();
-
-function normalizeText(value) {
-  return String(value || '').trim();
-}
+// normalizeText and fetchWithTimeout are imported from worker-http-helpers.js
 
 function getLegacyGatewayOrigin(env) {
   return normalizeOrigin(env.LEGACY_GATEWAY_ORIGIN || env.SUPABASE_ORIGIN || DEFAULT_LEGACY_GATEWAY_ORIGIN);
@@ -421,15 +421,7 @@ function normalizeGatewaySession(payload) {
   return normalized;
 }
 
-async function fetchWithTimeout(url, init, timeoutMs = PROXY_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
+// fetchWithTimeout is now imported from worker-http-helpers.js (see top of file).
 
 async function proxyGatewayActionToLegacyGateway(request, env, action, payload = {}, options = {}) {
   const apikey = getLegacyGatewayApiKey(env, request);
@@ -836,17 +828,22 @@ async function handleManagedRestTable(request, env, url, config) {
   const where = buildRestWhereClause(url, allowedColumns);
 
   if (method === 'GET' || method === 'HEAD') {
-    const countResult = await db.prepare(`SELECT COUNT(*) AS row_count FROM ${config.tableName} ${where.clause}`).bind(...where.bindings).first();
-    const rowCount = Number(countResult?.row_count || 0);
+    // Use LIMIT n+1 to infer "has more" without a separate COUNT(*) query,
+    // saving one D1 round-trip per request.
+    const fetchLimit = limit + 1;
     const rowsResult = await db.prepare(`
       SELECT ${allowedColumns.join(', ')}
       FROM ${config.tableName}
       ${where.clause}
       ORDER BY ${allowedColumns.includes(order.column) ? order.column : config.defaultOrderColumn} ${order.direction}
       LIMIT ? OFFSET ?
-    `).bind(...where.bindings, limit, offset).all();
-    const rows = Array.isArray(rowsResult?.results) ? rowsResult.results : [];
-    return buildRestResponse(request, rows, rowCount, offset, 200, selectFields);
+    `).bind(...where.bindings, fetchLimit, offset).all();
+    const allRows = Array.isArray(rowsResult?.results) ? rowsResult.results : [];
+    const hasMore = allRows.length > limit;
+    const rows = hasMore ? allRows.slice(0, limit) : allRows;
+    // Approximate total for Content-Range: reflects actual page + whether more pages exist.
+    const approxTotal = offset + rows.length + (hasMore ? 1 : 0);
+    return buildRestResponse(request, rows, approxTotal, offset, 200, selectFields);
   }
 
   if (method === 'POST') {
@@ -1049,6 +1046,15 @@ async function handleWarningList(request, db, session, payload) {
     conditions.push('status = ?');
     bindings.push(normalizeText(payload.status));
   }
+  // Push school-scope filter into SQL for non-admin roles to avoid fetching
+  // and then discarding unrelated rows in JS (see warningVisible).
+  if (!isAdmin(session) && !hasRole(session, 'director')) {
+    const school = normalizeText(session.school);
+    if (school) {
+      conditions.push('school_name = ?');
+      bindings.push(school);
+    }
+  }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const limit = Math.max(1, Math.min(Number(payload.limit ?? 100) || 100, 500));
   const rows = await queryRows(db, `
@@ -1057,6 +1063,7 @@ async function handleWarningList(request, db, session, payload) {
     ORDER BY created_at DESC
     LIMIT ?
   `, [...bindings, limit], normalizeWarningRow);
+  // Fine-grained JS filter still applied for grade/class/teacher scope within the school.
   return jsonResponse(200, { ok: true, records: rows.filter((row) => warningVisible(session, row)) }, request);
 }
 
@@ -1089,6 +1096,14 @@ async function handleRectifyList(request, db, session, payload) {
     conditions.push('status = ?');
     bindings.push(normalizeText(payload.status));
   }
+  // Push school-scope filter into SQL for non-admin roles to reduce D1 read rows.
+  if (!isAdmin(session) && !hasRole(session, 'director')) {
+    const school = normalizeText(session.school);
+    if (school) {
+      conditions.push('school_name = ?');
+      bindings.push(school);
+    }
+  }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const limit = Math.max(1, Math.min(Number(payload.limit ?? 100) || 100, 500));
   const rows = await queryRows(db, `
@@ -1097,6 +1112,7 @@ async function handleRectifyList(request, db, session, payload) {
     ORDER BY created_at DESC
     LIMIT ?
   `, [...bindings, limit], normalizeRectifyRow);
+  // Fine-grained JS filter still applied for grade/class/teacher/participant scope.
   return jsonResponse(200, { ok: true, records: rows.filter((row) => rectifyVisible(session, row)) }, request);
 }
 
@@ -1419,31 +1435,72 @@ async function handleAccountExport(request, db, session) {
 async function handleAccountUpsertMany(request, db, session, payload) {
   if (!canBulkManageAccounts(session)) return forbidden(request, 'No permission to manage accounts');
   const rows = Array.isArray(payload.rows) ? payload.rows : [payload];
+  // Guard: cap batch size to avoid PBKDF2 CPU exhaustion in a single Worker invocation.
+  if (rows.length > ACCOUNT_UPSERT_BATCH_LIMIT) {
+    return badRequest(request, `单次批量上限为 ${ACCOUNT_UPSERT_BATCH_LIMIT} 条，本次提交 ${rows.length} 条，请分批提交`);
+  }
   const normalizedRows = rows.map((row) => normalizeAccountUpsertRow(row, session));
   for (let index = 0; index < normalizedRows.length; index += 1) {
     const reason = validateAccountUpsertRow(session, normalizedRows[index]);
     if (reason) return badRequest(request, `第 ${index + 1} 条账号数据无效: ${reason}`);
   }
+  // Pre-hash all passwords and fetch existing rows before batching to D1.
+  const now = new Date().toISOString();
+  const statements = [];
   for (const row of normalizedRows) {
     const existing = await getSystemUserRow(db, row.username, { includeInactive: true });
     const passwordHash = await hashAccountPassword(row.password);
-    await upsertSystemUser(db, {
-      ...existing,
-      username: row.username,
-      role: row.role,
-      roles: row.roles,
-      school: row.school,
-      class_name: row.class_name,
-      teacher_name: row.teacher_name,
+    // Build the upsert statement inline so all writes go in a single db.batch() call.
+    const normalized = {
+      username: normalizeText(row.username),
+      role: normalizeText(row.role) || 'guest',
+      roles_json: JSON.stringify(Array.isArray(row.roles) ? Array.from(new Set(row.roles.map((r) => normalizeText(r)).filter(Boolean))) : [row.role || 'guest']),
+      school: normalizeText(row.school) || null,
+      class_name: normalizeText(row.class_name) || null,
+      teacher_name: normalizeText(row.teacher_name || row.username) || null,
       password_hash: passwordHash,
       password_scheme: PBKDF2_SCHEME,
       password_source: 'cloudflare_upsert',
-      has_password: true,
-      is_active: true,
-      created_at: existing?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
+      has_password: 1,
+      password_display: '已设置(不显示明文)',
+      is_active: 1,
+      last_login_at: normalizeText(existing?.last_login_at) || null,
+      created_at: normalizeText(existing?.created_at) || now,
+      updated_at: now
+    };
+    statements.push(
+      db.prepare(`
+        INSERT INTO system_users (
+          username, role, roles_json, school, class_name, teacher_name,
+          password_hash, password_scheme, password_source, has_password,
+          password_display, is_active, last_login_at, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(username) DO UPDATE SET
+          role = excluded.role,
+          roles_json = excluded.roles_json,
+          school = excluded.school,
+          class_name = excluded.class_name,
+          teacher_name = excluded.teacher_name,
+          password_hash = excluded.password_hash,
+          password_scheme = excluded.password_scheme,
+          password_source = excluded.password_source,
+          has_password = 1,
+          password_display = excluded.password_display,
+          is_active = excluded.is_active,
+          last_login_at = COALESCE(system_users.last_login_at, excluded.last_login_at),
+          created_at = system_users.created_at,
+          updated_at = excluded.updated_at
+      `).bind(
+        normalized.username, normalized.role, normalized.roles_json,
+        normalized.school, normalized.class_name, normalized.teacher_name,
+        normalized.password_hash, normalized.password_scheme, normalized.password_source,
+        normalized.has_password, normalized.password_display, normalized.is_active,
+        normalized.last_login_at, normalized.created_at, normalized.updated_at
+      )
+    );
   }
+  // Atomic batch write — all rows succeed or all fail together.
+  if (statements.length) await db.batch(statements);
   return jsonResponse(200, { ok: true, count: normalizedRows.length }, request);
 }
 
@@ -1545,9 +1602,18 @@ async function handleAccountMigrationStatus(request, db, session) {
 
 async function routeGatewayAction(request, env, body) {
   const db = getGatewayDb(env);
-  if (!db || !normalizeText(env.APP_SESSION_SECRET)) {
-    if (!db) console.warn('[gateway] GATEWAY_DATA_DB binding is missing');
-    if (!normalizeText(env.APP_SESSION_SECRET)) console.warn('[gateway] APP_SESSION_SECRET is missing');
+  // Startup integrity check: fail loudly with 503 instead of silently degrading.
+  // A missing APP_SESSION_SECRET would cause token signing to throw and logins to fail.
+  if (!normalizeText(env.APP_SESSION_SECRET)) {
+    console.error('[gateway] FATAL: APP_SESSION_SECRET is missing. Set it via: npx wrangler secret put APP_SESSION_SECRET');
+    return jsonResponse(503, {
+      ok: false,
+      error: 'GATEWAY_SECRET_NOT_CONFIGURED',
+      message: 'Session secret is not configured. Contact the system administrator.'
+    }, request);
+  }
+  if (!db) {
+    console.warn('[gateway] GATEWAY_DATA_DB binding is missing — D1 actions will be unavailable');
     return null;
   }
   const action = normalizeText(body?.action);

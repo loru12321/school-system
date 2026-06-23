@@ -194,9 +194,10 @@ assert.ok(downloadScript, 'index should defer the app download runtime with a ca
 assert.ok(catalogScript.index < downloadScript.index, 'catalog runtime should load before download runtime');
 
 assert.strictEqual(packageJson.scripts['test:app-release-catalog-runtime'], 'node scripts/test-app-release-catalog-runtime.js');
-const validateSteps = packageJson.scripts.validate.split('&&').map((step) => step.trim());
-const catalogStep = validateSteps.indexOf('npm run test:app-release-catalog-runtime');
-assert.ok(catalogStep >= 0, 'validate should invoke the release catalog test');
-assert.strictEqual(validateSteps[catalogStep + 1], 'npm run test:app-download-runtime-hygiene');
+const validateBuild = packageJson.scripts['validate:build'] || '';
+const buildSteps = validateBuild.split(' ').map((step) => step.trim());
+const catalogStep = buildSteps.indexOf('test:app-release-catalog-runtime');
+assert.ok(catalogStep >= 0, 'validate:build should invoke the release catalog test');
+assert.strictEqual(buildSteps[catalogStep + 1], 'test:app-download-runtime-hygiene');
 
 console.log('app release catalog runtime tests passed');

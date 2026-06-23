@@ -978,6 +978,44 @@ async function runModuleDeepCheck(page, id) {
                 timings.push({ label, durationMs: Math.round(now - lastMark) });
                 lastMark = now;
             };
+            const seedSmokeIndicatorInputs = () => {
+                if (!window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) return;
+                const currentIndicator = window.SYS_VARS?.indicator || {};
+                if (!String(currentIndicator.ind1 || '').trim() || !String(currentIndicator.ind2 || '').trim()) {
+                    if (typeof window.setIndicatorState === 'function') {
+                        window.setIndicatorState({ ind1: '222', ind2: '1353' });
+                    } else {
+                        window.SYS_VARS = window.SYS_VARS || {};
+                        window.SYS_VARS.indicator = { ind1: '222', ind2: '1353' };
+                    }
+                }
+                const targetCount = window.TARGETS && typeof window.TARGETS === 'object'
+                    ? Object.keys(window.TARGETS).length
+                    : 0;
+                if (targetCount > 0) return;
+                const buckets = typeof window.buildIndicatorSchoolBuckets === 'function'
+                    ? window.buildIndicatorSchoolBuckets()
+                    : Object.values(window.SCHOOLS || {}).map((school) => ({
+                        name: String(school?.name || '').trim(),
+                        students: Array.isArray(school?.students) ? school.students : []
+                    }));
+                const targets = {};
+                buckets
+                    .filter((bucket) => bucket.name && Array.isArray(bucket.students) && bucket.students.length > 0)
+                    .forEach((bucket) => {
+                        const count = bucket.students.length;
+                        targets[bucket.name] = {
+                            t1: String(Math.max(1, Math.min(count, Math.round(count * 0.05)))),
+                            t2: String(Math.max(1, Math.min(count, Math.round(count * 0.2))))
+                        };
+                    });
+                if (Object.keys(targets).length > 0) {
+                    if (typeof window.setTargetsState === 'function') window.setTargetsState(targets);
+                    else window.TARGETS = targets;
+                    if (typeof window.ensureNormalizedTargets === 'function') window.ensureNormalizedTargets();
+                }
+            };
+            seedSmokeIndicatorInputs();
             let result = [];
             let calcError = '';
             try {

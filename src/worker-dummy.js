@@ -1,5 +1,5 @@
 import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway-d1.js';
-import { HOP_BY_HOP_HEADERS, buildCorsHeaders, normalizeOrigin } from './worker-http-helpers.js';
+import { HOP_BY_HOP_HEADERS, buildCorsHeaders, normalizeOrigin, normalizeText, fetchWithTimeout } from './worker-http-helpers.js';
 import { handleReleaseDownload } from './worker-release-downloads.mjs';
 
 // Production Cloudflare Worker entrypoint.
@@ -66,9 +66,7 @@ function getSystemDataMode(env) {
   return 'hybrid';
 }
 
-function normalizeText(value) {
-  return String(value || '').trim();
-}
+// normalizeText is imported from worker-http-helpers.js (see top of file).
 
 function parseSystemDataFilterValue(value) {
   return normalizeText(value);
@@ -411,13 +409,17 @@ async function upsertSystemDataRows(env, rows) {
 }
 
 async function buildSystemDataJsonResponse(request, env, rows, selectSet) {
-  const payloadRows = [];
-  for (const row of rows) {
-    const content = selectSet.has('content')
-      ? await readStoredSystemDataContent(env, row)
-      : undefined;
-    payloadRows.push(mapSystemDataResponseRow(row, selectSet, content));
-  }
+  // Read all R2 objects concurrently instead of awaiting each one serially.
+  const contents = await Promise.all(
+    rows.map((row) =>
+      selectSet.has('content')
+        ? readStoredSystemDataContent(env, row)
+        : Promise.resolve(undefined)
+    )
+  );
+  const payloadRows = rows.map((row, index) =>
+    mapSystemDataResponseRow(row, selectSet, contents[index])
+  );
   const single = wantsSingleSystemDataObject(request);
   const body = single ? (payloadRows[0] || null) : payloadRows;
   return jsonResponse(200, body, request);
@@ -566,7 +568,6 @@ async function readRequestBody(request) {
   const buffer = await request.arrayBuffer();
   return buffer.byteLength ? buffer : new ArrayBuffer(0);
 }
-
 function buildProxyInit(request, bodyBuffer, extraHeaders = {}) {
   const method = String(request.method || 'GET').toUpperCase();
   const headers = filterProxyHeaders(request.headers);
@@ -588,15 +589,7 @@ function buildProxyInit(request, bodyBuffer, extraHeaders = {}) {
   return init;
 }
 
-async function fetchWithTimeout(url, init, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
+// fetchWithTimeout is imported from worker-http-helpers.js (see top of file).
 
 async function proxyRequest(url, request, targetUrl, bodyBuffer, extraHeaders = {}) {
   const proxyInit = buildProxyInit(request, bodyBuffer, extraHeaders);
@@ -797,8 +790,8 @@ async function proxySystemDataReadToSupabase(request, env, url) {
     }
   }, PROXY_TIMEOUT_MS);
 
-  const text = await response.text();
   if (!response.ok) {
+    const text = await response.text();
     return new Response(text, {
       status: response.status,
       statusText: response.statusText,
@@ -806,6 +799,15 @@ async function proxySystemDataReadToSupabase(request, env, url) {
     });
   }
 
+  if (!requestedSizeBytes) {
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: buildForwardHeaders(response.headers, request)
+    });
+  }
+
+  const text = await response.text();
   let parsed = [];
   try {
     parsed = text ? JSON.parse(text) : [];

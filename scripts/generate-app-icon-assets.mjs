@@ -97,12 +97,12 @@ for (const [density, legacySize, foregroundSize] of densities) {
 
 const adaptiveDir = path.join(androidRoot, 'mipmap-anydpi-v26');
 await ensureDir(adaptiveDir);
-const adaptiveXml = `<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background" />\n    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n</adaptive-icon>\n`;
+const adaptiveXml = `<?xml version="1.0" encoding="utf-8"?>\r\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\r\n    <background android:drawable="@color/ic_launcher_background" />\r\n    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\r\n</adaptive-icon>\r\n`;
 await writeFile(path.join(adaptiveDir, 'ic_launcher.xml'), adaptiveXml);
 await writeFile(path.join(adaptiveDir, 'ic_launcher_round.xml'), adaptiveXml);
 const colorsDir = path.join(androidRoot, 'values');
 await ensureDir(colorsDir);
-await writeFile(path.join(colorsDir, 'ic_launcher_colors.xml'), `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${background}</color>\n</resources>\n`);
+await writeFile(path.join(colorsDir, 'ic_launcher_colors.xml'), `<?xml version="1.0" encoding="utf-8"?>\r\n<resources>\r\n    <color name="ic_launcher_background">${background}</color>\r\n</resources>\r\n`);
 
 const iosProject = at('ios', 'App', 'App.xcodeproj');
 let iosPresent = true;

@@ -26,6 +26,14 @@ function assertContiguousScriptSequence(scriptName, expectedCommands, message) {
   );
 }
 
+function assertScriptIncludesTokens(scriptName, expectedTokens, message) {
+  const script = scripts[scriptName] || '';
+  assert.ok(
+    expectedTokens.every((token) => script.includes(token)),
+    message
+  );
+}
+
 const packageJson = parseJson('package.json');
 const scripts = packageJson.scripts || {};
 const manifestText = read('public/site.webmanifest');
@@ -60,14 +68,14 @@ const requiredContractGate = [
 ];
 assertContiguousScriptSequence('check:release-fast', requiredContractGate, 'fast release checks should verify icons before all package contracts immediately after release surface');
 const validateContractGate = [
-  'npm run test:release-manifest',
-  'npm run test:app-icon-assets',
-  'npm run test:desktop-package-contract',
-  'npm run test:capacitor-package-contract',
-  'npm run test:beta-release-workflow',
-  'npm run build',
+  'test:release-manifest',
+  'test:app-icon-assets',
+  'test:desktop-package-contract',
+  'test:capacitor-package-contract',
+  'test:beta-release-workflow',
 ];
-assertContiguousScriptSequence('validate', validateContractGate, 'validate should verify icons before all package contracts immediately before build');
+assertScriptIncludesTokens('validate:build', validateContractGate, 'validate:build should verify icons and all package contracts before build');
+assert.match(scripts.validate || '', /validate:build[\s\S]*&&\s*npm run build/, 'validate should run build contract group before build');
 assert.match(verifier, /release-manifest\.json/, 'release verifier should load the published manifest');
 assert.match(verifier, /windows:[\s\S]*extension:\s*['"]\.exe['"][\s\S]*minimumBytes:\s*50\s*\*\s*1024\s*\*\s*1024/, 'Windows packages should be real EXE installers');
 assert.match(verifier, /android:[\s\S]*extension:\s*['"]\.apk['"][\s\S]*minimumBytes:\s*10\s*\*\s*1024\s*\*\s*1024/, 'Android packages should be real APK files');

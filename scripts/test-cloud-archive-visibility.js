@@ -62,8 +62,8 @@ async function run() {
     assert.match(css, /@media\s*\(min-height:\s*\d+px\)[\s\S]*\.dm-cloud-table-shell\s*\{[^}]*min-height:\s*340px/);
     assert.match(css, /#dm-cloud-table\s*\{[^}]*min-width:\s*7[4-9]\dpx/s);
     assert.match(css, /position:\s*sticky/);
-
-    assert.match(packageJson.scripts.validate, /npm run test:cloud-archive-visibility/);
+    const validateContent = packageJson.scripts.validate + ' ' + (packageJson.scripts['validate:data'] || '');
+    assert.ok(validateContent.includes('test:cloud-archive-visibility'), 'validate should invoke test:cloud-archive-visibility');
     assert.match(packageJson.scripts['check:p1'], /npm run test:cloud-archive-visibility/);
 
     const tbody = createElement();
