@@ -5,8 +5,26 @@
         signature: '',
         matrixHtml: '',
         chartHtml: '',
-        liftDragHtml: ''
+        liftDragHtml: '',
+        studentLists: new Map(),
+        classOptions: new Map()
     };
+
+    function buildCorrelationDataSignature(scope) {
+        const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
+        const first = rows[0] || {};
+        const last = rows[rows.length - 1] || {};
+        const schoolRows = scope && scope !== 'ALL' && window.SCHOOLS?.[scope]?.students;
+        return [
+            window.__RAW_DATA_VERSION || 0,
+            window.CURRENT_EXAM_ID || '',
+            String(scope || 'ALL'),
+            rows.length,
+            schoolRows ? schoolRows.length : '',
+            `${first.school || ''}/${first.class || ''}/${first.name || ''}/${first.total ?? ''}`,
+            `${last.school || ''}/${last.class || ''}/${last.name || ''}/${last.total ?? ''}`
+        ].join('::');
+    }
 
     function updateCorrelationSchoolSelect() {
         const select = document.getElementById('corrSchoolSelect');
@@ -41,10 +59,24 @@
         const classSelect = document.getElementById('corrClassSelect');
         if (!schoolSelect || !classSelect) return;
         const oldClass = classSelect.value;
-        const students = getCorrelationStudents(schoolSelect.value || 'ALL', 'ALL');
-        const classes = Array.from(new Set((students || []).map(student => student?.class).filter(Boolean)))
-            .sort((a, b) => normalizeCorrelationClass(a).localeCompare(normalizeCorrelationClass(b), 'zh-Hans-CN', { numeric: true }));
-        classSelect.innerHTML = `<option value="ALL">全部班级</option>${classes.map(className => `<option value="${className}">${className}</option>`).join('')}`;
+        const scope = schoolSelect.value || 'ALL';
+        const signature = buildCorrelationDataSignature(scope);
+        const cacheKey = `${scope}::${signature}`;
+        let optionsHtml = CorrelationAnalysisPerfCache.classOptions.get(cacheKey);
+        if (!optionsHtml) {
+            const students = getCorrelationStudents(scope, 'ALL');
+            const classes = Array.from(new Set((students || []).map(student => student?.class).filter(Boolean)))
+                .sort((a, b) => normalizeCorrelationClass(a).localeCompare(normalizeCorrelationClass(b), 'zh-Hans-CN', { numeric: true }));
+            optionsHtml = `<option value="ALL">全部班级</option>${classes.map(className => `<option value="${className}">${className}</option>`).join('')}`;
+            CorrelationAnalysisPerfCache.classOptions.set(cacheKey, optionsHtml);
+            while (CorrelationAnalysisPerfCache.classOptions.size > 8) {
+                CorrelationAnalysisPerfCache.classOptions.delete(CorrelationAnalysisPerfCache.classOptions.keys().next().value);
+            }
+        }
+        if (classSelect.dataset.corrClassOptionsSig !== cacheKey) {
+            classSelect.innerHTML = optionsHtml;
+            classSelect.dataset.corrClassOptionsSig = cacheKey;
+        }
         if (oldClass && Array.from(classSelect.options || []).some(option => option.value === oldClass)) {
             classSelect.value = oldClass;
         }
@@ -117,14 +149,26 @@
     }
 
     function getCorrelationStudents(scope, className = 'ALL') {
-        const baseStudents = scope === 'ALL'
+        const normalizedScope = scope || 'ALL';
+        const normalizedClass = normalizeCorrelationClass(className);
+        const signature = buildCorrelationDataSignature(normalizedScope);
+        const cacheKey = `${normalizedScope}::${normalizedClass || 'ALL'}::${signature}`;
+        if (CorrelationAnalysisPerfCache.studentLists.has(cacheKey)) {
+            return CorrelationAnalysisPerfCache.studentLists.get(cacheKey);
+        }
+        const baseStudents = normalizedScope === 'ALL'
             ? ((typeof window.filterRowsToTownshipSchools === 'function')
                 ? window.filterRowsToTownshipSchools(RAW_DATA || [])
                 : (Array.isArray(RAW_DATA) ? RAW_DATA : []))
-            : (SCHOOLS?.[scope]?.students || []);
-        const normalizedClass = normalizeCorrelationClass(className);
-        if (!normalizedClass || normalizedClass.toLowerCase() === 'all') return baseStudents;
-        return baseStudents.filter(student => normalizeCorrelationClass(student?.class || '') === normalizedClass);
+            : (SCHOOLS?.[normalizedScope]?.students || []);
+        const result = (!normalizedClass || normalizedClass.toLowerCase() === 'all')
+            ? baseStudents
+            : baseStudents.filter(student => normalizeCorrelationClass(student?.class || '') === normalizedClass);
+        CorrelationAnalysisPerfCache.studentLists.set(cacheKey, result);
+        while (CorrelationAnalysisPerfCache.studentLists.size > 12) {
+            CorrelationAnalysisPerfCache.studentLists.delete(CorrelationAnalysisPerfCache.studentLists.keys().next().value);
+        }
+        return result;
     }
 
     function getCorrelationStudentSignaturePart(student) {

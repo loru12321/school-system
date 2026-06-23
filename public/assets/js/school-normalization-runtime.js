@@ -19,7 +19,8 @@ const SCHOOL_ALIAS_GROUPS = [
 ];
 
 const SchoolCompareListPerfCache = {
-    signature: '',
+    allSignature: '',
+    townshipSignature: '',
     allSchools: [],
     townshipSchools: []
 };
@@ -768,10 +769,11 @@ function listAvailableSchoolsForCompare(scope = 'township') {
     };
 
     const signature = buildSignature();
-    if (SchoolCompareListPerfCache.signature === signature) {
-        return requestedScope === 'all'
-            ? SchoolCompareListPerfCache.allSchools.slice()
-            : SchoolCompareListPerfCache.townshipSchools.slice();
+    if (requestedScope === 'all' && SchoolCompareListPerfCache.allSignature === signature) {
+        return SchoolCompareListPerfCache.allSchools.slice();
+    }
+    if (requestedScope !== 'all' && SchoolCompareListPerfCache.townshipSignature === signature) {
+        return SchoolCompareListPerfCache.townshipSchools.slice();
     }
 
     const allSchools = (() => {
@@ -810,15 +812,20 @@ function listAvailableSchoolsForCompare(scope = 'township') {
             .sort((a, b) => a.localeCompare(b, 'zh-CN'));
     })();
 
+    SchoolCompareListPerfCache.allSignature = signature;
+    SchoolCompareListPerfCache.allSchools = allSchools.slice();
+
+    if (requestedScope === 'all') {
+        return allSchools.slice();
+    }
+
     const townshipSchools = getTownshipManagedSchoolNames(allSchools);
-    const canCacheTownshipResult = townshipSchools.length > 0 || !rawRows.length;
-    if (canCacheTownshipResult) {
-        SchoolCompareListPerfCache.signature = signature;
-        SchoolCompareListPerfCache.allSchools = allSchools.slice();
+    if (townshipSchools.length > 0 || !rawRows.length) {
+        SchoolCompareListPerfCache.townshipSignature = signature;
         SchoolCompareListPerfCache.townshipSchools = townshipSchools.slice();
     }
 
-    return requestedScope === 'all' ? allSchools.slice() : townshipSchools.slice();
+    return townshipSchools.slice();
 }
 
 function getClassSchoolMapForAllData() {

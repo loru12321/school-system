@@ -17,6 +17,8 @@ const freshmanFile = 'public/assets/js/freshman-exam-runtime.js';
 const progressFile = 'public/assets/js/progress-analysis-runtime.js';
 const compareSharedFile = 'public/assets/js/compare-shared-runtime.js';
 const bootFile = 'public/assets/js/boot-runtime.js';
+const schoolNormalizationFile = 'public/assets/js/school-normalization-runtime.js';
+const teacherBridgeFile = 'public/assets/js/teacher-analysis-bridge-runtime.js';
 const packageFile = 'package.json';
 const app = read(appFile);
 const overview = read(overviewFile);
@@ -24,6 +26,8 @@ const freshman = read(freshmanFile);
 const progress = read(progressFile);
 const compareShared = read(compareSharedFile);
 const boot = read(bootFile);
+const schoolNormalization = read(schoolNormalizationFile);
+const teacherBridge = read(teacherBridgeFile);
 const pkg = JSON.parse(read(packageFile));
 
 [
@@ -96,6 +100,21 @@ if (!listAvailableExamsSource || listAvailableExamsSource.includes('computeExamD
 if (boot.includes("'updateProgressMultiExamSelects',")) {
     fail('progress compare selector refresh should stay on the lightweight compare-selectors runtime, not trigger the full progress runtime');
 }
+
+[
+    'allSignature',
+    'townshipSignature',
+    "if (requestedScope === 'all')",
+    'return allSchools.slice();'
+].forEach((token) => assertContains(schoolNormalization, token, schoolNormalizationFile));
+
+[
+    'studentLists: new Map()',
+    'classOptions: new Map()',
+    'function buildCorrelationDataSignature(scope)',
+    'CorrelationAnalysisPerfCache.classOptions.set(cacheKey, optionsHtml)',
+    'CorrelationAnalysisPerfCache.studentLists.set(cacheKey, result)'
+].forEach((token) => assertContains(teacherBridge, token, teacherBridgeFile));
 
 const marginalStart = overview.indexOf('function smBuildMarginalSummary()');
 const marginalEnd = overview.indexOf('function smGetSchoolListCached()', marginalStart);
