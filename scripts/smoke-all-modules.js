@@ -1127,18 +1127,30 @@ async function runModuleDeepCheck(page, id) {
             const gapInput = document.getElementById('mpGap');
             const typeSelect = document.getElementById('mpType');
             const schools = Array.from(schoolSelect.options || []).map(option => option.value).filter(Boolean);
+            const buildTaskRows = window.MarginalPushRuntime && typeof window.MarginalPushRuntime.buildTaskRows === 'function'
+                ? window.MarginalPushRuntime.buildTaskRows
+                : null;
+            let sample = null;
             let result = null;
             for (const school of schools) {
-                schoolSelect.value = school;
+                for (const gap of [5, 10, 20, 999]) {
+                    const count = buildTaskRows
+                        ? Number(buildTaskRows({ school, className: '', subject: 'ALL', gap, type: 'both' })?.rows?.length || 0)
+                        : 0;
+                    if (count > 0) {
+                        sample = { school, gap, count };
+                        break;
+                    }
+                }
+                if (sample) break;
+            }
+            if (sample) {
+                schoolSelect.value = sample.school;
                 window.updateMpClassSelect();
                 if (subjectSelect) subjectSelect.value = 'ALL';
                 if (typeSelect) typeSelect.value = 'both';
-                for (const gap of [5, 10, 20, 999]) {
-                    if (gapInput) gapInput.value = String(gap);
-                    result = window.generateMarginalTickets();
-                    if (Number(result?.count || 0) > 0) break;
-                }
-                if (Number(result?.count || 0) > 0) break;
+                if (gapInput) gapInput.value = String(sample.gap);
+                result = window.generateMarginalTickets();
             }
             const ticketCount = document.querySelectorAll('#mp-tickets-container .task-ticket').length;
             const generatedCount = Number(result?.count || 0);
@@ -1147,7 +1159,8 @@ async function runModuleDeepCheck(page, id) {
                 checks,
                 generatedCount,
                 ticketCount,
-                sampleSchool: schoolSelect.value || ''
+                sampleSchool: schoolSelect.value || '',
+                sampleGap: sample?.gap || null
             };
         });
     }
@@ -2349,7 +2362,21 @@ async function runModuleDeepCheck(page, id) {
             nameInput.value = student.name || '';
 
             await window.doQuery();
-            await new Promise(resolve => setTimeout(resolve, 1200));
+            await new Promise(resolve => {
+                const startedAt = Date.now();
+                const checkReady = () => {
+                    const reportWrap = document.getElementById('single-report-result');
+                    const capture = document.getElementById('report-card-capture-area');
+                    const reportVisible = !!reportWrap && !reportWrap.classList.contains('hidden');
+                    const contentReady = !!capture && String(capture.innerHTML || '').trim().length > 0;
+                    if ((reportVisible && contentReady) || Date.now() - startedAt > 1200) {
+                        resolve();
+                        return;
+                    }
+                    requestAnimationFrame(checkReady);
+                };
+                checkReady();
+            });
 
             const reportWrap = document.getElementById('single-report-result');
             const capture = document.getElementById('report-card-capture-area');
