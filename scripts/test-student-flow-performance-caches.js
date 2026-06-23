@@ -104,6 +104,7 @@ if (boot.includes("'updateProgressMultiExamSelects',")) {
 [
     'allSignature',
     'townshipSignature',
+    "const includeCohortExamSchools = requestedScope !== 'all' || !rawRows.length;",
     "if (requestedScope === 'all')",
     'return allSchools.slice();'
 ].forEach((token) => assertContains(schoolNormalization, token, schoolNormalizationFile));

@@ -738,6 +738,7 @@ function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
 function listAvailableSchoolsForCompare(scope = 'township') {
     const requestedScope = String(scope || '').toLowerCase();
     const rawRows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+    const includeCohortExamSchools = requestedScope !== 'all' || !rawRows.length;
     const buildSignature = () => {
         const schoolKeys = Object.keys(SCHOOLS || {}).sort().join('|');
         const teacherKeys = Object.entries(window.TEACHER_SCHOOL_MAP || {})
@@ -749,10 +750,12 @@ function listAvailableSchoolsForCompare(scope = 'township') {
         let examSig = '';
         try {
             const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-            examSig = Object.entries(db?.exams || {})
-                .map(([key, exam]) => `${key}:${Array.isArray(exam?.data) ? exam.data.length : 0}`)
-                .sort()
-                .join('|');
+            examSig = includeCohortExamSchools
+                ? Object.entries(db?.exams || {})
+                    .map(([key, exam]) => `${key}:${Array.isArray(exam?.data) ? exam.data.length : 0}`)
+                    .sort()
+                    .join('|')
+                : '';
         } catch (error) {
             examSig = 'cohort-db-unavailable';
         }
@@ -795,7 +798,7 @@ function listAvailableSchoolsForCompare(scope = 'township') {
         if (persistedSchool) collectName(persistedSchool);
         if (runtimeSchool) collectName(runtimeSchool);
 
-        const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+        const db = includeCohortExamSchools && (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
         if (db?.exams) {
             Object.values(db.exams).forEach((exam) => {
                 (exam?.data || []).forEach((row) => collectName(row?.school));
