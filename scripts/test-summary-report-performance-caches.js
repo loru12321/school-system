@@ -41,7 +41,11 @@ const pkg = JSON.parse(read(packageFile));
     'buildDistribution',
     'getTownDistribution',
     'getSchoolDistribution',
-    'getSchoolProfileModel'
+    'getSchoolProfileModel',
+    'currentModalSchool === (resolvedKey || schoolName)',
+    "modal.style.display = 'flex';",
+    '&& schoolRadarInstance',
+    '&& schoolDistInstance'
 ].forEach((token) => assertContains(profile, token, profileFile));
 
 if (pkg.scripts['test:summary-report-performance-caches'] !== 'node scripts/test-summary-report-performance-caches.js') {

@@ -162,6 +162,18 @@
             ? window.getAppSchoolRecord(schoolName)
             : SCHOOLS[schoolName];
         if (!s) return;
+        const modal = document.getElementById('school-profile-modal');
+        if (
+            modal
+            && currentModalSchool
+            && currentModalSchool === (resolvedKey || schoolName)
+            && schoolRadarInstance
+            && schoolDistInstance
+            && SchoolProfilePerfCache.profileModel.size > 0
+        ) {
+            modal.style.display = 'flex';
+            return;
+        }
         currentModalSchool = resolvedKey || schoolName;
         const m = s.metrics.total || {};
 
