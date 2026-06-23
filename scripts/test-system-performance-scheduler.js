@@ -87,6 +87,22 @@ async function wait(ms) {
   await wait(30);
   assert.deepStrictEqual(idleRuns, ['idle']);
 
+  let cohortFetches = 0;
+  fakeWindow.CloudManager.fetchCohortExamsToLocal = () => new Promise((resolve) => {
+    cohortFetches += 1;
+    setTimer(() => resolve({ success: true, cohortFetches }), 1250);
+  });
+  scheduler.patchCloudManager();
+  await fakeWindow.CloudManager.fetchCohortExamsToLocal('2022', { background: true, minCount: 1, latestOnly: true });
+  await fakeWindow.CloudManager.fetchCohortExamsToLocal('2022', { background: true, minCount: 1, latestOnly: false });
+  const snapshotAfterBackgroundFetch = scheduler.getSnapshot();
+  assert.strictEqual(cohortFetches, 2, 'latestOnly and full cohort fetches should use distinct cache keys');
+  assert.strictEqual(
+    snapshotAfterBackgroundFetch.longTasks.some((item) => String(item.key || '').includes('fetchCohortExamsToLocal')),
+    false,
+    'background cohort fetch duration should not be reported as a main-thread long task'
+  );
+
   assert.strictEqual(scheduler.getSnapshot().scheduled, 0);
   activeTimers.forEach(clearTimer);
   console.log('system-performance scheduler tests passed');

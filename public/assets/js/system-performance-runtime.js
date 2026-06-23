@@ -76,7 +76,7 @@
                     state.active -= 1;
                     if (item.cacheKey) state.inflight.delete(item.cacheKey);
                     const duration = now() - start;
-                    if (duration > 1200) {
+                    if (item.trackLongTask !== false && duration > 1200) {
                         state.longTasks.push({
                             key: item.cacheKey || item.label || 'task',
                             duration,
@@ -107,7 +107,8 @@
                 task,
                 resolve,
                 reject,
-                priority: Number(options.priority || 0)
+                priority: Number(options.priority || 0),
+                trackLongTask: options.trackLongTask !== false
             });
             state.queue.sort((a, b) => b.priority - a.priority);
             scheduleIdle(drainQueue);
@@ -226,7 +227,10 @@
         if (method === 'fetchCohortExamsToLocal') {
             const cohortId = list[0] || '';
             const options = list[1] && typeof list[1] === 'object' ? list[1] : {};
-            return [cohortId, { minCount: options.minCount || 2 }];
+            return [cohortId, {
+                minCount: options.minCount || 2,
+                latestOnly: options.latestOnly === true || Number(options.maxFetch || 0) === 1
+            }];
         }
         if (method === 'fetchAllCohortExams') {
             const options = list[0] && typeof list[0] === 'object' ? list[0] : {};
@@ -286,7 +290,8 @@
                 label: method,
                 cacheKey,
                 ttlMs: noCache ? 0 : ttlMs,
-                priority: isBackground ? -1 : 1
+                priority: isBackground ? -1 : 1,
+                trackLongTask: !(isBackground && method === 'fetchCohortExamsToLocal')
             });
         };
         wrapped.__systemPerformanceWrapped = true;
