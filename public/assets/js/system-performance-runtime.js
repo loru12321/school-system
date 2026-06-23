@@ -229,7 +229,8 @@
             const options = list[1] && typeof list[1] === 'object' ? list[1] : {};
             return [cohortId, {
                 minCount: options.minCount || 2,
-                latestOnly: options.latestOnly === true || Number(options.maxFetch || 0) === 1
+                latestOnly: options.latestOnly === true || Number(options.maxFetch || 0) === 1,
+                maxFetch: Number(options.maxFetch || 0) || 0
             }];
         }
         if (method === 'fetchAllCohortExams') {

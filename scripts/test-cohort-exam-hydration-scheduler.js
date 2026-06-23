@@ -19,8 +19,10 @@ async function run() {
         'cloud exam sync should track active task requirements'
     );
     assert.ok(
-        cloudWorkspaceSource.includes('minCount > activeMinCount || (activeLatestOnly && !latestOnly)'),
-        'cloud exam sync should upgrade an in-flight latest-only fetch when comparisons need history'
+        cloudWorkspaceSource.includes('minCount > activeMinCount')
+            && cloudWorkspaceSource.includes('activeLatestOnly && !latestOnly')
+            && cloudWorkspaceSource.includes('activeMaxFetch > 0 && maxFetch === 0'),
+        'cloud exam sync should upgrade an in-flight quick/latest fetch when comparisons need full history'
     );
     assert.ok(
         cloudWorkspaceSource.includes('latestOnly: false') && cloudWorkspaceSource.includes('maxFetch: undefined'),

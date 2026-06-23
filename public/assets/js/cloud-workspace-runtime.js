@@ -1187,13 +1187,19 @@
             if (!this._cohortExamSyncTaskOptions) this._cohortExamSyncTaskOptions = {};
             const forceSync = Boolean(options.force);
             const minCount = Math.max(1, Number(options.minCount || 2));
-            const latestOnly = options.latestOnly === true || Number(options.maxFetch || 0) === 1;
+            const maxFetch = Math.max(0, Number(options.maxFetch || 0));
+            const latestOnly = options.latestOnly === true || maxFetch === 1;
+            const latestMetaOnly = latestOnly || maxFetch > 0;
             if (this._cohortExamSyncTasks[cid]) {
                 const activeOptions = this._cohortExamSyncTaskOptions[cid] || {};
                 const activeMinCount = Math.max(1, Number(activeOptions.minCount || 2));
-                const activeLatestOnly = activeOptions.latestOnly === true || Number(activeOptions.maxFetch || 0) === 1;
+                const activeMaxFetch = Math.max(0, Number(activeOptions.maxFetch || 0));
+                const activeLatestOnly = activeOptions.latestOnly === true || activeMaxFetch === 1;
                 const needsUpgrade = !forceSync
-                    && (minCount > activeMinCount || (activeLatestOnly && !latestOnly));
+                    && (minCount > activeMinCount
+                        || (activeLatestOnly && !latestOnly)
+                        || (activeMaxFetch > 0 && maxFetch === 0)
+                        || (activeMaxFetch > 0 && maxFetch > activeMaxFetch));
                 if (!needsUpgrade) return this._cohortExamSyncTasks[cid];
                 return this._cohortExamSyncTasks[cid].then(() => this.fetchCohortExamsToLocal(cid, {
                     ...options,
@@ -1229,7 +1235,7 @@
                     const chunkSize = 10;
                     const candidates = await fetchCohortExamMetaRows(this, cid, {
                         force: forceSync,
-                        latestOnly,
+                        latestOnly: latestMetaOnly,
                         minCount
                     });
 
@@ -1246,14 +1252,15 @@
                         keysToFetch.push(candidates[candidates.length - 1].key);
                     }
 
-                    if (latestOnly && keysToFetch.length > 1) {
+                    const maxKeysToFetch = maxFetch > 0 ? maxFetch : (latestOnly ? 1 : 0);
+                    if (maxKeysToFetch > 0 && keysToFetch.length > maxKeysToFetch) {
                         const candidateByKey = new Map(candidates.map(row => [row.key, row]));
                         keysToFetch.sort((left, right) => {
                             const leftRow = candidateByKey.get(left) || {};
                             const rightRow = candidateByKey.get(right) || {};
                             return getExamKeyRecencyScore(right, rightRow.updated_at) - getExamKeyRecencyScore(left, leftRow.updated_at);
                         });
-                        keysToFetch.length = 1;
+                        keysToFetch.length = maxKeysToFetch;
                     }
 
                     if (keysToFetch.length === 0) {

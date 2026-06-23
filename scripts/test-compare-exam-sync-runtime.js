@@ -46,9 +46,22 @@ function run() {
     runtime.refreshSelectors();
     assert.deepStrictEqual(refreshLog, ['progress', 'report']);
 
-    const started = runtime.trySyncOptions({ cohortId: 'cohort:2022', minCount: 2 });
+    const started = runtime.trySyncOptions({
+        cohortId: 'cohort:2022',
+        fetchOptions: {
+            background: true,
+            minCount: 2,
+            maxFetch: 4,
+            refreshSelectors: false
+        }
+    });
     assert.strictEqual(started, true);
-    assert.deepStrictEqual(fetchArgs, ['2022', { minCount: 2 }]);
+    assert.deepStrictEqual(fetchArgs, ['2022', {
+        background: true,
+        minCount: 2,
+        maxFetch: 4,
+        refreshSelectors: false
+    }]);
     assert.strictEqual(syncState['2022'].pending, true);
     assert.ok(syncState['2022'].lastAttempt > 0);
 

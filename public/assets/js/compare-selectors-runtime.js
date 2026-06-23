@@ -61,7 +61,12 @@
         ? function trySyncCompareExamOptions() {
             return CompareExamSyncRuntime.trySyncOptions({
                 cohortId: CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'),
-                minCount: 2
+                fetchOptions: {
+                    background: true,
+                    minCount: 2,
+                    maxFetch: 4,
+                    refreshSelectors: false
+                }
             });
         }
         : function trySyncCompareExamOptions() {
@@ -75,7 +80,12 @@
             if (Date.now() - Number(state.lastAttempt || 0) < 5000) return false;
             state.pending = true;
             state.lastAttempt = Date.now();
-            Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { minCount: 2 }))
+            Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, {
+                background: true,
+                minCount: 2,
+                maxFetch: 4,
+                refreshSelectors: false
+            }))
                 .catch(err => {
                     console.warn('[compare-sync] fetchCohortExamsToLocal failed:', err);
                 })
