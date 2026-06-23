@@ -39,6 +39,7 @@ function countFilesRecursive(relativePath) {
 const packageJson = parseJson('package.json');
 const wrangler = parseJson('wrangler.jsonc');
 const distIndex = read('dist/index.html');
+const gitignore = normalizeLineEndings(read('.gitignore'));
 const prodSmoke = read('scripts/run-prod-smoke.js');
 const runLocalSmoke = read('scripts/run-local-smoke.js');
 const smokeModules = read('scripts/smoke-all-modules.js');
@@ -58,6 +59,8 @@ const forbiddenSecretPatterns = [
 ];
 
 assert.ok(exists('dist/index.html'), 'dist/index.html must exist before release');
+assert.ok(exists('lt.html'), 'root lt.html must be generated before offline or AD release packaging');
+assert.ok(/^lt\.html$/m.test(gitignore), 'generated root lt.html must stay ignored by Git');
 assert.ok(exists('dist/_headers'), 'dist/_headers must be emitted for Cloudflare static asset headers');
 assert.ok(exists('dist/robots.txt'), 'dist/robots.txt must be emitted for crawlers');
 assert.ok(exists('dist/sitemap.xml'), 'dist/sitemap.xml must be emitted for crawlers');

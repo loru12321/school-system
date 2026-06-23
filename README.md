@@ -77,7 +77,7 @@ scripts/                   构建、验证、烟测、部署辅助脚本
 supabase/                  Edge Functions、SQL、迁移脚本
 cloudflare/                Worker 相关代码
 dist/                      Vite 构建产物
-lt.html                    单文件离线版本
+lt.html                    构建时生成的单文件离线版本（不提交 Git）
 wrangler.jsonc             Cloudflare Workers 部署配置
 ```
 
