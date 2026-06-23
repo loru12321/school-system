@@ -13,8 +13,11 @@ async function fetchWithTimeout(pathname, options = {}) {
       redirect: 'follow',
       signal: controller.signal,
       headers: {
-        'User-Agent': 'school-system-production-verifier'
-      }
+        'User-Agent': 'school-system-production-verifier',
+        ...(options.headers || {})
+      },
+      method: options.method || 'GET',
+      body: options.body
     });
   } finally {
     clearTimeout(timeout);
@@ -40,6 +43,22 @@ const healthText = await health.text();
 checks.push(['health_status', health.status === 200]);
 checks.push(['health_json', /application\/json/i.test(health.headers.get('content-type') || '')]);
 checks.push(['health_ok', healthText.includes('"ok":true')]);
+
+const gatewayLogin = await fetchWithTimeout('/api/gateway', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    action: 'login',
+    payload: {
+      username: process.env.SMOKE_USER || 'admin',
+      password: process.env.SMOKE_PASS || 'admin123'
+    }
+  })
+});
+const gatewayLoginText = await gatewayLogin.text();
+checks.push(['gateway_alias_status', gatewayLogin.status === 200]);
+checks.push(['gateway_alias_json', /application\/json/i.test(gatewayLogin.headers.get('content-type') || '')]);
+checks.push(['gateway_alias_login_ok', gatewayLoginText.includes('"ok":true') && gatewayLoginText.includes('"token"')]);
 
 const manifest = await fetchWithTimeout('/site.webmanifest');
 checks.push(['manifest_status', manifest.status === 200]);

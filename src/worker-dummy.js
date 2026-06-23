@@ -914,6 +914,7 @@ export default {
 
       if (request.method === 'OPTIONS' && (
         url.pathname === '/api/edu-gateway'
+        || url.pathname === '/api/gateway'
         || url.pathname === SYSTEM_DATA_API_PATH
         || url.pathname.startsWith('/sb/')
       )) {
@@ -941,7 +942,7 @@ export default {
         }, request, env);
       }
 
-      if (url.pathname === '/api/edu-gateway' || url.pathname === '/api/edu_gateway') {
+      if (url.pathname === '/api/edu-gateway' || url.pathname === '/api/edu_gateway' || url.pathname === '/api/gateway') {
         return await handleGatewayProxy(request, env, url);
       }
 

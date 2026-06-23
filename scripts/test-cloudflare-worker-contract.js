@@ -24,6 +24,7 @@ const requiredWorkerTokens = [
   "url.pathname === '/api/health'",
   "url.pathname === '/api/edu-gateway'",
   "url.pathname === '/api/edu_gateway'",
+  "url.pathname === '/api/gateway'",
   "url.pathname === SYSTEM_DATA_API_PATH",
   "url.pathname.startsWith('/sb/')",
   "url.pathname.startsWith('/downloads/')",
@@ -105,6 +106,7 @@ console.log(JSON.stringify({
   workerRoutes: [
     '/api/health',
     '/api/edu-gateway',
+    '/api/gateway',
     '/api/system-data',
     '/sb/*',
     '/downloads/*',
