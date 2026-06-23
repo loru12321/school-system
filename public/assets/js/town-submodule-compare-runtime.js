@@ -82,6 +82,70 @@ const TOWN_SUBMODULE_META = {
     bottom3: '低分率/后1/3核算'
 };
 let townSubmoduleCollapseBindTimer = null;
+const TownSubmoduleComparePerfCache = {
+    signature: '',
+    examRows: new Map(),
+    schoolRows: new Map(),
+    schoolSummary: new Map(),
+    renderedHtml: new Map()
+};
+
+function getTownSubmoduleCompareDataSignature() {
+    let dbSignature = '';
+    try {
+        const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+        dbSignature = Object.entries(db?.exams || {})
+            .map(([key, exam]) => `${key}:${Array.isArray(exam?.data) ? exam.data.length : 0}:${exam?.createdAt || 0}:${exam?.fingerprint || ''}`)
+            .sort()
+            .join('|');
+    } catch (_) {
+        dbSignature = 'cohort-db-unavailable';
+    }
+    const signature = [
+        window.CURRENT_EXAM_ID || '',
+        window.CURRENT_COHORT_ID || '',
+        window.__RAW_DATA_VERSION || 0,
+        Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+        Array.isArray(window.SUBJECTS) ? window.SUBJECTS.join('|') : '',
+        Object.keys(window.SCHOOLS || {}).sort().join('|'),
+        dbSignature
+    ].join('::');
+    if (TownSubmoduleComparePerfCache.signature !== signature) {
+        TownSubmoduleComparePerfCache.signature = signature;
+        TownSubmoduleComparePerfCache.examRows.clear();
+        TownSubmoduleComparePerfCache.schoolRows.clear();
+        TownSubmoduleComparePerfCache.schoolSummary.clear();
+        TownSubmoduleComparePerfCache.renderedHtml.clear();
+    }
+    return signature;
+}
+
+function getCachedTownSubmoduleExamRows(examId) {
+    const signature = getTownSubmoduleCompareDataSignature();
+    const cacheKey = `${signature}::rows::${examId || ''}`;
+    if (TownSubmoduleComparePerfCache.examRows.has(cacheKey)) return TownSubmoduleComparePerfCache.examRows.get(cacheKey);
+    const rows = getExamRowsForCompare(examId);
+    TownSubmoduleComparePerfCache.examRows.set(cacheKey, rows);
+    return rows;
+}
+
+function getCachedTownSubmoduleSchoolRows(examId, rows, school) {
+    const signature = getTownSubmoduleCompareDataSignature();
+    const cacheKey = `${signature}::school-rows::${examId || ''}::${townNormalizeSchoolName(school)}`;
+    if (TownSubmoduleComparePerfCache.schoolRows.has(cacheKey)) return TownSubmoduleComparePerfCache.schoolRows.get(cacheKey);
+    const schoolRows = filterRowsBySchool(rows, school);
+    TownSubmoduleComparePerfCache.schoolRows.set(cacheKey, schoolRows);
+    return schoolRows;
+}
+
+function getCachedTownSubmoduleSchoolSummary(examId, rows) {
+    const signature = getTownSubmoduleCompareDataSignature();
+    const cacheKey = `${signature}::summary::${examId || ''}`;
+    if (TownSubmoduleComparePerfCache.schoolSummary.has(cacheKey)) return TownSubmoduleComparePerfCache.schoolSummary.get(cacheKey);
+    const summary = buildSchoolSummaryForExam(rows);
+    TownSubmoduleComparePerfCache.schoolSummary.set(cacheKey, summary);
+    return summary;
+}
 
 function scheduleTownSubmoduleCompareCollapseBinding() {
     if (townSubmoduleCollapseBindTimer !== null) return;
@@ -374,7 +438,17 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
     const resultEl = document.getElementById(`town-submodule-compare-result-${submoduleId}`);
     if (!hintEl || !resultEl) return;
 
-    const rowsByExam = examIds.map(id => ({ examId: id, rows: getExamRowsForCompare(id) }));
+    const renderCacheKey = `${getTownSubmoduleCompareDataSignature()}::render::${submoduleId}::${townNormalizeSchoolName(school)}::${(examIds || []).join('|')}::${periodCount}`;
+    const cachedRender = TownSubmoduleComparePerfCache.renderedHtml.get(renderCacheKey);
+    if (cachedRender && resultEl.dataset.townSubmoduleCompareRenderSig === renderCacheKey) {
+        hintEl.innerHTML = cachedRender.hint;
+        hintEl.style.color = cachedRender.hintColor;
+        if (resultEl.innerHTML !== cachedRender.html) resultEl.innerHTML = cachedRender.html;
+        setTownSubmoduleCompareEntryState(submoduleId, cachedRender.entry);
+        return;
+    }
+
+    const rowsByExam = examIds.map(id => ({ examId: id, rows: getCachedTownSubmoduleExamRows(id) }));
     if (rowsByExam.some(x => !x.rows.length)) {
         hintEl.innerHTML = '❌ 某些期次没有可用数据，请检查考试数据。';
         hintEl.style.color = '#dc2626';
@@ -382,8 +456,8 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
         return;
     }
 
-    const summaryByExam = rowsByExam.map(x => ({ examId: x.examId, summary: buildSchoolSummaryForExam(x.rows) }));
-    const selectedByExam = rowsByExam.map(x => ({ examId: x.examId, rows: filterRowsBySchool(x.rows, school) }));
+    const summaryByExam = rowsByExam.map(x => ({ examId: x.examId, summary: getCachedTownSubmoduleSchoolSummary(x.examId, x.rows) }));
+    const selectedByExam = rowsByExam.map(x => ({ examId: x.examId, rows: getCachedTownSubmoduleSchoolRows(x.examId, x.rows, school) }));
     if (!selectedByExam.every(x => x.rows.length > 0)) {
         hintEl.innerHTML = '❌ 所选学校在某些期次中无数据，无法对比。';
         hintEl.style.color = '#dc2626';
@@ -405,8 +479,9 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
     resultEl.innerHTML = html;
     hintEl.innerHTML = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
     hintEl.style.color = '#16a34a';
+    resultEl.dataset.townSubmoduleCompareRenderSig = renderCacheKey;
 
-    setTownSubmoduleCompareEntryState(submoduleId, {
+    const entry = {
         submoduleId,
         title,
         school,
@@ -416,7 +491,14 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
         rows: data.rows,
         note: data.note,
         html
+    };
+    TownSubmoduleComparePerfCache.renderedHtml.set(renderCacheKey, {
+        html,
+        hint: hintEl.innerHTML,
+        hintColor: hintEl.style.color,
+        entry
     });
+    setTownSubmoduleCompareEntryState(submoduleId, entry);
 }
 
 function exportTownSubmoduleCompare(submoduleId) {
@@ -555,7 +637,12 @@ async function loadCloudTownSubmoduleCompare(submoduleId, key) {
 
     Object.assign(window, {
         TOWN_SUBMODULE_META,
+        TownSubmoduleComparePerfCache,
         ensureTownSubmoduleCompareUIs,
+        getTownSubmoduleCompareDataSignature,
+        getCachedTownSubmoduleExamRows,
+        getCachedTownSubmoduleSchoolRows,
+        getCachedTownSubmoduleSchoolSummary,
         getTownSubmoduleSeries,
         resolveTownSubmoduleDefaultSchool,
         openTownSubmoduleCompareDialog,
