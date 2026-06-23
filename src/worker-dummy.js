@@ -503,7 +503,7 @@ function getStaticAssetCacheControl(url) {
     return 'public, max-age=0, must-revalidate';
   }
   if (pathname.startsWith('/downloads/')) {
-    return 'public, max-age=3600, stale-while-revalidate=86400';
+    return 'public, max-age=31536000, immutable';
   }
   if (!isStaticAssetPath(pathname)) return '';
   if (isVersionedStaticAsset(url)) {

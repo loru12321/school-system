@@ -116,6 +116,10 @@ assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should c
 assert.ok(publicHeaders.includes('/assets/audio/*'), 'static asset headers should cover built-in entrance audio assets');
 assert.ok(publicHeaders.includes('max-age=3600, stale-while-revalidate=86400'), 'runtime JS should use short browser caching with background revalidation');
 assert.ok(publicHeaders.includes('/downloads/*'), 'static asset headers should cover hosted downloads');
+assert.ok(
+  publicHeaders.includes('/downloads/*\n  Cache-Control: public, max-age=31536000, immutable'),
+  'hosted downloads should use long immutable CDN caching'
+);
 assert.ok(publicHeaders.includes('/index.html'), 'static asset headers should cover index.html');
 assert.ok(publicHeaders.includes('Content-Type: text/html; charset=utf-8'), 'HTML responses should declare UTF-8 charset');
 assert.ok(publicHeaders.includes('/sw.js'), 'static asset headers should keep service worker updates revalidation-friendly');

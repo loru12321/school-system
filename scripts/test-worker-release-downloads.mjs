@@ -48,6 +48,7 @@ assert.ok(getEnv.stats.chunkGets <= 1, 'stream should respect backpressure befor
 assert.equal(await getResponse.text(), 'abcdef');
 assert.equal(getResponse.headers.get('Content-Length'), '6');
 assert.equal(getResponse.headers.get('Content-Type'), 'application/vnd.microsoft.portable-executable');
+assert.equal(getResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable');
 assert.match(getResponse.headers.get('Content-Disposition'), /attachment/);
 assert.equal(getResponse.headers.get('X-Content-Type-Options'), 'nosniff');
 
