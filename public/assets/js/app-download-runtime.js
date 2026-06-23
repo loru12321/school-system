@@ -525,6 +525,31 @@
         }) || null;
     }
 
+    function getAppDownloadRenderSignature(platform = releaseCatalogState.selectedPlatform) {
+        const releases = releaseCatalogState.releases.map((release) => {
+            const asset = release?.platforms?.[platform] || {};
+            return [
+                release?.releaseTag || '',
+                release?.channel || '',
+                release?.generatedAt || '',
+                asset.version || '',
+                asset.buildNumber || '',
+                asset.status || '',
+                asset.assetName || '',
+                asset.assetUrl || '',
+                asset.sha256 || '',
+                asset.bytes || 0
+            ].join('~');
+        }).join('|');
+        return [
+            platform,
+            releaseCatalogState.loading ? 'loading' : 'idle',
+            releaseCatalogState.lastError || '',
+            releaseCatalogState.lastFetchedAt || 0,
+            releases
+        ].join('::');
+    }
+
     function getAssetStatusLabel(asset) {
         if (asset?.status === 'ready') return '安装包已就绪';
         if (asset?.status === 'awaiting-signing') return '等待签名';
@@ -563,6 +588,8 @@
     function renderFocusedPlatform(platform = releaseCatalogState.selectedPlatform) {
         const root = document.getElementById('app-release-focused-detail');
         if (!root) return;
+        const signature = `${getAppDownloadRenderSignature(platform)}::focused`;
+        if (root.dataset.appDownloadRenderSignature === signature && root.innerHTML.trim()) return;
         const runtime = getReleaseCatalogRuntime();
         const release = getLatestReleaseForPlatform(platform);
         const asset = release?.platforms?.[platform] || { status: 'unavailable' };
@@ -596,11 +623,14 @@
                 <div><span>SHA-256</span><strong title="${escapeHtml(checksum)}">${escapeHtml(checksum ? `${checksum.slice(0, 12)}…` : '等待校验')}</strong></div>
             </div>
             <div class="app-release-actions">${downloadAction}${checksumAction}</div>`;
+        root.dataset.appDownloadRenderSignature = signature;
     }
 
     function renderReleaseTimeline(platform = releaseCatalogState.selectedPlatform) {
         const root = document.getElementById('app-release-timeline');
         if (!root) return;
+        const signature = `${getAppDownloadRenderSignature(platform)}::timeline`;
+        if (root.dataset.appDownloadRenderSignature === signature && root.innerHTML.trim()) return;
         const releases = releaseCatalogState.releases.filter((release) => {
             return release?.platforms?.[platform]?.status !== 'unavailable';
         }).slice(0, 6);
@@ -613,6 +643,7 @@
                 <p>${escapeHtml(getAssetStatusLabel(asset))}</p>
             </article>`;
         }).join('') : '<p class="app-release-empty">当前平台还没有发布记录。</p>';
+        root.dataset.appDownloadRenderSignature = signature;
     }
 
     function updateReleaseSyncStatus() {
@@ -767,6 +798,13 @@
         const root = document.getElementById('app-download-center');
         if (!root) return false;
         bindReleaseCenterEvents();
+        const signature = getAppDownloadRenderSignature(releaseCatalogState.selectedPlatform);
+        if (root.dataset.appDownloadRenderSignature === signature
+            && document.getElementById('app-release-focused-detail')?.innerHTML.trim()
+            && document.getElementById('app-release-timeline')?.innerHTML.trim()) {
+            updateReleaseSyncStatus();
+            return true;
+        }
         setSelectedPlatform(releaseCatalogState.selectedPlatform);
         updateReleaseSyncStatus();
         const iosStatus = root.querySelector('[data-ios-status]');
@@ -774,6 +812,7 @@
             const iosRelease = getLatestReleaseForPlatform('ios');
             iosStatus.textContent = iosRelease?.platforms?.ios?.status === 'ready' ? '已上架' : '待签名';
         }
+        root.dataset.appDownloadRenderSignature = signature;
         return true;
     }
 

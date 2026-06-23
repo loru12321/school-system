@@ -752,17 +752,42 @@
         return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.8))] || 60;
     }
 
-    function summarizeCountyTeacherScores(subject, students, thresholdStudents = students) {
+    function precomputeCountyTeacherThresholdLines(thresholdStudents = []) {
+        const scoresBySubject = new Map();
+        (thresholdStudents || []).forEach((student) => {
+            Object.entries(student?.scores || {}).forEach(([rawSubject, rawScore]) => {
+                const normalizedSubject = normalizeCountySubjectName(rawSubject);
+                const score = Number(rawScore);
+                if (!normalizedSubject || !Number.isFinite(score)) return;
+                if (!scoresBySubject.has(normalizedSubject)) scoresBySubject.set(normalizedSubject, []);
+                scoresBySubject.get(normalizedSubject).push(score);
+            });
+        });
+        const thresholdLinesBySubject = new Map();
+        scoresBySubject.forEach((scores, normalizedSubject) => {
+            thresholdLinesBySubject.set(normalizedSubject, {
+                excellentLine: getCountySubjectThreshold(normalizedSubject, 'excellent', scores),
+                passLine: getCountySubjectThreshold(normalizedSubject, 'pass', scores)
+            });
+        });
+        return thresholdLinesBySubject;
+    }
+
+    function summarizeCountyTeacherScores(subject, students, thresholdStudents = students, thresholdLines = null) {
         const scores = (students || [])
-            .map((student) => Number(student?.scores?.[subject]))
-            .filter(Number.isFinite);
-        const thresholdScores = (thresholdStudents || students || [])
             .map((student) => Number(student?.scores?.[subject]))
             .filter(Number.isFinite);
         const count = scores.length;
         const avg = count ? scores.reduce((sum, value) => sum + value, 0) / count : 0;
-        const excellentLine = getCountySubjectThreshold(subject, 'excellent', thresholdScores);
-        const passLine = getCountySubjectThreshold(subject, 'pass', thresholdScores);
+        let excellentLine = thresholdLines?.excellentLine;
+        let passLine = thresholdLines?.passLine;
+        if (!Number.isFinite(excellentLine) || !Number.isFinite(passLine)) {
+            const thresholdScores = (thresholdStudents || students || [])
+                .map((student) => Number(student?.scores?.[subject]))
+                .filter(Number.isFinite);
+            excellentLine = getCountySubjectThreshold(subject, 'excellent', thresholdScores);
+            passLine = getCountySubjectThreshold(subject, 'pass', thresholdScores);
+        }
         return {
             count,
             avg,
@@ -783,6 +808,7 @@
         const subjectByNormalized = new Map(
             (window.SUBJECTS || []).map((subject) => [normalizeCountySubjectName(subject), subject])
         );
+        const thresholdLinesBySubject = precomputeCountyTeacherThresholdLines(schoolRows);
         const rowsByClassSubject = new Map();
         schoolRows.forEach((student) => {
             const className = normalizeClassNameForCounty(student?.class);
@@ -830,7 +856,8 @@
                 });
                 data.students = Array.from(uniqueStudents.values());
                 data.classes = [...new Set((data.classes || []).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
-                const summary = summarizeCountyTeacherScores(data.subject, data.students, schoolRows);
+                const normalizedSubject = normalizeCountySubjectName(data.subject);
+                const summary = summarizeCountyTeacherScores(data.subject, data.students, schoolRows, thresholdLinesBySubject.get(normalizedSubject));
                 data.studentCount = summary.count;
                 data.count = summary.count;
                 data.avgValue = summary.avg;

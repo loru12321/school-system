@@ -259,7 +259,10 @@ if (read('public/assets/js/cloud-workspace-runtime.js').includes("currentExamId 
     'renderCache.fastSignature === fastSignature',
     'lastRenderHtmlSignature',
     'lastRenderHtml',
-    'root.innerHTML !== html'
+    'root.innerHTML !== html',
+    'function precomputeCountyTeacherThresholdLines',
+    'thresholdLinesBySubject',
+    'summarizeCountyTeacherScores(data.subject, data.students, schoolRows, thresholdLinesBySubject.get(normalizedSubject))'
 ].forEach((token) => assertContains(county, token, countyFile));
 
 if (pkg.scripts['test:report-performance-caches'] !== 'node scripts/test-report-performance-caches.js') {
