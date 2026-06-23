@@ -1014,10 +1014,13 @@
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
         if (id === 'bottom3') scheduleMacroTablesRender('bottom3', 'bottom3-tables');
         if (id === 'indicator' && typeof refreshIndicatorResults === 'function') {
-            scheduleActiveModuleTask('indicator', 'indicator-results', () => refreshIndicatorResults(true), {
+            scheduleActiveModuleTask('indicator', 'indicator-results', () => refreshIndicatorResults(true, {
+                waitForInputs: true,
+                timeoutMs: 8000
+            }), {
                 delay: 80,
                 idle: true,
-                timeout: 1200
+                timeout: 9000
             });
         }
         if (id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal') {

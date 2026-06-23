@@ -982,7 +982,10 @@ async function runModuleDeepCheck(page, id) {
             let calcError = '';
             try {
                 if (typeof window.refreshIndicatorResults === 'function') {
-                    result = window.refreshIndicatorResults(true);
+                    result = await Promise.resolve(window.refreshIndicatorResults(true, {
+                        waitForInputs: true,
+                        timeoutMs: 9000
+                    }));
                 } else if (typeof window.calcIndicators === 'function') {
                     result = window.calcIndicators(true);
                 }

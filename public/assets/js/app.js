@@ -14271,8 +14271,39 @@ function updateIndicatorUIState() {
     }
 }
 
-function refreshIndicatorResults(isSilent = true) {
+function waitForIndicatorCalcInputs(timeoutMs = 6000) {
+    const deadline = Date.now() + Math.max(0, Number(timeoutMs) || 0);
+    return new Promise(resolve => {
+        const tick = () => {
+            updateIndicatorUIState();
+            if (!isIndicatorCalcAllowed()) {
+                resolve(false);
+                return;
+            }
+            if (hasIndicatorCalcInputs()) {
+                resolve(true);
+                return;
+            }
+            if (Date.now() >= deadline) {
+                resolve(false);
+                return;
+            }
+            setTimeout(tick, 160);
+        };
+        tick();
+    });
+}
+
+function refreshIndicatorResults(isSilent = true, options = {}) {
     updateIndicatorUIState();
+    const waitForInputs = !!(options && options.waitForInputs);
+    if (waitForInputs && isIndicatorCalcAllowed() && !hasIndicatorCalcInputs()) {
+        return waitForIndicatorCalcInputs(options.timeoutMs || 6000).then((ready) => {
+            if (!ready) return [];
+            const result = calcIndicators(isSilent);
+            return Array.isArray(result) ? result : [];
+        });
+    }
     if (!isIndicatorCalcAllowed() || !hasIndicatorCalcInputs()) return [];
     const result = calcIndicators(isSilent);
     return Array.isArray(result) ? result : [];
