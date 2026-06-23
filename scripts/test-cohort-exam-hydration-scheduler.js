@@ -6,6 +6,7 @@ const vm = require('vm');
 async function run() {
     const source = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
     const cloudSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/cloud.js'), 'utf8');
+    const cloudWorkspaceSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/cloud-workspace-runtime.js'), 'utf8');
     const fastEntryStart = source.indexOf('if (options.fastEnter === true) {');
     const fastEntryEnd = source.indexOf('} else {', fastEntryStart);
     const fastEntrySource = source.slice(fastEntryStart, fastEntryEnd);
@@ -13,6 +14,22 @@ async function run() {
     assert.ok(!fastEntrySource.includes('minCount: 1'), 'fast entry must not schedule an insufficient one-exam sync');
     assert.ok(!fastEntrySource.includes('latestOnly: true'), 'fast entry must keep multi-period comparisons warm');
     assert.ok(!cloudSource.includes('minCount: 1'), 'idle cloud hydration must keep multi-period comparisons warm');
+    assert.ok(
+        cloudWorkspaceSource.includes('this._cohortExamSyncTaskOptions'),
+        'cloud exam sync should track active task requirements'
+    );
+    assert.ok(
+        cloudWorkspaceSource.includes('minCount > activeMinCount || (activeLatestOnly && !latestOnly)'),
+        'cloud exam sync should upgrade an in-flight latest-only fetch when comparisons need history'
+    );
+    assert.ok(
+        cloudWorkspaceSource.includes('latestOnly: false') && cloudWorkspaceSource.includes('maxFetch: undefined'),
+        'upgraded cloud exam sync must request a full historical fetch'
+    );
+    assert.ok(
+        source.includes("Object.prototype.hasOwnProperty.call(db, 'TARGETS')"),
+        'snapshot restore must preserve existing targets when an exam snapshot omits TARGETS'
+    );
 
     const start = source.indexOf('const CohortExamHydrationScheduler = (() => {');
     const endMarker = 'window.CohortExamHydrationScheduler = CohortExamHydrationScheduler;';

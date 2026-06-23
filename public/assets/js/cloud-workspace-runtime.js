@@ -1171,7 +1171,25 @@
                 return { success: false, skipped: true, message: '未登录，跳过自动拉取' };
             }
             if (!this._cohortExamSyncTasks) this._cohortExamSyncTasks = {};
-            if (this._cohortExamSyncTasks[cid]) return this._cohortExamSyncTasks[cid];
+            if (!this._cohortExamSyncTaskOptions) this._cohortExamSyncTaskOptions = {};
+            const forceSync = Boolean(options.force);
+            const minCount = Math.max(1, Number(options.minCount || 2));
+            const latestOnly = options.latestOnly === true || Number(options.maxFetch || 0) === 1;
+            if (this._cohortExamSyncTasks[cid]) {
+                const activeOptions = this._cohortExamSyncTaskOptions[cid] || {};
+                const activeMinCount = Math.max(1, Number(activeOptions.minCount || 2));
+                const activeLatestOnly = activeOptions.latestOnly === true || Number(activeOptions.maxFetch || 0) === 1;
+                const needsUpgrade = !forceSync
+                    && (minCount > activeMinCount || (activeLatestOnly && !latestOnly));
+                if (!needsUpgrade) return this._cohortExamSyncTasks[cid];
+                return this._cohortExamSyncTasks[cid].then(() => this.fetchCohortExamsToLocal(cid, {
+                    ...options,
+                    latestOnly: false,
+                    maxFetch: undefined,
+                    minCount
+                }));
+            }
+            this._cohortExamSyncTaskOptions[cid] = { ...options, minCount, latestOnly };
 
             this._cohortExamSyncTasks[cid] = (async () => {
                 if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
@@ -1183,9 +1201,6 @@
                 const db = CohortDB.ensure();
                 db.exams = db.exams || {};
                 const cacheKey = getCohortSyncCacheKey(cid);
-                const forceSync = Boolean(options.force);
-                const minCount = Math.max(1, Number(options.minCount || 2));
-                const latestOnly = options.latestOnly === true || Number(options.maxFetch || 0) === 1;
                 const shouldRefreshSelectors = options.refreshSelectors !== false;
                 const lastSyncAt = Number(localStorage.getItem(cacheKey) || 0);
                 const localExamCount = countCachedCohortExams(db, cid);
@@ -1278,6 +1293,7 @@
                 }
             })().finally(() => {
                 delete this._cohortExamSyncTasks[cid];
+                delete this._cohortExamSyncTaskOptions[cid];
             });
 
             return this._cohortExamSyncTasks[cid];

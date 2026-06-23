@@ -18097,7 +18097,9 @@ function applySnapshotPayload(db) {
     setTeacherMap(db.TEACHER_MAP || {});
     setTeacherSchoolMap(db.TEACHER_SCHOOL_MAP || {});
     writeCurrentSchool(db.MY_SCHOOL || '');
-    setTargetsState(db.TARGETS || {});
+    if (Object.prototype.hasOwnProperty.call(db, 'TARGETS')) {
+        setTargetsState(db.TARGETS || {});
+    }
     setSchoolAliasState(Array.isArray(db.SCHOOL_ALIAS_SETTINGS) ? db.SCHOOL_ALIAS_SETTINGS : readSchoolAliasState());
     persistSchoolAliasSettingsLocal();
     if (db.INDICATOR_PARAMS) {

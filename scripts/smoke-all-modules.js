@@ -1057,6 +1057,17 @@ async function runModuleDeepCheck(page, id) {
             const calcAllowed = typeof window.isIndicatorCalcAllowed === 'function'
                 ? window.isIndicatorCalcAllowed()
                 : true;
+            const indicatorInputDiagnostics = {
+                context: typeof window.getIndicatorContext === 'function' ? window.getIndicatorContext() : null,
+                indicator: window.SYS_VARS?.indicator || null,
+                targetCount: window.TARGETS && typeof window.TARGETS === 'object' ? Object.keys(window.TARGETS).length : 0,
+                scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+                hasInputs: typeof window.hasIndicatorCalcInputs === 'function' ? window.hasIndicatorCalcInputs() : null,
+                dmInd1: document.getElementById('dm_ind1_input')?.value || '',
+                dmInd2: document.getElementById('dm_ind2_input')?.value || '',
+                mainInd1: document.getElementById('ind1')?.value || '',
+                mainInd2: document.getElementById('ind2')?.value || ''
+            };
             const checks = {
                 sectionReady: !!document.querySelector('#indicator.support-metric-workspace'),
                 heroReady: !!document.querySelector('#indicator .analysis-hero, #indicator .analysis-shell-head'),
@@ -1094,6 +1105,7 @@ async function runModuleDeepCheck(page, id) {
                 topSchool: expectedTop?.name || '',
                 issueCount: expectedIssueCount,
                 calcError,
+                indicatorInputDiagnostics,
                 timings,
                 summary
             };
