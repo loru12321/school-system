@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = '20260624-indicator-target-cache-v2';
+var BOOT_ASSET_VERSION_FALLBACK = '20260625-desktop-client-v1';
 
 function bootDebugLog(...args) {
 try {
@@ -87,8 +87,30 @@ return window.AuthReady;
 
 var sbClient = window.sbClient || null;
 
+function isDesktopShellRuntime() {
+return !!(window.DesktopShell && window.DesktopShell.isDesktopApp === true);
+}
+
+function applyDesktopShellBootDefaults() {
+if (!isDesktopShellRuntime()) return;
+try {
+    window.__SCHOOL_DESKTOP_BOOT__ = true;
+    if (!localStorage.getItem('SYSTEM_LOAD_PROFILE')) localStorage.setItem('SYSTEM_LOAD_PROFILE', 'full');
+    localStorage.setItem('SCHOOL_RUNTIME_HOTSPOT_HYDRATE', 'true');
+    localStorage.setItem('SYSTEM_APP_PRELOAD_LIMIT', localStorage.getItem('SYSTEM_APP_PRELOAD_LIMIT') || '36');
+    localStorage.setItem('SYSTEM_APP_LATE_PREFETCH_LIMIT', localStorage.getItem('SYSTEM_APP_LATE_PREFETCH_LIMIT') || '48');
+    localStorage.setItem('SYSTEM_APP_PREFETCH_CHUNK_SIZE', localStorage.getItem('SYSTEM_APP_PREFETCH_CHUNK_SIZE') || '8');
+    if (typeof window.DesktopShell.warmCloud === 'function') {
+        Promise.resolve(window.DesktopShell.warmCloud()).catch(() => {});
+    }
+} catch (_) {}
+}
+
+applyDesktopShellBootDefaults();
+
 document.addEventListener('DOMContentLoaded', function () {
 if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
+applyDesktopShellBootDefaults();
 scheduleLoginPrefetch();
 scheduleAppModuleWarmup();
 });
