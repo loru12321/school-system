@@ -1,5 +1,5 @@
 param(
-    [string]$OutputPath = "public\downloads\school-system-android-beta-20260624-161180a.apk",
+    [string]$OutputPath = "public\downloads\school-system-android-beta-20260624-ea9037f.apk",
     [string]$BuildType = "debug"
 )
 

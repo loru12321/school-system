@@ -1,5 +1,5 @@
 param(
-    [string]$OutputPath = "public\downloads\school-system-windows-beta-20260624-161180a.exe"
+    [string]$OutputPath = "public\downloads\school-system-windows-beta-20260624-ea9037f.exe"
 )
 
 $ErrorActionPreference = "Stop"

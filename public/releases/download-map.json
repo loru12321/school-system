@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "releaseTag": "beta-20260624-161180a",
-  "sourceSha": "161180a09d7596320f20a85b35d04aef211fb0d7",
+  "releaseTag": "beta-20260624-ea9037f",
+  "sourceSha": "ea9037f0e8dcf0accae18b6f3eb8d9679a30ebd5",
   "downloads": [
     {
       "platform": "windows",
-      "filename": "school-system-windows-beta-20260624-161180a.exe",
+      "filename": "school-system-windows-beta-20260624-ea9037f.exe",
       "contentType": "application/vnd.microsoft.portable-executable",
-      "bytes": 119053249,
-      "sha256": "60da0fcca0b5885a813e06953ff0a1233629e13c713082cf08d28b752baa1958",
+      "bytes": 119053282,
+      "sha256": "25a942e30433fba531ea90e7a9cb39643e66999edc45cc76488169e81548cf68",
       "chunks": [
-        "packages/beta-20260624-161180a/windows/part-0001",
-        "packages/beta-20260624-161180a/windows/part-0002",
-        "packages/beta-20260624-161180a/windows/part-0003",
-        "packages/beta-20260624-161180a/windows/part-0004",
-        "packages/beta-20260624-161180a/windows/part-0005",
-        "packages/beta-20260624-161180a/windows/part-0006"
+        "packages/beta-20260624-ea9037f/windows/part-0001",
+        "packages/beta-20260624-ea9037f/windows/part-0002",
+        "packages/beta-20260624-ea9037f/windows/part-0003",
+        "packages/beta-20260624-ea9037f/windows/part-0004",
+        "packages/beta-20260624-ea9037f/windows/part-0005",
+        "packages/beta-20260624-ea9037f/windows/part-0006"
       ],
       "chunkBytes": [
         20971520,
@@ -23,17 +23,17 @@
         20971520,
         20971520,
         20971520,
-        14195649
+        14195682
       ]
     },
     {
       "platform": "android",
-      "filename": "school-system-android-beta-20260624-161180a.apk",
+      "filename": "school-system-android-beta-20260624-ea9037f.apk",
       "contentType": "application/vnd.android.package-archive",
       "bytes": 11982465,
       "sha256": "8f121c3e85fade03e041054af9b8619bbbe06756b0c3936da6edffd975eb96f8",
       "chunks": [
-        "packages/beta-20260624-161180a/android/part-0001"
+        "packages/beta-20260624-ea9037f/android/part-0001"
       ],
       "chunkBytes": [
         11982465

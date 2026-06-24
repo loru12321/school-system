@@ -4,7 +4,7 @@
     const RELEASE_PAGE_URL = 'https://github.com/hka123321/school-system/releases/latest';
     const DEFAULT_BUILD_INFO = {
         shared: {
-            releaseTag: 'beta-20260624-161180a',
+            releaseTag: 'beta-20260624-ea9037f',
             releaseDate: '2026-06-22'
         },
         web: {
@@ -32,8 +32,8 @@
             badge: '手机 / 平板',
             icon: 'ti-brand-android',
             accent: '#22c55e',
-            url: './downloads/school-system-android-beta-20260624-161180a.apk',
-            fileName: 'school-system-android-beta-20260624-161180a.apk',
+            url: './downloads/school-system-android-beta-20260624-ea9037f.apk',
+            fileName: 'school-system-android-beta-20260624-ea9037f.apk',
             helper: '适合安卓手机和平板直接安装，安装后沿用现有账号登录。',
             notes: [
                 '适合教师、班主任、家长与学生在移动端直接打开系统。',
@@ -48,8 +48,8 @@
             badge: 'Windows 桌面',
             icon: 'ti-brand-windows',
             accent: '#60a5fa',
-            url: './downloads/school-system-windows-beta-20260624-161180a.exe',
-            fileName: 'school-system-windows-beta-20260624-161180a.exe',
+            url: './downloads/school-system-windows-beta-20260624-ea9037f.exe',
+            fileName: 'school-system-windows-beta-20260624-ea9037f.exe',
             helper: '适合 Windows 办公电脑一步步安装到本机，创建桌面/开始菜单入口后启动正式系统。',
             notes: [
                 '适合教务处、办公室、机房与固定工位使用。',

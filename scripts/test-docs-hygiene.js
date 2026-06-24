@@ -36,8 +36,8 @@ assert.ok(readme.includes('npm run check:release-fast'), 'README should document
 assert.ok(readme.includes('docs/optimization-backlog.md'), 'README should link to the optimization backlog');
 assert.ok(readme.includes('scripts/legacy/'), 'README should document the legacy script archive');
 assert.ok(readme.includes('docs/performance/'), 'README should point readers to the performance trend output');
-assert.ok(readme.includes('/downloads/school-system-windows-beta-20260624-161180a.exe'), 'README should document the current hosted Windows download');
-assert.ok(readme.includes('/downloads/school-system-android-beta-20260624-161180a.apk'), 'README should document the current hosted APK download');
+assert.ok(readme.includes('/downloads/school-system-windows-beta-20260624-ea9037f.exe'), 'README should document the current hosted Windows download');
+assert.ok(readme.includes('/downloads/school-system-android-beta-20260624-ea9037f.apk'), 'README should document the current hosted APK download');
 assert.ok(!readme.includes('/downloads/school-system-windows-latest.exe'), 'README should not present the old Windows alias as the current download');
 assert.ok(!readme.includes('/downloads/school-system-android-v1.0.apk'), 'README should not present the old APK as the current download');
 assert.ok(!readme.includes('school-system-android-latest.apk` 下载地址返回 `404`'), 'README should not keep stale release 404 guidance');
