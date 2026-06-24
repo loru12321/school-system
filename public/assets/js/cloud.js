@@ -953,7 +953,7 @@
         });
 
         const candidateList = Array.from(candidateKeys)
-            .filter(candidateKey => candidateKey && candidateKey !== preferredKey)
+            .filter(candidateKey => candidateKey)
             .slice(0, 8);
         const scoredCandidates = await Promise.all(candidateList.map(async (candidateKey) => {
             try {

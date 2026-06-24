@@ -37,6 +37,10 @@ async function run() {
         'indicator supplement lookups must bypass stale cached snapshots that lack target/parameter fields'
     );
     assert.ok(
+        !cloudSource.includes('candidateKey !== preferredKey'),
+        'indicator supplement must allow the preferred remote workspace key to repair stale local caches'
+    );
+    assert.ok(
         cloudWorkspaceSource.includes('lastAppliedCachedNeedsIndicatorRefresh')
             && cloudWorkspaceSource.includes('force: lastAppliedCachedNeedsIndicatorRefresh')
             && cloudWorkspaceSource.includes('(!force && remoteTs <= localTs + 1000)'),
