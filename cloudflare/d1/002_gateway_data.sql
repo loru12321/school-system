@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS system_logs (
 CREATE INDEX IF NOT EXISTS idx_system_logs_status_created
   ON system_logs(status, created_at DESC);
 
+CREATE INDEX IF NOT EXISTS idx_system_logs_operator_created
+  ON system_logs(operator, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS config_alias_rules (
   id TEXT PRIMARY KEY,
   rule_type TEXT NOT NULL,
@@ -116,6 +119,12 @@ CREATE INDEX IF NOT EXISTS idx_rectify_tasks_scope
 
 CREATE INDEX IF NOT EXISTS idx_rectify_tasks_status
   ON rectify_tasks(status, priority, due_date);
+
+CREATE INDEX IF NOT EXISTS idx_rectify_tasks_school_status_due
+  ON rectify_tasks(school_name, status, due_date);
+
+CREATE INDEX IF NOT EXISTS idx_rectify_tasks_project_cohort_status_school_created
+  ON rectify_tasks(project_key, cohort_id, status, school_name, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS snapshot_versions (
   id TEXT PRIMARY KEY,

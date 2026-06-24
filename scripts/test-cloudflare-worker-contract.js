@@ -16,6 +16,7 @@ const packageJson = JSON.parse(read('package.json'));
 const worker = read('src/worker-dummy.js');
 const releaseDownloads = read('src/worker-release-downloads.mjs');
 const gateway = read('src/worker-gateway-d1.js');
+const gatewayD1Schema = read('cloudflare/d1/002_gateway_data.sql');
 const helpers = read('src/worker-http-helpers.js');
 const wranglerContent = read('wrangler.jsonc').replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
 const wrangler = JSON.parse(wranglerContent);
@@ -101,6 +102,12 @@ assert.ok(worker.includes('if (!requestedSizeBytes)') && worker.includes('new Re
 assert.ok(wrangler.vars && wrangler.vars.CLOUD_SYSTEM_DATA_MODE === 'supabase', 'production data mode should remain explicit');
 assert.ok(!wrangler.vars.SUPABASE_ORIGIN, 'Supabase origin must not be hardcoded in wrangler config');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:cloudflare-worker-contract'), 'fast release check must include Cloudflare Worker contract guard');
+assert.ok(gatewayD1Schema.includes('idx_system_logs_operator_created'), 'system_logs should index operator history lookups by created_at');
+assert.ok(gatewayD1Schema.includes('ON system_logs(operator, created_at DESC)'), 'system_logs operator index should match admin audit lookup order');
+assert.ok(gatewayD1Schema.includes('idx_rectify_tasks_school_status_due'), 'rectify tasks should index school-scoped pending task filters');
+assert.ok(gatewayD1Schema.includes('ON rectify_tasks(school_name, status, due_date)'), 'rectify school/status index should keep due_date as the range/order suffix');
+assert.ok(gatewayD1Schema.includes('idx_rectify_tasks_project_cohort_status_school_created'), 'rectify tasks should index dashboard list filters');
+assert.ok(gatewayD1Schema.includes('ON rectify_tasks(project_key, cohort_id, status, school_name, created_at DESC)'), 'rectify dashboard index should match list filters before created_at ordering');
 
 console.log(JSON.stringify({
   ok: true,
