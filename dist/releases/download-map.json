@@ -15,15 +15,33 @@
         "packages/beta-20260624-ea9037f/windows/part-0003",
         "packages/beta-20260624-ea9037f/windows/part-0004",
         "packages/beta-20260624-ea9037f/windows/part-0005",
-        "packages/beta-20260624-ea9037f/windows/part-0006"
+        "packages/beta-20260624-ea9037f/windows/part-0006",
+        "packages/beta-20260624-ea9037f/windows/part-0007",
+        "packages/beta-20260624-ea9037f/windows/part-0008",
+        "packages/beta-20260624-ea9037f/windows/part-0009",
+        "packages/beta-20260624-ea9037f/windows/part-0010",
+        "packages/beta-20260624-ea9037f/windows/part-0011",
+        "packages/beta-20260624-ea9037f/windows/part-0012",
+        "packages/beta-20260624-ea9037f/windows/part-0013",
+        "packages/beta-20260624-ea9037f/windows/part-0014",
+        "packages/beta-20260624-ea9037f/windows/part-0015"
       ],
       "chunkBytes": [
-        20971520,
-        20971520,
-        20971520,
-        20971520,
-        20971520,
-        14195682
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        8388608,
+        1612770
       ]
     },
     {
@@ -33,10 +51,12 @@
       "bytes": 11982465,
       "sha256": "8f121c3e85fade03e041054af9b8619bbbe06756b0c3936da6edffd975eb96f8",
       "chunks": [
-        "packages/beta-20260624-ea9037f/android/part-0001"
+        "packages/beta-20260624-ea9037f/android/part-0001",
+        "packages/beta-20260624-ea9037f/android/part-0002"
       ],
       "chunkBytes": [
-        11982465
+        8388608,
+        3593857
       ]
     }
   ]
