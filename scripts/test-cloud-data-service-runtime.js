@@ -66,6 +66,8 @@ async function runCloudApiPathTest() {
     const secondSelect = await service.selectSystemData({ keyEq: 'A', select: 'key' });
     assert.deepStrictEqual(secondSelect.data, [{ key: 'A', value: 1 }]);
     assert.strictEqual(log.filter(item => item.type === 'select').length, 1, 'select should reuse cache');
+    const singleSelect = await service.selectSystemData({ keyEq: 'A', select: 'key,content', maybeSingle: true });
+    assert.deepStrictEqual(singleSelect.data, { key: 'A', value: 1 }, 'maybeSingle select should normalize API array responses to one row');
     assert.ok(Array.isArray(service.getPerfTimings()), 'service should expose production perf timings');
     assert.ok(service.getPerfTimings().some((entry) => entry.name === 'CloudDataService.selectSystemData'), 'select timings should be recorded');
 

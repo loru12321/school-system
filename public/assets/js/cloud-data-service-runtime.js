@@ -72,6 +72,16 @@
         }
     }
 
+    function normalizeMaybeSingleResult(result, options = {}) {
+        if (!options?.maybeSingle || !result || typeof result !== 'object' || !Array.isArray(result.data)) {
+            return result;
+        }
+        return {
+            ...result,
+            data: result.data[0] || null
+        };
+    }
+
     function getCached(key) {
         const cached = state.cache.get(key);
         if (!cached) return null;
@@ -147,6 +157,7 @@
         }
         const promise = Promise.resolve()
             .then(task)
+            .then((result) => normalizeMaybeSingleResult(result, options))
             .then((result) => {
                 const hasError = result && typeof result === 'object' && result.error;
                 if (!hasError) setCached(key, result, config.ttl || DEFAULT_TTL_MS);
