@@ -9889,8 +9889,18 @@ async function processData() {
     try {
         appDebug("🔄 正在自动执行衍生计算...");
 
+        if (typeof DataManager !== 'undefined' && DataManager && typeof DataManager.isGrade9Context === 'function' && DataManager.isGrade9Context()) {
+            if (typeof hasIndicatorCalcInputs === 'function' && !hasIndicatorCalcInputs()) {
+                if (typeof DataManager.restoreGrade9IndicatorTemplate === 'function') DataManager.restoreGrade9IndicatorTemplate();
+                if (typeof DataManager.restoreGrade9TargetsTemplate === 'function') DataManager.restoreGrade9TargetsTemplate();
+            }
+        }
+
         if (typeof calcSummary === 'function') {
             calcSummary(true);    // 汇总内部会按需同步指标生，避免上传后重复全量计算。
+        }
+        if (typeof scheduleIndicatorAutoScoreAfterDataReady === 'function') {
+            scheduleIndicatorAutoScoreAfterDataReady('processData');
         }
 
     } catch (e) {
@@ -13880,6 +13890,35 @@ function refreshIndicatorResults(isSilent = true, options = {}) {
     if (!isIndicatorCalcAllowed() || !hasIndicatorCalcInputs()) return [];
     const result = calcIndicators(isSilent);
     return Array.isArray(result) ? result : [];
+}
+
+const IndicatorAutoScoreState = { token: 0 };
+
+function scheduleIndicatorAutoScoreAfterDataReady(reason = 'data-ready') {
+    if (typeof refreshIndicatorResults !== 'function') return;
+    const token = ++IndicatorAutoScoreState.token;
+    const run = () => {
+        if (token !== IndicatorAutoScoreState.token) return;
+        if (typeof isIndicatorCalcAllowed === 'function' && !isIndicatorCalcAllowed()) return;
+
+        Promise.resolve(refreshIndicatorResults(true, { waitForInputs: true, timeoutMs: 7000 }))
+            .then((rows) => {
+                if (token !== IndicatorAutoScoreState.token) return;
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    if (typeof updateIndicatorUIState === 'function') updateIndicatorUIState();
+                    return;
+                }
+                if (typeof calcSummary === 'function') calcSummary(true);
+                appDebug(`[Indicator] auto-scored after ${reason}: ${rows.length} school rows`);
+            })
+            .catch((error) => {
+                console.warn('[Indicator] 自动补算失败:', error);
+            });
+    };
+    const scheduleIdle = window.requestIdleCallback
+        ? (task) => window.requestIdleCallback(task, { timeout: 2500 })
+        : (task) => setTimeout(task, 240);
+    setTimeout(() => scheduleIdle(run), 120);
 }
 
 function ensureIndicatorTargetMatchPanel() {

@@ -32,6 +32,16 @@ async function run() {
         source.includes("Object.prototype.hasOwnProperty.call(db, 'TARGETS')"),
         'snapshot restore must preserve existing targets when an exam snapshot omits TARGETS'
     );
+    assert.ok(
+        cloudSource.includes("cached && typeof cached === 'object' && !needsIndicatorPayloadSupplement(cached)"),
+        'indicator supplement lookups must bypass stale cached snapshots that lack target/parameter fields'
+    );
+    assert.ok(
+        cloudWorkspaceSource.includes('lastAppliedCachedNeedsIndicatorRefresh')
+            && cloudWorkspaceSource.includes('force: lastAppliedCachedNeedsIndicatorRefresh')
+            && cloudWorkspaceSource.includes('(!force && remoteTs <= localTs + 1000)'),
+        'cached workspace loads missing indicator fields must force one remote refresh'
+    );
 
     const start = source.indexOf('const CohortExamHydrationScheduler = (() => {');
     const endMarker = 'window.CohortExamHydrationScheduler = CohortExamHydrationScheduler;';

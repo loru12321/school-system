@@ -873,7 +873,7 @@
         try {
             if (window.idbKeyval) {
                 const cached = await idbKeyval.get(`cache_${snapshotKey}`);
-                if (cached && typeof cached === 'object') return cached;
+                if (cached && typeof cached === 'object' && !needsIndicatorPayloadSupplement(cached)) return cached;
             }
         } catch (e) {
             console.warn('[CloudLoad] read snapshot cache failed:', e);

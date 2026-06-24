@@ -880,12 +880,30 @@
         return Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
     }
 
+    let lastAppliedCachedNeedsIndicatorRefresh = false;
+
+    function hasWorkspaceTargetConfig(payload) {
+        return !!(payload && typeof payload === 'object' && payload.TARGETS && typeof payload.TARGETS === 'object' && Object.keys(payload.TARGETS).length > 0);
+    }
+
+    function hasWorkspaceIndicatorParams(payload) {
+        const params = payload?.INDICATOR_PARAMS;
+        if (!params || typeof params !== 'object') return false;
+        return !!String(params.ind1 || '').trim() && !!String(params.ind2 || '').trim();
+    }
+
+    function needsWorkspaceIndicatorRefresh(payload) {
+        if (!payload || typeof payload !== 'object') return false;
+        return !hasWorkspaceTargetConfig(payload) || !hasWorkspaceIndicatorParams(payload);
+    }
+
     async function applyCachedWorkspaceSnapshot(key, payload, updatedAt = '') {
         if (!payload || typeof payload !== 'object') return false;
         let normalizedPayload = isSplitWorkspacePayload(payload)
             ? await hydrateSplitWorkspacePayload(key, payload)
             : normalizeWorkspacePayload(payload);
         normalizedPayload = await supplementIndicatorPayload(key, normalizedPayload);
+        lastAppliedCachedNeedsIndicatorRefresh = needsWorkspaceIndicatorRefresh(normalizedPayload);
         const meta = readWorkspaceSyncMeta(key);
         const signature = buildWorkspaceApplySignature(key, normalizedPayload, updatedAt, meta);
         if (isWorkspaceSnapshotAlreadyApplied(signature)) return true;
@@ -961,18 +979,19 @@
         return stamp;
     }
 
-    function scheduleWorkspaceRemoteRefresh(manager, key, cachedMeta = {}) {
+    function scheduleWorkspaceRemoteRefresh(manager, key, cachedMeta = {}, options = {}) {
         const normalizedKey = String(key || '').trim();
         if (!normalizedKey) return;
         manager._workspaceRefreshTasks = manager._workspaceRefreshTasks || {};
         if (manager._workspaceRefreshTasks[normalizedKey]) return;
+        const force = !!(options && options.force);
 
         manager._workspaceRefreshTasks[normalizedKey] = (async () => {
             if (!(await manager.ensureClientReady({ silent: true, timeoutMs: 3500 }))) return false;
             const remoteMeta = await fetchWorkspaceSnapshotMeta(normalizedKey);
             const remoteTs = Date.parse(String(remoteMeta?.updated_at || '')) || 0;
             const localTs = Date.parse(String(cachedMeta.remoteUpdatedAt || cachedMeta.lastSyncedAt || '')) || 0;
-            if (!remoteMeta?.updated_at || remoteTs <= localTs + 1000) return false;
+            if (!remoteMeta?.updated_at || (!force && remoteTs <= localTs + 1000)) return false;
             const row = await fetchWorkspaceSnapshotRow(normalizedKey);
             return fetchAndApplyWorkspaceSnapshot(manager, normalizedKey, row);
         })()
@@ -1630,7 +1649,9 @@
         }
 
         if (appliedCached) {
-            scheduleWorkspaceRemoteRefresh(this, requestedKey, cachedMeta);
+            scheduleWorkspaceRemoteRefresh(this, requestedKey, cachedMeta, {
+                force: lastAppliedCachedNeedsIndicatorRefresh
+            });
             setCloudStatus('success', '本地已就绪');
             return true;
         }
@@ -1680,7 +1701,9 @@
                 return true;
             }
             if (appliedCached) {
-                scheduleWorkspaceRemoteRefresh(this, key, cachedMeta);
+                scheduleWorkspaceRemoteRefresh(this, key, cachedMeta, {
+                    force: lastAppliedCachedNeedsIndicatorRefresh
+                });
                 setCloudStatus('success', '本地已就绪');
                 return true;
             }

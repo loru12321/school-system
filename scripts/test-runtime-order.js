@@ -1067,6 +1067,8 @@ assert.ok(supportMetricsRuntime.includes('root.getSummaryTownshipSchools'), 'sup
 assert.ok(appSource.includes('const IndicatorCalcPerfCache'), 'indicator should cache repeated silent calculations');
 assert.ok(appSource.includes('function buildIndicatorCalcSignature'), 'indicator cache should use an explicit dependency signature');
 assert.ok(appSource.includes('isSilent') && appSource.includes('IndicatorCalcPerfCache.signature === calcSignature'), 'indicator cache should only short-circuit repeated silent calculations');
+assert.ok(appSource.includes('function scheduleIndicatorAutoScoreAfterDataReady'), 'indicator should keep a deferred auto-score path after data restore');
+assert.ok(appSource.includes("scheduleIndicatorAutoScoreAfterDataReady('processData')"), 'processData should trigger deferred indicator auto-score after restoring school data');
 assert.ok(schoolNormalizationRuntime.includes('const IndicatorSchoolBucketPerfCache'), 'indicator school normalization should cache repeated bucket builds');
 assert.ok(schoolNormalizationRuntime.includes('function getIndicatorSchoolBucketSignature'), 'indicator bucket cache should use an explicit dependency signature');
 assert.ok(schoolNormalizationRuntime.includes('scoreNameMap'), 'indicator score sync should cache repeated school-name matching');
