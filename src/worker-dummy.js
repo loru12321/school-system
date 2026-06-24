@@ -15,7 +15,6 @@ const SYSTEM_DATA_COMPARE_PREFIXES = [
   'TEACHER_COMPARE_',
   'TOWN_SUB_COMPARE_'
 ];
-const GATEWAY_PATHS = ['/functions/v1/edu-gateway-v2', '/functions/v1/edu-gateway'];
 const PROXY_TIMEOUT_MS = 15000;
 
 function getLegacyGatewayOrigin(env) {
@@ -613,40 +612,10 @@ async function handleGatewayProxy(request, env, url) {
       detail: error instanceof Error ? error.message : String(error)
     }, request);
   }
-
-  const legacyGatewayOrigin = getLegacyGatewayOrigin(env);
-  const bodyBuffer = await readRequestBody(request);
-  let lastResponse = null;
-  let lastError = null;
-
-  for (const path of GATEWAY_PATHS) {
-    try {
-      const response = await proxyRequest(
-        url,
-        request,
-        `${legacyGatewayOrigin}${path}`,
-        bodyBuffer,
-        { apikey: getLegacyGatewayApiKey(env, request) }
-      );
-      if (response.ok || (response.status !== 404 && response.status < 500)) {
-        return response;
-      }
-      lastResponse = response;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  if (lastResponse) return lastResponse;
-  return new Response(JSON.stringify({
+  return jsonResponse(404, {
     ok: false,
-    error: lastError ? String(lastError.message || lastError) : 'LEGACY_GATEWAY_UNAVAILABLE'
-  }), {
-    status: 502,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8'
-    }
-  });
+    error: 'CLOUDFLARE_GATEWAY_ACTION_NOT_SUPPORTED'
+  }, request, env);
 }
 
 async function handleSystemDataRead(request, env, url) {
@@ -972,7 +941,7 @@ export default {
           cloudSystemDataSupabaseReady: hasSupabaseRestOrigin(env),
           gatewayDataBackend,
           gatewayDataReady: gatewayDataBackend === 'supabase' ? hasSupabaseRestOrigin(env) : hasGatewayDataStorage(env),
-          gatewayAuthFallback: gatewayDataBackend === 'supabase' ? 'supabase-edge' : 'legacy-login-only'
+          gatewayAuthFallback: gatewayDataBackend === 'supabase' ? 'supabase-edge' : 'cloudflare-only'
         }, request, env);
       }
 

@@ -51,7 +51,12 @@ assert.ok(gateway.includes('let nextSchool = normalizeText(payload.school ?? exi
 assert.ok(gateway.includes("if (nextRole === 'director' || nextRole === 'admin') nextClassName = '';"), 'director/admin account updates should not require a grade/class range');
 assert.ok(gateway.includes("Director can only manage accounts in own school"), 'director account edits must remain school-scoped');
 assert.ok(gateway.includes("error: 'Invalid username or password'"), 'managed D1 account passwords should not fall back to stale legacy credentials');
-assert.ok(gateway.includes("if (remoteUser.role !== 'admin')"), 'legacy fallback must not recreate deleted non-admin accounts');
+assert.ok(!gateway.includes('proxyGatewayActionToLegacyGateway'), 'D1 auth should not proxy login/session/change-password to the legacy gateway');
+assert.ok(!gateway.includes("action, payload = {}, options = {}"), 'legacy gateway action helper should be removed after auth cutover');
+assert.ok(!gateway.includes("password_source: 'legacy_login_backfill'"), 'auth cutover should not create new legacy backfill password sources');
+assert.ok(gateway.includes("mode: pendingAccounts > 0 ? 'cloudflare-only-pending-account-repair-required' : 'cloudflare-only-ready'"), 'migration status should report Cloudflare-only fallback mode');
+assert.ok(worker.includes("error: 'CLOUDFLARE_GATEWAY_ACTION_NOT_SUPPORTED'"), 'unsupported gateway actions should fail closed instead of proxying to legacy Edge Functions');
+assert.ok(!worker.includes('LEGACY_GATEWAY_UNAVAILABLE'), 'Worker gateway should not expose a legacy gateway fallback error after auth cutover');
 assert.ok(worker.includes("from './worker-http-helpers.js'"), 'worker should import shared HTTP helpers');
 assert.ok(worker.includes("from './worker-release-downloads.mjs'"), 'worker should import the release download handler');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should import shared HTTP helpers');

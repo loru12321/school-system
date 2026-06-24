@@ -1,12 +1,10 @@
 // Managed D1 account/data gateway implementation imported by src/worker-dummy.js.
 // It is not the Wrangler main entrypoint; keep production routing in worker-dummy.js.
-import { buildCorsHeaders, normalizeOrigin, normalizeText, fetchWithTimeout } from './worker-http-helpers.js';
+import { buildCorsHeaders, normalizeText } from './worker-http-helpers.js';
 
-const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
 const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 12;
 const PBKDF2_ITERATIONS = 100000;
 const PBKDF2_SCHEME = 'pbkdf2-sha256';
-const GATEWAY_PATHS = ['/functions/v1/edu-gateway-v2', '/functions/v1/edu-gateway'];
 const PROXY_TIMEOUT_MS = 15000;
 const REST_META_KEYS = new Set(['select', 'order', 'limit', 'offset', 'or']);
 // Maximum number of accounts that can be created/updated in a single batch request.
@@ -14,20 +12,7 @@ const REST_META_KEYS = new Set(['select', 'order', 'limit', 'offset', 'or']);
 const ACCOUNT_UPSERT_BATCH_LIMIT = 50;
 
 const textEncoder = new TextEncoder();
-// normalizeText and fetchWithTimeout are imported from worker-http-helpers.js
-
-function getLegacyGatewayOrigin(env) {
-  return normalizeOrigin(env.LEGACY_GATEWAY_ORIGIN || env.SUPABASE_ORIGIN || DEFAULT_LEGACY_GATEWAY_ORIGIN);
-}
-
-function getLegacyGatewayApiKey(env, request) {
-  return normalizeText(
-    env.SUPABASE_REST_API_KEY
-    || env.LEGACY_GATEWAY_API_KEY
-    || env.LEGACY_SUPABASE_KEY
-    || request.headers.get('apikey')
-  );
-}
+// normalizeText is imported from worker-http-helpers.js
 
 function getGatewayDb(env) {
   return env.GATEWAY_DATA_DB || null;
@@ -421,53 +406,6 @@ function normalizeGatewaySession(payload) {
   return normalized;
 }
 
-// fetchWithTimeout is now imported from worker-http-helpers.js (see top of file).
-
-async function proxyGatewayActionToLegacyGateway(request, env, action, payload = {}, options = {}) {
-  const apikey = getLegacyGatewayApiKey(env, request);
-  if (!apikey) return null;
-  const token = normalizeText(options.token || getBearerToken(request));
-  const headers = {
-    'Content-Type': 'application/json',
-    'apikey': apikey
-  };
-  if (!options.allowAnonymous && token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  const origin = getLegacyGatewayOrigin(env);
-  let lastData = null;
-  let lastError = null;
-  let lastStatus = 0;
-  for (const path of GATEWAY_PATHS) {
-    try {
-      const response = await fetchWithTimeout(`${origin}${path}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ action, payload })
-      });
-      const text = await response.text();
-      let data = null;
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        data = null;
-      }
-      if (response.ok && data?.ok) return data;
-      lastData = data;
-      lastStatus = response.status;
-      if (response.status === 404 || response.status >= 500) continue;
-      break;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  if (lastData) return lastData;
-  if (lastError) {
-    return { ok: false, error: String(lastError.message || lastError) };
-  }
-  return { ok: false, error: `EDGE_GATEWAY_HTTP_${lastStatus || 502}` };
-}
-
 function normalizeDbAccountRow(row) {
   const roles = safeJsonParse(row?.roles_json, []);
   return {
@@ -568,11 +506,6 @@ async function resolveSession(request, env) {
     return { session: normalizeGatewaySession(localSession), source: 'local' };
   }
 
-  const remote = await proxyGatewayActionToLegacyGateway(request, env, 'session.verify', {}, { token });
-  if (remote?.ok && remote.session) {
-    return { session: normalizeGatewaySession(remote.session), source: 'legacy' };
-  }
-
   return { error: unauthorized(request, 'Invalid or expired app session token') };
 }
 
@@ -594,74 +527,28 @@ async function performGatewayLogin(request, env, body) {
     return forbidden(request, 'Account disabled');
   }
 
-  if (existing?.password_hash) {
-    const localMatch = await verifyAccountPasswordHash(existing.password_hash, password);
-    if (localMatch) {
-      const session = buildSessionPayload(existing);
-      const token = await signLocalSession(env, session);
-      await upsertSystemUser(db, {
-        ...existing,
-        last_login_at: new Date().toISOString(),
-        has_password: true,
-        updated_at: new Date().toISOString()
-      });
-      return jsonResponse(200, {
-        ok: true,
-        token,
-        user: {
-          username: session.username,
-          role: session.role,
-          roles: session.roles,
-          school: session.school,
-          class_name: session.class_name,
-          grade_name: session.grade_name,
-          teacher_name: session.teacher_name,
-          expires_at: session.exp,
-          must_change_password: shouldForceManagedPasswordChange(existing)
-        }
-      }, request);
-    }
+  if (!existing?.password_hash) {
     return jsonResponse(401, {
       ok: false,
       error: 'Invalid username or password'
     }, request);
   }
 
-  const remote = await proxyGatewayActionToLegacyGateway(request, env, 'login', body?.payload || {}, { allowAnonymous: true });
-  if (!remote?.ok || !remote?.user) {
-    return jsonResponse(401, {
-      ok: false,
-      error: normalizeText(remote?.error) || 'Invalid username or password'
-    }, request);
-  }
-
-  const remoteUser = normalizeGatewaySession(remote.user);
-  if (!remoteUser.username) remoteUser.username = username;
-  if (remoteUser.role !== 'admin') {
+  const localMatch = await verifyAccountPasswordHash(existing.password_hash, password);
+  if (!localMatch) {
     return jsonResponse(401, {
       ok: false,
       error: 'Invalid username or password'
     }, request);
   }
-  const passwordHash = await hashAccountPassword(password);
+  const session = buildSessionPayload(existing);
+  const token = await signLocalSession(env, session);
   await upsertSystemUser(db, {
-    username: remoteUser.username,
-    role: remoteUser.role,
-    roles: remoteUser.roles,
-    school: remoteUser.school,
-    class_name: remoteUser.class_name,
-    teacher_name: remoteUser.teacher_name || remoteUser.username,
-    password_hash: passwordHash,
-    password_scheme: PBKDF2_SCHEME,
-    password_source: 'legacy_login_backfill',
-    has_password: true,
-    is_active: true,
+    ...existing,
     last_login_at: new Date().toISOString(),
+    has_password: true,
     updated_at: new Date().toISOString()
   });
-
-  const session = buildSessionPayload(remoteUser);
-  const token = await signLocalSession(env, session);
   return jsonResponse(200, {
     ok: true,
     token,
@@ -674,10 +561,7 @@ async function performGatewayLogin(request, env, body) {
       grade_name: session.grade_name,
       teacher_name: session.teacher_name,
       expires_at: session.exp,
-      must_change_password: shouldForceManagedPasswordChange({
-        ...remoteUser,
-        password_source: 'legacy_login_backfill'
-      })
+      must_change_password: shouldForceManagedPasswordChange(existing)
     }
   }, request);
 }
@@ -1386,7 +1270,7 @@ async function handleAccountResetPassword(request, db, session, payload) {
   return jsonResponse(200, { ok: true, record: sanitizeAccountRecord(updated) }, request);
 }
 
-async function handleAccountChangePassword(request, env, db, session, payload, sessionSource) {
+async function handleAccountChangePassword(request, db, session, payload) {
   const oldPassword = normalizeText(payload.old_password);
   const newPassword = normalizeText(payload.new_password);
   if (!oldPassword || !newPassword) return badRequest(request, 'old_password and new_password are required');
@@ -1397,13 +1281,6 @@ async function handleAccountChangePassword(request, env, db, session, payload, s
   let verified = false;
   if (existing.password_hash) {
     verified = await verifyAccountPasswordHash(existing.password_hash, oldPassword);
-  }
-  if (!verified && sessionSource === 'legacy') {
-    const remote = await proxyGatewayActionToLegacyGateway(request, env, 'account.change_password', payload);
-    if (!remote?.ok) {
-      return forbidden(request, normalizeText(remote?.error) || 'old password mismatch');
-    }
-    verified = true;
   }
   if (!verified) return forbidden(request, 'old password mismatch');
   const passwordHash = await hashAccountPassword(newPassword);
@@ -1558,7 +1435,7 @@ async function handleAccountMigrationStatus(request, db, session) {
   sources.forEach((row) => {
     const rawSource = normalizeText(row.password_source) || 'pending';
     const normalizedSource = rawSource === 'supabase_login'
-      ? 'legacy_login_backfill'
+      ? 'historical_supabase_login'
       : rawSource;
     normalizedSources.set(
       normalizedSource,
@@ -1594,8 +1471,8 @@ async function handleAccountMigrationStatus(request, db, session) {
       }))
       .sort((left, right) => right.account_count - left.account_count || left.password_source.localeCompare(right.password_source)),
     fallback: {
-      enabled: pendingAccounts > 0,
-      mode: pendingAccounts > 0 ? 'legacy-login-only' : 'cloudflare-only-ready'
+      enabled: false,
+      mode: pendingAccounts > 0 ? 'cloudflare-only-pending-account-repair-required' : 'cloudflare-only-ready'
     }
   }, request);
 }
@@ -1623,7 +1500,6 @@ async function routeGatewayAction(request, env, body) {
   const resolved = await resolveSession(request, env);
   if (resolved.error) return resolved.error;
   const session = resolved.session;
-  const sessionSource = resolved.source;
   if (action === 'session.verify') {
     const token = await signLocalSession(env, buildSessionPayload(session));
     return jsonResponse(200, { ok: true, session, token }, request);
@@ -1643,7 +1519,7 @@ async function routeGatewayAction(request, env, body) {
     case 'account.search': return handleAccountSearch(request, db, session, payload);
     case 'account.update': return handleAccountUpdate(request, db, session, payload);
     case 'account.reset_password': return handleAccountResetPassword(request, db, session, payload);
-    case 'account.change_password': return handleAccountChangePassword(request, env, db, session, payload, sessionSource);
+    case 'account.change_password': return handleAccountChangePassword(request, db, session, payload);
     case 'account.export': return handleAccountExport(request, db, session);
     case 'account.upsert_many': return handleAccountUpsertMany(request, db, session, payload);
     case 'account.delete_non_admin': return handleAccountDeleteNonAdmin(request, db, session);

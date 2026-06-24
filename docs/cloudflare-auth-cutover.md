@@ -1,31 +1,29 @@
 # Cloudflare Auth Cutover Plan
 
-Last updated: `2026-04-18`
+Last updated: `2026-06-24`
 
 ## Current state
 
-- Production data reads and writes are already Cloudflare-first.
-- Login still keeps a legacy gateway fallback for accounts that do not yet have a local password hash in D1.
-- Current remote D1 status:
-  - `total_accounts`: `414`
-  - `migrated_accounts`: `151`
-  - `pending_accounts`: `263`
+- Production account login, session verification, account search, and password changes are Cloudflare D1 native.
+- The legacy auth fallback has been removed from the Worker gateway after the remote D1 account report reached `pending_accounts = 0`.
+- Current remote D1 status from `node scripts/report-account-migration-status.mjs`:
+  - `total_accounts`: `16`
+  - `migrated_accounts`: `16`
+  - `pending_accounts`: `0`
 
-## Why fallback still exists
+## Why fallback can stay removed
 
-The fallback is still required because removing it today would strand `263` active accounts that have no local password hash yet.
+The fallback is no longer required because all active accounts have a local password hash in D1.
 
 The current safe behavior is:
 
 1. Try local D1 password verification first.
-2. If the account has no local hash, verify against the legacy gateway.
-3. On successful legacy login, write a new local Cloudflare password hash back into D1.
-
-That means every successful legacy login reduces the pending count over time.
+2. If the account has no local hash or the password does not match, fail closed with `401`.
+3. Use admin reset or managed account upsert flows to repair any future account missing a local hash.
 
 ## Cutover target
 
-The auth path can switch to Cloudflare-only when both conditions are true:
+The auth path has switched to Cloudflare-only because both conditions are true:
 
 - `pending_accounts = 0`
 - Production smoke checks pass for:
@@ -38,7 +36,7 @@ The auth path can switch to Cloudflare-only when both conditions are true:
 
 ### Phase 1: keep fallback, reduce pending accounts
 
-- Keep legacy fallback enabled in production.
+- Completed. Legacy fallback is no longer enabled in production.
 - Monitor `account.migration_status` from the admin UI.
 - Encourage users who have not logged in recently to log in once, or reset passwords through the admin flow.
 
@@ -68,22 +66,21 @@ npm run smoke:modules:local
 
 ### Phase 4: remove fallback
 
-When the pending count reaches zero:
+Completed in the Cloudflare-only auth cutover:
 
-1. Remove legacy login and `session.verify` fallback from `src/worker-gateway-d1.js`
-2. Remove legacy upstream proxying from `src/worker-dummy.js`
-3. Delete the deprecated `supabase/` reference folder and migration scripts if no longer needed
-4. Redeploy `school-system1`
-5. Run production smoke checks again
+1. Removed legacy login and `session.verify` fallback from `src/worker-gateway-d1.js`
+2. Removed legacy upstream gateway proxying from `src/worker-dummy.js`
+3. Kept Supabase REST compatibility for `system_data` while `CLOUD_SYSTEM_DATA_MODE` remains `supabase`
+4. Redeploy and run production smoke checks after every auth-path change
 
 ## Rollback
 
 If Cloudflare-only login fails after cutover:
 
-1. Restore the legacy fallback branch in `src/worker-gateway-d1.js`
-2. Redeploy the Worker
-3. Re-check `account.change_password` and `session.verify`
+1. Revert the Cloudflare-only auth cutover commit.
+2. Redeploy the Worker.
+3. Re-check `login`, `session.verify`, `account.search`, and `account.change_password`.
 
 ## Operator note
 
-Do not delete the legacy reference files or gateway origin configuration until the pending account count is zero and production smoke has passed.
+Do not delete the remaining Supabase REST compatibility path until `system_data` is fully verified and `CLOUD_SYSTEM_DATA_MODE` is moved away from `supabase`.
