@@ -66,6 +66,10 @@ function getSystemDataMode(env) {
   return 'hybrid';
 }
 
+function isSystemDataHybridMode(env) {
+  return getSystemDataMode(env) === 'hybrid';
+}
+
 // normalizeText is imported from worker-http-helpers.js (see top of file).
 
 function parseSystemDataFilterValue(value) {
@@ -868,6 +872,29 @@ async function handleSystemDataProxy(request, env, url) {
   }
 
   const method = String(request.method || 'GET').toUpperCase();
+  if (isSystemDataHybridMode(env)) {
+    if (method === 'GET' || method === 'HEAD') {
+      const d1Response = await handleSystemDataRead(request, env, url);
+      return d1Response || proxySystemDataReadToSupabase(request, env, url);
+    }
+
+    if (method === 'POST') {
+      const supabaseRequest = request.clone();
+      const d1Response = await handleSystemDataWrite(request, env);
+      const supabaseResponse = await proxySystemDataWriteToSupabase(supabaseRequest, env, url);
+      return supabaseResponse.ok ? d1Response : supabaseResponse;
+    }
+
+    if (method === 'DELETE') {
+      const supabaseRequest = request.clone();
+      const d1Response = await handleSystemDataDelete(request, env, url);
+      const supabaseResponse = await proxySupabaseRestRequest(supabaseRequest, env, url, '/rest/v1/system_data');
+      return supabaseResponse.ok ? d1Response : supabaseResponse;
+    }
+
+    return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);
+  }
+
   if (method === 'GET' || method === 'HEAD') {
     const { rows, selectSet } = await querySystemDataRows(env, request, url);
     return buildSystemDataJsonResponse(request, env, rows, selectSet);
@@ -927,17 +954,22 @@ export default {
       }
 
       if (url.pathname === '/api/health') {
+        const cloudSystemDataMode = getSystemDataMode(env);
         const cloudSystemDataBackend = shouldProxySystemDataToSupabase(env)
           ? 'supabase'
-          : (hasSystemDataStorage(env) ? 'd1' : 'unavailable');
+          : (isSystemDataHybridMode(env) ? 'hybrid' : (hasSystemDataStorage(env) ? 'd1' : 'unavailable'));
         const gatewayDataBackend = shouldProxyManagedRestToSupabase(env)
           ? 'supabase'
           : (hasGatewayDataStorage(env) ? 'd1' : 'unavailable');
         return jsonResponse(200, {
           ok: true,
           cloudSystemDataBackend,
-          cloudSystemDataReady: cloudSystemDataBackend === 'supabase' ? hasSupabaseRestOrigin(env) : hasSystemDataStorage(env),
-          cloudSystemDataMode: getSystemDataMode(env),
+          cloudSystemDataReady: cloudSystemDataBackend === 'supabase'
+            ? hasSupabaseRestOrigin(env)
+            : (cloudSystemDataBackend === 'hybrid' ? hasSystemDataStorage(env) && hasSupabaseRestOrigin(env) : hasSystemDataStorage(env)),
+          cloudSystemDataMode,
+          cloudSystemDataD1Bound: hasSystemDataStorage(env),
+          cloudSystemDataSupabaseReady: hasSupabaseRestOrigin(env),
           gatewayDataBackend,
           gatewayDataReady: gatewayDataBackend === 'supabase' ? hasSupabaseRestOrigin(env) : hasGatewayDataStorage(env),
           gatewayAuthFallback: gatewayDataBackend === 'supabase' ? 'supabase-edge' : 'legacy-login-only'

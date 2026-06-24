@@ -99,6 +99,15 @@ assert.ok(worker.includes('function parseSystemDataOffset(searchParams)'), 'syst
 assert.ok(worker.includes("'LIMIT ? OFFSET ?'"), 'system_data reads should push pagination into D1 instead of slicing in memory');
 assert.ok(worker.includes('bind(...bindings, limit, offset)'), 'system_data reads should bind offset into the D1 query');
 assert.ok(worker.includes('if (!requestedSizeBytes)') && worker.includes('new Response(response.body'), 'Supabase system_data proxy should stream large content rows unless size_bytes requires parsing');
+assert.ok(worker.includes('function isSystemDataHybridMode(env)'), 'system_data should expose an explicit hybrid mode helper');
+assert.ok(worker.includes('const d1Response = await handleSystemDataRead(request, env, url);'), 'hybrid system_data reads should try D1 before Supabase fallback');
+assert.ok(worker.includes('return d1Response || proxySystemDataReadToSupabase(request, env, url);'), 'hybrid system_data reads should fall back to Supabase when D1 misses');
+assert.ok(worker.includes('const supabaseRequest = request.clone();'), 'hybrid system_data writes should clone requests before dual-write proxying');
+assert.ok(worker.includes('const d1Response = await handleSystemDataWrite(request, env);'), 'hybrid system_data writes should persist to D1');
+assert.ok(worker.includes('const supabaseResponse = await proxySystemDataWriteToSupabase(supabaseRequest, env, url);'), 'hybrid system_data writes should also sync Supabase');
+assert.ok(worker.includes("cloudSystemDataBackend === 'hybrid' ? hasSystemDataStorage(env) && hasSupabaseRestOrigin(env)"), 'health should require both D1 and Supabase readiness for hybrid mode');
+assert.ok(worker.includes('cloudSystemDataD1Bound: hasSystemDataStorage(env)'), 'health should expose D1 binding readiness before primary cutover');
+assert.ok(worker.includes('cloudSystemDataSupabaseReady: hasSupabaseRestOrigin(env)'), 'health should expose Supabase readiness during hybrid cutover');
 assert.ok(wrangler.vars && wrangler.vars.CLOUD_SYSTEM_DATA_MODE === 'supabase', 'production data mode should remain explicit');
 assert.ok(!wrangler.vars.SUPABASE_ORIGIN, 'Supabase origin must not be hardcoded in wrangler config');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:cloudflare-worker-contract'), 'fast release check must include Cloudflare Worker contract guard');
