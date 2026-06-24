@@ -27,6 +27,8 @@ assert.ok(html.includes('alt="校衡台应用图标"'), 'focused release icon sh
 assert.ok(source.includes('function getAppDownloadRenderSignature'), 'download center should define a stable render signature');
 assert.ok(source.includes('dataset.appDownloadRenderSignature'), 'download center should skip repeated DOM writes for identical release state');
 assert.ok(source.includes('return true;'), 'download center render fast path should return success without rerendering');
+assert.ok(source.includes('const nextPlatform = tabs[next]?.dataset.appDownloadPlatform'), 'download center keyboard navigation should select by next platform key');
+assert.ok(source.includes('root.querySelector(`[data-app-download-platform="${nextPlatform}"]`)?.focus()'), 'download center keyboard navigation should focus the rerendered tab');
 assert.ok(source.includes("const RELEASE_BRAND_ICON_URL = './assets/brand/app-icon-128.png';"), 'download runtime should define one release icon URL');
 assert.match(source, /windows:\s*\{ iconUrl: RELEASE_BRAND_ICON_URL, pattern:/, 'GitHub Windows mapping should define the shared icon');
 assert.match(source, /android:\s*\{ iconUrl: RELEASE_BRAND_ICON_URL, pattern:/, 'GitHub Android mapping should define the shared icon');

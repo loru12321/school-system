@@ -784,8 +784,10 @@
                     : event.key === 'End' ? tabs.length - 1
                         : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
                 event.preventDefault();
-                tabs[next]?.focus();
-                tabs[next]?.click();
+                const nextPlatform = tabs[next]?.dataset.appDownloadPlatform || '';
+                if (setSelectedPlatform(nextPlatform)) {
+                    root.querySelector(`[data-app-download-platform="${nextPlatform}"]`)?.focus();
+                }
                 return;
             }
             trapReleaseHistoryFocus(event);
