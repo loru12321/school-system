@@ -387,6 +387,7 @@ var APP_MODULE_MOBILE_PRELOAD_LIMIT = 3;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 24;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 6;
 var APP_MODULE_DESKTOP_BATCH_SIZE = 18;
+var APP_MODULE_MOBILE_BATCH_SIZE = 18;
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
 if (window.ReportInsightRuntime) {
@@ -640,6 +641,7 @@ return new Promise((resolve) => {
 
 function getAppModuleTimeoutMs(src) {
 const moduleSrc = String(src || '');
+if (isRuntimeMobileViewport()) return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 20000 : 15000;
 return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 15000 : 8000;
 }
 
@@ -650,7 +652,7 @@ try {
 } catch (_) {}
 try {
     if (getRuntimeLoadProfile() === 'lazy') return 4;
-    if (isRuntimeMobileViewport()) return 6;
+    if (isRuntimeMobileViewport()) return APP_MODULE_MOBILE_BATCH_SIZE;
     const lowCpu = Number(navigator.hardwareConcurrency || 0) > 0
         && Number(navigator.hardwareConcurrency || 0) <= 4;
     if (lowCpu) return 8;
@@ -1846,6 +1848,63 @@ function syncBootLoginOverlayState(visible) {
     }
 }
 
+function finalizeBootLoginUi(portal = 'school') {
+    const activeAuth = window.Auth;
+    if (activeAuth && typeof activeAuth.syncLoginOverlayState === 'function') activeAuth.syncLoginOverlayState(false);
+    else syncBootLoginOverlayState(false);
+    setBootSubmitState({ busy: false, text: getPortalConfig(portal).submit });
+    repairAuthenticatedShellVisibility();
+    [0,250,1000,3000,1e4,3e4].forEach((delay) => window.setTimeout(repairAuthenticatedShellVisibility, delay));
+    startAuthenticatedShellRepairWindow();
+    window.setTimeout(() => {
+        try { window.ensureMobileManagerRuntimeLoaded?.(); } catch (_) { }
+        try { window.MobileQueryUI?.refresh?.(); } catch (_) { }
+    }, 0);
+}
+
+function dismissNonBlockingMobileSwal() {
+    if (!isRuntimeMobileViewport()) return false;
+    const container = document.querySelector('.swal2-container.swal2-backdrop-show');
+    if (!container) return false;
+    if (container.querySelector('input,textarea,select,.swal2-cancel,.swal2-deny')) return false;
+    if (/(安全|警告|失败|错误|确认|确定切换|请确认|未完成|必须|需要完成)/.test(String(container.innerText || ''))) return false;
+    if (window.Swal && typeof window.Swal.close === 'function') window.Swal.close();
+    else container.remove();
+    return true;
+}
+
+function repairAuthenticatedShellVisibility() {
+    if (!readBootSessionUser() && !(window.Auth && window.Auth.currentUser)) return false;
+    const overlay = document.getElementById('login-overlay');
+    const app = document.getElementById('app');
+    document.body.classList.remove('login-overlay-active');
+    document.body.dataset.authState = 'logged_in';
+    if (overlay) {
+        overlay.style.setProperty('display', 'none', 'important');
+        overlay.setAttribute('aria-hidden', 'true');
+    }
+    if (app) {
+        app.classList.remove('hidden');
+        app.style.setProperty('display', 'flex', 'important');
+        app.setAttribute('aria-hidden', 'false');
+    }
+    dismissNonBlockingMobileSwal();
+    return true;
+}
+
+function startAuthenticatedShellRepairWindow() {
+    if (window.__AUTH_SHELL_REPAIR_INTERVAL__) return;
+    const startedAt = Date.now();
+    window.__AUTH_SHELL_REPAIR_INTERVAL__ = window.setInterval(() => {
+        if (Date.now() - startedAt > 120000) {
+            window.clearInterval(window.__AUTH_SHELL_REPAIR_INTERVAL__);
+            window.__AUTH_SHELL_REPAIR_INTERVAL__ = 0;
+            return;
+        }
+        repairAuthenticatedShellVisibility();
+    }, 1000);
+}
+
 const bootAuth = window.Auth || {
     __bootLoginShell: true,
     __bootLoginBusy: false,
@@ -1945,6 +2004,7 @@ const bootAuth = window.Auth || {
                 const matchedUser = result.user;
                 writeBootSessionUser(matchedUser);
                 setBootHelperMessage('身份验证成功', 'success');
+                finalizeBootLoginUi(portal);
                 if (portal === 'school' && window.gsap) {
                     const form = document.getElementById('login-form');
                     const cohortPhase = document.getElementById('login-cohort-phase');
@@ -1978,7 +2038,7 @@ const bootAuth = window.Auth || {
                 await loadAppModules();
                 await window.waitForAuthReady();
                 if (portal === 'school' && cohortYear) await enterSelectedBootCohort(cohortYear);
-                this.syncLoginOverlayState(false);
+                finalizeBootLoginUi(portal);
                 if (loader) {
                     loader.style.opacity = '0';
                     setTimeout(() => {

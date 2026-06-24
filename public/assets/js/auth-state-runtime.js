@@ -14,6 +14,9 @@
     root.MASKED_PASSWORD_DISPLAY = runtime.MASKED_PASSWORD_DISPLAY;
     root.sanitizeLocalAuthDb = runtime.sanitizeLocalAuthDb;
     root.persistLocalAuthDb = runtime.persistLocalAuthDb;
+    if (typeof root.getCurrentUser !== 'function') root.getCurrentUser = runtime.getCurrentUser;
+    if (typeof root.setCurrentUser !== 'function') root.setCurrentUser = runtime.setCurrentUser;
+    if (typeof root.clearCurrentUser !== 'function') root.clearCurrentUser = runtime.clearCurrentUser;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createAuthStateRuntime(root) {
     const MASKED_PASSWORD_DISPLAY = '已设置(不显示明文)';
     const SESSION_USER_KEY = 'CURRENT_USER';

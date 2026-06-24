@@ -699,6 +699,7 @@
     }
 
     function isBlockingDialogVisible() {
+        dismissPassiveSwal();
         if (window.Swal && typeof window.Swal.isVisible === 'function' && window.Swal.isVisible()) {
             return true;
         }
@@ -717,6 +718,18 @@
             const zIndex = Number(style.zIndex || 0);
             return style.position === 'fixed' || zIndex >= 1000;
         });
+    }
+
+    function dismissPassiveSwal() {
+        const container = document.querySelector('.swal2-container.swal2-backdrop-show');
+        if (!isMobileViewport() || !container) return false;
+        if (container.querySelector('input,textarea,select,.swal2-cancel,.swal2-deny')) return false;
+        if (container.querySelector('.swal2-icon-error,.swal2-icon-warning,.swal2-icon-question')) return false;
+        const text = String(container.innerText || '');
+        if (/(安全|警告|失败|错误|确认|请确认|未完成|必须|需要完成|删除|覆盖|退出|清空)/.test(text)) return false;
+        if (window.Swal && typeof window.Swal.close === 'function') window.Swal.close();
+        else container.remove();
+        return true;
     }
 
     function syncShellModalState(root = document.getElementById('apk-mobile-shell')) {
@@ -1658,6 +1671,7 @@
             const wrappedFire = function () {
                 const result = originalFire.apply(window.Swal, arguments);
                 scheduleRefresh();
+                window.setTimeout(dismissPassiveSwal, 1200);
                 REFRESH_DELAYS.forEach((delay) => {
                     window.setTimeout(scheduleRefresh, delay);
                 });
