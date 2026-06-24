@@ -1,6 +1,7 @@
 const RELEASE_MAP_PATH = '/releases/download-map.json';
 const DOWNLOAD_PREFIX = '/downloads/';
 const CHUNK_PATTERN = /^packages\/[A-Za-z0-9._-]+\/(windows|android)\/part-\d{4}$/;
+const TRUSTED_EXTERNAL_CHUNK_PATTERN = /^https:\/\/api\.github\.com\/repos\/hka123321\/school-system\/releases\/assets\/\d+$/;
 const FILENAME_PATTERN = /^school-system-(windows|android)-[A-Za-z0-9._-]+\.(exe|apk)$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const CONTENT_TYPES = new Set([
@@ -42,11 +43,47 @@ function validateDownloadEntry(entry, filename) {
     && SHA256_PATTERN.test(entry.sha256)
     && Array.isArray(entry.chunks)
     && entry.chunks.length > 0
-    && entry.chunks.every((chunk) => typeof chunk === 'string' && CHUNK_PATTERN.test(chunk))
+    && entry.chunks.every((chunk) => isValidChunkReference(chunk))
     && Array.isArray(entry.chunkBytes)
     && entry.chunkBytes.length === entry.chunks.length
     && entry.chunkBytes.every((bytes) => Number.isSafeInteger(bytes) && bytes > 0)
     && entry.chunkBytes.reduce((sum, bytes) => sum + bytes, 0) === entry.bytes;
+}
+
+function isValidChunkReference(chunk) {
+  return typeof chunk === 'string'
+    && (CHUNK_PATTERN.test(chunk) || TRUSTED_EXTERNAL_CHUNK_PATTERN.test(chunk));
+}
+
+function buildChunkRequest(request, env, chunk, method = 'GET') {
+  if (CHUNK_PATTERN.test(chunk)) {
+    return {
+      external: false,
+      request: new Request(new URL(`/releases/${chunk}`, request.url), { method })
+    };
+  }
+  const token = envGithubReleaseToken(env);
+  return {
+    external: true,
+    request: new Request(chunk, {
+      method,
+      headers: {
+        Accept: 'application/octet-stream',
+        Authorization: token ? `Bearer ${token}` : '',
+        'User-Agent': 'school-system-release-proxy'
+      },
+      redirect: 'follow'
+    })
+  };
+}
+
+function envGithubReleaseToken(env) {
+  return env?.GITHUB_RELEASE_TOKEN || env?.GITHUB_TOKEN || '';
+}
+
+function fetchChunk(request, env, chunk, method = 'GET') {
+  const target = buildChunkRequest(request, env, chunk, method);
+  return target.external ? fetch(target.request) : env.ASSETS.fetch(target.request);
 }
 
 async function loadDownloadEntry(request, env, filename) {
@@ -69,10 +106,9 @@ async function loadDownloadEntry(request, env, filename) {
 }
 
 async function preflightChunks(request, env, entry) {
-  const chunkUrls = entry.chunks.map((chunk) => new URL(`/releases/${chunk}`, request.url));
-  const probes = await Promise.all(chunkUrls.map((url) => env.ASSETS.fetch(new Request(url, { method: 'HEAD' }))));
+  const probes = await Promise.all(entry.chunks.map((chunk) => fetchChunk(request, env, chunk, 'HEAD')));
   if (probes.some((response) => !response.ok)) return null;
-  return chunkUrls;
+  return entry.chunks;
 }
 
 function buildDownloadHeaders(entry) {
@@ -87,7 +123,7 @@ function buildDownloadHeaders(entry) {
   });
 }
 
-function streamChunks(env, chunkUrls) {
+function streamChunks(request, env, chunks) {
   let chunkIndex = 0;
   let reader = null;
   return new ReadableStream({
@@ -95,11 +131,11 @@ function streamChunks(env, chunkUrls) {
       try {
         while (true) {
           if (!reader) {
-            if (chunkIndex >= chunkUrls.length) {
+            if (chunkIndex >= chunks.length) {
               controller.close();
               return;
             }
-            const response = await env.ASSETS.fetch(new Request(chunkUrls[chunkIndex], { method: 'GET' }));
+            const response = await fetchChunk(request, env, chunks[chunkIndex], 'GET');
             if (!response.ok || !response.body) throw new Error('release chunk unavailable');
             reader = response.body.getReader();
             chunkIndex += 1;
@@ -143,5 +179,5 @@ export async function handleReleaseDownload(request, env) {
   if (!chunkUrls) return plainResponse(503, 'Release asset unavailable');
   const headers = buildDownloadHeaders(loaded.entry);
   if (request.method === 'HEAD') return new Response(null, { status: 200, headers });
-  return new Response(streamChunks(env, chunkUrls), { status: 200, headers });
+  return new Response(streamChunks(request, env, chunkUrls), { status: 200, headers });
 }

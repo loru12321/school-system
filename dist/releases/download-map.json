@@ -1,62 +1,56 @@
 {
   "schemaVersion": 1,
-  "releaseTag": "beta-20260625-87b8c5b",
-  "sourceSha": "87b8c5b697e7b732dc14c6e856f3cd58518c00d9",
+  "releaseTag": "beta-20260625-187d79f",
+  "sourceSha": "187d79fa4cabbac3095b26dbf1bb4428e4632b61",
   "downloads": [
     {
       "platform": "windows",
-      "filename": "school-system-windows-beta-20260625-87b8c5b.exe",
+      "filename": "school-system-windows-beta-20260625-187d79f.exe",
       "contentType": "application/vnd.microsoft.portable-executable",
       "bytes": 119057214,
       "sha256": "ce73b1f430f73f274fada31323c7e9985a0b5bfdc6844e15eff0b475bb4e5be2",
       "chunks": [
-        "packages/beta-20260625-87b8c5b/windows/part-0001",
-        "packages/beta-20260625-87b8c5b/windows/part-0002",
-        "packages/beta-20260625-87b8c5b/windows/part-0003",
-        "packages/beta-20260625-87b8c5b/windows/part-0004",
-        "packages/beta-20260625-87b8c5b/windows/part-0005",
-        "packages/beta-20260625-87b8c5b/windows/part-0006",
-        "packages/beta-20260625-87b8c5b/windows/part-0007",
-        "packages/beta-20260625-87b8c5b/windows/part-0008",
-        "packages/beta-20260625-87b8c5b/windows/part-0009",
-        "packages/beta-20260625-87b8c5b/windows/part-0010",
-        "packages/beta-20260625-87b8c5b/windows/part-0011",
-        "packages/beta-20260625-87b8c5b/windows/part-0012",
-        "packages/beta-20260625-87b8c5b/windows/part-0013",
-        "packages/beta-20260625-87b8c5b/windows/part-0014",
-        "packages/beta-20260625-87b8c5b/windows/part-0015"
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457054996",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055072",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055201",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055304",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055343",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055442",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055460",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055506",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055684",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055749",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055807",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457055842"
       ],
       "chunkBytes": [
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        8388608,
-        1616702
+        10485760,
+        10485760,
+        10485760,
+        10485760,
+        10485760,
+        10485760,
+        10485760,
+        10485760,
+        10485760,
+        10485760,
+        10485760,
+        3713854
       ]
     },
     {
       "platform": "android",
-      "filename": "school-system-android-beta-20260625-87b8c5b.apk",
+      "filename": "school-system-android-beta-20260625-187d79f.apk",
       "contentType": "application/vnd.android.package-archive",
       "bytes": 11982465,
       "sha256": "8f121c3e85fade03e041054af9b8619bbbe06756b0c3936da6edffd975eb96f8",
       "chunks": [
-        "packages/beta-20260625-87b8c5b/android/part-0001",
-        "packages/beta-20260625-87b8c5b/android/part-0002"
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457054915",
+        "https://api.github.com/repos/hka123321/school-system/releases/assets/457054970"
       ],
       "chunkBytes": [
-        8388608,
-        3593857
+        10485760,
+        1496705
       ]
     }
   ]

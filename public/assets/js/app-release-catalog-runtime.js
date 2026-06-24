@@ -115,12 +115,23 @@
       && Array.isArray(entry.chunks)
       && entry.chunks.length > 0
       && entry.chunks.every(function (chunk) {
-        return /^packages\/[A-Za-z0-9._-]+\/(windows|android)\/part-\d{4}$/.test(chunk);
+        return isTrustedChunk(chunk);
       })
       && Array.isArray(entry.chunkBytes)
       && entry.chunkBytes.length === entry.chunks.length
       && entry.chunkBytes.every(function (bytes) { return Number.isSafeInteger(bytes) && bytes > 0; })
       && entry.chunkBytes.reduce(function (sum, bytes) { return sum + bytes; }, 0) === entry.bytes;
+  }
+
+  function isTrustedChunk(chunk) {
+    return /^packages\/[A-Za-z0-9._-]+\/(windows|android)\/part-\d{4}$/.test(chunk)
+      || /^https:\/\/api\.github\.com\/repos\/hka123321\/school-system\/releases\/assets\/\d+$/.test(chunk);
+  }
+
+  function hasExternalChunks(entry) {
+    return !!entry && Array.isArray(entry.chunks) && entry.chunks.some(function (chunk) {
+      return /^https:\/\//.test(chunk);
+    });
   }
 
   async function loadChunkDelivery(filename) {
@@ -208,6 +219,10 @@
     try {
       var filename = decodeURIComponent(url.pathname.split('/').pop());
       var entry = await loadChunkDelivery(filename);
+      if (hasExternalChunks(entry)) {
+        root.location.href = anchor.href;
+        return;
+      }
       if (typeof root.showSaveFilePicker === 'function') await saveChunksToFile(entry, anchor);
       else await saveChunksAsBlob(entry, anchor);
       anchor.textContent = '下载完成';

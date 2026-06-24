@@ -3,25 +3,25 @@
   "releases": [
     {
       "schemaVersion": 1,
-      "releaseTag": "beta-20260625-87b8c5b",
+      "releaseTag": "beta-20260625-187d79f",
       "channel": "beta",
-      "sourceSha": "87b8c5b697e7b732dc14c6e856f3cd58518c00d9",
-      "generatedAt": "2026-06-24T17:08:35.597Z",
-      "expiresAt": "2026-09-22T17:08:35.597Z",
+      "sourceSha": "187d79fa4cabbac3095b26dbf1bb4428e4632b61",
+      "generatedAt": "2026-06-24T17:39:25.242Z",
+      "expiresAt": "2026-09-22T17:39:25.242Z",
       "releaseUrl": "",
       "platforms": {
         "windows": {
           "platform": "windows",
           "version": "1.0.2",
-          "buildNumber": "87b8c5b697e7",
+          "buildNumber": "187d79fa4cab",
           "status": "ready",
           "signed": "unsigned",
           "minimumOs": "Windows 10 22H2",
           "architectures": [
             "x64"
           ],
-          "assetName": "school-system-windows-beta-20260625-87b8c5b.exe",
-          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-windows-beta-20260625-87b8c5b.exe",
+          "assetName": "school-system-windows-beta-20260625-187d79f.exe",
+          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-windows-beta-20260625-187d79f.exe",
           "bytes": 119057214,
           "sha256": "ce73b1f430f73f274fada31323c7e9985a0b5bfdc6844e15eff0b475bb4e5be2",
           "notes": [
@@ -32,7 +32,7 @@
         "android": {
           "platform": "android",
           "version": "1.0.2",
-          "buildNumber": "87b8c5b697e7",
+          "buildNumber": "187d79fa4cab",
           "status": "ready",
           "signed": "test-signed",
           "minimumOs": "Android 10",
@@ -41,8 +41,8 @@
             "armeabi-v7a",
             "x86_64"
           ],
-          "assetName": "school-system-android-beta-20260625-87b8c5b.apk",
-          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-android-beta-20260625-87b8c5b.apk",
+          "assetName": "school-system-android-beta-20260625-187d79f.apk",
+          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-android-beta-20260625-187d79f.apk",
           "bytes": 11982465,
           "sha256": "8f121c3e85fade03e041054af9b8619bbbe06756b0c3936da6edffd975eb96f8",
           "notes": [
@@ -53,7 +53,7 @@
         "ios": {
           "platform": "ios",
           "version": "1.0.2",
-          "buildNumber": "87b8c5b697e7",
+          "buildNumber": "187d79fa4cab",
           "status": "awaiting-signing",
           "signed": false,
           "minimumOs": "iOS 16",

@@ -10,6 +10,8 @@ const source = fs.readFileSync(
 assert.match(source, /download-map\.json/, 'catalog runtime should use the first-party chunk map');
 assert.match(source, /showSaveFilePicker/, 'catalog runtime should stream large packages to disk when supported');
 assert.match(source, /saveChunksAsBlob/, 'catalog runtime should retain a browser fallback');
+assert.match(source, /api\\.github\\.com/, 'catalog runtime should recognize trusted GitHub release chunks');
+assert.match(source, /hasExternalChunks/, 'catalog runtime should hand external chunks back to the same-origin worker download');
 const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../public/releases/release-manifest.json'), 'utf8'));
 const html = fs.readFileSync(path.resolve(__dirname, '../src/index.html'), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
