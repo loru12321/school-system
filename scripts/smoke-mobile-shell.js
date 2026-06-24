@@ -99,6 +99,10 @@ async function waitForMobileShellReady(page) {
 async function inspectMobileReleaseCenter(page) {
     await page.evaluate(() => window.switchTab?.('app-download-center'));
     await page.waitForSelector('#app-release-focused-detail', { state: 'visible', timeout: 45000 });
+    await page.waitForFunction(() => (
+        !!window.__APP_DOWNLOAD_RUNTIME_PATCHED__
+        && !!document.querySelector('[data-app-download-platform][aria-selected="true"]')
+    ), null, { timeout: 45000 });
     const firstTab = page.locator('[data-app-download-platform="windows"]');
     await firstTab.focus();
     await page.keyboard.press('ArrowRight');

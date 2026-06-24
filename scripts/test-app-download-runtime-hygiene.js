@@ -8,6 +8,7 @@ const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/a
 const loginDownloadSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/login-download-runtime.js'), 'utf8');
 const html = fs.readFileSync(path.resolve(__dirname, '../src/index.html'), 'utf8');
 const verifier = fs.readFileSync(path.resolve(__dirname, '../scripts/verify-release-assets.mjs'), 'utf8');
+const mobileSmoke = fs.readFileSync(path.resolve(__dirname, '../scripts/smoke-mobile-shell.js'), 'utf8');
 const scripts = packageJson.scripts || {};
 
 ['windows', 'android', 'ios'].forEach((platform) => {
@@ -30,6 +31,7 @@ assert.ok(source.includes('dataset.appDownloadRenderSignature'), 'download cente
 assert.ok(source.includes('return true;'), 'download center render fast path should return success without rerendering');
 assert.ok(source.includes('const nextPlatform = tabs[next]?.dataset.appDownloadPlatform'), 'download center keyboard navigation should select by next platform key');
 assert.ok(source.includes('root.querySelector(`[data-app-download-platform="${nextPlatform}"]`)?.focus()'), 'download center keyboard navigation should focus the rerendered tab');
+assert.ok(mobileSmoke.includes('window.__APP_DOWNLOAD_RUNTIME_PATCHED__'), 'mobile smoke should wait for download runtime before testing platform keyboard navigation');
 assert.ok(source.includes("const RELEASE_BRAND_ICON_URL = './assets/brand/app-icon-128.png';"), 'download runtime should define one release icon URL');
 assert.match(source, /windows:\s*\{ iconUrl: RELEASE_BRAND_ICON_URL, pattern:/, 'GitHub Windows mapping should define the shared icon');
 assert.match(source, /android:\s*\{ iconUrl: RELEASE_BRAND_ICON_URL, pattern:/, 'GitHub Android mapping should define the shared icon');
