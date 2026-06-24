@@ -8842,6 +8842,18 @@ function scheduleCountyAnalysisRenderAfterSwitch(id) {
     }
 }
 
+function closeBlockingModalsBeforeModuleSwitch() {
+    const modalIds = ['data-manager-modal'];
+    modalIds.forEach((modalId) => {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        const display = window.getComputedStyle ? getComputedStyle(modal).display : modal.style.display;
+        if (display !== 'none') {
+            modal.style.display = 'none';
+        }
+    });
+}
+
 function switchTab(id) {
     if (id === 'school-internal-grades') {
         console.warn('school-internal-grades has been removed; redirecting to exam-arranger');
@@ -8867,6 +8879,7 @@ function switchTab(id) {
     }
     if (!__guardBypass && !guardBeforeSwitch(id)) return;
     if (__guardBypass) __guardBypass = false;
+    closeBlockingModalsBeforeModuleSwitch();
     if (typeof window.ensureLazySectionLoaded === 'function') {
         const before = getModuleSectionById(id);
         const loaded = window.ensureLazySectionLoaded(id);
@@ -14068,6 +14081,7 @@ function calcIndicators(isSilent = false) {
 
         calcData.push({
             name: s.name,
+            rawNames: Array.isArray(s.rawNames) ? s.rawNames.slice() : [],
             targetKey: targetInfo.key || '',
             missingTarget,
             invalidTarget,
@@ -14089,6 +14103,9 @@ function calcIndicators(isSilent = false) {
         d.finalScore = d.score1 + d.score2;
 
         syncIndicatorScoreToSchools(d.name, d.finalScore);
+        if (Array.isArray(d.rawNames)) {
+            d.rawNames.forEach((rawName) => syncIndicatorScoreToSchools(rawName, d.finalScore));
+        }
     });
 
     calcData.sort((a, b) => b.finalScore - a.finalScore).forEach((d, i) => d.rank = i + 1);
@@ -14388,18 +14405,38 @@ function analyzeTargetGap(schoolName, type, lineScore) {
 
 function calcSummary(isSilent = false) {
     const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
+    let indicatorRowsForSummary = [];
 
     if (isGrade9 && typeof calcIndicators === 'function') {
         const previousSuppress = SummaryRefreshState.suppress;
         SummaryRefreshState.suppress = true;
         try {
-            calcIndicators(true);
+            const result = calcIndicators(true);
+            indicatorRowsForSummary = Array.isArray(result) ? result : [];
         } catch (e) {
             console.warn('[calcSummary] 指标生静默重算失败:', e);
         } finally {
             SummaryRefreshState.suppress = previousSuppress;
         }
     }
+    if (!indicatorRowsForSummary.length && Array.isArray(window.INDICATOR_LAST_RESULT)) {
+        indicatorRowsForSummary = window.INDICATOR_LAST_RESULT;
+    }
+    const indicatorScoreMap = new Map();
+    (indicatorRowsForSummary || []).forEach((row) => {
+        const score = Number(row?.finalScore);
+        if (!Number.isFinite(score)) return;
+        const names = [row?.name, ...(Array.isArray(row?.rawNames) ? row.rawNames : [])]
+            .map((name) => String(name || '').trim())
+            .filter(Boolean);
+        names.forEach((name) => {
+            indicatorScoreMap.set(name, score);
+            if (typeof normalizeSchoolName === 'function') {
+                const normalized = normalizeSchoolName(name);
+                if (normalized) indicatorScoreMap.set(normalized, score);
+            }
+        });
+    });
 
     const hasSummaryScopeHelper = typeof listAvailableSchoolsForCompare === 'function';
     const summarySchoolNames = hasSummaryScopeHelper
@@ -14416,7 +14453,9 @@ function calcSummary(isSilent = false) {
     )).map(s => {
         const s1 = s.score2Rate || 0;  // 两率一分
         const s2 = s.scoreBottom || 0; // 后1/3
-        const s3 = isGrade9 ? (s.scoreInd || 0) : 0;    // 指标生仅9年级参与
+        const indicatorFallbackKey = typeof normalizeSchoolName === 'function' ? normalizeSchoolName(s.name) : '';
+        const indicatorFallbackScore = indicatorScoreMap.get(s.name) ?? indicatorScoreMap.get(indicatorFallbackKey) ?? 0;
+        const s3 = isGrade9 ? (Number(s.scoreInd) || indicatorFallbackScore || 0) : 0;    // 指标生仅9年级参与
 
         let s4 = 0; // 高分段赋分
         if (isGrade9 && s.highScoreStats) {

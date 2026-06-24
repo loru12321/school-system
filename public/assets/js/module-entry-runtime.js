@@ -389,17 +389,36 @@
         }, { delay, idle: false, timeout: 700 });
     }
 
+    function waitForTeacherMapReady(options = {}) {
+        if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
+            return Promise.resolve(true);
+        }
+        if (!window.CloudManager || typeof window.CloudManager.loadTeachers !== 'function') {
+            return Promise.resolve(false);
+        }
+        const timeoutMs = Number(options.timeoutMs || 3500);
+        const loadTask = window.CloudManager.loadTeachers({ background: true, toast: false });
+        const timeoutTask = new Promise((resolve) => window.setTimeout(() => resolve(false), timeoutMs));
+        return Promise.race([Promise.resolve(loadTask), timeoutTask]).then(() => (
+            !!(window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0)
+        )).catch((error) => {
+            console.warn('[teacher-analysis] teacher map async load failed:', error);
+            return false;
+        });
+    }
+
     function renderTeacherAnalysisNow() {
         if (!isTeacherAnalysisActive()) return;
         const run = () => {
-            if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
-                try {
-                    DataManager.ensureTeacherMap(true);
-                } catch (error) {
-                    console.warn('[teacher-analysis] teacher map load failed:', error);
+            showTeacherAnalysisPendingState();
+            waitForTeacherMapReady({ timeoutMs: 5000 }).then((ready) => {
+                if (!isTeacherAnalysisActive()) return;
+                if (!ready) {
+                    renderTeacherAnalysisEmptyState();
+                    return;
                 }
-            }
-            scheduleTeacherAnalysisRenderWork(0);
+                scheduleTeacherAnalysisRenderWork(0);
+            });
         };
         if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
             window.ensureTeacherAnalysisMainRuntimeLoaded().then(run).catch((error) => console.warn(error));
@@ -736,8 +755,15 @@
             applyTeacherRoleVisibility();
             const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
             if (!teacherMapReady) {
-                renderTeacherAnalysisEmptyState();
-                applyTeacherRoleVisibility();
+                waitForTeacherMapReady({ timeoutMs: 5000 }).then((ready) => {
+                    if (!isTeacherAnalysisActive()) return;
+                    if (ready) {
+                        scheduleTeacherAnalysisRenderWork(0);
+                    } else {
+                        renderTeacherAnalysisEmptyState();
+                    }
+                    applyTeacherRoleVisibility();
+                });
                 return;
             }
             const run = () => scheduleTeacherAnalysisRenderWork(0);
