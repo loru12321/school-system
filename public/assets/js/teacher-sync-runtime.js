@@ -104,11 +104,10 @@ function shouldAutoLoadTeacherData() {
     if (window.__FORCE_TEACHER_CLOUD_LOAD__ === true) return true;
     const teacherSection = document.getElementById('teacher-analysis');
     if (teacherSection && teacherSection.classList.contains('active')) return true;
-    const uploadSection = document.getElementById('upload');
-    if (uploadSection && uploadSection.classList.contains('active')) return true;
-    const starterSection = document.getElementById('starter-hub');
-    if (starterSection && starterSection.classList.contains('active')) return true;
-    return !!document.getElementById('starter-status-panel');
+    const dataManagerModal = document.getElementById('data-manager-modal');
+    const dataManagerVisible = !!dataManagerModal
+        && (!window.getComputedStyle || getComputedStyle(dataManagerModal).display !== 'none');
+    return !!(dataManagerVisible && window.DataManager && DataManager.currentTab === 'teacher');
 }
 
 function syncTeacherAnalysisSchoolContext(preferredSchool = '') {
@@ -286,7 +285,7 @@ function scheduleTeacherSyncPrompt() {
 
 function renderTeacherAnalysisState() {
     if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
-        DataManager.ensureTeacherMap(true);
+        DataManager.ensureTeacherMap(false);
     }
     if (typeof updateTeacherCompareExamSelects === 'function') {
         updateTeacherCompareExamSelects();

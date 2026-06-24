@@ -922,7 +922,7 @@
         perfProbe.mark('resolve school');
 
         if (window.DataManager && typeof window.DataManager.ensureTeacherMap === 'function') {
-            const ok = window.DataManager.ensureTeacherMap(true);
+            const ok = window.DataManager.ensureTeacherMap(false);
             if (!ok) {
                 if (window.UI) window.UI.toast('请先同步教师任课表后再分析', 'warning');
                 return;

@@ -8843,7 +8843,24 @@ function scheduleCountyAnalysisRenderAfterSwitch(id) {
 }
 
 function closeBlockingModalsBeforeModuleSwitch() {
-    const modalIds = ['data-manager-modal'];
+    const modalIds = [
+        'drill-modal',
+        'target-editor-modal',
+        'teacherModal',
+        'mobileShareModal',
+        'mappingModal',
+        'cert-modal',
+        'school-profile-modal',
+        'skin-modal',
+        'admin-modal',
+        'user-password-modal',
+        'issue-submit-modal',
+        'admin-issue-modal',
+        'admin-log-modal',
+        'account-manager-modal',
+        'data-manager-modal',
+        'version-center-backdrop'
+    ];
     modalIds.forEach((modalId) => {
         const modal = document.getElementById(modalId);
         if (!modal) return;
@@ -8851,7 +8868,17 @@ function closeBlockingModalsBeforeModuleSwitch() {
         if (display !== 'none') {
             modal.style.display = 'none';
         }
+        if (modal.hasAttribute('aria-hidden')) modal.setAttribute('aria-hidden', 'true');
     });
+    document.querySelectorAll('.modal').forEach((modal) => {
+        const display = window.getComputedStyle ? getComputedStyle(modal).display : modal.style.display;
+        if (display !== 'none') modal.style.display = 'none';
+    });
+    const releaseHistoryDrawer = document.getElementById('app-release-history-drawer');
+    if (releaseHistoryDrawer) releaseHistoryDrawer.hidden = true;
+    const spotlight = document.getElementById('spotlight-mask');
+    if (spotlight) spotlight.style.display = 'none';
+    document.body.classList.remove('app-release-history-open', 'version-center-open');
 }
 
 function switchTab(id) {
@@ -9862,12 +9889,8 @@ async function processData() {
     try {
         appDebug("🔄 正在自动执行衍生计算...");
 
-        if (typeof calcIndicators === 'function' && isIndicatorCalcAllowed()) {
-            calcIndicators(true); // 传入 true 表示静默模式(可选，视函数实现而定)
-        }
-
         if (typeof calcSummary === 'function') {
-            calcSummary(true);    // 传入 true 表示静默模式
+            calcSummary(true);    // 汇总内部会按需同步指标生，避免上传后重复全量计算。
         }
 
     } catch (e) {
