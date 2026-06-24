@@ -140,6 +140,7 @@
     "smoke:prod-minimal": "npm run verify:prod-minimal",
     "report:account-migration": "node scripts/report-account-migration-status.mjs",
     "migrate:system-data:cloudflare": "node scripts/migrate-system-data-to-cloudflare.js",
+    "verify:system-data:cloudflare-cutover": "node scripts/verify-system-data-cloudflare-cutover.js",
     "migrate:gateway-data:cloudflare": "node scripts/migrate-gateway-data-to-cloudflare.mjs",
     "migrate:supabase:project": "node scripts/migrate-supabase-project-data.mjs",
     "preview": "vite preview",
