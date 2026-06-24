@@ -29,6 +29,7 @@ const helpSystemRuntimePath = path.resolve(__dirname, '../public/assets/js/help-
 const loggerRuntimePath = path.resolve(__dirname, '../public/assets/js/logger-runtime.js');
 const workerApiRuntimePath = path.resolve(__dirname, '../public/assets/js/worker-api-runtime.js');
 const accountManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/account-manager-runtime.js');
+const managementFacadesRuntimePath = path.resolve(__dirname, '../public/assets/js/management-facades-runtime.js');
 const dataManagerTeacherRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-teacher-runtime.js');
 const dataManagerStudentRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-student-runtime.js');
 const dataManagerArchiveRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-archive-runtime.js');
@@ -103,6 +104,7 @@ assert.ok(fs.existsSync(helpSystemRuntimePath), 'help-system-runtime.js should e
 assert.ok(fs.existsSync(loggerRuntimePath), 'logger-runtime.js should exist');
 assert.ok(fs.existsSync(workerApiRuntimePath), 'worker-api-runtime.js should exist');
 assert.ok(fs.existsSync(accountManagerRuntimePath), 'account-manager-runtime.js should exist');
+assert.ok(fs.existsSync(managementFacadesRuntimePath), 'management-facades-runtime.js should exist');
 assert.ok(fs.existsSync(dataManagerTeacherRuntimePath), 'data-manager-teacher-runtime.js should exist');
 assert.ok(fs.existsSync(dataManagerStudentRuntimePath), 'data-manager-student-runtime.js should exist');
 assert.ok(fs.existsSync(dataManagerArchiveRuntimePath), 'data-manager-archive-runtime.js should exist');
@@ -213,6 +215,7 @@ const helpSystemRef = './assets/js/help-system-runtime.js';
 const loggerRef = './assets/js/logger-runtime.js';
 const workerApiRef = './assets/js/worker-api-runtime.js';
 const accountManagerRef = './assets/js/account-manager-runtime.js';
+const managementFacadesRef = './assets/js/management-facades-runtime.js';
 const dataManagerTeacherRef = './assets/js/data-manager-teacher-runtime.js';
 const dataManagerStudentRef = './assets/js/data-manager-student-runtime.js';
 const dataManagerArchiveRef = './assets/js/data-manager-archive-runtime.js';
@@ -237,6 +240,7 @@ const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
 const shellRuntimeRef = './assets/js/shell-runtime.js';
 const shellPolishRuntimeRef = './assets/js/shell-polish-runtime.js';
 const moduleEntryRuntimeRef = './assets/js/module-entry-runtime.js';
+const runtimeAccessorsRef = './assets/js/runtime-accessors-runtime.js';
 const rankingDataServiceRef = './assets/js/ranking-data-service-runtime.js';
 const studentJumpRef = './assets/js/student-jump-runtime.js';
 const cloudRef = './assets/js/cloud.js';
@@ -347,6 +351,7 @@ const helpSystemIndex = normalizedModuleManifest.indexOf(helpSystemRef);
 const loggerIndex = normalizedModuleManifest.indexOf(loggerRef);
 const workerApiIndex = normalizedModuleManifest.indexOf(workerApiRef);
 const accountManagerIndex = normalizedModuleManifest.indexOf(accountManagerRef);
+const managementFacadesIndex = normalizedModuleManifest.indexOf(managementFacadesRef);
 const dataManagerTeacherIndex = normalizedModuleManifest.indexOf(dataManagerTeacherRef);
 const dataManagerStudentIndex = normalizedModuleManifest.indexOf(dataManagerStudentRef);
 const dataManagerArchiveIndex = normalizedModuleManifest.indexOf(dataManagerArchiveRef);
@@ -367,6 +372,7 @@ const cloudWorkspaceIndex = normalizedModuleManifest.indexOf(cloudWorkspaceRef);
 const shellRuntimeIndex = normalizedModuleManifest.indexOf(shellRuntimeRef);
 const shellPolishRuntimeIndex = normalizedModuleManifest.indexOf(shellPolishRuntimeRef);
 const moduleEntryRuntimeIndex = normalizedModuleManifest.indexOf(moduleEntryRuntimeRef);
+const runtimeAccessorsIndex = normalizedModuleManifest.indexOf(runtimeAccessorsRef);
 const rankingDataServiceIndex = normalizedModuleManifest.indexOf(rankingDataServiceRef);
 const studentJumpIndex = normalizedModuleManifest.indexOf(studentJumpRef);
 const appIndex = normalizedModuleManifest.indexOf(appRef);
@@ -401,6 +407,7 @@ assert.ok(helpSystemIndex >= 0, 'index.html should load help-system-runtime.js')
 assert.ok(loggerIndex >= 0, 'index.html should load logger-runtime.js');
 assert.strictEqual(workerApiIndex, -1, 'worker-api-runtime.js should be lazy-loaded instead of boot-loaded');
 assert.ok(accountManagerIndex >= 0, 'index.html should load account-manager-runtime.js');
+assert.ok(managementFacadesIndex >= 0, 'index.html should load management-facades-runtime.js');
 assert.ok(dataManagerTeacherIndex >= 0, 'index.html should load data-manager-teacher-runtime.js');
 assert.ok(dataManagerStudentIndex >= 0, 'index.html should load data-manager-student-runtime.js');
 assert.ok(dataManagerArchiveIndex >= 0, 'index.html should load data-manager-archive-runtime.js');
@@ -428,6 +435,8 @@ assert.ok(issueManagerIndex < appIndex, 'issue-manager-runtime.js should load be
 assert.ok(helpSystemIndex < appIndex, 'help-system-runtime.js should load before app.js');
 assert.ok(loggerIndex < appIndex, 'logger-runtime.js should load before app.js');
 assert.ok(accountManagerIndex < appIndex, 'account-manager-runtime.js should load before app.js');
+assert.ok(managementFacadesIndex < appIndex, 'management-facades-runtime.js should load before app.js');
+assert.ok(runtimeAccessorsIndex < managementFacadesIndex, 'runtime-accessors-runtime.js should load before management-facades-runtime.js');
 assert.ok(dataManagerTeacherIndex < appIndex, 'data-manager-teacher-runtime.js should load before app.js');
 assert.ok(dataManagerStudentIndex < appIndex, 'data-manager-student-runtime.js should load before app.js');
 assert.ok(dataManagerArchiveIndex < appIndex, 'data-manager-archive-runtime.js should load before app.js');
@@ -441,6 +450,7 @@ assert.ok(dataManagerTabIndex < appIndex, 'data-manager-tab-runtime.js should lo
 assert.ok(shellRuntimeIndex >= 0, 'index.html should load shell-runtime.js');
 assert.strictEqual(shellPolishRuntimeIndex, -1, 'shell-polish-runtime.js should be idle-loaded instead of blocking core app boot');
 assert.ok(moduleEntryRuntimeIndex >= 0, 'index.html should load module-entry-runtime.js');
+assert.ok(runtimeAccessorsIndex >= 0, 'index.html should load runtime-accessors-runtime.js');
 assert.ok(rankingDataServiceIndex >= 0, 'index.html should load ranking-data-service-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
 assert.ok(bootRuntimeReferences(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
@@ -798,6 +808,12 @@ assert.strictEqual(switchTabDefinitions.length, 1, 'app.js should define switchT
 assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign switchTab after definition');
 assert.ok(!appSource.includes('const CohortGrowth = {'), 'app.js should not duplicate the dedicated cohort-growth runtime');
 assert.ok(!appSource.includes('window.CohortGrowth = CohortGrowth'), 'app.js should not overwrite the dedicated cohort-growth runtime');
+assert.ok(!appSource.includes('const IssueManager = {'), 'app.js should not duplicate management facades');
+assert.ok(!appSource.includes('const Packager = {'), 'app.js should not duplicate management facades');
+assert.ok(!appSource.includes('const HelpSystem = {'), 'app.js should not duplicate management facades');
+assert.ok(!appSource.includes('const WorkerAPI = {'), 'app.js should not duplicate management facades');
+assert.ok(!appSource.includes('const Logger = {'), 'app.js should not duplicate management facades');
+assert.ok(!appSource.includes('const AccountManager = {'), 'app.js should not duplicate management facades');
 
 [
     cryptoJsVendorRef,

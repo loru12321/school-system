@@ -62,15 +62,17 @@ async function main() {
   fs.mkdirSync(srcDir, { recursive: true });
   fs.mkdirSync(publicDir, { recursive: true });
 
-  const verboseJs = `function longName(){const veryLongVariableName = 1 + 2; return veryLongVariableName;}\nwindow.answer = longName();\nconst workerUrl = './assets/js/data-processing-worker.js';\n`;
+  const verboseJs = `function longName(){const veryLongVariableName = 1 + 2; return veryLongVariableName;}\nwindow.answer = longName();\n`;
+  const facadeJs = `const workerUrl = './assets/js/data-processing-worker.js';\n`;
   const unusedJs = `window.shouldNotExist = true;\n`;
   const bootRuntime = `
 window.ensureLazy = function(){return loadOptionalRuntime('lazy', './assets/js/lazy-runtime.js');};
 window.ensureBundle = function(){return loadOptionalRuntimeBundle('bundle', [{ key: 'baz', src: './assets/js/baz-runtime.js' }]);};
 window.ensureCompactBundle = function(){return loadOptionalRuntimeBundle('compact', [bootEntry('compact', bootJs('compact-runtime.js'))]);};
-var APP_MODULES = ['auth-state-runtime.js'].map(bootJs);
+var APP_MODULES = ['auth-state-runtime.js', 'management-facades-runtime.js'].map(bootJs);
 `;
   fs.writeFileSync(path.join(sourceJsDir, 'app.js'), verboseJs, 'utf8');
+  fs.writeFileSync(path.join(sourceJsDir, 'management-facades-runtime.js'), facadeJs, 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'unused.js'), unusedJs, 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'boot-runtime.js'), bootRuntime, 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'lazy-runtime.js'), 'window.lazyLoaded = true;\n', 'utf8');
@@ -94,6 +96,7 @@ var APP_MODULES = ['auth-state-runtime.js'].map(bootJs);
   const syncedBundlePath = path.join(targetJsDir, 'baz-runtime.js');
   const syncedCompactPath = path.join(targetJsDir, 'compact-runtime.js');
   const syncedAppModulePath = path.join(targetJsDir, 'auth-state-runtime.js');
+  const syncedFacadePath = path.join(targetJsDir, 'management-facades-runtime.js');
   const syncedWorkerPath = path.join(targetJsDir, 'data-processing-worker.js');
   const skippedPath = path.join(targetJsDir, 'unused.js');
   const stalePath = path.join(targetJsDir, 'stale.js');
@@ -102,7 +105,8 @@ var APP_MODULES = ['auth-state-runtime.js'].map(bootJs);
   assert.ok(fs.existsSync(syncedBundlePath), 'should sync bundled lazy-loaded assets referenced by boot runtime');
   assert.ok(fs.existsSync(syncedCompactPath), 'should sync compact bootJs assets referenced by boot runtime');
   assert.ok(fs.existsSync(syncedAppModulePath), 'should sync compact APP_MODULES assets referenced by boot runtime');
-  assert.ok(fs.existsSync(syncedWorkerPath), 'should sync lazily loaded assets referenced by app runtime');
+  assert.ok(fs.existsSync(syncedFacadePath), 'should sync compact APP_MODULES facade assets');
+  assert.ok(fs.existsSync(syncedWorkerPath), 'should sync lazily loaded assets referenced by referenced runtime assets');
   assert.strictEqual(fs.existsSync(skippedPath), false, 'should skip unreferenced assets');
   assert.strictEqual(fs.existsSync(stalePath), false, 'should remove stale target assets that are no longer referenced');
   const minifiedJs = fs.readFileSync(syncedAppPath, 'utf8');

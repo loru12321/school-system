@@ -64,11 +64,21 @@ export function syncReferencedAssets({
       referencedAssets.add(asset);
     }
   }
-  const resolvedAppRuntimePath = path.join(sourceJsDir, 'app.js');
-  if (fs.existsSync(resolvedAppRuntimePath)) {
-    const appRuntime = fs.readFileSync(resolvedAppRuntimePath, 'utf8');
-    for (const asset of collectLazyLoadedJsAssets(appRuntime)) {
-      referencedAssets.add(asset);
+
+  const scannedAssets = new Set();
+  const scanQueue = Array.from(referencedAssets);
+  while (scanQueue.length) {
+    const assetName = scanQueue.shift();
+    if (!assetName || scannedAssets.has(assetName)) continue;
+    scannedAssets.add(assetName);
+    const assetPath = path.join(sourceJsDir, assetName);
+    if (!fs.existsSync(assetPath)) continue;
+    const sourceCode = fs.readFileSync(assetPath, 'utf8');
+    for (const nestedAsset of collectLazyLoadedJsAssets(sourceCode)) {
+      if (!referencedAssets.has(nestedAsset)) {
+        referencedAssets.add(nestedAsset);
+        scanQueue.push(nestedAsset);
+      }
     }
   }
 

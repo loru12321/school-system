@@ -366,6 +366,7 @@ var APP_MODULES = [
 'starter-status-runtime.js',
 'teacher-sync-runtime.js',
 'login-download-runtime.js',
+'management-facades-runtime.js',
 'app.js',
 'support-metrics-runtime.js',
 'marginal-push-runtime.js',
