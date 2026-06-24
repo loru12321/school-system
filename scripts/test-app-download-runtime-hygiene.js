@@ -16,6 +16,7 @@ const scripts = packageJson.scripts || {};
 assert.ok(html.includes('id="app-release-focused-detail"'), 'download center should expose the focused platform detail');
 assert.ok(html.includes('id="app-release-timeline"'), 'download center should expose the release timeline');
 assert.ok(html.includes('id="app-release-history-drawer"'), 'download center should expose the release history drawer');
+assert.ok(html.includes('app-download-runtime.js?v=20260624-mobile-tabs-v1'), 'download center runtime should cache-bust mobile tab keyboard fixes');
 assert.ok(html.includes('id="app-release-history-platform"'), 'history drawer should expose a platform filter');
 assert.ok(html.includes('id="app-release-history-channel"'), 'history drawer should expose a channel filter');
 assert.ok(html.includes('<img class="app-release-brand-icon"'), 'focused release template should expose the real app icon image');
