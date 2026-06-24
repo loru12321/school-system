@@ -80,7 +80,8 @@ for (const required of [
 }
 
 assert.match(clientSource, /--app=/, 'installed launcher must open the web app in app-window mode');
-assert.match(clientSource, /GetLaunchUrl/, 'small fallback launcher must prefer a bundled local index.html when used');
+assert.match(clientSource, /GetLaunchUrl/, 'small fallback launcher must resolve the client launch URL through one helper');
+assert.doesNotMatch(clientSource, /new Uri\(localIndex\)\.AbsoluteUri/, 'small fallback launcher must not use bundled local HTML as the default login surface');
 assert.match(clientSource, /https:\/\/schoolsystem\.com\.cn/, 'installed launcher must target the production site');
 
 console.log('Windows installer contract verified.');

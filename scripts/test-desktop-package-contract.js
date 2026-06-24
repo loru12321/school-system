@@ -14,8 +14,9 @@ assert.ok(main.includes('contextIsolation: true'), 'renderer must use context is
 assert.ok(main.includes('nodeIntegration: false'), 'renderer must not expose Node.js');
 assert.ok(main.includes('sandbox: true'), 'renderer must use the Chromium sandbox');
 assert.ok(main.includes('https://schoolsystem.com.cn'), 'desktop shell must use the production origin');
-assert.ok(main.includes('LOCAL_APP_ENTRY'), 'desktop shell must prefer bundled local app resources');
-assert.ok(main.includes("loadFile(LOCAL_APP_ENTRY)"), 'desktop shell must load the bundled local app before falling back online');
+assert.ok(main.includes('LOCAL_APP_ENTRY'), 'desktop shell should keep the bundled app path available for package contract checks');
+assert.ok(main.includes("loadURL(PRODUCTION_URL)"), 'desktop shell must load the production origin before any local fallback');
+assert.ok(!main.includes("loadFile(LOCAL_APP_ENTRY)"), 'desktop shell must not use the bundled local app as the default login surface');
 assert.ok(main.includes('setWindowOpenHandler'), 'new windows must be intercepted');
 assert.ok(main.includes('will-navigate'), 'top-level navigation must be allowlisted');
 assert.ok(main.includes('shell.openExternal'), 'approved release links should open outside the app');

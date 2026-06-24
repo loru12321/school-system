@@ -52,8 +52,6 @@ namespace SchoolSystemClient
 
         private static string GetLaunchUrl()
         {
-            var localIndex = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app", "index.html");
-            if (File.Exists(localIndex)) return new Uri(localIndex).AbsoluteUri;
             return AppUrl;
         }
 

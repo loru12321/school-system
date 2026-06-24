@@ -108,11 +108,7 @@ function createMainWindow() {
         mainWindow = null;
     });
 
-    if (require('node:fs').existsSync(LOCAL_APP_ENTRY)) {
-        mainWindow.loadFile(LOCAL_APP_ENTRY).catch(() => showOfflineFallback());
-    } else {
-        mainWindow.loadURL(PRODUCTION_URL).catch(() => showOfflineFallback());
-    }
+    mainWindow.loadURL(PRODUCTION_URL).catch(() => showOfflineFallback());
     return mainWindow;
 }
 
