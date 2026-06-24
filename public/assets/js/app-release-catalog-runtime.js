@@ -201,6 +201,53 @@
     root.setTimeout(function () { root.URL.revokeObjectURL(objectUrl); }, 60000);
   }
 
+  async function fetchProxiedDownload(entry, url) {
+    var response = await root.fetch(url.href, { cache: 'no-store', credentials: 'same-origin' });
+    if (!response.ok || !response.body) throw new Error('安装包下载失败');
+    var contentLength = Number(response.headers.get('Content-Length') || 0);
+    if (contentLength && contentLength !== entry.bytes) throw new Error('安装包长度不一致');
+    return response;
+  }
+
+  async function saveProxiedDownloadToFile(entry, url, anchor) {
+    var response = await fetchProxiedDownload(entry, url);
+    var handle = await root.showSaveFilePicker({
+      suggestedName: entry.filename,
+      types: [{ description: '安装包', accept: { [entry.contentType]: ['.' + entry.filename.split('.').pop()] } }]
+    });
+    var writable = await handle.createWritable();
+    var reader = response.body.getReader();
+    var total = 0;
+    try {
+      while (true) {
+        var result = await reader.read();
+        if (result.done) break;
+        total += result.value.byteLength;
+        await writable.write(result.value);
+        anchor.textContent = '正在下载 ' + Math.min(99, Math.floor(total * 100 / entry.bytes)) + '%';
+      }
+      if (total !== entry.bytes) throw new Error('安装包长度不一致');
+      await writable.close();
+    } catch (error) {
+      await reader.cancel().catch(function () {});
+      await writable.abort().catch(function () {});
+      throw error;
+    }
+  }
+
+  async function saveProxiedDownloadAsBlob(entry, url, anchor) {
+    var response = await fetchProxiedDownload(entry, url);
+    var bytes = await response.arrayBuffer();
+    if (bytes.byteLength !== entry.bytes) throw new Error('安装包长度不一致');
+    anchor.textContent = '正在下载 100%';
+    var objectUrl = root.URL.createObjectURL(new root.Blob([bytes], { type: entry.contentType }));
+    var link = root.document.createElement('a');
+    link.href = objectUrl;
+    link.download = entry.filename;
+    link.click();
+    root.setTimeout(function () { root.URL.revokeObjectURL(objectUrl); }, 60000);
+  }
+
   async function handleChunkDownload(event) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     var anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
@@ -220,11 +267,12 @@
       var filename = decodeURIComponent(url.pathname.split('/').pop());
       var entry = await loadChunkDelivery(filename);
       if (hasExternalChunks(entry)) {
-        root.location.href = anchor.href;
-        return;
+        if (typeof root.showSaveFilePicker === 'function') await saveProxiedDownloadToFile(entry, url, anchor);
+        else await saveProxiedDownloadAsBlob(entry, url, anchor);
+      } else {
+        if (typeof root.showSaveFilePicker === 'function') await saveChunksToFile(entry, anchor);
+        else await saveChunksAsBlob(entry, anchor);
       }
-      if (typeof root.showSaveFilePicker === 'function') await saveChunksToFile(entry, anchor);
-      else await saveChunksAsBlob(entry, anchor);
       anchor.textContent = '下载完成';
     } catch (error) {
       anchor.innerHTML = originalHtml;

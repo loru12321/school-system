@@ -150,7 +150,8 @@
     "test:calculation-snapshot": "node scripts/test-calculation-snapshot.js",
     "test:calculation-snapshot:local": "node -e \"process.env.SMOKE_SCRIPT='./test-calculation-snapshot.js'; require('./scripts/run-local-smoke.js')\"",
     "release:verify-assets": "node scripts/verify-release-assets.mjs",
-    "verify:prod-minimal": "node scripts/verify-production-minimal.mjs"
+    "verify:prod-minimal": "node scripts/verify-production-minimal.mjs",
+    "verify:windows-client-release": "node scripts/verify-windows-client-release.mjs"
   },
   "build": {
     "win": {

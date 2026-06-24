@@ -11,7 +11,9 @@ assert.match(source, /download-map\.json/, 'catalog runtime should use the first
 assert.match(source, /showSaveFilePicker/, 'catalog runtime should stream large packages to disk when supported');
 assert.match(source, /saveChunksAsBlob/, 'catalog runtime should retain a browser fallback');
 assert.match(source, /api\\.github\\.com/, 'catalog runtime should recognize trusted GitHub release chunks');
-assert.match(source, /hasExternalChunks/, 'catalog runtime should hand external chunks back to the same-origin worker download');
+assert.match(source, /hasExternalChunks/, 'catalog runtime should detect external chunks');
+assert.match(source, /saveProxiedDownloadToFile/, 'catalog runtime should save proxied external chunks without leaving the app');
+assert.doesNotMatch(source, /location\.href\s*=\s*anchor\.href/, 'download center should not navigate away from the app while downloading');
 const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../public/releases/release-manifest.json'), 'utf8'));
 const html = fs.readFileSync(path.resolve(__dirname, '../src/index.html'), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
