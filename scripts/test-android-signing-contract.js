@@ -41,7 +41,7 @@ assert.match(gitignore, /^\*\.jks$/m, 'root ignore rules should exclude JKS file
 
 const manifestPath = path.join(root, 'public', 'releases', 'release-manifest.json');
 const releaseManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-const currentRelease = releaseManifest.releases.find((release) => release.releaseTag === 'beta-20260624-7e19d7d');
+const currentRelease = releaseManifest.releases[0];
 assert.ok(currentRelease, 'public release manifest should include the current Android package');
 const androidAsset = currentRelease.platforms.android;
 const apkPath = path.join(root, 'public', 'downloads', androidAsset.assetName);

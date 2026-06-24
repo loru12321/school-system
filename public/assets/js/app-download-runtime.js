@@ -15,7 +15,7 @@
 
     const DEFAULT_BUILD_INFO = {
         shared: {
-            releaseTag: 'beta-20260624-7e19d7d',
+            releaseTag: 'beta-20260624-161180a',
             releaseDate: '2026-06-22'
         },
         web: {
@@ -44,8 +44,8 @@
             badge: '手机 / 平板',
             icon: 'ti-brand-android',
             accent: '#22c55e',
-            url: './downloads/school-system-android-beta-20260624-7e19d7d.apk',
-            fileName: 'school-system-android-beta-20260624-7e19d7d.apk',
+            url: './downloads/school-system-android-beta-20260624-161180a.apk',
+            fileName: 'school-system-android-beta-20260624-161180a.apk',
             heroTitle: '安卓包与桌面端统一下载',
             heroCopy: '登录后可继续查看关于与更新；登录前也可以在这里直接下载安卓 APK 或 Windows 应用包。',
             summary: '当前会根据所选平台切换下载链接，历史更新记录已清空，后续新文件从这里开始记录。',
@@ -106,8 +106,8 @@
             badge: 'Windows 10 / 11',
             icon: 'ti-brand-windows',
             accent: '#60a5fa',
-            url: './downloads/school-system-windows-beta-20260624-7e19d7d.exe',
-            fileName: 'school-system-windows-beta-20260624-7e19d7d.exe',
+            url: './downloads/school-system-windows-beta-20260624-161180a.exe',
+            fileName: 'school-system-windows-beta-20260624-161180a.exe',
             heroTitle: 'Windows 本地安装包与安卓 APK 统一下载',
             heroCopy: 'Windows 提供可一步步安装到本机的安装向导 EXE；Android 提供可在设备上直接安装的 APK，二者都与网页端共用当前系统版本。',
             summary: '当前选中 Windows 本地安装包，会优先展示安装向导下载、安装步骤和更新状态。',

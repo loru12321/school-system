@@ -1920,7 +1920,7 @@ var Auth = {
     },
 
     getPublicApkDownloadFileName: function (url = this.getPublicApkDownloadUrl()) {
-        return window.LoginDownloadRuntime?.getFileName?.('android', url) || 'school-system-android-beta-20260624-7e19d7d.apk';
+        return window.LoginDownloadRuntime?.getFileName?.('android', url) || 'school-system-android-beta-20260624-161180a.apk';
     },
 
     getPublicDesktopDownloadUrl: function () {
@@ -1928,7 +1928,7 @@ var Auth = {
     },
 
     getPublicDesktopDownloadFileName: function (url = this.getPublicDesktopDownloadUrl()) {
-        return window.LoginDownloadRuntime?.getFileName?.('desktop', url) || 'school-system-windows-beta-20260624-7e19d7d.exe';
+        return window.LoginDownloadRuntime?.getFileName?.('desktop', url) || 'school-system-windows-beta-20260624-161180a.exe';
     },
 
     syncPublicDownloadLinks: function () {

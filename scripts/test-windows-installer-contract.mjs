@@ -8,9 +8,9 @@ import { execFileSync } from 'node:child_process';
 const root = path.resolve(import.meta.dirname, '..');
 const installerSource = await readFile(path.join(root, 'desktop/windows-client/SchoolSystemInstaller.cs'), 'utf8');
 const clientSource = await readFile(path.join(root, 'desktop/windows-client/SchoolSystemClient.cs'), 'utf8');
-const exePath = path.join(root, 'public/downloads/school-system-windows-beta-20260624-7e19d7d.exe');
 const manifest = JSON.parse(await readFile(path.join(root, 'public/releases/release-manifest.json'), 'utf8'));
 const windowsAsset = manifest.releases[0].platforms.windows;
+const exePath = path.join(root, 'public/downloads', windowsAsset.assetName);
 const requireLocalReleaseAssets = process.env.REQUIRE_LOCAL_RELEASE_ASSETS === 'true';
 const hasLocalInstaller = existsSync(exePath);
 
