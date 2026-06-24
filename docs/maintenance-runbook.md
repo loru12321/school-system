@@ -61,7 +61,7 @@ npm run check:release-fast
 
 Good P2 work should make the next P0 or P1 patch easier to validate.
 
-Legacy operations scripts live in `scripts/legacy/`. The recommended release path is Cloudflare-only: `npm run build`, `npx wrangler deploy`, then `npm run verify:prod-minimal`.
+Legacy operations scripts live in `scripts/legacy/`. The recommended release path is Cloudflare-only: `npm run deploy:cloudflare:verified`. The GitHub Actions `Deploy Cloudflare` workflow follows the same order: build, fast release guards, `npx wrangler deploy`, then `npm run smoke:prod-minimal`.
 
 ## Release Checklist
 
@@ -69,8 +69,8 @@ Legacy operations scripts live in `scripts/legacy/`. The recommended release pat
 2. Run `npm run check:release-fast`.
 3. If copy, metadata, or visible report text changed, run `npm run test:ui-copy-integrity`.
 4. Commit and push `main`.
-5. Deploy with `npx wrangler deploy`.
-6. Verify production:
+5. Deploy and verify with `npm run deploy:cloudflare:verified`.
+6. If deploying manually, verify production:
 
 ```bash
 npm run verify:prod-minimal

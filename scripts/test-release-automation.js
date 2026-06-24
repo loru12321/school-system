@@ -19,6 +19,7 @@ function checkSyntax(relativePath) {
 const packageJson = JSON.parse(read('package.json'));
 const scripts = packageJson.scripts || {};
 const releaseWorkflow = read('.github/workflows/release-apps.yml');
+const deployWorkflow = read('.github/workflows/deploy-cloudflare.yml');
 const cleanupWorkflowPath = path.join(root, '.github/workflows/cleanup-beta-releases.yml');
 assert.ok(fs.existsSync(cleanupWorkflowPath), 'beta cleanup workflow should exist');
 const cleanupWorkflow = fs.readFileSync(cleanupWorkflowPath, 'utf8');
@@ -31,6 +32,7 @@ assert.strictEqual(scripts['release:prepare-assets'], 'node scripts/prepare-gith
 assert.strictEqual(scripts['performance:record'], 'node scripts/record-performance-trend.mjs', 'performance trend script should stay stable');
 assert.strictEqual(scripts['test:app-download-clicks'], 'node scripts/test-app-download-clicks.js', 'download click smoke test should be exposed');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-automation'), 'fast release check should include release automation checks');
+assert.strictEqual(scripts['deploy:cloudflare:verified'], 'npm run build && npm run check:release-fast && npx wrangler deploy && npm run smoke:prod-minimal', 'verified Cloudflare deploy script should build, guard, deploy, and smoke production');
 
 assert.ok(releaseWorkflow.includes('npm run build'), 'release workflow should build dist before packaging app assets');
 assert.ok(releaseWorkflow.includes('npm run test:app-download-runtime-hygiene'), 'release workflow should guard download runtime hygiene');
@@ -48,6 +50,13 @@ assert.ok((releaseWorkflow.match(/node scripts\/resolve-app-version\.mjs/g) || [
 assert.ok(releaseWorkflow.includes('assembleRelease'), 'stable release should build an Android APK');
 assert.ok(releaseWorkflow.includes('CODE_SIGNING_ALLOWED=NO'), 'stable iOS validation should not require Apple credentials');
 assert.ok(!releaseWorkflow.includes('--prerelease'), 'stable releases must never be marked prerelease');
+assert.ok(deployWorkflow.includes('workflow_dispatch:'), 'Cloudflare deployment should be manually triggerable');
+assert.ok(deployWorkflow.includes('npm run build'), 'Cloudflare deployment should build dist before deploy');
+assert.ok(deployWorkflow.includes('npm run check:release-fast'), 'Cloudflare deployment should run fast release guards before deploy');
+assert.ok(deployWorkflow.includes('npx wrangler deploy'), 'Cloudflare deployment should use the canonical Wrangler deploy command');
+assert.ok(deployWorkflow.includes('CLOUDFLARE_API_TOKEN'), 'Cloudflare deployment should use a GitHub secret token');
+assert.ok(deployWorkflow.includes('npm run smoke:prod-minimal'), 'Cloudflare deployment should run production smoke after deploy');
+assert.ok(deployWorkflow.indexOf('npx wrangler deploy') < deployWorkflow.indexOf('npm run smoke:prod-minimal'), 'production smoke should run after Wrangler deploy');
 assert.ok(cleanupWorkflow.includes('schedule:'), 'beta cleanup should run on a schedule');
 assert.ok(cleanupWorkflow.includes('workflow_dispatch:'), 'beta cleanup should support manual execution');
 assert.ok(cleanupWorkflow.includes('90 days ago'), 'beta retention should be exactly 90 days');

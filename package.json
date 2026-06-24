@@ -113,6 +113,7 @@
     "validate": "npm-run-all --parallel validate:hygiene validate:state validate:data validate:build && npm run build && npm-run-all --parallel test:ui-copy-integrity test:build-size-budget test:calculation-snapshot:local smoke:layout:local",
     "push": "powershell -ExecutionPolicy Bypass -File ./deploy.ps1",
     "check:cloudflare": "npx wrangler deploy --dry-run",
+    "deploy:cloudflare:verified": "npm run build && npm run check:release-fast && npx wrangler deploy && npm run smoke:prod-minimal",
     "check:p0": "npm run build && npm run check:release-data-safe && npm run test:ui-copy-integrity",
     "precheck:p1": "npm run check:responsive-login",
     "check:p1": "npm run test:cloud-archive-visibility && npm run test:html-hygiene && npm run test:service-worker-contract && npm run test:release-surface && npm run test:runtime-hygiene && npm run test:css-hygiene && npm run check:release-fast",
