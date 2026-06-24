@@ -2,6 +2,7 @@ const RELEASE_MAP_PATH = '/releases/download-map.json';
 const DOWNLOAD_PREFIX = '/downloads/';
 const CHUNK_PATTERN = /^packages\/[A-Za-z0-9._-]+\/(windows|android)\/part-\d{4}$/;
 const TRUSTED_EXTERNAL_CHUNK_PATTERN = /^https:\/\/api\.github\.com\/repos\/hka123321\/school-system\/releases\/assets\/\d+$/;
+const TRUSTED_GITHUB_ASSET_API_PATTERN = TRUSTED_EXTERNAL_CHUNK_PATTERN;
 const FILENAME_PATTERN = /^school-system-(windows|android)-[A-Za-z0-9._-]+\.(exe|apk)$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const CONTENT_TYPES = new Set([
@@ -35,24 +36,30 @@ function parseFilename(request) {
 }
 
 function validateDownloadEntry(entry, filename) {
-  return !!entry
-    && entry.filename === filename
-    && CONTENT_TYPES.has(entry.contentType)
-    && Number.isSafeInteger(entry.bytes)
-    && entry.bytes > 0
-    && SHA256_PATTERN.test(entry.sha256)
-    && Array.isArray(entry.chunks)
+  const hasCompleteAsset = isValidGithubAssetApiUrl(entry?.fullAssetApiUrl);
+  const hasValidChunks = Array.isArray(entry?.chunks)
     && entry.chunks.length > 0
     && entry.chunks.every((chunk) => isValidChunkReference(chunk))
     && Array.isArray(entry.chunkBytes)
     && entry.chunkBytes.length === entry.chunks.length
     && entry.chunkBytes.every((bytes) => Number.isSafeInteger(bytes) && bytes > 0)
     && entry.chunkBytes.reduce((sum, bytes) => sum + bytes, 0) === entry.bytes;
+  return !!entry
+    && entry.filename === filename
+    && CONTENT_TYPES.has(entry.contentType)
+    && Number.isSafeInteger(entry.bytes)
+    && entry.bytes > 0
+    && SHA256_PATTERN.test(entry.sha256)
+    && (hasCompleteAsset || hasValidChunks);
 }
 
 function isValidChunkReference(chunk) {
   return typeof chunk === 'string'
     && (CHUNK_PATTERN.test(chunk) || TRUSTED_EXTERNAL_CHUNK_PATTERN.test(chunk));
+}
+
+function isValidGithubAssetApiUrl(url) {
+  return typeof url === 'string' && TRUSTED_GITHUB_ASSET_API_PATTERN.test(url);
 }
 
 function buildChunkRequest(request, env, chunk, method = 'GET') {
@@ -84,6 +91,26 @@ function envGithubReleaseToken(env) {
 function fetchChunk(request, env, chunk, method = 'GET') {
   const target = buildChunkRequest(request, env, chunk, method);
   return target.external ? fetch(target.request) : env.ASSETS.fetch(target.request);
+}
+
+async function resolveGithubAssetRedirect(env, assetApiUrl) {
+  if (!isValidGithubAssetApiUrl(assetApiUrl)) return '';
+  const token = envGithubReleaseToken(env);
+  if (!token) return '';
+  const response = await fetch(assetApiUrl, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/octet-stream',
+      Authorization: `Bearer ${token}`,
+      'User-Agent': 'school-system-release-proxy'
+    },
+    redirect: 'manual'
+  });
+  if (response.status >= 300 && response.status < 400) {
+    const location = response.headers.get('Location') || response.headers.get('location') || '';
+    if (/^https:\/\/release-assets\.githubusercontent\.com\//.test(location)) return location;
+  }
+  return '';
 }
 
 async function loadDownloadEntry(request, env, filename) {
@@ -175,9 +202,17 @@ export async function handleReleaseDownload(request, env) {
   const loaded = await loadDownloadEntry(request, env, filename);
   if (loaded.fallback) return null;
   if (loaded.error) return loaded.error;
-  const chunkUrls = await preflightChunks(request, env, loaded.entry);
-  if (!chunkUrls) return plainResponse(503, 'Release asset unavailable');
   const headers = buildDownloadHeaders(loaded.entry);
   if (request.method === 'HEAD') return new Response(null, { status: 200, headers });
+  if (loaded.entry.fullAssetApiUrl) {
+    const location = await resolveGithubAssetRedirect(env, loaded.entry.fullAssetApiUrl);
+    if (!location) return plainResponse(503, 'Release asset unavailable');
+    headers.delete('Content-Length');
+    headers.set('Location', location);
+    headers.set('Cache-Control', 'no-store');
+    return new Response(null, { status: 302, headers });
+  }
+  const chunkUrls = await preflightChunks(request, env, loaded.entry);
+  if (!chunkUrls) return plainResponse(503, 'Release asset unavailable');
   return new Response(streamChunks(request, env, chunkUrls), { status: 200, headers });
 }

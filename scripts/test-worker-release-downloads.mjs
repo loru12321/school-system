@@ -20,6 +20,7 @@ const externalMap = {
     contentType: 'application/vnd.microsoft.portable-executable',
     bytes: 6,
     sha256: 'b'.repeat(64),
+    fullAssetApiUrl: 'https://api.github.com/repos/hka123321/school-system/releases/assets/457116887',
     chunks: [
       'https://api.github.com/repos/hka123321/school-system/releases/assets/457054996',
       'https://api.github.com/repos/hka123321/school-system/releases/assets/457055072'
@@ -82,10 +83,19 @@ assert.match(getResponse.headers.get('Content-Disposition'), /attachment/);
 assert.equal(getResponse.headers.get('X-Content-Type-Options'), 'nosniff');
 
 const originalFetch = globalThis.fetch;
-globalThis.fetch = async (request) => {
-  const url = new URL(request.url);
+globalThis.fetch = async (request, init = {}) => {
+  const url = new URL(typeof request === 'string' ? request : request.url);
+  const headers = new Headers((request && request.headers) || init.headers || {});
   assert.equal(url.hostname, 'api.github.com');
-  assert.equal(request.headers.get('Authorization'), 'Bearer test-token');
+  assert.equal(headers.get('Authorization'), 'Bearer test-token');
+  if (url.pathname.endsWith('457116887')) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: 'https://release-assets.githubusercontent.com/github-production-release-asset/test'
+      }
+    });
+  }
   const body = url.pathname.endsWith('457054996') ? 'abc' : 'def';
   return request.method === 'HEAD'
     ? new Response(null, { status: 200 })
@@ -96,8 +106,9 @@ try {
   const externalEnv = createExternalEnv();
   externalEnv.GITHUB_RELEASE_TOKEN = 'test-token';
   const externalResponse = await handleReleaseDownload(new Request(externalRequestUrl), externalEnv);
-  assert.equal(externalResponse.status, 200);
-  assert.equal(await externalResponse.text(), 'abcdef');
+  assert.equal(externalResponse.status, 302);
+  assert.match(externalResponse.headers.get('Location'), /^https:\/\/release-assets\.githubusercontent\.com\//);
+  assert.equal(externalResponse.headers.get('Content-Length'), null);
 } finally {
   globalThis.fetch = originalFetch;
 }
