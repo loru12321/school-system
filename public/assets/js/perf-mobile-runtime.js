@@ -57,7 +57,7 @@ window.PerformanceMonitor = {
 };
 
 window.MemoryCleaner = {
-    clean: function () {
+    clean: async function () {
         console.log('🧹 开始清理内存...');
 
         if (window.Chart && Chart.instances) {
@@ -70,7 +70,10 @@ window.MemoryCleaner = {
         }
 
         console.log('💡 建议: 刷新页面以完全释放内存');
-        if (confirm('是否刷新页面以完全清理内存?')) {
+        const confirmed = window.UI && typeof UI.confirm === 'function'
+            ? await UI.confirm('是否刷新页面以完全清理内存?', { title: '清理内存', confirmText: '刷新页面' })
+            : window.confirm('是否刷新页面以完全清理内存?');
+        if (confirmed) {
             location.reload();
         }
     }
@@ -179,7 +182,8 @@ const MobDashboardMgr = {
 
     showToast: function (msg) {
         if (window.showToast) window.showToast(msg);
-        else alert(msg);
+        else if (window.UI && typeof UI.alert === 'function') UI.alert(msg);
+        else window.alert(msg);
     }
 };
 

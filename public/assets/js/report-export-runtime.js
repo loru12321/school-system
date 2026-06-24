@@ -16,6 +16,18 @@ function printSingleReport() {
     setTimeout(() => { document.body.removeChild(printContainer); document.head.removeChild(style); }, 500);
 }
 
+async function confirmReportExport(message) {
+    if (window.UI && typeof UI.confirm === 'function') {
+        return UI.confirm(message, {
+            title: '确认批量打印',
+            confirmText: '继续',
+            cancelText: '取消',
+            icon: 'question'
+        });
+    }
+    return window.confirm(String(message || ''));
+}
+
 async function downloadSingleReportPDF() {
     const reportContent = document.getElementById('report-card-capture-area');
     if ((!window.jspdf || !window.jspdf.jsPDF || typeof html2canvas === 'undefined') && typeof window.ensurePdfExportVendorsLoaded === 'function') {
@@ -91,7 +103,7 @@ async function batchGeneratePDF() {
             cancelButtonText: '取消'
         });
         if (!res.isConfirmed) return;
-    } else if (!confirm(`即将生成 ${students.length} 份 A4 报告。\n\n系统将调用浏览器打印功能，请在打印预览页选择：\n1. 目标打印机：另存为 PDF\n2. 更多设置 -> 勾选“背景图形”\n\n确定继续吗？`)) return;
+    } else if (!await confirmReportExport(`即将生成 ${students.length} 份 A4 报告。\n\n系统将调用浏览器打印功能，请在打印预览页选择：\n1. 目标打印机：另存为 PDF\n2. 更多设置 -> 勾选“背景图形”\n\n确定继续吗？`)) return;
     const container = document.getElementById('batch-print-container'); container.innerHTML = ''; let batchHtml = '';
 
     // 清除主报告区，避免 #radarChart 重复 ID 导致 Chart.js 找错画布

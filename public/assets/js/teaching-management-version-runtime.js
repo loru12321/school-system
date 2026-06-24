@@ -3,6 +3,20 @@ const TM_VERSION_FRESH_MS = 45 * 1000;
 const TM_VERSION_STALE_MS = 10 * 60 * 1000;
 const TM_VERSION_STORAGE_KEY = 'schoolSystemTeachingVersionCacheV1';
 
+async function tmVersionConfirm(message, options = {}) {
+    if (window.UI && typeof UI.confirm === 'function') {
+        return UI.confirm(message, options);
+    }
+    return window.confirm(String(message || ''));
+}
+
+async function tmVersionPrompt(message, defaultValue = '', options = {}) {
+    if (window.UI && typeof UI.prompt === 'function') {
+        return UI.prompt(message, defaultValue, options);
+    }
+    return window.prompt(String(message || ''), String(defaultValue || ''));
+}
+
 function tmNormalizeVersionSnapshot(value, cacheKey, maxAgeMs = TM_VERSION_STALE_MS) {
     if (!value || typeof value !== 'object') return null;
     if (String(value.key || '') !== String(cacheKey || '')) return null;
@@ -628,7 +642,12 @@ async function tmDeleteVersion(versionId) {
         });
         confirmed = !!result.isConfirmed;
     } else {
-        confirmed = window.confirm(`确定删除版本“${versionName}”吗？\n${stableHint}`);
+        confirmed = await tmVersionConfirm(`确定删除版本“${versionName}”吗？\n${stableHint}`, {
+            title: '删除版本归档',
+            confirmText: '确认删除',
+            cancelText: '取消',
+            icon: 'warning'
+        });
     }
     if (!confirmed) return;
 
@@ -894,7 +913,9 @@ async function tmCreateCurrentVersionSnapshot() {
         if (!result.isConfirmed) return;
         versionName = String(result.value || '').trim();
     } else {
-        versionName = String(prompt('请输入版本名称', defaultName) || '').trim();
+        versionName = String(await tmVersionPrompt('请输入版本名称', defaultName, {
+            title: '生成当前版本'
+        }) || '').trim();
     }
     if (!versionName) return;
 

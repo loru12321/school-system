@@ -27,6 +27,15 @@ function getTeacherTermOptions() {
     return options;
 }
 
+async function promptTeacherTermId(list, defaultValue) {
+    if (window.UI && typeof UI.prompt === 'function') {
+        return UI.prompt(`检测到任课表可同步，请输入学期ID：\n${list}`, defaultValue, {
+            title: '同步任课表'
+        });
+    }
+    return window.prompt(`检测到任课表可同步，请输入学期ID：\n${list}`, defaultValue);
+}
+
 function parseTeacherTermApproxMs(termId) {
     if (!termId) return 0;
     const m = String(termId).match(/(\d{4})-(\d{4})_(.+?)(?:_|$)/);
@@ -195,8 +204,9 @@ function promptTeacherSyncIfNeeded() {
 
     if (typeof Swal === 'undefined') {
         const list = opts.map(o => o.value).join('\n');
-        const picked = prompt(`检测到任课表可同步，请输入学期ID：\n${list}`, defaultValue);
-        if (picked) doSync(picked);
+        promptTeacherTermId(list, defaultValue).then((picked) => {
+            if (picked) doSync(picked);
+        });
         sessionStorage.setItem('TEACHER_SYNC_PROMPT_SHOWN', '1');
         return true;
     }

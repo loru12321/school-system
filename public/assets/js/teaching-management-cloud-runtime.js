@@ -3,6 +3,13 @@ const TM_CLOUD_OPS_FRESH_MS = 90 * 1000;
 const TM_CLOUD_OPS_STALE_MS = 10 * 60 * 1000;
 const TM_CLOUD_OPS_STORAGE_KEY = 'schoolSystemTeachingCloudOpsCacheV2';
 
+async function tmPromptInput(message, defaultValue = '', options = {}) {
+    if (window.UI && typeof UI.prompt === 'function') {
+        return UI.prompt(message, defaultValue, options);
+    }
+    return window.prompt(String(message || ''), String(defaultValue || ''));
+}
+
 function tmGetCurrentGatewayScope() {
     const school = tmGetSelectDisplayValue(
         ['teacherCompareSchool', 'mySchoolSelect', 'studentSchoolSelect'],
@@ -743,7 +750,11 @@ async function tmPromptRectifyProgress(taskId) {
         if (!result.isConfirmed) return;
         nextProgress = Number(result.value ?? nextProgress);
     } else {
-        const raw = prompt('请输入整改进度（0-100）', String(nextProgress));
+        const raw = await tmPromptInput('请输入整改进度（0-100）', String(nextProgress), {
+            title: '更新整改进度',
+            input: 'number',
+            inputAttributes: { min: 0, max: 100, step: 5 }
+        });
         if (raw === null) return;
         nextProgress = Number(raw);
     }
@@ -791,9 +802,14 @@ async function tmCreateManualRectifyTask() {
         if (!planResult.isConfirmed) return;
         actionPlan = String(planResult.value || '').trim();
     } else {
-        title = String(prompt('请输入整改任务标题') || '').trim();
+        title = String(await tmPromptInput('请输入整改任务标题', '', {
+            title: '新建整改任务'
+        }) || '').trim();
         if (!title) return;
-        actionPlan = String(prompt('请输入整改计划', '请结合当前问题制定整改措施，明确责任人、推进节奏和复盘时间。') || '').trim();
+        actionPlan = String(await tmPromptInput('请输入整改计划', '请结合当前问题制定整改措施，明确责任人、推进节奏和复盘时间。', {
+            title: '整改计划',
+            input: 'textarea'
+        }) || '').trim();
     }
 
     const scope = tmGetCurrentGatewayScope();

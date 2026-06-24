@@ -597,8 +597,15 @@
         persistAndCalculate(false);
     }
 
-    function resetAllSettings() {
-        if (!window.confirm('恢复默认设置会清空当前考试日期、假期设置和法定节假日缓存，是否继续？')) return;
+    async function resetAllSettings() {
+        const confirmed = global.UI && typeof global.UI.confirm === 'function'
+            ? await global.UI.confirm('恢复默认设置会清空当前考试日期、假期设置和法定节假日缓存，是否继续？', {
+                title: '恢复默认设置',
+                confirmText: '恢复默认',
+                icon: 'warning'
+            })
+            : window.confirm('恢复默认设置会清空当前考试日期、假期设置和法定节假日缓存，是否继续？');
+        if (!confirmed) return;
         state.config = getDefaultConfig();
         persistCurrentConfig();
         renderForm();
