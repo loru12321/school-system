@@ -88,8 +88,9 @@ assert.ok(worker.includes("return new Response('Not Found', { status: 404 });"),
 assert.ok(worker.includes('buildWorkerErrorBody(error, env)'), 'worker crash responses should use sanitized error bodies');
 assert.ok(worker.includes('WORKER_DEBUG_ERRORS'), 'worker crash stack traces should require an explicit debug flag');
 assert.ok(!worker.includes("stack: error instanceof Error ? error.stack : ''"), 'worker must not expose stack traces by default');
-assert.ok(worker.includes("headers.set('Cache-Control', mergeCacheControl"), 'HTML responses should preserve and extend cache control');
-assert.ok(worker.includes("'public', 'no-transform'"), 'HTML response protection should include no-transform');
+assert.ok(worker.includes('function getHtmlShellCacheControl()'), 'HTML shell cache policy should be centralized');
+assert.ok(worker.includes("return 'no-cache, max-age=0, must-revalidate, no-transform';"), 'HTML responses should force strict revalidation');
+assert.ok(worker.includes("headers.set('Cache-Control', getHtmlShellCacheControl())"), 'HTML responses should use the centralized shell cache policy');
 assert.ok(worker.includes("return 'public, max-age=31536000, immutable';"), 'versioned static assets should get immutable caching');
 assert.ok(worker.includes("return 'public, max-age=3600, stale-while-revalidate=86400';"), 'unversioned static assets should get short browser caching');
 assert.ok(worker.includes("pathname.startsWith('/downloads/')"), 'hosted downloads should have an explicit cache policy');

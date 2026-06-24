@@ -455,20 +455,6 @@ async function readJsonBody(request) {
   }
 }
 
-function mergeCacheControl(currentValue, directives) {
-  const current = String(currentValue || '')
-    .split(',')
-    .map((part) => String(part || '').trim())
-    .filter(Boolean);
-  const next = [...current];
-  directives.forEach((directive) => {
-    if (!next.some((item) => item.toLowerCase() === directive.toLowerCase())) {
-      next.push(directive);
-    }
-  });
-  return next.join(', ');
-}
-
 function shouldProtectHtmlResponse(request, response) {
   if (!response || !response.ok) return false;
   const method = String(request.method || 'GET').toUpperCase();
@@ -477,10 +463,14 @@ function shouldProtectHtmlResponse(request, response) {
   return contentType.includes('text/html');
 }
 
+function getHtmlShellCacheControl() {
+  return 'no-cache, max-age=0, must-revalidate, no-transform';
+}
+
 function protectHtmlResponse(request, response) {
   if (!shouldProtectHtmlResponse(request, response)) return response;
   const headers = new Headers(response.headers);
-  headers.set('Cache-Control', mergeCacheControl(headers.get('Cache-Control'), ['public', 'no-transform']));
+  headers.set('Cache-Control', getHtmlShellCacheControl());
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

@@ -47,7 +47,7 @@ const releaseWorkflow = read('.github/workflows/release-apps.yml');
 const deployWorkflow = read('.github/workflows/deploy-cloudflare.yml');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
 const wrangler = parseJson('wrangler.jsonc');
-const headers = read('public/_headers');
+const headers = read('public/_headers').replace(/\r\n/g, '\n');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
 const appRuntime = read('public/assets/js/app.js');
 const appDownloadRuntime = read('public/assets/js/app-download-runtime.js');
@@ -98,6 +98,8 @@ const guardedItems = [
   () => assert.strictEqual(wrangler.main, 'src/worker-dummy.js', 'Worker entrypoint should stay explicit'),
   () => assert.strictEqual(wrangler.assets.directory, './dist', 'Cloudflare should deploy dist assets'),
   () => assertIncludes(headers, 'Content-Type: text/html; charset=utf-8', 'HTML charset header should stay explicit'),
+  () => assertIncludes(headers, '/index.html\n  Content-Type: text/html; charset=utf-8\n  Cache-Control: no-cache, max-age=0, must-revalidate', 'index HTML should stay revalidation-friendly'),
+  () => assertIncludes(worker, "return 'no-cache, max-age=0, must-revalidate, no-transform';", 'Worker HTML shell should force strict revalidation'),
   () => assertIncludes(headers, '/downloads/*', 'download headers should stay configured'),
   () => assertIncludes(headers, '/sw.js', 'service worker header should stay configured'),
   () => assertIncludes(releaseSurface, 'dist/index.html', 'release surface should guard dist HTML'),
