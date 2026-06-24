@@ -555,8 +555,11 @@ assert.ok(bootRuntime.includes('function repairAuthenticatedShellVisibility()'),
 assert.ok(bootRuntime.includes("overlay.style.setProperty('display', 'none', 'important');"), 'boot login repair should force-hide the login overlay');
 assert.ok(bootRuntime.includes("app.classList.remove('hidden');"), 'boot login repair should force-show the authenticated app shell');
 assert.ok(bootRuntime.includes("app.style.setProperty('display', 'flex', 'important');"), 'boot login repair should override mobile hidden display rules');
-assert.ok(bootRuntime.includes('function dismissNonBlockingMobileSwal()'), 'mobile authenticated shell repair should dismiss non-blocking success dialogs');
 assert.ok(bootRuntime.includes('startAuthenticatedShellRepairWindow()'), 'mobile authenticated shell repair should keep correcting late login UI regressions');
+assert.ok(bootRuntime.includes("window.__BOOT_LOGIN_CLICKED__"), 'boot-runtime.js should replay login clicks made before boot handlers bind');
+assert.ok(bootRuntime.includes('if (cohortYear) await enterSelectedBootCohort(cohortYear);'), 'boot login should enter the selected cohort after animated school login');
+assert.ok(indexHtml.includes('type="button" class="advanced-submit login-clean-submit"'), 'login submit button should not default-submit before boot handlers bind');
+assert.ok(indexHtml.includes("window.__BOOT_LOGIN_CLICKED__=true"), 'login submit button should queue early clicks before boot runtime is ready');
 const authStateRuntime = fs.readFileSync(runtimePath, 'utf8');
 assert.ok(authStateRuntime.includes("root.getCurrentUser = runtime.getCurrentUser"), 'auth-state-runtime.js should expose legacy getCurrentUser for parallel mobile module boot');
 assert.ok(authStateRuntime.includes("root.setCurrentUser = runtime.setCurrentUser"), 'auth-state-runtime.js should expose legacy setCurrentUser for older modules');

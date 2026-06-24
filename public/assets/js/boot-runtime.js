@@ -1849,28 +1849,16 @@ function syncBootLoginOverlayState(visible) {
 }
 
 function finalizeBootLoginUi(portal = 'school') {
-    const activeAuth = window.Auth;
-    if (activeAuth && typeof activeAuth.syncLoginOverlayState === 'function') activeAuth.syncLoginOverlayState(false);
+    if (window.Auth && typeof window.Auth.syncLoginOverlayState === 'function') window.Auth.syncLoginOverlayState(false);
     else syncBootLoginOverlayState(false);
     setBootSubmitState({ busy: false, text: getPortalConfig(portal).submit });
     repairAuthenticatedShellVisibility();
-    [0,250,1000,3000,1e4,3e4].forEach((delay) => window.setTimeout(repairAuthenticatedShellVisibility, delay));
+    [250,1000,3000,1e4,3e4].forEach((delay) => window.setTimeout(repairAuthenticatedShellVisibility, delay));
     startAuthenticatedShellRepairWindow();
     window.setTimeout(() => {
-        try { window.ensureMobileManagerRuntimeLoaded?.(); } catch (_) { }
-        try { window.MobileQueryUI?.refresh?.(); } catch (_) { }
+        try { window.ensureMobileManagerRuntimeLoaded?.(); } catch (_) {}
+        try { window.MobileQueryUI?.refresh?.(); } catch (_) {}
     }, 0);
-}
-
-function dismissNonBlockingMobileSwal() {
-    if (!isRuntimeMobileViewport()) return false;
-    const container = document.querySelector('.swal2-container.swal2-backdrop-show');
-    if (!container) return false;
-    if (container.querySelector('input,textarea,select,.swal2-cancel,.swal2-deny')) return false;
-    if (/(安全|警告|失败|错误|确认|确定切换|请确认|未完成|必须|需要完成)/.test(String(container.innerText || ''))) return false;
-    if (window.Swal && typeof window.Swal.close === 'function') window.Swal.close();
-    else container.remove();
-    return true;
 }
 
 function repairAuthenticatedShellVisibility() {
@@ -1888,7 +1876,6 @@ function repairAuthenticatedShellVisibility() {
         app.style.setProperty('display', 'flex', 'important');
         app.setAttribute('aria-hidden', 'false');
     }
-    dismissNonBlockingMobileSwal();
     return true;
 }
 
@@ -2019,6 +2006,7 @@ const bootAuth = window.Auth || {
                             (async () => {
                                 await loadAppModules();
                                 await window.waitForAuthReady();
+                                if (cohortYear) await enterSelectedBootCohort(cohortYear);
                                 const loader = document.getElementById('global-loader');
                                 if (loader) {
                                     loader.style.opacity = '0';
@@ -2112,6 +2100,7 @@ function initBootAuthOnce() {
     window.__BOOT_AUTH_INIT_DONE__ = true;
     bindBootLoginActions();
     bootAuth.init();
+    if (window.__BOOT_LOGIN_CLICKED__) setTimeout(submitBootLogin);
 }
 
 if (document.readyState === 'loading') {

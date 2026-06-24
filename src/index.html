@@ -409,7 +409,7 @@
                         <div id="login-graduate-cohort-helper" class="login-graduate-cohort-helper">选择毕业届后，完成登录即可进入该届成绩档案。</div>
                     </div>
 
-                    <button id="login-submit-button" class="advanced-submit login-clean-submit" data-login-submit="1">进入学校工作台</button>
+                    <button id="login-submit-button" type="button" class="advanced-submit login-clean-submit" data-login-submit="1" onclick="window.__BOOT_LOGIN_CLICKED__=true;if(window.Auth&&typeof window.Auth.login==='function')window.Auth.login();return false;">进入学校工作台</button>
                     <div class="entrance-sound-panel" data-entrance-sound-panel="1" aria-label="入场音乐">
                         <div class="entrance-sound-panel__head">
                             <span>
