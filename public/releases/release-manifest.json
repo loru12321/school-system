@@ -3,36 +3,36 @@
   "releases": [
     {
       "schemaVersion": 1,
-      "releaseTag": "beta-20260621-9a362b3",
+      "releaseTag": "beta-20260624-7e19d7d",
       "channel": "beta",
-      "sourceSha": "9a362b38124ca5a210b4679e95c297ae7afa8f35",
-      "generatedAt": "2026-06-22T06:01:28.560Z",
-      "expiresAt": "2026-09-18T16:19:59.000Z",
+      "sourceSha": "7e19d7d3501b75017c761b9f88af3feddad95315",
+      "generatedAt": "2026-06-24T08:45:57.669Z",
+      "expiresAt": "2026-09-22T08:45:57.669Z",
       "releaseUrl": "",
       "platforms": {
         "windows": {
           "platform": "windows",
           "version": "1.0.2",
-          "buildNumber": "nsis-20260622-icon",
+          "buildNumber": "7e19d7d3501b",
           "status": "ready",
           "signed": "unsigned",
           "minimumOs": "Windows 10 22H2",
           "architectures": [
             "x64"
           ],
-          "assetName": "school-system-windows-beta-20260621-9a362b3.exe",
-          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-windows-beta-20260621-9a362b3.exe",
-          "bytes": 123711973,
+          "assetName": "school-system-windows-beta-20260624-7e19d7d.exe",
+          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-windows-beta-20260624-7e19d7d.exe",
+          "bytes": 117794422,
+          "sha256": "864877d81ac273c788c38692a33836d0debd2715aa1bf1cbfcbb851b3bd6cf0c",
           "notes": [
-            "Windows NSIS 本地安装器，内置 Electron 运行时、本地系统资源与校衡台图标，可按步骤选择安装目录，创建桌面/开始菜单快捷方式，并写入系统卸载入口。"
+            "NSIS 安装器，包含本地系统资源并写入系统卸载入口。"
           ],
-          "buildUrl": "https://schoolsystem.com.cn/",
-          "sha256": "3dbb73db6f9615f3fb9d10c52262a8f9611759faae736e85c4f1419c8f93c669"
+          "buildUrl": "https://schoolsystem.com.cn/"
         },
         "android": {
           "platform": "android",
           "version": "1.0.2",
-          "buildNumber": "3-local",
+          "buildNumber": "7e19d7d3501b",
           "status": "ready",
           "signed": "test-signed",
           "minimumOs": "Android 10",
@@ -41,19 +41,19 @@
             "armeabi-v7a",
             "x86_64"
           ],
-          "assetName": "school-system-android-beta-20260621-9a362b3.apk",
-          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-android-beta-20260621-9a362b3.apk",
-          "bytes": 29349489,
-          "sha256": "14cb89299fd27eb23e5056c0cac5eea09c9b8f5078dfdd1de2f24844e00e6ff3",
+          "assetName": "school-system-android-beta-20260624-7e19d7d.apk",
+          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-android-beta-20260624-7e19d7d.apk",
+          "bytes": 11802220,
+          "sha256": "3a8b82fce82a2302444dc55c4a2d61a86b2ea1a56d8ff0b94e18ea9dc0cdb0e4",
           "notes": [
-            "Android 本地安装 APK，内置 Capacitor 本地系统资源，已移除历史下载包和 release 分片资产，可直接在安卓设备安装。"
+            "Android APK 本地安装包，使用测试签名。"
           ],
           "buildUrl": "https://schoolsystem.com.cn/"
         },
         "ios": {
           "platform": "ios",
-          "version": "20260621-9a362b3",
-          "buildNumber": "9a362b38124c",
+          "version": "1.0.2",
+          "buildNumber": "7e19d7d3501b",
           "status": "awaiting-signing",
           "signed": false,
           "minimumOs": "iOS 16",

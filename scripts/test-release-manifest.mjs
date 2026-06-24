@@ -29,7 +29,7 @@ try {
   const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
   const androidGradle = fs.readFileSync(path.join(rootDir, 'android/app/build.gradle'), 'utf8');
   const publicCatalog = JSON.parse(fs.readFileSync(path.join(rootDir, 'public/releases/release-manifest.json'), 'utf8'));
-  const currentPublicRelease = publicCatalog.releases.find((release) => release.releaseTag === 'beta-20260621-9a362b3');
+  const currentPublicRelease = publicCatalog.releases.find((release) => release.releaseTag === 'beta-20260624-7e19d7d');
   assert.ok(currentPublicRelease, 'public catalog must include the current beta');
   assert.equal(currentPublicRelease.platforms.windows.version, packageJson.version, 'current Windows manifest version should match the system package version');
   assert.equal(currentPublicRelease.platforms.android.version, packageJson.version, 'current Android manifest version should match the system package version');

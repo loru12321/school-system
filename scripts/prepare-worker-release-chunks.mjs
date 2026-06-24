@@ -82,6 +82,12 @@ function validateReleaseIdentity(releaseTag, sourceSha) {
   if (!/^[0-9a-f]{40}$/.test(sourceSha)) throw new Error('source SHA is invalid');
 }
 
+function readPackageVersion() {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(repositoryRoot, 'package.json'), 'utf8'));
+  if (!packageJson.version) throw new Error('package.json version is required');
+  return String(packageJson.version);
+}
+
 function discoverInputs(inputDirectory) {
   const entries = fs.readdirSync(inputDirectory, { withFileTypes: true });
   if (entries.some((entry) => entry.isSymbolicLink())) throw new Error('release input directory contains a symbolic link');
@@ -155,7 +161,7 @@ export function prepareWorkerReleaseChunks(options = {}) {
   if (!Number.isFinite(generatedAt.getTime())) throw new Error('generatedAt is invalid');
   const generatedAtIso = generatedAt.toISOString();
   const buildNumber = sourceSha.slice(0, 12);
-  const version = releaseTag.replace(/^beta-/, '');
+  const version = readPackageVersion();
   const platforms = Object.fromEntries(downloads.map((download) => {
     const spec = PLATFORM_SPECS.find((item) => item.platform === download.platform);
     return [download.platform, {
@@ -170,7 +176,9 @@ export function prepareWorkerReleaseChunks(options = {}) {
       assetUrl: `${origin}/downloads/${encodeURIComponent(download.filename)}`,
       bytes: download.bytes,
       sha256: download.sha256,
-      notes: [],
+      notes: download.platform === 'android'
+        ? ['Android APK 本地安装包，使用测试签名。']
+        : ['NSIS 安装器，包含本地系统资源并写入系统卸载入口。'],
       buildUrl: `${origin}/`
     }];
   }));

@@ -141,7 +141,7 @@ const guardedItems = [
   () => assertIncludes(dialogRuntimeContract, 'confirmReportExport', 'dialog runtime contract should guard report export confirmation'),
   () => assertIncludes(freshmanExamRuntime, 'window.UI.prompt', 'freshman exam access password should use shared prompt API'),
   () => assert.ok(!freshmanExamRuntime.includes('例如: 123456'), 'freshman exam password prompt should not suggest weak defaults'),
-  () => assertIncludes(appDownloadRuntime, 'school-system-windows-beta-20260621-9a362b3.exe', 'download runtime should keep the current Windows installer URL'),
+  () => assertIncludes(appDownloadRuntime, 'school-system-windows-beta-20260624-7e19d7d.exe', 'download runtime should keep the current Windows installer URL'),
   () => assertIncludes(sw, 'CACHE_VERSION', 'service worker cache version should remain explicit')
   ,() => ['123456', 'admin123', 'yssy2016'].forEach((token) => {
     [

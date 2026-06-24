@@ -177,8 +177,8 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 
 “应用服务”保留当前可用下载入口：
 
-- Windows：`/downloads/school-system-windows-beta-20260621-9a362b3.exe`
-- Android：`/downloads/school-system-android-beta-20260621-9a362b3.apk`
+- Windows：`/downloads/school-system-windows-beta-20260624-7e19d7d.exe`
+- Android：`/downloads/school-system-android-beta-20260624-7e19d7d.apk`
 
 旧的历史版本更新文件已清空。以后发布新的 APK 或 Windows 应用包时，版本记录从当前入口重新累积。
 

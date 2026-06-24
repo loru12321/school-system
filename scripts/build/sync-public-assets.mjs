@@ -11,6 +11,7 @@ const sourceDir = path.join(DEFAULT_PROJECT_ROOT, 'public', 'assets', 'js');
 const targetDir = path.join(DEFAULT_PROJECT_ROOT, 'dist', 'assets', 'js');
 const sourceIndexPath = path.join(DEFAULT_PROJECT_ROOT, 'src', 'index.html');
 const rootPublicFiles = ['favicon.ico', '_headers', 'robots.txt', 'sitemap.xml', 'site.webmanifest', 'icon.svg'];
+const releaseAssetsDir = 'releases';
 
 export function collectReferencedJsAssets(html) {
   const refs = new Set();
@@ -113,6 +114,14 @@ export function syncReferencedAssets({
     const targetPath = path.join(projectRoot, 'dist', fileName);
     fs.copyFileSync(sourcePath, targetPath);
     console.log(`Synced root asset: ${sourcePath} -> ${targetPath}`);
+  }
+
+  const sourceReleasePath = path.join(projectRoot, 'public', releaseAssetsDir);
+  const targetReleasePath = path.join(projectRoot, 'dist', releaseAssetsDir);
+  if (fs.existsSync(sourceReleasePath)) {
+    fs.rmSync(targetReleasePath, { recursive: true, force: true });
+    fs.cpSync(sourceReleasePath, targetReleasePath, { recursive: true });
+    console.log(`Synced release assets: ${sourceReleasePath} -> ${targetReleasePath}`);
   }
 }
 

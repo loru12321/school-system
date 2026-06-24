@@ -19,7 +19,7 @@ try {
   const result = prepareWorkerReleaseChunks({
     inputDir: input,
     outputDir: output,
-    releaseTag: 'beta-20260621-9a362b3',
+    releaseTag: 'beta-20260624-7e19d7d',
     sourceSha: '9a362b38124ca5a210b4679e95c297ae7afa8f35',
     origin: 'https://schoolsystem.com.cn',
     chunkBytes: 16
@@ -47,7 +47,7 @@ try {
   assert.throws(() => prepareWorkerReleaseChunks({
     inputDir: input,
     outputDir: path.join(path.parse(root).root, 'worker-release-escape'),
-    releaseTag: 'beta-20260621-9a362b3',
+    releaseTag: 'beta-20260624-7e19d7d',
     sourceSha: '9a362b38124ca5a210b4679e95c297ae7afa8f35',
     origin: 'https://schoolsystem.com.cn'
   }), /output directory/i);

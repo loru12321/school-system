@@ -4,11 +4,11 @@ import { handleReleaseDownload } from '../src/worker-release-downloads.mjs';
 const map = {
   schemaVersion: 1,
   downloads: [{
-    filename: 'school-system-windows-beta-20260621-9a362b3.exe',
+    filename: 'school-system-windows-beta-20260624-7e19d7d.exe',
     contentType: 'application/vnd.microsoft.portable-executable',
     bytes: 6,
     sha256: 'a'.repeat(64),
-    chunks: ['packages/beta-20260621-9a362b3/windows/part-0001', 'packages/beta-20260621-9a362b3/windows/part-0002'],
+    chunks: ['packages/beta-20260624-7e19d7d/windows/part-0001', 'packages/beta-20260624-7e19d7d/windows/part-0002'],
     chunkBytes: [3, 3]
   }]
 };
@@ -17,11 +17,11 @@ function createEnv({ omitSecondChunk = false, omitMap = false } = {}) {
   const stats = { chunkGets: 0 };
   const objects = new Map([
     ['/releases/download-map.json', JSON.stringify(map)],
-    ['/releases/packages/beta-20260621-9a362b3/windows/part-0001', 'abc'],
-    ['/releases/packages/beta-20260621-9a362b3/windows/part-0002', 'def']
+    ['/releases/packages/beta-20260624-7e19d7d/windows/part-0001', 'abc'],
+    ['/releases/packages/beta-20260624-7e19d7d/windows/part-0002', 'def']
   ]);
   if (omitMap) objects.delete('/releases/download-map.json');
-  if (omitSecondChunk) objects.delete('/releases/packages/beta-20260621-9a362b3/windows/part-0002');
+  if (omitSecondChunk) objects.delete('/releases/packages/beta-20260624-7e19d7d/windows/part-0002');
   return {
     ASSETS: {
       async fetch(request) {
@@ -39,7 +39,7 @@ function createEnv({ omitSecondChunk = false, omitMap = false } = {}) {
   };
 }
 
-const requestUrl = 'https://schoolsystem.com.cn/downloads/school-system-windows-beta-20260621-9a362b3.exe';
+const requestUrl = 'https://schoolsystem.com.cn/downloads/school-system-windows-beta-20260624-7e19d7d.exe';
 const getEnv = createEnv();
 const getResponse = await handleReleaseDownload(new Request(requestUrl), getEnv);
 assert.equal(getResponse.status, 200);
