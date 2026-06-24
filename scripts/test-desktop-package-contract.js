@@ -26,12 +26,17 @@ assert.ok(main.includes('offline.html'), 'failed initial loads must show the off
 assert.ok(main.includes('new Tray'), 'desktop shell should expose a Windows tray entry');
 assert.ok(main.includes('setLoginItemSettings'), 'desktop shell should manage launch-at-login from the tray');
 assert.ok(main.includes("closeBehavior: 'quit'"), 'clicking the close button should quit by default');
+assert.ok(main.includes("mainWindow.on('close'") && main.includes('mainWindow.destroy()') && main.includes('app.exit(0)'), 'native close button must force the desktop app to exit');
+assert.ok(main.includes("webContents.on('will-prevent-unload'"), 'desktop close should not be blocked by page beforeunload handlers');
+assert.ok(main.includes('setImmediate(showMainWindow)'), 'tray menu actions should be dispatched from the main process');
 assert.ok(main.includes('desktopWarmup'), 'desktop shell should prewarm production cloud connections');
+assert.ok(main.includes('safeStorage') && main.includes('LOGIN_PROFILE_FILE'), 'desktop shell should persist login autofill data through protected local storage');
 assert.ok(main.includes('DESKTOP_IPC_HANDLERS'), 'desktop IPC must be centralized behind an allowlist');
 assert.ok(preload.includes('contextBridge.exposeInMainWorld'), 'preload should expose a narrow metadata bridge');
 assert.ok(preload.includes('Object.freeze'), 'exposed metadata must be immutable');
 assert.ok(preload.includes('allowedInvocations'), 'preload IPC must be limited to approved desktop channels');
 assert.ok(preload.includes('desktop:getSettings') && preload.includes('desktop:updateSettings'), 'preload should expose desktop settings only through approved channels');
+assert.ok(preload.includes('desktop:saveLoginProfile') && preload.includes('desktop:clearLoginProfile'), 'preload should expose only approved login autofill channels');
 assert.ok(!preload.includes('ipcRenderer.send'), 'preload must not expose fire-and-forget IPC');
 assert.ok(main.includes('additionalArguments'), 'sandboxed preload metadata should arrive through launch arguments');
 assert.ok(!preload.includes("require('../package.json')"), 'sandboxed preload must not require local files');

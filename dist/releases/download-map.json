@@ -1,30 +1,30 @@
 {
   "schemaVersion": 1,
-  "releaseTag": "beta-20260625-11370f7",
-  "sourceSha": "11370f7ab43f6de80f507809b4eaef0d8ef97eb6",
+  "releaseTag": "beta-20260625-87b8c5b",
+  "sourceSha": "87b8c5b697e7b732dc14c6e856f3cd58518c00d9",
   "downloads": [
     {
       "platform": "windows",
-      "filename": "school-system-windows-beta-20260625-11370f7.exe",
+      "filename": "school-system-windows-beta-20260625-87b8c5b.exe",
       "contentType": "application/vnd.microsoft.portable-executable",
-      "bytes": 119055828,
-      "sha256": "be76d3364eb8b7b8a96b188498c3a39327e9cc06c59bab052efb965798905109",
+      "bytes": 119057214,
+      "sha256": "ce73b1f430f73f274fada31323c7e9985a0b5bfdc6844e15eff0b475bb4e5be2",
       "chunks": [
-        "packages/beta-20260625-11370f7/windows/part-0001",
-        "packages/beta-20260625-11370f7/windows/part-0002",
-        "packages/beta-20260625-11370f7/windows/part-0003",
-        "packages/beta-20260625-11370f7/windows/part-0004",
-        "packages/beta-20260625-11370f7/windows/part-0005",
-        "packages/beta-20260625-11370f7/windows/part-0006",
-        "packages/beta-20260625-11370f7/windows/part-0007",
-        "packages/beta-20260625-11370f7/windows/part-0008",
-        "packages/beta-20260625-11370f7/windows/part-0009",
-        "packages/beta-20260625-11370f7/windows/part-0010",
-        "packages/beta-20260625-11370f7/windows/part-0011",
-        "packages/beta-20260625-11370f7/windows/part-0012",
-        "packages/beta-20260625-11370f7/windows/part-0013",
-        "packages/beta-20260625-11370f7/windows/part-0014",
-        "packages/beta-20260625-11370f7/windows/part-0015"
+        "packages/beta-20260625-87b8c5b/windows/part-0001",
+        "packages/beta-20260625-87b8c5b/windows/part-0002",
+        "packages/beta-20260625-87b8c5b/windows/part-0003",
+        "packages/beta-20260625-87b8c5b/windows/part-0004",
+        "packages/beta-20260625-87b8c5b/windows/part-0005",
+        "packages/beta-20260625-87b8c5b/windows/part-0006",
+        "packages/beta-20260625-87b8c5b/windows/part-0007",
+        "packages/beta-20260625-87b8c5b/windows/part-0008",
+        "packages/beta-20260625-87b8c5b/windows/part-0009",
+        "packages/beta-20260625-87b8c5b/windows/part-0010",
+        "packages/beta-20260625-87b8c5b/windows/part-0011",
+        "packages/beta-20260625-87b8c5b/windows/part-0012",
+        "packages/beta-20260625-87b8c5b/windows/part-0013",
+        "packages/beta-20260625-87b8c5b/windows/part-0014",
+        "packages/beta-20260625-87b8c5b/windows/part-0015"
       ],
       "chunkBytes": [
         8388608,
@@ -41,18 +41,18 @@
         8388608,
         8388608,
         8388608,
-        1615316
+        1616702
       ]
     },
     {
       "platform": "android",
-      "filename": "school-system-android-beta-20260625-11370f7.apk",
+      "filename": "school-system-android-beta-20260625-87b8c5b.apk",
       "contentType": "application/vnd.android.package-archive",
       "bytes": 11982465,
       "sha256": "8f121c3e85fade03e041054af9b8619bbbe06756b0c3936da6edffd975eb96f8",
       "chunks": [
-        "packages/beta-20260625-11370f7/android/part-0001",
-        "packages/beta-20260625-11370f7/android/part-0002"
+        "packages/beta-20260625-87b8c5b/android/part-0001",
+        "packages/beta-20260625-87b8c5b/android/part-0002"
       ],
       "chunkBytes": [
         8388608,

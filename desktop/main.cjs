@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const https = require('node:https');
 const path = require('node:path');
-const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, safeStorage, session, shell } = require('electron');
 
 const PRODUCTION_URL = 'https://schoolsystem.com.cn';
 const PRODUCTION_ORIGIN = new URL(PRODUCTION_URL).origin;
@@ -11,6 +11,7 @@ const OFFLINE_PAGE = path.join(__dirname, 'offline.html');
 const LOCAL_APP_ENTRY = path.join(process.resourcesPath || path.join(__dirname, '..'), 'app', 'index.html');
 const TRAY_ICON = path.join(__dirname, 'assets', 'icon.ico');
 const SETTINGS_FILE = 'desktop-settings.json';
+const LOGIN_PROFILE_FILE = 'desktop-login-profile.json';
 
 const DEFAULT_SETTINGS = Object.freeze({
     trayEnabled: true,
@@ -18,7 +19,8 @@ const DEFAULT_SETTINGS = Object.freeze({
     launchAtLogin: false,
     fontScale: 100,
     skin: 'default',
-    desktopWarmup: true
+    desktopWarmup: true,
+    rememberLogin: true
 });
 
 const SKIN_PRESETS = Object.freeze({
@@ -48,6 +50,7 @@ function normalizeDesktopSettings(settings) {
     next.fontScale = Math.max(90, Math.min(125, Number(next.fontScale) || DEFAULT_SETTINGS.fontScale));
     next.skin = Object.prototype.hasOwnProperty.call(SKIN_PRESETS, next.skin) ? next.skin : DEFAULT_SETTINGS.skin;
     next.desktopWarmup = next.desktopWarmup !== false;
+    next.rememberLogin = next.rememberLogin !== false;
     return next;
 }
 
@@ -112,6 +115,87 @@ function openApprovedExternal(rawUrl) {
     return true;
 }
 
+function encodeSecret(value) {
+    const cleanValue = String(value || '');
+    try {
+        if (safeStorage && safeStorage.isEncryptionAvailable()) {
+            return {
+                encoding: 'safeStorage',
+                value: safeStorage.encryptString(cleanValue).toString('base64')
+            };
+        }
+    } catch (_) {}
+    return {
+        encoding: 'plain',
+        value: Buffer.from(cleanValue, 'utf8').toString('base64')
+    };
+}
+
+function decodeSecret(secret) {
+    if (!secret || typeof secret !== 'object') return '';
+    try {
+        const payload = Buffer.from(String(secret.value || ''), 'base64');
+        if (secret.encoding === 'safeStorage' && safeStorage && safeStorage.isEncryptionAvailable()) {
+            return safeStorage.decryptString(payload);
+        }
+        return payload.toString('utf8');
+    } catch (_) {
+        return '';
+    }
+}
+
+function normalizeLoginProfile(profile) {
+    const next = profile && typeof profile === 'object' ? profile : {};
+    return {
+        username: String(next.username || '').slice(0, 160),
+        password: String(next.password || '').slice(0, 512),
+        cohortId: String(next.cohortId || '2022').slice(0, 32),
+        portal: String(next.portal || 'school').slice(0, 32),
+        savedAt: String(next.savedAt || new Date().toISOString())
+    };
+}
+
+function saveLoginProfile(profile) {
+    if (!desktopSettings.rememberLogin) return getLoginProfileSnapshot();
+    const normalized = normalizeLoginProfile({
+        ...profile,
+        savedAt: new Date().toISOString()
+    });
+    if (!normalized.username && !normalized.password) return getLoginProfileSnapshot();
+    const stored = {
+        ...normalized,
+        password: encodeSecret(normalized.password)
+    };
+    try {
+        fs.mkdirSync(app.getPath('userData'), { recursive: true });
+        fs.writeFileSync(path.join(app.getPath('userData'), LOGIN_PROFILE_FILE), JSON.stringify(stored, null, 2));
+    } catch (error) {
+        console.error('[desktop] failed to save login profile:', error);
+    }
+    return getLoginProfileSnapshot();
+}
+
+function getLoginProfileSnapshot() {
+    if (!desktopSettings.rememberLogin) return null;
+    try {
+        const raw = fs.readFileSync(path.join(app.getPath('userData'), LOGIN_PROFILE_FILE), 'utf8');
+        const parsed = JSON.parse(raw);
+        return normalizeLoginProfile({
+            ...parsed,
+            password: decodeSecret(parsed.password)
+        });
+    } catch (_) {
+        return null;
+    }
+}
+
+function clearLoginProfile() {
+    try {
+        fs.rmSync(path.join(app.getPath('userData'), LOGIN_PROFILE_FILE), { force: true });
+    } catch (_) {}
+    return null;
+}
+
 function getDesktopSettingsSnapshot() {
     return {
         ...normalizeDesktopSettings(desktopSettings),
@@ -123,8 +207,9 @@ function getDesktopSettingsSnapshot() {
 function buildDesktopPreferenceScript() {
     const settings = getDesktopSettingsSnapshot();
     const preset = SKIN_PRESETS[settings.skin] || SKIN_PRESETS.default;
+    const loginProfile = getLoginProfileSnapshot();
     return `
-(function applyDesktopClientPreferences(settings, preset) {
+(function applyDesktopClientPreferences(settings, preset, loginProfile) {
     try {
         window.__SCHOOL_DESKTOP_SETTINGS__ = settings;
         localStorage.setItem('SYSTEM_LOAD_PROFILE', settings.desktopWarmup ? 'full' : 'balanced');
@@ -161,10 +246,55 @@ function buildDesktopPreferenceScript() {
             'button,input,select,textarea{font-size:calc(14px * var(--desktop-font-scale));}'
         ].join('\\n');
         window.dispatchEvent(new CustomEvent('school:desktop-settings-applied', { detail: settings }));
+        function findLoginFields() {
+            const account = document.querySelector('input[placeholder*="管理员账号"], input[placeholder*="教师姓名"], input[aria-label*="账号"], input[name*="user"], input[type="text"]');
+            const password = document.querySelector('input[type="password"], input[placeholder*="密码"]');
+            const cohort = document.querySelector('select[aria-label*="届别"], #cohort-select, select');
+            const loginButton = Array.from(document.querySelectorAll('button')).find((button) => /进入学校工作台|登录/.test((button.textContent || '').trim()));
+            return { account, password, cohort, loginButton };
+        }
+        function writeInput(element, value) {
+            if (!element || value == null || value === '') return;
+            const setter = Object.getOwnPropertyDescriptor(element.__proto__ || HTMLInputElement.prototype, 'value')?.set;
+            if (setter) setter.call(element, value);
+            else element.value = value;
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        function collectLoginProfile() {
+            const fields = findLoginFields();
+            return {
+                username: String(fields.account?.value || '').trim(),
+                password: String(fields.password?.value || ''),
+                cohortId: String(fields.cohort?.value || '2022'),
+                portal: 'school'
+            };
+        }
+        function bindLoginRemember() {
+            if (!settings.rememberLogin || !window.DesktopShell || window.__DESKTOP_LOGIN_REMEMBER_BOUND__) return;
+            const fields = findLoginFields();
+            if (loginProfile) {
+                writeInput(fields.account, loginProfile.username);
+                writeInput(fields.password, loginProfile.password);
+                if (fields.cohort && loginProfile.cohortId) writeInput(fields.cohort, loginProfile.cohortId);
+            }
+            const save = function () {
+                const profile = collectLoginProfile();
+                if (profile.username || profile.password) {
+                    Promise.resolve(window.DesktopShell.saveLoginProfile(profile)).catch(() => {});
+                }
+            };
+            if (fields.loginButton) fields.loginButton.addEventListener('click', save, true);
+            document.addEventListener('submit', save, true);
+            window.__DESKTOP_LOGIN_REMEMBER_BOUND__ = true;
+        }
+        bindLoginRemember();
+        window.setTimeout(bindLoginRemember, 800);
+        window.setTimeout(bindLoginRemember, 2200);
     } catch (error) {
         console.warn('[desktop] apply preferences failed:', error);
     }
-})(${JSON.stringify(settings)}, ${JSON.stringify(preset)});
+})(${JSON.stringify(settings)}, ${JSON.stringify(preset)}, ${JSON.stringify(loginProfile)});
 `;
 }
 
@@ -204,11 +334,15 @@ function showMainWindow() {
 
 function quitApp() {
     isQuitting = true;
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach((window) => {
+        if (!window.isDestroyed()) window.destroy();
+    });
     if (tray) {
         tray.destroy();
         tray = null;
     }
-    app.quit();
+    app.exit(0);
 }
 
 function setLaunchAtLogin(enabled) {
@@ -244,8 +378,9 @@ function rebuildTrayMenu() {
     const settings = getDesktopSettingsSnapshot();
     const launchLabel = settings.launchAtLogin ? '开机自启：已开启' : '开机自启：未开启';
     const contextMenu = Menu.buildFromTemplate([
-        { label: '打开校衡台', click: showMainWindow },
-        { label: '同步/预热云端数据', click: () => { warmDesktopCloudConnections(); if (mainWindow && !mainWindow.isDestroyed()) mainWindow.reload(); } },
+        { label: '打开校衡台', click: () => setImmediate(showMainWindow) },
+        { label: '最小化到托盘', click: () => setImmediate(() => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide(); }) },
+        { label: '同步/预热云端数据', click: () => setImmediate(() => { warmDesktopCloudConnections(); if (mainWindow && !mainWindow.isDestroyed()) mainWindow.reload(); }) },
         { type: 'separator' },
         {
             label: launchLabel,
@@ -254,10 +389,10 @@ function rebuildTrayMenu() {
             click: (item) => updateDesktopSettings({ launchAtLogin: item.checked })
         },
         {
-            label: '关闭按钮最小化到托盘',
+            label: '记住登录信息并自动填充',
             type: 'checkbox',
-            checked: settings.closeBehavior === 'tray',
-            click: (item) => updateDesktopSettings({ closeBehavior: item.checked ? 'tray' : 'quit' })
+            checked: settings.rememberLogin,
+            click: (item) => updateDesktopSettings({ rememberLogin: item.checked })
         },
         {
             label: '字体大小',
@@ -284,20 +419,21 @@ function rebuildTrayMenu() {
             click: (item) => updateDesktopSettings({ desktopWarmup: item.checked })
         },
         { type: 'separator' },
-        { label: '刷新页面', click: () => mainWindow && !mainWindow.isDestroyed() && mainWindow.reload() },
+        { label: '刷新页面', click: () => setImmediate(() => mainWindow && !mainWindow.isDestroyed() && mainWindow.reload()) },
         {
             label: '清理缓存并重载',
-            click: async () => {
+            click: () => setImmediate(async () => {
                 try {
                     await session.defaultSession.clearCache();
                 } catch (error) {
                     console.error('[desktop] clear cache failed:', error);
                 }
                 if (mainWindow && !mainWindow.isDestroyed()) mainWindow.reload();
-            }
+            })
         },
+        { label: '清除已记住账号', click: () => setImmediate(() => { clearLoginProfile(); if (mainWindow && !mainWindow.isDestroyed()) mainWindow.reload(); }) },
         { type: 'separator' },
-        { label: '退出校衡台', click: quitApp }
+        { label: '退出校衡台', click: () => setImmediate(quitApp) }
     ]);
     tray.setToolTip(`校衡台 - ${launchLabel}`);
     tray.setContextMenu(contextMenu);
@@ -361,6 +497,10 @@ function createMainWindow() {
         openApprovedExternal(url);
     });
 
+    mainWindow.webContents.on('will-prevent-unload', (event) => {
+        if (isQuitting || desktopSettings.closeBehavior === 'quit') event.preventDefault();
+    });
+
     mainWindow.webContents.on('did-finish-load', () => {
         initialLoadComplete = true;
         applyDesktopPreferences();
@@ -375,9 +515,11 @@ function createMainWindow() {
     });
 
     mainWindow.on('close', (event) => {
-        if (isQuitting || desktopSettings.closeBehavior !== 'tray') return;
+        if (isQuitting) return;
+        isQuitting = true;
         event.preventDefault();
-        mainWindow.hide();
+        mainWindow.destroy();
+        app.exit(0);
     });
 
     mainWindow.on('closed', () => {
@@ -391,6 +533,9 @@ function createMainWindow() {
 const DESKTOP_IPC_HANDLERS = Object.freeze({
     'desktop:getSettings': () => getDesktopSettingsSnapshot(),
     'desktop:updateSettings': (_event, patch) => updateDesktopSettings(patch),
+    'desktop:getLoginProfile': () => getLoginProfileSnapshot(),
+    'desktop:saveLoginProfile': (_event, profile) => saveLoginProfile(profile),
+    'desktop:clearLoginProfile': () => clearLoginProfile(),
     'desktop:showWindow': () => { showMainWindow(); return true; },
     'desktop:warmCloud': () => { warmDesktopCloudConnections(); return true; },
     'desktop:quit': () => { quitApp(); return true; }
