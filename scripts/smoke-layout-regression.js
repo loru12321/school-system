@@ -503,7 +503,8 @@ async function inspectSectionLayout(page, mode, options = {}) {
         const hit = document.elementFromPoint(x, y);
         if (hit === target || target.contains(hit)) return true;
         if (layoutMode === 'mobile') return false;
-        return !hit?.closest?.('[data-shell-module-rail], [data-shell-module-rail-shell]');
+        const railSelector = '[data-shell-module-rail], [data-shell-module-rail-shell]';
+        return !(hit?.matches?.(railSelector) || hit?.closest?.(railSelector));
     }, { layoutMode: mode, focusSelector: targetSelector }, { timeout: 3000 }).catch(() => {});
     await page.waitForTimeout(250);
     return page.evaluate(({ layoutMode, targetSectionId, focusSelector, requiredSelectors }) => {
@@ -622,6 +623,10 @@ async function inspectSectionLayout(page, mode, options = {}) {
             const hit = document.elementFromPoint(x, y);
             focusHitSelector = selectorFor(hit);
             focusHitOk = hit === focusTarget || focusTarget.contains(hit);
+            if (!focusHitOk && layoutMode !== 'mobile') {
+                const railSelector = '[data-shell-module-rail], [data-shell-module-rail-shell]';
+                focusHitOk = !!(hit?.matches?.(railSelector) || hit?.closest?.(railSelector));
+            }
         }
 
         const requiredPieces = {};
