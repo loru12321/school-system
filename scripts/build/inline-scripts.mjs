@@ -14,9 +14,6 @@ const OPTIONAL_INLINE_RUNTIME_PATHS = [
     './assets/js/perf-mobile-runtime.js',
     './assets/js/mobile-app-runtime.js',
     './assets/js/data-manager-sql.js',
-    './assets/vendor/alasql/alasql.min.js',
-    './assets/vendor/jspdf/jspdf.umd.min.js',
-    './assets/vendor/html2canvas/html2canvas.min.js',
     './assets/js/report-render-runtime.js',
     './assets/js/report-chart-runtime.js',
     './assets/js/report-export-runtime.js',
@@ -192,6 +189,10 @@ function collectRuntimeManifestSources(manifestSource) {
     return Array.from(sources);
 }
 
+function shouldInlineRuntimeSource(src) {
+    return /^\.\/assets\/js\//.test(String(src || ''));
+}
+
 function getBootRuntimeSkillSources(projectRoot) {
     const sources = new Set();
     for (const manifestPath of MANIFEST_RUNTIME_PATHS) {
@@ -209,7 +210,7 @@ export function collectInlineRuntimePaths(projectRoot = DEFAULT_PROJECT_ROOT) {
         ...OPTIONAL_INLINE_RUNTIME_PATHS,
         ...getBootRuntimeSkillSources(projectRoot)
     ]);
-    return Array.from(merged).sort();
+    return Array.from(merged).filter(shouldInlineRuntimeSource).sort();
 }
 
 function injectInlineRuntimeSourceMap(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {

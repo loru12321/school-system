@@ -30,7 +30,7 @@ const budgets = {
     // Approved responsive login + archive state styles add ~2.8KB beyond the
     // prior cap (<0.5%); retain 2KB+ headroom for regression detection.
     distAppCss: 625_000,
-    ltHtml: 3_900_000,
+    ltHtml: 2_100_000,
     publicAppJs: 910_000,
     // Keep first-screen boot focused; optional runtime manifest/loaders live in runtime-loader-runtime.js.
     publicBootJs: 85_000,

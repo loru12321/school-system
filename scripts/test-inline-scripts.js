@@ -39,15 +39,19 @@ async function main() {
     assert.ok(ltHtml.includes('./assets/js/school-profile-runtime.js'), 'lt.html should carry school-profile runtime inline source');
     assert.ok(ltHtml.includes('./assets/js/county-analysis-runtime.js'), 'lt.html should carry county analysis runtime inline source from boot manifest');
     assert.ok(ltHtml.includes('./public/assets/vendor/tabler-icons/tabler-icons.min.css'), 'lt.html should rewrite vendor asset paths for local file usage');
+    assert.ok(!ltHtml.includes('./assets/vendor/alasql/alasql.min.js'), 'lt.html should not inline heavy AlaSQL vendor sources');
+    assert.ok(!ltHtml.includes('./assets/vendor/jspdf/jspdf.umd.min.js'), 'lt.html should not inline heavy jsPDF vendor sources');
+    assert.ok(!ltHtml.includes('./assets/vendor/html2canvas/html2canvas.min.js'), 'lt.html should not inline heavy html2canvas vendor sources');
     const inlineMapMatch = ltHtml.match(/window\.__INLINE_RUNTIME_SOURCES=(\{.*?\});<\/script>/s);
     assert.ok(inlineMapMatch, 'lt.html should expose an inline runtime source map');
     const inlineMap = JSON.parse(inlineMapMatch[1]);
-    assert.ok(!String(inlineMap['./assets/vendor/gsap/ScrollTrigger.min.js'] || '').includes('</head>'), 'replacement should not expand $& tokens inside runtime sources');
+    assert.ok(!Object.keys(inlineMap).some((key) => key.startsWith('./assets/vendor/')), 'inline runtime source map should not carry vendor payloads');
     fs.unlinkSync(tempStylePath);
 
     const runtimePaths = collectInlineRuntimePaths(projectRoot);
     assert.ok(runtimePaths.includes('./assets/js/county-analysis-runtime.js'), 'runtime source collection should include county analysis');
     assert.ok(runtimePaths.includes('./assets/js/freshman-exam-runtime.js'), 'runtime source collection should include freshman exam tools');
+    assert.ok(!runtimePaths.some((entry) => entry.startsWith('./assets/vendor/')), 'runtime source collection should exclude vendor libraries');
 
     console.log('inline-scripts tests passed');
 }

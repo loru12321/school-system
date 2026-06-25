@@ -17,7 +17,7 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 
 - Continue splitting `public/assets/js/app.js` so low-frequency modules load on demand.
 - Reduce `src/index.html` inline event handlers by moving behavior into runtime modules.
-- Lazy-load heavy vendor libraries such as Excel, SQL, PDF, and charting dependencies.
+- Lazy-load heavy vendor libraries such as Excel, SQL, PDF, and charting dependencies. Status: guarded so heavy vendors stay out of first-screen HTML and offline `lt.html` runtime source maps.
 - Subset or prune Tabler icon fonts so unused font formats do not dominate the release surface.
 - Replace alert, confirm, and prompt flows with a shared modal/toast API.
 - Tighten immutable cache rules for versioned assets while keeping `sw.js` and HTML revalidation strict. Status: runtime JS now uses build-generated content versions before immutable caching.
@@ -26,7 +26,7 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Keep `CACHE_VERSION` explicit when service worker app-shell behavior changes. Status: derived from the same generated runtime version.
 - Keep `check:p1` tied to HTML, service worker, release surface, runtime, and CSS hygiene.
 - Keep heavy vendor libraries behind demand loaders instead of boot loading.
-- Keep bundle and hosted download budgets from drifting upward silently.
+- Keep bundle and hosted download budgets from drifting upward silently. Status: `lt.html` budget tightened after excluding vendor payloads from the inline runtime source map.
 
 ## P2: sustainable maintenance
 
@@ -55,3 +55,4 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 | 2026-06-24 | P0/P2 | 新增 `deploy:cloudflare:verified` 与 `Deploy Cloudflare` workflow，把 build、fast release guards、`wrangler deploy` 和部署后 `smoke:prod-minimal` 串成固定生产发布链路 | `npm run test:release-automation`, `npm run test:maintenance-priority-contract`, `npm run test:docs-hygiene` |
 | 2026-06-24 | P0 | D1 远程账号迁移报告显示 `pending_accounts = 0` 后，移除登录、`session.verify`、改密和未知网关动作的旧 Edge Function fallback，认证路径切换为 Cloudflare-only | `node scripts/report-account-migration-status.mjs`, `npm run test:cloudflare-worker-contract`, `npm run test:security-hygiene` |
 | 2026-06-24 | P1 | Worker HTML 响应统一使用 `no-cache, max-age=0, must-revalidate, no-transform`，与 `_headers` 的入口 HTML 重验证策略对齐，避免生产端继续命中旧壳代码 | `npm run test:cloudflare-worker-contract`, `npm run test:release-surface`, `npm run test:maintenance-priority-contract` |
+| 2026-06-25 | P1 | `lt.html` 离线构建不再内联 heavy vendor payloads，仅保留 runtime source map；新增 vendor 首屏守卫并收紧 `lt.html` 预算；更新 sitemap `lastmod` | `npm run build`, `npm run test:inline-scripts`, `npm run test:vendor-budget`, `npm run test:build-size-budget` |

@@ -24,6 +24,7 @@ for (const [relativePath, maxBytes] of Object.entries(budgets)) {
 const bootRuntime = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
 const runtimeLoaderRuntime = fs.readFileSync(path.join(root, 'public/assets/js/runtime-loader-runtime.js'), 'utf8');
 const runtimeSurface = `${bootRuntime}\n${runtimeLoaderRuntime}`;
+const sourceHtml = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const tablerCss = fs.readFileSync(path.join(root, 'public/assets/vendor/tabler-icons/tabler-icons.min.css'), 'utf8');
 const tablerSourceCss = fs.readFileSync(path.join(root, 'scripts/vendor/tabler-icons-full.css'), 'utf8');
@@ -31,6 +32,15 @@ assert.ok(runtimeLoaderRuntime.includes('ensureXlsxVendorLoaded'), 'XLSX should 
 assert.ok(runtimeLoaderRuntime.includes('ensureAlasqlVendorLoaded'), 'AlaSQL should stay behind the lazy loader');
 const bootVendorBlock = (bootRuntime.match(/BOOT_VENDOR_MODULES\s*=\s*\[([\s\S]*?)\];/) || [])[1] || '';
 assert.ok(!bootVendorBlock.includes('xlsx.full.min.js'), 'XLSX must not be a boot vendor');
+[
+    'xlsx/xlsx.full.min.js',
+    'alasql/alasql.min.js',
+    'jspdf/jspdf.umd.min.js',
+    'html2canvas/html2canvas.min.js',
+    'chart.js/chart.umd.min.js'
+].forEach((vendorPath) => {
+    assert.ok(!sourceHtml.includes(`src="./assets/vendor/${vendorPath}"`), `${vendorPath} must not be a first-screen script`);
+});
 const shellPolishFactoryWarmup = (runtimeSurface.match(/'shell-polish':\s*bootSkill\(\s*['"][^'"]+['"]\s*,\s*['"]([^'"]+)['"]/) || [])[1] || '';
 const shellPolishSkill = (runtimeSurface.match(/'shell-polish':\s*\{([\s\S]*?)\n\s*\}/) || [])[1] || '';
 assert.ok(
