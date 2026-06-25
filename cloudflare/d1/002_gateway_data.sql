@@ -155,7 +155,6 @@ CREATE TABLE IF NOT EXISTS system_users_staging (
   class_name TEXT,
   teacher_name TEXT,
   has_password INTEGER NOT NULL DEFAULT 0,
-  password_display TEXT,
   imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

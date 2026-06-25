@@ -62,6 +62,18 @@
         return root.EdgeGateway && typeof root.EdgeGateway === 'object' ? root.EdgeGateway : null;
     }
 
+    function getPasswordStatus(user) {
+        const explicit = String(user && user.password_display || '').trim();
+        if (explicit) return explicit;
+        if (user && (user.has_password === true || Number(user.has_password || 0) > 0)) {
+            return '已设置(不显示明文)';
+        }
+        if (String(user && user.password_hash || '').trim()) {
+            return '已设置(不显示明文)';
+        }
+        return '未设置';
+    }
+
     function getSwal() {
         return root.Swal && typeof root.Swal.fire === 'function' ? root.Swal : null;
     }
@@ -297,7 +309,7 @@
                         <td><span class="badge" style="background:#e0f2fe; color:#0369a1;">${escapeHtml(roleName)}</span></td>
                         <td>${escapeHtml(user.school || '-')}</td>
                         <td>${escapeHtml(user.class_name || '-')}</td>
-                        <td style="font-family:monospace; color:#666;">${escapeHtml(user.password_display || '未设置')}</td>
+                        <td style="font-family:monospace; color:#666;">${escapeHtml(getPasswordStatus(user))}</td>
                         <td>
                             <button class="btn btn-sm btn-purple" ${disableAttr} style="padding:2px 6px; font-size:12px; margin-right:5px; ${cursorStyle}"
                                     data-account-action="edit" data-account-username="${safeUser}" data-account-role="${safeRole}" data-account-class="${safeClass}" data-account-school="${safeSchool}">

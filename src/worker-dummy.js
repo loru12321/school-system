@@ -668,7 +668,7 @@ function shouldProxySystemDataToSupabase(env) {
 }
 
 function shouldProxyManagedRestToSupabase(env) {
-  return getSystemDataMode(env) === 'supabase' || !hasGatewayDataStorage(env);
+  return !hasGatewayDataStorage(env);
 }
 
 function buildSupabaseRestTargetUrl(env, url, explicitPath = '') {

@@ -305,8 +305,7 @@ function sanitizeAccountRecord(row) {
     school: normalizeText(row?.school),
     class_name: normalizeText(row?.class_name),
     teacher_name: normalizeText(row?.teacher_name || row?.username),
-    has_password: hasPassword,
-    password_display: hasPassword ? '已设置(不显示明文)' : '未设置'
+    has_password: hasPassword
   };
 }
 
@@ -419,7 +418,6 @@ function normalizeDbAccountRow(row) {
     password_scheme: normalizeText(row?.password_scheme),
     password_source: normalizeText(row?.password_source),
     has_password: Number(row?.has_password || 0) > 0,
-    password_display: normalizeText(row?.password_display),
     is_active: Number(row?.is_active ?? 1) !== 0,
     last_login_at: normalizeText(row?.last_login_at),
     created_at: normalizeText(row?.created_at),
@@ -450,7 +448,6 @@ async function upsertSystemUser(db, row) {
     password_scheme: normalizeText(row?.password_scheme) || '',
     password_source: normalizeText(row?.password_source) || '',
     has_password: row?.has_password ? 1 : 0,
-    password_display: row?.has_password ? '已设置(不显示明文)' : '未设置',
     is_active: row?.is_active === false ? 0 : 1,
     last_login_at: normalizeText(row?.last_login_at) || null,
     created_at: normalizeText(row?.created_at) || new Date().toISOString(),
@@ -461,8 +458,8 @@ async function upsertSystemUser(db, row) {
     INSERT INTO system_users (
       username, role, roles_json, school, class_name, teacher_name,
       password_hash, password_scheme, password_source, has_password,
-      password_display, is_active, last_login_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      is_active, last_login_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(username) DO UPDATE SET
       role = excluded.role,
       roles_json = excluded.roles_json,
@@ -473,7 +470,6 @@ async function upsertSystemUser(db, row) {
       password_scheme = CASE WHEN excluded.password_hash IS NOT NULL AND excluded.password_hash <> '' THEN excluded.password_scheme ELSE system_users.password_scheme END,
       password_source = CASE WHEN excluded.password_hash IS NOT NULL AND excluded.password_hash <> '' THEN excluded.password_source ELSE system_users.password_source END,
       has_password = CASE WHEN excluded.password_hash IS NOT NULL AND excluded.password_hash <> '' THEN 1 ELSE excluded.has_password END,
-      password_display = CASE WHEN excluded.password_hash IS NOT NULL AND excluded.password_hash <> '' THEN '已设置(不显示明文)' ELSE excluded.password_display END,
       is_active = excluded.is_active,
       last_login_at = COALESCE(excluded.last_login_at, system_users.last_login_at),
       created_at = system_users.created_at,
@@ -489,7 +485,6 @@ async function upsertSystemUser(db, row) {
     normalized.password_scheme,
     normalized.password_source,
     normalized.has_password,
-    normalized.password_display,
     normalized.is_active,
     normalized.last_login_at,
     normalized.created_at,
@@ -1339,7 +1334,6 @@ async function handleAccountUpsertMany(request, db, session, payload) {
       password_scheme: PBKDF2_SCHEME,
       password_source: 'cloudflare_upsert',
       has_password: 1,
-      password_display: '已设置(不显示明文)',
       is_active: 1,
       last_login_at: normalizeText(existing?.last_login_at) || null,
       created_at: normalizeText(existing?.created_at) || now,
@@ -1350,8 +1344,8 @@ async function handleAccountUpsertMany(request, db, session, payload) {
         INSERT INTO system_users (
           username, role, roles_json, school, class_name, teacher_name,
           password_hash, password_scheme, password_source, has_password,
-          password_display, is_active, last_login_at, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          is_active, last_login_at, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(username) DO UPDATE SET
           role = excluded.role,
           roles_json = excluded.roles_json,
@@ -1362,7 +1356,6 @@ async function handleAccountUpsertMany(request, db, session, payload) {
           password_scheme = excluded.password_scheme,
           password_source = excluded.password_source,
           has_password = 1,
-          password_display = excluded.password_display,
           is_active = excluded.is_active,
           last_login_at = COALESCE(system_users.last_login_at, excluded.last_login_at),
           created_at = system_users.created_at,
@@ -1371,7 +1364,7 @@ async function handleAccountUpsertMany(request, db, session, payload) {
         normalized.username, normalized.role, normalized.roles_json,
         normalized.school, normalized.class_name, normalized.teacher_name,
         normalized.password_hash, normalized.password_scheme, normalized.password_source,
-        normalized.has_password, normalized.password_display, normalized.is_active,
+        normalized.has_password, normalized.is_active,
         normalized.last_login_at, normalized.created_at, normalized.updated_at
       )
     );

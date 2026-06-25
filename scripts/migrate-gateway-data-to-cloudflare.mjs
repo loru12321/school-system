@@ -265,7 +265,6 @@ function normalizeAccountStagingRow(row, importedAt) {
     class_name: row?.class_name ?? null,
     teacher_name: row?.teacher_name ?? null,
     has_password: row?.has_password ? 1 : 0,
-    password_display: row?.password_display ?? null,
     imported_at: importedAt
   };
 }
@@ -283,7 +282,6 @@ function normalizeSystemUserRow(row, importedAt) {
     password_scheme: '',
     password_source: row?.has_password ? 'supabase_export' : '',
     has_password: row?.has_password ? 1 : 0,
-    password_display: row?.password_display ?? null,
     is_active: 1,
     last_login_at: null,
     created_at: importedAt,
@@ -341,8 +339,8 @@ async function importIntoD1(targetDb, datasets) {
     ...buildInsertStatements('warning_records', ['id', 'warning_type', 'warning_code', 'warning_level', 'project_key', 'cohort_id', 'snapshot_key', 'exam_id', 'school_name', 'grade_name', 'class_name', 'subject_name', 'teacher_name', 'student_name', 'source_module', 'metric_name', 'metric_value', 'threshold_value', 'description', 'status', 'created_at', 'updated_at'], datasets.warnings.map(normalizeWarningRow)),
     ...buildInsertStatements('rectify_tasks', ['id', 'source_warning_id', 'task_type', 'title', 'project_key', 'cohort_id', 'exam_id', 'school_name', 'grade_name', 'class_name', 'subject_name', 'teacher_name', 'student_name', 'problem_desc', 'action_plan', 'owner_name', 'assist_users_json', 'due_date', 'priority', 'status', 'progress', 'review_result', 'created_by', 'created_at', 'updated_at'], datasets.rectify_tasks.map(normalizeRectifyRow)),
     ...buildInsertStatements('snapshot_versions', ['id', 'version_name', 'project_key', 'cohort_id', 'snapshot_key', 'exam_scope', 'score_hash', 'teacher_hash', 'target_hash', 'alias_hash', 'config_hash', 'summary_json', 'is_stable', 'created_by', 'created_at'], datasets.snapshot_versions.map(normalizeVersionRow)),
-    ...buildInsertStatements('system_users', ['username', 'role', 'roles_json', 'school', 'class_name', 'teacher_name', 'password_hash', 'password_scheme', 'password_source', 'has_password', 'password_display', 'is_active', 'last_login_at', 'created_at', 'updated_at'], datasets.accounts.map((row) => normalizeSystemUserRow(row, importedAt))),
-    ...buildInsertStatements('system_users_staging', ['username', 'role', 'roles_json', 'school', 'class_name', 'teacher_name', 'has_password', 'password_display', 'imported_at'], datasets.accounts.map((row) => normalizeAccountStagingRow(row, importedAt)))
+    ...buildInsertStatements('system_users', ['username', 'role', 'roles_json', 'school', 'class_name', 'teacher_name', 'password_hash', 'password_scheme', 'password_source', 'has_password', 'is_active', 'last_login_at', 'created_at', 'updated_at'], datasets.accounts.map((row) => normalizeSystemUserRow(row, importedAt))),
+    ...buildInsertStatements('system_users_staging', ['username', 'role', 'roles_json', 'school', 'class_name', 'teacher_name', 'has_password', 'imported_at'], datasets.accounts.map((row) => normalizeAccountStagingRow(row, importedAt)))
   );
 
   const summaryRows = [

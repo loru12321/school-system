@@ -523,6 +523,19 @@ const AuthState = window.AuthState || {
     }
 };
 
+function getManagedPasswordStatus(record) {
+    if (!record || typeof record !== 'object') return '未设置';
+    const explicit = String(record.password_display || '').trim();
+    if (explicit) return explicit;
+    if (record.has_password === true || Number(record.has_password || 0) > 0) {
+        return AuthState.MASKED_PASSWORD_DISPLAY;
+    }
+    if (String(record.password_hash || '').trim()) {
+        return AuthState.MASKED_PASSWORD_DISPLAY;
+    }
+    return '未设置';
+}
+
 function isParentLikeRole(role) {
     return PermissionPolicy.isParentLikeRole(role);
 }
@@ -3563,7 +3576,7 @@ var Auth = {
                     u.school || '-',       // 学校
                     u.class_name || '-',   // 班级
                     u.username,            // 账号
-                    u.password_display || '未设置'
+                    getManagedPasswordStatus(u)
                 ]);
             });
 

@@ -277,8 +277,7 @@ function sanitizeAccountRecord(row) {
     school: normalizeAccountText(row?.school),
     class_name: normalizeAccountText(row?.class_name),
     teacher_name: normalizeAccountText(row?.teacher_name || row?.display_name || row?.name || row?.username),
-    has_password: passwordPresent,
-    password_display: passwordPresent ? "已设置(不显示明文)" : "未设置"
+    has_password: passwordPresent
   };
 }
 function canSearchAccounts(session) {
@@ -805,4 +804,3 @@ Deno.serve(async (req) => {
     });
   }
 });
-

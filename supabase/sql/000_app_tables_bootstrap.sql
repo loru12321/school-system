@@ -69,7 +69,6 @@ create table if not exists public.system_users (
   password_scheme text not null default '',
   password_source text not null default '',
   has_password boolean not null default false,
-  password_display text,
   is_active boolean not null default true,
   last_login_at timestamptz,
   created_at timestamptz not null default now(),
@@ -96,7 +95,6 @@ create table if not exists public.system_users_staging (
   class_name text,
   teacher_name text,
   has_password boolean not null default false,
-  password_display text,
   imported_at timestamptz not null default now()
 );
 

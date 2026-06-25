@@ -201,7 +201,6 @@ async function fetchCloudflareD1Accounts({ dbName, useRemote }) {
         password_scheme,
         password_source,
         has_password,
-        password_display,
         is_active,
         last_login_at,
         created_at,
@@ -433,7 +432,6 @@ function normalizeFullAccountRow(row) {
     password_scheme: passwordHash ? 'bcrypt' : '',
     password_source: hasPassword ? 'supabase_full_export' : '',
     has_password: hasPassword,
-    password_display: hasPassword ? '已设置(不显示明文)' : '未设置',
     is_active: row?.is_active !== false,
     last_login_at: row?.last_login_at ?? null,
     created_at: normalizeText(row?.created_at) || new Date().toISOString(),
@@ -456,7 +454,6 @@ function normalizeMetadataAccountRow(row) {
     password_scheme: '',
     password_source: hasPassword ? 'supabase_metadata_only' : '',
     has_password: hasPassword,
-    password_display: row?.password_display ?? (hasPassword ? '已设置(不显示明文)' : '未设置'),
     is_active: true,
     last_login_at: null,
     created_at: new Date().toISOString(),
@@ -487,7 +484,6 @@ function normalizeCloudflareD1AccountRow(row) {
     password_scheme: normalizeText(row?.password_scheme) || (passwordHash ? 'pbkdf2-sha256' : ''),
     password_source: normalizeText(row?.password_source) || (hasPassword ? 'cloudflare_d1' : ''),
     has_password: hasPassword,
-    password_display: row?.password_display ?? (hasPassword ? '已设置(不显示明文)' : '未设置'),
     is_active: row?.is_active !== false && Number(row?.is_active ?? 1) !== 0,
     last_login_at: row?.last_login_at ?? null,
     created_at: normalizeText(row?.created_at) || new Date().toISOString(),
@@ -513,7 +509,6 @@ function normalizeStagingAccountRow(row) {
     class_name: row.class_name,
     teacher_name: row.teacher_name,
     has_password: row.has_password,
-    password_display: row.password_display,
     imported_at: new Date().toISOString()
   };
 }

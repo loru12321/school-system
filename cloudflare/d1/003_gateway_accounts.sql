@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS system_users (
   password_scheme TEXT NOT NULL DEFAULT '',
   password_source TEXT NOT NULL DEFAULT '',
   has_password INTEGER NOT NULL DEFAULT 0,
-  password_display TEXT,
   is_active INTEGER NOT NULL DEFAULT 1,
   last_login_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
