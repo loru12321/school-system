@@ -1668,7 +1668,7 @@ body.dark-mode .analysis-workspace .module-desc-bar.analysis-hero {
  * Favorite-content inspired polish.
  * Reference mood: light outfit editorials, soft studio light, warm skin-tone
  * neutrals, pink accents, and dense vertical-cover rhythm. This intentionally
- * does not copy Douyin's product shell.
+ * does not copy any third-party product shell.
  */
 :root {
     --pd-bg: #fff7f3;
@@ -2262,7 +2262,7 @@ table thead th,
     border-left: 0 !important;
 }
 
-/* Douyin-favorite inspired refinement: vertical focus cards, light lookbook rhythm. */
+/* Favorite-inspired refinement: vertical focus cards, light lookbook rhythm. */
 #login-overlay[data-login-skin="clean"] .login-clean-stage {
     display: flex !important;
     flex-direction: column !important;
@@ -2977,7 +2977,7 @@ table thead th,
 }
 
 /*
- * Douyin favorite evidence refresh.
+ * Favorite evidence refresh.
  * CLEAN / BEAT / FLOW
  * Logged-in favorite/video-detail evidence shows clean outfit portraits, soft
  * daylight, night-cover music, light pink rhythm, mint reflections, slow dance,
@@ -3270,7 +3270,7 @@ tbody tr:hover td,
 }
 
 /*
- * Douyin creator and favorite variation.
+ * Creator and favorite variation.
  * Current evidence from the provided creator pages plus logged-in favorites
  * points to quick beat cuts, white/grey denim styling, cinematic clean light,
  * low-saturation pink, and blue-green reflections. Keep the system bright.
@@ -3641,7 +3641,7 @@ table thead th,
 
 /*
  * Curated media workspace system.
- * Final direction after reviewing the logged-in Douyin favorite page,
+ * Final direction after reviewing the logged-in favorite reference page,
  * Instagram feed rhythm, and foxirj.com utility-resource structure:
  * compact Win11 controls, a white editorial feed, and precise color accents.
  */

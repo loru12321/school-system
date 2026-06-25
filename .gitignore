@@ -29,6 +29,11 @@ supabase/functions/.env.local
 supabase/.temp/
 
 .tmp-*/
+.tmp-smoke-*.json
+.tmp-smoke-*.log
+.tmp-prod-smoke.png
+.tmp-calc-*.json
+.tmp-preview.log
 .tmp-*.zip
 .tmp-lt-check.js
 tmp_*.png
@@ -41,3 +46,7 @@ worker.html
 .tmp-*
 .superpowers/
 .worktrees/
+docs/*-favorite-audit-ledger.json
+docs/*-favorite-evidence-*.md
+docs/*-favorite-music-audit-ledger.json
+scripts/merge-*-detail-batch.mjs

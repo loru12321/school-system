@@ -34,7 +34,7 @@ for (const entry of fs.readdirSync(outDir, { withFileTypes: true })) {
 
 const manifest = {
   generatedAt: new Date().toISOString(),
-  note: 'Bundled entrance audio/video is supported only when each track is explicitly marked authorizedForEmbedding. Downloaded Douyin favorite-video music must not be listed here unless the user has rights to redistribute it inside this system.',
+  note: 'Bundled entrance audio/video is supported only when each track is explicitly marked authorizedForEmbedding. Downloaded third-party favorite-video music must not be listed here unless the user has rights to redistribute it inside this system.',
   trackSchema: {
     id: 'stable-track-id',
     name: 'display name',

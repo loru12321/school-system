@@ -7,9 +7,6 @@ const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 const maintenanceRunbook = fs.readFileSync(path.join(root, 'docs', 'maintenance-runbook.md'), 'utf8');
 const optimizationBacklog = fs.readFileSync(path.join(root, 'docs', 'optimization-backlog.md'), 'utf8');
 const cloudflareCutover = fs.readFileSync(path.join(root, 'docs', 'cloudflare-auth-cutover.md'), 'utf8');
-const douyinEvidence = fs.readFileSync(path.join(root, 'docs', 'douyin-favorite-evidence-2026-06-17.md'), 'utf8');
-const douyinLedger = JSON.parse(fs.readFileSync(path.join(root, 'docs', 'douyin-favorite-audit-ledger.json'), 'utf8'));
-const douyinMusicLedger = JSON.parse(fs.readFileSync(path.join(root, 'docs', 'douyin-favorite-music-audit-ledger.json'), 'utf8'));
 const legacyReadme = fs.readFileSync(path.join(root, 'scripts', 'legacy', 'README.md'), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const scripts = packageJson.scripts || {};
@@ -17,8 +14,7 @@ const docs = [
     ['README.md', readme],
     ['docs/maintenance-runbook.md', maintenanceRunbook],
     ['docs/optimization-backlog.md', optimizationBacklog],
-    ['docs/cloudflare-auth-cutover.md', cloudflareCutover],
-    ['docs/douyin-favorite-evidence-2026-06-17.md', douyinEvidence]
+    ['docs/cloudflare-auth-cutover.md', cloudflareCutover]
 ];
 
 function assertReadableDoc(name, text) {
@@ -60,60 +56,6 @@ assert.ok((optimizationBacklog.match(/^- /gm) || []).length >= 20, 'optimization
 assert.ok(legacyReadme.includes('npx wrangler deploy'), 'legacy script README should point to Wrangler deploy');
 assert.ok(legacyReadme.includes('direct-deploy'), 'legacy script README should explain direct-deploy archive');
 assert.ok(cloudflareCutover.includes('pending_accounts = 0'), 'Cloudflare cutover doc should retain readiness condition');
-assert.strictEqual(douyinLedger.schemaVersion, 1, 'Douyin favorite ledger should expose a stable schema version');
-assert.strictEqual(douyinLedger.summary.completedDetailPages, 371, 'Douyin favorite ledger should track completed detail pages');
-assert.strictEqual(douyinLedger.summary.attemptedDetailPages, 11, 'Douyin favorite ledger should track attempted detail pages');
-assert.strictEqual(douyinLedger.summary.visibleListOnlyPages, 0, 'Douyin favorite ledger should track list-only favorite captures');
-assert.strictEqual(douyinLedger.summary.directlyReusableAudio, 0, 'Douyin favorite ledger should not mark unlicensed audio reusable');
-assert.ok(douyinLedger.summary.authorizationPolicy.includes('explicit'), 'Douyin favorite ledger should document the authorization policy');
-assert.strictEqual(douyinMusicLedger.schemaVersion, 1, 'Douyin favorite music ledger should expose a stable schema version');
-assert.strictEqual(douyinMusicLedger.summary.visibleMusicItems, 49, 'Douyin favorite music ledger should track visible music entries');
-assert.strictEqual(douyinMusicLedger.summary.openedMusicListItems, 1, 'Douyin favorite music ledger should track detail-behavior checks');
-assert.strictEqual(douyinMusicLedger.summary.itemsWithDirectAudioUrl, 0, 'Douyin favorite music ledger should not invent audio URLs');
-assert.strictEqual(douyinMusicLedger.summary.itemsWithExplicitReuseAuthorization, 0, 'Douyin favorite music ledger should not mark unlicensed music authorized');
-assert.strictEqual(douyinMusicLedger.summary.directlyReusableAudio, 0, 'Douyin favorite music ledger should not mark any Douyin music directly reusable');
-assert.ok(douyinMusicLedger.summary.authorizationPolicy.includes('explicit'), 'Douyin favorite music ledger should document explicit authorization policy');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 3 - Detail Loading Audit'), 'Douyin evidence should include the third batch audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 4 - Visible List Capture'), 'Douyin evidence should include the fourth batch visible-list audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 5 - Deep Visible List Capture'), 'Douyin evidence should include the fifth batch deep visible-list audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 6 - Detail Upgrade Audit'), 'Douyin evidence should include the sixth batch detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 7 - Detail Upgrade Audit'), 'Douyin evidence should include the seventh batch detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 8 - Detail Upgrade Audit'), 'Douyin evidence should include the eighth batch detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 9 - Detail Upgrade Audit'), 'Douyin evidence should include batch 9 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 10 - Detail Upgrade Audit'), 'Douyin evidence should include batch 10 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 11 - Detail Upgrade Audit'), 'Douyin evidence should include batch 11 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 12 - Detail Upgrade Audit'), 'Douyin evidence should include batch 12 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 13 - Detail Upgrade Audit'), 'Douyin evidence should include batch 13 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 14 - Detail Upgrade Audit'), 'Douyin evidence should include batch 14 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 15 - Detail Upgrade Audit'), 'Douyin evidence should include batch 15 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 16 - Detail Upgrade Audit'), 'Douyin evidence should include batch 16 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 17 - Detail Upgrade Audit'), 'Douyin evidence should include batch 17 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 18 - Detail Upgrade Audit'), 'Douyin evidence should include batch 18 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 19 - Detail Upgrade Audit'), 'Douyin evidence should include batch 19 detail-upgrade audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 20 - Deeper Visible And Detail Capture'), 'Douyin evidence should include batch 20 deeper visible/detail audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 21 - Fresh Deep Detail Capture'), 'Douyin evidence should include batch 21 fresh deep detail audit');
-assert.ok(douyinEvidence.includes('Favorite Link Batch 22 - Fresh Deep Detail Capture'), 'Douyin evidence should include batch 22 fresh deep detail audit');
-assert.ok(douyinEvidence.includes('Directly reusable Douyin favorite audio found so far: `0`'), 'Douyin evidence should keep the music reuse audit');
-assert.ok(douyinEvidence.includes('Clarified target: the embeddable playlist must be selected from soundtracks used inside the user\'s favorited Douyin videos'), 'Douyin evidence should clarify that video soundtracks are the playlist source');
-assert.ok(douyinEvidence.includes('Favorite Music Tab Audit'), 'Douyin evidence should include the clarified favorite-music tab audit');
-assert.ok(douyinEvidence.includes('Visible favorite music entries captured: `49`'), 'Douyin evidence should record favorite-music capture count');
-assert.ok(douyinEvidence.includes('not counted as favorite-video soundtrack candidates'), 'Douyin evidence should not treat the music tab as the embeddable soundtrack source');
-assert.ok(Array.isArray(douyinLedger.batches) && douyinLedger.batches.length >= 3, 'Douyin favorite ledger should preserve batch history');
-const douyinEntries = douyinLedger.batches.flatMap((batch) => batch.entries || []);
-const completedDouyinEntries = douyinEntries.filter((entry) => entry.status === 'completed-detail');
-const attemptedDouyinEntries = douyinEntries.filter((entry) => entry.status && entry.status.startsWith('attempted-'));
-const visibleListOnlyDouyinEntries = douyinEntries.filter((entry) => entry.status === 'visible-list-only');
-assert.strictEqual(completedDouyinEntries.length, douyinLedger.summary.completedDetailPages, 'Douyin completed detail count should match ledger entries');
-assert.strictEqual(attemptedDouyinEntries.length, douyinLedger.summary.attemptedDetailPages, 'Douyin attempted detail count should match ledger entries');
-assert.strictEqual(visibleListOnlyDouyinEntries.length, douyinLedger.summary.visibleListOnlyPages, 'Douyin visible-list count should match ledger entries');
-assert.ok(douyinEntries.every((entry) => /^https:\/\/www\.douyin\.com\/video\/\d+/.test(entry.url)), 'Douyin ledger entries should use canonical video URLs');
-assert.strictEqual(new Set(douyinEntries.map((entry) => entry.url)).size, douyinEntries.length, 'Douyin ledger should not duplicate canonical video URLs');
-assert.ok(douyinEntries.every((entry) => Array.isArray(entry.authorizationSignals) && entry.authorizationSignals.length === 0), 'Douyin ledger should not imply audio authorization without evidence');
-const douyinMusicEntries = douyinMusicLedger.batches.flatMap((batch) => batch.entries || []);
-assert.strictEqual(douyinMusicEntries.length, douyinMusicLedger.summary.visibleMusicItems, 'Douyin favorite music count should match ledger entries');
-assert.strictEqual(new Set(douyinMusicEntries.map((entry) => `${entry.title}\u0000${entry.creator}\u0000${entry.duration}`)).size, douyinMusicEntries.length, 'Douyin favorite music ledger should not duplicate visible entries');
-assert.ok(douyinMusicEntries.every((entry) => Array.isArray(entry.authorizationSignals) && entry.authorizationSignals.length === 0), 'Douyin music entries should not imply reuse authorization without evidence');
-assert.ok(douyinMusicEntries.every((entry) => Array.isArray(entry.directAudioUrls) && entry.directAudioUrls.length === 0), 'Douyin music entries should not imply direct audio URLs without evidence');
 assert.ok(scripts['check:p0'] && scripts['check:p0'].includes('check:release-data-safe'), 'P0 check should include data-safe release checks');
 assert.ok(scripts['check:p1'] && scripts['check:p1'].includes('test:html-hygiene'), 'P1 check should include HTML hygiene');
 assert.ok(scripts['check:p2'] && scripts['check:p2'].includes('test:docs-hygiene'), 'P2 check should include docs hygiene');

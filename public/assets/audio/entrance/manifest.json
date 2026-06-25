@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-06-18T05:10:09.744Z",
-  "note": "Bundled entrance audio/video is supported only when each track is explicitly marked authorizedForEmbedding. Downloaded Douyin favorite-video music must not be listed here unless the user has rights to redistribute it inside this system.",
+  "note": "Bundled entrance audio/video is supported only when each track is explicitly marked authorizedForEmbedding. Downloaded third-party favorite-video music must not be listed here unless the user has rights to redistribute it inside this system.",
   "trackSchema": {
     "id": "stable-track-id",
     "name": "display name",

@@ -1497,7 +1497,7 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     }
 }
 
-/* Douyin favorite gallery pass: lighter rail, clearer icons, softer protected watermark. */
+/* Favorite gallery pass: lighter rail, clearer icons, softer protected watermark. */
 :root {
     --ds-favorite-ink: #161823;
     --ds-favorite-rose: #fe2c55;
@@ -3368,7 +3368,7 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     }
 }
 
-/* Final designer override: keep the Douyin-informed rail above the legacy theme stack. */
+/* Final designer override: keep the reference-informed rail above the legacy theme stack. */
 :root {
     --ds-favorite-ink: #161823;
     --ds-favorite-rose: #fe2c55;
@@ -3861,7 +3861,7 @@ body.shell-dashboard {
     }
 }
 
-/* TRUE EOF Douyin-favorite palette pass: soften pure black into graphite and keep accents small. */
+/* TRUE EOF favorite palette pass: soften pure black into graphite and keep accents small. */
 :root {
     --ds-favorite-ink: #242a38 !important;
     --ds-favorite-ink-soft: #38445a !important;
@@ -3947,7 +3947,7 @@ body.shell-dashboard {
     color: var(--ds-favorite-ink) !important;
 }
 
-/* TRUE EOF Douyin favorites system pass: translate the collection mood into a usable school UI. */
+/* TRUE EOF favorites system pass: translate the collection mood into a usable school UI. */
 :root {
     --ds-favorite-ink: #242a38 !important;
     --ds-favorite-ink-soft: #3e485c !important;

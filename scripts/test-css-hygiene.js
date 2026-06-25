@@ -8,7 +8,7 @@ const activeThemeLayers = [
   ['product-redesign.css', 118_000, 900],
   ['readable-pop-workspace.css', 13_000, 130],
   ['designer-studio-workspace.css', 164_000, 2_160],
-  ['douyin-editorial-system.css', 33_000, 540],
+  ['editorial-control-system.css', 33_000, 540],
 ];
 const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
 const entranceAudioPath = path.join(root, 'public', 'assets', 'audio', 'entrance');
@@ -59,8 +59,8 @@ for (const [fileName, maxBytes, maxImportant] of activeThemeLayers) {
 }
 
 const favoriteThemeMarkers = [
-  'Douyin favorite evidence refresh',
-  'Douyin creator and favorite variation',
+  'Favorite evidence refresh',
+  'Creator and favorite variation',
   'Added-profile editorial shell',
   '--pd-sun',
   '--pd-sky-soft',

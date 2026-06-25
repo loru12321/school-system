@@ -49,6 +49,11 @@ assert.ok(releaseWorkflow.includes('assembleRelease'), 'stable release should bu
 assert.ok(releaseWorkflow.includes('CODE_SIGNING_ALLOWED=NO'), 'stable iOS validation should not require Apple credentials');
 assert.ok(!releaseWorkflow.includes('--prerelease'), 'stable releases must never be marked prerelease');
 assert.ok(deployWorkflow.includes('workflow_dispatch:'), 'Cloudflare deployment should be manually triggerable');
+assert.ok(deployWorkflow.includes('push:'), 'Cloudflare deployment should run automatically after main pushes');
+assert.ok(deployWorkflow.includes('branches:'), 'Cloudflare deployment push trigger should be branch scoped');
+assert.ok(deployWorkflow.includes('main'), 'Cloudflare deployment push trigger should target main');
+assert.ok(deployWorkflow.includes("github.actor != 'github-actions[bot]'"), 'Cloudflare deployment should not loop on bot-authored maintenance commits');
+assert.ok(deployWorkflow.includes('docs/performance/**'), 'Cloudflare deployment should ignore performance trend doc-only commits');
 assert.ok(deployWorkflow.includes('npm run build'), 'Cloudflare deployment should build dist before deploy');
 assert.ok(deployWorkflow.includes('npm run check:release-fast'), 'Cloudflare deployment should run fast release guards before deploy');
 assert.ok(deployWorkflow.includes('npx wrangler deploy'), 'Cloudflare deployment should use the canonical Wrangler deploy command');
