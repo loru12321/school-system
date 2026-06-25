@@ -177,7 +177,7 @@ jobs:
             echo "Source SHA: ${RELEASE_SOURCE_SHA}"
             echo "Build: ${RELEASE_BUILD_URL}"
             echo
-            jq -r '.platforms | to_entries[] | "- \(.key): \(.value.status) | \(.value.bytes) bytes | SHA-256 \(.value.sha256 // \"n/a\") | \(.value.buildUrl)"' release-assets/release-manifest.json
+            jq -r '.platforms | to_entries[] | "- \(.key): \(.value.status) | \(.value.bytes) bytes | SHA-256 \(.value.sha256 // "n/a") | \(.value.buildUrl)"' release-assets/release-manifest.json
           } > release-assets/release-notes.md
       - name: Create or update GitHub prerelease
         env:

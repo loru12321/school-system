@@ -9,6 +9,8 @@ const source = fs.readFileSync(
 );
 assert.match(source, /download-map\.json/, 'catalog runtime should use the first-party chunk map');
 assert.match(source, /api\\.github\\.com/, 'catalog runtime should recognize trusted GitHub release chunks');
+assert.match(source, /repos\\\/loru12321\\\/school-system\\\/releases\\\/assets/, 'catalog runtime should trust the migrated release repository');
+assert.doesNotMatch(source, new RegExp('hka' + '123321'), 'catalog runtime must not trust the retired repository owner');
 assert.doesNotMatch(source, /preventDefault\(\)/, 'download center should let the browser and IDM handle native downloads');
 assert.doesNotMatch(source, /triggerBrowserDownload/, 'download center should not synthesize downloads in JavaScript');
 assert.doesNotMatch(source, /saveChunksAsBlob/, 'download center should not buffer installers in page memory');

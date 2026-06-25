@@ -125,7 +125,7 @@
 
   function isTrustedChunk(chunk) {
     return /^packages\/[A-Za-z0-9._-]+\/(windows|android)\/part-\d{4}$/.test(chunk)
-      || /^https:\/\/api\.github\.com\/repos\/hka123321\/school-system\/releases\/assets\/\d+$/.test(chunk);
+      || /^https:\/\/api\.github\.com\/repos\/loru12321\/school-system\/releases\/assets\/\d+$/.test(chunk);
   }
 
   async function loadChunkDelivery(filename) {
