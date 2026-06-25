@@ -42,13 +42,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build release surface
+        run: npm run build
+
       - name: Run fast release guards
         run: npm run check:release-fast
 
       - name: Install Playwright browser dependencies
         run: npx playwright install --with-deps chromium
 
-      - name: Build web package
+      - name: Refresh web package
         run: npm run build
 
       - name: Run local smoke and save raw performance sample

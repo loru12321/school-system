@@ -39,11 +39,16 @@ function pathKey(value) {
 
 function assertTrustedAssetDirectory(assetDir) {
   const resolved = path.resolve(assetDir);
-  if (!isWithinOrEqual(rootDir, resolved) && !isWithinOrEqual(tempRoot, resolved)) {
+  const trustedRoot = isWithinOrEqual(rootDir, resolved)
+    ? rootDir
+    : isWithinOrEqual(tempRoot, resolved)
+      ? tempRoot
+      : '';
+  if (!trustedRoot) {
     throw new Error('RELEASE_ASSET_DIR must be inside the repository or system temporary directory');
   }
-  let current = path.parse(resolved).root;
-  for (const segment of resolved.slice(current.length).split(path.sep).filter(Boolean)) {
+  let current = trustedRoot;
+  for (const segment of path.relative(trustedRoot, resolved).split(path.sep).filter(Boolean)) {
     current = path.join(current, segment);
     if (!fs.existsSync(current)) throw new Error(`Release asset directory does not exist: ${resolved}`);
     const stats = fs.lstatSync(current);
