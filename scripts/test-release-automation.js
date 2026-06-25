@@ -18,6 +18,7 @@ function checkSyntax(relativePath) {
 
 const packageJson = JSON.parse(read('package.json'));
 const scripts = packageJson.scripts || {};
+const ciWorkflow = read('.github/workflows/ci.yml');
 const releaseWorkflow = read('.github/workflows/release-apps.yml');
 const deployWorkflow = read('.github/workflows/deploy-cloudflare.yml');
 const cleanupWorkflowPath = path.join(root, '.github/workflows/cleanup-beta-releases.yml');
@@ -49,6 +50,7 @@ assert.ok((releaseWorkflow.match(/node scripts\/resolve-app-version\.mjs/g) || [
 assert.ok(releaseWorkflow.includes('assembleRelease'), 'stable release should build an Android APK');
 assert.ok(releaseWorkflow.includes('CODE_SIGNING_ALLOWED=NO'), 'stable iOS validation should not require Apple credentials');
 assert.ok(!releaseWorkflow.includes('--prerelease'), 'stable releases must never be marked prerelease');
+assert.ok((ciWorkflow.match(/python -m pip install fonttools brotli/g) || []).length >= 3, 'CI jobs that build or validate should install font subsetting tools');
 assert.ok(deployWorkflow.includes('workflow_dispatch:'), 'Cloudflare deployment should be manually triggerable');
 assert.ok(deployWorkflow.includes('push:'), 'Cloudflare deployment should run automatically after main pushes');
 assert.ok(deployWorkflow.includes('branches:'), 'Cloudflare deployment push trigger should be branch scoped');
