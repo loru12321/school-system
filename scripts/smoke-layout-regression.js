@@ -191,9 +191,51 @@ async function openCorrelationAnalysisModule(page) {
 async function openProgressAnalysisModule(page) {
     await openModule(page, 'progress-analysis');
     await page.evaluate(async () => {
+        const ensureProgressSmokeExamArchive = () => {
+            const rawRows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
+            if (!rawRows.length) return false;
+            const db = (typeof window.CohortDB !== 'undefined' && typeof window.CohortDB.ensure === 'function')
+                ? window.CohortDB.ensure()
+                : (window.COHORT_DB || {});
+            db.exams = db.exams || {};
+            const existingExams = Object.values(db.exams).filter(exam => Array.isArray(exam?.data) && exam.data.length);
+            if (existingExams.length >= 2) return true;
+
+            const currentExamId = String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || db.currentExamId || '').trim()
+                || 'smoke-layout-current';
+            const baselineExamId = `${currentExamId}-baseline`;
+            const cloneRows = () => rawRows.map(row => ({ ...row }));
+            if (!db.exams[baselineExamId]) {
+                db.exams[baselineExamId] = {
+                    examId: baselineExamId,
+                    examFullKey: baselineExamId,
+                    createdAt: Date.now() - 86400000,
+                    updatedAt: Date.now() - 86400000,
+                    data: cloneRows()
+                };
+            }
+            if (!db.exams[currentExamId]) {
+                db.exams[currentExamId] = {
+                    examId: currentExamId,
+                    examFullKey: currentExamId,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    data: cloneRows()
+                };
+            }
+            db.currentExamId = currentExamId;
+            window.COHORT_DB = db;
+            window.CURRENT_EXAM_ID = currentExamId;
+            try { CURRENT_EXAM_ID = currentExamId; } catch (_) {}
+            try { localStorage.setItem('CURRENT_EXAM_ID', currentExamId); } catch (_) {}
+            window.__PROGRESS_BASELINE_LOADING = false;
+            return true;
+        };
+
         if (typeof window.ensureProgressAnalysisRuntimeLoaded === 'function') {
             await window.ensureProgressAnalysisRuntimeLoaded();
         }
+        ensureProgressSmokeExamArchive();
         if (typeof window.updateProgressSchoolSelect === 'function') window.updateProgressSchoolSelect();
         if (typeof window.updateProgressBaselineSelect === 'function') window.updateProgressBaselineSelect();
         if (typeof window.updateProgressMultiExamSelects === 'function') window.updateProgressMultiExamSelects();
@@ -228,14 +270,32 @@ async function openProgressAnalysisModule(page) {
             && typeof window.renderMultiPeriodComparison === 'function') {
             window.renderMultiPeriodComparison();
         }
+        if (typeof window.applyProgressFilter === 'function') {
+            window.applyProgressFilter();
+        }
         if (typeof window.refreshResponsiveMobileTables === 'function') {
             window.refreshResponsiveMobileTables(document.getElementById('progress-analysis'));
         }
     }).catch(() => {});
-    await page.waitForFunction(() => {
+    try {
+        await page.waitForFunction(() => {
         const section = document.getElementById('progress-analysis');
         const valueRows = document.querySelectorAll('#tb-value-added tbody tr').length;
-        const progressRows = document.querySelectorAll('#progressTable tbody tr').length;
+        let progressRows = document.querySelectorAll('#progressTable tbody tr').length;
+        const fullProgressRows = typeof window.readProgressCacheFullState === 'function'
+            ? window.readProgressCacheFullState()
+            : (Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL : []);
+        const visibleProgressRows = typeof window.readProgressCacheState === 'function'
+            ? window.readProgressCacheState()
+            : (Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : []);
+        if (progressRows === 0 && (fullProgressRows.length || visibleProgressRows.length)) {
+            if (typeof window.applyProgressFilter === 'function') {
+                window.applyProgressFilter();
+            } else if (typeof window.renderProgressTable === 'function') {
+                window.renderProgressTable(visibleProgressRows.length ? visibleProgressRows : fullProgressRows);
+            }
+            progressRows = document.querySelectorAll('#progressTable tbody tr').length;
+        }
         return !!section
             && section.classList.contains('active')
             && !!document.getElementById('progressSchoolSelect')
@@ -245,7 +305,30 @@ async function openProgressAnalysisModule(page) {
             && !!document.getElementById('progressCompareExam2')
             && valueRows > 0
             && progressRows > 0;
-    }, null, { timeout: 90000 });
+        }, null, { timeout: 90000 });
+    } catch (error) {
+        const diagnostics = await page.evaluate(() => ({
+            sectionActive: !!document.getElementById('progress-analysis')?.classList.contains('active'),
+            baselineLoading: !!window.__PROGRESS_BASELINE_LOADING,
+            rawRows: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : -1,
+            prevRows: Array.isArray(window.PREV_DATA) ? window.PREV_DATA.length : -1,
+            valueRows: document.querySelectorAll('#tb-value-added tbody tr').length,
+            progressRows: document.querySelectorAll('#progressTable tbody tr').length,
+            progressCacheRows: typeof window.readProgressCacheState === 'function'
+                ? window.readProgressCacheState().length
+                : (Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE.length : -1),
+            progressCacheFullRows: typeof window.readProgressCacheFullState === 'function'
+                ? window.readProgressCacheFullState().length
+                : (Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL.length : -1),
+            selectedSchool: document.getElementById('progressSchoolSelect')?.value || '',
+            selectedBaseline: document.getElementById('progressBaselineSelect')?.value || '',
+            compareSchool: document.getElementById('progressCompareSchool')?.value || '',
+            compareExam1: document.getElementById('progressCompareExam1')?.value || '',
+            compareExam2: document.getElementById('progressCompareExam2')?.value || ''
+        })).catch(() => null);
+        console.error('[smoke-layout] progress-analysis readiness diagnostics:', diagnostics);
+        throw error;
+    }
     await page.waitForTimeout(500);
 }
 
