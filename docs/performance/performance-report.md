@@ -4,12 +4,12 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `858703653c40`
-- Recorded at: 2026-06-25T11:51:14.420Z
-- Total smoke time: 37407 ms (+320 ms vs previous)
-- Login: 3162 ms
-- App ready: 4729 ms
-- Long tasks: 0, max 0 ms
+- Commit: `cd6382c07ed7`
+- Recorded at: 2026-06-25T12:32:22.999Z
+- Total smoke time: 36774 ms (-633 ms vs previous)
+- Login: 2673 ms
+- App ready: 3772 ms
+- Long tasks: 1, max 855 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `marginal-push` | 538 ms | 722 ms | 1260 ms |
-| `cohort-growth` | 559 ms | 647 ms | 1206 ms |
-| `upload` | 1085 ms | 4 ms | 1089 ms |
-| `student-overview` | 532 ms | 554 ms | 1086 ms |
-| `county-analysis` | 505 ms | 530 ms | 1035 ms |
-| `summary` | 536 ms | 491 ms | 1027 ms |
-| `potential-analysis` | 1023 ms | 0 ms | 1023 ms |
-| `report-generator` | 518 ms | 422 ms | 940 ms |
+| `upload` | 1847 ms | 2 ms | 1849 ms |
+| `indicator` | 580 ms | 1058 ms | 1638 ms |
+| `cohort-growth` | 554 ms | 660 ms | 1214 ms |
+| `county-analysis` | 508 ms | 581 ms | 1089 ms |
+| `student-overview` | 528 ms | 538 ms | 1066 ms |
+| `summary` | 534 ms | 505 ms | 1039 ms |
+| `potential-analysis` | 908 ms | 0 ms | 908 ms |
+| `grade-scheduler` | 530 ms | 374 ms | 904 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `cd6382c07ed7` | 36774 ms | 2673 ms | 3772 ms | 1 | 0 | 0 |
 | `858703653c40` | 37407 ms | 3162 ms | 4729 ms | 0 | 0 | 0 |
 | `e75cf9a41b3b` | 37087 ms | 2460 ms | 4438 ms | 1 | 0 | 0 |
 | `f180afc06cb0` | 38716 ms | 3261 ms | 4667 ms | 1 | 0 | 0 |
