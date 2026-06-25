@@ -368,7 +368,7 @@
                     <div class="insta-header">
                         <div class="insta-avatar-ring"><div class="insta-avatar">${H}</div></div>
                         <div class="insta-user-info">
-                            <div class="insta-username">${e.name} <i class="ti ti-discount-check-filled insta-verified"></i></div>
+                            <div class="insta-username">${e.name} <i class="ti ti-discount-check insta-verified"></i></div>
                             <div class="insta-location">${e.school} · ${e.class}</div>
                         </div>
                         <i class="ti ti-dots"></i>

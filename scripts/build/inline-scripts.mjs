@@ -42,7 +42,10 @@ const OPTIONAL_INLINE_RUNTIME_PATHS = [
     './assets/js/macro-compare-result-runtime.js',
     './assets/js/macro-compare-cloud-runtime.js'
 ];
-const BOOT_RUNTIME_PATH = './assets/js/boot-runtime.js';
+const MANIFEST_RUNTIME_PATHS = [
+    './assets/js/runtime-loader-runtime.js',
+    './assets/js/boot-runtime.js'
+];
 
 // Keep original script semantics intact; only normalize newlines.
 function normalizeScript(content) {
@@ -67,9 +70,9 @@ function readLocalScriptContent(projectRoot, src) {
     const builtPath = resolveBuiltScriptPath(projectRoot, src);
     const publicPath = resolvePublicScriptPath(projectRoot, src);
 
-    // For boot-runtime.js, prefer public if it's been recently patched
-    const isBootRuntime = src.includes('boot-runtime.js');
-    const sourcePath = (isBootRuntime && fs.existsSync(publicPath)) ? publicPath : (fs.existsSync(builtPath) ? builtPath : publicPath);
+    // Runtime manifests are patched in public before dist is rebuilt.
+    const isRuntimeManifest = MANIFEST_RUNTIME_PATHS.some((manifestPath) => src.includes(path.basename(manifestPath)));
+    const sourcePath = (isRuntimeManifest && fs.existsSync(publicPath)) ? publicPath : (fs.existsSync(builtPath) ? builtPath : publicPath);
 
     if (!fs.existsSync(sourcePath)) {
         return '';
@@ -170,12 +173,7 @@ function buildInlineRuntimeSourceMap(projectRoot) {
     return Object.fromEntries(entries);
 }
 
-function getBootRuntimeSkillSources(projectRoot) {
-    const bootContent = readLocalScriptContent(projectRoot, BOOT_RUNTIME_PATH);
-    if (!bootContent) return [];
-    const manifestMatch = bootContent.match(/var\s+SYSTEM_RUNTIME_SKILLS\s*=\s*\{([\s\S]*?)\n\};/);
-    if (!manifestMatch) return [];
-    const manifestSource = manifestMatch[1];
+function collectRuntimeManifestSources(manifestSource) {
     const sources = new Set();
 
     Array.from(manifestSource.matchAll(/\bsrc\s*:\s*['"]([^'"]+)['"]/g))
@@ -191,6 +189,18 @@ function getBootRuntimeSkillSources(projectRoot) {
         .map((match) => `./assets/vendor/${match[1]}`)
         .forEach((src) => sources.add(src));
 
+    return Array.from(sources);
+}
+
+function getBootRuntimeSkillSources(projectRoot) {
+    const sources = new Set();
+    for (const manifestPath of MANIFEST_RUNTIME_PATHS) {
+        const content = readLocalScriptContent(projectRoot, manifestPath);
+        if (!content) continue;
+        const manifestMatch = content.match(/var\s+SYSTEM_RUNTIME_SKILLS\s*=\s*\{([\s\S]*?)\n\};/);
+        if (!manifestMatch) continue;
+        collectRuntimeManifestSources(manifestMatch[1]).forEach((src) => sources.add(src));
+    }
     return Array.from(sources);
 }
 

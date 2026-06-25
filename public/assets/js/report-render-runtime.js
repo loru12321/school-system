@@ -1045,7 +1045,7 @@ function renderInstagramCard(stu) {
                     <div class="insta-header">
                         <div class="insta-avatar-ring"><div class="insta-avatar">${avatarLetter}</div></div>
                         <div class="insta-user-info">
-                            <div class="insta-username">${stu.name} <i class="ti ti-discount-check-filled insta-verified"></i></div>
+                            <div class="insta-username">${stu.name} <i class="ti ti-discount-check insta-verified"></i></div>
                             <div class="insta-location">${stu.school} · ${stu.class}</div>
                         </div>
                         <i class="ti ti-dots"></i>

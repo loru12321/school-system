@@ -5,9 +5,10 @@
   "main": "desktop/main.cjs",
   "scripts": {
     "assets:app-icons": "node scripts/generate-app-icon-assets.mjs",
+    "assets:tabler-icons": "node scripts/build/subset-tabler-icons.mjs",
     "test:app-icon-assets": "node scripts/test-app-icon-assets.mjs",
     "dev": "vite",
-    "build": "node scripts/build/preserve-dist-release-assets.mjs save && node scripts/build/update-runtime-cache-version.mjs && vite build && node scripts/build/preserve-dist-release-assets.mjs restore && node scripts/build/sync-public-assets.mjs && node scripts/build/prune-dist-assets.mjs && node scripts/build/dedupe-dist-css.mjs && node scripts/build/optimize-dist-html.mjs && node scripts/build/inline-scripts.mjs",
+    "build": "node scripts/build/preserve-dist-release-assets.mjs save && node scripts/build/subset-tabler-icons.mjs && node scripts/build/update-runtime-cache-version.mjs && vite build && node scripts/build/preserve-dist-release-assets.mjs restore && node scripts/build/sync-public-assets.mjs && node scripts/build/prune-dist-assets.mjs && node scripts/build/dedupe-dist-css.mjs && node scripts/build/optimize-dist-html.mjs && node scripts/build/inline-scripts.mjs",
     "desktop:start": "electron desktop/main.cjs",
     "desktop:build": "electron-builder --config electron-builder.yml --win nsis --x64 --publish never",
     "test:desktop-package-contract": "node scripts/test-desktop-package-contract.js",
