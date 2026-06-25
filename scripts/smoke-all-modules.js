@@ -735,7 +735,12 @@ async function runModuleDeepCheck(page, id) {
             const schoolNames = Object.keys(window.SCHOOLS || {});
             const modal = document.getElementById('school-profile-modal');
             const closeBtn = document.querySelector('#school-profile-modal .school-modal-close');
-            const schoolProfileCell = document.querySelector('#tb-total tbody [data-school-profile-name]');
+            let schoolProfileCell = document.querySelector('#tb-total tbody [data-school-profile-name]');
+            if (!schoolProfileCell && typeof window.renderTables === 'function') {
+                window.renderTables();
+                await new Promise(resolve => setTimeout(resolve, 120));
+                schoolProfileCell = document.querySelector('#tb-total tbody [data-school-profile-name]');
+            }
             const openSchoolProfile = typeof window.showSchoolProfile === 'function'
                 ? window.showSchoolProfile
                 : (typeof showSchoolProfile === 'function' ? showSchoolProfile : null);
