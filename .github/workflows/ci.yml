@@ -12,6 +12,10 @@ env:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release-guards:
     name: Release Guards
@@ -59,7 +63,8 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browser dependencies
-        run: npx playwright install chromium
+        timeout-minutes: 6
+        run: npx playwright install --only-shell chromium
 
       - name: Build web package
         run: npm run build
@@ -88,7 +93,8 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browser dependencies
-        run: npx playwright install chromium
+        timeout-minutes: 6
+        run: npx playwright install --only-shell chromium
 
       - name: Run root validation
         run: npm run validate
