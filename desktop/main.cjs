@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, safeStorage, sessi
 const PRODUCTION_URL = 'https://schoolsystem.com.cn';
 const PRODUCTION_ORIGIN = new URL(PRODUCTION_URL).origin;
 const RELEASE_HOST = 'github.com';
-const RELEASE_PATH_PREFIX = '/hka123321/school-system/releases';
+const RELEASE_PATH_PREFIX = '/loru12321/school-system/releases';
 const OFFLINE_PAGE = path.join(__dirname, 'offline.html');
 const LOCAL_APP_ENTRY = path.join(process.resourcesPath || path.join(__dirname, '..'), 'app', 'index.html');
 const TRAY_ICON = path.join(__dirname, 'assets', 'icon.ico');

@@ -20,10 +20,10 @@ const externalMap = {
     contentType: 'application/vnd.microsoft.portable-executable',
     bytes: 6,
     sha256: 'b'.repeat(64),
-    fullAssetApiUrl: 'https://api.github.com/repos/hka123321/school-system/releases/assets/457116887',
+    fullAssetApiUrl: 'https://api.github.com/repos/loru12321/school-system/releases/assets/457116887',
     chunks: [
-      'https://api.github.com/repos/hka123321/school-system/releases/assets/457054996',
-      'https://api.github.com/repos/hka123321/school-system/releases/assets/457055072'
+      'https://api.github.com/repos/loru12321/school-system/releases/assets/457054996',
+      'https://api.github.com/repos/loru12321/school-system/releases/assets/457055072'
     ],
     chunkBytes: [3, 3]
   }]

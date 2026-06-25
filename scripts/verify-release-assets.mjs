@@ -8,7 +8,7 @@ export const PLATFORM_RULES = Object.freeze({
   ios: { downloadableOnlyWhenStatusReady: true, extension: '.ipa', minimumBytes: 5 * 1024 * 1024 },
 });
 
-const repo = process.env.RELEASE_REPO || 'hka123321/school-system';
+const repo = process.env.RELEASE_REPO || 'loru12321/school-system';
 const apiUrl = `https://api.github.com/repos/${repo}/releases/latest`;
 const allowMissing = process.env.RELEASE_ASSETS_ALLOW_MISSING === 'true';
 
