@@ -131,6 +131,8 @@ assert.ok(publicHeaders.includes('Strict-Transport-Security: max-age=31536000; i
 assert.ok(publicHeaders.includes('Referrer-Policy: strict-origin-when-cross-origin'), 'static responses should send a referrer policy');
 assert.ok(publicHeaders.includes('X-Frame-Options: SAMEORIGIN'), 'static responses should limit framing');
 assert.ok(publicHeaders.includes('Permissions-Policy: camera=(), microphone=(), geolocation=()'), 'static responses should disable unused sensitive browser features');
+assert.ok(publicHeaders.includes('Content-Security-Policy-Report-Only:'), 'static responses should start CSP in report-only mode');
+assert.ok(publicHeaders.includes("report-uri /api/csp-report"), 'report-only CSP should route violation reports to the Worker endpoint');
 assert.ok(publicHeaders.includes('/robots.txt'), 'static asset headers should cover robots.txt');
 assert.ok(publicHeaders.includes('/sitemap.xml'), 'static asset headers should cover sitemap.xml');
 assert.ok(publicHeaders.includes('/site.webmanifest'), 'static asset headers should cover site.webmanifest');
@@ -149,6 +151,8 @@ assert.ok(publicManifest.description.includes('教务'), 'web manifest descripti
 assert.ok(!/[�锟]/.test(read('public/site.webmanifest')), 'web manifest should not contain mojibake');
 assert.ok(Array.isArray(publicManifest.categories) && publicManifest.categories.includes('education'), 'web manifest should classify the app for education');
 assert.ok(Array.isArray(publicManifest.icons) && publicManifest.icons.some((icon) => icon.src === '/icon.svg'), 'web manifest should include the SVG app icon');
+assert.ok(Array.isArray(publicManifest.icons) && publicManifest.icons.some((icon) => icon.src === '/assets/brand/app-icon-192.png' && icon.sizes === '192x192'), 'web manifest should include a 192 PNG app icon');
+assert.ok(Array.isArray(publicManifest.icons) && publicManifest.icons.some((icon) => icon.src === '/assets/brand/app-icon-512.png' && icon.sizes === '512x512'), 'web manifest should include a 512 PNG app icon');
 assert.ok(Array.isArray(publicManifest.shortcuts) && publicManifest.shortcuts.length >= 2, 'web manifest should expose common app shortcuts');
 assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.url === '/#upload'), 'web manifest should shortcut to data import');
 assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.url === '/#student-overview'), 'web manifest should shortcut to student overview');
@@ -156,6 +160,7 @@ assert.ok(!publicManifest.shortcuts.some((shortcut) => shortcut.url === '/#app-d
 assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.name === '数据导入'), 'web manifest should keep readable import shortcut');
 assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.name === '学情总览'), 'web manifest should keep readable overview shortcut');
 assert.ok(!publicManifest.shortcuts.some((shortcut) => shortcut.name === '应用下载'), 'web manifest should not expose removed app download shortcut');
+assert.ok(publicManifest.shortcuts.every((shortcut) => shortcut.icons?.some((icon) => icon.src === '/assets/brand/app-icon-192.png')), 'web manifest shortcuts should expose PNG icons for install surfaces');
 assert.ok(!distIndex.includes('http://localhost'), 'dist HTML must not reference localhost');
 assert.ok(!distIndex.includes('127.0.0.1'), 'dist HTML must not reference loopback hosts');
 forbiddenSecretPatterns.forEach((pattern) => {

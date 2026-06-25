@@ -935,6 +935,16 @@ export default {
         }, request, env);
       }
 
+      if (url.pathname === '/api/csp-report') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Cache-Control': 'no-store',
+            'X-Content-Type-Options': 'nosniff'
+          }
+        });
+      }
+
       if (url.pathname === '/api/edu-gateway' || url.pathname === '/api/edu_gateway' || url.pathname === '/api/gateway') {
         return await handleGatewayProxy(request, env, url);
       }

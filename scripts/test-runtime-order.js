@@ -200,6 +200,7 @@ const bootSameOriginGatewayCandidateIndex = bootRuntime.indexOf('pushCandidate(w
 const grade9TotalSubjectContract = /totalSubs:\s*\['语文',\s*'数学',\s*'英语',\s*'物理',\s*'化学'\]/;
 const grade9PoliticsDisplayContract = /extraDisplaySubs:\s*\['政治'\]/;
 const authStateRef = './assets/js/auth-state-runtime.js';
+const edgeGatewayRef = './assets/js/edge-gateway-runtime.js';
 const workspaceStateRef = './assets/js/workspace-state-runtime.js';
 const examStateRef = './assets/js/exam-state-runtime.js';
 const schoolStateRef = './assets/js/school-state-runtime.js';
@@ -339,6 +340,7 @@ assert.ok(runtimeLoaderRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'runti
 assert.ok(bootRuntime.includes("'shell-polish': bootSkill('idle', 'demand'"), 'shell polish should stay behind the on-demand runtime loader');
 assert.ok(bootRuntime.includes('window.ensureShellPolishRuntimeLoaded'), 'shell polish should still expose an explicit loader');
 const authStateIndex = normalizedModuleManifest.indexOf(authStateRef);
+const edgeGatewayIndex = normalizedModuleManifest.indexOf(edgeGatewayRef);
 const workspaceStateIndex = normalizedModuleManifest.indexOf(workspaceStateRef);
 const examStateIndex = normalizedModuleManifest.indexOf(examStateRef);
 const schoolStateIndex = normalizedModuleManifest.indexOf(schoolStateRef);
@@ -395,6 +397,7 @@ const historyCompareIndex = indexHtml.indexOf(historyCompareRef);
 const perfMobileIndex = indexHtml.indexOf(perfMobileRef);
 
 assert.ok(authStateIndex >= 0, 'index.html should load auth-state-runtime.js');
+assert.ok(edgeGatewayIndex >= 0, 'index.html should load edge-gateway-runtime.js');
 assert.ok(bootRuntimeIndex >= 0, 'index.html should load boot-runtime.js');
 assert.ok(runtimeLoaderRuntimeIndex >= 0, 'index.html should load runtime-loader-runtime.js');
 assert.ok(runtimeLoaderRuntimeIndex < bootRuntimeIndex, 'runtime-loader-runtime.js should load before boot-runtime.js');
@@ -448,6 +451,8 @@ assert.ok(issueManagerIndex < appIndex, 'issue-manager-runtime.js should load be
 assert.ok(helpSystemIndex < appIndex, 'help-system-runtime.js should load before app.js');
 assert.ok(loggerIndex < appIndex, 'logger-runtime.js should load before app.js');
 assert.ok(accountManagerIndex < appIndex, 'account-manager-runtime.js should load before app.js');
+assert.ok(edgeGatewayIndex < accountManagerIndex, 'edge-gateway-runtime.js should load before account-manager-runtime.js');
+assert.ok(edgeGatewayIndex < appIndex, 'edge-gateway-runtime.js should load before app.js');
 assert.ok(managementFacadesIndex < appIndex, 'management-facades-runtime.js should load before app.js');
 assert.ok(runtimeAccessorsIndex < managementFacadesIndex, 'runtime-accessors-runtime.js should load before management-facades-runtime.js');
 assert.ok(dataManagerTeacherIndex < appIndex, 'data-manager-teacher-runtime.js should load before app.js');

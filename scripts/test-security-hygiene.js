@@ -12,12 +12,14 @@ const gateway = read('src/worker-gateway-d1.js');
 const worker = read('src/worker-dummy.js');
 const workerHelpers = read('src/worker-http-helpers.js');
 const boot = read('public/assets/js/boot-runtime.js');
+const edgeGateway = read('public/assets/js/edge-gateway-runtime.js');
 const runtimeLoader = read('public/assets/js/runtime-loader-runtime.js');
 const app = read('public/assets/js/app.js');
 const authState = read('public/assets/js/auth-state-runtime.js');
 const accountAdmin = read('public/assets/js/account-admin-runtime.js');
 const srcIndex = read('src/index.html');
 const serviceWorker = read('public/sw.js');
+const publicHeaders = read('public/_headers');
 const supabaseBootstrap = read('supabase/sql/000_app_tables_bootstrap.sql');
 const keySensitiveFiles = [
     'wrangler.jsonc',
@@ -61,14 +63,16 @@ assert.ok(
     boot.includes("return normalizeProxyOrigin(window.location.origin) + '/sb/rest/v1';"),
     'localhost REST compatibility client should use the same-origin Supabase proxy'
 );
-assert.ok(app.includes('isHostedGatewayUrl'), 'app EdgeGateway should recognize same-origin hosted gateway URLs');
+assert.ok(edgeGateway.includes('isHostedGatewayUrl'), 'EdgeGateway runtime should recognize same-origin hosted gateway URLs');
 assert.ok(
-    app.includes("urls.length && (this.getPublishableKey() || urls.some(url => this.isHostedGatewayUrl(url)))"),
-    'app EdgeGateway should allow same-origin hosted gateway calls without a browser-side publishable key'
+    edgeGateway.includes("urls.length && (this.getPublishableKey() || urls.some(url => this.isHostedGatewayUrl(url)))"),
+    'EdgeGateway runtime should allow same-origin hosted gateway calls without a browser-side publishable key'
 );
-assert.ok(app.includes('if (apikey) headers.apikey = apikey;'), 'app EdgeGateway should omit empty apikey headers for hosted gateway calls');
+assert.ok(edgeGateway.includes('if (apikey) headers.apikey = apikey;'), 'EdgeGateway runtime should omit empty apikey headers for hosted gateway calls');
 assert.ok(serviceWorker.includes('isApiCacheEligible'), 'service worker should gate API caching');
 assert.ok(!serviceWorker.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
+assert.ok(publicHeaders.includes('Content-Security-Policy-Report-Only:'), 'static headers should start CSP in report-only mode');
+assert.ok(worker.includes("url.pathname === '/api/csp-report'"), 'worker should receive CSP violation reports');
 assert.ok(!boot.includes('DEMO_TOKEN'), 'boot runtime should not provide an offline admin demo token');
 assert.ok(!runtimeLoader.includes('DEMO_TOKEN'), 'runtime loader should not provide an offline admin demo token');
 assert.ok(!/\bpassword\s+text\b/i.test(supabaseBootstrap), 'Supabase bootstrap should not recreate the legacy plaintext password column');

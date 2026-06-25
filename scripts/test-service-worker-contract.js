@@ -59,7 +59,8 @@ assertIncludes(publicSw, "self.addEventListener('activate'", 'activate handler s
 assertIncludes(publicSw, 'await self.clients.claim();', 'activate should claim clients');
 assert.ok(!publicSw.includes('client.navigate'), 'service worker should not force-navigate clients during activation');
 assertIncludes(publicSw, "self.addEventListener('fetch'", 'fetch handler should be registered');
-assertIncludes(publicSw, "if (request.method !== 'GET') return;", 'service worker must not cache mutating requests');
+assertIncludes(publicSw, "if (request.method !== 'GET') {", 'service worker must branch mutating requests before caching');
+assertIncludes(publicSw, "event.waitUntil(clearApiCacheAfterMutation(url));", 'service worker should clear API cache after mutating API requests');
 assertIncludes(publicSw, "if (url.protocol === 'chrome-extension:') return;", 'service worker should ignore browser extension requests');
 assertIncludes(publicSw, "request.mode === 'navigate' || acceptsHtml(request)", 'HTML navigation should use network-first handling');
 assertIncludes(publicSw, 'event.respondWith(networkFirstApi(request, url));', 'API requests should use network-first handling');
@@ -68,8 +69,12 @@ assertIncludes(publicSw, "fetch(new Request(request, { cache: 'reload' }))", 'ru
 assertIncludes(publicSw, 'event.respondWith(cacheFirstStatic(request));', 'non-runtime static assets should keep cache-first handling');
 assertIncludes(publicSw, 'function isRuntimeAsset(pathname)', 'runtime asset routing should be centralized');
 assertIncludes(publicSw, 'function isApiCacheEligible(url)', 'API cache eligibility should be centralized');
-assertIncludes(publicSw, "if (pathname === '/api/health') return true;", 'only health API should be cache eligible by default');
+assertIncludes(publicSw, "if (pathname === '/api/health') return true;", 'health API should be cache eligible');
+assertIncludes(publicSw, "if (pathname === '/api/system-data') {", 'readonly system_data selects should be cache eligible');
+assertIncludes(publicSw, "searchParams.has('select')", 'system_data cache eligibility should require an explicit select');
+assertIncludes(publicSw, "&& (searchParams.has('key') || searchParams.has('limit'));", 'system_data cache eligibility should require a bounded readonly query');
 assertIncludes(publicSw, 'return false;', 'API cache eligibility should fail closed');
+assertIncludes(publicSw, 'async function clearApiCacheAfterMutation(url)', 'API cache invalidation should be centralized');
 assertIncludes(publicSw, "headers: buildOfflineHeaders('application/json; charset=utf-8')", 'offline API fallback should be JSON with charset');
 assertIncludes(publicSw, "headers: buildOfflineHeaders('text/html; charset=utf-8')", 'offline HTML fallback should be HTML with charset');
 assertIncludes(publicSw, "function buildOfflineHeaders(contentType)", 'offline fallback headers should be centralized');
@@ -101,5 +106,5 @@ console.log(JSON.stringify({
   ok: true,
   appShellAssets: publicAppShellAssets,
   cacheVersion,
-  apiCachePolicy: 'health-only'
+  apiCachePolicy: 'health-and-bounded-system-data'
 }, null, 2));

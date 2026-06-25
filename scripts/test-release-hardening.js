@@ -96,6 +96,9 @@ assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '数据导入'
 assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '学情总览'), 'manifest should keep readable overview shortcut');
 assert.ok(!manifest.shortcuts.some((shortcut) => shortcut.name === '应用下载'), 'manifest should not expose removed app download shortcut');
 assert.ok(manifest.shortcuts.every((shortcut) => shortcut.icons?.some((icon) => icon.src === '/icon.svg')), 'manifest shortcuts should include app icons');
+assert.ok(manifest.icons?.some((icon) => icon.src === '/assets/brand/app-icon-192.png' && icon.sizes === '192x192'), 'manifest should include 192 PNG icon');
+assert.ok(manifest.icons?.some((icon) => icon.src === '/assets/brand/app-icon-512.png' && icon.sizes === '512x512'), 'manifest should include 512 PNG icon');
+assert.ok(manifest.shortcuts.every((shortcut) => shortcut.icons?.some((icon) => icon.src === '/assets/brand/app-icon-192.png')), 'manifest shortcuts should include PNG app icons');
 const swVersionMatch = swRuntime.match(/const\s+SERVICE_WORKER_VERSION\s*=\s*['"]([^'"]+)['"]/);
 const swVersion = swVersionMatch ? swVersionMatch[1] : '';
 assert.ok(swVersion, 'could not extract SERVICE_WORKER_VERSION from service-worker-runtime.js');

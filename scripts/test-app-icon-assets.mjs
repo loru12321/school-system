@@ -50,7 +50,7 @@ const source = await mustRead(at('docs', 'design-assets', 'app-icon-knowledge-bl
 const copiedSource = await mustRead(at('public', 'assets', 'brand', 'app-icon-source.png'));
 assert.equal(sha256(copiedSource), sha256(source), 'approved source must be copied byte-for-byte');
 
-for (const size of [16, 24, 32, 48, 64, 128, 256, 512, 1024]) {
+for (const size of [16, 24, 32, 48, 64, 128, 192, 256, 512, 1024]) {
   await imageInfo(at('public', 'assets', 'brand', `app-icon-${size}.png`), size, size, {
     opaque: true,
     readable: [16, 24, 48].includes(size),
@@ -94,7 +94,7 @@ assert.equal(status.ios, undefined);
 
 const generatedFiles = [
   'public/assets/brand/app-icon-source.png',
-  ...[16, 24, 32, 48, 64, 128, 256, 512, 1024].map((size) => `public/assets/brand/app-icon-${size}.png`),
+  ...[16, 24, 32, 48, 64, 128, 192, 256, 512, 1024].map((size) => `public/assets/brand/app-icon-${size}.png`),
   'public/assets/brand/app-icon-platform-status.json',
   'desktop/assets/icon.ico'
 ];

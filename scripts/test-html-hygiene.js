@@ -23,7 +23,7 @@ assert.ok(html.includes('<link rel="canonical" href="https://schoolsystem.com.cn
 assert.ok(html.includes('<link rel="alternate" hreflang="zh-CN" href="https://schoolsystem.com.cn/">'), 'index.html should include a zh-CN alternate URL');
 assert.ok(html.includes('<link rel="alternate" hreflang="x-default" href="https://schoolsystem.com.cn/">'), 'index.html should include an x-default alternate URL');
 assert.ok(html.includes('<link rel="manifest" href="./site.webmanifest">'), 'index.html should link the web app manifest');
-assert.ok(html.includes('<link rel="apple-touch-icon" href="./icon.svg">'), 'index.html should provide a touch icon');
+assert.ok(html.includes('<link rel="apple-touch-icon" sizes="192x192" href="./assets/brand/app-icon-192.png">'), 'index.html should provide a PNG touch icon');
 assert.ok(html.includes('<meta property="og:title" content="校衡台">'), 'index.html should include Open Graph metadata');
 assert.ok(html.includes('<meta property="og:site_name" content="校衡台">'), 'index.html should include readable Open Graph site name');
 assert.ok(html.includes('<meta name="twitter:title" content="校衡台">'), 'index.html should include readable Twitter metadata');

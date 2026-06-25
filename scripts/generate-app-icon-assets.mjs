@@ -61,7 +61,7 @@ async function flattenedPng(size, output) {
 await ensureDir(brandDir);
 await copyFile(source, path.join(brandDir, 'app-icon-source.png'));
 
-const webSizes = [16, 24, 32, 48, 64, 128, 256, 512, 1024];
+const webSizes = [16, 24, 32, 48, 64, 128, 192, 256, 512, 1024];
 for (const size of webSizes) await flattenedPng(size, path.join(brandDir, `app-icon-${size}.png`));
 
 const icoInputs = [16, 24, 32, 48, 64, 128, 256].map((size) => path.join(brandDir, `app-icon-${size}.png`));

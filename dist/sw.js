@@ -4,7 +4,7 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-runtime-31208b8d4215';
+const CACHE_VERSION = 'school-system-runtime-1fa19c8a5cf6';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -43,10 +43,15 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const { request } = event;
 
-    if (request.method !== 'GET') return;
-
     const url = new URL(request.url);
     if (url.protocol === 'chrome-extension:') return;
+
+    if (request.method !== 'GET') {
+        if (isApiRequest(url.pathname)) {
+            event.waitUntil(clearApiCacheAfterMutation(url));
+        }
+        return;
+    }
 
     if (request.mode === 'navigate' || acceptsHtml(request)) {
         event.respondWith(networkFirstHtml(request));
@@ -188,7 +193,18 @@ function isApiRequest(pathname) {
 function isApiCacheEligible(url) {
     const pathname = String(url && url.pathname || '');
     if (pathname === '/api/health') return true;
+    if (pathname === '/api/system-data') {
+        const searchParams = url && url.searchParams;
+        return !!searchParams
+            && searchParams.has('select')
+            && (searchParams.has('key') || searchParams.has('limit'));
+    }
     return false;
+}
+
+async function clearApiCacheAfterMutation(url) {
+    if (!url || !isApiRequest(url.pathname)) return;
+    await caches.delete(API_CACHE);
 }
 
 self.addEventListener('sync', event => {

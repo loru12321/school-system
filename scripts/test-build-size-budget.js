@@ -31,7 +31,7 @@ const budgets = {
     // prior cap (<0.5%); retain 2KB+ headroom for regression detection.
     distAppCss: 625_000,
     ltHtml: 2_100_000,
-    publicAppJs: 910_000,
+    publicAppJs: 790_000,
     // Keep first-screen boot focused; optional runtime manifest/loaders live in runtime-loader-runtime.js.
     publicBootJs: 85_000,
     publicRuntimeLoaderJs: 58_000,

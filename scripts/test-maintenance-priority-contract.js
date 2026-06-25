@@ -51,6 +51,7 @@ const supabaseBootstrap = read('supabase/sql/000_app_tables_bootstrap.sql');
 const wrangler = parseJson('wrangler.jsonc');
 const headers = read('public/_headers').replace(/\r\n/g, '\n');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
+const edgeGatewayRuntime = read('public/assets/js/edge-gateway-runtime.js');
 const runtimeLoaderRuntime = read('public/assets/js/runtime-loader-runtime.js');
 const bootRuntimeSurface = `${bootRuntime}\n${runtimeLoaderRuntime}`;
 const appRuntime = read('public/assets/js/app.js');
@@ -135,14 +136,19 @@ const guardedItems = [
   () => assert.ok(!/\bpassword\s+text\b/i.test(supabaseBootstrap), 'Supabase bootstrap should not recreate plaintext account passwords'),
   () => assert.ok(!readme.includes('C:\\Users\\'), 'README should remain free of local paths'),
   () => assertIncludes(headers, 'max-age=31536000, immutable', 'versioned runtime JS should use immutable caching'),
+  () => assertIncludes(headers, 'Content-Security-Policy-Report-Only:', 'static headers should start CSP in report-only mode'),
+  () => assertIncludes(worker, "url.pathname === '/api/csp-report'", 'Worker should accept CSP violation reports'),
   () => assertIncludes(headers, '/sw.js', 'service worker should keep a dedicated revalidation header'),
   () => assertIncludes(runtimeLoaderRuntime, 'ensureXlsxVendorLoaded', 'runtime loader should lazy-load XLSX'),
   () => assertIncludes(bootRuntime, 'bindBootLoginActions', 'boot runtime should bind first-screen login actions before app modules load'),
   () => assertIncludes(bootRuntime, '[data-login-submit]', 'boot runtime should bind data-login-submit buttons'),
   () => assert.ok(fileSize('public/assets/js/app.js') <= 910_000, 'public app.js should stay within tightened budget'),
+  () => assert.ok(fileSize('public/assets/js/app.js') <= 790_000, 'public app.js should preserve the EdgeGateway runtime split'),
+  () => assert.ok(fileSize('public/assets/js/edge-gateway-runtime.js') <= 16_000, 'EdgeGateway runtime should stay focused'),
   () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 85_000, 'boot runtime should stay within tightened budget'),
   () => assert.ok(fileSize('public/assets/js/runtime-loader-runtime.js') <= 58_000, 'runtime loader should stay within its split budget'),
-  () => assertIncludes(appRuntime, 'isHostedGatewayUrl', 'app runtime should support hosted gateway URLs'),
+  () => assertIncludes(bootRuntime, 'edge-gateway-runtime.js', 'boot runtime should load the split EdgeGateway runtime before app.js'),
+  () => assertIncludes(edgeGatewayRuntime, 'isHostedGatewayUrl', 'EdgeGateway runtime should support hosted gateway URLs'),
   () => assertIncludes(dialogRuntime, 'UI.prompt = async function', 'dialog runtime should expose shared prompt modal API'),
   () => assertIncludes(dialogRuntime, 'UI.confirm = async function', 'dialog runtime should expose shared confirm modal API'),
   () => assertIncludes(dialogRuntime, 'UI.alert = async function', 'dialog runtime should expose shared alert modal API'),
