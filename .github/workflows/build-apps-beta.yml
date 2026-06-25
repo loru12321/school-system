@@ -52,7 +52,10 @@ jobs:
           npm pkg set version="${{ steps.version.outputs.APP_VERSION_NAME }}"
           npm run desktop:build
           New-Item -ItemType Directory -Force release-out | Out-Null
-          $installer = Get-ChildItem native-builds -Filter *.exe | Select-Object -First 1
+          $installer = Get-ChildItem native-builds -Recurse -Filter 'school-system-windows-*.exe' |
+            Where-Object { $_.Name -notlike '*.__uninstaller.exe' } |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
           if (-not $installer) { throw 'Windows installer was not produced' }
           Copy-Item $installer.FullName "release-out/school-system-windows-${{ needs.metadata.outputs.release-tag }}-x64.exe"
       - uses: actions/upload-artifact@v4
