@@ -25,9 +25,6 @@ jobs:
     if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message || '', '[skip performance]')
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    env:
-      NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
-      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
 
     steps:
       - name: Check out repository
@@ -59,6 +56,8 @@ jobs:
 
       - name: Run local smoke and save raw performance sample
         env:
+          NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
           SMOKE_OUTPUT_PATH: docs/performance/latest-smoke.json
           SMOKE_PERF_STRICT: "true"
         run: npm run smoke:modules:local

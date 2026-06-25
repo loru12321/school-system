@@ -47,9 +47,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: release-guards
-    env:
-      NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
-      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
 
     steps:
       - name: Check out repository
@@ -72,6 +69,9 @@ jobs:
         run: npm run build
 
       - name: Run browser smoke checks
+        env:
+          NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: npm run test:calculation-snapshot:local && npm run smoke:layout:local
 
   root-validate:
@@ -79,9 +79,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: browser-smoke
-    env:
-      NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
-      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
 
     steps:
       - name: Check out repository
@@ -101,4 +98,7 @@ jobs:
         run: google-chrome --version
 
       - name: Run root validation
+        env:
+          NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: npm run validate
