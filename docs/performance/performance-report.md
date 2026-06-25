@@ -4,11 +4,11 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `db221177bb7e`
-- Recorded at: 2026-06-25T23:08:57.068Z
-- Total smoke time: 32858 ms (-4640 ms vs previous)
-- Login: 3834 ms
-- App ready: 2334 ms
+- Commit: `99531e601775`
+- Recorded at: 2026-06-25T23:22:46.266Z
+- Total smoke time: 32409 ms (-449 ms vs previous)
+- Login: 2796 ms
+- App ready: 2207 ms
 - Long tasks: 0, max 0 ms
 - Budget failures: 0
 - Errors: 0
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `summary` | 544 ms | 576 ms | 1120 ms |
-| `student-overview` | 528 ms | 499 ms | 1027 ms |
-| `cohort-growth` | 514 ms | 408 ms | 922 ms |
-| `freshman-simulator` | 533 ms | 368 ms | 901 ms |
-| `grade-scheduler` | 527 ms | 374 ms | 901 ms |
-| `potential-analysis` | 881 ms | 0 ms | 881 ms |
-| `exam-arranger` | 517 ms | 343 ms | 860 ms |
-| `report-generator` | 518 ms | 280 ms | 798 ms |
+| `summary` | 555 ms | 517 ms | 1072 ms |
+| `cohort-growth` | 544 ms | 514 ms | 1058 ms |
+| `seat-adjustment` | 666 ms | 364 ms | 1030 ms |
+| `student-overview` | 548 ms | 482 ms | 1030 ms |
+| `potential-analysis` | 940 ms | 0 ms | 940 ms |
+| `grade-scheduler` | 531 ms | 383 ms | 914 ms |
+| `freshman-simulator` | 544 ms | 362 ms | 906 ms |
+| `report-generator` | 531 ms | 336 ms | 867 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `99531e601775` | 32409 ms | 2796 ms | 2207 ms | 0 | 0 | 0 |
 | `db221177bb7e` | 32858 ms | 3834 ms | 2334 ms | 0 | 0 | 0 |
 | `c38d91262d48` | 37498 ms | 2728 ms | 4462 ms | 1 | 0 | 0 |
 | `a2ea0396e059` | 38789 ms | 2472 ms | 5704 ms | 0 | 0 | 0 |
