@@ -85,6 +85,8 @@ jobs:
         run: node scripts/resolve-app-version.mjs --channel beta --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
       - name: Install dependencies
         run: npm ci
+      - name: Install font build tooling
+        run: python -m pip install fonttools brotli
       - name: Run package contracts
         run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow && node scripts/test-android-signing-contract.js
       - name: Restore Android test-signing keystore
@@ -128,6 +130,8 @@ jobs:
         run: node scripts/resolve-app-version.mjs --channel beta --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
       - name: Install dependencies
         run: npm ci
+      - name: Install font build tooling
+        run: python -m pip install fonttools brotli
       - name: Run package contracts
         run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow
       - name: Sync and compile unsigned iOS simulator application

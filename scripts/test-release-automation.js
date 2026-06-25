@@ -24,6 +24,7 @@ const cleanupWorkflowPath = path.join(root, '.github/workflows/cleanup-beta-rele
 assert.ok(fs.existsSync(cleanupWorkflowPath), 'beta cleanup workflow should exist');
 const cleanupWorkflow = fs.readFileSync(cleanupWorkflowPath, 'utf8');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
+const betaWorkflow = read('.github/workflows/build-apps-beta.yml');
 
 checkSyntax('scripts/prepare-github-release-assets.mjs');
 checkSyntax('scripts/record-performance-trend.mjs');
@@ -55,6 +56,7 @@ assert.ok(deployWorkflow.includes('main'), 'Cloudflare deployment push trigger s
 assert.ok(deployWorkflow.includes("github.actor != 'github-actions[bot]'"), 'Cloudflare deployment should not loop on bot-authored maintenance commits');
 assert.ok(deployWorkflow.includes('docs/performance/**'), 'Cloudflare deployment should ignore performance trend doc-only commits');
 assert.ok(deployWorkflow.includes('npm run build'), 'Cloudflare deployment should build dist before deploy');
+assert.ok(deployWorkflow.includes('python -m pip install fonttools brotli'), 'Cloudflare deployment should install font subsetting tools before build');
 assert.ok(deployWorkflow.includes('npm run check:release-fast'), 'Cloudflare deployment should run fast release guards before deploy');
 assert.ok(deployWorkflow.includes('npx wrangler deploy'), 'Cloudflare deployment should use the canonical Wrangler deploy command');
 assert.ok(deployWorkflow.includes('CLOUDFLARE_API_TOKEN'), 'Cloudflare deployment should use a GitHub secret token');
@@ -68,10 +70,13 @@ assert.ok(cleanupWorkflow.includes('startswith("beta-")'), 'cleanup must select 
 assert.ok(cleanupWorkflow.includes('gh api --paginate'), 'cleanup should inspect every releases page');
 assert.ok(cleanupWorkflow.includes('releases/$release_id'), 'cleanup should delete only selected release IDs');
 assert.ok(performanceWorkflow.includes('npm run performance:record'), 'performance workflow should record trend output');
+assert.ok(performanceWorkflow.includes('python -m pip install fonttools brotli'), 'performance workflow should install font subsetting tools before build');
 assert.ok(performanceWorkflow.includes('npm run check:release-fast'), 'performance workflow should run fast guards before smoke');
 assert.ok(performanceWorkflow.includes('cancel-in-progress: true'), 'performance workflow should cancel stale trend runs');
 assert.ok(performanceWorkflow.includes("github.actor != 'github-actions[bot]'"), 'performance workflow should not react to bot-authored trend commits');
 assert.ok(performanceWorkflow.includes('[skip performance]'), 'performance workflow should support an explicit skip marker');
+assert.ok(betaWorkflow.includes('python -m pip install fonttools brotli'), 'beta app workflow should install font subsetting tools before mobile sync builds');
+assert.ok(releaseWorkflow.includes('python -m pip install fonttools brotli'), 'stable release workflow should install font subsetting tools before web builds');
 
 console.log(JSON.stringify({
   ok: true,

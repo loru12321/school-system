@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install font build tooling
+        run: python -m pip install fonttools brotli
+
       - name: Build release surface
         run: npm run build
 
