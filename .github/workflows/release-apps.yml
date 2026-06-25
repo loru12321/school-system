@@ -165,10 +165,8 @@ jobs:
       - name: Run stable web and release guards
         run: |
           npm run build
-          npm run test:app-download-runtime-hygiene
           npm run test:release-surface
           npm run test:build-size-budget
-          npm run test:app-download-clicks
       - name: Prepare immutable stable assets
         env:
           RELEASE_INPUT_DIR: release-input

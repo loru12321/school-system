@@ -30,15 +30,13 @@ checkSyntax('scripts/record-performance-trend.mjs');
 
 assert.strictEqual(scripts['release:prepare-assets'], 'node scripts/prepare-github-release-assets.mjs', 'release asset preparation script should stay stable');
 assert.strictEqual(scripts['performance:record'], 'node scripts/record-performance-trend.mjs', 'performance trend script should stay stable');
-assert.strictEqual(scripts['test:app-download-clicks'], 'node scripts/test-app-download-clicks.js', 'download click smoke test should be exposed');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-automation'), 'fast release check should include release automation checks');
+assert.ok(!scripts['check:release-fast'].includes('test:app-download-runtime-hygiene'), 'fast release check should not guard the removed app download runtime');
 assert.strictEqual(scripts['deploy:cloudflare:verified'], 'npm run build && npm run check:release-fast && npx wrangler deploy && npm run smoke:prod-minimal', 'verified Cloudflare deploy script should build, guard, deploy, and smoke production');
 
 assert.ok(releaseWorkflow.includes('npm run build'), 'release workflow should build dist before packaging app assets');
-assert.ok(releaseWorkflow.includes('npm run test:app-download-runtime-hygiene'), 'release workflow should guard download runtime hygiene');
 assert.ok(releaseWorkflow.includes('npm run test:release-surface'), 'release workflow should guard release surface');
 assert.ok(releaseWorkflow.includes('npm run test:build-size-budget'), 'release workflow should guard hosted package budgets');
-assert.ok(releaseWorkflow.includes('npm run test:app-download-clicks'), 'release workflow should smoke-test hosted download clicks');
 assert.ok(releaseWorkflow.includes('npm run release:prepare-assets'), 'release workflow should prepare immutable release assets');
 assert.ok(releaseWorkflow.includes('gh release upload'), 'release workflow should update existing releases');
 assert.ok(releaseWorkflow.includes('gh release create'), 'release workflow should create missing releases');

@@ -7,9 +7,7 @@ const distIndexPath = path.join(projectRoot, 'dist', 'index.html');
 const ltHtmlPath = path.join(projectRoot, 'lt.html');
 const publicAppPath = path.join(projectRoot, 'public', 'assets', 'js', 'app.js');
 const publicBootPath = path.join(projectRoot, 'public', 'assets', 'js', 'boot-runtime.js');
-const publicAppDownloadPath = path.join(projectRoot, 'public', 'assets', 'js', 'app-download-runtime.js');
 const distAppPath = path.join(projectRoot, 'dist', 'assets', 'js', 'app.js');
-const distAppDownloadPath = path.join(projectRoot, 'dist', 'assets', 'js', 'app-download-runtime.js');
 const distReportRenderPath = path.join(projectRoot, 'dist', 'assets', 'js', 'report-render-runtime.js');
 const distTeacherAnalysisPath = path.join(projectRoot, 'dist', 'assets', 'js', 'teacher-analysis-main-runtime.js');
 
@@ -35,12 +33,9 @@ const budgets = {
     publicAppJs: 910_000,
     // Boot auth now includes login cohort handoff before core modules load.
     publicBootJs: 133_000,
-    // Three native platforms, release history, and verified-manifest handling.
-    publicAppDownloadJs: 100_000,
     // Current minified app bundle baseline after runtime splits, cache guards,
     // and the product redesign CSS layer being accounted in the singlefile build.
     distAppJs: 585_000,
-    distAppDownloadJs: 60_000,
     distReportRenderJs: 68_000,
     distTeacherAnalysisJs: 72_000
 };
@@ -53,9 +48,7 @@ const actual = {
     ltHtml: getSize(ltHtmlPath),
     publicAppJs: getSize(publicAppPath),
     publicBootJs: getSize(publicBootPath),
-    publicAppDownloadJs: getSize(publicAppDownloadPath),
     distAppJs: getSize(distAppPath),
-    distAppDownloadJs: getSize(distAppDownloadPath),
     distReportRenderJs: getSize(distReportRenderPath),
     distTeacherAnalysisJs: getSize(distTeacherAnalysisPath)
 };

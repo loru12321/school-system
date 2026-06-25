@@ -590,7 +590,7 @@ assert.ok(bootRuntime.includes("window.ensureWorkerApiRuntimeLoaded = function (
 assert.ok(!bootRuntime.includes("{ label: 'xlsx-vendor', loader: () => window.ensureXlsxVendorLoaded?.() }"), 'spreadsheet vendor should not actively warm during normal navigation');
 assert.ok(!bootRuntime.includes("{ label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() }"), 'freshman runtime should stay demand-loaded outside freshman/exam modules');
 const summaryEntryStart = moduleEntryRuntime.indexOf("if (id === 'summary')");
-const summaryEntryEnd = moduleEntryRuntime.indexOf("if (id === 'app-download-center')", summaryEntryStart);
+const summaryEntryEnd = moduleEntryRuntime.indexOf("if (id === 'analysis')", summaryEntryStart);
 const summaryEntrySource = summaryEntryStart >= 0 && summaryEntryEnd > summaryEntryStart
     ? moduleEntryRuntime.slice(summaryEntryStart, summaryEntryEnd)
     : '';
@@ -690,7 +690,7 @@ assert.ok(!mobileAppRuntime.includes("grade_director: 'starter-hub'"), 'grade di
 assert.ok(mobileAppRuntime.includes("grade_director: 'teacher-analysis'"), 'grade director mobile home should default to teacher analysis');
 assert.ok(shellRuntime.includes('function isVisibleModuleActive(activeSectionId, visibleItems)'), 'shell should verify that the active module is visible for the current role');
 assert.ok(shellRuntime.includes('if (!firstCard || activeIsVisible) return;'), 'shell should auto-enter the first visible module when the default active section is forbidden');
-assert.ok(appSource.includes("const fallbackIds = ['starter-hub', 'teacher-analysis', 'student-overview', 'report-generator', 'app-download-center'];"), 'base config guard should redirect to the first role-visible module instead of forcing starter hub');
+assert.ok(appSource.includes("const fallbackIds = ['starter-hub', 'teacher-analysis', 'student-overview', 'report-generator'];"), 'base config guard should redirect to the first role-visible module instead of forcing starter hub');
 assert.ok(appSource.includes('function getTownAnalysisVisibleSubjectsForCurrentUser()'), 'town analysis should centralize role-aware subject detail visibility');
 assert.ok(appSource.includes("if (role !== 'teacher') return allSubjects;"), 'only teacher role should hide non-teaching subject detail tables');
 assert.ok(appSource.includes('visibleSubjects.forEach(sub => {'), 'town analysis subject detail tables should render only visible subjects');

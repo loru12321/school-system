@@ -15,9 +15,6 @@
         'teacher-township-ranking',
         'cohort-growth'
     ]);
-    const APP_DOWNLOAD_MODULE_IDS = new Set([
-        'app-download-center'
-    ]);
     const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;
     const TEACHER_ANALYSIS_PRELOAD_DELAY_MS = 700;
     const TEACHER_ANALYSIS_ENTRY_LABELS = [
@@ -107,13 +104,6 @@
             loaders.push(window.ensureOptionalStylesheetLoaded(
                 'teacher-insights-module',
                 './assets/css/teacher-insights-module.css'
-            ));
-        }
-
-        if (APP_DOWNLOAD_MODULE_IDS.has(id)) {
-            loaders.push(window.ensureOptionalStylesheetLoaded(
-                'app-download-module',
-                './assets/css/app-download-module.css'
             ));
         }
 
@@ -494,58 +484,6 @@
             multiPeriodSection.style.display = 'none';
         }
         applyStudentDetailsRoleVisibility();
-    }
-
-    function initAppDownloadCenterEntry() {
-        if (typeof window.ensureLazySectionLoaded === 'function') {
-            window.ensureLazySectionLoaded('app-download-center');
-        }
-
-        const render = () => {
-            if (typeof window.renderAppDownloadCenter === 'function') {
-                window.renderAppDownloadCenter();
-                return true;
-            }
-            return false;
-        };
-
-        const scheduleRender = (attempt = 0) => {
-            if (render()) return true;
-            if (attempt >= 8) return false;
-            scheduleModuleTask('app-download-render-retry', () => {
-                scheduleRender(attempt + 1);
-            }, { delay: attempt < 2 ? 80 : 180 });
-            return false;
-        };
-
-        const loadRuntime = () => {
-            if (window.__APP_DOWNLOAD_RUNTIME_PATCHED__ || typeof window.renderAppDownloadCenter === 'function') {
-                return Promise.resolve();
-            }
-            if (typeof window.ensureAppDownloadRuntimeLoaded === 'function') {
-                return window.ensureAppDownloadRuntimeLoaded();
-            }
-            if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
-                return window.SystemRuntimeLoader.load('app-download');
-            }
-            return Promise.reject(new Error('app download runtime loader unavailable'));
-        };
-
-        if (window.__APP_DOWNLOAD_RUNTIME_PATCHED__ || typeof window.renderAppDownloadCenter === 'function') {
-            return Promise.resolve(scheduleRender());
-        }
-
-        loadRuntime()
-            .then(() => {
-                scheduleRender();
-                return true;
-            })
-            .catch((error) => {
-                console.warn('initAppDownloadCenterEntry failed:', error);
-                scheduleRender();
-                return false;
-            });
-        return Promise.resolve(false);
     }
 
     function initTeachingManagementEntry(id) {
@@ -1029,7 +967,6 @@
         if (id === 'summary') {
             scheduleMacroTablesRender('summary', 'summary-tables');
         }
-        if (id === 'app-download-center') return initAppDownloadCenterEntry();
         if (id === 'analysis') {
             scheduleActiveModuleTask('analysis', 'analysis-entry-selects', () => {
                 if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();

@@ -1,13 +1,8 @@
-(()=>{if(typeof window=="undefined"||window.__MODULE_HELP_RUNTIME_PATCHED__)return;const e={upload:{title:"📁 数据上传与设置·使用说明",fit:"用于<strong>导入并规范化成绩数据</strong>，为后续所有分析提供可靠数据基础。",when:"每次考试结束后、首次使用或更换数据来源时使用。",use:`<ul>
+(()=>{if(typeof window=="undefined"||window.__MODULE_HELP_RUNTIME_PATCHED__)return;const o={upload:{title:"📁 数据上传与设置·使用说明",fit:"用于<strong>导入并规范化成绩数据</strong>，为后续所有分析提供可靠数据基础。",when:"每次考试结束后、首次使用或更换数据来源时使用。",use:`<ul>
                     <li><strong>上传文件：</strong>点击虚线框，选择从考务系统导出的原始Excel（支持多选）。系统会自动识别“姓名、班级、科目”。</li>
                     <li><strong>教师配置：</strong>若要进行“教师教学评价”，请在下方“教师信息配置”处上传【班级-学科-教师】对应表。</li>
                     <li><strong>进退步基准：</strong>若要分析进退步，请在“历史成绩档案库”上传上次考试的成绩文件。</li>
-                  </ul>`,calc:"系统自动清洗数据，缺考/作弊记为0分。"},"app-download-center":{title:"📱 应用下载中心·使用说明",fit:"用于<strong>统一分发安卓 APK 与桌面 EXE</strong>，集中查看平台链接、版本说明和 release 记录。",when:"需要把安卓版或 Windows 桌面端发给教师、班主任、家长或办公室电脑时使用。",use:`<ul>
-                    <li><strong>先选平台：</strong>点击 Android 或 Desktop 卡片，页面会切换成对应的下载入口和说明。</li>
-                    <li><strong>复制链接：</strong>可以直接复制当前平台链接，再统一发到群或发给对应设备使用者。</li>
-                    <li><strong>查看 release：</strong>同页可跳转 GitHub release，确认最新 APK 和 EXE 是否已经更新。</li>
-                    <li><strong>后续更新：</strong>后面每次发新版，只需要替换最新 release 资产即可继续沿用同一入口。</li>
-                  </ul>`,calc:"当前页展示的是下载入口和分发说明，不参与成绩计算；安卓包和桌面端都以最新 release 资产为准。"},macro:{title:"🏆 镇域宏观横向评价·算法说明",fit:"用于<strong>校际横向对比</strong>与镇域整体水平研判。",when:"需要对各校进行整体排名、阶段性质量对比或迎检材料汇总时使用。",use:"用于教育组/教研室查看全镇各校排名。点击“生成横向对比表”可查看详细数据。",calc:`<strong>核心公式：两率一分总分 = (均分赋分 + 优率赋分 + 及格赋分)</strong>
+                  </ul>`,calc:"系统自动清洗数据，缺考/作弊记为0分。"},macro:{title:"🏆 镇域宏观横向评价·算法说明",fit:"用于<strong>校际横向对比</strong>与镇域整体水平研判。",when:"需要对各校进行整体排名、阶段性质量对比或迎检材料汇总时使用。",use:"用于教育组/教研室查看全镇各校排名。点击“生成横向对比表”可查看详细数据。",calc:`<strong>核心公式：两率一分总分 = (均分赋分 + 优率赋分 + 及格赋分)</strong>
                    <div class="formula-box">
                    均分赋分 = (本校均分 ÷ 全镇最高均分) × 权重(60/50)<br>
                    优率赋分 = (本校优率 ÷ 全镇最高优率) × 权重(70/80)<br>
@@ -26,9 +21,9 @@
                    其中“贡献值” = 班级均分 - 年级均分。`},"student-diag":{title:"🔎 学情深度诊断·原理说明",fit:"用于<strong>个人层面诊断</strong>与精准提分。",when:"期中/期末后需要制定个性化提升方案时使用。",use:"寻找提分点。",calc:`<strong>1. 临界生</strong>：距优生线/及格线差 5 分以内的学生。<br>
                    <strong>2. 偏科挖掘</strong>：总分排名靠前，但单科排名严重滞后的学生。<br>
                    <strong>3. 优劣势透视</strong>：基于 Z-Score (标准分) 判断学科强弱。`},tools:{title:"🛠️ 教务考务工具·算法说明",fit:"用于<strong>教务考务流程化</strong>与日常工作降本。",when:"开学初、考试前后、宣传展示时使用。",use:"包含新生分班、考场编排、座位调整等教务工具。",calc:`<strong>分班算法</strong>：S型蛇形排列 + 均分极差优化 (模拟退火)。<br>
-                   <strong>考场编排</strong>：同班互斥逻辑 (自动检测并调换同班相邻考生)。`},"starter-hub":{title:"🚀 新手入口·说明",fit:"用于<strong>新教师快速上手</strong>，一步完成核心配置。",when:"第一次使用系统或更换学期/届别后。",use:"按“学期 → 成绩 → 任课 → 教师画像”顺序完成配置。",calc:"本页不计算成绩，只提供流程引导、诊断与快捷入口。"}};e.teacher&&(e.teacher.calc=`<strong>当前模型：联考赋分 + 基线校正 + 置信修正</strong><br>
+                   <strong>考场编排</strong>：同班互斥逻辑 (自动检测并调换同班相邻考生)。`},"starter-hub":{title:"🚀 新手入口·说明",fit:"用于<strong>新教师快速上手</strong>，一步完成核心配置。",when:"第一次使用系统或更换学期/届别后。",use:"按“学期 → 成绩 → 任课 → 教师画像”顺序完成配置。",calc:"本页不计算成绩，只提供流程引导、诊断与快捷入口。"}};o.teacher&&(o.teacher.calc=`<strong>当前模型：联考赋分 + 基线校正 + 置信修正</strong><br>
                    <div class="formula-box">教学质量分 = 联考赋分(折算100) × 置信系数 + 基线校正 + 工作量修正</div>
-                   联考赋分按系统现有“两率一分”标准计算；基线校正按最近一次历史考试的匹配学生、分层基础与实际结果的超预期差折算。`);function s(o){const t=e[o];if(!t){Swal.fire({title:"📘 模型说明",html:`<div class="help-modal-content">
+                   联考赋分按系统现有“两率一分”标准计算；基线校正按最近一次历史考试的匹配学生、分层基础与实际结果的超预期差折算。`);function s(e){const t=o[e];if(!t){Swal.fire({title:"📘 模型说明",html:`<div class="help-modal-content">
                         <h4>🎯 适合干什么</h4>
                         <div>用于当前模块的功能理解与使用边界说明。</div>
                         <h4>⏱️ 什么时候用</h4>
@@ -44,4 +39,4 @@
                     <h4>🧮 计算方式 / 底层逻辑</h4>
                     <div>${t.calc}</div>
                 </div>
-            `,width:600,confirmButtonText:"我明白了",confirmButtonColor:"#4f46e5"})}function l(o){const t=document.getElementById(o);if(!t)return;const r=t.querySelector(".sec-head h2")||t.querySelector(".module-desc-bar h3");if(!r||r.querySelector(".module-help-btn"))return;const n=document.createElement("span");n.className="module-help-btn",n.textContent="📘 模型说明",n.onclick=()=>s(o),r.appendChild(n)}window.SYSTEM_MANUAL=e,window.showModuleHelp=s,window.ensureModuleHelpButton=l,window.__MODULE_HELP_RUNTIME_PATCHED__=!0})();
+            `,width:600,confirmButtonText:"我明白了",confirmButtonColor:"#4f46e5"})}function i(e){const t=document.getElementById(e);if(!t)return;const r=t.querySelector(".sec-head h2")||t.querySelector(".module-desc-bar h3");if(!r||r.querySelector(".module-help-btn"))return;const n=document.createElement("span");n.className="module-help-btn",n.textContent="📘 模型说明",n.onclick=()=>s(e),r.appendChild(n)}window.SYSTEM_MANUAL=o,window.showModuleHelp=s,window.ensureModuleHelpButton=i,window.__MODULE_HELP_RUNTIME_PATCHED__=!0})();

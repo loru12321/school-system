@@ -93,10 +93,10 @@ assert.strictEqual(manifest.name, '校衡台', 'manifest app name should be read
 assert.strictEqual(manifest.short_name, '校衡台', 'manifest short name should be readable Chinese');
 assert.ok(manifest.description.includes('教务'), 'manifest description should stay readable');
 assert.ok(!/[�锟]/.test(manifestText), 'manifest should not contain replacement or mojibake characters');
-assert.ok(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 3, 'manifest should keep app shortcuts');
+assert.ok(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 2, 'manifest should keep app shortcuts');
 assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '数据导入'), 'manifest should keep readable import shortcut');
 assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '学情总览'), 'manifest should keep readable overview shortcut');
-assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '应用下载'), 'manifest should keep readable download shortcut');
+assert.ok(!manifest.shortcuts.some((shortcut) => shortcut.name === '应用下载'), 'manifest should not expose removed app download shortcut');
 assert.ok(manifest.shortcuts.every((shortcut) => shortcut.icons?.some((icon) => icon.src === '/icon.svg')), 'manifest shortcuts should include app icons');
 const swVersionMatch = swRuntime.match(/const\s+SERVICE_WORKER_VERSION\s*=\s*['"]([^'"]+)['"]/);
 const swVersion = swVersionMatch ? swVersionMatch[1] : '';
@@ -119,7 +119,7 @@ assert.ok(worker.includes("'X-School-System-Gateway': 'cloudflare-worker'"), 'Wo
 assert.ok(releaseWorkflow.includes('concurrency:'), 'release workflow should serialize release jobs');
 assert.ok(releaseWorkflow.includes('npm run test:release-surface'), 'release workflow should guard release surface');
 assert.ok(releaseWorkflow.includes('npm run test:build-size-budget'), 'release workflow should guard hosted package budgets');
-assert.ok(releaseWorkflow.includes('npm run test:app-download-clicks'), 'release workflow should smoke-test downloads');
+assert.ok(!releaseWorkflow.includes('npm run test:app-download-clicks'), 'release workflow should not run removed download center smoke tests');
 assert.ok(performanceWorkflow.includes('concurrency:'), 'performance workflow should avoid overlapping trend writers');
 assert.ok(performanceWorkflow.includes('cancel-in-progress: true'), 'performance workflow should cancel stale trend runs');
 assert.ok(performanceWorkflow.includes('npm run check:release-fast'), 'performance trend workflow should run fast guards before smoke');

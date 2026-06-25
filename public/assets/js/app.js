@@ -1907,34 +1907,6 @@ var Auth = {
         return localStorage.getItem(this.loginPortalStorageKey) === 'parent' ? 'parent' : 'school';
     },
 
-    getPublicDownloadCatalog: function () {
-        return window.LoginDownloadRuntime?.getCatalog?.() || window.PUBLIC_DOWNLOAD_CHANNELS || {};
-    },
-
-    getPublicDownloadChannel: function (type = 'android') {
-        return window.LoginDownloadRuntime?.getChannel?.(type) || this.getPublicDownloadCatalog()[type === 'desktop' ? 'desktop' : 'android'];
-    },
-
-    getPublicApkDownloadUrl: function () {
-        return window.LoginDownloadRuntime?.getUrl?.('android') || String(window.PUBLIC_APK_DOWNLOAD_URL || '').trim();
-    },
-
-    getPublicApkDownloadFileName: function (url = this.getPublicApkDownloadUrl()) {
-        return window.LoginDownloadRuntime?.getFileName?.('android', url) || 'school-system-android-beta-20260624-ea9037f.apk';
-    },
-
-    getPublicDesktopDownloadUrl: function () {
-        return window.LoginDownloadRuntime?.getUrl?.('desktop') || String(window.PUBLIC_DESKTOP_DOWNLOAD_URL || '').trim();
-    },
-
-    getPublicDesktopDownloadFileName: function (url = this.getPublicDesktopDownloadUrl()) {
-        return window.LoginDownloadRuntime?.getFileName?.('desktop', url) || 'school-system-windows-beta-20260624-ea9037f.exe';
-    },
-
-    syncPublicDownloadLinks: function () {
-        return window.LoginDownloadRuntime?.syncLinks?.();
-    },
-
     setLoginPortal: function (portal) {
         const nextPortal = portal === 'parent' ? 'parent' : 'school';
         localStorage.setItem(this.loginPortalStorageKey, nextPortal);
@@ -1963,7 +1935,6 @@ var Auth = {
                         <div class="login-stage-nav-links">
                             <a href="#login-hero" class="active">首页</a>
                             <a href="#login-portal-hub">登录</a>
-                            <a href="#app-download">下载</a>
                             <button type="button" class="login-stage-nav-login" onclick="window.Auth?.openLoginPortalModal('school')">打开学校端</button>
                         </div>
                     </nav>
@@ -1974,7 +1945,7 @@ var Auth = {
                             <span class="login-stage-title-line">学校工作台与家长入口</span>
                             <span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里打开登录窗口</span>
                         </h1>
-                        <p id="login-stage-copy">把说明、下载与登录动作拆开，让首页先呈现品牌感和唯一主入口，再进入真正的登录表单。</p>
+                        <p id="login-stage-copy">把系统说明与登录动作拆开，让首页先呈现品牌感和唯一主入口，再进入真正的登录表单。</p>
                         <div class="login-stage-actions">
                             <button type="button" class="login-stage-primary-action" onclick="window.Auth?.openLoginPortalModal('school')">
                                 <i class="ti ti-building-community"></i> 学校端登录
@@ -1982,13 +1953,10 @@ var Auth = {
                             <button type="button" class="login-stage-secondary-action" onclick="window.Auth?.openLoginPortalModal('parent')">
                                 <i class="ti ti-heart-handshake"></i> 家长端登录
                             </button>
-                            <button type="button" class="login-stage-tertiary-action" onclick="window.Auth?.openDownloadHubModal('android')">
-                                <i class="ti ti-download"></i> 打开下载中心
-                            </button>
                         </div>
                         <div class="login-stage-meta">
                             <span><i class="ti ti-layout-dashboard"></i> 教学分析 / 数据维护 / 学校工作台</span>
-                            <span><i class="ti ti-devices"></i> Web / Android / Desktop 共用登录入口</span>
+                            <span><i class="ti ti-devices"></i> Web / 客户端共用登录入口</span>
                             <span><i class="ti ti-sparkles"></i> 当前稳定版 v1.0 · 2026-04-08</span>
                         </div>
                         <div class="login-stage-platforms" aria-label="支持终端">
@@ -2031,14 +1999,6 @@ var Auth = {
                                     <h2 class="login-auth-title">统一登录入口</h2>
                                     <p id="login-portal-copy">选择学校端或家长端，然后打开唯一登录窗口完成验证。</p>
                                 </div>
-                                <div class="login-auth-utility" id="app-download">
-                                    <button type="button" class="login-system-download-link" onclick="window.Auth?.openDownloadHubModal('android')">
-                                        <i class="ti ti-download"></i> 应用下载
-                                    </button>
-                                    <button type="button" class="login-system-download-ghost" onclick="window.copyPublicDownloadLink?.('android')">
-                                        <i class="ti ti-link"></i> 复制链接
-                                    </button>
-                                </div>
                             </div>
 
                             <div class="login-portal-launch-head">
@@ -2064,7 +2024,7 @@ var Auth = {
                             </div>
 
                             <div class="login-portal-note">
-                                <i class="ti ti-hand-click"></i> 首页只保留角色选择和下载动作，真正的账号验证统一在登录窗口中完成。
+                                <i class="ti ti-hand-click"></i> 首页只保留角色选择，真正的账号验证统一在登录窗口中完成。
                             </div>
                         </div>
 
@@ -2130,12 +2090,6 @@ var Auth = {
 
                             <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后直达教学分析与数据维护。</div>
 
-                            <div class="login-form-divider"><span>or</span></div>
-
-                            <button type="button" class="login-form-alt" onclick="window.Auth?.openDownloadHubModal('android')">
-                                <i class="ti ti-download"></i> 下载 Android / Desktop
-                            </button>
-
                             <div class="login-trust-strip">
                                 <span><i class="ti ti-shield-lock"></i> 统一身份认证</span>
                                 <span><i class="ti ti-cloud-lock"></i> 云端安全校验</span>
@@ -2173,7 +2127,6 @@ var Auth = {
                         <div class="login-stage-nav-links">
                             <a href="#login-hero" class="active">首页</a>
                             <a href="#login-portal-hub">登录</a>
-                            <a href="#app-download">下载</a>
                             <button type="button" class="login-stage-nav-login" onclick="window.Auth?.openLoginPortalModal('school')">打开学校端</button>
                         </div>
                     </nav>
@@ -2184,7 +2137,7 @@ var Auth = {
                             <span class="login-stage-title-line">一个登录入口</span>
                             <span class="login-stage-title-line login-stage-title-line--accent">直达学校工作台与家长成长端</span>
                         </h1>
-                        <p id="login-stage-copy">把登录、下载和系统说明拆分成清晰的工作台入口。首屏只负责方向感，登录动作集中在同一张认证面板里完成。</p>
+                        <p id="login-stage-copy">把登录和系统说明拆分成清晰的工作台入口。首屏只负责方向感，登录动作集中在同一张认证面板里完成。</p>
                         <div class="login-stage-actions">
                             <button type="button" class="login-stage-primary-action" onclick="window.Auth?.openLoginPortalModal('school')">
                                 <i class="ti ti-building-community"></i> 进入学校端
@@ -2192,13 +2145,10 @@ var Auth = {
                             <button type="button" class="login-stage-secondary-action" onclick="window.Auth?.openLoginPortalModal('parent')">
                                 <i class="ti ti-heart-handshake"></i> 进入家长端
                             </button>
-                            <button type="button" class="login-stage-tertiary-action" onclick="window.Auth?.openDownloadHubModal('android')">
-                                <i class="ti ti-download"></i> 打开下载中心
-                            </button>
                         </div>
                         <div class="login-stage-meta">
                             <span><i class="ti ti-layout-dashboard"></i> 教学分析 / 数据维护 / 学校工作台</span>
-                            <span><i class="ti ti-devices"></i> Web / Android / Desktop 统一入口</span>
+                            <span><i class="ti ti-devices"></i> Web / 客户端统一入口</span>
                             <span><i class="ti ti-sparkles"></i> 新版登录工作台 · 2026-04-19</span>
                         </div>
                         <div class="login-stage-platforms" aria-label="支持终端">
@@ -2247,14 +2197,6 @@ var Auth = {
                                     <span class="login-brand-kicker">Login Center</span>
                                     <h2 class="login-auth-title">统一登录入口</h2>
                                     <p id="login-portal-copy">先选角色，再在同一张面板里完成验证。登录后会自动进入对应工作区，不需要额外跳转。</p>
-                                </div>
-                                <div class="login-auth-utility" id="app-download">
-                                    <button type="button" class="login-system-download-link" onclick="window.Auth?.openDownloadHubModal('android')">
-                                        <i class="ti ti-download"></i> 应用下载
-                                    </button>
-                                    <button type="button" class="login-system-download-ghost" onclick="window.copyPublicDownloadLink?.('android')">
-                                        <i class="ti ti-link"></i> 复制链接
-                                    </button>
                                 </div>
                             </div>
 
@@ -2347,12 +2289,6 @@ var Auth = {
 
                             <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后直达教学分析与数据维护。</div>
 
-                            <div class="login-form-divider"><span>or</span></div>
-
-                            <button type="button" class="login-form-alt" onclick="window.Auth?.openDownloadHubModal('android')">
-                                <i class="ti ti-download"></i> 下载 Android / Desktop
-                            </button>
-
                             <div class="login-trust-strip">
                                 <span><i class="ti ti-shield-lock"></i> 统一身份认证</span>
                                 <span><i class="ti ti-cloud-lock"></i> 云端安全校验</span>
@@ -2390,7 +2326,6 @@ var Auth = {
                         <div class="login-stage-nav-links">
                             <a href="#login-hero" class="active">登录验证</a>
                             <a href="#login-portal-hub">流程说明</a>
-                            <a href="#app-download">应用下载</a>
                             <button type="button" class="login-stage-nav-login" onclick="window.Auth?.openLoginPortalModal('school')">切到学校端</button>
                         </div>
                     </nav>
@@ -2431,14 +2366,6 @@ var Auth = {
                                     <span class="login-brand-kicker">Inline Login</span>
                                     <h2 class="login-auth-title">登录验证</h2>
                                     <p id="login-portal-copy">学校端验证成功后进入届别选择，家长端保持直接进入成长查看界面。</p>
-                                </div>
-                                <div class="login-auth-utility" id="app-download">
-                                    <button type="button" class="login-system-download-link" onclick="window.Auth?.openDownloadHubModal('android')">
-                                        <i class="ti ti-download"></i> 应用下载
-                                    </button>
-                                    <button type="button" class="login-system-download-ghost" onclick="window.copyPublicDownloadLink?.('android')">
-                                        <i class="ti ti-link"></i> 复制链接
-                                    </button>
                                 </div>
                             </div>
 
@@ -2481,9 +2408,6 @@ var Auth = {
                                     <button type="button" class="login-form-alt" onclick="window.Auth?.openSystemIntroModal(window.Auth?.getLoginPortal?.())">
                                         <i class="ti ti-file-text"></i> 查看系统说明
                                     </button>
-                                    <button type="button" class="login-form-alt" onclick="window.Auth?.openDownloadHubModal('android')">
-                                        <i class="ti ti-download"></i> 下载 Android / Desktop
-                                    </button>
                                 </div>
 
                                 <div class="login-trust-strip">
@@ -2509,9 +2433,7 @@ var Auth = {
             existingOverlay.dataset.loginLayout = 'clean';
             existingOverlay.dataset.loginSkin = 'clean';
             existingOverlay.dataset.loginModal = 'inline';
-            this.syncPublicDownloadLinks();
             this.ensureSystemIntroModal();
-            this.ensureDownloadHubModal();
             return existingOverlay;
         }
 
@@ -2519,9 +2441,7 @@ var Auth = {
         const panel = document.getElementById('login-portal-hub');
         const modalBackdrop = document.getElementById('login-modal-backdrop');
         if (!overlay || !panel) return;
-        this.syncPublicDownloadLinks();
         this.ensureSystemIntroModal();
-        this.ensureDownloadHubModal();
 
         if (modalBackdrop && modalBackdrop.dataset.loginModalBound !== 'true') {
             modalBackdrop.addEventListener('click', (event) => {
@@ -2535,13 +2455,12 @@ var Auth = {
         const navButton = overlay.querySelector('.login-stage-nav-login');
         const introLink = navLinks[0];
         const modalLink = navLinks[1];
-        const downloadLink = navLinks[2];
 
-        if (navLinksWrap && modalLink && downloadLink && introLink) {
-            [modalLink, downloadLink, introLink].forEach((link) => navLinksWrap.appendChild(link));
+        if (navLinksWrap && modalLink && introLink) {
+            [modalLink, introLink].forEach((link) => navLinksWrap.appendChild(link));
         }
 
-        [introLink, modalLink, downloadLink].forEach((link) => {
+        [introLink, modalLink].forEach((link) => {
             if (link) link.classList.remove('active');
         });
 
@@ -2552,17 +2471,6 @@ var Auth = {
             introLink.onclick = (event) => {
                 event.preventDefault();
                 this.openSystemIntroModal(this.getLoginPortal());
-            };
-        }
-
-        if (downloadLink) {
-            downloadLink.textContent = '应用下载';
-            downloadLink.href = '#';
-            downloadLink.dataset.nav = 'download';
-            downloadLink.removeAttribute('download');
-            downloadLink.onclick = (event) => {
-                event.preventDefault();
-                this.openDownloadHubModal('android');
             };
         }
 
@@ -2664,14 +2572,6 @@ var Auth = {
         return backdrop;
     },
 
-    ensureDownloadHubModal: function () {
-        return window.LoginDownloadRuntime?.ensureModal?.(this) || null;
-    },
-
-    renderDownloadHubModal: function (type = 'android') {
-        return window.LoginDownloadRuntime?.renderModal?.(this, type) || null;
-    },
-
     getSystemIntroContent: function (portal = this.getLoginPortal()) {
         const nextPortal = portal === 'parent' ? 'parent' : 'school';
         const spotlight = nextPortal === 'parent'
@@ -2693,8 +2593,8 @@ var Auth = {
             spotlight,
             quickStats: [
                 { label: '适用角色', value: '管理员 / 教务 / 年级负责人 / 班主任 / 教师 / 家长' },
-                { label: '核心模块', value: '数据导入、综合分析、教师分析、成长报告、绩效比较、应用下载' },
-                { label: '统一口径', value: 'Web、Android、Desktop EXE 与家长端共用同一套数据和规则' }
+                { label: '核心模块', value: '数据导入、综合分析、教师分析、成长报告、绩效比较' },
+                { label: '统一口径', value: 'Web、客户端与家长端共用同一套数据和规则' }
             ],
             sections: [
                 {
@@ -2718,7 +2618,7 @@ var Auth = {
                         { label: '教师分析 / 教学评价', text: '结合任课表、历史基线和联考口径比较教师学科绩效。' },
                         { label: '学生详情 / 成长报告', text: '查看单个学生成绩、排名变化、报告卡和家长端展示结果。' },
                         { label: '横向对比 / 绩效比较', text: '按学校、班级、教师、学科和多次考试做同口径比较。' },
-                        { label: '应用下载中心 / 系统维护', text: '统一分发 Android APK 与桌面端 EXE，维护账号、权限、版本信息与云端同步。' }
+                        { label: '系统维护', text: '维护账号、权限、版本信息与云端同步。' }
                     ]
                 },
                 {
@@ -2757,12 +2657,12 @@ var Auth = {
                 },
                 {
                     title: '数据同步与结果输出',
-                    copy: '系统既适合办公室 Web，也支持移动端分发与外部查看。',
+                    copy: '系统既适合办公室 Web，也支持移动端与外部查看。',
                     type: 'grid',
                     items: [
-                        { label: 'Web / Android / Desktop EXE', text: '网页端、安卓 APK 和桌面 EXE 共用统一登录入口与主要工作流，便于办公室电脑、手机和本地桌面端切换。' },
+                        { label: 'Web / 客户端', text: '网页端与客户端共用统一登录入口与主要工作流，便于办公室电脑、手机和本地桌面端切换。' },
                         { label: '导出与分发', text: '可输出成绩单、成长报告、对比结果与分发版页面，便于班主任或家长查看。' },
-                        { label: '云端协同', text: '支持账号同步、数据同步与统一下载入口，版本更新后能继续集中分发 APK。' },
+                        { label: '云端协同', text: '支持账号同步、数据同步与结果一致性校验，版本更新后继续沿用同一套业务规则。' },
                         { label: '使用建议', text: '每次新考试先导入原始数据并核对阈值，再做分析和绩效比较，结果会更稳定。' }
                     ]
                 }
@@ -2852,19 +2752,10 @@ var Auth = {
         return backdrop;
     },
 
-    openDownloadHubModal: function (type = 'android') {
-        return window.LoginDownloadRuntime?.openModal?.(this, type) || (type === 'desktop' ? 'desktop' : 'android');
-    },
-
-    closeDownloadHubModal: function () {
-        return window.LoginDownloadRuntime?.closeModal?.(this);
-    },
-
     openSystemIntroModal: function (portal) {
         this.ensureLoginWorkbench();
         this.ensureSystemIntroModal();
         const nextPortal = this.setLoginPortal(portal || this.getLoginPortal());
-        this.closeDownloadHubModal();
         this.closeLoginPortalModal();
         const backdrop = this.renderSystemIntroModal(nextPortal);
         if (backdrop) {
@@ -3022,8 +2913,8 @@ var Auth = {
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
                 launchKicker: '登录窗口',
-                launchCopy: '先选择家长端，再打开唯一登录窗口；表单、说明和下载都各归其位。',
-                launchNote: '应用下载会打开下载中心，系统介绍会说明角色权限、流程和成绩规则。',
+                launchCopy: '先选择家长端，再打开唯一登录窗口；表单和说明各归其位。',
+                launchNote: '系统介绍会说明角色权限、流程和成绩规则。',
                 stageFeatureTitle: '家长端聚焦成绩、报告与提醒',
                 stageFeatureCopy: '首页只留下最重要的入口和价值点，避免像旧版那样把所有信息都堆在首屏。',
                 modalChip: '家长端登录窗口',
@@ -3052,8 +2943,8 @@ var Auth = {
                 ],
                 launchKicker: '登录窗口',
                 launchCopy: '先选学校端或家长端，再在唯一登录窗口里完成验证，减少跳转和视觉噪音。',
-                launchNote: '应用下载会打开双端下载中心，系统介绍会说明模块结构、角色权限和核心逻辑。',
-                stageFeatureTitle: '登录、下载与系统说明各自独立',
+                launchNote: '系统介绍会说明模块结构、角色权限和核心逻辑。',
+                stageFeatureTitle: '登录与系统说明各自独立',
                 stageFeatureCopy: '首屏只负责建立品牌感和主入口，不再把所有解释文字都堆到同一块大面板里。',
                 modalChip: '学校端登录窗口',
                 modalTitle: '进入学校端',
@@ -8397,9 +8288,9 @@ function showBaseConfigGuardModal(missing) {
     }).then((r) => {
         if (r.isConfirmed) {
             __guardBypass = true;
-            const fallbackIds = ['starter-hub', 'teacher-analysis', 'student-overview', 'report-generator', 'app-download-center'];
+            const fallbackIds = ['starter-hub', 'teacher-analysis', 'student-overview', 'report-generator'];
             const targetId = fallbackIds.find((moduleId) => typeof canAccessModule !== 'function' || canAccessModule(moduleId))
-                || 'app-download-center';
+                || 'starter-hub';
             switchTab(targetId);
         }
     });
@@ -18386,8 +18277,7 @@ function doSpotlightSearch() {
         { name: "进退步追踪", id: "progress-analysis" },
         { name: "两率一分(宏观)", id: "analysis" },
         { name: "临界生任务单", id: "marginal-push" },
-        { name: "学生成绩单", id: "report-generator" },
-        { name: "应用下载中心", id: "app-download-center" }
+        { name: "学生成绩单", id: "report-generator" }
     ];
 
     modules

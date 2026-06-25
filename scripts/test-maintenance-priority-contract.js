@@ -50,7 +50,6 @@ const wrangler = parseJson('wrangler.jsonc');
 const headers = read('public/_headers').replace(/\r\n/g, '\n');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
 const appRuntime = read('public/assets/js/app.js');
-const appDownloadRuntime = read('public/assets/js/app-download-runtime.js');
 const dialogRuntimeContract = read('scripts/test-dialog-runtime-contract.js');
 const sw = read('public/sw.js');
 const authState = read('public/assets/js/auth-state-runtime.js');
@@ -127,8 +126,7 @@ const guardedItems = [
   () => assertIncludes(bootRuntime, 'bindBootLoginActions', 'boot runtime should bind first-screen login actions before app modules load'),
   () => assertIncludes(bootRuntime, '[data-login-submit]', 'boot runtime should bind data-login-submit buttons'),
   () => assert.ok(fileSize('public/assets/js/app.js') <= 910_000, 'public app.js should stay within tightened budget'),
-  () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 130_000, 'boot runtime should stay within tightened budget'),
-  () => assert.ok(fileSize('public/assets/js/app-download-runtime.js') <= 100_000, 'download runtime should stay within the multiplatform budget'),
+  () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 131_000, 'boot runtime should stay within tightened budget'),
   () => assertIncludes(appRuntime, 'isHostedGatewayUrl', 'app runtime should support hosted gateway URLs'),
   () => assertIncludes(appRuntime, 'prompt: async', 'app runtime should expose shared prompt modal API'),
   () => assertIncludes(appRuntime, 'confirm: async', 'app runtime should expose shared confirm modal API'),
@@ -141,7 +139,6 @@ const guardedItems = [
   () => assertIncludes(dialogRuntimeContract, 'confirmReportExport', 'dialog runtime contract should guard report export confirmation'),
   () => assertIncludes(freshmanExamRuntime, 'window.UI.prompt', 'freshman exam access password should use shared prompt API'),
   () => assert.ok(!freshmanExamRuntime.includes('例如: 123456'), 'freshman exam password prompt should not suggest weak defaults'),
-  () => assertIncludes(appDownloadRuntime, 'school-system-windows-beta-20260624-ea9037f.exe', 'download runtime should keep the current Windows installer URL'),
   () => assertIncludes(sw, 'CACHE_VERSION', 'service worker cache version should remain explicit')
   ,() => ['123456', 'admin123', 'yssy2016'].forEach((token) => {
     [

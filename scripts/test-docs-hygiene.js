@@ -36,12 +36,9 @@ assert.ok(readme.includes('npm run check:release-fast'), 'README should document
 assert.ok(readme.includes('docs/optimization-backlog.md'), 'README should link to the optimization backlog');
 assert.ok(readme.includes('scripts/legacy/'), 'README should document the legacy script archive');
 assert.ok(readme.includes('docs/performance/'), 'README should point readers to the performance trend output');
-assert.ok(readme.includes('/downloads/school-system-windows-beta-20260624-ea9037f.exe'), 'README should document the current hosted Windows download');
-assert.ok(readme.includes('/downloads/school-system-android-beta-20260624-ea9037f.apk'), 'README should document the current hosted APK download');
-assert.ok(!readme.includes('/downloads/school-system-windows-latest.exe'), 'README should not present the old Windows alias as the current download');
-assert.ok(!readme.includes('/downloads/school-system-android-v1.0.apk'), 'README should not present the old APK as the current download');
-assert.ok(!readme.includes('school-system-android-latest.apk` 下载地址返回 `404`'), 'README should not keep stale release 404 guidance');
-assert.ok(!readme.includes('smartedu-desktop-windows-latest.exe` 下载地址返回 `404`'), 'README should not keep stale Windows release 404 guidance');
+assert.ok(readme.includes('校衡台-Windows-1.0.2-x64.exe'), 'README should document the desktop Windows installer file');
+assert.ok(readme.includes('校衡台-Android-1.0.2.apk'), 'README should document the desktop Android package file');
+assert.ok(readme.includes('系统内已移除“应用服务”下载母模块'), 'README should explain the removed app service module');
 assert.ok(maintenanceRunbook.includes('## Priority Levels'), 'maintenance runbook should explain priority levels');
 assert.ok(maintenanceRunbook.includes('### P0: production correctness'), 'maintenance runbook should define P0');
 assert.ok(maintenanceRunbook.includes('### P1: release quality and user experience'), 'maintenance runbook should define P1');

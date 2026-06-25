@@ -190,16 +190,14 @@ assert.match(cachedReleases[0].platforms.windows.assetUrl, /^https:\/\/schoolsys
 assert.match(cachedReleases[0].platforms.android.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
 
 const catalogScript = html.match(/<script defer src="\.\/assets\/js\/app-release-catalog-runtime\.js\?v=[^"]+"><\/script>/);
-const downloadScript = html.match(/<script defer src="\.\/assets\/js\/app-download-runtime\.js\?v=[^"]+"><\/script>/);
 assert.ok(catalogScript, 'index should defer the release catalog runtime with a cache key');
-assert.ok(downloadScript, 'index should defer the app download runtime with a cache key');
-assert.ok(catalogScript.index < downloadScript.index, 'catalog runtime should load before download runtime');
+assert.ok(!html.includes('app-download-runtime.js'), 'index should not load the removed app download runtime');
 
 assert.strictEqual(packageJson.scripts['test:app-release-catalog-runtime'], 'node scripts/test-app-release-catalog-runtime.js');
 const validateBuild = packageJson.scripts['validate:build'] || '';
 const buildSteps = validateBuild.split(' ').map((step) => step.trim());
 const catalogStep = buildSteps.indexOf('test:app-release-catalog-runtime');
 assert.ok(catalogStep >= 0, 'validate:build should invoke the release catalog test');
-assert.strictEqual(buildSteps[catalogStep + 1], 'test:app-download-runtime-hygiene');
+assert.ok(!buildSteps.includes('test:app-download-runtime-hygiene'), 'validate:build should not guard the removed app download runtime');
 
 console.log('app release catalog runtime tests passed');

@@ -132,7 +132,6 @@ const scoreFreeIds = new Set([
   'starter-hub',
   'upload',
   'data-quality',
-  'app-download-center',
   'zhongkao-countdown',
   'exam-arranger',
   'freshman-simulator',

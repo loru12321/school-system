@@ -76,54 +76,6 @@ async function openModule(page, id) {
     await page.waitForTimeout(500);
 }
 
-async function inspectReleaseCenterLayout(page, mode) {
-    await openModule(page, 'app-download-center');
-    await page.waitForSelector('#app-release-focused-detail', { state: 'visible', timeout: 45000 });
-    const firstTab = page.locator('[data-app-download-platform="windows"]');
-    await firstTab.focus();
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('ArrowRight');
-    const keyboardSelectedPlatform = await page.locator('[data-app-download-platform][aria-selected="true"]').getAttribute('data-app-download-platform');
-    await page.locator('[data-open-release-history]').click();
-    await page.waitForSelector('#app-release-history-drawer:not([hidden])', { state: 'visible', timeout: 10000 });
-    const state = await page.evaluate((layoutMode) => {
-        const rect = (selector) => {
-            const node = document.querySelector(selector);
-            if (!node) return null;
-            const value = node.getBoundingClientRect();
-            return { left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width };
-        };
-        const tabs = document.querySelector('.app-release-platform-tabs');
-        return {
-            mode: layoutMode,
-            viewportWidth: window.innerWidth,
-            detail: rect('#app-release-focused-detail'),
-            timeline: rect('#app-release-timeline'),
-            drawer: rect('.app-release-history-sheet'),
-            tabCount: document.querySelectorAll('[data-app-download-platform]').length,
-            tabsOverflowX: tabs ? getComputedStyle(tabs).overflowX : '',
-            tabsScrollable: !!tabs && tabs.scrollWidth > tabs.clientWidth,
-        };
-    }, mode);
-    await page.locator('[data-close-release-history]').click();
-    return { ...state, keyboardSelectedPlatform };
-}
-
-function assertReleaseCenterLayout(state) {
-    assert.strictEqual(state.tabCount, 3, `${state.mode} release center should expose three platforms`);
-    assert.strictEqual(state.keyboardSelectedPlatform, 'ios', `${state.mode} keyboard navigation should reach iOS`);
-    assert.ok(state.detail && state.timeline && state.drawer, `${state.mode} release center pieces should be visible`);
-    if (state.mode === 'desktop') {
-        assert.ok(Math.abs(state.detail.top - state.timeline.top) <= 2, 'desktop detail and timeline should form aligned columns');
-        assert.ok(state.detail.right <= state.timeline.left + 2, 'desktop timeline should sit beside focused detail');
-    } else {
-        assert.ok(state.timeline.top >= state.detail.bottom - 1, 'mobile timeline should follow focused detail');
-        assert.strictEqual(state.tabsOverflowX, 'auto', 'mobile platform tabs should enable horizontal scrolling');
-        assert.ok(state.tabsScrollable, 'mobile platform tabs should overflow for touch scrolling');
-        assert.ok(state.drawer.width >= state.viewportWidth - 2, 'mobile release history drawer should fill viewport width');
-    }
-}
-
 async function openStudentDetailsModule(page) {
     await openModule(page, 'student-details');
     await page.evaluate(() => {
@@ -1153,8 +1105,6 @@ async function main() {
     assertReportGeneratorLayout(desktopReportState);
     const desktopDataManagerState = await inspectDataManagerLayout(desktopPage, 'desktop', 'student');
     assertDataManagerLayout(desktopDataManagerState, 'student');
-    const desktopReleaseCenterState = await inspectReleaseCenterLayout(desktopPage, 'desktop');
-    assertReleaseCenterLayout(desktopReleaseCenterState);
     await desktopPage.close();
 
     const mobilePage = await makePage({
@@ -1197,8 +1147,6 @@ async function main() {
     assertReportGeneratorLayout(mobileReportState);
     const mobileDataManagerState = await inspectDataManagerLayout(mobilePage, 'mobile', 'student');
     assertDataManagerLayout(mobileDataManagerState, 'student');
-    const mobileReleaseCenterState = await inspectReleaseCenterLayout(mobilePage, 'mobile');
-    assertReleaseCenterLayout(mobileReleaseCenterState);
     await mobilePage.close();
 
     await browser.close();
@@ -1221,7 +1169,6 @@ async function main() {
         desktopStudentState,
         desktopReportState,
         desktopDataManagerState,
-        desktopReleaseCenterState,
         mobileState,
         mobileSummaryState,
         mobileTeacherState,
@@ -1233,7 +1180,6 @@ async function main() {
         mobileStudentState,
         mobileReportState,
         mobileDataManagerState,
-        mobileReleaseCenterState,
         actionableMessages
     }, null, 2));
 }

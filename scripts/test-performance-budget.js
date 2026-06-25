@@ -68,8 +68,7 @@ const budgets = {
   publicCountyAnalysisJs: 125_000,
   publicProgressAnalysisJs: 95_000,
   publicTeacherAnalysisCoreJs: 85_000,
-  publicReportRenderJs: 65_000,
-  publicAppDownloadJs: 100_000
+  publicReportRenderJs: 65_000
 };
 
 const actual = {
@@ -78,8 +77,7 @@ const actual = {
   publicCountyAnalysisJs: size('public/assets/js/county-analysis-runtime.js'),
   publicProgressAnalysisJs: size('public/assets/js/progress-analysis-runtime.js'),
   publicTeacherAnalysisCoreJs: size('public/assets/js/teacher-analysis-core-runtime.js'),
-  publicReportRenderJs: size('public/assets/js/report-render-runtime.js'),
-  publicAppDownloadJs: size('public/assets/js/app-download-runtime.js')
+  publicReportRenderJs: size('public/assets/js/report-render-runtime.js')
 };
 
 const failures = Object.entries(actual)

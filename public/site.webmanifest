@@ -42,19 +42,6 @@
           "type": "image/svg+xml"
         }
       ]
-    },
-    {
-      "name": "应用下载",
-      "short_name": "下载",
-      "description": "查看 Android 与 Windows 客户端发布状态。",
-      "url": "/#app-download-center",
-      "icons": [
-        {
-          "src": "/icon.svg",
-          "sizes": "any",
-          "type": "image/svg+xml"
-        }
-      ]
     }
   ],
   "icons": [

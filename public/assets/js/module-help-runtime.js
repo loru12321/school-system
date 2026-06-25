@@ -13,18 +13,6 @@ const SYSTEM_MANUAL = {
                   </ul>`,
         calc: `系统自动清洗数据，缺考/作弊记为0分。`
     },
-    'app-download-center': {
-        title: '📱 应用下载中心·使用说明',
-        fit: `用于<strong>统一分发安卓 APK 与桌面 EXE</strong>，集中查看平台链接、版本说明和 release 记录。`,
-        when: `需要把安卓版或 Windows 桌面端发给教师、班主任、家长或办公室电脑时使用。`,
-        use: `<ul>
-                    <li><strong>先选平台：</strong>点击 Android 或 Desktop 卡片，页面会切换成对应的下载入口和说明。</li>
-                    <li><strong>复制链接：</strong>可以直接复制当前平台链接，再统一发到群或发给对应设备使用者。</li>
-                    <li><strong>查看 release：</strong>同页可跳转 GitHub release，确认最新 APK 和 EXE 是否已经更新。</li>
-                    <li><strong>后续更新：</strong>后面每次发新版，只需要替换最新 release 资产即可继续沿用同一入口。</li>
-                  </ul>`,
-        calc: `当前页展示的是下载入口和分发说明，不参与成绩计算；安卓包和桌面端都以最新 release 资产为准。`
-    },
     'macro': {
         title: '🏆 镇域宏观横向评价·算法说明',
         fit: `用于<strong>校际横向对比</strong>与镇域整体水平研判。`,

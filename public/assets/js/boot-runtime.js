@@ -197,9 +197,6 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('macro-compare-result', bootJs('macro-compare-result-runtime.js')),
     bootEntry('macro-compare-cloud', bootJs('macro-compare-cloud-runtime.js'))
 ]),
-'app-download': bootSkill('demand', 'demand', ['app-download-center'], [
-    bootEntry('app-download', bootJs('app-download-runtime.js'))
-]),
 'school-profile': bootSkill('demand', 'demand', ['summary', 'showSchoolProfile'], [
     bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
     bootEntry('school-profile', bootJs('school-profile-runtime.js'))
@@ -387,7 +384,6 @@ var APP_MODULES = [
 'skin-settings-runtime.js',
 'starter-status-runtime.js',
 'teacher-sync-runtime.js',
-'login-download-runtime.js',
 'management-facades-runtime.js',
 'app.js',
 'support-metrics-runtime.js',
@@ -2792,10 +2788,6 @@ window.ensureStudentOverviewRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('student-overview');
 };
 
-window.ensureAppDownloadRuntimeLoaded = function () {
-return window.SystemRuntimeLoader.load('app-download');
-};
-
 window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('teacher-analysis');
 };
@@ -3280,8 +3272,7 @@ const prioritySteps = [
 { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() }
 ];
 const deferredSteps = [
-{ label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() },
-{ label: 'app-download', loader: () => window.ensureAppDownloadRuntimeLoaded?.() }
+{ label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() }
 ];
 const preload = () => {
 prioritySteps.concat(deferredSteps).forEach((step) => {

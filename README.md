@@ -45,7 +45,7 @@ flowchart LR
 | 教师教学诊断 | 教师教学分析、教师画像、校内/县域排名 | 让教师评价从印象判断变成可追溯指标 |
 | 学生发展跟踪 | 学生总览、学生明细、进退步、成长档案、成绩报告 | 形成学生个人层面的连续观察 |
 | 教学管理闭环 | 教学管理总览、问题清单、异常预警、整改任务 | 把发现问题到跟进整改串起来 |
-| 教务工具 | 考务编排、新生均衡分班、座位微调、应用服务 | 处理日常教务中的高频事务 |
+| 教务工具 | 考务编排、新生均衡分班、座位微调 | 处理日常教务中的高频事务 |
 
 ## 系统如何流动
 
@@ -88,7 +88,6 @@ wrangler.jsonc             Cloudflare Workers 部署配置
 - `*-runtime.js`：独立业务模块
 - `cloud-*-runtime.js`：云端连接、数据读写和同步
 - `teaching-management-*-runtime.js`：教学管理模块
-- `app-download-runtime.js`：应用服务、APK/Windows 下载和版本中心
 
 ## 本地运行
 
@@ -153,13 +152,13 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 
 - 全模块自动切换烟测：确认主模块和数据中心页签能打开。
 - 深度业务检查：报告生成、学生明细、县域排名、教学管理等关键路径会检查真实 DOM 和函数。
-- 下载验证：应用服务中的 Windows 包和 Android APK 会做真实请求与点击下载检查。
+- 客户端验证：Windows 包和 Android APK 作为桌面文件分发，发布前单独校验包体与安装可用性。
 - 性能预算：记录模块切换耗时、深度检查耗时和长任务。
 - Cloudflare 合约检查：部署配置、静态资源和 Worker 路由保持可验证。
 
 ## 自动化流水线
 
-- `.github/workflows/release-apps.yml`：手动输入 tag 或推送 `school-system-v*` tag 后，自动构建、检查下载入口、整理 APK 与 Windows 包，并创建或更新 GitHub Release。
+- `.github/workflows/release-apps.yml`：手动输入 tag 或推送 `school-system-v*` tag 后，自动构建、整理 APK 与 Windows 包，并创建或更新 GitHub Release。
 - `.github/workflows/performance-trend.yml`：`main` 更新后自动跑本地浏览器烟测，把原始性能样本、跨提交历史和 Markdown 趋势报告写入 `docs/performance/`。
 - `npm run release:prepare-assets`：本地生成 GitHub Release 资产目录，包含 latest 文件名、带 tag 的不可变文件名、SHA256 和 release notes。
 - `npm run performance:record`：把一次烟测 JSON 转成可对比的趋势记录，用于定位哪次提交让模块切换、深度检查或长任务变慢。
@@ -169,18 +168,16 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 长期维护按 P0/P1/P2 分级处理，完整发布清单和缓存规则见 [`docs/maintenance-runbook.md`](docs/maintenance-runbook.md)。
 持续优化清单见 [`docs/optimization-backlog.md`](docs/optimization-backlog.md)。
 
-- P0：生产正确性，优先保护登录、关键数据、报告、下载和线上可访问性。
+- P0：生产正确性，优先保护登录、关键数据、报告和线上可访问性。
 - P1：发布质量与用户体验，优先保护文案编码、元数据、离线缓存和回归检查。
 - P2：可持续维护，优先保护文档、自动化守护、交接清单和可追溯发布记录。
 
-## 应用下载
+## 客户端分发
 
-“应用服务”保留当前可用下载入口：
+系统内已移除“应用服务”下载母模块。Windows 安装包和 Android APK 作为独立文件分发，当前可用包已放在维护电脑桌面：
 
-- Windows：`/downloads/school-system-windows-beta-20260624-ea9037f.exe`
-- Android：`/downloads/school-system-android-beta-20260624-ea9037f.apk`
-
-旧的历史版本更新文件已清空。以后发布新的 APK 或 Windows 应用包时，版本记录从当前入口重新累积。
+- `校衡台-Windows-1.0.2-x64.exe`
+- `校衡台-Android-1.0.2.apk`
 
 ## 适合继续改进的方向
 
@@ -190,15 +187,15 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 
 ## 给维护者的一句话
 
-修改这个系统时，请把它当作一个真实学校正在使用的生产工作台：先保证登录、数据、报告、教学管理和下载入口可用，再谈重构和美化。每一次发布都应该能回答三个问题：
+修改这个系统时，请把它当作一个真实学校正在使用的生产工作台：先保证登录、数据、报告和教学管理可用，再谈重构和美化。每一次发布都应该能回答三个问题：
 
 1. 用户最常用的路径还能不能走通？
 2. 关键数据有没有被错误覆盖或错口径展示？
-3. 线上站点是否已经用真实浏览器和真实下载验证过？
+3. 线上站点是否已经用真实浏览器验证过？
 
-## 多平台应用发布中心（2026）
+## 多平台客户端发布（2026）
 
-“应用服务”母模块现在统一展示 Windows、Android 与 iOS 的最新版、构建状态、系统要求、SHA-256 和历史版本。GitHub Releases 中的 `release-manifest.json` 是安装包状态的权威来源；Windows 与 Android 只有在包体、扩展名、哈希和下载响应全部通过后才标记为可下载，iOS 未完成 Apple 签名时只显示进度，不暴露伪造的 IPA 链接。
+系统业务界面不再承载客户端下载中心。GitHub Releases 中的 `release-manifest.json` 仍用于记录安装包状态；Windows 与 Android 包需要在发布前校验包体、扩展名、哈希和安装可用性，iOS 未完成 Apple 签名时只做验证构建。
 
 ### 发布节奏与保留策略
 

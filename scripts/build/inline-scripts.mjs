@@ -26,7 +26,6 @@ const OPTIONAL_INLINE_RUNTIME_PATHS = [
     './assets/js/teaching-management-overview-runtime.js',
     './assets/js/student-overview-runtime.js',
     './assets/js/teaching-management-version-runtime.js',
-    './assets/js/app-download-runtime.js',
     './assets/js/teacher-analysis-core-runtime.js',
     './assets/js/teacher-analysis-ui-runtime.js',
     './assets/js/teacher-analysis-bridge-runtime.js',

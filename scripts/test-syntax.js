@@ -32,8 +32,8 @@ const targets = [...new Set(roots.flatMap(collectSyntaxTargets))].sort();
 
 assert.ok(targets.includes('public/sw.js'), 'syntax check should cover the service worker');
 assert.ok(targets.includes('public/assets/js/app.js'), 'syntax check should cover the main app runtime');
-assert.ok(targets.includes('public/assets/js/login-download-runtime.js'), 'syntax check should cover the login download runtime');
-assert.ok(targets.includes('public/assets/js/app-download-runtime.js'), 'syntax check should cover the download center runtime');
+assert.ok(!targets.includes('public/assets/js/login-download-runtime.js'), 'syntax check should not require the removed login download runtime');
+assert.ok(!targets.includes('public/assets/js/app-download-runtime.js'), 'syntax check should not require the removed download center runtime');
 assert.ok(targets.includes('scripts/test-performance-budget.js'), 'syntax check should cover performance budget guards');
 assert.ok(targets.includes('scripts/prepare-github-release-assets.mjs'), 'syntax check should cover release asset preparation');
 assert.ok(targets.includes('scripts/record-performance-trend.mjs'), 'syntax check should cover performance trend recording');

@@ -44,7 +44,6 @@ const DEFAULT_SWITCH_MODULE_IDS = [
     'progress-analysis',
     'cohort-growth',
     'report-generator',
-    'app-download-center',
     'zhongkao-countdown',
     'freshman-simulator',
     'exam-arranger',
@@ -3020,56 +3019,6 @@ async function runModuleDeepCheck(page, id) {
                 },
                 teacherConflicts,
                 alerts
-            };
-        });
-    }
-    if (id === 'app-download-center') {
-        return page.evaluate(async () => {
-            if (typeof window.ensureAppDownloadRuntimeLoaded === 'function') {
-                await Promise.resolve(window.ensureAppDownloadRuntimeLoaded()).catch(() => null);
-            }
-            if (typeof window.renderAppDownloadCenter === 'function') {
-                await Promise.resolve(window.renderAppDownloadCenter('android')).catch(() => null);
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            const primaryLink = document.getElementById('app-download-primary-link');
-            const featureCount = document.querySelectorAll('#app-download-feature-grid .app-download-feature-card').length;
-            const releaseCount = document.querySelectorAll('#app-download-release-list [data-app-release-item="true"]').length;
-            const specCount = document.querySelectorAll('#app-download-spec-grid .app-download-spec-card').length;
-            const statusCardCount = document.querySelectorAll('#app-download-status-grid .app-download-status-card').length;
-            const metaCardCount = document.querySelectorAll('#app-download-meta-grid .app-download-meta-card').length;
-            const releaseCenterMetaCount = document.querySelectorAll('#app-release-focused-detail .app-release-meta > div').length;
-            const releaseTimelineCount = document.querySelectorAll('#app-release-timeline .app-release-timeline-item').length;
-            const releasePlatformTabCount = document.querySelectorAll('#app-download-center [data-app-download-platform]').length;
-            const releaseFocusedDetailReady = !!document.querySelector('#app-release-focused-detail');
-            const releaseListText = document.getElementById('app-download-release-list')?.textContent?.trim() || '';
-            const releaseTimelineText = document.getElementById('app-release-timeline')?.textContent?.trim() || '';
-            const releaseEmptyStateReady = releaseListText.includes('历史版本已清空');
-            const releaseTimelineReady = releaseTimelineCount >= 1 || releaseTimelineText.length > 20;
-            const primaryHref = String(primaryLink?.getAttribute('href') || '');
-            const primaryDisabled = primaryLink?.getAttribute('aria-disabled') === 'true';
-            const checks = {
-                sectionReady: !!document.querySelector('#app-download-center.analysis-workspace-version'),
-                heroReady: !!document.querySelector('#app-download-center .analysis-hero, #app-download-center .analysis-shell-head'),
-                shellHeadReady: !!document.querySelector('#app-download-center .analysis-shell-head'),
-                primaryLinkReady: !!primaryLink && (primaryDisabled || /\.apk($|\?)/i.test(primaryHref)),
-                linkInputReady: !!document.getElementById('app-download-link-input') || releaseFocusedDetailReady,
-                featureGridReady: featureCount >= 1 || statusCardCount >= 3 || releasePlatformTabCount >= 2,
-                releaseListReady: releaseCount >= 1 || releaseEmptyStateReady || releaseListText.length > 20 || releaseTimelineReady,
-                specGridReady: specCount >= 1 || metaCardCount >= 4 || releaseCenterMetaCount >= 4
-            };
-            return {
-                ok: Object.values(checks).every(Boolean),
-                checks,
-                featureCount,
-                releaseCount,
-                releaseEmptyStateReady,
-                specCount,
-                statusCardCount,
-                metaCardCount,
-                releaseCenterMetaCount,
-                releaseTimelineCount,
-                releasePlatformTabCount
             };
         });
     }
