@@ -55,13 +55,13 @@ function createEnv({ omitSecondChunk = false, omitMap = false } = {}) {
   };
 }
 
-function createExternalEnv() {
+function createExternalEnv(downloadMap = externalMap) {
   return {
     ASSETS: {
       async fetch(request) {
         const pathname = new URL(request.url).pathname;
         if (pathname === '/releases/download-map.json') {
-          return new Response(JSON.stringify(externalMap), { status: 200 });
+          return new Response(JSON.stringify(downloadMap), { status: 200 });
         }
         return new Response('missing', { status: 404 });
       }
@@ -109,6 +109,9 @@ try {
   assert.equal(externalResponse.status, 302);
   assert.match(externalResponse.headers.get('Location'), /^https:\/\/release-assets\.githubusercontent\.com\//);
   assert.equal(externalResponse.headers.get('Content-Length'), null);
+  assert.equal(externalResponse.headers.get('Content-Disposition'), null);
+  assert.equal(externalResponse.headers.get('Content-Type'), null);
+  assert.equal(externalResponse.headers.get('Cache-Control'), 'no-store');
 } finally {
   globalThis.fetch = originalFetch;
 }

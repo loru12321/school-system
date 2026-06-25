@@ -56,10 +56,16 @@ assert.ok(source.includes('shouldAutoFetchReleaseCatalog'), 'download center sho
 assert.ok(source.includes('window.PUBLIC_DOWNLOAD_AUTO_FETCH_RELEASES === true'), 'download center should only auto-fetch GitHub releases when explicitly enabled');
 assert.ok(source.includes('preferHostedChannelDownload'), 'download center should prefer hosted app packages over stale embedded release assets');
 assert.ok(source.includes('remoteCatalogFetched'), 'download center should distinguish embedded releases from a freshly fetched release catalog');
-assert.ok(source.includes("pathname.startsWith('/downloads/')"), 'download center should recognize resolved same-origin download URLs');
+assert.ok(source.includes("decodeURIComponent(parsed.pathname.split('/').pop() || '')"), 'download center should recognize app package filenames from resolved download URLs');
 assert.ok(source.includes('link.removeAttribute(\'download\')'), 'download center should leave package downloads to the browser and IDM');
 assert.ok(!source.includes('link.setAttribute(\'download\''), 'download center should not force scripted download attributes');
 assert.ok(!/\sdownload=/.test(source), 'package download links should be native browser links without download attributes');
+assert.ok(source.includes('function isPackageDownloadUrl'), 'download center should identify app package downloads');
+assert.ok(source.includes("link.setAttribute('target', '_blank')"), 'download center should open package downloads outside the app shell');
+assert.ok(source.includes("link.setAttribute('rel', 'noopener')"), 'download center should protect package download tabs with noopener');
+assert.ok(source.includes('id="app-download-primary-link" class="btn btn-blue" href="${escapeHtml(asset.assetUrl)}" target="_blank" rel="noopener"'), 'primary package download should use a new browser context');
+assert.ok(source.includes('class="btn btn-blue" href="${escapeHtml(asset.assetUrl)}" target="_blank" rel="noopener"'), 'history package downloads should use a new browser context');
+assert.ok(source.includes('href="${escapeHtml(assetModel.url)}" target="_blank" rel="noopener"'), 'version center package downloads should use a new browser context');
 assert.ok(source.includes("name.endsWith('.exe') && /(?:win|windows|desktop|smartedu|school-system)/i.test(name)"), 'download center should recognize Windows release installers');
 assert.ok(source.includes('./downloads/school-system-android-beta-20260624-ea9037f.apk'), 'download center should expose the current hosted APK');
 assert.ok(source.includes('./downloads/school-system-windows-beta-20260624-ea9037f.exe'), 'download center should expose the current hosted Windows client installer');

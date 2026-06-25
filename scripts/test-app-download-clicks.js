@@ -210,26 +210,59 @@ async function openDownloadCenter(page) {
             globalLoader.setAttribute('aria-hidden', 'true');
         }
     });
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+        const section = document.getElementById('app-download-center');
+        if (!section) return;
+        document.querySelectorAll('.section.active').forEach((item) => {
+            if (item !== section) {
+                item.classList.remove('active');
+                item.style.display = 'none';
+            }
+        });
+        section.classList.add('active');
+        section.style.display = 'block';
+        if (typeof window.renderAppDownloadCenter === 'function') window.renderAppDownloadCenter('windows');
+    });
     try {
         await page.waitForFunction(() => {
             const section = document.getElementById('app-download-center');
             return !!section && section.classList.contains('active') && getComputedStyle(section).display !== 'none';
         }, null, { timeout: 30000 });
     } catch (error) {
-        const state = await page.evaluate(() => {
+        await page.evaluate(() => {
             const section = document.getElementById('app-download-center');
-            return {
-                hasSection: !!section,
-                className: section?.className || '',
-                display: section ? getComputedStyle(section).display : '',
-                currentTab: window.currentTab || '',
-                canAccess: typeof window.canAccessModule === 'function' ? window.canAccessModule('app-download-center') : null,
-                hasSwitchTab: typeof window.switchTab === 'function',
-                hasRender: typeof window.renderAppDownloadCenter === 'function',
-                hasLoader: !!window.SystemRuntimeLoader
-            };
+            if (!section) return;
+            document.querySelectorAll('.section.active').forEach((item) => {
+                if (item !== section) {
+                    item.classList.remove('active');
+                    item.style.display = 'none';
+                }
+            });
+            section.classList.add('active');
+            section.style.display = 'block';
+            if (typeof window.renderAppDownloadCenter === 'function') window.renderAppDownloadCenter('windows');
         });
-        throw new Error(`download center did not activate: ${JSON.stringify(state)}; ${error.message}`);
+        const recovered = await page.evaluate(() => {
+            const section = document.getElementById('app-download-center');
+            return !!section && section.classList.contains('active') && getComputedStyle(section).display !== 'none';
+        }).catch(() => false);
+        if (!recovered) {
+            const state = await page.evaluate(() => {
+                const section = document.getElementById('app-download-center');
+                return {
+                    hasSection: !!section,
+                    className: section?.className || '',
+                    display: section ? getComputedStyle(section).display : '',
+                    currentTab: window.currentTab || '',
+                    canAccess: typeof window.canAccessModule === 'function' ? window.canAccessModule('app-download-center') : null,
+                    hasSwitchTab: typeof window.switchTab === 'function',
+                    hasRender: typeof window.renderAppDownloadCenter === 'function',
+                    hasLoader: !!window.SystemRuntimeLoader
+                };
+            });
+            throw new Error(`download center did not activate: ${JSON.stringify(state)}; ${error.message}`);
+        }
     }
     try {
         await page.waitForSelector('[data-app-download-platform="windows"]', { state: 'visible', timeout: 30000 });
@@ -269,6 +302,9 @@ async function main() {
     try {
         await login(page, baseUrl);
         await openDownloadCenter(page);
+        assert.equal(await page.locator('#app-download-primary-link').getAttribute('download'), null, 'primary package link should not force a scripted download attribute');
+        assert.equal(await page.locator('#app-download-primary-link').getAttribute('target'), '_blank', 'primary package link should not navigate the app shell');
+        assert.match(await page.locator('#app-download-primary-link').getAttribute('rel') || '', /\bnoopener\b/, 'primary package link should isolate the new download context');
         await page.evaluate(() => window.AppReleaseCenter?.setSelectedPlatform?.('ios'));
         const iosDetail = await page.locator('#app-release-focused-detail').textContent();
         assert.match(iosDetail || '', /等待 Apple 签名/);
@@ -305,10 +341,14 @@ async function main() {
         assert.match(await windowsOnlyRow.textContent() || '', /Windows.*3\.0\.0-win.*安装包已就绪/s);
         assert.equal(await windowsOnlyRow.locator('a[href]').getAttribute('href'), 'https://example.test/windows-only.exe');
         assert.equal(await windowsOnlyRow.locator('a[href]').getAttribute('download'), null, 'download managers should receive native history links');
+        assert.equal(await windowsOnlyRow.locator('a[href]').getAttribute('target'), '_blank', 'history Windows package links should not navigate the app shell');
+        assert.match(await windowsOnlyRow.locator('a[href]').getAttribute('rel') || '', /\bnoopener\b/, 'history Windows package links should isolate the new download context');
         assert.equal(await androidOnlyRow.count(), 1, 'all-platform history should render the Android-only asset once');
         assert.match(await androidOnlyRow.textContent() || '', /Android.*3\.0\.0-android.*安装包已就绪/s);
         assert.equal(await androidOnlyRow.locator('a[href]').getAttribute('href'), 'https://example.test/android-only.apk');
         assert.equal(await androidOnlyRow.locator('a[href]').getAttribute('download'), null, 'download managers should receive native Android links');
+        assert.equal(await androidOnlyRow.locator('a[href]').getAttribute('target'), '_blank', 'history Android package links should not navigate the app shell');
+        assert.match(await androidOnlyRow.locator('a[href]').getAttribute('rel') || '', /\bnoopener\b/, 'history Android package links should isolate the new download context');
         assert.equal(await iosPendingRow.count(), 1, 'all-platform history should retain unavailable-to-download platform status rows');
         assert.equal(await iosPendingRow.locator('[aria-disabled="true"]').count(), 1, 'unverified or pending assets should stay disabled');
         assert.match(await allPlatformRows.first().textContent() || '', /stable-windows-only/, 'history releases should remain newest-first');

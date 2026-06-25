@@ -207,10 +207,14 @@ export async function handleReleaseDownload(request, env) {
   if (loaded.entry.fullAssetApiUrl) {
     const location = await resolveGithubAssetRedirect(env, loaded.entry.fullAssetApiUrl);
     if (!location) return plainResponse(503, 'Release asset unavailable');
-    headers.delete('Content-Length');
-    headers.set('Location', location);
-    headers.set('Cache-Control', 'no-store');
-    return new Response(null, { status: 302, headers });
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Cache-Control': 'no-store',
+        Location: location,
+        'X-Content-Type-Options': 'nosniff'
+      }
+    });
   }
   const chunkUrls = await preflightChunks(request, env, loaded.entry);
   if (!chunkUrls) return plainResponse(503, 'Release asset unavailable');
