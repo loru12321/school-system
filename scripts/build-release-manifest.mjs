@@ -48,12 +48,14 @@ function assertTrustedAssetDirectory(assetDir) {
     throw new Error('RELEASE_ASSET_DIR must be inside the repository or system temporary directory');
   }
   let current = trustedRoot;
+  let realCurrent = fs.realpathSync.native(trustedRoot);
   for (const segment of path.relative(trustedRoot, resolved).split(path.sep).filter(Boolean)) {
     current = path.join(current, segment);
+    realCurrent = path.join(realCurrent, segment);
     if (!fs.existsSync(current)) throw new Error(`Release asset directory does not exist: ${resolved}`);
     const stats = fs.lstatSync(current);
     if (stats.isSymbolicLink()) throw new Error(`Symbolic link, junction, or reparse path is not allowed: ${current}`);
-    if (pathKey(fs.realpathSync.native(current)) !== pathKey(current)) {
+    if (pathKey(fs.realpathSync.native(current)) !== pathKey(realCurrent)) {
       throw new Error(`Linked or reparse path is not allowed: ${current}`);
     }
   }
