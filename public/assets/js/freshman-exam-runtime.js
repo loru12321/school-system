@@ -108,8 +108,8 @@ function FB_loadData(input) {
                 const remarks = String(r['备注'] || r['说明'] || ""); const sameMatch = remarks.match(/(?:和|与|跟)([\u4e00-\u9fa5\w]+)(?:同班|一起|一班)/); const diffMatch = remarks.match(/(?:和|与|跟)([\u4e00-\u9fa5\w]+)(?:分开|不同班|不在一起)/);
                 return { _id: i, name: r['姓名'] || '未知', gender: (r['性别'] === '男' || r['Gender'] === 'M') ? 'M' : 'F', score: parseFloat(r['总分'] || r['语数英'] || 0), height: parseFloat(r['身高'] || 160), vision: parseFloat(r['视力'] || r['左眼'] || 5.0), isDiff: (String(r['难管'] || "").includes('是') || remarks.includes('难管') || remarks.includes('调皮')), remarks: remarks, constraints: { same: sameMatch ? [sameMatch[1]] : [], diff: diffMatch ? [diffMatch[1]] : [] }, classIdx: -1 };
             });
-            alert(`✅ 导入成功！共 ${FB_STUDENTS.length} 人。`); document.getElementById('fb-results-area').classList.add('hidden');
-        } catch (err) { alert("读取失败：" + err.message); }
+            window.UI.alert(`✅ 导入成功！共 ${FB_STUDENTS.length} 人。`); document.getElementById('fb-results-area').classList.add('hidden');
+        } catch (err) { window.UI.alert("读取失败：" + err.message); }
     }; reader.readAsArrayBuffer(file);
 }
 
@@ -121,7 +121,7 @@ function calculateSD(data) { const n = data.length; if (n === 0) return 0; const
 
 // 1. 主入口：运行分班
 function FB_runDivision() {
-    if (!FB_STUDENTS.length) return alert("请先导入数据");
+    if (!FB_STUDENTS.length) return window.UI.alert("请先导入数据");
 
     // 获取参数
     const k = parseInt(document.getElementById('fb_cls_num').value) || 6;
@@ -580,14 +580,14 @@ async function ensureInquiryCryptoRuntime() {
 
 async function generateInquiryPackage() {
     const sch = document.getElementById('studentSchoolSelect').value;
-    if (!sch || sch.includes('请选择')) return alert("请先选择一个学校，系统将生成该校的查分包。");
+    if (!sch || sch.includes('请选择')) return window.UI.alert("请先选择一个学校，系统将生成该校的查分包。");
 
     if (typeof CryptoJS === 'undefined') {
         try {
             await ensureInquiryCryptoRuntime();
         } catch (error) {
             console.error('[InquiryPackage] crypto-js load failed:', error);
-            return alert("❌ 导出失败：加密库未加载完成，请刷新页面后重试。");
+            return window.UI.alert("❌ 导出失败：加密库未加载完成，请刷新页面后重试。");
         }
     }
 
@@ -596,7 +596,7 @@ async function generateInquiryPackage() {
         ? window.getAppSchoolRecord(sch)
         : SCHOOLS[sch];
     const schoolStudents = schoolRecord?.students || [];
-    if (!schoolStudents || schoolStudents.length === 0) return alert("该学校无数据");
+    if (!schoolStudents || schoolStudents.length === 0) return window.UI.alert("该学校无数据");
 
     // 判断是否只有一所学校 (用于控制显示的排名类型)
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
@@ -701,12 +701,12 @@ async function generateInquiryPackage() {
                 }
             }
         )
-        : prompt('请设置一个访问密码。至少 8 位，并同时包含字母和数字。', '');
+        : window.prompt('请设置一个访问密码。至少 8 位，并同时包含字母和数字。', '');
 
     if (password === null) return;
-    if (!password) return alert("❌ 必须设置密码才能生成安全查分包！");
+    if (!password) return window.UI.alert("❌ 必须设置密码才能生成安全查分包！");
     if (String(password).trim().length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-        return alert("❌ 访问密码至少 8 位，并需同时包含字母和数字。");
+        return window.UI.alert("❌ 访问密码至少 8 位，并需同时包含字母和数字。");
     }
 
     // 使用 CryptoJS 进行 AES 加密
@@ -717,7 +717,7 @@ async function generateInquiryPackage() {
         inquiryPackageLibraries = await getStandaloneInquiryPackageLibraries();
     } catch (error) {
         console.error('[InquiryPackage] standalone libs unavailable:', error);
-        return alert("❌ 导出失败：查分包依赖未准备好，请刷新页面后重试。");
+        return window.UI.alert("❌ 导出失败：查分包依赖未准备好，请刷新页面后重试。");
     }
     const encryptedPayloadLiteral = JSON.stringify(encryptedData).replace(/</g, '\\u003c');
 
@@ -812,6 +812,7 @@ async function generateInquiryPackage() {
 
     let radarInst = null;
     let varInst = null;
+    const notify = (message) => window.alert(message);
 
     function doSearch() {
         const pass = document.getElementById('inpPass').value.trim();
@@ -819,21 +820,21 @@ async function generateInquiryPackage() {
         const name = document.getElementById('inpName').value.trim();
         const resBox = document.getElementById('resultArea');
 
-        if(!pass) return alert("❌ 请输入访问密码");
-        if(!cls) return alert("❌ 请输入班级");
-        if(!name) return alert("❌ 请输入学生姓名");
+        if(!pass) return notify("❌ 请输入访问密码");
+        if(!cls) return notify("❌ 请输入班级");
+        if(!name) return notify("❌ 请输入学生姓名");
 
         let allData = null;
 
         // 1. 解密数据
         try {
-            if (typeof CryptoJS === 'undefined') return alert("⚠️ 加载中，请稍后重试...");
+            if (typeof CryptoJS === 'undefined') return notify("⚠️ 加载中，请稍后重试...");
             const bytes = CryptoJS.AES.decrypt(PAYLOAD, pass);
             const originalText = bytes.toString(CryptoJS.enc.Utf8);
             if (!originalText) throw new Error("密码错误");
             allData = JSON.parse(originalText);
         } catch(e) {
-            return alert("⛔ 访问拒绝：密码错误！");
+            return notify("⛔ 访问拒绝：密码错误！");
         }
 
         // 2. 精确查找 (班级 + 姓名 必须完全匹配)
@@ -845,7 +846,7 @@ async function generateInquiryPackage() {
         resBox.innerHTML = '';
 
         if(!res) {
-            alert("❌ 未找到学生信息！\\n请检查【班级】和【姓名】是否输入正确。\\n(班级如：701)");
+            notify("❌ 未找到学生信息！\\n请检查【班级】和【姓名】是否输入正确。\\n(班级如：701)");
         } else {
             let subHtml = '';
             for(let sub in res.s) {
@@ -972,7 +973,7 @@ async function generateInquiryPackage() {
     link.click();
     document.body.removeChild(link);
 
-    alert("✅ 加密查分包已生成！\n文件名：" + link.download + "\n访问密码：" + password + "\n\n请将文件发给家长，告知密码。\n家长必须输入正确的 [班级] 和 [姓名] 才能查询。");
+    window.UI.alert("✅ 加密查分包已生成！\n文件名：" + link.download + "\n访问密码：" + password + "\n\n请将文件发给家长，告知密码。\n家长必须输入正确的 [班级] 和 [姓名] 才能查询。");
 }
 
 function parseConstraintStr(str) {
@@ -1287,9 +1288,9 @@ function FB_toggleViewRotation() {
     canvas.classList.toggle('view-rotated');
 }
 
-function FB_saveToLocal() { if (!FB_CLASSES.length) return alert("暂无数据"); localStorage.setItem('FB_DATA_BACKUP', JSON.stringify(FB_CLASSES)); alert("方案已保存至浏览器缓存"); }
+function FB_saveToLocal() { if (!FB_CLASSES.length) return window.UI.alert("暂无数据"); localStorage.setItem('FB_DATA_BACKUP', JSON.stringify(FB_CLASSES)); window.UI.alert("方案已保存至浏览器缓存"); }
 function FB_exportResult() {
-    if (!FB_CLASSES.length) return alert("无数据"); const wb = XLSX.utils.book_new(); const data = [['班级', '座位号', '姓名', '性别', '总分', '身高', '视力', '备注']];
+    if (!FB_CLASSES.length) return window.UI.alert("无数据"); const wb = XLSX.utils.book_new(); const data = [['班级', '座位号', '姓名', '性别', '总分', '身高', '视力', '备注']];
     FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { data.push([c.name, i + 1, s.name, s.gender, s.score, s.height, s.vision, s.remarks]); }); });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "分班与座位表"); XLSX.writeFile(wb, "新生分班结果.xlsx");
 }
@@ -1306,8 +1307,8 @@ function addBindPair(type) {
 
 
     if (!selA || !selB) return;
-    if (!selA.value || !selB.value) return alert("请先选择两个学生");
-    if (selA.value === selB.value) return alert("不能选择同一个学生");
+    if (!selA.value || !selB.value) return window.UI.alert("请先选择两个学生");
+    if (selA.value === selB.value) return window.UI.alert("不能选择同一个学生");
 
     addTagToWidget(wrapperId, hiddenId, `${selA.value}&${selB.value}`);
     selA.value = ""; selB.value = "";
@@ -1332,33 +1333,36 @@ function FB_initScenarioSelect() {
     });
 }
 
-function FB_saveScenario() {
+async function FB_saveScenario() {
     const cls = FB_CLASSES[FB_CUR_CLASS_IDX];
-    if (!cls) return alert("请先打开一个班级座位图");
-    if (!cls.seatLayout || cls.seatLayout.length === 0) return alert("当前座位表为空，无法保存");
+    if (!cls) return window.UI.alert("请先打开一个班级座位图");
+    if (!cls.seatLayout || cls.seatLayout.length === 0) return window.UI.alert("当前座位表为空，无法保存");
 
-    const name = prompt("请输入方案名称 (如：期中考试、日常、互助组)", `方案 ${Object.keys(cls.scenarios || {}).length + 1}`);
+    const name = await window.UI.prompt("请输入方案名称 (如：期中考试、日常、互助组)", `方案 ${Object.keys(cls.scenarios || {}).length + 1}`, {
+        title: '保存座位方案',
+        confirmText: '保存'
+    });
     if (!name) return;
 
     if (!cls.scenarios) cls.scenarios = {};
     // 深度拷贝当前布局
     cls.scenarios[name] = JSON.parse(JSON.stringify(cls.seatLayout));
 
-    alert(`方案 [${name}] 保存成功！`);
+    window.UI.alert(`方案 [${name}] 保存成功！`);
     FB_initScenarioSelect(); // 刷新下拉框
     document.getElementById('seat_scenario_select').value = name;
 }
 
-function FB_loadScenario() {
+async function FB_loadScenario() {
     const sel = document.getElementById('seat_scenario_select');
     if (!sel) return;
     const name = sel.value;
     if (!name) return;
 
     const cls = FB_CLASSES[FB_CUR_CLASS_IDX];
-    if (!cls) return alert("请先打开一个班级座位图");
+    if (!cls) return window.UI.alert("请先打开一个班级座位图");
     if (cls.scenarios && cls.scenarios[name]) {
-        if (!confirm(`确定要加载 [${name}] 方案吗？\n当前未保存的修改将丢失。`)) {
+        if (!await window.UI.confirm(`确定要加载 [${name}] 方案吗？\n当前未保存的修改将丢失。`)) {
             sel.value = "";
             return;
         }
@@ -1368,15 +1372,15 @@ function FB_loadScenario() {
     }
 }
 
-function FB_deleteScenario() {
+async function FB_deleteScenario() {
     const sel = document.getElementById('seat_scenario_select');
     if (!sel) return;
     const name = sel.value;
-    if (!name) return alert("请先选择一个要删除的方案");
+    if (!name) return window.UI.alert("请先选择一个要删除的方案");
 
-    if (confirm(`确定要永久删除方案 [${name}] 吗？`)) {
+    if (await window.UI.confirm(`确定要永久删除方案 [${name}] 吗？`)) {
         const cls = FB_CLASSES[FB_CUR_CLASS_IDX];
-        if (!cls) return alert("请先打开一个班级座位图");
+        if (!cls) return window.UI.alert("请先打开一个班级座位图");
         delete cls.scenarios[name];
         FB_initScenarioSelect();
     }
@@ -1394,13 +1398,13 @@ function EXAM_loadData(input) {
             const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, { type: 'array' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
             if (!json.length) throw new Error("Excel没有数据");
             EXAM_DATA = json.map(r => ({ name: r['姓名'] || '未知', class: r['班级'] || r['班'] || '未知', school: r['学校'] || '', score: parseFloat(r['总分'] || r['score'] || 0) }));
-            alert(`✅ 已导入 ${EXAM_DATA.length} 名学生，准备进行考场编排。`);
-        } catch (err) { alert("读取失败：" + err.message); }
+            window.UI.alert(`✅ 已导入 ${EXAM_DATA.length} 名学生，准备进行考场编排。`);
+        } catch (err) { window.UI.alert("读取失败：" + err.message); }
     }; reader.readAsArrayBuffer(file);
 }
 
 function EXAM_generate() {
-    if (!EXAM_DATA.length) return alert("请先导入学生名单");
+    if (!EXAM_DATA.length) return window.UI.alert("请先导入学生名单");
 
     const prefix = document.getElementById('exam_prefix').value;
     const seatsPerRoom = parseInt(document.getElementById('exam_seats_per_room').value) || 30;
@@ -1504,7 +1508,7 @@ function EXAM_renderOverview() {
     const html = EXAM_ROOMS.map(room => {
         const first = room.students[0].examNo;
         const last = room.students[room.students.length - 1].examNo;
-        return `<div class="exam-room-card analysis-exam-room-card" onclick="alert('提示：请使用“打印桌贴”功能查看该考场的详细座次表')"><div class="exam-room-title analysis-exam-room-title">第 ${String(room.id).padStart(2, '0')} 考场</div><div class="exam-room-info analysis-exam-room-info"><span>人数: ${room.students.length}</span></div><div class="exam-room-range analysis-exam-room-range">${first} - ${last}</div></div>`;
+        return `<div class="exam-room-card analysis-exam-room-card" onclick="window.UI.alert('提示：请使用“打印桌贴”功能查看该考场的详细座次表')"><div class="exam-room-title analysis-exam-room-title">第 ${String(room.id).padStart(2, '0')} 考场</div><div class="exam-room-info analysis-exam-room-info"><span>人数: ${room.students.length}</span></div><div class="exam-room-range analysis-exam-room-range">${first} - ${last}</div></div>`;
     }).join('');
     FreshmanExamPerfCache.examOverviewSignature = signature;
     FreshmanExamPerfCache.examOverviewHtml = html;
@@ -1559,7 +1563,7 @@ function EXAM_renderPrintView() {
 }
 
 function EXAM_generateDeskLabels() {
-    if (!EXAM_ROOMS || EXAM_ROOMS.length === 0) return alert("请先点击“一键生成考场安排”");
+    if (!EXAM_ROOMS || EXAM_ROOMS.length === 0) return window.UI.alert("请先点击“一键生成考场安排”");
 
     const container = document.getElementById('desk-labels-print-area');
     container.innerHTML = '';
@@ -1647,13 +1651,13 @@ function EXAM_initProctorUI() {
 
 // 执行编排逻辑
 function EXAM_assignProctors() {
-    if (!EXAM_ROOMS.length) return alert("请先生成考场安排");
+    if (!EXAM_ROOMS.length) return window.UI.alert("请先生成考场安排");
 
     const allTeachers = [...new Set(Object.values(TEACHER_MAP || {}).map(name => String(name || '').trim()).filter(Boolean))];
-    if (!allTeachers.length) return alert("请先导入任课表，当前没有可用于监考分配的教师。");
+    if (!allTeachers.length) return window.UI.alert("请先导入任课表，当前没有可用于监考分配的教师。");
     const patrolSelect = document.getElementById('proctor-role-patrol');
     const affairsSelect = document.getElementById('proctor-role-affairs');
-    if (!patrolSelect || !affairsSelect) return alert("监考配置面板未就绪，请刷新页面后重试。");
+    if (!patrolSelect || !affairsSelect) return window.UI.alert("监考配置面板未就绪，请刷新页面后重试。");
 
     // 获取排除人员
     const excluded = Array.from(document.querySelectorAll('.exclude-check:checked')).map(el => el.value);
@@ -1677,7 +1681,7 @@ function EXAM_assignProctors() {
 
     const needed = EXAM_ROOMS.length * 2;
     if (availablePool.length < needed) {
-        return alert(`❌ 人员不足！\n当前考场需要 ${needed} 名监考，但排除后仅剩 ${availablePool.length} 人。\n请减少排除项或合并岗位。`);
+        return window.UI.alert(`❌ 人员不足！\n当前考场需要 ${needed} 名监考，但排除后仅剩 ${availablePool.length} 人。\n请减少排除项或合并岗位。`);
     }
 
     // 洗牌算法乱序
@@ -1722,8 +1726,8 @@ function EXAM_assignProctors() {
 }
 
 function EXAM_exportResult() {
-    if (!EXAM_DATA.length) return alert("无考生数据");
-    if (!EXAM_ROOMS.length) return alert("请先生成考场安排");
+    if (!EXAM_DATA.length) return window.UI.alert("无考生数据");
+    if (!EXAM_ROOMS.length) return window.UI.alert("请先生成考场安排");
 
     const wb = XLSX.utils.book_new();
 
@@ -1736,7 +1740,7 @@ function EXAM_exportResult() {
     const proctorRows = document.querySelectorAll('#exam_proctor_table tbody tr');
 
     if (proctorRows.length === 0) {
-        alert("⚠️ 提示：您尚未进行“人员配置”或点击“一键编排”。监考表将只包含考生信息。");
+        window.UI.alert("⚠️ 提示：您尚未进行“人员配置”或点击“一键编排”。监考表将只包含考生信息。");
     } else {
         proctorRows.forEach(tr => {
             const tds = tr.querySelectorAll('td');

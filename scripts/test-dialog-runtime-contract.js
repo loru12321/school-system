@@ -33,6 +33,7 @@ const townSubmoduleCompare = read('public/assets/js/town-submodule-compare-runti
 const gradeScheduler = read('public/assets/js/grade-scheduler-runtime.js');
 const progressAnalysis = read('public/assets/js/progress-analysis-runtime.js');
 const skinSettings = read('public/assets/js/skin-settings-runtime.js');
+const freshmanExam = read('public/assets/js/freshman-exam-runtime.js');
 
 assert.ok(bootRuntime.includes("'dialog-runtime.js'"), 'dialog runtime should load before app.js');
 assert.ok(bootRuntime.indexOf("'dialog-runtime.js'") < bootRuntime.indexOf("'app.js'"), 'dialog runtime should precede app.js in the boot module list');
@@ -71,7 +72,10 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['town submodule compare permission alert', townSubmoduleCompare, "window.UI.alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用')"],
   ['grade scheduler import alert', gradeScheduler, 'window.UI.alert("请先导入教师任课数据")'],
   ['progress analysis export alert', progressAnalysis, 'window.UI.alert("暂无分析结果，请先进行分析")'],
-  ['skin settings logo alert', skinSettings, 'window.UI.alert("Logo 图片过大，请使用 500KB 以内的图片")']
+  ['skin settings logo alert', skinSettings, 'window.UI.alert("Logo 图片过大，请使用 500KB 以内的图片")'],
+  ['freshman scenario prompt', freshmanExam, "await window.UI.prompt(\"请输入方案名称"],
+  ['freshman scenario confirm', freshmanExam, "await window.UI.confirm(`确定要加载 [${name}] 方案吗？"],
+  ['freshman standalone notify wrapper', freshmanExam, 'const notify = (message) => window.alert(message);']
 ].forEach(([label, source, token]) => {
   assert.ok(source.includes(token), `${label} should prefer the shared UI dialog API`);
 });
@@ -96,7 +100,8 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['town-submodule-compare-runtime.js', townSubmoduleCompare],
   ['grade-scheduler-runtime.js', gradeScheduler],
   ['progress-analysis-runtime.js', progressAnalysis],
-  ['skin-settings-runtime.js', skinSettings]
+  ['skin-settings-runtime.js', skinSettings],
+  ['freshman-exam-runtime.js', freshmanExam]
 ].forEach(([file, source]) => {
   assert.ok(!/(^|[^\w$.])prompt\s*\(/.test(source), `${file} should not call bare prompt()`);
   assert.ok(!/(^|[^\w$.])confirm\s*\(/.test(source), `${file} should not call bare confirm()`);
@@ -107,5 +112,5 @@ assert.ok(scripts['check:release-fast']?.includes('test:dialog-runtime-contract'
 
 console.log(JSON.stringify({
   ok: true,
-  guardedRuntimes: 21
+  guardedRuntimes: 22
 }, null, 2));

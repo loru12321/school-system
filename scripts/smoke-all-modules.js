@@ -2560,7 +2560,16 @@ async function runModuleDeepCheck(page, id) {
 
             const alerts = [];
             const originalAlert = window.alert;
+            const originalUiAlert = window.UI?.alert;
             window.alert = (message) => alerts.push(String(message || ''));
+            if (window.UI) {
+                window.UI.alert = async (message, ...args) => {
+                    alerts.push(String(message || ''));
+                    return typeof originalUiAlert === 'function'
+                        ? originalUiAlert.call(window.UI, message, ...args)
+                        : undefined;
+                };
+            }
             try {
                 window.FB_loadData({ files: [makeWorkbookFile(sampleRows, 'freshman-smoke.xlsx')], value: '' });
                 await waitUntil(() => runtime.students.length === sampleRows.length);
@@ -2577,6 +2586,7 @@ async function runModuleDeepCheck(page, id) {
                     && document.querySelectorAll('#fb_class_container .fb-class-box').length === 4);
             } finally {
                 window.alert = originalAlert;
+                if (window.UI && originalUiAlert) window.UI.alert = originalUiAlert;
             }
 
             const classes = Array.isArray(runtime.classes) ? runtime.classes : [];
@@ -2698,7 +2708,16 @@ async function runModuleDeepCheck(page, id) {
 
             const alerts = [];
             const originalAlert = window.alert;
+            const originalUiAlert = window.UI?.alert;
             window.alert = (message) => alerts.push(String(message || ''));
+            if (window.UI) {
+                window.UI.alert = async (message, ...args) => {
+                    alerts.push(String(message || ''));
+                    return typeof originalUiAlert === 'function'
+                        ? originalUiAlert.call(window.UI, message, ...args)
+                        : undefined;
+                };
+            }
             try {
                 window.EXAM_loadData({ files: [makeWorkbookFile(sampleRows, 'exam-smoke.xlsx')], value: '' });
                 await waitUntil(() => runtime.examData.length === sampleRows.length);
@@ -2721,6 +2740,7 @@ async function runModuleDeepCheck(page, id) {
                 }
             } finally {
                 window.alert = originalAlert;
+                if (window.UI && originalUiAlert) window.UI.alert = originalUiAlert;
             }
 
             const rooms = Array.isArray(runtime.examRooms) ? runtime.examRooms : [];
@@ -2736,13 +2756,23 @@ async function runModuleDeepCheck(page, id) {
             let proctorAlerts = [];
             if (canAssignProctors) {
                 const proctorOriginalAlert = window.alert;
+                const proctorOriginalUiAlert = window.UI?.alert;
                 window.alert = (message) => proctorAlerts.push(String(message || ''));
+                if (window.UI) {
+                    window.UI.alert = async (message, ...args) => {
+                        proctorAlerts.push(String(message || ''));
+                        return typeof proctorOriginalUiAlert === 'function'
+                            ? proctorOriginalUiAlert.call(window.UI, message, ...args)
+                            : undefined;
+                    };
+                }
                 try {
                     window.EXAM_assignProctors();
                     proctorAssignmentTried = true;
                     await wait(200);
                 } finally {
                     window.alert = proctorOriginalAlert;
+                    if (window.UI && proctorOriginalUiAlert) window.UI.alert = proctorOriginalUiAlert;
                 }
                 const proctorRows = Array.from(document.querySelectorAll('#exam_proctor_table tbody tr'))
                     .filter(row => row.querySelectorAll('td').length >= 5);
