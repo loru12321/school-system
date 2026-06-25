@@ -50,7 +50,7 @@ assert.ok(builder.includes('installerIcon: desktop/assets/icon.ico'), 'NSIS inst
 assert.ok(builder.includes('uninstallerIcon: desktop/assets/icon.ico'), 'NSIS uninstaller must use the branded icon');
 assert.equal(packageJson.main, 'desktop/main.cjs', 'Electron must package the secure desktop entry point');
 assert.equal(packageJson.scripts?.['desktop:start'], 'electron desktop/main.cjs');
-assert.equal(packageJson.scripts?.['desktop:build'], 'electron-builder --config electron-builder.yml --win nsis --x64');
+assert.equal(packageJson.scripts?.['desktop:build'], 'electron-builder --config electron-builder.yml --win nsis --x64 --publish never');
 assert.equal(packageJson.build?.win?.icon, 'desktop/assets/icon.ico', 'Electron Builder must package the branded Windows icon');
 
 console.log('desktop package contract tests passed');
