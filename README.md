@@ -159,9 +159,10 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 ## 自动化流水线
 
 - `.github/workflows/release-apps.yml`：手动输入 tag 或推送 `school-system-v*` tag 后，自动构建、整理 APK 与 Windows 包，并创建或更新 GitHub Release。
-- `.github/workflows/performance-trend.yml`：`main` 更新后自动跑本地浏览器烟测，把原始性能样本、跨提交历史和 Markdown 趋势报告写入 `docs/performance/`。
+- `.github/workflows/performance-trend.yml`：`main` 更新后自动跑本地浏览器烟测，把原始性能样本、跨提交历史和 Markdown 趋势报告写入 `docs/performance/`，并用阈值检查让明显变慢的提交在 CI 中标红。
 - `npm run release:prepare-assets`：本地生成 GitHub Release 资产目录，包含 latest 文件名、带 tag 的不可变文件名、SHA256 和 release notes。
 - `npm run performance:record`：把一次烟测 JSON 转成可对比的趋势记录，用于定位哪次提交让模块切换、深度检查或长任务变慢。
+- `npm run test:performance-thresholds`：读取 `docs/performance/performance-history.json`，检查预算失败、烟测错误、长任务和跨提交回归阈值。
 
 ## 维护分级
 
@@ -183,7 +184,7 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 
 - 继续把高耦合业务从 `app.js` 拆到独立 runtime，降低首屏和模块切换压力。
 - 给教学管理、学生报告、县域排名等高价值模块增加更细的端到端用例。
-- 在性能趋势报告基础上增加自动阈值告警，让明显变慢的提交在 CI 中直接标红。
+- 继续收紧性能阈值，把已知稳定模块的波动窗口逐步变小。
 
 ## 给维护者的一句话
 
@@ -209,6 +210,7 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 - Windows 当前没有代码签名证书，安装时可能出现 Microsoft Defender SmartScreen 提示。正式对外分发前应配置受信任的 Windows 代码签名证书。
 - Android CI 使用独立测试 keystore，不应当用于 Google Play 正式发布。仓库绝不保存 keystore 或密码。
 - Android Actions 需要四个 Secrets：`ANDROID_TEST_KEYSTORE_FILE`（keystore 的 Base64 内容）、`ANDROID_TEST_KEYSTORE_PASSWORD`、`ANDROID_TEST_KEY_ALIAS`、`ANDROID_TEST_KEY_PASSWORD`。
+- Android beta 和 stable 工作流会先运行 `npm run check:android-signing-secrets`，确认四个 Secrets 都存在、keystore 是 Base64 内容而不是本机路径，再恢复 keystore 和构建 APK。
 - 只有在明确批准后，才运行 `node scripts/configure-android-test-signing.mjs <仓库外绝对路径>` 创建测试 keystore；脚本拒绝仓库内路径。
 - iOS 目前不会生成或展示 IPA，也不会上传 TestFlight/App Store。
 
@@ -220,7 +222,7 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 
 当 GitHub Actions 或公开 Releases 暂时不可用时，可使用现有 Cloudflare Workers 免费静态资源提供安装包，不需要开通 R2 或绑定付费存储。`npm run release:prepare-worker-assets` 会把 Windows 与 Android 包切成不超过 20 MiB 的不可变分片，并生成 `dist/releases/download-map.json`；Worker 只允许映射中的文件名，并通过 `/downloads/<filename>` 依次流式合并分片。
 
-二进制包、keystore 和生成分片都不会提交进 Git。执行干净构建后，部署人员必须从受控的本地安装包重新生成分片，再运行 `npx wrangler deploy`。部署前应同时执行 `npm run test:worker-release-chunks`、`npm run test:worker-release-downloads` 和 `npm run check:release-fast`。GitHub 账户恢复后，原有 Actions 与 Releases 仍是首选自动发布路径，Cloudflare 分片可保留为免费镜像。
+二进制包、keystore 和生成分片都不会提交进 Git。执行干净构建后，部署人员必须从受控的本地安装包重新生成分片，再运行 `npx wrangler deploy`。生产 Worker 名称固定为 `school-system`，部署前应同时执行 `npm run test:worker-release-chunks`、`npm run test:worker-release-downloads` 和 `npm run check:release-fast`。GitHub 账户恢复后，原有 Actions 与 Releases 仍是首选自动发布路径，Cloudflare 分片可保留为免费镜像。
 
 ### 手动构建与校验
 

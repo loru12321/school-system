@@ -44,6 +44,7 @@ const serviceWorkerContract = read('scripts/test-service-worker-contract.js');
 const docsHygiene = read('scripts/test-docs-hygiene.js');
 const ciWorkflow = read('.github/workflows/ci.yml');
 const releaseWorkflow = read('.github/workflows/release-apps.yml');
+const betaWorkflow = read('.github/workflows/build-apps-beta.yml');
 const deployWorkflow = read('.github/workflows/deploy-cloudflare.yml');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
 const wrangler = parseJson('wrangler.jsonc');
@@ -98,6 +99,7 @@ const guardedItems = [
   () => assertIncludes(legacyReadme, 'npx wrangler deploy', 'legacy README should point to Wrangler path'),
   () => assertIncludes(legacyReadme, 'direct-deploy', 'legacy README should document direct deploy archive'),
   () => assert.strictEqual(wrangler.main, 'src/worker-dummy.js', 'Worker entrypoint should stay explicit'),
+  () => assert.strictEqual(wrangler.name, 'school-system', 'Worker name should match the project name'),
   () => assert.strictEqual(wrangler.assets.directory, './dist', 'Cloudflare should deploy dist assets'),
   () => assertIncludes(headers, 'Content-Type: text/html; charset=utf-8', 'HTML charset header should stay explicit'),
   () => assertIncludes(headers, '/index.html\n  Content-Type: text/html; charset=utf-8\n  Cache-Control: no-cache, max-age=0, must-revalidate', 'index HTML should stay revalidation-friendly'),
@@ -122,7 +124,11 @@ const guardedItems = [
   () => assertIncludes(deployWorkflow, 'npm run smoke:prod-minimal', 'Cloudflare deploy workflow should smoke production after deployment'),
   () => assert.ok(deployWorkflow.indexOf('npx wrangler deploy') < deployWorkflow.indexOf('npm run smoke:prod-minimal'), 'Cloudflare deploy workflow should smoke only after deployment'),
   () => assertIncludes(performanceWorkflow, 'npm run check:release-fast', 'performance workflow should run fast release guards'),
+  () => assertIncludes(performanceWorkflow, 'npm run test:performance-thresholds', 'performance workflow should fail obvious regressions'),
   () => assertIncludes(performanceWorkflow, '[skip performance]', 'performance workflow should support skip marker'),
+  () => assertScriptIncludes(scripts, 'check:android-signing-secrets', 'check-android-signing-secrets.mjs'),
+  () => assertIncludes(betaWorkflow, 'npm run check:android-signing-secrets', 'beta Android workflow should precheck signing secrets'),
+  () => assertIncludes(releaseWorkflow, 'npm run check:android-signing-secrets', 'stable Android workflow should precheck signing secrets'),
   () => assert.ok(!readme.includes('C:\\Users\\'), 'README should remain free of local paths'),
   () => assertIncludes(headers, 'max-age=31536000, immutable', 'versioned runtime JS should use immutable caching'),
   () => assertIncludes(headers, '/sw.js', 'service worker should keep a dedicated revalidation header'),

@@ -1,6 +1,6 @@
 {
   "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
-  "name": "seongneung-bunseok",
+  "name": "school-system",
   "main": "src/worker-dummy.js",
   "compatibility_date": "2026-04-20",
   "assets": {

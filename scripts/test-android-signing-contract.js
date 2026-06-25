@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '..');
 const requireLocalReleaseAssets = process.env.REQUIRE_LOCAL_RELEASE_ASSETS === 'true';
 const gradlePath = path.join(root, 'android', 'app', 'build.gradle');
 const bootstrapPath = path.join(root, 'scripts', 'configure-android-test-signing.mjs');
+const precheckPath = path.join(root, 'scripts', 'check-android-signing-secrets.mjs');
 const gradle = fs.readFileSync(gradlePath, 'utf8');
 
 [
@@ -22,8 +23,12 @@ assert.ok(!/keyPassword\s+["'][^$]/.test(gradle), 'Gradle must not contain a lit
 assert.ok(!fs.existsSync(path.join(root, 'android-test.keystore')), 'test keystore must never be committed at repository root');
 assert.ok(!fs.existsSync(path.join(root, 'android', 'android-test.keystore')), 'test keystore must never be committed in Android project');
 assert.ok(fs.existsSync(bootstrapPath), 'signing bootstrap script should exist');
+assert.ok(fs.existsSync(precheckPath), 'signing secret precheck script should exist');
 const bootstrap = fs.readFileSync(bootstrapPath, 'utf8');
+const precheck = fs.readFileSync(precheckPath, 'utf8');
 assert.match(bootstrap, /readFileSync\(outputPath\)\.toString\(['"]base64['"]\)/, 'keystore file secret should be portable base64, not a local path');
+assert.ok(precheck.includes('Missing Android signing secrets'), 'precheck should report missing Android signing secrets clearly');
+assert.ok(precheck.includes('not a local filesystem path'), 'precheck should reject local keystore paths in secrets');
 
 const refusedOutput = path.join(root, '.tmp-test-signing.keystore');
 fs.rmSync(refusedOutput, { force: true });

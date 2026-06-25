@@ -36,7 +36,7 @@ const routePatterns = (wrangler.routes || []).map((route) => route.pattern).sort
 const d1Bindings = (wrangler.d1_databases || []).map((db) => db.binding).sort();
 
 assert.deepStrictEqual(rootConfigs, ['wrangler.jsonc'], 'repository root should expose exactly one Wrangler config');
-assert.strictEqual(wrangler.name, 'seongneung-bunseok', 'Wrangler Worker name should stay explicit');
+assert.strictEqual(wrangler.name, 'school-system', 'Wrangler Worker name should match the repository and product name');
 assert.strictEqual(wrangler.main, 'src/worker-dummy.js', 'Wrangler main must point at the production Worker entrypoint');
 assert.ok(exists(wrangler.main), 'Wrangler main Worker entrypoint must exist');
 assert.ok(worker.includes('Production Cloudflare Worker entrypoint'), 'Worker entrypoint should document production ownership');

@@ -71,6 +71,9 @@ jobs:
           PERFORMANCE_REPORT_DIR: docs/performance
         run: npm run performance:record
 
+      - name: Check performance thresholds
+        run: npm run test:performance-thresholds
+
       - name: Upload performance report artifact
         uses: actions/upload-artifact@v4
         with:
