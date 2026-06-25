@@ -18,20 +18,37 @@ function assertIncludes(source, token, message) {
   assert.ok(source.includes(token), message || `missing token: ${token}`);
 }
 
+function assertHeaderRule(source, route, cacheControl, message) {
+  const normalized = String(source || '').replace(/\r\n/g, '\n');
+  const escapedRoute = route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedCache = cacheControl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  assert.ok(new RegExp(`(^|\\n)${escapedRoute}\\n\\s+Cache-Control: ${escapedCache}(\\n|$)`).test(normalized), message);
+}
+
+function extractSingleQuotedConst(source, name) {
+  const match = source.match(new RegExp(`const\\s+${name}\\s*=\\s*'([^']+)'`));
+  assert.ok(match, `${name} should be declared as a single-quoted const`);
+  return match[1];
+}
+
 const packageJson = JSON.parse(read('package.json'));
 const publicSw = read('public/sw.js');
 const serviceWorkerRuntime = read('public/assets/js/service-worker-runtime.js');
 const srcIndex = read('src/index.html');
+const publicHeaders = read('public/_headers');
 const distSw = read('dist/sw.js');
 const releaseSurface = read('scripts/test-release-surface.js');
 const scripts = packageJson.scripts || {};
 const publicAppShellAssets = parseAppShellAssets(publicSw);
 const distAppShellAssets = parseAppShellAssets(distSw);
+const serviceWorkerVersion = extractSingleQuotedConst(serviceWorkerRuntime, 'SERVICE_WORKER_VERSION');
+const cacheVersion = extractSingleQuotedConst(publicSw, 'CACHE_VERSION');
 
 assert.deepStrictEqual(distSw, publicSw, 'dist service worker should match public service worker after build');
 assert.deepStrictEqual(publicAppShellAssets, ['./', './index.html', './favicon.ico', './icon.svg', './site.webmanifest', './robots.txt', './sitemap.xml'], 'service worker should precache only stable app shell assets and public metadata');
 assert.deepStrictEqual(distAppShellAssets, publicAppShellAssets, 'dist service worker app shell assets should match source');
-assertIncludes(publicSw, "const CACHE_VERSION = 'school-system-v1.7-client-icon-sync';", 'cache version should be explicit and bumped when the app shell changes');
+assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker runtime version should be generated from runtime content');
+assert.strictEqual(cacheVersion, `school-system-${serviceWorkerVersion}`, 'service worker cache version should follow the generated runtime version');
 assertIncludes(publicSw, 'const STATIC_CACHE = `${CACHE_VERSION}-static`;', 'static cache name should be versioned');
 assertIncludes(publicSw, 'const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;', 'dynamic cache name should be versioned');
 assertIncludes(publicSw, 'const API_CACHE = `${CACHE_VERSION}-api`;', 'API cache name should be versioned');
@@ -62,10 +79,14 @@ assertIncludes(publicSw, '<title>离线模式</title>', 'offline HTML fallback s
 assertIncludes(publicSw, "if (event.tag === 'sync-data')", 'background sync tag should remain explicit');
 assert.ok(!publicSw.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 assert.ok(!/\/\/[^\n]*const\s+APP_SHELL_ASSETS/.test(publicSw), 'APP_SHELL_ASSETS declaration should not be hidden inside a comment');
-assertIncludes(serviceWorkerRuntime, "const SERVICE_WORKER_VERSION = '20260622-client-icon-sync-v1';", 'service worker runtime should version registration updates');
+assert.ok(scripts.build.includes('scripts/build/update-runtime-cache-version.mjs'), 'build should update runtime cache versions before Vite runs');
+assertHeaderRule(publicHeaders, '/assets/js/*', 'public, max-age=31536000, immutable', 'versioned JS runtime assets should use immutable cache headers');
+assertHeaderRule(publicHeaders, '/sw.js', 'public, max-age=0, must-revalidate', 'service worker script should still revalidate');
+assertIncludes(serviceWorkerRuntime, `const SERVICE_WORKER_VERSION = '${serviceWorkerVersion}';`, 'service worker runtime should version registration updates');
 assertIncludes(serviceWorkerRuntime, 'const SERVICE_WORKER_PATH = `./sw.js?v=${SERVICE_WORKER_VERSION}`;', 'service worker runtime should register the versioned local sw.js');
-assertIncludes(srcIndex, 'service-worker-runtime.js?v=20260622-client-icon-sync-v1', 'HTML should cache-bust the service worker runtime loader');
-assertIncludes(srcIndex, "var refreshVersion = '20260622-client-icon-sync-v1';", 'early runtime refresh should use the same service worker runtime version');
+assertIncludes(srcIndex, `service-worker-runtime.js?v=${serviceWorkerVersion}`, 'HTML should cache-bust the service worker runtime loader');
+assertIncludes(srcIndex, `boot-runtime.js?v=${serviceWorkerVersion}`, 'HTML should cache-bust the boot runtime loader with the generated runtime version');
+assertIncludes(srcIndex, `var refreshVersion = '${serviceWorkerVersion}';`, 'early runtime refresh should use the same service worker runtime version');
 assertIncludes(serviceWorkerRuntime, "root.location.reload();", 'service worker runtime should refresh controlled pages after an update claims them');
 assertIncludes(serviceWorkerRuntime, "'schoolsystem.com.cn'", 'service worker runtime should allow the canonical production host');
 assertIncludes(serviceWorkerRuntime, "root.addEventListener('load', registerServiceWorker", 'service worker registration should wait until page load');
@@ -78,6 +99,6 @@ assert.ok(releaseSurface.includes("exists('dist/sw.js')"), 'release surface chec
 console.log(JSON.stringify({
   ok: true,
   appShellAssets: publicAppShellAssets,
-  cacheVersion: (publicSw.match(/CACHE_VERSION\s*=\s*'([^']+)'/) || [])[1],
+  cacheVersion,
   apiCachePolicy: 'health-only'
 }, null, 2));

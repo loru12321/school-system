@@ -20,10 +20,10 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Lazy-load heavy vendor libraries such as Excel, SQL, PDF, and charting dependencies.
 - Subset or prune Tabler icon fonts so unused font formats do not dominate the release surface.
 - Replace alert, confirm, and prompt flows with a shared modal/toast API.
-- Tighten immutable cache rules for hashed assets while keeping `sw.js` and HTML revalidation strict.
+- Tighten immutable cache rules for versioned assets while keeping `sw.js` and HTML revalidation strict. Status: runtime JS now uses build-generated content versions before immutable caching.
 - Keep `Content-Type: text/html; charset=utf-8` on `/` and `/index.html`.
-- Keep `SERVICE_WORKER_VERSION` and the early refresh version aligned.
-- Keep `CACHE_VERSION` explicit when service worker app-shell behavior changes.
+- Keep `SERVICE_WORKER_VERSION` and the early refresh version aligned. Status: guarded by `test:runtime-cache-version`.
+- Keep `CACHE_VERSION` explicit when service worker app-shell behavior changes. Status: derived from the same generated runtime version.
 - Keep `check:p1` tied to HTML, service worker, release surface, runtime, and CSS hygiene.
 - Keep heavy vendor libraries behind demand loaders instead of boot loading.
 - Keep bundle and hosted download budgets from drifting upward silently.

@@ -110,7 +110,8 @@ userFacingReleaseFiles.forEach((relativePath) => {
 assert.ok(publicHeaders.includes('/downloads/*'), 'Cloudflare static headers should cover hosted downloads');
 assert.ok(publicHeaders.includes('/index.html'), 'Cloudflare static headers should cover index.html');
 assert.ok(publicHeaders.includes('Content-Type: text/html; charset=utf-8'), 'HTML responses should declare UTF-8 charset');
-assert.ok(publicHeaders.includes('stale-while-revalidate=86400'), 'download headers should allow short browser caching with revalidation');
+assert.ok(publicHeaders.includes('/assets/js/*') && publicHeaders.includes('max-age=31536000, immutable'), 'versioned runtime JS headers should allow immutable caching');
+assert.ok(publicHeaders.includes('/sw.js') && publicHeaders.includes('max-age=0, must-revalidate'), 'service worker headers should still require revalidation');
 assert.ok(worker.includes("pathname.startsWith('/downloads/')"), 'Worker cache policy should recognize hosted downloads');
 assert.ok(worker.includes('buildWorkerErrorHeaders()'), 'Worker crash responses should use hardened headers');
 assert.ok(worker.includes("'Cache-Control': 'no-store'"), 'Worker crash responses should be no-store');

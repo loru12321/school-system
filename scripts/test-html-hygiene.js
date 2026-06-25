@@ -4,6 +4,8 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
+const serviceWorkerRuntime = fs.readFileSync(path.join(root, 'public/assets/js/service-worker-runtime.js'), 'utf8');
+const serviceWorkerVersion = (serviceWorkerRuntime.match(/const\s+SERVICE_WORKER_VERSION\s*=\s*'([^']+)'/) || [])[1] || '';
 
 function count(pattern) {
     return (html.match(pattern) || []).length;
@@ -34,7 +36,10 @@ assert.ok(html.includes('type="image/x-icon"'), 'favicon link should include an 
 assert.ok(html.includes('service-worker-runtime.js'), 'index.html should register the service worker runtime');
 assert.ok(html.includes('./assets/css/product-redesign.css?v=20260617-table-anchor-nav-v1'), 'index.html should load the product redesign layer after legacy styles');
 assert.ok(html.indexOf('layout-refinement.css') < html.indexOf('product-redesign.css'), 'product redesign should override layout refinement styles');
-assert.ok(html.includes("var refreshVersion = '20260622-client-icon-sync-v1';"), 'early runtime refresh version should match the service worker runtime');
+assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker runtime version should be generated from runtime content');
+assert.ok(html.includes(`var refreshVersion = '${serviceWorkerVersion}';`), 'early runtime refresh version should match the service worker runtime');
+assert.ok(html.includes(`boot-runtime.js?v=${serviceWorkerVersion}`), 'boot runtime query version should match the generated runtime version');
+assert.ok(html.includes(`service-worker-runtime.js?v=${serviceWorkerVersion}`), 'service worker runtime query version should match the generated runtime version');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
 assert.ok(inlineHandlerCount <= 377, `inline event handler count grew: ${inlineHandlerCount} > 377`);
