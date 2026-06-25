@@ -11,6 +11,8 @@ function read(relativePath) {
 const packageJson = JSON.parse(read('package.json'));
 const scripts = packageJson.scripts || {};
 const appRuntime = read('public/assets/js/app.js');
+const bootRuntime = read('public/assets/js/boot-runtime.js');
+const dialogRuntime = read('public/assets/js/dialog-runtime.js');
 const teachingCloud = read('public/assets/js/teaching-management-cloud-runtime.js');
 const teachingVersion = read('public/assets/js/teaching-management-version-runtime.js');
 const teacherSync = read('public/assets/js/teacher-sync-runtime.js');
@@ -18,9 +20,21 @@ const reportExport = read('public/assets/js/report-export-runtime.js');
 const perfMobile = read('public/assets/js/perf-mobile-runtime.js');
 const zhongkaoCountdown = read('public/assets/js/zhongkao-countdown-runtime.js');
 
-assert.ok(appRuntime.includes('alert: async'), 'shared UI should expose async alert');
-assert.ok(appRuntime.includes('confirm: async'), 'shared UI should expose async confirm');
-assert.ok(appRuntime.includes('prompt: async'), 'shared UI should expose async prompt');
+assert.ok(bootRuntime.includes("'dialog-runtime.js'"), 'dialog runtime should load before app.js');
+assert.ok(bootRuntime.indexOf("'dialog-runtime.js'") < bootRuntime.indexOf("'app.js'"), 'dialog runtime should precede app.js in the boot module list');
+assert.ok(dialogRuntime.includes('SchoolDialogRuntime'), 'dialog runtime should expose a named contract');
+assert.ok(dialogRuntime.includes('UI.alert = async function'), 'shared UI should expose async alert from dialog runtime');
+assert.ok(dialogRuntime.includes('UI.confirm = async function'), 'shared UI should expose async confirm from dialog runtime');
+assert.ok(dialogRuntime.includes('UI.prompt = async function'), 'shared UI should expose async prompt from dialog runtime');
+assert.ok(appRuntime.includes('const UI = Object.assign(window.UI || {}, {'), 'app.js should extend the shared UI object instead of owning dialog APIs');
+assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading and toast helpers on window.UI');
+[
+  'window.alert(String(message ||',
+  'window.confirm(String(message ||',
+  'window.prompt(String(message ||'
+].forEach((token) => {
+  assert.ok(!appRuntime.includes(token), 'app.js should not own native dialog fallbacks');
+});
 
 [
   ['teaching management cloud', teachingCloud, 'tmPromptInput'],
@@ -52,5 +66,5 @@ assert.ok(scripts['check:release-fast']?.includes('test:dialog-runtime-contract'
 
 console.log(JSON.stringify({
   ok: true,
-  guardedRuntimes: 6
+  guardedRuntimes: 7
 }, null, 2));

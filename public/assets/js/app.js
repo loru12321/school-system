@@ -1,5 +1,5 @@
 
-const UI = {
+const UI = Object.assign(window.UI || {}, {
     loading: (show, text = '系统正在处理数据...') => {
         const loader = document.getElementById('global-loader');
         const txt = document.getElementById('loader-text');
@@ -36,53 +36,9 @@ const UI = {
             div.style.transform = 'translateY(-20px)';
             setTimeout(() => div.remove(), 300);
         }, 3000);
-    },
-    alert: async (message, type = 'info') => {
-        if (window.Swal && typeof window.Swal.fire === 'function') {
-            await window.Swal.fire({
-                icon: type === 'error' ? 'error' : type === 'success' ? 'success' : 'info',
-                title: type === 'error' ? '操作未完成' : '提示',
-                text: String(message || ''),
-                confirmButtonText: '确定'
-            });
-            return;
-        }
-        window.alert(String(message || ''));
-    },
-    confirm: async (message, options = {}) => {
-        if (window.Swal && typeof window.Swal.fire === 'function') {
-            const result = await window.Swal.fire({
-                icon: options.icon || 'warning',
-                title: options.title || '请确认',
-                text: String(message || ''),
-                showCancelButton: true,
-                confirmButtonText: options.confirmText || '确认',
-                cancelButtonText: options.cancelText || '取消',
-                reverseButtons: true
-            });
-            return !!result.isConfirmed;
-        }
-        return window.confirm(String(message || ''));
-    },
-    prompt: async (message, defaultValue = '', options = {}) => {
-        if (window.Swal && typeof window.Swal.fire === 'function') {
-            const result = await window.Swal.fire({
-                icon: options.icon || 'question',
-                title: options.title || '请输入',
-                text: String(message || ''),
-                input: options.input || 'text',
-                inputValue: String(defaultValue || ''),
-                inputAttributes: options.inputAttributes || {},
-                showCancelButton: true,
-                confirmButtonText: options.confirmText || '确认',
-                cancelButtonText: options.cancelText || '取消',
-                inputValidator: options.inputValidator
-            });
-            return result.isConfirmed ? result.value : null;
-        }
-        return window.prompt(String(message || ''), String(defaultValue || ''));
     }
-};
+});
+window.UI = UI;
 
 
 const EdgeGateway = {

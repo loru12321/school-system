@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-aa88dcbaa41f';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-d19f74108714';
 
 function bootDebugLog(...args) {
 try {
@@ -125,6 +125,7 @@ function bootVend(name) { return BOOT_VENDOR_BASE + name; }
 
 
 var APP_MODULES = [
+'dialog-runtime.js',
 'auth-state-runtime.js',
 'login-entry-runtime.js',
 'workspace-state-runtime.js',

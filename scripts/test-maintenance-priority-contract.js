@@ -52,6 +52,7 @@ const bootRuntime = read('public/assets/js/boot-runtime.js');
 const runtimeLoaderRuntime = read('public/assets/js/runtime-loader-runtime.js');
 const bootRuntimeSurface = `${bootRuntime}\n${runtimeLoaderRuntime}`;
 const appRuntime = read('public/assets/js/app.js');
+const dialogRuntime = read('public/assets/js/dialog-runtime.js');
 const dialogRuntimeContract = read('scripts/test-dialog-runtime-contract.js');
 const sw = read('public/sw.js');
 const authState = read('public/assets/js/auth-state-runtime.js');
@@ -132,9 +133,9 @@ const guardedItems = [
   () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 85_000, 'boot runtime should stay within tightened budget'),
   () => assert.ok(fileSize('public/assets/js/runtime-loader-runtime.js') <= 58_000, 'runtime loader should stay within its split budget'),
   () => assertIncludes(appRuntime, 'isHostedGatewayUrl', 'app runtime should support hosted gateway URLs'),
-  () => assertIncludes(appRuntime, 'prompt: async', 'app runtime should expose shared prompt modal API'),
-  () => assertIncludes(appRuntime, 'confirm: async', 'app runtime should expose shared confirm modal API'),
-  () => assertIncludes(appRuntime, 'alert: async', 'app runtime should expose shared alert modal API'),
+  () => assertIncludes(dialogRuntime, 'UI.prompt = async function', 'dialog runtime should expose shared prompt modal API'),
+  () => assertIncludes(dialogRuntime, 'UI.confirm = async function', 'dialog runtime should expose shared confirm modal API'),
+  () => assertIncludes(dialogRuntime, 'UI.alert = async function', 'dialog runtime should expose shared alert modal API'),
   () => assert.ok(!gateway.includes('proxyGatewayActionToLegacyGateway'), 'auth cutover should keep D1 login/session verification Cloudflare-only'),
   () => assertIncludes(gateway, 'cloudflare-only-ready', 'account migration status should expose Cloudflare-only readiness'),
   () => assertIncludes(worker, 'CLOUDFLARE_GATEWAY_ACTION_NOT_SUPPORTED', 'unsupported gateway actions should not proxy to legacy Edge Functions'),
