@@ -47,6 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: release-guards
+    env:
+      NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
 
     steps:
       - name: Check out repository
@@ -62,9 +65,8 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
-      - name: Install Playwright browser dependencies
-        timeout-minutes: 15
-        run: npx playwright install --only-shell chromium
+      - name: Verify system Chrome
+        run: google-chrome --version
 
       - name: Build web package
         run: npm run build
@@ -77,6 +79,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: browser-smoke
+    env:
+      NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
 
     steps:
       - name: Check out repository
@@ -92,9 +97,8 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
-      - name: Install Playwright browser dependencies
-        timeout-minutes: 15
-        run: npx playwright install --only-shell chromium
+      - name: Verify system Chrome
+        run: google-chrome --version
 
       - name: Run root validation
         run: npm run validate
