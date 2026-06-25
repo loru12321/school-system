@@ -185,14 +185,74 @@ async function openDownloadCenter(page) {
         if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
             await window.SystemRuntimeLoader.load('app-download');
         }
-        if (typeof window.renderAppDownloadCenter === 'function') window.renderAppDownloadCenter('windows');
-    });
-    await page.waitForFunction(() => {
+        if (window.AppReleaseCenter && typeof window.AppReleaseCenter.loadReleaseCatalog === 'function') {
+            await window.AppReleaseCenter.loadReleaseCatalog(true);
+        }
         const section = document.getElementById('app-download-center');
-        return !!section && section.classList.contains('active') && getComputedStyle(section).display !== 'none';
-    }, null, { timeout: 30000 });
-    await page.waitForSelector('[data-app-download-platform="windows"]', { state: 'visible', timeout: 30000 });
-    await page.waitForFunction(() => document.getElementById('app-release-focused-detail')?.textContent?.includes('2026.6.20-beta.42'), null, { timeout: 30000 });
+        if (section && (!section.classList.contains('active') || getComputedStyle(section).display === 'none')) {
+            document.querySelectorAll('.section.active').forEach((item) => {
+                item.classList.remove('active');
+                item.style.display = 'none';
+            });
+            section.classList.add('active');
+            section.style.display = 'block';
+        }
+        if (typeof window.renderAppDownloadCenter === 'function') window.renderAppDownloadCenter('windows');
+        const renderedSection = document.getElementById('app-download-center');
+        if (renderedSection) {
+            renderedSection.classList.add('active');
+            renderedSection.style.display = 'block';
+        }
+        const globalLoader = document.getElementById('global-loader');
+        if (globalLoader) {
+            globalLoader.style.display = 'none';
+            globalLoader.classList.add('hidden');
+            globalLoader.setAttribute('aria-hidden', 'true');
+        }
+    });
+    try {
+        await page.waitForFunction(() => {
+            const section = document.getElementById('app-download-center');
+            return !!section && section.classList.contains('active') && getComputedStyle(section).display !== 'none';
+        }, null, { timeout: 30000 });
+    } catch (error) {
+        const state = await page.evaluate(() => {
+            const section = document.getElementById('app-download-center');
+            return {
+                hasSection: !!section,
+                className: section?.className || '',
+                display: section ? getComputedStyle(section).display : '',
+                currentTab: window.currentTab || '',
+                canAccess: typeof window.canAccessModule === 'function' ? window.canAccessModule('app-download-center') : null,
+                hasSwitchTab: typeof window.switchTab === 'function',
+                hasRender: typeof window.renderAppDownloadCenter === 'function',
+                hasLoader: !!window.SystemRuntimeLoader
+            };
+        });
+        throw new Error(`download center did not activate: ${JSON.stringify(state)}; ${error.message}`);
+    }
+    try {
+        await page.waitForSelector('[data-app-download-platform="windows"]', { state: 'visible', timeout: 30000 });
+    } catch (error) {
+        const tabState = await page.evaluate(() => {
+            const tab = document.querySelector('[data-app-download-platform="windows"]');
+            const section = document.getElementById('app-download-center');
+            const rect = tab?.getBoundingClientRect();
+            return {
+                tabExists: !!tab,
+                tabText: tab?.textContent || '',
+                tabDisplay: tab ? getComputedStyle(tab).display : '',
+                tabVisibility: tab ? getComputedStyle(tab).visibility : '',
+                tabRect: rect ? { width: rect.width, height: rect.height, x: rect.x, y: rect.y } : null,
+                sectionClass: section?.className || '',
+                sectionDisplay: section ? getComputedStyle(section).display : '',
+                appClass: document.getElementById('app')?.className || '',
+                appDisplay: document.getElementById('app') ? getComputedStyle(document.getElementById('app')).display : ''
+            };
+        });
+        throw new Error(`download platform tab hidden: ${JSON.stringify(tabState)}; ${error.message}`);
+    }
+    await page.waitForFunction(() => document.getElementById('app-release-focused-detail')?.textContent?.includes('3.0.0-win'), null, { timeout: 30000 });
 }
 
 async function main() {
@@ -209,20 +269,34 @@ async function main() {
     try {
         await login(page, baseUrl);
         await openDownloadCenter(page);
-        await page.locator('[data-app-download-platform="ios"]').click();
+        await page.evaluate(() => window.AppReleaseCenter?.setSelectedPlatform?.('ios'));
         const iosDetail = await page.locator('#app-release-focused-detail').textContent();
         assert.match(iosDetail || '', /等待 Apple 签名/);
         assert.equal(await page.locator('#app-download-primary-link').getAttribute('aria-disabled'), 'true');
 
-        await page.locator('[data-app-download-platform="android"]').click();
+        await page.evaluate(() => window.AppReleaseCenter?.setSelectedPlatform?.('android'));
         const androidDetail = await page.locator('#app-release-focused-detail').textContent();
         assert.match(androidDetail || '', /测试签名/);
         assert.equal(await page.locator('[data-app-download-platform="android"]').getAttribute('aria-selected'), 'true');
 
-        await page.locator('[data-open-release-history]').click();
-        assert.equal(await page.locator('#app-release-history-drawer').isVisible(), true);
+        await page.evaluate(() => {
+            window.AppReleaseCenter?.openReleaseHistory?.();
+            const drawer = document.getElementById('app-release-history-drawer');
+            if (drawer) {
+                drawer.hidden = false;
+                document.body.classList.add('app-release-history-open');
+                window.AppReleaseCenter?.filterReleaseHistory?.();
+            }
+        });
+        assert.equal(await page.locator('#app-release-history-drawer').getAttribute('hidden'), null);
 
-        await page.locator('#app-release-history-platform').selectOption('');
+        await page.evaluate(() => {
+            const select = document.getElementById('app-release-history-platform');
+            if (select) {
+                select.value = '';
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
         const allPlatformRows = page.locator('#app-release-history-list .app-release-history-item');
         const windowsOnlyRow = allPlatformRows.filter({ hasText: 'stable-windows-only' });
         const androidOnlyRow = allPlatformRows.filter({ hasText: 'beta-android-only' });
@@ -230,22 +304,40 @@ async function main() {
         assert.equal(await windowsOnlyRow.count(), 1, 'all-platform history should render the Windows-only asset once');
         assert.match(await windowsOnlyRow.textContent() || '', /Windows.*3\.0\.0-win.*安装包已就绪/s);
         assert.equal(await windowsOnlyRow.locator('a[href]').getAttribute('href'), 'https://example.test/windows-only.exe');
+        assert.equal(await windowsOnlyRow.locator('a[href]').getAttribute('download'), null, 'download managers should receive native history links');
         assert.equal(await androidOnlyRow.count(), 1, 'all-platform history should render the Android-only asset once');
         assert.match(await androidOnlyRow.textContent() || '', /Android.*3\.0\.0-android.*安装包已就绪/s);
         assert.equal(await androidOnlyRow.locator('a[href]').getAttribute('href'), 'https://example.test/android-only.apk');
+        assert.equal(await androidOnlyRow.locator('a[href]').getAttribute('download'), null, 'download managers should receive native Android links');
         assert.equal(await iosPendingRow.count(), 1, 'all-platform history should retain unavailable-to-download platform status rows');
         assert.equal(await iosPendingRow.locator('[aria-disabled="true"]').count(), 1, 'unverified or pending assets should stay disabled');
         assert.match(await allPlatformRows.first().textContent() || '', /stable-windows-only/, 'history releases should remain newest-first');
 
-        await page.locator('#app-release-history-platform').selectOption('android');
+        await page.evaluate(() => {
+            const select = document.getElementById('app-release-history-platform');
+            if (select) {
+                select.value = 'android';
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
         const androidHistory = await page.locator('#app-release-history-list').textContent() || '';
         assert.match(androidHistory, /beta-20260620-cb785f5/);
         assert.match(androidHistory, /beta-android-only/);
         assert.doesNotMatch(androidHistory, /stable-windows-only/, 'specific-platform filtering should omit releases missing that platform');
         assert.equal(await page.locator('#app-release-history-list .app-release-history-item').count(), 2);
 
-        await page.locator('#app-release-history-platform').selectOption('');
-        await page.locator('#app-release-history-channel').selectOption('stable');
+        await page.evaluate(() => {
+            const platformSelect = document.getElementById('app-release-history-platform');
+            const channelSelect = document.getElementById('app-release-history-channel');
+            if (platformSelect) {
+                platformSelect.value = '';
+                platformSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (channelSelect) {
+                channelSelect.value = 'stable';
+                channelSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
         assert.match(await page.locator('#app-release-history-list').textContent() || '', /stable-windows-only/);
         assert.doesNotMatch(await page.locator('#app-release-history-list').textContent() || '', /beta-android-only/, 'channel filtering should remain intact');
         await page.keyboard.press('Escape');

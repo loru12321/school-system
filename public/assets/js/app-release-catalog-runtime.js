@@ -128,12 +128,6 @@
       || /^https:\/\/api\.github\.com\/repos\/hka123321\/school-system\/releases\/assets\/\d+$/.test(chunk);
   }
 
-  function hasExternalChunks(entry) {
-    return !!entry && Array.isArray(entry.chunks) && entry.chunks.some(function (chunk) {
-      return /^https:\/\//.test(chunk);
-    });
-  }
-
   async function loadChunkDelivery(filename) {
     var response = await root.fetch('/releases/download-map.json', { cache: 'no-store', credentials: 'same-origin' });
     if (!response.ok) throw new Error('版本分片清单暂不可用');
@@ -143,113 +137,6 @@
       : null;
     if (!validateChunkDelivery(entry, filename)) throw new Error('版本分片清单无效');
     return entry;
-  }
-
-  async function fetchChunk(entry, index) {
-    var response = await root.fetch('/releases/' + entry.chunks[index], { credentials: 'same-origin' });
-    if (!response.ok || !response.body) throw new Error('安装包分片下载失败');
-    return response;
-  }
-
-  async function saveChunksToFile(entry, anchor) {
-    var handle = await root.showSaveFilePicker({
-      suggestedName: entry.filename,
-      types: [{ description: '安装包', accept: { [entry.contentType]: ['.' + entry.filename.split('.').pop()] } }]
-    });
-    var writable = await handle.createWritable();
-    var total = 0;
-    try {
-      for (var index = 0; index < entry.chunks.length; index += 1) {
-        var response = await fetchChunk(entry, index);
-        var reader = response.body.getReader();
-        var chunkTotal = 0;
-        while (true) {
-          var result = await reader.read();
-          if (result.done) break;
-          chunkTotal += result.value.byteLength;
-          total += result.value.byteLength;
-          await writable.write(result.value);
-          anchor.textContent = '正在下载 ' + Math.min(99, Math.floor(total * 100 / entry.bytes)) + '%';
-        }
-        if (chunkTotal !== entry.chunkBytes[index]) throw new Error('安装包分片长度不一致');
-      }
-      if (total !== entry.bytes) throw new Error('安装包长度不一致');
-      await writable.close();
-    } catch (error) {
-      await writable.abort().catch(function () {});
-      throw error;
-    }
-  }
-
-  async function saveChunksAsBlob(entry, anchor) {
-    var parts = [];
-    var total = 0;
-    for (var index = 0; index < entry.chunks.length; index += 1) {
-      var response = await fetchChunk(entry, index);
-      var bytes = await response.arrayBuffer();
-      if (bytes.byteLength !== entry.chunkBytes[index]) throw new Error('安装包分片长度不一致');
-      parts.push(bytes);
-      total += bytes.byteLength;
-      anchor.textContent = '正在下载 ' + Math.floor(total * 100 / entry.bytes) + '%';
-    }
-    if (total !== entry.bytes) throw new Error('安装包长度不一致');
-    var objectUrl = root.URL.createObjectURL(new root.Blob(parts, { type: entry.contentType }));
-    var link = root.document.createElement('a');
-    link.href = objectUrl;
-    link.download = entry.filename;
-    link.click();
-    root.setTimeout(function () { root.URL.revokeObjectURL(objectUrl); }, 60000);
-  }
-
-  function triggerBrowserDownload(entry, url) {
-    var link = root.document.createElement('a');
-    link.href = url.href;
-    link.download = entry.filename;
-    link.rel = 'noopener';
-    link.style.display = 'none';
-    root.document.body.appendChild(link);
-    link.click();
-    root.setTimeout(function () { link.remove(); }, 1000);
-  }
-
-  async function handleChunkDownload(event) {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    var anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
-    if (!anchor) return;
-    var url;
-    try {
-      url = new URL(anchor.href, root.location.href);
-    } catch (_) {
-      return;
-    }
-    if (url.origin !== root.location.origin || !/^\/downloads\/school-system-(windows|android)-beta-[^/]+\.(exe|apk)$/.test(url.pathname)) return;
-    event.preventDefault();
-    if (anchor.dataset.chunkDownloadBusy === 'true') return;
-    anchor.dataset.chunkDownloadBusy = 'true';
-    var originalHtml = anchor.innerHTML;
-    try {
-      var filename = decodeURIComponent(url.pathname.split('/').pop());
-      var entry = await loadChunkDelivery(filename);
-      if (hasExternalChunks(entry)) {
-        triggerBrowserDownload(entry, url);
-      } else {
-        if (typeof root.showSaveFilePicker === 'function') await saveChunksToFile(entry, anchor);
-        else await saveChunksAsBlob(entry, anchor);
-      }
-      anchor.textContent = '下载完成';
-    } catch (error) {
-      anchor.innerHTML = originalHtml;
-      if (error && error.name !== 'AbortError') root.alert(error.message || '安装包下载失败，请稍后重试');
-    } finally {
-      root.setTimeout(function () {
-        anchor.innerHTML = originalHtml;
-        delete anchor.dataset.chunkDownloadBusy;
-      }, 1500);
-    }
-  }
-
-  if (root.document && typeof root.document.addEventListener === 'function' && typeof root.fetch === 'function') {
-    root.document.addEventListener('click', handleChunkDownload, true);
   }
 
   root.AppReleaseCatalogRuntime = Object.freeze({

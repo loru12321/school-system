@@ -243,8 +243,7 @@
 
         if (nextHref) {
             link.href = nextHref;
-            if (downloadName) link.setAttribute('download', downloadName);
-            else link.removeAttribute('download');
+            link.removeAttribute('download');
             link.removeAttribute('aria-disabled');
             link.removeAttribute('tabindex');
             link.classList.remove('is-disabled');
@@ -599,7 +598,7 @@
         const checksum = String(asset.sha256 || '');
         const appleProgress = platform === 'ios' && !downloadable ? buildAppleProgressHtml(asset) : '';
         const downloadAction = downloadable
-            ? `<a id="app-download-primary-link" class="btn btn-blue" href="${escapeHtml(asset.assetUrl)}" download="${escapeHtml(asset.assetName)}"><i class="ti ti-download"></i> 下载最新版本</a>`
+            ? `<a id="app-download-primary-link" class="btn btn-blue" href="${escapeHtml(asset.assetUrl)}"><i class="ti ti-download"></i> 下载最新版本</a>`
             : '<a id="app-download-primary-link" class="btn btn-blue is-disabled" aria-disabled="true" tabindex="-1"><i class="ti ti-clock"></i> 查看构建状态</a>';
         const checksumAction = checksum
             ? `<button type="button" class="btn btn-gray" data-copy-release-checksum="${escapeHtml(checksum)}"><i class="ti ti-copy"></i> 复制 SHA-256</button>`
@@ -715,7 +714,7 @@
         list.innerHTML = historyEntries.length ? historyEntries.map(({ release, selectedPlatform, asset }) => {
             const downloadable = !!runtime.isDownloadable(asset);
             const historyAction = downloadable
-                ? `<a class="btn btn-blue" href="${escapeHtml(asset.assetUrl)}" download="${escapeHtml(asset.assetName)}"><i class="ti ti-download"></i> 下载此版本</a>`
+                ? `<a class="btn btn-blue" href="${escapeHtml(asset.assetUrl)}"><i class="ti ti-download"></i> 下载此版本</a>`
                 : '<a class="btn btn-blue is-disabled" aria-disabled="true" tabindex="-1"><i class="ti ti-clock"></i> 暂不可下载</a>';
             return `<article class="app-release-history-item">
                 ${renderReleaseBrandIcon(asset, 'app-release-history-icon')}
@@ -1415,10 +1414,10 @@
                     : `<p class="app-download-release-empty">当前版本暂未写入 release 说明。</p>`}
                 <div class="app-download-release-actions">
                     ${androidAsset && androidAsset.url
-                        ? `<a class="btn btn-gray app-download-release-btn" href="${escapeHtml(androidAsset.url)}" download="${escapeHtml(androidAsset.name)}"><i class="ti ti-brand-android"></i> 安卓包</a>`
+                        ? `<a class="btn btn-gray app-download-release-btn" href="${escapeHtml(androidAsset.url)}"><i class="ti ti-brand-android"></i> 安卓包</a>`
                         : ''}
                     ${desktopAsset && desktopAsset.url
-                        ? `<a class="btn btn-gray app-download-release-btn" href="${escapeHtml(desktopAsset.url)}" download="${escapeHtml(desktopAsset.name)}"><i class="ti ti-brand-windows"></i> 桌面端</a>`
+                        ? `<a class="btn btn-gray app-download-release-btn" href="${escapeHtml(desktopAsset.url)}"><i class="ti ti-brand-windows"></i> 桌面端</a>`
                         : ''}
                     <a class="btn btn-green app-download-release-btn" href="${escapeHtml(release?.url || RELEASE_PAGE_URL)}" target="_blank" rel="noopener"><i class="ti ti-brand-github"></i> Release</a>
                 </div>
@@ -1924,7 +1923,7 @@
                             <div><span>文件大小</span><strong>${escapeHtml(assetModel.size ? formatSize(assetModel.size) : assetModel.label)}</strong></div>
                         </div>
                         <div class="version-center-inline-actions">
-                            <a class="btn btn-blue${assetModel.ok ? '' : ' is-disabled'}" ${assetModel.url ? `href="${escapeHtml(assetModel.url)}" download="${escapeHtml(assetModel.name || channel.fileName)}"` : 'aria-disabled="true" tabindex="-1"'}><i class="ti ti-download"></i> ${assetModel.ok ? '下载当前平台' : '暂无可用安装包'}</a>
+                            <a class="btn btn-blue${assetModel.ok ? '' : ' is-disabled'}" ${assetModel.url ? `href="${escapeHtml(assetModel.url)}"` : 'aria-disabled="true" tabindex="-1"'}><i class="ti ti-download"></i> ${assetModel.ok ? '下载当前平台' : '暂无可用安装包'}</a>
                             <button type="button" class="btn btn-gray" data-version-center-copy="${escapeHtml(assetModel.url)}" ${assetModel.url ? '' : 'disabled'}><i class="ti ti-link"></i> 复制链接</button>
                         </div>
                     </article>
