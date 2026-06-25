@@ -32,7 +32,7 @@ vm.runInNewContext(source, sandbox, { filename: 'app-release-catalog-runtime.js'
 
 const runtime = window.AppReleaseCatalogRuntime;
 assert.ok(runtime, 'AppReleaseCatalogRuntime should be exported');
-assert.deepStrictEqual(Array.from(runtime.PLATFORMS), ['windows', 'android', 'ios']);
+assert.deepStrictEqual(Array.from(runtime.PLATFORMS), ['windows']);
 
 const releases = runtime.normalizeCatalog({
   releases: [
@@ -61,34 +61,10 @@ const releases = runtime.normalizeCatalog({
           buildUrl: 'https://example.com/builds/20'
         },
         android: {
-          iconUrl: './assets/brand/android-test.png',
-          version: '2.0.0-beta.1',
-          buildNumber: '20',
-          status: 'ready',
-          signed: 'test-signed',
-          minimumOs: 'Android 10',
-          architectures: ['arm64-v8a'],
-          assetName: 'school-system.apk',
-          assetUrl: 'https://example.com/school-system.apk',
-          bytes: 2048,
-          sha256: 'b'.repeat(64),
-          notes: 'Internal testing',
-          buildUrl: 'https://example.com/builds/20'
+          status: 'ready'
         },
         ios: {
-          iconUrl: './assets/brand/ios-test.png',
-          version: '2.0.0-beta.1',
-          buildNumber: 20,
-          status: 'awaiting-signing',
-          signed: false,
-          minimumOs: 'iOS 17',
-          architectures: ['arm64'],
-          assetName: 'school-system.ipa',
-          assetUrl: 'https://example.com/school-system.ipa',
-          bytes: 4096,
-          sha256: 'c'.repeat(64),
-          notes: [],
-          buildUrl: 'https://example.com/builds/20'
+          status: 'removed'
         }
       }
     },
@@ -108,11 +84,8 @@ assert.strictEqual(releases[0].platforms.windows.platform, 'windows');
 assert.strictEqual(releases[0].platforms.windows.iconUrl, './assets/brand/app-icon-128.png');
 assert.strictEqual(releases[0].platforms.windows.signed, 'signed');
 assert.strictEqual(releases[0].platforms.windows.sha256, 'a'.repeat(64));
-assert.strictEqual(releases[0].platforms.android.signed, 'test-signed');
-assert.strictEqual(releases[0].platforms.android.iconUrl, './assets/brand/app-icon-128.png');
-assert.deepStrictEqual(Array.from(releases[0].platforms.android.notes), ['Internal testing']);
-assert.strictEqual(releases[0].platforms.ios.signed, 'unsigned');
-assert.strictEqual(releases[0].platforms.ios.iconUrl, './assets/brand/app-icon-128.png');
+assert.strictEqual(releases[0].platforms.android, undefined);
+assert.strictEqual(releases[0].platforms.ios, undefined);
 assert.strictEqual(releases[1].platforms.windows.status, 'unavailable');
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.windows), true);
 assert.strictEqual(runtime.isDownloadable(releases[0].platforms.ios), false);
@@ -142,11 +115,11 @@ assert.strictEqual(
 );
 assert.deepStrictEqual(
   Array.from(runtime.filterCatalog(releases, { platform: 'android', channel: 'beta' }), (release) => release.releaseTag),
-  ['v2.0.0-beta.1']
+  []
 );
 assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (Windows NT 10.0; Win64; x64)'), 'windows');
-assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (Linux; Android 15; Pixel 9)'), 'android');
-assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)'), 'ios');
+assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (Linux; Android 15; Pixel 9)'), 'windows');
+assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)'), 'windows');
 
 assert.strictEqual(
   runtime.normalizeCatalog({ releaseTag: '   ' }).length,
@@ -159,7 +132,7 @@ const trimmed = runtime.normalizeCatalog({
   sourceSha: '  abcdef  ',
   generatedAt: '  2026-06-21T08:00:00.000Z  ',
   platforms: {
-    android: {
+    windows: {
       buildNumber: '  42  ',
       architectures: [' arm64-v8a ', '  ', ' x86_64 '],
       notes: [' Internal build ', '', '  Test only  ']
@@ -169,9 +142,9 @@ const trimmed = runtime.normalizeCatalog({
 assert.strictEqual(trimmed.schemaVersion, 2);
 assert.strictEqual(trimmed.releaseTag, 'v2.1.0');
 assert.strictEqual(trimmed.sourceSha, 'abcdef');
-assert.strictEqual(trimmed.platforms.android.buildNumber, '42');
-assert.deepStrictEqual(Array.from(trimmed.platforms.android.architectures), ['arm64-v8a', 'x86_64']);
-assert.deepStrictEqual(Array.from(trimmed.platforms.android.notes), ['Internal build', 'Test only']);
+assert.strictEqual(trimmed.platforms.windows.buildNumber, '42');
+assert.deepStrictEqual(Array.from(trimmed.platforms.windows.architectures), ['arm64-v8a', 'x86_64']);
+assert.deepStrictEqual(Array.from(trimmed.platforms.windows.notes), ['Internal build', 'Test only']);
 
 assert.strictEqual(manifest.schemaVersion, 1);
 assert.ok(Array.isArray(manifest.releases));
@@ -181,15 +154,16 @@ const cachedReleases = runtime.normalizeCatalog(manifest);
 assert.strictEqual(cachedReleases.length, 1);
 assert.deepStrictEqual(
   Array.from(runtime.PLATFORMS, (platform) => cachedReleases[0].platforms[platform].status),
-  ['ready', 'ready', 'awaiting-signing']
+  ['ready']
 );
 assert.deepStrictEqual(
   Array.from(runtime.PLATFORMS, (platform) => cachedReleases[0].platforms[platform].iconUrl),
-  ['./assets/brand/app-icon-128.png', './assets/brand/app-icon-128.png', './assets/brand/app-icon-128.png'],
+  ['./assets/brand/app-icon-128.png'],
   'cached manifest models should receive the shared release icon explicitly'
 );
 assert.match(cachedReleases[0].platforms.windows.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
-assert.match(cachedReleases[0].platforms.android.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
+assert.strictEqual(cachedReleases[0].platforms.android, undefined);
+assert.strictEqual(cachedReleases[0].platforms.ios, undefined);
 
 const catalogScript = html.match(/<script defer src="\.\/assets\/js\/app-release-catalog-runtime\.js\?v=[^"]+"><\/script>/);
 assert.ok(catalogScript, 'index should defer the release catalog runtime with a cache key');

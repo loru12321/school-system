@@ -45,7 +45,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run package contracts
-        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow
+        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:beta-release-workflow
       - name: Build immutable Windows installer
         shell: pwsh
         run: |
@@ -64,99 +64,9 @@ jobs:
           path: release-out/*.exe
           if-no-files-found: error
 
-  android:
-    name: Build test-signed Android APK
-    needs: metadata
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: gradle
-      - name: Resolve application version
-        id: version
-        run: node scripts/resolve-app-version.mjs --channel beta --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
-      - name: Install dependencies
-        run: npm ci
-      - name: Install font build tooling
-        run: python -m pip install fonttools brotli
-      - name: Run package contracts
-        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow && node scripts/test-android-signing-contract.js
-      - name: Check Android signing secrets
-        env:
-          ANDROID_TEST_KEYSTORE_FILE: ${{ secrets.ANDROID_TEST_KEYSTORE_FILE }}
-          ANDROID_TEST_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_TEST_KEYSTORE_PASSWORD }}
-          ANDROID_TEST_KEY_ALIAS: ${{ secrets.ANDROID_TEST_KEY_ALIAS }}
-          ANDROID_TEST_KEY_PASSWORD: ${{ secrets.ANDROID_TEST_KEY_PASSWORD }}
-        run: npm run check:android-signing-secrets
-      - name: Restore Android test-signing keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_TEST_KEYSTORE_FILE }}
-        run: |
-          test -n "$KEYSTORE_BASE64" || { echo 'ANDROID_TEST_KEYSTORE_FILE secret is required'; exit 1; }
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android-test.keystore"
-          echo "ANDROID_TEST_KEYSTORE_FILE=$RUNNER_TEMP/android-test.keystore" >> "$GITHUB_ENV"
-      - name: Sync Capacitor and build immutable APK
-        env:
-          ANDROID_TEST_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_TEST_KEYSTORE_PASSWORD }}
-          ANDROID_TEST_KEY_ALIAS: ${{ secrets.ANDROID_TEST_KEY_ALIAS }}
-          ANDROID_TEST_KEY_PASSWORD: ${{ secrets.ANDROID_TEST_KEY_PASSWORD }}
-        run: |
-          npm run mobile:sync
-          cd android
-          ./gradlew assembleRelease -PappVersionName="${{ steps.version.outputs.APP_VERSION_NAME }}" -PappVersionCode="${{ steps.version.outputs.APP_BUILD_NUMBER }}"
-          cd ..
-          mkdir -p release-out
-          cp android/app/build/outputs/apk/release/app-release.apk "release-out/school-system-android-${{ needs.metadata.outputs.release-tag }}.apk"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-${{ needs.metadata.outputs.release-tag }}
-          path: release-out/*.apk
-          if-no-files-found: error
-
-  ios:
-    name: Validate iOS simulator build
-    needs: metadata
-    runs-on: macos-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - name: Resolve application version
-        id: version
-        run: node scripts/resolve-app-version.mjs --channel beta --tag "${{ needs.metadata.outputs.release-tag }}" --sha "$GITHUB_SHA" --run-number "$GITHUB_RUN_NUMBER"
-      - name: Install dependencies
-        run: npm ci
-      - name: Install font build tooling
-        run: python -m pip install fonttools brotli
-      - name: Run package contracts
-        run: npm run test:release-manifest && npm run test:desktop-package-contract && npm run test:capacitor-package-contract && npm run test:beta-release-workflow
-      - name: Sync and compile unsigned iOS simulator application
-        run: |
-          npm run ios:sync
-          mkdir -p release-out
-          set -o pipefail
-          xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO MARKETING_VERSION="${{ steps.version.outputs.APP_VERSION_NAME }}" CURRENT_PROJECT_VERSION="${{ steps.version.outputs.APP_BUILD_NUMBER }}" build | tee release-out/ios-build.log
-          ditto -c -k --keepParent ios/App/App.xcodeproj "release-out/school-system-ios-${{ needs.metadata.outputs.release-tag }}-project.zip"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ios-${{ needs.metadata.outputs.release-tag }}
-          path: release-out/
-          if-no-files-found: error
-
   publish:
     name: Publish beta prerelease
-    needs: [metadata, windows, android, ios]
+    needs: [metadata, windows]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

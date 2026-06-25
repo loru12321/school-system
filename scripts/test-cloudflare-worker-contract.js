@@ -115,7 +115,8 @@ assert.ok(worker.includes('const supabaseResponse = await proxySystemDataWriteTo
 assert.ok(worker.includes("cloudSystemDataBackend === 'hybrid' ? hasSystemDataStorage(env) && hasSupabaseRestOrigin(env)"), 'health should require both D1 and Supabase readiness for hybrid mode');
 assert.ok(worker.includes('cloudSystemDataD1Bound: hasSystemDataStorage(env)'), 'health should expose D1 binding readiness before primary cutover');
 assert.ok(worker.includes('cloudSystemDataSupabaseReady: hasSupabaseRestOrigin(env)'), 'health should expose Supabase readiness during hybrid cutover');
-assert.ok(wrangler.vars && wrangler.vars.CLOUD_SYSTEM_DATA_MODE === 'supabase', 'production data mode should remain explicit');
+assert.ok(wrangler.vars && wrangler.vars.CLOUD_SYSTEM_DATA_MODE === 'primary', 'production data mode should use D1 primary storage');
+assert.ok((wrangler.d1_databases || []).some((db) => db.binding === 'CLOUD_SYSTEM_DATA_DB'), 'system_data D1 binding should be configured for primary storage');
 assert.ok(!wrangler.vars.SUPABASE_ORIGIN, 'Supabase origin must not be hardcoded in wrangler config');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:cloudflare-worker-contract'), 'fast release check must include Cloudflare Worker contract guard');
 assert.ok(scripts['verify:system-data:cloudflare-cutover'] === 'node scripts/verify-system-data-cloudflare-cutover.js', 'system_data cutover verifier should be runnable from npm scripts');

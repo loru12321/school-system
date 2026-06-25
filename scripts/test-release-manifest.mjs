@@ -27,35 +27,23 @@ function snapshotTree(directory) {
 
 try {
   const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
-  const androidGradle = fs.readFileSync(path.join(rootDir, 'android/app/build.gradle'), 'utf8');
   const publicCatalog = JSON.parse(fs.readFileSync(path.join(rootDir, 'public/releases/release-manifest.json'), 'utf8'));
   const currentPublicRelease = publicCatalog.releases[0];
   assert.ok(currentPublicRelease, 'public catalog must include the current beta');
   assert.equal(currentPublicRelease.platforms.windows.version, packageJson.version, 'current Windows manifest version should match the system package version');
-  assert.equal(currentPublicRelease.platforms.android.version, packageJson.version, 'current Android manifest version should match the system package version');
-  assert.match(androidGradle, new RegExp(`findProperty\\(['"]appVersionName['"]\\) \\?: ['"]${packageJson.version.replace(/\./g, '\\.')}['"]`), 'Android local default versionName should match the system package version');
   assert.match(currentPublicRelease.platforms.windows.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
-  assert.match(currentPublicRelease.platforms.android.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
+  assert.equal(currentPublicRelease.platforms.android, undefined, 'public catalog should not publish Android packages');
+  assert.equal(currentPublicRelease.platforms.ios, undefined, 'public catalog should not publish iOS packages');
   assert.ok(
     currentPublicRelease.platforms.windows.assetName.includes(currentPublicRelease.releaseTag),
     'current Windows asset name should include the release tag instead of a stale latest alias'
   );
-  assert.ok(
-    currentPublicRelease.platforms.android.assetName.includes(currentPublicRelease.releaseTag),
-    'current Android asset name should include the release tag instead of an old v1.0 filename'
-  );
   assert.ok(!currentPublicRelease.platforms.windows.assetName.includes('latest'), 'current Windows manifest asset should not use the old latest alias');
-  assert.ok(!currentPublicRelease.platforms.android.assetName.includes('v1.0'), 'current Android manifest asset should not use the old v1.0 filename');
   assert.ok(
     currentPublicRelease.platforms.windows.notes.some((note) => /NSIS|安装器/.test(note) && /系统卸载入口/.test(note) && /本地系统资源/.test(note)),
     'current Windows manifest notes should describe the NSIS local installer, bundled resources, and uninstall entry'
   );
-  assert.ok(
-    currentPublicRelease.platforms.android.notes.some((note) => /Android/.test(note) && /本地安装/.test(note) && /APK/.test(note)),
-    'current Android manifest notes should describe a locally installable APK'
-  );
-  assert.equal(currentPublicRelease.platforms.ios.status, 'awaiting-signing');
-  for (const platform of ['windows', 'android']) {
+  for (const platform of ['windows']) {
     const asset = currentPublicRelease.platforms[platform];
     const assetPath = path.join(rootDir, 'public/downloads', asset.assetName);
     if (!fs.existsSync(assetPath)) {
@@ -72,7 +60,6 @@ try {
   const outputPath = path.join(assetDir, 'release-manifest.json');
   fs.mkdirSync(assetDir);
   fs.writeFileSync(path.join(assetDir, 'school-system-windows-beta.exe'), 'windows-build-fixture');
-  fs.writeFileSync(path.join(assetDir, 'school-system-android-beta.apk'), 'android-build-fixture');
 
   const result = spawnSync(process.execPath, ['scripts/build-release-manifest.mjs'], {
     cwd: rootDir,
@@ -103,10 +90,8 @@ try {
   }
   assert.strictEqual(manifest.platforms.windows.version, '20260620-0123456');
   assert.strictEqual(manifest.platforms.windows.buildNumber, '0123456789ab');
-  assert.strictEqual(manifest.platforms.android.signed, 'test-signed');
-  assert.strictEqual(manifest.platforms.ios.status, 'awaiting-signing');
-  assert.strictEqual(manifest.platforms.ios.assetName, '');
-  assert.strictEqual(manifest.platforms.ios.assetUrl, '');
+  assert.strictEqual(manifest.platforms.android, undefined);
+  assert.strictEqual(manifest.platforms.ios, undefined);
   assert.match(manifest.platforms.windows.sha256, /^[a-f0-9]{64}$/);
   assert.strictEqual(
     Date.parse(manifest.expiresAt) - Date.parse(manifest.generatedAt),
@@ -125,8 +110,6 @@ try {
   const inputDir = path.join(preparedDir, 'input');
   fs.mkdirSync(inputDir, { recursive: true });
   fs.writeFileSync(path.join(inputDir, 'desktop-build.exe'), 'fresh-windows');
-  fs.writeFileSync(path.join(inputDir, 'mobile-build.apk'), 'fresh-android');
-  fs.writeFileSync(path.join(inputDir, 'ios-build.ipa'), 'fresh-ios');
   fs.writeFileSync(path.join(preparedDir, 'stale-package.zip'), 'stale-zip');
   fs.writeFileSync(path.join(preparedDir, 'school-system-windows-old.exe'), 'stale-windows');
 
@@ -148,8 +131,6 @@ try {
   assert.deepStrictEqual(fs.readdirSync(preparedDir).sort(), [
     'release-manifest.json',
     'release-notes.md',
-    'school-system-android-school-system-v2026.06.20.apk',
-    'school-system-ios-school-system-v2026.06.20.ipa',
     'school-system-windows-school-system-v2026.06.20.exe'
   ]);
   assert.strictEqual(fs.existsSync(path.join(preparedDir, 'input')), false);
@@ -157,10 +138,8 @@ try {
   assert.deepStrictEqual(fs.readdirSync(fixtureDir).filter((name) => name.startsWith('.prepared.')), []);
   const stableManifest = JSON.parse(fs.readFileSync(path.join(preparedDir, 'release-manifest.json'), 'utf8'));
   assert.strictEqual(stableManifest.expiresAt, '');
-  assert.strictEqual(stableManifest.platforms.ios.status, 'ready');
-  assert.strictEqual(stableManifest.platforms.ios.signed, false);
-  assert.match(stableManifest.platforms.ios.sha256, /^[a-f0-9]{64}$/);
-  assert.strictEqual(stableManifest.platforms.ios.minimumOs, 'iOS 16');
+  assert.strictEqual(stableManifest.platforms.android, undefined);
+  assert.strictEqual(stableManifest.platforms.ios, undefined);
 
   const generatorOptions = (dir, outputPath) => ({
     channel: 'stable',
@@ -171,7 +150,7 @@ try {
     buildUrl: 'https://github.com/example/school-system/actions/runs/789',
     repository: 'example/school-system'
   });
-  for (const extension of ['.exe', '.apk', '.ipa']) {
+  for (const extension of ['.exe']) {
     const duplicateDir = path.join(fixtureDir, `duplicate-${extension.slice(1)}`);
     fs.mkdirSync(duplicateDir);
     fs.writeFileSync(path.join(duplicateDir, `one${extension}`), 'one');
@@ -208,7 +187,6 @@ try {
   const junctionAssetDir = path.join(fixtureDir, 'junction-assets');
   fs.mkdirSync(junctionTarget);
   fs.writeFileSync(path.join(junctionTarget, 'app.exe'), 'junction-windows');
-  fs.writeFileSync(path.join(junctionTarget, 'app.apk'), 'junction-android');
   let junctionSupported = true;
   let junctionError = '';
   try {
@@ -235,7 +213,6 @@ try {
   const failedInputDir = path.join(failedOutputDir, 'input');
   fs.mkdirSync(failedInputDir, { recursive: true });
   fs.writeFileSync(path.join(failedInputDir, 'app.exe'), 'valid-windows');
-  fs.writeFileSync(path.join(failedInputDir, 'app.apk'), 'valid-android');
   fs.writeFileSync(path.join(failedOutputDir, 'existing.zip'), 'keep-me');
   const beforeFailure = snapshotTree(failedOutputDir);
   const failedPrepare = spawnSync(process.execPath, ['scripts/prepare-github-release-assets.mjs'], {
@@ -259,7 +236,6 @@ try {
   const linkedInput = path.join(linkedDir, 'input');
   fs.mkdirSync(linkedInput, { recursive: true });
   fs.writeFileSync(path.join(linkedInput, 'app.exe'), 'windows');
-  fs.writeFileSync(path.join(linkedInput, 'app.apk'), 'android');
   const linkTarget = path.join(fixtureDir, 'link-target.txt');
   fs.writeFileSync(linkTarget, 'outside');
   let symlinkSupported = true;

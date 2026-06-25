@@ -33,7 +33,9 @@ assert.ok(readme.includes('docs/optimization-backlog.md'), 'README should link t
 assert.ok(readme.includes('scripts/legacy/'), 'README should document the legacy script archive');
 assert.ok(readme.includes('docs/performance/'), 'README should point readers to the performance trend output');
 assert.ok(readme.includes('校衡台-Windows-1.0.2-x64.exe'), 'README should document the desktop Windows installer file');
-assert.ok(readme.includes('校衡台-Android-1.0.2.apk'), 'README should document the desktop Android package file');
+assert.ok(readme.includes('Android 与 iOS 安装包链路、公开记录和历史包已移除'), 'README should document removed Android/iOS packages');
+assert.ok(!readme.includes('校衡台-Android-1.0.2.apk'), 'README should not document a removed Android package file');
+assert.ok(!readme.includes('TestFlight'), 'README should not keep removed iOS release guidance');
 assert.ok(readme.includes('系统内已移除“应用服务”下载母模块'), 'README should explain the removed app service module');
 assert.ok(maintenanceRunbook.includes('## Priority Levels'), 'maintenance runbook should explain priority levels');
 assert.ok(maintenanceRunbook.includes('### P0: production correctness'), 'maintenance runbook should define P0');

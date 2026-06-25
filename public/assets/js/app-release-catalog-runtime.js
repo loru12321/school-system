@@ -1,7 +1,7 @@
 (function (root) {
   'use strict';
 
-  var PLATFORMS = Object.freeze(['windows', 'android', 'ios']);
+  var PLATFORMS = Object.freeze(['windows']);
   var RELEASE_BRAND_ICON_URL = './assets/brand/app-icon-128.png';
 
   function asString(value) {
@@ -102,8 +102,6 @@
     var fallbackNavigator = typeof navigator !== 'undefined' ? navigator : null;
     var agent = userAgent == null && fallbackNavigator ? fallbackNavigator.userAgent : userAgent;
     agent = asString(agent);
-    if (/iPhone|iPad|iPod/i.test(agent)) return 'ios';
-    if (/Android/i.test(agent)) return 'android';
     return 'windows';
   }
 
@@ -124,7 +122,7 @@
   }
 
   function isTrustedChunk(chunk) {
-    return /^packages\/[A-Za-z0-9._-]+\/(windows|android)\/part-\d{4}$/.test(chunk)
+    return /^packages\/[A-Za-z0-9._-]+\/windows\/part-\d{4}$/.test(chunk)
       || /^https:\/\/api\.github\.com\/repos\/loru12321\/school-system\/releases\/assets\/\d+$/.test(chunk);
   }
 

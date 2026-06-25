@@ -1,4 +1,4 @@
-import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import pngToIco from 'png-to-ico';
@@ -58,19 +58,6 @@ async function flattenedPng(size, output) {
     .toFile(output);
 }
 
-async function adaptiveForeground(size, output) {
-  const artworkSize = Math.round(size * 0.66);
-  const resizedArtwork = await sharp(artwork)
-    .resize(artworkSize, artworkSize, { fit: 'contain' })
-    .png({ compressionLevel: 9, adaptiveFiltering: false, palette: false })
-    .toBuffer();
-  await ensureDir(path.dirname(output));
-  await sharp({ create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
-    .composite([{ input: resizedArtwork, gravity: 'center' }])
-    .png({ compressionLevel: 9, adaptiveFiltering: false, palette: false })
-    .toFile(output);
-}
-
 await ensureDir(brandDir);
 await copyFile(source, path.join(brandDir, 'app-icon-source.png'));
 
@@ -83,47 +70,12 @@ const desktopDir = outputAt('desktop', 'assets');
 await ensureDir(desktopDir);
 await writeFile(path.join(desktopDir, 'icon.ico'), ico);
 
-const androidRoot = outputAt('android', 'app', 'src', 'main', 'res');
-const densities = [
-  ['mdpi', 48, 108], ['hdpi', 72, 162], ['xhdpi', 96, 216],
-  ['xxhdpi', 144, 324], ['xxxhdpi', 192, 432],
-];
-for (const [density, legacySize, foregroundSize] of densities) {
-  const dir = path.join(androidRoot, `mipmap-${density}`);
-  await flattenedPng(legacySize, path.join(dir, 'ic_launcher.png'));
-  await flattenedPng(legacySize, path.join(dir, 'ic_launcher_round.png'));
-  await adaptiveForeground(foregroundSize, path.join(dir, 'ic_launcher_foreground.png'));
-}
-
-const adaptiveDir = path.join(androidRoot, 'mipmap-anydpi-v26');
-await ensureDir(adaptiveDir);
-const adaptiveXml = `<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background" />\n    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n</adaptive-icon>\n`;
-await writeFile(path.join(adaptiveDir, 'ic_launcher.xml'), adaptiveXml);
-await writeFile(path.join(adaptiveDir, 'ic_launcher_round.xml'), adaptiveXml);
-const colorsDir = path.join(androidRoot, 'values');
-await ensureDir(colorsDir);
-await writeFile(path.join(colorsDir, 'ic_launcher_colors.xml'), `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${background}</color>\n</resources>\n`);
-
-const iosProject = at('ios', 'App', 'App.xcodeproj');
-let iosPresent = true;
-try { await stat(iosProject); } catch { iosPresent = false; }
 const status = {
   schemaVersion: 1,
   source: 'public/assets/brand/app-icon-source.png',
-  ios: iosPresent
-    ? { state: 'generated', assetSet: 'ios/App/App/Assets.xcassets/AppIcon.appiconset' }
-    : { state: 'ready-for-macos', source: 'public/assets/brand/app-icon-1024.png' },
+  web: { state: 'generated', directory: 'public/assets/brand' },
+  windows: { state: 'generated', asset: 'desktop/assets/icon.ico' }
 };
-if (iosPresent) {
-  const appIconDir = outputAt('ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset');
-  await ensureDir(appIconDir);
-  await flattenedPng(1024, path.join(appIconDir, 'AppIcon-512@2x.png'));
-  const contents = {
-    images: [{ filename: 'AppIcon-512@2x.png', idiom: 'universal', platform: 'ios', size: '1024x1024' }],
-    info: { author: 'xcode', version: 1 },
-  };
-  await writeFile(path.join(appIconDir, 'Contents.json'), `${JSON.stringify(contents, null, 2)}\n`);
-}
 await writeFile(path.join(brandDir, 'app-icon-platform-status.json'), `${JSON.stringify(status, null, 2)}\n`);
 
 console.log('Knowledge Bloom app icon assets generated.');

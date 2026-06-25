@@ -9,8 +9,8 @@
   },
   "vars": {
     // 当前数据模式：supabase | primary | hybrid
-    // 切换至 D1 primary 前先确认 CLOUD_SYSTEM_DATA_DB 已绑定并迁移完毕
-    "CLOUD_SYSTEM_DATA_MODE": "supabase"
+    // system_data 已迁移至 Cloudflare D1，生产读写以 D1 为主
+    "CLOUD_SYSTEM_DATA_MODE": "primary"
     // 以下敏感配置请通过 Wrangler Secrets 管理，不要写入此文件：
     //   LEGACY_GATEWAY_ORIGIN   → npx wrangler secret put LEGACY_GATEWAY_ORIGIN
     //   SUPABASE_ORIGIN         → npx wrangler secret put SUPABASE_ORIGIN
@@ -33,12 +33,11 @@
       "binding": "GATEWAY_DATA_DB",
       "database_name": "school-system-gateway",
       "database_id": "0af7205c-eead-4c60-a792-b67f8198ac0b"
+    },
+    {
+      "binding": "CLOUD_SYSTEM_DATA_DB",
+      "database_name": "school-system-cloud-metadata",
+      "database_id": "4ce32844-b42d-45ff-b436-818ffe714a08"
     }
-    // 若需启用 D1 system data 主存储，取消注释并填写真实 database_id：
-    // {
-    //   "binding": "CLOUD_SYSTEM_DATA_DB",
-    //   "database_name": "school-system-data",
-    //   "database_id": "<your-d1-database-id>"
-    // }
   ]
 }

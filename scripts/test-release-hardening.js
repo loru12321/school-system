@@ -63,7 +63,6 @@ const requiredContractGate = [
   'npm run test:app-icon-assets',
   'npm run test:desktop-package-contract',
   'npm run test:windows-installer-contract',
-  'npm run test:capacitor-package-contract',
   'npm run test:beta-release-workflow',
 ];
 assertContiguousScriptSequence('check:release-fast', requiredContractGate, 'fast release checks should verify icons before all package contracts immediately after release surface');
@@ -71,23 +70,22 @@ const validateContractGate = [
   'test:release-manifest',
   'test:app-icon-assets',
   'test:desktop-package-contract',
-  'test:capacitor-package-contract',
   'test:beta-release-workflow',
 ];
 assertScriptIncludesTokens('validate:build', validateContractGate, 'validate:build should verify icons and all package contracts before build');
 assert.match(scripts.validate || '', /validate:build[\s\S]*&&\s*npm run build/, 'validate should run build contract group before build');
 assert.match(verifier, /release-manifest\.json/, 'release verifier should load the published manifest');
 assert.match(verifier, /windows:[\s\S]*extension:\s*['"]\.exe['"][\s\S]*minimumBytes:\s*50\s*\*\s*1024\s*\*\s*1024/, 'Windows packages should be real EXE installers');
-assert.match(verifier, /android:[\s\S]*extension:\s*['"]\.apk['"][\s\S]*minimumBytes:\s*10\s*\*\s*1024\s*\*\s*1024/, 'Android packages should be real APK files');
-assert.match(verifier, /ios:[\s\S]*extension:\s*['"]\.ipa['"][\s\S]*minimumBytes:\s*5\s*\*\s*1024\s*\*\s*1024/, 'ready iOS packages should be real IPA files');
+assert.doesNotMatch(verifier, /android|\.apk|ios|\.ipa/i, 'release verifier should ignore removed Android and iOS packages');
 assert.match(verifier, /method:\s*['"]HEAD['"]/, 'downloadable assets should receive a HEAD request');
 assert.match(verifier, /text\/html/, 'HTML responses masquerading as packages should be rejected');
 assert.match(verifier, /failures:\s*\[/, 'release verification should report structured failures');
 for (const workflow of [releaseWorkflow, betaWorkflow]) {
   assert.ok(workflow.includes('npm run test:release-manifest'), 'native workflows should guard release manifests before builds');
   assert.ok(workflow.includes('npm run test:desktop-package-contract'), 'native workflows should guard desktop packaging before builds');
-  assert.ok(workflow.includes('npm run test:capacitor-package-contract'), 'native workflows should guard Capacitor packaging before builds');
   assert.ok(workflow.includes('npm run test:beta-release-workflow'), 'native workflows should guard workflow contracts before builds');
+  assert.ok(!workflow.includes('assembleRelease'), 'native workflows should not build Android packages');
+  assert.ok(!workflow.includes('xcodebuild'), 'native workflows should not validate iOS packages');
 }
 assert.strictEqual(manifest.name, '校衡台', 'manifest app name should be readable Chinese');
 assert.strictEqual(manifest.short_name, '校衡台', 'manifest short name should be readable Chinese');
@@ -136,36 +134,24 @@ async function testManifestVerification() {
       windows: {
         status: 'ready', assetName: 'school-system.exe', assetUrl: 'https://example.com/school-system.exe',
         bytes: 60 * 1024 * 1024, sha256: 'a'.repeat(64),
-      },
-      android: {
-        status: 'ready', assetName: 'school-system.apk', assetUrl: 'https://example.com/school-system.apk',
-        bytes: 20 * 1024 * 1024, sha256: 'b'.repeat(64),
-      },
-      ios: { status: 'awaiting-signing', assetName: '', assetUrl: '', bytes: 0, sha256: '' },
+      }
     },
   };
   const packageRequest = async (url, options) => {
     assert.strictEqual(options.method, 'HEAD');
-    const bytes = url.endsWith('.exe') ? 60 * 1024 * 1024 : 20 * 1024 * 1024;
     return {
       ok: true,
       status: 200,
-      headers: { get: (name) => name === 'content-type' ? 'application/octet-stream' : name === 'content-length' ? String(bytes) : '' },
+      headers: { get: (name) => name === 'content-type' ? 'application/octet-stream' : name === 'content-length' ? String(60 * 1024 * 1024) : '' },
     };
   };
   const verified = await verifyReleaseManifest(manifestFixture, { request: packageRequest });
   assert.strictEqual(verified.ok, true, JSON.stringify(verified.failures));
-  assert.strictEqual(verified.platforms.ios.ok, true);
 
   const htmlResponse = await verifyReleaseManifest(manifestFixture, {
     request: async () => ({ ok: true, status: 200, headers: { get: (name) => name === 'content-type' ? 'text/html; charset=utf-8' : '' } }),
   });
   assert.ok(htmlResponse.failures.some((failure) => failure.code === 'html-or-error-response'));
-
-  const exposedUnsignedIos = JSON.parse(JSON.stringify(manifestFixture));
-  exposedUnsignedIos.platforms.ios.assetUrl = 'https://example.com/not-signed.ipa';
-  const unsignedResult = await verifyReleaseManifest(exposedUnsignedIos, { request: packageRequest });
-  assert.ok(unsignedResult.failures.some((failure) => failure.code === 'unsigned-asset-exposed'));
 
   console.log(JSON.stringify({
     ok: true,

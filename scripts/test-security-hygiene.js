@@ -18,6 +18,7 @@ const authState = read('public/assets/js/auth-state-runtime.js');
 const accountAdmin = read('public/assets/js/account-admin-runtime.js');
 const srcIndex = read('src/index.html');
 const serviceWorker = read('public/sw.js');
+const supabaseBootstrap = read('supabase/sql/000_app_tables_bootstrap.sql');
 const keySensitiveFiles = [
     'wrangler.jsonc',
     'src/worker-gateway-d1.js',
@@ -70,5 +71,6 @@ assert.ok(serviceWorker.includes('isApiCacheEligible'), 'service worker should g
 assert.ok(!serviceWorker.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 assert.ok(!boot.includes('DEMO_TOKEN'), 'boot runtime should not provide an offline admin demo token');
 assert.ok(!runtimeLoader.includes('DEMO_TOKEN'), 'runtime loader should not provide an offline admin demo token');
+assert.ok(!/\bpassword\s+text\b/i.test(supabaseBootstrap), 'Supabase bootstrap should not recreate the legacy plaintext password column');
 
 console.log('security hygiene tests passed');

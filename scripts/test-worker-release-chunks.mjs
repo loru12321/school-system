@@ -12,9 +12,7 @@ const output = path.join(root, 'dist', 'releases');
 try {
   fs.mkdirSync(input, { recursive: true });
   const windows = Buffer.alloc(43, 0x57);
-  const android = Buffer.alloc(29, 0x41);
   fs.writeFileSync(path.join(input, 'app.exe'), windows);
-  fs.writeFileSync(path.join(input, 'app.apk'), android);
 
   const result = prepareWorkerReleaseChunks({
     inputDir: input,
@@ -25,11 +23,11 @@ try {
     chunkBytes: 16
   });
 
-  for (const platform of ['windows', 'android']) {
+  for (const platform of ['windows']) {
     const entry = result.downloads.find((item) => item.platform === platform);
     assert.ok(entry, `${platform} entry should exist`);
     const rebuilt = Buffer.concat(entry.chunks.map((relative) => fs.readFileSync(path.join(output, relative))));
-    const original = platform === 'windows' ? windows : android;
+    const original = windows;
     assert.deepEqual(rebuilt, original);
     assert.equal(entry.bytes, original.length);
     assert.equal(entry.sha256, crypto.createHash('sha256').update(original).digest('hex'));
@@ -40,8 +38,8 @@ try {
 
   const catalog = JSON.parse(fs.readFileSync(path.join(output, 'release-manifest.json'), 'utf8'));
   assert.equal(catalog.releases[0].platforms.windows.status, 'ready');
-  assert.equal(catalog.releases[0].platforms.android.status, 'ready');
-  assert.equal(catalog.releases[0].platforms.ios.status, 'awaiting-signing');
+  assert.equal(catalog.releases[0].platforms.android, undefined);
+  assert.equal(catalog.releases[0].platforms.ios, undefined);
   assert.match(catalog.releases[0].platforms.windows.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
 
   assert.throws(() => prepareWorkerReleaseChunks({

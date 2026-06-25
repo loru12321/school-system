@@ -30,12 +30,11 @@ const betaWorkflow = read('.github/workflows/build-apps-beta.yml');
 checkSyntax('scripts/prepare-github-release-assets.mjs');
 checkSyntax('scripts/record-performance-trend.mjs');
 checkSyntax('scripts/check-performance-thresholds.mjs');
-checkSyntax('scripts/check-android-signing-secrets.mjs');
 
 assert.strictEqual(scripts['release:prepare-assets'], 'node scripts/prepare-github-release-assets.mjs', 'release asset preparation script should stay stable');
 assert.strictEqual(scripts['performance:record'], 'node scripts/record-performance-trend.mjs', 'performance trend script should stay stable');
 assert.strictEqual(scripts['test:performance-thresholds'], 'node scripts/check-performance-thresholds.mjs', 'performance threshold script should stay stable');
-assert.strictEqual(scripts['check:android-signing-secrets'], 'node scripts/check-android-signing-secrets.mjs', 'Android signing secret precheck script should stay stable');
+assert.ok(!scripts['check:android-signing-secrets'], 'Android signing precheck should be removed from package scripts');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-automation'), 'fast release check should include release automation checks');
 assert.ok(!scripts['check:release-fast'].includes('test:app-download-runtime-hygiene'), 'fast release check should not guard the removed app download runtime');
 assert.strictEqual(scripts['deploy:cloudflare:verified'], 'npm run build && npm run check:release-fast && npx wrangler deploy && npm run smoke:prod-minimal', 'verified Cloudflare deploy script should build, guard, deploy, and smoke production');
@@ -48,11 +47,9 @@ assert.ok(releaseWorkflow.includes('gh release upload'), 'release workflow shoul
 assert.ok(releaseWorkflow.includes('gh release create'), 'release workflow should create missing releases');
 assert.ok(releaseWorkflow.includes('concurrency:'), 'release workflow should serialize release jobs');
 assert.ok(releaseWorkflow.includes('runs-on: windows-latest'), 'stable release should build Windows');
-assert.ok(releaseWorkflow.includes('runs-on: ubuntu-latest'), 'stable release should build Android and publish');
-assert.ok(releaseWorkflow.includes('runs-on: macos-latest'), 'stable release should validate iOS');
-assert.ok((releaseWorkflow.match(/node scripts\/resolve-app-version\.mjs/g) || []).length >= 3, 'stable platform jobs should resolve versions');
-assert.ok(releaseWorkflow.includes('assembleRelease'), 'stable release should build an Android APK');
-assert.ok(releaseWorkflow.includes('CODE_SIGNING_ALLOWED=NO'), 'stable iOS validation should not require Apple credentials');
+assert.ok(!releaseWorkflow.includes('assembleRelease'), 'stable release should not build Android APKs');
+assert.ok(!releaseWorkflow.includes('CODE_SIGNING_ALLOWED=NO'), 'stable release should not validate iOS');
+assert.ok((releaseWorkflow.match(/node scripts\/resolve-app-version\.mjs/g) || []).length >= 1, 'stable Windows job should resolve versions');
 assert.ok(!releaseWorkflow.includes('--prerelease'), 'stable releases must never be marked prerelease');
 assert.ok((ciWorkflow.match(/python -m pip install fonttools brotli/g) || []).length >= 3, 'CI jobs that build or validate should install font subsetting tools');
 assert.ok(deployWorkflow.includes('workflow_dispatch:'), 'Cloudflare deployment should be manually triggerable');
@@ -82,10 +79,9 @@ assert.ok(performanceWorkflow.includes('npm run check:release-fast'), 'performan
 assert.ok(performanceWorkflow.includes('cancel-in-progress: true'), 'performance workflow should cancel stale trend runs');
 assert.ok(performanceWorkflow.includes("github.actor != 'github-actions[bot]'"), 'performance workflow should not react to bot-authored trend commits');
 assert.ok(performanceWorkflow.includes('[skip performance]'), 'performance workflow should support an explicit skip marker');
-assert.ok(betaWorkflow.includes('python -m pip install fonttools brotli'), 'beta app workflow should install font subsetting tools before mobile sync builds');
-assert.ok(betaWorkflow.includes('npm run check:android-signing-secrets'), 'beta app workflow should precheck Android signing secrets before building APKs');
+assert.ok(!betaWorkflow.includes('npm run check:android-signing-secrets'), 'beta app workflow should not build Android APKs');
 assert.ok(releaseWorkflow.includes('python -m pip install fonttools brotli'), 'stable release workflow should install font subsetting tools before web builds');
-assert.ok(releaseWorkflow.includes('npm run check:android-signing-secrets'), 'stable release workflow should precheck Android signing secrets before building APKs');
+assert.ok(!releaseWorkflow.includes('npm run check:android-signing-secrets'), 'stable release workflow should not build Android APKs');
 
 console.log(JSON.stringify({
   ok: true,

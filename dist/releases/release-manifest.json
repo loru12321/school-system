@@ -28,44 +28,6 @@
             "NSIS 安装器，包含本地系统资源并写入系统卸载入口。"
           ],
           "buildUrl": "https://schoolsystem.com.cn/"
-        },
-        "android": {
-          "platform": "android",
-          "version": "1.0.2",
-          "buildNumber": "187d79fa4cab",
-          "status": "ready",
-          "signed": "test-signed",
-          "minimumOs": "Android 10",
-          "architectures": [
-            "arm64-v8a",
-            "armeabi-v7a",
-            "x86_64"
-          ],
-          "assetName": "school-system-android-beta-20260625-187d79f.apk",
-          "assetUrl": "https://schoolsystem.com.cn/downloads/school-system-android-beta-20260625-187d79f.apk",
-          "bytes": 11982465,
-          "sha256": "8f121c3e85fade03e041054af9b8619bbbe06756b0c3936da6edffd975eb96f8",
-          "notes": [
-            "Android APK 本地安装包，使用测试签名。"
-          ],
-          "buildUrl": "https://schoolsystem.com.cn/"
-        },
-        "ios": {
-          "platform": "ios",
-          "version": "1.0.2",
-          "buildNumber": "187d79fa4cab",
-          "status": "awaiting-signing",
-          "signed": false,
-          "minimumOs": "iOS 16",
-          "architectures": [
-            "arm64"
-          ],
-          "assetName": "",
-          "assetUrl": "",
-          "bytes": 0,
-          "sha256": "",
-          "notes": [],
-          "buildUrl": "https://schoolsystem.com.cn/"
         }
       }
     }

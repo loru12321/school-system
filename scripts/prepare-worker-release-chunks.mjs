@@ -17,14 +17,6 @@ const PLATFORM_SPECS = Object.freeze([
     minimumOs: 'Windows 10 22H2',
     architectures: ['x64'],
     signed: 'unsigned'
-  },
-  {
-    platform: 'android',
-    extension: '.apk',
-    contentType: 'application/vnd.android.package-archive',
-    minimumOs: 'Android 10',
-    architectures: ['arm64-v8a', 'armeabi-v7a', 'x86_64'],
-    signed: 'test-signed'
   }
 ]);
 
@@ -176,28 +168,10 @@ export function prepareWorkerReleaseChunks(options = {}) {
       assetUrl: `${origin}/downloads/${encodeURIComponent(download.filename)}`,
       bytes: download.bytes,
       sha256: download.sha256,
-      notes: download.platform === 'android'
-        ? ['Android APK 本地安装包，使用测试签名。']
-        : ['NSIS 安装器，包含本地系统资源并写入系统卸载入口。'],
+      notes: ['NSIS 安装器，包含本地系统资源并写入系统卸载入口。'],
       buildUrl: `${origin}/`
     }];
   }));
-  platforms.ios = {
-    platform: 'ios',
-    version,
-    buildNumber,
-    status: 'awaiting-signing',
-    signed: false,
-    minimumOs: 'iOS 16',
-    architectures: ['arm64'],
-    assetName: '',
-    assetUrl: '',
-    bytes: 0,
-    sha256: '',
-    notes: [],
-    buildUrl: `${origin}/`
-  };
-
   const downloadMap = { schemaVersion: 1, releaseTag, sourceSha, downloads };
   const releaseCatalog = {
     schemaVersion: 1,

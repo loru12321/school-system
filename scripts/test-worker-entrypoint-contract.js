@@ -48,7 +48,8 @@ assert.strictEqual(wrangler.assets?.directory, './dist', 'Wrangler assets direct
 assert.strictEqual(wrangler.assets?.binding, 'ASSETS', 'Wrangler assets binding must remain ASSETS');
 assert.deepStrictEqual(routePatterns, ['schoolsystem.com.cn/*', 'www.schoolsystem.com.cn/*'], 'Wrangler routes should only target canonical production domains');
 assert.ok(d1Bindings.includes('GATEWAY_DATA_DB'), 'Gateway D1 binding must be present for production auth/data routes');
-assert.strictEqual(wrangler.vars?.CLOUD_SYSTEM_DATA_MODE, 'supabase', 'production system_data mode should remain explicit until D1 cutover is verified');
+assert.ok(d1Bindings.includes('CLOUD_SYSTEM_DATA_DB'), 'system_data D1 binding must be present for primary storage');
+assert.strictEqual(wrangler.vars?.CLOUD_SYSTEM_DATA_MODE, 'primary', 'production system_data mode should use D1 primary storage');
 assert.ok(!('SUPABASE_ORIGIN' in (wrangler.vars || {})), 'Supabase origin must not be hardcoded in Wrangler vars');
 assert.ok(!('SUPABASE_REST_API_KEY' in (wrangler.vars || {})), 'Supabase REST key must not be hardcoded in Wrangler vars');
 assert.strictEqual(scripts['check:cloudflare'], 'npx wrangler deploy --dry-run', 'Cloudflare dry-run should use the canonical Wrangler config');

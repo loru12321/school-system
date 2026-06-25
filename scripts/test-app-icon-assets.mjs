@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -79,77 +79,24 @@ for (let index = 0; index < icoCount; index++) {
 }
 assert.deepEqual(icoSizes, [16, 24, 32, 48, 64, 128, 256], 'ICO must contain the exact required sizes');
 
-const android = [
-  ['mdpi', 48, 108], ['hdpi', 72, 162], ['xhdpi', 96, 216],
-  ['xxhdpi', 144, 324], ['xxxhdpi', 192, 432],
-];
-for (const [density, legacySize, foregroundSize] of android) {
-  await imageInfo(at('android', 'app', 'src', 'main', 'res', `mipmap-${density}`, 'ic_launcher.png'), legacySize, legacySize, { opaque: true });
-  await imageInfo(at('android', 'app', 'src', 'main', 'res', `mipmap-${density}`, 'ic_launcher_round.png'), legacySize, legacySize, { opaque: true });
-  const foreground = at('android', 'app', 'src', 'main', 'res', `mipmap-${density}`, 'ic_launcher_foreground.png');
-  await imageInfo(foreground, foregroundSize, foregroundSize);
-  const { data, info } = await sharp(foreground).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  let minX = info.width; let minY = info.height; let maxX = -1; let maxY = -1;
-  for (let y = 0; y < info.height; y++) {
-    for (let x = 0; x < info.width; x++) {
-      if (data[(y * info.width + x) * info.channels + 3] > 8) {
-        minX = Math.min(minX, x); minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
-      }
-    }
-  }
-  assert.ok(maxX >= minX && maxY >= minY, `${density} adaptive foreground must contain artwork`);
-  const widthFraction = (maxX - minX + 1) / foregroundSize;
-  const heightFraction = (maxY - minY + 1) / foregroundSize;
-  assert.ok(widthFraction >= 0.64 && widthFraction <= 0.68, `${density} artwork width must occupy the intended ~66% safe zone`);
-  assert.ok(heightFraction >= 0.64 && heightFraction <= 0.68, `${density} artwork height must occupy the intended ~66% safe zone`);
-  assert.ok(minX / foregroundSize >= 0.15 && minY / foregroundSize >= 0.15, `${density} foreground must retain transparent top/left margins`);
-  assert.ok((foregroundSize - 1 - maxX) / foregroundSize >= 0.15 && (foregroundSize - 1 - maxY) / foregroundSize >= 0.15, `${density} foreground must retain transparent bottom/right margins`);
-}
-for (const file of ['ic_launcher.xml', 'ic_launcher_round.xml']) {
-  const adaptiveXml = await readFile(at('android', 'app', 'src', 'main', 'res', 'mipmap-anydpi-v26', file), 'utf8');
-  assert.match(adaptiveXml, /<background android:drawable="@color\/ic_launcher_background"\s*\/>/, `${file} background resource`);
-  assert.match(adaptiveXml, /<foreground android:drawable="@mipmap\/ic_launcher_foreground"\s*\/>/, `${file} foreground resource`);
-}
-
 const packageJson = JSON.parse(await readFile(at('package.json'), 'utf8'));
 assert.equal(packageJson.scripts?.['assets:app-icons'], 'node scripts/generate-app-icon-assets.mjs');
 assert.equal(packageJson.scripts?.['test:app-icon-assets'], 'node scripts/test-app-icon-assets.mjs');
 assert.match(packageJson.scripts?.['check:release-fast'] || '', /(?:^|&&\s*)npm run test:app-icon-assets(?:\s*&&|$)/, 'fast release checks must verify committed app icon assets');
 
-const iosProject = at('ios', 'App', 'App.xcodeproj');
-let iosPresent = true;
-try { await stat(iosProject); } catch { iosPresent = false; }
 const status = JSON.parse(await readFile(at('public', 'assets', 'brand', 'app-icon-platform-status.json'), 'utf8'));
-if (iosPresent) {
-  assert.equal(status.ios.state, 'generated');
-  const appIconDir = at('ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset');
-  const contents = JSON.parse(await readFile(path.join(appIconDir, 'Contents.json'), 'utf8'));
-  const universal = contents.images.find((image) => image.platform === 'ios' && image.size === '1024x1024');
-  assert.ok(universal?.filename, 'iOS AppIcon must declare the universal 1024 slot');
-  await imageInfo(path.join(appIconDir, universal.filename), 1024, 1024, { opaque: true });
-} else {
-  assert.equal(status.ios.state, 'ready-for-macos');
-  assert.equal(status.ios.source, 'public/assets/brand/app-icon-1024.png');
-}
+assert.equal(status.web.state, 'generated');
+assert.equal(status.web.directory, 'public/assets/brand');
+assert.equal(status.windows.state, 'generated');
+assert.equal(status.windows.asset, 'desktop/assets/icon.ico');
+assert.equal(status.android, undefined);
+assert.equal(status.ios, undefined);
 
 const generatedFiles = [
   'public/assets/brand/app-icon-source.png',
   ...[16, 24, 32, 48, 64, 128, 256, 512, 1024].map((size) => `public/assets/brand/app-icon-${size}.png`),
   'public/assets/brand/app-icon-platform-status.json',
-  'desktop/assets/icon.ico',
-  ...android.flatMap(([density]) => [
-    `android/app/src/main/res/mipmap-${density}/ic_launcher.png`,
-    `android/app/src/main/res/mipmap-${density}/ic_launcher_round.png`,
-    `android/app/src/main/res/mipmap-${density}/ic_launcher_foreground.png`,
-  ]),
-  'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml',
-  'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml',
-  'android/app/src/main/res/values/ic_launcher_colors.xml',
-  ...(iosPresent ? [
-    'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png',
-    'ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json',
-  ] : []),
+  'desktop/assets/icon.ico'
 ];
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'school-system-app-icons-'));
 try {

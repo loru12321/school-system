@@ -64,7 +64,6 @@ create table if not exists public.system_users (
   school text,
   class_name text,
   teacher_name text,
-  password text,
   password_hash text,
   password_scheme text not null default '',
   password_source text not null default '',

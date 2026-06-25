@@ -4,8 +4,6 @@ import { pathToFileURL } from 'node:url';
 
 export const PLATFORM_RULES = Object.freeze({
   windows: { extension: '.exe', minimumBytes: 50 * 1024 * 1024 },
-  android: { extension: '.apk', minimumBytes: 10 * 1024 * 1024 },
-  ios: { downloadableOnlyWhenStatusReady: true, extension: '.ipa', minimumBytes: 5 * 1024 * 1024 },
 });
 
 const repo = process.env.RELEASE_REPO || 'loru12321/school-system';
@@ -25,13 +23,6 @@ async function request(url, options = {}) {
 
 function addFailure(result, platform, code, message, details = {}) {
   result.failures.push({ platform, code, message, ...details });
-}
-
-function isBlankAsset(asset) {
-  return !String(asset.assetName || '').trim()
-    && !String(asset.assetUrl || '').trim()
-    && !String(asset.sha256 || '').trim()
-    && Number(asset.bytes || 0) === 0;
 }
 
 function isPackageContentType(value) {
@@ -67,19 +58,8 @@ export async function verifyReleaseManifest(manifest, options = {}) {
       continue;
     }
 
-    if (asset.status === 'awaiting-signing') {
-      if (platform !== 'ios') {
-        addFailure(result, platform, 'unexpected-status', `${platform} cannot be awaiting-signing`);
-      } else if (!isBlankAsset(asset)) {
-        addFailure(result, platform, 'unsigned-asset-exposed', 'iOS awaiting-signing must have blank asset fields');
-      } else {
-        platformResult.ok = true;
-      }
-      continue;
-    }
-
     if (asset.status !== 'ready') {
-      addFailure(result, platform, 'not-ready', `${platform} status must be ready${platform === 'ios' ? ' or awaiting-signing' : ''}`);
+      addFailure(result, platform, 'not-ready', `${platform} status must be ready`);
       continue;
     }
 

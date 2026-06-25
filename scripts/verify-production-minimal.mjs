@@ -71,25 +71,9 @@ const releaseManifest = await fetchWithTimeout('/releases/release-manifest.json'
 const releaseCatalog = await releaseManifest.json();
 const currentRelease = releaseCatalog?.releases?.[0] || {};
 const releasePlatforms = currentRelease.platforms || {};
-const androidRelease = releasePlatforms.android || {};
 const windowsRelease = releasePlatforms.windows || {};
 checks.push(['release_manifest_status', releaseManifest.status === 200]);
-checks.push(['release_android_ready', androidRelease.status === 'ready']);
 checks.push(['release_windows_ready', windowsRelease.status === 'ready']);
-
-const apk = await fetchWithTimeout(`/downloads/${androidRelease.assetName || 'school-system-android-beta-20260624-ea9037f.apk'}`, { method: 'HEAD' });
-checks.push(['apk_status', apk.status === 200]);
-let apkBytes = Number(apk.headers.get('content-length') || 0);
-let apkSha = (apk.headers.get('x-content-sha256') || '').toLowerCase();
-if ((!apkBytes || !apkSha) && apk.status === 200) {
-  const apkGet = await fetchWithTimeout(`/downloads/${androidRelease.assetName || 'school-system-android-beta-20260624-ea9037f.apk'}`);
-  const apkBuffer = new Uint8Array(await apkGet.arrayBuffer());
-  const digest = await crypto.subtle.digest('SHA-256', apkBuffer);
-  apkBytes = apkBuffer.byteLength;
-  apkSha = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-checks.push(['apk_size', apkBytes === Number(androidRelease.bytes || 0)]);
-checks.push(['apk_sha', apkSha === String(androidRelease.sha256 || '').toLowerCase()]);
 
 const windowsExe = await fetchWithTimeout(`/downloads/${windowsRelease.assetName || 'school-system-windows-beta-20260624-ea9037f.exe'}`, { method: 'HEAD' });
 checks.push(['windows_status', windowsExe.status === 200]);

@@ -9,9 +9,7 @@ const rootDir = path.resolve(import.meta.dirname, '..');
 const tempRoot = path.resolve(os.tmpdir());
 const repositoryReleaseRoot = path.join(rootDir, 'release-assets');
 const specs = [
-  { platform: 'windows', extension: '.exe' },
-  { platform: 'android', extension: '.apk' },
-  { platform: 'ios', extension: '.ipa', optional: true }
+  { platform: 'windows', extension: '.exe' }
 ];
 
 function resolveFromRoot(value) {

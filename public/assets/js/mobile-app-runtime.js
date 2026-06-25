@@ -1278,7 +1278,7 @@
                         </div>
                         <div class="apk-account-row">
                             <span>${escapeHtml(copy.runtimeEnv)}</span>
-                            <strong>${escapeHtml(isNativeApp ? 'Android APK' : copy.mobileBrowser)}</strong>
+                            <strong>${escapeHtml(copy.mobileBrowser)}</strong>
                         </div>
                     </div>
                 </div>

@@ -47,6 +47,7 @@ const releaseWorkflow = read('.github/workflows/release-apps.yml');
 const betaWorkflow = read('.github/workflows/build-apps-beta.yml');
 const deployWorkflow = read('.github/workflows/deploy-cloudflare.yml');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
+const supabaseBootstrap = read('supabase/sql/000_app_tables_bootstrap.sql');
 const wrangler = parseJson('wrangler.jsonc');
 const headers = read('public/_headers').replace(/\r\n/g, '\n');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
@@ -126,9 +127,12 @@ const guardedItems = [
   () => assertIncludes(performanceWorkflow, 'npm run check:release-fast', 'performance workflow should run fast release guards'),
   () => assertIncludes(performanceWorkflow, 'npm run test:performance-thresholds', 'performance workflow should fail obvious regressions'),
   () => assertIncludes(performanceWorkflow, '[skip performance]', 'performance workflow should support skip marker'),
-  () => assertScriptIncludes(scripts, 'check:android-signing-secrets', 'check-android-signing-secrets.mjs'),
-  () => assertIncludes(betaWorkflow, 'npm run check:android-signing-secrets', 'beta Android workflow should precheck signing secrets'),
-  () => assertIncludes(releaseWorkflow, 'npm run check:android-signing-secrets', 'stable Android workflow should precheck signing secrets'),
+  () => assert.ok(!scripts['check:android-signing-secrets'], 'Android signing precheck should stay removed from package scripts'),
+  () => assert.ok(!betaWorkflow.includes('android') && !betaWorkflow.includes('ios'), 'beta app workflow should stay Windows-only'),
+  () => assert.ok(!releaseWorkflow.includes('android') && !releaseWorkflow.includes('ios'), 'stable app workflow should stay Windows-only'),
+  () => assert.strictEqual(wrangler.vars?.CLOUD_SYSTEM_DATA_MODE, 'primary', 'system_data should stay on D1 primary storage'),
+  () => assert.ok((wrangler.d1_databases || []).some((db) => db.binding === 'CLOUD_SYSTEM_DATA_DB'), 'system_data D1 binding should stay configured'),
+  () => assert.ok(!/\bpassword\s+text\b/i.test(supabaseBootstrap), 'Supabase bootstrap should not recreate plaintext account passwords'),
   () => assert.ok(!readme.includes('C:\\Users\\'), 'README should remain free of local paths'),
   () => assertIncludes(headers, 'max-age=31536000, immutable', 'versioned runtime JS should use immutable caching'),
   () => assertIncludes(headers, '/sw.js', 'service worker should keep a dedicated revalidation header'),

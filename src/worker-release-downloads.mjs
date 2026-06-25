@@ -1,13 +1,12 @@
 const RELEASE_MAP_PATH = '/releases/download-map.json';
 const DOWNLOAD_PREFIX = '/downloads/';
-const CHUNK_PATTERN = /^packages\/[A-Za-z0-9._-]+\/(windows|android)\/part-\d{4}$/;
+const CHUNK_PATTERN = /^packages\/[A-Za-z0-9._-]+\/windows\/part-\d{4}$/;
 const TRUSTED_EXTERNAL_CHUNK_PATTERN = /^https:\/\/api\.github\.com\/repos\/loru12321\/school-system\/releases\/assets\/\d+$/;
 const TRUSTED_GITHUB_ASSET_API_PATTERN = TRUSTED_EXTERNAL_CHUNK_PATTERN;
-const FILENAME_PATTERN = /^school-system-(windows|android)-[A-Za-z0-9._-]+\.(exe|apk)$/;
+const FILENAME_PATTERN = /^school-system-windows-[A-Za-z0-9._-]+\.exe$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const CONTENT_TYPES = new Set([
-  'application/vnd.microsoft.portable-executable',
-  'application/vnd.android.package-archive'
+  'application/vnd.microsoft.portable-executable'
 ]);
 
 function plainResponse(status, body, extraHeaders = {}) {
@@ -196,7 +195,7 @@ export async function handleReleaseDownload(request, env) {
   const filename = parseFilename(request);
   if (!filename) {
     const pathname = new URL(request.url).pathname;
-    if (/\.(?:exe|apk)$/i.test(pathname)) return plainResponse(404, 'Not Found');
+    if (/\.exe$/i.test(pathname)) return plainResponse(404, 'Not Found');
     return null;
   }
   const loaded = await loadDownloadEntry(request, env, filename);

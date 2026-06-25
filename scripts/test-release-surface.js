@@ -90,7 +90,7 @@ assert.ok(scripts.build && scripts.build.includes('prune-dist-assets.mjs'), 'bui
 assert.ok(scripts.build && scripts.build.includes('optimize-dist-html.mjs'), 'build script must optimize dist HTML');
 assert.ok(scripts.build && scripts.build.includes('inline-scripts.mjs'), 'build script must inline the release HTML script surface');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-surface'), 'fast release check must include release surface guard');
-['test:release-manifest', 'test:desktop-package-contract', 'test:capacitor-package-contract', 'test:beta-release-workflow'].forEach((scriptName) => {
+['test:release-manifest', 'test:desktop-package-contract', 'test:windows-installer-contract', 'test:beta-release-workflow'].forEach((scriptName) => {
   assert.ok(scripts[scriptName], `${scriptName} must be exposed as a release contract`);
   assert.ok(scripts['check:release-fast'].includes(scriptName), `fast release check must include ${scriptName}`);
 });

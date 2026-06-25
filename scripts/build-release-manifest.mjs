@@ -8,9 +8,7 @@ const rootDir = path.resolve(import.meta.dirname, '..');
 const DAY_MS = 86400000;
 const tempRoot = path.resolve(os.tmpdir());
 const PLATFORM_SPECS = Object.freeze({
-  windows: { extension: '.exe', minimumOs: 'Windows 10 22H2', architectures: ['x64'], signed: 'unsigned' },
-  android: { extension: '.apk', minimumOs: 'Android 10', architectures: ['arm64-v8a', 'armeabi-v7a', 'x86_64'], signed: 'test-signed' },
-  ios: { extension: '.ipa', minimumOs: 'iOS 16', architectures: ['arm64'], signed: false }
+  windows: { extension: '.exe', minimumOs: 'Windows 10 22H2', architectures: ['x64'], signed: 'unsigned' }
 });
 
 function required(value, name) {
@@ -152,7 +150,7 @@ export function buildReleaseManifest(options = {}) {
   for (const [platform, spec] of Object.entries(PLATFORM_SPECS)) {
     const matches = names.filter((name) => path.extname(name).toLowerCase() === spec.extension);
     if (matches.length > 1) throw new Error(`Multiple ${platform} assets with extension ${spec.extension} found in ${assetDir}`);
-    if (options.requireCoreAssets && platform !== 'ios' && matches.length !== 1) {
+    if (options.requireCoreAssets && matches.length !== 1) {
       throw new Error(`Exactly one ${platform} ${spec.extension} asset is required`);
     }
     const assetName = matches[0];
@@ -161,7 +159,7 @@ export function buildReleaseManifest(options = {}) {
         platform,
         version,
         buildNumber,
-        status: platform === 'ios' ? 'awaiting-signing' : 'unavailable',
+        status: 'unavailable',
         signed: spec.signed,
         minimumOs: spec.minimumOs,
         architectures: [...spec.architectures],

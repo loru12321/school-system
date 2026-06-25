@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
   "source": "public/assets/brand/app-icon-source.png",
-  "ios": {
+  "web": {
     "state": "generated",
-    "assetSet": "ios/App/App/Assets.xcassets/AppIcon.appiconset"
+    "directory": "public/assets/brand"
+  },
+  "windows": {
+    "state": "generated",
+    "asset": "desktop/assets/icon.ico"
   }
 }
