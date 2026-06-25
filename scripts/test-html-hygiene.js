@@ -38,6 +38,7 @@ assert.ok(html.includes('./assets/css/product-redesign.css?v=20260617-table-anch
 assert.ok(html.indexOf('layout-refinement.css') < html.indexOf('product-redesign.css'), 'product redesign should override layout refinement styles');
 assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker runtime version should be generated from runtime content');
 assert.ok(html.includes(`var refreshVersion = '${serviceWorkerVersion}';`), 'early runtime refresh version should match the service worker runtime');
+assert.ok(html.includes(`runtime-loader-runtime.js?v=${serviceWorkerVersion}`), 'runtime loader query version should match the generated runtime version');
 assert.ok(html.includes(`boot-runtime.js?v=${serviceWorkerVersion}`), 'boot runtime query version should match the generated runtime version');
 assert.ok(html.includes(`service-worker-runtime.js?v=${serviceWorkerVersion}`), 'service worker runtime query version should match the generated runtime version');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');

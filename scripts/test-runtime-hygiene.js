@@ -39,6 +39,7 @@ const sourceFiles = [
     'src/worker-dummy.js',
     'public/assets/js/app.js',
     'public/assets/js/boot-runtime.js',
+    'public/assets/js/runtime-loader-runtime.js',
     'public/assets/js/shell-runtime.js',
     'public/assets/js/module-entry-runtime.js',
     'public/assets/js/permission-policy-runtime.js',
@@ -48,6 +49,7 @@ const sourceFiles = [
 
 const quietRuntimeFiles = [
     'public/assets/js/boot-runtime.js',
+    'public/assets/js/runtime-loader-runtime.js',
     'public/assets/js/data-cloud-runtime.js',
     'public/assets/js/history-compare-runtime.js',
     'public/assets/js/student-compare-generate-runtime.js',

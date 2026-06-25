@@ -37,6 +37,7 @@ function normalizeVersionTokens(filePath, content) {
   if (relative === 'src/index.html') {
     normalized = normalized
       .replace(/var refreshVersion = '[^']+';/g, "var refreshVersion = '__RUNTIME_VERSION__';")
+      .replace(/runtime-loader-runtime\.js\?v=[^"']+/g, 'runtime-loader-runtime.js?v=__RUNTIME_VERSION__')
       .replace(/boot-runtime\.js\?v=[^"']+/g, 'boot-runtime.js?v=__RUNTIME_VERSION__')
       .replace(/service-worker-runtime\.js\?v=[^"']+/g, 'service-worker-runtime.js?v=__RUNTIME_VERSION__');
   }
@@ -69,6 +70,7 @@ function updateRuntimeVersions(version) {
       update(content) {
         return content
           .replace(/var refreshVersion = '[^']+';/g, `var refreshVersion = '${version}';`)
+          .replace(/runtime-loader-runtime\.js\?v=[^"']+/g, `runtime-loader-runtime.js?v=${version}`)
           .replace(/boot-runtime\.js\?v=[^"']+/g, `boot-runtime.js?v=${version}`)
           .replace(/service-worker-runtime\.js\?v=[^"']+/g, `service-worker-runtime.js?v=${version}`);
       }

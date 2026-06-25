@@ -45,6 +45,7 @@ const compareExamSyncRuntimePath = path.resolve(__dirname, '../public/assets/js/
 const townSubmoduleCompareStateRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-state-runtime.js');
 const townSubmoduleCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-runtime.js');
 const bootRuntimePath = path.resolve(__dirname, '../public/assets/js/boot-runtime.js');
+const runtimeLoaderRuntimePath = path.resolve(__dirname, '../public/assets/js/runtime-loader-runtime.js');
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
@@ -120,6 +121,7 @@ assert.ok(fs.existsSync(compareExamSyncRuntimePath), 'compare-exam-sync-runtime.
 assert.ok(fs.existsSync(townSubmoduleCompareStateRuntimePath), 'town-submodule-compare-state-runtime.js should exist');
 assert.ok(fs.existsSync(townSubmoduleCompareRuntimePath), 'town-submodule-compare-runtime.js should exist');
 assert.ok(fs.existsSync(bootRuntimePath), 'boot-runtime.js should exist');
+assert.ok(fs.existsSync(runtimeLoaderRuntimePath), 'runtime-loader-runtime.js should exist');
 assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js should exist');
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
@@ -153,7 +155,9 @@ assert.ok(fs.existsSync(macroCompareResultRuntimePath), 'macro-compare-result-ru
 assert.ok(fs.existsSync(macroCompareCloudRuntimePath), 'macro-compare-cloud-runtime.js should exist');
 
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
-const bootRuntime = fs.readFileSync(bootRuntimePath, 'utf8');
+const bootRuntimeSource = fs.readFileSync(bootRuntimePath, 'utf8');
+const runtimeLoaderRuntime = fs.readFileSync(runtimeLoaderRuntimePath, 'utf8');
+const bootRuntime = `${bootRuntimeSource}\n${runtimeLoaderRuntime}`;
 const shellRuntime = fs.readFileSync(shellRuntimePath, 'utf8');
 const shellPolishRuntime = fs.readFileSync(shellPolishRuntimePath, 'utf8');
 const schoolNormalizationRuntime = fs.readFileSync(schoolNormalizationRuntimePath, 'utf8');
@@ -271,6 +275,7 @@ const predictiveRef = './assets/js/predictive-simulation-lab.js';
 const metaverseRef = './assets/js/metaverse-collab-space.js';
 const emotionalRef = './assets/js/emotional-ai-monitor.js';
 const bootRuntimeRef = './assets/js/boot-runtime.js';
+const runtimeLoaderRuntimeRef = './assets/js/runtime-loader-runtime.js';
 const tablerIconsRef = '/assets/vendor/tabler-icons/tabler-icons.min.css';
 const supabaseVendorRef = './assets/vendor/supabase/supabase.min.js';
 const lzStringVendorRef = './assets/vendor/lz-string/lz-string.min.js';
@@ -326,6 +331,8 @@ assert.ok(!deferredVendorManifest.includes(tippyVendorRef), 'tippy should not be
 assert.ok(!deferredVendorManifest.includes(simplebarVendorRef), 'simplebar should not be part of the generic post-boot vendor batch');
 assert.ok(bootRuntime.includes('window.__BOOT_SCRIPT_REGISTRY__'), 'boot-runtime.js should cache boot script lookup state');
 assert.ok(bootRuntime.includes('function isBootScriptLoaded'), 'boot-runtime.js should reuse cached script load checks');
+assert.ok(!bootRuntimeSource.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-runtime.js should not carry the optional runtime skill manifest');
+assert.ok(runtimeLoaderRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'runtime-loader-runtime.js should declare the optional runtime skill manifest');
 assert.ok(bootRuntime.includes("'shell-polish': bootSkill('idle', 'demand'"), 'shell polish should stay behind the on-demand runtime loader');
 assert.ok(bootRuntime.includes('window.ensureShellPolishRuntimeLoaded'), 'shell polish should still expose an explicit loader');
 const authStateIndex = normalizedModuleManifest.indexOf(authStateRef);
@@ -377,6 +384,7 @@ const rankingDataServiceIndex = normalizedModuleManifest.indexOf(rankingDataServ
 const studentJumpIndex = normalizedModuleManifest.indexOf(studentJumpRef);
 const appIndex = normalizedModuleManifest.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
+const runtimeLoaderRuntimeIndex = indexHtml.indexOf(runtimeLoaderRuntimeRef);
 const popperVendorIndex = bootRuntimeReferenceIndex(popperVendorRef);
 const tippyVendorIndex = bootRuntimeReferenceIndex(tippyVendorRef);
 const accountAdminIndex = indexHtml.indexOf(accountAdminRef);
@@ -385,6 +393,8 @@ const perfMobileIndex = indexHtml.indexOf(perfMobileRef);
 
 assert.ok(authStateIndex >= 0, 'index.html should load auth-state-runtime.js');
 assert.ok(bootRuntimeIndex >= 0, 'index.html should load boot-runtime.js');
+assert.ok(runtimeLoaderRuntimeIndex >= 0, 'index.html should load runtime-loader-runtime.js');
+assert.ok(runtimeLoaderRuntimeIndex < bootRuntimeIndex, 'runtime-loader-runtime.js should load before boot-runtime.js');
 assert.ok(workspaceStateIndex >= 0, 'index.html should load workspace-state-runtime.js');
 assert.ok(examStateIndex >= 0, 'index.html should load exam-state-runtime.js');
 assert.ok(schoolStateIndex >= 0, 'index.html should load school-state-runtime.js');
@@ -911,6 +921,9 @@ assert.ok(!bootRuntime.includes('./assets/js/mobile-experience-runtime.js'), 'mo
 const bootScriptTag = findScriptTag(indexHtml, bootRuntimeRef);
 assert.ok(bootScriptTag, 'index.html should contain a script tag for boot-runtime.js');
 assert.ok(/\sdefer(\s|>|=)/i.test(bootScriptTag), 'boot-runtime.js should load with defer');
+const runtimeLoaderScriptTag = findScriptTag(indexHtml, runtimeLoaderRuntimeRef);
+assert.ok(runtimeLoaderScriptTag, 'index.html should contain a script tag for runtime-loader-runtime.js');
+assert.ok(/\sdefer(\s|>|=)/i.test(runtimeLoaderScriptTag), 'runtime-loader-runtime.js should load with defer');
 const lzScriptTag = findScriptTag(indexHtml, lzStringVendorRef);
 assert.ok(lzScriptTag, 'index.html should contain a script tag for lz-string.min.js');
 assert.ok(/\sdefer(\s|>|=)/i.test(lzScriptTag), 'lz-string.min.js should load with defer');
@@ -1038,6 +1051,7 @@ assert.ok(workspaceStateIndex < cloudIndex, 'workspace-state-runtime.js must loa
 assert.ok(workspaceStateIndex < cloudWorkspaceIndex, 'workspace-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(workspaceStateIndex < appIndex, 'workspace-state-runtime.js must load before app.js');
 assert.ok(bootRuntimeIndex >= 0, 'index.html should load boot-runtime.js before dynamic modules are requested');
+assert.ok(runtimeLoaderRuntimeIndex < bootRuntimeIndex, 'index.html should load runtime-loader-runtime.js before boot-runtime.js');
 assert.ok(authStateIndex < cloudWorkspaceIndex, 'auth-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app.js');
 assert.ok(shellRuntimeIndex < appIndex, 'shell-runtime.js must load before app.js');

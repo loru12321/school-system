@@ -49,6 +49,8 @@ const performanceWorkflow = read('.github/workflows/performance-trend.yml');
 const wrangler = parseJson('wrangler.jsonc');
 const headers = read('public/_headers').replace(/\r\n/g, '\n');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
+const runtimeLoaderRuntime = read('public/assets/js/runtime-loader-runtime.js');
+const bootRuntimeSurface = `${bootRuntime}\n${runtimeLoaderRuntime}`;
 const appRuntime = read('public/assets/js/app.js');
 const dialogRuntimeContract = read('scripts/test-dialog-runtime-contract.js');
 const sw = read('public/sw.js');
@@ -123,11 +125,12 @@ const guardedItems = [
   () => assert.ok(!readme.includes('C:\\Users\\'), 'README should remain free of local paths'),
   () => assertIncludes(headers, 'max-age=31536000, immutable', 'versioned runtime JS should use immutable caching'),
   () => assertIncludes(headers, '/sw.js', 'service worker should keep a dedicated revalidation header'),
-  () => assertIncludes(bootRuntime, 'ensureXlsxVendorLoaded', 'boot runtime should lazy-load XLSX'),
+  () => assertIncludes(runtimeLoaderRuntime, 'ensureXlsxVendorLoaded', 'runtime loader should lazy-load XLSX'),
   () => assertIncludes(bootRuntime, 'bindBootLoginActions', 'boot runtime should bind first-screen login actions before app modules load'),
   () => assertIncludes(bootRuntime, '[data-login-submit]', 'boot runtime should bind data-login-submit buttons'),
   () => assert.ok(fileSize('public/assets/js/app.js') <= 910_000, 'public app.js should stay within tightened budget'),
-  () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 131_000, 'boot runtime should stay within tightened budget'),
+  () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 85_000, 'boot runtime should stay within tightened budget'),
+  () => assert.ok(fileSize('public/assets/js/runtime-loader-runtime.js') <= 58_000, 'runtime loader should stay within its split budget'),
   () => assertIncludes(appRuntime, 'isHostedGatewayUrl', 'app runtime should support hosted gateway URLs'),
   () => assertIncludes(appRuntime, 'prompt: async', 'app runtime should expose shared prompt modal API'),
   () => assertIncludes(appRuntime, 'confirm: async', 'app runtime should expose shared confirm modal API'),
@@ -147,7 +150,8 @@ const guardedItems = [
       ['public/assets/js/app.js', appRuntime],
       ['public/assets/js/auth-state-runtime.js', authState],
       ['public/assets/js/account-admin-runtime.js', accountAdmin],
-      ['public/assets/js/boot-runtime.js', bootRuntime]
+      ['public/assets/js/boot-runtime.js', bootRuntime],
+      ['public/assets/js/runtime-loader-runtime.js', runtimeLoaderRuntime]
     ].forEach(([file, text]) => assert.ok(!text.includes(token), `${file} should not expose ${token}`));
   }),
   () => assertIncludes(appRuntime, 'createManagedTemporaryPassword', 'account generation should use temporary passwords'),
@@ -157,7 +161,7 @@ const guardedItems = [
   () => assertIncludes(gateway, "from './worker-http-helpers.js'", 'D1 gateway should use shared HTTP helpers'),
   () => assertIncludes(workerHelpers, 'DEFAULT_ALLOWED_CORS_ORIGINS', 'shared worker helpers should own CORS origins'),
   () => assertIncludes(workerHelpers, 'HOP_BY_HOP_HEADERS', 'shared worker helpers should own hop-by-hop header list'),
-  () => assert.ok(!bootRuntime.includes('console.log('), 'boot runtime should not emit production console.log noise'),
+  () => assert.ok(!bootRuntimeSurface.includes('console.log('), 'boot runtime surface should not emit production console.log noise'),
   () => assert.ok(!read('public/assets/js/data-cloud-runtime.js').includes('console.log('), 'data cloud runtime should not emit production console.log noise')
 ];
 

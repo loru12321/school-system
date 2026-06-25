@@ -20,12 +20,14 @@ for (const [relativePath, maxBytes] of Object.entries(budgets)) {
 }
 
 const bootRuntime = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
-assert.ok(bootRuntime.includes('ensureXlsxVendorLoaded'), 'XLSX should stay behind the lazy loader');
-assert.ok(bootRuntime.includes('ensureAlasqlVendorLoaded'), 'AlaSQL should stay behind the lazy loader');
+const runtimeLoaderRuntime = fs.readFileSync(path.join(root, 'public/assets/js/runtime-loader-runtime.js'), 'utf8');
+const runtimeSurface = `${bootRuntime}\n${runtimeLoaderRuntime}`;
+assert.ok(runtimeLoaderRuntime.includes('ensureXlsxVendorLoaded'), 'XLSX should stay behind the lazy loader');
+assert.ok(runtimeLoaderRuntime.includes('ensureAlasqlVendorLoaded'), 'AlaSQL should stay behind the lazy loader');
 const bootVendorBlock = (bootRuntime.match(/BOOT_VENDOR_MODULES\s*=\s*\[([\s\S]*?)\];/) || [])[1] || '';
 assert.ok(!bootVendorBlock.includes('xlsx.full.min.js'), 'XLSX must not be a boot vendor');
-const shellPolishFactoryWarmup = (bootRuntime.match(/'shell-polish':\s*bootSkill\(\s*['"][^'"]+['"]\s*,\s*['"]([^'"]+)['"]/) || [])[1] || '';
-const shellPolishSkill = (bootRuntime.match(/'shell-polish':\s*\{([\s\S]*?)\n\s*\}/) || [])[1] || '';
+const shellPolishFactoryWarmup = (runtimeSurface.match(/'shell-polish':\s*bootSkill\(\s*['"][^'"]+['"]\s*,\s*['"]([^'"]+)['"]/) || [])[1] || '';
+const shellPolishSkill = (runtimeSurface.match(/'shell-polish':\s*\{([\s\S]*?)\n\s*\}/) || [])[1] || '';
 assert.ok(
   shellPolishFactoryWarmup === 'demand'
     || shellPolishSkill.includes("warmup: 'demand'")

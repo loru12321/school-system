@@ -30,6 +30,7 @@ assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'runtime version sh
 assert.strictEqual(bootVersion, serviceWorkerVersion, 'boot runtime fallback should match generated runtime version');
 assert.strictEqual(refreshVersion, serviceWorkerVersion, 'early refresh guard should match generated runtime version');
 assert.strictEqual(cacheVersion, `school-system-${serviceWorkerVersion}`, 'service worker cache should follow generated runtime version');
+assert.ok(srcIndex.includes(`runtime-loader-runtime.js?v=${serviceWorkerVersion}`), 'runtime loader script tag should use generated runtime version');
 assert.ok(srcIndex.includes(`boot-runtime.js?v=${serviceWorkerVersion}`), 'boot runtime script tag should use generated runtime version');
 assert.ok(srcIndex.includes(`service-worker-runtime.js?v=${serviceWorkerVersion}`), 'service worker runtime script tag should use generated runtime version');
 assert.ok(packageJson.scripts.build.includes('scripts/build/update-runtime-cache-version.mjs'), 'build script should update runtime versions before bundling');

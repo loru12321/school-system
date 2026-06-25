@@ -64,7 +64,8 @@ assert.strictEqual(scripts['check:syntax'], 'node scripts/test-syntax.js', 'synt
 
 const budgets = {
   publicAppJs: 930_000,
-  publicBootJs: 135_000,
+  publicBootJs: 85_000,
+  publicRuntimeLoaderJs: 58_000,
   publicCountyAnalysisJs: 125_000,
   publicProgressAnalysisJs: 95_000,
   publicTeacherAnalysisCoreJs: 85_000,
@@ -74,6 +75,7 @@ const budgets = {
 const actual = {
   publicAppJs: size('public/assets/js/app.js'),
   publicBootJs: size('public/assets/js/boot-runtime.js'),
+  publicRuntimeLoaderJs: size('public/assets/js/runtime-loader-runtime.js'),
   publicCountyAnalysisJs: size('public/assets/js/county-analysis-runtime.js'),
   publicProgressAnalysisJs: size('public/assets/js/progress-analysis-runtime.js'),
   publicTeacherAnalysisCoreJs: size('public/assets/js/teacher-analysis-core-runtime.js'),

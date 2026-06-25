@@ -7,6 +7,7 @@ const distIndexPath = path.join(projectRoot, 'dist', 'index.html');
 const ltHtmlPath = path.join(projectRoot, 'lt.html');
 const publicAppPath = path.join(projectRoot, 'public', 'assets', 'js', 'app.js');
 const publicBootPath = path.join(projectRoot, 'public', 'assets', 'js', 'boot-runtime.js');
+const publicRuntimeLoaderPath = path.join(projectRoot, 'public', 'assets', 'js', 'runtime-loader-runtime.js');
 const distAppPath = path.join(projectRoot, 'dist', 'assets', 'js', 'app.js');
 const distReportRenderPath = path.join(projectRoot, 'dist', 'assets', 'js', 'report-render-runtime.js');
 const distTeacherAnalysisPath = path.join(projectRoot, 'dist', 'assets', 'js', 'teacher-analysis-main-runtime.js');
@@ -31,8 +32,9 @@ const budgets = {
     distAppCss: 625_000,
     ltHtml: 3_900_000,
     publicAppJs: 910_000,
-    // Boot auth now includes login cohort handoff before core modules load.
-    publicBootJs: 133_000,
+    // Keep first-screen boot focused; optional runtime manifest/loaders live in runtime-loader-runtime.js.
+    publicBootJs: 85_000,
+    publicRuntimeLoaderJs: 58_000,
     // Current minified app bundle baseline after runtime splits, cache guards,
     // and the product redesign CSS layer being accounted in the singlefile build.
     distAppJs: 585_000,
@@ -48,6 +50,7 @@ const actual = {
     ltHtml: getSize(ltHtmlPath),
     publicAppJs: getSize(publicAppPath),
     publicBootJs: getSize(publicBootPath),
+    publicRuntimeLoaderJs: getSize(publicRuntimeLoaderPath),
     distAppJs: getSize(distAppPath),
     distReportRenderJs: getSize(distReportRenderPath),
     distTeacherAnalysisJs: getSize(distTeacherAnalysisPath)
