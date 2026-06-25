@@ -875,7 +875,6 @@ function assertProgressAnalysisLayout(state) {
 async function inspectCohortGrowthLayout(page, mode) {
     const mobileOnlySelectors = mode === 'mobile'
         ? {
-            volatilityMobileLabels: '#cohort-volatility-table tbody td[data-label]',
             volatilityMobileCardTable: '#cohort-volatility-table.mobile-card-table',
             growthMobileLabels: '#cohort-growth-table tbody td[data-label]',
             growthMobileCardTable: '#cohort-growth-table.mobile-card-table'

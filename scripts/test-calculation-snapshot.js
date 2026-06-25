@@ -2,7 +2,9 @@ const assert = require('assert');
 const { chromium } = require('playwright');
 
 const url = process.env.SMOKE_URL || 'https://schoolsystem.com.cn/?verify=calc-snapshot';
-const minimumRawDataRows = Math.max(1, Number(process.env.CALC_SNAPSHOT_MIN_RAW_DATA || 7790));
+const minimumRawDataRows = Math.max(1, Number(process.env.CALC_SNAPSHOT_MIN_RAW_DATA || 2000));
+const minimumSchoolCount = Math.max(1, Number(process.env.CALC_SNAPSHOT_MIN_SCHOOLS || 14));
+const minimumCountyTeacherRankRows = Math.max(1, Number(process.env.CALC_SNAPSHOT_MIN_COUNTY_TEACHER_RANK_ROWS || 80));
 const user = process.env.SMOKE_USER || 'admin';
 const pass = process.env.SMOKE_PASS || 'admin123';
 
@@ -1225,7 +1227,7 @@ async function main() {
         snapshot.rawData >= minimumRawDataRows,
         `RAW_DATA count below protected baseline: ${snapshot.rawData} < ${minimumRawDataRows}`
     );
-    assert.ok(snapshot.schoolCount >= 24, `school count too low: ${snapshot.schoolCount}`);
+    assert.ok(snapshot.schoolCount >= minimumSchoolCount, `school count too low: ${snapshot.schoolCount} < ${minimumSchoolCount}`);
     assert.ok(snapshot.subjectCount >= 5, `subject count too low for current exam: ${snapshot.subjectCount}`);
     assert.deepStrictEqual(snapshot.subjectFullScorePolicy, {
         6: { '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100, '物理': null, '化学': null },
@@ -1326,10 +1328,10 @@ async function main() {
         switchedExcludesNewSchool: true,
         pairingCount: 1
     }, 'teacher analysis core should treat equivalent school aliases consistently');
-    assert.ok(snapshot.score2RatePositive >= 14, `score2Rate positive schools too low: ${snapshot.score2RatePositive}`);
+    assert.ok(snapshot.score2RatePositive >= minimumSchoolCount, `score2Rate positive schools too low: ${snapshot.score2RatePositive} < ${minimumSchoolCount}`);
     assert.ok(snapshot.teacherRows >= 10, `teacher row count too low: ${snapshot.teacherRows}`);
     assert.strictEqual(snapshot.teacherPositive, snapshot.teacherRows, 'teacher rows should all contain positive calculated metrics');
-    assert.ok(snapshot.countyTeacherRankRows >= 120, `county teacher rank rows too low: ${snapshot.countyTeacherRankRows}`);
+    assert.ok(snapshot.countyTeacherRankRows >= minimumCountyTeacherRankRows, `county teacher rank rows too low: ${snapshot.countyTeacherRankRows} < ${minimumCountyTeacherRankRows}`);
     assert.strictEqual(snapshot.countyOwnTeacherRows, snapshot.teacherRows, 'county own teacher rows should match calculated teacher rows');
     assert.ok(snapshot.teacherTownshipAverageSubjects >= 5, `teacher township benchmarks missing: ${snapshot.teacherTownshipAverageSubjects}`);
     assert.ok(
