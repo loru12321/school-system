@@ -49,7 +49,7 @@ jobs:
         run: npm run check:release-fast
 
       - name: Install Playwright browser dependencies
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Refresh web package
         run: npm run build
