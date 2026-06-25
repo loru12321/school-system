@@ -49,7 +49,7 @@ jobs:
         run: npm run check:release-fast
 
       - name: Install Playwright browser dependencies
-        timeout-minutes: 6
+        timeout-minutes: 15
         run: npx playwright install --only-shell chromium
 
       - name: Refresh web package

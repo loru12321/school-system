@@ -63,7 +63,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browser dependencies
-        timeout-minutes: 6
+        timeout-minutes: 15
         run: npx playwright install --only-shell chromium
 
       - name: Build web package
@@ -93,7 +93,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browser dependencies
-        timeout-minutes: 6
+        timeout-minutes: 15
         run: npx playwright install --only-shell chromium
 
       - name: Run root validation
