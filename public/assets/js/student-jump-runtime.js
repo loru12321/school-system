@@ -197,7 +197,7 @@
     function openStudentSubjectDialog(name, school, cls, subject, context = {}) {
         const targetStudent = findStudentForJump(name, school, cls);
         if (!targetStudent) {
-            alert(`未找到该学生：${name || ''}`);
+            window.UI.alert(`未找到该学生：${name || ''}`);
             return;
         }
         ensureStudentSubjectDialogStyle();
@@ -240,7 +240,7 @@
         if (typeof window.closeSpotlight === 'function') window.closeSpotlight();
         const targetStudent = findStudentForJump(name, school, cls);
         if (!targetStudent) {
-            alert(`未找到该学生：${name || ''}`);
+            window.UI.alert(`未找到该学生：${name || ''}`);
             return;
         }
         if (typeof window.switchTab === 'function') window.switchTab('report-generator');

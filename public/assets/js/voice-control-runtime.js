@@ -28,7 +28,7 @@ const VoiceControl = {
 
     init: function () {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert("您的浏览器不支持语音识别，请使用 Chrome 或 Edge 浏览器。");
+            window.UI.alert("您的浏览器不支持语音识别，请使用 Chrome 或 Edge 浏览器。");
             document.getElementById('voice-fab').style.display = 'none';
             return;
         }
@@ -91,7 +91,7 @@ const VoiceControl = {
         this.recognition.onerror = (event) => {
             console.error("语音识别错误", event.error);
             if (event.error === 'not-allowed') {
-                alert("无法访问麦克风，请检查浏览器权限。");
+                window.UI.alert("无法访问麦克风，请检查浏览器权限。");
                 this.stop();
             }
         };

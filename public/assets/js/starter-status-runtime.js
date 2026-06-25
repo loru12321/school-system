@@ -137,7 +137,7 @@ function manualBackup() {
 async function manualRestore() {
     const key = readWorkspaceProjectKey() || 'autosave_backup';
     const data = await DB.get(key);
-    if (!data) return alert('未找到备份数据');
+    if (!data) return window.UI.alert('未找到备份数据');
     if (typeof applySnapshotPayload === 'function') {
         applySnapshotPayload(data);
     } else {

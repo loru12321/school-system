@@ -48,13 +48,12 @@ function setThemeColor(color) {
 function handleLogoUpload(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 500 * 1024) return alert("Logo 图片过大，请使用 500KB 以内的图片");
+    if (file.size > 500 * 1024) return window.UI.alert("Logo 图片过大，请使用 500KB 以内的图片");
 
     const reader = new FileReader();
     reader.onload = function (e) {
         currentSkin.logoBase64 = e.target.result;
         applyLogo(currentSkin.logoBase64);
-        // alert("Logo 上传成功！点击下方保存按钮生效。");
     };
     reader.readAsDataURL(file);
 }
@@ -87,8 +86,8 @@ function updateTitlePreview(val) {
 function saveSkinSettings() {
     localStorage.setItem(SKIN_CONFIG_KEY, JSON.stringify(currentSkin));
     document.getElementById('skin-modal').style.display = 'none';
-    if (window.UI) window.UI.toast("✅ 外观设置已保存", "success");
-    else alert("设置已保存");
+    if (window.UI?.toast) window.UI.toast("✅ 外观设置已保存", "success");
+    else if (window.UI?.alert) window.UI.alert("设置已保存");
 }
 
 // 6. 初始化加载设置

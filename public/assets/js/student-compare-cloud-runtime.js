@@ -478,12 +478,12 @@
     async function saveStudentCompareToCloud() {
         const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
         window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
-        if (!window.STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成学生多期对比结果');
-        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接，无法保存');
+        if (!window.STUDENT_MULTI_PERIOD_COMPARE_CACHE) return window.UI.alert('请先生成学生多期对比结果');
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接，无法保存');
 
         const user = Auth.currentUser;
         if (!user || !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
-            return alert('⛔ 权限不足：只有管理员、教务主任或级部主任可以保存对比结果到云端');
+            return window.UI.alert('⛔ 权限不足：只有管理员、教务主任或级部主任可以保存对比结果到云端');
         }
 
         const { school, examIds, periodCount, studentsCompareData, subjects } = window.STUDENT_MULTI_PERIOD_COMPARE_CACHE;
@@ -527,7 +527,7 @@
         } catch (e) {
             if (window.UI) UI.loading(false);
             console.error('保存失败:', e);
-            alert('保存失败: ' + e.message);
+            window.UI.alert('保存失败: ' + e.message);
         }
     }
 
@@ -673,7 +673,7 @@
     }
 
     async function viewCloudStudentCompares(selfOnly = false) {
-        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
         try {
             if (window.UI) UI.loading(true, '☁️ 正在加载云端对比列表...');
 
@@ -722,9 +722,9 @@
                             width: 500
                         });
                     }
-                    return alert(`☁️ 云端暂无${readableName}的对比数据\n\n建议联系班主任或教务老师生成对比数据。`);
+                    return window.UI.alert(`☁️ 云端暂无${readableName}的对比数据\n\n建议联系班主任或教务老师生成对比数据。`);
                 }
-                return alert('☁️ 云端暂无已保存的对比结果');
+                return window.UI.alert('☁️ 云端暂无已保存的对比结果');
             }
 
             if (selfOnly && data.length === 1) return loadCloudStudentCompareForCurrentStudent(data[0].key);
@@ -764,13 +764,13 @@
         } catch (e) {
             if (window.UI) UI.loading(false);
             console.error('加载失败:', e);
-            alert('加载失败: ' + e.message);
+            window.UI.alert('加载失败: ' + e.message);
         }
     }
 
     async function loadCloudStudentCompare(key, selfOnly = false) {
         sanitizeCloudCompareFocusAndModal();
-        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
         try {
             if (window.UI) UI.loading(true, '☁️ 正在加载云端对比详情...');
             const { data, error } = await selectCloudStudentCompareRows({
@@ -810,7 +810,7 @@
                 picked = pickSelfStudentFromCloudRows(STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData, target);
                 if (!picked?.student) {
                     if (window.UI) UI.loading(false);
-                    return alert('☁️ 云端记录中未匹配到您的个人数据');
+                    return window.UI.alert('☁️ 云端记录中未匹配到您的个人数据');
                 }
                 STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = [picked.student];
                 STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData = [picked.student];
@@ -837,7 +837,7 @@
         } catch (e) {
             if (window.UI) UI.loading(false);
             console.error('加载失败:', e);
-            alert('加载失败: ' + e.message);
+            window.UI.alert('加载失败: ' + e.message);
         }
     }
 

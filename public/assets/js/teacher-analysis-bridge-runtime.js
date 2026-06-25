@@ -272,11 +272,11 @@
         const students = getCorrelationStudents(scope, className);
         const subjects = getAvailableSubjects();
         if (!Array.isArray(students) || students.length < 5) {
-            alert('样本数据过少，暂时无法生成有效的相关性分析。');
+            window.UI.alert('样本数据过少，暂时无法生成有效的相关性分析。');
             return;
         }
         if (!subjects.length) {
-            alert('学科列表尚未就绪，暂时无法生成相关性分析。');
+            window.UI.alert('学科列表尚未就绪，暂时无法生成相关性分析。');
             return;
         }
 
@@ -321,7 +321,7 @@
         const user = getCurrentUser();
         const role = user?.role || 'guest';
         if (!TOWNSHIP_RANKING_DATA || !Object.keys(TOWNSHIP_RANKING_DATA).length) {
-            alert('暂无乡镇排名数据可导出。');
+            window.UI.alert('暂无乡镇排名数据可导出。');
             return;
         }
 

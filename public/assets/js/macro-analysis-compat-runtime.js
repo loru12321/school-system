@@ -61,11 +61,11 @@
     }
 
     function renderHorizontalTable() {
-        if (!hasMacroData()) return alert('请先上传数据');
+        if (!hasMacroData()) return window.UI.alert('请先上传数据');
         if (typeof window.renderTables === 'function') window.renderTables();
 
         const schoolNames = getSortedSchoolNames();
-        if (!schoolNames.length) return alert('暂无可展示的学校数据');
+        if (!schoolNames.length) return window.UI.alert('暂无可展示的学校数据');
 
         const mySchoolName = getMySchoolName();
         const subjects = Array.isArray(window.SUBJECTS) ? window.SUBJECTS.slice() : [];
@@ -130,7 +130,7 @@
         });
 
         const container = document.getElementById('horizontal-table');
-        if (!container) return alert('找不到横向对比容器');
+        if (!container) return window.UI.alert('找不到横向对比容器');
 
         const html = `
             <table class="comparison-table analysis-generated-table analysis-table-dense">
@@ -160,11 +160,11 @@
     }
 
     function exportHorizontalExcel() {
-        if (!hasMacroData()) return alert('暂无数据可导出');
+        if (!hasMacroData()) return window.UI.alert('暂无数据可导出');
 
         const mySchoolName = getMySchoolName();
         const schoolNames = getSortedSchoolNames();
-        if (!schoolNames.length) return alert('暂无数据可导出');
+        if (!schoolNames.length) return window.UI.alert('暂无数据可导出');
 
         const wb = XLSX.utils.book_new();
         const wsData = [];
@@ -283,7 +283,7 @@
     }
 
     function exportMacroTables() {
-        if (!hasMacroData()) return alert('请先上传数据');
+        if (!hasMacroData()) return window.UI.alert('请先上传数据');
 
         const wb = XLSX.utils.book_new();
         const isGrade9 = String(window.CONFIG?.name || '').includes('9');

@@ -1069,7 +1069,7 @@
                 ? this.getKey()
                 : (getWorkspaceSnapshotKey() || this.getKey());
             if (!key) {
-                alert(mode === 'exam' ? '请先完善考试信息' : '请先选择届别');
+                window.UI.alert(mode === 'exam' ? '请先完善考试信息' : '请先选择届别');
                 return false;
             }
 
@@ -1135,7 +1135,7 @@
                 return true;
             } catch (e) {
                 console.error('Cloud save error:', e);
-                alert(`同步失败: ${e.message || e}`);
+                window.UI.alert(`同步失败: ${e.message || e}`);
                 setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '保存失败');
                 return false;
             } finally {
@@ -1367,7 +1367,7 @@
             ? this.getKey()
             : (getWorkspaceSnapshotKey() || this.getKey());
         if (!key) {
-            alert(mode === 'exam' ? '请先完善考试信息' : '请先选择届别');
+            window.UI.alert(mode === 'exam' ? '请先完善考试信息' : '请先选择届别');
             return false;
         }
 
@@ -1471,7 +1471,7 @@
         } catch (error) {
             console.error('Cloud save error:', error);
             if (!background) {
-                alert(`同步失败: ${error?.message || error}`);
+                window.UI.alert(`同步失败: ${error?.message || error}`);
             }
             setCloudStatus('error', error?.message ? String(error.message).slice(0, 24) : '保存失败');
             return false;

@@ -58,8 +58,8 @@
     async function saveMacroMultiPeriodCompareToCloud() {
         const MACRO_MULTI_PERIOD_COMPARE_CACHE = readMacroCompareCacheState();
         window.MACRO_MULTI_PERIOD_COMPARE_CACHE = MACRO_MULTI_PERIOD_COMPARE_CACHE;
-        if (!window.MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
-        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接，无法保存');
+        if (!window.MACRO_MULTI_PERIOD_COMPARE_CACHE) return window.UI.alert('请先生成校际多期对比结果');
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接，无法保存');
 
         const cache = MACRO_MULTI_PERIOD_COMPARE_CACHE;
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
@@ -94,14 +94,14 @@
             if (window.UI) UI.toast('✅ 校际多期对比已保存到云端', 'success');
         } catch (e) {
             console.error(e);
-            alert('保存失败: ' + e.message);
+            window.UI.alert('保存失败: ' + e.message);
         } finally {
             if (window.UI) UI.loading(false);
         }
     }
 
     async function viewCloudMacroCompares() {
-        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
         try {
             if (window.UI) UI.loading(true, '☁️ 正在加载校际对比云端列表...');
 
@@ -119,7 +119,7 @@
             if (error) throw error;
             if (window.UI) UI.loading(false);
 
-            if (!data || data.length === 0) return alert('☁️ 云端暂无校际多期对比记录');
+            if (!data || data.length === 0) return window.UI.alert('☁️ 云端暂无校际多期对比记录');
 
             const html = data.map((item) => {
                 const keyParts = item.key.split('_');
@@ -154,12 +154,12 @@
         } catch (e) {
             if (window.UI) UI.loading(false);
             console.error(e);
-            alert('加载失败: ' + e.message);
+            window.UI.alert('加载失败: ' + e.message);
         }
     }
 
     async function loadCloudMacroCompare(key) {
-        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
         try {
             if (typeof Swal !== 'undefined') Swal.close();
             if (window.UI) UI.loading(true, '☁️ 正在加载校际对比详情...');
@@ -196,7 +196,7 @@
             setMacroCompareCacheState(window.MACRO_MULTI_PERIOD_COMPARE_CACHE);
         } catch (e) {
             console.error(e);
-            alert('加载失败: ' + e.message);
+            window.UI.alert('加载失败: ' + e.message);
         } finally {
             if (window.UI) UI.loading(false);
         }

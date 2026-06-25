@@ -227,7 +227,7 @@ function renderMacroMultiPeriodComparison() {
 
 function exportMacroMultiPeriodComparison() {
     const MACRO_MULTI_PERIOD_COMPARE_CACHE = readMacroCompareCacheState();
-    if (!MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
+    if (!MACRO_MULTI_PERIOD_COMPARE_CACHE) return window.UI.alert('请先生成校际多期对比结果');
     const { school, examIds, summaryByExam, allSchoolsChange, moduleSeries = [] } = MACRO_MULTI_PERIOD_COMPARE_CACHE;
     const wb = XLSX.utils.book_new();
 

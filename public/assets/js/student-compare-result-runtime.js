@@ -374,13 +374,13 @@ function filterStudentCompareByName() {
 
     if (!nameInput) return;
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) {
-        alert('请先生成学生成绩对比数据');
+        window.UI.alert('请先生成学生成绩对比数据');
         return;
     }
 
     const searchText = nameInput.value.trim();
     if (!searchText) {
-        alert('请输入学生姓名后再筛选');
+        window.UI.alert('请输入学生姓名后再筛选');
         return;
     }
 
@@ -388,7 +388,7 @@ function filterStudentCompareByName() {
     const searchNames = searchText.split(/[,，、\s]+/).map(n => cleanName(n)).filter(Boolean);
 
     if (searchNames.length === 0) {
-        alert('请输入有效的学生姓名');
+        window.UI.alert('请输入有效的学生姓名');
         return;
     }
 
@@ -699,9 +699,9 @@ function toggleClassGroup(headerEl) {
 }
 
 function exportStudentMultiPeriodComparison() {
-    if (!canUseStudentMultiPeriodCompare()) return alert('权限不足：学生多期对比仅管理员、教务主任、级部主任可用');
+    if (!canUseStudentMultiPeriodCompare()) return window.UI.alert('权限不足：学生多期对比仅管理员、教务主任、级部主任可用');
     const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
-    if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成学生多期对比结果');
+    if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return window.UI.alert('请先生成学生多期对比结果');
 
     const { school, examIds, periodCount, studentsCompareData, subjects } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
     const wb = XLSX.utils.book_new();

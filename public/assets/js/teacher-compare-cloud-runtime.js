@@ -65,7 +65,7 @@
 
     function guardTeacherMultiPeriodCloudAction() {
         if (canUseTeacherMultiPeriodCompareCloud()) return true;
-        alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');
+        window.UI.alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');
         return false;
     }
 
@@ -97,16 +97,16 @@
         const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
         window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE) {
-            return alert('请先生成教师多期对比或全校对比结果');
+            return window.UI.alert('请先生成教师多期对比或全校对比结果');
         }
 
         if (!hasCloudCompareAccess()) {
-            return alert('☁️ 云端服务未连接，无法保存');
+            return window.UI.alert('☁️ 云端服务未连接，无法保存');
         }
 
         const user = Auth.currentUser;
         if (!user || user.role === 'guest') {
-            return alert('⛔ 权限不足：只有登录用户可以保存对比结果到云端');
+            return window.UI.alert('⛔ 权限不足：只有登录用户可以保存对比结果到云端');
         }
 
         const cache = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
@@ -157,7 +157,7 @@
             if (window.UI) UI.toast(`✅ 已保存云端对比: ${title}`, 'success');
         } catch (e) {
             console.error('Teacher Comparison Cloud Save Error:', e);
-            alert('保存失败: ' + (e.message || String(e)));
+            window.UI.alert('保存失败: ' + (e.message || String(e)));
         } finally {
             if (window.UI) UI.loading(false);
         }
@@ -165,7 +165,7 @@
 
     async function viewCloudTeacherCompares() {
         if (!guardTeacherMultiPeriodCloudAction()) return;
-        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
 
         try {
             if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');
@@ -210,7 +210,7 @@
             if (window.UI) UI.loading(false);
 
             if (!data || data.length === 0) {
-                return alert('☁️ 云端暂无已保存的教师对比记录');
+                return window.UI.alert('☁️ 云端暂无已保存的教师对比记录');
             }
 
             const listHtml = data.map((item) => {
@@ -250,7 +250,7 @@
         } catch (e) {
             if (window.UI) UI.loading(false);
             console.error('加载列表失败:', e);
-            alert('加载失败');
+            window.UI.alert('加载失败');
         }
     }
 
@@ -281,7 +281,7 @@
         } catch (e) {
             console.error(e);
             if (window.UI) UI.loading(false);
-            alert('加载详情失败: ' + e.message);
+            window.UI.alert('加载详情失败: ' + e.message);
         }
     }
 

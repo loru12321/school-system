@@ -55,7 +55,7 @@
 
         saveNamedSQL: function () {
             const sql = document.getElementById('dm-sql-input').value.trim();
-            if (!sql) return alert('请先输入 SQL');
+            if (!sql) return window.UI.alert('请先输入 SQL');
             const nameInput = document.getElementById('dm-sql-history-name');
             const name = (nameInput && nameInput.value.trim()) || `收藏 ${new Date().toLocaleString()}`;
             let list = this.getSQLHistory();
@@ -68,8 +68,8 @@
             if (window.UI) UI.toast('已保存收藏', 'success');
         },
 
-        clearSQLHistory: function () {
-            if (!confirm('确定清空 SQL 历史吗？')) return;
+        clearSQLHistory: async function () {
+            if (!await window.UI.confirm('确定清空 SQL 历史吗？')) return;
             localStorage.removeItem(this.sqlHistoryKey);
             this.renderSQLHistory();
         },
@@ -198,7 +198,7 @@
         },
 
         exportSQLResult: function () {
-            if (!this.sqlResultCache || this.sqlResultCache.length === 0) return alert('当前没有查询结果可导出');
+            if (!this.sqlResultCache || this.sqlResultCache.length === 0) return window.UI.alert('当前没有查询结果可导出');
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(this.sqlResultCache);
             XLSX.utils.book_append_sheet(wb, ws, 'SQL查询结果');
@@ -211,7 +211,7 @@
         const statusEl = document.getElementById('dm-nlq-status');
         if (!inputEl || !statusEl) return;
         const question = inputEl.value.trim();
-        if (!question) return alert('请输入查询需求');
+        if (!question) return window.UI.alert('请输入查询需求');
         statusEl.innerText = '自然语言问数已下线，请在 SQL 编辑框中直接输入 SELECT 查询。';
         if (window.UI) UI.toast('请直接使用 SQL 查询', 'info');
     }

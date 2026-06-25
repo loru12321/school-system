@@ -915,7 +915,7 @@
             if (firstFromRows) activeSchool = syncTeacherSchoolContext(String(firstFromRows.school).trim());
         }
         if (!activeSchool) {
-            alert('请先选择本校');
+            window.UI.alert('请先选择本校');
             return;
         }
         syncTeacherSchoolContext(activeSchool);

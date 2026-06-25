@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     const CLOUD_TABLE = 'system_data';
     const KEY_PREFIX_TEACHERS = 'TEACHERS_';
     const KEY_PREFIX_COMPARE = [
@@ -1322,7 +1322,7 @@
                 return true;
             } catch (e) {
                 console.error('Teacher save error:', e);
-                alert(`任课同步失败: ${e.message || e}`);
+                window.UI.alert(`任课同步失败: ${e.message || e}`);
                 setCloudStatus('error', '任课同步失败');
                 return false;
             } finally {

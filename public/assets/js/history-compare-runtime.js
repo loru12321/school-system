@@ -351,7 +351,7 @@ function initHistoryComparePatch() {
         const cls = document.getElementById('sel-class').value;
 
         let stu = SCHOOLS[sch]?.students.find(function (s) { return s.name === name && (cls === '--请先选择学校--' || s.class === cls); });
-        if (!stu) return alert('未找到该学生');
+        if (!stu) return window.UI.alert('未找到该学生');
 
         if (window.CloudManager && window.CloudManager.check()) {
             if (window.UI) UI.toast('🔍 正在同步云端历史数据...', 'info');
@@ -395,7 +395,7 @@ function initHistoryComparePatch() {
                 await window.ensureReportRenderRuntimeLoaded();
             } catch (error) {
                 console.error('Failed to load report render runtime before history compare query:', error);
-                alert('报告渲染模块加载失败，请刷新后重试。');
+                window.UI.alert('报告渲染模块加载失败，请刷新后重试。');
                 return;
             }
         }

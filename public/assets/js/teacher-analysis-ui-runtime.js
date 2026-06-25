@@ -522,7 +522,7 @@
                 confirmButtonColor: meta.color
             });
         } else {
-            alert(`${title}\n${rows.map((row) => `${row.className || '-'} ${row.name || '-'} ${row.score ?? '-'}`).join('\n') || meta.empty}`);
+            window.UI.alert(`${title}\n${rows.map((row) => `${row.className || '-'} ${row.name || '-'} ${row.score ?? '-'}`).join('\n') || meta.empty}`);
         }
     }
 
@@ -823,7 +823,7 @@
         const role = user?.role || 'guest';
         const exportStats = (role === 'teacher' || role === 'class_teacher') ? getTeacherStats() : (window.TEACHER_STATS || {});
         if (!Object.keys(exportStats).length) {
-            alert('请先进行教师分析');
+            window.UI.alert('请先进行教师分析');
             return;
         }
 

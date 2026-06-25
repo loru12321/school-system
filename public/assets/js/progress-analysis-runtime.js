@@ -919,7 +919,7 @@ function renderMultiPeriodComparison() {
 async function exportMultiPeriodComparison() {
     if (!canUseProgressMultiPeriodCompare()) {
         if (typeof uiAlert === 'function') uiAlert('权限不足：多期对比仅管理员、教务主任、级部主任可用', 'error');
-        else alert('权限不足：多期对比仅管理员、教务主任、级部主任可用');
+        else window.UI.alert('权限不足：多期对比仅管理员、教务主任、级部主任可用');
         return false;
     }
     let cache = getProgressMultiPeriodCache();
@@ -933,7 +933,7 @@ async function exportMultiPeriodComparison() {
     }
     if (!window.XLSX || !window.XLSX.utils) {
         if (typeof uiAlert === 'function') uiAlert('Excel 组件未加载，请刷新页面后重试', 'error');
-        else alert('Excel 组件未加载，请刷新页面后重试');
+        else window.UI.alert('Excel 组件未加载，请刷新页面后重试');
         return false;
     }
 
@@ -1028,7 +1028,7 @@ function confirmMappingsAndRun() {
         }
     });
 
-    if (!allSelected) return alert("请为所有疑似学生选择对应关系（如果是新生，请选“不是同一个人”）");
+    if (!allSelected) return window.UI.alert("请为所有疑似学生选择对应关系（如果是新生，请选“不是同一个人”）");
 
     syncLocalProgressState({ manualIdMappings: MANUAL_ID_MAPPINGS });
     document.getElementById('mappingModal').style.display = 'none';
@@ -1059,7 +1059,7 @@ function switchValueAddedView(mode, btn) {
 
 function exportValueAddedExcel() {
     const lastVaData = readLastVaDataState();
-    if (!lastVaData || lastVaData.length === 0) return alert("请先生成报表");
+    if (!lastVaData || lastVaData.length === 0) return window.UI.alert("请先生成报表");
 
     const wb = XLSX.utils.book_new();
     const data = [['单位名称', '匹配人数', '入口均位(上次排名)', '出口均位(本次排名)', '平均增值(名次)', '增值排名']];
@@ -1683,7 +1683,7 @@ function performSilentMatching() {
 }
 
 function exportProgressAnalysis() {
-    if (!PROGRESS_CACHE.length) return alert("暂无分析结果，请先进行分析");
+    if (!PROGRESS_CACHE.length) return window.UI.alert("暂无分析结果，请先进行分析");
     const user = getCurrentUser();
     const role = user?.role || 'guest';
     const scope = role === 'teacher' ? getTeacherScopeForUser(user) : null;

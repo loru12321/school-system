@@ -364,8 +364,8 @@ async function openTownSubmoduleCompareDialog(submoduleId) {
     if (!canShowTownSubmoduleMultiPeriodCompare()) return;
     const schoolList = listAvailableSchoolsForCompare();
     const examList = listAvailableExamsForCompare();
-    if (schoolList.length === 0) return alert('暂无可选学校');
-    if (examList.length < 2) return alert('考试数量不足，至少2期');
+    if (schoolList.length === 0) return window.UI.alert('暂无可选学校');
+    if (examList.length < 2) return window.UI.alert('考试数量不足，至少2期');
 
     const title = TOWN_SUBMODULE_META[submoduleId] || submoduleId;
     const schoolOptions = schoolList.map(s => `<option value="${s}">${s}</option>`).join('');
@@ -378,7 +378,7 @@ async function openTownSubmoduleCompareDialog(submoduleId) {
     const exam3Default = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
 
     if (typeof Swal === 'undefined') {
-        return alert('当前环境不支持弹窗，请升级页面依赖后重试');
+        return window.UI.alert('当前环境不支持弹窗，请升级页面依赖后重试');
     }
 
     const res = await Swal.fire({
@@ -502,9 +502,9 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
 }
 
 function exportTownSubmoduleCompare(submoduleId) {
-    if (!canShowTownSubmoduleMultiPeriodCompare()) return alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return window.UI.alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
     const cache = readTownSubmoduleCompareEntryState(submoduleId);
-    if (!cache) return alert('请先生成多期对比结果');
+    if (!cache) return window.UI.alert('请先生成多期对比结果');
     const wb = XLSX.utils.book_new();
     const aoa = [cache.headers, ...cache.rows];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '多期对比');
@@ -512,10 +512,10 @@ function exportTownSubmoduleCompare(submoduleId) {
 }
 
 async function saveTownSubmoduleCompareToCloud(submoduleId) {
-    if (!canShowTownSubmoduleMultiPeriodCompare()) return alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return window.UI.alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
     const cache = readTownSubmoduleCompareEntryState(submoduleId);
-    if (!cache) return alert('请先生成多期对比结果');
-    if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接，无法保存');
+    if (!cache) return window.UI.alert('请先生成多期对比结果');
+    if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接，无法保存');
 
     const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
     const stamp = new Date().toISOString().split('T')[0];
@@ -537,15 +537,15 @@ async function saveTownSubmoduleCompareToCloud(submoduleId) {
         if (window.UI) UI.toast('✅ 云端保存成功', 'success');
     } catch (e) {
         console.error(e);
-        alert('保存失败: ' + e.message);
+        window.UI.alert('保存失败: ' + e.message);
     } finally {
         if (window.UI) UI.loading(false);
     }
 }
 
 async function viewCloudTownSubmoduleCompares(submoduleId) {
-    if (!canShowTownSubmoduleMultiPeriodCompare()) return alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
-    if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return window.UI.alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
+    if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
     try {
         if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');
 
@@ -564,7 +564,7 @@ async function viewCloudTownSubmoduleCompares(submoduleId) {
         });
         if (error) throw error;
         if (window.UI) UI.loading(false);
-        if (!data || data.length === 0) return alert('☁️ 云端暂无记录');
+        if (!data || data.length === 0) return window.UI.alert('☁️ 云端暂无记录');
 
         const html = data.map((item, idx) => {
             const keyParts = item.key.replace(`TOWN_SUB_COMPARE_${submoduleId}_`, '').split('_');
@@ -599,12 +599,12 @@ async function viewCloudTownSubmoduleCompares(submoduleId) {
     } catch (e) {
         if (window.UI) UI.loading(false);
         console.error(e);
-        alert('加载失败: ' + e.message);
+        window.UI.alert('加载失败: ' + e.message);
     }
 }
 
 async function loadCloudTownSubmoduleCompare(submoduleId, key) {
-    if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
+    if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
     const hintEl = document.getElementById(`town-submodule-compare-hint-${submoduleId}`);
     const resultEl = document.getElementById(`town-submodule-compare-result-${submoduleId}`);
     if (!hintEl || !resultEl) return;
@@ -629,7 +629,7 @@ async function loadCloudTownSubmoduleCompare(submoduleId, key) {
         setTownSubmoduleCompareEntryState(submoduleId, payload);
     } catch (e) {
         console.error(e);
-        alert('加载失败: ' + e.message);
+        window.UI.alert('加载失败: ' + e.message);
     } finally {
         if (window.UI) UI.loading(false);
     }

@@ -26,8 +26,8 @@ const AccountExcel = {
                 const wb = XLSX.read(data, { type: 'array' });
                 const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-                if (json.length === 0) return alert('表格为空');
-                if (!confirm(`解析到 ${json.length} 条账号数据，确定要导入云端吗？`)) return;
+                if (json.length === 0) return window.UI.alert('表格为空');
+                if (!await window.UI.confirm(`解析到 ${json.length} 条账号数据，确定要导入云端吗？`)) return;
 
                 UI.loading(true, '正在批量创建云端账号...');
 
@@ -76,11 +76,11 @@ const AccountExcel = {
                 if (window.Auth && typeof window.Auth.refreshCloudAccountMigrationStatus === 'function') {
                     window.Auth.refreshCloudAccountMigrationStatus();
                 }
-                alert(`✅ 成功导入 ${batchData.length} 个账号！`);
+                window.UI.alert(`✅ 成功导入 ${batchData.length} 个账号！`);
                 input.value = '';
             } catch (err) {
                 UI.loading(false);
-                alert('导入失败：' + err.message);
+                window.UI.alert('导入失败：' + err.message);
             }
         };
         reader.readAsArrayBuffer(file);
@@ -122,7 +122,7 @@ function toggleAdminManualInput() {
 
 async function changeAdminPass() {
     const p = document.getElementById('new-admin-pass').value.trim();
-    if (!p) return alert('密码不能为空');
+    if (!p) return window.UI.alert('密码不能为空');
 
     if (typeof Auth !== 'undefined') {
         const maskedPassword = window.AuthState?.MASKED_PASSWORD_DISPLAY || '已设置(不显示明文)';
@@ -150,20 +150,20 @@ async function changeAdminPass() {
             if (window.Auth && typeof window.Auth.refreshCloudAccountMigrationStatus === 'function') {
                 window.Auth.refreshCloudAccountMigrationStatus();
             }
-            alert('✅ 管理员密码已修改！\n本地与云端已同步更新。');
+            window.UI.alert('✅ 管理员密码已修改！\n本地与云端已同步更新。');
             document.getElementById('new-admin-pass').value = '';
         } catch (err) {
             if (loader) loader.classList.add('hidden');
-            alert('❌ 程序异常：' + err.message);
+            window.UI.alert('❌ 程序异常：' + err.message);
         }
     } else {
-        alert('⚠️ 账号网关未连接，无法修改管理员密码。');
+        window.UI.alert('⚠️ 账号网关未连接，无法修改管理员密码。');
     }
 }
 
 function openUserPasswordModal(isForced = false) {
     const user = window.AuthState?.getCurrentUser ? window.AuthState.getCurrentUser() : JSON.parse(sessionStorage.getItem('CURRENT_USER'));
-    if (!user) return alert('未检测到登录用户，请刷新页面。');
+    if (!user) return window.UI.alert('未检测到登录用户，请刷新页面。');
 
     document.getElementById('upm-old').value = '';
     document.getElementById('upm-new').value = '';
@@ -187,33 +187,33 @@ function openUserPasswordModal(isForced = false) {
 
 async function submitUserPasswordChange() {
     if (!window.EdgeGateway || typeof EdgeGateway.changeOwnPassword !== 'function') {
-        return alert('❌ 账号网关未连接，无法修改密码。');
+        return window.UI.alert('❌ 账号网关未连接，无法修改密码。');
     }
 
     const user = window.AuthState?.getCurrentUser ? window.AuthState.getCurrentUser() : JSON.parse(sessionStorage.getItem('CURRENT_USER'));
-    if (!user) return alert('未检测到登录用户，请刷新重试。');
+    if (!user) return window.UI.alert('未检测到登录用户，请刷新重试。');
 
     const oldPass = document.getElementById('upm-old').value.trim();
     const newPass = document.getElementById('upm-new').value.trim();
     const confirmPass = document.getElementById('upm-confirm').value.trim();
 
-    if (!oldPass || !newPass) return alert('密码不能为空');
-    if (newPass !== confirmPass) return alert('两次输入的新密码不一致');
-    if (newPass.length < 6) return alert('新密码长度至少需要 6 位，建议使用字母+数字组合');
-    if (oldPass === newPass) return alert('新密码不能与旧密码相同');
+    if (!oldPass || !newPass) return window.UI.alert('密码不能为空');
+    if (newPass !== confirmPass) return window.UI.alert('两次输入的新密码不一致');
+    if (newPass.length < 6) return window.UI.alert('新密码长度至少需要 6 位，建议使用字母+数字组合');
+    if (oldPass === newPass) return window.UI.alert('新密码不能与旧密码相同');
 
     UI.loading(true, '正在验证并更新密码...');
 
     try {
         await EdgeGateway.changeOwnPassword(oldPass, newPass);
         UI.loading(false);
-        alert('✅ 密码修改成功！\n\n为了安全起见，请使用新密码重新登录。');
+        window.UI.alert('✅ 密码修改成功！\n\n为了安全起见，请使用新密码重新登录。');
         document.getElementById('user-password-modal').style.display = 'none';
         Auth.logout();
     } catch (e) {
         UI.loading(false);
         console.error(e);
-        alert('❌ 修改失败：' + e.message);
+        window.UI.alert('❌ 修改失败：' + e.message);
     }
 }
 

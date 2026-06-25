@@ -2091,7 +2091,7 @@
 
     function exportStudentDetailsWithCountyRanks() {
         if (!(window.RAW_DATA || []).length) {
-            alert('请先上传数据');
+            window.UI.alert('请先上传数据');
             return;
         }
         applyCountyRanks();

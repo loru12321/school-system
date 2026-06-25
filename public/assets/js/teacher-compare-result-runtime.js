@@ -611,10 +611,10 @@ function renderAllTeachersMultiPeriodComparison() {
 // 🆕 导出全校教师对比
 function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
     if (!canUseTeacherMultiPeriodCompare()) {
-        return alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');
+        return window.UI.alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');
     }
     const ALL_TEACHERS_DIFF_CACHE = readAllTeachersDiffCacheState();
-    if (!ALL_TEACHERS_DIFF_CACHE) return alert('请先生成表格');
+    if (!ALL_TEACHERS_DIFF_CACHE) return window.UI.alert('请先生成表格');
     const { results, examIds } = ALL_TEACHERS_DIFF_CACHE;
 
     // 构建 Excel 数据 [Teacher, Subject, 每期三类镇排, 变化三类镇排]
@@ -659,7 +659,7 @@ function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
         XLSX.writeFile(wb, `${school}_教师多期对比总表_${new Date().toISOString().slice(0, 10)}.xlsx`);
     } catch (e) {
         console.error(e);
-        alert('导出失败 (请确保xlsx库已加载)');
+        window.UI.alert('导出失败 (请确保xlsx库已加载)');
     }
 }
 
@@ -667,10 +667,10 @@ function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
 
 function exportTeacherMultiPeriodComparison() {
     if (!canUseTeacherMultiPeriodCompare()) {
-        return alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');
+        return window.UI.alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');
     }
     const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
-    if (!TEACHER_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成教师多期对比结果');
+    if (!TEACHER_MULTI_PERIOD_COMPARE_CACHE) return window.UI.alert('请先生成教师多期对比结果');
     const { school, subject, teacher, examIds, examStats, delta } = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
     const wb = XLSX.utils.book_new();
 

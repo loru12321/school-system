@@ -24,7 +24,7 @@ const SCHEDULER = {
 
             // 查重：同一个学科不能重复添加规则
             if (this.rules.combined.some(r => r.subject === subject)) {
-                return alert(`学科 [${subject}] 已存在合堂规则，请勿重复添加。`);
+                return window.UI.alert(`学科 [${subject}] 已存在合堂规则，请勿重复添加。`);
             }
 
             this.rules.combined.push({ subject, slot, id: Date.now() });
@@ -43,7 +43,7 @@ const SCHEDULER = {
             const day = document.getElementById('sch_busy_day').value;
             const name = document.getElementById('sch_busy_name').value.trim();
             const slotsRaw = document.getElementById('sch_busy_slots').value.trim();
-            if (!name || !slotsRaw) return alert("请填写教师姓名和节次");
+            if (!name || !slotsRaw) return window.UI.alert("请填写教师姓名和节次");
 
             this.rules.busy.push({ day, slotsStr: slotsRaw, name, id: Date.now() });
             this.renderTags('busy', this.rules.busy, b => `${b.name}: 周${b.day} [${b.slotsStr}] 不排`);
@@ -186,7 +186,7 @@ const SCHEDULER = {
             if (window.UI) UI.toast(`✅ 任课数据导入成功（${this.data.length} 条）`, 'success');
         } catch (e) {
             console.error(e);
-            alert('导入失败: ' + (e.message || e));
+            window.UI.alert('导入失败: ' + (e.message || e));
         } finally {
             if (input) input.value = '';
         }
@@ -194,7 +194,7 @@ const SCHEDULER = {
 
     // --- 核心排课逻辑 (Run) ---
     run: function () {
-        if (!this.data.length) return alert("请先导入教师任课数据");
+        if (!this.data.length) return window.UI.alert("请先导入教师任课数据");
 
         const btn = document.querySelector('#grade-scheduler .btn-primary');
         btn.innerHTML = '<i class="ti ti-loader"></i> 正在进行多维约束运算...';
@@ -365,7 +365,7 @@ const SCHEDULER = {
 
             } catch (e) {
                 console.error(e);
-                alert("排课运算出错: " + e.message);
+                window.UI.alert("排课运算出错: " + e.message);
             } finally {
                 btn.innerHTML = '🚀 开始智能排课';
                 btn.disabled = false;
@@ -375,7 +375,7 @@ const SCHEDULER = {
 
     // --- 疲劳审计 ---
     auditFatigue: function () {
-        if (!this.schedule || !this.classes || !this.classes.length) return alert("请先完成排课");
+        if (!this.schedule || !this.classes || !this.classes.length) return window.UI.alert("请先完成排课");
         const area = document.getElementById('sch_audit_area');
         const summaryEl = document.getElementById('sch_audit_summary');
         const listEl = document.getElementById('sch_audit_list');
@@ -702,7 +702,7 @@ const SCHEDULER = {
     },
 
     exportResult: function () {
-        if (Object.keys(this.schedule).length === 0) return alert("暂无课表数据");
+        if (Object.keys(this.schedule).length === 0) return window.UI.alert("暂无课表数据");
         const wb = XLSX.utils.book_new();
         const data = [['班级', '时段', '周一', '周二', '周三', '周四', '周五']];
         const am = parseInt(document.getElementById('sch_am_count').value);
@@ -741,7 +741,7 @@ const SCHEDULER = {
         XLSX.writeFile(wb, "智能排课结果.xlsx");
     },
 
-    importExisting: function () { alert("功能开发中：支持上传 Excel 反向解析课表"); }
+    importExisting: function () { window.UI.alert("功能开发中：支持上传 Excel 反向解析课表"); }
 };
 
     window.SCHEDULER = SCHEDULER;
