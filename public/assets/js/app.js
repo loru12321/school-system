@@ -2783,10 +2783,27 @@ var Auth = {
         this.setLoginWorkbenchNavState('modal');
     },
 
+    closeDownloadHubModal: function () {
+        const selectors = [
+            '#download-hub-modal',
+            '#download-hub-backdrop',
+            '[data-download-hub-modal]',
+            '[data-download-hub-backdrop]'
+        ];
+        selectors.forEach((selector) => {
+            document.querySelectorAll(selector).forEach((node) => {
+                if (!(node instanceof HTMLElement)) return;
+                node.style.display = 'none';
+                node.setAttribute('aria-hidden', 'true');
+            });
+        });
+        document.body.classList.remove('download-hub-open');
+    },
+
     openLoginPortalModal: function (portal) {
         this.ensureLoginWorkbench();
         this.closeSystemIntroModal();
-        this.closeDownloadHubModal();
+        this.closeDownloadHubModal?.();
         const nextPortal = this.setLoginPortal(portal);
         const overlay = document.getElementById('login-overlay');
         const backdrop = document.getElementById('login-modal-backdrop');
@@ -2822,7 +2839,7 @@ var Auth = {
         const overlay = document.getElementById('login-overlay');
         const app = document.getElementById('app');
         this.closeSystemIntroModal();
-        this.closeDownloadHubModal();
+        this.closeDownloadHubModal?.();
         this.closeLoginPortalModal();
         if (visible) {
             this.syncParentMobileScrollRoot(false);
