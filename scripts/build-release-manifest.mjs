@@ -69,7 +69,8 @@ function assertOutputPathComponents(assetDir, outputPath) {
   }
   if (fs.existsSync(outputPath)) {
     const stats = fs.lstatSync(outputPath);
-    if (stats.isSymbolicLink() || pathKey(fs.realpathSync.native(outputPath)) !== pathKey(outputPath)) {
+    const expectedOutputPath = path.join(fs.realpathSync.native(path.dirname(outputPath)), path.basename(outputPath));
+    if (stats.isSymbolicLink() || pathKey(fs.realpathSync.native(outputPath)) !== pathKey(expectedOutputPath)) {
       throw new Error(`Symbolic link, junction, or reparse output is not allowed: ${outputPath}`);
     }
   }
