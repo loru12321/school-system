@@ -2052,7 +2052,8 @@ async function runModuleDeepCheck(page, id) {
                 throw lastError || new Error('correlation analysis wait timeout');
             };
             const toFiniteNumber = (value) => {
-                const number = typeof value === 'number' ? value : Number(String(value || '').replace(/[+%]/g, ''));
+                if (value === null || value === undefined || value === '') return null;
+                const number = typeof value === 'number' ? value : Number(String(value).replace(/[+%]/g, ''));
                 return Number.isFinite(number) ? number : null;
             };
             const getSubjects = () => {
@@ -2060,13 +2061,22 @@ async function runModuleDeepCheck(page, id) {
                 if (typeof SUBJECTS !== 'undefined' && Array.isArray(SUBJECTS)) return SUBJECTS.filter(Boolean);
                 return [];
             };
-            const getSelectedStudents = (scope) => {
-                if (scope === 'ALL') {
-                    return (typeof window.filterRowsToTownshipSchools === 'function')
-                        ? window.filterRowsToTownshipSchools(window.RAW_DATA || [])
-                        : (Array.isArray(window.RAW_DATA) ? window.RAW_DATA : []);
+            const normalizeCorrelationClass = (value) => {
+                if (window.AuthState && typeof window.AuthState.normalizeClassName === 'function') {
+                    return window.AuthState.normalizeClassName(value || '');
                 }
-                return window.SCHOOLS?.[scope]?.students || [];
+                if (typeof window.normalizeClass === 'function') return window.normalizeClass(value || '');
+                return String(value || '').trim().replace(/\s+/g, '');
+            };
+            const getSelectedStudents = (scope, className = 'ALL') => {
+                const baseStudents = scope === 'ALL'
+                    ? ((typeof window.filterRowsToTownshipSchools === 'function')
+                        ? window.filterRowsToTownshipSchools(window.RAW_DATA || [])
+                        : (Array.isArray(window.RAW_DATA) ? window.RAW_DATA : []))
+                    : (window.SCHOOLS?.[scope]?.students || []);
+                const normalizedClass = normalizeCorrelationClass(className);
+                if (!normalizedClass || normalizedClass.toLowerCase() === 'all') return baseStudents;
+                return baseStudents.filter(student => normalizeCorrelationClass(student?.class || '') === normalizedClass);
             };
             const pearson = (leftValues, rightValues) => {
                 const size = Math.min(Array.isArray(leftValues) ? leftValues.length : 0, Array.isArray(rightValues) ? rightValues.length : 0);
@@ -2149,6 +2159,8 @@ async function runModuleDeepCheck(page, id) {
             }
             const select = document.getElementById('corrSchoolSelect');
             if (select && !select.value) select.value = 'ALL';
+            const classSelect = document.getElementById('corrClassSelect');
+            if (classSelect) classSelect.value = 'ALL';
 
             const alerts = [];
             const originalAlert = window.alert;
@@ -2168,7 +2180,8 @@ async function runModuleDeepCheck(page, id) {
 
             const subjects = getSubjects();
             const scope = document.getElementById('corrSchoolSelect')?.value || 'ALL';
-            const students = getSelectedStudents(scope);
+            const className = document.getElementById('corrClassSelect')?.value || 'ALL';
+            const students = getSelectedStudents(scope, className);
             const matrixTable = document.getElementById('corrMatrixTable');
             const matrixRows = Array.from(matrixTable?.querySelectorAll('tbody tr') || []);
             const matrixValues = Array.from(document.querySelectorAll('#corrMatrixTable .heatmap-cell'))
@@ -2258,6 +2271,7 @@ async function runModuleDeepCheck(page, id) {
                 ok: Object.values(checks).every(Boolean),
                 checks,
                 scope,
+                className,
                 counts: {
                     subjects: subjects.length,
                     students: students.length,
