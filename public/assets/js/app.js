@@ -8139,8 +8139,10 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
             if (typeof saveCloudData === 'function') {
                 cloudSynced = await saveCloudData({ background: false, sourceLabel: 'score-import-overwrite', forceUpload: true });
                 if (!cloudSynced) {
-                    setUploadMessage(`⚠️ 已在当前页面导入 ${RAW_DATA.length} 名学生，但云端同步失败，请稍后点击“保存并同步”。`, 'warning');
-                    UI.toast('⚠️ 成绩已导入本机，云端同步失败', 'warning');
+                    const cloudError = String(window.__LAST_CLOUD_SAVE_ERROR__ || '').trim();
+                    const detail = cloudError ? `原因：${cloudError}` : '请稍后点击“保存并同步”，或刷新后重新登录再试。';
+                    setUploadMessage(`⚠️ 已在当前页面导入 ${RAW_DATA.length} 名学生，但云端同步失败。${detail}`, 'warning');
+                    UI.toast(cloudError ? `⚠️ 云端同步失败：${cloudError}` : '⚠️ 成绩已导入本机，云端同步失败', 'warning');
                     return;
                 }
                 appDebug("成绩导入云端同步完成");
@@ -8971,7 +8973,6 @@ function renderTables() {
     setSummaryHtmlIfChanged(tbTotal, html, `${summarySignature}::total-body`);
     bindSummaryProfileEvents(tbTotal);
     applySchoolModeToTables();
-    renderBlankScoreAuditPanel();
 
     const subContainer = document.getElementById('subject-tables-container');
     const sideNavSubjects = document.getElementById('side-nav-subjects-container');

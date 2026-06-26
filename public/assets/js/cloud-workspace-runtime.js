@@ -1527,9 +1527,21 @@
         const opts = options && typeof options === 'object' ? { ...options } : {};
         const background = Boolean(opts.background);
         const sourceLabel = String(opts.sourceLabel || '').trim() || (opts.mode === 'exam' ? 'exam-save' : 'workspace-save');
+        window.__LAST_CLOUD_SAVE_ERROR__ = '';
+
+        if (!(await this.ensureClientReady({ silent: background, timeoutMs: background ? 4000 : 8000 }))) {
+            const message = '云端连接未就绪，请重新登录或稍后重试';
+            window.__LAST_CLOUD_SAVE_ERROR__ = message;
+            if (!background && window.UI && typeof window.UI.alert === 'function') {
+                window.UI.alert(`同步失败: ${message}`);
+            }
+            setCloudStatus('error', '连接未就绪');
+            return false;
+        }
 
         const role = getCurrentUserRole();
         if (!['admin', 'director', 'grade_director'].includes(role)) {
+            window.__LAST_CLOUD_SAVE_ERROR__ = `权限不足：当前角色 ${role || '未识别'} 不能同步云端`;
             safeToast('权限不足', 'warning');
             return false;
         }
@@ -1539,6 +1551,7 @@
             ? this.getKey()
             : (getWorkspaceSnapshotKey() || this.getKey());
         if (!key) {
+            window.__LAST_CLOUD_SAVE_ERROR__ = mode === 'exam' ? '请先完善考试信息' : '请先选择届别';
             window.UI.alert(mode === 'exam' ? '请先完善考试信息' : '请先选择届别');
             return false;
         }
@@ -1633,19 +1646,24 @@
             const flushOk = await this.flushWorkspaceSyncQueue({ targetKey: key });
             if (!flushOk) {
                 const nextMeta = readWorkspaceSyncMeta(key);
-                throw new Error(nextMeta.lastCloudError || '云端同步失败');
+                const message = nextMeta.lastCloudError || '云端同步失败';
+                window.__LAST_CLOUD_SAVE_ERROR__ = message;
+                throw new Error(message);
             }
 
             if (typeof updateStatusPanel === 'function') updateStatusPanel();
             safeToast('云端同步成功', 'success');
             setCloudStatus('success', '已保存');
+            window.__LAST_CLOUD_SAVE_ERROR__ = '';
             return true;
         } catch (error) {
             console.error('Cloud save error:', error);
+            const message = error?.message || String(error);
+            window.__LAST_CLOUD_SAVE_ERROR__ = message;
             if (!background) {
-                window.UI.alert(`同步失败: ${error?.message || error}`);
+                window.UI.alert(`同步失败: ${message}`);
             }
-            setCloudStatus('error', error?.message ? String(error.message).slice(0, 24) : '保存失败');
+            setCloudStatus('error', message ? String(message).slice(0, 24) : '保存失败');
             return false;
         }
     };
