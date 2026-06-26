@@ -9,7 +9,9 @@
     const PLAYLIST_AUDIO_ID = 'authorized-playlist';
     const BUNDLED_ASSET_ORIGIN = window.location && window.location.protocol === 'file:' ? 'https://schoolsystem.com.cn/' : './';
     const BUNDLED_AUDIO_PATH = ['assets', 'audio', 'entrance'].join('/');
-    const BUNDLED_PLAYLIST_MANIFEST = `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/manifest.json?v=20260618-waipoqiao-lite-v1`;
+    const BUNDLED_PLAYLIST_MANIFEST = window.location && window.location.protocol === 'file:'
+        ? 'https://schoolsystem.com.cn/api/entrance-audio-manifest?v=20260618-waipoqiao-lite-v1'
+        : `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/manifest.json?v=20260618-waipoqiao-lite-v1`;
     const BUNDLED_AUDIO_BASE = `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/`;
     const DEFAULT_MODE = 'random';
 

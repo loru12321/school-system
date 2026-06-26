@@ -115,6 +115,9 @@ if (!entranceSound.includes('BUNDLED_PLAYLIST_MANIFEST') || !entranceSound.inclu
 if (!entranceSound.includes("window.location.protocol === 'file:' ? 'https://schoolsystem.com.cn/' : './'")) {
   throw new Error('Entrance sound runtime should use hosted audio assets for file:// lt.html');
 }
+if (!entranceSound.includes('https://schoolsystem.com.cn/api/entrance-audio-manifest')) {
+  throw new Error('Entrance sound runtime should read the bundled playlist through the Worker manifest API for file:// lt.html');
+}
 if (!entranceSound.includes("['assets', 'audio', 'entrance'].join('/')")) {
   throw new Error('Entrance sound runtime should build audio paths dynamically so lt.html asset rewriting does not corrupt hosted URLs');
 }

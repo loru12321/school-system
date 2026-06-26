@@ -8,6 +8,8 @@ import { handleReleaseDownload } from './worker-release-downloads.mjs';
 const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
 const SYSTEM_DATA_PATH = '/sb/rest/v1/system_data';
 const SYSTEM_DATA_API_PATH = '/api/system-data';
+const ENTRANCE_AUDIO_MANIFEST_API_PATH = '/api/entrance-audio-manifest';
+const ENTRANCE_AUDIO_MANIFEST_ASSET_PATH = '/assets/audio/entrance/manifest.json';
 const SYSTEM_DATA_TABLE = 'cloud_system_data';
 const SYSTEM_DATA_COMPARE_PREFIXES = [
   'STUDENT_COMPARE_',
@@ -909,6 +911,30 @@ async function handleCloudRestProxy(request, env, url) {
   }, request);
 }
 
+async function handleEntranceAudioManifest(request, env) {
+  const method = String(request.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') {
+    return jsonResponse(405, { ok: false, error: 'ENTRANCE_AUDIO_MANIFEST_METHOD_NOT_ALLOWED' }, request, env);
+  }
+
+  const assetUrl = new URL(ENTRANCE_AUDIO_MANIFEST_ASSET_PATH, request.url);
+  const assetResponse = await env.ASSETS.fetch(new Request(assetUrl.toString(), { method: 'GET' }));
+  if (!assetResponse.ok) {
+    return jsonResponse(404, { ok: false, error: 'ENTRANCE_AUDIO_MANIFEST_NOT_FOUND' }, request, env);
+  }
+
+  const headers = buildCorsHeaders(request, env);
+  headers['Content-Type'] = 'application/json; charset=utf-8';
+  headers['Cache-Control'] = 'no-store';
+  headers['X-Content-Type-Options'] = 'nosniff';
+  headers['X-School-System-Gateway'] = 'cloudflare-worker';
+  const body = method === 'HEAD' ? null : await assetResponse.text();
+  return new Response(body, {
+    status: 200,
+    headers
+  });
+}
+
 export default {
   async fetch(request, env) {
     try {
@@ -918,6 +944,7 @@ export default {
         url.pathname === '/api/edu-gateway'
         || url.pathname === '/api/gateway'
         || url.pathname === SYSTEM_DATA_API_PATH
+        || url.pathname === ENTRANCE_AUDIO_MANIFEST_API_PATH
         || url.pathname.startsWith('/sb/')
       )) {
       return new Response(null, {
@@ -965,6 +992,10 @@ export default {
 
       if (url.pathname === SYSTEM_DATA_API_PATH) {
         return await handleSystemDataProxy(request, env, url);
+      }
+
+      if (url.pathname === ENTRANCE_AUDIO_MANIFEST_API_PATH) {
+        return await handleEntranceAudioManifest(request, env);
       }
 
       if (url.pathname.startsWith('/sb/')) {

@@ -84,6 +84,10 @@ assert.ok(worker.includes("Authorization: `Bearer ${apikey}`"), 'Supabase proxy 
 assert.ok(worker.includes("targetUrl.searchParams.set('on_conflict', 'key')"), 'system_data writes must keep upsert conflict key');
 assert.ok(worker.includes("Prefer: 'resolution=merge-duplicates,return=representation'"), 'system_data writes must request merge upserts');
 assert.ok(worker.includes("return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);"), 'system data route must fail closed for unsupported methods');
+assert.ok(worker.includes("const ENTRANCE_AUDIO_MANIFEST_API_PATH = '/api/entrance-audio-manifest';"), 'file runtime should have a Worker-served entrance audio manifest route');
+assert.ok(worker.includes('async function handleEntranceAudioManifest(request, env)'), 'Worker must proxy the entrance audio manifest through an API route');
+assert.ok(worker.includes("url.pathname === ENTRANCE_AUDIO_MANIFEST_API_PATH"), 'entrance audio manifest route should be included in CORS preflight and routing');
+assert.ok(worker.includes('ENTRANCE_AUDIO_MANIFEST_NOT_FOUND'), 'entrance audio manifest route should fail with JSON when the asset is missing');
 assert.ok(worker.includes("return jsonResponse(404"), 'unsupported managed REST paths should return JSON 404');
 assert.ok(worker.includes("return new Response('Not Found', { status: 404 });"), 'asset fallback should return 404 instead of crashing');
 assert.ok(worker.includes('buildWorkerErrorBody(error, env)'), 'worker crash responses should use sanitized error bodies');
