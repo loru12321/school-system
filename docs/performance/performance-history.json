@@ -1613,5 +1613,90 @@
     "maxLongTaskMs": 0,
     "budgetFailureCount": 0,
     "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-06-26T01:08:16.163Z",
+    "commit": "b8b397c23552",
+    "branch": "main",
+    "runId": "28210488801",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 3417,
+    "appReadyMs": 3164,
+    "totalMs": 33687,
+    "moduleCount": 29,
+    "slowestModules": [
+      {
+        "id": "summary",
+        "switchMs": 540,
+        "deepCheckMs": 548,
+        "totalMs": 1088
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 562,
+        "deepCheckMs": 496,
+        "totalMs": 1058
+      },
+      {
+        "id": "potential-analysis",
+        "switchMs": 1024,
+        "deepCheckMs": 0,
+        "totalMs": 1024
+      },
+      {
+        "id": "cohort-growth",
+        "switchMs": 546,
+        "deepCheckMs": 408,
+        "totalMs": 954
+      },
+      {
+        "id": "grade-scheduler",
+        "switchMs": 533,
+        "deepCheckMs": 386,
+        "totalMs": 919
+      },
+      {
+        "id": "freshman-simulator",
+        "switchMs": 538,
+        "deepCheckMs": 347,
+        "totalMs": 885
+      },
+      {
+        "id": "exam-arranger",
+        "switchMs": 510,
+        "deepCheckMs": 344,
+        "totalMs": 854
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 527,
+        "deepCheckMs": 287,
+        "totalMs": 814
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "teacher",
+        "durationMs": 1137
+      },
+      {
+        "id": "student",
+        "durationMs": 1122
+      },
+      {
+        "id": "targets",
+        "durationMs": 1117
+      },
+      {
+        "id": "params",
+        "durationMs": 1115
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
   }
 ]
