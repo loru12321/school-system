@@ -7,6 +7,14 @@ const minimumSchoolCount = Math.max(1, Number(process.env.CALC_SNAPSHOT_MIN_SCHO
 const minimumCountyTeacherRankRows = Math.max(1, Number(process.env.CALC_SNAPSHOT_MIN_COUNTY_TEACHER_RANK_ROWS || 80));
 const user = process.env.SMOKE_USER || 'admin';
 const pass = process.env.SMOKE_PASS || 'admin123';
+const traceEnabled = /^(1|true|yes)$/i.test(String(process.env.CALC_SNAPSHOT_TRACE || ''));
+const startedAt = Date.now();
+
+function trace(message) {
+    if (!traceEnabled) return;
+    const elapsed = String(((Date.now() - startedAt) / 1000).toFixed(1)).padStart(6, ' ');
+    console.log(`[calc-snapshot ${elapsed}s] ${message}`);
+}
 
 function isExecutionContextDestroyed(error) {
     const message = String(error?.message || error || '');
@@ -213,17 +221,29 @@ async function ensureCohortEntered(page) {
 }
 
 async function login(page) {
+    trace(`goto ${url}`);
     await page.goto(url, { waitUntil: 'commit', timeout: 90000 });
+    trace('waiting for shell entry');
     await withNavigationRetry(page, () => page.waitForFunction(() => {
         return document.getElementById('login-overlay')
             || document.getElementById('app')
             || document.getElementById('mode-mask');
     }, null, { timeout: 90000 }), 4);
-    await page.waitForFunction(() => window.__APP_MODULES_LOADED__ === true || !!sessionStorage.getItem('CURRENT_USER'), null, { timeout: 90000 }).catch(() => {});
+    trace('shell entry found; checking modules/session');
+    await page.waitForFunction(() => {
+        const overlay = document.getElementById('login-overlay');
+        const loginFormReady = !!document.getElementById('login-user')
+            || !!document.querySelector('[data-login-open="school"]')
+            || !!document.querySelector('.login-stage-primary-action');
+        const appReady = window.__APP_MODULES_LOADED__ === true || !!sessionStorage.getItem('CURRENT_USER');
+        return appReady || (!!overlay && loginFormReady);
+    }, null, { timeout: 10000 }).catch(() => {});
     await waitForPageStability(page, 10000);
 
     let ready = await readLoginState(page);
+    trace(`initial login state ${JSON.stringify(ready)}`);
     if (!isLoggedInShellReady(ready)) {
+        trace('opening login modal');
         await ensureLoginWindowVisible(page);
         await page.fill('#login-user', user);
         await page.fill('#login-pass', pass);
@@ -236,27 +256,41 @@ async function login(page) {
     }
 
     try {
+        trace('waiting for logged-in shell');
         await waitForLoggedInShell(page);
     } catch (error) {
         ready = await readLoginState(page).catch(() => null);
         throw new Error(`Login shell did not become ready: ${error.message}; state=${JSON.stringify(ready)}`);
     }
 
+    trace('ensuring cohort is entered');
     await ensureCohortEntered(page);
+    trace('waiting for RAW_DATA and SCHOOLS');
     await page.waitForFunction(() => {
         const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
         const schools = window.SCHOOLS ? Object.keys(window.SCHOOLS).length : 0;
         return rawDataLen > 0 && schools > 0;
     }, null, { timeout: 180000 });
     await page.waitForTimeout(1000);
+    const finalState = await readLoginState(page).catch(() => null);
+    trace(`login ready ${JSON.stringify(finalState)}`);
 }
 
 async function main() {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    if (traceEnabled) {
+        page.on('console', (message) => {
+            const text = message.text();
+            if (text.includes('[calc-snapshot-page]')) trace(text);
+        });
+    }
     await login(page);
 
+    trace('starting browser snapshot evaluate');
     const snapshot = await page.evaluate(async () => {
+        const snapshotStep = (name) => console.log(`[calc-snapshot-page] ${name}`);
+        snapshotStep('evaluate:start');
         const loadRuntimeSkill = async (skillId) => {
             if (!window.SystemRuntimeLoader || typeof window.SystemRuntimeLoader.load !== 'function') return false;
             try {
@@ -279,6 +313,7 @@ async function main() {
             return true;
         };
         await loadRuntimeSkill('county-analysis');
+        snapshotStep('runtime:county-analysis');
         await boundedSwitchTab('county-analysis');
         await window.CountyAnalysisRuntime?.ensureTeacherContextForCountyAnalysis?.(true);
         window.renderCountyAnalysis?.('county-teacher-portrait');
@@ -293,7 +328,9 @@ async function main() {
             await new Promise((resolve) => setTimeout(resolve, 250));
             window.renderCountyAnalysis?.('county-teacher-portrait');
         }
+        snapshotStep('render:county-teacher');
         await loadRuntimeSkill('student-compare');
+        snapshotStep('runtime:student-compare');
         await boundedSwitchTab('student-details');
         window.renderStudentDetails?.();
         const studentDeadline = Date.now() + 10000;
@@ -304,8 +341,10 @@ async function main() {
             await new Promise((resolve) => setTimeout(resolve, 250));
             window.renderStudentDetails?.();
         }
+        snapshotStep('render:student-details');
         await loadRuntimeSkill('teaching-management');
         await loadRuntimeSkill('teacher-analysis');
+        snapshotStep('runtime:teaching-management/teacher-analysis');
         await boundedSwitchTab('teacher-analysis');
         window.TeachingManagementModulesRuntime?.relocateTeacherBlocks?.();
         await boundedSwitchTab('teacher-township-ranking');
@@ -322,9 +361,11 @@ async function main() {
             window.calculateTeacherTownshipRanking?.();
             window.renderTeacherTownshipRanking?.();
         }
+        snapshotStep('render:teacher-township-ranking');
         await window.ensureTeacherCompareRuntimeLoaded?.().catch(() => {});
         await loadRuntimeSkill('progress-analysis');
         await loadRuntimeSkill('town-submodule-compare');
+        snapshotStep('runtime:progress-analysis/town-submodule-compare');
         const toNumber = (value, fallback = 0) => {
             const number = Number(value);
             return Number.isFinite(number) ? number : fallback;
@@ -462,6 +503,7 @@ async function main() {
             .filter((row) => row.type === 'teacher')
             .map(compareTownshipRow)
             .filter(Boolean);
+        snapshotStep('check:teacher-township-independent');
         const townshipAverageChecks = (window.SUBJECTS || []).map((subject) => {
             const rows = (window.RAW_DATA || []).filter((row) => {
                 const schoolName = String(row?.school || '').trim();
@@ -482,6 +524,7 @@ async function main() {
             };
         });
         const townshipAverageMismatches = townshipAverageChecks.filter((item) => !item.countMatches || !item.avgMatches);
+        snapshotStep('check:teacher-township-averages');
         await boundedSwitchTab('marginal-push');
         if (typeof window.updateMpSchoolSelect === 'function') window.updateMpSchoolSelect();
         const marginalResult = (() => {
@@ -510,6 +553,7 @@ async function main() {
             ? MP_DATA_CACHE
             : (Array.isArray(window.MP_DATA_CACHE) ? window.MP_DATA_CACHE : []);
         const marginalValues = marginalRows.flatMap((row) => [row.score, row.target, row.diff]);
+        snapshotStep('check:marginal-push');
         await boundedSwitchTab('seat-adjustment');
         if (typeof window.updateSeatAdjSelects === 'function') window.updateSeatAdjSelects();
         const seatAdjustmentResult = (() => {
@@ -539,6 +583,7 @@ async function main() {
             return result;
         })();
         const seatAdjustmentDeskCount = document.querySelectorAll('#seat-adj-container .desk:not(.desk-empty)').length;
+        snapshotStep('check:seat-adjustment');
         await boundedSwitchTab('cohort-growth');
         const cohortGrowthResult = typeof window.CohortGrowth?.compute === 'function'
             ? window.CohortGrowth.compute()
@@ -547,6 +592,7 @@ async function main() {
             ...(cohortGrowthResult.volatility || []).flatMap((row) => [row.count, row.sigma]),
             ...(cohortGrowthResult.growth || []).flatMap((row) => [row.start, row.end, row.delta])
         ];
+        snapshotStep('check:cohort-growth');
         await boundedSwitchTab('teacher-township-ranking');
         window.calculateTeacherTownshipRanking?.();
         window.renderTeacherTownshipRanking?.();
@@ -556,6 +602,7 @@ async function main() {
             .filter((row) => row.type === 'teacher')
             .map(compareTownshipRow)
             .filter(Boolean);
+        snapshotStep('check:teacher-township-rerender');
 
         const teacherRoot = getTeacherRoot();
         const studentSection = document.getElementById('student-details');
@@ -583,6 +630,7 @@ async function main() {
             subject,
             window.AnalyticsKernel?.getSubjectFullScore?.(subject, { config: window.CONFIG }) ?? null
         ]));
+        snapshotStep('policy:subject-full-score');
         const blankSubjectScorePolicy = (() => {
             if (typeof window.parseRows !== 'function'
                 || typeof window.readRawData !== 'function'
@@ -634,6 +682,7 @@ async function main() {
                 window.setConfigState(previousConfig);
             }
         })();
+        snapshotStep('policy:blank-subject-score');
         const classSchoolIsolationPolicy = (() => {
             if (typeof window.calculateClassRanksOnly !== 'function'
                 || typeof window.getClassSchoolMapForAllData !== 'function'
@@ -686,6 +735,7 @@ async function main() {
                 window.setTeacherSchoolMap(previousTeacherSchoolMap);
             }
         })();
+        snapshotStep('policy:class-school-isolation');
         const analyticsKernelSchoolAliasPolicy = (() => {
             if (!window.AnalyticsKernel || typeof window.AnalyticsKernel.buildSnapshot !== 'function'
                 || typeof window.readRawData !== 'function'
@@ -757,6 +807,7 @@ async function main() {
                 window.AnalyticsKernel.invalidate?.();
             }
         })();
+        snapshotStep('policy:analytics-kernel-school-alias');
         const teacherCompareSchoolIsolationPolicy = (() => {
             if (typeof window.buildTeacherStatsForExam !== 'function') return { available: false };
             const previousTeacherMap = typeof window.readTeacherMap === 'function'
@@ -803,6 +854,7 @@ async function main() {
                 applyTeacherMaps(previousTeacherMap, previousTeacherSchoolMap);
             }
         })();
+        snapshotStep('policy:teacher-compare-school-isolation');
         const compareSchoolAliasDefaultPolicy = (() => {
             if (typeof window.resolveCompareSchoolOption !== 'function'
                 || typeof window.progressResolveSchoolOption !== 'function'
@@ -828,6 +880,7 @@ async function main() {
                 window.areSchoolNamesEquivalent = previousSameSchool;
             }
         })();
+        snapshotStep('policy:compare-school-alias-default');
         const countyAnalysisSchoolAliasPolicy = (() => {
             const runtime = window.CountyAnalysisRuntime || {};
             if (typeof runtime.resolveSchoolOption !== 'function'
@@ -867,6 +920,7 @@ async function main() {
                 window.areSchoolNamesEquivalent = previousSameSchool;
             }
         })();
+        snapshotStep('policy:county-analysis-school-alias');
         const studentAliasIdentityPolicy = (() => {
             if (typeof window.getCurrentBoundStudentFromUser !== 'function'
                 || typeof window.pickSelfStudentFromCloudRows !== 'function'
@@ -951,6 +1005,7 @@ async function main() {
                 window.THRESHOLDS = previousThresholds;
             }
         })();
+        snapshotStep('policy:student-alias-identity');
         const appSchoolAliasHelperPolicy = (() => {
             if (typeof window.sameAppSchoolName !== 'function'
                 || typeof window.getAppSchoolRecord !== 'function'
@@ -1002,6 +1057,7 @@ async function main() {
                 window.setSubjects(previousSubjects);
             }
         })();
+        snapshotStep('policy:app-school-alias-helper');
         const rankingDataServiceSchoolAliasPolicy = (() => {
             const service = window.RankingDataService;
             if (!service
@@ -1040,6 +1096,7 @@ async function main() {
                 window.areSchoolNamesEquivalent = previousSameSchool;
             }
         })();
+        snapshotStep('policy:ranking-data-service-school-alias');
         const teacherAnalysisCoreSchoolAliasPolicy = (() => {
             if (typeof window.analyzeTeachers !== 'function'
                 || typeof window.calculateTeacherTownshipRanking !== 'function'
@@ -1166,7 +1223,9 @@ async function main() {
                 window.calculateTeacherTownshipRanking({ force: true });
             }
         })();
+        snapshotStep('policy:teacher-analysis-core-school-alias');
         const target = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
+        snapshotStep('evaluate:return');
         return {
             rawData: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
             schoolCount: window.SCHOOLS ? Object.keys(window.SCHOOLS).length : 0,
@@ -1224,8 +1283,10 @@ async function main() {
             } : null
         };
     });
+    trace('browser snapshot evaluate finished');
 
     await browser.close();
+    trace('browser closed; running assertions');
 
     assert.ok(
         snapshot.rawData >= minimumRawDataRows,
