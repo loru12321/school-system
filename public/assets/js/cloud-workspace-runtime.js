@@ -1547,7 +1547,7 @@
         }
 
         const mode = opts.mode === 'exam' ? 'exam' : 'workspace';
-        const key = mode === 'exam'
+        let key = mode === 'exam'
             ? this.getKey()
             : (getWorkspaceSnapshotKey() || this.getKey());
         if (!key) {
@@ -1582,6 +1582,9 @@
 
             const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
             if (mode === 'workspace') normalizeWorkspacePayload(payload);
+            if (mode === 'exam') {
+                key = getCurrentExamIdFromPayload(payload) || String(window.CURRENT_EXAM_ID || '').trim() || key;
+            }
 
             const nowIso = new Date().toISOString();
             const currentMeta = readWorkspaceSyncMeta(key);
