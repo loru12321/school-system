@@ -73,6 +73,7 @@ assert.ok(serviceWorker.includes('isApiCacheEligible'), 'service worker should g
 assert.ok(!serviceWorker.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 assert.ok(publicHeaders.includes('Content-Security-Policy-Report-Only:'), 'static headers should start CSP in report-only mode');
 assert.ok(publicHeaders.includes('Content-Security-Policy:'), 'static headers should enforce CSP after report-only rollout');
+assert.ok(publicHeaders.includes("'unsafe-eval'"), 'CSP should temporarily allow Alpine expression evaluation until inline expressions are removed');
 assert.ok(worker.includes("url.pathname === '/api/csp-report'"), 'worker should receive CSP violation reports');
 assert.ok(!boot.includes('DEMO_TOKEN'), 'boot runtime should not provide an offline admin demo token');
 assert.ok(!runtimeLoader.includes('DEMO_TOKEN'), 'runtime loader should not provide an offline admin demo token');
