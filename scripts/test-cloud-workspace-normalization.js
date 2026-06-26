@@ -94,6 +94,22 @@ assert.ok(
     'cached workspace payloads should be normalized before application'
 );
 assert.ok(
+    workspaceSource.includes('async function assertWorkspaceBundleSafeForUpload'),
+    'workspace sync should guard against stale cohort snapshots overwriting newer cloud exams'
+);
+assert.ok(
+    workspaceSource.includes('已阻止云端覆盖：本地当前考试'),
+    'stale workspace guard should show an actionable blocked-sync reason'
+);
+assert.ok(
+    workspaceSource.includes('getExamKeyOrderScore(currentExamId)'),
+    'stale workspace guard should compare exam order without using cloud updated_at recency'
+);
+assert.ok(
+    workspaceSource.includes('if (remotePayload)') && workspaceSource.includes('if (latestPayload)'),
+    'stale workspace guard should not swallow intentional blocked-upload errors'
+);
+assert.ok(
     appSource.includes('preferredMatchesCohort'),
     'post-hydration exam restoration should reject a foreign-cohort active snapshot'
 );

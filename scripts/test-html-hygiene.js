@@ -43,7 +43,7 @@ assert.ok(html.includes(`boot-runtime.js?v=${serviceWorkerVersion}`), 'boot runt
 assert.ok(html.includes(`service-worker-runtime.js?v=${serviceWorkerVersion}`), 'service worker runtime query version should match the generated runtime version');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-assert.ok(inlineHandlerCount <= 377, `inline event handler count grew: ${inlineHandlerCount} > 377`);
+assert.ok(inlineHandlerCount <= 347, `inline event handler count grew: ${inlineHandlerCount} > 347`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 console.log(`html hygiene tests passed: style=${inlineStyleCount}, handlers=${inlineHandlerCount}`);

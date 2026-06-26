@@ -51,7 +51,7 @@
     <link rel="stylesheet" href="./assets/css/responsive-login-final.css?v=20260621-responsive-login-v1">
     <script>
         (function () {
-            var refreshVersion = 'runtime-546094ff23fe';
+            var refreshVersion = 'runtime-b059779753f8';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -87,9 +87,9 @@
     <script defer src="./assets/js/report-render-runtime.js?v=20260613-report-render-preload-v1"></script>
     <script defer src="./assets/js/town-submodule-compare-runtime.js?v=20260614-town-submodule-preload-v1"></script>
     <script defer src="./assets/js/app-release-catalog-runtime.js?v=20260622-client-icon-sync-v1"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-546094ff23fe"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-546094ff23fe"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-546094ff23fe"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-b059779753f8"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-b059779753f8"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-b059779753f8"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -4258,7 +4258,7 @@
                     <div class="analysis-action-stack" data-role-allow="admin,director,grade_director">
                         <div class="analysis-action-note">建议先筛选学校/班级，再决定是导出 Excel、长图还是查分包。</div>
                         <div class="analysis-actions">
-                            <button class="btn" onclick="exportStudentDetails()">导出Excel</button>
+                            <button class="btn" data-ui-action="export-student-details">导出Excel</button>
                         </div>
                     </div>
                 </div>
@@ -4285,11 +4285,11 @@
                             <option value="teaching">任教学科</option>
                         </select>
                     </span>
-                    <button class="btn" onclick="renderStudentDetails()">筛选查询</button>
-                    <button class="btn btn-green" style="margin-left:auto;" data-role-allow="admin,director,grade_director" onclick="generateMobileLongImage()">
+                    <button class="btn" data-ui-action="render-student-details">筛选查询</button>
+                    <button class="btn btn-green" style="margin-left:auto;" data-role-allow="admin,director,grade_director" data-ui-action="generate-mobile-long-image">
                         <i class="ti ti-photo-scan"></i> 生成班级成绩长图 (手机端)
                     </button>
-                    <button class="btn btn-orange" data-role-allow="admin,director,grade_director" onclick="generateInquiryPackage()">
+                    <button class="btn btn-orange" data-role-allow="admin,director,grade_director" data-ui-action="generate-inquiry-package">
                         <i class="ti ti-package"></i> 生成家长查分包 (HTML)
                     </button>
                 </div>
@@ -4310,7 +4310,7 @@
                         </div>
                         <div class="student-compare-toolbar__field student-compare-toolbar__field--period-count">
                             <label for="studentComparePeriodCount">期数：</label>
-                            <select id="studentComparePeriodCount" class="student-compare-toolbar__select student-compare-toolbar__select--compact" onchange="onStudentComparePeriodCountChange()">
+                            <select id="studentComparePeriodCount" class="student-compare-toolbar__select student-compare-toolbar__select--compact" data-ui-change="student-compare-period-count">
                                 <option value="2">2期</option>
                                 <option value="3">3期</option>
                             </select>
@@ -4330,15 +4330,15 @@
                     </div>
 
                     <div class="student-compare-toolbar__actions">
-                        <button class="btn btn-green" onclick="renderStudentMultiPeriodComparison()" style="background:#10b981; border-radius:20px; padding: 6px 20px;">生成全校学生对比</button>
-                        <button id="btn-save-compare-cloud" class="btn" style="background:#8b5cf6; color:white; border-radius:20px; padding: 6px 20px;" onclick="saveStudentCompareToCloud()">☁️ 保存到云端</button>
+                        <button class="btn btn-green" data-ui-action="render-student-multi-period-comparison" style="background:#10b981; border-radius:20px; padding: 6px 20px;">生成全校学生对比</button>
+                        <button id="btn-save-compare-cloud" class="btn" style="background:#8b5cf6; color:white; border-radius:20px; padding: 6px 20px;" data-ui-action="save-student-compare-cloud">☁️ 保存到云端</button>
                     </div>
                 </div>
 
                 <div class="control-panel student-compare-toolbar student-compare-toolbar--secondary">
                     <div class="student-compare-toolbar__actions student-compare-toolbar__actions--secondary">
-                        <button class="btn" style="background:#06b6d4; color:white; border-radius:20px; padding: 6px 20px;" onclick="viewCloudStudentCompares()">📋 查看云端对比</button>
-                        <button class="btn" style="background:#10b981; color:white; border-radius:20px; padding: 6px 20px;" onclick="exportStudentMultiPeriodComparison()">导出Excel</button>
+                        <button class="btn" style="background:#06b6d4; color:white; border-radius:20px; padding: 6px 20px;" data-ui-action="view-cloud-student-compares">📋 查看云端对比</button>
+                        <button class="btn" style="background:#10b981; color:white; border-radius:20px; padding: 6px 20px;" data-ui-action="export-student-multi-period-comparison">导出Excel</button>
                     </div>
                     <span class="student-compare-toolbar__tip">提示：教师只能查看自己任教班级的对比数据</span>
                 </div>
@@ -4349,11 +4349,11 @@
                     <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
                         <label style="font-size:12px; color:#475569;">🔍 筛选：</label>
                         <select id="studentCompareClassFilter" style="padding:4px 12px; border-radius:20px; min-width:140px;"
-                            onchange="filterStudentCompareByClass()">
+                            data-ui-change="filter-student-compare-class">
                             <option value="">全部班级</option>
                         </select>
                         <select id="studentCompareSortBy" style="padding:4px 12px; border-radius:20px; min-width:160px;"
-                            onchange="sortStudentCompare()">
+                            data-ui-change="sort-student-compare">
                             <option value="class">班级/姓名</option>
                             <option value="totalDesc">总分从高到低</option>
                             <option value="totalAsc">总分从低到高</option>
@@ -4363,13 +4363,13 @@
                         </select>
                         <input type="text" id="studentCompareNameInput" placeholder="输入姓名（可用逗号分隔多个）"
                             style="padding:4px 12px; border-radius:20px; min-width:180px;"
-                            onkeypress="if(event.key==='Enter') filterStudentCompareByName()">
-                        <button class="btn btn-sm btn-gray" onclick="filterStudentCompareByName()">查询姓名</button>
+                            data-ui-enter="filter-student-compare-name">
+                        <button class="btn btn-sm btn-gray" data-ui-action="filter-student-compare-name">查询姓名</button>
                         <button class="btn btn-sm" style="background:#10b981; color:white;"
-                            onclick="filterByProgress('improve')">只看进步</button>
+                            data-ui-action="filter-student-compare-progress" data-ui-value="improve">只看进步</button>
                         <button class="btn btn-sm" style="background:#ef4444; color:white;"
-                            onclick="filterByProgress('decline')">只看退步</button>
-                        <button class="btn btn-sm btn-gray" onclick="clearStudentCompareFilter()">显示全部</button>
+                            data-ui-action="filter-student-compare-progress" data-ui-value="decline">只看退步</button>
+                        <button class="btn btn-sm btn-gray" data-ui-action="clear-student-compare-filter">显示全部</button>
                     </div>
                     
                     <div id="studentCompareHint" style="font-size:12px; color:#64748b; margin:10px 0;">
@@ -4381,7 +4381,7 @@
                     <div id="studentComparePagination" style="margin-top:10px; display:none; padding:8px; background:#f8fafc; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
                         <div>
                             <label style="color:#475569;">每页显示：</label>
-                            <select id="studentComparePageSize" onchange="changePageSize()">
+                            <select id="studentComparePageSize" data-ui-change="student-compare-page-size">
                                 <option value="10">10人</option>
                                 <option value="20" selected>20人</option>
                                 <option value="30">30人</option>

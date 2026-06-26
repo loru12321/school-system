@@ -73,3 +73,70 @@ async function downloadCertificate() {
     link.href = canvas.toDataURL("image/png");
     link.click();
 }
+
+(() => {
+    if (typeof window === 'undefined' || window.__UI_ACTIONS_DELEGATE_INSTALLED__) return;
+    window.__UI_ACTIONS_DELEGATE_INSTALLED__ = true;
+
+    const callGlobal = (name, ...args) => {
+        const fn = window[name];
+        if (typeof fn !== 'function') {
+            console.warn(`[ui-actions] missing handler: ${name}`);
+            return undefined;
+        }
+        return fn(...args);
+    };
+
+    const actionHandlers = {
+        'export-student-details': () => callGlobal('exportStudentDetails'),
+        'render-student-details': () => callGlobal('renderStudentDetails'),
+        'generate-mobile-long-image': () => callGlobal('generateMobileLongImage'),
+        'generate-inquiry-package': () => callGlobal('generateInquiryPackage'),
+        'render-student-multi-period-comparison': () => callGlobal('renderStudentMultiPeriodComparison'),
+        'save-student-compare-cloud': () => callGlobal('saveStudentCompareToCloud'),
+        'view-cloud-student-compares': () => callGlobal('viewCloudStudentCompares'),
+        'export-student-multi-period-comparison': () => callGlobal('exportStudentMultiPeriodComparison'),
+        'filter-student-compare-name': () => callGlobal('filterStudentCompareByName'),
+        'filter-student-compare-progress': (target) => callGlobal('filterByProgress', target?.dataset?.uiValue || ''),
+        'clear-student-compare-filter': () => callGlobal('clearStudentCompareFilter')
+    };
+
+    const changeHandlers = {
+        'student-compare-period-count': () => callGlobal('onStudentComparePeriodCountChange'),
+        'filter-student-compare-class': () => callGlobal('filterStudentCompareByClass'),
+        'sort-student-compare': () => callGlobal('sortStudentCompare'),
+        'student-compare-page-size': () => callGlobal('changePageSize')
+    };
+
+    function runAction(target, action) {
+        const handler = actionHandlers[action] || changeHandlers[action];
+        if (typeof handler !== 'function') return false;
+        handler(target);
+        return true;
+    }
+
+    document.addEventListener('click', (event) => {
+        const target = event.target?.closest?.('[data-ui-action]');
+        if (!target) return;
+        const action = target.dataset.uiAction;
+        if (!action || !runAction(target, action)) return;
+        event.preventDefault();
+    });
+
+    document.addEventListener('change', (event) => {
+        const target = event.target?.closest?.('[data-ui-change]');
+        if (!target) return;
+        const action = target.dataset.uiChange;
+        if (!action) return;
+        runAction(target, action);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        const target = event.target?.closest?.('[data-ui-enter]');
+        if (!target) return;
+        const action = target.dataset.uiEnter;
+        if (!action || !runAction(target, action)) return;
+        event.preventDefault();
+    });
+})();

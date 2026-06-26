@@ -66,6 +66,20 @@
         return Math.max(updatedScore, dateScore) + termScore + typeScore;
     }
 
+    function getExamKeyOrderScore(key) {
+        const text = String(key || '');
+        const dateMatch = text.match(/(20\d{2})[-_/年.](\d{1,2})[-_/月.](\d{1,2})/);
+        const dateScore = dateMatch
+            ? new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])).getTime()
+            : 0;
+        const termScore = text.includes('下学期') ? 200000 : text.includes('上学期') ? 100000 : 0;
+        const typeOrder = ['期中', '期末', '一模', '二模', '三模', '四模', '中考'];
+        const typeScore = typeOrder.reduce((score, label, index) => (
+            text.includes(label) ? Math.max(score, (index + 1) * 1000) : score
+        ), 0);
+        return dateScore + termScore + typeScore;
+    }
+
     function syncWorkspaceState(patch = {}) {
         if (WorkspaceState && typeof WorkspaceState.syncWorkspaceState === 'function') {
             return WorkspaceState.syncWorkspaceState(patch);
@@ -366,6 +380,35 @@
         return String(payload?.CURRENT_EXAM_ID || payload?.COHORT_DB?.currentExamId || '').trim();
     }
 
+    function getPayloadRawRowCount(payload) {
+        const rows = payload?.RAW_DATA;
+        if (Array.isArray(rows)) return rows.length;
+        if (rows && Array.isArray(rows.rows)) return rows.rows.length;
+        return 0;
+    }
+
+    function getBundleCohortId(bundle) {
+        return normalizeCohortId(
+            bundle?.metaPayload?.CURRENT_COHORT_ID
+            || bundle?.metaPayload?.COHORT_DB?.cohortId
+            || bundle?.workspaceKey
+        );
+    }
+
+    function getBundleCurrentExamRow(bundle, currentExamId) {
+        const exactExamId = String(currentExamId || '').trim();
+        return (bundle?.examRows || []).find(row => String(row?.key || '').trim() === exactExamId) || null;
+    }
+
+    function getPayloadCurrentExamSummary(payload, fallbackKey = '') {
+        const currentExamId = getCurrentExamIdFromPayload(payload) || String(fallbackKey || '').trim();
+        return {
+            currentExamId,
+            rowCount: getPayloadRawRowCount(payload),
+            recencyScore: getExamKeyOrderScore(currentExamId)
+        };
+    }
+
     function compactExamMetadata(examId, examPayload = {}) {
         const next = {};
         Object.entries(examPayload && typeof examPayload === 'object' ? examPayload : {}).forEach(([field, value]) => {
@@ -646,6 +689,7 @@
 
     async function uploadWorkspaceBundle(bundle, syncedAt) {
         if (!bundle || bundle.mode !== 'workspace-split') return false;
+        await assertWorkspaceBundleSafeForUpload(bundle);
         const historyIndexRows = buildStudentHistoryIndexRowsForBundle(bundle.metaPayload, bundle.examRows, syncedAt);
         const rows = [
             { key: bundle.workspaceKey, content: bundle.metaContent, updated_at: syncedAt },
@@ -657,6 +701,66 @@
             const chunk = historyIndexRows.slice(i, i + 400);
             const { error: indexError } = await upsertSystemDataRecord(chunk);
             if (indexError) throw indexError;
+        }
+        return true;
+    }
+
+    async function assertWorkspaceBundleSafeForUpload(bundle) {
+        const workspaceKey = String(bundle?.workspaceKey || '').trim();
+        const cohortId = getBundleCohortId(bundle);
+        if (!workspaceKey || !cohortId || workspaceKey !== `cohort::${cohortId}`) return true;
+
+        const currentExamId = getCurrentExamIdFromPayload(bundle.metaPayload);
+        const currentExamRow = getBundleCurrentExamRow(bundle, currentExamId);
+        const currentRowCount = getPayloadRawRowCount(currentExamRow?.shard);
+        if (!currentExamId || !currentExamRow || currentRowCount <= 0) {
+            throw new Error('已阻止云端覆盖：当前考试没有有效成绩分片');
+        }
+
+        const localSummary = {
+            currentExamId,
+            rowCount: currentRowCount,
+            recencyScore: getExamKeyOrderScore(currentExamId)
+        };
+
+        const rejectIfRemoteIsNewer = (remoteSummary) => {
+            if (!remoteSummary?.currentExamId || remoteSummary.rowCount <= 0) return;
+            if (extractCohortIdFromKey(remoteSummary.currentExamId) !== cohortId) return;
+            if (remoteSummary.recencyScore > localSummary.recencyScore) {
+                throw new Error(`已阻止云端覆盖：本地当前考试 ${localSummary.currentExamId} 早于云端 ${remoteSummary.currentExamId}`);
+            }
+        };
+
+        const remoteWorkspaceRow = await fetchWorkspaceSnapshotRow(workspaceKey);
+        if (remoteWorkspaceRow?.content) {
+            let remotePayload = null;
+            try {
+                remotePayload = parsePayload(remoteWorkspaceRow.content);
+            } catch (error) {
+                console.warn('[CloudSync] remote workspace guard skipped:', error?.message || error);
+            }
+            if (remotePayload) {
+                rejectIfRemoteIsNewer(getPayloadCurrentExamSummary({
+                    ...remotePayload,
+                    updated_at: remoteWorkspaceRow.updated_at || ''
+                }, workspaceKey));
+            }
+        }
+
+        const latestExamRow = await fetchLatestCohortExamRow(cohortId);
+        if (latestExamRow?.content) {
+            let latestPayload = null;
+            try {
+                latestPayload = parsePayload(latestExamRow.content);
+            } catch (error) {
+                console.warn('[CloudSync] latest exam guard skipped:', error?.message || error);
+            }
+            if (latestPayload) {
+                rejectIfRemoteIsNewer(getPayloadCurrentExamSummary({
+                    ...latestPayload,
+                    updated_at: latestExamRow.updated_at || ''
+                }, latestExamRow.key));
+            }
         }
         return true;
     }
