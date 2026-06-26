@@ -116,6 +116,10 @@ assert.ok(publicHeaders.includes('/assets/vendor/*'), 'static asset headers shou
 assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should cover runtime JS assets');
 assert.ok(publicHeaders.includes('/assets/audio/*'), 'static asset headers should cover built-in entrance audio assets');
 assert.ok(publicHeaders.includes('/assets/js/*') && publicHeaders.includes('max-age=31536000, immutable'), 'versioned runtime JS should use long immutable browser caching');
+assert.ok(
+  publicHeaders.includes('/assets/css/*\n  Cache-Control: public, max-age=31536000, immutable'),
+  'versioned runtime CSS should use long immutable browser caching'
+);
 assert.ok(publicHeaders.includes('/downloads/*'), 'static asset headers should cover hosted downloads');
 assert.ok(
   publicHeaders.includes('/downloads/*\n  Cache-Control: public, max-age=31536000, immutable'),
@@ -133,6 +137,7 @@ assert.ok(publicHeaders.includes('Referrer-Policy: strict-origin-when-cross-orig
 assert.ok(publicHeaders.includes('X-Frame-Options: SAMEORIGIN'), 'static responses should limit framing');
 assert.ok(publicHeaders.includes('Permissions-Policy: camera=(), microphone=(), geolocation=()'), 'static responses should disable unused sensitive browser features');
 assert.ok(publicHeaders.includes('Content-Security-Policy-Report-Only:'), 'static responses should start CSP in report-only mode');
+assert.ok(publicHeaders.includes('Content-Security-Policy:'), 'static responses should enforce CSP after report-only rollout');
 assert.ok(publicHeaders.includes("report-uri /api/csp-report"), 'report-only CSP should route violation reports to the Worker endpoint');
 assert.ok(publicHeaders.includes('/robots.txt'), 'static asset headers should cover robots.txt');
 assert.ok(publicHeaders.includes('/sitemap.xml'), 'static asset headers should cover sitemap.xml');

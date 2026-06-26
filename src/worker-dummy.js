@@ -839,15 +839,19 @@ async function handleSystemDataProxy(request, env, url) {
 
     if (method === 'POST') {
       const supabaseRequest = request.clone();
-      const d1Response = await handleSystemDataWrite(request, env);
-      const supabaseResponse = await proxySystemDataWriteToSupabase(supabaseRequest, env, url);
+      const [d1Response, supabaseResponse] = await Promise.all([
+        handleSystemDataWrite(request, env),
+        proxySystemDataWriteToSupabase(supabaseRequest, env, url)
+      ]);
       return supabaseResponse.ok ? d1Response : supabaseResponse;
     }
 
     if (method === 'DELETE') {
       const supabaseRequest = request.clone();
-      const d1Response = await handleSystemDataDelete(request, env, url);
-      const supabaseResponse = await proxySupabaseRestRequest(supabaseRequest, env, url, '/rest/v1/system_data');
+      const [d1Response, supabaseResponse] = await Promise.all([
+        handleSystemDataDelete(request, env, url),
+        proxySupabaseRestRequest(supabaseRequest, env, url, '/rest/v1/system_data')
+      ]);
       return supabaseResponse.ok ? d1Response : supabaseResponse;
     }
 

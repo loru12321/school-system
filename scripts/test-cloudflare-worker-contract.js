@@ -110,8 +110,11 @@ assert.ok(worker.includes('function isSystemDataHybridMode(env)'), 'system_data 
 assert.ok(worker.includes('const d1Response = await handleSystemDataRead(request, env, url);'), 'hybrid system_data reads should try D1 before Supabase fallback');
 assert.ok(worker.includes('return d1Response || proxySystemDataReadToSupabase(request, env, url);'), 'hybrid system_data reads should fall back to Supabase when D1 misses');
 assert.ok(worker.includes('const supabaseRequest = request.clone();'), 'hybrid system_data writes should clone requests before dual-write proxying');
-assert.ok(worker.includes('const d1Response = await handleSystemDataWrite(request, env);'), 'hybrid system_data writes should persist to D1');
-assert.ok(worker.includes('const supabaseResponse = await proxySystemDataWriteToSupabase(supabaseRequest, env, url);'), 'hybrid system_data writes should also sync Supabase');
+assert.ok(worker.includes('const [d1Response, supabaseResponse] = await Promise.all(['), 'hybrid system_data writes should dual-write D1 and Supabase concurrently');
+assert.ok(worker.includes('handleSystemDataWrite(request, env),'), 'hybrid system_data writes should persist to D1');
+assert.ok(worker.includes('proxySystemDataWriteToSupabase(supabaseRequest, env, url)'), 'hybrid system_data writes should also sync Supabase');
+assert.ok(worker.includes('handleSystemDataDelete(request, env, url),'), 'hybrid system_data deletes should delete from D1');
+assert.ok(worker.includes("proxySupabaseRestRequest(supabaseRequest, env, url, '/rest/v1/system_data')"), 'hybrid system_data deletes should also sync Supabase');
 assert.ok(worker.includes("cloudSystemDataBackend === 'hybrid' ? hasSystemDataStorage(env) && hasSupabaseRestOrigin(env)"), 'health should require both D1 and Supabase readiness for hybrid mode');
 assert.ok(worker.includes('cloudSystemDataD1Bound: hasSystemDataStorage(env)'), 'health should expose D1 binding readiness before primary cutover');
 assert.ok(worker.includes('cloudSystemDataSupabaseReady: hasSupabaseRestOrigin(env)'), 'health should expose Supabase readiness during hybrid cutover');

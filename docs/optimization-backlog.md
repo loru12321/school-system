@@ -20,13 +20,15 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Lazy-load heavy vendor libraries such as Excel, SQL, PDF, and charting dependencies. Status: guarded so heavy vendors stay out of first-screen HTML and offline `lt.html` runtime source maps.
 - Subset or prune Tabler icon fonts so unused font formats do not dominate the release surface.
 - Replace alert, confirm, and prompt flows with a shared modal/toast API.
-- Tighten immutable cache rules for versioned assets while keeping `sw.js` and HTML revalidation strict. Status: runtime JS now uses build-generated content versions before immutable caching.
+- Tighten immutable cache rules for versioned assets while keeping `sw.js` and HTML revalidation strict. Status: runtime JS/CSS now use build-generated content versions before immutable caching, including Service Worker cache-first handling for explicitly versioned assets.
 - Keep `Content-Type: text/html; charset=utf-8` on `/` and `/index.html`.
 - Keep `SERVICE_WORKER_VERSION` and the early refresh version aligned. Status: guarded by `test:runtime-cache-version`.
 - Keep `CACHE_VERSION` explicit when service worker app-shell behavior changes. Status: derived from the same generated runtime version.
 - Keep `check:p1` tied to HTML, service worker, release surface, runtime, and CSS hygiene.
 - Keep heavy vendor libraries behind demand loaders instead of boot loading.
 - Keep bundle and hosted download budgets from drifting upward silently. Status: `lt.html` budget tightened after excluding vendor payloads from the inline runtime source map, and `lt.html.br` is generated with a Brotli budget.
+- Reduce first-screen render blocking from the many source CSS links. Status: production `dist/index.html` still emits a single optimized CSS file, but source CSS module consolidation remains queued.
+- Continue CSP hardening toward hash/nonce-based inline script execution. Status: enforced CSP is now shipped alongside report-only reporting; removing `unsafe-inline` requires inline script hashing or nonce injection in the build pipeline.
 
 ## P2: sustainable maintenance
 
@@ -63,3 +65,4 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 | 2026-06-26 | P1/P2 | 性能趋势 workflow 增加 `test:performance-thresholds` 自动红线；Cloudflare Worker 名称统一为 `school-system`，生产路由迁移到新 Worker 并补齐 Cloudflare Secrets | `npm run build`, `npm run check:release-fast`, `npm run smoke:modules:local`, `npm run smoke:prod-minimal`, production `node scripts/smoke-all-modules.js`, Cloudflare version `434814dd-1087-49d3-91a3-01b2ce50dead` |
 | 2026-06-26 | P0/P1/P2 | system_data 切换为 D1 primary 并绑定 `CLOUD_SYSTEM_DATA_DB`；Supabase bootstrap 不再创建旧 `password text`；客户端安装包发布链收敛为 Windows-only，移除 Android/iOS 包历史、清单、工作流和签名检查 | `npm run build`, `npm run check:release-fast`, `npm run smoke:mobile:local`, `npm run smoke:modules:local`, `npm run smoke:prod-minimal`, production `node scripts/smoke-all-modules.js`, Cloudflare version `b60d777a-221f-41c8-94f4-7000523f206a` |
 | 2026-06-26 | P0/P1/P2 | CI 增加 P0 快速通道；Supabase `system_users` / `system_users_staging` 补齐 RLS 与 anon/authenticated revoke；build 拆成 pre/core/post；`lt.html` 生成 Brotli 产物；README 明确 Windows 代码签名负责人和稳定版目标 | commit `713ca360`, `npm run build`, `npm run check:release-fast`, `npm run smoke:mobile:local`, `npm run smoke:modules:local`, `npm run smoke:prod-minimal`, production `node scripts/smoke-all-modules.js`, Cloudflare version `c7e06635-9f10-4d07-bb5b-b50427ec915e` |
+| 2026-06-26 | P1/P2 | Service Worker 对显式版本 JS/CSS 改为 CacheFirst；`/assets/css/*` 与 JS 对齐为 immutable；hybrid system_data 写入/删除改为 D1 与 Supabase 并发；静态响应启用正式 CSP 并保留 Report-Only | pending |
