@@ -185,6 +185,284 @@
     }
 }
 
+/* Production login recovery: keep the auth flow, restore a restrained workbench shell. */
+@media (min-width: 901px) {
+    html body #login-overlay[data-login-skin="clean"] {
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 28px !important;
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(246, 248, 251, .96)),
+            #f6f8fb !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: min(1120px, calc(100vw - 56px)) !important;
+        min-height: 0 !important;
+        height: min(760px, calc(100vh - 56px)) !important;
+        display: grid !important;
+        grid-template-columns: minmax(360px, .9fr) minmax(400px, 480px) !important;
+        gap: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        border: 1px solid #d9e0ea !important;
+        border-radius: 16px !important;
+        background: #fff !important;
+        box-shadow: 0 22px 56px rgba(31, 41, 55, .12) !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 0 !important;
+        height: auto !important;
+        display: grid !important;
+        grid-template-columns: minmax(260px, 1fr) 200px !important;
+        grid-template-rows: auto 1fr auto !important;
+        align-items: center !important;
+        column-gap: 16px !important;
+        padding: 38px 42px !important;
+        color: #182230 !important;
+        background:
+            linear-gradient(#e9edf3 1px, transparent 1px),
+            linear-gradient(90deg, #e9edf3 1px, transparent 1px),
+            #f8fafc !important;
+        background-size: 28px 28px !important;
+        border: 0 !important;
+        border-right: 1px solid #d9e0ea !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        content: none !important;
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-brand {
+        grid-column: 1 / -1 !important;
+        align-self: start !important;
+        color: #182230 !important;
+        gap: 12px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-mark {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 10px !important;
+        background: #174ea6 !important;
+        color: #fff !important;
+        box-shadow: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-brand strong {
+        color: #182230 !important;
+        font-size: 17px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-brand small {
+        color: #64748b !important;
+        letter-spacing: 0 !important;
+        text-transform: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy {
+        display: block !important;
+        grid-column: 1 !important;
+        align-self: center !important;
+        justify-self: start !important;
+        width: 100% !important;
+        max-width: 300px !important;
+        margin: auto 0 28px !important;
+        color: #182230 !important;
+        animation: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy span {
+        display: inline-flex !important;
+        margin-bottom: 12px !important;
+        color: #174ea6 !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        letter-spacing: 0 !important;
+        text-transform: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        margin: 0 0 14px !important;
+        color: #111827 !important;
+        font-size: clamp(40px, 5vw, 64px) !important;
+        line-height: 1.02 !important;
+        letter-spacing: 0 !important;
+        max-width: none !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy p {
+        width: min(440px, 100%) !important;
+        max-width: 440px !important;
+        color: #526174 !important;
+        font-size: 15px !important;
+        line-height: 1.75 !important;
+        word-break: keep-all !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        grid-column: 2 !important;
+        align-self: center !important;
+        justify-self: end !important;
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+        width: 200px !important;
+        max-width: none !important;
+        height: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard *,
+    #login-overlay[data-login-skin="clean"] .login-styleboard::before,
+    #login-overlay[data-login-skin="clean"] .login-styleboard::after {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-look-card {
+        display: grid !important;
+        grid-template-columns: 34px 1fr !important;
+        column-gap: 10px !important;
+        align-items: center !important;
+        width: auto !important;
+        min-height: 58px !important;
+        max-width: none !important;
+        height: auto !important;
+        padding: 10px !important;
+        margin: 0 !important;
+        border: 1px solid #dce3ed !important;
+        border-radius: 10px !important;
+        background: rgba(255, 255, 255, .74) !important;
+        box-shadow: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-look-card span {
+        grid-row: span 2 !important;
+        width: 30px !important;
+        height: 30px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 8px !important;
+        background: #eef4ff !important;
+        color: #174ea6 !important;
+        font-size: 11px !important;
+        font-weight: 800 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-look-card strong {
+        color: #182230 !important;
+        font-size: 14px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-look-card small {
+        color: #64748b !important;
+        font-size: 12px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-card {
+        min-height: 0 !important;
+        max-width: none !important;
+        justify-content: center !important;
+        padding: 36px 32px !important;
+        background: #fff !important;
+        overflow: auto !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-form-header {
+        margin-bottom: 16px !important;
+        text-align: left !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-form-header h2 {
+        margin: 8px 0 6px !important;
+        color: #111827 !important;
+        font-size: 28px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-form-header p,
+    #login-overlay[data-login-skin="clean"] .login-clean-helper,
+    #login-overlay[data-login-skin="clean"] .login-graduate-cohort-helper,
+    #login-overlay[data-login-skin="clean"] .login-portal-helper {
+        color: #64748b !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-portal-badge {
+        border-radius: 6px !important;
+        background: #eef4ff !important;
+        border-color: #d7e5ff !important;
+        color: #174ea6 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-switch,
+    #login-overlay[data-login-skin="clean"] .login-entry-field,
+    #login-overlay[data-login-skin="clean"] .login-graduate-cohort-panel,
+    #login-overlay[data-login-skin="clean"] .entrance-sound-panel {
+        border-radius: 8px !important;
+        box-shadow: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-switch {
+        margin: 16px 0 !important;
+        background: #f3f6fa !important;
+        border-color: #dce3ed !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-entry-field {
+        grid-template-columns: 86px 1fr !important;
+        min-height: 46px !important;
+        border-color: #dce3ed !important;
+        background: #fff !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-entry-field:focus-within {
+        border-color: #174ea6 !important;
+        box-shadow: 0 0 0 3px rgba(23, 78, 166, .1) !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-entry-prefix {
+        color: #526174 !important;
+        letter-spacing: 0 !important;
+        text-transform: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-submit {
+        min-height: 48px !important;
+        margin-top: 16px !important;
+        border-radius: 8px !important;
+        background: #174ea6 !important;
+        box-shadow: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
+        background: #123f86 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .entrance-sound-panel {
+        margin-top: 14px !important;
+        padding: 12px !important;
+        border: 1px solid #dce3ed !important;
+        background: #f8fafc !important;
+    }
+}
+
 @media (max-width: 768px) {
     html body #login-overlay[data-login-skin="clean"] {
         position: fixed !important;
