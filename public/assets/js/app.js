@@ -9139,6 +9139,18 @@ Object.assign(window, {
     renderBlankScoreAuditModule
 });
 
+if (!window.__blankScoreAuditRefreshBound) {
+    window.__blankScoreAuditRefreshBound = true;
+    document.addEventListener('click', (event) => {
+        const button = event.target && typeof event.target.closest === 'function'
+            ? event.target.closest('[data-blank-score-audit-refresh]')
+            : null;
+        if (!button) return;
+        event.preventDefault();
+        renderBlankScoreAuditModule();
+    });
+}
+
 function renderTrafficLightDashboard() {
     const container = document.getElementById('traffic-light-dashboard');
     const listRed = document.getElementById('list-red');
