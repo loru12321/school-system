@@ -821,14 +821,16 @@
             keyLike: `${cid}%`,
             order: 'updated_at',
             ascending: false,
-            limit: 8
+            limit: COHORT_EXAM_LATEST_META_LIMIT
         });
         if (error) throw error;
-        return (data || []).find(row => {
+        return (data || []).filter(row => {
             if (!row?.key || !row?.content) return false;
             if (isIgnoredExamKey(row.key)) return false;
             return extractCohortIdFromKey(row.key) === cid;
-        }) || null;
+        }).sort((left, right) => (
+            getExamKeyRecencyScore(right.key, right.updated_at) - getExamKeyRecencyScore(left.key, left.updated_at)
+        ))[0] || null;
     }
 
     async function hydrateSplitWorkspacePayload(key, metaPayload) {

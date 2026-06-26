@@ -382,6 +382,45 @@
         return metaDate || updatedTs || createdTs || 0;
     }
 
+    function getWorkspaceExamOrderScore(examId, examPayload = {}) {
+        const key = String(examId || '');
+        const meta = examPayload?.meta && typeof examPayload.meta === 'object' ? examPayload.meta : {};
+        const dateCandidates = [
+            meta.date,
+            meta.examDate,
+            key
+        ];
+        let dateScore = 0;
+        for (const candidate of dateCandidates) {
+            if (candidate == null || candidate === '') continue;
+            const text = String(candidate);
+            const parsed = Date.parse(text);
+            if (Number.isFinite(parsed)) dateScore = Math.max(dateScore, parsed);
+            const match = text.match(/(20\d{2})[-_/年.](\d{1,2})[-_/月.](\d{1,2})/);
+            if (match) {
+                dateScore = Math.max(dateScore, new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime());
+            }
+        }
+
+        const descriptor = [
+            key,
+            meta.name,
+            meta.examName,
+            meta.term,
+            meta.stage,
+            examPayload.examLabel,
+            examPayload.name
+        ].map(value => String(value || '')).join('|');
+        const termScore = descriptor.includes('下学期') ? 200000 : descriptor.includes('上学期') ? 100000 : 0;
+        const typeOrder = ['期中', '期末', '一模', '二模', '三模', '四模', '中考'];
+        const typeScore = typeOrder.reduce((score, label, index) => (
+            descriptor.includes(label) ? Math.max(score, (index + 1) * 1000) : score
+        ), 0);
+        const storageTime = getWorkspaceExamSortTime(examId, examPayload);
+        const storageTieScore = storageTime ? Math.min(999, Math.floor(storageTime / 86400000) % 1000) : 0;
+        return (dateScore || 0) + termScore + typeScore + storageTieScore;
+    }
+
     function getWorkspaceSnapshotKey() {
         const explicitProjectKey = getCurrentProjectKey();
         if (/^cohort::/i.test(explicitProjectKey)) return explicitProjectKey;
@@ -464,8 +503,8 @@
         const sortedRealExamEntries = realExamEntries
             .slice()
             .sort((a, b) => {
-                const ta = getWorkspaceExamSortTime(a.examId, a.examPayload);
-                const tb = getWorkspaceExamSortTime(b.examId, b.examPayload);
+                const ta = getWorkspaceExamOrderScore(a.examId, a.examPayload);
+                const tb = getWorkspaceExamOrderScore(b.examId, b.examPayload);
                 if (ta !== tb) return tb - ta;
                 return String(b.examId || '').localeCompare(String(a.examId || ''), 'zh-CN');
             })
@@ -1161,6 +1200,7 @@
         extractCohortIdFromKey,
         isLegacyWorkspaceShadowExamKey,
         getWorkspaceExamSortTime,
+        getWorkspaceExamOrderScore,
         getWorkspaceSnapshotKey,
         getCohortSyncCacheKey,
         countCachedCohortExams,
