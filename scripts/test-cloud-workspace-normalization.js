@@ -148,6 +148,10 @@ assert.ok(
     'workspace bundle upload should use chunked system_data upserts instead of one large POST'
 );
 assert.ok(
+    workspaceSource.includes('return this._workspaceSyncFlushTask.then(() => this.flushWorkspaceSyncQueue(opts));'),
+    'manual save should rerun queue flush after an active background flush so the newly queued overwrite is uploaded'
+);
+assert.ok(
     workspaceSource.includes('云端连接未就绪，请重新登录或稍后重试'),
     'manual score sync should persist a clear cloud readiness failure instead of a generic error'
 );

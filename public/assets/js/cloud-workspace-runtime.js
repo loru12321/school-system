@@ -1671,7 +1671,9 @@
     CloudManager.flushWorkspaceSyncQueue = async function (options = {}) {
         const opts = options && typeof options === 'object' ? { ...options } : {};
         const targetKey = String(opts.targetKey || '').trim();
-        if (this._workspaceSyncFlushTask) return this._workspaceSyncFlushTask;
+        if (this._workspaceSyncFlushTask) {
+            return this._workspaceSyncFlushTask.then(() => this.flushWorkspaceSyncQueue(opts));
+        }
 
         this._workspaceSyncFlushTask = (async () => {
             let queue = readWorkspaceSyncQueue();
