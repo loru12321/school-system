@@ -15566,6 +15566,18 @@ function ensureWorkspaceDefaultSchool() {
     return fallbackSchool;
 }
 
+function hasUsableProcessedSchoolMetrics(schools) {
+    const entries = Object.values((schools && typeof schools === 'object') ? schools : {});
+    if (!entries.length) return false;
+    return entries.some((school) => {
+        const totalMetrics = school?.metrics?.total;
+        if (!totalMetrics || typeof totalMetrics !== 'object') return false;
+        const count = Number(totalMetrics.count);
+        const avg = Number(totalMetrics.avg);
+        return Number.isFinite(count) && count > 0 && Number.isFinite(avg);
+    });
+}
+
 function tryAutoRestoreWorkspaceExam(options = {}) {
     const db = COHORT_DB || ((typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null);
     if (!db) return false;
@@ -15583,12 +15595,18 @@ function tryAutoRestoreWorkspaceExam(options = {}) {
     const activeCid = normalizeCompareCohortId(CURRENT_COHORT_META?.id || '');
     if (normalizedCohortId && activeCid !== normalizedCohortId) ensureCohortRegistered(normalizedCohortId);
     const currentRows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+    const currentSchoolMetricsReady = hasUsableProcessedSchoolMetrics(SCHOOLS);
 
     if (preferredExamId && db.exams?.[preferredExamId] && currentRows.length > 0 && preferredMatchesCohort) {
         const preferredMeta = db.exams[preferredExamId].meta || {};
         const effectiveGrade = String(getEffectiveGrade(preferredMeta) || '').trim();
-        if (effectiveGrade && String(preferredMeta.grade || '').trim() !== effectiveGrade && typeof CohortDB?.applyExamToWorkspace === 'function') {
-            CohortDB.applyExamToWorkspace(preferredExamId, { renderTables: false, recalculate: false });
+        if ((effectiveGrade && String(preferredMeta.grade || '').trim() !== effectiveGrade) || !currentSchoolMetricsReady) {
+            if (typeof CohortDB?.applyExamToWorkspace === 'function') {
+                CohortDB.applyExamToWorkspace(preferredExamId, {
+                    renderTables: false,
+                    recalculate: !currentSchoolMetricsReady
+                });
+            }
         }
         ensureWorkspaceDefaultSchool();
         return true;
@@ -15875,7 +15893,8 @@ const CohortDB = {
         const exam = db.exams?.[examId];
         if (!exam) return false;
         const hasProcessedSchools = !!(exam.schools && typeof exam.schools === 'object' && Object.keys(exam.schools).length > 0);
-        const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools;
+        const hasProcessedSchoolMetrics = hasUsableProcessedSchoolMetrics(exam.schools);
+        const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;
         const shouldRenderTables = options.renderTables !== false;
         syncDataRuntimeState({
             rawData: exam.data || [],

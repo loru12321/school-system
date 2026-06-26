@@ -200,8 +200,21 @@ assert.ok(
     'post-hydration exam restoration should repair stale cohort metadata'
 );
 assert.ok(
-    appSource.includes('CohortDB.applyExamToWorkspace(preferredExamId, { renderTables: false, recalculate: false });'),
+    appSource.includes('CohortDB.applyExamToWorkspace(preferredExamId, {')
+        && appSource.includes('recalculate: !currentSchoolMetricsReady'),
     'post-hydration exam restoration should refresh stale grade-derived settings'
+);
+assert.ok(
+    appSource.includes('function hasUsableProcessedSchoolMetrics'),
+    'workspace restore should distinguish rebuilt school rosters from processed school metrics'
+);
+assert.ok(
+    appSource.includes('const currentSchoolMetricsReady = hasUsableProcessedSchoolMetrics(SCHOOLS);'),
+    'auto restore should detect split cloud payloads that have rows but missing school metrics'
+);
+assert.ok(
+    appSource.includes('const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;'),
+    'exam restore should recalculate when restored school metrics are missing even if school rosters exist'
 );
 
 console.log('cloud workspace normalization tests passed');
