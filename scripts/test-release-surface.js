@@ -127,8 +127,8 @@ assert.ok(
 );
 assert.ok(publicHeaders.includes('/index.html'), 'static asset headers should cover index.html');
 assert.ok(publicHeaders.includes('Content-Type: text/html; charset=utf-8'), 'HTML responses should declare UTF-8 charset');
-assert.ok(publicHeaders.includes('/\n  Content-Type: text/html; charset=utf-8\n  Cache-Control: no-cache, max-age=0, must-revalidate'), 'root HTML should revalidate strictly');
-assert.ok(publicHeaders.includes('/index.html\n  Content-Type: text/html; charset=utf-8\n  Cache-Control: no-cache, max-age=0, must-revalidate'), 'index HTML should revalidate strictly');
+assert.ok(publicHeaders.includes('/\n  Content-Type: text/html; charset=utf-8\n  Cache-Control: no-store, max-age=0, must-revalidate\n  CDN-Cache-Control: no-store\n  Cloudflare-CDN-Cache-Control: no-store'), 'root HTML should bypass browser and CDN storage');
+assert.ok(publicHeaders.includes('/index.html\n  Content-Type: text/html; charset=utf-8\n  Cache-Control: no-store, max-age=0, must-revalidate\n  CDN-Cache-Control: no-store\n  Cloudflare-CDN-Cache-Control: no-store'), 'index HTML should bypass browser and CDN storage');
 assert.ok(publicHeaders.includes('/sw.js'), 'static asset headers should keep service worker updates revalidation-friendly');
 assert.ok(publicHeaders.includes('max-age=31536000, immutable'), 'fingerprinted/vendor assets should get long browser caching');
 assert.ok(publicHeaders.includes('/sw.js\n  Cache-Control: public, max-age=0, must-revalidate'), 'service worker should remain quickly updateable');

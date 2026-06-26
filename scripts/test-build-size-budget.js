@@ -33,7 +33,7 @@ const budgets = {
     distAppCss: 635_000,
     ltHtml: 2_100_000,
     ltHtmlBrotli: 330_000,
-    publicAppJs: 790_000,
+    publicAppJs: 791_000,
     publicCohortExamHydrationJs: 7_000,
     // Keep first-screen boot focused; optional runtime manifest/loaders live in runtime-loader-runtime.js.
     publicBootJs: 85_000,

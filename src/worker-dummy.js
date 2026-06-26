@@ -466,13 +466,15 @@ function shouldProtectHtmlResponse(request, response) {
 }
 
 function getHtmlShellCacheControl() {
-  return 'no-cache, max-age=0, must-revalidate, no-transform';
+  return 'no-store, max-age=0, must-revalidate, no-transform';
 }
 
 function protectHtmlResponse(request, response) {
   if (!shouldProtectHtmlResponse(request, response)) return response;
   const headers = new Headers(response.headers);
   headers.set('Cache-Control', getHtmlShellCacheControl());
+  headers.set('CDN-Cache-Control', 'no-store');
+  headers.set('Cloudflare-CDN-Cache-Control', 'no-store');
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

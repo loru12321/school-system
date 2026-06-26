@@ -160,6 +160,18 @@ assert.ok(
     'score imports should pass the locked exam key into cloud sync'
 );
 assert.ok(
+    appSource.includes('getLegacyDbSaveOptionsForKey'),
+    'legacy DB autosave should centralize cloud-save options'
+);
+assert.ok(
+    /getLegacyDbSaveOptionsForKey[\s\S]*cloud\s*:\s*(?:false|!1)/.test(appSource),
+    'cohort workspace autosaves should not duplicate full cloud writes through the legacy DB path'
+);
+assert.ok(
+    appSource.includes('DB.save(currentKey, snapshotPayload, getLegacyDbSaveOptionsForKey(currentKey'),
+    'large cohort workspace autosaves should stay local while split cloud sync owns remote writes'
+);
+assert.ok(
     workspaceSource.includes('云端连接未就绪，请重新登录或稍后重试'),
     'manual score sync should persist a clear cloud readiness failure instead of a generic error'
 );

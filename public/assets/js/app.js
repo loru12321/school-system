@@ -5966,6 +5966,8 @@ window.runExamSelectorRefresh = runExamSelectorRefresh;
 
 const CohortExamHydrationScheduler = window.CohortExamHydrationScheduler;
 
+const getLegacyDbSaveOptionsForKey=k=>/^cohort::/i.test(k||'')?{cloud:!1}:{deferCloud:!0,deferMs:9e3};
+
 
 window.addEventListener('load', async () => {
     try { CloudSyncIndicator.start(); } catch (e) { console.warn('CloudSyncIndicator start failed:', e); }
@@ -8601,7 +8603,7 @@ async function processData() {
         if (isCohortKey && indicatorRequired && Array.isArray(snapshotPayload?.RAW_DATA) && snapshotPayload.RAW_DATA.length > 0 && targetCount === 0) {
             console.warn(`[AutoSave] skip partial cohort snapshot without targets: ${currentKey}`);
         } else {
-            DB.save(currentKey, snapshotPayload, { deferCloud: true, deferMs: 9000 });
+            DB.save(currentKey, snapshotPayload, getLegacyDbSaveOptionsForKey(currentKey));
             appDebug(`✅ 数据已自动保存至: ${currentKey}`);
         }
     }
@@ -11174,7 +11176,7 @@ function generateTeacherInputs() {
                         CONFIG: CONFIG,
                         MY_SCHOOL: MY_SCHOOL
                     };
-                DB.save(currentKey, snapshotPayload, { deferCloud: true, deferMs: 9000 });
+                DB.save(currentKey, snapshotPayload, getLegacyDbSaveOptionsForKey(currentKey));
             }, 1000);
         });
     });

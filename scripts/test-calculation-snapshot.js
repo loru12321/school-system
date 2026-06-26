@@ -385,13 +385,19 @@ async function main() {
                     ? window.getTownshipManagedSchoolNames(allSchoolNames).map((name) => String(name || '').trim())
                     : allSchoolNames.map((name) => String(name || '').trim())
             );
+            const schoolEligibilityCache = new Map();
             return (schoolName) => {
                 const normalizedName = String(schoolName || '').trim();
+                if (schoolEligibilityCache.has(normalizedName)) return schoolEligibilityCache.get(normalizedName);
+                let matched = true;
                 if (!hasHelper) return true;
                 if (typeof window.isTownshipManagedSchool === 'function') {
-                    return window.isTownshipManagedSchool(normalizedName, allSchoolNames);
+                    matched = window.isTownshipManagedSchool(normalizedName, allSchoolNames);
+                } else {
+                    matched = townshipSet.has(normalizedName);
                 }
-                return townshipSet.has(normalizedName);
+                schoolEligibilityCache.set(normalizedName, matched);
+                return matched;
             };
         };
         const isTownshipSchoolName = buildTownshipSchoolMatcher();
@@ -505,21 +511,24 @@ async function main() {
             .filter(Boolean);
         snapshotStep('check:teacher-township-independent');
         const townshipAverageChecks = (window.SUBJECTS || []).map((subject) => {
-            const rows = (window.RAW_DATA || []).filter((row) => {
+            let count = 0;
+            let total = 0;
+            (window.RAW_DATA || []).forEach((row) => {
                 const schoolName = String(row?.school || '').trim();
                 const score = toNumber(row?.scores?.[subject], NaN);
-                return Number.isFinite(score) && (!schoolName || isTownshipSchoolName(schoolName));
+                if (!Number.isFinite(score) || (schoolName && !isTownshipSchoolName(schoolName))) return;
+                count += 1;
+                total += score;
             });
-            const scores = rows.map((row) => toNumber(row?.scores?.[subject], NaN)).filter(Number.isFinite);
-            const avg = scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+            const avg = count ? total / count : 0;
             const renderedAverage = townshipAverages?.[subject] || {};
             return {
                 subject,
-                rawCount: scores.length,
+                rawCount: count,
                 renderedCount: toNumber(renderedAverage.count),
                 avg,
                 renderedAvg: toNumber(renderedAverage.avg),
-                countMatches: scores.length === toNumber(renderedAverage.count),
+                countMatches: count === toNumber(renderedAverage.count),
                 avgMatches: nearlyEqual(toNumber(renderedAverage.avg), avg, 0.0001)
             };
         });

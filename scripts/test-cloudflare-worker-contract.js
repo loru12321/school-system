@@ -94,8 +94,10 @@ assert.ok(worker.includes('buildWorkerErrorBody(error, env)'), 'worker crash res
 assert.ok(worker.includes('WORKER_DEBUG_ERRORS'), 'worker crash stack traces should require an explicit debug flag');
 assert.ok(!worker.includes("stack: error instanceof Error ? error.stack : ''"), 'worker must not expose stack traces by default');
 assert.ok(worker.includes('function getHtmlShellCacheControl()'), 'HTML shell cache policy should be centralized');
-assert.ok(worker.includes("return 'no-cache, max-age=0, must-revalidate, no-transform';"), 'HTML responses should force strict revalidation');
+assert.ok(worker.includes("return 'no-store, max-age=0, must-revalidate, no-transform';"), 'HTML responses should bypass CDN and browser storage');
 assert.ok(worker.includes("headers.set('Cache-Control', getHtmlShellCacheControl())"), 'HTML responses should use the centralized shell cache policy');
+assert.ok(worker.includes("headers.set('CDN-Cache-Control', 'no-store');"), 'HTML responses should explicitly bypass shared CDN cache');
+assert.ok(worker.includes("headers.set('Cloudflare-CDN-Cache-Control', 'no-store');"), 'HTML responses should explicitly bypass Cloudflare edge cache');
 assert.ok(worker.includes("function shouldExposeStaticAssetCors(url)"), 'static asset CORS helper should be centralized');
 assert.ok(worker.includes("pathname.startsWith('/assets/audio/')"), 'hosted entrance audio should expose matching CORS for file:// lt.html');
 assert.ok(worker.includes('if (!cacheControl && !exposeCors) return protectedHtml;'), 'audio manifest JSON must still receive CORS even when it is not treated as a cacheable static asset');
