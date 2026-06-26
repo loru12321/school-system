@@ -39,7 +39,13 @@ jobs:
       - name: Install font build tooling
         run: python -m pip install fonttools brotli
 
+      - name: Verify system Chrome
+        run: google-chrome --version
+
       - name: Run P0 release gate
+        env:
+          NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: npm run check:p0
 
   release-guards:
