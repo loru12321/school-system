@@ -51,7 +51,7 @@
     <link rel="stylesheet" href="./assets/css/responsive-login-final.css?v=20260621-responsive-login-v1">
     <script>
         (function () {
-            var refreshVersion = 'runtime-e06959285dcf';
+            var refreshVersion = 'runtime-37b7efce120c';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -87,9 +87,9 @@
     <script defer src="./assets/js/report-render-runtime.js?v=20260613-report-render-preload-v1"></script>
     <script defer src="./assets/js/town-submodule-compare-runtime.js?v=20260614-town-submodule-preload-v1"></script>
     <script defer src="./assets/js/app-release-catalog-runtime.js?v=20260622-client-icon-sync-v1"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-e06959285dcf"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-e06959285dcf"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-e06959285dcf"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-37b7efce120c"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-37b7efce120c"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-37b7efce120c"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -1261,6 +1261,33 @@
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="blank-score-audit-panel" class="anchor-target analysis-anchor-panel" style="display:none;">
+                            <div class="sub-header analysis-section-head"><span><i class="ti ti-alert-circle"></i> 空分/0分学科核对清单</span></div>
+                            <div class="analysis-table-meta">
+                                <span><strong>计算口径：</strong>以下学科分数仍按 0 分参与单科、总分、校排、镇排、县排。</span>
+                                <span><strong>核对建议：</strong>“原始空白”来自 Excel 空单元格；“0分记录”建议人工确认是否真实 0 分。</span>
+                            </div>
+                            <div id="blank-score-audit-summary" class="analysis-table-meta"></div>
+                            <div class="table-wrap analysis-table-shell">
+                                <table class="analysis-table-dense">
+                                    <thead>
+                                        <tr>
+                                            <th>学校</th>
+                                            <th>班级</th>
+                                            <th>姓名</th>
+                                            <th>考号</th>
+                                            <th>学科</th>
+                                            <th>标注</th>
+                                            <th>总分</th>
+                                            <th>校排</th>
+                                            <th>镇排</th>
+                                            <th>县排</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="blank-score-audit-body"></tbody>
                                 </table>
                             </div>
                         </div>

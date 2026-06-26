@@ -617,6 +617,10 @@ async function main() {
                     available: true,
                     rowCount: rows.length,
                     blankMath: blankRow?.scores?.数学,
+                    blankSubjects: blankRow?.blankScoreSubjects || [],
+                    blankAuditSubjects: typeof window.getStudentZeroScoreAuditSubjects === 'function'
+                        ? window.getStudentZeroScoreAuditSubjects(blankRow, ['语文', '数学', '英语']).allSubjects
+                        : [],
                     blankTotal: blankRow?.total,
                     blankClass: blankRow?.class,
                     fullMath: fullRow?.scores?.数学,
@@ -1243,6 +1247,8 @@ async function main() {
         available: true,
         rowCount: 2,
         blankMath: 0,
+        blankSubjects: ['数学'],
+        blankAuditSubjects: ['数学'],
         blankTotal: 238,
         blankClass: '6.10',
         fullMath: 119,
