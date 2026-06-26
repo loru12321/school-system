@@ -218,10 +218,14 @@
         }
     }
 
+    function getExplicitSystemDataApiUrl() {
+        return normalizeApiUrl(root.SYSTEM_DATA_API_URL || getStoredValue('SYSTEM_DATA_API_URL'));
+    }
+
     function getProxyOrigin() {
-        if (isLocalFileRuntime()) return '';
-        const explicitApiUrl = normalizeApiUrl(root.SYSTEM_DATA_API_URL || getStoredValue('SYSTEM_DATA_API_URL'));
+        const explicitApiUrl = getExplicitSystemDataApiUrl();
         if (explicitApiUrl) return explicitApiUrl;
+        if (isLocalFileRuntime()) return '';
 
         const explicitOrigin = normalizeOrigin(root.__SUPABASE_PROXY_ORIGIN);
         if (explicitOrigin) return `${explicitOrigin}${SYSTEM_DATA_API_PATH}`;
@@ -235,6 +239,8 @@
     }
 
     function getSystemDataApiUrl() {
+        const explicitApiUrl = getExplicitSystemDataApiUrl();
+        if (explicitApiUrl) return explicitApiUrl;
         if (root && root.__API_FALLBACK_ACTIVE__) return '';
         return getProxyOrigin();
     }

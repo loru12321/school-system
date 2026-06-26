@@ -31,6 +31,11 @@ var EdgeGateway = window.EdgeGateway || {
             candidates.push(normalized);
         };
         if (isLocalFileRuntimeForEdgeGateway()) {
+            if (typeof window.DIRECT_CLOUDFLARE_GATEWAY_URL !== 'undefined') {
+                pushCandidate(window.DIRECT_CLOUDFLARE_GATEWAY_URL);
+            } else if (typeof DIRECT_CLOUDFLARE_GATEWAY_URL !== 'undefined') {
+                pushCandidate(DIRECT_CLOUDFLARE_GATEWAY_URL);
+            }
             if (typeof window.__DIRECT_EDGE_GATEWAY_URL !== 'undefined') {
                 pushCandidate(window.__DIRECT_EDGE_GATEWAY_URL);
             } else if (typeof DIRECT_EDGE_GATEWAY_URL !== 'undefined') {

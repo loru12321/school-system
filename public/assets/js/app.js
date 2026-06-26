@@ -9102,23 +9102,10 @@ function renderBlankScoreAuditPanel() {
     const panel = document.getElementById('blank-score-audit-panel');
     const tbody = document.getElementById('blank-score-audit-body');
     const summary = document.getElementById('blank-score-audit-summary');
-    if (!panel || !tbody) return;
-
-    const rows = collectBlankScoreAuditRows(SUBJECTS);
-
-    if (!rows.length) {
-        panel.style.display = 'none';
-        tbody.innerHTML = '';
-        if (summary) summary.innerHTML = '';
-        return;
-    }
-
-    if (summary) {
-        summary.innerHTML = buildBlankScoreAuditSummaryHtml(rows, { limit: 120 });
-    }
-
-    panel.style.display = '';
-    renderBlankScoreAuditTable(tbody, rows, { limit: 120 });
+    if (!panel) return;
+    panel.style.display = 'none';
+    if (tbody) tbody.innerHTML = '';
+    if (summary) summary.innerHTML = '';
 }
 
 function renderBlankScoreAuditModule() {

@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-a6a837304e10';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-579431e8fe1c';
 
 function bootDebugLog(...args) {
 try {
@@ -1265,6 +1265,8 @@ window.SUPABASE_URL = isLocalFileRuntime()
 : (getBootStorageValue('SUPABASE_URL') || window.CLOUD_REST_URL);
 window.SUPABASE_KEY = getBootStorageValue('SUPABASE_KEY') || window.CLOUD_API_KEY;
 window.EDGE_GATEWAY_URL = getSameOriginGatewayUrl();
+window.SYSTEM_DATA_API_URL = getBootStorageValue('SYSTEM_DATA_API_URL')
+    || (isLocalFileRuntime() ? `${DIRECT_PROXY_ORIGIN}/api/system-data` : (window.SYSTEM_DATA_API_URL || ''));
 window.initSupabase = function () {
 if (!sbClient) {
     sbClient = createCloudflareCompatClient();
@@ -1466,6 +1468,7 @@ const bootGateway = window.EdgeGateway || {
             candidates.push(normalized);
         };
         if (isLocalFileRuntime()) {
+            pushCandidate(window.DIRECT_CLOUDFLARE_GATEWAY_URL);
             pushCandidate(DIRECT_EDGE_GATEWAY_URL);
             return candidates;
         }

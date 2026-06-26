@@ -132,6 +132,19 @@ function scanReplacementCharacters() {
     assert.deepStrictEqual(offenders, [], `Found replacement characters in user-facing release files: ${offenders.join(', ')}`);
 }
 
+function scanBlankScoreAuditPlacement() {
+    const sourcePath = path.join(projectRoot, 'src', 'index.html');
+    const source = fs.readFileSync(sourcePath, 'utf8');
+    const analysisStart = source.indexOf('<div id="analysis"');
+    const analysisEnd = source.indexOf('<div id="high-score"', analysisStart);
+    assert.ok(analysisStart >= 0 && analysisEnd > analysisStart, 'analysis section boundaries should be discoverable');
+
+    const analysisSection = source.slice(analysisStart, analysisEnd);
+    assert.ok(!analysisSection.includes('blank-score-audit-panel'), 'two-rate analysis should not contain the old blank score audit panel');
+    assert.ok(!analysisSection.includes('空分/0分学科核对清单'), 'two-rate analysis should not render the blank score audit checklist');
+    assert.ok(source.includes('<div id="blank-score-audit"'), 'independent blank score audit module should remain available');
+}
+
 function resolveFilePath(urlPath) {
     const decodedPath = decodeURIComponent(String(urlPath || '/').split('?')[0]);
     const relativePath = decodedPath === '/' ? '/index.html' : decodedPath;
@@ -638,6 +651,7 @@ async function verifyParentAnalysisCopyRemoved(page) {
 async function main() {
     scanConflictMarkers();
     scanReplacementCharacters();
+    scanBlankScoreAuditPlacement();
 
     const server = await startServer();
     const browser = await chromium.launch({ headless: true });

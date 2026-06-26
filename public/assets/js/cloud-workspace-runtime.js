@@ -30,6 +30,8 @@
         isIgnoredExamKey
     } = deps;
 
+    const STUDENT_HISTORY_INDEX_UPLOAD_CHUNK_SIZE = 80;
+
     function normalizeWorkspacePayload(payload) {
         if (typeof normalizeCloudWorkspacePayload === 'function') {
             return normalizeCloudWorkspacePayload(payload);
@@ -649,6 +651,59 @@
         return rows;
     }
 
+    function rememberStudentHistoryIndexUploadWarning(error, detail = {}) {
+        const message = error?.message || String(error || 'STUDENT_HISTORY_INDEX_UPLOAD_FAILED');
+        const warning = {
+            context: String(detail.context || '').trim(),
+            uploaded: Number(detail.uploaded || 0),
+            total: Number(detail.total || 0),
+            message,
+            at: new Date().toISOString()
+        };
+        window.__STUDENT_HISTORY_INDEX_SYNC_WARNING__ = warning;
+        console.warn('[CloudSync] student history index backfill skipped:', warning, error);
+    }
+
+    async function uploadStudentHistoryIndexRows(historyIndexRows, context = '') {
+        const rows = Array.isArray(historyIndexRows) ? historyIndexRows.filter(Boolean) : [];
+        if (!rows.length) return 0;
+        let uploaded = 0;
+        for (let i = 0; i < rows.length; i += STUDENT_HISTORY_INDEX_UPLOAD_CHUNK_SIZE) {
+            const chunk = rows.slice(i, i + STUDENT_HISTORY_INDEX_UPLOAD_CHUNK_SIZE);
+            const { error: indexError } = await upsertSystemDataRecord(chunk);
+            if (indexError) {
+                rememberStudentHistoryIndexUploadWarning(indexError, {
+                    context,
+                    uploaded,
+                    total: rows.length
+                });
+                return uploaded;
+            }
+            uploaded += chunk.length;
+        }
+        if (window.__STUDENT_HISTORY_INDEX_SYNC_WARNING__?.context === context) {
+            window.__STUDENT_HISTORY_INDEX_SYNC_WARNING__ = null;
+        }
+        return uploaded;
+    }
+
+    function scheduleStudentHistoryIndexUpload(historyIndexRows, context = '') {
+        const rows = Array.isArray(historyIndexRows) ? historyIndexRows.filter(Boolean) : [];
+        if (!rows.length) return;
+        const run = async () => {
+            try {
+                await uploadStudentHistoryIndexRows(rows, context);
+            } catch (error) {
+                rememberStudentHistoryIndexUploadWarning(error, {
+                    context,
+                    uploaded: 0,
+                    total: rows.length
+                });
+            }
+        };
+        window.setTimeout(run, 0);
+    }
+
     function buildWorkspaceSplitUploadBundle(workspaceKey, payload) {
         const metaPayload = buildWorkspaceMetaPayload(payload, workspaceKey);
         const metaContent = packPayload(metaPayload);
@@ -697,11 +752,7 @@
         ];
         const { error } = await upsertSystemDataRecord(rows);
         if (error) throw error;
-        for (let i = 0; i < historyIndexRows.length; i += 400) {
-            const chunk = historyIndexRows.slice(i, i + 400);
-            const { error: indexError } = await upsertSystemDataRecord(chunk);
-            if (indexError) throw indexError;
-        }
+        scheduleStudentHistoryIndexUpload(historyIndexRows, 'workspace-split');
         return true;
     }
 
@@ -1218,13 +1269,7 @@
                     updated_at: nowIso
                 });
                 if (error) throw error;
-                if (legacyHistoryIndexRows.length) {
-                    for (let i = 0; i < legacyHistoryIndexRows.length; i += 400) {
-                        const chunk = legacyHistoryIndexRows.slice(i, i + 400);
-                        const { error: indexError } = await upsertSystemDataRecord(chunk);
-                        if (indexError) throw indexError;
-                    }
-                }
+                scheduleStudentHistoryIndexUpload(legacyHistoryIndexRows, 'legacy-exam-save');
 
                 if (mode === 'workspace') {
                     syncWorkspaceState({

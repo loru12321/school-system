@@ -66,6 +66,7 @@ assert.ok(helpers.includes('Access-Control-Max-Age'), 'shared helpers must keep 
 assert.ok(helpers.includes("'https://schoolsystem.com.cn'"), 'root production origin must be allowed');
 assert.ok(helpers.includes("'https://www.schoolsystem.com.cn'"), 'www production origin must be allowed');
 assert.ok(helpers.includes("'https://school-system.hkakjiweu.workers.dev'"), 'workers.dev origin must remain allowed for diagnostics');
+assert.ok(helpers.includes("if (normalizedOrigin === 'null') return 'null';"), 'file:// lt.html requests must receive a matching null CORS origin');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(worker), 'worker must not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gateway), 'gateway must not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(helpers), 'shared helpers must not emit wildcard CORS');

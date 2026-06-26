@@ -220,9 +220,13 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
 
 [
     'STUDENT_HISTORY_INDEX_PREFIX',
+    'STUDENT_HISTORY_INDEX_UPLOAD_CHUNK_SIZE',
     'buildStudentHistoryIndexRowsForExam',
     'buildStudentHistoryIndexRowsForBundle',
-    'i += 400',
+    'uploadStudentHistoryIndexRows',
+    'scheduleStudentHistoryIndexUpload',
+    'i += STUDENT_HISTORY_INDEX_UPLOAD_CHUNK_SIZE',
+    'student history index backfill skipped',
     'legacyHistoryIndexRows',
     'COHORT_EXAM_META_CACHE_MS',
     'const COHORT_EXAM_META_CACHE_MS = 2 * 60 * 1000',

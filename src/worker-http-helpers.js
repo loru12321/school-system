@@ -77,7 +77,8 @@ export function isLocalDevelopmentOrigin(origin) {
 
 export function resolveCorsOrigin(request, env = {}) {
   const normalizedOrigin = normalizeOrigin(request.headers.get('Origin'));
-  if (!normalizedOrigin || normalizedOrigin === 'null') return DEFAULT_ALLOWED_CORS_ORIGINS[0];
+  if (normalizedOrigin === 'null') return 'null';
+  if (!normalizedOrigin) return DEFAULT_ALLOWED_CORS_ORIGINS[0];
   if (getAllowedCorsOrigins(env).has(normalizedOrigin)) return normalizedOrigin;
   if (isLocalDevelopmentOrigin(normalizedOrigin)) return normalizedOrigin;
   try {
