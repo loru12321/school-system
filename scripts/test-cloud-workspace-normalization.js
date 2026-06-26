@@ -152,8 +152,12 @@ assert.ok(
     'manual save should rerun queue flush after an active background flush so the newly queued overwrite is uploaded'
 );
 assert.ok(
-    workspaceSource.includes("key = getCurrentExamIdFromPayload(payload) || String(window.CURRENT_EXAM_ID || '').trim() || key;"),
+    workspaceSource.includes("key = String(opts.examKey || '').trim() || getCurrentExamIdFromPayload(payload) || String(window.CURRENT_EXAM_ID || '').trim() || key;"),
     'exam-mode saves should use the canonical current exam id instead of the legacy CloudManager key'
+);
+assert.ok(
+    appSource.includes("saveCloudData({ mode: 'exam', examKey: currentExamId"),
+    'score imports should pass the locked exam key into cloud sync'
 );
 assert.ok(
     workspaceSource.includes('云端连接未就绪，请重新登录或稍后重试'),

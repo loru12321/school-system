@@ -1583,7 +1583,7 @@
             const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
             if (mode === 'workspace') normalizeWorkspacePayload(payload);
             if (mode === 'exam') {
-                key = getCurrentExamIdFromPayload(payload) || String(window.CURRENT_EXAM_ID || '').trim() || key;
+                key = String(opts.examKey || '').trim() || getCurrentExamIdFromPayload(payload) || String(window.CURRENT_EXAM_ID || '').trim() || key;
             }
 
             const nowIso = new Date().toISOString();
