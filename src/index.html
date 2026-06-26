@@ -51,7 +51,7 @@
     <link rel="stylesheet" href="./assets/css/responsive-login-final.css?v=20260621-responsive-login-v1">
     <script>
         (function () {
-            var refreshVersion = 'runtime-6db731faafe2';
+            var refreshVersion = 'runtime-a6a837304e10';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -87,9 +87,9 @@
     <script defer src="./assets/js/report-render-runtime.js?v=20260613-report-render-preload-v1"></script>
     <script defer src="./assets/js/town-submodule-compare-runtime.js?v=20260614-town-submodule-preload-v1"></script>
     <script defer src="./assets/js/app-release-catalog-runtime.js?v=20260622-client-icon-sync-v1"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-6db731faafe2"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-6db731faafe2"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-6db731faafe2"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-a6a837304e10"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-a6a837304e10"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-a6a837304e10"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -1727,6 +1727,50 @@
 
             <!-- 10. 学生考试明细 -->
                         <div id="student-details" class="section card-box analysis-workspace analysis-workspace-student" data-lazy-section-template="lazy-section-template-student-details" data-lazy-section-placeholder="1"></div>
+
+            <!-- 10. 空分学科核对 -->
+            <div id="blank-score-audit" class="section card-box analysis-workspace analysis-workspace-amber">
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-alert-circle"></i> 空分/0分学科核对</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">集中展示原始 Excel 空白学科和 0 分记录；这些学科仍按 0 分参与单科、总分、校排、镇排、县排。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="renderBlankScoreAuditModule()">刷新核对清单</button>
+                        </div>
+                    </div>
+                </div>
+                <details class="explain-panel analysis-doc-panel" open>
+                    <summary>核对口径</summary>
+                    <div class="explain-content">
+                        <p>原始空白：Excel 单元格为空，系统按 0 分参与计算，并在这里单独标注。</p>
+                        <p>0分记录：Excel 明确存在 0 分，系统同样按 0 分计算，建议人工确认是否属于真实 0 分、缺考或漏填。</p>
+                        <p>该模块只用于核对展示，不改变手机网页端成绩查询和排名口径。</p>
+                    </div>
+                </details>
+                <div id="blank-score-audit-module-root" class="analysis-anchor-panel">
+                    <div id="blank-score-audit-module-summary" class="analysis-table-meta"></div>
+                    <div id="blank-score-audit-module-empty" class="analysis-empty-state" style="display:none;">暂无需要单独核对的空分/0分学科。</div>
+                    <div class="table-wrap analysis-table-shell">
+                        <table class="analysis-table-dense">
+                            <thead>
+                                <tr>
+                                    <th>学校</th>
+                                    <th>班级</th>
+                                    <th>姓名</th>
+                                    <th>考号</th>
+                                    <th>学科</th>
+                                    <th>标注</th>
+                                    <th>总分</th>
+                                    <th>校排</th>
+                                    <th>镇排</th>
+                                    <th>县排</th>
+                                </tr>
+                            </thead>
+                            <tbody id="blank-score-audit-module-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
             <!-- 进退步追踪分析 (修复缺失模块) -->
             <div id="progress-analysis" class="section card-box analysis-workspace analysis-workspace-progress">

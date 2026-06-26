@@ -52,6 +52,7 @@ const DEFAULT_SWITCH_MODULE_IDS = [
     'potential-analysis',
     'mutual-aid',
     'student-overview',
+    'blank-score-audit',
     'student-details'
 ];
 const requestedModuleIds = String(process.env.SMOKE_MODULE_IDS || '')

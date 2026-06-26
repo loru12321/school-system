@@ -7089,7 +7089,7 @@ function guardBeforeSwitch(id) {
     const needGuard = [
         'summary', 'analysis', 'county-analysis', 'high-score', 'indicator', 'bottom3',
         'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking',
-        'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
+        'student-overview', 'student-details', 'blank-score-audit', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
         'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator'
     ];
     if (!needGuard.includes(id)) return true;
@@ -7546,6 +7546,9 @@ function switchTab(id) {
     if (window.DEBUG_MODULE_SWITCH) console.debug(`✅ 激活模块: ${id}`);
     targetSection.classList.add('active');
     targetSection.style.display = 'block';
+    if (id === 'blank-score-audit' && typeof renderBlankScoreAuditModule === 'function') {
+        scheduleAfterPaint(() => renderBlankScoreAuditModule());
+    }
     resetMainViewport();
     scheduleAfterPaint(() => scheduleCountyAnalysisRenderAfterSwitch(id));
 
@@ -8090,6 +8093,12 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
 
     Perf.runAsync(async () => {
         try {
+            if ((!window.XLSX || !window.XLSX.utils) && typeof window.ensureXlsxVendorLoaded === 'function') {
+                await window.ensureXlsxVendorLoaded();
+            }
+            if (!window.XLSX || !window.XLSX.utils) {
+                throw new Error('Excel 解析组件未加载，请刷新页面后重试');
+            }
             if (shouldOverwriteExistingExam) {
                 await prepareSameExamOverwrite(currentExamId, effectiveExistingExam);
             }
@@ -8156,6 +8165,12 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
 });
 
 async function readExcel(file) {
+    if ((!window.XLSX || !window.XLSX.utils) && typeof window.ensureXlsxVendorLoaded === 'function') {
+        await window.ensureXlsxVendorLoaded();
+    }
+    if (!window.XLSX || !window.XLSX.utils) {
+        throw new Error('Excel 解析组件未加载，请刷新页面后重试');
+    }
     const data = await file.arrayBuffer();
     const wb = XLSX.read(data, { type: 'array' });
     wb.SheetNames.forEach(sname => {
@@ -9036,41 +9051,21 @@ function getStudentZeroScoreAuditSubjects(student, visibleSubjects = SUBJECTS) {
     };
 }
 
-function renderBlankScoreAuditPanel() {
-    const panel = document.getElementById('blank-score-audit-panel');
-    const tbody = document.getElementById('blank-score-audit-body');
-    const summary = document.getElementById('blank-score-audit-summary');
-    if (!panel || !tbody) return;
-
-    const visibleSubjects = Array.isArray(SUBJECTS) ? SUBJECTS : [];
+function collectBlankScoreAuditRows(visibleSubjects = SUBJECTS) {
+    const subjects = Array.isArray(visibleSubjects) ? visibleSubjects : (Array.isArray(SUBJECTS) ? SUBJECTS : []);
     const rows = [];
     (Array.isArray(RAW_DATA) ? RAW_DATA : []).forEach(student => {
-        const audit = getStudentZeroScoreAuditSubjects(student, visibleSubjects);
+        const audit = getStudentZeroScoreAuditSubjects(student, subjects);
         audit.blankSubjects.forEach(subject => rows.push({ student, subject, type: '原始空白，按0分计' }));
         audit.zeroSubjects.forEach(subject => rows.push({ student, subject, type: '0分记录，需核对是否空分' }));
     });
+    return rows;
+}
 
-    if (!rows.length) {
-        panel.style.display = 'none';
-        tbody.innerHTML = '';
-        if (summary) summary.innerHTML = '';
-        return;
-    }
-
-    const subjectCounts = rows.reduce((acc, item) => {
-        acc[item.subject] = (acc[item.subject] || 0) + 1;
-        return acc;
-    }, {});
-    const summaryText = Object.entries(subjectCounts)
-        .sort((a, b) => b[1] - a[1])
-        .map(([subject, count]) => `<span><strong>${escapeAppHtml(subject)}：</strong>${count} 人次</span>`)
-        .join('');
-    if (summary) {
-        summary.innerHTML = `<span><strong>共 ${rows.length} 条学科记录</strong></span>${summaryText}<span>当前最多展示前 120 条，可在学生明细中继续筛选。</span>`;
-    }
-
-    panel.style.display = '';
-    tbody.innerHTML = rows.slice(0, 120).map(({ student, subject, type }) => {
+function renderBlankScoreAuditTable(tbody, rows, options = {}) {
+    if (!tbody) return;
+    const limit = Number(options.limit || 120);
+    tbody.innerHTML = rows.slice(0, limit).map(({ student, subject, type }) => {
         const rank = student?.ranks || {};
         const subjectRank = rank?.[subject] || {};
         const townRank = subjectRank.township ?? subjectRank.town ?? '-';
@@ -9089,10 +9084,67 @@ function renderBlankScoreAuditPanel() {
     }).join('');
 }
 
+function buildBlankScoreAuditSummaryHtml(rows, options = {}) {
+    const subjectCounts = rows.reduce((acc, item) => {
+        acc[item.subject] = (acc[item.subject] || 0) + 1;
+        return acc;
+    }, {});
+    const summaryText = Object.entries(subjectCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([subject, count]) => `<span><strong>${escapeAppHtml(subject)}：</strong>${count} 人次</span>`)
+        .join('');
+    const limit = Number(options.limit || 120);
+    const tail = rows.length > limit ? `当前展示前 ${limit} 条，完整名单请按学校/班级继续筛选。` : '已展示全部核对记录。';
+    return `<span><strong>共 ${rows.length} 条学科记录</strong></span>${summaryText}<span>${tail}</span>`;
+}
+
+function renderBlankScoreAuditPanel() {
+    const panel = document.getElementById('blank-score-audit-panel');
+    const tbody = document.getElementById('blank-score-audit-body');
+    const summary = document.getElementById('blank-score-audit-summary');
+    if (!panel || !tbody) return;
+
+    const rows = collectBlankScoreAuditRows(SUBJECTS);
+
+    if (!rows.length) {
+        panel.style.display = 'none';
+        tbody.innerHTML = '';
+        if (summary) summary.innerHTML = '';
+        return;
+    }
+
+    if (summary) {
+        summary.innerHTML = buildBlankScoreAuditSummaryHtml(rows, { limit: 120 });
+    }
+
+    panel.style.display = '';
+    renderBlankScoreAuditTable(tbody, rows, { limit: 120 });
+}
+
+function renderBlankScoreAuditModule() {
+    const root = document.getElementById('blank-score-audit-module-root');
+    const summary = document.getElementById('blank-score-audit-module-summary');
+    const tbody = document.getElementById('blank-score-audit-module-body');
+    const empty = document.getElementById('blank-score-audit-module-empty');
+    if (!root || !summary || !tbody) return;
+    const rows = collectBlankScoreAuditRows(SUBJECTS);
+    if (!rows.length) {
+        summary.innerHTML = '<span><strong>暂无需要单独核对的空分/0分学科。</strong></span><span>如学生单科为空，系统会按 0 分参与排名，并自动在这里生成记录。</span>';
+        tbody.innerHTML = '';
+        if (empty) empty.style.display = '';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+    summary.innerHTML = buildBlankScoreAuditSummaryHtml(rows, { limit: 500 });
+    renderBlankScoreAuditTable(tbody, rows, { limit: 500 });
+}
+
 Object.assign(window, {
+    collectBlankScoreAuditRows,
     getStudentBlankScoreSubjects,
     getStudentZeroScoreAuditSubjects,
-    renderBlankScoreAuditPanel
+    renderBlankScoreAuditPanel,
+    renderBlankScoreAuditModule
 });
 
 function renderTrafficLightDashboard() {

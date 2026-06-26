@@ -60,6 +60,7 @@
                 { id: 'zhongkao-countdown', icon: 'ti-calendar-event', text: '中考倒计时', hint: '用时间视角拉齐当前冲刺阶段和节奏。' },
                 { id: 'student-overview', icon: 'ti-layout-dashboard', text: '学情总览', hint: '先看整体学情结构、风险分层和关键信号。' },
                 { id: 'student-details', icon: 'ti-list-details', text: '学生档案查询', hint: '按学生查看成绩、班级和画像细节。' },
+                { id: 'blank-score-audit', icon: 'ti-alert-circle', text: '空分/0分核对', hint: '单独核对空白学科和 0 分记录，确认它们按 0 分参与排名。' },
                 { id: 'subject-balance', icon: 'ti-scale', text: '优势劣势学科透视', hint: '识别学生的拉分学科和短板学科。' },
                 { id: 'marginal-push', icon: 'ti-target-arrow', text: '临界生精准干预', hint: '锁定边缘学生，安排最值得的干预资源。' },
                 { id: 'progress-analysis', icon: 'ti-trending-up', text: '进退步/增值评价', hint: '判断学生是在稳定上行、停滞还是回落。' },
