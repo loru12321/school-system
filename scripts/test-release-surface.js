@@ -84,11 +84,12 @@ assert.ok(wranglerRoutes.some((route) => route.pattern === 'schoolsystem.com.cn/
 assert.ok(wranglerRoutes.some((route) => route.pattern === 'www.schoolsystem.com.cn/*'), 'www production route must be configured');
 assert.ok(/^20\d{2}-\d{2}-\d{2}$/.test(wrangler.compatibility_date || ''), 'compatibility_date must be explicit');
 assert.ok(new Date(wrangler.compatibility_date) >= new Date('2026-04-01'), 'compatibility_date should not drift too far behind this release line');
-assert.ok(scripts.build && scripts.build.includes('vite build'), 'build script must run Vite');
-assert.ok(scripts.build && scripts.build.includes('sync-public-assets.mjs'), 'build script must sync public assets');
-assert.ok(scripts.build && scripts.build.includes('prune-dist-assets.mjs'), 'build script must prune stale dist assets');
-assert.ok(scripts.build && scripts.build.includes('optimize-dist-html.mjs'), 'build script must optimize dist HTML');
-assert.ok(scripts.build && scripts.build.includes('inline-scripts.mjs'), 'build script must inline the release HTML script surface');
+assert.strictEqual(scripts.build, 'npm-run-all build:pre build:core build:post', 'build script should run readable build phases');
+assert.strictEqual(scripts['build:core'], 'vite build', 'build:core must run Vite');
+assert.ok(scripts['build:post'] && scripts['build:post'].includes('sync-public-assets.mjs'), 'build:post must sync public assets');
+assert.ok(scripts['build:post'] && scripts['build:post'].includes('prune-dist-assets.mjs'), 'build:post must prune stale dist assets');
+assert.ok(scripts['build:post'] && scripts['build:post'].includes('optimize-dist-html.mjs'), 'build:post must optimize dist HTML');
+assert.ok(scripts['build:post'] && scripts['build:post'].includes('inline-scripts.mjs'), 'build:post must inline the release HTML script surface');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-surface'), 'fast release check must include release surface guard');
 ['test:release-manifest', 'test:desktop-package-contract', 'test:windows-installer-contract', 'test:beta-release-workflow'].forEach((scriptName) => {
   assert.ok(scripts[scriptName], `${scriptName} must be exposed as a release contract`);

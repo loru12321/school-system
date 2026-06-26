@@ -11,7 +11,7 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Keep `check:p0` tied to data-safe release checks and UI copy integrity.
 - Keep Worker crash responses no-store, nosniff, and gateway-identified.
 - Keep `/api/health` returning JSON before any deploy is considered complete.
-- Keep hosted APK and Windows package signatures checked before release.
+- Keep Windows package signatures checked before stable release; Android/iOS packages remain removed.
 
 ## P1: release quality and user experience
 
@@ -26,12 +26,12 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Keep `CACHE_VERSION` explicit when service worker app-shell behavior changes. Status: derived from the same generated runtime version.
 - Keep `check:p1` tied to HTML, service worker, release surface, runtime, and CSS hygiene.
 - Keep heavy vendor libraries behind demand loaders instead of boot loading.
-- Keep bundle and hosted download budgets from drifting upward silently. Status: `lt.html` budget tightened after excluding vendor payloads from the inline runtime source map.
+- Keep bundle and hosted download budgets from drifting upward silently. Status: `lt.html` budget tightened after excluding vendor payloads from the inline runtime source map, and `lt.html.br` is generated with a Brotli budget.
 
 ## P2: sustainable maintenance
 
 - Archive legacy OSS, DNS, certificate, and direct-deploy scripts under a documented legacy folder. Status: `scripts/legacy/README.md` now identifies Wrangler as the recommended path.
-- Split CI into smaller priority jobs so P0 checks return faster than full browser smoke.
+- Split CI into smaller priority jobs so `check:p0` and `check:release-fast` run before full browser smoke and root validation.
 - Keep `check:p0`, `check:p1`, and `check:p2` aligned with the maintenance runbook.
 - Record each optimization pass with the changed files, commands run, commit hash, and Cloudflare version when deployed.
 - Keep `test:maintenance-priority-contract` guarding at least 20 maintenance constraints.
@@ -62,3 +62,4 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 | 2026-06-25 | P2 | Cloudflare deploy workflow 增加 main push 自动触发与 bot/doc-only 防循环保护；GitHub build jobs 安装 fonttools/brotli 以支持 Tabler 字体子集化；第三方收藏审计资料从 tracked docs/scripts 移至 ignored scratch 归档；明确忽略并清理根目录 `.tmp-smoke-*` 临时输出 | `npm run build`, `npm run check:release-fast`, `npm run smoke:modules:local`, `npm run smoke:prod-minimal`, production `node scripts/smoke-all-modules.js`, `npm run test:release-automation`, Cloudflare version `cbb6c6c9-e235-4007-88da-724adc4afd38` |
 | 2026-06-26 | P1/P2 | 性能趋势 workflow 增加 `test:performance-thresholds` 自动红线；Cloudflare Worker 名称统一为 `school-system`，生产路由迁移到新 Worker 并补齐 Cloudflare Secrets | `npm run build`, `npm run check:release-fast`, `npm run smoke:modules:local`, `npm run smoke:prod-minimal`, production `node scripts/smoke-all-modules.js`, Cloudflare version `434814dd-1087-49d3-91a3-01b2ce50dead` |
 | 2026-06-26 | P0/P1/P2 | system_data 切换为 D1 primary 并绑定 `CLOUD_SYSTEM_DATA_DB`；Supabase bootstrap 不再创建旧 `password text`；客户端安装包发布链收敛为 Windows-only，移除 Android/iOS 包历史、清单、工作流和签名检查 | `npm run build`, `npm run check:release-fast`, `npm run smoke:mobile:local`, `npm run smoke:modules:local`, `npm run smoke:prod-minimal`, production `node scripts/smoke-all-modules.js`, Cloudflare version `b60d777a-221f-41c8-94f4-7000523f206a` |
+| 2026-06-26 | P0/P1/P2 | CI 增加 P0 快速通道；Supabase `system_users` / `system_users_staging` 补齐 RLS 与 anon/authenticated revoke；build 拆成 pre/core/post；`lt.html` 生成 Brotli 产物；README 明确 Windows 代码签名负责人和稳定版目标 | pending |

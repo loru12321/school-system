@@ -48,6 +48,7 @@ const betaWorkflow = read('.github/workflows/build-apps-beta.yml');
 const deployWorkflow = read('.github/workflows/deploy-cloudflare.yml');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
 const supabaseBootstrap = read('supabase/sql/000_app_tables_bootstrap.sql');
+const supabaseSystemUsersRls = read('supabase/sql/006_system_users_rls_lockdown.sql');
 const wrangler = parseJson('wrangler.jsonc');
 const headers = read('public/_headers').replace(/\r\n/g, '\n');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
@@ -119,6 +120,9 @@ const guardedItems = [
   () => assertIncludes(serviceWorkerContract, 'isApiCacheEligible', 'service worker contract should guard API cache policy'),
   () => assertIncludes(docsHygiene, 'optimization-backlog.md', 'docs hygiene should guard optimization backlog'),
   () => assertIncludes(ciWorkflow, 'npm run validate', 'CI should keep full validation'),
+  () => assertIncludes(ciWorkflow, 'p0-quick:', 'CI should keep a dedicated P0 quick gate'),
+  () => assertIncludes(ciWorkflow, 'npm run check:p0', 'CI P0 quick gate should run check:p0'),
+  () => assertIncludes(ciWorkflow, 'needs: p0-quick', 'CI release guards should wait for the P0 quick gate'),
   () => assertIncludes(ciWorkflow, 'release-guards:', 'CI should split fast release guards into their own job'),
   () => assertIncludes(ciWorkflow, 'browser-smoke:', 'CI should split browser smoke into its own job'),
   () => assertIncludes(ciWorkflow, 'needs: release-guards', 'browser smoke should wait for fast release guards'),
@@ -135,6 +139,10 @@ const guardedItems = [
   () => assert.strictEqual(wrangler.vars?.CLOUD_SYSTEM_DATA_MODE, 'primary', 'system_data should stay on D1 primary storage'),
   () => assert.ok((wrangler.d1_databases || []).some((db) => db.binding === 'CLOUD_SYSTEM_DATA_DB'), 'system_data D1 binding should stay configured'),
   () => assert.ok(!/\bpassword\s+text\b/i.test(supabaseBootstrap), 'Supabase bootstrap should not recreate plaintext account passwords'),
+  () => assertIncludes(supabaseBootstrap, 'alter table public.system_users enable row level security', 'Supabase bootstrap should enable RLS on system_users'),
+  () => assertIncludes(supabaseBootstrap, 'revoke all on public.system_users from anon, authenticated', 'Supabase bootstrap should revoke browser roles from system_users'),
+  () => assertIncludes(supabaseSystemUsersRls, 'alter table if exists public.system_users enable row level security', 'Supabase RLS migration should enable RLS on existing system_users'),
+  () => assertIncludes(supabaseSystemUsersRls, 'revoke all on public.system_users from anon, authenticated', 'Supabase RLS migration should revoke browser roles from existing system_users'),
   () => assert.ok(!readme.includes('C:\\Users\\'), 'README should remain free of local paths'),
   () => assertIncludes(headers, 'max-age=31536000, immutable', 'versioned runtime JS should use immutable caching'),
   () => assertIncludes(headers, 'Content-Security-Policy-Report-Only:', 'static headers should start CSP in report-only mode'),
@@ -149,6 +157,7 @@ const guardedItems = [
   () => assert.ok(fileSize('public/assets/js/edge-gateway-runtime.js') <= 16_000, 'EdgeGateway runtime should stay focused'),
   () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 85_000, 'boot runtime should stay within tightened budget'),
   () => assert.ok(fileSize('public/assets/js/runtime-loader-runtime.js') <= 58_000, 'runtime loader should stay within its split budget'),
+  () => assert.ok(fileSize('lt.html.br') <= 330_000, 'offline lt.html Brotli artifact should stay compressed enough for distribution'),
   () => assertIncludes(bootRuntime, 'edge-gateway-runtime.js', 'boot runtime should load the split EdgeGateway runtime before app.js'),
   () => assertIncludes(bootRuntime, 'cohort-exam-hydration-runtime.js', 'boot runtime should load the split hydration scheduler before app.js'),
   () => assertIncludes(cohortExamHydrationRuntime, 'window.CohortExamHydrationScheduler', 'hydration scheduler should publish its runtime surface'),

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 lt.html
+lt.html.br
 .npm-cache/
 .idea/
 .playwright-cli/

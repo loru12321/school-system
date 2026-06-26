@@ -33,7 +33,7 @@ assert.strictEqual(cacheVersion, `school-system-${serviceWorkerVersion}`, 'servi
 assert.ok(srcIndex.includes(`runtime-loader-runtime.js?v=${serviceWorkerVersion}`), 'runtime loader script tag should use generated runtime version');
 assert.ok(srcIndex.includes(`boot-runtime.js?v=${serviceWorkerVersion}`), 'boot runtime script tag should use generated runtime version');
 assert.ok(srcIndex.includes(`service-worker-runtime.js?v=${serviceWorkerVersion}`), 'service worker runtime script tag should use generated runtime version');
-assert.ok(packageJson.scripts.build.includes('scripts/build/update-runtime-cache-version.mjs'), 'build script should update runtime versions before bundling');
+assert.ok(packageJson.scripts['build:pre'] && packageJson.scripts['build:pre'].includes('scripts/build/update-runtime-cache-version.mjs'), 'build:pre should update runtime versions before bundling');
 assert.ok(buildScript.includes('normalizeVersionTokens'), 'version generator should normalize existing version tokens before hashing');
 assert.ok(buildScript.includes("public', 'assets', 'js'"), 'version generator should hash public runtime JS sources');
 

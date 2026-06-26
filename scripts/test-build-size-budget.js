@@ -5,6 +5,7 @@ const path = require('path');
 const projectRoot = path.resolve(__dirname, '..');
 const distIndexPath = path.join(projectRoot, 'dist', 'index.html');
 const ltHtmlPath = path.join(projectRoot, 'lt.html');
+const ltHtmlBrotliPath = path.join(projectRoot, 'lt.html.br');
 const publicAppPath = path.join(projectRoot, 'public', 'assets', 'js', 'app.js');
 const publicBootPath = path.join(projectRoot, 'public', 'assets', 'js', 'boot-runtime.js');
 const publicRuntimeLoaderPath = path.join(projectRoot, 'public', 'assets', 'js', 'runtime-loader-runtime.js');
@@ -31,6 +32,7 @@ const budgets = {
     // prior cap (<0.5%); retain 2KB+ headroom for regression detection.
     distAppCss: 625_000,
     ltHtml: 2_100_000,
+    ltHtmlBrotli: 330_000,
     publicAppJs: 780_000,
     publicCohortExamHydrationJs: 7_000,
     // Keep first-screen boot focused; optional runtime manifest/loaders live in runtime-loader-runtime.js.
@@ -49,6 +51,7 @@ const actual = {
     distIndexHtml: getSize(distIndexPath),
     distAppCss: getBuiltStylesheetSize(),
     ltHtml: getSize(ltHtmlPath),
+    ltHtmlBrotli: getSize(ltHtmlBrotliPath),
     publicAppJs: getSize(publicAppPath),
     publicBootJs: getSize(publicBootPath),
     publicCohortExamHydrationJs: getSize(path.join(projectRoot, 'public', 'assets', 'js', 'cohort-exam-hydration-runtime.js')),

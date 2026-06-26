@@ -84,7 +84,7 @@ assertIncludes(publicSw, '<title>离线模式</title>', 'offline HTML fallback s
 assertIncludes(publicSw, "if (event.tag === 'sync-data')", 'background sync tag should remain explicit');
 assert.ok(!publicSw.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 assert.ok(!/\/\/[^\n]*const\s+APP_SHELL_ASSETS/.test(publicSw), 'APP_SHELL_ASSETS declaration should not be hidden inside a comment');
-assert.ok(scripts.build.includes('scripts/build/update-runtime-cache-version.mjs'), 'build should update runtime cache versions before Vite runs');
+assert.ok(scripts['build:pre'] && scripts['build:pre'].includes('scripts/build/update-runtime-cache-version.mjs'), 'build:pre should update runtime cache versions before Vite runs');
 assertHeaderRule(publicHeaders, '/assets/js/*', 'public, max-age=31536000, immutable', 'versioned JS runtime assets should use immutable cache headers');
 assertHeaderRule(publicHeaders, '/sw.js', 'public, max-age=0, must-revalidate', 'service worker script should still revalidate');
 assertIncludes(serviceWorkerRuntime, `const SERVICE_WORKER_VERSION = '${serviceWorkerVersion}';`, 'service worker runtime should version registration updates');

@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { pathToFileURL } = require('url');
 
 async function main() {
@@ -52,6 +53,13 @@ async function main() {
     assert.ok(runtimePaths.includes('./assets/js/county-analysis-runtime.js'), 'runtime source collection should include county analysis');
     assert.ok(runtimePaths.includes('./assets/js/freshman-exam-runtime.js'), 'runtime source collection should include freshman exam tools');
     assert.ok(!runtimePaths.some((entry) => entry.startsWith('./assets/vendor/')), 'runtime source collection should exclude vendor libraries');
+
+    const builtLtPath = path.join(projectRoot, 'lt.html');
+    const builtBrotliPath = `${builtLtPath}.br`;
+    if (fs.existsSync(builtLtPath) && fs.existsSync(builtBrotliPath)) {
+        const restored = zlib.brotliDecompressSync(fs.readFileSync(builtBrotliPath)).toString('utf8');
+        assert.strictEqual(restored, fs.readFileSync(builtLtPath, 'utf8'), 'lt.html.br should be a Brotli copy of lt.html');
+    }
 
     console.log('inline-scripts tests passed');
 }

@@ -52,6 +52,9 @@ assert.ok(!releaseWorkflow.includes('CODE_SIGNING_ALLOWED=NO'), 'stable release 
 assert.ok((releaseWorkflow.match(/node scripts\/resolve-app-version\.mjs/g) || []).length >= 1, 'stable Windows job should resolve versions');
 assert.ok(!releaseWorkflow.includes('--prerelease'), 'stable releases must never be marked prerelease');
 assert.ok((ciWorkflow.match(/python -m pip install fonttools brotli/g) || []).length >= 3, 'CI jobs that build or validate should install font subsetting tools');
+assert.ok(ciWorkflow.includes('p0-quick:'), 'CI should expose a dedicated P0 quick gate before longer jobs');
+assert.ok(ciWorkflow.includes('npm run check:p0'), 'CI P0 quick gate should run check:p0 directly');
+assert.ok(ciWorkflow.includes('needs: p0-quick'), 'release guards should wait for the P0 quick gate');
 assert.ok(deployWorkflow.includes('workflow_dispatch:'), 'Cloudflare deployment should be manually triggerable');
 assert.ok(deployWorkflow.includes('push:'), 'Cloudflare deployment should run automatically after main pushes');
 assert.ok(deployWorkflow.includes('branches:'), 'Cloudflare deployment push trigger should be branch scoped');

@@ -33,6 +33,8 @@ assert.ok(readme.includes('docs/optimization-backlog.md'), 'README should link t
 assert.ok(readme.includes('scripts/legacy/'), 'README should document the legacy script archive');
 assert.ok(readme.includes('docs/performance/'), 'README should point readers to the performance trend output');
 assert.ok(readme.includes('校衡台-Windows-1.0.2-x64.exe'), 'README should document the desktop Windows installer file');
+assert.ok(readme.includes('签名证书负责人'), 'README should identify the Windows signing certificate responsibility');
+assert.ok(readme.includes('证书配置目标：稳定版正式对外分发前'), 'README should identify the Windows signing certificate target');
 assert.ok(readme.includes('Android 与 iOS 安装包链路、公开记录和历史包已移除'), 'README should document removed Android/iOS packages');
 assert.ok(!readme.includes('校衡台-Android-1.0.2.apk'), 'README should not document a removed Android package file');
 assert.ok(!readme.includes('TestFlight'), 'README should not keep removed iOS release guidance');

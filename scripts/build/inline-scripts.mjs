@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -8,6 +9,7 @@ const DEFAULT_PROJECT_ROOT = path.resolve(__dirname, '../../');
 
 const htmlPath = path.join(DEFAULT_PROJECT_ROOT, 'dist', 'index.html');
 const outPath = path.join(DEFAULT_PROJECT_ROOT, 'lt.html');
+const brotliOutPath = `${outPath}.br`;
 const OPTIONAL_INLINE_RUNTIME_PATHS = [
     './assets/js/account-admin-runtime.js',
     './assets/js/history-compare-runtime.js',
@@ -255,7 +257,14 @@ function main() {
         const html = fs.readFileSync(htmlPath, 'utf-8');
         const output = buildLtHtml(html, { projectRoot: DEFAULT_PROJECT_ROOT });
         fs.writeFileSync(outPath, output, 'utf-8');
+        const brotliOutput = zlib.brotliCompressSync(Buffer.from(output, 'utf8'), {
+            params: {
+                [zlib.constants.BROTLI_PARAM_QUALITY]: 11
+            }
+        });
+        fs.writeFileSync(brotliOutPath, brotliOutput);
         console.log('Successfully generated lt.html with inlined local scripts.');
+        console.log(`Generated lt.html.br (${brotliOutput.length} bytes).`);
     } catch (err) {
         console.error('Build failed:', err.message);
         process.exit(1);

@@ -207,6 +207,8 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 ### 签名与安装提醒
 
 - Windows 当前没有代码签名证书，安装时可能出现 Microsoft Defender SmartScreen 提示。正式对外分发前应配置受信任的 Windows 代码签名证书。
+- 签名证书负责人：发布负责人在创建 `school-system-v*` 稳定版前确认 EV/OV 代码签名证书、时间戳服务和 CI secret 均已就绪。
+- 证书配置目标：稳定版正式对外分发前；Beta 预发布可以保持未签名状态，但 Release notes 必须继续提示 SmartScreen 风险。
 
 ### Cloudflare 免费下载回退
 
