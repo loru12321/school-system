@@ -835,7 +835,6 @@
             Object.entries(exams).forEach(([examId, examPayload]) => {
                 const exactExamId = String(examId || '').trim();
                 if (!exactExamId) return;
-                if (currentExamId && exactExamId === currentExamId && next.RAW_DATA) return;
                 compactExams[exactExamId] = compactExamPayloadForStorage(examPayload);
             });
 
