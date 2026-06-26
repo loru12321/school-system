@@ -692,6 +692,10 @@
     html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel {
         display: none !important;
     }
+
+    html body #login-overlay[data-login-skin="clean"] [data-login-sound-hidden="1"] {
+        display: none !important;
+    }
 }
 
 @media (max-width: 768px) {
@@ -716,6 +720,10 @@
     }
 
     html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel {
+        display: none !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] [data-login-sound-hidden="1"] {
         display: none !important;
     }
 }
