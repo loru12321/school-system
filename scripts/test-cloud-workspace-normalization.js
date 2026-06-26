@@ -216,5 +216,13 @@ assert.ok(
     appSource.includes('const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;'),
     'exam restore should recalculate when restored school metrics are missing even if school rosters exist'
 );
+assert.ok(
+    appSource.includes('function normalizeStudentTotalsForCurrentConfig'),
+    'score processing should normalize restored student totals to the active grade total-subject policy'
+);
+assert.ok(
+    appSource.includes('const totalNormalization = normalizeStudentTotalsForCurrentConfig(RAW_DATA, SUBJECTS, CONFIG);'),
+    'processData should repair stale cloud totals before thresholds and metrics are calculated'
+);
 
 console.log('cloud workspace normalization tests passed');

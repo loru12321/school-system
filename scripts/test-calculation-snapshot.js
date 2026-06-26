@@ -1287,6 +1287,9 @@ async function main() {
             targetStudent: target ? {
                 name: target.name,
                 school: target.school,
+                total: target.total,
+                configuredTotal: (Array.isArray(window.CONFIG?.totalSubs) ? window.CONFIG.totalSubs : (window.SUBJECTS || []))
+                    .reduce((sum, subject) => sum + Number(target.scores?.[subject] || 0), 0),
                 town: target.townshipRank || target.ranks?.total?.township || 0,
                 county: target.countyRank || target.ranks?.total?.county || 0
             } : null
@@ -1461,6 +1464,11 @@ async function main() {
     assert.deepStrictEqual(snapshot.headers.slice(totalIndex + 1, totalIndex + 5), ['班排', '校排', '镇排', '县排'], 'total rank column order changed');
     assert.ok(snapshot.targetStudent, 'target student 解洪旭 missing');
     assert.strictEqual(snapshot.targetStudent.school, '银山实验学校', 'target student school changed');
+    assert.strictEqual(
+        Number(snapshot.targetStudent.total).toFixed(2),
+        Number(snapshot.targetStudent.configuredTotal).toFixed(2),
+        'student total should match configured total subjects'
+    );
     assert.ok(snapshot.targetStudent.town > 0, `target student town rank invalid: ${snapshot.targetStudent.town}`);
     assert.ok(snapshot.targetStudent.county >= snapshot.targetStudent.town, `target student county rank invalid: ${snapshot.targetStudent.county}`);
 

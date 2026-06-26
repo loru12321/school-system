@@ -8462,7 +8462,37 @@ function normalizeSubject(subj) {
     return s;
 }
 
+function normalizeStudentTotalsForCurrentConfig(rows = RAW_DATA, subjects = SUBJECTS, config = CONFIG) {
+    const list = Array.isArray(rows) ? rows : [];
+    const configuredTotalSubs = config?.totalSubs === 'auto'
+        ? (Array.isArray(subjects) ? subjects : [])
+        : (Array.isArray(config?.totalSubs) ? config.totalSubs : []);
+    if (!configuredTotalSubs.length) return { changed: 0, subjects: [] };
+    let changed = 0;
+    list.forEach((student) => {
+        if (!student || typeof student !== 'object') return;
+        const scores = student.scores && typeof student.scores === 'object' ? student.scores : {};
+        const nextTotal = configuredTotalSubs.reduce((sum, subject) => {
+            const value = scores[subject];
+            const numeric = typeof value === 'number' ? value : Number(value);
+            return Number.isFinite(numeric) ? sum + numeric : sum;
+        }, 0);
+        const normalizedTotal = parseFloat(nextTotal.toFixed(2));
+        const currentTotal = Number(student.total);
+        if (!Number.isFinite(currentTotal) || Math.abs(currentTotal - normalizedTotal) > 0.0001) {
+            student.total = normalizedTotal;
+            changed += 1;
+        }
+    });
+    return { changed, subjects: configuredTotalSubs.slice() };
+}
+
 async function processData() {
+
+    const totalNormalization = normalizeStudentTotalsForCurrentConfig(RAW_DATA, SUBJECTS, CONFIG);
+    if (totalNormalization.changed) {
+        appDebug('[score] normalized student totals for current config:', totalNormalization);
+    }
 
     const schoolSet = new Set(RAW_DATA.map(s => s.school));
     const isSingleSchool = schoolSet.size === 1;
