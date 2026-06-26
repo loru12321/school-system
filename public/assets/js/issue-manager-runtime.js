@@ -47,6 +47,10 @@
         return root.sbClient || null;
     }
 
+    function isLocalFileRuntime() {
+        return normalizeText(root.location && root.location.protocol).toLowerCase() === 'file:';
+    }
+
     function hasCloudAccess() {
         return !!(root.CloudApi || getSupabaseClient());
     }
@@ -178,6 +182,7 @@
     }
 
     async function checkIssues() {
+        if (isLocalFileRuntime()) return;
         if (!hasCloudAccess()) return;
 
         const user = getCurrentUser();

@@ -505,6 +505,11 @@ function getStaticAssetCacheControl(url) {
   return 'public, max-age=3600, stale-while-revalidate=86400';
 }
 
+function shouldExposeStaticAssetCors(url) {
+  const pathname = String(url.pathname || '');
+  return pathname.startsWith('/assets/audio/');
+}
+
 function protectAssetResponse(request, response) {
   const protectedHtml = protectHtmlResponse(request, response);
   if (!protectedHtml || !protectedHtml.ok || shouldProtectHtmlResponse(request, protectedHtml)) {
@@ -512,11 +517,15 @@ function protectAssetResponse(request, response) {
   }
   const method = String(request.method || 'GET').toUpperCase();
   if (method !== 'GET' && method !== 'HEAD') return protectedHtml;
-  const cacheControl = getStaticAssetCacheControl(new URL(request.url));
+  const requestUrl = new URL(request.url);
+  const cacheControl = getStaticAssetCacheControl(requestUrl);
   if (!cacheControl) return protectedHtml;
   const headers = new Headers(protectedHtml.headers);
   headers.set('Cache-Control', cacheControl);
   headers.set('X-Content-Type-Options', 'nosniff');
+  if (shouldExposeStaticAssetCors(requestUrl)) {
+    Object.entries(buildCorsHeaders(request)).forEach(([key, value]) => headers.set(key, value));
+  }
   return new Response(protectedHtml.body, {
     status: protectedHtml.status,
     statusText: protectedHtml.statusText,

@@ -112,6 +112,12 @@ if (entranceSound.includes('BUILTIN_TRACKS') || entranceSound.includes('playTone
 if (!entranceSound.includes('BUNDLED_PLAYLIST_MANIFEST') || !entranceSound.includes('authorizedForEmbedding')) {
   throw new Error('Entrance sound runtime should load only manifest-authorized bundled audio/video tracks');
 }
+if (!entranceSound.includes("window.location.protocol === 'file:' ? 'https://schoolsystem.com.cn/' : './'")) {
+  throw new Error('Entrance sound runtime should use hosted audio assets for file:// lt.html');
+}
+if (!entranceSound.includes("['assets', 'audio', 'entrance'].join('/')")) {
+  throw new Error('Entrance sound runtime should build audio paths dynamically so lt.html asset rewriting does not corrupt hosted URLs');
+}
 if (!entranceSound.includes('data-sound-choice="random"') || !entranceSound.includes('storeAuthorizedPlaylist')) {
   throw new Error('Entrance sound runtime should expose random playback for authorized playlists');
 }

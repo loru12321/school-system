@@ -103,6 +103,19 @@ async function run() {
     await runtimeWithZeroCount.checkIssues();
     assert.strictEqual(hiddenBadge.classList.has('hidden'), true);
 
+    const localFileQuery = createQueryRecorder({ count: 1, error: null });
+    const runtimeForLocalFile = createIssueManagerRuntime({
+        ...root,
+        location: { protocol: 'file:' },
+        sbClient: {
+            from() {
+                return localFileQuery.query;
+            }
+        }
+    });
+    await runtimeForLocalFile.checkIssues();
+    assert.deepStrictEqual(localFileQuery.calls, [], 'file:// lt.html should not poll Supabase issues directly');
+
     console.log('issue-manager-runtime tests passed');
 }
 
