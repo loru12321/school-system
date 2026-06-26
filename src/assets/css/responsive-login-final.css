@@ -199,7 +199,7 @@
     #login-overlay[data-login-skin="clean"] .login-clean-shell {
         width: min(1120px, calc(100vw - 56px)) !important;
         min-height: 0 !important;
-        height: min(760px, calc(100vh - 56px)) !important;
+        height: min(860px, calc(100vh - 56px)) !important;
         display: grid !important;
         grid-template-columns: minmax(360px, .9fr) minmax(400px, 480px) !important;
         gap: 0 !important;
@@ -659,5 +659,63 @@
         overflow: hidden !important;
         pointer-events: none !important;
         opacity: 0 !important;
+    }
+}
+
+/* Login recovery lock: keep later theme layers from stretching the auth shell. */
+@media (min-width: 1025px) {
+    html body #login-overlay[data-login-skin="clean"] .login-clean-card {
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        align-self: stretch !important;
+        justify-content: flex-start !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding-top: 34px !important;
+        padding-bottom: 34px !important;
+        box-sizing: border-box !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-form-header {
+        position: static !important;
+        transform: none !important;
+        margin-top: 0 !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-form {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    html body #login-overlay[data-login-skin="clean"] {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        padding: 0 !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel {
+        display: none !important;
     }
 }

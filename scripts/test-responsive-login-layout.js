@@ -2,6 +2,7 @@ const assert = require('assert');
 const { chromium } = require('playwright');
 
 const viewports = [
+    { width: 1440, height: 1000, mode: 'desktop' },
     { width: 1024, height: 768, mode: 'tablet-stacked' },
     { width: 834, height: 1194, mode: 'tablet-stacked' },
     { width: 960, height: 900, mode: 'tablet' },
@@ -81,12 +82,21 @@ async function main() {
             }
             assert.ok(state.horizontalOverflow <= 1, `${label}: document must not overflow horizontally`);
             assert.ok(state.shell.top >= -1, `${label}: login shell must start inside the viewport`);
-            assert.strictEqual(state.styleboardStyle.display, 'none', `${label}: decorative styleboard must be hidden on tablet and phone`);
-            assert.strictEqual(state.styleboardStyle.visibility, 'hidden', `${label}: decorative styleboard must not be visible on tablet and phone`);
-            assert.ok(state.styleboard.right - state.styleboard.left <= 1, `${label}: decorative styleboard must not reserve width`);
-            assert.ok(state.styleboard.bottom - state.styleboard.top <= 1, `${label}: decorative styleboard must not reserve height`);
+            assert.ok(state.shell.left >= -1, `${label}: login shell must not start before viewport`);
+            assert.ok(state.shell.right <= state.viewportWidth + 1, `${label}: login shell must stay inside viewport`);
+            assert.ok(state.card.left >= state.shell.left - 1, `${label}: login card must stay inside shell`);
+            assert.ok(state.card.right <= state.shell.right + 1, `${label}: login card must not overflow shell`);
 
-            if (viewport.mode === 'tablet') {
+            if (viewport.mode !== 'desktop') {
+                assert.strictEqual(state.styleboardStyle.display, 'none', `${label}: decorative styleboard must be hidden on tablet and phone`);
+                assert.strictEqual(state.styleboardStyle.visibility, 'hidden', `${label}: decorative styleboard must not be visible on tablet and phone`);
+                assert.ok(state.styleboard.right - state.styleboard.left <= 1, `${label}: decorative styleboard must not reserve width`);
+                assert.ok(state.styleboard.bottom - state.styleboard.top <= 1, `${label}: decorative styleboard must not reserve height`);
+            }
+
+            if (viewport.mode === 'desktop') {
+                assert.ok(state.card.bottom <= state.shell.bottom + 1, `${label}: desktop login card must not overflow shell vertically`);
+            } else if (viewport.mode === 'tablet') {
                 const intersectionWidth = Math.min(state.stage.right, state.card.right) - Math.max(state.stage.left, state.card.left);
                 const intersectionHeight = Math.min(state.stage.bottom, state.card.bottom) - Math.max(state.stage.top, state.card.top);
                 assert.ok(intersectionWidth <= 0 || intersectionHeight <= 0, `${label}: tablet stage and card must not overlap`);
