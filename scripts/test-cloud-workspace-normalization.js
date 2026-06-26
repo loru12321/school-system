@@ -140,6 +140,18 @@ assert.ok(
     'workspace sync should guard against stale cohort snapshots overwriting newer cloud exams'
 );
 assert.ok(
+    workspaceSource.includes('const WORKSPACE_BUNDLE_UPLOAD_CHUNK_SIZE = 1'),
+    'workspace bundle sync should upload split exam shards one-by-one to avoid oversized Worker/D1 batch writes'
+);
+assert.ok(
+    workspaceSource.includes("await upsertSystemDataRecordChunks(rows, '工作区分片同步')"),
+    'workspace bundle upload should use chunked system_data upserts instead of one large POST'
+);
+assert.ok(
+    workspaceSource.includes('云端连接未就绪，请重新登录或稍后重试'),
+    'manual score sync should persist a clear cloud readiness failure instead of a generic error'
+);
+assert.ok(
     workspaceSource.includes('已阻止云端覆盖：本地当前考试'),
     'stale workspace guard should show an actionable blocked-sync reason'
 );

@@ -94,6 +94,7 @@ assert.ok(worker.includes("return 'no-cache, max-age=0, must-revalidate, no-tran
 assert.ok(worker.includes("headers.set('Cache-Control', getHtmlShellCacheControl())"), 'HTML responses should use the centralized shell cache policy');
 assert.ok(worker.includes("function shouldExposeStaticAssetCors(url)"), 'static asset CORS helper should be centralized');
 assert.ok(worker.includes("pathname.startsWith('/assets/audio/')"), 'hosted entrance audio should expose matching CORS for file:// lt.html');
+assert.ok(worker.includes('if (!cacheControl && !exposeCors) return protectedHtml;'), 'audio manifest JSON must still receive CORS even when it is not treated as a cacheable static asset');
 assert.ok(worker.includes("Object.entries(buildCorsHeaders(request)).forEach(([key, value]) => headers.set(key, value));"), 'audio asset CORS should reuse the explicit origin resolver');
 assert.ok(worker.includes("return 'public, max-age=31536000, immutable';"), 'versioned static assets should get immutable caching');
 assert.ok(worker.includes("return 'public, max-age=3600, stale-while-revalidate=86400';"), 'unversioned static assets should get short browser caching');

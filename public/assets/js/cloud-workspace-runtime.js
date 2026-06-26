@@ -31,6 +31,7 @@
     } = deps;
 
     const STUDENT_HISTORY_INDEX_UPLOAD_CHUNK_SIZE = 80;
+    const WORKSPACE_BUNDLE_UPLOAD_CHUNK_SIZE = 1;
 
     function normalizeWorkspacePayload(payload) {
         if (typeof normalizeCloudWorkspacePayload === 'function') {
@@ -259,6 +260,27 @@
             return { data: null, error: new Error('CLOUD_CLIENT_MISSING') };
         }
         return window.sbClient.from(CLOUD_TABLE).upsert(row, { onConflict: 'key' });
+    }
+
+    async function upsertSystemDataRecordChunks(rows, context = '') {
+        const list = Array.isArray(rows) ? rows.filter(Boolean) : (rows ? [rows] : []);
+        if (!list.length) return 0;
+        let uploaded = 0;
+        for (let i = 0; i < list.length; i += WORKSPACE_BUNDLE_UPLOAD_CHUNK_SIZE) {
+            const chunk = list.slice(i, i + WORKSPACE_BUNDLE_UPLOAD_CHUNK_SIZE);
+            const { error } = await upsertSystemDataRecord(chunk);
+            if (error) {
+                const message = error?.message || String(error);
+                const detail = context
+                    ? `${context} ${uploaded + 1}-${uploaded + chunk.length}/${list.length}: ${message}`
+                    : message;
+                const wrapped = new Error(detail);
+                wrapped.cause = error;
+                throw wrapped;
+            }
+            uploaded += chunk.length;
+        }
+        return uploaded;
     }
 
     const WORKSPACE_SYNC_META_PREFIX = 'CLOUD_WORKSPACE_META_V2::';
@@ -750,8 +772,7 @@
             { key: bundle.workspaceKey, content: bundle.metaContent, updated_at: syncedAt },
             ...bundle.examRows.map(row => ({ key: row.key, content: row.content, updated_at: syncedAt }))
         ];
-        const { error } = await upsertSystemDataRecord(rows);
-        if (error) throw error;
+        await upsertSystemDataRecordChunks(rows, '工作区分片同步');
         scheduleStudentHistoryIndexUpload(historyIndexRows, 'workspace-split');
         return true;
     }
@@ -1642,6 +1663,24 @@
 
             if (!entries.length) return !targetKey;
             if (!(await this.ensureClientReady({ silent: true, timeoutMs: 4000 }))) {
+                const message = '云端连接未就绪，请重新登录或稍后重试';
+                entries.forEach((job) => {
+                    const cacheKey = String(job?.key || '').trim();
+                    if (!cacheKey || (targetKey && cacheKey !== targetKey)) return;
+                    writeWorkspaceSyncMeta(cacheKey, {
+                        pendingCloudSync: true,
+                        pendingSyncSource: String(job.sourceLabel || '').trim(),
+                        lastCloudError: message,
+                        lastFailedSyncAt: new Date().toISOString()
+                    });
+                    dispatchWorkspaceSyncEvent('error', {
+                        key: cacheKey,
+                        mode: job.mode || 'workspace',
+                        sourceLabel: String(job.sourceLabel || '').trim(),
+                        message
+                    });
+                });
+                setCloudStatus('error', '连接未就绪');
                 return false;
             }
 

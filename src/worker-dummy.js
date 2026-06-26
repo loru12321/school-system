@@ -519,11 +519,12 @@ function protectAssetResponse(request, response) {
   if (method !== 'GET' && method !== 'HEAD') return protectedHtml;
   const requestUrl = new URL(request.url);
   const cacheControl = getStaticAssetCacheControl(requestUrl);
-  if (!cacheControl) return protectedHtml;
+  const exposeCors = shouldExposeStaticAssetCors(requestUrl);
+  if (!cacheControl && !exposeCors) return protectedHtml;
   const headers = new Headers(protectedHtml.headers);
-  headers.set('Cache-Control', cacheControl);
+  if (cacheControl) headers.set('Cache-Control', cacheControl);
   headers.set('X-Content-Type-Options', 'nosniff');
-  if (shouldExposeStaticAssetCors(requestUrl)) {
+  if (exposeCors) {
     Object.entries(buildCorsHeaders(request)).forEach(([key, value]) => headers.set(key, value));
   }
   return new Response(protectedHtml.body, {
