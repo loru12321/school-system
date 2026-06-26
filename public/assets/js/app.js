@@ -8137,7 +8137,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
             setUploadMessage(`✅ 已解析 ${Object.keys(SCHOOLS).length} 所学校，共 ${RAW_DATA.length} 名学生，正在同步云端...`, 'info');
             let cloudSynced = true;
             if (typeof saveCloudData === 'function') {
-                cloudSynced = await saveCloudData({ background: false, sourceLabel: 'score-import-overwrite', forceUpload: true });
+                cloudSynced = await saveCloudData({ mode: 'exam', background: false, sourceLabel: 'score-import-overwrite', forceUpload: true });
                 if (!cloudSynced) {
                     const cloudError = String(window.__LAST_CLOUD_SAVE_ERROR__ || '').trim();
                     const detail = cloudError ? `原因：${cloudError}` : '请稍后点击“保存并同步”，或刷新后重新登录再试。';
