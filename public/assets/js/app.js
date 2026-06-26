@@ -8048,83 +8048,102 @@ async function prepareSameExamOverwrite(currentExamId, existingExam = null) {
     return { localRemoved, cloudRemoved };
 }
 
+function getUploadExamDataRowCount(data) {
+    if (Array.isArray(data)) return data.length;
+    if (data && typeof data === 'object' && data.__packedRows && Array.isArray(data.rows)) return data.rows.length;
+    return 0;
+}
+
 document.getElementById('fileInput').addEventListener('change', function (e) {
     if (isArchiveLocked()) return alert("⛔ 当前考试已封存，禁止上传新数据");
     if (!CURRENT_COHORT_ID) return alert("请先选择或新建届别");
+    const inputEl = e.target;
+    const files = Array.from(inputEl?.files || []);
+    if (!files.length) return;
     const beforeExamId = CURRENT_EXAM_ID || readWorkspaceExamId() || '';
     const currentExamId = setCurrentExamMeta(true);
-    if (!currentExamId) return;
+    if (!currentExamId) {
+        inputEl.value = '';
+        return;
+    }
     if (beforeExamId && beforeExamId !== currentExamId && window.UI) {
         UI.toast(`🧭 已自动切换考试批次：${currentExamId}`, 'info');
     }
 
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     const existingExam = db?.exams?.[currentExamId];
-    const hasExistingData = !!(existingExam && Array.isArray(existingExam.data) && existingExam.data.length > 0);
+    const existingExamRows = getUploadExamDataRowCount(existingExam?.data);
+    const currentWorkspaceRows = beforeExamId && beforeExamId === currentExamId ? getUploadExamDataRowCount(RAW_DATA) : 0;
+    const existingRows = existingExamRows || currentWorkspaceRows;
+    const existingSourceLabel = existingExamRows ? '历史考试' : '当前工作区';
+    const effectiveExistingExam = existingExam || (currentWorkspaceRows ? { data: RAW_DATA, source: 'workspace-current' } : null);
+    const hasExistingData = existingRows > 0;
     const shouldOverwriteExistingExam = hasExistingData;
     if (hasExistingData) {
-        const ok = confirm(`⚠️ 检测到考试批次「${currentExamId}」已存在 ${existingExam.data.length} 条成绩数据。\n继续上传将覆盖该批次原数据，是否继续？`);
+        const ok = confirm(`⚠️ 检测到考试批次「${currentExamId}」在${existingSourceLabel}已存在 ${existingRows} 条成绩数据。\n继续上传将覆盖该批次原数据，是否继续？`);
         if (!ok) {
-            e.target.value = '';
+            inputEl.value = '';
             if (window.UI) UI.toast('已取消上传，原批次数据未被修改', 'info');
             return;
         }
     }
-    const files = e.target.files;
-    if (!files.length) return;
 
     Perf.runAsync(async () => {
-        if (shouldOverwriteExistingExam) {
-            await prepareSameExamOverwrite(currentExamId, existingExam);
+        try {
+            if (shouldOverwriteExistingExam) {
+                await prepareSameExamOverwrite(currentExamId, effectiveExistingExam);
+            }
+
+            clearDataRuntimeState({ keepConfig: true }); setTeacherMap({}); setTeacherStats({});
+            TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; clearCurrentSchool();
+            const teacherCards = document.getElementById('teacherCardsContainer');
+            const teacherTable = document.getElementById('teacherComparisonTable');
+            const teacherTownship = document.getElementById('teacher-township-ranking-container');
+            const detailTable = document.getElementById('studentDetailTable');
+            const marginalResult = document.getElementById('marginal-student-results');
+            if (teacherCards) teacherCards.innerHTML = '';
+            if (teacherTable) {
+                const tbody = teacherTable.querySelector('tbody');
+                if (tbody) tbody.innerHTML = '';
+                else teacherTable.innerHTML = '';
+            }
+            if (teacherTownship) teacherTownship.innerHTML = '';
+            if (detailTable) {
+                const tbody = detailTable.querySelector('tbody');
+                if (tbody) tbody.innerHTML = '';
+            }
+            if (marginalResult) marginalResult.innerHTML = '';
+
+            for (let f of files) await readExcel(f);
+            SUBJECTS.sort(sortSubjects);
+            await processData(); // 这是一个耗时操作
+            syncRuntimeStateToWindow();
+
+            updateSchoolMode();
+
+            await CohortDB.syncCurrentExam();
+
+            scheduleExamSelectorRefresh({ teacherCompareTeacher: true });
+
+            saveCloudData({ background: true, sourceLabel: 'auto-backup' }).then(() => {
+                appDebug("自动备份完成");
+            }).catch(e => logCloudSyncIssue("自动备份失败", e));
+            renderTables();
+            applySchoolModeToTables();
+            updateSchoolSelect(); updateMySchoolSelect(); updateStudentSchoolSelect(); updateMarginalSchoolSelect();
+            updateClassSelect(); updateSegmentSelects(); updatePotentialSchoolSelect();
+            if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
+            updateSeatAdjSelects();
+            updateProgressSchoolSelect();
+            updateMutualAidSelects(); updateMpSchoolSelect();
+
+            setUploadMessage(`✅ 成功导入 ${Object.keys(SCHOOLS).length} 所学校，共 ${RAW_DATA.length} 名学生。下一步建议确认本校、任课表与当前考试是否都已就绪。`, 'success');
+            UI.toast(`✅ 导入成功！包含 ${RAW_DATA.length} 条数据`, 'success');
+            logAction('导入', `成绩导入 ${RAW_DATA.length} 条`);
+            updateStatusPanel();
+        } finally {
+            inputEl.value = '';
         }
-
-        clearDataRuntimeState({ keepConfig: true }); setTeacherMap({}); setTeacherStats({});
-        TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; clearCurrentSchool();
-        const teacherCards = document.getElementById('teacherCardsContainer');
-        const teacherTable = document.getElementById('teacherComparisonTable');
-        const teacherTownship = document.getElementById('teacher-township-ranking-container');
-        const detailTable = document.getElementById('studentDetailTable');
-        const marginalResult = document.getElementById('marginal-student-results');
-        if (teacherCards) teacherCards.innerHTML = '';
-        if (teacherTable) {
-            const tbody = teacherTable.querySelector('tbody');
-            if (tbody) tbody.innerHTML = '';
-            else teacherTable.innerHTML = '';
-        }
-        if (teacherTownship) teacherTownship.innerHTML = '';
-        if (detailTable) {
-            const tbody = detailTable.querySelector('tbody');
-            if (tbody) tbody.innerHTML = '';
-        }
-        if (marginalResult) marginalResult.innerHTML = '';
-
-        for (let f of files) await readExcel(f);
-        SUBJECTS.sort(sortSubjects);
-        await processData(); // 这是一个耗时操作
-        syncRuntimeStateToWindow();
-
-        updateSchoolMode();
-
-        await CohortDB.syncCurrentExam();
-
-        scheduleExamSelectorRefresh({ teacherCompareTeacher: true });
-
-        saveCloudData({ background: true, sourceLabel: 'auto-backup' }).then(() => {
-            appDebug("自动备份完成");
-        }).catch(e => logCloudSyncIssue("自动备份失败", e));
-        renderTables();
-        applySchoolModeToTables();
-        updateSchoolSelect(); updateMySchoolSelect(); updateStudentSchoolSelect(); updateMarginalSchoolSelect();
-        updateClassSelect(); updateSegmentSelects(); updatePotentialSchoolSelect();
-        if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
-        updateSeatAdjSelects();
-        updateProgressSchoolSelect();
-        updateMutualAidSelects(); updateMpSchoolSelect();
-
-        setUploadMessage(`✅ 成功导入 ${Object.keys(SCHOOLS).length} 所学校，共 ${RAW_DATA.length} 名学生。下一步建议确认本校、任课表与当前考试是否都已就绪。`, 'success');
-        UI.toast(`✅ 导入成功！包含 ${RAW_DATA.length} 条数据`, 'success');
-        logAction('导入', `成绩导入 ${RAW_DATA.length} 条`);
-        updateStatusPanel();
     }, "正在解析 Excel 并计算排名...");
 });
 
