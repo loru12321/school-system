@@ -19,17 +19,20 @@ self.onmessage = function(e) {
                 if (schoolMap[s.school]) schoolMap[s.school].students.push(s);
             });
 
+            const isFiniteScore = (value) => typeof value === 'number' && Number.isFinite(value);
+
             // --- B. 计算统计指标 (原 processData 逻辑) ---
             Object.values(schoolMap).forEach(sch => {
                 [...SUBJECTS, 'total'].forEach(k => {
-                    const vals = sch.students.map(s => k==='total'?s.total:s.scores[k]).filter(v=>v!==undefined);
+                    const vals = sch.students
+                        .map(s => k==='total'?s.total:s.scores[k])
+                        .filter(isFiniteScore);
                     if(!vals.length) { sch.metrics[k] = { count:0, avg:0, excRate:0, passRate:0 }; return; }
                     const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
                     const excN = vals.filter(v=>v>=THRESHOLDS[k].exc).length;
                     const passN = vals.filter(v=>v>=THRESHOLDS[k].pass).length;
                     sch.metrics[k] = { count: vals.length, avg: avg, excRate: excN / vals.length, passRate: passN / vals.length };
                 });
-
                 // 后1/3计算
                 const totalN = sch.students.length;
                 const bottomN = Math.max(0, Math.floor(totalN / 3));

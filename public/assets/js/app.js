@@ -8417,7 +8417,10 @@ async function processData() {
 
     const keys = [...SUBJECTS, 'total'];
     keys.forEach(k => {
-        const vals = thresholdSourceRows.map(s => k === 'total' ? s.total : s.scores[k]).filter(v => v !== undefined).sort((a, b) => b - a);
+        const vals = thresholdSourceRows
+            .map(s => k === 'total' ? Number(s.total) : Number(s.scores[k]))
+            .filter(Number.isFinite)
+            .sort((a, b) => b - a);
 
         if (vals.length) {
             if (isSingleSchool && k === 'total' && input1 > 0 && input2 > 0) {
@@ -8894,7 +8897,6 @@ function renderTables() {
 
         const barPercent = m.avg ? Math.min(100, m.avg / maxAvg * 100).toFixed(1) : 0;
         const safeSchoolName = escapeAppHtml(s.name);
-
         html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td data-label="学校" class="clickable-school" data-school-profile-name="${safeSchoolName}" role="button" tabindex="0" title="点击查看学校学科诊断">
                     ${safeSchoolName} <i class="ti ti-chart-radar" style="font-size:12px; opacity:0.5;"></i>
