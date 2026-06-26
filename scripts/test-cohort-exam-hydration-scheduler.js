@@ -5,6 +5,7 @@ const vm = require('vm');
 
 async function run() {
     const source = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
+    const schedulerSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/cohort-exam-hydration-runtime.js'), 'utf8');
     const cloudSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/cloud.js'), 'utf8');
     const cloudWorkspaceSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/cloud-workspace-runtime.js'), 'utf8');
     const fastEntryStart = source.indexOf('if (options.fastEnter === true) {');
@@ -47,10 +48,14 @@ async function run() {
         'cached workspace loads missing indicator fields must force one remote refresh'
     );
 
-    const start = source.indexOf('const CohortExamHydrationScheduler = (() => {');
-    const endMarker = 'window.CohortExamHydrationScheduler = CohortExamHydrationScheduler;';
-    const end = source.indexOf(endMarker, start) + endMarker.length;
-    assert.ok(start >= 0 && end > start, 'hydration scheduler source should be present');
+    assert.ok(
+        source.includes('const CohortExamHydrationScheduler = window.CohortExamHydrationScheduler;'),
+        'app.js should consume the split hydration scheduler runtime'
+    );
+    assert.ok(
+        !source.includes('const CohortExamHydrationScheduler = (() => {'),
+        'app.js should not carry the hydration scheduler implementation'
+    );
 
     const requests = [];
     const window = {
@@ -63,10 +68,7 @@ async function run() {
     };
     const context = {
         window,
-        CURRENT_COHORT_ID: '2022',
-        readWorkspaceCohortId: () => '2022',
-        tryAutoRestoreWorkspaceExam: () => true,
-        scheduleExamSelectorRefresh: () => {},
+        localStorage: { getItem: () => '2022' },
         setTimeout,
         clearTimeout,
         Promise,
@@ -78,7 +80,11 @@ async function run() {
         console
     };
     window.window = window;
-    vm.runInNewContext(source.slice(start, end), context, { filename: 'cohort-hydration-scheduler.js' });
+    window.CURRENT_COHORT_ID = '2022';
+    window.readWorkspaceCohortId = () => '2022';
+    window.tryAutoRestoreWorkspaceExam = () => true;
+    window.scheduleExamSelectorRefresh = () => {};
+    vm.runInNewContext(schedulerSource, context, { filename: 'cohort-exam-hydration-runtime.js' });
 
     const quick = window.CohortExamHydrationScheduler.schedule('2022', {
         delay: 30,

@@ -31,7 +31,8 @@ const budgets = {
     // prior cap (<0.5%); retain 2KB+ headroom for regression detection.
     distAppCss: 625_000,
     ltHtml: 2_100_000,
-    publicAppJs: 790_000,
+    publicAppJs: 780_000,
+    publicCohortExamHydrationJs: 7_000,
     // Keep first-screen boot focused; optional runtime manifest/loaders live in runtime-loader-runtime.js.
     publicBootJs: 85_000,
     publicRuntimeLoaderJs: 58_000,
@@ -50,6 +51,7 @@ const actual = {
     ltHtml: getSize(ltHtmlPath),
     publicAppJs: getSize(publicAppPath),
     publicBootJs: getSize(publicBootPath),
+    publicCohortExamHydrationJs: getSize(path.join(projectRoot, 'public', 'assets', 'js', 'cohort-exam-hydration-runtime.js')),
     publicRuntimeLoaderJs: getSize(publicRuntimeLoaderPath),
     distAppJs: getSize(distAppPath),
     distReportRenderJs: getSize(distReportRenderPath),

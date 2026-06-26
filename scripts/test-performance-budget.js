@@ -63,7 +63,8 @@ assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].include
 assert.strictEqual(scripts['check:syntax'], 'node scripts/test-syntax.js', 'syntax check should use recursive syntax coverage');
 
 const budgets = {
-  publicAppJs: 790_000,
+  publicAppJs: 780_000,
+  publicCohortExamHydrationJs: 7_000,
   publicBootJs: 85_000,
   publicRuntimeLoaderJs: 58_000,
   publicCountyAnalysisJs: 125_000,
@@ -75,6 +76,7 @@ const budgets = {
 const actual = {
   publicAppJs: size('public/assets/js/app.js'),
   publicBootJs: size('public/assets/js/boot-runtime.js'),
+  publicCohortExamHydrationJs: size('public/assets/js/cohort-exam-hydration-runtime.js'),
   publicRuntimeLoaderJs: size('public/assets/js/runtime-loader-runtime.js'),
   publicCountyAnalysisJs: size('public/assets/js/county-analysis-runtime.js'),
   publicProgressAnalysisJs: size('public/assets/js/progress-analysis-runtime.js'),

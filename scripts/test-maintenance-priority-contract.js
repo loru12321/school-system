@@ -52,6 +52,7 @@ const wrangler = parseJson('wrangler.jsonc');
 const headers = read('public/_headers').replace(/\r\n/g, '\n');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
 const edgeGatewayRuntime = read('public/assets/js/edge-gateway-runtime.js');
+const cohortExamHydrationRuntime = read('public/assets/js/cohort-exam-hydration-runtime.js');
 const runtimeLoaderRuntime = read('public/assets/js/runtime-loader-runtime.js');
 const bootRuntimeSurface = `${bootRuntime}\n${runtimeLoaderRuntime}`;
 const appRuntime = read('public/assets/js/app.js');
@@ -143,11 +144,14 @@ const guardedItems = [
   () => assertIncludes(bootRuntime, 'bindBootLoginActions', 'boot runtime should bind first-screen login actions before app modules load'),
   () => assertIncludes(bootRuntime, '[data-login-submit]', 'boot runtime should bind data-login-submit buttons'),
   () => assert.ok(fileSize('public/assets/js/app.js') <= 910_000, 'public app.js should stay within tightened budget'),
-  () => assert.ok(fileSize('public/assets/js/app.js') <= 790_000, 'public app.js should preserve the EdgeGateway runtime split'),
+  () => assert.ok(fileSize('public/assets/js/app.js') <= 780_000, 'public app.js should preserve the hydration scheduler runtime split'),
+  () => assert.ok(fileSize('public/assets/js/cohort-exam-hydration-runtime.js') <= 7_000, 'cohort exam hydration runtime should stay focused'),
   () => assert.ok(fileSize('public/assets/js/edge-gateway-runtime.js') <= 16_000, 'EdgeGateway runtime should stay focused'),
   () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 85_000, 'boot runtime should stay within tightened budget'),
   () => assert.ok(fileSize('public/assets/js/runtime-loader-runtime.js') <= 58_000, 'runtime loader should stay within its split budget'),
   () => assertIncludes(bootRuntime, 'edge-gateway-runtime.js', 'boot runtime should load the split EdgeGateway runtime before app.js'),
+  () => assertIncludes(bootRuntime, 'cohort-exam-hydration-runtime.js', 'boot runtime should load the split hydration scheduler before app.js'),
+  () => assertIncludes(cohortExamHydrationRuntime, 'window.CohortExamHydrationScheduler', 'hydration scheduler should publish its runtime surface'),
   () => assertIncludes(edgeGatewayRuntime, 'isHostedGatewayUrl', 'EdgeGateway runtime should support hosted gateway URLs'),
   () => assertIncludes(dialogRuntime, 'UI.prompt = async function', 'dialog runtime should expose shared prompt modal API'),
   () => assertIncludes(dialogRuntime, 'UI.confirm = async function', 'dialog runtime should expose shared confirm modal API'),
