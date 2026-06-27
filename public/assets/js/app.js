@@ -5775,6 +5775,14 @@ async function switchCohort(cohortId, options = {}) {
                 }
             }
         }
+        if (options.requireCloudData === true) {
+            setManualCohortSelectionGate(true);
+            setCohortSyncStatus('error', { cohortId, detail: '未能从云端恢复该届别数据' });
+            UI.toast(`未能从云端恢复 [${cohortKey}] 数据，请稍后重试同步`, 'error');
+            UI.loading(false);
+            window.__COHORT_SWITCH_IN_PROGRESS__ = false;
+            return false;
+        }
         clearDataRuntimeState();
         COHORT_DB = {
             cohortId,
@@ -15149,9 +15157,13 @@ function showCohortPicker() {
 
     const year = parseInt(resolveMaskCohortYear(), 10);
     if (year && year >= 2000 && typeof CohortManager !== 'undefined') {
-        window.setTimeout(() => {
+        window.setTimeout(async () => {
             try {
-                CohortManager.addCohort({ year, startGrade: 6 }, { skipConfirm: true, fastEnter: true });
+                await CohortManager.addCohort({ year, startGrade: 6 }, {
+                    skipConfirm: true,
+                    fastEnter: false,
+                    requireCloudData: true
+                });
             } catch (error) {
                 console.warn('[CohortPicker] auto-enter failed:', error);
             }
@@ -15328,10 +15340,11 @@ async function enterCohortFromMask() {
     const startGrade = 6;
     if (!year || year < 2000) return alert('请输入有效的入学年份');
     setManualCohortSelectionGate(false);
-    // Open the locally cached workspace immediately. CohortManager keeps the
-    // authoritative cloud refresh in the background and reapplies it only when
-    // the user is still viewing this cohort.
-    await CohortManager.addCohort({ year, startGrade }, { skipConfirm: true, fastEnter: true });
+    await CohortManager.addCohort({ year, startGrade }, {
+        skipConfirm: true,
+        fastEnter: false,
+        requireCloudData: true
+    });
     refreshAuthRoleViewFromSession();
 }
 

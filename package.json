@@ -20,6 +20,7 @@
     "check:syntax": "node scripts/test-syntax.js",
     "test:auth-state": "node scripts/test-auth-state.js",
     "test:login-cohort-runtime": "node scripts/test-login-cohort-runtime.js",
+    "test:cohort-entry-cloud-restore": "node scripts/test-cohort-entry-cloud-restore.js",
     "test:responsive-login-contract": "node scripts/test-responsive-login-contract.js",
     "test:responsive-login-layout": "node scripts/test-responsive-login-layout.js",
     "check:responsive-login": "npm run test:responsive-login-contract && npm run test:responsive-login-layout",
