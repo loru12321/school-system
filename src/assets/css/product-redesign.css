@@ -2615,7 +2615,8 @@ table thead th,
 #login-overlay[data-login-skin="clean"] .login-clean-copy p {
     max-width: 560px !important;
     color: var(--pd-yj-ink-soft) !important;
-    font-size: 16px !important;
+    font-size: 18px !important;
+    line-height: 1.72 !important;
 }
 
 .login-styleboard {
@@ -2625,22 +2626,27 @@ table thead th,
 }
 
 .login-look-card {
-    min-height: 176px !important;
+    min-height: 188px !important;
     border-radius: 26px !important;
     border-color: rgba(228, 207, 168, 0.44) !important;
     box-shadow: 0 24px 52px rgba(120, 104, 86, 0.12) !important;
 }
 
 .login-look-card span {
+    font-size: 13px !important;
     color: rgba(29, 35, 48, 0.58) !important;
 }
 
 .login-look-card strong {
+    font-size: 24px !important;
+    line-height: 1.12 !important;
     color: #1d2330 !important;
     text-shadow: none !important;
 }
 
 .login-look-card small {
+    font-size: 14px !important;
+    line-height: 1.48 !important;
     color: rgba(102, 112, 133, 0.86) !important;
 }
 
@@ -2709,6 +2715,9 @@ table thead th,
     background: linear-gradient(135deg, #ffffff, #ffd5e1 52%, #bce9df) !important;
     box-shadow: 0 18px 34px rgba(188, 233, 223, 0.22) !important;
 }
+
+.login-entry-transition { display: none; margin-top: 12px; }
+.login-entry-transition.is-visible { display: flex; }
 
 .entrance-sound-panel {
     margin-top: 14px;
@@ -3977,7 +3986,7 @@ table thead th,
 .analysis-table-dense thead th {
     background: linear-gradient(180deg, #fbfcff, #eef3f8) !important;
     color: #334155 !important;
-    font-size: 12px !important;
+    font-size: 13px !important;
     font-weight: 820 !important;
     border-bottom: 1px solid var(--pd-curated-line) !important;
 }

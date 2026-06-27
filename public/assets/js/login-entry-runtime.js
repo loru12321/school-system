@@ -1183,6 +1183,7 @@
 
     function submitLogin() {
         window.__BOOT_LOGIN_CLICKED__ = false;
+        if (window.__BOOT_LOGIN_SUBMIT_LOCK__) return;
         if (window.Auth && typeof window.Auth.login === 'function') {
             window.Auth.login();
         }
@@ -1200,11 +1201,13 @@
             });
         });
         document.querySelectorAll('[data-login-submit]').forEach((button) => {
+            if (button.dataset.bootLoginBound === '1') return;
             if (button.dataset.loginEntryBound === '1') return;
             button.dataset.loginEntryBound = '1';
             button.addEventListener('click', submitLogin);
         });
         document.querySelectorAll('[data-login-submit-on-enter]').forEach((input) => {
+            if (input.dataset.bootLoginBound === '1') return;
             if (input.dataset.loginEntryBound === '1') return;
             input.dataset.loginEntryBound = '1';
             input.addEventListener('keydown', (event) => {

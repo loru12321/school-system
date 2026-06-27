@@ -29,6 +29,23 @@ const stylesheetLinks = [...html.matchAll(/<link\b[^>]*>/gi)]
     .filter(Boolean);
 assert.ok(stylesheetLinks.some(href => href.split('?')[0] === stylesheet), 'index.html must load responsive-login-final.css');
 assert.strictEqual(stylesheetLinks.at(-1).split('?')[0], stylesheet, 'responsive-login-final.css must be the last stylesheet loaded');
+assert.ok(
+    /<button\b[^>]*id="login-submit-button"[^>]*data-login-submit="1"[^>]*>/i.test(html),
+    'login submit button must keep the runtime submit hook'
+);
+assert.doesNotMatch(
+    html,
+    /<button\b[^>]*id="login-submit-button"[^>]*\bonclick=/i,
+    'login submit button must not use inline onclick because boot runtime owns single-submit behavior'
+);
+assert.ok(
+    html.includes('id="login-entry-transition"') && html.includes('data-login-transition-title') && html.includes('data-login-transition-copy'),
+    'login page must include a visible entry transition region for slow workbench loading'
+);
+assert.ok(
+    html.includes('class="sidebar-sound-module"') && html.includes('data-sound-import="1"') && html.includes('data-sound-preview="1"'),
+    'sidebar must expose system sound preview/import controls'
+);
 
 const tabletQuery = /@media\s*\(min-width:\s*769px\)\s*and\s*\(max-width:\s*1180px\)/i;
 const phoneQuery = /@media\s*\(max-width:\s*768px\)/i;

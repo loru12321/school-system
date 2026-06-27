@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-459808af9c6a';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-32df974ae5e0';
 
 function bootDebugLog(...args) {
 try {
@@ -1625,11 +1625,22 @@ function getPortalConfig(portal) {
 
 function setBootSubmitState(options = {}) {
     const button = document.getElementById('login-submit-button');
-    if (!button) return;
+    const transition = document.getElementById('login-entry-transition');
     const busy = !!options.busy;
-    button.disabled = busy;
-    button.dataset.bootBusy = busy ? '1' : '0';
-    if (options.text) button.textContent = options.text;
+    if (button) {
+        button.disabled = busy;
+        button.dataset.bootBusy = busy ? '1' : '0';
+        button.setAttribute('aria-busy', busy ? 'true' : 'false');
+        if (options.text) button.textContent = options.text;
+    }
+    if (transition) {
+        const title = transition.querySelector('[data-login-transition-title]');
+        const copy = transition.querySelector('[data-login-transition-copy]');
+        transition.classList.toggle('is-visible', busy);
+        transition.setAttribute('aria-hidden', busy ? 'false' : 'true');
+        if (title && (options.title || options.text)) title.textContent = options.title || options.text;
+        if (copy && options.copy) copy.textContent = options.copy;
+    }
 }
 
 function setBootHelperMessage(message, tone = 'info') {
@@ -1803,7 +1814,13 @@ const bootAuth = window.Auth || {
         }
 
         this.__bootLoginBusy = true;
-        setBootSubmitState({ busy: true, text: '正在验证身份...' });
+        window.__BOOT_LOGIN_SUBMIT_LOCK__ = true;
+        setBootSubmitState({
+            busy: true,
+            text: '正在验证身份...',
+            title: '正在进入学校工作台',
+            copy: '正在验证身份并准备载入数据模块，请稍候。'
+        });
 
         try {
             const result = await bootGateway.login(user, pass, className);
@@ -1811,12 +1828,26 @@ const bootAuth = window.Auth || {
             if (result && result.user) {
                 const matchedUser = result.user;
                 writeBootSessionUser(matchedUser);
-                setBootHelperMessage('身份验证成功', 'success');
+                setBootHelperMessage('身份验证成功，正在载入工作台。', 'success');
+                setBootSubmitState({
+                    busy: true,
+                    text: '正在载入工作台...',
+                    title: '正在载入学校工作台',
+                    copy: '正在同步菜单、权限和当前届别数据。'
+                });
                 const loader = document.getElementById('global-loader');
                 if (loader) loader.classList.remove('hidden');
                 await loadAppModules();
                 await window.waitForAuthReady();
-                if (portal === 'school' && cohortYear) await enterSelectedBootCohort(cohortYear);
+                if (portal === 'school' && cohortYear) {
+                    setBootSubmitState({
+                        busy: true,
+                        text: '正在同步届别...',
+                        title: '正在同步届别数据',
+                        copy: `正在进入 ${cohortYear} 届并恢复本地与云端状态。`
+                    });
+                    await enterSelectedBootCohort(cohortYear);
+                }
                 finalizeBootLoginUi(portal);
                 if (loader) {
                     loader.style.opacity = '0';
@@ -1834,6 +1865,7 @@ const bootAuth = window.Auth || {
             setBootSubmitState({ busy: false, text: getPortalConfig(portal).submit });
         } finally {
             this.__bootLoginBusy = false;
+            window.__BOOT_LOGIN_SUBMIT_LOCK__ = false;
         }
     },
     logout() {
@@ -1849,6 +1881,7 @@ const bootAuth = window.Auth || {
 
 function submitBootLogin() {
     window.__BOOT_LOGIN_CLICKED__ = false;
+    if (window.__BOOT_LOGIN_SUBMIT_LOCK__) return;
     if (window.Auth && typeof window.Auth.login === 'function') {
         window.Auth.login();
     }

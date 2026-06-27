@@ -51,7 +51,7 @@
     <link rel="stylesheet" href="./assets/css/responsive-login-final.css?v=20260621-responsive-login-v1">
     <script>
         (function () {
-            var refreshVersion = 'runtime-459808af9c6a';
+            var refreshVersion = 'runtime-32df974ae5e0';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -86,9 +86,9 @@
     <script defer src="./assets/js/report-insight-runtime.js?v=20260613-report-insight-v1"></script>
     <script defer src="./assets/js/report-render-runtime.js?v=20260613-report-render-preload-v1"></script>
     <script defer src="./assets/js/town-submodule-compare-runtime.js?v=20260614-town-submodule-preload-v1"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-459808af9c6a"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-459808af9c6a"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-459808af9c6a"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-32df974ae5e0"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-32df974ae5e0"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-32df974ae5e0"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -408,7 +408,22 @@
                         <div id="login-graduate-cohort-helper" class="login-graduate-cohort-helper">选择毕业届后，完成登录即可进入该届成绩档案。</div>
                     </div>
 
-                    <button id="login-submit-button" type="button" class="advanced-submit login-clean-submit" data-login-submit="1" onclick="window.__BOOT_LOGIN_CLICKED__=true;if(window.Auth&&typeof window.Auth.login==='function')window.Auth.login();return false;">进入学校工作台</button>
+                    <button id="login-submit-button" type="button" class="advanced-submit login-clean-submit" data-login-submit="1">进入学校工作台</button>
+                    <script>
+                        document.addEventListener('click', function (event) {
+                            if (window.__BOOT_AUTH_INIT_DONE__) return;
+                            if (event.target && event.target.closest && event.target.closest('[data-login-submit]')) {
+                                window.__BOOT_LOGIN_CLICKED__=true;
+                            }
+                        }, true);
+                    </script>
+                    <div id="login-entry-transition" class="login-entry-transition" aria-live="polite" aria-hidden="true">
+                        <div class="login-entry-transition__orb" aria-hidden="true"></div>
+                        <div>
+                            <strong data-login-transition-title>正在进入学校工作台</strong>
+                            <span data-login-transition-copy>正在验证身份并载入数据模块，请稍候。</span>
+                        </div>
+                    </div>
                     <div class="entrance-sound-panel" data-entrance-sound-panel="1" data-login-sound-hidden="1" aria-label="入场音乐" aria-hidden="true" hidden>
                         <div class="entrance-sound-panel__head">
                             <span>
@@ -547,6 +562,23 @@
             <nav class="sidebar-nav-container" id="sidebar-nav">
                 <!-- 导航通过 JS 动态渲染到这里 -->
             </nav>
+            <div class="sidebar-sound-module" aria-label="系统音效控制">
+                <button type="button" class="sidebar-sound-module__main" data-sound-preview="1" title="试听系统音效">
+                    <i class="ti ti-music-plus"></i>
+                    <span>音效</span>
+                </button>
+                <label class="sidebar-sound-module__import" title="导入已授权音/视频">
+                    <input type="file" accept=".mp3,.wav,.ogg,.m4a,.mp4,.mov,.webm,audio/mpeg,audio/wav,audio/ogg,audio/mp4,video/mp4,video/quicktime,video/webm" data-sound-import="1" multiple hidden>
+                    <i class="ti ti-photo-up"></i>
+                    <span>导入</span>
+                </label>
+                <div class="sidebar-sound-module__modes" role="group" aria-label="系统音效模式">
+                    <button type="button" data-sound-choice="random" title="随机播放"><i class="ti ti-player-play"></i></button>
+                    <button type="button" data-sound-choice="custom" title="顺序播放"><i class="ti ti-list-details"></i></button>
+                    <button type="button" data-sound-choice="off" title="关闭音效"><i class="ti ti-volume-off"></i></button>
+                </div>
+                <small class="sidebar-sound-module__status" data-sound-status="1">未导入授权音乐</small>
+            </div>
 
         </aside>
 
