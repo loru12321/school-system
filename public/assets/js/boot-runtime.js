@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-6276e1c46c06';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-bb994c58d06d';
 
 function bootDebugLog(...args) {
 try {
@@ -200,10 +200,10 @@ var APP_MODULES = [
 'town-submodule-compare-state-runtime.js'
 ].map(bootJs);
 
-var APP_MODULE_PRELOAD_LIMIT = 18;
-var APP_MODULE_MOBILE_PRELOAD_LIMIT = 3;
-var APP_MODULE_LATE_PREFETCH_LIMIT = 24;
-var APP_MODULE_PREFETCH_CHUNK_SIZE = 6;
+var APP_MODULE_PRELOAD_LIMIT = 36;
+var APP_MODULE_MOBILE_PRELOAD_LIMIT = 4;
+var APP_MODULE_LATE_PREFETCH_LIMIT = 34;
+var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
 var APP_MODULE_DESKTOP_BATCH_SIZE = 18;
 var APP_MODULE_MOBILE_BATCH_SIZE = 18;
 
@@ -385,9 +385,14 @@ if (preloadCount < APP_MODULES.length) {
 function scheduleLoginPrefetch() {
 if (window.__LOGIN_PREFETCH__) return;
 window.__LOGIN_PREFETCH__ = true;
-window.setTimeout(() => window.__APP_MODULES_LOADED__ !== true
-    && window.__APP_MODULES_LOADED__ !== 'loading'
-    && prefetchAppModuleList(APP_MODULES.slice(0, 3), 'lh'), 320);
+window.setTimeout(() => {
+    if (window.__APP_MODULES_LOADED__ === true || window.__APP_MODULES_LOADED__ === 'loading') return;
+    prefetchAppModuleList(APP_MODULES.slice(0, 18), 'lh');
+    scheduleIdleBootTask(() => {
+        if (window.__APP_MODULES_LOADED__ === true || window.__APP_MODULES_LOADED__ === 'loading') return;
+        prefetchAppModuleList(APP_MODULES.slice(18, 36), 'lh2');
+    }, 1200);
+}, 120);
 }
 
 function warmAppModuleCache() {

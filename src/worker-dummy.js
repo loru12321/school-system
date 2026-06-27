@@ -426,7 +426,7 @@ async function buildSystemDataJsonResponse(request, env, rows, selectSet) {
   );
   const single = wantsSingleSystemDataObject(request);
   const body = single ? (payloadRows[0] || null) : payloadRows;
-  return jsonResponse(200, body, request);
+  return jsonResponse(200, body, request, {}, SYSTEM_DATA_READ_CACHE_CONTROL);
 }
 
 function buildForwardHeaders(upstreamHeaders, request, env = {}) {
@@ -439,14 +439,16 @@ function buildForwardHeaders(upstreamHeaders, request, env = {}) {
   return headers;
 }
 
-function jsonResponse(status, body, request, env = {}) {
+function jsonResponse(status, body, request, env = {}, cacheControl = 'no-store') {
   const headers = buildCorsHeaders(request, env);
   headers['Content-Type'] = 'application/json; charset=utf-8';
-  headers['Cache-Control'] = 'no-store';
+  headers['Cache-Control'] = cacheControl;
   headers['X-Content-Type-Options'] = 'nosniff';
   headers['X-School-System-Gateway'] = 'cloudflare-worker';
   return new Response(JSON.stringify(body), { status, headers });
 }
+
+const SYSTEM_DATA_READ_CACHE_CONTROL = 'public, s-maxage=20, stale-while-revalidate=60';
 
 async function readJsonBody(request) {
   try {
@@ -773,10 +775,12 @@ async function proxySystemDataReadToSupabase(request, env, url) {
   }
 
   if (!requestedSizeBytes) {
+    const fwdHeaders = buildForwardHeaders(response.headers, request);
+    fwdHeaders.set('Cache-Control', SYSTEM_DATA_READ_CACHE_CONTROL);
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
-      headers: buildForwardHeaders(response.headers, request)
+      headers: fwdHeaders
     });
   }
 
@@ -806,7 +810,7 @@ async function proxySystemDataReadToSupabase(request, env, url) {
   });
 
   const body = wantsSingleSystemDataObject(request) ? (payloadRows[0] || null) : payloadRows;
-  return jsonResponse(200, body, request);
+  return jsonResponse(200, body, request, {}, SYSTEM_DATA_READ_CACHE_CONTROL);
 }
 
 async function proxySystemDataWriteToSupabase(request, env, url) {
