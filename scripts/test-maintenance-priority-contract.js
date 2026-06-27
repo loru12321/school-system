@@ -150,7 +150,6 @@ const guardedItems = [
   () => assertIncludes(sw, 'isVersionedRuntimeAsset(url)', 'service worker should detect explicit-version runtime assets'),
   () => assertIncludes(headers, 'Content-Security-Policy-Report-Only:', 'static headers should start CSP in report-only mode'),
   () => assertIncludes(headers, 'Content-Security-Policy:', 'static headers should enforce CSP after report-only rollout'),
-  () => assertIncludes(headers, "'unsafe-eval'", 'CSP should temporarily allow Alpine expression evaluation until inline expressions are removed'),
   () => assertIncludes(worker, "url.pathname === '/api/csp-report'", 'Worker should accept CSP violation reports'),
   () => assertIncludes(worker, 'const [d1Response, supabaseResponse] = await Promise.all([', 'hybrid system_data writes should dual-write concurrently'),
   () => assertIncludes(headers, '/sw.js', 'service worker should keep a dedicated revalidation header'),

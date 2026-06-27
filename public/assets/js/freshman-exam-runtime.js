@@ -570,8 +570,13 @@ async function ensureInquiryCryptoRuntime() {
     if (typeof window.ensureCryptoJsVendorLoaded === 'function') {
         return window.ensureCryptoJsVendorLoaded();
     }
-    const cryptoJsSource = await readStandaloneExportLibrarySource('crypto-js', './assets/vendor/crypto-js/crypto-js.min.js');
-    window.eval(cryptoJsSource);
+    await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = './assets/vendor/crypto-js/crypto-js.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('crypto-js load failed'));
+        document.head.appendChild(s);
+    });
     if (typeof CryptoJS === 'undefined') {
         throw new Error('CryptoJS runtime unavailable');
     }
