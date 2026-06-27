@@ -188,6 +188,11 @@ assert.ok(
     'latest exam fallback should inspect a wider candidate set and sort by exam recency'
 );
 assert.ok(
+    workspaceSource.includes('const backgroundLatestOnly = options.background === true && !forceSync;')
+        && workspaceSource.includes('const latestMetaOnly = latestOnly || backgroundLatestOnly || maxFetch > 0;'),
+    'background cloud restore should use latest metadata mode instead of paging through full cohort history'
+);
+assert.ok(
     workspaceSource.includes('if (remotePayload)') && workspaceSource.includes('if (latestPayload)'),
     'stale workspace guard should not swallow intentional blocked-upload errors'
 );

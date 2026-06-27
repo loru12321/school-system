@@ -1372,7 +1372,8 @@
             const minCount = Math.max(1, Number(options.minCount || 2));
             const maxFetch = Math.max(0, Number(options.maxFetch || 0));
             const latestOnly = options.latestOnly === true || maxFetch === 1;
-            const latestMetaOnly = latestOnly || maxFetch > 0;
+            const backgroundLatestOnly = options.background === true && !forceSync;
+            const latestMetaOnly = latestOnly || backgroundLatestOnly || maxFetch > 0;
             if (this._cohortExamSyncTasks[cid]) {
                 const activeOptions = this._cohortExamSyncTaskOptions[cid] || {};
                 const activeMinCount = Math.max(1, Number(activeOptions.minCount || 2));

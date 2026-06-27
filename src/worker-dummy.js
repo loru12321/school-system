@@ -111,9 +111,9 @@ function inferSystemDataMeta(key) {
   } else if (SYSTEM_DATA_COMPARE_PREFIXES.some((prefix) => text.startsWith(prefix))) {
     kind = 'compare';
     keyPrefix = text.split('_').slice(0, 2).join('_') || 'compare';
-  } else if (/^\d{4}级/i.test(text)) {
+  } else if (/^\d{4}/i.test(text)) {
     kind = 'exam';
-    keyPrefix = `${cohortId || ''}级`;
+    keyPrefix = text.match(/^\d{4}级/i) ? `${cohortId || ''}级` : (cohortId || '');
     const parts = text.split('_').filter(Boolean);
     termId = parts.slice(1, 4).join('_');
   }
@@ -252,6 +252,25 @@ function appendSystemDataFilterClause(clauses, bindings, filter, column = 'key')
   }
 }
 
+function buildSystemDataKeyFilterClause(filter) {
+  if (filter?.op === 'like') {
+    const value = normalizeText(filter.value);
+    const cohortMatch = value.match(/^(\d{4})%$/);
+    if (cohortMatch) {
+      return {
+        clauses: ['cohort_id = ?', "(kind = 'exam' OR key LIKE ?)"],
+        bindings: [cohortMatch[1], value],
+        optimized: 'cohort_exam_prefix'
+      };
+    }
+  }
+
+  const clauses = [];
+  const bindings = [];
+  appendSystemDataFilterClause(clauses, bindings, filter, 'key');
+  return { clauses, bindings, optimized: '' };
+}
+
 function buildSystemDataOrClause(rawOr) {
   const text = normalizeText(rawOr);
   if (!text) return { clause: '', bindings: [] };
@@ -283,7 +302,9 @@ async function querySystemDataRows(env, request, url) {
   const whereClauses = [];
   const bindings = [];
 
-  appendSystemDataFilterClause(whereClauses, bindings, keyFilter, 'key');
+  const keyWhere = buildSystemDataKeyFilterClause(keyFilter);
+  whereClauses.push(...keyWhere.clauses);
+  bindings.push(...keyWhere.bindings);
   const orClause = buildSystemDataOrClause(url.searchParams.get('or'));
   if (orClause.clause) {
     whereClauses.push(orClause.clause);

@@ -89,6 +89,9 @@ assert.ok(worker.includes('buildWorkerErrorHeaders()'), 'worker crash responses 
 assert.ok(worker.includes("if (method === 'GET' || method === 'HEAD') return null;"), 'GET/HEAD proxy requests should not attach a body');
 assert.ok(worker.includes("Math.min(Math.floor(raw), 1000)"), 'system_data read limit should be capped');
 assert.ok(worker.includes("'LIMIT ? OFFSET ?'"), 'system_data reads should push pagination into D1 instead of slicing in memory');
+assert.ok(worker.includes("function buildSystemDataKeyFilterClause(filter)"), 'system_data reads should optimize compatible key filters before querying D1');
+assert.ok(worker.includes("value.match(/^(\\d{4})%$/)"), 'cohort exam key-prefix reads should be recognized without scanning generic keys');
+assert.ok(worker.includes("'cohort_id = ?'") && worker.includes("(kind = 'exam' OR key LIKE ?)"), 'cohort exam reads should use D1 cohort indexes before applying compatible key filters');
 assert.ok(worker.includes('const [d1Response, supabaseResponse] = await Promise.all(['), 'hybrid system_data writes should dual-write D1 and Supabase concurrently');
 assert.ok(worker.includes("cloudSystemDataBackend === 'hybrid' ? hasSystemDataStorage(env) && hasSupabaseRestOrigin(env)"), 'health should require both D1 and Supabase readiness for hybrid mode');
 assert.ok(wrangler.vars && wrangler.vars.CLOUD_SYSTEM_DATA_MODE === 'primary', 'production data mode should use D1 primary storage');
