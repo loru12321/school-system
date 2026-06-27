@@ -2,7 +2,7 @@
 // It is not the Wrangler main entrypoint; keep production routing in worker-dummy.js.
 import { buildCorsHeaders, normalizeText } from './worker-http-helpers.js';
 
-const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 12;
+const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 8;
 const PBKDF2_ITERATIONS = 100000;
 const PBKDF2_SCHEME = 'pbkdf2-sha256';
 const PROXY_TIMEOUT_MS = 15000;

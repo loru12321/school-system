@@ -137,7 +137,7 @@ function buildSessionPayload(row) {
     class_name: className,
     grade_name: gradeName,
     teacher_name: teacherName,
-    exp: Math.floor(Date.now() / 1e3) + 60 * 60 * 12
+    exp: Math.floor(Date.now() / 1e3) + 60 * 60 * 8
   };
 }
 function hasAnyRole(session, roles) {

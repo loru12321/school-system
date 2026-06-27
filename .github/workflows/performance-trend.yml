@@ -54,9 +54,6 @@ jobs:
       - name: Verify system Chrome
         run: google-chrome --version
 
-      - name: Refresh web package
-        run: npm run build
-
       - name: Run local smoke and save raw performance sample
         env:
           NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs

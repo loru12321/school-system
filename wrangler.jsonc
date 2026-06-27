@@ -2,7 +2,8 @@
   "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
   "name": "school-system",
   "main": "src/worker-dummy.js",
-  "compatibility_date": "2026-04-20",
+  "compatibility_date": "2026-06-27",
+  "observability": { "enabled": true },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS"
