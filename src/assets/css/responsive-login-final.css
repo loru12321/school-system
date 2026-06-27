@@ -349,7 +349,7 @@
         box-shadow: none !important;
     }
 
-    #login-overlay[data-login-skin="clean"] .login-look-card span {
+    #login-overlay[data-login-skin="clean"] .login-look-card span:first-child {
         grid-row: span 2 !important;
         width: 30px !important;
         height: 30px !important;
@@ -708,9 +708,7 @@
         max-height: 100dvh !important;
         padding: 0 !important;
         overflow: hidden !important;
-        background:
-            radial-gradient(circle at 17% 18%, rgba(255, 255, 255, .92) 0 16%, transparent 17%),
-            linear-gradient(135deg, #f6fafc 0%, #fff9f2 44%, #eef5f8 100%) !important;
+        background: linear-gradient(135deg, #f8fbff 0%, #f5fbf8 54%, #eef7fb 100%) !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
@@ -720,7 +718,7 @@
         height: 100dvh !important;
         min-height: 0 !important;
         max-height: 100dvh !important;
-        grid-template-columns: minmax(520px, 1.1fr) minmax(430px, .9fr) !important;
+        grid-template-columns: minmax(540px, 1.08fr) minmax(450px, .92fr) !important;
         gap: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
@@ -741,42 +739,37 @@
         padding: clamp(32px, 5vh, 70px) clamp(38px, 6vw, 92px) !important;
         overflow: hidden !important;
         border: 0 !important;
-        border-right: 1px solid rgba(21, 57, 96, .1) !important;
+        border-right: 1px solid rgba(199, 216, 230, .75) !important;
         border-radius: 0 !important;
         background:
-            linear-gradient(rgba(40, 84, 119, .07) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(40, 84, 119, .07) 1px, transparent 1px),
-            linear-gradient(145deg, rgba(255, 255, 255, .72), rgba(235, 245, 247, .86)) !important;
-        background-size: 32px 32px, 32px 32px, auto !important;
-        box-shadow: inset -24px 0 60px rgba(52, 83, 105, .06) !important;
+            linear-gradient(135deg, rgba(255, 255, 255, .95), rgba(233, 247, 246, .88)),
+            linear-gradient(90deg, rgba(31, 115, 183, .08), rgba(16, 185, 129, .1)) !important;
     }
 
-    html body #login-overlay[data-login-skin="clean"] .login-clean-copy {
-        width: min(620px, 100%) !important;
-        max-width: 620px !important;
-        margin: 0 !important;
-        padding: 0 !important;
+    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        display: none !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
         margin: 14px 0 18px !important;
-        font-size: clamp(54px, 8vw, 108px) !important;
-        line-height: .96 !important;
+        font-size: clamp(58px, 7.2vw, 96px) !important;
+        line-height: 1 !important;
         white-space: normal !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-copy p {
-        width: min(520px, 100%) !important;
-        max-width: 520px !important;
         margin: 0 !important;
         font-size: clamp(15px, 1.2vw, 17px) !important;
         line-height: 1.78 !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-styleboard {
-        width: 100% !important;
-        max-width: 260px !important;
-        gap: 12px !important;
+        gap: 14px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+        display: none !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-card {
@@ -789,7 +782,7 @@
         border-radius: 0 !important;
         justify-content: center !important;
         overflow: hidden !important;
-        box-shadow: -18px 0 54px rgba(23, 55, 83, .08) !important;
+        background: #fff !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-form-header {
@@ -831,6 +824,7 @@
         height: clamp(44px, 5.8vh, 54px) !important;
         min-height: 44px !important;
         margin-top: clamp(8px, 1.5vh, 14px) !important;
+        background: linear-gradient(135deg, #0ea5a4, #2563eb) !important;
     }
 }
 
@@ -912,7 +906,6 @@
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-card {
         width: 100% !important;
-        max-width: 100% !important;
         box-sizing: border-box !important;
     }
 
