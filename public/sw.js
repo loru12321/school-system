@@ -4,7 +4,7 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-runtime-6276e1c46c06';
+const CACHE_VERSION = 'school-system-runtime-2226299ed8c7';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -134,9 +134,18 @@ async function cacheFirstRuntimeAsset(request) {
 }
 
 async function networkFirstApi(request, url) {
+    const eligible = isApiCacheEligible(url);
+    if (eligible) {
+        const cache = await caches.open(API_CACHE);
+        const cached = await cache.match(request);
+        if (cached) {
+            fetch(request).then((r) => { if (r.ok) cache.put(request, r.clone()); }).catch(() => {});
+            return cached;
+        }
+    }
     try {
         const response = await fetch(request);
-        if (isCacheable(response) && isApiCacheEligible(url)) {
+        if (isCacheable(response) && eligible) {
             const cache = await caches.open(API_CACHE);
             cache.put(request, response.clone());
         }

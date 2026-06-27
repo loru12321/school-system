@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-bb994c58d06d';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-2226299ed8c7';
 
 function bootDebugLog(...args) {
 try {
@@ -204,7 +204,7 @@ var APP_MODULE_PRELOAD_LIMIT = 36;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 4;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 34;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
-var APP_MODULE_DESKTOP_BATCH_SIZE = 18;
+var APP_MODULE_DESKTOP_BATCH_SIZE = 70;
 var APP_MODULE_MOBILE_BATCH_SIZE = 18;
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
@@ -594,7 +594,7 @@ const run = async () => {
         controller = typeof AbortController === 'function' ? new AbortController() : null;
         timeoutId = window.setTimeout(() => {
             if (controller) controller.abort();
-        }, 3200);
+        }, 1500);
 
         await fetch(DIRECT_PROXY_ORIGIN + '/api/health', {
             method: 'GET',
