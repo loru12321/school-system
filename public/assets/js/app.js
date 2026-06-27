@@ -4289,17 +4289,7 @@ const DataManager = {
     },
 
     getExamBatchDateSortTs: function (examId, meta = {}) {
-        const candidates = [
-            meta?.date,
-            String(examId || '').match(/(\d{4}-\d{2}-\d{2})(?!.*\d{4}-\d{2}-\d{2})/)?.[1]
-        ];
-        for (const raw of candidates) {
-            const text = String(raw || '').trim();
-            if (!text) continue;
-            const ts = Date.parse(`${text}T00:00:00`);
-            if (!Number.isNaN(ts)) return ts;
-        }
-        return 0;
+        return getExamRecordDateSortTimestamp(examId, { meta });
     },
 
     getExamBatchRows: function () {
@@ -4531,8 +4521,7 @@ const DataManager = {
             try { await window.idbKeyval.del(`cache_${key}`); } catch (e) { console.warn('[DataManager] exam cache delete skipped:', e); }
         }
         if (String(CURRENT_EXAM_ID || window.CURRENT_EXAM_ID || db.currentExamId || '').trim() === key) {
-            const fallback = Object.entries(db.exams || {})
-                .sort((a, b) => Number(b?.[1]?.updatedAt || b?.[1]?.createdAt || 0) - Number(a?.[1]?.updatedAt || a?.[1]?.createdAt || 0))[0]?.[0] || '';
+            const fallback = getLatestExamRecordId(db.exams || {});
             db.currentExamId = fallback;
             if (fallback && CohortDB.applyExamToWorkspace) CohortDB.applyExamToWorkspace(fallback, { recalculate: true, renderTables: true });
             else {
@@ -12769,7 +12758,7 @@ function findPreviousRecord(student) {
             if (db && db.exams && Object.keys(db.exams).length > 0) {
                 const examEntries = Object.entries(db.exams)
                     .filter(([id]) => !currentExamId || !isExamKeyEquivalentForCompare(id, currentExamId)) // 排除当前考试
-                    .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0)); // 按时间降序
+                    .sort(compareExamRecordsByDateDesc);
 
                 for (const [examId, exam] of examEntries) {
                     const examData = exam.data || [];
@@ -12851,7 +12840,7 @@ function getStudentExamHistory(student) {
         if (!db || !db.exams) return results;
 
         const examEntries = Object.entries(db.exams)
-            .sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0)); // 按时间升序
+            .sort(compareExamRecordsByDateAsc);
         const comparisonContextByExam = new Map();
         const getExamComparisonContext = (examId, examFingerprint, examData) => {
             const contextKey = `${String(examFingerprint || examId || '').trim()}::${Array.isArray(examData) ? examData.length : 0}`;
@@ -12906,7 +12895,9 @@ function getStudentExamHistory(student) {
                     examId,
                     examFullKey: exam.examFullKey || examId, // 记录全名
                     examLabel: examId.replace(/_/g, ' '),
+                    meta: exam.meta || {},
                     createdAt: exam.createdAt || 0,
+                    updatedAt: exam.updatedAt || 0,
                     fingerprint: examFingerprint,
                     student: normalizedStudent,
                     percentiles: {},
@@ -12981,8 +12972,8 @@ function getStudentExamHistory(student) {
     });
 
     dedupedResults.sort((a, b) => {
-        const timeA = getHistoryTime(a);
-        const timeB = getHistoryTime(b);
+        const timeA = getExamRecordDateSortTimestamp(getHistoryKey(a), a);
+        const timeB = getExamRecordDateSortTimestamp(getHistoryKey(b), b);
         if (timeA !== timeB) return timeA - timeB;
         return getHistoryKey(a).localeCompare(getHistoryKey(b));
     });
@@ -15800,6 +15791,70 @@ function migrateLegacyExamKey(meta, nextKey) {
     moveExamRecordKey(db, legacyKey, nextKey);
 }
 
+function getIsoDateTimestamp(value) {
+    const text = String(value || '').trim();
+    if (!text) return 0;
+    const match = text.match(/(\d{4}-\d{2}-\d{2})(?!.*\d{4}-\d{2}-\d{2})/);
+    const dateText = match ? match[1] : (/^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '');
+    if (!dateText) return 0;
+    const ts = Date.parse(`${dateText}T00:00:00`);
+    return Number.isNaN(ts) ? 0 : ts;
+}
+
+function getExamRecordDateSortTimestamp(examId, exam = {}) {
+    const meta = exam?.meta || {};
+    const candidates = [
+        meta?.date,
+        exam?.date,
+        exam?.examDate,
+        exam?.examFullKey,
+        exam?.examLabel,
+        examId
+    ];
+    for (const candidate of candidates) {
+        const ts = getIsoDateTimestamp(candidate);
+        if (ts > 0) return ts;
+    }
+    if (typeof getExamSortTimestamp === 'function') {
+        const fallback = Number(exam?.updatedAt || exam?.createdAt || 0);
+        const ts = getExamSortTimestamp(examId, fallback);
+        if (Number.isFinite(ts) && ts > 0) return ts;
+    }
+    const raw = exam?.updatedAt || exam?.createdAt || exam?.student?.updatedAt || 0;
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric) && numeric > 0) return numeric;
+    const parsed = new Date(raw).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function compareExamRecordsByDateDesc(left, right) {
+    const [leftId, leftExam] = left || [];
+    const [rightId, rightExam] = right || [];
+    const leftTs = getExamRecordDateSortTimestamp(leftId, leftExam);
+    const rightTs = getExamRecordDateSortTimestamp(rightId, rightExam);
+    if (leftTs !== rightTs) return rightTs - leftTs;
+    const leftUpdated = Number(leftExam?.updatedAt || leftExam?.createdAt || 0);
+    const rightUpdated = Number(rightExam?.updatedAt || rightExam?.createdAt || 0);
+    if (leftUpdated !== rightUpdated) return rightUpdated - leftUpdated;
+    return String(rightId || '').localeCompare(String(leftId || ''), 'zh-CN');
+}
+
+function compareExamRecordsByDateAsc(left, right) {
+    const desc = compareExamRecordsByDateDesc(left, right);
+    return desc === 0 ? 0 : -desc;
+}
+
+function getLatestExamRecordId(exams = {}) {
+    return Object.entries(exams || {}).sort(compareExamRecordsByDateDesc)[0]?.[0] || '';
+}
+
+if (typeof window !== 'undefined') {
+    window.getExamRecordDateSortTimestamp = getExamRecordDateSortTimestamp;
+    window.compareExamRecordsByDateDesc = compareExamRecordsByDateDesc;
+    window.compareExamRecordsByDateAsc = compareExamRecordsByDateAsc;
+    window.getLatestExamRecordId = getLatestExamRecordId;
+}
+
 function getExamMetaFromUI() {
     window.getExamMetaFromUI = getExamMetaFromUI;
     const year = document.getElementById('exam-year')?.value || '';
@@ -15894,32 +15949,23 @@ function getAutoRestoreExamId(db, cohortId = '') {
     const sourceDb = db && typeof db === 'object' ? db : null;
     if (!sourceDb || !sourceDb.exams || typeof sourceDb.exams !== 'object') return '';
     const normalizedCohortId = String(cohortId || CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
-    const entries = Object.values(sourceDb.exams)
+    const entries = Object.entries(sourceDb.exams)
         .filter((exam) => {
-            const examId = String(exam?.examId || '').trim();
-            const rows = Array.isArray(exam?.data) ? exam.data : [];
+            const [examKey, examValue] = exam || [];
+            const examId = String(examValue?.examId || examKey || '').trim();
+            const rows = Array.isArray(examValue?.data) ? examValue.data : [];
             if (!examId || rows.length === 0) return false;
             if (!normalizedCohortId) return true;
             const examCohortId = normalizeCompareCohortId(
-                exam?.meta?.cohortId
+                examValue?.meta?.cohortId
                 || (typeof inferCohortIdFromValue === 'function' ? inferCohortIdFromValue(examId) : '')
                 || ''
             );
             return !examCohortId || examCohortId === normalizedCohortId;
         })
-        .map((exam) => {
-            const examId = String(exam?.examId || '').trim();
-            const ts = typeof getExamSortTimestamp === 'function'
-                ? getExamSortTimestamp(examId, Number(exam?.createdAt || exam?.updatedAt || 0))
-                : Number(exam?.createdAt || exam?.updatedAt || 0);
-            return { examId, ts };
-        });
+        .sort(compareExamRecordsByDateDesc);
     if (!entries.length) return '';
-    entries.sort((a, b) => {
-        if (a.ts !== b.ts) return b.ts - a.ts;
-        return String(b.examId || '').localeCompare(String(a.examId || ''), 'zh-CN');
-    });
-    return entries[0].examId || '';
+    return String(entries[0]?.[1]?.examId || entries[0]?.[0] || '').trim();
 }
 
 function ensureWorkspaceDefaultSchool() {
@@ -16206,13 +16252,14 @@ const CohortDB = {
             return;
         }
         const db = this.ensure();
-        const exams = Object.values(db.exams || {});
+        const exams = Object.entries(db.exams || {})
+            .sort(compareExamRecordsByDateDesc)
+            .map(([, exam]) => exam);
         if (!exams.length) {
             sel.innerHTML = '<option value="">暂无历史考试</option>';
             scheduleExamSelectorRefresh();
             return;
         }
-        exams.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         sel.innerHTML = exams.map(ex => `<option value="${ex.examId}">${ex.examId}</option>`).join('');
         if (db.currentExamId) sel.value = db.currentExamId;
         scheduleExamSelectorRefresh();
@@ -16580,7 +16627,9 @@ function showMultiCompareDataSourceDiag() {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || '(未选择届别)';
     const currentExamId = CURRENT_EXAM_ID || readWorkspaceExamId() || '(未设置当前考试)';
-    const exams = Object.values(db?.exams || {}).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const exams = Object.entries(db?.exams || {})
+        .sort(compareExamRecordsByDateDesc)
+        .map(([, exam]) => exam);
 
     const lines = exams.map((ex, idx) => {
         const id = ex?.examId || '(无ID)';

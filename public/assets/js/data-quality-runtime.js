@@ -25,6 +25,20 @@
         return Array.isArray(value) ? value : [];
     }
 
+    function getExamDateSortTimestamp(exam) {
+        if (root && typeof root.getExamRecordDateSortTimestamp === 'function') {
+            return root.getExamRecordDateSortTimestamp(exam?.examId || exam?.examFullKey || '', exam);
+        }
+        const dateText = String(exam?.meta?.date || exam?.date || exam?.examId || exam?.examFullKey || '').match(/(\d{4}-\d{2}-\d{2})(?!.*\d{4}-\d{2}-\d{2})/)?.[1] || '';
+        const dateTs = dateText ? Date.parse(`${dateText}T00:00:00`) : 0;
+        if (Number.isFinite(dateTs) && dateTs > 0) return dateTs;
+        if (root && typeof root.getExamSortTimestamp === 'function') {
+            const ts = root.getExamSortTimestamp(exam?.examId || exam?.examFullKey || '', Number(exam?.updatedAt || exam?.createdAt || 0));
+            if (Number.isFinite(ts) && ts > 0) return ts;
+        }
+        return Number(exam?.updatedAt || exam?.createdAt || 0);
+    }
+
     function getSubjects() {
         const subjects = asArray(root.SUBJECTS).map(normalizeText).filter(Boolean);
         if (subjects.length) return subjects;
@@ -47,7 +61,7 @@
         if (preferred && preferred.length) return preferred;
         const latest = Object.values(exams)
             .filter(Boolean)
-            .sort((left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0))
+            .sort((left, right) => getExamDateSortTimestamp(right) - getExamDateSortTimestamp(left))
             .find((exam) => asArray(exam && exam.data).length);
         return latest ? asArray(latest.data) : [];
     }

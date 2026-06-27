@@ -24,6 +24,20 @@
             return nextSchool;
         });
 
+    function getTeacherExamDateSortTimestamp(exam) {
+        if (typeof window.getExamRecordDateSortTimestamp === 'function') {
+            return window.getExamRecordDateSortTimestamp(exam?.id || exam?.examId || exam?.examFullKey || '', exam);
+        }
+        const dateText = String(exam?.meta?.date || exam?.date || exam?.id || exam?.examId || exam?.examFullKey || '').match(/(\d{4}-\d{2}-\d{2})(?!.*\d{4}-\d{2}-\d{2})/)?.[1] || '';
+        const dateTs = dateText ? Date.parse(`${dateText}T00:00:00`) : 0;
+        if (Number.isFinite(dateTs) && dateTs > 0) return dateTs;
+        if (typeof window.getExamSortTimestamp === 'function') {
+            const ts = window.getExamSortTimestamp(exam?.id || exam?.examId || exam?.examFullKey || '', Number(exam?.updatedAt || exam?.createdAt || 0));
+            if (Number.isFinite(ts) && ts > 0) return ts;
+        }
+        return Number(exam?.updatedAt || exam?.createdAt || 0);
+    }
+
     function teacherNormalizeSchoolName(value) {
         return String(value || '').trim();
     }
@@ -464,10 +478,14 @@
             .map((exam) => ({
                 id: exam.examId,
                 key: exam.examFullKey || exam.examId,
+                examId: exam.examId,
+                examFullKey: exam.examFullKey || exam.examId,
+                meta: exam.meta || {},
                 createdAt: Number(exam.createdAt || 0),
+                updatedAt: Number(exam.updatedAt || 0),
                 dataCount: exam.data.length
             }))
-            .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+            .sort((a, b) => getTeacherExamDateSortTimestamp(a) - getTeacherExamDateSortTimestamp(b));
     }
 
     function resolveProgressBaselineExamEntry(examId) {
@@ -495,6 +513,7 @@
             examId: exam?.examId || key,
             examFullKey: exam?.examFullKey || exam?.examId || key,
             createdAt: Number(exam?.createdAt || 0),
+            updatedAt: Number(exam?.updatedAt || 0),
             data: Array.isArray(exam?.data) ? exam.data : [],
             meta: exam?.meta || {}
         };
@@ -608,7 +627,7 @@
         if (preferredId) pushEntry(preferredId);
         historicalList
             .slice()
-            .sort((left, right) => (right.createdAt || 0) - (left.createdAt || 0))
+            .sort((left, right) => getTeacherExamDateSortTimestamp(right) - getTeacherExamDateSortTimestamp(left))
             .forEach((exam) => pushEntry(exam.id));
         return ordered.slice(0, limit);
     }
@@ -779,7 +798,7 @@
             const currentId = window.CURRENT_EXAM_ID || db.currentExamId || '';
             let exam = currentId ? db.exams[currentId] : null;
             if (!exam) {
-                const list = Object.values(db.exams).sort((left, right) => (right.createdAt || 0) - (left.createdAt || 0));
+                const list = Object.values(db.exams).sort((left, right) => getTeacherExamDateSortTimestamp(right) - getTeacherExamDateSortTimestamp(left));
                 exam = list[0] || null;
             }
             return Array.isArray(exam?.data) ? exam.data : [];

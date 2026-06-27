@@ -27,6 +27,21 @@
             const mode = String(window.__PROGRESS_QUICK_MODE || 'all').trim();
             return ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all';
         });
+
+    function getProgressExamDateSortTimestamp(exam) {
+        if (typeof window.getExamRecordDateSortTimestamp === 'function') {
+            return window.getExamRecordDateSortTimestamp(exam?.id || exam?.examId || exam?.examFullKey || '', exam);
+        }
+        const dateText = String(exam?.meta?.date || exam?.date || exam?.id || exam?.examId || exam?.examFullKey || '').match(/(\d{4}-\d{2}-\d{2})(?!.*\d{4}-\d{2}-\d{2})/)?.[1] || '';
+        const dateTs = dateText ? Date.parse(`${dateText}T00:00:00`) : 0;
+        if (Number.isFinite(dateTs) && dateTs > 0) return dateTs;
+        if (typeof window.getExamSortTimestamp === 'function') {
+            const ts = window.getExamSortTimestamp(exam?.id || exam?.examId || exam?.examFullKey || '', Number(exam?.updatedAt || exam?.createdAt || 0));
+            if (Number.isFinite(ts) && ts > 0) return ts;
+        }
+        return Number(exam?.updatedAt || exam?.createdAt || 0);
+    }
+
     const ensureCompareExamSyncStateEntry = typeof window.ensureCompareExamSyncStateEntry === 'function'
         ? window.ensureCompareExamSyncStateEntry
         : ((cohortId) => {
@@ -212,11 +227,13 @@ function getProgressBaselineExamList() {
             id: String(exam?.examId || '').trim(),
             examId: String(exam?.examId || '').trim(),
             examFullKey: String(exam?.examFullKey || exam?.examId || '').trim(),
+            meta: exam?.meta || {},
             createdAt: Number(exam?.createdAt || exam?.updatedAt || 0),
+            updatedAt: Number(exam?.updatedAt || 0),
             data: Array.isArray(exam?.data) ? exam.data : []
         }))
         .filter((exam) => exam.id && exam.data.length > 0)
-        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        .sort((a, b) => getProgressExamDateSortTimestamp(a) - getProgressExamDateSortTimestamp(b));
     ProgressBaselineExamPerfCache.signature = signature;
     ProgressBaselineExamPerfCache.list = list;
     return list;
@@ -530,12 +547,14 @@ function updateProgressMultiExamSelects() {
     const examList = getProgressBaselineExamList().map((exam) => ({
         id: exam.id,
         createdAt: exam.createdAt || 0,
+        meta: exam.meta || {},
+        updatedAt: exam.updatedAt || 0,
         label: exam.id
     }));
     if (CURRENT_EXAM_ID && !examList.some((exam) => exam.id === CURRENT_EXAM_ID)) {
         examList.push({ id: CURRENT_EXAM_ID, createdAt: Date.now(), label: `${CURRENT_EXAM_ID} (当前)` });
     }
-    examList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    examList.sort((a, b) => getProgressExamDateSortTimestamp(a) - getProgressExamDateSortTimestamp(b));
 
     if (examList.length < 2) {
         const syncing = trySyncCompareExamOptions();

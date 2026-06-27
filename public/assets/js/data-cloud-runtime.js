@@ -354,6 +354,12 @@
 
     function getExamSortTimestamp(exam) {
         if (!exam || typeof exam !== 'object') return 0;
+        if (root && typeof root.getExamRecordDateSortTimestamp === 'function') {
+            return root.getExamRecordDateSortTimestamp(exam.examId || exam.examFullKey || '', exam);
+        }
+        const dateText = String(exam?.meta?.date || exam?.date || exam?.examId || exam?.examFullKey || '').match(/(\d{4}-\d{2}-\d{2})(?!.*\d{4}-\d{2}-\d{2})/)?.[1] || '';
+        const dateTs = dateText ? Date.parse(`${dateText}T00:00:00`) : 0;
+        if (Number.isFinite(dateTs) && dateTs > 0) return dateTs;
         const updatedTs = Date.parse(String(exam.updatedAt || '')) || Number(exam.updatedAt || 0) || 0;
         const createdTs = Date.parse(String(exam.createdAt || '')) || Number(exam.createdAt || 0) || 0;
         return Math.max(updatedTs, createdTs);
