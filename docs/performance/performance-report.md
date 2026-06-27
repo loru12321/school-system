@@ -4,12 +4,12 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `5e383a82235e`
-- Recorded at: 2026-06-27T03:03:57.134Z
-- Total smoke time: 39323 ms (-931 ms vs previous)
-- Login: 7410 ms
-- App ready: 4 ms
-- Long tasks: 2, max 1050 ms
+- Commit: `c2899c280b64`
+- Recorded at: 2026-06-27T03:39:40.359Z
+- Total smoke time: 39570 ms (+247 ms vs previous)
+- Login: 7521 ms
+- App ready: 7 ms
+- Long tasks: 2, max 1087 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `cohort-growth` | 670 ms | 1783 ms | 2453 ms |
-| `upload` | 1227 ms | 577 ms | 1804 ms |
-| `report-generator` | 520 ms | 765 ms | 1285 ms |
-| `student-overview` | 531 ms | 669 ms | 1200 ms |
-| `county-analysis` | 507 ms | 638 ms | 1145 ms |
-| `summary` | 548 ms | 519 ms | 1067 ms |
-| `potential-analysis` | 964 ms | 0 ms | 964 ms |
-| `grade-scheduler` | 527 ms | 374 ms | 901 ms |
+| `cohort-growth` | 635 ms | 1978 ms | 2613 ms |
+| `upload` | 1229 ms | 465 ms | 1694 ms |
+| `report-generator` | 519 ms | 814 ms | 1333 ms |
+| `county-analysis` | 507 ms | 646 ms | 1153 ms |
+| `potential-analysis` | 1100 ms | 0 ms | 1100 ms |
+| `student-overview` | 531 ms | 562 ms | 1093 ms |
+| `summary` | 554 ms | 513 ms | 1067 ms |
+| `freshman-simulator` | 547 ms | 400 ms | 947 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `c2899c280b64` | 39570 ms | 7521 ms | 7 ms | 2 | 0 | 0 |
 | `5e383a82235e` | 39323 ms | 7410 ms | 4 ms | 2 | 0 | 0 |
 | `291411606b3e` | 40254 ms | 8028 ms | 2 ms | 2 | 0 | 0 |
 | `b318de55602b` | 38504 ms | 1944 ms | 3764 ms | 2 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `b8b397c23552` | 33687 ms | 3417 ms | 3164 ms | 0 | 0 | 0 |
 | `8d7707f7542f` | 31464 ms | 2450 ms | 2178 ms | 0 | 0 | 0 |
 | `713ca3604a33` | 31966 ms | 2919 ms | 2083 ms | 0 | 0 | 0 |
-| `bf2c1db79a98` | 32145 ms | 3044 ms | 2072 ms | 0 | 0 | 0 |
 
 ## Data Files
 
