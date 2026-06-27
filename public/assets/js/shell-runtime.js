@@ -8,6 +8,7 @@
             summary: '先把届别、数据、权限和参数校准，再进入分析与执行链路。',
             items: [
                 { id: 'starter-hub', icon: 'ti-rocket', text: '新手入口与诊断', hint: '完成初始化检查，快速确认系统已经进入可分析状态。' },
+                { id: 'audio-debug', icon: 'ti-music-plus', text: '系统音效调试', hint: '集中导入、试听和切换进入系统时的授权音效。' },
                 { id: 'upload', icon: 'ti-database-import', text: '数据上传与设置', hint: '管理数据导入、映射、科目与基础配置。' },
                 { id: 'data-quality', icon: 'ti-stethoscope', text: '数据质量体检', hint: '检查缺字段、重复身份、异常分数和科目缺失。' }
             ]

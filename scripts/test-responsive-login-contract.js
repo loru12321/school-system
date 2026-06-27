@@ -43,8 +43,8 @@ assert.ok(
     'login page must include a visible entry transition region for slow workbench loading'
 );
 assert.ok(
-    html.includes('class="sidebar-sound-module"') && html.includes('data-sound-import="1"') && html.includes('data-sound-preview="1"'),
-    'sidebar must expose system sound preview/import controls'
+    html.includes('id="audio-debug"') && html.includes('data-sound-import="1"') && html.includes('data-sound-preview="1"'),
+    'audio debug module must expose system sound preview/import controls'
 );
 
 const tabletQuery = /@media\s*\(min-width:\s*769px\)\s*and\s*\(max-width:\s*1180px\)/i;

@@ -587,12 +587,15 @@ assert.ok(bootRuntime.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'boot 
 assert.ok(loginEntryRuntime.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'login entry submit should clear stale queued early click state');
 assert.ok(appSource.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'full Auth.login should clear stale queued early click state');
 const bootLoginLoadIndex = bootRuntime.indexOf('await loadAppModules();');
-const bootLoginAuthReadyIndex = bootRuntime.indexOf('await window.waitForAuthReady();');
-const bootLoginCohortIndex = bootRuntime.indexOf('await enterSelectedBootCohort(cohortYear);');
+const bootLoginFinalizeIndex = bootRuntime.indexOf('finalizeBootLoginUi(portal);', bootLoginLoadIndex);
+const bootLoginBackgroundAuthIndex = bootRuntime.indexOf('window.waitForAuthReady(3500)', bootLoginFinalizeIndex);
+const bootLoginBackgroundCohortIndex = bootRuntime.indexOf('enterSelectedBootCohort(cohortYear)', bootLoginBackgroundAuthIndex);
 assert.ok(
-    bootLoginLoadIndex >= 0 && bootLoginAuthReadyIndex > bootLoginLoadIndex && bootLoginCohortIndex > bootLoginAuthReadyIndex,
-    'boot login should enter the selected school cohort after app modules and Auth are ready'
+    bootLoginLoadIndex >= 0 && bootLoginFinalizeIndex > bootLoginLoadIndex && bootLoginBackgroundAuthIndex > bootLoginFinalizeIndex && bootLoginBackgroundCohortIndex > bootLoginBackgroundAuthIndex,
+    'boot login should reveal the workbench after app modules and restore the selected school cohort in the background'
 );
+assert.ok(!bootRuntime.includes('await window.waitForAuthReady();'), 'boot login should not block workbench entry on Auth readiness');
+assert.ok(!bootRuntime.includes('await enterSelectedBootCohort(cohortYear);'), 'boot login should not block workbench entry on cohort restoration');
 assert.ok(indexHtml.includes('type="button" class="advanced-submit login-clean-submit"'), 'login submit button should not default-submit before boot handlers bind');
 assert.ok(indexHtml.includes("window.__BOOT_LOGIN_CLICKED__=true"), 'login submit button should queue early clicks before boot runtime is ready');
 const authStateRuntime = fs.readFileSync(runtimePath, 'utf8');

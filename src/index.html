@@ -51,7 +51,7 @@
     <link rel="stylesheet" href="./assets/css/responsive-login-final.css?v=20260621-responsive-login-v1">
     <script>
         (function () {
-            var refreshVersion = 'runtime-32df974ae5e0';
+            var refreshVersion = 'runtime-6276e1c46c06';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -86,9 +86,9 @@
     <script defer src="./assets/js/report-insight-runtime.js?v=20260613-report-insight-v1"></script>
     <script defer src="./assets/js/report-render-runtime.js?v=20260613-report-render-preload-v1"></script>
     <script defer src="./assets/js/town-submodule-compare-runtime.js?v=20260614-town-submodule-preload-v1"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-32df974ae5e0"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-32df974ae5e0"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-32df974ae5e0"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-6276e1c46c06"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-6276e1c46c06"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-6276e1c46c06"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -562,23 +562,6 @@
             <nav class="sidebar-nav-container" id="sidebar-nav">
                 <!-- 导航通过 JS 动态渲染到这里 -->
             </nav>
-            <div class="sidebar-sound-module" aria-label="系统音效控制">
-                <button type="button" class="sidebar-sound-module__main" data-sound-preview="1" title="试听系统音效">
-                    <i class="ti ti-music-plus"></i>
-                    <span>音效</span>
-                </button>
-                <label class="sidebar-sound-module__import" title="导入已授权音/视频">
-                    <input type="file" accept=".mp3,.wav,.ogg,.m4a,.mp4,.mov,.webm,audio/mpeg,audio/wav,audio/ogg,audio/mp4,video/mp4,video/quicktime,video/webm" data-sound-import="1" multiple hidden>
-                    <i class="ti ti-photo-up"></i>
-                    <span>导入</span>
-                </label>
-                <div class="sidebar-sound-module__modes" role="group" aria-label="系统音效模式">
-                    <button type="button" data-sound-choice="random" title="随机播放"><i class="ti ti-player-play"></i></button>
-                    <button type="button" data-sound-choice="custom" title="顺序播放"><i class="ti ti-list-details"></i></button>
-                    <button type="button" data-sound-choice="off" title="关闭音效"><i class="ti ti-volume-off"></i></button>
-                </div>
-                <small class="sidebar-sound-module__status" data-sound-status="1">未导入授权音乐</small>
-            </div>
 
         </aside>
 
@@ -857,6 +840,52 @@
                             style="background:#ec4899;">独立页面</span></h3>
                     <p><strong>一句话目的：</strong>把中考日期、法定节假日、长假区间和实时倒计时集中在同一页维护。</p>
                     <p><strong>推荐顺序：</strong>先确认中考日期，再同步法定节假日，最后按学校实际添加寒暑假或校内长假。</p>
+                </div>
+            </div>
+
+            <div id="audio-debug" class="section card-box analysis-workspace analysis-workspace-tools audio-debug-workspace">
+                <div class="module-desc-bar analysis-hero" style="border-color:#0ea5e9;">
+                    <h3><i class="ti ti-music-plus"></i> 系统音效调试 <span class="badge"
+                            style="background:#0ea5e9;">音效管理</span></h3>
+                    <p><strong>一句话目的：</strong>集中管理进入系统时的授权音效，避免控制项挤在侧边栏影响导航。</p>
+                    <p><strong>推荐顺序：</strong>先导入已授权音/视频，再选择播放模式，最后试听确认登录入场体验。</p>
+                </div>
+                <div class="starter-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));">
+                    <section class="starter-card audio-debug-panel audio-debug-panel--primary" style="min-height:180px;">
+                        <div class="audio-debug-panel__head" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;">
+                            <span class="audio-debug-icon" style="width:48px;height:48px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;color:#0369a1;background:#e0f2fe;font-size:24px;"><i class="ti ti-volume"></i></span>
+                            <div>
+                                <h4 style="margin:0 0 4px;">入场音效</h4>
+                                <p data-sound-status="1" style="margin:0;color:#475569;font-size:13px;">未导入授权音乐</p>
+                            </div>
+                        </div>
+                        <div class="audio-debug-actions" style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button type="button" class="btn btn-blue" data-sound-preview="1">
+                                <i class="ti ti-player-play"></i> 试听当前音效
+                            </button>
+                            <label class="btn btn-green audio-debug-import">
+                                <input type="file" accept=".mp3,.wav,.ogg,.m4a,.mp4,.mov,.webm,audio/mpeg,audio/wav,audio/ogg,audio/mp4,video/mp4,video/quicktime,video/webm" data-sound-import="1" multiple hidden>
+                                <i class="ti ti-photo-up"></i> 导入授权音/视频
+                            </label>
+                        </div>
+                    </section>
+                    <section class="starter-card audio-debug-panel" style="min-height:180px;">
+                        <h4><i class="ti ti-adjustments"></i> 播放模式</h4>
+                        <div class="audio-debug-modes entrance-sound-options" role="group" aria-label="系统音效模式" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;max-height:none;">
+                            <button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="random" style="min-height:88px;">
+                                <strong>随机播放</strong>
+                                <small>适合多首授权歌单，登录时自动轮换</small>
+                            </button>
+                            <button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="custom" style="min-height:88px;">
+                                <strong>顺序播放</strong>
+                                <small>按照导入顺序播放，便于固定调试</small>
+                            </button>
+                            <button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="off" style="min-height:88px;">
+                                <strong>关闭音效</strong>
+                                <small>保留素材，不在进入系统时播放</small>
+                            </button>
+                        </div>
+                    </section>
                 </div>
             </div>
 

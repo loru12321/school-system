@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-32df974ae5e0';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-6276e1c46c06';
 
 function bootDebugLog(...args) {
 try {
@@ -1838,16 +1838,6 @@ const bootAuth = window.Auth || {
                 const loader = document.getElementById('global-loader');
                 if (loader) loader.classList.remove('hidden');
                 await loadAppModules();
-                await window.waitForAuthReady();
-                if (portal === 'school' && cohortYear) {
-                    setBootSubmitState({
-                        busy: true,
-                        text: '正在同步届别...',
-                        title: '正在同步届别数据',
-                        copy: `正在进入 ${cohortYear} 届并恢复本地与云端状态。`
-                    });
-                    await enterSelectedBootCohort(cohortYear);
-                }
                 finalizeBootLoginUi(portal);
                 if (loader) {
                     loader.style.opacity = '0';
@@ -1855,6 +1845,16 @@ const bootAuth = window.Auth || {
                         loader.style.display = 'none';
                         loader.classList.add('hidden');
                     }, 300);
+                }
+                if (portal === 'school' && cohortYear) {
+                    Promise.resolve()
+                        .then(() => {
+                            if (typeof window.waitForAuthReady === 'function') return window.waitForAuthReady(3500);
+                            return null;
+                        })
+                        .catch(() => null)
+                        .then(() => enterSelectedBootCohort(cohortYear))
+                        .catch((error) => console.warn('[boot-auth] background cohort enter failed:', error));
                 }
             } else {
                 setBootHelperMessage('验证失败：' + (result?.error || '账号密码错误'), 'error');
