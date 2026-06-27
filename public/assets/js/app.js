@@ -3536,6 +3536,7 @@ const DataManager = {
     cloudBackupRows: new Map(),
     studentSelection: new Set(),
     examBatchSelection: new Set(),
+    examBatchHydratedCohorts: new Set(),
 
     isGrade9Context: function () {
         const meta = (typeof getExamMetaFromUI === 'function') ? getExamMetaFromUI() : null;
@@ -3969,6 +3970,7 @@ const DataManager = {
 
         if (tab === 'exams') {
             this.renderExamBatches();
+            this.ensureExamBatchesHydrated();
         }
 
         this.renderCurrentTab();
@@ -4345,6 +4347,46 @@ const DataManager = {
             ].map(v => String(v || '').toLowerCase()).join(' ');
             return haystack.includes(keyword);
         });
+    },
+
+    ensureExamBatchesHydrated: function (options = {}) {
+        const force = options.force === true;
+        const cohortId = String(CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || (typeof readWorkspaceCohortId === 'function' ? readWorkspaceCohortId() : '') || '').trim();
+        if (!cohortId || !window.CloudManager || typeof CloudManager.fetchCohortExamsToLocal !== 'function') return Promise.resolve({ success: false, skipped: true });
+        if (!force && this.examBatchHydratedCohorts.has(cohortId)) return Promise.resolve({ success: true, cached: true });
+        if (this._examBatchHydrationPromise && !force) return this._examBatchHydrationPromise;
+
+        const summary = document.getElementById('dm-exams-summary');
+        if (summary && this.currentTab === 'exams') {
+            summary.dataset.loading = 'true';
+            summary.innerHTML = `${summary.innerHTML || ''}<div style="margin-top:6px; color:#2563eb; font-weight:700;">正在补齐云端历史考试...</div>`;
+        }
+
+        this._examBatchHydrationPromise = Promise.resolve(CloudManager.fetchCohortExamsToLocal(cohortId, {
+            background: true,
+            force: true,
+            latestOnly: false,
+            maxFetch: 0,
+            minCount: 50,
+            refreshSelectors: false
+        })).then((result) => {
+            this.examBatchHydratedCohorts.add(cohortId);
+            if (this.currentTab === 'exams') this.renderExamBatches();
+            return result;
+        }).catch((error) => {
+            console.warn('[DataManager] exam batch cloud hydration failed:', error);
+            if (window.UI) UI.toast('云端历史考试补齐失败，请稍后重试', 'warning');
+            return { success: false, error };
+        }).finally(() => {
+            this._examBatchHydrationPromise = null;
+        });
+        return this._examBatchHydrationPromise;
+    },
+
+    refreshExamBatchesFromCloud: function () {
+        this.examBatchHydratedCohorts.delete(String(CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || '').trim());
+        this.renderExamBatches();
+        return this.ensureExamBatchesHydrated({ force: true });
     },
 
     renderExamBatches: function () {

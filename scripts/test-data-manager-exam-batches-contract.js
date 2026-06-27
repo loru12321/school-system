@@ -13,14 +13,21 @@ assert.ok(html.includes('id="dm-exams-area"'), 'exam batch area must exist');
 assert.ok(html.includes('id="dm-exams-tbody"'), 'exam batch table body must exist');
 assert.ok(html.includes('DataManager.selectRecognizedExamBatches()'), 'exam batch view must provide bulk recognition');
 assert.ok(html.includes('DataManager.deleteSelectedExamBatches()'), 'exam batch view must provide bulk deletion');
+assert.ok(html.includes('DataManager.refreshExamBatchesFromCloud()'), 'exam batch view must expose cloud history hydration');
 assert.ok(html.includes('height:clamp(420px, 52vh, 620px)'), 'exam batch table must have a readable viewport height');
 
 [
     'examBatchSelection: new Set()',
+    'examBatchHydratedCohorts: new Set()',
     "if (tab === 'exams') tabId = 'tab-data-exams';",
     "examsArea.style.display = tab === 'exams' ? 'flex' : 'none'",
     "const isExamBatchTab = this.currentTab === 'exams';",
     "if (isExamBatchTab) {",
+    'this.ensureExamBatchesHydrated();',
+    'ensureExamBatchesHydrated: function (options = {})',
+    'refreshExamBatchesFromCloud: function ()',
+    'CloudManager.fetchCohortExamsToLocal(cohortId',
+    'minCount: 50',
     'renderExamBatches: function ()',
     'selectRecognizedExamBatches: function ()',
     'deleteSelectedExamBatches: async function ()',
