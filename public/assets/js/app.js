@@ -3535,6 +3535,7 @@ const DataManager = {
     cloudSelection: new Set(),
     cloudBackupRows: new Map(),
     studentSelection: new Set(),
+    examBatchSelection: new Set(),
 
     isGrade9Context: function () {
         const meta = (typeof getExamMetaFromUI === 'function') ? getExamMetaFromUI() : null;
@@ -3827,7 +3828,7 @@ const DataManager = {
             tabContainer.style.flexWrap = 'wrap';
             tabContainer.style.overflowX = 'auto';
 
-            ['tab-data-stu', 'tab-data-tea', 'tab-data-targets', 'tab-data-params', 'tab-data-cloud', 'tab-data-sql']
+            ['tab-data-stu', 'tab-data-exams', 'tab-data-tea', 'tab-data-targets', 'tab-data-params', 'tab-data-cloud', 'tab-data-sql']
                 .forEach(id => {
                     const tab = document.getElementById(id);
                     if (tab && tab.parentElement === tabContainer) {
@@ -3871,6 +3872,7 @@ const DataManager = {
         document.querySelectorAll('.login-tab').forEach(el => el.classList.remove('active'));
 
         let tabId = 'tab-data-stu';
+        if (tab === 'exams') tabId = 'tab-data-exams';
         if (tab === 'teacher') tabId = 'tab-data-tea';
         if (tab === 'archive') tabId = 'tab-data-arch';
         if (tab === 'params') tabId = 'tab-data-params';
@@ -3883,6 +3885,9 @@ const DataManager = {
 
         const stuTable = document.getElementById('dm-student-table');
         if (stuTable) stuTable.style.display = tab === 'student' ? 'table' : 'none';
+
+        const examsArea = document.getElementById('dm-exams-area');
+        if (examsArea) examsArea.style.display = tab === 'exams' ? 'flex' : 'none';
 
         const teaArea = document.getElementById('dm-teacher-area');
         if (teaArea) teaArea.style.display = tab === 'teacher' ? 'block' : 'none';
@@ -3952,6 +3957,10 @@ const DataManager = {
 
         if (tab === 'params') {
             this.renderParams();
+        }
+
+        if (tab === 'exams') {
+            this.renderExamBatches();
         }
 
         this.renderCurrentTab();
@@ -4251,6 +4260,268 @@ const DataManager = {
             this.renderParams();
         } else if (this.currentTab === 'targets') {
             this.renderTargets();
+        } else if (this.currentTab === 'exams') {
+            this.renderExamBatches();
+        }
+    },
+
+    escapeDataManagerHtml: function (value) {
+        if (window.SchoolRuntime && typeof SchoolRuntime.escapeHtml === 'function') {
+            return SchoolRuntime.escapeHtml(value);
+        }
+        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch]));
+    },
+
+    getExamBatchRows: function () {
+        const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+        const exams = db?.exams && typeof db.exams === 'object' ? db.exams : {};
+        const currentExamId = String(CURRENT_EXAM_ID || window.CURRENT_EXAM_ID || readWorkspaceExamId?.() || db?.currentExamId || '').trim();
+        const rows = Object.entries(exams).map(([examId, exam]) => {
+            const meta = exam?.meta || {};
+            const rowCount = getUploadExamDataRowCount(exam?.data);
+            const grade = String(getEffectiveGrade?.(meta) || meta.grade || '').trim();
+            const cohortId = String(meta.cohortId || CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || '').trim();
+            const momentKey = [cohortId, meta.year || '', meta.term || '', meta.date || '', grade].map(v => String(v || '').trim()).join('|');
+            const sortTs = Number(exam?.updatedAt || exam?.createdAt || getExamSortTimestamp?.(examId, 0) || 0);
+            return {
+                examId,
+                exam,
+                meta,
+                rowCount,
+                grade,
+                cohortId,
+                momentKey,
+                sortTs,
+                current: examId === currentExamId,
+                selected: this.examBatchSelection.has(examId)
+            };
+        });
+        const duplicateCounts = {};
+        rows.forEach(row => {
+            if (!row.momentKey.replace(/\|/g, '')) return;
+            duplicateCounts[row.momentKey] = (duplicateCounts[row.momentKey] || 0) + 1;
+        });
+        rows.forEach(row => {
+            row.duplicate = duplicateCounts[row.momentKey] > 1;
+            row.empty = row.rowCount === 0;
+        });
+        rows.sort((a, b) => {
+            if (a.current !== b.current) return a.current ? -1 : 1;
+            return b.sortTs - a.sortTs || a.examId.localeCompare(b.examId, 'zh-CN');
+        });
+        return rows;
+    },
+
+    getFilteredExamBatchRows: function () {
+        const keyword = String(document.getElementById('dm-exams-search')?.value || '').trim().toLowerCase();
+        const filter = String(document.getElementById('dm-exams-filter')?.value || 'all');
+        return this.getExamBatchRows().filter(row => {
+            if (filter === 'duplicate' && !row.duplicate) return false;
+            if (filter === 'empty' && !row.empty) return false;
+            if (filter === 'current' && !row.current) return false;
+            if (!keyword) return true;
+            const haystack = [
+                row.examId,
+                row.meta?.year,
+                row.meta?.term,
+                row.meta?.type,
+                row.meta?.name,
+                row.meta?.examName,
+                row.meta?.date
+            ].map(v => String(v || '').toLowerCase()).join(' ');
+            return haystack.includes(keyword);
+        });
+    },
+
+    renderExamBatches: function () {
+        const tbody = document.getElementById('dm-exams-tbody');
+        const summary = document.getElementById('dm-exams-summary');
+        if (!tbody) return;
+        const h = (value) => this.escapeDataManagerHtml(value);
+        const allRows = this.getExamBatchRows();
+        const rows = this.getFilteredExamBatchRows();
+        const selected = new Set(this.examBatchSelection);
+        this.examBatchSelection = new Set([...selected].filter(id => allRows.some(row => row.examId === id)));
+        const duplicateCount = allRows.filter(row => row.duplicate).length;
+        const emptyCount = allRows.filter(row => row.empty).length;
+        const totalRows = allRows.reduce((sum, row) => sum + row.rowCount, 0);
+        if (summary) {
+            const cohort = String(CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || '未选择').trim();
+            summary.innerHTML = `当前届别：<b>${h(cohort)}</b> · 考试批次 <b>${allRows.length}</b> 个 · 成绩记录 <b>${totalRows}</b> 条 · 疑似重复 <b style="color:#b45309;">${duplicateCount}</b> 个 · 空批次 <b style="color:#dc2626;">${emptyCount}</b> 个`;
+        }
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:22px; color:#64748b;">当前筛选下没有考试批次</td></tr>';
+            this.updateExamBatchSelectionUI();
+            return;
+        }
+        tbody.innerHTML = rows.map(row => {
+            const meta = row.meta || {};
+            const title = meta.examName || meta.name || meta.type || row.examId;
+            const encodedExamId = encodeURIComponent(row.examId);
+            const statusBadges = [];
+            if (row.current) statusBadges.push('<span class="badge" style="background:#dbeafe;color:#1d4ed8;">当前</span>');
+            if (row.duplicate) statusBadges.push('<span class="badge" style="background:#fef3c7;color:#92400e;">疑似重复</span>');
+            if (row.empty) statusBadges.push('<span class="badge" style="background:#fee2e2;color:#b91c1c;">空数据</span>');
+            if (!statusBadges.length) statusBadges.push('<span class="badge" style="background:#dcfce7;color:#166534;">正常</span>');
+            const updatedAt = row.exam?.updatedAt || row.exam?.createdAt;
+            const updatedText = updatedAt ? new Date(updatedAt).toLocaleString('zh-CN') : '-';
+            const termText = [meta.year, meta.term].filter(Boolean).join(' / ') || '-';
+            return `
+                <tr data-exam-id="${h(row.examId)}">
+                    <td style="text-align:center;">
+                        <input type="checkbox" class="dm-exams-select" data-exam-id="${h(row.examId)}" ${this.examBatchSelection.has(row.examId) ? 'checked' : ''} onchange="DataManager.toggleExamBatchSelection(this)">
+                    </td>
+                    <td>
+                        <div style="font-weight:700; color:#0f172a;">${h(title)}</div>
+                        <div style="font-size:11px; color:#64748b; margin-top:3px;">${h(row.examId)}</div>
+                    </td>
+                    <td>${h(termText)}${row.grade ? `<div style="font-size:11px; color:#64748b; margin-top:3px;">${h(row.grade)}年级</div>` : ''}</td>
+                    <td>${h(meta.date || '-')}</td>
+                    <td style="font-weight:700;">${row.rowCount}</td>
+                    <td>${statusBadges.join(' ')}</td>
+                    <td>${h(updatedText)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" type="button" onclick="DataManager.switchToExamBatch(decodeURIComponent('${encodedExamId}'))" style="padding:3px 7px;">切换</button>
+                        <button class="btn btn-sm btn-danger" type="button" onclick="DataManager.deleteExamBatch(decodeURIComponent('${encodedExamId}'))" style="padding:3px 7px; background:#dc2626;">删除</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        this.updateExamBatchSelectionUI();
+    },
+
+    updateExamBatchSelectionUI: function () {
+        const boxes = Array.from(document.querySelectorAll('#dm-exams-tbody .dm-exams-select'));
+        const selectedVisible = boxes.filter(box => this.examBatchSelection.has(String(box.dataset.examId || '')));
+        boxes.forEach(box => { box.checked = this.examBatchSelection.has(String(box.dataset.examId || '')); });
+        const allBox = document.getElementById('dm-exams-select-all');
+        if (allBox) {
+            allBox.checked = boxes.length > 0 && selectedVisible.length === boxes.length;
+            allBox.indeterminate = selectedVisible.length > 0 && selectedVisible.length < boxes.length;
+        }
+        const countEl = document.getElementById('dm-exams-selected-count');
+        if (countEl) countEl.textContent = `已选 ${this.examBatchSelection.size} 项`;
+        const deleteBtn = document.getElementById('dm-exams-batch-delete');
+        if (deleteBtn) {
+            deleteBtn.disabled = this.examBatchSelection.size === 0;
+            deleteBtn.style.opacity = this.examBatchSelection.size === 0 ? '0.6' : '1';
+        }
+    },
+
+    toggleExamBatchSelection: function (inputEl) {
+        const examId = String(inputEl?.dataset?.examId || '').trim();
+        if (!examId) return;
+        if (inputEl.checked) this.examBatchSelection.add(examId);
+        else this.examBatchSelection.delete(examId);
+        this.updateExamBatchSelectionUI();
+    },
+
+    toggleExamBatchSelectAll: function (checked) {
+        document.querySelectorAll('#dm-exams-tbody .dm-exams-select').forEach(box => {
+            const examId = String(box.dataset.examId || '').trim();
+            if (!examId) return;
+            if (checked) this.examBatchSelection.add(examId);
+            else this.examBatchSelection.delete(examId);
+        });
+        this.updateExamBatchSelectionUI();
+    },
+
+    selectRecognizedExamBatches: function () {
+        const rows = this.getFilteredExamBatchRows().filter(row => row.duplicate || row.empty);
+        this.examBatchSelection = new Set(rows.map(row => row.examId));
+        this.renderExamBatches();
+        if (window.UI) UI.toast(`已识别并勾选 ${rows.length} 个疑似项`, rows.length ? 'info' : 'success');
+    },
+
+    switchToExamBatch: function (examId) {
+        const key = String(examId || '').trim();
+        if (!key || !CohortDB?.applyExamToWorkspace) return;
+        const ok = CohortDB.applyExamToWorkspace(key, { recalculate: true, renderTables: true });
+        if (ok) {
+            this.renderExamBatches();
+            if (window.UI) UI.toast(`已切换到考试批次：${key}`, 'success');
+        } else {
+            alert('未找到该考试批次，可能已被删除或尚未同步。');
+        }
+    },
+
+    removeExamBatchLocal: async function (examId) {
+        const key = String(examId || '').trim();
+        const db = CohortDB?.ensure?.();
+        if (!key || !db?.exams) return false;
+        delete db.exams[key];
+        if (Array.isArray(db.resetPoints)) {
+            db.resetPoints = db.resetPoints.filter(item => String(item || '').trim() !== key);
+        }
+        CohortDB.removeStudentHistoryByExamId?.(key);
+        if (window.idbKeyval?.del) {
+            try { await window.idbKeyval.del(`cache_${key}`); } catch (e) { console.warn('[DataManager] exam cache delete skipped:', e); }
+        }
+        if (String(CURRENT_EXAM_ID || window.CURRENT_EXAM_ID || db.currentExamId || '').trim() === key) {
+            const fallback = Object.entries(db.exams || {})
+                .sort((a, b) => Number(b?.[1]?.updatedAt || b?.[1]?.createdAt || 0) - Number(a?.[1]?.updatedAt || a?.[1]?.createdAt || 0))[0]?.[0] || '';
+            db.currentExamId = fallback;
+            if (fallback && CohortDB.applyExamToWorkspace) CohortDB.applyExamToWorkspace(fallback, { recalculate: true, renderTables: true });
+            else {
+                CURRENT_EXAM_ID = '';
+                window.CURRENT_EXAM_ID = '';
+                if (typeof writeWorkspaceExamId === 'function') writeWorkspaceExamId('');
+                if (typeof clearDataRuntimeState === 'function') clearDataRuntimeState({ keepConfig: true });
+            }
+        }
+        if (typeof syncRuntimeStateToWindow === 'function') syncRuntimeStateToWindow();
+        if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+        return true;
+    },
+
+    deleteExamBatch: async function (examId) {
+        const key = String(examId || '').trim();
+        if (!key) return;
+        if (!confirm(`危险操作：确定删除考试批次「${key}」吗？\n\n会清理该届别库中的成绩、学生历史引用、本地缓存，并尝试删除同名云端考试快照。`)) return;
+        await this.deleteExamBatches([key]);
+    },
+
+    deleteSelectedExamBatches: async function () {
+        const keys = Array.from(this.examBatchSelection).filter(Boolean);
+        if (!keys.length) return alert('请先勾选需要删除的考试批次。');
+        if (!confirm(`确定批量删除 ${keys.length} 个考试批次吗？\n\n删除后不可恢复，建议确认已备份。`)) return;
+        await this.deleteExamBatches(keys);
+    },
+
+    deleteExamBatches: async function (keys) {
+        const uniqueKeys = [...new Set((keys || []).map(key => String(key || '').trim()).filter(Boolean))];
+        if (!uniqueKeys.length) return;
+        if (window.UI) UI.loading(true, `正在删除 ${uniqueKeys.length} 个考试批次...`);
+        let localRemoved = 0;
+        let cloudRemoved = 0;
+        try {
+            for (const key of uniqueKeys) {
+                if (await this.removeExamBatchLocal(key)) localRemoved += 1;
+                if (typeof deleteSystemDataRecords === 'function') {
+                    try {
+                        const { error } = await deleteSystemDataRecords({ keyEq: key });
+                        if (!error) cloudRemoved += 1;
+                    } catch (e) {
+                        console.warn('[DataManager] cloud exam delete failed:', key, e);
+                    }
+                }
+                this.examBatchSelection.delete(key);
+            }
+            if (typeof saveCloudData === 'function') {
+                try { await saveCloudData({ mode: 'workspace', background: false, sourceLabel: 'data-manager-delete-exam-batches', forceUpload: true }); }
+                catch (e) { console.warn('[DataManager] workspace sync after exam delete failed:', e); }
+            }
+            this.renderExamBatches();
+            this.renderDataManagerStatus();
+            if (window.UI) UI.toast(`已删除 ${localRemoved} 个本地批次，云端快照删除 ${cloudRemoved} 个`, 'success');
+        } finally {
+            if (window.UI) UI.loading(false);
         }
     },
 

@@ -51,7 +51,7 @@
     <link rel="stylesheet" href="./assets/css/responsive-login-final.css?v=20260621-responsive-login-v1">
     <script>
         (function () {
-            var refreshVersion = 'runtime-3b524d2e6a44';
+            var refreshVersion = 'runtime-db71c3addc82';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -87,9 +87,9 @@
     <script defer src="./assets/js/report-render-runtime.js?v=20260613-report-render-preload-v1"></script>
     <script defer src="./assets/js/town-submodule-compare-runtime.js?v=20260614-town-submodule-preload-v1"></script>
     <script defer src="./assets/js/app-release-catalog-runtime.js?v=20260622-client-icon-sync-v1"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-3b524d2e6a44"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-3b524d2e6a44"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-3b524d2e6a44"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-db71c3addc82"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-db71c3addc82"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-db71c3addc82"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -3709,6 +3709,10 @@
                     <i class="ti ti-users"></i> 学生成绩
                 </div>
 
+                <div class="login-tab" id="tab-data-exams" onclick="DataManager.switchTab('exams')">
+                    <i class="ti ti-list-details"></i> 成绩批次
+                </div>
+
                 <div class="login-tab" id="tab-data-tea" onclick="DataManager.switchTab('teacher')">
                     <i class="ti ti-id"></i> 教师任课
                 </div>
@@ -3766,6 +3770,58 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+
+                <div id="dm-exams-area" style="display:none; padding:15px; height:100%; min-height:0; flex-direction:column;">
+                    <div id="dm-exams-summary"
+                        style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; font-size:12px; color:#475569; margin-bottom:12px;">
+                    </div>
+                    <div
+                        style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; font-size:12px; color:#475569;">
+                        <input type="text" id="dm-exams-search" placeholder="按批次、学年、学期、考试名称筛选..."
+                            style="flex:1; min-width:260px; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px;"
+                            oninput="DataManager.renderExamBatches()">
+                        <select id="dm-exams-filter"
+                            style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px;"
+                            onchange="DataManager.renderExamBatches()">
+                            <option value="all">全部批次</option>
+                            <option value="duplicate">疑似重复</option>
+                            <option value="empty">空数据</option>
+                            <option value="current">当前批次</option>
+                        </select>
+                        <span id="dm-exams-selected-count" style="white-space:nowrap;">已选 0 项</span>
+                        <button class="btn btn-sm btn-gray" type="button" onclick="DataManager.renderExamBatches()">
+                            <i class="ti ti-refresh"></i> 刷新
+                        </button>
+                        <button class="btn btn-sm btn-primary" type="button" onclick="DataManager.selectRecognizedExamBatches()">
+                            <i class="ti ti-wand"></i> 识别疑似项
+                        </button>
+                        <button class="btn btn-sm btn-danger" id="dm-exams-batch-delete" type="button"
+                            onclick="DataManager.deleteSelectedExamBatches()" disabled style="opacity:0.6;">
+                            <i class="ti ti-trash"></i> 批量删除
+                        </button>
+                    </div>
+                    <div class="table-wrap"
+                        style="flex:1; min-height:0; overflow:auto; box-shadow:none; border:1px solid #e2e8f0;">
+                        <table class="comparison-table" id="dm-exams-table" style="font-size:12px; min-width:980px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:42px; text-align:center;">
+                                        <input type="checkbox" id="dm-exams-select-all"
+                                            onchange="DataManager.toggleExamBatchSelectAll(this.checked)">
+                                    </th>
+                                    <th>考试批次</th>
+                                    <th>学年 / 学期</th>
+                                    <th>日期</th>
+                                    <th>成绩数</th>
+                                    <th>状态识别</th>
+                                    <th>更新时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dm-exams-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
 
                 <!-- ==================== 教师任课管理区域 ==================== -->
                 <div id="dm-teacher-area" style="display:none;">

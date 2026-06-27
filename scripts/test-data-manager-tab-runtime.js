@@ -27,6 +27,9 @@ function run() {
         renderTeachers() {
             renderCalls.push('teacher');
         },
+        renderExamBatches() {
+            renderCalls.push('exams');
+        },
         renderArchives() {
             renderCalls.push('archive');
         },
@@ -43,13 +46,15 @@ function run() {
 
     manager.currentTab = 'teacher';
     runtime.renderCurrentTab(manager);
+    manager.currentTab = 'exams';
+    runtime.renderCurrentTab(manager);
     manager.currentTab = 'archive';
     runtime.renderCurrentTab(manager);
     manager.currentTab = 'params';
     runtime.renderCurrentTab(manager);
     manager.currentTab = 'targets';
     runtime.renderCurrentTab(manager);
-    assert.deepStrictEqual(renderCalls, ['student:701', 'teacher', 'archive', 'params', 'targets']);
+    assert.deepStrictEqual(renderCalls, ['student:701', 'teacher', 'exams', 'archive', 'params', 'targets']);
 
     runtime.updatePaginationUI(manager, 9);
     assert.strictEqual(pageInfo.innerText, '3 / 9');

@@ -27,6 +27,10 @@
             if (typeof manager.renderTeachers === 'function') manager.renderTeachers();
             return;
         }
+        if (manager.currentTab === 'exams') {
+            if (typeof manager.renderExamBatches === 'function') manager.renderExamBatches();
+            return;
+        }
         if (manager.currentTab === 'archive') {
             if (typeof manager.renderArchives === 'function') manager.renderArchives();
             return;
