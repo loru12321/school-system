@@ -4,7 +4,16 @@
       "Bash(du -sh /c/Users/loru/Desktop/system/dist/assets/*)",
       "Bash(npm -v)",
       "Bash(grep -l \"setTimeout\\\\|setInterval\\\\|requestAnimationFrame\" /c/Users/loru/Desktop/system/public/assets/js/*.js)",
-      "Bash(find /c/Users/loru/Desktop/system/supabase/sql -name \"*.sql\" -exec grep -l \"create policy\\\\|create.*policy\" {} \\\\;)"
+      "Bash(find /c/Users/loru/Desktop/system/supabase/sql -name \"*.sql\" -exec grep -l \"create policy\\\\|create.*policy\" {} \\\\;)",
+      "Bash(node -e \"const l=require\\('./package-lock.json'\\); console.log\\('electron:', l.packages['node_modules/electron']?.version\\); console.log\\('electron-builder:', l.packages['node_modules/electron-builder']?.version\\); console.log\\('playwright:', l.packages['node_modules/playwright']?.version\\);\")",
+      "Bash(node -e \"const l=require\\('./package-lock.json'\\); console.log\\('esbuild:', l.packages['node_modules/esbuild']?.version\\);\")",
+      "Bash(grep -n \"edu_gateway\\\\|\\\\/api\\\\/gateway[^-]\\\\|LOCAL_SESSION_TTL\\\\|sync.*event\\\\|sync-data\" scripts/test-cloudflare-worker-contract.js scripts/test-worker-entrypoint-contract.js scripts/test-service-worker-contract.js)",
+      "Bash(node scripts/test-security-hygiene.js)",
+      "Bash(node scripts/test-service-worker-contract.js)",
+      "Bash(node scripts/test-cloudflare-worker-contract.js)",
+      "Bash(node scripts/test-css-hygiene.js)",
+      "Bash(node scripts/test-html-hygiene.js)",
+      "Bash(node scripts/test-maintenance-priority-contract.js)"
     ]
   }
 }
