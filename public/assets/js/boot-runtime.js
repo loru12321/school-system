@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-0957bb1240ca';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-3b524d2e6a44';
 
 function bootDebugLog(...args) {
 try {
@@ -1812,36 +1812,6 @@ const bootAuth = window.Auth || {
                 const matchedUser = result.user;
                 writeBootSessionUser(matchedUser);
                 setBootHelperMessage('身份验证成功', 'success');
-                finalizeBootLoginUi(portal);
-                if (portal === 'school' && window.gsap) {
-                    const form = document.getElementById('login-form');
-                    const cohortPhase = document.getElementById('login-cohort-phase');
-                    const submitBtn = document.getElementById('login-submit-button');
-
-                    if (form && cohortPhase) {
-                        window.gsap.to(form, { opacity: 0, x: -20, duration: 0.4, onComplete: () => {
-                            form.style.display = 'none';
-                            cohortPhase.style.display = 'block';
-                            if (submitBtn) submitBtn.style.display = 'none';
-                            window.gsap.fromTo(cohortPhase, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
-                            (async () => {
-                                await loadAppModules();
-                                await window.waitForAuthReady();
-                                if (cohortYear) await enterSelectedBootCohort(cohortYear);
-                                const loader = document.getElementById('global-loader');
-                                if (loader) {
-                                    loader.style.opacity = '0';
-                                    setTimeout(() => {
-                                        loader.style.display = 'none';
-                                        loader.classList.add('hidden');
-                                    }, 300);
-                                }
-                            })();
-                        }});
-                        return;
-                    }
-                }
-
                 const loader = document.getElementById('global-loader');
                 if (loader) loader.classList.remove('hidden');
                 await loadAppModules();

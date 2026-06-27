@@ -682,25 +682,25 @@
                         <div id="login-hero" class="login-stage-hero login-stage-hero--passport">
                             <span id="login-stage-kicker" class="login-stage-hero-kicker">Step 1 / Login</span>
                             <h1 id="login-stage-title">
-                                <span class="login-stage-title-line">先登录</span>
-                                <span class="login-stage-title-line login-stage-title-line--accent">再选择届别进入工作台</span>
+                                <span class="login-stage-title-line">选择届别并登录</span>
+                                <span class="login-stage-title-line login-stage-title-line--accent">一次进入学校工作台</span>
                             </h1>
-                            <p id="login-stage-copy">登录页现在只负责身份验证。学校端验证成功后，会先进入届别选择界面，再由你决定进入哪个届别工作区。</p>
+                            <p id="login-stage-copy">学校端在登录页直接选择届别，验证成功后进入对应届别工作区，不再多一次确认。</p>
                             <div class="login-stage-meta">
                                 <span><i class="ti ti-shield-lock"></i> 登录验证与工作区选择拆开</span>
                                 <span><i class="ti ti-route-2"></i> 学校端登录后固定进入届别选择</span>
                                 <span><i class="ti ti-devices"></i> Web / Android / Desktop 共用同一套流程</span>
                             </div>
                             <div class="login-stage-status-grid login-stage-status-grid--passport">
-                                <div class="login-stage-status-pill"><span>01</span><strong>登录界面</strong><p>只做账号验证，不直跳系统。</p></div>
-                                <div class="login-stage-status-pill"><span>02</span><strong>届别选择</strong><p>登录成功后，先选择届别。</p></div>
-                                <div class="login-stage-status-pill"><span>03</span><strong>进入工作台</strong><p>届别就绪后再装载模块。</p></div>
+                                <div class="login-stage-status-pill"><span>01</span><strong>选择届别</strong><p>在登录页确认目标届别。</p></div>
+                                <div class="login-stage-status-pill"><span>02</span><strong>验证身份</strong><p>账号与密码一次提交。</p></div>
+                                <div class="login-stage-status-pill"><span>03</span><strong>进入工作台</strong><p>云端数据就绪后直接打开。</p></div>
                             </div>
                             <div class="login-stage-spotlight login-stage-spotlight--passport">
                                 <div class="login-stage-spotlight-copy">
-                                    <span class="login-stage-featured-label">Two-step Flow</span>
-                                    <strong id="login-stage-featured-title" class="login-stage-featured-title">登录成功后不会直接进入系统</strong>
-                                    <p id="login-stage-featured-copy" class="login-stage-featured-copy">学校端采用“登录验证 → 届别选择 → 工作台”的固定路径，避免直接落进空数据或错误届别。</p>
+                                    <span class="login-stage-featured-label">One-step Entry</span>
+                                    <strong id="login-stage-featured-title" class="login-stage-featured-title">登录页完成届别选择和身份验证</strong>
+                                    <p id="login-stage-featured-copy" class="login-stage-featured-copy">学校端采用“选择届别 → 验证身份 → 工作台”的路径，避免重复点击，也避免落进空数据或错误届别。</p>
                                 </div>
                             </div>
                         </div>
@@ -749,9 +749,9 @@
                                         <input type="password" id="login-pass" placeholder="输入密码" data-login-submit-on-enter="1">
                                     </div>
 
-                                    <button id="login-submit-button" data-login-submit="1">验证并进入届别选择</button>
+                                    <button id="login-submit-button" data-login-submit="1">进入学校工作台</button>
 
-                                    <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证成功后会先进入届别选择界面。</div>
+                                    <div id="login-portal-helper" class="login-portal-helper">当前为学校端，选择届别并验证成功后直接进入工作台。</div>
 
                                     <div class="login-form-actions">
                                         <button type="button" class="login-form-alt" onclick="window.Auth?.openSystemIntroModal(window.Auth?.getLoginPortal?.())">
@@ -1074,17 +1074,17 @@
                 Object.assign(config, {
                     badge: '学校身份验证',
                     authTitle: '登录验证',
-                    copy: '学校端验证成功后，会先进入届别选择界面，再进入对应届别工作台。',
-                    helper: '当前为学校端，验证成功后会先进入届别选择界面。',
-                    submit: '验证并进入届别选择',
+                    copy: '学校端验证成功后，会直接进入当前选择的届别工作台。',
+                    helper: '当前为学校端，选择届别并验证成功后直接进入工作台。',
+                    submit: '进入学校工作台',
                     stageKicker: 'Step 1 / Login',
-                    stageTitle: '<span class="login-stage-title-line">先登录</span><span class="login-stage-title-line login-stage-title-line--accent">再选择届别进入工作台</span>',
-                    stageCopy: '登录页只负责身份验证，不再把届别选择和主工作台混在同一层里。',
-                    stageFeatureTitle: '登录成功后不会直接进入系统',
-                    stageFeatureCopy: '学校端固定采用“登录验证 → 届别选择 → 工作台”的路径，避免直接落到错误届别或空模块。',
-                    launchKicker: 'Two-step Flow',
-                    launchCopy: '学校端与家长端共用内联登录页，但学校端验证后必须先经过届别选择。',
-                    launchNote: '下载与系统说明都留在辅助入口里，登录动作本身只负责验证。'
+                    stageTitle: '<span class="login-stage-title-line">选择届别并登录</span><span class="login-stage-title-line login-stage-title-line--accent">一次进入学校工作台</span>',
+                    stageCopy: '登录页直接完成届别选择和身份验证，验证成功后打开对应届别工作区。',
+                    stageFeatureTitle: '一次点击完成登录和届别进入',
+                    stageFeatureCopy: '学校端固定采用“选择届别 → 验证身份 → 工作台”的路径，避免重复点击，也避免直接落到错误届别或空模块。',
+                    launchKicker: 'One-step Entry',
+                    launchCopy: '学校端与家长端共用内联登录页，学校端在表单里直接确认届别。',
+                    launchNote: '下载与系统说明都留在辅助入口里，登录动作负责验证并进入工作台。'
                 });
             }
 

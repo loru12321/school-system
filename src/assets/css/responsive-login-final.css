@@ -698,6 +698,78 @@
     }
 }
 
+/* Final login polish: keep the auth card readable and prevent clipped titles. */
+@media (min-width: 1025px) {
+    html body #login-overlay[data-login-skin="clean"] {
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 100vh !important;
+        padding: clamp(24px, 4vh, 44px) clamp(28px, 4vw, 56px) !important;
+        overflow: auto !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: min(1180px, calc(100vw - 64px)) !important;
+        height: min(880px, calc(100vh - 72px)) !important;
+        min-height: 720px !important;
+        grid-template-columns: minmax(520px, 1fr) minmax(400px, 0.9fr) !important;
+        gap: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        border-radius: 20px !important;
+        box-shadow: 0 32px 80px rgba(15, 23, 42, 0.12) !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 100% !important;
+        border-radius: 20px 0 0 20px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-card {
+        width: 100% !important;
+        max-width: none !important;
+        height: 100% !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        padding: clamp(30px, 4vh, 46px) clamp(32px, 4vw, 48px) !important;
+        border-radius: 0 20px 20px 0 !important;
+        justify-content: flex-start !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-form-header {
+        margin: 0 0 26px !important;
+        padding: 0 !important;
+        text-align: center !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-form-header h2 {
+        margin: 6px 0 8px !important;
+        line-height: 1.16 !important;
+        font-size: clamp(26px, 2.2vw, 34px) !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-form {
+        gap: 12px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-panel {
+        margin-top: 6px !important;
+        padding: 12px !important;
+        border-radius: 8px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-submit {
+        min-height: 56px !important;
+        margin-top: 12px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-portal-helper {
+        margin-top: 12px !important;
+    }
+}
+
 @media (max-width: 768px) {
     html body #login-overlay[data-login-skin="clean"] {
         width: 100vw !important;
