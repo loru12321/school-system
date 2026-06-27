@@ -1,133 +1,118 @@
-# 优化工作交接总结
+# 优化工作交接总结（续接轮）
 
 ## 一、基本信息
 
 - **工作日期**：2026-06-27
-- **Commit**：`f0db6761` (branch: `main`)
-- **Cloudflare 版本**：`8efa3a3a-cb7f-48f3-bf6e-2a9d220962bf`
+- **远端**：`loru`（github.com/loru12321/school-system），推送目标 `loru main`
+- **当前 HEAD**：`aecbfabd`（已推送到 `loru/main`，工作树干净，零分叉）
 - **生产地址**：https://schoolsystem.com.cn
-- **部署验证**：生产 smoke 20项全部通过
+- **线上验收**：生产 smoke 20/20 全部通过
 
 ---
 
-## 二、已完成内容
+## 二、本轮已完成（全部已 push 到 loru/main）
 
-### 安全
+### 1. 线上验收（只读，未改线上）
 
-| 文件 | 变更 |
-|------|------|
-| `src/worker-gateway-d1.js` | Session TTL `60*60*12` → `60*60*8`（12h→8h） |
-| `supabase/functions/edu-gateway/index.ts` | 同上，与 Worker 保持一致 |
-| `public/_headers` | CSP-RO 由"与 CSP 完全相同"改为"监控去掉 `unsafe-eval` 的严格策略"，有实际意义 |
+| 项 | 验证方式 | 结果 |
+|----|---------|------|
+| 生产 smoke（20项） | `npm run verify:prod-minimal` | 全绿 `ok:true` |
+| Session TTL 8h | 读 `src/worker-gateway-d1.js:5` | `LOCAL_SESSION_TTL_SECONDS = 60*60*8` ✅ |
+| CSP / CSP-RO | curl 生产首页响应头 | enforcing 含 `unsafe-eval`，Report-Only 去掉，已线上生效 ✅ |
+| wrangler observability | `wrangler.jsonc:6` | `"observability":{"enabled":true}` ✅ |
+| compatibility_date | `wrangler.jsonc:5` | `2026-06-27` ✅ |
+| 后端健康 | curl `/api/health` | D1 primary、gateway ready、D1 bound 全 true ✅ |
 
-### 依赖管理
+### 2. Git 与生产对齐
 
-| 文件 | 变更 |
-|------|------|
-| `.npmrc`（新建） | `save-exact=true`，防止未来 `npm install` 引入 `^` 范围 |
-| `package.json` | `electron 42.4.1`、`electron-builder 26.15.3`、`playwright 1.58.2`、`esbuild 0.28.1` 全部精确锁定 |
-| `package.json` | `gsap`、`tippy.js`、`simplebar`、`ali-oss`、`mime-types`、`@alicloud/*`、`@fontsource/*` 共10个运行时死依赖从 `dependencies` 移入 `devDependencies`（electron-builder 不打包 node_modules，零影响） |
+- 运行时版本是 **内容的确定性 SHA-256**（`scripts/build/update-runtime-cache-version.mjs`，版本令牌在哈希前被归一化）。
+- 原 `f0db6761` 的令牌 `runtime-9bd5d97eb348` 相对自身内容是**陈旧**的；实际部署并线上运行的是 `runtime-fb4a741f1e4b`，但产物未提交。
+- 已提交重建产物，使 HEAD 精确复现线上。已验证：`update-runtime-cache-version.mjs` 报 `changed:[]`；所有 diff 仅版本令牌（`dist/.../service-worker-runtime.js` 一处为 esbuild 局部变量改名 `S`→`f`，语义等价）。
 
-### 死代码
+### 3. Postgres migration 改为非阻塞
 
-| 文件 | 变更 |
-|------|------|
-| `src/assets/css/login-instagram-refresh.css` | 删除（无任何引用，合约测试不涉及） |
-| `src/assets/css/login-qq-final.css` | 删除（同上） |
+- `supabase/sql/007_add_management_query_indexes.sql`：`create index` → `create index concurrently`，加头部注释（不能在事务里跑、无写锁、INVALID 索引恢复方法）。
+- D1 文件 `cloudflare/d1/005_add_warning_query_index.sql` 不变（SQLite 无 CONCURRENTLY，sub-ms 构建）。
 
-### CI/工作流
+### 4. 本地权限清理
 
-| 文件 | 变更 |
-|------|------|
-| `.github/workflows/performance-trend.yml` | 删除重复的 `npm run build` 步骤（原流程 build 两次，每次约1分钟） |
-
-### 配置
-
-| 文件 | 变更 |
-|------|------|
-| `tsconfig.json`（新建） | `allowJs + checkJs + noEmit`，启用 IDE 类型提示，不介入构建 |
-| `wrangler.jsonc` | `compatibility_date` 从 `2026-04-20` 推进到 `2026-06-27` |
-| `wrangler.jsonc` | 新增 `"observability": {"enabled": true}`，开启 Cloudflare Worker 日志自动捕获 |
-
-### 数据库
-
-| 文件 | 内容 |
-|------|------|
-| `supabase/sql/007_add_management_query_indexes.sql`（新建） | 为 `warning_records`、`rectify_tasks` 添加 `(project_key, cohort_id, status, warning_level)` 复合索引（Supabase PostgreSQL） |
-| `cloudflare/d1/005_add_warning_query_index.sql`（新建） | 同名复合索引（Cloudflare D1 SQLite） |
-| **⚠️ 注意** | 以上两个文件仅为 migration 脚本，**尚未在数据库上执行**，需要手动运行 |
-
-### 文档
-
-| 文件 | 变更 |
-|------|------|
-| `docs/optimization-backlog.md` | Optimization pass log 追加本次记录 |
+- `.claude/settings.local.json` 删除危险/过宽授权：`Bash(del *)`、残缺的 `Bash(node -e ' *)`、过宽的 `Bash(npm run *)`。
+- 注意：auto-mode 分类器禁止助手直接改该权限文件，本次由用户手动删除并验证 JSON 有效。
 
 ---
 
-## 三、测试核验结果（部署前全部通过）
+## 三、推送记录
 
+- 推送前 `loru/main` 已分叉：远端多 1 个 `docs/performance/*` 自动 perf-trend 提交（`9b9191c2`），本地多 3 个。无文件冲突。
+- 采用 **rebase**（不强推）保持线性历史，再 fast-forward push。
+- 结果：`9b9191c2..aecbfabd main -> main`，`rev-list --left-right --count loru/main...HEAD` = `0 0`。
+
+---
+
+## 四、未完成 / 待你决策（已暂停）
+
+### ⚠️ 数据库 migration —— 已提交脚本，尚未执行（最高价值未上线项）
+
+**等你确认低峰窗口后再执行。在此之前不碰数据库、不跑 `wrangler d1 execute`。**
+
+两个脚本均幂等（`IF NOT EXISTS`），可重复执行；索引只改查询速度，不改计算结果。
+
+**Supabase / Postgres** —— 在 SQL editor 里**逐条**执行（`CONCURRENTLY` 不能在事务里，勿用 "run all"）：
+
+```sql
+create index concurrently if not exists idx_warning_records_query
+  on public.warning_records (project_key, cohort_id, status, warning_level);
 ```
-test:security-hygiene              ✅
-test:cloudflare-worker-contract    ✅
-test:service-worker-contract       ✅
-test:css-hygiene                   ✅
-test:html-hygiene                  ✅
-test:docs-hygiene                  ✅
-test:maintenance-priority-contract ✅ (120 items guarded)
-build-size-budget                  ✅
-check:release-fast                 ✅
-smoke:prod-minimal                 ✅ (20 checks)
+```sql
+create index concurrently if not exists idx_rectify_tasks_query
+  on public.rectify_tasks (project_key, cohort_id, status);
 ```
 
+**D1**（sub-ms，无锁）：
+
+```bash
+npx wrangler d1 execute school-system-gateway --file cloudflare/d1/005_add_warning_query_index.sql
+```
+
+**执行后只读核验：**
+
+```sql
+-- 1) 不该有任何行返回（无 INVALID 索引）
+SELECT indexrelid::regclass AS invalid_index FROM pg_index WHERE NOT indisvalid;
+-- 2) 确认索引已建立
+SELECT indexname FROM pg_indexes
+WHERE tablename IN ('warning_records','rectify_tasks')
+  AND indexname IN ('idx_warning_records_query','idx_rectify_tasks_query');
+-- 3) EXPLAIN 确认查询走了 idx_*_query（PG）/ EXPLAIN QUERY PLAN（D1）
+```
+
+**中断恢复（残留 INVALID 索引）：**
+
+```sql
+DROP INDEX IF EXISTS idx_warning_records_query;   -- 或 idx_rectify_tasks_query
+-- 然后重跑对应的 create concurrently 语句
+```
+
+### 其余 backlog（沿用上一轮 HANDOFF 第五节，本轮未触碰）
+
+- **中风险**：wrangler `4.67 → 4.105` 升级后验证；Supabase `edu-gateway-v2`（v1 wrapper）客户端全切后可下线。
+- **高风险（需架构决策）**：R2 大文件存储承接 `cloud_system_data` 大行；去掉 CSP `unsafe-eval`（先用 CSP-RO 报告验证归零再切）；移除 `vite-plugin-singlefile`（需重设计 chunk 与版本管理，建议单独立项）。
+
 ---
 
-## 四、被合约测试保护、不可轻动的项目
-
-以下是本次尝试修改后**因合约测试断言失败而撤回**的项目，记录原因备查：
+## 五、被合约测试保护、不可轻动（沿用上一轮记录）
 
 | 项 | 约束位置 | 原因 |
 |----|---------|------|
-| `workers.dev` CORS 域名 | `test-cloudflare-worker-contract.js:68` | 明确断言"workers.dev origin must remain allowed for diagnostics" |
-| `/api/edu_gateway`、`/api/gateway` 路由 | 同上 :29-30 | 合约断言这两个路由必须存在 |
+| `workers.dev` CORS 域名 | `test-cloudflare-worker-contract.js:68` | 断言必须保留供诊断 |
+| `/api/edu_gateway`、`/api/gateway` 路由 | 同上 :29-30 | 断言这两路由必须存在 |
 | `sw.js` sync 骨架 | `test-service-worker-contract.js:89` | 断言 `sync-data` 标签必须保留 |
-| `mobile-login.css` | `test-css-hygiene.js` | 直接读取并断言必须包含特定 CSS 注释块 |
-| `Content-Security-Policy-Report-Only` | `test-security-hygiene.js`、`test-maintenance-priority-contract.js` | 两处明确断言该头必须存在 |
+| `mobile-login.css` | `test-css-hygiene.js` | 断言必须含特定 CSS 注释块 |
+| `Content-Security-Policy-Report-Only` | `test-security-hygiene.js`、`test-maintenance-priority-contract.js` | 两处断言该头必须存在 |
 
 ---
 
-## 五、剩余风险
+## 六、下一步（你回来时）
 
-**低风险（可随时处理）：**
-
-- SQL migration 脚本已准备，执行前先在 staging 验证：
-
-```bash
-# D1
-npx wrangler d1 execute school-system-gateway --file cloudflare/d1/005_add_warning_query_index.sql
-
-# Supabase
-# 在 dashboard SQL editor 执行 supabase/sql/007_add_management_query_indexes.sql
-```
-
-**中风险（需评估）：**
-
-- `wrangler 4.67.0` 运行时提示有更新（4.105.0），建议择期升级后验证
-- Supabase edge function `edu-gateway-v2` 只是 v1 的 wrapper（`import "../edu-gateway/index.ts"`），若客户端全切换到 `/api/edu-gateway` 后可下线，减少冷启动
-
-**高风险（需架构决策）：**
-
-| 项 | 影响范围 | 建议 |
-|----|---------|------|
-| R2 大文件存储 | `cloud_system_data` 大行读写性能 | Cloudflare 控制台建 bucket → `wrangler.jsonc` 加 `r2_buckets` 绑定，代码已就绪 |
-| 去掉 CSP `unsafe-eval` | 所有用 Alpine.js 表达式的页面 | 先统计 `x-on` / `:class` 等 inline 表达式数量，迁移后通过 CSP-RO 日志验证零报告再切换 |
-| 移除 `vite-plugin-singlefile` | 整个构建与缓存架构 | 需重新设计 chunk 分割 + 版本管理策略，风险最高，建议单独立项 |
-
----
-
-## 六、下一步建议
-
-1. **执行 SQL migration**（本次最高价值未上线项）：先 D1 再 Supabase，两个都用 `IF NOT EXISTS`，可反复执行
-2. **创建 R2 bucket**：`school-system-cloud-data` → 加 wrangler 绑定 → 大于阈值的 `system_data` 自动走 R2
-3. **CSP 监控**：部署后观察 `/api/csp-report` 收到的 CSP-RO 违规报告，当 `unsafe-eval` 相关报告归零时，再从 enforcing CSP 中移除
-4. **wrangler 升级**：`4.67 → 4.105` 测试后更新 package.json
+1. 确认低峰窗口后告知，我先读记忆核对状态（脚本仍在、未被改动），再按第四节执行 migration（先 D1 或先 Postgres 均可），执行后做只读核验。
+2. 之后再依次评估 backlog 各项。
