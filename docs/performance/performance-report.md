@@ -4,12 +4,12 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `aecbfabdf4de`
-- Recorded at: 2026-06-27T08:24:24.422Z
-- Total smoke time: 37587 ms (+3060 ms vs previous)
-- Login: 5912 ms
-- App ready: 11 ms
-- Long tasks: 2, max 914 ms
+- Commit: `ae77304134f8`
+- Recorded at: 2026-06-27T08:37:05.201Z
+- Total smoke time: 38594 ms (+1007 ms vs previous)
+- Login: 6679 ms
+- App ready: 6 ms
+- Long tasks: 2, max 1063 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `cohort-growth` | 587 ms | 1618 ms | 2205 ms |
-| `upload` | 1526 ms | 447 ms | 1973 ms |
-| `report-generator` | 521 ms | 655 ms | 1176 ms |
-| `county-analysis` | 507 ms | 634 ms | 1141 ms |
-| `student-overview` | 527 ms | 542 ms | 1069 ms |
-| `summary` | 561 ms | 494 ms | 1055 ms |
-| `potential-analysis` | 1011 ms | 0 ms | 1011 ms |
-| `grade-scheduler` | 557 ms | 390 ms | 947 ms |
+| `cohort-growth` | 678 ms | 1868 ms | 2546 ms |
+| `upload` | 1189 ms | 407 ms | 1596 ms |
+| `student-overview` | 531 ms | 678 ms | 1209 ms |
+| `report-generator` | 521 ms | 640 ms | 1161 ms |
+| `county-analysis` | 506 ms | 652 ms | 1158 ms |
+| `summary` | 549 ms | 508 ms | 1057 ms |
+| `potential-analysis` | 1021 ms | 0 ms | 1021 ms |
+| `grade-scheduler` | 536 ms | 374 ms | 910 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `ae77304134f8` | 38594 ms | 6679 ms | 6 ms | 2 | 0 | 0 |
 | `aecbfabdf4de` | 37587 ms | 5912 ms | 11 ms | 2 | 0 | 0 |
 | `e6711c267b69` | 34527 ms | 4969 ms | 43 ms | 0 | 0 | 0 |
 | `c2899c280b64` | 39570 ms | 7521 ms | 7 ms | 2 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `61425f000c25` | 36561 ms | 2973 ms | 3180 ms | 0 | 0 | 0 |
 | `0146c24e74bf` | 31937 ms | 2517 ms | 2175 ms | 0 | 0 | 0 |
 | `c70db2cc35ed` | 32109 ms | 2303 ms | 2108 ms | 0 | 0 | 0 |
-| `b8b397c23552` | 33687 ms | 3417 ms | 3164 ms | 0 | 0 | 0 |
 
 ## Data Files
 
