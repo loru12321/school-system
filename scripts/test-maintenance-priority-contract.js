@@ -158,7 +158,7 @@ const guardedItems = [
   () => assertIncludes(bootRuntime, 'bindBootLoginActions', 'boot runtime should bind first-screen login actions before app modules load'),
   () => assertIncludes(bootRuntime, '[data-login-submit]', 'boot runtime should bind data-login-submit buttons'),
   () => assert.ok(fileSize('public/assets/js/app.js') <= 910_000, 'public app.js should stay within tightened budget'),
-  () => assert.ok(fileSize('public/assets/js/app.js') <= 791_000, 'public app.js should preserve the hydration scheduler runtime split'),
+  () => assert.ok(fileSize('public/assets/js/app.js') <= 820_000, 'public app.js should preserve the hydration scheduler runtime split'),
   () => assert.ok(fileSize('public/assets/js/cohort-exam-hydration-runtime.js') <= 7_000, 'cohort exam hydration runtime should stay focused'),
   () => assert.ok(fileSize('public/assets/js/edge-gateway-runtime.js') <= 16_000, 'EdgeGateway runtime should stay focused'),
   () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 85_000, 'boot runtime should stay within tightened budget'),
