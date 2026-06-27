@@ -249,7 +249,7 @@
         width: 38px !important;
         height: 38px !important;
         border-radius: 10px !important;
-        background: #174ea6 !important;
+        background: #FE2C55 !important;
         color: #fff !important;
         box-shadow: none !important;
     }
@@ -280,7 +280,7 @@
     #login-overlay[data-login-skin="clean"] .login-clean-copy span {
         display: inline-flex !important;
         margin-bottom: 12px !important;
-        color: #174ea6 !important;
+        color: #FE2C55 !important;
         font-size: 12px !important;
         font-weight: 800 !important;
         letter-spacing: 0 !important;
@@ -334,43 +334,62 @@
 
     #login-overlay[data-login-skin="clean"] .login-look-card {
         display: grid !important;
-        grid-template-columns: 34px 1fr !important;
-        column-gap: 10px !important;
-        align-items: center !important;
+        grid-template-columns: 1fr !important;
+        grid-template-rows: 64px auto auto !important;
+        column-gap: 0 !important;
+        align-items: start !important;
         width: auto !important;
-        min-height: 58px !important;
+        min-height: 0 !important;
         max-width: none !important;
         height: auto !important;
-        padding: 10px !important;
+        padding: 0 !important;
         margin: 0 !important;
-        border: 1px solid #dce3ed !important;
-        border-radius: 10px !important;
-        background: rgba(255, 255, 255, .74) !important;
-        box-shadow: none !important;
+        border: 1px solid #ece8ee !important;
+        border-radius: 12px !important;
+        background: #fff !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, .07) !important;
+        overflow: hidden !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-look-card span:first-child {
-        grid-row: span 2 !important;
-        width: 30px !important;
-        height: 30px !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 8px !important;
-        background: #eef4ff !important;
-        color: #174ea6 !important;
+        grid-row: 1 !important;
+        grid-column: 1 !important;
+        width: 100% !important;
+        height: 64px !important;
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: flex-start !important;
+        padding: 8px 10px !important;
+        border-radius: 0 !important;
+        background: linear-gradient(135deg, #FE2C55, #FF6B81) !important;
+        color: rgba(255, 255, 255, .92) !important;
         font-size: 11px !important;
         font-weight: 800 !important;
     }
 
+    #login-overlay[data-login-skin="clean"] .login-look-card--warm span:first-child {
+        background: linear-gradient(135deg, #FF9500, #FFBD59) !important;
+        color: rgba(255, 255, 255, .92) !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-look-card--mint span:first-child {
+        background: linear-gradient(135deg, #08b8b4, #25F4EE) !important;
+        color: rgba(0, 0, 0, .72) !important;
+    }
+
     #login-overlay[data-login-skin="clean"] .login-look-card strong {
-        color: #182230 !important;
-        font-size: 14px !important;
+        padding: 8px 10px 2px !important;
+        color: #181818 !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        display: block !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-look-card small {
-        color: #64748b !important;
-        font-size: 12px !important;
+        padding: 0 10px 8px !important;
+        color: #86909c !important;
+        font-size: 11px !important;
+        display: block !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-rhythm-strip {
@@ -406,9 +425,9 @@
 
     #login-overlay[data-login-skin="clean"] .login-portal-badge {
         border-radius: 6px !important;
-        background: #eef4ff !important;
-        border-color: #d7e5ff !important;
-        color: #174ea6 !important;
+        background: #fff0f3 !important;
+        border-color: #ffd0da !important;
+        color: #FE2C55 !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-switch,
@@ -433,8 +452,8 @@
     }
 
     #login-overlay[data-login-skin="clean"] .login-entry-field:focus-within {
-        border-color: #174ea6 !important;
-        box-shadow: 0 0 0 3px rgba(23, 78, 166, .1) !important;
+        border-color: #FE2C55 !important;
+        box-shadow: 0 0 0 3px rgba(254, 44, 85, .1) !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-entry-prefix {
@@ -447,12 +466,12 @@
         min-height: 48px !important;
         margin-top: 16px !important;
         border-radius: 8px !important;
-        background: #174ea6 !important;
-        box-shadow: none !important;
+        background: #FE2C55 !important;
+        box-shadow: 0 4px 14px rgba(254, 44, 85, .28) !important;
     }
 
     #login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
-        background: #123f86 !important;
+        background: #E01E45 !important;
     }
 
     #login-overlay[data-login-skin="clean"] .entrance-sound-panel {
@@ -708,7 +727,7 @@
         max-height: 100dvh !important;
         padding: 0 !important;
         overflow: hidden !important;
-        background: linear-gradient(135deg, #f8fbff 0%, #f5fbf8 54%, #eef7fb 100%) !important;
+        background: #f7f8fa !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
@@ -741,9 +760,7 @@
         border: 0 !important;
         border-right: 1px solid rgba(199, 216, 230, .75) !important;
         border-radius: 0 !important;
-        background:
-            linear-gradient(135deg, rgba(255, 255, 255, .95), rgba(233, 247, 246, .88)),
-            linear-gradient(90deg, rgba(31, 115, 183, .08), rgba(16, 185, 129, .1)) !important;
+        background: #ffffff !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
@@ -824,7 +841,7 @@
         height: clamp(44px, 5.8vh, 54px) !important;
         min-height: 44px !important;
         margin-top: clamp(8px, 1.5vh, 14px) !important;
-        background: linear-gradient(135deg, #0ea5a4, #2563eb) !important;
+        background: #FE2C55 !important;
     }
 }
 

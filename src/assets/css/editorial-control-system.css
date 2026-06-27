@@ -341,7 +341,7 @@ html body #app #starter-hub.active .starter-grid { animation: de-workspace-enter
     --de-canvas: #f6f6f9; --de-paper: #fff; --de-line: #e7e4ec; --de-line-strong: #d9d4e2;
     --de-coral: #d9637d; --de-coral-deep: #ad435d; --de-coral-soft: #fbeef2;
     --de-mint: #4fa58e; --de-mint-soft: #edf7f4; --de-navy: #373344;
-    --de-violet: #7265c7; --de-violet-deep: #594da9; --de-violet-soft: #f0eefb;
+    --de-violet: #FE2C55; --de-violet-deep: #E01E45; --de-violet-soft: #fff0f3;
     --de-blue-soft: #f1f3fa; --de-warm: #b98168; --de-warm-soft: #f8f0ec;
 }
 body:not(.login-overlay-active), body:not(.login-overlay-active) #app, body:not(.login-overlay-active) .main-content { background: var(--de-canvas) !important; }
