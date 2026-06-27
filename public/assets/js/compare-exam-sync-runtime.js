@@ -107,11 +107,18 @@
         state.pending = true;
         state.lastAttempt = Date.now();
 
+        const defaultFetchOptions = {
+            latestOnly: false,
+            maxFetch: 0,
+            minCount: Number(settings.minCount || 50) || 50
+        };
         const fetchArgs = [cohortId];
         if (Object.prototype.hasOwnProperty.call(settings, 'fetchOptions')) {
             if (settings.fetchOptions !== undefined) fetchArgs.push(settings.fetchOptions);
         } else if (Object.prototype.hasOwnProperty.call(settings, 'minCount')) {
-            fetchArgs.push({ minCount: settings.minCount });
+            fetchArgs.push(defaultFetchOptions);
+        } else {
+            fetchArgs.push(defaultFetchOptions);
         }
 
         Promise.resolve(root.CloudManager.fetchCohortExamsToLocal.apply(root.CloudManager, fetchArgs))

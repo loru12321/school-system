@@ -46,6 +46,7 @@ const compareExamSyncRuntimePath = path.resolve(__dirname, '../public/assets/js/
 const townSubmoduleCompareStateRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-state-runtime.js');
 const townSubmoduleCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-runtime.js');
 const bootRuntimePath = path.resolve(__dirname, '../public/assets/js/boot-runtime.js');
+const loginEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/login-entry-runtime.js');
 const runtimeLoaderRuntimePath = path.resolve(__dirname, '../public/assets/js/runtime-loader-runtime.js');
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
@@ -123,6 +124,7 @@ assert.ok(fs.existsSync(compareExamSyncRuntimePath), 'compare-exam-sync-runtime.
 assert.ok(fs.existsSync(townSubmoduleCompareStateRuntimePath), 'town-submodule-compare-state-runtime.js should exist');
 assert.ok(fs.existsSync(townSubmoduleCompareRuntimePath), 'town-submodule-compare-runtime.js should exist');
 assert.ok(fs.existsSync(bootRuntimePath), 'boot-runtime.js should exist');
+assert.ok(fs.existsSync(loginEntryRuntimePath), 'login-entry-runtime.js should exist');
 assert.ok(fs.existsSync(runtimeLoaderRuntimePath), 'runtime-loader-runtime.js should exist');
 assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js should exist');
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
@@ -159,6 +161,7 @@ assert.ok(fs.existsSync(macroCompareCloudRuntimePath), 'macro-compare-cloud-runt
 
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const bootRuntimeSource = fs.readFileSync(bootRuntimePath, 'utf8');
+const loginEntryRuntime = fs.readFileSync(loginEntryRuntimePath, 'utf8');
 const runtimeLoaderRuntime = fs.readFileSync(runtimeLoaderRuntimePath, 'utf8');
 const bootRuntime = `${bootRuntimeSource}\n${runtimeLoaderRuntime}`;
 const shellRuntime = fs.readFileSync(shellRuntimePath, 'utf8');
@@ -580,7 +583,10 @@ assert.ok(bootRuntime.includes("app.classList.remove('hidden');"), 'boot login r
 assert.ok(bootRuntime.includes("app.style.setProperty('display', 'flex', 'important');"), 'boot login repair should override mobile hidden display rules');
 assert.ok(bootRuntime.includes('startAuthenticatedShellRepairWindow()'), 'mobile authenticated shell repair should keep correcting late login UI regressions');
 assert.ok(bootRuntime.includes("window.__BOOT_LOGIN_CLICKED__"), 'boot-runtime.js should replay login clicks made before boot handlers bind');
-assert.ok(bootRuntime.includes('if (cohortYear) await enterSelectedBootCohort(cohortYear);'), 'boot login should enter the selected cohort after animated school login');
+assert.ok(bootRuntime.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'boot login replay should consume the queued early click flag');
+assert.ok(loginEntryRuntime.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'login entry submit should clear stale queued early click state');
+assert.ok(appSource.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'full Auth.login should clear stale queued early click state');
+assert.ok(bootRuntime.includes("if (portal === 'school' && cohortYear) await enterSelectedBootCohort(cohortYear);"), 'boot login should enter the selected school cohort after animated school login');
 assert.ok(indexHtml.includes('type="button" class="advanced-submit login-clean-submit"'), 'login submit button should not default-submit before boot handlers bind');
 assert.ok(indexHtml.includes("window.__BOOT_LOGIN_CLICKED__=true"), 'login submit button should queue early clicks before boot runtime is ready');
 const authStateRuntime = fs.readFileSync(runtimePath, 'utf8');
@@ -999,8 +1005,8 @@ assert.ok(
     'parseRows should store display-only subject scores without adding them to global heavy subjects'
 );
 assert.ok(
-    appSource.includes('CohortManager.addCohort({ year, startGrade }, { skipConfirm: true, fastEnter: true })'),
-    'login cohort entry should open the local workspace immediately while cloud data refreshes in the background'
+    /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: false,\s*requireCloudData: true\s*\}\)/.test(appSource),
+    'login cohort entry should wait for cloud data instead of opening an empty local workspace'
 );
 assert.ok(
     appSource.includes('void hydrateFromExamArchive();'),

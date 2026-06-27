@@ -1182,6 +1182,7 @@
     }
 
     function submitLogin() {
+        window.__BOOT_LOGIN_CLICKED__ = false;
         if (window.Auth && typeof window.Auth.login === 'function') {
             window.Auth.login();
         }

@@ -1,9 +1,18 @@
 const assert = require('assert');
 const path = require('path');
+const fs = require('fs');
 
 function run() {
     const runtimePath = path.resolve(__dirname, '../public/assets/js/compare-exam-sync-runtime.js');
+    const progressPath = path.resolve(__dirname, '../public/assets/js/progress-analysis-runtime.js');
     const createRuntime = require(runtimePath);
+    const syncSource = fs.readFileSync(runtimePath, 'utf8');
+    const progressSource = fs.readFileSync(progressPath, 'utf8');
+
+    assert.ok(syncSource.includes('latestOnly: false'), 'compare exam sync should request full cloud exam history by default');
+    assert.ok(syncSource.includes('minCount: Number(settings.minCount || 50) || 50'), 'compare exam sync should not stop after only two cached exams');
+    assert.ok(progressSource.includes('fetchOptions: { latestOnly: false, maxFetch: 0, minCount: 50 }'), 'progress compare selector sync should hydrate full exam history');
+    assert.ok(progressSource.includes('fetchCohortExamsToLocal(cohortId, { latestOnly: false, maxFetch: 0, minCount: 50 })'), 'progress baseline sync should hydrate full exam history');
 
     const syncState = {};
     const refreshLog = [];
@@ -64,6 +73,12 @@ function run() {
     }]);
     assert.strictEqual(syncState['2022'].pending, true);
     assert.ok(syncState['2022'].lastAttempt > 0);
+
+    fetchArgs = null;
+    syncState['2023'] = { pending: false, lastAttempt: 0 };
+    const defaultStarted = runtime.trySyncOptions({ cohortId: '2023', throttleMs: 0 });
+    assert.strictEqual(defaultStarted, true);
+    assert.deepStrictEqual(fetchArgs, ['2023', { latestOnly: false, maxFetch: 0, minCount: 50 }]);
 
     console.log('compare-exam-sync-runtime tests passed');
 }

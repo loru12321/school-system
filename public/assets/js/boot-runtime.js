@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-da7068e20846';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-9bd5d97eb348';
 
 function bootDebugLog(...args) {
 try {
@@ -1848,6 +1848,7 @@ const bootAuth = window.Auth || {
 };
 
 function submitBootLogin() {
+    window.__BOOT_LOGIN_CLICKED__ = false;
     if (window.Auth && typeof window.Auth.login === 'function') {
         window.Auth.login();
     }
@@ -1891,7 +1892,10 @@ function initBootAuthOnce() {
     window.__BOOT_AUTH_INIT_DONE__ = true;
     bindBootLoginActions();
     bootAuth.init();
-    if (window.__BOOT_LOGIN_CLICKED__) setTimeout(submitBootLogin);
+    if (window.__BOOT_LOGIN_CLICKED__) {
+        window.__BOOT_LOGIN_CLICKED__ = false;
+        setTimeout(submitBootLogin);
+    }
 }
 
 if (document.readyState === 'loading') {

@@ -2010,6 +2010,7 @@ var Auth = {
     /* 👇👇👇 ✋ 🟢 [此处开始替换] 重写 login 函数 (登录后立即刷新主界面) 🟢 ✋ 👇👇👇 */
 
     login: async function () {
+        window.__BOOT_LOGIN_CLICKED__ = false;
         const user = document.getElementById('login-user').value.trim();
         const pass = document.getElementById('login-pass').value.trim();
         const loginPortal = this.getLoginPortal();
