@@ -28,6 +28,8 @@ assert.ok(html.includes('height:clamp(420px, 52vh, 620px)'), 'exam batch table m
     'refreshExamBatchesFromCloud: function ()',
     'CloudManager.fetchCohortExamsToLocal(cohortId',
     'minCount: 50',
+    'getExamBatchDateSortTs: function (examId, meta = {})',
+    'return b.examDateTs - a.examDateTs',
     'renderExamBatches: function ()',
     'selectRecognizedExamBatches: function ()',
     'deleteSelectedExamBatches: async function ()',

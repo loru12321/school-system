@@ -4288,6 +4288,20 @@ const DataManager = {
         }[ch]));
     },
 
+    getExamBatchDateSortTs: function (examId, meta = {}) {
+        const candidates = [
+            meta?.date,
+            String(examId || '').match(/(\d{4}-\d{2}-\d{2})(?!.*\d{4}-\d{2}-\d{2})/)?.[1]
+        ];
+        for (const raw of candidates) {
+            const text = String(raw || '').trim();
+            if (!text) continue;
+            const ts = Date.parse(`${text}T00:00:00`);
+            if (!Number.isNaN(ts)) return ts;
+        }
+        return 0;
+    },
+
     getExamBatchRows: function () {
         const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
         const exams = db?.exams && typeof db.exams === 'object' ? db.exams : {};
@@ -4298,7 +4312,8 @@ const DataManager = {
             const grade = String(getEffectiveGrade?.(meta) || meta.grade || '').trim();
             const cohortId = String(meta.cohortId || CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || '').trim();
             const momentKey = [cohortId, meta.year || '', meta.term || '', meta.date || '', grade].map(v => String(v || '').trim()).join('|');
-            const sortTs = Number(exam?.updatedAt || exam?.createdAt || getExamSortTimestamp?.(examId, 0) || 0);
+            const examDateTs = this.getExamBatchDateSortTs(examId, meta);
+            const updateSortTs = Number(exam?.updatedAt || exam?.createdAt || getExamSortTimestamp?.(examId, 0) || 0);
             return {
                 examId,
                 exam,
@@ -4307,7 +4322,8 @@ const DataManager = {
                 grade,
                 cohortId,
                 momentKey,
-                sortTs,
+                examDateTs,
+                updateSortTs,
                 current: examId === currentExamId,
                 selected: this.examBatchSelection.has(examId)
             };
@@ -4322,8 +4338,9 @@ const DataManager = {
             row.empty = row.rowCount === 0;
         });
         rows.sort((a, b) => {
+            if (b.examDateTs !== a.examDateTs) return b.examDateTs - a.examDateTs;
             if (a.current !== b.current) return a.current ? -1 : 1;
-            return b.sortTs - a.sortTs || a.examId.localeCompare(b.examId, 'zh-CN');
+            return b.updateSortTs - a.updateSortTs || a.examId.localeCompare(b.examId, 'zh-CN');
         });
         return rows;
     },
