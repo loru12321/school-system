@@ -3671,9 +3671,17 @@ const DataManager = {
         const overviewBtn = document.getElementById('dm-cloud-view-overview');
         const listBtn = document.getElementById('dm-cloud-view-list');
         const isCloudTab = this.currentTab === 'cloud';
+        const isExamBatchTab = this.currentTab === 'exams';
 
         if (switcher) {
             switcher.style.display = isCloudTab ? 'flex' : 'none';
+        }
+
+        if (isExamBatchTab) {
+            if (workflow) workflow.style.display = 'none';
+            if (statusOverview) statusOverview.style.display = 'none';
+            if (cloudArea) cloudArea.style.display = 'none';
+            return;
         }
 
         if (!isCloudTab) {

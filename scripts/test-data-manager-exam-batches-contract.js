@@ -13,11 +13,14 @@ assert.ok(html.includes('id="dm-exams-area"'), 'exam batch area must exist');
 assert.ok(html.includes('id="dm-exams-tbody"'), 'exam batch table body must exist');
 assert.ok(html.includes('DataManager.selectRecognizedExamBatches()'), 'exam batch view must provide bulk recognition');
 assert.ok(html.includes('DataManager.deleteSelectedExamBatches()'), 'exam batch view must provide bulk deletion');
+assert.ok(html.includes('height:clamp(420px, 52vh, 620px)'), 'exam batch table must have a readable viewport height');
 
 [
     'examBatchSelection: new Set()',
     "if (tab === 'exams') tabId = 'tab-data-exams';",
     "examsArea.style.display = tab === 'exams' ? 'flex' : 'none'",
+    "const isExamBatchTab = this.currentTab === 'exams';",
+    "if (isExamBatchTab) {",
     'renderExamBatches: function ()',
     'selectRecognizedExamBatches: function ()',
     'deleteSelectedExamBatches: async function ()',
