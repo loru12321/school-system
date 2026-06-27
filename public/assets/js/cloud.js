@@ -1428,27 +1428,19 @@
                         const scopedKeyPrefix = requestedSchool
                             ? `${KEY_PREFIX_TEACHERS}${cohortId || ''}级_${normalizeTeacherSchoolForKey(requestedSchool)}_`
                             : '';
-                        let rows = [];
-                        if (requestedSchool && scopedKeyPrefix) {
-                            const { data: scopedRows, error: scopedError } = await selectSystemData({
-                                select: 'key,updated_at',
-                                keyLike: scopedKeyPrefix,
-                                order: 'updated_at',
-                                limit: 80
-                            });
-                            if (scopedError) throw scopedError;
-                            rows = scopedRows || [];
-                        }
-                        if (!rows.length) {
-                            const { data: fallbackRows, error } = await selectSystemData({
-                                select: 'key,updated_at',
-                                keyLike: cohortId ? `${KEY_PREFIX_TEACHERS}${cohortId}%` : `${KEY_PREFIX_TEACHERS}%`,
-                                order: 'updated_at',
-                                limit: requestedSchool ? 120 : 50
-                            });
-                            if (error) throw error;
-                            rows = fallbackRows || [];
-                        }
+                        const scopedQuery = (requestedSchool && scopedKeyPrefix)
+                            ? selectSystemData({ select: 'key,updated_at', keyLike: scopedKeyPrefix, order: 'updated_at', limit: 80 })
+                            : Promise.resolve({ data: [], error: null });
+                        const fallbackQuery = selectSystemData({
+                            select: 'key,updated_at',
+                            keyLike: cohortId ? `${KEY_PREFIX_TEACHERS}${cohortId}%` : `${KEY_PREFIX_TEACHERS}%`,
+                            order: 'updated_at',
+                            limit: requestedSchool ? 120 : 50
+                        });
+                        const [{ data: scopedRows, error: scopedError }, { data: fallbackRows, error: fallbackError }] = await Promise.all([scopedQuery, fallbackQuery]);
+                        if (scopedError) throw scopedError;
+                        if (fallbackError) throw fallbackError;
+                        const rows = (scopedRows && scopedRows.length) ? scopedRows : (fallbackRows || []);
                         metaRow = (requestedSchool && scopedKeyPrefix
                             ? (rows || []).find(item => String(item?.key || '').startsWith(scopedKeyPrefix)
                                 && desiredTerms.some(term => String(item?.key || '').endsWith(`_${term}`)))

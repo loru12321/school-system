@@ -1115,15 +1115,7 @@
             maybeSingle: true
         });
         if (error) throw error;
-        if (data) return data;
-
-        const { data: fallbackRows, error: fallbackError } = await selectSystemData({
-            select: 'key,content,updated_at',
-            keyIn: [exactKey],
-            limit: 1
-        });
-        if (fallbackError) throw fallbackError;
-        return (fallbackRows || [])[0] || null;
+        return data || null;
     }
 
     function queueWorkspaceSyncJob(key, job = {}) {
@@ -1464,12 +1456,13 @@
                     }
 
                     const rowMap = new Map();
+                    const chunkPromises = [];
                     for (let i = 0; i < keysToFetch.length; i += chunkSize) {
                         const chunk = keysToFetch.slice(i, i + chunkSize);
-                        const { data: chunkRows, error: chunkErr } = await selectSystemData({
-                            select: 'key,content,updated_at',
-                            keyIn: chunk
-                        });
+                        chunkPromises.push(selectSystemData({ select: 'key,content,updated_at', keyIn: chunk }));
+                    }
+                    const chunkResults = await Promise.all(chunkPromises);
+                    for (const { data: chunkRows, error: chunkErr } of chunkResults) {
                         if (chunkErr) throw chunkErr;
                         (chunkRows || []).forEach(r => rowMap.set(r.key, r));
                     }
