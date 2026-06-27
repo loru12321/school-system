@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 
 const viewports = [
     { width: 1440, height: 1000, mode: 'desktop' },
+    { width: 1366, height: 768, mode: 'desktop' },
     { width: 1024, height: 768, mode: 'tablet-stacked' },
     { width: 834, height: 1194, mode: 'tablet-stacked' },
     { width: 960, height: 900, mode: 'tablet' },
@@ -21,12 +22,13 @@ async function inspectLayout(page, viewport) {
     return page.evaluate(() => {
         const stage = document.querySelector('.login-clean-stage');
         const card = document.querySelector('.login-clean-card');
+        const overlay = document.querySelector('#login-overlay');
         const shell = document.querySelector('.login-clean-shell');
         const submit = document.querySelector('#login-submit-button');
         const styleboard = document.querySelector('.login-styleboard');
         const rect = node => {
             const value = node.getBoundingClientRect();
-            return { left: value.left, right: value.right, top: value.top, bottom: value.bottom };
+            return { left: value.left, right: value.right, top: value.top, bottom: value.bottom, width: value.width, height: value.height };
         };
         const style = node => {
             const value = getComputedStyle(node);
@@ -37,6 +39,7 @@ async function inspectLayout(page, viewport) {
             };
         };
         return {
+            overlay: rect(overlay),
             stage: rect(stage),
             card: rect(card),
             shell: rect(shell),
@@ -50,6 +53,10 @@ async function inspectLayout(page, viewport) {
                 opacity: getComputedStyle(styleboard).opacity
             },
             viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            documentScrollOverflow: document.documentElement.scrollHeight - window.innerHeight,
+            overlayScrollOverflow: overlay.scrollHeight - overlay.clientHeight,
+            cardScrollOverflow: card.scrollHeight - card.clientHeight,
             horizontalOverflow: document.documentElement.scrollWidth - window.innerWidth
         };
     });
@@ -81,6 +88,10 @@ async function main() {
                 assert.ok(styles.marginTop >= 0, `${label}: ${name} must not have a negative top margin`);
             }
             assert.ok(state.horizontalOverflow <= 1, `${label}: document must not overflow horizontally`);
+            assert.ok(state.overlay.left >= -1, `${label}: overlay must start inside the viewport`);
+            assert.ok(state.overlay.top >= -1, `${label}: overlay must start inside the viewport`);
+            assert.ok(state.overlay.right <= state.viewportWidth + 1, `${label}: overlay must not exceed viewport width`);
+            assert.ok(state.overlay.bottom <= state.viewportHeight + 1, `${label}: overlay must not exceed viewport height`);
             assert.ok(state.shell.top >= -1, `${label}: login shell must start inside the viewport`);
             assert.ok(state.shell.left >= -1, `${label}: login shell must not start before viewport`);
             assert.ok(state.shell.right <= state.viewportWidth + 1, `${label}: login shell must stay inside viewport`);
@@ -95,6 +106,11 @@ async function main() {
             }
 
             if (viewport.mode === 'desktop') {
+                assert.ok(Math.abs(state.shell.width - state.viewportWidth) <= 1, `${label}: desktop shell must fill the viewport width`);
+                assert.ok(Math.abs(state.shell.height - state.viewportHeight) <= 1, `${label}: desktop shell must fill the viewport height`);
+                assert.ok(state.documentScrollOverflow <= 1, `${label}: desktop document must not need vertical scrolling`);
+                assert.ok(state.overlayScrollOverflow <= 1, `${label}: desktop login overlay must not need vertical scrolling`);
+                assert.ok(state.cardScrollOverflow <= 1, `${label}: desktop login card must not need internal scrolling`);
                 assert.ok(state.card.bottom <= state.shell.bottom + 1, `${label}: desktop login card must not overflow shell vertically`);
             } else if (viewport.mode === 'tablet') {
                 const intersectionWidth = Math.min(state.stage.right, state.card.right) - Math.max(state.stage.left, state.card.left);
