@@ -8275,7 +8275,20 @@ function parseRows(rows, defaultSchool) {
         const rawIdValue = idxMap.id !== -1 ? r[idxMap.id] : '';
         const idStr = String(rawIdValue || '').trim();
 
-        if (!nameStr && !idStr) continue;
+        const rowHasExplicitScoreEvidence = Object.values(idxMap.scores || {}).some((colIndices) => (
+            Array.isArray(colIndices) && colIndices.some((idx) => {
+                let rawVal = r[idx];
+                if (isBlankSubjectScoreCell(rawVal)) return false;
+                if (typeof rawVal === 'string') rawVal = toHalfWidth(rawVal).trim();
+                const numeric = parseFloat(rawVal);
+                if (!isNaN(numeric)) return true;
+                const strVal = String(rawVal || "").trim().toUpperCase();
+                const zeroKeywords = ["缺", "ABS", "作弊", "违纪", "病假", "缓考", "取消", "零分", "Q", "CHE"];
+                return zeroKeywords.some(key => strVal.includes(key));
+            })
+        ));
+
+        if (!nameStr && !idStr && !rowHasExplicitScoreEvidence) continue;
 
         if (!nameStr || nameStr === '-' || nameStr === '0' || nameStr === '0.0' || nameStr === '姓名') {
             nameStr = `考生${String(i).padStart(3, '0')}`;

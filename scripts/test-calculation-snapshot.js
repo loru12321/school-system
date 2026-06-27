@@ -1234,6 +1234,22 @@ async function main() {
         })();
         snapshotStep('policy:teacher-analysis-core-school-alias');
         const target = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
+        const standard0527SchoolNames = {
+            oldCounty: '旧县',
+            yinshan: '银山实验学校',
+            jieshan: '接山中学'
+        };
+        const getSchoolStandardMetrics = (schoolName) => {
+            const school = window.SCHOOLS?.[schoolName] || null;
+            if (!school) return null;
+            return {
+                count: Array.isArray(school.students) ? school.students.length : 0,
+                avg: Number(school.avg || 0),
+                score2Rate: Number(school.score2Rate || 0)
+            };
+        };
+        const oldCountyRows = (window.RAW_DATA || []).filter((student) => String(student?.school || '').trim() === standard0527SchoolNames.oldCounty);
+        const oldCountyGeneratedRow = oldCountyRows.find((student) => String(student?.name || '').trim() === '考生030');
         snapshotStep('evaluate:return');
         return {
             rawData: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
@@ -1292,7 +1308,20 @@ async function main() {
                     .reduce((sum, subject) => sum + Number(target.scores?.[subject] || 0), 0),
                 town: target.townshipRank || target.ranks?.total?.township || 0,
                 county: target.countyRank || target.ranks?.total?.county || 0
-            } : null
+            } : null,
+            standard0527: {
+                oldCountyRawCount: oldCountyRows.length,
+                oldCountyGeneratedRow: oldCountyGeneratedRow ? {
+                    name: oldCountyGeneratedRow.name,
+                    total: Number(oldCountyGeneratedRow.total || 0),
+                    math: Number(oldCountyGeneratedRow.scores?.数学 || 0)
+                } : null,
+                totalPassLine: Number(window.THRESHOLDS?.total?.pass || 0),
+                totalExcellentLine: Number(window.THRESHOLDS?.total?.exc || 0),
+                oldCounty: getSchoolStandardMetrics(standard0527SchoolNames.oldCounty),
+                yinshan: getSchoolStandardMetrics(standard0527SchoolNames.yinshan),
+                jieshan: getSchoolStandardMetrics(standard0527SchoolNames.jieshan)
+            }
         };
     });
     trace('browser snapshot evaluate finished');
@@ -1471,6 +1500,19 @@ async function main() {
     );
     assert.ok(snapshot.targetStudent.town > 0, `target student town rank invalid: ${snapshot.targetStudent.town}`);
     assert.ok(snapshot.targetStudent.county >= snapshot.targetStudent.town, `target student county rank invalid: ${snapshot.targetStudent.county}`);
+    assert.ok(snapshot.standard0527, '0527 standard snapshot missing');
+    assert.strictEqual(snapshot.standard0527.oldCountyRawCount, 30, '0527 standard old county row count should include score-only row');
+    assert.deepStrictEqual(snapshot.standard0527.oldCountyGeneratedRow, {
+        name: '\u8003\u751f030',
+        total: 111.5,
+        math: 111.5
+    }, '0527 standard score-only old county row changed');
+    assert.strictEqual(Number(snapshot.standard0527.totalExcellentLine).toFixed(1), '413.4', '0527 total excellent line changed');
+    assert.strictEqual(Number(snapshot.standard0527.totalPassLine).toFixed(1), '260.8', '0527 total pass line changed');
+    assert.strictEqual(snapshot.standard0527.oldCounty?.count, 30, '0527 old county school count changed');
+    assert.strictEqual(Number(snapshot.standard0527.oldCounty?.score2Rate).toFixed(2), '61.21', '0527 old county score2Rate changed');
+    assert.strictEqual(snapshot.standard0527.yinshan?.count, 276, '0527 Yinshan count changed');
+    assert.strictEqual(Number(snapshot.standard0527.yinshan?.score2Rate).toFixed(2), '158.68', '0527 Yinshan score2Rate changed');
 
     console.log(JSON.stringify(snapshot, null, 2));
 }

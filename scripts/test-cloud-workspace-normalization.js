@@ -224,5 +224,10 @@ assert.ok(
     appSource.includes('const totalNormalization = normalizeStudentTotalsForCurrentConfig(RAW_DATA, SUBJECTS, CONFIG);'),
     'processData should repair stale cloud totals before thresholds and metrics are calculated'
 );
+assert.ok(
+    appSource.includes('rowHasExplicitScoreEvidence')
+        && appSource.includes('if (!nameStr && !idStr && !rowHasExplicitScoreEvidence) continue;'),
+    'score import should preserve score-only rows by auto-generating a student name'
+);
 
 console.log('cloud workspace normalization tests passed');
