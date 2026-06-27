@@ -14,7 +14,8 @@ const { chromium } = require('playwright');
 
 const projectRoot = path.resolve(__dirname, '..');
 const distDir = path.join(projectRoot, 'dist');
-const port = Number(process.env.UI_COPY_PORT || 4174);
+let port = Number(process.env.UI_COPY_PORT || 4174);
+const hasExplicitPort = !!process.env.UI_COPY_PORT;
 const proxyOrigin = String(process.env.SMOKE_PROXY_ORIGIN || 'https://schoolsystem.com.cn').trim().replace(/\/+$/, '');
 
 const mimeTypes = {
@@ -239,10 +240,28 @@ async function startServer() {
         });
     });
 
-    await new Promise((resolve, reject) => {
-        server.once('error', reject);
-        server.listen(port, '127.0.0.1', () => resolve());
+    const listen = (targetPort) => new Promise((resolve, reject) => {
+        const onError = (error) => {
+            server.off('listening', onListening);
+            reject(error);
+        };
+        const onListening = () => {
+            server.off('error', onError);
+            resolve();
+        };
+        server.once('error', onError);
+        server.once('listening', onListening);
+        server.listen(targetPort, '127.0.0.1');
     });
+
+    try {
+        await listen(port);
+    } catch (error) {
+        if (hasExplicitPort || error?.code !== 'EADDRINUSE') throw error;
+        await listen(0);
+    }
+
+    port = server.address().port;
 
     return server;
 }
