@@ -4,12 +4,12 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `3247e7e98ae0`
-- Recorded at: 2026-06-27T10:23:31.056Z
-- Total smoke time: 39301 ms (+1382 ms vs previous)
-- Login: 5757 ms
-- App ready: 3 ms
-- Long tasks: 2, max 1095 ms
+- Commit: `44605c44bfd8`
+- Recorded at: 2026-06-27T11:04:22.645Z
+- Total smoke time: 38915 ms (-386 ms vs previous)
+- Login: 6854 ms
+- App ready: 4 ms
+- Long tasks: 2, max 1025 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `upload` | 2906 ms | 3 ms | 2909 ms |
-| `cohort-growth` | 524 ms | 1936 ms | 2460 ms |
-| `report-generator` | 520 ms | 771 ms | 1291 ms |
-| `progress-analysis` | 1172 ms | 105 ms | 1277 ms |
-| `county-analysis` | 507 ms | 686 ms | 1193 ms |
-| `student-overview` | 526 ms | 616 ms | 1142 ms |
-| `summary` | 607 ms | 514 ms | 1121 ms |
-| `potential-analysis` | 1005 ms | 0 ms | 1005 ms |
+| `cohort-growth` | 637 ms | 1964 ms | 2601 ms |
+| `upload` | 1222 ms | 451 ms | 1673 ms |
+| `student-overview` | 526 ms | 775 ms | 1301 ms |
+| `report-generator` | 518 ms | 663 ms | 1181 ms |
+| `county-analysis` | 506 ms | 650 ms | 1156 ms |
+| `summary` | 557 ms | 499 ms | 1056 ms |
+| `potential-analysis` | 987 ms | 0 ms | 987 ms |
+| `grade-scheduler` | 567 ms | 373 ms | 940 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `44605c44bfd8` | 38915 ms | 6854 ms | 4 ms | 2 | 0 | 0 |
 | `3247e7e98ae0` | 39301 ms | 5757 ms | 3 ms | 2 | 0 | 0 |
 | `0b28d045637a` | 37919 ms | 5705 ms | 3 ms | 2 | 0 | 0 |
 | `ae77304134f8` | 38594 ms | 6679 ms | 6 ms | 2 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `a3e8fcc34e33` | 33499 ms | 1421 ms | 2185 ms | 1 | 0 | 0 |
 | `23efa25edea8` | 37980 ms | 5362 ms | 3231 ms | 1 | 0 | 0 |
 | `a736667cc657` | 35390 ms | 3014 ms | 2828 ms | 1 | 0 | 0 |
-| `61425f000c25` | 36561 ms | 2973 ms | 3180 ms | 0 | 0 | 0 |
 
 ## Data Files
 
