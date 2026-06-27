@@ -4,12 +4,12 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `291411606b3e`
-- Recorded at: 2026-06-27T02:51:53.766Z
-- Total smoke time: 40254 ms (+1750 ms vs previous)
-- Login: 8028 ms
-- App ready: 2 ms
-- Long tasks: 2, max 1056 ms
+- Commit: `5e383a82235e`
+- Recorded at: 2026-06-27T03:03:57.134Z
+- Total smoke time: 39323 ms (-931 ms vs previous)
+- Login: 7410 ms
+- App ready: 4 ms
+- Long tasks: 2, max 1050 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `cohort-growth` | 668 ms | 1962 ms | 2630 ms |
-| `upload` | 1246 ms | 558 ms | 1804 ms |
-| `student-overview` | 530 ms | 876 ms | 1406 ms |
-| `report-generator` | 526 ms | 656 ms | 1182 ms |
-| `county-analysis` | 512 ms | 663 ms | 1175 ms |
-| `summary` | 557 ms | 536 ms | 1093 ms |
-| `potential-analysis` | 963 ms | 0 ms | 963 ms |
-| `grade-scheduler` | 529 ms | 375 ms | 904 ms |
+| `cohort-growth` | 670 ms | 1783 ms | 2453 ms |
+| `upload` | 1227 ms | 577 ms | 1804 ms |
+| `report-generator` | 520 ms | 765 ms | 1285 ms |
+| `student-overview` | 531 ms | 669 ms | 1200 ms |
+| `county-analysis` | 507 ms | 638 ms | 1145 ms |
+| `summary` | 548 ms | 519 ms | 1067 ms |
+| `potential-analysis` | 964 ms | 0 ms | 964 ms |
+| `grade-scheduler` | 527 ms | 374 ms | 901 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `5e383a82235e` | 39323 ms | 7410 ms | 4 ms | 2 | 0 | 0 |
 | `291411606b3e` | 40254 ms | 8028 ms | 2 ms | 2 | 0 | 0 |
 | `b318de55602b` | 38504 ms | 1944 ms | 3764 ms | 2 | 0 | 0 |
 | `35517468c965` | 36684 ms | 2462 ms | 3530 ms | 0 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `8d7707f7542f` | 31464 ms | 2450 ms | 2178 ms | 0 | 0 | 0 |
 | `713ca3604a33` | 31966 ms | 2919 ms | 2083 ms | 0 | 0 | 0 |
 | `bf2c1db79a98` | 32145 ms | 3044 ms | 2072 ms | 0 | 0 | 0 |
-| `b1b8693a8230` | 31634 ms | 2371 ms | 2011 ms | 0 | 0 | 0 |
 
 ## Data Files
 
