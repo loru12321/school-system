@@ -305,7 +305,7 @@
                             </div>
                             <div class="login-stage-meta">
                                 <span><i class="ti ti-layout-dashboard"></i> 教学分析 / 数据维护 / 学校工作台</span>
-                                <span><i class="ti ti-devices"></i> Web / 客户端共用登录入口</span>
+                                <span><i class="ti ti-devices"></i> Web / PWA 共用登录入口</span>
                                 <span><i class="ti ti-sparkles"></i> 当前稳定版 v1.0 · 2026-04-08</span>
                             </div>
                             <div class="login-stage-platforms" aria-label="支持终端">
@@ -497,7 +497,7 @@
                             </div>
                             <div class="login-stage-meta">
                                 <span><i class="ti ti-layout-dashboard"></i> 教学分析 / 数据维护 / 学校工作台</span>
-                                <span><i class="ti ti-devices"></i> Web / 客户端统一入口</span>
+                                <span><i class="ti ti-devices"></i> Web / PWA 统一入口</span>
                                 <span><i class="ti ti-sparkles"></i> 新版登录工作台 · 2026-04-19</span>
                             </div>
                             <div class="login-stage-platforms" aria-label="支持终端">
@@ -798,7 +798,7 @@
                 quickStats: [
                     { label: '适用角色', value: '管理员 / 教务 / 年级负责人 / 班主任 / 教师 / 家长' },
                     { label: '核心模块', value: '数据导入、综合分析、教师分析、成长报告、绩效比较' },
-                    { label: '统一口径', value: 'Web、客户端与家长端共用同一套数据和规则' }
+                    { label: '统一口径', value: 'Web、PWA 与家长端共用同一套数据和规则' }
                 ],
                 sections: [
                     {
@@ -864,7 +864,7 @@
                         copy: '系统既适合办公室 Web，也支持移动端与外部查看。',
                         type: 'grid',
                         items: [
-                            { label: 'Web / 客户端', text: '网页端与客户端共用统一登录入口与主要工作流，便于办公室电脑、手机和本地桌面端切换。' },
+                            { label: 'Web / PWA', text: '网页端与 PWA 共用统一登录入口与主要工作流，便于办公室电脑、平板和手机切换。' },
                             { label: '导出与分发', text: '可输出成绩单、成长报告、对比结果与分发版页面，便于班主任或家长查看。' },
                             { label: '云端协同', text: '支持账号同步、数据同步与结果一致性校验，版本更新后继续沿用同一套业务规则。' },
                             { label: '使用建议', text: '每次新考试先导入原始数据并核对阈值，再做分析和绩效比较，结果会更稳定。' }

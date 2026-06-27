@@ -57,28 +57,6 @@ for (const size of [16, 24, 32, 48, 64, 128, 192, 256, 512, 1024]) {
   });
 }
 
-const ico = await readFile(at('desktop', 'assets', 'icon.ico'));
-assert.ok(ico.length > 1_000, 'desktop ICO must be nonempty');
-assert.equal(ico.readUInt16LE(0), 0, 'ICO reserved header');
-assert.equal(ico.readUInt16LE(2), 1, 'ICO image type');
-const icoCount = ico.readUInt16LE(4);
-const icoSizes = [];
-for (let index = 0; index < icoCount; index++) {
-  const directoryOffset = 6 + index * 16;
-  assert.ok(directoryOffset + 16 <= ico.length, `ICO directory entry ${index} must be within the file`);
-  const width = ico[directoryOffset] || 256;
-  const height = ico[directoryOffset + 1] || 256;
-  const dataLength = ico.readUInt32LE(directoryOffset + 8);
-  const dataOffset = ico.readUInt32LE(directoryOffset + 12);
-  assert.equal(height, width, `ICO entry ${index} must be square`);
-  assert.ok(dataLength > 0, `ICO entry ${index} data must be nonempty`);
-  assert.ok(dataOffset >= 6 + icoCount * 16, `ICO entry ${index} data must follow the directory`);
-  assert.ok(dataOffset + dataLength <= ico.length, `ICO entry ${index} data must be within the file`);
-  assert.ok(ico.subarray(dataOffset, dataOffset + dataLength).some((byte) => byte !== 0), `ICO entry ${index} must contain image data`);
-  icoSizes.push(width);
-}
-assert.deepEqual(icoSizes, [16, 24, 32, 48, 64, 128, 256], 'ICO must contain the exact required sizes');
-
 const packageJson = JSON.parse(await readFile(at('package.json'), 'utf8'));
 assert.equal(packageJson.scripts?.['assets:app-icons'], 'node scripts/generate-app-icon-assets.mjs');
 assert.equal(packageJson.scripts?.['test:app-icon-assets'], 'node scripts/test-app-icon-assets.mjs');
@@ -87,16 +65,14 @@ assert.match(packageJson.scripts?.['check:release-fast'] || '', /(?:^|&&\s*)npm 
 const status = JSON.parse(await readFile(at('public', 'assets', 'brand', 'app-icon-platform-status.json'), 'utf8'));
 assert.equal(status.web.state, 'generated');
 assert.equal(status.web.directory, 'public/assets/brand');
-assert.equal(status.windows.state, 'generated');
-assert.equal(status.windows.asset, 'desktop/assets/icon.ico');
+assert.equal(status.windows, undefined);
 assert.equal(status.android, undefined);
 assert.equal(status.ios, undefined);
 
 const generatedFiles = [
   'public/assets/brand/app-icon-source.png',
   ...[16, 24, 32, 48, 64, 128, 192, 256, 512, 1024].map((size) => `public/assets/brand/app-icon-${size}.png`),
-  'public/assets/brand/app-icon-platform-status.json',
-  'desktop/assets/icon.ico'
+  'public/assets/brand/app-icon-platform-status.json'
 ];
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'school-system-app-icons-'));
 try {

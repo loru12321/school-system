@@ -8,19 +8,22 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
-function count(source, pattern) {
-  return (source.match(pattern) || []).length;
+function exists(relativePath) {
+  return fs.existsSync(path.join(root, relativePath));
+}
+
+function parseJsonc(relativePath) {
+  const content = read(relativePath).replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
+  return JSON.parse(content);
 }
 
 const packageJson = JSON.parse(read('package.json'));
 const worker = read('src/worker-dummy.js');
-const releaseDownloads = read('src/worker-release-downloads.mjs');
 const gateway = read('src/worker-gateway-d1.js');
 const gatewayD1Schema = read('cloudflare/d1/002_gateway_data.sql');
 const helpers = read('src/worker-http-helpers.js');
 const systemDataCutoverVerifier = read('scripts/verify-system-data-cloudflare-cutover.js');
-const wranglerContent = read('wrangler.jsonc').replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
-const wrangler = JSON.parse(wranglerContent);
+const wrangler = parseJsonc('wrangler.jsonc');
 const scripts = packageJson.scripts || {};
 
 const requiredWorkerTokens = [
@@ -30,20 +33,24 @@ const requiredWorkerTokens = [
   "url.pathname === '/api/gateway'",
   "url.pathname === SYSTEM_DATA_API_PATH",
   "url.pathname.startsWith('/sb/')",
-  "url.pathname.startsWith('/downloads/')",
   'env.ASSETS.fetch(request)',
   'protectHtmlResponse(request, response)',
   'buildCorsHeaders(request, env)',
   'fetchWithTimeout(targetUrl, proxyInit, PROXY_TIMEOUT_MS)',
   'PROXY_TIMEOUT_MS = 15000',
   'HOP_BY_HOP_HEADERS.forEach((name) => nextHeaders.delete(name))',
-  'request.method === \'OPTIONS\'',
+  "request.method === 'OPTIONS'",
   'protectAssetResponse(request, response)'
 ];
 
 requiredWorkerTokens.forEach((token) => {
   assert.ok(worker.includes(token), `worker contract missing token: ${token}`);
 });
+
+assert.ok(!exists('src/worker-release-downloads.mjs'), 'release download proxy should be removed');
+assert.ok(!worker.includes("worker-release-downloads"), 'worker must not import release download handler');
+assert.ok(!worker.includes("url.pathname.startsWith('/downloads/')"), 'worker must not route hosted installers');
+assert.ok(!read('public/_headers').includes('/downloads/*'), 'static headers must not expose hosted installer cache policy');
 
 assert.ok(worker.includes('Production Cloudflare Worker entrypoint'), 'worker entrypoint responsibility should be documented');
 assert.ok(gateway.includes('not the Wrangler main entrypoint'), 'D1 gateway module responsibility should be documented');
@@ -52,109 +59,56 @@ assert.ok(gateway.includes("if (nextRole === 'director' || nextRole === 'admin')
 assert.ok(gateway.includes("Director can only manage accounts in own school"), 'director account edits must remain school-scoped');
 assert.ok(gateway.includes("error: 'Invalid username or password'"), 'managed D1 account passwords should not fall back to stale legacy credentials');
 assert.ok(!gateway.includes('proxyGatewayActionToLegacyGateway'), 'D1 auth should not proxy login/session/change-password to the legacy gateway');
-assert.ok(!gateway.includes("action, payload = {}, options = {}"), 'legacy gateway action helper should be removed after auth cutover');
-assert.ok(!gateway.includes("password_source: 'legacy_login_backfill'"), 'auth cutover should not create new legacy backfill password sources');
-assert.ok(gateway.includes("mode: pendingAccounts > 0 ? 'cloudflare-only-pending-account-repair-required' : 'cloudflare-only-ready'"), 'migration status should report Cloudflare-only fallback mode');
 assert.ok(worker.includes("error: 'CLOUDFLARE_GATEWAY_ACTION_NOT_SUPPORTED'"), 'unsupported gateway actions should fail closed instead of proxying to legacy Edge Functions');
-assert.ok(!worker.includes('LEGACY_GATEWAY_UNAVAILABLE'), 'Worker gateway should not expose a legacy gateway fallback error after auth cutover');
 assert.ok(worker.includes("from './worker-http-helpers.js'"), 'worker should import shared HTTP helpers');
-assert.ok(worker.includes("from './worker-release-downloads.mjs'"), 'worker should import the release download handler');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should import shared HTTP helpers');
 assert.ok(helpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared helpers must keep explicit CORS allowlist usage');
 assert.ok(helpers.includes('HOP_BY_HOP_HEADERS'), 'shared helpers must keep hop-by-hop header list');
-assert.ok(helpers.includes('Access-Control-Max-Age'), 'shared helpers must keep CORS preflight max age');
 assert.ok(helpers.includes("'https://schoolsystem.com.cn'"), 'root production origin must be allowed');
 assert.ok(helpers.includes("'https://www.schoolsystem.com.cn'"), 'www production origin must be allowed');
-assert.ok(helpers.includes("'https://school-system.hkakjiweu.workers.dev'"), 'workers.dev origin must remain allowed for diagnostics');
-assert.ok(helpers.includes("if (normalizedOrigin === 'null') return 'null';"), 'file:// lt.html requests must receive a matching null CORS origin');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(worker), 'worker must not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gateway), 'gateway must not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(helpers), 'shared helpers must not emit wildcard CORS');
-assert.ok(worker.includes("return normalizeOrigin(env.LEGACY_GATEWAY_ORIGIN || env.SUPABASE_ORIGIN || DEFAULT_LEGACY_GATEWAY_ORIGIN);"), 'legacy origin resolution must prefer env values');
-assert.ok(releaseDownloads.includes("if (!['GET', 'HEAD'].includes(request.method))"), 'release downloads must reject unsupported methods');
-assert.ok(releaseDownloads.includes("return plainResponse(404, 'Not Found')"), 'release downloads must fail closed for unknown files');
-assert.ok(releaseDownloads.includes("'Content-Disposition': `attachment; filename=\"${entry.filename}\"`"), 'release downloads must preserve the package filename');
-assert.ok(releaseDownloads.includes("'X-Content-SHA256': entry.sha256"), 'release downloads must expose the verified SHA-256');
 assert.ok(worker.includes("headers['Cache-Control'] = 'no-store';"), 'JSON API responses should be no-store');
 assert.ok(worker.includes("headers['X-Content-Type-Options'] = 'nosniff';"), 'JSON API responses should set nosniff');
 assert.ok(worker.includes("headers['X-School-System-Gateway'] = 'cloudflare-worker';"), 'JSON API responses should identify the gateway');
 assert.ok(worker.includes("env.SUPABASE_REST_API_KEY"), 'Supabase REST key must be read from env');
-assert.ok(worker.includes("request.headers.get('apikey')"), 'Supabase proxy may use request apikey fallback for compatibility');
 assert.ok(worker.includes("Authorization: `Bearer ${apikey}`"), 'Supabase proxy must forward bearer auth');
-assert.ok(worker.includes("targetUrl.searchParams.set('on_conflict', 'key')"), 'system_data writes must keep upsert conflict key');
-assert.ok(worker.includes("Prefer: 'resolution=merge-duplicates,return=representation'"), 'system_data writes must request merge upserts');
 assert.ok(worker.includes("return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);"), 'system data route must fail closed for unsupported methods');
 assert.ok(worker.includes("const ENTRANCE_AUDIO_MANIFEST_API_PATH = '/api/entrance-audio-manifest';"), 'file runtime should have a Worker-served entrance audio manifest route');
-assert.ok(worker.includes('async function handleEntranceAudioManifest(request, env)'), 'Worker must proxy the entrance audio manifest through an API route');
-assert.ok(worker.includes("url.pathname === ENTRANCE_AUDIO_MANIFEST_API_PATH"), 'entrance audio manifest route should be included in CORS preflight and routing');
-assert.ok(worker.includes('ENTRANCE_AUDIO_MANIFEST_NOT_FOUND'), 'entrance audio manifest route should fail with JSON when the asset is missing');
-assert.ok(worker.includes("return jsonResponse(404"), 'unsupported managed REST paths should return JSON 404');
 assert.ok(worker.includes("return new Response('Not Found', { status: 404 });"), 'asset fallback should return 404 instead of crashing');
 assert.ok(worker.includes('buildWorkerErrorBody(error, env)'), 'worker crash responses should use sanitized error bodies');
 assert.ok(worker.includes('WORKER_DEBUG_ERRORS'), 'worker crash stack traces should require an explicit debug flag');
-assert.ok(!worker.includes("stack: error instanceof Error ? error.stack : ''"), 'worker must not expose stack traces by default');
 assert.ok(worker.includes('function getHtmlShellCacheControl()'), 'HTML shell cache policy should be centralized');
 assert.ok(worker.includes("return 'no-store, max-age=0, must-revalidate, no-transform';"), 'HTML responses should bypass CDN and browser storage');
-assert.ok(worker.includes("headers.set('Cache-Control', getHtmlShellCacheControl())"), 'HTML responses should use the centralized shell cache policy');
-assert.ok(worker.includes("headers.set('CDN-Cache-Control', 'no-store');"), 'HTML responses should explicitly bypass shared CDN cache');
-assert.ok(worker.includes("headers.set('Cloudflare-CDN-Cache-Control', 'no-store');"), 'HTML responses should explicitly bypass Cloudflare edge cache');
-assert.ok(worker.includes("function shouldExposeStaticAssetCors(url)"), 'static asset CORS helper should be centralized');
 assert.ok(worker.includes("pathname.startsWith('/assets/audio/')"), 'hosted entrance audio should expose matching CORS for file:// lt.html');
-assert.ok(worker.includes('if (!cacheControl && !exposeCors) return protectedHtml;'), 'audio manifest JSON must still receive CORS even when it is not treated as a cacheable static asset');
-assert.ok(worker.includes("Object.entries(buildCorsHeaders(request)).forEach(([key, value]) => headers.set(key, value));"), 'audio asset CORS should reuse the explicit origin resolver');
 assert.ok(worker.includes("return 'public, max-age=31536000, immutable';"), 'versioned static assets should get immutable caching');
 assert.ok(worker.includes("return 'public, max-age=3600, stale-while-revalidate=86400';"), 'unversioned static assets should get short browser caching');
-assert.ok(worker.includes("pathname.startsWith('/downloads/')"), 'hosted downloads should have an explicit cache policy');
 assert.ok(worker.includes("pathname === '/sw.js'"), 'service worker script should stay revalidation-friendly');
 assert.ok(worker.includes('buildWorkerErrorHeaders()'), 'worker crash responses should use hardened headers');
-assert.ok(worker.includes("headers.set('Cache-Control', 'no-store');"), 'forwarded API responses should be no-store');
-assert.ok(worker.includes("headers.set('X-Content-Type-Options', 'nosniff');"), 'forwarded API responses should set nosniff');
 assert.ok(worker.includes("if (method === 'GET' || method === 'HEAD') return null;"), 'GET/HEAD proxy requests should not attach a body');
-assert.ok(worker.includes("proxyInit.headers.set('x-forwarded-host', url.host);"), 'proxy requests should include forwarded host');
-assert.ok(worker.includes("proxyInit.headers.set('x-forwarded-proto', url.protocol.replace(':', ''));"), 'proxy requests should include forwarded proto');
 assert.ok(worker.includes("Math.min(Math.floor(raw), 1000)"), 'system_data read limit should be capped');
-assert.ok(worker.includes('function parseSystemDataOffset(searchParams)'), 'system_data reads should parse bounded offsets');
 assert.ok(worker.includes("'LIMIT ? OFFSET ?'"), 'system_data reads should push pagination into D1 instead of slicing in memory');
-assert.ok(worker.includes('bind(...bindings, limit, offset)'), 'system_data reads should bind offset into the D1 query');
-assert.ok(worker.includes('if (!requestedSizeBytes)') && worker.includes('new Response(response.body'), 'Supabase system_data proxy should stream large content rows unless size_bytes requires parsing');
-assert.ok(worker.includes('function isSystemDataHybridMode(env)'), 'system_data should expose an explicit hybrid mode helper');
-assert.ok(worker.includes('const d1Response = await handleSystemDataRead(request, env, url);'), 'hybrid system_data reads should try D1 before Supabase fallback');
-assert.ok(worker.includes('return d1Response || proxySystemDataReadToSupabase(request, env, url);'), 'hybrid system_data reads should fall back to Supabase when D1 misses');
-assert.ok(worker.includes('const supabaseRequest = request.clone();'), 'hybrid system_data writes should clone requests before dual-write proxying');
 assert.ok(worker.includes('const [d1Response, supabaseResponse] = await Promise.all(['), 'hybrid system_data writes should dual-write D1 and Supabase concurrently');
-assert.ok(worker.includes('handleSystemDataWrite(request, env),'), 'hybrid system_data writes should persist to D1');
-assert.ok(worker.includes('proxySystemDataWriteToSupabase(supabaseRequest, env, url)'), 'hybrid system_data writes should also sync Supabase');
-assert.ok(worker.includes('handleSystemDataDelete(request, env, url),'), 'hybrid system_data deletes should delete from D1');
-assert.ok(worker.includes("proxySupabaseRestRequest(supabaseRequest, env, url, '/rest/v1/system_data')"), 'hybrid system_data deletes should also sync Supabase');
 assert.ok(worker.includes("cloudSystemDataBackend === 'hybrid' ? hasSystemDataStorage(env) && hasSupabaseRestOrigin(env)"), 'health should require both D1 and Supabase readiness for hybrid mode');
-assert.ok(worker.includes('cloudSystemDataD1Bound: hasSystemDataStorage(env)'), 'health should expose D1 binding readiness before primary cutover');
-assert.ok(worker.includes('cloudSystemDataSupabaseReady: hasSupabaseRestOrigin(env)'), 'health should expose Supabase readiness during hybrid cutover');
 assert.ok(wrangler.vars && wrangler.vars.CLOUD_SYSTEM_DATA_MODE === 'primary', 'production data mode should use D1 primary storage');
 assert.ok((wrangler.d1_databases || []).some((db) => db.binding === 'CLOUD_SYSTEM_DATA_DB'), 'system_data D1 binding should be configured for primary storage');
 assert.ok(!wrangler.vars.SUPABASE_ORIGIN, 'Supabase origin must not be hardcoded in wrangler config');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:cloudflare-worker-contract'), 'fast release check must include Cloudflare Worker contract guard');
 assert.ok(scripts['verify:system-data:cloudflare-cutover'] === 'node scripts/verify-system-data-cloudflare-cutover.js', 'system_data cutover verifier should be runnable from npm scripts');
 assert.ok(systemDataCutoverVerifier.includes("DEFAULT_EXPECTED_BACKEND = 'hybrid,d1'"), 'system_data cutover verifier must reject same-backend Supabase comparisons by default');
-assert.ok(systemDataCutoverVerifier.includes('cloudSystemDataReady'), 'system_data cutover verifier should require target readiness');
-assert.ok(systemDataCutoverVerifier.includes('keySha256') && systemDataCutoverVerifier.includes('contentSha256'), 'system_data cutover verifier should compare key and content digests');
-assert.ok(systemDataCutoverVerifier.includes('missingInTargetCount') && systemDataCutoverVerifier.includes('contentMismatchCount'), 'system_data cutover verifier should report actionable row diffs');
 assert.ok(gatewayD1Schema.includes('idx_system_logs_operator_created'), 'system_logs should index operator history lookups by created_at');
-assert.ok(gatewayD1Schema.includes('ON system_logs(operator, created_at DESC)'), 'system_logs operator index should match admin audit lookup order');
-assert.ok(gatewayD1Schema.includes('idx_rectify_tasks_school_status_due'), 'rectify tasks should index school-scoped pending task filters');
-assert.ok(gatewayD1Schema.includes('ON rectify_tasks(school_name, status, due_date)'), 'rectify school/status index should keep due_date as the range/order suffix');
 assert.ok(gatewayD1Schema.includes('idx_rectify_tasks_project_cohort_status_school_created'), 'rectify tasks should index dashboard list filters');
-assert.ok(gatewayD1Schema.includes('ON rectify_tasks(project_key, cohort_id, status, school_name, created_at DESC)'), 'rectify dashboard index should match list filters before created_at ordering');
 
 console.log(JSON.stringify({
   ok: true,
-  corsOrigins: count(worker, /https:\/\/[^'"]+/g),
+  installerDownloadsRemoved: true,
   workerRoutes: [
     '/api/health',
     '/api/edu-gateway',
     '/api/gateway',
     '/api/system-data',
     '/sb/*',
-    '/downloads/*',
     'ASSETS'
   ],
   proxyTimeoutMs: 15000

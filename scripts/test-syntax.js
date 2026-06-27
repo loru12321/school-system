@@ -35,9 +35,9 @@ assert.ok(targets.includes('public/assets/js/app.js'), 'syntax check should cove
 assert.ok(!targets.includes('public/assets/js/login-download-runtime.js'), 'syntax check should not require the removed login download runtime');
 assert.ok(!targets.includes('public/assets/js/app-download-runtime.js'), 'syntax check should not require the removed download center runtime');
 assert.ok(targets.includes('scripts/test-performance-budget.js'), 'syntax check should cover performance budget guards');
-assert.ok(targets.includes('scripts/prepare-github-release-assets.mjs'), 'syntax check should cover release asset preparation');
+assert.ok(!targets.includes('scripts/prepare-github-release-assets.mjs'), 'syntax check should not require removed native release asset preparation');
 assert.ok(targets.includes('scripts/record-performance-trend.mjs'), 'syntax check should cover performance trend recording');
-assert.ok(targets.length >= 180, `syntax target count looks too small: ${targets.length}`);
+assert.ok(targets.length >= 165, `syntax target count looks too small: ${targets.length}`);
 
 for (const target of targets) {
   execFileSync(process.execPath, ['--check', target], {

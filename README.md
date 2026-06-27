@@ -1,93 +1,13 @@
 # SmartEdu Analytics
 
-一套正在生产环境运行的学校教务与质量分析系统。它不是一个静态演示页，而是围绕“成绩数据进入系统之后，学校、年级、教师、班主任分别能做什么判断”搭起来的完整工作台。
+SmartEdu Analytics 是运行在生产环境的学校教务与质量分析工作台。当前唯一正式发布面是 Web 系统：
 
-正式站点：[https://schoolsystem.com.cn/](https://schoolsystem.com.cn/)  
-当前生产分支：`main`  
-部署平台：Cloudflare Workers + Assets  
-数据与网关：Supabase / Cloudflare D1 / `/api/edu-gateway`
+- 正式站点：[https://schoolsystem.com.cn/](https://schoolsystem.com.cn/)
+- 生产分支：`main`
+- 部署平台：Cloudflare Worker + Assets
+- 数据与网关：Supabase / Cloudflare D1 / `/api/edu-gateway`
 
-## 为什么值得看
-
-很多成绩分析系统只停留在“把 Excel 变成表格”。这个项目更关心后面的链路：
-
-- 教务主任需要快速知道：哪所学校、哪个年级、哪个学科出现了质量波动。
-- 年级组需要知道：指标生、后 1/3、临界生、进退步学生分别在哪里。
-- 班主任需要知道：学生个人报告、成长轨迹、薄弱学科和同层对比。
-- 教师需要知道：自己的教学画像、班级表现和县域/校内位置。
-- 管理者需要知道：问题清单、预警、整改任务是否闭环。
-
-系统把这些场景放在同一个工作台里，并配套了本地烟测、线上烟测、下载验证和 Cloudflare 部署流程，避免“页面能打开但业务不可用”。
-
-## 一眼看懂
-
-```mermaid
-flowchart LR
-    A["成绩 Excel / 历次考试数据"] --> B["数据枢纽中心"]
-    B --> C["标准化: 学校别名 / 届别 / 考试 / 目标人数"]
-    C --> D["分析引擎"]
-    D --> E["县域质量排名"]
-    D --> F["教师教学分析"]
-    D --> G["学生成长与报告"]
-    D --> H["教学管理闭环"]
-    H --> I["问题清单 / 异常预警 / 整改任务 / 版本归档"]
-    E --> J["校长与教务决策"]
-    F --> K["教研组复盘"]
-    G --> L["班主任与家长沟通"]
-```
-
-## 功能地图
-
-| 场景 | 代表模块 | 解决的问题 |
-| --- | --- | --- |
-| 数据进入系统 | 数据上传、考试归档、届别管理、云端备份 | 把不同来源的成绩数据整理成可分析的统一口径 |
-| 学校质量分析 | 综合分析、两率一分、县域质量排名、学科贡献度 | 看清学校、乡镇、县域之间的质量位置 |
-| 教师教学诊断 | 教师教学分析、教师画像、校内/县域排名 | 让教师评价从印象判断变成可追溯指标 |
-| 学生发展跟踪 | 学生总览、学生明细、进退步、成长档案、成绩报告 | 形成学生个人层面的连续观察 |
-| 教学管理闭环 | 教学管理总览、问题清单、异常预警、整改任务 | 把发现问题到跟进整改串起来 |
-| 教务工具 | 考务编排、新生均衡分班、座位微调 | 处理日常教务中的高频事务 |
-
-## 系统如何流动
-
-```mermaid
-sequenceDiagram
-    participant User as 教务/教师/班主任
-    participant UI as Web 工作台
-    participant Runtime as 前端运行时模块
-    participant Gateway as /api/edu-gateway
-    participant Data as Supabase / D1
-    participant Smoke as 本地与线上烟测
-
-    User->>UI: 登录并选择模块
-    UI->>Runtime: 懒加载对应 runtime
-    Runtime->>Gateway: 读取账号、归档、整改、版本等数据
-    Gateway->>Data: 查询或写入业务数据
-    Data-->>Gateway: 返回标准化结果
-    Gateway-->>Runtime: 返回统一响应
-    Runtime-->>UI: 渲染分析表、报告、任务单
-    Smoke->>UI: 自动切换模块并做深度检查
-```
-
-## 技术结构
-
-```text
-src/                       页面入口和模板
-public/assets/js/          前端运行时模块
-scripts/                   构建、验证、烟测、部署辅助脚本
-supabase/                  Edge Functions、SQL、迁移脚本
-cloudflare/                Worker 相关代码
-dist/                      Vite 构建产物
-lt.html                    构建时生成的单文件离线版本（不提交 Git）
-wrangler.jsonc             Cloudflare Workers 部署配置
-```
-
-核心思路是把巨大的前端业务拆成多个 runtime：
-
-- `app.js`：公共配置、入口调度和少量兼容逻辑
-- `*-state-runtime.js`：状态与持久化边界
-- `*-runtime.js`：独立业务模块
-- `cloud-*-runtime.js`：云端连接、数据读写和同步
-- `teaching-management-*-runtime.js`：教学管理模块
+Windows、Android 与 iOS 安装包链路均已移除。仓库不再维护本地安装包、下载清单、分片文件、安装器源码、桌面客户端壳或 native app 发布 workflow。
 
 ## 本地运行
 
@@ -96,7 +16,7 @@ npm install
 npm run dev
 ```
 
-构建生产产物：
+生产构建：
 
 ```bash
 npm run build
@@ -110,7 +30,7 @@ npm run smoke:modules:local
 npm run smoke:modules:prod
 ```
 
-更完整的回归：
+完整回归：
 
 ```bash
 npm run validate
@@ -121,110 +41,77 @@ npm run validate
 ```mermaid
 flowchart TD
     A["修改代码"] --> B["npm run build"]
-    B --> C["本地专项测试 / 本地全模块烟测"]
+    B --> C["npm run check:release-fast"]
     C --> D["git commit + push main"]
-    D --> E["wrangler deploy"]
-    E --> F["正式站点烟测"]
-    F --> G["真实下载 / 关键接口验证"]
-    G --> H["发布完成"]
+    D --> E["Cloudflare Deploy workflow 或 npx wrangler deploy"]
+    E --> F["npm run smoke:prod-minimal"]
+    F --> G["生产站点验证完成"]
 ```
 
-Cloudflare 手动部署命令：
+手动部署：
 
 ```powershell
 $env:npm_config_cache = "$PWD\.npm-cache"
 npx wrangler deploy
 ```
 
-Current recommended release path:
+推荐发布命令：
 
 ```bash
 npm run build
+npm run check:release-fast
 npx wrangler deploy
 npm run verify:prod-minimal
 ```
 
-Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts/legacy/`. Keep new releases on the Wrangler path unless a recovery note explicitly says otherwise.
+Legacy OSS、DNS、证书和 direct-deploy 辅助脚本已归档在 `scripts/legacy/`。除非恢复说明明确要求，否则新发布保持在 Wrangler 路径。
+
+## 自动化
+
+- `.github/workflows/deploy-cloudflare.yml`：`main` 推送或手动触发后构建、运行快速守卫、部署 Cloudflare，并执行生产 smoke。
+- `.github/workflows/performance-trend.yml`：记录性能趋势，输出到 `docs/performance/`，并通过阈值检查阻止明显回归。
+- `.github/workflows/ci.yml`：保留 P0 快速通道、release guards、浏览器 smoke 和完整验证。
+
+已删除的 native 发布面：
+
+- `.github/workflows/build-apps-beta.yml`
+- `.github/workflows/release-apps.yml`
+- 公开下载目录、安装包清单、分片文件和 Worker 下载代理
+- Windows 桌面壳、安装器源码、本地共享盘客户端更新脚本和相关校验脚本
 
 ## 质量保护
 
-这个仓库对“能不能真的用”看得比“能不能构建”更重。常见保护包括：
+这个仓库优先保护真实可用性：登录、数据、报告、教学管理、生产部署和 smoke 验证。
 
-- 全模块自动切换烟测：确认主模块和数据中心页签能打开。
-- 深度业务检查：报告生成、学生明细、县域排名、教学管理等关键路径会检查真实 DOM 和函数。
-- 客户端验证：仅保留 Windows 安装包分发，发布前单独校验包体与安装可用性。
-- 性能预算：记录模块切换耗时、深度检查耗时和长任务。
-- Cloudflare 合约检查：部署配置、静态资源和 Worker 路由保持可验证。
+- `npm run check:p0`：生产正确性和数据安全。
+- `npm run check:p1`：发布质量、HTML/service worker/runtime/CSS 体验。
+- `npm run check:p2`：文档、自动化、性能趋势和维护守卫。
+- `npm run check:release-fast`：部署前共享快速闸门。
+- `npm run verify:prod-minimal`：最小生产验证。
+- `npm run smoke:prod-minimal`：生产 smoke 别名。
 
-## 自动化流水线
+维护分级见 [`docs/maintenance-runbook.md`](docs/maintenance-runbook.md)，持续优化清单见 [`docs/optimization-backlog.md`](docs/optimization-backlog.md)。
 
-- `.github/workflows/release-apps.yml`：手动输入 tag 或推送 `school-system-v*` tag 后，自动构建、整理 Windows 包，并创建或更新 GitHub Release。
-- `.github/workflows/performance-trend.yml`：`main` 更新后自动跑本地浏览器烟测，把原始性能样本、跨提交历史和 Markdown 趋势报告写入 `docs/performance/`，并用阈值检查让明显变慢的提交在 CI 中标红。
-- `npm run release:prepare-assets`：本地生成 GitHub Release 资产目录，包含 latest 文件名、带 tag 的不可变文件名、SHA256 和 release notes。
-- `npm run performance:record`：把一次烟测 JSON 转成可对比的趋势记录，用于定位哪次提交让模块切换、深度检查或长任务变慢。
-- `npm run test:performance-thresholds`：读取 `docs/performance/performance-history.json`，检查预算失败、烟测错误、长任务和跨提交回归阈值。
+## 项目结构
 
-## 维护分级
-
-长期维护按 P0/P1/P2 分级处理，完整发布清单和缓存规则见 [`docs/maintenance-runbook.md`](docs/maintenance-runbook.md)。
-持续优化清单见 [`docs/optimization-backlog.md`](docs/optimization-backlog.md)。
-
-- P0：生产正确性，优先保护登录、关键数据、报告和线上可访问性。
-- P1：发布质量与用户体验，优先保护文案编码、元数据、离线缓存和回归检查。
-- P2：可持续维护，优先保护文档、自动化守护、交接清单和可追溯发布记录。
-
-## 客户端分发
-
-系统内已移除“应用服务”下载母模块。客户端分发只保留 Windows 安装包；Android 与 iOS 安装包链路、公开记录和历史包已移除，不再维护更新。
-
-- `校衡台-Windows-1.0.2-x64.exe`
-
-## 适合继续改进的方向
-
-- 继续把高耦合业务从 `app.js` 拆到独立 runtime，降低首屏和模块切换压力。
-- 给教学管理、学生报告、县域排名等高价值模块增加更细的端到端用例。
-- 继续收紧性能阈值，把已知稳定模块的波动窗口逐步变小。
-
-## 给维护者的一句话
-
-修改这个系统时，请把它当作一个真实学校正在使用的生产工作台：先保证登录、数据、报告和教学管理可用，再谈重构和美化。每一次发布都应该能回答三个问题：
-
-1. 用户最常用的路径还能不能走通？
-2. 关键数据有没有被错误覆盖或错口径展示？
-3. 线上站点是否已经用真实浏览器验证过？
-
-## Windows 客户端发布（2026）
-
-系统业务界面不再承载客户端下载中心。GitHub Releases 中的 `release-manifest.json` 仅记录 Windows 安装包状态；Android 与 iOS 安装包、分片、签名检查、公开清单和历史记录均已移除，以后不再进入发布更新范围。
-
-### 发布节奏与保留策略
-
-- 每次推送到 `main`：`.github/workflows/build-apps-beta.yml` 构建 Windows 验证任务，发布 `beta-YYYYMMDD-<short-sha>` 预发布版本。
-- Beta Release 保留 90 天；每周清理任务只删除同时满足“`beta-` 标签、GitHub prerelease、超过 90 天”的版本。
-- 推送 `school-system-v*` 标签：`.github/workflows/release-apps.yml` 创建永久稳定版，不参与 Beta 清理。
-- Windows 产物为 x64 NSIS `.exe`。
-
-### 签名与安装提醒
-
-- Windows 当前没有代码签名证书，安装时可能出现 Microsoft Defender SmartScreen 提示。正式对外分发前应配置受信任的 Windows 代码签名证书。
-- 签名证书负责人：发布负责人在创建 `school-system-v*` 稳定版前确认 EV/OV 代码签名证书、时间戳服务和 CI secret 均已就绪。
-- 证书配置目标：稳定版正式对外分发前；Beta 预发布可以保持未签名状态，但 Release notes 必须继续提示 SmartScreen 风险。
-
-### Cloudflare 免费下载回退
-
-当 GitHub Actions 或公开 Releases 暂时不可用时，可使用现有 Cloudflare Workers 免费静态资源提供安装包，不需要开通 R2 或绑定付费存储。`npm run release:prepare-worker-assets` 会把 Windows 包切成不超过 20 MiB 的不可变分片，并生成 `dist/releases/download-map.json`；Worker 只允许映射中的文件名，并通过 `/downloads/<filename>` 依次流式合并分片。
-
-二进制包、keystore 和生成分片都不会提交进 Git。执行干净构建后，部署人员必须从受控的本地安装包重新生成分片，再运行 `npx wrangler deploy`。生产 Worker 名称固定为 `school-system`，部署前应同时执行 `npm run test:worker-release-chunks`、`npm run test:worker-release-downloads` 和 `npm run check:release-fast`。GitHub 账户恢复后，原有 Actions 与 Releases 仍是首选自动发布路径，Cloudflare 分片可保留为免费镜像。
-
-### 手动构建与校验
-
-```powershell
-npm run build
-npm run test:release-manifest
-npm run test:desktop-package-contract
-npm run test:windows-installer-contract
-npm run test:beta-release-workflow
-npm run desktop:build
+```text
+src/                       页面入口和模板
+public/assets/js/          前端运行时模块
+public/assets/css/         样式资源
+scripts/                   构建、验证、烟测、部署辅助脚本
+supabase/                  Edge Functions、SQL、迁移脚本
+cloudflare/                D1 SQL 和 Worker 相关资源
+dist/                      Vite 构建产物
+lt.html                    构建时生成的单文件离线版本，不提交 Git
+wrangler.jsonc             Cloudflare Worker 部署配置
+docs/performance/          性能趋势输出
+scripts/legacy/            已归档的历史 OSS/DNS/证书/direct deploy 脚本
 ```
 
-发布后可运行 `npm run release:verify-assets`，按 Windows 包返回结构化失败列表并阻止 HTML 错误页、过小包体或无效哈希进入下载链路。
+## 维护提醒
+
+修改系统时，把它当作真实学校正在使用的生产工作台：先保证登录、关键数据、报告和教学管理可用，再做重构和美化。每次发布都应回答三件事：
+
+1. 用户最常用路径还能不能走通？
+2. 关键数据有没有被错误覆盖或错口径展示？
+3. 线上站点是否已经用真实浏览器验证过？

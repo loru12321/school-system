@@ -59,7 +59,7 @@ const forbiddenSecretPatterns = [
 ];
 
 assert.ok(exists('dist/index.html'), 'dist/index.html must exist before release');
-assert.ok(exists('lt.html'), 'root lt.html must be generated before offline or AD release packaging');
+assert.ok(exists('lt.html'), 'root lt.html must be generated for offline web verification');
 assert.ok(/^lt\.html$/m.test(gitignore), 'generated root lt.html must stay ignored by Git');
 assert.ok(exists('dist/_headers'), 'dist/_headers must be emitted for Cloudflare static asset headers');
 assert.ok(exists('dist/robots.txt'), 'dist/robots.txt must be emitted for crawlers');
@@ -85,17 +85,18 @@ assert.ok(wranglerRoutes.some((route) => route.pattern === 'www.schoolsystem.com
 assert.ok(/^20\d{2}-\d{2}-\d{2}$/.test(wrangler.compatibility_date || ''), 'compatibility_date must be explicit');
 assert.ok(new Date(wrangler.compatibility_date) >= new Date('2026-04-01'), 'compatibility_date should not drift too far behind this release line');
 assert.strictEqual(scripts.build, 'npm-run-all build:pre build:core build:post', 'build script should run readable build phases');
+assert.ok(!scripts['build:pre'].includes('preserve-dist-release-assets'), 'build:pre must not preserve removed release assets');
 assert.strictEqual(scripts['build:core'], 'vite build', 'build:core must run Vite');
 assert.ok(scripts['build:post'] && scripts['build:post'].includes('sync-public-assets.mjs'), 'build:post must sync public assets');
+assert.ok(!scripts['build:post'].includes('preserve-dist-release-assets'), 'build:post must not restore removed release assets');
 assert.ok(scripts['build:post'] && scripts['build:post'].includes('prune-dist-assets.mjs'), 'build:post must prune stale dist assets');
 assert.ok(scripts['build:post'] && scripts['build:post'].includes('optimize-dist-html.mjs'), 'build:post must optimize dist HTML');
 assert.ok(scripts['build:post'] && scripts['build:post'].includes('inline-scripts.mjs'), 'build:post must inline the release HTML script surface');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-surface'), 'fast release check must include release surface guard');
-['test:release-manifest', 'test:desktop-package-contract', 'test:windows-installer-contract', 'test:beta-release-workflow'].forEach((scriptName) => {
-  assert.ok(scripts[scriptName], `${scriptName} must be exposed as a release contract`);
-  assert.ok(scripts['check:release-fast'].includes(scriptName), `fast release check must include ${scriptName}`);
+['test:release-manifest', 'test:desktop-package-contract', 'test:windows-installer-contract', 'test:beta-release-workflow', 'release:verify-assets'].forEach((scriptName) => {
+  assert.ok(!scripts[scriptName], `${scriptName} must stay removed with native installer distribution`);
+  assert.ok(!scripts['check:release-fast'].includes(scriptName), `fast release check must not include removed ${scriptName}`);
 });
-assert.strictEqual(scripts['release:verify-assets'], 'node scripts/verify-release-assets.mjs', 'release verification should use the manifest-aware verifier');
 assert.ok(scripts['smoke:modules:prod'] === 'node scripts/run-prod-smoke.js', 'production smoke script should use the guarded production wrapper');
 assert.ok(prodSmoke.includes('https://schoolsystem.com.cn/'), 'production smoke wrapper should default to the canonical domain');
 assert.ok(prodSmoke.includes('Refusing to run production smoke'), 'production smoke wrapper should reject unexpected URLs');
@@ -120,11 +121,7 @@ assert.ok(
   publicHeaders.includes('/assets/css/*\n  Cache-Control: public, max-age=31536000, immutable'),
   'versioned runtime CSS should use long immutable browser caching'
 );
-assert.ok(publicHeaders.includes('/downloads/*'), 'static asset headers should cover hosted downloads');
-assert.ok(
-  publicHeaders.includes('/downloads/*\n  Cache-Control: public, max-age=31536000, immutable'),
-  'hosted downloads should use long immutable CDN caching'
-);
+assert.ok(!publicHeaders.includes('/downloads/*'), 'static asset headers should not expose removed hosted downloads');
 assert.ok(publicHeaders.includes('/index.html'), 'static asset headers should cover index.html');
 assert.ok(publicHeaders.includes('Content-Type: text/html; charset=utf-8'), 'HTML responses should declare UTF-8 charset');
 assert.ok(publicHeaders.includes('/\n  Content-Type: text/html; charset=utf-8\n  Cache-Control: no-store, max-age=0, must-revalidate\n  CDN-Cache-Control: no-store\n  Cloudflare-CDN-Cache-Control: no-store'), 'root HTML should bypass browser and CDN storage');
@@ -169,6 +166,12 @@ assert.ok(!publicManifest.shortcuts.some((shortcut) => shortcut.name === '应用
 assert.ok(publicManifest.shortcuts.every((shortcut) => shortcut.icons?.some((icon) => icon.src === '/assets/brand/app-icon-192.png')), 'web manifest shortcuts should expose PNG icons for install surfaces');
 assert.ok(!distIndex.includes('http://localhost'), 'dist HTML must not reference localhost');
 assert.ok(!distIndex.includes('127.0.0.1'), 'dist HTML must not reference loopback hosts');
+assert.ok(!distIndex.includes('app-release-catalog-runtime.js'), 'dist HTML must not load removed release catalog runtime');
+assert.ok(!exists('public/releases'), 'public release catalog directory must stay removed');
+assert.ok(!exists('public/downloads'), 'public installer download directory must stay removed');
+assert.ok(!exists('dist/releases'), 'dist release catalog directory must stay removed');
+assert.ok(!exists('dist/downloads'), 'dist installer download directory must stay removed');
+assert.ok(!exists('scripts/build/preserve-dist-release-assets.mjs'), 'dist release preservation helper must stay removed');
 forbiddenSecretPatterns.forEach((pattern) => {
   assert.ok(!pattern.test(distIndex), `dist HTML must not embed secret-like pattern ${pattern}`);
   assert.ok(!pattern.test(read('wrangler.jsonc')), `wrangler config must not embed secret-like pattern ${pattern}`);

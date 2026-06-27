@@ -67,27 +67,6 @@ const serviceWorker = await fetchWithTimeout('/sw.js');
 checks.push(['service_worker_status', serviceWorker.status === 200]);
 checks.push(['service_worker_revalidate', /must-revalidate/.test(serviceWorker.headers.get('cache-control') || '')]);
 
-const releaseManifest = await fetchWithTimeout('/releases/release-manifest.json');
-const releaseCatalog = await releaseManifest.json();
-const currentRelease = releaseCatalog?.releases?.[0] || {};
-const releasePlatforms = currentRelease.platforms || {};
-const windowsRelease = releasePlatforms.windows || {};
-checks.push(['release_manifest_status', releaseManifest.status === 200]);
-checks.push(['release_windows_ready', windowsRelease.status === 'ready']);
-
-const windowsExe = await fetchWithTimeout(`/downloads/${windowsRelease.assetName || 'school-system-windows-beta-20260624-ea9037f.exe'}`, { method: 'HEAD' });
-checks.push(['windows_status', windowsExe.status === 200]);
-let windowsBytes = Number(windowsExe.headers.get('content-length') || 0);
-let windowsSignature = '';
-if (!windowsBytes && windowsExe.status === 200) {
-  const windowsGet = await fetchWithTimeout(`/downloads/${windowsRelease.assetName || 'school-system-windows-beta-20260624-ea9037f.exe'}`);
-  const windowsBuffer = new Uint8Array(await windowsGet.arrayBuffer());
-  windowsBytes = windowsBuffer.byteLength;
-  windowsSignature = String.fromCharCode(windowsBuffer[0] || 0, windowsBuffer[1] || 0);
-}
-checks.push(['windows_size', windowsBytes === Number(windowsRelease.bytes || 0)]);
-checks.push(['windows_pe_header', !windowsSignature || windowsSignature === 'MZ']);
-
 const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
 assert(failed.length === 0, `Production verification failed: ${failed.join(', ')}`);
 

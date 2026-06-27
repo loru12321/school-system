@@ -18,7 +18,7 @@ const docs = [
 ];
 
 function assertReadableDoc(name, text) {
-    assert.ok(!/[�锟鏅烘収閿]/.test(text), `${name} should not contain mojibake or replacement characters`);
+    assert.ok(!/[锟介敓閺呯儤鍙庨柨]/.test(text), `${name} should not contain mojibake or replacement characters`);
     assert.ok(!text.includes('C:\\Users\\loru\\Documents\\New project\\school-system'), `${name} should not expose the current local workspace path`);
     assert.ok(!text.includes('C:\\Users\\loru\\Desktop\\system\\school-system'), `${name} should not point to the old desktop workspace`);
 }
@@ -26,19 +26,19 @@ function assertReadableDoc(name, text) {
 docs.forEach(([name, text]) => assertReadableDoc(name, text));
 
 assert.ok(readme.includes('SmartEdu Analytics'), 'README should use the current project title');
-assert.ok(readme.includes('.github/workflows/release-apps.yml'), 'README should document the GitHub Release automation workflow');
+assert.ok(readme.includes('Cloudflare Worker'), 'README should document the Cloudflare web deployment surface');
 assert.ok(readme.includes('.github/workflows/performance-trend.yml'), 'README should document the performance trend workflow');
 assert.ok(readme.includes('npm run check:release-fast'), 'README should document the fast release check');
 assert.ok(readme.includes('docs/optimization-backlog.md'), 'README should link to the optimization backlog');
 assert.ok(readme.includes('scripts/legacy/'), 'README should document the legacy script archive');
 assert.ok(readme.includes('docs/performance/'), 'README should point readers to the performance trend output');
-assert.ok(readme.includes('校衡台-Windows-1.0.2-x64.exe'), 'README should document the desktop Windows installer file');
-assert.ok(readme.includes('签名证书负责人'), 'README should identify the Windows signing certificate responsibility');
-assert.ok(readme.includes('证书配置目标：稳定版正式对外分发前'), 'README should identify the Windows signing certificate target');
-assert.ok(readme.includes('Android 与 iOS 安装包链路、公开记录和历史包已移除'), 'README should document removed Android/iOS packages');
-assert.ok(!readme.includes('校衡台-Android-1.0.2.apk'), 'README should not document a removed Android package file');
+assert.ok(readme.includes('Windows、Android 与 iOS 安装包链路均已移除'), 'README should document removed native installer packages');
+assert.ok(!readme.includes('release-manifest.json'), 'README should not document removed installer release manifests');
+assert.ok(!readme.includes('校衡台-Windows-1.0.2-x64.exe'), 'README should not document a removed Windows package file');
+assert.ok(!readme.includes('Android-1.0.2.apk'), 'README should not document a removed Android package file');
 assert.ok(!readme.includes('TestFlight'), 'README should not keep removed iOS release guidance');
-assert.ok(readme.includes('系统内已移除“应用服务”下载母模块'), 'README should explain the removed app service module');
+assert.ok(!readme.includes('electron-builder'), 'README should not keep removed Windows installer build guidance');
+
 assert.ok(maintenanceRunbook.includes('## Priority Levels'), 'maintenance runbook should explain priority levels');
 assert.ok(maintenanceRunbook.includes('### P0: production correctness'), 'maintenance runbook should define P0');
 assert.ok(maintenanceRunbook.includes('### P1: release quality and user experience'), 'maintenance runbook should define P1');
@@ -56,6 +56,7 @@ assert.ok(optimizationBacklog.includes('## P1: release quality and user experien
 assert.ok(optimizationBacklog.includes('## P2: sustainable maintenance'), 'optimization backlog should list P2 items');
 assert.ok(optimizationBacklog.includes('check:p0'), 'optimization backlog should mention priority check scripts');
 assert.ok(optimizationBacklog.includes('## Optimization pass log'), 'optimization backlog should keep a dated pass log');
+assert.ok(optimizationBacklog.includes('Windows、Android、iOS 安装包链路彻底移除'), 'optimization backlog should record native installer removal');
 assert.ok((optimizationBacklog.match(/^- /gm) || []).length >= 20, 'optimization backlog should keep at least 20 tracked optimization items');
 assert.ok(legacyReadme.includes('npx wrangler deploy'), 'legacy script README should point to Wrangler deploy');
 assert.ok(legacyReadme.includes('direct-deploy'), 'legacy script README should explain direct-deploy archive');

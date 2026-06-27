@@ -1,7 +1,6 @@
 import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import pngToIco from 'png-to-ico';
 import sharp from 'sharp';
 
 const root = process.cwd();
@@ -64,17 +63,10 @@ await copyFile(source, path.join(brandDir, 'app-icon-source.png'));
 const webSizes = [16, 24, 32, 48, 64, 128, 192, 256, 512, 1024];
 for (const size of webSizes) await flattenedPng(size, path.join(brandDir, `app-icon-${size}.png`));
 
-const icoInputs = [16, 24, 32, 48, 64, 128, 256].map((size) => path.join(brandDir, `app-icon-${size}.png`));
-const ico = await pngToIco(icoInputs);
-const desktopDir = outputAt('desktop', 'assets');
-await ensureDir(desktopDir);
-await writeFile(path.join(desktopDir, 'icon.ico'), ico);
-
 const status = {
   schemaVersion: 1,
   source: 'public/assets/brand/app-icon-source.png',
-  web: { state: 'generated', directory: 'public/assets/brand' },
-  windows: { state: 'generated', asset: 'desktop/assets/icon.ico' }
+  web: { state: 'generated', directory: 'public/assets/brand' }
 };
 await writeFile(path.join(brandDir, 'app-icon-platform-status.json'), `${JSON.stringify(status, null, 2)}\n`);
 

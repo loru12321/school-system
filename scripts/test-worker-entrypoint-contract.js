@@ -30,7 +30,6 @@ const worker = read('src/worker-dummy.js');
 const releaseSurface = read('scripts/test-release-surface.js');
 const maintenanceContract = read('scripts/test-maintenance-priority-contract.js');
 const ciWorkflow = read('.github/workflows/ci.yml');
-const releaseWorkflow = read('.github/workflows/release-apps.yml');
 const rootConfigs = listRootWorkerConfigs();
 const routePatterns = (wrangler.routes || []).map((route) => route.pattern).sort();
 const d1Bindings = (wrangler.d1_databases || []).map((db) => db.binding).sort();
@@ -58,7 +57,7 @@ assert.ok(releaseSurface.includes("wrangler.main, 'src/worker-dummy.js'"), 'rele
 assert.ok(maintenanceContract.includes("wrangler.main, 'src/worker-dummy.js'"), 'maintenance contract should also guard the Worker entrypoint');
 assert.ok(ciWorkflow.includes('npm run check:release-fast'), 'CI release guards should run fast release checks');
 assert.ok(!ciWorkflow.includes('wrangler deploy --config'), 'CI should not deploy using an alternate Wrangler config');
-assert.ok(!releaseWorkflow.includes('wrangler deploy --config'), 'release workflow should not deploy using an alternate Wrangler config');
+assert.ok(!exists('.github/workflows/release-apps.yml'), 'native release workflow should stay removed');
 
 console.log(JSON.stringify({
   ok: true,

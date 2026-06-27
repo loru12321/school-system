@@ -1,6 +1,5 @@
 import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway-d1.js';
 import { HOP_BY_HOP_HEADERS, buildCorsHeaders, normalizeOrigin, normalizeText, fetchWithTimeout } from './worker-http-helpers.js';
-import { handleReleaseDownload } from './worker-release-downloads.mjs';
 
 // Production Cloudflare Worker entrypoint.
 // This file owns routing, static asset protection, Supabase compatibility proxying,
@@ -498,9 +497,6 @@ function getStaticAssetCacheControl(url) {
   const pathname = String(url.pathname || '');
   if (pathname === '/sw.js' || pathname.endsWith('/sw.js')) {
     return 'public, max-age=0, must-revalidate';
-  }
-  if (pathname.startsWith('/downloads/')) {
-    return 'public, max-age=31536000, immutable';
   }
   if (!isStaticAssetPath(pathname)) return '';
   if (isVersionedStaticAsset(url)) {
@@ -1002,11 +998,6 @@ export default {
 
       if (url.pathname.startsWith('/sb/')) {
         return await handleCloudRestProxy(request, env, url);
-      }
-
-      if (url.pathname.startsWith('/downloads/')) {
-        const releaseDownload = await handleReleaseDownload(request, env);
-        if (releaseDownload) return releaseDownload;
       }
 
       try {

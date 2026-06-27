@@ -67,15 +67,4 @@ const failures = Object.entries(actual)
 
 assert.deepStrictEqual(failures, [], failures.join('\n'));
 
-const releasePackagePolicies = {
-    windows: { extension: '.exe', minimumBytes: 50 * 1024 * 1024 }
-};
-const verifierSource = fs.readFileSync(path.join(projectRoot, 'scripts', 'verify-release-assets.mjs'), 'utf8');
-Object.entries(releasePackagePolicies).forEach(([platform, policy]) => {
-    assert.ok(verifierSource.includes(`${platform}: {`), `release verifier should define ${platform}`);
-    assert.ok(verifierSource.includes(`extension: '${policy.extension}'`), `${platform} should require ${policy.extension}`);
-    assert.ok(verifierSource.includes(`minimumBytes: ${policy.minimumBytes / (1024 * 1024)} * 1024 * 1024`), `${platform} should enforce a real package size`);
-});
-assert.ok(!/android|\.apk|ios|\.ipa/i.test(verifierSource), 'release verifier should not track removed Android or iOS packages');
-
 console.log('build-size-budget tests passed');

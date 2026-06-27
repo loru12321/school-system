@@ -7,11 +7,11 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Harden default account credentials: replace visible shared defaults with reset-required temporary passwords or server-generated credentials.
 - Finish Cloudflare account migration: remove the legacy gateway fallback only after `pending_accounts = 0`.
 - Clarify Worker entrypoint ownership: keep `wrangler.jsonc` aligned with the intended production Worker and guard it in release checks.
-- Add a post-deploy production smoke: verify `/`, `/api/health`, login shell availability, core modules, and hosted downloads.
+- Add a post-deploy production smoke: verify `/`, `/api/health`, login shell availability, and core modules.
 - Keep `check:p0` tied to data-safe release checks and UI copy integrity.
 - Keep Worker crash responses no-store, nosniff, and gateway-identified.
 - Keep `/api/health` returning JSON before any deploy is considered complete.
-- Keep Windows package signatures checked before stable release; Android/iOS packages remain removed.
+- Keep Windows、Android、iOS 安装包链路彻底移除；生产发布只保留 Web/Cloudflare 路径。
 
 ## P1: release quality and user experience
 
@@ -26,7 +26,7 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Keep `CACHE_VERSION` explicit when service worker app-shell behavior changes. Status: derived from the same generated runtime version.
 - Keep `check:p1` tied to HTML, service worker, release surface, runtime, and CSS hygiene.
 - Keep heavy vendor libraries behind demand loaders instead of boot loading.
-- Keep bundle and hosted download budgets from drifting upward silently. Status: `lt.html` budget tightened after excluding vendor payloads from the inline runtime source map, and `lt.html.br` is generated with a Brotli budget.
+- Keep bundle budgets from drifting upward silently. Status: `lt.html` budget tightened after excluding vendor payloads from the inline runtime source map, and `lt.html.br` is generated with a Brotli budget.
 - Reduce first-screen render blocking from the many source CSS links. Status: production `dist/index.html` still emits a single optimized CSS file, but source CSS module consolidation remains queued.
 - Continue CSP hardening toward hash/nonce-based inline script execution. Status: enforced CSP is now shipped alongside report-only reporting; removing `unsafe-inline` requires inline script hashing or nonce injection in the build pipeline.
 
@@ -41,7 +41,7 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Keep `docs/optimization-backlog.md` linked from README and checked by docs hygiene.
 - Keep release and performance workflows protected by concurrency settings.
 - Keep performance trend recording paired with threshold checks so regressions fail in CI instead of only updating reports.
-- Keep the client release chain Windows-only; Android/iOS package jobs, signing checks, manifests, and historical package records must stay removed.
+- Keep the native installer release chain removed; Windows/Android/iOS package jobs, signing checks, manifests, downloads, and historical package records must stay removed.
 - Keep the production Worker name aligned with the project name in `wrangler.jsonc`.
 - Keep production verification available through `npm run verify:prod-minimal`.
 - Keep production minimal smoke available through `npm run smoke:prod-minimal` after Cloudflare deployments.
@@ -65,4 +65,5 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 | 2026-06-26 | P1/P2 | 性能趋势 workflow 增加 `test:performance-thresholds` 自动红线；Cloudflare Worker 名称统一为 `school-system`，生产路由迁移到新 Worker 并补齐 Cloudflare Secrets | `npm run build`, `npm run check:release-fast`, `npm run smoke:modules:local`, `npm run smoke:prod-minimal`, production `node scripts/smoke-all-modules.js`, Cloudflare version `434814dd-1087-49d3-91a3-01b2ce50dead` |
 | 2026-06-26 | P0/P1/P2 | system_data 切换为 D1 primary 并绑定 `CLOUD_SYSTEM_DATA_DB`；Supabase bootstrap 不再创建旧 `password text`；客户端安装包发布链收敛为 Windows-only，移除 Android/iOS 包历史、清单、工作流和签名检查 | `npm run build`, `npm run check:release-fast`, `npm run smoke:mobile:local`, `npm run smoke:modules:local`, `npm run smoke:prod-minimal`, production `node scripts/smoke-all-modules.js`, Cloudflare version `b60d777a-221f-41c8-94f4-7000523f206a` |
 | 2026-06-26 | P0/P1/P2 | CI 增加 P0 快速通道；Supabase `system_users` / `system_users_staging` 补齐 RLS 与 anon/authenticated revoke；build 拆成 pre/core/post；`lt.html` 生成 Brotli 产物；README 明确 Windows 代码签名负责人和稳定版目标 | commit `713ca360`, `npm run build`, `npm run check:release-fast`, `npm run smoke:mobile:local`, `npm run smoke:modules:local`, `npm run smoke:prod-minimal`, production `node scripts/smoke-all-modules.js`, Cloudflare version `c7e06635-9f10-4d07-bb5b-b50427ec915e` |
-| 2026-06-27 | P1/P2 | Session TTL 12h → 8h（worker-gateway-d1.js + edu-gateway/index.ts 统一）；CSP-RO 改为监控去除 `unsafe-eval` 的严格策略；新增 tsconfig.json 启用 JS 类型检查；新增 .npmrc save-exact=true；package.json 精确锁定 electron/electron-builder/playwright/esbuild 版本；10个运行时死依赖（gsap/tippy/simplebar/ali-oss/mime-types/@alicloud/*/@fontsource/*）归入 devDependencies；删除两个无引用死 CSS 文件（login-instagram-refresh.css、login-qq-final.css）；performance-trend.yml 删除冗余第二次 npm run build；wrangler.jsonc compatibility_date 推进到 2026-06-27 | `node scripts/test-security-hygiene.js`, `node scripts/test-service-worker-contract.js`, `node scripts/test-cloudflare-worker-contract.js`, `node scripts/test-css-hygiene.js`, `node scripts/test-html-hygiene.js` |
+| 2026-06-27 | P1/P2 | Session TTL 12h → 8h（worker-gateway-d1.js + edu-gateway/index.ts 统一）；CSP-RO 改为监控去除 `unsafe-eval` 的严格策略；新增 tsconfig.json 启用 JS 类型检查；新增 .npmrc save-exact=true；精确锁定 playwright/esbuild/wrangler 版本；10个运行时死依赖（gsap/tippy/simplebar/ali-oss/mime-types/@alicloud/*/@fontsource/*）归入 devDependencies；删除两个无引用死 CSS 文件（login-instagram-refresh.css、login-qq-final.css）；performance-trend.yml 删除冗余第二次 npm run build；wrangler.jsonc compatibility_date 推进到 2026-06-27 | `node scripts/test-security-hygiene.js`, `node scripts/test-service-worker-contract.js`, `node scripts/test-cloudflare-worker-contract.js`, `node scripts/test-css-hygiene.js`, `node scripts/test-html-hygiene.js` |
+| 2026-06-27 | P0/P1/P2 | Windows、Android、iOS 安装包链路彻底移除：删除公开下载目录、安装包清单、分片文件、Worker 下载代理、Windows 桌面壳、安装器源码、本地共享盘客户端更新脚本、native release workflows 和相关校验脚本；生产 smoke 改为只验证 Web 系统 | `npm run test:cloudflare-worker-contract`, `npm run test:release-automation`, `npm run test:release-hardening`, `npm run test:docs-hygiene` |

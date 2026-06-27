@@ -4,9 +4,5 @@
   "web": {
     "state": "generated",
     "directory": "public/assets/brand"
-  },
-  "windows": {
-    "state": "generated",
-    "asset": "desktop/assets/icon.ico"
   }
 }
