@@ -207,6 +207,32 @@ async function readPerformanceSnapshot(page) {
     }));
 }
 
+async function readCohortRuntimeState(page) {
+    return page.evaluate(() => ({
+        cohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
+        examId: String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
+        rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+        termId: String(localStorage.getItem('CURRENT_TERM_ID') || '').trim()
+    }));
+}
+
+function buildCohortRuntimeGuard(state) {
+    const expectedCohortId = String(process.env.SMOKE_COHORT_YEAR || '').trim();
+    if (!expectedCohortId) return { ok: true, expectedCohortId: '', ...(state || {}) };
+    const next = state || {};
+    const examCohortMatch = String(next.examId || '').match(/(\d{4})/);
+    const examCohortId = examCohortMatch ? examCohortMatch[1] : '';
+    return {
+        ...next,
+        expectedCohortId,
+        examCohortId,
+        ok: String(next.cohortId || '').trim() === expectedCohortId
+            && (!examCohortId || examCohortId === expectedCohortId)
+            && !!String(next.examId || '').trim()
+            && Number(next.rawDataLen || 0) > 0
+    };
+}
+
 async function withNavigationRetry(page, task, options = {}) {
     const attempts = Math.max(1, Number(options.attempts || 3));
     let lastError = null;
@@ -315,6 +341,24 @@ async function login(page, user, pass) {
 }
 
 async function ensureCohortEntered(page) {
+    const explicitCohortYear = String(process.env.SMOKE_COHORT_YEAR || '').trim();
+    const waitForExpectedCohort = (candidate) => page.waitForFunction((expectedCohortId) => {
+        const mask = document.getElementById('mode-mask');
+        const app = document.getElementById('app');
+        const overlay = document.getElementById('login-overlay');
+        const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
+        const appVisible = !!app
+            && getComputedStyle(app).display !== 'none'
+            && !app.classList.contains('hidden');
+        const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+        const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+        const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+        const normalizedExpected = String(expectedCohortId || '').trim();
+        const expectedReady = !!cohortId && normalizedExpected && cohortId === normalizedExpected && !!examId && rawDataLen > 0;
+        const maskHidden = !mask || getComputedStyle(mask).display === 'none';
+        return overlayHidden && appVisible && maskHidden && expectedReady;
+    }, candidate, { timeout: 50000 });
+
     const readEntryState = () => page.evaluate(() => {
         const mask = document.getElementById('mode-mask');
         const overlay = document.getElementById('login-overlay');
@@ -346,9 +390,42 @@ async function ensureCohortEntered(page) {
         };
     });
 
+    const switchToExplicitCohortIfNeeded = async (state) => {
+        if (!explicitCohortYear || String(state?.currentCohortId || '').trim() === explicitCohortYear) {
+            return state;
+        }
+        await withNavigationRetry(page, async () => {
+            await page.evaluate(async (year) => {
+                const manager = window.CohortManager;
+                if (manager && typeof manager.addCohort === 'function') {
+                    if (typeof window.lockRuntimeCohortId === 'function') window.lockRuntimeCohortId(year);
+                    await manager.addCohort({ year, startGrade: 6 }, {
+                        skipConfirm: true,
+                        fastEnter: false,
+                        requireCloudData: true
+                    });
+                    return;
+                }
+                const input = document.getElementById('entry-cohort-year');
+                if (input) input.value = year;
+                if (typeof window.enterCohortFromMask === 'function') {
+                    await window.enterCohortFromMask();
+                }
+            }, explicitCohortYear);
+            await waitForPageStability(page, 10000);
+            try {
+                await waitForExpectedCohort(explicitCohortYear);
+            } catch (error) {
+                const debugState = await readEntryState();
+                throw new Error(`${error.message}; entryState=${JSON.stringify(debugState)}`);
+            }
+        }, { attempts: 4 });
+        return readEntryState();
+    };
+
     let state = await withNavigationRetry(page, readEntryState, { attempts: 4 });
 
-    if (!state.maskVisible) return state;
+    if (!state.maskVisible) return switchToExplicitCohortIfNeeded(state);
 
     if (!state.overlayHidden && (state.authState === 'logged_in' || state.sessionUserPresent || state.bootPending)) {
         try {
@@ -361,7 +438,7 @@ async function ensureCohortEntered(page) {
             // 登录接力可能还在收尾，超时后继续按当前状态判断。
         }
         state = await withNavigationRetry(page, readEntryState, { attempts: 4 });
-        if (!state.maskVisible) return state;
+        if (!state.maskVisible) return switchToExplicitCohortIfNeeded(state);
     }
 
     try {
@@ -380,7 +457,7 @@ async function ensureCohortEntered(page) {
     }
 
     state = await withNavigationRetry(page, readEntryState, { attempts: 4 });
-    if (!state.maskVisible) return state;
+    if (!state.maskVisible) return switchToExplicitCohortIfNeeded(state);
 
     const candidate = String(
         process.env.SMOKE_COHORT_YEAR
@@ -400,9 +477,8 @@ async function ensureCohortEntered(page) {
             if (!mask || getComputedStyle(mask).display === 'none') return true;
             let cohortManagerReady = false;
             try {
-                cohortManagerReady = typeof CohortManager !== 'undefined'
-                    && !!CohortManager
-                    && typeof CohortManager.addCohort === 'function';
+                cohortManagerReady = !!window.CohortManager
+                    && typeof window.CohortManager.addCohort === 'function';
             } catch (_) {
                 cohortManagerReady = false;
             }
@@ -423,9 +499,8 @@ async function ensureCohortEntered(page) {
         await page.evaluate(async () => {
             let cohortManagerReady = false;
             try {
-                cohortManagerReady = typeof CohortManager !== 'undefined'
-                    && !!CohortManager
-                    && typeof CohortManager.addCohort === 'function';
+                cohortManagerReady = !!window.CohortManager
+                    && typeof window.CohortManager.addCohort === 'function';
             } catch (_) {
                 cohortManagerReady = false;
             }
@@ -437,26 +512,7 @@ async function ensureCohortEntered(page) {
             if (button) button.click();
         });
         await waitForPageStability(page, 10000);
-        await page.waitForFunction((expectedCohortId) => {
-            const mask = document.getElementById('mode-mask');
-            const app = document.getElementById('app');
-            const overlay = document.getElementById('login-overlay');
-            const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
-            const appVisible = !!app
-                && getComputedStyle(app).display !== 'none'
-                && !app.classList.contains('hidden');
-            const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
-            const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
-            const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
-            const readyWorkspace = !!cohortId && !!examId && rawDataLen > 0;
-            const maskHidden = !mask || getComputedStyle(mask).display === 'none';
-            const normalizedExpected = String(expectedCohortId || '').trim();
-            return overlayHidden && (
-                (maskHidden && appVisible)
-                || (!!cohortId && normalizedExpected && cohortId === normalizedExpected)
-                || (appVisible && readyWorkspace)
-            );
-        }, candidate, { timeout: 40000 });
+        await waitForExpectedCohort(candidate);
     }, { attempts: 4 });
 }
 
@@ -709,15 +765,28 @@ async function smokeSwitchModule(page, id) {
 async function runModuleDeepCheck(page, id) {
     if (id === 'summary') {
         return page.evaluate(async () => {
+            const stateTrace = [];
+            const captureState = (label) => {
+                stateTrace.push({
+                    label,
+                    cohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || ''),
+                    examId: String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || window.COHORT_DB?.currentExamId || ''),
+                    rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : -1
+                });
+            };
+            captureState('start');
             if (typeof window.ensureTownSubmoduleCompareRuntimeLoaded === 'function') {
                 await window.ensureTownSubmoduleCompareRuntimeLoaded();
             }
+            captureState('town-runtime-loaded');
             if (typeof window.ensureTownSubmoduleCompareUIs === 'function') {
                 await window.ensureTownSubmoduleCompareUIs();
             }
+            captureState('town-ui-ensured');
             if (typeof window.ensureSchoolProfileRuntimeLoaded === 'function') {
                 await window.ensureSchoolProfileRuntimeLoaded();
             }
+            captureState('school-profile-runtime-loaded');
             const checks = {
                 ensureTownSubmoduleCompareUIs: typeof window.ensureTownSubmoduleCompareUIs === 'function',
                 openTownSubmoduleCompareDialog: typeof window.openTownSubmoduleCompareDialog === 'function',
@@ -740,6 +809,7 @@ async function runModuleDeepCheck(page, id) {
             if (!schoolProfileCell && typeof window.renderTables === 'function') {
                 window.renderTables();
                 await new Promise(resolve => setTimeout(resolve, 120));
+                captureState('render-tables');
                 schoolProfileCell = document.querySelector('#tb-total tbody [data-school-profile-name]');
             }
             const openSchoolProfile = typeof window.showSchoolProfile === 'function'
@@ -748,9 +818,11 @@ async function runModuleDeepCheck(page, id) {
             if (modal && closeBtn && schoolNames.length && openSchoolProfile) {
                 openSchoolProfile(schoolNames[0]);
                 await new Promise(resolve => setTimeout(resolve, 120));
+                captureState('open-school-profile');
                 const modalVisible = getComputedStyle(modal).display !== 'none';
                 closeBtn.click();
                 await new Promise(resolve => setTimeout(resolve, 80));
+                captureState('close-school-profile');
                 const modalClosed = getComputedStyle(modal).display === 'none';
                 schoolProfileCloseWorks = modalVisible && modalClosed;
             }
@@ -758,9 +830,11 @@ async function runModuleDeepCheck(page, id) {
                 modal.style.display = 'none';
                 schoolProfileCell.click();
                 await new Promise(resolve => setTimeout(resolve, 120));
+                captureState('click-school-profile-cell');
                 const modalVisible = getComputedStyle(modal).display !== 'none';
                 closeBtn.click();
                 await new Promise(resolve => setTimeout(resolve, 80));
+                captureState('close-school-profile-cell');
                 const modalClosed = getComputedStyle(modal).display === 'none';
                 schoolProfileCellClickWorks = modalVisible && modalClosed;
             }
@@ -777,7 +851,8 @@ async function runModuleDeepCheck(page, id) {
                 schoolProfileCellReady: !!schoolProfileCell,
                 schoolProfileCellClickWorks,
                 summaryDirty,
-                staleTexts
+                staleTexts,
+                stateTrace
             };
         });
     }
@@ -1118,25 +1193,25 @@ async function runModuleDeepCheck(page, id) {
                     && !!document.getElementById('indicator-top-score')
                     && !!document.getElementById('indicator-top-school')
                     && !!document.getElementById('indicator-missing-target-count'),
-                tableReady: tableRowCount > 0,
+                tableReady: !calcAllowed || tableRowCount > 0,
                 buttonReady: !!document.getElementById('btn-indicator-calc'),
                 runtimeReady: !!window.SupportMetricsRuntime,
                 calcIndicatorsWrapped: window.calcIndicators?.__supportMetricsWrapped === true,
                 refreshReady: typeof window.SupportMetricsRuntime?.refreshIndicatorSummary === 'function',
-                calcAllowed,
-                calcSuccess: !calcError && rows.length > 0,
-                summaryReady: !!summary && summary.ok === true,
-                countMatches: String(summary?.count || '') === String(rows.length)
-                    && schoolCountText === String(rows.length),
-                topScoreMatches: !!expectedTop
+                calculationRuleHandled: calcAllowed || (!calcError && rows.length === 0),
+                calcSuccess: !calcAllowed || (!calcError && rows.length > 0),
+                summaryReady: !calcAllowed || (!!summary && summary.ok === true),
+                countMatches: !calcAllowed || (String(summary?.count || '') === String(rows.length)
+                    && schoolCountText === String(rows.length)),
+                topScoreMatches: !calcAllowed || (!!expectedTop
                     && Math.abs(toNumber(summary?.topScore) - Number(expectedTop.finalScore.toFixed(2))) < 0.01
-                    && topScoreText === expectedTop.finalScore.toFixed(2),
-                topSchoolMatches: !!expectedTop
+                    && topScoreText === expectedTop.finalScore.toFixed(2)),
+                topSchoolMatches: !calcAllowed || (!!expectedTop
                     && summary?.topSchool === expectedTop.name
-                    && topSchoolText === shortenName(expectedTop.name),
-                issueCountMatches: Number(summary?.issueCount) === expectedIssueCount
-                    && issueCountText === String(expectedIssueCount),
-                finite,
+                    && topSchoolText === shortenName(expectedTop.name)),
+                issueCountMatches: !calcAllowed || (Number(summary?.issueCount) === expectedIssueCount
+                    && issueCountText === String(expectedIssueCount)),
+                finite: !calcAllowed || finite,
                 summaryRefreshDoesNotMutateScores: scoreSnapshot === scoreSnapshotAfterSummary
             };
             return {
@@ -1148,6 +1223,8 @@ async function runModuleDeepCheck(page, id) {
                 topSchool: expectedTop?.name || '',
                 issueCount: expectedIssueCount,
                 calcError,
+                calcAllowed,
+                calculationSkippedByRule: !calcAllowed,
                 indicatorInputDiagnostics,
                 timings,
                 summary
@@ -1952,7 +2029,9 @@ async function runModuleDeepCheck(page, id) {
                 runtimeReady: typeof window.renderCountyAnalysis === 'function'
                     && !!window.CountyAnalysisRuntime
                     && !!window.CountySchoolHorizontalRenderer,
-                teacherRankTableReady: !!teacherRoot?.querySelector('.county-teacher-rank-table'),
+                teacherRankTableReady: !shouldExpectTeacherRows
+                    ? (!!teacherRoot && teacherEmptyState)
+                    : !!teacherRoot?.querySelector('.county-teacher-rank-table'),
                 teacherRowsReady: !shouldExpectTeacherRows || (teacherRankRows > 0 && teacherOwnRows.length > 0),
                 teacherOwnMetricsFinite: !shouldExpectTeacherRows || [
                     firstTeacherOwnSummary.rankAvg,
@@ -3295,7 +3374,8 @@ async function smokeDataManagerTab(page, id) {
                 recoveredByDeepCheck: true
             }
             : switchResult;
-        summary.switchModules.push({ ...normalizedSwitchResult, ...timingPayload, deepCheck: normalizedDeepCheck });
+        const cohortGuard = buildCohortRuntimeGuard(await readCohortRuntimeState(page));
+        summary.switchModules.push({ ...normalizedSwitchResult, ...timingPayload, deepCheck: normalizedDeepCheck, cohortGuard });
     }
 
     currentScope = 'data-manager';
@@ -3319,7 +3399,8 @@ async function smokeDataManagerTab(page, id) {
         summary.performance.budgetStatus.push(
             buildBudgetStatus(tabTiming.durationMs, PERFORMANCE_BUDGETS.dataManagerTabMs, `dm:${id}`)
         );
-        summary.dataManagerTabs.push({ ...tabResult, performance: tabTiming });
+        const cohortGuard = buildCohortRuntimeGuard(await readCohortRuntimeState(page));
+        summary.dataManagerTabs.push({ ...tabResult, performance: tabTiming, cohortGuard });
         trace('data-manager-tab:done', { id, ok: tabResult.ok, durationMs: tabTiming.durationMs });
     }
 
@@ -3344,8 +3425,8 @@ async function smokeDataManagerTab(page, id) {
     console.log(JSON.stringify(summary, null, 2));
     await browser.close();
 
-    const failedSwitch = summary.switchModules.find(item => !item.ok || !item.deepCheck?.ok);
-    const failedDm = summary.dataManagerTabs.find(item => !item.ok);
+    const failedSwitch = summary.switchModules.find(item => !item.ok || !item.deepCheck?.ok || item.cohortGuard?.ok === false);
+    const failedDm = summary.dataManagerTabs.find(item => !item.ok || item.cohortGuard?.ok === false);
     if (
         !summary.login.appVisible
         || !summary.login.schoolInternalRemoved

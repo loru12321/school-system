@@ -463,6 +463,7 @@
         const store = getIdbKeyval();
         if (!store || typeof store.del !== 'function') return false;
         await store.del(`cache_${key}`);
+        await store.del(`cache_meta_${key}`);
         return true;
     }
 
@@ -505,10 +506,17 @@
         return root.idbKeyval && typeof root.idbKeyval === 'object' ? root.idbKeyval : null;
     }
 
-    async function writeLocalCache(key, value) {
+    async function writeLocalCache(key, value, meta = {}) {
         const store = getIdbKeyval();
         if (!store || typeof store.set !== 'function') return false;
         await store.set(`cache_${key}`, value);
+        if (meta && typeof meta === 'object' && Object.keys(meta).length > 0) {
+            await store.set(`cache_meta_${key}`, {
+                key,
+                updatedAt: normalizeText(meta.updatedAt || meta.updated_at),
+                cachedAt: new Date().toISOString()
+            });
+        }
         return true;
     }
 
@@ -518,13 +526,32 @@
         return store.get(`cache_${key}`);
     }
 
+    async function readLocalCacheMeta(key) {
+        const store = getIdbKeyval();
+        if (!store || typeof store.get !== 'function') return null;
+        const meta = await store.get(`cache_meta_${key}`);
+        return meta && typeof meta === 'object' ? meta : null;
+    }
+
+    function isLocalCacheFresh(localMeta, remoteUpdatedAt) {
+        const localTs = new Date(normalizeText(localMeta && localMeta.updatedAt)).getTime() || 0;
+        const remoteTs = new Date(normalizeText(remoteUpdatedAt)).getTime() || 0;
+        return !!localTs && !!remoteTs && localTs >= remoteTs - 1000;
+    }
+
     function parseCloudPayload(content) {
         if (root.CloudWorkspaceRuntimeDeps && typeof root.CloudWorkspaceRuntimeDeps.parsePayload === 'function') {
             return root.CloudWorkspaceRuntimeDeps.parsePayload(content);
         }
 
         let parsed = content;
-        if (typeof parsed === 'string' && parsed.startsWith('LZ|')) {
+        if (typeof parsed === 'string' && parsed.startsWith('LZB64|')) {
+            if (!root.LZString || typeof root.LZString.decompressFromBase64 !== 'function') {
+                throw new Error('LZString 未加载，无法解压云端内容');
+            }
+            const decompressed = root.LZString.decompressFromBase64(parsed.substring(6));
+            parsed = JSON.parse(decompressed);
+        } else if (typeof parsed === 'string' && parsed.startsWith('LZ|')) {
             if (!root.LZString || typeof root.LZString.decompressFromUTF16 !== 'function') {
                 throw new Error('LZString 未加载，无法解压云端内容');
             }
@@ -620,9 +647,21 @@
     async function readSplitExamPayload(examKey, metaPayload) {
         const readSystemDataRecord = getReadSystemDataRecord();
         if (readSystemDataRecord && examKey) {
-            const direct = await readSystemDataRecord(examKey, 'content').catch(() => null);
+            const localMeta = await readLocalCacheMeta(examKey).catch(() => null);
+            const localPayload = localMeta ? await readLocalCache(examKey).catch(() => null) : null;
+            const metaOnly = await readSystemDataRecord(examKey, 'updated_at').catch(() => null);
+            const remoteUpdatedAt = metaOnly && !metaOnly.error ? metaOnly.data?.updated_at : '';
+            if (localPayload) {
+                if (isLocalCacheFresh(localMeta, remoteUpdatedAt)) {
+                    return { key: examKey, payload: localPayload, cached: true };
+                }
+            }
+
+            const direct = await readSystemDataRecord(examKey, 'content,updated_at', remoteUpdatedAt ? { cacheVersion: remoteUpdatedAt } : {}).catch(() => null);
             if (direct && !direct.error && direct.data && direct.data.content) {
-                return { key: examKey, payload: parseCloudPayload(direct.data.content) };
+                const payload = parseCloudPayload(direct.data.content);
+                await writeLocalCache(examKey, payload, { updatedAt: direct.data.updated_at }).catch(() => false);
+                return { key: examKey, payload };
             }
         }
 
@@ -632,7 +671,8 @@
 
         const { data, error } = await selectSystemDataRecords({
             select: 'key,content,updated_at',
-            keyLike: `${cohortId}%`,
+            kind: 'exam',
+            cohortId,
             order: 'updated_at',
             ascending: false,
             limit: 12
@@ -642,7 +682,11 @@
         const rows = Array.isArray(data) ? data : [];
         const selected = rows.find(row => normalizeText(row && row.key) === examKey) || rows[0] || null;
         if (!selected || !selected.content) return null;
-        return { key: selected.key, payload: parseCloudPayload(selected.content) };
+        const payload = parseCloudPayload(selected.content);
+        if (selected.key) {
+            await writeLocalCache(selected.key, payload, { updatedAt: selected.updated_at }).catch(() => false);
+        }
+        return { key: selected.key, payload };
     }
 
     async function hydrateSplitWorkspacePayload(key, payload) {
@@ -657,10 +701,10 @@
         if (root.CloudWorkspaceRuntimeDeps && typeof root.CloudWorkspaceRuntimeDeps.packPayload === 'function') {
             return root.CloudWorkspaceRuntimeDeps.packPayload(value);
         }
-        if (!root.LZString || typeof root.LZString.compressToUTF16 !== 'function') {
+        if (!root.LZString || typeof root.LZString.compressToBase64 !== 'function') {
             throw new Error('LZString 未加载，无法压缩云端内容');
         }
-        return `LZ|${root.LZString.compressToUTF16(JSON.stringify(value))}`;
+        return `LZB64|${root.LZString.compressToBase64(JSON.stringify(value))}`;
     }
 
     function scheduleIdleTask(task, options = {}) {
@@ -1446,11 +1490,11 @@
         if (!readSystemDataRecord) return null;
 
         const task = (async () => {
-            const { data, error } = await readSystemDataRecord(normalizedKey, 'content');
+            const { data, error } = await readSystemDataRecord(normalizedKey, 'content,updated_at');
             if (error) throw error;
             if (data && data.content) {
                 const db = await hydrateSplitWorkspacePayload(normalizedKey, parseCloudPayload(data.content));
-                await writeLocalCache(normalizedKey, db);
+                await writeLocalCache(normalizedKey, db, { updatedAt: data.updated_at });
                 return db;
             }
             return null;

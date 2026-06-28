@@ -99,7 +99,12 @@ function inferSystemDataMeta(key) {
   let projectKey = '';
   let termId = '';
 
-  if (/^cohort::/i.test(text)) {
+  if (/^cohort::\d{4}::exam::/i.test(text)) {
+    kind = 'exam';
+    keyPrefix = 'cohort_exam';
+    projectKey = cohortId ? `cohort::${cohortId}` : '';
+    termId = text.split('::exam::').slice(1).join('::exam::');
+  } else if (/^cohort::/i.test(text)) {
     kind = 'workspace';
     keyPrefix = 'cohort';
     projectKey = text;
@@ -258,9 +263,17 @@ function buildSystemDataKeyFilterClause(filter) {
     const cohortMatch = value.match(/^(\d{4})%$/);
     if (cohortMatch) {
       return {
-        clauses: ['cohort_id = ?', "(kind = 'exam' OR key LIKE ?)"],
-        bindings: [cohortMatch[1], value],
+        clauses: ['cohort_id = ?', "kind = 'exam'"],
+        bindings: [cohortMatch[1]],
         optimized: 'cohort_exam_prefix'
+      };
+    }
+    const teacherMatch = value.match(/^TEACHERS_(\d{4})%$/i);
+    if (teacherMatch) {
+      return {
+        clauses: ['key_prefix = ?', 'cohort_id = ?'],
+        bindings: ['TEACHERS', teacherMatch[1]],
+        optimized: 'teacher_cohort_prefix'
       };
     }
   }
@@ -269,6 +282,13 @@ function buildSystemDataKeyFilterClause(filter) {
   const bindings = [];
   appendSystemDataFilterClause(clauses, bindings, filter, 'key');
   return { clauses, bindings, optimized: '' };
+}
+
+function appendSystemDataMetadataFilter(clauses, bindings, url, paramName, columnName) {
+  const allowedColumns = new Set(['kind', 'key_prefix', 'cohort_id', 'project_key', 'term_id']);
+  if (!allowedColumns.has(columnName)) return;
+  const filter = parseSystemDataKeyFilter(url.searchParams.get(paramName));
+  appendSystemDataFilterClause(clauses, bindings, filter, columnName);
 }
 
 function buildSystemDataOrClause(rawOr) {
@@ -305,6 +325,11 @@ async function querySystemDataRows(env, request, url) {
   const keyWhere = buildSystemDataKeyFilterClause(keyFilter);
   whereClauses.push(...keyWhere.clauses);
   bindings.push(...keyWhere.bindings);
+  appendSystemDataMetadataFilter(whereClauses, bindings, url, 'kind', 'kind');
+  appendSystemDataMetadataFilter(whereClauses, bindings, url, 'key_prefix', 'key_prefix');
+  appendSystemDataMetadataFilter(whereClauses, bindings, url, 'cohort_id', 'cohort_id');
+  appendSystemDataMetadataFilter(whereClauses, bindings, url, 'project_key', 'project_key');
+  appendSystemDataMetadataFilter(whereClauses, bindings, url, 'term_id', 'term_id');
   const orClause = buildSystemDataOrClause(url.searchParams.get('or'));
   if (orClause.clause) {
     whereClauses.push(orClause.clause);
@@ -433,7 +458,7 @@ async function upsertSystemDataRows(env, rows) {
   return rows;
 }
 
-async function buildSystemDataJsonResponse(request, env, rows, selectSet) {
+async function buildSystemDataJsonResponse(request, env, rows, selectSet, cacheControl = SYSTEM_DATA_READ_CACHE_CONTROL) {
   // Read all R2 objects concurrently instead of awaiting each one serially.
   const contents = await Promise.all(
     rows.map((row) =>
@@ -447,7 +472,63 @@ async function buildSystemDataJsonResponse(request, env, rows, selectSet) {
   );
   const single = wantsSingleSystemDataObject(request);
   const body = single ? (payloadRows[0] || null) : payloadRows;
-  return jsonResponse(200, body, request, {}, SYSTEM_DATA_READ_CACHE_CONTROL);
+  return jsonResponse(200, body, request, {}, cacheControl);
+}
+
+function isSystemDataEdgeCacheEligible(request, url) {
+  const method = String(request.method || 'GET').toUpperCase();
+  if (method !== 'GET') return false;
+  if (!url || url.pathname !== SYSTEM_DATA_API_PATH) return false;
+  const searchParams = url.searchParams;
+  const selectSet = parseSystemDataSelect(searchParams);
+  if (selectSet.has('content')) {
+    const version = normalizeText(searchParams.get('cache_version') || searchParams.get('v'));
+    return !!version && /^eq\./i.test(normalizeText(searchParams.get('key')));
+  }
+  return searchParams.has('select') && (searchParams.has('key') || searchParams.has('limit'));
+}
+
+function getSystemDataEdgeCacheKey(request, url) {
+  const cacheUrl = new URL(url.toString());
+  cacheUrl.searchParams.set('__accept', String(request.headers.get('accept') || 'application/json'));
+  return new Request(cacheUrl.toString(), { method: 'GET' });
+}
+
+function withSystemDataCacheStatus(response, cacheStatus) {
+  if (!response || !cacheStatus) return response;
+  const headers = new Headers(response.headers);
+  headers.set('X-School-System-Cache', cacheStatus);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
+async function handleCachedSystemDataRead(request, env, url) {
+  if (!isSystemDataEdgeCacheEligible(request, url)) {
+    const { rows, selectSet } = await querySystemDataRows(env, request, url);
+    const versionedContent = selectSet.has('content') && normalizeText(url.searchParams.get('cache_version') || url.searchParams.get('v'));
+    const cacheControl = selectSet.has('content') && !versionedContent ? 'no-store' : SYSTEM_DATA_READ_CACHE_CONTROL;
+    return withSystemDataCacheStatus(
+      await buildSystemDataJsonResponse(request, env, rows, selectSet, cacheControl),
+      'BYPASS'
+    );
+  }
+
+  const cache = globalThis.caches && globalThis.caches.default;
+  const cacheKey = getSystemDataEdgeCacheKey(request, url);
+  if (cache) {
+    const cached = await cache.match(cacheKey);
+    if (cached) return withSystemDataCacheStatus(cached, 'HIT');
+  }
+
+  const { rows, selectSet } = await querySystemDataRows(env, request, url);
+  const response = await buildSystemDataJsonResponse(request, env, rows, selectSet);
+  if (cache && response.ok) {
+    await cache.put(cacheKey, response.clone());
+  }
+  return withSystemDataCacheStatus(response, cache ? 'MISS' : 'BYPASS');
 }
 
 function buildForwardHeaders(upstreamHeaders, request, env = {}) {
@@ -868,7 +949,9 @@ async function handleSystemDataProxy(request, env, url) {
   const method = String(request.method || 'GET').toUpperCase();
   if (isSystemDataHybridMode(env)) {
     if (method === 'GET' || method === 'HEAD') {
-      const d1Response = await handleSystemDataRead(request, env, url);
+      const d1Response = method === 'GET'
+        ? await handleCachedSystemDataRead(request, env, url)
+        : await handleSystemDataRead(request, env, url);
       return d1Response || proxySystemDataReadToSupabase(request, env, url);
     }
 
@@ -894,8 +977,9 @@ async function handleSystemDataProxy(request, env, url) {
   }
 
   if (method === 'GET' || method === 'HEAD') {
-    const { rows, selectSet } = await querySystemDataRows(env, request, url);
-    return buildSystemDataJsonResponse(request, env, rows, selectSet);
+    return method === 'GET'
+      ? handleCachedSystemDataRead(request, env, url)
+      : handleSystemDataRead(request, env, url);
   }
 
   if (method === 'POST') {

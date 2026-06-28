@@ -54,6 +54,12 @@
         return normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
     }
 
+    function workspaceKeyMatchesCurrentCohort(key) {
+        const keyCohortId = normalizeCohortId(key);
+        const currentCohortId = getCurrentCohortId();
+        return !keyCohortId || !currentCohortId || keyCohortId === currentCohortId;
+    }
+
     function getExamKeyRecencyScore(key, updatedAt = '') {
         const text = String(key || '');
         const updatedScore = new Date(updatedAt || '').getTime() || 0;
@@ -81,6 +87,15 @@
             text.includes(label) ? Math.max(score, (index + 1) * 1000) : score
         ), 0);
         return dateScore + termScore + typeScore;
+    }
+
+    function compareExamRowsByExamOrder(left, right) {
+        const leftOrder = getExamKeyOrderScore(left?.key || left);
+        const rightOrder = getExamKeyOrderScore(right?.key || right);
+        if (rightOrder !== leftOrder) return rightOrder - leftOrder;
+        const leftUpdated = new Date(left?.updated_at || '').getTime() || 0;
+        const rightUpdated = new Date(right?.updated_at || '').getTime() || 0;
+        return rightUpdated - leftUpdated;
     }
 
     function syncWorkspaceState(patch = {}) {
@@ -153,6 +168,10 @@
         if (options.keyEq) query = query.eq('key', options.keyEq);
         if (options.keyLike) query = query.like('key', options.keyLike);
         if (Array.isArray(options.keyIn) && options.keyIn.length) query = query.in('key', options.keyIn);
+        if (options.kind) query = query.eq('kind', options.kind);
+        if (options.keyPrefix) query = query.eq('key_prefix', options.keyPrefix);
+        if (options.cohortId) query = query.eq('cohort_id', options.cohortId);
+        if (options.projectKey) query = query.eq('project_key', options.projectKey);
         if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
         if (Number.isFinite(Number(options.limit)) && Number(options.limit) > 0) query = query.limit(Number(options.limit));
         if (Number.isFinite(Number(options.offset)) && Number(options.offset) > 0 && typeof query.range === 'function' && Number.isFinite(Number(options.limit)) && Number(options.limit) > 0) {
@@ -219,7 +238,8 @@
             const limit = offset === 0 ? firstLimit : COHORT_EXAM_META_PAGE_SIZE;
             const { data, error } = await selectSystemData({
                 select: 'key,updated_at',
-                keyLike: `${cid}%`,
+                kind: 'exam',
+                cohortId: cid,
                 order: 'updated_at',
                 ascending: false,
                 limit,
@@ -244,6 +264,76 @@
             pages: Math.max(1, Math.ceil((offset + firstLimit) / COHORT_EXAM_META_PAGE_SIZE))
         });
         return writeCachedCohortExamMetaRows(manager, cid, mode, rows);
+    }
+
+    async function fetchVersionedExamContentRows(keysToFetch, candidateRows, options = {}) {
+        const keys = Array.isArray(keysToFetch) ? keysToFetch.map(key => String(key || '').trim()).filter(Boolean) : [];
+        if (!keys.length) return [];
+        const candidateByKey = new Map((Array.isArray(candidateRows) ? candidateRows : []).map(row => [String(row?.key || '').trim(), row]));
+        const preferVersionedCache = options.latestOnly === true || Math.max(0, Number(options.maxFetch || 0)) > 0 || keys.length <= 3;
+        if (!preferVersionedCache) {
+            const rows = [];
+            const chunkSize = 10;
+            const chunkPromises = [];
+            for (let i = 0; i < keys.length; i += chunkSize) {
+                const chunk = keys.slice(i, i + chunkSize);
+                chunkPromises.push(selectSystemData({ select: 'key,content,updated_at', keyIn: chunk }));
+            }
+            const chunkResults = await Promise.all(chunkPromises);
+            for (const { data: chunkRows, error: chunkErr } of chunkResults) {
+                if (chunkErr) throw chunkErr;
+                rows.push(...(chunkRows || []));
+            }
+            return rows;
+        }
+        const exactResults = await Promise.all(keys.map((key) => {
+            const candidate = candidateByKey.get(key) || {};
+            return selectSystemData({
+                select: 'key,content,updated_at',
+                keyEq: key,
+                maybeSingle: true,
+                ...(candidate.updated_at ? { cacheVersion: candidate.updated_at } : {})
+            });
+        }));
+        const rows = [];
+        for (const { data, error } of exactResults) {
+            if (error) throw error;
+            if (Array.isArray(data)) rows.push(...data);
+            else if (data) rows.push(data);
+        }
+        return rows;
+    }
+
+    function pickLatestCachedCohortExamId(db, cid, candidateKeys = []) {
+        const exams = db && typeof db === 'object' && db.exams && typeof db.exams === 'object' ? db.exams : {};
+        const candidateSet = new Set((Array.isArray(candidateKeys) ? candidateKeys : []).map(key => String(key || '').trim()).filter(Boolean));
+        return Object.entries(exams)
+            .filter(([examId, exam]) => {
+                const exactExamId = String(examId || '').trim();
+                if (!exactExamId) return false;
+                if (candidateSet.size && !candidateSet.has(exactExamId)) return false;
+                if (cid && extractCohortIdFromKey(exactExamId) !== cid) return false;
+                const rows = Array.isArray(exam?.data) ? exam.data : [];
+                return rows.length > 0;
+            })
+            .sort((left, right) => compareExamRowsByExamOrder(left[0], right[0]))[0]?.[0] || '';
+    }
+
+    function promoteCachedCohortExamIfMissing(db, cid, candidateKeys = []) {
+        const activeExamId = String(
+            (typeof getCurrentExamId === 'function' ? getCurrentExamId() : '')
+            || db?.currentExamId
+            || ''
+        ).trim();
+        if (activeExamId) return activeExamId;
+        const currentExamId = pickLatestCachedCohortExamId(db, cid, candidateKeys);
+        if (!currentExamId) return '';
+        if (typeof root.persistWorkspaceExamIdentity === 'function') {
+            return root.persistWorkspaceExamIdentity(currentExamId, db, { cohortId: cid });
+        }
+        db.currentExamId = currentExamId;
+        syncWorkspaceState({ cohortDb: db, currentExamId });
+        return currentExamId;
     }
 
     async function upsertSystemDataRecord(row) {
@@ -440,7 +530,11 @@
             next[field] = clonePayloadFragment(value);
         });
         next.examId = String(next.examId || examId || '').trim();
-        const rowCount = Array.isArray(examPayload?.data) ? examPayload.data.length : Number(examPayload?.rowCount || 0);
+        const rowCount = Array.isArray(examPayload?.data)
+            ? examPayload.data.length
+            : (examPayload?.data && Array.isArray(examPayload.data.rows)
+                ? examPayload.data.rows.length
+                : Number(examPayload?.rowCount || 0));
         if (rowCount) next.rowCount = rowCount;
         return next;
     }
@@ -537,24 +631,22 @@
                 cohortMeta: clonePayloadFragment(payload?.COHORT_DB?.cohortMeta || payload?.CURRENT_COHORT_META || null),
                 students: clonePayloadFragment(payload?.COHORT_DB?.students || {}),
                 teachingHistory: clonePayloadFragment(payload?.COHORT_DB?.teachingHistory || {}),
-                exams: {
-                    [exactExamId]: {
-                        ...clonePayloadFragment(exam),
-                        examId: exactExamId,
-                        examLabel: exam.examLabel || deriveExamLabel(exactExamId),
-                        data: clonePayloadFragment(rows),
-                        schools: clonePayloadFragment(exam.schools || {}),
-                        subjects: clonePayloadFragment(exam.subjects || payload?.SUBJECTS || []),
-                        thresholds: clonePayloadFragment(exam.thresholds || payload?.THRESHOLDS || {}),
-                        config: clonePayloadFragment(exam.config || payload?.CONFIG || {}),
-                        teacherMap: clonePayloadFragment(exam.teacherMap || payload?.TEACHER_MAP || {}),
-                        fingerprint: String(exam.fingerprint || payload?.FINGERPRINT || '').trim()
-                    }
-                },
+                exams: {},
                 currentExamId: exactExamId,
                 resetPoints: clonePayloadFragment(payload?.COHORT_DB?.resetPoints || [])
             }
         };
+        const compactExam = compactExamMetadata(exactExamId, {
+            ...exam,
+            examId: exactExamId,
+            examLabel: exam.examLabel || deriveExamLabel(exactExamId),
+            data: rows,
+            subjects: exam.subjects || payload?.SUBJECTS || [],
+            thresholds: exam.thresholds || payload?.THRESHOLDS || {},
+            config: exam.config || payload?.CONFIG || {},
+            fingerprint: String(exam.fingerprint || payload?.FINGERPRINT || '').trim()
+        });
+        shard.COHORT_DB.exams = { [exactExamId]: compactExam };
         return shard;
     }
 
@@ -890,7 +982,8 @@
         if (!cid) return null;
         const { data, error } = await selectSystemData({
             select: 'key,content,updated_at',
-            keyLike: `${cid}%`,
+            kind: 'exam',
+            cohortId: cid,
             order: 'updated_at',
             ascending: false,
             limit: COHORT_EXAM_LATEST_META_LIMIT
@@ -900,19 +993,20 @@
             if (!row?.key || !row?.content) return false;
             if (isIgnoredExamKey(row.key)) return false;
             return extractCohortIdFromKey(row.key) === cid;
-        }).sort((left, right) => (
-            getExamKeyRecencyScore(right.key, right.updated_at) - getExamKeyRecencyScore(left.key, left.updated_at)
-        ))[0] || null;
+        }).sort(compareExamRowsByExamOrder)[0] || null;
     }
 
     async function hydrateSplitWorkspacePayload(key, metaPayload) {
         const currentExamKey = String(metaPayload?.__CURRENT_EXAM_KEY || metaPayload?.CURRENT_EXAM_ID || metaPayload?.COHORT_DB?.currentExamId || '').trim();
-        let examRow = currentExamKey ? await fetchWorkspaceSnapshotRow(currentExamKey) : null;
-        if (!examRow?.content) {
+        let examRow = currentExamKey ? await fetchWorkspaceSnapshotRow(currentExamKey, { preferCache: true }) : null;
+        if (!examRow?.content && !examRow?.payload) {
             examRow = await fetchLatestCohortExamRow(metaPayload?.CURRENT_COHORT_ID || getCurrentCohortId());
         }
-        if (!examRow?.content) return normalizeWorkspacePayload(metaPayload);
-        const examPayload = parsePayload(examRow.content);
+        if (!examRow?.content && !examRow?.payload) return normalizeWorkspacePayload(metaPayload);
+        const examPayload = examRow.payload || parsePayload(examRow.content);
+        if (!examRow.cached && examRow.key && examPayload) {
+            await writeCachedWorkspaceSnapshot(examRow.key, examPayload, { updatedAt: examRow.updated_at }).catch(() => false);
+        }
         return normalizeWorkspacePayload(mergeWorkspaceSplitPayload(metaPayload, examPayload, examRow.key || currentExamKey || key));
     }
 
@@ -1009,7 +1103,25 @@
         }
     }
 
-    async function writeCachedWorkspaceSnapshot(key, payload) {
+    async function readCachedWorkspaceSnapshotMeta(key) {
+        ensureLocalCacheProfile();
+        if (!(window.idbKeyval && typeof window.idbKeyval.get === 'function')) return null;
+        try {
+            const meta = await window.idbKeyval.get(`cache_meta_${key}`);
+            return meta && typeof meta === 'object' ? meta : null;
+        } catch (error) {
+            console.warn('[CloudSync] read cache meta failed:', error);
+            return null;
+        }
+    }
+
+    function isCachedWorkspaceSnapshotFresh(cachedMeta, remoteUpdatedAt) {
+        const localTs = new Date(String(cachedMeta?.updatedAt || '').trim()).getTime() || 0;
+        const remoteTs = new Date(String(remoteUpdatedAt || '').trim()).getTime() || 0;
+        return !!localTs && !!remoteTs && localTs >= remoteTs - 1000;
+    }
+
+    async function writeCachedWorkspaceSnapshot(key, payload, meta = {}) {
         const machineId = ensureLocalCacheProfile();
         if (!(window.idbKeyval && typeof window.idbKeyval.set === 'function')) return false;
         try {
@@ -1018,7 +1130,8 @@
                 await window.idbKeyval.set(`cache_meta_${key}`, {
                     machineId,
                     key,
-                    updatedAt: new Date().toISOString()
+                    updatedAt: String(meta.updatedAt || meta.updated_at || new Date().toISOString()).trim(),
+                    cachedAt: new Date().toISOString()
                 });
             }
             return true;
@@ -1085,13 +1198,16 @@
         const meta = readWorkspaceSyncMeta(key);
         const signature = buildWorkspaceApplySignature(key, normalizedPayload, updatedAt, meta);
         if (isWorkspaceSnapshotAlreadyApplied(signature)) return true;
+        seedCurrentExamToCohortDb(normalizedPayload, key, updatedAt);
+        if (typeof applySnapshotPayload === 'function') {
+            const applied = applySnapshotPayload(normalizedPayload);
+            if (applied === false) return false;
+        }
         syncWorkspaceState({
             currentProjectKey: key,
             currentExamId: normalizedPayload?.CURRENT_EXAM_ID || ''
         });
-        seedCurrentExamToCohortDb(normalizedPayload, key, updatedAt);
-        if (typeof applySnapshotPayload === 'function') applySnapshotPayload(normalizedPayload);
-        await writeCachedWorkspaceSnapshot(key, normalizedPayload);
+        await writeCachedWorkspaceSnapshot(key, normalizedPayload, { updatedAt });
         await refreshCompareSelectors();
         markWorkspaceSnapshotApplied(signature);
         return true;
@@ -1107,12 +1223,30 @@
         return data || null;
     }
 
-    async function fetchWorkspaceSnapshotRow(key) {
+    async function fetchWorkspaceSnapshotRow(key, options = {}) {
         const exactKey = String(key || '').trim();
+        let remoteUpdatedAt = '';
+        if (options.preferCache === true) {
+            const cachedPayload = await readCachedWorkspaceSnapshot(exactKey);
+            const cachedMeta = cachedPayload ? await readCachedWorkspaceSnapshotMeta(exactKey) : null;
+            const meta = exactKey ? await fetchWorkspaceSnapshotMeta(exactKey).catch(() => null) : null;
+            remoteUpdatedAt = meta?.updated_at || '';
+            if (cachedPayload && cachedMeta) {
+                if (isCachedWorkspaceSnapshotFresh(cachedMeta, remoteUpdatedAt)) {
+                    return {
+                        key: exactKey,
+                        payload: cachedPayload,
+                        updated_at: remoteUpdatedAt || cachedMeta.updatedAt || '',
+                        cached: true
+                    };
+                }
+            }
+        }
         const { data, error } = await selectSystemData({
             select: 'content,updated_at',
             keyEq: exactKey,
-            maybeSingle: true
+            maybeSingle: true,
+            ...(remoteUpdatedAt ? { cacheVersion: remoteUpdatedAt } : {})
         });
         if (error) throw error;
         return data || null;
@@ -1175,6 +1309,7 @@
     }
 
     async function fetchAndApplyWorkspaceSnapshot(manager, key, row) {
+        if (!workspaceKeyMatchesCurrentCohort(key)) return false;
         const snapshotRow = row && typeof row === 'object' ? row : await fetchWorkspaceSnapshotRow(key);
         if (!snapshotRow || !snapshotRow.content) return false;
 
@@ -1185,12 +1320,15 @@
         payload = await supplementIndicatorPayload(key, payload);
 
         seedCurrentExamToCohortDb(payload, key, snapshotRow.updated_at || '');
-        if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
+        if (typeof applySnapshotPayload === 'function') {
+            const applied = applySnapshotPayload(payload);
+            if (applied === false) return false;
+        }
 
         const contentHash = hashText(snapshotRow.content);
         const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || getCurrentCohortId());
 
-        await writeCachedWorkspaceSnapshot(key, payload);
+        await writeCachedWorkspaceSnapshot(key, payload, { updatedAt: snapshotRow.updated_at });
         writeWorkspaceSyncMeta(key, {
             contentHash,
             lastUploadedHash: contentHash,
@@ -1314,6 +1452,7 @@
             let key = getWorkspaceSnapshotKey() || getCurrentProjectKey() || this.getKey();
             try {
                 key = await resolveCloudSnapshotKey(key);
+                if (key && !workspaceKeyMatchesCurrentCohort(key)) return false;
                 if (key) syncWorkspaceState({ currentProjectKey: key });
             } catch (e) {
                 logCloudRuntimeIssue('Cloud load key lookup error:', e);
@@ -1337,7 +1476,10 @@
                 payload = normalizeWorkspacePayload(payload);
                 payload = await supplementIndicatorPayload(key, payload);
                 seedCurrentExamToCohortDb(payload, key, data.updated_at);
-                if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
+                if (typeof applySnapshotPayload === 'function') {
+                    const applied = applySnapshotPayload(payload);
+                    if (applied === false) return false;
+                }
                 const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || getCurrentCohortId());
                 await refreshCompareSelectors();
                 if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
@@ -1359,6 +1501,11 @@
 
         fetchCohortExamsToLocal: async function (cohortId, options = {}) {
             const cid = normalizeCohortId(cohortId || getCurrentCohortId());
+            const initialCurrentCohortId = getCurrentCohortId();
+            const allowCrossCohort = options.allowCrossCohort === true;
+            if (initialCurrentCohortId && cid && cid !== initialCurrentCohortId && !allowCrossCohort) {
+                return { success: false, skipped: true, staleCohort: true, cohortId: cid, currentCohortId: initialCurrentCohortId };
+            }
             if (!cid) return { success: false, message: '无法确定届别' };
             const hasSessionUser = !!(window.AuthState && typeof window.AuthState.hasActiveSession === 'function'
                 ? window.AuthState.hasActiveSession(window.Auth && Auth.currentUser)
@@ -1403,6 +1550,10 @@
 
                 const db = CohortDB.ensure();
                 db.exams = db.exams || {};
+                const currentCohortBeforeFetch = getCurrentCohortId();
+                if (currentCohortBeforeFetch && cid !== currentCohortBeforeFetch && !allowCrossCohort) {
+                    return { success: false, skipped: true, staleCohort: true, cohortId: cid, currentCohortId: currentCohortBeforeFetch };
+                }
                 const cacheKey = getCohortSyncCacheKey(cid);
                 const shouldRefreshSelectors = options.refreshSelectors !== false;
                 const lastSyncAt = Number(localStorage.getItem(cacheKey) || 0);
@@ -1416,7 +1567,6 @@
                 }
 
                 try {
-                    const chunkSize = 10;
                     const candidates = await fetchCohortExamMetaRows(this, cid, {
                         force: forceSync,
                         latestOnly: latestMetaOnly,
@@ -1442,13 +1592,17 @@
                         keysToFetch.sort((left, right) => {
                             const leftRow = candidateByKey.get(left) || {};
                             const rightRow = candidateByKey.get(right) || {};
-                            return getExamKeyRecencyScore(right, rightRow.updated_at) - getExamKeyRecencyScore(left, leftRow.updated_at);
+                            return compareExamRowsByExamOrder(
+                                { key: left, updated_at: leftRow.updated_at },
+                                { key: right, updated_at: rightRow.updated_at }
+                            );
                         });
                         keysToFetch.length = maxKeysToFetch;
                     }
 
                     if (keysToFetch.length === 0) {
                         const syncedAt = new Date().toISOString();
+                        promoteCachedCohortExamIfMissing(db, cid, candidates.map(row => row.key));
                         localStorage.setItem(cacheKey, String(Date.now()));
                         if (shouldRefreshSelectors) await refreshCompareSelectors();
                         markFullCloudSyncComplete(syncedAt, `全量考试已检查：${cid}`);
@@ -1456,33 +1610,34 @@
                         return { success: true, count: candidates.length, updated: 0 };
                     }
 
-                    const rowMap = new Map();
-                    const chunkPromises = [];
-                    for (let i = 0; i < keysToFetch.length; i += chunkSize) {
-                        const chunk = keysToFetch.slice(i, i + chunkSize);
-                        chunkPromises.push(selectSystemData({ select: 'key,content,updated_at', keyIn: chunk }));
-                    }
-                    const chunkResults = await Promise.all(chunkPromises);
-                    for (const { data: chunkRows, error: chunkErr } of chunkResults) {
-                        if (chunkErr) throw chunkErr;
-                        (chunkRows || []).forEach(r => rowMap.set(r.key, r));
+                    const contentRows = await fetchVersionedExamContentRows(keysToFetch, candidates, { latestOnly, maxFetch });
+                    const rowMap = new Map((contentRows || []).map(r => [r.key, r]));
+
+                    const currentCohortBeforeApply = getCurrentCohortId();
+                    if (currentCohortBeforeApply && cid !== currentCohortBeforeApply && !allowCrossCohort) {
+                        return { success: false, skipped: true, staleCohort: true, cohortId: cid, currentCohortId: currentCohortBeforeApply };
                     }
 
                     let loadedCount = 0;
+                    const loadedKeys = [];
                     for (const key of keysToFetch) {
                         const row = rowMap.get(key);
                         if (!row) continue;
                         try {
                             const payload = parsePayload(row.content);
                             if (!payload) continue;
+                            await writeCachedWorkspaceSnapshot(row.key, payload, { updatedAt: row.updated_at }).catch(() => false);
+                            const beforeCount = loadedCount;
                             loadedCount += upsertCloudExamSnapshot(db, row.key, payload, row.updated_at, deriveExamLabel(row.key));
                             loadedCount += hydrateBundledCohortExams(db, payload, row.updated_at);
+                            if (loadedCount > beforeCount) loadedKeys.push(row.key);
                         } catch (rowErr) {
                             console.warn('[CloudExams] parse row failed:', rowErr);
                         }
                     }
 
                     window.COHORT_DB = db;
+                    promoteCachedCohortExamIfMissing(db, cid, loadedKeys.length ? loadedKeys : candidates.map(row => row.key));
                     const syncedAt = new Date().toISOString();
                     localStorage.setItem(cacheKey, String(Date.now()));
                     if (shouldRefreshSelectors) await refreshCompareSelectors();
@@ -1833,6 +1988,10 @@
         let cachedMeta = requestedKey ? readWorkspaceSyncMeta(requestedKey) : {};
         let appliedCached = false;
 
+        if (requestedKey && !workspaceKeyMatchesCurrentCohort(requestedKey)) {
+            return false;
+        }
+
         if (requestedKey && cachedPayload) {
             try {
                 appliedCached = await applyCachedWorkspaceSnapshot(
@@ -1870,6 +2029,7 @@
         let key = requestedKey;
         try {
             key = await resolveCloudSnapshotKey(key);
+            if (key && !workspaceKeyMatchesCurrentCohort(key)) return appliedCached;
             if (key) syncWorkspaceState({ currentProjectKey: key });
         } catch (error) {
             logCloudRuntimeIssue('Cloud load key lookup error:', error);
@@ -1885,6 +2045,7 @@
 
         if (key !== requestedKey) {
             requestedKey = key;
+            if (!workspaceKeyMatchesCurrentCohort(key)) return appliedCached;
             cachedPayload = await readCachedWorkspaceSnapshot(key);
             cachedMeta = readWorkspaceSyncMeta(key);
             if (!appliedCached && cachedPayload) {
@@ -1917,6 +2078,22 @@
         }
 
         try {
+            if (!appliedCached) {
+                const row = await fetchWorkspaceSnapshotRow(key);
+                if (!row || !row.content) {
+                    setCloudStatus('success', 'no cloud data');
+                    return false;
+                }
+
+                const loaded = await fetchAndApplyWorkspaceSnapshot(this, key, row);
+                if (!loaded) return false;
+
+                if (typeof logAction === 'function') logAction('Cloud load', `Loaded workspace data: ${key}`);
+                safeToast('Data synced locally', 'success');
+                setCloudStatus('success', 'loaded');
+                return true;
+            }
+
             const remoteMeta = await fetchWorkspaceSnapshotMeta(key);
             if (!remoteMeta?.updated_at) {
                 setCloudStatus('success', appliedCached ? '本地已就绪' : '暂无云端');

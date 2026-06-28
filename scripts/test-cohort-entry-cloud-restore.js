@@ -4,6 +4,9 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const cloudSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud.js'), 'utf8');
+const dataCloudSource = fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8');
+const cloudWorkspaceSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud-workspace-runtime.js'), 'utf8');
 
 assert.ok(
     /function showCohortPicker\(\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade: 6 \}, \{\s*skipConfirm: true,\s*fastEnter: false,\s*requireCloudData: true\s*\}\)/.test(appSource),
@@ -23,6 +26,232 @@ assert.ok(
 assert.ok(
     !/enterCohortFromMask\(\)[\s\S]{0,500}fastEnter: true/.test(appSource),
     'enterCohortFromMask must not use fastEnter:true because that exposes the empty shell before sync'
+);
+
+assert.ok(
+    /else if \(options\.fastEnter === true\) \{\s*setCohortSyncStatus\('local'/.test(appSource),
+    'fast-enter cohort switching must leave the top sync chip in local/background mode instead of staying stuck in syncing'
+);
+
+assert.ok(
+    appSource.includes('const hasSessionUser = !!(window.AuthState')
+        && appSource.includes('const shouldShowLogin = !!visible || !hasSessionUser;')
+        && appSource.includes("document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';"),
+    'login overlay state must fail closed and keep the app hidden when no authenticated session exists'
+);
+
+assert.ok(
+    appSource.includes('function enforceLoggedOutShellGate()')
+        && appSource.includes("sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1')")
+        && appSource.includes("app.classList.add('hidden');")
+        && appSource.includes("window.addEventListener('load', runLoggedOutGate, { once: true });")
+        && appSource.includes('setTimeout(runLoggedOutGate, 16000);'),
+    'logged-out shell gate should re-hide the app even if another startup branch exposes it'
+);
+
+const bootSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
+assert.ok(
+    bootSource.includes('function hasBootAuthenticatedSession()')
+        && bootSource.includes("sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1')")
+        && bootSource.includes('const shouldShowLogin = !!visible || !hasBootAuthenticatedSession();')
+        && bootSource.includes('clearStaleBootSession();'),
+    'boot login shell must require a real token and fail closed instead of exposing stale admin sessions'
+);
+
+assert.ok(
+    cloudSource.includes("raw.startsWith('LZB64|')") && cloudSource.includes("return 'LZB64|' + LZString.compressToBase64(json);"),
+    'workspace cloud payloads should use the smaller LZB64 format while keeping legacy LZ reads'
+);
+
+assert.ok(
+    /const transientKeys = new Set\(\['_tempRank'\]\);[\s\S]*if \(!reservedKeys\.has\(key\) && !transientKeys\.has\(key\)\) extras\[key\] = clonePayloadFragment\(row\[key\]\);/.test(cloudSource),
+    'packed student rows should not persist transient calculation fields such as _tempRank'
+);
+
+assert.ok(
+    cloudSource.includes('compactStudentExtras(extras, subjects, PACKED_T_SCORE_SCALE)')
+        && cloudSource.includes('next.tScores = subjects.map((subject) =>')
+        && cloudSource.includes('restoreStudentExtrasFromPacked(extras, subjects, scale)')
+        && cloudSource.includes('extras.tScores = tScores;'),
+    'packed student rows should store tScores as subject-aligned arrays and restore them as objects'
+);
+
+assert.ok(
+    cloudSource.includes('const PACKED_T_SCORE_SCALE = 10;')
+        && cloudSource.includes('tScoreScale: PACKED_T_SCORE_SCALE,')
+        && cloudSource.includes('scalePackedScoreValue(extras.totalTScore, PACKED_T_SCORE_SCALE)')
+        && cloudSource.includes('scalePackedScoreValue(value, scale)')
+        && cloudSource.includes('restorePackedScoreValue(value, scale)')
+        && cloudSource.includes('const scale = Number(packedRows.tScoreScale) || 1;')
+        && cloudSource.includes('row.totalTScore = restorePackedScoreValue(entry[11], scale);'),
+    'packed student rows should store one-decimal tScores and totalTScore as scaled integers with a compatible scale marker'
+);
+
+assert.ok(
+    cloudSource.includes('const totalTScore = typeof extras.totalTScore === \'number\'')
+        && cloudSource.includes('delete next.totalTScore;')
+        && cloudSource.includes('delete next.hasValidScore;')
+        && cloudSource.includes('delete next.examRoom;')
+        && cloudSource.includes('delete next.countyScope;')
+        && cloudSource.includes('row.totalTScore = restorePackedScoreValue(entry[11], scale);')
+        && cloudSource.includes("row.examRoom = restoredExtras.examRoom || '-';")
+        && cloudSource.includes('row.hasValidScore = Object.values(row.scores || {}).some((value) => typeof value === \'number\' && Number.isFinite(value));')
+        && cloudSource.includes("row.countyScope = row.townshipRank ? 'township' : 'county';"),
+    'packed student rows should omit default/derivable extras and restore them after load'
+);
+
+assert.ok(
+    dataCloudSource.includes("parsed.startsWith('LZB64|')") && dataCloudSource.includes('root.LZString.compressToBase64'),
+    'data cloud runtime should read and write the smaller LZB64 payload format'
+);
+
+assert.ok(
+    dataCloudSource.includes('cache_meta_${key}')
+        && dataCloudSource.includes("readSystemDataRecord(examKey, 'updated_at')")
+        && dataCloudSource.includes('isLocalCacheFresh(localMeta, remoteUpdatedAt)')
+        && dataCloudSource.includes("readSystemDataRecord(normalizedKey, 'content,updated_at')"),
+    'split workspace restore should reuse fresh local exam shards before downloading large cloud content'
+);
+
+assert.ok(
+    cloudWorkspaceSource.includes('readCachedWorkspaceSnapshotMeta(exactKey)')
+        && cloudWorkspaceSource.includes("fetchWorkspaceSnapshotRow(currentExamKey, { preferCache: true })")
+        && cloudWorkspaceSource.includes('isCachedWorkspaceSnapshotFresh(cachedMeta, remoteUpdatedAt)')
+        && cloudWorkspaceSource.includes("updatedAt: String(meta.updatedAt || meta.updated_at || new Date().toISOString()).trim()"),
+    'cloud workspace split restore should reuse fresh local exam shards before downloading large cloud content'
+);
+
+assert.ok(
+    /const payload = parsePayload\(row\.content\);[\s\S]*writeCachedWorkspaceSnapshot\(row\.key, payload, \{ updatedAt: row\.updated_at \}\)/.test(cloudWorkspaceSource),
+    'cohort exam background sync should persist downloaded exam shards into the shared local cache'
+);
+
+assert.ok(
+    /if \(!appliedCached\) \{[\s\S]*const row = await fetchWorkspaceSnapshotRow\(key\);[\s\S]*return true;[\s\S]*\}\s*const remoteMeta = await fetchWorkspaceSnapshotMeta\(key\);/.test(cloudWorkspaceSource),
+    'cold workspace restore should skip the separate updated_at preflight and fetch the small split metadata row directly'
+);
+
+assert.ok(
+    /const compactExam = compactExamMetadata\(exactExamId, \{[\s\S]*\.\.\.exam,[\s\S]*data: rows[\s\S]*\}\);[\s\S]*shard\.COHORT_DB\.exams = \{ \[exactExamId\]: compactExam \};/.test(cloudWorkspaceSource),
+    'exam shards should keep row data only at the top level and avoid duplicating it inside COHORT_DB.exams'
+);
+
+assert.ok(
+    /function buildWorkspaceSplitUploadBundle\(workspaceKey, payload\) \{[\s\S]*const metaPayload = buildWorkspaceMetaPayload\(payload, workspaceKey\);[\s\S]*const metaContent = packPayload\(metaPayload\);[\s\S]*examRows\.push\(\{ key: exactExamId, content: packPayload\(shard\), shard \}\);/.test(cloudWorkspaceSource),
+    'future cohort workspace uploads should automatically split the light cohort meta row from exam detail shards'
+);
+
+assert.ok(
+    /function buildWorkspaceMetaPayload\(payload, workspaceKey\) \{[\s\S]*if \(WORKSPACE_META_ONLY_FIELDS\.has\(field\)\) delete source\[field\];[\s\S]*source\.__CLOUD_WORKSPACE_SPLIT_VERSION = WORKSPACE_SPLIT_VERSION;[\s\S]*source\.__CURRENT_EXAM_KEY = source\.CURRENT_EXAM_ID;/.test(cloudWorkspaceSource),
+    'future cohort meta rows should omit large runtime fields and point to the current exam shard'
+);
+
+assert.ok(
+    /function compactExamMetadata\(examId, examPayload = \{\}\) \{[\s\S]*if \(field === 'data' \|\| field === 'schools' \|\| field === 'teacherMap'\) return;[\s\S]*if \(rowCount\) next\.rowCount = rowCount;/.test(cloudWorkspaceSource),
+    'future exam shard metadata should preserve row counts without duplicating student rows'
+);
+
+assert.ok(
+    /const rows = \[[\s\S]*\{ key: bundle\.workspaceKey, content: bundle\.metaContent, updated_at: syncedAt \},[\s\S]*\.\.\.bundle\.examRows\.map\(row => \(\{ key: row\.key, content: row\.content, updated_at: syncedAt \}\)\)[\s\S]*\];/.test(cloudWorkspaceSource),
+    'future cloud saves should upload the cohort meta key and exam keys as separate system_data rows'
+);
+
+assert.ok(
+    appSource.includes('function getSnapshotPayloadCohortId(db)')
+        && appSource.includes('blocked cross-cohort snapshot apply')
+        && appSource.includes('return false;')
+        && appSource.includes('return true;'),
+    'snapshot restores should reject cross-cohort payloads before they can overwrite the active workspace'
+);
+
+assert.ok(
+    /applyExamToWorkspace: function \(examId, options = \{\}\) \{[\s\S]*const examCohortId = inferCohortIdFromValue\(examId\)[\s\S]*blocked cross-cohort exam apply[\s\S]*return false;/.test(appSource),
+    'applying an exam batch to the workspace should reject exam IDs from another cohort'
+);
+
+assert.ok(
+    appSource.includes('function getExplicitCohortSelection()')
+        && /if \(explicitSelection && current === explicitSelection && restoreActiveCohortUI\(current\)\) \{[\s\S]*rememberUserCohort\(current\);[\s\S]*return;[\s\S]*\}/.test(appSource)
+        && appSource.includes('if (explicitSelection && saved !== explicitSelection)'),
+    'login-selected cohorts should take precedence over stale saved cohort preferences'
+);
+
+assert.ok(
+    /function getRuntimeCohortGuardId\(\) \{[\s\S]*window\.__LOCKED_LOGIN_COHORT_ID__[\s\S]*sessionStorage\.getItem\('LOCKED_LOGIN_COHORT_ID'\)[\s\S]*getExplicitCohortSelection/.test(appSource),
+    'runtime cohort guard should prefer the active locked cohort over a stale hidden login selection'
+);
+
+assert.ok(
+    appSource.includes('function persistSchoolAliasSettingsLocal()')
+        && appSource.includes("localStorage.setItem('CUSTOM_SCHOOL_ALIAS_SETTINGS'")
+        && appSource.includes('window.persistSchoolAliasSettingsLocal = window.persistSchoolAliasSettingsLocal || persistSchoolAliasSettingsLocal;'),
+    'cohort switching should have a local school-alias persistence fallback before optional normalization runtime loads'
+);
+
+assert.ok(
+    /const currentExamCohortId = normalizeCompareCohortId\(currentExamId\);[\s\S]*const targetCohortId = normalizeCompareCohortId\(cohortId\);[\s\S]*const readyDataMatchesTarget = !!targetCohortId && !!currentExamCohortId && currentExamCohortId === targetCohortId;[\s\S]*if \(current === cohortKey && currentExamId && hasReadyData && readyDataMatchesTarget\)/.test(appSource),
+    'cohort switching should not early-return when the loaded exam still belongs to another cohort'
+);
+
+assert.ok(
+    /switchTo: function \(cohortId, options = \{\}\) \{[\s\S]*lockRuntimeCohortId\(cohortId\);[\s\S]*CURRENT_EXAM_ID = '';[\s\S]*window\.CURRENT_EXAM_ID = '';[\s\S]*currentExamId: '',/.test(appSource),
+    'manual cohort switching should clear the previous exam before syncing the target cohort identity'
+);
+
+assert.ok(
+    /COHORT_DB = data\.COHORT_DB \|\| null;[\s\S]*CURRENT_EXAM_ID = persistWorkspaceExamIdentity\(data\.CURRENT_EXAM_ID \|\| COHORT_DB\?\.currentExamId \|\| '', COHORT_DB,[\s\S]*cohortId: CURRENT_COHORT_ID \|\| cohortId,[\s\S]*sync: false/.test(appSource),
+    'cohort restores should persist the current exam id even when split workspace meta omits the top-level exam id'
+);
+
+assert.ok(
+    appSource.includes('function persistWorkspaceExamIdentity(examId, db = COHORT_DB, options = {})')
+        && appSource.includes('window.persistWorkspaceExamIdentity = window.persistWorkspaceExamIdentity || persistWorkspaceExamIdentity;')
+        && appSource.includes('if (!persistWorkspaceExamIdentity(preferredExamId, db, { cohortId: normalizedCohortId })) return false;')
+        && appSource.includes('if (!persistWorkspaceExamIdentity(autoExamId, db, { cohortId: normalizedCohortId })) return false;'),
+    'auto restored exams should update CURRENT_EXAM_ID, localStorage, and COHORT_DB through one guarded persistence path'
+);
+
+assert.ok(
+    /if \(!readWorkspaceExamId\(\) && Array\.isArray\(RAW_DATA\) && RAW_DATA\.length > 0\) \{[\s\S]*const fallbackExamId = getAutoRestoreExamId\(COHORT_DB, CURRENT_COHORT_ID \|\| cohortId\);[\s\S]*persistWorkspaceExamIdentity\(fallbackExamId, COHORT_DB, \{ cohortId: CURRENT_COHORT_ID \|\| cohortId \}\);/.test(appSource),
+    'project snapshot restores with rows but an empty current exam should infer and persist a cohort-local exam id'
+);
+
+assert.ok(
+    cloudWorkspaceSource.includes('const loadedKeys = [];')
+        && cloudWorkspaceSource.includes('if (loadedCount > beforeCount) loadedKeys.push(row.key);')
+        && cloudWorkspaceSource.includes('function promoteCachedCohortExamIfMissing(db, cid, candidateKeys = [])')
+        && cloudWorkspaceSource.includes('promoteCachedCohortExamIfMissing(db, cid, candidates.map(row => row.key));')
+        && cloudWorkspaceSource.includes('promoteCachedCohortExamIfMissing(db, cid, loadedKeys.length ? loadedKeys : candidates.map(row => row.key));'),
+    'exam snapshot restore should promote cached or loaded latest exams to current when the workspace has no current exam id'
+);
+
+assert.ok(
+    appSource.includes('blocked stale local backup restore')
+        && appSource.includes('const backupCohortId = getSnapshotPayloadCohortId(backup);')
+        && appSource.includes('const activeCohortId = getExplicitCohortSelection() || CURRENT_COHORT_ID || readWorkspaceCohortId();'),
+    'local backup restore should not overwrite an explicitly selected active cohort'
+);
+
+assert.ok(
+    appSource.includes('[DataRuntime] blocked cross-cohort data write')
+        && appSource.includes('const incomingRows = patch.rawData ?? patch.RAW_DATA;')
+        && appSource.includes('const incomingCohortId = getSnapshotPayloadCohortId({'),
+    'low-level data writes should reject score rows from a different active cohort'
+);
+
+assert.ok(
+    cloudWorkspaceSource.includes('function workspaceKeyMatchesCurrentCohort(key)')
+        && cloudWorkspaceSource.includes('if (key && !workspaceKeyMatchesCurrentCohort(key)) return false;')
+        && cloudWorkspaceSource.includes('if (applied === false) return false;'),
+    'cloud workspace loads should drop stale cross-cohort requests and respect rejected snapshot applies'
+);
+
+assert.ok(
+    cloudWorkspaceSource.includes('const allowCrossCohort = options.allowCrossCohort === true;')
+        && cloudWorkspaceSource.includes('const initialCurrentCohortId = getCurrentCohortId();')
+        && cloudWorkspaceSource.includes('const currentCohortBeforeApply = getCurrentCohortId();')
+        && cloudWorkspaceSource.includes('staleCohort: true'),
+    'cohort exam history sync should skip stale cross-cohort background tasks before they mutate the active workspace'
 );
 
 console.log('cohort entry cloud restore tests passed');

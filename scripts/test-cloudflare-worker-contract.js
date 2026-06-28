@@ -19,6 +19,11 @@ function parseJsonc(relativePath) {
 
 const packageJson = JSON.parse(read('package.json'));
 const worker = read('src/worker-dummy.js');
+const cloudApiRuntime = read('public/assets/js/cloud-api-runtime.js');
+const cloudConnectionRuntime = read('public/assets/js/cloud-connection-runtime.js');
+const cloudWorkspaceRuntime = read('public/assets/js/cloud-workspace-runtime.js');
+const dataCloudRuntime = read('public/assets/js/data-cloud-runtime.js');
+const cloudRuntime = read('public/assets/js/cloud.js');
 const gateway = read('src/worker-gateway-d1.js');
 const gatewayD1Schema = read('cloudflare/d1/002_gateway_data.sql');
 const helpers = read('src/worker-http-helpers.js');
@@ -72,6 +77,8 @@ assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(helpers), 'shared he
 assert.ok(worker.includes("headers['Cache-Control'] = 'no-store';"), 'JSON API responses should be no-store');
 assert.ok(worker.includes("headers['X-Content-Type-Options'] = 'nosniff';"), 'JSON API responses should set nosniff');
 assert.ok(worker.includes("headers['X-School-System-Gateway'] = 'cloudflare-worker';"), 'JSON API responses should identify the gateway');
+assert.ok(!worker.includes("headers['Content-Encoding'] = 'gzip';"), 'worker must not manually gzip JSON API responses because it can break response.text() decoding');
+assert.ok(!worker.includes("pipeThrough(new CompressionStream('gzip'))"), 'worker should leave JSON transport compression to Cloudflare');
 assert.ok(worker.includes("env.SUPABASE_REST_API_KEY"), 'Supabase REST key must be read from env');
 assert.ok(worker.includes("Authorization: `Bearer ${apikey}`"), 'Supabase proxy must forward bearer auth');
 assert.ok(worker.includes("return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);"), 'system data route must fail closed for unsupported methods');
@@ -91,7 +98,38 @@ assert.ok(worker.includes("Math.min(Math.floor(raw), 1000)"), 'system_data read 
 assert.ok(worker.includes("'LIMIT ? OFFSET ?'"), 'system_data reads should push pagination into D1 instead of slicing in memory');
 assert.ok(worker.includes("function buildSystemDataKeyFilterClause(filter)"), 'system_data reads should optimize compatible key filters before querying D1');
 assert.ok(worker.includes("value.match(/^(\\d{4})%$/)"), 'cohort exam key-prefix reads should be recognized without scanning generic keys');
-assert.ok(worker.includes("'cohort_id = ?'") && worker.includes("(kind = 'exam' OR key LIKE ?)"), 'cohort exam reads should use D1 cohort indexes before applying compatible key filters');
+assert.ok(worker.includes("'cohort_id = ?'") && worker.includes("\"kind = 'exam'\""), 'cohort exam reads should use structured D1 metadata filters without an OR key scan');
+assert.ok(worker.includes("value.match(/^TEACHERS_(\\d{4})%$/i)") && worker.includes("'key_prefix = ?'"), 'teacher cohort reads should use structured D1 metadata filters');
+assert.ok(worker.includes("/^cohort::\\d{4}::exam::/i.test(text)") && worker.includes("keyPrefix = 'cohort_exam';"), 'split exam shard keys should be classified as exam rows instead of workspace rows');
+assert.ok(worker.includes('function appendSystemDataMetadataFilter'), 'system_data reads should accept explicit metadata filters');
+assert.ok(worker.includes("url, 'kind', 'kind'") && worker.includes("url, 'cohort_id', 'cohort_id'"), 'Worker should map explicit kind/cohort_id query params into D1 filters');
+assert.ok(cloudApiRuntime.includes("url.searchParams.set('kind', `eq.${kind}`)") && cloudApiRuntime.includes("url.searchParams.set('cohort_id', `eq.${cohortId}`)"), 'CloudApi should forward metadata filters to the Worker API');
+assert.ok(cloudApiRuntime.includes("url.searchParams.set('cache_version', cacheVersion)"), 'CloudApi should forward version tokens for safe content edge caching');
+assert.ok(cloudConnectionRuntime.includes("if (options.kind) query = query.eq('kind', options.kind);") && cloudConnectionRuntime.includes("if (options.cohortId) query = query.eq('cohort_id', options.cohortId);"), 'direct Supabase fallback should support metadata filters');
+assert.ok(cloudWorkspaceRuntime.includes("kind: 'exam',\n                cohortId: cid"), 'cohort workspace restore should fetch exam metadata through indexed kind/cohort filters');
+assert.ok(cloudWorkspaceRuntime.includes("cacheVersion: remoteUpdatedAt"), 'workspace content reads should pass updated_at as a safe cache version');
+assert.ok(cloudWorkspaceRuntime.includes('async function fetchVersionedExamContentRows(keysToFetch, candidateRows, options = {})')
+  && cloudWorkspaceRuntime.includes('keyEq: key,')
+  && cloudWorkspaceRuntime.includes('maybeSingle: true,')
+  && cloudWorkspaceRuntime.includes('cacheVersion: candidate.updated_at')
+  && cloudWorkspaceRuntime.includes('const contentRows = await fetchVersionedExamContentRows(keysToFetch, candidates, { latestOnly, maxFetch });'),
+  'latest cohort exam restores should use exact-key versioned content reads so Cloudflare edge cache can serve large exam payloads');
+assert.ok(dataCloudRuntime.includes("kind: 'exam',\n            cohortId,"), 'data cloud split fallback should fetch exam shards through indexed kind/cohort filters');
+assert.ok(dataCloudRuntime.includes("cacheVersion: remoteUpdatedAt"), 'data cloud split reads should pass updated_at as a safe cache version');
+assert.ok(cloudRuntime.includes("kind: 'exam',\n            cohortId") && cloudRuntime.includes("kind: 'exam',\n                        cohortId"), 'cloud history/supplement fallback should fetch exam rows through indexed kind/cohort filters');
+assert.ok(worker.includes('function isSystemDataEdgeCacheEligible(request, url)'), 'system_data edge cache eligibility should be centralized and fail closed');
+assert.ok(worker.includes('function getSystemDataEdgeCacheKey(request, url)'), 'system_data edge cache key should include request representation details');
+assert.ok(worker.includes("cacheUrl.searchParams.set('__accept', String(request.headers.get('accept') || 'application/json'));"), 'system_data edge cache key should separate maybeSingle object responses from array responses');
+assert.ok(worker.includes("searchParams.has('select')") && worker.includes("(searchParams.has('key') || searchParams.has('limit'))"), 'system_data edge cache should only store bounded explicit readonly selects');
+assert.ok(worker.includes("searchParams.get('cache_version') || searchParams.get('v')"), 'system_data content edge cache should require an explicit payload version');
+assert.ok(worker.includes("return !!version && /^eq\\./i.test(normalizeText(searchParams.get('key')))"), 'versioned content cache should only allow exact-key reads');
+assert.ok(worker.includes("const cacheControl = selectSet.has('content') && !versionedContent ? 'no-store' : SYSTEM_DATA_READ_CACHE_CONTROL;"), 'unversioned content reads should still bypass shared edge caches');
+assert.ok(worker.includes('const cache = globalThis.caches && globalThis.caches.default;'), 'system_data reads should use Cloudflare Cache API when available');
+assert.ok(worker.includes("headers.set('X-School-System-Cache', cacheStatus);"), 'system_data cache responses should expose hit/miss status for diagnosis');
+assert.ok(/if \(isSystemDataHybridMode\(env\)\) \{[\s\S]*method === 'GET'[\s\S]*handleCachedSystemDataRead\(request, env, url\)/.test(worker), 'hybrid system_data GET reads should use the same edge cache path as D1 primary reads');
+const cloudSystemDataRestoreIndexes = fs.readFileSync(path.join(root, 'cloudflare/d1/006_cloud_system_data_restore_indexes.sql'), 'utf8');
+assert.ok(cloudSystemDataRestoreIndexes.includes('idx_cloud_system_data_cohort_kind_updated'), 'cloud restore should have a cohort/kind/updated_at composite index');
+assert.ok(cloudSystemDataRestoreIndexes.includes('idx_cloud_system_data_prefix_cohort_updated'), 'teacher cloud restore should have a key_prefix/cohort/updated_at composite index');
 assert.ok(worker.includes('const [d1Response, supabaseResponse] = await Promise.all(['), 'hybrid system_data writes should dual-write D1 and Supabase concurrently');
 assert.ok(worker.includes("cloudSystemDataBackend === 'hybrid' ? hasSystemDataStorage(env) && hasSupabaseRestOrigin(env)"), 'health should require both D1 and Supabase readiness for hybrid mode');
 assert.ok(wrangler.vars && wrangler.vars.CLOUD_SYSTEM_DATA_MODE === 'primary', 'production data mode should use D1 primary storage');

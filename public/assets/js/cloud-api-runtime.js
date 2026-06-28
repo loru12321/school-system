@@ -70,6 +70,11 @@
             keyEq: normalizeText(options.keyEq),
             keyLike: normalizeText(options.keyLike),
             keyIn: normalizeKeyList(options.keyIn),
+            kind: normalizeText(options.kind),
+            keyPrefix: normalizeText(options.keyPrefix),
+            cohortId: normalizeText(options.cohortId),
+            projectKey: normalizeText(options.projectKey),
+            cacheVersion: normalizeText(options.cacheVersion),
             order: normalizeText(options.order),
             ascending: options.ascending !== false,
             limit: Number.isFinite(Number(options.limit)) ? Number(options.limit) : 0,
@@ -377,6 +382,11 @@
         const order = normalizeText(options && options.order);
         const keyEq = normalizeText(options && options.keyEq);
         const keyLike = normalizeText(options && options.keyLike);
+        const kind = normalizeText(options && options.kind);
+        const keyPrefix = normalizeText(options && options.keyPrefix);
+        const cohortId = normalizeText(options && options.cohortId);
+        const projectKey = normalizeText(options && options.projectKey);
+        const cacheVersion = normalizeText(options && options.cacheVersion);
         const limit = Number(options && options.limit);
         const offset = Number(options && options.offset);
         const keyIn = Array.isArray(options && options.keyIn)
@@ -391,6 +401,11 @@
         } else if (keyIn.length) {
             url.searchParams.set('key', `in.(${keyIn.join(',')})`);
         }
+        if (kind) url.searchParams.set('kind', `eq.${kind}`);
+        if (keyPrefix) url.searchParams.set('key_prefix', `eq.${keyPrefix}`);
+        if (cohortId) url.searchParams.set('cohort_id', `eq.${cohortId}`);
+        if (projectKey) url.searchParams.set('project_key', `eq.${projectKey}`);
+        if (cacheVersion) url.searchParams.set('cache_version', cacheVersion);
         if (order) {
             url.searchParams.set('order', `${order}.${options && options.ascending ? 'asc' : 'desc'}`);
         }
@@ -488,6 +503,10 @@
             let query = client.from(SYSTEM_DATA_TABLE).select(normalizeText(options && options.select) || 'key');
             const keyEq = normalizeText(options && options.keyEq);
             const keyLike = normalizeText(options && options.keyLike);
+            const kind = normalizeText(options && options.kind);
+            const keyPrefix = normalizeText(options && options.keyPrefix);
+            const cohortId = normalizeText(options && options.cohortId);
+            const projectKey = normalizeText(options && options.projectKey);
             const keyIn = Array.isArray(options && options.keyIn)
                 ? options.keyIn.map((item) => normalizeText(item)).filter(Boolean)
                 : [];
@@ -499,6 +518,10 @@
             } else if (keyIn.length) {
                 query = query.in('key', keyIn);
             }
+            if (kind) query = query.eq('kind', kind);
+            if (keyPrefix) query = query.eq('key_prefix', keyPrefix);
+            if (cohortId) query = query.eq('cohort_id', cohortId);
+            if (projectKey) query = query.eq('project_key', projectKey);
 
             const order = normalizeText(options && options.order);
             if (order) {

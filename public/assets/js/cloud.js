@@ -8,6 +8,7 @@
         'TOWN_SUB_COMPARE_'
     ];
     const STUDENT_HISTORY_INDEX_PREFIX = 'STUDENT_HISTORY_V1';
+    const PACKED_T_SCORE_SCALE = 10;
     const AUTO_COHORT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
     const TEACHER_LOAD_CACHE_TTL_MS = 90 * 1000;
     const STUDENT_HISTORY_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -456,7 +457,9 @@
 
     function parsePayload(content) {
         let raw = content;
-        if (typeof raw === 'string' && raw.startsWith('LZ|')) {
+        if (typeof raw === 'string' && raw.startsWith('LZB64|')) {
+            raw = LZString.decompressFromBase64(raw.slice(6));
+        } else if (typeof raw === 'string' && raw.startsWith('LZ|')) {
             raw = LZString.decompressFromUTF16(raw.slice(3));
         }
         const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -538,7 +541,7 @@
 
     function packPayload(payload) {
         const json = JSON.stringify(compactPayloadForStorage(payload || {}));
-        return 'LZ|' + LZString.compressToUTF16(json);
+        return 'LZB64|' + LZString.compressToBase64(json);
     }
 
     function clonePayloadFragment(value) {
@@ -574,15 +577,20 @@
             'school', 'class', 'name', 'id', 'total', 'scores', 'ranks',
             'uuid', 'status', 'townRank', 'schoolRank', 'classRank', 'countyRank', 'rankCounty'
         ]);
+        const transientKeys = new Set(['_tempRank']);
 
         return {
             __packedRows: 'rows-v1',
             subjects,
+            tScoreScale: PACKED_T_SCORE_SCALE,
             rows: list.map((row) => {
                 const extras = {};
                 Object.keys(row || {}).forEach((key) => {
-                    if (!reservedKeys.has(key)) extras[key] = clonePayloadFragment(row[key]);
+                    if (!reservedKeys.has(key) && !transientKeys.has(key)) extras[key] = clonePayloadFragment(row[key]);
                 });
+                const totalTScore = typeof extras.totalTScore === 'number'
+                    ? scalePackedScoreValue(extras.totalTScore, PACKED_T_SCORE_SCALE)
+                    : null;
 
                 const totalRanks = row?.ranks?.total && typeof row.ranks.total === 'object' ? row.ranks.total : {};
                 const totalRankTuple = [
@@ -613,10 +621,60 @@
                     }),
                     row?.uuid ?? null,
                     row?.status ?? null,
-                    Object.keys(extras).length ? extras : null
+                    compactStudentExtras(extras, subjects, PACKED_T_SCORE_SCALE),
+                    totalTScore
                 ];
             })
         };
+    }
+
+    function scalePackedScoreValue(value, scale = PACKED_T_SCORE_SCALE) {
+        return typeof value === 'number' && Number.isFinite(value)
+            ? Math.round(value * scale)
+            : value;
+    }
+
+    function restorePackedScoreValue(value, scale = 1) {
+        return typeof value === 'number' && Number.isFinite(value) && scale > 1
+            ? Number((value / scale).toFixed(1))
+            : value;
+    }
+
+    function compactStudentExtras(extras, subjects = [], scale = PACKED_T_SCORE_SCALE) {
+        if (!extras || typeof extras !== 'object') return null;
+        const next = clonePayloadFragment(extras);
+        if (next.tScores && typeof next.tScores === 'object' && !Array.isArray(next.tScores)) {
+            next.tScores = subjects.map((subject) => {
+                const value = next.tScores[subject];
+                return value === undefined ? null : scalePackedScoreValue(value, scale);
+            });
+        }
+        if (Array.isArray(next.blankScoreSubjects) && next.blankScoreSubjects.length === 0) {
+            delete next.blankScoreSubjects;
+        }
+        delete next.totalTScore;
+        if (next.hasValidScore === true) delete next.hasValidScore;
+        if (next.examRoom === '-') delete next.examRoom;
+        if (typeof next.countyScope === 'string') delete next.countyScope;
+        return Object.keys(next).length ? next : null;
+    }
+
+    function restoreStudentExtrasFromPacked(extras, subjects = [], scale = 1) {
+        if (!extras || typeof extras !== 'object' || Array.isArray(extras)) return {};
+        const next = clonePayloadFragment(extras);
+        if (Array.isArray(next.tScores)) {
+            const tScores = {};
+            subjects.forEach((subject, index) => {
+                const value = next.tScores[index];
+                if (value !== null && value !== undefined && value !== '') {
+                    tScores[subject] = restorePackedScoreValue(value, scale);
+                }
+            });
+            extras.tScores = tScores;
+            next.tScores = tScores;
+        }
+        if (!Array.isArray(next.blankScoreSubjects)) next.blankScoreSubjects = [];
+        return next;
     }
 
     function inflateStudentRows(packedRows, subjectHint = []) {
@@ -625,6 +683,7 @@
         }
 
         const subjects = collectPackedSubjects([], Array.isArray(packedRows.subjects) ? packedRows.subjects : subjectHint);
+        const scale = Number(packedRows.tScoreScale) || 1;
         return (Array.isArray(packedRows.rows) ? packedRows.rows : []).map((entry) => {
             if (!Array.isArray(entry)) return null;
 
@@ -640,6 +699,7 @@
             if (entry[3] !== null && entry[3] !== undefined && entry[3] !== '') row.id = entry[3];
             if (entry[8] !== null && entry[8] !== undefined && entry[8] !== '') row.uuid = entry[8];
             if (entry[9] !== null && entry[9] !== undefined && entry[9] !== '') row.status = entry[9];
+            if (entry[11] !== null && entry[11] !== undefined && entry[11] !== '') row.totalTScore = restorePackedScoreValue(entry[11], scale);
 
             const scoreValues = Array.isArray(entry[5]) ? entry[5] : [];
             subjects.forEach((subject, index) => {
@@ -684,12 +744,20 @@
             });
 
             const extras = entry[10];
-            if (extras && typeof extras === 'object' && !Array.isArray(extras)) {
-                Object.keys(extras).forEach((key) => {
+            const restoredExtras = restoreStudentExtrasFromPacked(extras, subjects, scale);
+            if (restoredExtras && typeof restoredExtras === 'object' && !Array.isArray(restoredExtras)) {
+                Object.keys(restoredExtras).forEach((key) => {
                     if (!Object.prototype.hasOwnProperty.call(row, key)) {
-                        row[key] = clonePayloadFragment(extras[key]);
+                        row[key] = clonePayloadFragment(restoredExtras[key]);
                     }
                 });
+            }
+            if (!Object.prototype.hasOwnProperty.call(row, 'examRoom')) row.examRoom = restoredExtras.examRoom || '-';
+            if (!Object.prototype.hasOwnProperty.call(row, 'hasValidScore')) {
+                row.hasValidScore = Object.values(row.scores || {}).some((value) => typeof value === 'number' && Number.isFinite(value));
+            }
+            if (!Object.prototype.hasOwnProperty.call(row, 'countyScope')) {
+                row.countyScope = row.townshipRank ? 'township' : 'county';
             }
 
             return row;
@@ -978,7 +1046,8 @@
 
         const { data, error } = await selectSystemData({
             select: 'key,updated_at',
-            keyLike: `${cohortId}%`,
+            kind: 'exam',
+            cohortId,
             order: 'updated_at',
             limit: 50
         });
@@ -1158,7 +1227,8 @@
         );
         const { data, error } = await selectSystemData({
             select: 'key,updated_at',
-            keyLike: cid ? `${cid}%` : '',
+            kind: 'exam',
+            ...(cid ? { cohortId: cid } : {}),
             order: 'updated_at',
             limit: 50
         });
@@ -1980,7 +2050,8 @@
                     }
                     : {
                         select: 'key,content,updated_at',
-                        keyLike: `${cohortId}%`,
+                        kind: 'exam',
+                        cohortId,
                         order: 'updated_at',
                         ascending: true,
                         ...(Number(options?.fallbackLimit) > 0 ? { limit: Number(options.fallbackLimit) } : {})

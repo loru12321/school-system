@@ -36,6 +36,8 @@ assert.ok(html.includes('type="image/x-icon"'), 'favicon link should include an 
 assert.ok(html.includes('service-worker-runtime.js'), 'index.html should register the service worker runtime');
 assert.ok(html.includes('./assets/css/product-redesign.css?v=20260617-table-anchor-nav-v1'), 'index.html should load the product redesign layer after legacy styles');
 assert.ok(html.indexOf('layout-refinement.css') < html.indexOf('product-redesign.css'), 'product redesign should override layout refinement styles');
+assert.ok(html.includes('id="critical-visibility-guard"'), 'index.html should inline a critical visibility guard before scripts run');
+assert.ok(/\.hidden,\s*\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/.test(html), 'critical visibility guard must keep hidden app content invisible before login');
 assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker runtime version should be generated from runtime content');
 assert.ok(html.includes(`var refreshVersion = '${serviceWorkerVersion}';`), 'early runtime refresh version should match the service worker runtime');
 assert.ok(html.includes(`runtime-loader-runtime.js?v=${serviceWorkerVersion}`), 'runtime loader query version should match the generated runtime version');

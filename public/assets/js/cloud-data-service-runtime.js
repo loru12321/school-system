@@ -240,17 +240,21 @@
         const options = {
             keyEq: normalizedKey,
             select: select || 'content',
-            maybeSingle: true
+            maybeSingle: true,
+            ...(config && config.cacheVersion ? { cacheVersion: config.cacheVersion } : {})
         };
         if (!normalizedKey) return makeUnavailableResult(null, 'SYSTEM_DATA_KEY_MISSING');
         return runCached('readSystemDataRecord', options, () => {
             const api = getCloudApi();
+            if (api && options.cacheVersion && typeof api.selectSystemData === 'function') {
+                return api.selectSystemData(options);
+            }
             if (api && typeof api.readSystemDataRecord === 'function') {
                 return api.readSystemDataRecord(normalizedKey, options.select);
             }
             const legacy = window.readSystemDataRecord;
             if (typeof legacy === 'function' && legacy !== readSystemDataRecord) {
-                return legacy(normalizedKey, options.select);
+                return legacy(normalizedKey, options.select, config);
             }
             return makeUnavailableResult(null, 'readSystemDataRecord unavailable');
         }, { ttl: getReadTtl(options), ...config });

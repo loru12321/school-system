@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-55c115062072';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-8b7f2c3d4e06';
 
 function bootDebugLog(...args) {
 try {
@@ -204,7 +204,7 @@ var APP_MODULE_PRELOAD_LIMIT = 36;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 4;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 34;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
-var APP_MODULE_DESKTOP_BATCH_SIZE = 70;
+var APP_MODULE_DESKTOP_BATCH_SIZE = 18;
 var APP_MODULE_MOBILE_BATCH_SIZE = 18;
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
@@ -1617,6 +1617,36 @@ function readBootSessionUser() {
     }
 }
 
+function readBootSessionToken() {
+    try {
+        return String(
+            sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1')
+            || sessionStorage.getItem('edu:session:token')
+            || ''
+        ).trim();
+    } catch (error) {
+        return '';
+    }
+}
+
+function hasBootAuthenticatedSession() {
+    const user = readBootSessionUser() || (window.Auth && window.Auth.currentUser) || null;
+    return !!(user && readBootSessionToken());
+}
+
+function clearStaleBootSession() {
+    if (hasBootAuthenticatedSession()) return false;
+    try {
+        sessionStorage.removeItem('CURRENT_USER');
+        sessionStorage.removeItem('CURRENT_ROLE');
+        sessionStorage.removeItem('CURRENT_ROLES');
+    } catch (error) { }
+    if (window.Auth && window.Auth.currentUser) {
+        try { window.Auth.currentUser = null; } catch (error) { }
+    }
+    return true;
+}
+
 function writeBootSessionUser(user) {
     if (!user || typeof user !== 'object') return;
     sessionStorage.setItem('CURRENT_USER', JSON.stringify(user));
@@ -1664,24 +1694,26 @@ function syncBootLoginOverlayState(visible) {
     const overlay = document.getElementById('login-overlay');
     const loader = document.getElementById('global-loader');
     const app = document.getElementById('app');
+    const shouldShowLogin = !!visible || !hasBootAuthenticatedSession();
+    if (shouldShowLogin) clearStaleBootSession();
 
-    document.body.classList.toggle('login-overlay-active', !!visible);
-    document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
+    document.body.classList.toggle('login-overlay-active', shouldShowLogin);
+    document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';
 
     if (overlay) {
-        overlay.style.display = visible ? 'flex' : 'none';
-        overlay.style.visibility = visible ? 'visible' : 'hidden';
-        overlay.style.opacity = visible ? '1' : '0';
-        overlay.style.pointerEvents = visible ? 'auto' : 'none';
-        overlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        overlay.style.display = shouldShowLogin ? 'flex' : 'none';
+        overlay.style.visibility = shouldShowLogin ? 'visible' : 'hidden';
+        overlay.style.opacity = shouldShowLogin ? '1' : '0';
+        overlay.style.pointerEvents = shouldShowLogin ? 'auto' : 'none';
+        overlay.setAttribute('aria-hidden', shouldShowLogin ? 'false' : 'true');
     }
-    if (loader && !visible) {
+    if (loader && !shouldShowLogin) {
         loader.classList.add('hidden');
         setTimeout(() => { if (loader.classList.contains('hidden')) loader.style.display = 'none'; }, 300);
     }
     if (app) {
-        app.classList.toggle('hidden', !!visible);
-        app.setAttribute('aria-hidden', visible ? 'true' : 'false');
+        app.classList.toggle('hidden', shouldShowLogin);
+        app.setAttribute('aria-hidden', shouldShowLogin ? 'true' : 'false');
     }
 }
 
@@ -1699,7 +1731,11 @@ function finalizeBootLoginUi(portal = 'school') {
 }
 
 function repairAuthenticatedShellVisibility() {
-    if (!readBootSessionUser() && !(window.Auth && window.Auth.currentUser)) return false;
+    if (!hasBootAuthenticatedSession()) {
+        clearStaleBootSession();
+        syncBootLoginOverlayState(true);
+        return false;
+    }
     const overlay = document.getElementById('login-overlay');
     const app = document.getElementById('app');
     document.body.classList.remove('login-overlay-active');
@@ -1785,7 +1821,8 @@ const bootAuth = window.Auth || {
     },
     init() {
         this.syncLoginPortalUI(this.getLoginPortal());
-        if (!readBootSessionUser()) {
+        if (!hasBootAuthenticatedSession()) {
+            clearStaleBootSession();
             this.syncLoginOverlayState(true);
         } else {
             bootDebugLog('[boot-auth] User already logged in, bypassing overlay and loading modules');

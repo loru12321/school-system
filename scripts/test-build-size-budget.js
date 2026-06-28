@@ -33,7 +33,9 @@ const budgets = {
     distAppCss: 640_000,
     ltHtml: 2_100_000,
     ltHtmlBrotli: 330_000,
-    publicAppJs: 820_000,
+    // Cloud sync guards and fail-closed login gates add a small amount of
+    // startup-critical source; keep a narrow cap above the current baseline.
+    publicAppJs: 830_000,
     publicCohortExamHydrationJs: 7_000,
     // Keep first-screen boot focused; optional runtime manifest/loaders live in runtime-loader-runtime.js.
     publicBootJs: 85_000,

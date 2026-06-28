@@ -7,6 +7,7 @@ const minimumSchoolCount = Math.max(1, Number(process.env.CALC_SNAPSHOT_MIN_SCHO
 const minimumCountyTeacherRankRows = Math.max(1, Number(process.env.CALC_SNAPSHOT_MIN_COUNTY_TEACHER_RANK_ROWS || 80));
 const user = process.env.SMOKE_USER || 'admin';
 const pass = process.env.SMOKE_PASS || 'admin123';
+const snapshotCohortYear = String(process.env.SMOKE_COHORT_YEAR || '2022').trim();
 const traceEnabled = /^(1|true|yes)$/i.test(String(process.env.CALC_SNAPSHOT_TRACE || ''));
 const startedAt = Date.now();
 
@@ -122,8 +123,59 @@ async function waitForLoggedInShell(page) {
 }
 
 async function ensureCohortEntered(page) {
+    const waitForExpectedCohort = (candidate) => page.waitForFunction((expectedCohortId) => {
+        const mask = document.getElementById('mode-mask');
+        const app = document.getElementById('app');
+        const overlay = document.getElementById('login-overlay');
+        const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
+        const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
+        const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+        const examId = String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+        const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+        const expected = String(expectedCohortId || '').trim();
+        const examCohort = (examId.match(/(\d{4})/) || [])[1] || '';
+        const maskHidden = !mask || getComputedStyle(mask).display === 'none';
+        return overlayHidden && appVisible && maskHidden
+            && cohortId === expected
+            && (!examCohort || examCohort === expected)
+            && !!examId
+            && rawDataLen > 0;
+    }, candidate, { timeout: 60000 });
+
+    const switchToExpectedCohort = async (candidate) => {
+        if (!candidate) return;
+        await withNavigationRetry(page, async () => {
+            await page.evaluate(async (year) => {
+                const manager = window.CohortManager;
+                if (typeof window.lockRuntimeCohortId === 'function') window.lockRuntimeCohortId(year);
+                if (manager && typeof manager.addCohort === 'function') {
+                    await manager.addCohort({ year, startGrade: 6 }, {
+                        skipConfirm: true,
+                        fastEnter: false,
+                        requireCloudData: true
+                    });
+                    return;
+                }
+                const input = document.getElementById('entry-cohort-year');
+                if (input) input.value = year;
+                if (typeof window.enterCohortFromMask === 'function') {
+                    await window.enterCohortFromMask();
+                } else {
+                    document.querySelector('button[onclick="enterCohortFromMask()"]')?.click();
+                }
+            }, candidate);
+            await waitForPageStability(page, 10000);
+            await waitForExpectedCohort(candidate);
+        }, 4);
+    };
+
     let state = await readLoginState(page);
-    if (!state.maskVisible) return state;
+    if (!state.maskVisible) {
+        if (snapshotCohortYear && state.currentCohortId !== snapshotCohortYear) {
+            await switchToExpectedCohort(snapshotCohortYear);
+        }
+        return readLoginState(page);
+    }
 
     if (!state.overlayHidden && (state.authState === 'logged_in' || state.sessionUserPresent || state.bootPending)) {
         await withNavigationRetry(page, () => page.waitForFunction(() => {
@@ -132,7 +184,12 @@ async function ensureCohortEntered(page) {
         }, null, { timeout: 30000 }), 2).catch(() => {});
         await waitForPageStability(page, 5000);
         state = await readLoginState(page);
-        if (!state.maskVisible) return state;
+        if (!state.maskVisible) {
+            if (snapshotCohortYear && state.currentCohortId !== snapshotCohortYear) {
+                await switchToExpectedCohort(snapshotCohortYear);
+            }
+            return readLoginState(page);
+        }
     }
 
     await withNavigationRetry(page, () => page.waitForFunction(() => {
@@ -147,10 +204,15 @@ async function ensureCohortEntered(page) {
     }, null, { timeout: 15000 }), 1).catch(() => {});
 
     state = await readLoginState(page);
-    if (!state.maskVisible) return state;
+    if (!state.maskVisible) {
+        if (snapshotCohortYear && state.currentCohortId !== snapshotCohortYear) {
+            await switchToExpectedCohort(snapshotCohortYear);
+        }
+        return readLoginState(page);
+    }
 
     const candidate = String(
-        process.env.SMOKE_COHORT_YEAR
+        snapshotCohortYear
         || state.inputValue
         || state.currentCohortId
         || state.knownCohorts[0]
@@ -165,9 +227,8 @@ async function ensureCohortEntered(page) {
             if (!mask || getComputedStyle(mask).display === 'none') return true;
             let cohortManagerReady = false;
             try {
-                cohortManagerReady = typeof CohortManager !== 'undefined'
-                    && !!CohortManager
-                    && typeof CohortManager.addCohort === 'function';
+                cohortManagerReady = !!window.CohortManager
+                    && typeof window.CohortManager.addCohort === 'function';
             } catch (_) {
                 cohortManagerReady = false;
             }
@@ -183,9 +244,8 @@ async function ensureCohortEntered(page) {
         await page.evaluate(async () => {
             let cohortManagerReady = false;
             try {
-                cohortManagerReady = typeof CohortManager !== 'undefined'
-                    && !!CohortManager
-                    && typeof CohortManager.addCohort === 'function';
+                cohortManagerReady = !!window.CohortManager
+                    && typeof window.CohortManager.addCohort === 'function';
             } catch (_) {
                 cohortManagerReady = false;
             }
@@ -210,9 +270,8 @@ async function ensureCohortEntered(page) {
             const maskHidden = !mask || getComputedStyle(mask).display === 'none';
             const normalizedExpected = String(expectedCohortId || '').trim();
             return overlayHidden && (
-                (maskHidden && appVisible)
-                || (!!cohortId && normalizedExpected && cohortId === normalizedExpected)
-                || (appVisible && readyWorkspace)
+                (maskHidden && appVisible && !!cohortId && normalizedExpected && cohortId === normalizedExpected)
+                || (appVisible && readyWorkspace && !!cohortId && normalizedExpected && cohortId === normalizedExpected)
             );
         }, candidate, { timeout: 60000 });
     }, 4);

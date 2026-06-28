@@ -138,6 +138,10 @@
                 keyEq: options.keyEq || '',
                 keyLike: options.keyLike || '',
                 keyIn: Array.isArray(options.keyIn) ? options.keyIn : [],
+                kind: options.kind || '',
+                keyPrefix: options.keyPrefix || '',
+                cohortId: options.cohortId || '',
+                projectKey: options.projectKey || '',
                 order: options.order || '',
                 ascending: !!options.ascending,
                 limit: options.limit || '',
@@ -170,6 +174,10 @@
             } else if (Array.isArray(options.keyIn) && options.keyIn.length) {
                 query = query.in('key', options.keyIn);
             }
+            if (options.kind) query = query.eq('kind', options.kind);
+            if (options.keyPrefix) query = query.eq('key_prefix', options.keyPrefix);
+            if (options.cohortId) query = query.eq('cohort_id', options.cohortId);
+            if (options.projectKey) query = query.eq('project_key', options.projectKey);
             if (options.order) {
                 query = query.order(options.order, { ascending: !!options.ascending });
             }
@@ -194,13 +202,15 @@
         }
     }
 
-    async function readSystemDataRecord(key, select = 'content') {
+    async function readSystemDataRecord(key, select = 'content', options = {}) {
         const normalizedKey = String(key || '').trim();
-        const cacheKey = `system-data:read:${normalizedKey}:${String(select || 'content')}`;
+        const cacheVersion = String(options.cacheVersion || '').trim();
+        const cacheKey = `system-data:read:${normalizedKey}:${String(select || 'content')}:${cacheVersion}`;
         return runCachedSystemData(cacheKey, SYSTEM_DATA_READ_TTL_MS, () => selectSystemDataRecords({
             select,
             keyEq: normalizedKey,
             maybeSingle: true,
+            ...(cacheVersion ? { cacheVersion } : {}),
             cache: false
         }));
     }

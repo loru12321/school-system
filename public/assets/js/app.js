@@ -271,6 +271,39 @@ function readWorkspaceSnapshot() {
     };
 }
 
+function normalizeCohortGuardId(value) {
+    const inferred = (typeof inferCohortIdFromValue === 'function' ? inferCohortIdFromValue(value) : '') || value;
+    const text = String(inferred || '').trim();
+    return /^\d{4}$/.test(text) ? text : '';
+}
+
+function lockRuntimeCohortId(cohortId) {
+    const id = normalizeCohortGuardId(cohortId);
+    if (!id) return '';
+    window.__LOCKED_LOGIN_COHORT_ID__ = id;
+    try {
+        sessionStorage.setItem('LOCKED_LOGIN_COHORT_ID', id);
+    } catch (e) { }
+    return id;
+}
+
+function getRuntimeCohortGuardId() {
+    const locked = window.__LOCKED_LOGIN_COHORT_ID__
+        || (() => {
+            try { return sessionStorage.getItem('LOCKED_LOGIN_COHORT_ID') || ''; } catch (e) { return ''; }
+        })()
+        || (typeof getExplicitCohortSelection === 'function' ? getExplicitCohortSelection() : '');
+    return normalizeCohortGuardId(locked);
+}
+
+function isCrossCohortRuntimeValue(value, guardId = getRuntimeCohortGuardId()) {
+    const incoming = normalizeCohortGuardId(value);
+    return !!guardId && !!incoming && incoming !== guardId;
+}
+
+window.lockRuntimeCohortId = lockRuntimeCohortId;
+window.getRuntimeCohortGuardId = getRuntimeCohortGuardId;
+
 function writeWorkspaceProjectKey(key) {
     if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.setCurrentProjectKey === 'function') {
         return WorkspaceStateRuntime.setCurrentProjectKey(key);
@@ -291,10 +324,17 @@ function writeWorkspaceProjectKey(key) {
 }
 
 function writeWorkspaceCohortId(cohortId, options = {}) {
+    const nextId = String(cohortId || '').trim();
+    if (!options.allowCrossCohort && isCrossCohortRuntimeValue(nextId)) {
+        console.warn('[WorkspaceState] blocked cross-cohort cohort identity write', {
+            lockedCohortId: getRuntimeCohortGuardId(),
+            incomingCohortId: nextId
+        });
+        return readWorkspaceCohortId();
+    }
     if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.setCurrentCohortId === 'function') {
         return WorkspaceStateRuntime.setCurrentCohortId(cohortId, options);
     }
-    const nextId = String(cohortId || '').trim();
     if (!nextId) {
         localStorage.removeItem('CURRENT_COHORT_ID');
         try {
@@ -307,6 +347,7 @@ function writeWorkspaceCohortId(cohortId, options = {}) {
     }
     localStorage.setItem('CURRENT_COHORT_ID', nextId);
     window.CURRENT_COHORT_ID = nextId;
+    lockRuntimeCohortId(nextId);
     if (options.syncProjectKey !== false) writeWorkspaceProjectKey(`cohort::${nextId}`);
     return nextId;
 }
@@ -330,10 +371,20 @@ function writeWorkspaceCohortMeta(meta, options = {}) {
 }
 
 function writeWorkspaceExamId(examId) {
+    const nextExamId = String(examId || '').trim();
+    if (!isCrossCohortRuntimeValue(nextExamId)) {
+        const examCohortId = normalizeCohortGuardId(nextExamId);
+        if (examCohortId) lockRuntimeCohortId(examCohortId);
+    } else {
+        console.warn('[WorkspaceState] blocked cross-cohort exam identity write', {
+            lockedCohortId: getRuntimeCohortGuardId(),
+            incomingExamId: nextExamId
+        });
+        return readWorkspaceExamId();
+    }
     if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.setCurrentExamId === 'function') {
         return WorkspaceStateRuntime.setCurrentExamId(examId);
     }
-    const nextExamId = String(examId || '').trim();
     if (!nextExamId) {
         localStorage.removeItem('CURRENT_EXAM_ID');
         try {
@@ -348,6 +399,34 @@ function writeWorkspaceExamId(examId) {
     return nextExamId;
 }
 
+function persistWorkspaceExamIdentity(examId, db = COHORT_DB, options = {}) {
+    const nextExamId = String(examId || '').trim();
+    if (!nextExamId) return '';
+    const normalizedCohortId = normalizeCompareCohortId(options.cohortId || CURRENT_COHORT_ID || readWorkspaceCohortId() || '');
+    const examCohortId = normalizeCompareCohortId(
+        typeof inferCohortIdFromValue === 'function' ? inferCohortIdFromValue(nextExamId) : ''
+    );
+    if (normalizedCohortId && examCohortId && normalizedCohortId !== examCohortId && options.allowCrossCohort !== true) {
+        console.warn('[WorkspaceState] blocked cross-cohort restored exam identity', {
+            cohortId: normalizedCohortId,
+            examId: nextExamId,
+            examCohortId
+        });
+        return '';
+    }
+    const persistedExamId = String(writeWorkspaceExamId(nextExamId) || '').trim();
+    if (persistedExamId !== nextExamId) return '';
+    CURRENT_EXAM_ID = nextExamId;
+    window.CURRENT_EXAM_ID = nextExamId;
+    if (db && typeof db === 'object') {
+        db.currentExamId = nextExamId;
+        window.COHORT_DB = db;
+    }
+    if (options.sync !== false && typeof syncRuntimeStateToWindow === 'function') syncRuntimeStateToWindow();
+    return nextExamId;
+}
+window.persistWorkspaceExamIdentity = window.persistWorkspaceExamIdentity || persistWorkspaceExamIdentity;
+
 function writeWorkspaceCohortDb(db) {
     if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.setCohortDb === 'function') {
         return WorkspaceStateRuntime.setCohortDb(db);
@@ -357,10 +436,34 @@ function writeWorkspaceCohortDb(db) {
 }
 
 function syncWorkspaceRuntimeState(patch = {}) {
+    const next = patch && typeof patch === 'object' ? patch : {};
+    const guardId = getRuntimeCohortGuardId();
+    if (guardId) {
+        const incomingCohortId = Object.prototype.hasOwnProperty.call(next, 'currentCohortId')
+            ? normalizeCohortGuardId(next.currentCohortId)
+            : '';
+        const incomingExamCohortId = Object.prototype.hasOwnProperty.call(next, 'currentExamId')
+            ? normalizeCohortGuardId(next.currentExamId)
+            : '';
+        const incomingProjectCohortId = Object.prototype.hasOwnProperty.call(next, 'currentProjectKey')
+            ? normalizeCohortGuardId(next.currentProjectKey)
+            : '';
+        const mismatch = [incomingCohortId, incomingExamCohortId, incomingProjectCohortId]
+            .filter(Boolean)
+            .find(id => id !== guardId);
+        if (mismatch) {
+            console.warn('[WorkspaceState] blocked cross-cohort workspace sync', {
+                lockedCohortId: guardId,
+                incomingCohortId,
+                incomingExamCohortId,
+                incomingProjectCohortId
+            });
+            return readWorkspaceSnapshot();
+        }
+    }
     if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.syncWorkspaceState === 'function') {
         return WorkspaceStateRuntime.syncWorkspaceState(patch);
     }
-    const next = patch && typeof patch === 'object' ? patch : {};
     if (Object.prototype.hasOwnProperty.call(next, 'cohortDb')) writeWorkspaceCohortDb(next.cohortDb);
     if (Object.prototype.hasOwnProperty.call(next, 'currentCohortId')) writeWorkspaceCohortId(next.currentCohortId, { syncProjectKey: false });
     if (Object.prototype.hasOwnProperty.call(next, 'currentCohortMeta')) writeWorkspaceCohortMeta(next.currentCohortMeta, { syncCohortId: false });
@@ -779,6 +882,19 @@ function readRawData() {
 }
 
 function setRawData(rows) {
+    if (Array.isArray(rows) && rows.length > 0) {
+        const guardId = getRuntimeCohortGuardId();
+        const activeExamId = window.CURRENT_EXAM_ID || readWorkspaceExamId();
+        const activeExamCohortId = normalizeCohortGuardId(activeExamId);
+        if (guardId && activeExamCohortId && activeExamCohortId !== guardId) {
+            console.warn('[DataRuntime] blocked cross-cohort raw data write', {
+                lockedCohortId: guardId,
+                activeExamId,
+                activeExamCohortId
+            });
+            return readRawData();
+        }
+    }
     const nextRows = DataStateRuntime && typeof DataStateRuntime.setRawData === 'function'
         ? (DataStateRuntime.setRawData(rows) || [])
         : (Array.isArray(rows) ? rows : []);
@@ -869,6 +985,26 @@ function setConfigState(config) {
 }
 
 function syncDataRuntimeState(patch = {}) {
+    const incomingRows = patch.rawData ?? patch.RAW_DATA;
+    const incomingHasRows = Array.isArray(incomingRows) && incomingRows.length > 0;
+    const activeCohortId = getRuntimeCohortGuardId()
+        || window.CURRENT_COHORT_ID
+        || readWorkspaceCohortId();
+    const incomingCohortId = getSnapshotPayloadCohortId({
+        CURRENT_COHORT_ID: patch.currentCohortId || patch.CURRENT_COHORT_ID || '',
+        CURRENT_EXAM_ID: patch.currentExamId || patch.CURRENT_EXAM_ID || window.CURRENT_EXAM_ID || readWorkspaceExamId(),
+        CURRENT_PROJECT_KEY: patch.currentProjectKey || patch.CURRENT_PROJECT_KEY || ''
+    });
+    if (incomingHasRows && activeCohortId && incomingCohortId && String(activeCohortId) !== String(incomingCohortId)) {
+        console.warn('[DataRuntime] blocked cross-cohort data write', { activeCohortId, incomingCohortId });
+        return {
+            rawData: readRawData(),
+            schools: readSchools(),
+            subjects: readSubjects(),
+            thresholds: readThresholds(),
+            config: readConfigState()
+        };
+    }
     if (DataStateRuntime && typeof DataStateRuntime.syncDataState === 'function') {
         const snapshot = DataStateRuntime.syncDataState(patch);
         if (typeof RAW_DATA !== 'undefined') RAW_DATA = snapshot.rawData || [];
@@ -988,6 +1124,14 @@ function setSchoolAliasState(list) {
         : (Array.isArray(list) ? list : []);
     ensureSupportSysVars().schoolAliases = nextAliases;
     return nextAliases;
+}
+
+function persistSchoolAliasSettingsLocal() {
+    const aliases = readSchoolAliasState();
+    try {
+        localStorage.setItem('CUSTOM_SCHOOL_ALIAS_SETTINGS', JSON.stringify(aliases));
+    } catch (e) { }
+    return aliases;
 }
 
 function readDataManagerSyncStateValue() {
@@ -1147,6 +1291,7 @@ window.readTargetsState = readTargetsState;
 window.setTargetsState = setTargetsState;
 window.readSchoolAliasState = readSchoolAliasState;
 window.setSchoolAliasState = setSchoolAliasState;
+window.persistSchoolAliasSettingsLocal = window.persistSchoolAliasSettingsLocal || persistSchoolAliasSettingsLocal;
 window.readDataManagerSyncStateValue = readDataManagerSyncStateValue;
 window.setDataManagerSyncStateValue = setDataManagerSyncStateValue;
 window.readPrevDataState = readPrevDataState;
@@ -1841,10 +1986,12 @@ var Auth = {
     syncLoginOverlayState: function (visible) {
         const overlay = document.getElementById('login-overlay');
         const app = document.getElementById('app');
+        const hasSessionUser = !!(window.AuthState && typeof AuthState.getCurrentUser === 'function' && AuthState.getCurrentUser());
+        const shouldShowLogin = !!visible || !hasSessionUser;
         this.closeSystemIntroModal();
         this.closeDownloadHubModal?.();
         this.closeLoginPortalModal();
-        if (visible) {
+        if (shouldShowLogin) {
             this.syncParentMobileScrollRoot(false);
             setManualCohortSelectionGate(false);
             if (this._parentRenderTimer) {
@@ -1852,25 +1999,30 @@ var Auth = {
                 this._parentRenderTimer = null;
             }
         }
-        document.body.classList.toggle('login-overlay-active', !!visible);
-        document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
+        document.body.classList.toggle('login-overlay-active', shouldShowLogin);
+        document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';
+        if (shouldShowLogin) {
+            document.body.dataset.role = 'guest';
+            document.body.className = document.body.className.replace(/\brole-\w+\b/g, '').trim();
+            document.body.classList.add('role-guest');
+        }
         if (overlay) {
-            if (!visible && overlay.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
+            if (!shouldShowLogin && overlay.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
                 document.activeElement.blur();
             }
-            overlay.style.display = visible ? 'flex' : 'none';
-            overlay.style.visibility = visible ? 'visible' : 'hidden';
-            overlay.style.opacity = visible ? '1' : '0';
-            overlay.style.pointerEvents = visible ? 'auto' : 'none';
-            overlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
-            try { overlay.inert = !visible; } catch (_) { /* inert is best-effort */ }
-            overlay.dataset.loginState = visible ? 'active' : 'hidden';
-            if (visible) overlay.dataset.loginModal = 'inline';
-            if (!visible) overlay.dataset.loginModal = 'hidden';
+            overlay.style.display = shouldShowLogin ? 'flex' : 'none';
+            overlay.style.visibility = shouldShowLogin ? 'visible' : 'hidden';
+            overlay.style.opacity = shouldShowLogin ? '1' : '0';
+            overlay.style.pointerEvents = shouldShowLogin ? 'auto' : 'none';
+            overlay.setAttribute('aria-hidden', shouldShowLogin ? 'false' : 'true');
+            try { overlay.inert = !shouldShowLogin; } catch (_) { /* inert is best-effort */ }
+            overlay.dataset.loginState = shouldShowLogin ? 'active' : 'hidden';
+            if (shouldShowLogin) overlay.dataset.loginModal = 'inline';
+            if (!shouldShowLogin) overlay.dataset.loginModal = 'hidden';
         }
         if (app) {
-            app.classList.toggle('hidden', !!visible);
-            app.setAttribute('aria-hidden', visible ? 'true' : 'false');
+            app.classList.toggle('hidden', shouldShowLogin);
+            app.setAttribute('aria-hidden', shouldShowLogin ? 'true' : 'false');
         }
     },
 
@@ -2112,18 +2264,31 @@ var Auth = {
                 || document.getElementById('login-cohort-select')?.value
                 || ''
             ).trim();
+            let pendingLoginCohortEntry = null;
             if (!isParentLikeUser(this.currentUser) && selectedLoginCohort) {
                 const yearInput = document.getElementById('entry-cohort-year');
                 if (yearInput) yearInput.value = selectedLoginCohort;
+                lockRuntimeCohortId(selectedLoginCohort);
                 if (typeof enterCohortFromMask === 'function') {
+                    pendingLoginCohortEntry = Promise.resolve()
+                        .then(() => enterCohortFromMask())
+                        .then(() => {
+                            if (window.BootCohortLifecycle?.clearGraduateTarget) {
+                                window.BootCohortLifecycle.clearGraduateTarget();
+                            }
+                        })
+                        .catch((cohortError) => {
+                            console.warn('[Auth] failed to enter selected login cohort:', cohortError?.message || cohortError);
+                        });
+                    window.setTimeout(() => {
+                        pendingLoginCohortEntry?.catch(() => { });
+                    }, 0);
+                } else if (window.BootCohortLifecycle?.clearGraduateTarget) {
                     try {
-                        await enterCohortFromMask();
                         if (window.BootCohortLifecycle?.clearGraduateTarget) {
                             window.BootCohortLifecycle.clearGraduateTarget();
                         }
-                    } catch (cohortError) {
-                        console.warn('[Auth] failed to enter selected login cohort:', cohortError?.message || cohortError);
-                    }
+                    } catch (e) { }
                 }
             }
             if (!isLocalOnlySession && (!window.EdgeGateway || !EdgeGateway.getToken()) && window.EdgeGateway && typeof EdgeGateway.login === 'function') {
@@ -5915,13 +6080,66 @@ async function retryCurrentCohortSync() {
 window.setCohortSyncStatus = setCohortSyncStatus;
 window.retryCurrentCohortSync = retryCurrentCohortSync;
 
+function hasAuthenticatedAppSession() {
+    const user = !!(window.AuthState && typeof AuthState.getCurrentUser === 'function' && AuthState.getCurrentUser());
+    let token = '';
+    try {
+        token = String(sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1') || sessionStorage.getItem('edu:session:token') || '').trim();
+    } catch (_) { }
+    return !!(user && token);
+}
+
+function enforceLoggedOutShellGate() {
+    if (hasAuthenticatedAppSession()) return false;
+    const overlay = document.getElementById('login-overlay');
+    const app = document.getElementById('app');
+    document.body.classList.add('login-overlay-active', 'role-guest');
+    document.body.dataset.authState = 'logged_out';
+    document.body.dataset.role = 'guest';
+    document.body.className = document.body.className.replace(/\brole-(?!guest\b)\w+\b/g, '').trim();
+    if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.style.visibility = 'visible';
+        overlay.style.opacity = '1';
+        overlay.style.pointerEvents = 'auto';
+        overlay.setAttribute('aria-hidden', 'false');
+        try { overlay.inert = false; } catch (_) { }
+        overlay.dataset.loginState = 'active';
+        overlay.dataset.loginModal = 'inline';
+    }
+    if (app) {
+        app.classList.add('hidden');
+        app.setAttribute('aria-hidden', 'true');
+    }
+    return true;
+}
+
+window.enforceLoggedOutShellGate = enforceLoggedOutShellGate;
+if (!window.__LOGGED_OUT_SHELL_GATE_BOUND__) {
+    window.__LOGGED_OUT_SHELL_GATE_BOUND__ = true;
+    const runLoggedOutGate = () => enforceLoggedOutShellGate();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runLoggedOutGate, { once: true });
+    } else {
+        setTimeout(runLoggedOutGate, 0);
+    }
+    window.addEventListener('load', runLoggedOutGate, { once: true });
+    setTimeout(runLoggedOutGate, 1200);
+    setTimeout(runLoggedOutGate, 4000);
+    setTimeout(runLoggedOutGate, 9000);
+    setTimeout(runLoggedOutGate, 16000);
+}
+
 async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
     const cohortKey = getCohortKey(cohortId);
     const current = readWorkspaceProjectKey() || '';
     const currentExamId = CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '';
     const hasReadyData = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
-    if (current === cohortKey && currentExamId && hasReadyData) {
+    const currentExamCohortId = normalizeCompareCohortId(currentExamId);
+    const targetCohortId = normalizeCompareCohortId(cohortId);
+    const readyDataMatchesTarget = !!targetCohortId && !!currentExamCohortId && currentExamCohortId === targetCohortId;
+    if (current === cohortKey && currentExamId && hasReadyData && readyDataMatchesTarget) {
         tryAutoEnterReadyCohortWorkspace();
         return true;
     }
@@ -5981,7 +6199,10 @@ async function switchCohort(cohortId, options = {}) {
         COHORT_DB = data.COHORT_DB || null;
         CURRENT_COHORT_ID = data.CURRENT_COHORT_ID || cohortId;
         CURRENT_COHORT_META = data.CURRENT_COHORT_META || CURRENT_COHORT_META;
-        CURRENT_EXAM_ID = data.CURRENT_EXAM_ID || '';
+        CURRENT_EXAM_ID = persistWorkspaceExamIdentity(data.CURRENT_EXAM_ID || COHORT_DB?.currentExamId || '', COHORT_DB, {
+            cohortId: CURRENT_COHORT_ID || cohortId,
+            sync: false
+        }) || '';
         syncRuntimeStateToWindow();
 
         if (COHORT_DB && COHORT_DB.currentExamId && CohortDB.applyExamToWorkspace(COHORT_DB.currentExamId, { renderTables: false })) {
@@ -6000,6 +6221,12 @@ async function switchCohort(cohortId, options = {}) {
             preferredExamId: data.CURRENT_EXAM_ID || COHORT_DB?.currentExamId || '',
             cohortId: CURRENT_COHORT_ID || cohortId
         });
+        if (!readWorkspaceExamId() && Array.isArray(RAW_DATA) && RAW_DATA.length > 0) {
+            const fallbackExamId = getAutoRestoreExamId(COHORT_DB, CURRENT_COHORT_ID || cohortId);
+            if (fallbackExamId) {
+                persistWorkspaceExamIdentity(fallbackExamId, COHORT_DB, { cohortId: CURRENT_COHORT_ID || cohortId });
+            }
+        }
         scheduleTeacherSyncPrompt();
 
         if (data.AUTH_DB) {
@@ -6062,7 +6289,18 @@ async function switchCohort(cohortId, options = {}) {
                 .then((syncRes) => {
                     if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId)) return false;
                 const restoredFromExamArchive = syncRes && syncRes.success && tryAutoRestoreWorkspaceExam({ cohortId });
+                const restoredExamId = restoredFromExamArchive
+                    ? persistWorkspaceExamIdentity(
+                        CURRENT_EXAM_ID || COHORT_DB?.currentExamId || getAutoRestoreExamId(COHORT_DB, cohortId),
+                        COHORT_DB,
+                        { cohortId }
+                    )
+                    : '';
                 if (restoredFromExamArchive) {
+                    if (!restoredExamId) {
+                        setCohortSyncStatus('error', { cohortId, detail: '云端考试快照已拉取，但未能确定当前考试' });
+                        return false;
+                    }
                     updateSchoolSelect();
                     updateMySchoolSelect();
                     if (CONFIG.name) renderNavigation();
@@ -6146,7 +6384,7 @@ async function switchCohort(cohortId, options = {}) {
 
     if (options.fastEnter !== true && Array.isArray(RAW_DATA) && RAW_DATA.length > 0) {
         setCohortSyncStatus('synced', { cohortId });
-    } else if (options.fastEnter === true && Array.isArray(RAW_DATA) && RAW_DATA.length > 0) {
+    } else if (options.fastEnter === true) {
         setCohortSyncStatus('local', { cohortId, detail: '已使用本地数据进入，云端继续在后台同步' });
     }
 
@@ -6382,6 +6620,12 @@ window.addEventListener('load', async () => {
         const isForceRestore = localStorage.getItem('SYS_FORCE_RESTORE');
 
         const performRestore = async () => {
+            const backupCohortId = getSnapshotPayloadCohortId(backup);
+            const activeCohortId = getExplicitCohortSelection() || CURRENT_COHORT_ID || readWorkspaceCohortId();
+            if (!isForceRestore && backupCohortId && activeCohortId && backupCohortId !== activeCohortId) {
+                console.warn('[WorkspaceRestore] blocked stale local backup restore', { backupCohortId, activeCohortId, currentKey });
+                return false;
+            }
             await Perf.runAsync(async () => {
                 COHORT_DB = backup.COHORT_DB || COHORT_DB || null;
                 CURRENT_COHORT_ID = backup.CURRENT_COHORT_ID || CURRENT_COHORT_ID || readWorkspaceCohortId() || '';
@@ -9117,7 +9361,7 @@ const SummaryRenderPerfCache = {
 function getSummaryRenderSignature() {
     const targetKeys = Object.keys(TARGETS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
     const signature = [
-        CURRENT_EXAM_ID || '',
+        window.CURRENT_EXAM_ID || readWorkspaceExamId() || '',
         window.__RAW_DATA_VERSION || 0,
         Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
         Array.isArray(SUBJECTS) ? SUBJECTS.join('|') : '',
@@ -15138,6 +15382,14 @@ function inferCohortIdFromValue(value) {
     return '';
 }
 
+function normalizeCompareCohortId(value) {
+    const inferred = inferCohortIdFromValue(value);
+    const text = String(inferred || value || '').trim();
+    return /^\d{4}$/.test(text) ? text : '';
+}
+
+window.normalizeCompareCohortId = normalizeCompareCohortId;
+
 function ensureCurrentCohortIdentity() {
     const existing = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
     if (existing) {
@@ -15336,13 +15588,24 @@ function getUserCohortPrefKey() {
 
 function rememberUserCohort(cohortId) {
     const key = getUserCohortPrefKey();
+    lockRuntimeCohortId(cohortId);
     if (!key) return;
     localStorage.setItem(key, cohortId);
 }
 
+function getExplicitCohortSelection() {
+    const selected = String(
+        window.BootCohortLifecycle?.getSelectedLoginCohortYear?.()
+        || document.getElementById('login-cohort-select')?.value
+        || document.getElementById('entry-cohort-year')?.value
+        || ''
+    ).trim();
+    return /^\d{4}$/.test(selected) ? selected : '';
+}
+
 function ensureCohortRegistered(cohortId) {
     const id = String(cohortId || '').trim();
-    if (!id || typeof CohortManager === 'undefined') return null;
+    if (!id || !window.__COHORT_MANAGER_READY__) return null;
     CohortManager.list = Array.isArray(CohortManager.list) ? CohortManager.list : [];
 
     let meta = CohortManager.list.find(item => String(item?.id || '').trim() === id);
@@ -15403,11 +15666,20 @@ function applyUserCohortPreference() {
     if (!key) return;
     const saved = String(localStorage.getItem(key) || '').trim();
     const current = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
-    const knownIds = (typeof CohortManager !== 'undefined' && Array.isArray(CohortManager.list))
+    const explicitSelection = getExplicitCohortSelection();
+    const knownIds = (window.__COHORT_MANAGER_READY__ && Array.isArray(CohortManager.list))
         ? CohortManager.list.map(item => String(item?.id || '').trim()).filter(Boolean)
         : [];
 
+    if (explicitSelection && current === explicitSelection && restoreActiveCohortUI(current)) {
+        rememberUserCohort(current);
+        return;
+    }
+
     if (saved) {
+        if (explicitSelection && saved !== explicitSelection) {
+            localStorage.removeItem(key);
+        } else
         if (knownIds.includes(saved) && saved !== current) {
             CohortManager.switchTo(saved);
             rememberUserCohort(saved);
@@ -15486,7 +15758,7 @@ function showCohortPicker() {
     setManualCohortSelectionGate(false);
 
     const year = parseInt(resolveMaskCohortYear(), 10);
-    if (year && year >= 2000 && typeof CohortManager !== 'undefined') {
+    if (year && year >= 2000 && window.__COHORT_MANAGER_READY__) {
         window.setTimeout(async () => {
             try {
                 await CohortManager.addCohort({ year, startGrade: 6 }, {
@@ -15615,12 +15887,15 @@ const CohortManager = {
         const switchOptions = Object.assign({ fastEnter: true }, options || {});
         const meta = this.list.find(c => c.id === cohortId);
         if (!meta) return alert('未找到该届别');
+        lockRuntimeCohortId(cohortId);
         CURRENT_COHORT_ID = cohortId;
         CURRENT_COHORT_META = meta;
+        CURRENT_EXAM_ID = '';
+        window.CURRENT_EXAM_ID = '';
         syncWorkspaceRuntimeState({
             currentCohortId: cohortId,
             currentCohortMeta: meta,
-            currentExamId: CURRENT_EXAM_ID,
+            currentExamId: '',
             cohortDb: COHORT_DB
         });
         rememberUserCohort(cohortId);
@@ -15665,16 +15940,25 @@ const CohortManager = {
     }
 };
 
+window.CohortManager = CohortManager;
+window.__COHORT_MANAGER_READY__ = true;
+
 async function enterCohortFromMask() {
     const year = parseInt(resolveMaskCohortYear(), 10);
     const startGrade = 6;
     if (!year || year < 2000) return alert('请输入有效的入学年份');
+    if (!window.__COHORT_MANAGER_READY__) {
+        window.setTimeout(() => enterCohortFromMask(), 60);
+        return false;
+    }
+    lockRuntimeCohortId(String(year));
     setManualCohortSelectionGate(false);
     await CohortManager.addCohort({ year, startGrade }, {
         skipConfirm: true,
         fastEnter: false,
         requireCloudData: true
     });
+    rememberUserCohort(String(year));
     refreshAuthRoleViewFromSession();
 }
 
@@ -16037,7 +16321,6 @@ function tryAutoRestoreWorkspaceExam(options = {}) {
     if (normalizedCohortId && activeCid !== normalizedCohortId) ensureCohortRegistered(normalizedCohortId);
     const currentRows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
     const currentSchoolMetricsReady = hasUsableProcessedSchoolMetrics(SCHOOLS);
-
     if (preferredExamId && db.exams?.[preferredExamId] && currentRows.length > 0 && preferredMatchesCohort) {
         const preferredMeta = db.exams[preferredExamId].meta || {};
         const effectiveGrade = String(getEffectiveGrade(preferredMeta) || '').trim();
@@ -16049,6 +16332,7 @@ function tryAutoRestoreWorkspaceExam(options = {}) {
                 });
             }
         }
+        if (!persistWorkspaceExamIdentity(preferredExamId, db, { cohortId: normalizedCohortId })) return false;
         ensureWorkspaceDefaultSchool();
         return true;
     }
@@ -16063,6 +16347,7 @@ function tryAutoRestoreWorkspaceExam(options = {}) {
     db.currentExamId = autoExamId;
     window.COHORT_DB = db;
     if (!CohortDB.applyExamToWorkspace(autoExamId, { renderTables: false })) return false;
+    if (!persistWorkspaceExamIdentity(autoExamId, db, { cohortId: normalizedCohortId })) return false;
 
     ensureWorkspaceDefaultSchool();
     if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
@@ -16334,6 +16619,12 @@ const CohortDB = {
         const db = this.ensure();
         const exam = db.exams?.[examId];
         if (!exam) return false;
+        const currentCohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+        const examCohortId = inferCohortIdFromValue(examId) || inferCohortIdFromValue(exam?.meta?.cohortId || '');
+        if (currentCohortId && examCohortId && currentCohortId !== examCohortId && options.allowCrossCohort !== true) {
+            console.warn('[CohortDB] blocked cross-cohort exam apply', { examId, examCohortId, currentCohortId });
+            return false;
+        }
         const hasProcessedSchools = !!(exam.schools && typeof exam.schools === 'object' && Object.keys(exam.schools).length > 0);
         const hasProcessedSchoolMetrics = hasUsableProcessedSchoolMetrics(exam.schools);
         const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;
@@ -16764,8 +17055,33 @@ function promptHistoryRecoveryIfEmpty() {
     });
 }
 
-function applySnapshotPayload(db) {
+function getSnapshotPayloadCohortId(db) {
+    if (!db || typeof db !== 'object') return '';
+    return normalizeCompareCohortId(
+        db.CURRENT_COHORT_ID
+        || db.COHORT_DB?.cohortId
+        || (typeof inferCohortIdFromValue === 'function' ? inferCohortIdFromValue(db.CURRENT_EXAM_ID) : '')
+        || (typeof inferCohortIdFromValue === 'function' ? inferCohortIdFromValue(db.CURRENT_PROJECT_KEY) : '')
+        || ''
+    );
+}
+
+function applySnapshotPayload(db, options = {}) {
     window.applySnapshotPayload = applySnapshotPayload;
+    const incomingCohortId = getSnapshotPayloadCohortId(db);
+    const currentCohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || readWorkspaceCohortId() || '');
+    if (!options.allowCrossCohort && incomingCohortId && currentCohortId && incomingCohortId !== currentCohortId) {
+        console.warn('[WorkspaceRestore] blocked cross-cohort snapshot apply', {
+            currentCohortId,
+            incomingCohortId,
+            currentExamId: CURRENT_EXAM_ID || readWorkspaceExamId() || '',
+            incomingExamId: db?.CURRENT_EXAM_ID || ''
+        });
+        if (window.UI && typeof UI.toast === 'function') {
+            UI.toast('已阻止其他届别数据覆盖当前工作区', 'warning');
+        }
+        return false;
+    }
     COHORT_DB = db.COHORT_DB || COHORT_DB || null;
     CURRENT_COHORT_ID = db.CURRENT_COHORT_ID || CURRENT_COHORT_ID || '';
     CURRENT_COHORT_META = db.CURRENT_COHORT_META || CURRENT_COHORT_META || null;
@@ -16865,6 +17181,7 @@ function applySnapshotPayload(db) {
     if (typeof DataManager !== 'undefined' && DataManager.renderHistoryPreview) DataManager.renderHistoryPreview();
     closeBaseConfigGuardModalIfRecovered();
     flushDeferredGuardResume('snapshot');
+    return true;
 }
 function getConfigTransferRuntime() {
     if (window.ConfigTransferRuntime) return window.ConfigTransferRuntime;
