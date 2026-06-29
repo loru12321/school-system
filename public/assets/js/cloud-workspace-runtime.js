@@ -328,8 +328,8 @@
         if (activeExamId) return activeExamId;
         const currentExamId = pickLatestCachedCohortExamId(db, cid, candidateKeys);
         if (!currentExamId) return '';
-        if (typeof root.persistWorkspaceExamIdentity === 'function') {
-            return root.persistWorkspaceExamIdentity(currentExamId, db, { cohortId: cid });
+        if (typeof window.persistWorkspaceExamIdentity === 'function') {
+            return window.persistWorkspaceExamIdentity(currentExamId, db, { cohortId: cid });
         }
         db.currentExamId = currentExamId;
         syncWorkspaceState({ cohortDb: db, currentExamId });

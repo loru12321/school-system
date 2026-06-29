@@ -7,6 +7,7 @@ const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'u
 const cloudSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud.js'), 'utf8');
 const dataCloudSource = fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8');
 const cloudWorkspaceSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud-workspace-runtime.js'), 'utf8');
+const smokeSource = fs.readFileSync(path.join(root, 'scripts/smoke-all-modules.js'), 'utf8');
 
 assert.ok(
     /function showCohortPicker\(\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade: 6 \}, \{\s*skipConfirm: true,\s*fastEnter: false,\s*requireCloudData: true\s*\}\)/.test(appSource),
@@ -217,12 +218,39 @@ assert.ok(
 );
 
 assert.ok(
+    smokeSource.includes('window.__resolveSmokeRuntimeExamId')
+        && smokeSource.includes('window.COHORT_DB?.currentExamId'),
+    'smoke cohort readiness should accept runtime or COHORT_DB exam ids instead of only localStorage'
+);
+
+assert.ok(
+    smokeSource.includes('function resolveSmokeRuntimeExamId(cohortId = \'\')')
+        && smokeSource.includes('window.getAutoRestoreExamId(db, normalizedCohortId)')
+        && smokeSource.includes('Object.entries(db?.exams || {})')
+        && smokeSource.includes('window.__resolveSmokeRuntimeExamId = resolveSmokeRuntimeExamId;'),
+    'smoke readiness should infer a cohort-local exam id when raw rows are restored before CURRENT_EXAM_ID'
+);
+
+assert.ok(
+    smokeSource.includes('function resolveSmokeRuntimeTermId(examId = \'\')')
+        && smokeSource.includes('window.getTermId(examMeta)')
+        && smokeSource.includes('window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;'),
+    'smoke app readiness should infer CURRENT_TERM_ID from restored exam metadata or exam key'
+);
+
+assert.ok(
     cloudWorkspaceSource.includes('const loadedKeys = [];')
         && cloudWorkspaceSource.includes('if (loadedCount > beforeCount) loadedKeys.push(row.key);')
         && cloudWorkspaceSource.includes('function promoteCachedCohortExamIfMissing(db, cid, candidateKeys = [])')
+        && cloudWorkspaceSource.includes('if (typeof window.persistWorkspaceExamIdentity === \'function\')')
         && cloudWorkspaceSource.includes('promoteCachedCohortExamIfMissing(db, cid, candidates.map(row => row.key));')
         && cloudWorkspaceSource.includes('promoteCachedCohortExamIfMissing(db, cid, loadedKeys.length ? loadedKeys : candidates.map(row => row.key));'),
     'exam snapshot restore should promote cached or loaded latest exams to current when the workspace has no current exam id'
+);
+
+assert.ok(
+    !cloudWorkspaceSource.includes('root.persistWorkspaceExamIdentity'),
+    'cloud workspace runtime should use the browser global instead of an undefined root variable'
 );
 
 assert.ok(

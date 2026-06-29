@@ -728,6 +728,8 @@ assert.ok(!mobileAppRuntime.includes("grade_director: 'starter-hub'"), 'grade di
 assert.ok(mobileAppRuntime.includes("grade_director: 'teacher-analysis'"), 'grade director mobile home should default to teacher analysis');
 assert.ok(shellRuntime.includes('function isVisibleModuleActive(activeSectionId, visibleItems)'), 'shell should verify that the active module is visible for the current role');
 assert.ok(shellRuntime.includes('if (!firstCard || activeIsVisible) return;'), 'shell should auto-enter the first visible module when the default active section is forbidden');
+assert.ok(shellRuntime.includes('function activateCurrentCategoryDefaultModule'), 'shell should expose a shared helper for entering a category default module');
+assert.ok(shellRuntime.includes('activateCurrentCategoryDefaultModule(key)'), 'clicking an already-active parent category should re-enter its default visible child module');
 assert.ok(appSource.includes("const fallbackIds = ['starter-hub', 'teacher-analysis', 'student-overview', 'report-generator'];"), 'base config guard should redirect to the first role-visible module instead of forcing starter hub');
 assert.ok(appSource.includes('function getTownAnalysisVisibleSubjectsForCurrentUser()'), 'town analysis should centralize role-aware subject detail visibility');
 assert.ok(appSource.includes("if (role !== 'teacher') return allSubjects;"), 'only teacher role should hide non-teaching subject detail tables');

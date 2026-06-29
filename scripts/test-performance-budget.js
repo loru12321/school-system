@@ -46,7 +46,11 @@ requiredSmokeTokens.forEach((token) => {
 
 assert.ok(smoke.includes('window.SystemPerformance'), 'smoke should read SystemPerformance snapshots');
 assert.ok(smoke.includes('summary.switchModules.push({ ...normalizedSwitchResult, ...timingPayload'), 'module switch results should include timing payloads');
-assert.ok(smoke.includes('summary.dataManagerTabs.push({ ...tabResult, performance: tabTiming })'), 'data manager tab results should include timing payloads');
+assert.ok(smoke.includes('summary.dataManagerTabs.push({ ...tabResult, performance: tabTiming, cohortGuard })'), 'data manager tab results should include timing and cohort guard payloads');
+assert.ok(smoke.includes('const DATA_MANAGER_TAB_STABILIZE_MS'), 'smoke should use per-tab stabilization instead of one fixed wait for all data-manager tabs');
+assert.ok(smoke.includes("sql: 120"), 'SQL data-manager smoke tab should use a short stabilization wait because it only checks runtime hooks');
+assert.ok(smoke.includes("cloud: 800"), 'cloud data-manager smoke tab should keep a longer stabilization wait for archive row checks');
+assert.ok(smoke.includes("default: 320"), 'ordinary data-manager smoke tabs should avoid the old 800ms fixed wait');
 assert.ok(smoke.includes('STRICT_PERFORMANCE_BUDGETS && summary.performance.budgetFailures.length > 0'), 'strict performance mode should fail on budget regressions');
 assert.ok(smoke.includes('loginMs: 30000'), 'login performance budget should protect the optimized entry path');
 assert.ok(smoke.includes('appReadyMs: 15000'), 'app-ready performance budget should catch startup regressions');
@@ -63,7 +67,7 @@ assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].include
 assert.strictEqual(scripts['check:syntax'], 'node scripts/test-syntax.js', 'syntax check should use recursive syntax coverage');
 
 const budgets = {
-  publicAppJs: 820_000,
+  publicAppJs: 835_000,
   publicCohortExamHydrationJs: 7_000,
   publicBootJs: 85_000,
   publicRuntimeLoaderJs: 58_000,

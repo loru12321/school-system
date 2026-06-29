@@ -64,6 +64,11 @@ const SWITCH_MODULE_IDS = requestedModuleIds.length
     : DEFAULT_SWITCH_MODULE_IDS;
 
 const DATA_MANAGER_TABS = ['student', 'teacher', 'targets', 'params', 'sql', 'cloud'];
+const DATA_MANAGER_TAB_STABILIZE_MS = {
+    sql: 120,
+    cloud: 800,
+    default: 320
+};
 const MODULE_SWITCH_TIMEOUT_MS = 12000;
 const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
@@ -208,12 +213,29 @@ async function readPerformanceSnapshot(page) {
 }
 
 async function readCohortRuntimeState(page) {
-    return page.evaluate(() => ({
-        cohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
-        examId: String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
-        rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
-        termId: String(localStorage.getItem('CURRENT_TERM_ID') || '').trim()
-    }));
+    return page.evaluate(() => {
+        const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+        const examId = String(
+            (typeof window.__resolveSmokeRuntimeExamId === 'function'
+                ? window.__resolveSmokeRuntimeExamId(cohortId)
+                : '')
+            || window.CURRENT_EXAM_ID
+            || localStorage.getItem('CURRENT_EXAM_ID')
+            || window.COHORT_DB?.currentExamId
+            || ''
+        ).trim();
+        const termId = String(
+            (typeof window.__resolveSmokeRuntimeTermId === 'function' ? window.__resolveSmokeRuntimeTermId(examId) : '')
+            || localStorage.getItem('CURRENT_TERM_ID')
+            || ''
+        ).trim();
+        return {
+            cohortId,
+            examId,
+            rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            termId
+        };
+    });
 }
 
 function buildCohortRuntimeGuard(state) {
@@ -231,6 +253,123 @@ function buildCohortRuntimeGuard(state) {
             && !!String(next.examId || '').trim()
             && Number(next.rawDataLen || 0) > 0
     };
+}
+
+function resolveSmokeRuntimeExamId(cohortId = '') {
+    const db = (window.COHORT_DB && typeof window.COHORT_DB === 'object')
+        ? window.COHORT_DB
+        : (window.CohortDB && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null);
+    const normalizeCohortId = (value) => {
+        const normalized = String(
+            (typeof window.normalizeCompareCohortId === 'function' ? window.normalizeCompareCohortId(value) : '')
+            || (typeof window.inferCohortIdFromValue === 'function' ? window.inferCohortIdFromValue(value) : '')
+            || value
+            || ''
+        ).trim();
+        const match = normalized.match(/\d{4}/);
+        return match ? match[0] : normalized;
+    };
+    const currentCohortId = String(
+        cohortId
+        || window.CURRENT_COHORT_ID
+        || localStorage.getItem('CURRENT_COHORT_ID')
+        || ''
+    ).trim();
+    const normalizedCohortId = normalizeCohortId(currentCohortId);
+    const matchesCohort = (examId, examValue = null) => {
+        const examCohortId = normalizeCohortId(
+            examValue?.meta?.cohortId
+            || examValue?.cohortId
+            || examId
+            || ''
+        );
+        return !normalizedCohortId || !examCohortId || examCohortId === normalizedCohortId;
+    };
+    const syncExamId = (examId) => {
+        const candidate = String(examId || '').trim();
+        if (!candidate || !matchesCohort(candidate, db?.exams?.[candidate])) return '';
+        if (typeof window.persistWorkspaceExamIdentity === 'function') {
+            try {
+                const persisted = String(window.persistWorkspaceExamIdentity(candidate, db, { cohortId: normalizedCohortId }) || '').trim();
+                if (persisted) return persisted;
+            } catch (_) {
+                // Fall through to smoke-local synchronization below.
+            }
+        }
+        window.CURRENT_EXAM_ID = candidate;
+        try { localStorage.setItem('CURRENT_EXAM_ID', candidate); } catch (_) { }
+        if (db && typeof db === 'object') db.currentExamId = candidate;
+        return candidate;
+    };
+    const directExamId = String(
+        window.CURRENT_EXAM_ID
+        || localStorage.getItem('CURRENT_EXAM_ID')
+        || db?.currentExamId
+        || ''
+    ).trim();
+    if (directExamId && matchesCohort(directExamId, db?.exams?.[directExamId])) return syncExamId(directExamId);
+
+    if (db && typeof window.getAutoRestoreExamId === 'function') {
+        const autoExamId = String(window.getAutoRestoreExamId(db, normalizedCohortId) || '').trim();
+        if (autoExamId && matchesCohort(autoExamId, db?.exams?.[autoExamId])) return syncExamId(autoExamId);
+    }
+
+    const entries = Object.entries(db?.exams || {})
+        .map(([key, value]) => {
+            const examId = String(value?.examId || key || '').trim();
+            const rows = Array.isArray(value?.data) ? value.data.length : 0;
+            const dateText = String(value?.meta?.date || value?.date || examId || '');
+            const dateMatch = dateText.match(/(20\d{2})\D?(\d{1,2})?\D?(\d{1,2})?/);
+            const score = dateMatch
+                ? Number(`${dateMatch[1]}${String(dateMatch[2] || 0).padStart(2, '0')}${String(dateMatch[3] || 0).padStart(2, '0')}`)
+                : 0;
+            return { examId, value, rows, score };
+        })
+        .filter((entry) => entry.examId && matchesCohort(entry.examId, entry.value))
+        .sort((left, right) => (right.rows - left.rows) || (right.score - left.score) || right.examId.localeCompare(left.examId, 'zh-CN'));
+    return syncExamId(entries[0]?.examId || '');
+}
+
+function resolveSmokeRuntimeTermId(examId = '') {
+    const directTermId = String(window.CURRENT_TERM_ID || localStorage.getItem('CURRENT_TERM_ID') || '').trim();
+    if (directTermId) return directTermId;
+
+    const db = (window.COHORT_DB && typeof window.COHORT_DB === 'object')
+        ? window.COHORT_DB
+        : (window.CohortDB && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null);
+    const currentExamId = String(
+        examId
+        || window.CURRENT_EXAM_ID
+        || localStorage.getItem('CURRENT_EXAM_ID')
+        || db?.currentExamId
+        || ''
+    ).trim();
+    const examMeta = (currentExamId && db?.exams?.[currentExamId]?.meta) || {};
+    let termId = '';
+    if (typeof window.getTermId === 'function') {
+        try {
+            termId = String(window.getTermId(examMeta) || '').trim();
+        } catch (_) {
+            termId = '';
+        }
+    }
+    if (!termId) {
+        const grade = String(examMeta?.grade || currentExamId.match(/(\d+)年级/)?.[1] || '').trim();
+        const term = String(examMeta?.term || currentExamId.match(/(上学期|下学期)/)?.[1] || '').trim();
+        termId = grade && term ? `${grade}年级_${term}` : term;
+    }
+    if (!termId) return '';
+    if (typeof window.writeCurrentTermId === 'function') {
+        try {
+            const written = String(window.writeCurrentTermId(termId) || '').trim();
+            if (written) return written;
+        } catch (_) {
+            // Fall through to smoke-local synchronization below.
+        }
+    }
+    window.CURRENT_TERM_ID = termId;
+    try { localStorage.setItem('CURRENT_TERM_ID', termId); } catch (_) { }
+    return termId;
 }
 
 async function withNavigationRetry(page, task, options = {}) {
@@ -351,7 +490,13 @@ async function ensureCohortEntered(page) {
             && getComputedStyle(app).display !== 'none'
             && !app.classList.contains('hidden');
         const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
-        const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+        const examId = String(
+            (typeof window.__resolveSmokeRuntimeExamId === 'function' ? window.__resolveSmokeRuntimeExamId(cohortId) : '')
+            || window.CURRENT_EXAM_ID
+            || localStorage.getItem('CURRENT_EXAM_ID')
+            || window.COHORT_DB?.currentExamId
+            || ''
+        ).trim();
         const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
         const normalizedExpected = String(expectedCohortId || '').trim();
         const expectedReady = !!cohortId && normalizedExpected && cohortId === normalizedExpected && !!examId && rawDataLen > 0;
@@ -382,7 +527,15 @@ async function ensureCohortEntered(page) {
                 || infer(localStorage.getItem('CURRENT_EXAM_ID'))
                 || ''
             ).trim(),
-            examId: String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
+            examId: String(
+                (typeof window.__resolveSmokeRuntimeExamId === 'function'
+                    ? window.__resolveSmokeRuntimeExamId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '')
+                    : '')
+                || window.CURRENT_EXAM_ID
+                || localStorage.getItem('CURRENT_EXAM_ID')
+                || window.COHORT_DB?.currentExamId
+                || ''
+            ).trim(),
             rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
             knownCohorts: selector
                 ? Array.from(selector.options || []).map((option) => String(option.value || '').trim()).filter(Boolean)
@@ -444,7 +597,15 @@ async function ensureCohortEntered(page) {
     try {
         await withNavigationRetry(page, () => page.waitForFunction(() => {
             const mask = document.getElementById('mode-mask');
-            const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+            const examId = String(
+                (typeof window.__resolveSmokeRuntimeExamId === 'function'
+                    ? window.__resolveSmokeRuntimeExamId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '')
+                    : '')
+                || window.CURRENT_EXAM_ID
+                || localStorage.getItem('CURRENT_EXAM_ID')
+                || window.COHORT_DB?.currentExamId
+                || ''
+            ).trim();
             const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
             const app = document.getElementById('app');
             const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
@@ -528,9 +689,19 @@ async function waitForAppReady(page) {
             lastState = await page.evaluate(() => {
                 const app = document.getElementById('app');
                 const mask = document.getElementById('mode-mask');
-                const termId = String(localStorage.getItem('CURRENT_TERM_ID') || '').trim();
                 const cohortId = String(localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
-                const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+                const examId = String(
+                    (typeof window.__resolveSmokeRuntimeExamId === 'function' ? window.__resolveSmokeRuntimeExamId(cohortId) : '')
+                    || window.CURRENT_EXAM_ID
+                    || localStorage.getItem('CURRENT_EXAM_ID')
+                    || window.COHORT_DB?.currentExamId
+                    || ''
+                ).trim();
+                const termId = String(
+                    (typeof window.__resolveSmokeRuntimeTermId === 'function' ? window.__resolveSmokeRuntimeTermId(examId) : '')
+                    || localStorage.getItem('CURRENT_TERM_ID')
+                    || ''
+                ).trim();
                 const school = String(
                     (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function'
                         ? window.SchoolState.getCurrentSchool()
@@ -605,12 +776,20 @@ async function attemptSmokeDataRecovery(page) {
             const db = (typeof window.COHORT_DB === 'object' && window.COHORT_DB)
                 || (typeof window.CohortDB !== 'undefined' && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null);
             const currentExamId = String(
-                window.CURRENT_EXAM_ID
+                (typeof window.__resolveSmokeRuntimeExamId === 'function'
+                    ? window.__resolveSmokeRuntimeExamId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '')
+                    : '')
+                || window.CURRENT_EXAM_ID
                 || localStorage.getItem('CURRENT_EXAM_ID')
                 || db?.currentExamId
                 || ''
             ).trim();
-            const fallbackExamId = currentExamId || Object.keys(db?.exams || {})[0] || '';
+            const fallbackExamId = currentExamId
+                || (typeof window.__resolveSmokeRuntimeExamId === 'function'
+                    ? window.__resolveSmokeRuntimeExamId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '')
+                    : '')
+                || Object.keys(db?.exams || {})[0]
+                || '';
             if (fallbackExamId && typeof window.CohortDB !== 'undefined' && typeof window.CohortDB.applyExamToWorkspace === 'function') {
                 try {
                     window.CohortDB.applyExamToWorkspace(fallbackExamId, { renderTables: false });
@@ -643,7 +822,14 @@ async function attemptSmokeDataRecovery(page) {
                 action: 'loadCloudData',
                 before,
                 after,
-                examId: String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
+                examId: String(
+                    (typeof window.__resolveSmokeRuntimeExamId === 'function'
+                        ? window.__resolveSmokeRuntimeExamId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '')
+                        : '')
+                    || window.CURRENT_EXAM_ID
+                    || localStorage.getItem('CURRENT_EXAM_ID')
+                    || ''
+                ).trim(),
                 error: loadError
             };
         });
@@ -770,7 +956,15 @@ async function runModuleDeepCheck(page, id) {
                 stateTrace.push({
                     label,
                     cohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || ''),
-                    examId: String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || window.COHORT_DB?.currentExamId || ''),
+                    examId: String(
+                        (typeof window.__resolveSmokeRuntimeExamId === 'function'
+                            ? window.__resolveSmokeRuntimeExamId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '')
+                            : '')
+                        || window.CURRENT_EXAM_ID
+                        || localStorage.getItem('CURRENT_EXAM_ID')
+                        || window.COHORT_DB?.currentExamId
+                        || ''
+                    ),
                     rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : -1
                 });
             };
@@ -3155,13 +3349,14 @@ async function runModuleDeepCheck(page, id) {
 }
 
 async function smokeDataManagerTab(page, id) {
-    const result = await page.evaluate(async (tabId) => {
+    const stabilizeMs = Number(DATA_MANAGER_TAB_STABILIZE_MS[id] || DATA_MANAGER_TAB_STABILIZE_MS.default || 0);
+    const result = await page.evaluate(async ({ tabId, stabilizeMs }) => {
         try {
             if (!window.DataManager || typeof window.DataManager.switchTab !== 'function') {
                 return { ok: false, id: tabId, error: 'DataManager.switchTab is not available' };
             }
             await Promise.resolve(window.DataManager.switchTab(tabId));
-            await new Promise(resolve => setTimeout(resolve, 800));
+            if (stabilizeMs > 0) await new Promise(resolve => setTimeout(resolve, stabilizeMs));
             const activePanel = document.querySelector('.data-manager-tab.active,[data-dm-tab].active,.tab-pane.active');
             if (tabId === 'sql') {
                 const checks = {
@@ -3200,7 +3395,7 @@ async function smokeDataManagerTab(page, id) {
         } catch (error) {
             return { ok: false, id: tabId, error: error?.message || String(error) };
         }
-    }, id);
+    }, { tabId: id, stabilizeMs });
     await page.waitForTimeout(300);
     return result;
 }
@@ -3218,6 +3413,10 @@ async function smokeDataManagerTab(page, id) {
     await page.addInitScript(() => {
         window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__ = true;
     });
+    await page.addInitScript(`${resolveSmokeRuntimeExamId.toString()}
+${resolveSmokeRuntimeTermId.toString()}
+window.__resolveSmokeRuntimeExamId = resolveSmokeRuntimeExamId;
+window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
 
     const user = process.env.SMOKE_USER || 'admin';
     const pass = process.env.SMOKE_PASS || 'admin123';

@@ -915,7 +915,7 @@
                 if (currentCategory !== key) {
                     switchCategory(key);
                 } else {
-                    updateShellChrome();
+                    activateCurrentCategoryDefaultModule(key);
                 }
                 const sidebar = document.getElementById('app-sidebar');
                 if (sidebar && sidebar.classList.contains('show-mobile')) {
@@ -945,6 +945,19 @@
         renderSubNavigation();
         updateShellChrome(item.id);
         closeWorkspaceDrawer();
+    }
+
+    function activateCurrentCategoryDefaultModule(key) {
+        if (key && NAV_STRUCTURE[key]) currentCategory = key;
+        resolveCategoryState();
+        const category = NAV_STRUCTURE[currentCategory];
+        const visibleItems = resolveVisibleItems(category);
+        const firstItem = visibleItems[0] || (category && category.items ? category.items[0] : null);
+        if (!category || !firstItem) {
+            updateShellChrome();
+            return;
+        }
+        activateSubmodule(firstItem, category);
     }
 
     function renderSubNavigation() {
@@ -1031,9 +1044,7 @@
         renderNavigation();
 
         setTimeout(function () {
-            const subNavContainer = document.getElementById('sub-nav-container');
-            const firstCard = subNavContainer ? subNavContainer.querySelector('.shell-story-card') : null;
-            if (firstCard) firstCard.click();
+            activateCurrentCategoryDefaultModule(key);
         }, 50);
     }
 
