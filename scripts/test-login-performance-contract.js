@@ -48,6 +48,23 @@ assertParentPathUsesDeferredCloudLoad(
 
 const selectedCohortIndex = appJs.indexOf('let pendingLoginCohortEntry = null;');
 assert.ok(selectedCohortIndex >= 0, 'school login must track selected cohort entry');
+const selectedCohortSetupEnd = appJs.indexOf('if (!isLocalOnlySession && (!window.EdgeGateway || !EdgeGateway.getToken())', selectedCohortIndex);
+assert.ok(selectedCohortSetupEnd > selectedCohortIndex, 'selected cohort setup must finish before gateway session backfill');
+const selectedCohortSetup = appJs.slice(selectedCohortIndex, selectedCohortSetupEnd);
+assert.match(
+  selectedCohortSetup,
+  /enterCohortFromMask\(\{\s*fastEnter:\s*true,\s*requireCloudData:\s*false\s*\}\)/,
+  'school login selected cohort entry must use fastEnter so cloud cohort data does not block login'
+);
+
+const enterMaskIndex = appJs.indexOf('async function enterCohortFromMask(');
+assert.ok(enterMaskIndex >= 0, 'enterCohortFromMask must accept options');
+const enterMaskEnd = appJs.indexOf('\n\nfunction tryAutoEnterReadyCohortWorkspace()', enterMaskIndex);
+assert.ok(enterMaskEnd > enterMaskIndex, 'enterCohortFromMask block must have a stable end marker');
+const enterMaskBlock = appJs.slice(enterMaskIndex, enterMaskEnd);
+assert.match(enterMaskBlock, /fastEnter:\s*options\.fastEnter\s*!==\s*false/, 'enterCohortFromMask must default to fastEnter');
+assert.match(enterMaskBlock, /requireCloudData:\s*options\.requireCloudData\s*===\s*true/, 'enterCohortFromMask must not require cloud data unless explicitly requested');
+
 const schoolBranchIndex = appJs.indexOf('} else {\n                if (typeof renderNavigation === \'function\') renderNavigation();', selectedCohortIndex);
 assert.ok(schoolBranchIndex > selectedCohortIndex, 'school post-login branch must exist after selected cohort handling');
 const schoolBranchEnd = appJs.indexOf('\n\n                if (this.currentUser.school)', schoolBranchIndex);

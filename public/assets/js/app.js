@@ -2274,7 +2274,7 @@ var Auth = {
                 lockRuntimeCohortId(selectedLoginCohort);
                 if (typeof enterCohortFromMask === 'function') {
                     pendingLoginCohortEntry = Promise.resolve()
-                        .then(() => enterCohortFromMask())
+                        .then(() => enterCohortFromMask({ fastEnter: true, requireCloudData: false }))
                         .then(() => {
                             if (window.BootCohortLifecycle?.clearGraduateTarget) {
                                 window.BootCohortLifecycle.clearGraduateTarget();
@@ -15961,7 +15961,7 @@ const CohortManager = {
 window.CohortManager = CohortManager;
 window.__COHORT_MANAGER_READY__ = true;
 
-async function enterCohortFromMask() {
+async function enterCohortFromMask(options = {}) {
     const year = parseInt(resolveMaskCohortYear(), 10);
     const startGrade = 6;
     if (!year || year < 2000) return alert('请输入有效的入学年份');
@@ -15973,8 +15973,8 @@ async function enterCohortFromMask() {
     setManualCohortSelectionGate(false);
     await CohortManager.addCohort({ year, startGrade }, {
         skipConfirm: true,
-        fastEnter: false,
-        requireCloudData: true
+        fastEnter: options.fastEnter !== false,
+        requireCloudData: options.requireCloudData === true
     });
     rememberUserCohort(String(year));
     refreshAuthRoleViewFromSession();
