@@ -2111,15 +2111,17 @@ var Auth = {
             if (isParentLikeUser(this.currentUser)) {
                 if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function' && !this._parentDataRecovering) {
                     this._parentDataRecovering = true;
-                    try {
-                        UI.loading(true, "正在恢复学生数据...");
-                        await loadCloudData();
-                    } catch (e) {
-                        console.warn('家长会话恢复：云端数据拉取失败', e);
-                    } finally {
-                        this._parentDataRecovering = false;
-                        UI.loading(false);
-                    }
+                    scheduleStartupCloudTask(() => {
+                        Promise.resolve()
+                            .then(() => loadCloudData())
+                            .then(() => {
+                                if (isParentLikeUser(this.currentUser)) this.renderParentView();
+                            })
+                            .catch(e => console.warn('[Auth.init] parent background cloud restore failed:', e))
+                            .finally(() => {
+                                this._parentDataRecovering = false;
+                            });
+                    }, { delay: 250, timeout: 2600 });
                 }
                 this.renderParentView();
             }
@@ -2386,17 +2388,24 @@ var Auth = {
 
             if (isParentLikeUser(this.currentUser)) {
                 if (!isLocalOnlySession && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
-                    UI.loading(true, "正在恢复学生数据...");
-                    try {
-                        await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');
-                    } catch (e) {
-                        console.warn('[Auth.login] parent cloud load timeout/fail:', e);
-                        if (typeof loadCloudData === 'function') {
-                            loadCloudData().catch(err => console.warn('[Auth.login] parent background cloud load failed:', err));
-                        }
-                    } finally {
-                        UI.loading(false);
-                    }
+                    scheduleStartupCloudTask(() => {
+                        Promise.resolve()
+                            .then(() => withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout'))
+                            .then(() => {
+                                if (isParentLikeUser(this.currentUser)) this.renderParentView();
+                            })
+                            .catch(e => {
+                                console.warn('[Auth.login] parent background cloud load timeout/fail:', e);
+                                if (typeof loadCloudData === 'function') {
+                                    Promise.resolve()
+                                        .then(() => loadCloudData())
+                                        .then(() => {
+                                            if (isParentLikeUser(this.currentUser)) this.renderParentView();
+                                        })
+                                        .catch(err => console.warn('[Auth.login] parent delayed cloud load failed:', err));
+                                }
+                            });
+                    }, { delay: 250, timeout: 2600 });
                 }
                 this.renderParentView();
             } else {
