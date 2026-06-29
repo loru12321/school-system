@@ -25,6 +25,7 @@ function writeSmokeOutput(summary) {
 
 const DEFAULT_SWITCH_MODULE_IDS = [
     'starter-hub',
+    'audio-debug',
     'upload',
     'data-quality',
     'summary',

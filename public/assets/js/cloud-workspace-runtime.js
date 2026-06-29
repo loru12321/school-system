@@ -90,11 +90,16 @@
     }
 
     function compareExamRowsByExamOrder(left, right) {
-        const leftOrder = getExamKeyOrderScore(left?.key || left);
-        const rightOrder = getExamKeyOrderScore(right?.key || right);
+        left = typeof left === 'object' && left ? left : { key: left, updated_at: '' };
+        right = typeof right === 'object' && right ? right : { key: right, updated_at: '' };
+        const leftOrder = getExamKeyOrderScore(left.key);
+        const rightOrder = getExamKeyOrderScore(right.key);
         if (rightOrder !== leftOrder) return rightOrder - leftOrder;
-        const leftUpdated = new Date(left?.updated_at || '').getTime() || 0;
-        const rightUpdated = new Date(right?.updated_at || '').getTime() || 0;
+        const leftRecency = getExamKeyRecencyScore(left.key, left.updated_at);
+        const rightRecency = getExamKeyRecencyScore(right.key, right.updated_at);
+        if (rightRecency !== leftRecency) return rightRecency - leftRecency;
+        const leftUpdated = new Date(left.updated_at || '').getTime() || 0;
+        const rightUpdated = new Date(right.updated_at || '').getTime() || 0;
         return rightUpdated - leftUpdated;
     }
 

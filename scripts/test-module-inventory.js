@@ -130,6 +130,7 @@ const navParserMisses = unique(rawShellNavIds).filter((id) => !navIds.includes(i
 
 const scoreFreeIds = new Set([
   'starter-hub',
+  'audio-debug',
   'upload',
   'data-quality',
   'zhongkao-countdown',

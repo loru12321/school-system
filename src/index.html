@@ -57,7 +57,7 @@
     </style>
     <script>
         (function () {
-            var refreshVersion = 'runtime-051d3fd06bae';
+            var refreshVersion = 'runtime-8ef70937a29a';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -92,9 +92,9 @@
     <script defer src="./assets/js/report-insight-runtime.js?v=20260613-report-insight-v1"></script>
     <script defer src="./assets/js/report-render-runtime.js?v=20260613-report-render-preload-v1"></script>
     <script defer src="./assets/js/town-submodule-compare-runtime.js?v=20260614-town-submodule-preload-v1"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-051d3fd06bae"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-051d3fd06bae"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-051d3fd06bae"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-8ef70937a29a"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-8ef70937a29a"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-8ef70937a29a"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -636,7 +636,7 @@
                     </button>
 
                     <button class="btn" id="login-session-btn"
-                        onclick="LoginSessionManager.open()"
+                        data-login-session-open="1"
                         style="background:transparent; border:none; color:var(--text-color); font-size: 22px; padding: 8px; border-radius: 50%;"
                         title="登录状态与设备记录">
                         <i class="ti ti-devices"></i>
@@ -3765,11 +3765,11 @@
                     <p id="login-session-subtitle" style="margin:6px 0 0; color:#64748b; font-size:13px;">查看当前账号近期在哪些设备上登录。</p>
                 </div>
                 <button type="button" class="modal-close-btn" aria-label="关闭登录状态弹窗"
-                    onclick="LoginSessionManager.close()">&times;</button>
+                    data-login-session-close="1">&times;</button>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px;">
                 <h4 style="margin:0; color:#1e3a8a;">我的最近登录</h4>
-                <button type="button" class="btn btn-sm btn-blue" onclick="LoginSessionManager.load('self')">
+                <button type="button" class="btn btn-sm btn-blue" data-login-session-load="self">
                     <i class="ti ti-refresh"></i> 刷新
                 </button>
             </div>
@@ -3793,7 +3793,7 @@
             <div id="login-session-admin-panel" style="display:none; min-height:0; flex:1;">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px;">
                     <h4 style="margin:0; color:#7c2d12;">全部账号最近登录</h4>
-                    <button type="button" class="btn btn-sm btn-orange" onclick="LoginSessionManager.load('all')">
+                    <button type="button" class="btn btn-sm btn-orange" data-login-session-load="all">
                         <i class="ti ti-refresh"></i> 刷新全部
                     </button>
                 </div>

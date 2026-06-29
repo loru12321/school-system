@@ -105,5 +105,25 @@
         if (modal) modal.style.display = 'none';
     }
 
+    document.addEventListener('click', (event) => {
+        const openButton = event.target.closest('[data-login-session-open]');
+        if (openButton) {
+            event.preventDefault();
+            open();
+            return;
+        }
+        const closeButton = event.target.closest('[data-login-session-close]');
+        if (closeButton) {
+            event.preventDefault();
+            close();
+            return;
+        }
+        const loadButton = event.target.closest('[data-login-session-load]');
+        if (loadButton) {
+            event.preventDefault();
+            load(loadButton.getAttribute('data-login-session-load') || 'self');
+        }
+    });
+
     window.LoginSessionManager = { open, close, load };
 })();
