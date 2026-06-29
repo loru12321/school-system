@@ -16429,7 +16429,10 @@ function isArchiveLocked() {
 async function archiveCurrentExam() {
     if (!RAW_DATA.length) return alert("当前无成绩数据，无法封存");
     if (isArchiveLocked()) return alert("当前考试已封存，无需重复操作");
-    if (!confirm("⚠️ 封存后将进入只读模式，避免误改历史数据。确定封存吗？")) return;
+    if (!(await UI.confirm("⚠️ 封存后将进入只读模式，避免误改历史数据。确定封存吗？", {
+        title: '确认封存考试',
+        confirmText: '封存'
+    }))) return;
 
     const meta = getExamMetaFromUI();
     if (!meta.year || !meta.term || !meta.type) return alert("请先设置学年/学期/考试类型");
@@ -16453,9 +16456,12 @@ async function archiveCurrentExam() {
     if (window.Logger) Logger.log('封存考试', `封存考试 ${key}`);
 }
 
-function unlockArchive() {
+async function unlockArchive() {
     if (!isArchiveLocked()) return alert("当前未封存");
-    if (!confirm("⚠️ 解除封存将允许编辑历史数据，是否继续？")) return;
+    if (!(await UI.confirm("⚠️ 解除封存将允许编辑历史数据，是否继续？", {
+        title: '解除封存',
+        confirmText: '解除'
+    }))) return;
     writeArchiveLockState(false, '');
     applyExamMetaUI();
     applyArchiveLockUI();
@@ -16977,8 +16983,11 @@ function renderAutoSnapshotsUI() {
     }).join('');
 }
 
-function restoreAutoSnapshot(index) {
-    if (!confirm('确定回滚到该快照吗？当前未保存的修改将丢失。')) return;
+async function restoreAutoSnapshot(index) {
+    if (!(await UI.confirm('确定回滚到该快照吗？当前未保存的修改将丢失。', {
+        title: '回滚自动快照',
+        confirmText: '回滚'
+    }))) return;
     const list = JSON.parse(localStorage.getItem('AUTO_SNAPSHOTS') || '[]');
     const item = list[index];
     if (!item || !item.data) return;
@@ -17016,7 +17025,7 @@ function restoreLatestAutoSnapshotDirect() {
     }
 }
 
-function promptHistoryRecoveryIfEmpty() {
+async function promptHistoryRecoveryIfEmpty() {
     return;
     const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || '';
     if (!cohortId) return;
@@ -17033,7 +17042,10 @@ function promptHistoryRecoveryIfEmpty() {
     const hasSnapshots = list.length > 0;
 
     if (!window.Swal) {
-        if (hasSnapshots && confirm('⚠️ 检测到当前届别历史考试为空。\n是否一键回滚最近自动快照进行恢复？')) {
+        if (hasSnapshots && await UI.confirm('⚠️ 检测到当前届别历史考试为空。\n是否一键回滚最近自动快照进行恢复？', {
+            title: '历史考试为空',
+            confirmText: '恢复最近快照'
+        })) {
             restoreLatestAutoSnapshotDirect();
             if (typeof CohortDB !== 'undefined') CohortDB.renderExamList();
         }
@@ -17300,7 +17312,10 @@ async function loadProjectSnapshot(input) {
     const file = input && input.files ? input.files[0] : input;
     if (!file) return;
 
-    if (!confirm("⚠️ 警告：从文件恢复会覆盖当前系统中的所有数据！\n确定要继续吗？")) {
+    if (!(await UI.confirm("⚠️ 警告：从文件恢复会覆盖当前系统中的所有数据！\n确定要继续吗？", {
+        title: '从文件恢复项目',
+        confirmText: '恢复'
+    }))) {
         if (input && input.value !== undefined) input.value = '';
         return;
     }

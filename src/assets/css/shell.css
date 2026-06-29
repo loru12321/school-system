@@ -2119,6 +2119,20 @@ body[data-mobile-query="true"] #parent-view-container .fluent-card {
     transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
 
+.shell-sync-chip [data-sync-label] {
+    white-space: nowrap;
+}
+
+.shell-sync-chip [data-sync-meta] {
+    max-width: 220px;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .shell-sync-chip[data-sync-state="syncing"] {
     border-color: rgba(217, 119, 6, 0.28);
     background: rgba(255, 247, 237, 0.94);
@@ -2150,6 +2164,10 @@ body[data-mobile-query="true"] #parent-view-container .fluent-card {
 .dark-mode .shell-sync-chip {
     background: rgba(15, 23, 42, 0.72);
     border-color: rgba(148, 163, 184, 0.26);
+}
+
+.dark-mode .shell-sync-chip [data-sync-meta] {
+    color: #94a3b8;
 }
 
 .shell-current-desc {

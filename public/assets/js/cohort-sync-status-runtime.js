@@ -7,21 +7,79 @@
     function formatTime(value) {
         const timestamp = Number(value || 0);
         if (!Number.isFinite(timestamp) || timestamp <= 0) return '';
-        return new Date(timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        return new Date(timestamp).toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function readStorage(key) {
+        try {
+            return localStorage.getItem(key) || '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function resolveSyncMeta(state = 'idle', options = {}) {
+        const cohortId = String(
+            options.cohortId
+            || global.CURRENT_COHORT_ID
+            || readStorage('CURRENT_COHORT_ID')
+            || ''
+        ).trim();
+        const examId = String(
+            options.examId
+            || global.CURRENT_EXAM_ID
+            || readStorage('CURRENT_EXAM_ID')
+            || ''
+        ).trim();
+        const source = String(
+            options.source
+            || (state === 'synced' || state === 'syncing' ? 'cloud' : '')
+            || (state === 'local' ? 'local' : '')
+            || (readStorage('CLOUD_SYNC_AT') ? 'cache' : 'local')
+        ).trim();
+        const updatedAt = Number(options.syncedAt || options.updatedAt || readStorage(`${SYNC_AT_PREFIX}${cohortId}`) || readStorage('CLOUD_SYNC_AT') || 0);
+
+        return {
+            source: source || 'local',
+            cohortId,
+            examId,
+            updatedAt
+        };
+    }
+
+    function formatSyncDetail(meta) {
+        const sourceLabels = {
+            cloud: '云端',
+            cache: '缓存',
+            local: '本地'
+        };
+        const source = sourceLabels[meta.source] || '本地';
+        const cohort = meta.cohortId ? `${meta.cohortId}届` : '未选届别';
+        const exam = meta.examId ? meta.examId.replace(/^(.{18}).+$/, '$1...') : '未选择考试';
+        const time = formatTime(meta.updatedAt);
+        return time ? `${source} · ${cohort} · ${exam} · ${time}` : `${source} · ${cohort} · ${exam}`;
     }
 
     function setStatus(state = 'idle', options = {}) {
-        const cohortId = String(options.cohortId || '').trim();
-        const chip = document.getElementById('shell-sync-chip');
         const normalizedState = VALID_STATES.has(state) ? state : 'idle';
-        let syncedAt = Number(options.syncedAt || 0);
+        const chip = document.getElementById('shell-sync-chip');
+        const meta = resolveSyncMeta(normalizedState, options);
+        let syncedAt = Number(options.syncedAt || meta.updatedAt || 0);
 
         if (normalizedState === 'synced') {
             syncedAt = syncedAt || Date.now();
-            if (cohortId) localStorage.setItem(`${SYNC_AT_PREFIX}${cohortId}`, String(syncedAt));
+            if (meta.cohortId) localStorage.setItem(`${SYNC_AT_PREFIX}${meta.cohortId}`, String(syncedAt));
             localStorage.setItem('CLOUD_SYNC_AT', String(syncedAt));
-        } else if (!syncedAt && cohortId) {
-            syncedAt = Number(localStorage.getItem(`${SYNC_AT_PREFIX}${cohortId}`) || 0);
+            meta.updatedAt = syncedAt;
+            meta.source = 'cloud';
+        } else if (!syncedAt && meta.cohortId) {
+            syncedAt = Number(localStorage.getItem(`${SYNC_AT_PREFIX}${meta.cohortId}`) || 0);
+            meta.updatedAt = syncedAt;
         }
 
         const labels = {
@@ -32,13 +90,22 @@
             error: '同步失败 · 重试'
         };
 
+        const detailText = formatSyncDetail(meta);
         if (chip) {
+            const dataSyncSource = meta.source;
+            const dataSyncExam = meta.examId;
+            const dataSyncUpdated = String(meta.updatedAt || '');
             chip.dataset.syncState = normalizedState;
-            chip.dataset.cohortId = cohortId;
+            chip.dataset.cohortId = meta.cohortId;
+            chip.dataset.syncSource = dataSyncSource;
+            chip.dataset.syncExam = dataSyncExam;
+            chip.dataset.syncUpdated = dataSyncUpdated;
             chip.disabled = normalizedState === 'syncing';
             const label = chip.querySelector('[data-sync-label]');
             if (label) label.textContent = labels[normalizedState];
-            chip.title = options.detail || (normalizedState === 'error' ? '点击重试当前届别的云端同步' : labels[normalizedState]);
+            const metaLabel = chip.querySelector('[data-sync-meta]');
+            if (metaLabel) metaLabel.textContent = detailText;
+            chip.title = options.detail || (normalizedState === 'error' ? `${detailText}；点击重试当前届别的云端同步` : detailText);
             if (chip.dataset.syncBound !== '1') {
                 chip.dataset.syncBound = '1';
                 chip.addEventListener('click', () => {
@@ -47,7 +114,7 @@
             }
         }
         if (document.body) document.body.dataset.cohortSyncState = normalizedState;
-        return { state: normalizedState, cohortId, syncedAt };
+        return { state: normalizedState, cohortId: meta.cohortId, syncedAt, meta };
     }
 
     async function retry(options = {}) {
@@ -71,5 +138,5 @@
         }
     }
 
-    global.CohortSyncStatusRuntime = Object.freeze({ retry, setStatus });
+    global.CohortSyncStatusRuntime = Object.freeze({ retry, setStatus, resolveSyncMeta });
 }(window));
