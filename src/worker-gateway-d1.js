@@ -201,6 +201,7 @@ function buildSessionPayload(row) {
   const className = normalizeText(row?.class_name);
   const teacherName = normalizeText(row?.teacher_name || row?.display_name || row?.name || row?.username);
   return {
+    session_id: normalizeText(row?.session_id) || crypto.randomUUID(),
     username: normalizeText(row?.username || row?.name),
     role,
     roles,
@@ -210,6 +211,117 @@ function buildSessionPayload(row) {
     teacher_name: teacherName,
     exp: Math.floor(Date.now() / 1000) + LOCAL_SESSION_TTL_SECONDS
   };
+}
+
+function parseClientDeviceInfo(payload = {}) {
+  const device = payload?.device && typeof payload.device === 'object' ? payload.device : {};
+  return {
+    device_label: normalizeText(device.device_label || device.label).slice(0, 120),
+    device_type: normalizeText(device.device_type || device.type).slice(0, 40),
+    browser: normalizeText(device.browser).slice(0, 80),
+    os: normalizeText(device.os).slice(0, 80),
+    platform: normalizeText(device.platform).slice(0, 120),
+    language: normalizeText(device.language).slice(0, 40),
+    timezone: normalizeText(device.timezone).slice(0, 80),
+    screen: normalizeText(device.screen).slice(0, 60),
+    user_agent: normalizeText(device.user_agent || device.userAgent).slice(0, 500)
+  };
+}
+
+function readRequestIp(request) {
+  return normalizeText(
+    request.headers.get('CF-Connecting-IP')
+    || request.headers.get('X-Forwarded-For')
+    || ''
+  ).split(',')[0].trim();
+}
+
+async function ensureLoginSessionsTable(db) {
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS login_sessions (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT '',
+      school TEXT,
+      class_name TEXT,
+      session_id TEXT NOT NULL,
+      device_label TEXT,
+      device_type TEXT,
+      browser TEXT,
+      os TEXT,
+      platform TEXT,
+      language TEXT,
+      timezone TEXT,
+      screen TEXT,
+      user_agent TEXT,
+      ip_address TEXT,
+      login_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      session_expires_at TEXT,
+      status TEXT NOT NULL DEFAULT 'active'
+    )
+  `).run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_login_sessions_username_login ON login_sessions(username, login_at DESC)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_login_sessions_status_login ON login_sessions(status, login_at DESC)').run();
+}
+
+function normalizeLoginSessionRow(row) {
+  return {
+    id: normalizeText(row?.id),
+    username: normalizeText(row?.username),
+    role: normalizeText(row?.role),
+    school: normalizeText(row?.school),
+    class_name: normalizeText(row?.class_name),
+    session_id: normalizeText(row?.session_id),
+    device_label: normalizeText(row?.device_label),
+    device_type: normalizeText(row?.device_type),
+    browser: normalizeText(row?.browser),
+    os: normalizeText(row?.os),
+    platform: normalizeText(row?.platform),
+    language: normalizeText(row?.language),
+    timezone: normalizeText(row?.timezone),
+    screen: normalizeText(row?.screen),
+    user_agent: normalizeText(row?.user_agent),
+    ip_address: normalizeText(row?.ip_address),
+    login_at: normalizeText(row?.login_at),
+    last_seen_at: normalizeText(row?.last_seen_at),
+    session_expires_at: normalizeText(row?.session_expires_at),
+    status: normalizeText(row?.status) || 'active'
+  };
+}
+
+async function recordLoginSession(db, request, session, payload) {
+  await ensureLoginSessionsTable(db);
+  const now = new Date().toISOString();
+  const device = parseClientDeviceInfo(payload);
+  await db.prepare(`
+    INSERT INTO login_sessions (
+      id, username, role, school, class_name, session_id, device_label,
+      device_type, browser, os, platform, language, timezone, screen,
+      user_agent, ip_address, login_at, last_seen_at, session_expires_at, status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    crypto.randomUUID(),
+    normalizeText(session.username),
+    normalizeText(session.role),
+    normalizeText(session.school) || null,
+    normalizeText(session.class_name) || null,
+    normalizeText(session.session_id),
+    device.device_label || null,
+    device.device_type || null,
+    device.browser || null,
+    device.os || null,
+    device.platform || null,
+    device.language || null,
+    device.timezone || null,
+    device.screen || null,
+    device.user_agent || null,
+    readRequestIp(request) || null,
+    now,
+    now,
+    session.exp ? new Date(Number(session.exp) * 1000).toISOString() : null,
+    'active'
+  ).run();
 }
 
 function shouldForceManagedPasswordChange(row) {
@@ -544,10 +656,14 @@ async function performGatewayLogin(request, env, body) {
     has_password: true,
     updated_at: new Date().toISOString()
   });
+  await recordLoginSession(db, request, session, body?.payload || {}).catch((error) => {
+    console.error('[gateway] login session record failed:', error);
+  });
   return jsonResponse(200, {
     ok: true,
     token,
     user: {
+      session_id: session.session_id,
       username: session.username,
       role: session.role,
       roles: session.roles,
@@ -1204,6 +1320,29 @@ async function handleAccountSearch(request, db, session, payload) {
   return jsonResponse(200, { ok: true, records }, request);
 }
 
+async function handleLoginSessionList(request, db, session, payload) {
+  await ensureLoginSessionsTable(db);
+  const mode = normalizeText(payload.mode) || 'self';
+  const limit = Math.max(1, Math.min(Number(payload.limit ?? 50) || 50, 200));
+  const bindings = [];
+  let sql = 'SELECT * FROM login_sessions';
+  if (mode === 'all') {
+    if (!isAdmin(session)) return forbidden(request, 'Only admin can view all login sessions');
+  } else {
+    sql += ' WHERE username = ?';
+    bindings.push(normalizeText(session.username));
+  }
+  sql += ' ORDER BY login_at DESC LIMIT ?';
+  bindings.push(limit);
+  const records = await queryRows(db, sql, bindings, normalizeLoginSessionRow);
+  return jsonResponse(200, {
+    ok: true,
+    records,
+    current_session_id: normalizeText(session.session_id),
+    scope: mode === 'all' && isAdmin(session) ? 'all' : 'self'
+  }, request);
+}
+
 async function handleAccountUpdate(request, db, session, payload) {
   if (!canSearchAccounts(session)) return forbidden(request, 'No permission to update accounts');
   const username = normalizeText(payload.username);
@@ -1495,6 +1634,13 @@ async function routeGatewayAction(request, env, body) {
   const session = resolved.session;
   if (action === 'session.verify') {
     const token = await signLocalSession(env, buildSessionPayload(session));
+    if (session.session_id) {
+      await ensureLoginSessionsTable(db);
+      await db.prepare('UPDATE login_sessions SET last_seen_at = ? WHERE session_id = ?')
+        .bind(new Date().toISOString(), normalizeText(session.session_id))
+        .run()
+        .catch((error) => console.error('[gateway] login session heartbeat failed:', error));
+    }
     return jsonResponse(200, { ok: true, session, token }, request);
   }
   switch (action) {
@@ -1510,6 +1656,7 @@ async function routeGatewayAction(request, env, body) {
     case 'version.update': return handleVersionUpdate(request, db, session, payload);
     case 'version.delete': return handleVersionDelete(request, db, session, payload);
     case 'account.search': return handleAccountSearch(request, db, session, payload);
+    case 'account.login_sessions': return handleLoginSessionList(request, db, session, payload);
     case 'account.update': return handleAccountUpdate(request, db, session, payload);
     case 'account.reset_password': return handleAccountResetPassword(request, db, session, payload);
     case 'account.change_password': return handleAccountChangePassword(request, db, session, payload);

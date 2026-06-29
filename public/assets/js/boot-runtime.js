@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-d6d542e60289';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-051d3fd06bae';
 
 function bootDebugLog(...args) {
 try {
@@ -152,6 +152,7 @@ var APP_MODULES = [
 'help-system-runtime.js',
 'logger-runtime.js',
 'account-manager-runtime.js',
+'login-session-runtime.js',
 'data-manager-teacher-runtime.js',
 'data-manager-student-runtime.js',
 'data-manager-archive-runtime.js',
@@ -1527,6 +1528,33 @@ const bootGateway = window.EdgeGateway || {
             || text.includes('failed to fetch')
             || text.includes('networkerror');
     },
+    getClientDeviceInfo() {
+        const nav = typeof navigator !== 'undefined' ? navigator : {};
+        const screenObj = typeof screen !== 'undefined' ? screen : {};
+        const ua = String(nav.userAgent || '');
+        const browser = /Edg\//.test(ua) ? 'Microsoft Edge'
+            : /Chrome\//.test(ua) ? 'Chrome'
+            : /Firefox\//.test(ua) ? 'Firefox'
+            : /Safari\//.test(ua) ? 'Safari'
+            : 'Browser';
+        const os = /Windows/i.test(ua) ? 'Windows'
+            : /Mac OS X/i.test(ua) ? 'macOS'
+            : /Android/i.test(ua) ? 'Android'
+            : /iPhone|iPad|iPod/i.test(ua) ? 'iOS'
+            : String(nav.platform || 'Unknown');
+        const screenText = screenObj.width && screenObj.height ? `${screenObj.width}x${screenObj.height}` : '';
+        return {
+            device_label: `${browser} / ${os}${screenText ? ` / ${screenText}` : ''}`,
+            device_type: /Mobi|Android|iPhone|iPad|iPod/i.test(ua) ? 'mobile' : 'desktop',
+            browser,
+            os,
+            platform: String(nav.platform || ''),
+            language: String(nav.language || ''),
+            timezone: (Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || '',
+            screen: screenText,
+            user_agent: ua
+        };
+    },
     async request(action, payload = {}, options = {}) {
         const urls = this.getGatewayCandidates();
         const apikey = this.getPublishableKey();
@@ -1596,7 +1624,8 @@ const bootGateway = window.EdgeGateway || {
         const data = await this.request('login', {
             username,
             password,
-            class_name: className || ''
+            class_name: className || '',
+            device: this.getClientDeviceInfo()
         }, { allowAnonymous: true });
         if (data?.token) this.setToken(data.token);
         if (data?.user) sessionStorage.setItem(this.userStorageKey, JSON.stringify(data.user));

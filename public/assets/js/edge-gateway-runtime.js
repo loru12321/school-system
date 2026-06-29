@@ -16,7 +16,7 @@ function edgeGatewayDebug(...args) {
     } catch (_) {}
 }
 
-var EdgeGateway = window.EdgeGateway || {
+var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
     tokenStorageKey: 'EDGE_GATEWAY_TOKEN_V1',
     userStorageKey: 'EDGE_GATEWAY_USER_V1',
     resolvedGatewayUrl: '',
@@ -211,6 +211,38 @@ var EdgeGateway = window.EdgeGateway || {
         }
         throw lastError || new Error('EDGE_GATEWAY_REQUEST_FAILED');
     },
+    getClientDeviceInfo: function () {
+        const nav = typeof navigator !== 'undefined' ? navigator : {};
+        const screenObj = typeof screen !== 'undefined' ? screen : {};
+        const ua = String(nav.userAgent || '');
+        const browser = (() => {
+            if (/Edg\//.test(ua)) return 'Microsoft Edge';
+            if (/Chrome\//.test(ua)) return 'Chrome';
+            if (/Firefox\//.test(ua)) return 'Firefox';
+            if (/Safari\//.test(ua)) return 'Safari';
+            return 'Browser';
+        })();
+        const os = (() => {
+            if (/Windows/i.test(ua)) return 'Windows';
+            if (/Mac OS X/i.test(ua)) return 'macOS';
+            if (/Android/i.test(ua)) return 'Android';
+            if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
+            return String(nav.platform || 'Unknown');
+        })();
+        const deviceType = /Mobi|Android|iPhone|iPad|iPod/i.test(ua) ? 'mobile' : 'desktop';
+        const screenText = screenObj.width && screenObj.height ? `${screenObj.width}x${screenObj.height}` : '';
+        return {
+            device_label: `${browser} / ${os}${screenText ? ` / ${screenText}` : ''}`,
+            device_type: deviceType,
+            browser,
+            os,
+            platform: String(nav.platform || ''),
+            language: String(nav.language || ''),
+            timezone: (Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || '',
+            screen: screenText,
+            user_agent: ua
+        };
+    },
     login: async function (username, password, className = '') {
         const classCandidates = this.buildLoginClassCandidates(className);
         let lastError = null;
@@ -221,7 +253,8 @@ var EdgeGateway = window.EdgeGateway || {
                 const data = await this.request('login', {
                     username,
                     password,
-                    class_name: currentClassName || ''
+                    class_name: currentClassName || '',
+                    device: this.getClientDeviceInfo()
                 }, { allowAnonymous: true });
                 if (data?.token) this.setToken(data.token);
                 if (data?.user) sessionStorage.setItem(this.userStorageKey, JSON.stringify(data.user));
@@ -284,6 +317,9 @@ var EdgeGateway = window.EdgeGateway || {
             keyword: String(keyword || '').trim()
         }, payload || {}));
     },
+    listLoginSessions: async function (payload = {}) {
+        return await this.request('account.login_sessions', payload || {});
+    },
     updateAccount: async function (payload = {}) {
         return await this.request('account.update', payload || {});
     },
@@ -313,6 +349,6 @@ var EdgeGateway = window.EdgeGateway || {
     getAccountMigrationStatus: async function () {
         return await this.request('account.migration_status', {});
     }
-};
+});
 
 window.EdgeGateway = EdgeGateway;

@@ -25,7 +25,10 @@ const cloudWorkspaceRuntime = read('public/assets/js/cloud-workspace-runtime.js'
 const dataCloudRuntime = read('public/assets/js/data-cloud-runtime.js');
 const cloudRuntime = read('public/assets/js/cloud.js');
 const gateway = read('src/worker-gateway-d1.js');
-const gatewayD1Schema = read('cloudflare/d1/002_gateway_data.sql');
+const gatewayD1Schema = [
+  read('cloudflare/d1/002_gateway_data.sql'),
+  read('cloudflare/d1/003_gateway_accounts.sql')
+].join('\n');
 const helpers = read('src/worker-http-helpers.js');
 const systemDataCutoverVerifier = read('scripts/verify-system-data-cloudflare-cutover.js');
 const wrangler = parseJsonc('wrangler.jsonc');
@@ -140,6 +143,11 @@ assert.ok(scripts['verify:system-data:cloudflare-cutover'] === 'node scripts/ver
 assert.ok(systemDataCutoverVerifier.includes("DEFAULT_EXPECTED_BACKEND = 'hybrid,d1'"), 'system_data cutover verifier must reject same-backend Supabase comparisons by default');
 assert.ok(gatewayD1Schema.includes('idx_system_logs_operator_created'), 'system_logs should index operator history lookups by created_at');
 assert.ok(gatewayD1Schema.includes('idx_rectify_tasks_project_cohort_status_school_created'), 'rectify tasks should index dashboard list filters');
+assert.ok(gatewayD1Schema.includes('CREATE TABLE IF NOT EXISTS login_sessions'), 'gateway schema should persist login device/session records');
+assert.ok(gatewayD1Schema.includes('idx_login_sessions_username_login'), 'login session records should index self history lookups');
+assert.ok(gateway.includes("case 'account.login_sessions'"), 'gateway should expose scoped login session lookup action');
+assert.ok(gateway.includes('recordLoginSession(db, request, session'), 'gateway login should record device/session metadata');
+assert.ok(gateway.includes('Only admin can view all login sessions'), 'all-account login session lookup should be admin-only');
 
 console.log(JSON.stringify({
   ok: true,

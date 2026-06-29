@@ -2245,6 +2245,7 @@ var Auth = {
             /* 👆👆👆 🟢 结束 🟢 👆👆👆 */
 
             const matchedUser = {
+                session_id: data.session_id || '',
                 name: data.username || data.name,
                 role: data.role, // 主角色（兼容）
                 roles: data.roles || [data.role], // 🆕 支持多角色数组
@@ -8056,6 +8057,7 @@ function closeBlockingModalsBeforeModuleSwitch() {
         'admin-issue-modal',
         'admin-log-modal',
         'account-manager-modal',
+        'login-session-modal',
         'data-manager-modal',
         'version-center-backdrop'
     ];
@@ -15228,6 +15230,7 @@ function bindModalInteractionGuards() {
         'admin-issue-modal',
         'admin-log-modal',
         'account-manager-modal',
+        'login-session-modal',
         'data-manager-modal'
     ];
 
@@ -18245,7 +18248,8 @@ window.addEventListener('load', () => {
             'issue-submit-modal',   // 成绩核查申诉弹窗
             'admin-issue-modal',    // 管理员申诉处理弹窗
             'user-password-modal',  // 修改密码弹窗
-            'account-manager-modal' // 账号管理弹窗
+            'account-manager-modal', // 账号管理弹窗
+            'login-session-modal' // 登录状态弹窗
         ];
 
         modalIds.forEach(id => {

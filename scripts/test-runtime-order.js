@@ -227,6 +227,7 @@ const helpSystemRef = './assets/js/help-system-runtime.js';
 const loggerRef = './assets/js/logger-runtime.js';
 const workerApiRef = './assets/js/worker-api-runtime.js';
 const accountManagerRef = './assets/js/account-manager-runtime.js';
+const loginSessionRef = './assets/js/login-session-runtime.js';
 const managementFacadesRef = './assets/js/management-facades-runtime.js';
 const cohortExamHydrationRef = './assets/js/cohort-exam-hydration-runtime.js';
 const dataManagerTeacherRef = './assets/js/data-manager-teacher-runtime.js';
@@ -368,6 +369,7 @@ const helpSystemIndex = normalizedModuleManifest.indexOf(helpSystemRef);
 const loggerIndex = normalizedModuleManifest.indexOf(loggerRef);
 const workerApiIndex = normalizedModuleManifest.indexOf(workerApiRef);
 const accountManagerIndex = normalizedModuleManifest.indexOf(accountManagerRef);
+const loginSessionIndex = normalizedModuleManifest.indexOf(loginSessionRef);
 const managementFacadesIndex = normalizedModuleManifest.indexOf(managementFacadesRef);
 const cohortExamHydrationIndex = normalizedModuleManifest.indexOf(cohortExamHydrationRef);
 const dataManagerTeacherIndex = normalizedModuleManifest.indexOf(dataManagerTeacherRef);
@@ -457,6 +459,15 @@ assert.ok(issueManagerIndex < appIndex, 'issue-manager-runtime.js should load be
 assert.ok(helpSystemIndex < appIndex, 'help-system-runtime.js should load before app.js');
 assert.ok(loggerIndex < appIndex, 'logger-runtime.js should load before app.js');
 assert.ok(accountManagerIndex < appIndex, 'account-manager-runtime.js should load before app.js');
+assert.ok(loginSessionIndex >= 0, 'index.html should load login-session-runtime.js');
+assert.ok(loginSessionIndex < appIndex, 'login-session-runtime.js should load before app.js');
+assert.ok(indexHtml.includes('id="login-session-btn"'), 'login status button should be present in the toolbar');
+assert.ok(indexHtml.includes('id="login-session-modal"'), 'login status modal should be present');
+assert.ok(
+    fs.readFileSync(path.resolve(__dirname, '../public/assets/js/edge-gateway-runtime.js'), 'utf8').includes('var EdgeGateway = Object.assign(window.EdgeGateway || {}, {'),
+    'edge gateway runtime should merge full methods into any placeholder object'
+);
+assert.ok(bootRuntimeSource.includes('device: this.getClientDeviceInfo()'), 'boot gateway login should persist device metadata for session audit records');
 assert.ok(edgeGatewayIndex < accountManagerIndex, 'edge-gateway-runtime.js should load before account-manager-runtime.js');
 assert.ok(edgeGatewayIndex < appIndex, 'edge-gateway-runtime.js should load before app.js');
 assert.ok(managementFacadesIndex < appIndex, 'management-facades-runtime.js should load before app.js');
@@ -897,6 +908,7 @@ assert.ok(!appSource.includes('const AccountManager = {'), 'app.js should not du
     helpSystemRef,
     loggerRef,
     accountManagerRef,
+    loginSessionRef,
     dataManagerTeacherRef,
     dataManagerStudentRef,
     dataManagerArchiveRef,
