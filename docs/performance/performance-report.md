@@ -4,12 +4,12 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `5a4e643fc778`
-- Recorded at: 2026-06-29T08:52:12.432Z
-- Total smoke time: 41261 ms (+2731 ms vs previous)
-- Login: 4499 ms
-- App ready: 2625 ms
-- Long tasks: 2, max 1005 ms
+- Commit: `8855664a28f9`
+- Recorded at: 2026-06-29T09:13:44.340Z
+- Total smoke time: 39667 ms (-1594 ms vs previous)
+- Login: 3878 ms
+- App ready: 2322 ms
+- Long tasks: 2, max 884 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `upload` | 683 ms | 2527 ms | 3210 ms |
-| `cohort-growth` | 605 ms | 1844 ms | 2449 ms |
-| `county-analysis` | 506 ms | 706 ms | 1212 ms |
-| `report-generator` | 539 ms | 648 ms | 1187 ms |
-| `student-overview` | 562 ms | 526 ms | 1088 ms |
-| `summary` | 541 ms | 509 ms | 1050 ms |
-| `grade-scheduler` | 529 ms | 384 ms | 913 ms |
-| `freshman-simulator` | 538 ms | 351 ms | 889 ms |
+| `cohort-growth` | 601 ms | 1619 ms | 2220 ms |
+| `county-analysis` | 506 ms | 747 ms | 1253 ms |
+| `report-generator` | 517 ms | 650 ms | 1167 ms |
+| `student-overview` | 564 ms | 515 ms | 1079 ms |
+| `summary` | 558 ms | 509 ms | 1067 ms |
+| `grade-scheduler` | 530 ms | 375 ms | 905 ms |
+| `freshman-simulator` | 533 ms | 359 ms | 892 ms |
+| `exam-arranger` | 522 ms | 338 ms | 860 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `8855664a28f9` | 39667 ms | 3878 ms | 2322 ms | 2 | 0 | 0 |
 | `5a4e643fc778` | 41261 ms | 4499 ms | 2625 ms | 2 | 0 | 0 |
 | `6f694388ccbb` | 38530 ms | 6132 ms | 6 ms | 2 | 0 | 0 |
 | `29426047563b` | 38268 ms | 6203 ms | 8 ms | 2 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `291411606b3e` | 40254 ms | 8028 ms | 2 ms | 2 | 0 | 0 |
 | `b318de55602b` | 38504 ms | 1944 ms | 3764 ms | 2 | 0 | 0 |
 | `35517468c965` | 36684 ms | 2462 ms | 3530 ms | 0 | 0 | 0 |
-| `deb2edaf0d20` | 38921 ms | 2828 ms | 3601 ms | 0 | 0 | 0 |
 
 ## Data Files
 
