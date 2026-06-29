@@ -2421,9 +2421,15 @@ var Auth = {
                     && !!restoredExamId
                     && Array.isArray(RAW_DATA)
                     && RAW_DATA.length > 0;
-                setManualCohortSelectionGate(!hasReadyWorkspace);
-                showCohortPicker();
-                if (hasReadyWorkspace) {
+                if (pendingLoginCohortEntry) {
+                    setManualCohortSelectionGate(false);
+                    await pendingLoginCohortEntry;
+                    tryResumeReadyWorkspace();
+                } else {
+                    setManualCohortSelectionGate(!hasReadyWorkspace);
+                    showCohortPicker();
+                }
+                if (!pendingLoginCohortEntry && hasReadyWorkspace) {
                     tryResumeReadyWorkspace();
                 }
 

@@ -5,18 +5,15 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const htmlPath = path.join(root, 'src', 'index.html');
 const cssPath = path.join(root, 'src', 'assets', 'css', 'responsive-login-final.css');
-const liteCssPath = path.join(root, 'src', 'assets', 'css', 'login-workbench-lite.css');
 const packagePath = path.join(root, 'package.json');
 
 assert.ok(fs.existsSync(cssPath), 'responsive-login-final.css must exist');
-assert.ok(fs.existsSync(liteCssPath), 'login-workbench-lite.css must exist');
+assert.ok(!fs.existsSync(path.join(root, 'src', 'assets', 'css', 'login-workbench-lite.css')), 'login-workbench-lite.css must be removed instead of layering a second login theme');
 
 const html = fs.readFileSync(htmlPath, 'utf8');
 const css = fs.readFileSync(cssPath, 'utf8');
-const liteCss = fs.readFileSync(liteCssPath, 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 const stylesheet = './assets/css/responsive-login-final.css';
-const liteStylesheet = './assets/css/login-workbench-lite.css';
 
 assert.strictEqual(
     packageJson.scripts['check:responsive-login'],
@@ -32,12 +29,8 @@ const stylesheetLinks = [...html.matchAll(/<link\b[^>]*>/gi)]
     .map(match => match[0].match(/\bhref\s*=\s*(["'])([^"']+)\1/i)?.[2])
     .filter(Boolean);
 assert.ok(stylesheetLinks.some(href => href.split('?')[0] === stylesheet), 'index.html must load responsive-login-final.css');
-assert.ok(stylesheetLinks.some(href => href.split('?')[0] === liteStylesheet), 'index.html must load login-workbench-lite.css');
-assert.strictEqual(stylesheetLinks.at(-1).split('?')[0], liteStylesheet, 'login-workbench-lite.css must be the last stylesheet loaded');
-assert.ok(
-    stylesheetLinks.findIndex(href => href.split('?')[0] === stylesheet) < stylesheetLinks.findIndex(href => href.split('?')[0] === liteStylesheet),
-    'login-workbench-lite.css must load after responsive-login-final.css'
-);
+assert.ok(!stylesheetLinks.some(href => href.split('?')[0] === './assets/css/login-workbench-lite.css'), 'index.html must not load a second login theme');
+assert.strictEqual(stylesheetLinks.at(-1).split('?')[0], stylesheet, 'responsive-login-final.css must be the last login stylesheet loaded');
 assert.ok(
     /<button\b[^>]*id="login-submit-button"[^>]*data-login-submit="1"[^>]*>/i.test(html),
     'login submit button must keep the runtime submit hook'
@@ -66,13 +59,11 @@ assert.match(css, /flex-direction:\s*column/, 'tablet shell must use a stacked p
 assert.match(css, /border-radius:\s*28px/, 'tablet shell must remain a polished card');
 assert.match(css, phoneQuery, 'phone breakpoint must target widths up to 768px');
 assert.match(css, /\.login-styleboard,\s*[\s\S]*?display:\s*none\s*!important/, 'responsive rules must explicitly hide the legacy styleboard');
-assert.match(liteCss, /#login-overlay\s*\{[^}]*background:\s*#f6f8fb\s*!important/s, 'lite login theme must use the workspace background');
-assert.match(liteCss, /background-image:\s*none\s*!important/, 'lite login theme must clear inherited radial gradients');
-assert.match(liteCss, /#login-overlay\s+\*[\s\S]*animation:\s*none\s*!important/, 'lite login theme must disable login page animations');
-assert.match(liteCss, /backdrop-filter:\s*none\s*!important/, 'lite login theme must neutralize backdrop filters');
-assert.match(liteCss, /body\[data-platform-shell="apple"\]\s+#login-overlay\s+\.login-auth-panel/, 'lite login theme must target apple login panel overrides');
-assert.doesNotMatch(liteCss, /backdrop-filter:\s*blur\(/, 'lite login theme must not introduce backdrop blur');
-assert.doesNotMatch(liteCss, /box-shadow:\s*0\s+3\dpx\s+8\dpx/, 'lite login theme must not introduce oversized login shadows');
+assert.match(css, /#login-overlay\[data-login-skin="clean"\]\s*\{[^}]*background:\s*#f6f8fb\s*!important/s, 'single login theme must use the workspace background');
+assert.match(css, /#login-overlay\[data-login-skin="clean"\]\s*\{[^}]*background-image:\s*none\s*!important/s, 'single login theme must clear inherited radial gradients');
+assert.match(css, /#login-overlay\[data-login-skin="clean"\]\s+\*[\s\S]*animation:\s*none\s*!important/, 'single login theme must disable login page animations');
+assert.doesNotMatch(css, /backdrop-filter:\s*blur\(/, 'responsive-login-final.css must not introduce login backdrop blur');
+assert.doesNotMatch(css, /box-shadow:\s*0\s+3\dpx\s+8\dpx/, 'responsive-login-final.css must not introduce oversized login shadows');
 
 function readBlock(source, start) {
     const open = source.indexOf('{', start);

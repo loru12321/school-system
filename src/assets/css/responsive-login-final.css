@@ -508,6 +508,23 @@ html body #login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
     background: #e61e48 !important;
 }
 
+/* Final single-theme login lock: keep the entry light without a second CSS layer. */
+#login-overlay[data-login-skin="clean"] {
+    background: #f6f8fb !important;
+    background-image: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] *,
+#login-overlay[data-login-skin="clean"] *::before,
+#login-overlay[data-login-skin="clean"] *::after {
+    animation: none !important;
+}
+
+html body #login-overlay[data-login-skin="clean"]::before,
+html body #login-overlay[data-login-skin="clean"]::after {
+    display: none !important;
+}
+
 @media (max-width: 1024px) {
     html body #login-overlay[data-login-skin="clean"] {
         overflow-y: auto !important;

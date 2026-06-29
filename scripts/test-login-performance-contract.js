@@ -46,4 +46,22 @@ assertParentPathUsesDeferredCloudLoad(
   'if (false && !isLocalOnlySession && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === \'function\')'
 );
 
+const selectedCohortIndex = appJs.indexOf('let pendingLoginCohortEntry = null;');
+assert.ok(selectedCohortIndex >= 0, 'school login must track selected cohort entry');
+const schoolBranchIndex = appJs.indexOf('} else {\n                if (typeof renderNavigation === \'function\') renderNavigation();', selectedCohortIndex);
+assert.ok(schoolBranchIndex > selectedCohortIndex, 'school post-login branch must exist after selected cohort handling');
+const schoolBranchEnd = appJs.indexOf('\n\n                if (this.currentUser.school)', schoolBranchIndex);
+assert.ok(schoolBranchEnd > schoolBranchIndex, 'school post-login branch must have a stable end marker');
+const schoolBranch = appJs.slice(schoolBranchIndex, schoolBranchEnd);
+
+assert.match(
+  schoolBranch,
+  /if\s*\(\s*pendingLoginCohortEntry\s*\)\s*\{[\s\S]*?await\s+pendingLoginCohortEntry/,
+  'school login with a selected cohort must wait for the selected cohort entry instead of showing the cohort picker again'
+);
+assert.match(
+  schoolBranch,
+  /else\s*\{[\s\S]*?showCohortPicker\(\)/,
+  'school login must only show the cohort picker when no selected cohort entry is pending'
+);
 console.log('Login performance contract passed');
