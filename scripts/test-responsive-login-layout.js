@@ -44,14 +44,14 @@ async function inspectLayout(page, viewport) {
             card: rect(card),
             shell: rect(shell),
             submit: rect(submit),
-            styleboard: rect(styleboard),
+            styleboard: styleboard ? rect(styleboard) : null,
             stageStyle: style(stage),
             cardStyle: style(card),
-            styleboardStyle: {
+            styleboardStyle: styleboard ? {
                 display: getComputedStyle(styleboard).display,
                 visibility: getComputedStyle(styleboard).visibility,
                 opacity: getComputedStyle(styleboard).opacity
-            },
+            } : null,
             viewportWidth: window.innerWidth,
             viewportHeight: window.innerHeight,
             documentScrollOverflow: document.documentElement.scrollHeight - window.innerHeight,
@@ -99,10 +99,12 @@ async function main() {
             assert.ok(state.card.right <= state.shell.right + 1, `${label}: login card must not overflow shell`);
 
             if (viewport.mode !== 'desktop') {
-                assert.strictEqual(state.styleboardStyle.display, 'none', `${label}: decorative styleboard must be hidden on tablet and phone`);
-                assert.strictEqual(state.styleboardStyle.visibility, 'hidden', `${label}: decorative styleboard must not be visible on tablet and phone`);
-                assert.ok(state.styleboard.right - state.styleboard.left <= 1, `${label}: decorative styleboard must not reserve width`);
-                assert.ok(state.styleboard.bottom - state.styleboard.top <= 1, `${label}: decorative styleboard must not reserve height`);
+                if (state.styleboardStyle) {
+                    assert.strictEqual(state.styleboardStyle.display, 'none', `${label}: decorative styleboard must be hidden on tablet and phone`);
+                    assert.strictEqual(state.styleboardStyle.visibility, 'hidden', `${label}: decorative styleboard must not be visible on tablet and phone`);
+                    assert.ok(state.styleboard.right - state.styleboard.left <= 1, `${label}: decorative styleboard must not reserve width`);
+                    assert.ok(state.styleboard.bottom - state.styleboard.top <= 1, `${label}: decorative styleboard must not reserve height`);
+                }
             }
 
             if (viewport.mode === 'desktop') {

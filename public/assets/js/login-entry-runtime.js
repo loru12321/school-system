@@ -659,120 +659,100 @@
 
             const portal = this.getLoginPortal();
             overlay.dataset.loginPortal = portal;
-            overlay.dataset.loginLayout = 'passport';
-            overlay.dataset.loginSkin = 'passport';
+            overlay.dataset.loginLayout = 'clean';
+            overlay.dataset.loginSkin = 'clean';
+            overlay.dataset.loginModal = 'inline';
             overlay.innerHTML = `
-                <div class="login-shell login-shell--passport">
-                    <section class="login-stage login-stage--passport" aria-label="系统登录说明">
-                        <nav class="login-stage-nav login-stage-nav--passport" aria-label="登录辅助导航">
-                            <a class="login-stage-brand" href="#login-hero">
-                                <span class="login-stage-brand-mark">SE</span>
-                                <span class="login-stage-brand-copy">
-                                    <strong>校衡台</strong>
-                                    <small>教学数据工作台</small>
-                                </span>
-                            </a>
-                            <div class="login-stage-nav-links">
-                                <a href="#login-hero" class="active">登录验证</a>
-                                <a href="#login-portal-hub">流程说明</a>
-                                <button type="button" class="login-stage-nav-login" onclick="window.Auth?.openLoginPortalModal('school')">切到学校端</button>
+                <div class="login-clean-shell" aria-label="系统登录">
+                    <section class="login-clean-stage">
+                        <div class="login-clean-brand">
+                            <span class="login-clean-mark">校</span>
+                            <div>
+                                <strong>校衡台</strong>
+                                <small>教学数据工作台</small>
                             </div>
-                        </nav>
-
-                        <div id="login-hero" class="login-stage-hero login-stage-hero--passport">
-                            <span id="login-stage-kicker" class="login-stage-hero-kicker">Step 1 / Login</span>
-                            <h1 id="login-stage-title">
-                                <span class="login-stage-title-line">选择届别并登录</span>
-                                <span class="login-stage-title-line login-stage-title-line--accent">一次进入学校工作台</span>
-                            </h1>
-                            <p id="login-stage-copy">学校端在登录页直接选择届别，验证成功后进入对应届别工作区，不再多一次确认。</p>
-                            <div class="login-stage-meta">
-                                <span><i class="ti ti-shield-lock"></i> 登录验证与工作区选择拆开</span>
-                                <span><i class="ti ti-route-2"></i> 学校端登录后固定进入届别选择</span>
-                                <span><i class="ti ti-devices"></i> Web / Android / Desktop 共用同一套流程</span>
-                            </div>
-                            <div class="login-stage-status-grid login-stage-status-grid--passport">
-                                <div class="login-stage-status-pill"><span>01</span><strong>选择届别</strong><p>在登录页确认目标届别。</p></div>
-                                <div class="login-stage-status-pill"><span>02</span><strong>验证身份</strong><p>账号与密码一次提交。</p></div>
-                                <div class="login-stage-status-pill"><span>03</span><strong>进入工作台</strong><p>云端数据就绪后直接打开。</p></div>
-                            </div>
-                            <div class="login-stage-spotlight login-stage-spotlight--passport">
-                                <div class="login-stage-spotlight-copy">
-                                    <span class="login-stage-featured-label">One-step Entry</span>
-                                    <strong id="login-stage-featured-title" class="login-stage-featured-title">登录页完成届别选择和身份验证</strong>
-                                    <p id="login-stage-featured-copy" class="login-stage-featured-copy">学校端采用“选择届别 → 验证身份 → 工作台”的路径，避免重复点击，也避免落进空数据或错误届别。</p>
-                                </div>
-                            </div>
+                        </div>
+                        <div class="login-clean-copy">
+                            <span>学校数据工作台</span>
+                            <h1>校衡台</h1>
+                            <p>把联考数据、教师画像、成长轨迹和家校沟通整理成清楚、可信、可行动的教学视图。</p>
                         </div>
                     </section>
 
-                    <section class="login-auth-panel login-auth-panel--passport" id="login-portal-hub" aria-label="统一登录入口">
-                        <div class="login-auth-panel-inner login-auth-panel-inner--passport">
-                            <div class="login-auth-card login-auth-card--passport">
-                                <div class="login-auth-head login-auth-head--passport">
-                                    <div class="login-brand-block">
-                                        <div id="login-portal-badge" class="login-portal-badge">学校身份验证</div>
-                                        <span class="login-brand-kicker">Inline Login</span>
-                                        <h2 class="login-auth-title">登录验证</h2>
-                                        <p id="login-portal-copy">学校端验证成功后进入届别选择，家长端保持直接进入成长查看界面。</p>
-                                    </div>
-                                </div>
+                    <section class="login-clean-card" id="login-portal-hub" aria-label="登录表单">
+                        <div class="login-form-header">
+                            <span id="login-portal-badge" class="login-portal-badge">学校身份验证</span>
+                            <h2 class="login-auth-title">欢迎回来</h2>
+                            <p id="login-portal-copy">请选择登录入口并完成验证。</p>
+                        </div>
 
-                                <div class="login-portal-launch-head">
-                                    <span>Switch Portal</span>
-                                    <p>学校端与家长端共用一张内联登录页，但学校端会在验证后进入届别选择，家长端保持直接查看成长数据。</p>
-                                </div>
+                        <div class="login-clean-switch" aria-label="登录入口">
+                            <button id="btn-role-school" type="button" class="role-btn active" data-login-portal-action="school">学校端</button>
+                            <button id="btn-role-parent" type="button" class="role-btn" data-login-portal-action="parent">家长端登录</button>
+                        </div>
 
-                                <div class="login-portal-switch" aria-label="登录入口选择">
-                                    <button type="button" class="login-portal-chip active" data-portal="school" data-login-open="school" onclick="window.Auth?.openLoginPortalModal('school')">学校端</button>
-                                    <button type="button" class="login-portal-chip" data-portal="parent" data-login-open="parent" onclick="window.Auth?.openLoginPortalModal('parent')">家长端</button>
-                                </div>
+                        <div id="login-form" class="login-clean-form">
+                            <label id="login-user-label" for="login-user" class="login-clean-label">账号 / 姓名</label>
+                            <div class="login-entry-field" data-login-field="user">
+                                <span class="login-entry-prefix">账号</span>
+                                <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" autocomplete="username" data-login-submit-on-enter="1">
+                            </div>
+                            <div id="login-user-helper" class="login-clean-helper">支持管理员、教务、年级、班主任与教师账号登录。</div>
 
-                                <div class="login-portal-note">
-                                    登录页已改为内联表单，不再打开单独的登录弹窗。
-                                </div>
-
-                                <div id="login-form">
-                                    <div class="form-group">
-                                        <label id="login-user-label" for="login-user">账号 / 姓名</label>
-                                        <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" data-login-submit-on-enter="1">
-                                        <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级主任、班主任和教师账号登录。</div>
-                                    </div>
-
-                                    <div id="login-class-group" class="form-group">
-                                        <label for="login-class">班级 <span id="login-class-label-note">(学校端无需填写)</span></label>
-                                        <input type="text" id="login-class" placeholder="请输入学生班级，如 701" data-login-submit-on-enter="1">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="login-pass">密码</label>
-                                        <input type="password" id="login-pass" placeholder="输入密码" data-login-submit-on-enter="1">
-                                    </div>
-
-                                    <button id="login-submit-button" data-login-submit="1">进入学校工作台</button>
-
-                                    <div id="login-portal-helper" class="login-portal-helper">当前为学校端，选择届别并验证成功后直接进入工作台。</div>
-
-                                    <div class="login-form-actions">
-                                        <button type="button" class="login-form-alt" onclick="window.Auth?.openSystemIntroModal(window.Auth?.getLoginPortal?.())">
-                                            <i class="ti ti-file-text"></i> 查看系统说明
-                                        </button>
-                                    </div>
-
-                                    <div class="login-trust-strip">
-                                        <span><i class="ti ti-shield-lock"></i> 统一身份认证</span>
-                                        <span><i class="ti ti-layers-subtract"></i> 登录与届别选择分步完成</span>
-                                        <span><i class="ti ti-database-export"></i> 模块按届别加载</span>
-                                    </div>
+                            <div id="login-class-group" class="login-clean-class" style="display:none;" aria-hidden="true">
+                                <label for="login-class" class="login-clean-label">班级 <span id="login-class-label-note">(家长端必填)</span></label>
+                                <div class="login-entry-field" data-login-field="class">
+                                    <span class="login-entry-prefix">班级</span>
+                                    <input type="text" id="login-class" placeholder="请输入学生班级，如 701" autocomplete="organization-title" data-login-submit-on-enter="1">
                                 </div>
                             </div>
+
+                            <label for="login-pass" class="login-clean-label">密码</label>
+                            <div class="login-entry-field" data-login-field="password">
+                                <span class="login-entry-prefix">密码</span>
+                                <input type="password" id="login-pass" placeholder="输入密码" autocomplete="current-password" data-login-submit-on-enter="1">
+                            </div>
+
+                            <div id="login-cohort-group" class="login-clean-cohort">
+                                <label for="login-cohort-select" class="login-clean-label">选择届别</label>
+                                <div class="login-entry-field login-entry-field--select" data-login-field="cohort">
+                                    <span class="login-entry-prefix">届别</span>
+                                    <select id="login-cohort-select" data-login-cohort-select="1"></select>
+                                </div>
+                            </div>
+
+                            <div id="login-graduate-cohort-panel" class="login-graduate-cohort-panel" hidden>
+                                <div class="login-graduate-cohort-head">
+                                    <span>毕业生档案</span>
+                                    <small>历届成绩查询入口</small>
+                                </div>
+                                <div class="login-graduate-cohort-row">
+                                    <div class="login-entry-field login-entry-field--select" data-login-field="graduate-cohort">
+                                        <span class="login-entry-prefix">档案</span>
+                                        <select id="login-graduate-cohort-select" data-login-graduate-cohort-select="1"></select>
+                                    </div>
+                                    <button id="login-graduate-cohort-button" type="button">查询</button>
+                                </div>
+                                <div id="login-graduate-cohort-helper" class="login-graduate-cohort-helper">选择毕业届后，完成登录即可进入该届成绩档案。</div>
+                            </div>
+
+                            <button id="login-submit-button" type="button" class="advanced-submit login-clean-submit" data-login-submit="1">进入学校工作台</button>
+
+                            <div id="login-entry-transition" class="login-entry-transition" aria-live="polite" aria-hidden="true">
+                                <div class="login-entry-transition__orb" aria-hidden="true"></div>
+                                <div>
+                                    <strong data-login-transition-title>正在进入学校工作台</strong>
+                                    <span data-login-transition-copy>正在验证身份并载入数据模块，请稍候。</span>
+                                </div>
+                            </div>
+                            <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后进入届别选择和工作台。</div>
                         </div>
                     </section>
                 </div>
 
                 <div id="login-modal-backdrop" class="login-modal-backdrop" style="display:none;" aria-hidden="true"></div>
             `;
-            overlay.dataset.passportRebuilt = 'true';
+            overlay.dataset.passportRebuilt = 'false';
             return overlay;
         },
 
