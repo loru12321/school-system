@@ -2170,6 +2170,11 @@ body[data-mobile-query="true"] #parent-view-container .fluent-card {
     color: #94a3b8;
 }
 
+.workflow-path {}
+.workflow-path__step {}
+.table-affordance-shell {}
+.calculation-policy-strip {}
+
 .shell-current-desc {
     margin: 0;
     max-width: 620px;

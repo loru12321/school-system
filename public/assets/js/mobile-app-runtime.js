@@ -19,6 +19,13 @@
         'progress-analysis',
         'analysis'
     ];
+    const ROLE_QUICK_MODULE_IDS = {
+        admin: ['upload', 'summary', 'data-manager', 'report-generator', 'teacher-analysis', 'cohort-growth'],
+        director: ['summary', 'county-analysis', 'teacher-analysis', 'report-generator', 'progress-analysis', 'cohort-growth'],
+        grade_director: ['teacher-analysis', 'summary', 'progress-analysis', 'student-overview', 'cohort-growth', 'report-generator'],
+        class_teacher: ['student-details', 'student-overview', 'progress-analysis', 'marginal-push', 'report-generator', 'summary'],
+        teacher: ['teacher-analysis', 'student-details', 'student-overview', 'summary', 'report-generator', 'progress-analysis']
+    };
     const RECENT_MODULE_STORAGE_KEY = 'apk-recent-modules-v1';
     const RECENT_MODULE_LIMIT = 8;
     const QUICK_MODULE_LIMIT = 6;
@@ -370,10 +377,12 @@
     }
 
     function getQuickModules(limit = QUICK_MODULE_LIMIT) {
+        const roleQuickModules = ROLE_QUICK_MODULE_IDS[getCurrentRole()] || [];
         const modules = [
             ...getRecentModules(limit),
             getActiveItem(),
             findAllowedItem(getHomeModuleId()),
+            ...roleQuickModules.map((moduleId) => findAllowedItem(moduleId)),
             ...QUICK_MODULE_IDS.map((moduleId) => findAllowedItem(moduleId))
         ];
         return uniqueItems(modules).slice(0, limit);
