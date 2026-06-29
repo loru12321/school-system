@@ -192,11 +192,49 @@
         return loaded || document.getElementById('teacher-analysis') || null;
     }
 
+    function refreshTeacherAnalysisPortrait() {
+        const section = ensureTeacherAnalysisLoaded();
+        if (!section || section.dataset.lazySectionPlaceholder === '1') return false;
+
+        if (typeof window.syncTeacherAnalysisSchoolContext === 'function') {
+            window.syncTeacherAnalysisSchoolContext();
+        }
+        if (typeof window.hydrateTeacherDataStore === 'function') {
+            window.hydrateTeacherDataStore();
+        } else if (typeof window.ensureTeacherDataStore === 'function') {
+            window.ensureTeacherDataStore();
+        }
+
+        if (typeof window.renderTeacherAnalysisState === 'function') {
+            window.renderTeacherAnalysisState();
+        } else if (typeof window.analyzeTeachers === 'function') {
+            window.analyzeTeachers();
+        }
+        if (typeof window.renderTeacherCards === 'function') {
+            window.renderTeacherCards();
+        }
+        if (typeof window.updateTeacherMultiExamSelects === 'function') {
+            window.updateTeacherMultiExamSelects();
+        }
+        if (typeof window.updateTeacherCompareTeacherSelect === 'function') {
+            window.updateTeacherCompareTeacherSelect();
+        }
+        if (typeof window.applyRoleAllowVisibility === 'function') {
+            window.applyRoleAllowVisibility(section);
+        }
+        return true;
+    }
+
     function refreshTeachingManagementAfterSwitch(moduleId) {
         markActiveGroup(moduleId);
         ensureTeacherAnalysisLoaded();
         if (typeof window.tmRenderTeachingModuleStateBars === 'function') {
             window.tmRenderTeachingModuleStateBars(moduleId === 'teacher-analysis' ? 'teacher-analysis' : '');
+        }
+        if (moduleId === 'teacher-analysis') {
+            window.setTimeout(refreshTeacherAnalysisPortrait, 80);
+            window.setTimeout(refreshTeacherAnalysisPortrait, 260);
+            return;
         }
         const renderers = {
             'teacher-detail-comparison': window.renderTeacherComparisonTable,
@@ -246,6 +284,7 @@
         ensureTeachingManagementSections,
         relocateTeacherBlocks,
         ensureTeacherTownshipRankingSlotReady,
+        refreshTeacherAnalysisPortrait,
         install
     };
 

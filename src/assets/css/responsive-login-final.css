@@ -919,3 +919,112 @@
         display: none !important;
     }
 }
+
+/* Compact login lock: this intentionally sits last in the cascade. */
+@media (min-width: 1025px) {
+    html body #login-overlay[data-login-skin="clean"] {
+        background: #f5f7fb !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        grid-template-columns: minmax(340px, 0.52fr) minmax(520px, 1fr) !important;
+        background: #ffffff !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        gap: 28px !important;
+        padding: clamp(28px, 4.5vh, 56px) clamp(30px, 4.5vw, 64px) !important;
+        border-right: 1px solid #e2e8f0 !important;
+        background: #f8fafc !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::after,
+    html body #login-overlay[data-login-skin="clean"] .login-styleboard,
+    html body #login-overlay[data-login-skin="clean"] .login-styleboard *,
+    html body #login-overlay[data-login-skin="clean"] .login-styleboard::before,
+    html body #login-overlay[data-login-skin="clean"] .login-styleboard::after {
+        content: none !important;
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        max-width: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-brand {
+        align-self: stretch !important;
+        margin: 0 !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-mark {
+        background: #0f172a !important;
+        border-radius: 10px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-copy {
+        width: 100% !important;
+        max-width: 360px !important;
+        margin: 0 !important;
+        align-self: stretch !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-copy span {
+        color: #2563eb !important;
+        letter-spacing: 0 !important;
+        text-transform: none !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        margin: 0 0 12px !important;
+        font-size: clamp(40px, 4.2vw, 58px) !important;
+        line-height: 1.04 !important;
+        color: #0f172a !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-copy p {
+        max-width: 330px !important;
+        color: #64748b !important;
+        font-size: 14px !important;
+        line-height: 1.72 !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-card {
+        align-items: center !important;
+        justify-content: center !important;
+        padding: clamp(24px, 4vh, 48px) clamp(42px, 6vw, 96px) !important;
+        overflow-y: auto !important;
+        background: #ffffff !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-form-header,
+    html body #login-overlay[data-login-skin="clean"] .login-clean-switch,
+    html body #login-overlay[data-login-skin="clean"] .login-clean-form {
+        width: min(100%, 560px) !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-entry-field {
+        min-height: 46px !important;
+        grid-template-columns: 82px minmax(0, 1fr) !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-submit {
+        background: #2563eb !important;
+        box-shadow: none !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
+        background: #1d4ed8 !important;
+    }
+}
