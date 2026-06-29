@@ -4,12 +4,12 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `6f694388ccbb`
-- Recorded at: 2026-06-27T12:17:07.321Z
-- Total smoke time: 38530 ms (+262 ms vs previous)
-- Login: 6132 ms
-- App ready: 6 ms
-- Long tasks: 2, max 1117 ms
+- Commit: `5a4e643fc778`
+- Recorded at: 2026-06-29T08:52:12.432Z
+- Total smoke time: 41261 ms (+2731 ms vs previous)
+- Login: 4499 ms
+- App ready: 2625 ms
+- Long tasks: 2, max 1005 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `cohort-growth` | 598 ms | 1991 ms | 2589 ms |
-| `student-overview` | 843 ms | 515 ms | 1358 ms |
-| `report-generator` | 518 ms | 805 ms | 1323 ms |
-| `summary` | 785 ms | 537 ms | 1322 ms |
-| `upload` | 1268 ms | 3 ms | 1271 ms |
-| `potential-analysis` | 1231 ms | 0 ms | 1231 ms |
-| `county-analysis` | 506 ms | 659 ms | 1165 ms |
-| `freshman-simulator` | 546 ms | 411 ms | 957 ms |
+| `upload` | 683 ms | 2527 ms | 3210 ms |
+| `cohort-growth` | 605 ms | 1844 ms | 2449 ms |
+| `county-analysis` | 506 ms | 706 ms | 1212 ms |
+| `report-generator` | 539 ms | 648 ms | 1187 ms |
+| `student-overview` | 562 ms | 526 ms | 1088 ms |
+| `summary` | 541 ms | 509 ms | 1050 ms |
+| `grade-scheduler` | 529 ms | 384 ms | 913 ms |
+| `freshman-simulator` | 538 ms | 351 ms | 889 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `5a4e643fc778` | 41261 ms | 4499 ms | 2625 ms | 2 | 0 | 0 |
 | `6f694388ccbb` | 38530 ms | 6132 ms | 6 ms | 2 | 0 | 0 |
 | `29426047563b` | 38268 ms | 6203 ms | 8 ms | 2 | 0 | 0 |
 | `44605c44bfd8` | 38915 ms | 6854 ms | 4 ms | 2 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `b318de55602b` | 38504 ms | 1944 ms | 3764 ms | 2 | 0 | 0 |
 | `35517468c965` | 36684 ms | 2462 ms | 3530 ms | 0 | 0 | 0 |
 | `deb2edaf0d20` | 38921 ms | 2828 ms | 3601 ms | 0 | 0 | 0 |
-| `a3e8fcc34e33` | 33499 ms | 1421 ms | 2185 ms | 1 | 0 | 0 |
 
 ## Data Files
 
