@@ -597,13 +597,21 @@ assert.ok(bootRuntime.includes("window.__BOOT_LOGIN_CLICKED__"), 'boot-runtime.j
 assert.ok(bootRuntime.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'boot login replay should consume the queued early click flag');
 assert.ok(loginEntryRuntime.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'login entry submit should clear stale queued early click state');
 assert.ok(appSource.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'full Auth.login should clear stale queued early click state');
-const bootLoginLoadIndex = bootRuntime.indexOf('await loadAppModules();');
-const bootLoginFinalizeIndex = bootRuntime.indexOf('finalizeBootLoginUi(portal);', bootLoginLoadIndex);
+const bootLoginSuccessIndex = bootRuntime.indexOf('if (result && result.user) {');
+const bootLoginSuccessEndIndex = bootRuntime.indexOf("} else {\n                setBootHelperMessage", bootLoginSuccessIndex);
+const bootLoginFinalizeIndex = bootRuntime.indexOf('finalizeBootLoginUi(portal);', bootLoginSuccessIndex);
+const bootLoginLoadIndex = bootRuntime.indexOf('loadAppModules()', bootLoginFinalizeIndex);
 const bootLoginBackgroundAuthIndex = bootRuntime.indexOf('window.waitForAuthReady(3500)', bootLoginFinalizeIndex);
 const bootLoginBackgroundCohortIndex = bootRuntime.indexOf('enterSelectedBootCohort(cohortYear)', bootLoginBackgroundAuthIndex);
 assert.ok(
-    bootLoginLoadIndex >= 0 && bootLoginFinalizeIndex > bootLoginLoadIndex && bootLoginBackgroundAuthIndex > bootLoginFinalizeIndex && bootLoginBackgroundCohortIndex > bootLoginBackgroundAuthIndex,
-    'boot login should reveal the workbench after app modules and restore the selected school cohort in the background'
+    bootLoginSuccessIndex >= 0 && bootLoginSuccessEndIndex > bootLoginSuccessIndex && bootLoginFinalizeIndex > bootLoginSuccessIndex && bootLoginLoadIndex > bootLoginFinalizeIndex && bootLoginBackgroundAuthIndex > bootLoginLoadIndex && bootLoginBackgroundCohortIndex > bootLoginBackgroundAuthIndex,
+    'boot login should reveal the workbench before loading full app modules and restore the selected school cohort in the background'
+);
+const bootLoginSuccessBlock = bootRuntime.slice(bootLoginSuccessIndex, bootLoginSuccessEndIndex);
+assert.ok(!bootLoginSuccessBlock.includes('await loadAppModules();'), 'boot login should not block entry on full app module loading');
+assert.ok(
+    !bootLoginSuccessBlock.includes("loader.classList.remove('hidden')"),
+    'boot login should not swap the login overlay for the full-screen global loader'
 );
 assert.ok(!bootRuntime.includes('await window.waitForAuthReady();'), 'boot login should not block workbench entry on Auth readiness');
 assert.ok(!bootRuntime.includes('await enterSelectedBootCohort(cohortYear);'), 'boot login should not block workbench entry on cohort restoration');
@@ -1028,8 +1036,8 @@ assert.ok(
     'parseRows should store display-only subject scores without adding them to global heavy subjects'
 );
 assert.ok(
-    /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: false,\s*requireCloudData: true\s*\}\)/.test(appSource),
-    'login cohort entry should wait for cloud data instead of opening an empty local workspace'
+    /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
+    'login cohort entry should fast-enter and hydrate cloud cohort data in the background unless explicitly requested'
 );
 assert.ok(
     appSource.includes('void hydrateFromExamArchive();'),

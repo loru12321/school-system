@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-5d4a53e4acd7';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-1768b896ade2';
 
 function bootDebugLog(...args) {
 try {
@@ -1908,26 +1908,35 @@ const bootAuth = window.Auth || {
                     copy: '正在同步菜单、权限和当前届别数据。'
                 });
                 const loader = document.getElementById('global-loader');
-                if (loader) loader.classList.remove('hidden');
-                await loadAppModules();
-                finalizeBootLoginUi(portal);
                 if (loader) {
                     loader.style.opacity = '0';
-                    setTimeout(() => {
-                        loader.style.display = 'none';
-                        loader.classList.add('hidden');
-                    }, 300);
+                    loader.style.display = 'none';
+                    loader.classList.add('hidden');
                 }
-                if (portal === 'school' && cohortYear) {
-                    Promise.resolve()
-                        .then(() => {
-                            if (typeof window.waitForAuthReady === 'function') return window.waitForAuthReady(3500);
-                            return null;
-                        })
-                        .catch(() => null)
-                        .then(() => enterSelectedBootCohort(cohortYear))
-                        .catch((error) => console.warn('[boot-auth] background cohort enter failed:', error));
-                }
+                finalizeBootLoginUi(portal);
+                Promise.resolve()
+                    .then(() => loadAppModules())
+                    .then(() => {
+                        finalizeBootLoginUi(portal);
+                        if (portal !== 'school' || !cohortYear) return null;
+                        return Promise.resolve()
+                            .then(() => {
+                                if (typeof window.waitForAuthReady === 'function') return window.waitForAuthReady(3500);
+                                return null;
+                            })
+                            .catch(() => null)
+                            .then(() => enterSelectedBootCohort(cohortYear));
+                    })
+                    .catch((error) => console.warn('[boot-auth] background module/cohort restore failed:', error))
+                    .finally(() => {
+                        if (loader) {
+                            loader.style.opacity = '0';
+                            setTimeout(() => {
+                                loader.style.display = 'none';
+                                loader.classList.add('hidden');
+                            }, 300);
+                        }
+                    });
             } else {
                 setBootHelperMessage('验证失败：' + (result?.error || '账号密码错误'), 'error');
                 setBootSubmitState({ busy: false, text: getPortalConfig(portal).submit });

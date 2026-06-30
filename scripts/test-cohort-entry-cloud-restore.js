@@ -15,8 +15,8 @@ assert.ok(
 );
 
 assert.ok(
-    /async function enterCohortFromMask\(\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: false,\s*requireCloudData: true\s*\}\)/.test(appSource),
-    'login-selected cohort entry should require cloud data before showing the workspace'
+    /async function enterCohortFromMask\(options = \{\}\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
+    'login-selected cohort entry should fast-enter and restore cloud data in the background by default'
 );
 
 assert.ok(
@@ -25,8 +25,8 @@ assert.ok(
 );
 
 assert.ok(
-    !/enterCohortFromMask\(\)[\s\S]{0,500}fastEnter: true/.test(appSource),
-    'enterCohortFromMask must not use fastEnter:true because that exposes the empty shell before sync'
+    /enterCohortFromMask\(\{\s*fastEnter:\s*true,\s*requireCloudData:\s*false\s*\}\)/.test(appSource),
+    'selected login cohort should explicitly request fast entry so cloud data does not block the login screen'
 );
 
 assert.ok(
