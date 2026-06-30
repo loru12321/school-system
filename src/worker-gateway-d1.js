@@ -42,6 +42,16 @@ function forbidden(request, message = 'Forbidden') {
   return jsonResponse(403, { ok: false, error: message }, request);
 }
 
+function scheduleLoginAuditWrite(ctx, task) {
+  if (ctx && typeof ctx.waitUntil === 'function') {
+    ctx.waitUntil(task.catch((error) => {
+      console.error('[gateway] login audit write failed:', error);
+    }));
+    return true;
+  }
+  return false;
+}
+
 function safeJsonParse(value, fallbackValue = null) {
   try {
     return JSON.parse(value);
@@ -616,7 +626,7 @@ async function resolveSession(request, env) {
   return { error: unauthorized(request, 'Invalid or expired app session token') };
 }
 
-async function performGatewayLogin(request, env, body) {
+async function performGatewayLogin(request, env, body, ctx) {
   const db = getGatewayDb(env);
   if (!db) return null;
 
@@ -650,15 +660,20 @@ async function performGatewayLogin(request, env, body) {
   }
   const session = buildSessionPayload(existing);
   const token = await signLocalSession(env, session);
-  await upsertSystemUser(db, {
-    ...existing,
-    last_login_at: new Date().toISOString(),
-    has_password: true,
-    updated_at: new Date().toISOString()
-  });
-  await recordLoginSession(db, request, session, body?.payload || {}).catch((error) => {
-    console.error('[gateway] login session record failed:', error);
-  });
+  const auditWrite = Promise.all([
+    upsertSystemUser(db, {
+      ...existing,
+      last_login_at: new Date().toISOString(),
+      has_password: true,
+      updated_at: new Date().toISOString()
+    }),
+    recordLoginSession(db, request, session, body?.payload || {})
+  ]);
+  if (!scheduleLoginAuditWrite(ctx, auditWrite)) {
+    await auditWrite.catch((error) => {
+      console.error('[gateway] login audit write failed:', error);
+    });
+  }
   return jsonResponse(200, {
     ok: true,
     token,
@@ -1609,7 +1624,7 @@ async function handleAccountMigrationStatus(request, db, session) {
   }, request);
 }
 
-async function routeGatewayAction(request, env, body) {
+async function routeGatewayAction(request, env, body, ctx) {
   const db = getGatewayDb(env);
   // Startup integrity check: fail loudly with 503 instead of silently degrading.
   // A missing APP_SESSION_SECRET would cause token signing to throw and logins to fail.
@@ -1628,7 +1643,7 @@ async function routeGatewayAction(request, env, body) {
   const action = normalizeText(body?.action);
   const payload = body?.payload && typeof body.payload === 'object' ? body.payload : {};
   if (!action) return badRequest(request, 'action is required');
-  if (action === 'login') return performGatewayLogin(request, env, body);
+  if (action === 'login') return performGatewayLogin(request, env, body, ctx);
   const resolved = await resolveSession(request, env);
   if (resolved.error) return resolved.error;
   const session = resolved.session;
@@ -1668,10 +1683,10 @@ async function routeGatewayAction(request, env, body) {
   }
 }
 
-export async function handleGatewayRequest(request, env) {
+export async function handleGatewayRequest(request, env, ctx) {
   const body = await request.clone().json().catch(() => null);
   if (!body) return badRequest(request, 'Invalid JSON body');
-  return routeGatewayAction(request, env, body);
+  return routeGatewayAction(request, env, body, ctx);
 }
 
 export async function handleManagedRestRequest(request, env, url) {

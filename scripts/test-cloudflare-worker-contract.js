@@ -147,6 +147,10 @@ assert.ok(gatewayD1Schema.includes('CREATE TABLE IF NOT EXISTS login_sessions'),
 assert.ok(gatewayD1Schema.includes('idx_login_sessions_username_login'), 'login session records should index self history lookups');
 assert.ok(gateway.includes("case 'account.login_sessions'"), 'gateway should expose scoped login session lookup action');
 assert.ok(gateway.includes('recordLoginSession(db, request, session'), 'gateway login should record device/session metadata');
+assert.ok(worker.includes('handleGatewayRequest(request, env, ctx)'), 'Worker should pass execution context into the D1 gateway');
+assert.ok(gateway.includes('function scheduleLoginAuditWrite(ctx, task)'), 'gateway login audit writes should be schedulable in the background');
+assert.ok(gateway.includes('ctx.waitUntil(task.catch'), 'gateway should use waitUntil for successful login audit writes');
+assert.ok(gateway.includes('return performGatewayLogin(request, env, body, ctx);'), 'login action should receive execution context for non-blocking audit writes');
 assert.ok(gateway.includes('Only admin can view all login sessions'), 'all-account login session lookup should be admin-only');
 
 console.log(JSON.stringify({

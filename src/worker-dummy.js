@@ -705,9 +705,9 @@ async function proxyRequest(url, request, targetUrl, bodyBuffer, extraHeaders = 
   return fetchWithTimeout(targetUrl, proxyInit, PROXY_TIMEOUT_MS);
 }
 
-async function handleGatewayProxy(request, env, url) {
+async function handleGatewayProxy(request, env, url, ctx) {
   try {
-    const managed = await handleGatewayRequest(request, env);
+    const managed = await handleGatewayRequest(request, env, ctx);
     if (managed) return managed;
   } catch (error) {
     return jsonResponse(500, {
@@ -1043,7 +1043,7 @@ async function handleEntranceAudioManifest(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
 
@@ -1094,7 +1094,7 @@ export default {
       }
 
       if (url.pathname === '/api/edu-gateway' || url.pathname === '/api/edu_gateway' || url.pathname === '/api/gateway') {
-        return await handleGatewayProxy(request, env, url);
+        return await handleGatewayProxy(request, env, url, ctx);
       }
 
       if (url.pathname === SYSTEM_DATA_API_PATH) {
