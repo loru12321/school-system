@@ -277,6 +277,7 @@ const studentOverviewRef = './assets/js/student-overview-runtime.js';
 const teachingManagementVersionRef = './assets/js/teaching-management-version-runtime.js';
 const mobileAppRef = './assets/js/mobile-app-runtime.js';
 const dataManagerSqlRef = './assets/js/data-manager-sql.js';
+const reportInsightRef = './assets/js/report-insight-runtime.js';
 const reportRenderRef = './assets/js/report-render-runtime.js';
 const reportChartRef = './assets/js/report-chart-runtime.js';
 const reportExportRef = './assets/js/report-export-runtime.js';
@@ -478,7 +479,7 @@ assert.ok(dataManagerTabIndex >= 0, 'index.html should load data-manager-tab-run
 assert.ok(compareCloudContextIndex >= 0, 'index.html should load compare-cloud-context-runtime.js');
 assert.ok(compareExamSyncIndex >= 0, 'index.html should load compare-exam-sync-runtime.js');
 assert.ok(townSubmoduleCompareStateIndex >= 0, 'index.html should load town-submodule-compare-state-runtime.js');
-assert.ok(indexHtml.includes(townSubmoduleCompareRef), 'index.html should preload town-submodule-compare-runtime.js to avoid summary deep-check cold-load stalls');
+assert.strictEqual(indexHtml.includes(townSubmoduleCompareRef), false, 'town-submodule compare runtime should lazy-load after login instead of blocking the login page');
 assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
@@ -1049,8 +1050,13 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
 });
 assert.strictEqual(
     indexHtml.includes(reportRenderRef),
-    true,
-    'report-render runtime should be preloaded on boot to avoid report query cold-load stalls'
+    false,
+    'report-render runtime should lazy-load after login instead of blocking the login page'
+);
+assert.strictEqual(
+    indexHtml.includes(reportInsightRef),
+    false,
+    'report-insight runtime should lazy-load after login instead of blocking the login page'
 );
 assert.ok(
     bootDirectGatewayCandidateIndex >= 0 && bootSameOriginGatewayCandidateIndex >= 0 && bootDirectGatewayCandidateIndex < bootSameOriginGatewayCandidateIndex,
