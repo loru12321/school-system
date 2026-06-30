@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-85be2f39ff9f';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-12ba3fabf914';
 
 function bootDebugLog(...args) {
 try {
@@ -1917,6 +1917,7 @@ const bootAuth = window.Auth || {
                     loader.classList.add('hidden');
                 }
                 finalizeBootLoginUi(portal);
+                window.__BOOT_BACKGROUND_HYDRATING__ = true;
                 Promise.resolve()
                     .then(() => loadAppModules())
                     .then(() => {
@@ -1939,6 +1940,7 @@ const bootAuth = window.Auth || {
                                 loader.classList.add('hidden');
                             }, 300);
                         }
+                        window.__BOOT_BACKGROUND_HYDRATING__ = false;
                     });
             } else {
                 setBootHelperMessage('验证失败：' + (result?.error || '账号密码错误'), 'error');

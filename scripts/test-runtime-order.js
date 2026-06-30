@@ -647,6 +647,16 @@ assert.ok(
     !bootLoginSuccessBlock.includes("loader.classList.remove('hidden')"),
     'boot login should not swap the login overlay for the full-screen global loader'
 );
+assert.ok(
+    bootLoginSuccessBlock.includes('window.__BOOT_BACKGROUND_HYDRATING__ = true;')
+        && bootLoginSuccessBlock.includes('window.__BOOT_BACKGROUND_HYDRATING__ = false;'),
+    'boot login should mark background hydration so full app UI does not reopen the global loader'
+);
+assert.ok(
+    appSource.includes('window.__BOOT_BACKGROUND_HYDRATING__ === true')
+        && appSource.includes('return;'),
+    'UI.loading should suppress full-screen loader show requests during boot background hydration'
+);
 assert.ok(!bootRuntime.includes('await window.waitForAuthReady();'), 'boot login should not block workbench entry on Auth readiness');
 assert.ok(!bootRuntime.includes('await enterSelectedBootCohort(cohortYear);'), 'boot login should not block workbench entry on cohort restoration');
 assert.ok(indexHtml.includes('type="button" class="advanced-submit login-clean-submit"'), 'login submit button should not default-submit before boot handlers bind');
@@ -771,6 +781,8 @@ const historyDoQueryWrapperSource = historyDoQueryWrapperStart >= 0 && historyDo
 assert.ok(historyDoQueryWrapperSource.includes('report-history-compare-target-sync'), 'report history hook should only sync compare targets when the compare runtime is already loaded');
 assert.ok(!historyDoQueryWrapperSource.includes('ensureStudentCompareRuntimeLoaded'), 'report history hook should not load the student compare runtime during normal report generation');
 assert.ok(!appSource.includes('report-student-compare-warmup'), 'report queries should not warm student compare runtime unless the user opens compare features');
+assert.ok(appSource.includes('function examKeyEq'), 'report history should use a local safe exam-key comparator');
+assert.ok(!/[^.\w]isExamKeyEquivalentForCompare\s*\(/.test(appSource), 'app.js should not call compare-shared exam-key helper as an unguarded global');
 assert.ok(!moduleEntryRuntime.includes("id === 'exam-arranger'\n            && typeof window.ensureGradeSchedulerRuntimeLoaded"), 'exam arranger should not eagerly load the grade scheduler runtime');
 assert.ok(bootRuntime.includes("'grade-scheduler': bootSkill('demand', 'demand', ['grade-scheduler']"), 'grade scheduler runtime should load only for the grade scheduler module');
 assert.ok(!moduleEntryRuntime.includes('initClassComparisonEntry'), 'removed class comparison should not have an entry initializer');

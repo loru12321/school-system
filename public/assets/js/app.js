@@ -4,6 +4,7 @@ const UI = Object.assign(window.UI || {}, {
         const loader = document.getElementById('global-loader');
         const txt = document.getElementById('loader-text');
         if (show) {
+            if (window.__BOOT_BACKGROUND_HYDRATING__ === true && sessionStorage.getItem('CURRENT_USER')) return;
             if (txt) txt.innerText = text;
             if (loader) {
                 loader.classList.remove('hidden');
@@ -12137,6 +12138,13 @@ function clearStudentReportCache(student) {
     runtime.clear(identity || '');
 }
 
+function examKeyEq(a, b) {
+    const fn = window.isExamKeyEquivalentForCompare;
+    if (typeof fn === 'function') return fn(a, b);
+    const v = k => { const p = String(k || '').trim().replace(/\s+/g, '_').toLowerCase().split('_').filter(Boolean); return [p.join('_'), p.slice(4).join('_'), p.slice(3).join('_')].filter(Boolean); };
+    return v(a).some(key => v(b).includes(key));
+}
+
 function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamIds = [], effectiveCurrentExamId = '') {
     if (!historyRes || !historyRes.success || !Array.isArray(historyRes.data) || historyRes.data.length === 0) return 0;
     const selectedForCompare = Array.isArray(selectedReportExamIds) ? selectedReportExamIds : [];
@@ -12144,10 +12152,10 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
         const hid = String(h.examFullKey || h.examId || '').trim();
         if (!hid) return false;
         if (selectedForCompare.length > 0) {
-            const inSelected = selectedForCompare.some(id => isExamKeyEquivalentForCompare(hid, id));
+            const inSelected = selectedForCompare.some(id => examKeyEq(hid, id));
             if (!inSelected) return false;
         }
-        return !effectiveCurrentExamId || !isExamKeyEquivalentForCompare(hid, effectiveCurrentExamId);
+        return !effectiveCurrentExamId || !examKeyEq(hid, effectiveCurrentExamId);
     }).map(h => ({
         examId: h.examId,
         examFullKey: h.examFullKey,
@@ -12218,7 +12226,7 @@ function getMissingReportHistoryExamIds(stu, selectedReportExamIds = [], effecti
     if (!Array.isArray(history) || !history.length) return selectedIds;
     return selectedIds.filter(selectedId => !history.some(item => {
         const examKey = String(item?.examFullKey || item?.examId || '').trim();
-        return examKey && isExamKeyEquivalentForCompare(examKey, selectedId);
+        return examKey && examKeyEq(examKey, selectedId);
     }));
 }
 
@@ -12226,7 +12234,7 @@ function getHistoricalReportExamIds(selectedReportExamIds = [], effectiveCurrent
     return (Array.isArray(selectedReportExamIds) ? selectedReportExamIds : [])
         .map(id => String(id || '').trim())
         .filter(Boolean)
-        .filter(id => !effectiveCurrentExamId || !isExamKeyEquivalentForCompare(id, effectiveCurrentExamId));
+        .filter(id => !effectiveCurrentExamId || !examKeyEq(id, effectiveCurrentExamId));
 }
 
 async function refreshRenderedStudentReportAfterHistory(stu, token) {
@@ -12843,8 +12851,8 @@ function getLatestHistoryExamEntry(student, passedHistory = null) {
         .filter(entry => {
             const entryKey = entry?.examFullKey || entry?.examId;
             return !currentExamId || (
-                !isExamKeyEquivalentForCompare(entryKey, currentExamId) &&
-                !isExamKeyEquivalentForCompare(entry?.examId, currentExamId)
+                !examKeyEq(entryKey, currentExamId) &&
+                !examKeyEq(entry?.examId, currentExamId)
             );
         })
         .sort((a, b) => {
@@ -13006,7 +13014,7 @@ function findPreviousRecord(student) {
     if (window.PREV_DATA && window.PREV_DATA.length > 0) {
         const otherExams = window.PREV_DATA.filter(p => {
             const hid = p.examFullKey || p.examId;
-            const sameExam = currentExamId && (isExamKeyEquivalentForCompare(hid, currentExamId) || isExamKeyEquivalentForCompare(p.examId, currentExamId));
+            const sameExam = currentExamId && (examKeyEq(hid, currentExamId) || examKeyEq(p.examId, currentExamId));
             const sameFingerprint = currentFingerprint && p?.fingerprint && String(p.fingerprint) === currentFingerprint;
             return !sameExam && !sameFingerprint;
         }).sort((a, b) => getRecordTime(b) - getRecordTime(a));
@@ -13019,7 +13027,7 @@ function findPreviousRecord(student) {
             const db = CohortDB.ensure();
             if (db && db.exams && Object.keys(db.exams).length > 0) {
                 const examEntries = Object.entries(db.exams)
-                    .filter(([id]) => !currentExamId || !isExamKeyEquivalentForCompare(id, currentExamId)) // 排除当前考试
+                    .filter(([id]) => !currentExamId || !examKeyEq(id, currentExamId))
                     .sort(compareExamRecordsByDateDesc);
 
                 for (const [examId, exam] of examEntries) {
@@ -13140,11 +13148,11 @@ function getStudentExamHistory(student) {
             const examData = exam.data || [];
             if (examData.length === 0) continue;
             const examFingerprint = getReportExamFingerprint(exam, examData);
-            if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint && !isExamKeyEquivalentForCompare(examId, currentExamId)) {
+            if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint && !examKeyEq(examId, currentExamId)) {
                 continue;
             }
 
-            if (manualExams.length > 0 && !manualExams.some(id => isExamKeyEquivalentForCompare(examId, id)) && !isExamKeyEquivalentForCompare(examId, currentExamId)) {
+            if (manualExams.length > 0 && !manualExams.some(id => examKeyEq(examId, id)) && !examKeyEq(examId, currentExamId)) {
                 continue;
             }
 
@@ -13175,10 +13183,10 @@ function getStudentExamHistory(student) {
         window.PREV_DATA.forEach(h => {
             if (!isTargetStudent(h)) return;
             const matchKey = getHistoryKey(h);
-            if (currentFingerprint && h?.fingerprint && String(h.fingerprint) === currentFingerprint && !isExamKeyEquivalentForCompare(matchKey, currentExamId)) {
+            if (currentFingerprint && h?.fingerprint && String(h.fingerprint) === currentFingerprint && !examKeyEq(matchKey, currentExamId)) {
                 return;
             }
-            if (manualExams.length > 0 && !manualExams.some(id => isExamKeyEquivalentForCompare(matchKey, id)) && !isExamKeyEquivalentForCompare(matchKey, currentExamId)) {
+            if (manualExams.length > 0 && !manualExams.some(id => examKeyEq(matchKey, id)) && !examKeyEq(matchKey, currentExamId)) {
                 return;
             }
             if (!matchKey) return;
@@ -13190,7 +13198,7 @@ function getStudentExamHistory(student) {
                 examLabel: String(h.examLabel || h.examId || h.examFullKey || '').replace(/_/g, ' '),
                 fingerprint: h.fingerprint || ''
             };
-            const existsIdx = results.findIndex(r => isExamKeyEquivalentForCompare(getHistoryKey(r), matchKey));
+            const existsIdx = results.findIndex(r => examKeyEq(getHistoryKey(r), matchKey));
             if (existsIdx === -1) {
                 results.push(normalized);
             } else if (getHistoryTime(normalized) > getHistoryTime(results[existsIdx])) {
@@ -13209,7 +13217,7 @@ function getStudentExamHistory(student) {
         const identity = getHistoryIdentity(item);
         const existingIdx = dedupedResults.findIndex(existing => {
             const existingKey = getHistoryKey(existing);
-            if (matchKey && existingKey && isExamKeyEquivalentForCompare(existingKey, matchKey)) return true;
+            if (matchKey && existingKey && examKeyEq(existingKey, matchKey)) return true;
             return !!identity && identity === getHistoryIdentity(existing);
         });
         if (existingIdx === -1) {
