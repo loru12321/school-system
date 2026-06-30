@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-1768b896ade2';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-afbdaa4d680e';
 
 function bootDebugLog(...args) {
 try {
@@ -118,7 +118,20 @@ scheduleAppModuleWarmup();
 var BOOT_JS_BASE = './assets/js/';
 var BOOT_VENDOR_BASE = './assets/vendor/';
 var BOOT_VENDOR_MODULES = [BOOT_VENDOR_BASE + 'alpinejs/cdn.min.js'];
-var DEFERRED_APP_MODULES = [];
+var DEFERRED_APP_MODULES = [
+'support-metrics-runtime.js',
+'marginal-push-runtime.js',
+'seat-adjustment-runtime.js',
+'cohort-growth-runtime.js',
+'macro-analysis-compat-runtime.js',
+'school-normalization-runtime.js',
+'compare-shared-runtime.js',
+'compare-cloud-context-runtime.js',
+'compare-exam-sync-runtime.js',
+'report-compare-runtime.js',
+'compare-selectors-runtime.js',
+'town-submodule-compare-state-runtime.js'
+].map(bootJs);
 
 function bootJs(name) { return BOOT_JS_BASE + name; }
 function bootVend(name) { return BOOT_VENDOR_BASE + name; }
@@ -187,19 +200,7 @@ var APP_MODULES = [
 'teacher-sync-runtime.js',
 'management-facades-runtime.js',
 'cohort-exam-hydration-runtime.js',
-'app.js',
-'support-metrics-runtime.js',
-'marginal-push-runtime.js',
-'seat-adjustment-runtime.js',
-'cohort-growth-runtime.js',
-'macro-analysis-compat-runtime.js',
-'school-normalization-runtime.js',
-'compare-shared-runtime.js',
-'compare-cloud-context-runtime.js',
-'compare-exam-sync-runtime.js',
-'report-compare-runtime.js',
-'compare-selectors-runtime.js',
-'town-submodule-compare-state-runtime.js'
+'app.js'
 ].map(bootJs);
 
 var APP_MODULE_PRELOAD_LIMIT = 36;
@@ -563,14 +564,16 @@ for (let index = 0; index < list.length; index += batchSize) {
 }
 
 function loadDeferredAppModules() {
-if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.warmup === 'function') {
-    return window.SystemRuntimeLoader.warmup();
-}
-if (!DEFERRED_APP_MODULES.length) return Promise.resolve();
-return loadOptionalRuntimeBundle('deferred-app-modules', DEFERRED_APP_MODULES.map((src, index) => ({
-    key: `deferred-app-module-${index}`,
-    src
-}))).then((result) => {
+const runtimeWarmupPromise = window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.warmup === 'function'
+    ? window.SystemRuntimeLoader.warmup()
+    : Promise.resolve();
+const deferredModulesPromise = DEFERRED_APP_MODULES.length && typeof loadOptionalRuntimeBundle === 'function'
+    ? loadOptionalRuntimeBundle('deferred-app-modules', DEFERRED_APP_MODULES.map((src, index) => ({
+        key: `deferred-app-module-${index}`,
+        src
+    })))
+    : Promise.resolve();
+return Promise.all([runtimeWarmupPromise, deferredModulesPromise]).then((result) => {
     window.dispatchEvent(new CustomEvent('school:deferred-vendors-ready'));
     return result;
 });

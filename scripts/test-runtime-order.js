@@ -212,8 +212,15 @@ const teacherStateRef = './assets/js/teacher-state-runtime.js';
 const dataStateRef = './assets/js/data-state-runtime.js';
 const supportStateRef = './assets/js/support-state-runtime.js';
 const supportMetricsRef = './assets/js/support-metrics-runtime.js';
+const marginalPushRef = './assets/js/marginal-push-runtime.js';
+const seatAdjustmentRef = './assets/js/seat-adjustment-runtime.js';
+const cohortGrowthRef = './assets/js/cohort-growth-runtime.js';
+const macroAnalysisCompatRef = './assets/js/macro-analysis-compat-runtime.js';
+const schoolNormalizationRef = './assets/js/school-normalization-runtime.js';
+const compareSharedRef = './assets/js/compare-shared-runtime.js';
 const progressStateRef = './assets/js/progress-state-runtime.js';
 const reportSessionStateRef = './assets/js/report-session-state-runtime.js';
+const reportCompareRef = './assets/js/report-compare-runtime.js';
 const compareSessionStateRef = './assets/js/compare-session-state-runtime.js';
 const compareResultStateRef = './assets/js/compare-result-state-runtime.js';
 const compareSummaryStateRef = './assets/js/compare-summary-state-runtime.js';
@@ -324,6 +331,10 @@ const bootVendorManifest = bootVendorMatch[0];
 const deferredVendorMatch = bootRuntime.match(/var DEFERRED_APP_MODULES = \[[\s\S]*?\];/);
 assert.ok(deferredVendorMatch, 'boot-runtime.js should declare DEFERRED_APP_MODULES');
 const deferredVendorManifest = deferredVendorMatch[0];
+const normalizedDeferredManifest = deferredVendorManifest.includes('.map(bootJs)')
+    ? deferredVendorManifest.replace(/'([^']+\.js)'/g, "'./assets/js/$1'")
+    : deferredVendorManifest;
+const moduleOrderManifest = `${normalizedModuleManifest}\n${normalizedDeferredManifest}`;
 const bootRuntimeReferences = (ref) => bootRuntime.includes(ref) || bootRuntime.includes(ref.split('/').pop());
 const bootRuntimeReferenceIndex = (ref) => {
     const fullIndex = bootRuntime.indexOf(ref);
@@ -345,57 +356,79 @@ assert.ok(!bootRuntimeSource.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-ru
 assert.ok(runtimeLoaderRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'runtime-loader-runtime.js should declare the optional runtime skill manifest');
 assert.ok(bootRuntime.includes("'shell-polish': bootSkill('idle', 'demand'"), 'shell polish should stay behind the on-demand runtime loader');
 assert.ok(bootRuntime.includes('window.ensureShellPolishRuntimeLoaded'), 'shell polish should still expose an explicit loader');
-const authStateIndex = normalizedModuleManifest.indexOf(authStateRef);
-const edgeGatewayIndex = normalizedModuleManifest.indexOf(edgeGatewayRef);
-const workspaceStateIndex = normalizedModuleManifest.indexOf(workspaceStateRef);
-const examStateIndex = normalizedModuleManifest.indexOf(examStateRef);
-const schoolStateIndex = normalizedModuleManifest.indexOf(schoolStateRef);
-const teacherStateIndex = normalizedModuleManifest.indexOf(teacherStateRef);
-const dataStateIndex = normalizedModuleManifest.indexOf(dataStateRef);
-const supportStateIndex = normalizedModuleManifest.indexOf(supportStateRef);
-const supportMetricsIndex = normalizedModuleManifest.indexOf(supportMetricsRef);
-const progressStateIndex = normalizedModuleManifest.indexOf(progressStateRef);
-const reportSessionStateIndex = normalizedModuleManifest.indexOf(reportSessionStateRef);
-const compareSessionStateIndex = normalizedModuleManifest.indexOf(compareSessionStateRef);
-const compareResultStateIndex = normalizedModuleManifest.indexOf(compareResultStateRef);
-const compareSummaryStateIndex = normalizedModuleManifest.indexOf(compareSummaryStateRef);
-const cloudApiIndex = normalizedModuleManifest.indexOf(cloudApiRef);
-const cloudConnectionIndex = normalizedModuleManifest.indexOf(cloudConnectionRef);
-const systemPerformanceIndex = normalizedModuleManifest.indexOf(systemPerformanceRef);
-const dataCloudIndex = normalizedModuleManifest.indexOf(dataCloudRef);
-const issueManagerIndex = normalizedModuleManifest.indexOf(issueManagerRef);
-const packagerIndex = normalizedModuleManifest.indexOf(packagerRef);
-const helpSystemIndex = normalizedModuleManifest.indexOf(helpSystemRef);
-const loggerIndex = normalizedModuleManifest.indexOf(loggerRef);
-const workerApiIndex = normalizedModuleManifest.indexOf(workerApiRef);
-const accountManagerIndex = normalizedModuleManifest.indexOf(accountManagerRef);
-const loginSessionIndex = normalizedModuleManifest.indexOf(loginSessionRef);
-const managementFacadesIndex = normalizedModuleManifest.indexOf(managementFacadesRef);
-const cohortExamHydrationIndex = normalizedModuleManifest.indexOf(cohortExamHydrationRef);
-const dataManagerTeacherIndex = normalizedModuleManifest.indexOf(dataManagerTeacherRef);
-const dataManagerStudentIndex = normalizedModuleManifest.indexOf(dataManagerStudentRef);
-const dataManagerArchiveIndex = normalizedModuleManifest.indexOf(dataManagerArchiveRef);
-const dataManagerGrade9TemplateIndex = normalizedModuleManifest.indexOf(dataManagerGrade9TemplateRef);
-const dataManagerParamsIndex = normalizedModuleManifest.indexOf(dataManagerParamsRef);
-const dataManagerTargetsIndex = normalizedModuleManifest.indexOf(dataManagerTargetsRef);
-const dataManagerSchoolAliasIndex = normalizedModuleManifest.indexOf(dataManagerSchoolAliasRef);
-const dataManagerSaveSyncIndex = normalizedModuleManifest.indexOf(dataManagerSaveSyncRef);
-const dataManagerHistoryIndex = normalizedModuleManifest.indexOf(dataManagerHistoryRef);
-const dataManagerTabIndex = normalizedModuleManifest.indexOf(dataManagerTabRef);
-const compareCloudContextIndex = normalizedModuleManifest.indexOf(compareCloudContextRef);
-const compareExamSyncIndex = normalizedModuleManifest.indexOf(compareExamSyncRef);
-const townSubmoduleCompareStateIndex = normalizedModuleManifest.indexOf(townSubmoduleCompareStateRef);
-const compareSelectorsIndex = normalizedModuleManifest.indexOf(compareSelectorsRef);
-const progressAnalysisIndex = normalizedModuleManifest.indexOf(progressAnalysisRef);
-const cloudIndex = normalizedModuleManifest.indexOf(cloudRef);
-const cloudWorkspaceIndex = normalizedModuleManifest.indexOf(cloudWorkspaceRef);
-const shellRuntimeIndex = normalizedModuleManifest.indexOf(shellRuntimeRef);
-const shellPolishRuntimeIndex = normalizedModuleManifest.indexOf(shellPolishRuntimeRef);
-const moduleEntryRuntimeIndex = normalizedModuleManifest.indexOf(moduleEntryRuntimeRef);
-const runtimeAccessorsIndex = normalizedModuleManifest.indexOf(runtimeAccessorsRef);
-const rankingDataServiceIndex = normalizedModuleManifest.indexOf(rankingDataServiceRef);
-const studentJumpIndex = normalizedModuleManifest.indexOf(studentJumpRef);
-const appIndex = normalizedModuleManifest.indexOf(appRef);
+const postAppDeferredRefs = [
+    supportMetricsRef,
+    marginalPushRef,
+    seatAdjustmentRef,
+    cohortGrowthRef,
+    macroAnalysisCompatRef,
+    schoolNormalizationRef,
+    compareSharedRef,
+    compareCloudContextRef,
+    compareExamSyncRef,
+    reportCompareRef,
+    compareSelectorsRef,
+    townSubmoduleCompareStateRef
+];
+postAppDeferredRefs.forEach((ref) => {
+    assert.ok(!normalizedModuleManifest.includes(ref), `${ref} should not block core app module hydration`);
+    assert.ok(normalizedDeferredManifest.includes(ref), `${ref} should hydrate through DEFERRED_APP_MODULES`);
+});
+assert.ok(
+    /function loadDeferredAppModules\(\)[\s\S]*runtimeWarmupPromise[\s\S]*loadOptionalRuntimeBundle\('deferred-app-modules'[\s\S]*Promise\.all\(\[runtimeWarmupPromise, deferredModulesPromise\]\)/.test(bootRuntime),
+    'deferred app module hydration should run explicit deferred modules even when SystemRuntimeLoader warmup is available'
+);
+const authStateIndex = moduleOrderManifest.indexOf(authStateRef);
+const edgeGatewayIndex = moduleOrderManifest.indexOf(edgeGatewayRef);
+const workspaceStateIndex = moduleOrderManifest.indexOf(workspaceStateRef);
+const examStateIndex = moduleOrderManifest.indexOf(examStateRef);
+const schoolStateIndex = moduleOrderManifest.indexOf(schoolStateRef);
+const teacherStateIndex = moduleOrderManifest.indexOf(teacherStateRef);
+const dataStateIndex = moduleOrderManifest.indexOf(dataStateRef);
+const supportStateIndex = moduleOrderManifest.indexOf(supportStateRef);
+const supportMetricsIndex = moduleOrderManifest.indexOf(supportMetricsRef);
+const progressStateIndex = moduleOrderManifest.indexOf(progressStateRef);
+const reportSessionStateIndex = moduleOrderManifest.indexOf(reportSessionStateRef);
+const compareSessionStateIndex = moduleOrderManifest.indexOf(compareSessionStateRef);
+const compareResultStateIndex = moduleOrderManifest.indexOf(compareResultStateRef);
+const compareSummaryStateIndex = moduleOrderManifest.indexOf(compareSummaryStateRef);
+const cloudApiIndex = moduleOrderManifest.indexOf(cloudApiRef);
+const cloudConnectionIndex = moduleOrderManifest.indexOf(cloudConnectionRef);
+const systemPerformanceIndex = moduleOrderManifest.indexOf(systemPerformanceRef);
+const dataCloudIndex = moduleOrderManifest.indexOf(dataCloudRef);
+const issueManagerIndex = moduleOrderManifest.indexOf(issueManagerRef);
+const packagerIndex = moduleOrderManifest.indexOf(packagerRef);
+const helpSystemIndex = moduleOrderManifest.indexOf(helpSystemRef);
+const loggerIndex = moduleOrderManifest.indexOf(loggerRef);
+const workerApiIndex = moduleOrderManifest.indexOf(workerApiRef);
+const accountManagerIndex = moduleOrderManifest.indexOf(accountManagerRef);
+const loginSessionIndex = moduleOrderManifest.indexOf(loginSessionRef);
+const managementFacadesIndex = moduleOrderManifest.indexOf(managementFacadesRef);
+const cohortExamHydrationIndex = moduleOrderManifest.indexOf(cohortExamHydrationRef);
+const dataManagerTeacherIndex = moduleOrderManifest.indexOf(dataManagerTeacherRef);
+const dataManagerStudentIndex = moduleOrderManifest.indexOf(dataManagerStudentRef);
+const dataManagerArchiveIndex = moduleOrderManifest.indexOf(dataManagerArchiveRef);
+const dataManagerGrade9TemplateIndex = moduleOrderManifest.indexOf(dataManagerGrade9TemplateRef);
+const dataManagerParamsIndex = moduleOrderManifest.indexOf(dataManagerParamsRef);
+const dataManagerTargetsIndex = moduleOrderManifest.indexOf(dataManagerTargetsRef);
+const dataManagerSchoolAliasIndex = moduleOrderManifest.indexOf(dataManagerSchoolAliasRef);
+const dataManagerSaveSyncIndex = moduleOrderManifest.indexOf(dataManagerSaveSyncRef);
+const dataManagerHistoryIndex = moduleOrderManifest.indexOf(dataManagerHistoryRef);
+const dataManagerTabIndex = moduleOrderManifest.indexOf(dataManagerTabRef);
+const compareCloudContextIndex = moduleOrderManifest.indexOf(compareCloudContextRef);
+const compareExamSyncIndex = moduleOrderManifest.indexOf(compareExamSyncRef);
+const townSubmoduleCompareStateIndex = moduleOrderManifest.indexOf(townSubmoduleCompareStateRef);
+const compareSelectorsIndex = moduleOrderManifest.indexOf(compareSelectorsRef);
+const progressAnalysisIndex = moduleOrderManifest.indexOf(progressAnalysisRef);
+const cloudIndex = moduleOrderManifest.indexOf(cloudRef);
+const cloudWorkspaceIndex = moduleOrderManifest.indexOf(cloudWorkspaceRef);
+const shellRuntimeIndex = moduleOrderManifest.indexOf(shellRuntimeRef);
+const shellPolishRuntimeIndex = moduleOrderManifest.indexOf(shellPolishRuntimeRef);
+const moduleEntryRuntimeIndex = moduleOrderManifest.indexOf(moduleEntryRuntimeRef);
+const runtimeAccessorsIndex = moduleOrderManifest.indexOf(runtimeAccessorsRef);
+const rankingDataServiceIndex = moduleOrderManifest.indexOf(rankingDataServiceRef);
+const studentJumpIndex = moduleOrderManifest.indexOf(studentJumpRef);
+const appIndex = moduleOrderManifest.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
 const runtimeLoaderRuntimeIndex = indexHtml.indexOf(runtimeLoaderRuntimeRef);
 const popperVendorIndex = bootRuntimeReferenceIndex(popperVendorRef);

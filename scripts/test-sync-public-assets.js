@@ -44,6 +44,9 @@ async function main() {
       'auth-state-runtime.js',
       'school-state-runtime.js'
     ].map(bootJs);
+    var DEFERRED_APP_MODULES = [
+      'support-metrics-runtime.js'
+    ].map(bootJs);
   `);
   assert.ok(lazyRefs.has('foo-runtime.js'), 'should collect lazy-loaded runtime assets');
   assert.ok(lazyRefs.has('bar-runtime.js'), 'should collect double-quoted lazy-loaded assets');
@@ -51,6 +54,7 @@ async function main() {
   assert.ok(lazyRefs.has('compact-runtime.js'), 'should collect compact bootJs runtime assets');
   assert.ok(lazyRefs.has('auth-state-runtime.js'), 'should collect compact APP_MODULES assets');
   assert.ok(lazyRefs.has('school-state-runtime.js'), 'should collect all compact APP_MODULES assets');
+  assert.ok(lazyRefs.has('support-metrics-runtime.js'), 'should collect compact DEFERRED_APP_MODULES assets');
 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-public-assets-'));
   const sourceJsDir = path.join(tempRoot, 'public', 'assets', 'js');
@@ -70,6 +74,7 @@ window.ensureLazy = function(){return loadOptionalRuntime('lazy', './assets/js/l
 window.ensureBundle = function(){return loadOptionalRuntimeBundle('bundle', [{ key: 'baz', src: './assets/js/baz-runtime.js' }]);};
 window.ensureCompactBundle = function(){return loadOptionalRuntimeBundle('compact', [bootEntry('compact', bootJs('compact-runtime.js'))]);};
 var APP_MODULES = ['auth-state-runtime.js', 'management-facades-runtime.js'].map(bootJs);
+var DEFERRED_APP_MODULES = ['support-metrics-runtime.js'].map(bootJs);
 `;
   fs.writeFileSync(path.join(sourceJsDir, 'app.js'), verboseJs, 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'management-facades-runtime.js'), facadeJs, 'utf8');
@@ -79,6 +84,7 @@ var APP_MODULES = ['auth-state-runtime.js', 'management-facades-runtime.js'].map
   fs.writeFileSync(path.join(sourceJsDir, 'baz-runtime.js'), 'window.bundleLoaded = true;\n', 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'compact-runtime.js'), 'window.compactLoaded = true;\n', 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'auth-state-runtime.js'), 'window.authStateLoaded = true;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceJsDir, 'support-metrics-runtime.js'), 'window.supportMetricsLoaded = true;\n', 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'data-processing-worker.js'), 'self.onmessage = function(){};\n', 'utf8');
   fs.writeFileSync(path.join(srcDir, 'index.html'), '<script src="./assets/js/app.js?v=1"></script>', 'utf8');
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), 'ico', 'utf8');
@@ -96,6 +102,7 @@ var APP_MODULES = ['auth-state-runtime.js', 'management-facades-runtime.js'].map
   const syncedBundlePath = path.join(targetJsDir, 'baz-runtime.js');
   const syncedCompactPath = path.join(targetJsDir, 'compact-runtime.js');
   const syncedAppModulePath = path.join(targetJsDir, 'auth-state-runtime.js');
+  const syncedDeferredModulePath = path.join(targetJsDir, 'support-metrics-runtime.js');
   const syncedFacadePath = path.join(targetJsDir, 'management-facades-runtime.js');
   const syncedWorkerPath = path.join(targetJsDir, 'data-processing-worker.js');
   const skippedPath = path.join(targetJsDir, 'unused.js');
@@ -105,6 +112,7 @@ var APP_MODULES = ['auth-state-runtime.js', 'management-facades-runtime.js'].map
   assert.ok(fs.existsSync(syncedBundlePath), 'should sync bundled lazy-loaded assets referenced by boot runtime');
   assert.ok(fs.existsSync(syncedCompactPath), 'should sync compact bootJs assets referenced by boot runtime');
   assert.ok(fs.existsSync(syncedAppModulePath), 'should sync compact APP_MODULES assets referenced by boot runtime');
+  assert.ok(fs.existsSync(syncedDeferredModulePath), 'should sync compact DEFERRED_APP_MODULES assets referenced by boot runtime');
   assert.ok(fs.existsSync(syncedFacadePath), 'should sync compact APP_MODULES facade assets');
   assert.ok(fs.existsSync(syncedWorkerPath), 'should sync lazily loaded assets referenced by referenced runtime assets');
   assert.strictEqual(fs.existsSync(skippedPath), false, 'should skip unreferenced assets');
