@@ -70,6 +70,7 @@ const DATA_MANAGER_TAB_STABILIZE_MS = {
     cloud: 800,
     default: 320
 };
+const DATA_MANAGER_TAB_TIMEOUT_MS = 8000;
 const MODULE_SWITCH_TIMEOUT_MS = 12000;
 const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
@@ -897,7 +898,7 @@ async function smokeSwitchModule(page, id) {
             if (typeof window.switchTab !== 'function') {
                 throw new Error('switchTab is not available');
             }
-            window.setTimeout(() => window.switchTab(moduleId), 0);
+            window.switchTab(moduleId);
         }, id);
 
         if (id === 'student-details') {
@@ -936,10 +937,10 @@ async function smokeSwitchModule(page, id) {
     }
 
     let result = await collectState();
-        if (!result.ok) {
-            await page.evaluate((moduleId) => {
+    if (!result.ok) {
+        await page.evaluate((moduleId) => {
             if (typeof window.switchTab === 'function') {
-                window.setTimeout(() => window.switchTab(moduleId), 0);
+                window.switchTab(moduleId);
             }
         }, id);
         await page.waitForTimeout(1200);
@@ -3624,7 +3625,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
             `dm:${id}`,
             () => withTimeoutResult(
                 () => smokeDataManagerTab(page, id),
-                PERFORMANCE_BUDGETS.dataManagerTabMs,
+                DATA_MANAGER_TAB_TIMEOUT_MS,
                 () => ({ ok: false, id, error: 'data-manager-timeout' })
             )
         );

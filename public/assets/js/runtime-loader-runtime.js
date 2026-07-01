@@ -1119,6 +1119,7 @@ scheduleMobileRuntimeBootstrap({ maxWidth: 960, delayMs: 120 });
 scheduleMobileRuntimeBootstrap({ maxWidth: 768, includePerf: true, delayMs: 480 });
 
 function scheduleDataManagerSqlIdleWarmup() {
+if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) return;
 if (window.__DATA_MANAGER_SQL_IDLE_WARMUP__) return;
 window.__DATA_MANAGER_SQL_IDLE_WARMUP__ = true;
 const step = { label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() };
@@ -1137,6 +1138,7 @@ runAfterAppModulesReady(() => {
 scheduleDataManagerSqlIdleWarmup();
 
 function scheduleHotspotRuntimeWarmup() {
+if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) return;
 if (window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ || getRuntimeLoadProfile() === 'lazy' || isRuntimeMobileViewport()) return;
 window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ = true;
 const prioritySteps = [
@@ -1177,6 +1179,7 @@ scheduleWarmup('hotspot-runtime:priority', runPrioritySteps);
 scheduleHotspotRuntimeWarmup();
 
 function scheduleTeachingManagementFastWarmup() {
+if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) return;
 if (window.__TEACHING_FAST_WARMUP_SCHEDULED__) return;
 window.__TEACHING_FAST_WARMUP_SCHEDULED__ = true;
 runAfterAppModulesReady(() => {

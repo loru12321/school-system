@@ -11057,83 +11057,6 @@ function renderStudentDetails(reset = true) {
         data = PermissionPolicy.filterStudentRows(user, data, { mode: queryMode });
         appDebug('[考试明细] 当前用户:', user);
 
-        if (false && user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
-            !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
-            appDebug('[考试明细] 🔒 检测到教师角色，启用权限过滤');
-            const scope = getTeacherScopeForUser(user);
-
-            if (isClassTeacher && classTeacherMode === 'class_all') {
-                const myClass = getStudentDetailsHomeroomClass(user);
-                if (!myClass) {
-                    data = [];
-                    UI.toast('⚠️ 班主任账号未配置班级，无法显示本班数据。', 'warning');
-                } else {
-                    const before = data.length;
-                    data = data.filter(s => normalizeClass(s.class) === myClass);
-                    appDebug(`[考试明细] 班主任本班全科模式：过滤前${before}人，过滤后${data.length}人，班级=${myClass}`);
-                }
-            } else if (scope.classes.size > 0) {
-                const originalCount = data.length;
-
-                if (data.length > 0) {
-                    appDebug(`[考试明细] 数据样本班级: ${data[0].class} (规范化: ${normalizeClass(data[0].class)})`);
-                }
-                appDebug(`[考试明细] 权限班级:`, Array.from(scope.classes));
-
-                data = data.filter(s => {
-                    const rawClass = String(s.class || '').trim();
-                    const normalizedClass = normalizeClass(s.class);
-
-                    let hasPermission = scope.classes.has(normalizedClass);
-                    if (!hasPermission) hasPermission = scope.classes.has(rawClass);
-                    if (!hasPermission) {
-                        for (const allowedCls of scope.classes) {
-                            if (String(allowedCls).replace(/[\s\.]/g, '') === String(rawClass).replace(/[\s\.]/g, '')) {
-                                hasPermission = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!hasPermission && Math.random() < 0.001) { // 抽样打印被过滤的
-                        appDebug(`[考试明细] ❌ 过滤: ${s.class} -> ${normalizedClass}`);
-                    }
-                    return hasPermission;
-                });
-                appDebug(`[考试明细] 🔐 权限筛选：过滤前${originalCount}人，过滤后${data.length}人`);
-
-                if (data.length === 0) {
-                    console.warn('[考试明细] ⚠️ 过滤后无数据');
-                    const userClasses = Array.from(scope.classes).join(', ');
-                    UI.toast(`⚠️ 暂无考试数据。您的任教班级：${userClasses}`, 'warning');
-                }
-            } else {
-                console.warn('[考试明细] ⚠️ 未找到任课信息，显示空数据');
-                data = []; // 没有任课信息则不显示任何数据
-                UI.toast('⚠️ 未找到您的任课信息，无法显示数据。请在“数据管理-教师任课”中检查配置。', 'warning');
-            }
-        } else if (false && user) {
-            if (!RoleManager.hasAnyRole(user, ['admin', 'director'])) {
-                if (RoleManager.hasAnyRole(user, ['grade_director']) && user.class) {
-                    const gradePrefix = String(user.class).trim();
-                    const beforeCount = data.length;
-                    data = data.filter(s => {
-                        const cls = String(s.class || '').trim();
-                        return cls.startsWith(gradePrefix);
-                    });
-                    appDebug(`[考试明细] 🔒 级部主任过滤: 年级=${gradePrefix}, 过滤前${beforeCount}人, 过滤后${data.length}人`);
-                    if (data.length === 0) {
-                        UI.toast(`⚠️ 未找到${gradePrefix}年级的考试数据`, 'warning');
-                    }
-                }
-                else if (user.school) {
-                    data = data.filter(s => sameAppSchoolName(s.school, user.school));
-                    appDebug(`[考试明细] 按学校过滤: ${user.school}`);
-                }
-            }
-            appDebug('[考试明细] 其他角色或管理员，显示所有/学校范围数据');
-        }
-
         if (hasSelectedSchool) {
             data = data.filter(s => sameAppSchoolName(s.school, effectiveSelectedSchool));
             if (hasSelectedClass) {
@@ -12283,6 +12206,8 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
     ReportHistoryPerfCache.hydratingKeys.add(hydrateKey);
     const task = async () => {
         try {
+            const still = () => document.getElementById('report-generator')?.classList.contains('active') && token === __reportQueryToken;
+            if (!still()) return;
             const ready = (
                 (typeof window.CloudManager.ensureClientReady === 'function' && await window.CloudManager.ensureClientReady({ silent: true })) ||
                 (typeof window.CloudManager.check === 'function' && window.CloudManager.check(true))
@@ -12294,6 +12219,7 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
                 currentExamId: effectiveCurrentExamId,
                 background: true
             });
+            if (!still()) return;
             const loadedCount = applyCloudStudentHistoryToPrevData(stu, historyRes, missingHistoricalExamIds, effectiveCurrentExamId);
             if (!loadedCount || token !== __reportQueryToken) return;
             if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
