@@ -95,6 +95,7 @@ assertHeaderRule(publicHeaders, '/assets/css/*', 'public, max-age=31536000, immu
 assertHeaderRule(publicHeaders, '/sw.js', 'public, max-age=0, must-revalidate', 'service worker script should still revalidate');
 assertIncludes(serviceWorkerRuntime, `const SERVICE_WORKER_VERSION = '${serviceWorkerVersion}';`, 'service worker runtime should version registration updates');
 assertIncludes(serviceWorkerRuntime, 'const SERVICE_WORKER_PATH = `./sw.js?v=${SERVICE_WORKER_VERSION}`;', 'service worker runtime should register the versioned local sw.js');
+assertIncludes(srcIndex, `entrance-sound-runtime.js?v=${serviceWorkerVersion}`, 'HTML should cache-bust the entrance sound runtime with the generated runtime version');
 assertIncludes(srcIndex, `service-worker-runtime.js?v=${serviceWorkerVersion}`, 'HTML should cache-bust the service worker runtime loader');
 assertIncludes(srcIndex, `runtime-loader-runtime.js?v=${serviceWorkerVersion}`, 'HTML should cache-bust the split runtime loader with the generated runtime version');
 assertIncludes(srcIndex, `boot-runtime.js?v=${serviceWorkerVersion}`, 'HTML should cache-bust the boot runtime loader with the generated runtime version');
