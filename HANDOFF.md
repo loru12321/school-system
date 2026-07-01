@@ -48,25 +48,12 @@
 
 ## 四、未完成 / 待决策
 
-### ⚠️ Supabase 索引 —— 仍未执行（需手动）
+### Supabase 索引
 
-在 [SQL Editor](https://supabase.com/dashboard/project/dpwsxxgojpqevzwyxrot/sql) **逐条执行**（不能在事务里，不能用 "run all"）：
+已迁移到当前 `school-system` Supabase 项目并完成索引创建：
 
-```sql
-create index concurrently if not exists idx_warning_records_query
-  on public.warning_records (project_key, cohort_id, status, warning_level);
-```
-```sql
-create index concurrently if not exists idx_rectify_tasks_query
-  on public.rectify_tasks (project_key, cohort_id, status);
-```
-
-执行后验证：
-```sql
-SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid; -- 应返回 0 行
-SELECT indexname FROM pg_indexes
-WHERE indexname IN ('idx_warning_records_query','idx_rectify_tasks_query');
-```
+- `idx_warning_records_query`
+- `idx_rectify_tasks_query`
 
 ### edu-gateway-v2（用户决定保留）
 
