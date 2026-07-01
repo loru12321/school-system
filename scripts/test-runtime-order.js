@@ -364,7 +364,6 @@ const postAppDeferredRefs = [
     cohortGrowthRef,
     macroAnalysisCompatRef,
     schoolNormalizationRef,
-    compareSharedRef,
     compareCloudContextRef,
     compareExamSyncRef,
     reportCompareRef,
@@ -428,6 +427,7 @@ const shellPolishRuntimeIndex = moduleOrderManifest.indexOf(shellPolishRuntimeRe
 const moduleEntryRuntimeIndex = moduleOrderManifest.indexOf(moduleEntryRuntimeRef);
 const runtimeAccessorsIndex = moduleOrderManifest.indexOf(runtimeAccessorsRef);
 const rankingDataServiceIndex = moduleOrderManifest.indexOf(rankingDataServiceRef);
+const compareSharedIndex = moduleOrderManifest.indexOf(compareSharedRef);
 const studentJumpIndex = moduleOrderManifest.indexOf(studentJumpRef);
 const appIndex = moduleOrderManifest.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
@@ -1162,6 +1162,9 @@ assert.ok(shellRuntimeIndex < appIndex, 'shell-runtime.js must load before app.j
 assert.ok(shellRuntimeIndex < moduleEntryRuntimeIndex, 'shell-runtime.js must load before module-entry-runtime.js');
 assert.ok(moduleEntryRuntimeIndex < rankingDataServiceIndex, 'module-entry-runtime.js must load before ranking-data-service-runtime.js');
 assert.ok(rankingDataServiceIndex < appIndex, 'ranking-data-service-runtime.js must load before app.js');
+assert.ok(compareSharedIndex >= 0, 'compare-shared-runtime.js should load with core app modules');
+assert.ok(rankingDataServiceIndex < compareSharedIndex, 'ranking-data-service-runtime.js must load before compare-shared-runtime.js');
+assert.ok(compareSharedIndex < appIndex, 'compare-shared-runtime.js must load before app.js');
 assert.ok(studentJumpIndex >= 0, 'index.html should load student-jump-runtime.js');
 assert.ok(rankingDataServiceIndex < studentJumpIndex, 'ranking-data-service-runtime.js must load before student-jump-runtime.js');
 assert.ok(studentJumpIndex < appIndex, 'student-jump-runtime.js must load before app.js');
