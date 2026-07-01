@@ -1,0 +1,681 @@
+// Sync schoolsystem teaching-analysis scores into the independent teacher assessment system.
+(function () {
+    const root = window;
+    const PROJECTS = {
+        twoRates: 'teacher_two_rates_one_score',
+        classCollaboration: 'teacher_class_collaboration',
+        subjectCollaboration: 'teacher_subject_collaboration',
+        bottomThird: 'teacher_bottom_third',
+        excellentContribution: 'teacher_excellent_contribution'
+    };
+
+    const PROJECT_LABELS = {
+        [PROJECTS.twoRates]: '两率一分',
+        [PROJECTS.classCollaboration]: '班级协调成绩',
+        [PROJECTS.subjectCollaboration]: '学科组协同成绩',
+        [PROJECTS.bottomThird]: '后 1/3 学生成绩',
+        [PROJECTS.excellentContribution]: '尖子生培养贡献'
+    };
+
+    const SUBJECT_ORDER = ['语文', '数学', '英语', '物理', '化学', '政治', '历史', '地理', '生物', '体育', '音乐', '美术', '信息', '科学'];
+
+    function text(value) {
+        return String(value ?? '').trim();
+    }
+
+    function escapeHtml(value) {
+        if (typeof root.tmEscapeHtml === 'function') return root.tmEscapeHtml(value);
+        return text(value).replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function toNumber(value, fallback = NaN) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : fallback;
+    }
+
+    function round(value, digits = 2) {
+        const number = toNumber(value, 0);
+        const factor = 10 ** digits;
+        return Math.round(number * factor) / factor;
+    }
+
+    function pct(value) {
+        return `${round(toNumber(value, 0) * 100, 1)}%`;
+    }
+
+    function normalizeGrade(value) {
+        const source = text(value);
+        const cn = { 六: '6', 七: '7', 八: '8', 九: '9' };
+        for (const [key, grade] of Object.entries(cn)) {
+            if (source.includes(`${key}年级`) || source === key) return grade;
+        }
+        const match = source.match(/[6-9]/);
+        return match ? match[0] : '';
+    }
+
+    function gradeLabel(value) {
+        const grade = normalizeGrade(value);
+        return grade ? `${grade}年级` : text(value);
+    }
+
+    function normalizeSubject(value) {
+        const raw = text(value).replace(/\s+/g, '');
+        const map = {
+            语: '语文',
+            数: '数学',
+            英: '英语',
+            道法: '政治',
+            道德与法治: '政治',
+            思政: '政治',
+            体育与健康: '体育'
+        };
+        if (map[raw]) return map[raw];
+        if (typeof root.normalizeSubject === 'function') return root.normalizeSubject(raw);
+        return raw;
+    }
+
+    function parseClasses(value) {
+        const raw = Array.isArray(value) ? value : text(value).split(/[、,，;；|\s]+/);
+        return Array.from(new Set(raw.map((item) => text(item).replace(/班$/, '')).filter(Boolean)));
+    }
+
+    function getAcademicYearForSync(date = new Date()) {
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const start = month <= 6 ? year - 2 : year - 1;
+        return `${start}-${start + 1}`;
+    }
+
+    function getCurrentRows() {
+        if (Array.isArray(root.RAW_DATA) && root.RAW_DATA.length) return root.RAW_DATA;
+        const db = root.CohortDB && typeof root.CohortDB.ensure === 'function' ? root.CohortDB.ensure() : null;
+        const currentExam = root.CURRENT_EXAM_ID || db?.currentExamId || '';
+        const exam = currentExam && db?.exams ? db.exams[currentExam] : null;
+        return Array.isArray(exam?.data) ? exam.data : [];
+    }
+
+    function getTotal(row) {
+        const direct = toNumber(row?.total ?? row?.totalScore ?? row?.score_total, NaN);
+        if (Number.isFinite(direct)) return direct;
+        const scores = row?.scores && typeof row.scores === 'object' ? row.scores : {};
+        const values = Object.values(scores).map((value) => toNumber(value, NaN)).filter(Number.isFinite);
+        return values.length ? values.reduce((sum, value) => sum + value, 0) : NaN;
+    }
+
+    function getSubjectScore(row, subject) {
+        const normalized = normalizeSubject(subject);
+        const scores = row?.scores && typeof row.scores === 'object' ? row.scores : {};
+        for (const [key, value] of Object.entries(scores)) {
+            if (normalizeSubject(key) === normalized) return toNumber(value, NaN);
+        }
+        return NaN;
+    }
+
+    function inferGradeFromClass(className) {
+        const cls = text(className);
+        const match = cls.match(/[6-9]/);
+        return match ? match[0] : '';
+    }
+
+    function resolveTotalThresholds(rows) {
+        const totals = rows.map(getTotal).filter(Number.isFinite).sort((a, b) => b - a);
+        if (!totals.length) return { exc: 0, pass: 0 };
+        const totalMax = Math.max(...totals, 1);
+        const at = (ratio) => totals[Math.min(totals.length - 1, Math.max(0, Math.floor((totals.length - 1) * ratio)))] || 0;
+        return {
+            exc: Math.max(at(0.20), totalMax * 0.80),
+            pass: Math.max(at(0.60), totalMax * 0.60)
+        };
+    }
+
+    function metricFromValues(values, thresholds) {
+        const list = values.filter(Number.isFinite);
+        if (!list.length) return null;
+        const total = list.reduce((sum, value) => sum + value, 0);
+        return {
+            count: list.length,
+            avg: total / list.length,
+            excellentRate: thresholds.exc > 0 ? list.filter((value) => value >= thresholds.exc).length / list.length : 0,
+            passRate: thresholds.pass > 0 ? list.filter((value) => value >= thresholds.pass).length / list.length : 0
+        };
+    }
+
+    function weightedScore(metric, highest) {
+        if (!metric || !highest) return null;
+        const raw = [
+            highest.excellentRate > 0 ? (metric.excellentRate / highest.excellentRate) * 40 : 0,
+            highest.passRate > 0 ? (metric.passRate / highest.passRate) * 30 : 0,
+            highest.avg > 0 ? (metric.avg / highest.avg) * 30 : 0
+        ].reduce((sum, value) => sum + value, 0);
+        return raw;
+    }
+
+    function scaleWithinGroup(rawScores, maxScore) {
+        const maxRaw = Math.max(...rawScores.map((item) => toNumber(item.raw, 0)), 0);
+        return rawScores.map((item) => ({
+            ...item,
+            score: maxRaw > 0 ? round((item.raw / maxRaw) * maxScore, 2) : 0
+        }));
+    }
+
+    function readTeacherAssignments() {
+        return Object.entries(root.TEACHER_MAP || {}).map(([key, teacherName]) => {
+            const [rawClass, rawSubject] = text(key).split('_');
+            const className = typeof root.normalizeClass === 'function' ? root.normalizeClass(rawClass) : text(rawClass);
+            return {
+                key,
+                teacherName: text(teacherName),
+                className,
+                grade: inferGradeFromClass(className),
+                subject: normalizeSubject(rawSubject),
+                school: text((root.TEACHER_SCHOOL_MAP || {})[key] || root.MY_SCHOOL || '')
+            };
+        }).filter((item) => item.teacherName && item.className && item.subject);
+    }
+
+    function groupAssignmentsByTeacher(assignments) {
+        const map = new Map();
+        assignments.forEach((assignment) => {
+            const key = `${assignment.teacherName}::${assignment.grade}::${assignment.subject}`;
+            if (!map.has(key)) {
+                map.set(key, {
+                    teacher_name: assignment.teacherName,
+                    grade: assignment.grade,
+                    subject: assignment.subject,
+                    classes: [],
+                    school: assignment.school
+                });
+            }
+            const current = map.get(key);
+            current.classes.push(assignment.className);
+        });
+        return Array.from(map.values()).map((item) => ({
+            ...item,
+            classes: Array.from(new Set(item.classes))
+        })).sort(sortTeacherItems);
+    }
+
+    function sortTeacherItems(left, right) {
+        const gradeDiff = toNumber(left.grade, 99) - toNumber(right.grade, 99);
+        if (gradeDiff) return gradeDiff;
+        const subjectDiff = SUBJECT_ORDER.indexOf(left.subject) - SUBJECT_ORDER.indexOf(right.subject);
+        if (subjectDiff) return subjectDiff;
+        return text(left.teacher_name).localeCompare(text(right.teacher_name), 'zh-Hans-CN');
+    }
+
+    function ensureTeacherStats() {
+        if (typeof root.analyzeTeachersV2 === 'function') {
+            try {
+                root.analyzeTeachersV2({ force: true, render: false, township: false, teacherMetricScope: 'admin' });
+            } catch (error) {
+                console.warn('[assessment-sync] teacher analysis failed:', error);
+            }
+        }
+        if (typeof root.calculateTeacherTownshipRanking === 'function') {
+            try {
+                root.calculateTeacherTownshipRanking({ force: true, teacherMetricScope: 'admin' });
+            } catch (error) {
+                console.warn('[assessment-sync] township ranking failed:', error);
+            }
+        }
+    }
+
+    function buildTownSubjectHighest(rows) {
+        const subjectValues = new Map();
+        rows.forEach((row) => {
+            const scores = row?.scores && typeof row.scores === 'object' ? row.scores : {};
+            Object.keys(scores).forEach((rawSubject) => {
+                const subject = normalizeSubject(rawSubject);
+                const value = getSubjectScore(row, subject);
+                if (!subject || !Number.isFinite(value)) return;
+                if (!subjectValues.has(subject)) subjectValues.set(subject, []);
+                subjectValues.get(subject).push(value);
+            });
+        });
+        const thresholdsBySubject = new Map();
+        subjectValues.forEach((values, subject) => {
+            const ordered = values.slice().sort((a, b) => b - a);
+            const top = ordered[0] || 0;
+            thresholdsBySubject.set(subject, {
+                exc: Math.max(ordered[Math.floor(ordered.length * 0.2)] || 0, top * 0.8),
+                pass: Math.max(ordered[Math.floor(ordered.length * 0.6)] || 0, top * 0.6)
+            });
+        });
+        const schoolSubject = new Map();
+        rows.forEach((row) => {
+            const school = text(row?.school);
+            if (!school) return;
+            const scores = row?.scores && typeof row.scores === 'object' ? row.scores : {};
+            Object.keys(scores).forEach((rawSubject) => {
+                const subject = normalizeSubject(rawSubject);
+                const value = getSubjectScore(row, subject);
+                if (!subject || !Number.isFinite(value)) return;
+                const key = `${school}::${subject}`;
+                if (!schoolSubject.has(key)) schoolSubject.set(key, { school, subject, values: [] });
+                schoolSubject.get(key).values.push(value);
+            });
+        });
+        const highest = new Map();
+        schoolSubject.forEach((entry) => {
+            const metric = metricFromValues(entry.values, thresholdsBySubject.get(entry.subject) || { exc: 0, pass: 0 });
+            if (!metric) return;
+            const current = highest.get(entry.subject) || { excellentRate: 0, passRate: 0, avg: 0 };
+            highest.set(entry.subject, {
+                excellentRate: Math.max(current.excellentRate, metric.excellentRate),
+                passRate: Math.max(current.passRate, metric.passRate),
+                avg: Math.max(current.avg, metric.avg)
+            });
+        });
+        return highest;
+    }
+
+    function buildTwoRatesItems(teachers, rows) {
+        const stats = root.TEACHER_STATS || {};
+        const townHighestBySubject = buildTownSubjectHighest(rows);
+        const bySubject = new Map();
+        teachers.forEach((teacher) => {
+            const data = stats[teacher.teacher_name]?.subjects?.[teacher.subject] || stats[teacher.teacher_name]?.subjects?.[normalizeSubject(teacher.subject)];
+            if (!data || !toNumber(data.studentCount, 0)) return;
+            const subjectKey = teacher.subject;
+            if (!bySubject.has(subjectKey)) bySubject.set(subjectKey, []);
+            bySubject.get(subjectKey).push({ teacher, data });
+        });
+
+        const items = [];
+        bySubject.forEach((entries) => {
+            const highest = townHighestBySubject.get(entries[0]?.teacher?.subject) || {
+                excellentRate: Math.max(...entries.map((entry) => toNumber(entry.data.excellentRate, 0)), 0),
+                passRate: Math.max(...entries.map((entry) => toNumber(entry.data.passRate, 0)), 0),
+                avg: Math.max(...entries.map((entry) => toNumber(entry.data.avgValue ?? entry.data.avg, 0)), 0)
+            };
+            const rawScores = entries.map((entry) => ({
+                teacher: entry.teacher,
+                data: entry.data,
+                raw: weightedScore({
+                    excellentRate: toNumber(entry.data.excellentRate, 0),
+                    passRate: toNumber(entry.data.passRate, 0),
+                    avg: toNumber(entry.data.avgValue ?? entry.data.avg, 0)
+                }, highest)
+            })).filter((entry) => Number.isFinite(entry.raw));
+            scaleWithinGroup(rawScores, 54).forEach((entry) => {
+                items.push({
+                    ...entry.teacher,
+                    project_id: PROJECTS.twoRates,
+                    score: entry.score,
+                    max_score: 60,
+                    note: `联考两率一分主体 ${entry.score}/54；优秀率 ${pct(entry.data.excellentRate)}，及格率 ${pct(entry.data.passRate)}，均分 ${round(entry.data.avgValue ?? entry.data.avg, 2)}。优秀率增幅需有基准考试后另行同步或手填。`,
+                    source: 'teaching-management'
+                });
+            });
+        });
+        return items;
+    }
+
+    function buildClassMetrics(rows) {
+        const thresholds = resolveTotalThresholds(rows);
+        const map = new Map();
+        rows.forEach((row) => {
+            const school = text(row?.school);
+            const className = typeof root.normalizeClass === 'function' ? root.normalizeClass(row?.class) : text(row?.class);
+            if (!school || !className) return;
+            const key = `${school}::${className}`;
+            if (!map.has(key)) map.set(key, { school, className, totals: [] });
+            const total = getTotal(row);
+            if (Number.isFinite(total)) map.get(key).totals.push(total);
+        });
+        return Array.from(map.values()).map((item) => ({
+            ...item,
+            metric: metricFromValues(item.totals, thresholds)
+        })).filter((item) => item.metric);
+    }
+
+    function buildClassCollaborationItems(teachers, rows) {
+        const classMetrics = buildClassMetrics(rows);
+        const highest = {
+            excellentRate: Math.max(...classMetrics.map((item) => item.metric.excellentRate), 0),
+            passRate: Math.max(...classMetrics.map((item) => item.metric.passRate), 0),
+            avg: Math.max(...classMetrics.map((item) => item.metric.avg), 0)
+        };
+        const metricByClass = new Map(classMetrics.map((item) => [`${item.school}::${item.className}`, item.metric]));
+        const rawScores = teachers.map((teacher) => {
+            const metrics = teacher.classes
+                .map((className) => metricByClass.get(`${teacher.school}::${className}`))
+                .filter(Boolean);
+            const totalCount = metrics.reduce((sum, metric) => sum + metric.count, 0);
+            if (!totalCount) return null;
+            const metric = {
+                count: totalCount,
+                avg: metrics.reduce((sum, metric) => sum + metric.avg * metric.count, 0) / totalCount,
+                excellentRate: metrics.reduce((sum, metric) => sum + metric.excellentRate * metric.count, 0) / totalCount,
+                passRate: metrics.reduce((sum, metric) => sum + metric.passRate * metric.count, 0) / totalCount
+            };
+            return {
+                teacher,
+                metric,
+                raw: weightedScore(metric, highest)
+            };
+        }).filter(Boolean);
+        return scaleWithinGroup(rawScores, 10).map((entry) => ({
+            ...entry.teacher,
+            project_id: PROJECTS.classCollaboration,
+            score: entry.score,
+            max_score: 10,
+            note: `按任教班级总分三项核算：优秀率 ${pct(entry.metric.excellentRate)}，及格率 ${pct(entry.metric.passRate)}，均分 ${round(entry.metric.avg, 2)}。`,
+            source: 'teaching-management'
+        }));
+    }
+
+    function buildSubjectCollaborationItems(teachers, rows) {
+        const stats = root.TEACHER_STATS || {};
+        const subjectRows = new Map();
+        rows.forEach((row) => {
+            const scores = row?.scores && typeof row.scores === 'object' ? row.scores : {};
+            Object.keys(scores).forEach((rawSubject) => {
+                const subject = normalizeSubject(rawSubject);
+                if (!subject) return;
+                const school = text(row?.school);
+                const value = getSubjectScore(row, subject);
+                if (!school || !Number.isFinite(value)) return;
+                const key = `${school}::${subject}`;
+                if (!subjectRows.has(key)) subjectRows.set(key, { school, subject, values: [], thresholds: { exc: 0, pass: 0 } });
+                subjectRows.get(key).values.push(value);
+            });
+        });
+        const thresholdsBySubject = new Map();
+        subjectRows.forEach((entry) => {
+            if (thresholdsBySubject.has(entry.subject)) return;
+            const values = [];
+            rows.forEach((row) => {
+                const value = getSubjectScore(row, entry.subject);
+                if (Number.isFinite(value)) values.push(value);
+            });
+            const ordered = values.sort((a, b) => b - a);
+            const top = ordered[0] || 0;
+            thresholdsBySubject.set(entry.subject, {
+                exc: Math.max(ordered[Math.floor(ordered.length * 0.2)] || 0, top * 0.8),
+                pass: Math.max(ordered[Math.floor(ordered.length * 0.6)] || 0, top * 0.6)
+            });
+        });
+        const townBySubject = new Map();
+        subjectRows.forEach((entry) => {
+            const metric = metricFromValues(entry.values, thresholdsBySubject.get(entry.subject) || { exc: 0, pass: 0 });
+            if (!metric) return;
+            if (!townBySubject.has(entry.subject)) townBySubject.set(entry.subject, []);
+            townBySubject.get(entry.subject).push({ ...entry, metric });
+        });
+        const highestBySubject = new Map();
+        townBySubject.forEach((entries, subject) => {
+            highestBySubject.set(subject, {
+                excellentRate: Math.max(...entries.map((entry) => entry.metric.excellentRate), 0),
+                passRate: Math.max(...entries.map((entry) => entry.metric.passRate), 0),
+                avg: Math.max(...entries.map((entry) => entry.metric.avg), 0)
+            });
+        });
+        const bySubject = new Map();
+        teachers.forEach((teacher) => {
+            const data = stats[teacher.teacher_name]?.subjects?.[teacher.subject] || stats[teacher.teacher_name]?.subjects?.[normalizeSubject(teacher.subject)];
+            if (!data || !toNumber(data.studentCount, 0)) return;
+            if (!bySubject.has(teacher.subject)) bySubject.set(teacher.subject, []);
+            bySubject.get(teacher.subject).push({ teacher, data });
+        });
+        const items = [];
+        bySubject.forEach((entries) => {
+            const totalCount = entries.reduce((sum, entry) => sum + toNumber(entry.data.studentCount, 0), 0);
+            if (!totalCount) return;
+            const subjectMetric = {
+                count: totalCount,
+                excellentRate: entries.reduce((sum, entry) => sum + toNumber(entry.data.excellentRate, 0) * toNumber(entry.data.studentCount, 0), 0) / totalCount,
+                passRate: entries.reduce((sum, entry) => sum + toNumber(entry.data.passRate, 0) * toNumber(entry.data.studentCount, 0), 0) / totalCount,
+                avg: entries.reduce((sum, entry) => sum + toNumber(entry.data.avgValue ?? entry.data.avg, 0) * toNumber(entry.data.studentCount, 0), 0) / totalCount
+            };
+            const highest = highestBySubject.get(entries[0]?.teacher?.subject) || subjectMetric;
+            const raw = weightedScore(subjectMetric, highest);
+            const score = Number.isFinite(raw) ? round(Math.min(10, (raw / 100) * 10), 2) : 0;
+            entries.forEach((entry) => {
+                items.push({
+                    ...entry.teacher,
+                    project_id: PROJECTS.subjectCollaboration,
+                    score,
+                    max_score: 10,
+                    note: `本校同学科协作项按全镇同学科最高指标折算；${entry.teacher.subject}优秀率 ${pct(subjectMetric.excellentRate)}，及格率 ${pct(subjectMetric.passRate)}，均分 ${round(subjectMetric.avg, 2)}。`,
+                    source: 'teaching-management'
+                });
+            });
+        });
+        return items;
+    }
+
+    function buildBottomThirdItems(teachers, rows) {
+        const schoolClassMetrics = buildClassMetrics(rows);
+        const bottomByClass = new Map();
+        schoolClassMetrics.forEach((item) => {
+            const totals = item.totals.slice().sort((a, b) => a - b);
+            const count = Math.max(1, Math.ceil(totals.length / 3));
+            const bottom = totals.slice(0, count);
+            const avg = bottom.reduce((sum, value) => sum + value, 0) / bottom.length;
+            bottomByClass.set(`${item.school}::${item.className}`, { avg, count: bottom.length });
+        });
+        const highest = Math.max(...Array.from(bottomByClass.values()).map((item) => item.avg), 0);
+        return teachers.map((teacher) => {
+            const metrics = teacher.classes.map((className) => bottomByClass.get(`${teacher.school}::${className}`)).filter(Boolean);
+            const count = metrics.reduce((sum, item) => sum + item.count, 0);
+            if (!count || highest <= 0) return null;
+            const avg = metrics.reduce((sum, item) => sum + item.avg * item.count, 0) / count;
+            return {
+                ...teacher,
+                project_id: PROJECTS.bottomThird,
+                score: round((avg / highest) * 10, 2),
+                max_score: 10,
+                note: `任教班级后 1/3 总分均分 ${round(avg, 2)}，全镇最高 ${round(highest, 2)}。`,
+                source: 'teaching-management'
+            };
+        }).filter(Boolean);
+    }
+
+    function buildExcellentContributionItems(teachers, rows) {
+        const ranked = rows.map((row) => ({
+            row,
+            total: getTotal(row)
+        })).filter((item) => Number.isFinite(item.total)).sort((a, b) => b.total - a.total);
+        const top = ranked.slice(0, 150);
+        if (!top.length) return [];
+        const contribution = new Map();
+        teachers.forEach((teacher) => {
+            teacher.classes.forEach((className) => {
+                top.forEach(({ row }) => {
+                    const rowClass = typeof root.normalizeClass === 'function' ? root.normalizeClass(row?.class) : text(row?.class);
+                    if (rowClass !== className) return;
+                    const score = getSubjectScore(row, teacher.subject);
+                    if (!Number.isFinite(score)) return;
+                    const key = `${teacher.teacher_name}::${teacher.grade}::${teacher.subject}`;
+                    contribution.set(key, {
+                        teacher,
+                        value: (contribution.get(key)?.value || 0) + 1
+                    });
+                });
+            });
+        });
+        const rawScores = Array.from(contribution.values()).map((item) => ({
+            teacher: item.teacher,
+            raw: item.value
+        }));
+        return scaleWithinGroup(rawScores, 5).map((entry) => ({
+            ...entry.teacher,
+            project_id: PROJECTS.excellentContribution,
+            score: entry.score,
+            max_score: 5,
+            note: `按全镇前 150 名学生与任教学科匹配生成贡献值 ${entry.raw}，再按最高教师折算 5 分。`,
+            source: 'teaching-management'
+        }));
+    }
+
+    async function buildAssessmentSyncPayload() {
+        if (root.SystemRuntimeLoader && typeof root.SystemRuntimeLoader.load === 'function') {
+            try {
+                await root.SystemRuntimeLoader.load('teacher-analysis');
+            } catch (error) {
+                console.warn('[assessment-sync] load teacher-analysis failed:', error);
+            }
+        }
+        ensureTeacherStats();
+        const rows = getCurrentRows();
+        const teachers = groupAssignmentsByTeacher(readTeacherAssignments());
+        const skipped = [];
+        if (!rows.length) skipped.push('当前没有可用成绩数据，不能自动同步。');
+        if (!teachers.length) skipped.push('当前没有教师任课表，不能自动同步。');
+        if (!rows.length || !teachers.length) {
+            return {
+                academic_year: getAcademicYearForSync(),
+                items: [],
+                skipped
+            };
+        }
+        const items = [
+            ...buildTwoRatesItems(teachers, rows),
+            ...buildClassCollaborationItems(teachers, rows),
+            ...buildSubjectCollaborationItems(teachers, rows),
+            ...buildBottomThirdItems(teachers, rows),
+            ...buildExcellentContributionItems(teachers, rows)
+        ].filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0);
+        return {
+            academic_year: getAcademicYearForSync(),
+            items,
+            skipped
+        };
+    }
+
+    function summarizeItems(items) {
+        const counts = {};
+        (items || []).forEach((item) => {
+            const label = PROJECT_LABELS[item.project_id] || item.project_id;
+            counts[label] = (counts[label] || 0) + 1;
+        });
+        return Object.entries(counts).map(([label, count]) => `${label} ${count}条`).join('，') || '暂无可同步分值';
+    }
+
+    function renderResult(panel, payload, result = null, error = null) {
+        const resultEl = panel.querySelector('#tmAssessmentSyncResult');
+        if (!resultEl) return;
+        const sampleRows = (payload.items || []).slice(0, 8).map((item) => `
+            <tr>
+                <td>${escapeHtml(item.teacher_name)}</td>
+                <td>${escapeHtml(gradeLabel(item.grade))}</td>
+                <td>${escapeHtml(item.subject)}</td>
+                <td>${escapeHtml(PROJECT_LABELS[item.project_id] || item.project_id)}</td>
+                <td><strong>${escapeHtml(item.score)}</strong> / ${escapeHtml(item.max_score || '')}</td>
+            </tr>
+        `).join('');
+        const skippedRows = (result?.skipped || []).slice(0, 8).map((item) => `
+            <li><strong>${escapeHtml(item.teacher_name || '')}</strong> ${escapeHtml(item.grade || '')} ${escapeHtml(item.subject || '')}：${escapeHtml(item.reason || '')}</li>
+        `).join('');
+        resultEl.innerHTML = `
+            <div class="tm-assessment-sync-summary">
+                <span class="status-chip info">学年度 ${escapeHtml(payload.academic_year)}</span>
+                <span class="status-chip ${payload.items?.length ? 'ok' : 'warn'}">${escapeHtml(summarizeItems(payload.items))}</span>
+                ${result ? `<span class="status-chip ok">已写入 ${escapeHtml(result.written || 0)} 条</span>` : ''}
+                ${error ? `<span class="status-chip warn">${escapeHtml(error.message || error)}</span>` : ''}
+            </div>
+            ${sampleRows ? `<div class="table-wrap analysis-table-shell tm-assessment-sync-table"><table><thead><tr><th>教师</th><th>年级</th><th>学科</th><th>项目</th><th>分值</th></tr></thead><tbody>${sampleRows}</tbody></table></div>` : ''}
+            ${payload.skipped?.length ? `<div class="tm-assessment-sync-note">${payload.skipped.map(escapeHtml).join('<br>')}</div>` : ''}
+            ${skippedRows ? `<div class="tm-assessment-sync-note"><strong>同步跳过：</strong><ul>${skippedRows}</ul></div>` : ''}
+        `;
+    }
+
+    function renderPanel() {
+        const container = document.getElementById('tmNextAction') || document.querySelector('#teacher-analysis .analysis-content-stack');
+        if (!container || document.getElementById('tmAssessmentSyncPanel')) return;
+        const panel = document.createElement('div');
+        panel.id = 'tmAssessmentSyncPanel';
+        panel.className = 'tm-next-card tm-assessment-sync-panel';
+        panel.innerHTML = `
+            <div class="tm-assessment-sync-copy">
+                <div class="tm-next-title"><i class="ti ti-cloud-upload"></i> 同步到教师教学质量考核系统</div>
+                <div class="tm-next-desc">从当前联考成绩和教学管理任课表生成教师个人考核分值。缺成绩、缺任课表或目标系统未匹配到教师时不会写入，仍由考核组长手动填写。</div>
+                <div class="tm-next-meta">
+                    <span class="status-chip info">两率一分</span>
+                    <span class="status-chip info">班级协调</span>
+                    <span class="status-chip info">学科协作</span>
+                    <span class="status-chip info">后 1/3</span>
+                    <span class="status-chip info">尖子生</span>
+                </div>
+                <label class="tm-assessment-sync-toggle">
+                    <input type="checkbox" id="tmAssessmentOverwriteManual">
+                    覆盖考核系统中已有人工分数
+                </label>
+            </div>
+            <div class="tm-assessment-sync-actions">
+                <button type="button" class="btn btn-secondary" id="tmAssessmentPreviewBtn"><i class="ti ti-eye"></i> 预览</button>
+                <button type="button" class="btn btn-blue" id="tmAssessmentSyncBtn"><i class="ti ti-cloud-upload"></i> 同步</button>
+            </div>
+            <div id="tmAssessmentSyncResult" class="tm-assessment-sync-result"></div>
+        `;
+        container.insertAdjacentElement('afterend', panel);
+        bindPanel(panel);
+    }
+
+    function setBusy(panel, busy) {
+        panel.querySelectorAll('button').forEach((button) => {
+            button.disabled = !!busy;
+        });
+    }
+
+    function bindPanel(panel) {
+        const previewBtn = panel.querySelector('#tmAssessmentPreviewBtn');
+        const syncBtn = panel.querySelector('#tmAssessmentSyncBtn');
+        previewBtn.onclick = async () => {
+            setBusy(panel, true);
+            try {
+                const payload = await buildAssessmentSyncPayload();
+                panel.__assessmentSyncPayload = payload;
+                renderResult(panel, payload);
+            } catch (error) {
+                renderResult(panel, { academic_year: getAcademicYearForSync(), items: [] }, null, error);
+            } finally {
+                setBusy(panel, false);
+            }
+        };
+        syncBtn.onclick = async () => {
+            setBusy(panel, true);
+            try {
+                const payload = panel.__assessmentSyncPayload || await buildAssessmentSyncPayload();
+                const overwrite = !!panel.querySelector('#tmAssessmentOverwriteManual')?.checked;
+                if (!payload.items?.length) throw new Error('没有可同步的分值');
+                if (!root.EdgeGateway || typeof root.EdgeGateway.syncAssessmentScores !== 'function') {
+                    throw new Error('当前网关不支持考核同步，请先部署最新版本');
+                }
+                const result = await root.EdgeGateway.syncAssessmentScores({
+                    academic_year: payload.academic_year,
+                    overwrite_manual: overwrite,
+                    items: payload.items
+                });
+                renderResult(panel, payload, result);
+            } catch (error) {
+                const payload = panel.__assessmentSyncPayload || { academic_year: getAcademicYearForSync(), items: [] };
+                renderResult(panel, payload, null, error);
+            } finally {
+                setBusy(panel, false);
+            }
+        };
+    }
+
+    function installAssessmentSyncPanel() {
+        renderPanel();
+        setTimeout(renderPanel, 400);
+        setTimeout(renderPanel, 1200);
+    }
+
+    root.tmBuildTeacherAssessmentSyncPayload = buildAssessmentSyncPayload;
+    root.tmRenderAssessmentSyncPanel = installAssessmentSyncPanel;
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', installAssessmentSyncPanel);
+    } else {
+        installAssessmentSyncPanel();
+    }
+})();

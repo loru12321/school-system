@@ -154,6 +154,93 @@
     white-space: nowrap;
 }
 
+.analysis-workspace-management .tm-assessment-sync-panel,
+#tmAssessmentSyncPanel {
+    margin-top: 14px;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-copy {
+    display: grid;
+    gap: 8px;
+    min-width: min(620px, 100%);
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-toggle input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-result {
+    flex-basis: 100%;
+    display: grid;
+    gap: 10px;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-table {
+    max-height: 280px;
+    overflow: auto;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-table th,
+#tmAssessmentSyncPanel .tm-assessment-sync-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+    white-space: nowrap;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-note {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-note ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
 .analysis-workspace-management .tm-quick-entry-btn {
     display: grid;
     align-content: space-between;

@@ -62,6 +62,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('teaching-management', bootJs('teaching-management-runtime.js')),
     bootEntry('teaching-management-cloud', bootJs('teaching-management-cloud-runtime.js')),
     bootEntry('teaching-management-overview', bootJs('teaching-management-overview-runtime.js')),
+    bootEntry('teaching-assessment-sync', bootJs('teaching-assessment-sync-runtime.js')),
     bootEntry('teaching-management-version', bootJs('teaching-management-version-runtime.js'))
 ]),
 'student-compare': bootSkill('demand', 'demand', ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares'], [

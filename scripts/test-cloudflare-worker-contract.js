@@ -157,6 +157,10 @@ assert.ok(gateway.includes('function scheduleLoginAuditWrite(ctx, task)'), 'gate
 assert.ok(gateway.includes('ctx.waitUntil(task.catch'), 'gateway should use waitUntil for successful login audit writes');
 assert.ok(gateway.includes('return performGatewayLogin(request, env, body, ctx);'), 'login action should receive execution context for non-blocking audit writes');
 assert.ok(gateway.includes('Only admin can view all login sessions'), 'all-account login session lookup should be admin-only');
+assert.ok(gateway.includes("case 'assessment.sync_scores'"), 'gateway should expose assessment score sync through authenticated edu-gateway');
+assert.ok(gateway.includes('ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY'), 'assessment sync service role key must be read from Worker env only');
+assert.ok(gateway.includes("change_tag: 'system_sync'"), 'assessment sync writes should mark rows as system_sync');
+assert.ok(gateway.includes('teacher_workload') === false, 'assessment sync must not write workload scores without a system data source');
 
 console.log(JSON.stringify({
   ok: true,
