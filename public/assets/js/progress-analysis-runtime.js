@@ -928,9 +928,15 @@ function renderMultiPeriodComparison() {
         setProgressMultiPeriodHint(`✅ 已生成 ${config.school} 的 ${rows.length} 名学生 ${config.periodCount} 期进退步对比。`, 'success');
         return cache;
     } catch (error) {
-        console.error('[progress-compare] render failed:', error);
-        setProgressMultiPeriodHint(`❌ ${error && error.message ? error.message : '生成失败，请稍后重试。'}`, 'error');
-        resultEl.innerHTML = '<div class="analysis-empty-state analysis-empty-state-compact">生成失败，请检查学校和期次选择。</div>';
+        const message = error && error.message ? error.message : '生成失败，请稍后重试。';
+        const isMissingComparableData = message.includes('可对比学生数据');
+        if (isMissingComparableData) {
+            console.warn('[progress-compare] no comparable data:', message);
+        } else {
+            console.error('[progress-compare] render failed:', error);
+        }
+        setProgressMultiPeriodHint(`${isMissingComparableData ? '⚠️' : '❌'} ${message}`, isMissingComparableData ? 'warning' : 'error');
+        resultEl.innerHTML = `<div class="analysis-empty-state analysis-empty-state-compact">${isMissingComparableData ? '当前学校在所选期次缺少可对比学生数据，请更换学校或期次。' : '生成失败，请检查学校和期次选择。'}</div>`;
         return false;
     }
 }
