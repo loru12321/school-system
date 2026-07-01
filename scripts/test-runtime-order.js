@@ -326,15 +326,22 @@ const moduleManifest = appModulesMatch[0];
 const normalizedModuleManifest = moduleManifest.includes('.map(bootJs)')
     ? moduleManifest.replace(/'([^']+\.js)'/g, "'./assets/js/$1'")
     : moduleManifest;
+assert.ok(normalizedModuleManifest.includes(schoolNormalizationRef), 'school-normalization-runtime.js should load with core app modules');
+assert.ok(
+    normalizedModuleManifest.indexOf(schoolNormalizationRef) < normalizedModuleManifest.indexOf('./assets/js/app.js'),
+    'school-normalization-runtime.js should load before app.js so township-scoped analysis cannot fall back to all schools'
+);
 const bootVendorMatch = bootRuntime.match(/var BOOT_VENDOR_MODULES = \[[\s\S]*?\];/);
 assert.ok(bootVendorMatch, 'boot-runtime.js should declare BOOT_VENDOR_MODULES');
 const bootVendorManifest = bootVendorMatch[0];
-const deferredVendorMatch = bootRuntime.match(/var DEFERRED_APP_MODULES = \[[\s\S]*?\];/);
+const deferredVendorMatch = bootRuntime.match(/var DEFERRED_APP_MODULES = \[[\s\S]*?\]\.map\(bootJs\);/)
+    || bootRuntime.match(/var DEFERRED_APP_MODULES = \[[\s\S]*?\];/);
 assert.ok(deferredVendorMatch, 'boot-runtime.js should declare DEFERRED_APP_MODULES');
 const deferredVendorManifest = deferredVendorMatch[0];
 const normalizedDeferredManifest = deferredVendorManifest.includes('.map(bootJs)')
     ? deferredVendorManifest.replace(/'([^']+\.js)'/g, "'./assets/js/$1'")
     : deferredVendorManifest;
+assert.ok(!normalizedDeferredManifest.includes(schoolNormalizationRef), 'school-normalization-runtime.js must not be deferred past first analysis render');
 const moduleOrderManifest = `${normalizedModuleManifest}\n${normalizedDeferredManifest}`;
 const bootRuntimeReferences = (ref) => bootRuntime.includes(ref) || bootRuntime.includes(ref.split('/').pop());
 const bootRuntimeReferenceIndex = (ref) => {
@@ -363,7 +370,6 @@ const postAppDeferredRefs = [
     seatAdjustmentRef,
     cohortGrowthRef,
     macroAnalysisCompatRef,
-    schoolNormalizationRef,
     compareCloudContextRef,
     compareExamSyncRef,
     reportCompareRef,

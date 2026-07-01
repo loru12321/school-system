@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-654ec79e9c87';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-3e06aae057bb';
 
 function bootDebugLog(...args) {
 try {
@@ -124,7 +124,6 @@ var DEFERRED_APP_MODULES = [
 'seat-adjustment-runtime.js',
 'cohort-growth-runtime.js',
 'macro-analysis-compat-runtime.js',
-'school-normalization-runtime.js',
 'compare-cloud-context-runtime.js',
 'compare-exam-sync-runtime.js',
 'report-compare-runtime.js',
@@ -153,6 +152,7 @@ var APP_MODULES = [
 'compare-session-state-runtime.js',
 'compare-result-state-runtime.js',
 'compare-summary-state-runtime.js',
+'school-normalization-runtime.js',
 'cloud-api-runtime.js',
 'cloud-connection-runtime.js',
 'cloud-data-service-runtime.js',

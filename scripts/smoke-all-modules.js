@@ -2582,15 +2582,43 @@ async function runModuleDeepCheck(page, id) {
     if (id === 'analysis') {
         return page.evaluate(async () => {
             const checks = {
+                schoolNormalizationReady: typeof window.listAvailableSchoolsForCompare === 'function'
+                    && typeof window.getCountyDirectSchoolNames === 'function'
+                    && typeof window.isTownshipManagedSchool === 'function',
                 getExamRowsForCompare: typeof window.getExamRowsForCompare === 'function',
                 listAvailableExamsForCompare: typeof window.listAvailableExamsForCompare === 'function',
                 sortExamIdsChronologically: typeof window.sortExamIdsChronologically === 'function',
                 renderMacroMultiPeriodComparison: typeof window.renderMacroMultiPeriodComparison === 'function',
-                exportMacroMultiPeriodComparison: typeof window.exportMacroMultiPeriodComparison === 'function'
+                exportMacroMultiPeriodComparison: typeof window.exportMacroMultiPeriodComparison === 'function',
+                renderTables: typeof window.renderTables === 'function'
             };
+            if (checks.renderTables) window.renderTables();
+            const tableSchools = Array.from(document.querySelectorAll('#tb-total tbody tr td:first-child'))
+                .map((cell) => String(cell.textContent || '').replace(/\s+/g, ' ').trim())
+                .filter(Boolean);
+            const allSchools = typeof window.listAvailableSchoolsForCompare === 'function'
+                ? window.listAvailableSchoolsForCompare('all')
+                : Object.keys(window.SCHOOLS || {});
+            const townshipSchools = typeof window.listAvailableSchoolsForCompare === 'function'
+                ? window.listAvailableSchoolsForCompare()
+                : [];
+            const countySchools = typeof window.getCountyDirectSchoolNames === 'function'
+                ? window.getCountyDirectSchoolNames(allSchools)
+                : [];
+            const countyInTownshipTable = tableSchools.filter((schoolName) => countySchools.some((countyName) => (
+                schoolName === countyName
+                || (typeof window.areSchoolNamesEquivalent === 'function' && window.areSchoolNamesEquivalent(schoolName, countyName))
+                || (typeof window.areSchoolNamesMatched === 'function' && window.areSchoolNamesMatched(schoolName, countyName, true))
+            )));
+            checks.townshipSchoolListReady = townshipSchools.length > 0;
+            checks.analysisTableScopedToTownship = tableSchools.length > 0 && countyInTownshipTable.length === 0;
             return {
                 ok: Object.values(checks).every(Boolean),
-                checks
+                checks,
+                tableSchools,
+                townshipSchools,
+                countySchools,
+                countyInTownshipTable
             };
         });
     }
