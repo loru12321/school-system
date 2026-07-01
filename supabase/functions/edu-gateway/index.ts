@@ -6,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 const textEncoder = new TextEncoder();
-const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("EDU_GATEWAY_SUPABASE_URL") ?? "";
+const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("EDU_GATEWAY_SERVICE_ROLE_KEY") ?? "";
 const sessionSecret = Deno.env.get("APP_SESSION_SECRET") ?? "";
 const bcryptRounds = 12;
 const PBKDF2_ITERATIONS = 100000;
