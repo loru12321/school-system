@@ -5,6 +5,8 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const appPath = path.join(root, 'public', 'assets', 'js', 'app.js');
 const appJs = fs.readFileSync(appPath, 'utf8');
+const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
+const entranceSoundJs = fs.readFileSync(entranceSoundPath, 'utf8');
 
 function assertParentPathUsesDeferredCloudLoad(marker, legacyGuard) {
   const rawMarkerIndex = appJs.indexOf(marker);
@@ -80,5 +82,31 @@ assert.match(
   schoolBranch,
   /else\s*\{[\s\S]*?showCohortPicker\(\)/,
   'school login must only show the cohort picker when no selected cohort entry is pending'
+);
+
+assert.match(
+  entranceSoundJs,
+  /const AUTOPLAY_KEY = 'SCHOOL_ENTRANCE_SOUND_AUTOPLAY_V1';/,
+  'entrance audio must use an explicit autoplay opt-in flag'
+);
+assert.match(
+  entranceSoundJs,
+  /const DEFAULT_MODE = 'off';/,
+  'entrance audio must default to off so login does not fetch media'
+);
+assert.match(
+  entranceSoundJs,
+  /function prewarmCustomAudio\(\)\s*\{[\s\S]*?!isAutoplayEnabled\(\)/,
+  'entrance audio prewarm must not run unless autoplay was explicitly enabled'
+);
+assert.match(
+  entranceSoundJs,
+  /function unlockCustomAudio\(\)\s*\{[\s\S]*?!isAutoplayEnabled\(\)/,
+  'login gestures must not unlock or fetch entrance audio unless autoplay was explicitly enabled'
+);
+assert.match(
+  entranceSoundJs,
+  /lastOverlayVisible && !visible && !playedForSession && isAutoplayEnabled\(\)/,
+  'login overlay exit must not play entrance audio unless autoplay was explicitly enabled'
 );
 console.log('Login performance contract passed');

@@ -13,7 +13,8 @@
         ? 'https://schoolsystem.com.cn/api/entrance-audio-manifest?v=20260618-waipoqiao-lite-v1'
         : `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/manifest.json?v=20260618-waipoqiao-lite-v1`;
     const BUNDLED_AUDIO_BASE = `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/`;
-    const DEFAULT_MODE = 'random';
+    const AUTOPLAY_KEY = 'SCHOOL_ENTRANCE_SOUND_AUTOPLAY_V1';
+    const DEFAULT_MODE = 'off';
 
     let lastOverlayVisible = true;
     let playedForSession = false;
@@ -47,8 +48,22 @@
 
     function writeMode(mode) {
         try {
-            localStorage.setItem(STORAGE_KEY, normalizeMode(mode));
+            const nextMode = normalizeMode(mode);
+            localStorage.setItem(STORAGE_KEY, nextMode);
+            if (nextMode === 'off') {
+                localStorage.removeItem(AUTOPLAY_KEY);
+            } else {
+                localStorage.setItem(AUTOPLAY_KEY, 'true');
+            }
         } catch (_) {}
+    }
+
+    function isAutoplayEnabled() {
+        try {
+            return localStorage.getItem(AUTOPLAY_KEY) === 'true';
+        } catch (_) {
+            return false;
+        }
     }
 
     function openCustomAudioDb() {
@@ -238,12 +253,12 @@
     }
 
     function prewarmCustomAudio() {
-        if (readMode() === 'off') return;
+        if (!isAutoplayEnabled() || readMode() === 'off') return;
         getPlaylist().catch(() => {});
     }
 
     function unlockCustomAudio() {
-        if (audioUnlocked || readMode() === 'off') return;
+        if (audioUnlocked || !isAutoplayEnabled() || readMode() === 'off') return;
         getPlaylist().then((tracks) => {
             const track = tracks[0];
             if (!track || (!track.blob && !track.src) || audioUnlocked) return;
@@ -271,6 +286,7 @@
     }
 
     function bindUnlockGestures() {
+        if (!isAutoplayEnabled()) return;
         if (!unlockGestureBound) {
             unlockGestureBound = true;
             ['pointerdown', 'keydown', 'touchstart'].forEach((eventName) => {
@@ -368,6 +384,7 @@
                     try {
                         localStorage.setItem(CUSTOM_AUDIO_KEY, 'indexeddb');
                         localStorage.setItem(STORAGE_KEY, tracks.length > 1 ? 'random' : 'custom');
+                        localStorage.setItem(AUTOPLAY_KEY, 'true');
                     } catch (_) {}
                     audioUnlocked = false;
                     updateSoundButtons();
@@ -401,7 +418,7 @@
     function observeEntrance() {
         const overlay = document.getElementById('login-overlay');
         const visible = !!overlay && getComputedStyle(overlay).display !== 'none' && !overlay.classList.contains('hidden');
-        if (lastOverlayVisible && !visible && !playedForSession) {
+        if (lastOverlayVisible && !visible && !playedForSession && isAutoplayEnabled()) {
             playedForSession = true;
             window.setTimeout(() => playEntranceSound(), 120);
         }
