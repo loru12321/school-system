@@ -1816,6 +1816,7 @@ async function handleAssessmentScoreSync(request, env, session, payload) {
   if (!items.length) return badRequest(request, 'no valid score items');
 
   const overwriteManual = payload?.overwrite_manual === true;
+  const dryRun = payload?.dry_run === true;
   const [teachers, existingScores] = await Promise.all([
     fetchAssessmentTeachersForYear(env, academicYear),
     fetchAssessmentScoresForYear(env, academicYear)
@@ -1869,7 +1870,7 @@ async function handleAssessmentScoreSync(request, env, session, payload) {
     projectCounts[item.project_id] = (projectCounts[item.project_id] || 0) + 1;
   });
 
-  if (rows.length) {
+  if (rows.length && !dryRun) {
     await assessmentRestFetch(env, '/rest/v1/assessment_scores?on_conflict=academic_year,teacher_id,project_id', {
       method: 'POST',
       headers: {
@@ -1882,9 +1883,11 @@ async function handleAssessmentScoreSync(request, env, session, payload) {
   return jsonResponse(200, {
     ok: true,
     academic_year: academicYear,
+    dry_run: dryRun,
     received: rawItems.length,
     valid: items.length,
-    written: rows.length,
+    written: dryRun ? 0 : rows.length,
+    would_write: rows.length,
     matched_teachers: matchedTeacherIds.size,
     skipped,
     project_counts: projectCounts

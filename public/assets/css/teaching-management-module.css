@@ -206,6 +206,49 @@
     flex-wrap: wrap;
 }
 
+#tmAssessmentSyncPanel .tm-assessment-sync-projects {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-project {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-project strong {
+    color: #0f172a;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-project span {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-project.is-ready {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-project.is-missing {
+    border-color: #fed7aa;
+    background: #fff7ed;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-project.is-manual {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
 #tmAssessmentSyncPanel .tm-assessment-sync-table {
     max-height: 280px;
     overflow: auto;
@@ -239,6 +282,11 @@
 #tmAssessmentSyncPanel .tm-assessment-sync-note ul {
     margin: 6px 0 0;
     padding-left: 18px;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-note.is-soft {
+    background: #eff6ff;
+    color: #1d4ed8;
 }
 
 .analysis-workspace-management .tm-quick-entry-btn {

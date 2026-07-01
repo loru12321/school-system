@@ -559,9 +559,59 @@
         return Object.entries(counts).map(([label, count]) => `${label} ${count}条`).join('，') || '暂无可同步分值';
     }
 
+    function summarizeMissingProjects(items) {
+        const projectSet = new Set((items || []).map((item) => item.project_id));
+        const missing = [
+            PROJECTS.twoRates,
+            PROJECTS.classCollaboration,
+            PROJECTS.subjectCollaboration,
+            PROJECTS.bottomThird,
+            PROJECTS.excellentContribution
+        ].filter((projectId) => !projectSet.has(projectId));
+        const manual = ['课时量'];
+        return {
+            missing: missing.map((projectId) => PROJECT_LABELS[projectId] || projectId),
+            manual
+        };
+    }
+
+    function buildProjectMatrixHtml(items) {
+        const counts = {};
+        (items || []).forEach((item) => {
+            counts[item.project_id] = (counts[item.project_id] || 0) + 1;
+        });
+        const autoProjects = [
+            PROJECTS.twoRates,
+            PROJECTS.classCollaboration,
+            PROJECTS.subjectCollaboration,
+            PROJECTS.bottomThird,
+            PROJECTS.excellentContribution
+        ];
+        const rows = autoProjects.map((projectId) => {
+            const count = counts[projectId] || 0;
+            const ok = count > 0;
+            return `
+                <div class="tm-assessment-sync-project ${ok ? 'is-ready' : 'is-missing'}">
+                    <strong>${escapeHtml(PROJECT_LABELS[projectId] || projectId)}</strong>
+                    <span>${ok ? `可同步 ${count} 条` : '缺少可同步数据'}</span>
+                </div>
+            `;
+        }).join('');
+        return `
+            <div class="tm-assessment-sync-projects">
+                ${rows}
+                <div class="tm-assessment-sync-project is-manual">
+                    <strong>课时量成绩</strong>
+                    <span>system 暂无课时量来源，仍由组长手填</span>
+                </div>
+            </div>
+        `;
+    }
+
     function renderResult(panel, payload, result = null, error = null) {
         const resultEl = panel.querySelector('#tmAssessmentSyncResult');
         if (!resultEl) return;
+        const missing = summarizeMissingProjects(payload.items || []);
         const sampleRows = (payload.items || []).slice(0, 8).map((item) => `
             <tr>
                 <td>${escapeHtml(item.teacher_name)}</td>
@@ -572,17 +622,22 @@
             </tr>
         `).join('');
         const skippedRows = (result?.skipped || []).slice(0, 8).map((item) => `
-            <li><strong>${escapeHtml(item.teacher_name || '')}</strong> ${escapeHtml(item.grade || '')} ${escapeHtml(item.subject || '')}：${escapeHtml(item.reason || '')}</li>
+            <li><strong>${escapeHtml(item.teacher_name || '')}</strong> ${escapeHtml(gradeLabel(item.grade || ''))} ${escapeHtml(item.subject || '')} ${escapeHtml(PROJECT_LABELS[item.project_id] || item.project_id || '')}：${escapeHtml(item.reason || '')}</li>
         `).join('');
         resultEl.innerHTML = `
             <div class="tm-assessment-sync-summary">
                 <span class="status-chip info">学年度 ${escapeHtml(payload.academic_year)}</span>
                 <span class="status-chip ${payload.items?.length ? 'ok' : 'warn'}">${escapeHtml(summarizeItems(payload.items))}</span>
-                ${result ? `<span class="status-chip ok">已写入 ${escapeHtml(result.written || 0)} 条</span>` : ''}
+                ${result?.dry_run ? `<span class="status-chip info">预计写入 ${escapeHtml(result.would_write || 0)} 条</span>` : ''}
+                ${result && !result.dry_run ? `<span class="status-chip ok">已写入 ${escapeHtml(result.written || 0)} 条</span>` : ''}
+                ${result?.skipped?.length ? `<span class="status-chip warn">跳过 ${escapeHtml(result.skipped.length)} 条</span>` : ''}
                 ${error ? `<span class="status-chip warn">${escapeHtml(error.message || error)}</span>` : ''}
             </div>
+            ${buildProjectMatrixHtml(payload.items || [])}
             ${sampleRows ? `<div class="table-wrap analysis-table-shell tm-assessment-sync-table"><table><thead><tr><th>教师</th><th>年级</th><th>学科</th><th>项目</th><th>分值</th></tr></thead><tbody>${sampleRows}</tbody></table></div>` : ''}
             ${payload.skipped?.length ? `<div class="tm-assessment-sync-note">${payload.skipped.map(escapeHtml).join('<br>')}</div>` : ''}
+            ${missing.missing.length ? `<div class="tm-assessment-sync-note"><strong>暂未自动生成：</strong>${escapeHtml(missing.missing.join('、'))}。请检查当前成绩、任课表或对应公式数据是否完整。</div>` : ''}
+            <div class="tm-assessment-sync-note is-soft"><strong>保留手填：</strong>${escapeHtml(missing.manual.join('、'))}。</div>
             ${skippedRows ? `<div class="tm-assessment-sync-note"><strong>同步跳过：</strong><ul>${skippedRows}</ul></div>` : ''}
         `;
     }
@@ -611,6 +666,7 @@
             </div>
             <div class="tm-assessment-sync-actions">
                 <button type="button" class="btn btn-secondary" id="tmAssessmentPreviewBtn"><i class="ti ti-eye"></i> 预览</button>
+                <button type="button" class="btn btn-secondary" id="tmAssessmentDryRunBtn"><i class="ti ti-shield-check"></i> 检查匹配</button>
                 <button type="button" class="btn btn-blue" id="tmAssessmentSyncBtn"><i class="ti ti-cloud-upload"></i> 同步</button>
             </div>
             <div id="tmAssessmentSyncResult" class="tm-assessment-sync-result"></div>
@@ -627,6 +683,7 @@
 
     function bindPanel(panel) {
         const previewBtn = panel.querySelector('#tmAssessmentPreviewBtn');
+        const dryRunBtn = panel.querySelector('#tmAssessmentDryRunBtn');
         const syncBtn = panel.querySelector('#tmAssessmentSyncBtn');
         previewBtn.onclick = async () => {
             setBusy(panel, true);
@@ -636,6 +693,30 @@
                 renderResult(panel, payload);
             } catch (error) {
                 renderResult(panel, { academic_year: getAcademicYearForSync(), items: [] }, null, error);
+            } finally {
+                setBusy(panel, false);
+            }
+        };
+        dryRunBtn.onclick = async () => {
+            setBusy(panel, true);
+            try {
+                const payload = panel.__assessmentSyncPayload || await buildAssessmentSyncPayload();
+                panel.__assessmentSyncPayload = payload;
+                const overwrite = !!panel.querySelector('#tmAssessmentOverwriteManual')?.checked;
+                if (!payload.items?.length) throw new Error('没有可核验的分值');
+                if (!root.EdgeGateway || typeof root.EdgeGateway.syncAssessmentScores !== 'function') {
+                    throw new Error('当前网关不支持考核同步，请先部署最新版本');
+                }
+                const result = await root.EdgeGateway.syncAssessmentScores({
+                    academic_year: payload.academic_year,
+                    overwrite_manual: overwrite,
+                    dry_run: true,
+                    items: payload.items
+                });
+                renderResult(panel, payload, result);
+            } catch (error) {
+                const payload = panel.__assessmentSyncPayload || { academic_year: getAcademicYearForSync(), items: [] };
+                renderResult(panel, payload, null, error);
             } finally {
                 setBusy(panel, false);
             }

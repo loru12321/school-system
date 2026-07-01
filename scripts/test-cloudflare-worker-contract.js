@@ -160,6 +160,7 @@ assert.ok(gateway.includes('Only admin can view all login sessions'), 'all-accou
 assert.ok(gateway.includes("case 'assessment.sync_scores'"), 'gateway should expose assessment score sync through authenticated edu-gateway');
 assert.ok(gateway.includes('ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY'), 'assessment sync service role key must be read from Worker env only');
 assert.ok(gateway.includes("change_tag: 'system_sync'"), 'assessment sync writes should mark rows as system_sync');
+assert.ok(gateway.includes('dry_run: dryRun') && gateway.includes('rows.length && !dryRun'), 'assessment sync should support a no-write dry-run match check');
 assert.ok(gateway.includes('teacher_workload') === false, 'assessment sync must not write workload scores without a system data source');
 
 console.log(JSON.stringify({
