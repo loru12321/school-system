@@ -1186,9 +1186,9 @@ if (skill && Array.isArray(skill.entries)) prefetchAppModuleList(skill.entries.m
 window.setTimeout(preload, 520);
 try { if (localStorage.getItem('SCHOOL_RUNTIME_HOTSPOT_HYDRATE') !== 'true') return; } catch (_) { return; }
 const run = () => window.ensureTeacherAnalysisMainRuntimeLoaded?.();
-if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') window.SystemPerformance.scheduleIdle(run, { label: 'teacher-analysis-fast-warmup', delay: 280, timeout: 1200 });
-else if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run, { timeout: 1200 });
-else window.setTimeout(run, 360);
+if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') window.SystemPerformance.scheduleIdle(run, { label: 'teacher-analysis-fast-warmup', delay: 12000, timeout: 1800 });
+else if (typeof window.requestIdleCallback === 'function') window.setTimeout(() => window.requestIdleCallback(run, { timeout: 1800 }), 12000);
+else window.setTimeout(run, 12000);
 });
 }
 
