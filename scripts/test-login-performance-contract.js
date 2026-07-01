@@ -7,6 +7,8 @@ const appPath = path.join(root, 'public', 'assets', 'js', 'app.js');
 const appJs = fs.readFileSync(appPath, 'utf8');
 const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
 const entranceSoundJs = fs.readFileSync(entranceSoundPath, 'utf8');
+const bootRuntimePath = path.join(root, 'public', 'assets', 'js', 'boot-runtime.js');
+const bootRuntimeJs = fs.readFileSync(bootRuntimePath, 'utf8');
 
 function assertParentPathUsesDeferredCloudLoad(marker, legacyGuard) {
   const rawMarkerIndex = appJs.indexOf(marker);
@@ -108,5 +110,25 @@ assert.match(
   entranceSoundJs,
   /lastOverlayVisible && !visible && !playedForSession && isAutoplayEnabled\(\)/,
   'login overlay exit must not play entrance audio unless autoplay was explicitly enabled'
+);
+assert.match(
+  bootRuntimeJs,
+  /var LOGIN_MODULE_PREFETCH_LIMIT = 8;/,
+  'login page should only prefetch a small number of core modules by default'
+);
+assert.match(
+  bootRuntimeJs,
+  /var LOGIN_MODULE_PREFETCH_DELAY_MS = 2200;/,
+  'login page module prefetch should wait for idle time instead of competing with first paint'
+);
+assert.match(
+  bootRuntimeJs,
+  /function shouldPrefetchLoginModules\(\)/,
+  'login page module prefetch should have a connection and viewport gate'
+);
+assert.doesNotMatch(
+  bootRuntimeJs,
+  /APP_MODULES\.slice\(0,\s*18\)|APP_MODULES\.slice\(18,\s*36\)/,
+  'login page must not prefetch dozens of app modules before sign-in'
 );
 console.log('Login performance contract passed');
