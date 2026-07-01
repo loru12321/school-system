@@ -673,7 +673,8 @@ assert.ok(authStateRuntime.includes("root.setCurrentUser = runtime.setCurrentUse
 assert.ok(authStateRuntime.includes("root.clearCurrentUser = runtime.clearCurrentUser"), 'auth-state-runtime.js should expose legacy clearCurrentUser for older modules');
 assert.ok(mobileAppRuntime.includes('function dismissPassiveSwal()'), 'mobile-app-runtime.js should dismiss passive mobile SweetAlert overlays');
 assert.ok(mobileAppRuntime.includes("container.querySelector('.swal2-icon-error,.swal2-icon-warning,.swal2-icon-question')"), 'mobile passive SweetAlert dismissal should preserve error and confirmation dialogs');
-assert.ok(bootRuntime.includes("{ label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() }"), 'boot-runtime.js should idle-warm data manager SQL runtime');
+assert.ok(bootRuntime.includes("prefetchAppModuleList(skill.entries.map((entry) => entry.src), 'data-manager-sql-prefetch')"), 'boot-runtime.js should prefetch data manager SQL runtime without executing it during login');
+assert.ok(!bootRuntime.includes("{ label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() }"), 'boot-runtime.js should not execute data manager SQL runtime during login warmup');
 assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
 assert.ok(bootRuntime.includes("'teacher-correlation':"), 'runtime skill manifest should include teacher-correlation');
 assert.ok(bootRuntime.includes("'teacher-correlation': bootSkill('demand', 'demand', ['correlation-analysis', 'renderCorrelationAnalysis', 'updateCorrelationSchoolSelect'], [\n        bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js'))\n    ])"), 'correlation analysis should load only the lightweight bridge runtime');

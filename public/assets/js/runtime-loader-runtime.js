@@ -1122,16 +1122,14 @@ function scheduleDataManagerSqlIdleWarmup() {
 if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) return;
 if (window.__DATA_MANAGER_SQL_IDLE_WARMUP__) return;
 window.__DATA_MANAGER_SQL_IDLE_WARMUP__ = true;
-const step = { label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() };
 runAfterAppModulesReady(() => {
-    const run = () => Promise.resolve(step.loader()).catch(() => {});
-    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-        window.SystemPerformance.scheduleIdle(run, { label: step.label, delay: 900, timeout: 1600 });
-    } else if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(run, { timeout: 1600 });
-    } else {
-        window.setTimeout(run, 900);
-    }
+    const prefetch = () => {
+        const skill = SYSTEM_RUNTIME_SKILLS['data-manager-sql'];
+        if (skill && Array.isArray(skill.entries)) {
+            prefetchAppModuleList(skill.entries.map((entry) => entry.src), 'data-manager-sql-prefetch');
+        }
+    };
+    window.setTimeout(prefetch, 8000);
 });
 }
 
@@ -1147,9 +1145,7 @@ const prioritySteps = [
 { label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
 { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() }
 ];
-const deferredSteps = [
-{ label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() }
-];
+const deferredSteps = [];
 const preload = () => {
 prioritySteps.concat(deferredSteps).forEach((step) => {
 const skill = SYSTEM_RUNTIME_SKILLS[step.label];
@@ -1172,7 +1168,7 @@ window.setTimeout(preload, 240);
 window.setTimeout(() => {
 try { if (localStorage.getItem('SCHOOL_RUNTIME_HOTSPOT_HYDRATE') !== 'true') return; } catch (_) { return; }
 scheduleWarmup('hotspot-runtime:priority', runPrioritySteps);
-}, 1400);
+}, 12000);
 });
 }
 
