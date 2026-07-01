@@ -608,9 +608,61 @@
         `;
     }
 
+    function csvEscape(value) {
+        const raw = text(value);
+        return /[",\r\n]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
+    }
+
+    function downloadAssessmentSyncCsv(panel) {
+        const payload = panel.__assessmentSyncPayload || { academic_year: getAcademicYearForSync(), items: [] };
+        const result = panel.__assessmentSyncResult || null;
+        const rows = [[
+            '类型', '教师', '年级', '学科', '项目', '分值', '满分', '说明'
+        ]];
+        (payload.items || []).forEach((item) => {
+            rows.push([
+                result?.dry_run ? '预计写入' : '预览可同步',
+                item.teacher_name,
+                gradeLabel(item.grade),
+                item.subject,
+                PROJECT_LABELS[item.project_id] || item.project_id,
+                item.score,
+                item.max_score,
+                item.note
+            ]);
+        });
+        (result?.skipped || []).forEach((item) => {
+            rows.push([
+                '跳过',
+                item.teacher_name,
+                gradeLabel(item.grade),
+                item.subject,
+                PROJECT_LABELS[item.project_id] || item.project_id,
+                '',
+                '',
+                item.reason
+            ]);
+        });
+        (payload.skipped || []).forEach((reason) => {
+            rows.push(['本地缺项', '', '', '', '', '', '', reason]);
+        });
+        const csv = `\ufeff${rows.map((row) => row.map(csvEscape).join(',')).join('\r\n')}`;
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `教师考核同步检查_${payload.academic_year || getAcademicYearForSync()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
     function renderResult(panel, payload, result = null, error = null) {
         const resultEl = panel.querySelector('#tmAssessmentSyncResult');
         if (!resultEl) return;
+        panel.__assessmentSyncPayload = payload;
+        panel.__assessmentSyncResult = result || null;
         const missing = summarizeMissingProjects(payload.items || []);
         const sampleRows = (payload.items || []).slice(0, 8).map((item) => `
             <tr>
@@ -635,11 +687,14 @@
             </div>
             ${buildProjectMatrixHtml(payload.items || [])}
             ${sampleRows ? `<div class="table-wrap analysis-table-shell tm-assessment-sync-table"><table><thead><tr><th>教师</th><th>年级</th><th>学科</th><th>项目</th><th>分值</th></tr></thead><tbody>${sampleRows}</tbody></table></div>` : ''}
+            ${(payload.items?.length || result?.skipped?.length || payload.skipped?.length) ? `<div><button type="button" class="btn btn-secondary tm-assessment-export-btn"><i class="ti ti-download"></i> 导出检查结果</button></div>` : ''}
             ${payload.skipped?.length ? `<div class="tm-assessment-sync-note">${payload.skipped.map(escapeHtml).join('<br>')}</div>` : ''}
             ${missing.missing.length ? `<div class="tm-assessment-sync-note"><strong>暂未自动生成：</strong>${escapeHtml(missing.missing.join('、'))}。请检查当前成绩、任课表或对应公式数据是否完整。</div>` : ''}
             <div class="tm-assessment-sync-note is-soft"><strong>保留手填：</strong>${escapeHtml(missing.manual.join('、'))}。</div>
             ${skippedRows ? `<div class="tm-assessment-sync-note"><strong>同步跳过：</strong><ul>${skippedRows}</ul></div>` : ''}
         `;
+        const exportBtn = resultEl.querySelector('.tm-assessment-export-btn');
+        if (exportBtn) exportBtn.onclick = () => downloadAssessmentSyncCsv(panel);
     }
 
     function renderPanel() {

@@ -1750,7 +1750,7 @@ function normalizeAssessmentScoreItem(input) {
   };
 }
 
-function findAssessmentTeacher(yearPeople, item) {
+function findAssessmentTeacherMatch(yearPeople, item) {
   const teacherName = normalizeAssessmentName(item.teacher_name);
   const candidates = yearPeople
     .filter((person) => normalizeAssessmentName(person.full_name) === teacherName)
@@ -1762,7 +1762,25 @@ function findAssessmentTeacher(yearPeople, item) {
       return { person, weight };
     })
     .sort((left, right) => right.weight - left.weight);
-  return candidates[0]?.person || null;
+  if (!candidates.length) {
+    return { teacher: null, ambiguous: false, candidateCount: 0 };
+  }
+  const topWeight = candidates[0].weight;
+  const topCandidates = candidates.filter((candidate) => candidate.weight === topWeight);
+  if (topCandidates.length > 1) {
+    return {
+      teacher: null,
+      ambiguous: true,
+      candidateCount: topCandidates.length,
+      candidates: topCandidates.map((candidate) => ({
+        full_name: candidate.person.full_name,
+        grade: candidate.person.grade,
+        subject: candidate.person.subject,
+        classes: candidate.person.classes
+      }))
+    };
+  }
+  return { teacher: candidates[0].person, ambiguous: false, candidateCount: candidates.length };
 }
 
 async function fetchAssessmentTeachersForYear(env, academicYear) {
@@ -1829,7 +1847,18 @@ async function handleAssessmentScoreSync(request, env, session, payload) {
   const matchedTeacherIds = new Set();
 
   items.forEach((item) => {
-    const teacher = findAssessmentTeacher(teachers, item);
+    const match = findAssessmentTeacherMatch(teachers, item);
+    if (match.ambiguous) {
+      skipped.push({
+        teacher_name: item.teacher_name,
+        grade: item.grade,
+        subject: item.subject,
+        project_id: item.project_id,
+        reason: `目标考核系统教师匹配不唯一（${match.candidateCount}人）`
+      });
+      return;
+    }
+    const teacher = match.teacher;
     if (!teacher) {
       skipped.push({
         teacher_name: item.teacher_name,

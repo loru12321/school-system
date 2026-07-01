@@ -161,6 +161,7 @@ assert.ok(gateway.includes("case 'assessment.sync_scores'"), 'gateway should exp
 assert.ok(gateway.includes('ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY'), 'assessment sync service role key must be read from Worker env only');
 assert.ok(gateway.includes("change_tag: 'system_sync'"), 'assessment sync writes should mark rows as system_sync');
 assert.ok(gateway.includes('dry_run: dryRun') && gateway.includes('rows.length && !dryRun'), 'assessment sync should support a no-write dry-run match check');
+assert.ok(gateway.includes('findAssessmentTeacherMatch') && gateway.includes('目标考核系统教师匹配不唯一'), 'assessment sync should skip ambiguous teacher matches instead of writing to a guessed account');
 assert.ok(gateway.includes('teacher_workload') === false, 'assessment sync must not write workload scores without a system data source');
 
 console.log(JSON.stringify({
