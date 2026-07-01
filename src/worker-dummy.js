@@ -2,9 +2,9 @@ import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway
 import { HOP_BY_HOP_HEADERS, buildCorsHeaders, normalizeOrigin, normalizeText, fetchWithTimeout } from './worker-http-helpers.js';
 
 // Production Cloudflare Worker entrypoint.
-// This file owns routing, static asset protection, Supabase compatibility proxying,
+// This file owns routing, static asset protection, optional Supabase compatibility proxying,
 // and delegates managed account actions to worker-gateway-d1.js.
-const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
+const DEFAULT_LEGACY_GATEWAY_ORIGIN = '';
 const SYSTEM_DATA_PATH = '/sb/rest/v1/system_data';
 const SYSTEM_DATA_API_PATH = '/api/system-data';
 const ENTRANCE_AUDIO_MANIFEST_API_PATH = '/api/entrance-audio-manifest';
@@ -778,11 +778,11 @@ async function handleSystemDataDelete(request, env, url) {
 }
 
 function shouldProxySystemDataToSupabase(env) {
-  return getSystemDataMode(env) === 'supabase' || !hasSystemDataStorage(env);
+  return getSystemDataMode(env) === 'supabase' || (!hasSystemDataStorage(env) && hasSupabaseRestOrigin(env));
 }
 
 function shouldProxyManagedRestToSupabase(env) {
-  return !hasGatewayDataStorage(env);
+  return !hasGatewayDataStorage(env) && hasSupabaseRestOrigin(env);
 }
 
 function buildSupabaseRestTargetUrl(env, url, explicitPath = '') {

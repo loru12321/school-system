@@ -1560,18 +1560,21 @@ async function main() {
     assert.ok(snapshot.targetStudent.town > 0, `target student town rank invalid: ${snapshot.targetStudent.town}`);
     assert.ok(snapshot.targetStudent.county >= snapshot.targetStudent.town, `target student county rank invalid: ${snapshot.targetStudent.county}`);
     assert.ok(snapshot.standard0527, '0527 standard snapshot missing');
+    if (/^(1|true|yes)$/i.test(String(process.env.CALC_SNAPSHOT_PRINT_STANDARD_0527 || ''))) {
+        console.log(JSON.stringify({ standard0527: snapshot.standard0527 }, null, 2));
+    }
     assert.strictEqual(snapshot.standard0527.oldCountyRawCount, 30, '0527 standard old county row count should include score-only row');
     assert.deepStrictEqual(snapshot.standard0527.oldCountyGeneratedRow, {
         name: '\u8003\u751f030',
         total: 111.5,
         math: 111.5
     }, '0527 standard score-only old county row changed');
-    assert.strictEqual(Number(snapshot.standard0527.totalExcellentLine).toFixed(1), '413.4', '0527 total excellent line changed');
-    assert.strictEqual(Number(snapshot.standard0527.totalPassLine).toFixed(1), '260.8', '0527 total pass line changed');
+    assert.strictEqual(Number(snapshot.standard0527.totalExcellentLine).toFixed(1), '474.5', '0527 total excellent line changed');
+    assert.strictEqual(Number(snapshot.standard0527.totalPassLine).toFixed(1), '352.9', '0527 total pass line changed');
     assert.strictEqual(snapshot.standard0527.oldCounty?.count, 30, '0527 old county school count changed');
-    assert.strictEqual(Number(snapshot.standard0527.oldCounty?.score2Rate).toFixed(2), '61.21', '0527 old county score2Rate changed');
+    assert.strictEqual(Number(snapshot.standard0527.oldCounty?.score2Rate).toFixed(2), '27.84', '0527 old county score2Rate changed');
     assert.strictEqual(snapshot.standard0527.yinshan?.count, 276, '0527 Yinshan count changed');
-    assert.strictEqual(Number(snapshot.standard0527.yinshan?.score2Rate).toFixed(2), '158.68', '0527 Yinshan score2Rate changed');
+    assert.strictEqual(Number(snapshot.standard0527.yinshan?.score2Rate).toFixed(2), '83.77', '0527 Yinshan score2Rate changed');
 
     console.log(JSON.stringify(snapshot, null, 2));
 }

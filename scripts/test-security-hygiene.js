@@ -59,6 +59,8 @@ for (const file of keySensitiveFiles) {
     assert.ok(!read(file).includes('sb_publishable_'), `${file} should not embed Supabase publishable keys`);
 }
 assert.ok(boot.includes("getBootStorageValue('SUPABASE_DIRECT_LOCAL') !== 'true'"), 'localhost should use the same-origin proxy unless direct local Supabase is explicitly requested');
+assert.ok(!boot.includes('dpwsxxgojpqevzwyxrot'), 'boot runtime should not hardcode the legacy Supabase project ref');
+assert.ok(!read('src/worker-dummy.js').includes('dpwsxxgojpqevzwyxrot'), 'Worker should not hardcode the legacy Supabase project ref');
 assert.ok(
     boot.includes("return normalizeProxyOrigin(window.location.origin) + '/sb/rest/v1';"),
     'localhost REST compatibility client should use the same-origin Supabase proxy'

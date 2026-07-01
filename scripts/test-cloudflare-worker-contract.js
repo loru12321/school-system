@@ -31,6 +31,7 @@ const gatewayD1Schema = [
 ].join('\n');
 const helpers = read('src/worker-http-helpers.js');
 const systemDataCutoverVerifier = read('scripts/verify-system-data-cloudflare-cutover.js');
+const supabaseMigrator = read('scripts/migrate-supabase-project-data.mjs');
 const wrangler = parseJsonc('wrangler.jsonc');
 const scripts = packageJson.scripts || {};
 
@@ -82,6 +83,9 @@ assert.ok(worker.includes("headers['X-Content-Type-Options'] = 'nosniff';"), 'JS
 assert.ok(worker.includes("headers['X-School-System-Gateway'] = 'cloudflare-worker';"), 'JSON API responses should identify the gateway');
 assert.ok(!worker.includes("headers['Content-Encoding'] = 'gzip';"), 'worker must not manually gzip JSON API responses because it can break response.text() decoding');
 assert.ok(!worker.includes("pipeThrough(new CompressionStream('gzip'))"), 'worker should leave JSON transport compression to Cloudflare');
+assert.ok(worker.includes("const DEFAULT_LEGACY_GATEWAY_ORIGIN = '';"), 'Worker must not hardcode a default Supabase project origin');
+assert.ok(worker.includes("!hasSystemDataStorage(env) && hasSupabaseRestOrigin(env)"), 'system_data should only fall back to Supabase when an origin is explicitly configured');
+assert.ok(worker.includes("!hasGatewayDataStorage(env) && hasSupabaseRestOrigin(env)"), 'managed REST should only fall back to Supabase when an origin is explicitly configured');
 assert.ok(worker.includes("env.SUPABASE_REST_API_KEY"), 'Supabase REST key must be read from env');
 assert.ok(worker.includes("Authorization: `Bearer ${apikey}`"), 'Supabase proxy must forward bearer auth');
 assert.ok(worker.includes("return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);"), 'system data route must fail closed for unsupported methods');
@@ -141,6 +145,7 @@ assert.ok(!wrangler.vars.SUPABASE_ORIGIN, 'Supabase origin must not be hardcoded
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:cloudflare-worker-contract'), 'fast release check must include Cloudflare Worker contract guard');
 assert.ok(scripts['verify:system-data:cloudflare-cutover'] === 'node scripts/verify-system-data-cloudflare-cutover.js', 'system_data cutover verifier should be runnable from npm scripts');
 assert.ok(systemDataCutoverVerifier.includes("DEFAULT_EXPECTED_BACKEND = 'hybrid,d1'"), 'system_data cutover verifier must reject same-backend Supabase comparisons by default');
+assert.ok(supabaseMigrator.includes("const DEFAULT_TARGET_PROJECT_REF = '';"), 'Supabase project migration must require an explicit target project ref');
 assert.ok(gatewayD1Schema.includes('idx_system_logs_operator_created'), 'system_logs should index operator history lookups by created_at');
 assert.ok(gatewayD1Schema.includes('idx_rectify_tasks_project_cohort_status_school_created'), 'rectify tasks should index dashboard list filters');
 assert.ok(gatewayD1Schema.includes('CREATE TABLE IF NOT EXISTS login_sessions'), 'gateway schema should persist login device/session records');

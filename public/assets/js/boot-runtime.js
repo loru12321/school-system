@@ -1,9 +1,9 @@
-var DIRECT_SUPABASE_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
+var DIRECT_SUPABASE_URL = String(window.PUBLIC_SUPABASE_URL || '').trim().replace(/\/$/, '');
 var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
-var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
+var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-91cb92e4b8bc';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-49f5a6f2a41b';
 
 function bootDebugLog(...args) {
 try {
@@ -807,8 +807,16 @@ var proxyOrigin = getSupabaseProxyOrigin();
 return proxyOrigin ? proxyOrigin + '/sb' : DIRECT_SUPABASE_URL;
 }
 
+function getDefaultCloudBaseUrl() {
+if (isLocalFileRuntime()) {
+    var hostedOrigin = getHostedSupabaseProxyOrigin();
+    return DIRECT_SUPABASE_URL || (hostedOrigin ? hostedOrigin + '/sb' : '');
+}
+return shouldUseCloudProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL;
+}
+
 function getSameOriginGatewayUrl() {
-if (window.__API_FALLBACK_ACTIVE__) {
+if (window.__API_FALLBACK_ACTIVE__ && DIRECT_EDGE_GATEWAY_URL) {
     return DIRECT_EDGE_GATEWAY_URL;
 }
 if (window.location && /^(https?:)$/i.test(String(window.location.protocol || '').trim())) {
@@ -872,9 +880,12 @@ try {
 
 function getCloudflareRestBaseUrl() {
 if (isLocalFileRuntime()) {
-    return normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1';
+    var hostedOrigin = getHostedSupabaseProxyOrigin();
+    return DIRECT_SUPABASE_URL
+        ? normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1'
+        : (hostedOrigin ? hostedOrigin + '/sb/rest/v1' : '');
 }
-if (window.__API_FALLBACK_ACTIVE__) {
+if (window.__API_FALLBACK_ACTIVE__ && DIRECT_SUPABASE_URL) {
     return normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1';
 }
 if (
@@ -885,7 +896,7 @@ if (
     if (shouldUseSameOriginSupabaseProxy()) {
         return normalizeProxyOrigin(window.location.origin) + '/sb/rest/v1';
     }
-    return normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1';
+    return DIRECT_SUPABASE_URL ? normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1' : '';
 }
 var proxyOrigin = getSupabaseProxyOrigin();
 if (proxyOrigin) return proxyOrigin + '/sb/rest/v1';
@@ -1266,13 +1277,9 @@ window.isLocalFileRuntime = isLocalFileRuntime;
 window.shouldUseSupabaseProxy = shouldUseSupabaseProxy;
 window.shouldUseSameOriginCloudProxy = shouldUseSameOriginCloudProxy;
 window.shouldUseCloudProxy = shouldUseCloudProxy;
-window.CLOUD_REST_URL = isLocalFileRuntime()
-? DIRECT_SUPABASE_URL
-: (getBootStorageValue('CLOUD_REST_URL') || getBootStorageValue('SUPABASE_URL') || (shouldUseCloudProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL));
+window.CLOUD_REST_URL = getBootStorageValue('CLOUD_REST_URL') || getBootStorageValue('SUPABASE_URL') || getDefaultCloudBaseUrl();
 window.CLOUD_API_KEY = getBootStorageValue('CLOUD_API_KEY') || getBootStorageValue('SUPABASE_KEY') || DIRECT_SUPABASE_KEY;
-window.SUPABASE_URL = isLocalFileRuntime()
-? DIRECT_SUPABASE_URL
-: (getBootStorageValue('SUPABASE_URL') || window.CLOUD_REST_URL);
+window.SUPABASE_URL = getBootStorageValue('SUPABASE_URL') || window.CLOUD_REST_URL;
 window.SUPABASE_KEY = getBootStorageValue('SUPABASE_KEY') || window.CLOUD_API_KEY;
 window.EDGE_GATEWAY_URL = getSameOriginGatewayUrl();
 window.SYSTEM_DATA_API_URL = getBootStorageValue('SYSTEM_DATA_API_URL')
