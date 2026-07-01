@@ -1052,6 +1052,13 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'upload') {
+        await page.waitForFunction(() => {
+            return typeof window.normalizeSchoolName === 'function'
+                && typeof window.getCanonicalSchoolName === 'function'
+                && typeof window.ensureNormalizedTargets === 'function'
+                && typeof window.buildIndicatorSchoolBuckets === 'function'
+                && typeof window.listAvailableSchoolsForCompare === 'function';
+        }, undefined, { timeout: 10000 }).catch(() => {});
         return page.evaluate(async () => {
             const schools = typeof window.listAvailableSchoolsForCompare === 'function'
                 ? window.listAvailableSchoolsForCompare()
