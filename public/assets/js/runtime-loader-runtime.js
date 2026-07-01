@@ -1141,7 +1141,6 @@ if (window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ || getRuntimeLoadProfile() === '
 window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ = true;
 const prioritySteps = [
 { label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
-{ label: 'teacher-analysis', loader: () => window.ensureTeacherAnalysisMainRuntimeLoaded?.() },
 { label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
 { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() }
 ];

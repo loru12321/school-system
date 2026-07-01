@@ -710,6 +710,7 @@ assert.ok(bootRuntime.includes('SCHOOL_RUNTIME_HOTSPOT_HYDRATE'), 'desktop hotsp
 assert.ok(bootRuntime.includes('runStepsSequentially(prioritySteps'), 'interactive runtime warmup should avoid concurrent hot bundle parsing during user interaction');
 assert.ok(bootRuntime.includes("scheduleWarmup('hotspot-runtime:priority', runPrioritySteps)"), 'interactive runtime warmup should retain idle scheduling for boot responsiveness');
 assert.ok(bootRuntime.indexOf("{ label: 'town-submodule-compare'") < bootRuntime.indexOf('const deferredSteps = ['), 'summary interaction runtimes should remain in the priority batch');
+assert.ok(!bootRuntime.includes("{ label: 'teacher-analysis', loader: () => window.ensureTeacherAnalysisMainRuntimeLoaded?.() }"), 'teacher analysis runtime should not execute from generic hotspot warmup after login');
 const teachingFastWarmupStart = bootRuntime.indexOf('function scheduleTeachingManagementFastWarmup()');
 const teachingFastWarmupEnd = bootRuntime.indexOf('function installHistoryDoQueryWrapper()', teachingFastWarmupStart);
 const teachingFastWarmupSource = teachingFastWarmupStart >= 0 && teachingFastWarmupEnd > teachingFastWarmupStart
@@ -719,6 +720,7 @@ assert.ok(teachingFastWarmupSource, 'teaching fast warmup source should be prese
 assert.ok(!teachingFastWarmupSource.includes('ensureTeachingManagementRuntimeLoaded'), 'teaching management legacy bundle should stay demand-loaded outside legacy module entry');
 assert.ok(teachingFastWarmupSource.includes('teaching-management-fast-prefetch'), 'teaching management runtime files should be prefetched after app entry');
 assert.ok(teachingFastWarmupSource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher analysis runtime should remain fast-warmed for teacher insight modules');
+assert.ok(teachingFastWarmupSource.includes('delay: 12000'), 'teacher analysis fast warmup should wait until after the login-critical window');
 assert.ok(teachingManagementVersionRuntime.includes('TM_VERSION_INFLIGHT'), 'teaching version center should coalesce duplicate cloud reads');
 assert.ok(teachingManagementVersionRuntime.includes('schoolSystemTeachingVersionCacheV1'), 'teaching version center should keep a short session snapshot');
 assert.ok(bootRuntime.includes('runAfterAppModulesReady(function () {\n    retryInstallLateHook(installHistoryDoQueryWrapper'), 'late workspace hooks should not retry on the unauthenticated login screen');
