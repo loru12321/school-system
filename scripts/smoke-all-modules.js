@@ -74,6 +74,12 @@ const DATA_MANAGER_TAB_TIMEOUT_MS = 8000;
 const MODULE_SWITCH_TIMEOUT_MS = 12000;
 const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
+const SMOKE_HOTSPOT_PREWARM_TIMEOUT_MS = 4500;
+const MODULE_SWITCH_SETTLE_MS = {
+    'student-details': 0,
+    'mutual-aid': 0,
+    default: 180
+};
 const PERFORMANCE_BUDGETS = {
     loginMs: 30000,
     appReadyMs: 15000,
@@ -83,6 +89,14 @@ const PERFORMANCE_BUDGETS = {
     longTaskMs: 800
 };
 const STRICT_PERFORMANCE_BUDGETS = process.env.SMOKE_PERF_STRICT === 'true';
+
+function getModuleSwitchSettleMs(id) {
+    const configured = Object.prototype.hasOwnProperty.call(MODULE_SWITCH_SETTLE_MS, id)
+        ? MODULE_SWITCH_SETTLE_MS[id]
+        : MODULE_SWITCH_SETTLE_MS.default;
+    const value = Number(configured);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+}
 
 function getChromeLaunchArgs() {
     const args = [];
@@ -238,6 +252,52 @@ async function readCohortRuntimeState(page) {
             termId
         };
     });
+}
+
+async function prewarmSmokeHotspots(page) {
+    const started = Date.now();
+    const result = await page.evaluate(async ({ timeoutMs }) => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const loadWithTimeout = async (name) => {
+            const loader = window[name];
+            if (typeof loader !== 'function') return { name, status: 'missing' };
+            try {
+                const outcome = await Promise.race([
+                    Promise.resolve(loader()),
+                    wait(timeoutMs).then(() => ({ __smokeTimedOut: true }))
+                ]);
+                return {
+                    name,
+                    status: outcome && outcome.__smokeTimedOut ? 'timeout' : 'loaded'
+                };
+            } catch (error) {
+                return {
+                    name,
+                    status: 'error',
+                    error: error?.message || String(error)
+                };
+            }
+        };
+        const loaders = [
+            'ensureDataManagerSqlRuntimeLoaded',
+            'ensureStudentCompareRuntimeLoaded',
+            'ensureCountyAnalysisRuntimeLoaded',
+            'ensureStudentOverviewRuntimeLoaded'
+        ];
+        const entries = await Promise.all(loaders.map(loadWithTimeout));
+        return {
+            ok: entries.every((entry) => entry.status === 'loaded' || entry.status === 'missing'),
+            entries
+        };
+    }, { timeoutMs: SMOKE_HOTSPOT_PREWARM_TIMEOUT_MS }).catch((error) => ({
+        ok: false,
+        error: error?.message || String(error),
+        entries: []
+    }));
+    return {
+        ...result,
+        durationMs: Date.now() - started
+    };
 }
 
 function buildCohortRuntimeGuard(state) {
@@ -904,14 +964,9 @@ async function smokeSwitchModule(page, id) {
         if (id === 'student-details') {
             await page.waitForFunction(() => {
                 const section = document.getElementById('student-details');
-                const table = document.getElementById('studentDetailTable');
-                const headers = Array.from(table?.querySelectorAll('thead th') || [])
-                    .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
-                const countyRankAfterTownRank = headers.some((header, index) => (
-                    header.includes('镇排') && String(headers[index + 1] || '').includes('县排')
-                ));
-                return !!section && section.classList.contains('active') && countyRankAfterTownRank;
-            }, { timeout: 1500 }).catch(() => {});
+                const title = section?.querySelector('h1,h2,h3,.sub-header,.sec-head')?.textContent?.trim() || '';
+                return !!section && section.classList.contains('active') && !!title;
+            }, { timeout: 2000 }).catch(() => {});
             const earlyState = await collectState();
             if (earlyState.active || earlyState.visible || earlyState.ok) return earlyState;
         }
@@ -925,7 +980,8 @@ async function smokeSwitchModule(page, id) {
     } catch (error) {
         const fallback = await collectState();
         if (fallback.ok) {
-            await page.waitForTimeout(500);
+            const settleMs = getModuleSwitchSettleMs(id);
+            if (settleMs > 0) await page.waitForTimeout(settleMs);
             return fallback;
         }
         return {
@@ -946,7 +1002,8 @@ async function smokeSwitchModule(page, id) {
         await page.waitForTimeout(1200);
         result = await collectState();
     }
-    await page.waitForTimeout(500);
+    const settleMs = getModuleSwitchSettleMs(id);
+    if (settleMs > 0) await page.waitForTimeout(settleMs);
     return result;
 }
 
@@ -2624,10 +2681,10 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'student-details') {
-        return page.evaluate(() => {
+        return page.evaluate(async () => {
+            const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
             const section = document.getElementById('student-details');
             const table = document.getElementById('studentDetailTable');
-            const rows = table?.querySelectorAll('tbody tr')?.length || 0;
             const schoolSelect = document.getElementById('studentSchoolSelect');
             const classSelect = document.getElementById('studentClassSelect');
             let classOptionCount = Array.from(classSelect?.options || []).filter(option => option.value).length;
@@ -2642,9 +2699,24 @@ async function runModuleDeepCheck(page, id) {
                 if (sampleSchool) {
                     schoolSelect.value = sampleSchool;
                     schoolSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                    classOptionCount = Array.from(classSelect.options || []).filter(option => option.value).length;
                 }
             }
+            if (typeof window.renderStudentDetails === 'function') {
+                await Promise.resolve(window.renderStudentDetails(true)).catch(() => {});
+            }
+            for (let index = 0; index < 20; index += 1) {
+                classOptionCount = Array.from(classSelect?.options || []).filter(option => option.value).length;
+                const currentHeaders = Array.from(table?.querySelectorAll('thead th') || [])
+                    .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
+                const currentRows = table?.querySelectorAll('tbody tr')?.length || 0;
+                const currentCountyRankAfterTownRank = currentHeaders.some((header, headerIndex) => (
+                    header.includes('镇排') && String(currentHeaders[headerIndex + 1] || '').includes('县排')
+                ));
+                if (classOptionCount > 0 && currentRows > 0 && currentCountyRankAfterTownRank) break;
+                await wait(150);
+            }
+            const rows = table?.querySelectorAll('tbody tr')?.length || 0;
+            classOptionCount = Array.from(classSelect?.options || []).filter(option => option.value).length;
             const headers = Array.from(table?.querySelectorAll('thead th') || [])
                 .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
             const countyRankAfterTownRank = headers.some((header, index) => (
@@ -3559,6 +3631,11 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         },
         errors
     };
+
+    currentScope = 'hotspot-prewarm';
+    trace('hotspot-prewarm:start');
+    summary.performance.hotspotPrewarm = await prewarmSmokeHotspots(page);
+    trace('hotspot-prewarm:done', summary.performance.hotspotPrewarm);
 
     for (const id of SWITCH_MODULE_IDS) {
         currentScope = `switch:${id}`;
