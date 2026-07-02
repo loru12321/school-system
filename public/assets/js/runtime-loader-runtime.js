@@ -47,7 +47,8 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('teacher-analysis-core', bootJs('teacher-analysis-core-runtime.js')),
     bootEntry('teacher-analysis-ui', bootJs('teacher-analysis-ui-runtime.js')),
     bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js')),
-    bootEntry('teacher-analysis-main', bootJs('teacher-analysis-main-runtime.js'))
+    bootEntry('teacher-analysis-main', bootJs('teacher-analysis-main-runtime.js')),
+    bootEntry('teaching-assessment-sync', bootJs('teaching-assessment-sync-runtime.js'))
 ]),
 'cohort-growth': bootSkill('demand', 'balanced', ['cohort-growth'], [
     bootEntry('cohort-growth', bootJs('cohort-growth-runtime.js'))

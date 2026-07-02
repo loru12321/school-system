@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-b591c5b93741';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-f0af8f3956bf';
 
 function bootDebugLog(...args) {
 try {

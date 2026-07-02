@@ -6,6 +6,7 @@ const vm = require('vm');
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'public/assets/js/teaching-assessment-sync-runtime.js'), 'utf8');
 const teachingRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/teaching-management-runtime.js'), 'utf8');
+const runtimeLoaderSource = fs.readFileSync(path.join(root, 'public/assets/js/runtime-loader-runtime.js'), 'utf8');
 
 const context = {
   console,
@@ -61,6 +62,10 @@ vm.runInContext(source, context);
 assert.strictEqual(typeof context.window.tmBuildTeacherAssessmentSyncPayload, 'function');
 assert.ok(source.includes('watchAssessmentSyncMount'), 'assessment sync panel should remount when teaching overview renders later');
 assert.ok(teachingRuntimeSource.includes('tmRenderAssessmentSyncPanel'), 'teaching overview scheduler should call assessment sync panel mount hook');
+assert.ok(
+  /'teacher-analysis': bootSkill[\s\S]*bootEntry\('teaching-assessment-sync', bootJs\('teaching-assessment-sync-runtime\.js'\)\)/.test(runtimeLoaderSource),
+  'teacher analysis page should load assessment sync runtime'
+);
 
 context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
   assert.match(payload.academic_year, /^20\d{2}-20\d{2}$/);
