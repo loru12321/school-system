@@ -823,7 +823,7 @@
         root.__TM_ASSESSMENT_SYNC_WATCHING__ = true;
         document.addEventListener('click', (event) => {
             const target = event.target && typeof event.target.closest === 'function'
-                ? event.target.closest('[data-target="teaching-overview"], [onclick*="teaching-overview"], [onclick*="teacher-analysis"]')
+                ? event.target.closest('[data-target], [onclick], [data-shell-module-rail], .shell-side-item, .workflow-path button, .shell-module-rail button')
                 : null;
             if (target) setTimeout(installAssessmentSyncPanel, 180);
         }, true);
