@@ -1010,6 +1010,8 @@
     function renderResult(panel, payload, result = null, error = null) {
         const resultEl = panel.querySelector('#tmAssessmentSyncResult');
         if (!resultEl) return;
+        resultEl.classList.remove('is-collapsed');
+        panel.dataset.assessmentSyncOpen = 'true';
         panel.__assessmentSyncPayload = payload;
         panel.__assessmentSyncResult = result || null;
         const audit = buildAssessmentSyncAudit(payload, result);
@@ -1044,8 +1046,33 @@
             <div class="tm-assessment-sync-note is-soft"><strong>保留手填：</strong>${escapeHtml(missing.manual.join('、'))}。</div>
             ${skippedRows ? `<div class="tm-assessment-sync-note"><strong>同步跳过：</strong><ul>${skippedRows}</ul></div>` : ''}
         `;
+        setPreviewButtonState(panel, true);
         const exportBtn = resultEl.querySelector('.tm-assessment-export-btn');
         if (exportBtn) exportBtn.onclick = () => downloadAssessmentSyncCsv(panel);
+    }
+
+    function setPreviewButtonState(panel, open) {
+        const previewBtn = panel.querySelector('#tmAssessmentPreviewBtn');
+        if (!previewBtn) return;
+        previewBtn.innerHTML = open
+            ? '<i class="ti ti-eye-off"></i> 隐藏同步对账'
+            : '<i class="ti ti-eye"></i> 查看同步对账';
+    }
+
+    function collapseAssessmentResult(panel) {
+        const resultEl = panel.querySelector('#tmAssessmentSyncResult');
+        if (!resultEl) return;
+        resultEl.classList.add('is-collapsed');
+        panel.dataset.assessmentSyncOpen = 'false';
+        setPreviewButtonState(panel, false);
+    }
+
+    function expandAssessmentResult(panel) {
+        const resultEl = panel.querySelector('#tmAssessmentSyncResult');
+        if (!resultEl) return;
+        resultEl.classList.remove('is-collapsed');
+        panel.dataset.assessmentSyncOpen = 'true';
+        setPreviewButtonState(panel, true);
     }
 
     function renderPanel() {
@@ -1101,13 +1128,19 @@
         const dryRunBtn = panel.querySelector('#tmAssessmentDryRunBtn');
         const syncBtn = panel.querySelector('#tmAssessmentSyncBtn');
         if (previewBtn) previewBtn.onclick = async () => {
+            if (panel.dataset.assessmentSyncOpen === 'true') {
+                collapseAssessmentResult(panel);
+                return;
+            }
             setBusy(panel, true);
             try {
                 const payload = await buildAssessmentSyncPayload();
                 panel.__assessmentSyncPayload = payload;
                 renderResult(panel, payload);
+                expandAssessmentResult(panel);
             } catch (error) {
                 renderResult(panel, { academic_year: getAcademicYearForSync(), items: [] }, null, error);
+                expandAssessmentResult(panel);
             } finally {
                 setBusy(panel, false);
             }

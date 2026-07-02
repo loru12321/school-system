@@ -8,6 +8,7 @@ const source = fs.readFileSync(path.join(root, 'public/assets/js/teaching-assess
 const teachingRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/teaching-management-runtime.js'), 'utf8');
 const runtimeLoaderSource = fs.readFileSync(path.join(root, 'public/assets/js/runtime-loader-runtime.js'), 'utf8');
 const bootRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
+const teachingCss = fs.readFileSync(path.join(root, 'public/assets/css/teaching-management-module.css'), 'utf8');
 
 const context = {
   console,
@@ -70,6 +71,10 @@ assert.ok(bootRuntimeSource.includes("'teaching-assessment-sync-runtime.js'"), '
 const indexHtml = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 assert.ok(indexHtml.includes('考核同步对账'), 'teaching management page should show a fixed assessment sync reconciliation entry');
 assert.ok(indexHtml.includes('联考分析的“两率一分”同步也在这里看'), 'fixed sync entry should explain where two-rates-one-score sync is checked');
+assert.ok(source.includes('collapseAssessmentResult'), 'assessment sync preview button should collapse the result on second click');
+assert.ok(source.includes('assessmentSyncOpen'), 'assessment sync panel should track expanded and collapsed state');
+assert.ok(teachingCss.includes('min-width: 1180px'), 'assessment sync table should keep a wide scrollable layout');
+assert.ok(teachingCss.includes('overscroll-behavior-x: contain'), 'assessment sync table should support horizontal scrolling inside the panel');
 
 context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
   assert.match(payload.academic_year, /^20\d{2}-20\d{2}$/);

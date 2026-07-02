@@ -157,6 +157,9 @@
 .analysis-workspace-management .tm-assessment-sync-panel,
 #tmAssessmentSyncPanel {
     margin-top: 14px;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 
 #tmAssessmentSyncPanel .tm-assessment-sync-copy {
@@ -197,6 +200,13 @@
     flex-basis: 100%;
     display: grid;
     gap: 10px;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-result.is-collapsed {
+    display: none;
 }
 
 #tmAssessmentSyncPanel .tm-assessment-sync-summary {
@@ -250,14 +260,19 @@
 }
 
 #tmAssessmentSyncPanel .tm-assessment-sync-table {
+    width: 100%;
+    max-width: 100%;
     max-height: 280px;
     overflow: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
     border-radius: 14px;
     border: 1px solid #e2e8f0;
 }
 
 #tmAssessmentSyncPanel .tm-assessment-sync-table table {
-    width: 100%;
+    width: max-content;
+    min-width: 1180px;
     border-collapse: collapse;
     font-size: 13px;
 }
@@ -268,6 +283,11 @@
     border-bottom: 1px solid #e2e8f0;
     text-align: left;
     white-space: nowrap;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-sync-table th:last-child,
+#tmAssessmentSyncPanel .tm-assessment-sync-table td:last-child {
+    min-width: 620px;
 }
 
 #tmAssessmentSyncPanel .tm-assessment-sync-note {
