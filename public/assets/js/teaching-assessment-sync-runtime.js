@@ -265,6 +265,17 @@
         }
     }
 
+    function getTeacherSubjectStats(stats, teacherName, subject) {
+        const record = stats?.[teacherName];
+        if (!record || typeof record !== 'object') return null;
+        const normalized = normalizeSubject(subject);
+        return record.subjects?.[subject]
+            || record.subjects?.[normalized]
+            || record[subject]
+            || record[normalized]
+            || null;
+    }
+
     function buildTownSubjectHighest(rows) {
         const subjectValues = new Map();
         rows.forEach((row) => {
@@ -319,7 +330,7 @@
         const townHighestBySubject = buildTownSubjectHighest(rows);
         const bySubject = new Map();
         teachers.forEach((teacher) => {
-            const data = stats[teacher.teacher_name]?.subjects?.[teacher.subject] || stats[teacher.teacher_name]?.subjects?.[normalizeSubject(teacher.subject)];
+            const data = getTeacherSubjectStats(stats, teacher.teacher_name, teacher.subject);
             if (!data || !toNumber(data.studentCount, 0)) return;
             const subjectKey = teacher.subject;
             if (!bySubject.has(subjectKey)) bySubject.set(subjectKey, []);
@@ -458,7 +469,7 @@
         });
         const bySubject = new Map();
         teachers.forEach((teacher) => {
-            const data = stats[teacher.teacher_name]?.subjects?.[teacher.subject] || stats[teacher.teacher_name]?.subjects?.[normalizeSubject(teacher.subject)];
+            const data = getTeacherSubjectStats(stats, teacher.teacher_name, teacher.subject);
             if (!data || !toNumber(data.studentCount, 0)) return;
             if (!bySubject.has(teacher.subject)) bySubject.set(teacher.subject, []);
             bySubject.get(teacher.subject).push({ teacher, data });

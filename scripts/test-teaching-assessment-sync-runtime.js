@@ -40,13 +40,11 @@ const context = {
     },
     TEACHER_STATS: {
       张老师: {
-        subjects: {
-          语文: {
-            studentCount: 3,
-            excellentRate: 1 / 3,
-            passRate: 1,
-            avgValue: 81.67
-          }
+        语文: {
+          studentCount: 3,
+          excellentRate: 1 / 3,
+          passRate: 1,
+          avgValue: 81.67
         }
       }
     },
