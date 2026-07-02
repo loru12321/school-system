@@ -56,7 +56,7 @@
     </style>
     <script>
         (function () {
-            var refreshVersion = 'runtime-b34696e7c194';
+            var refreshVersion = 'runtime-759fa2041d17';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -99,10 +99,10 @@
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
     <script defer src="./assets/js/runtime-registry-runtime.js?v=20260501-runtime-registry-v1"></script>
     <script defer src="./assets/js/cohort-sync-status-runtime.js?v=20260620-sync-status-v1"></script>
-    <script defer src="./assets/js/entrance-sound-runtime.js?v=runtime-b34696e7c194"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-b34696e7c194"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-b34696e7c194"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-b34696e7c194"></script>
+    <script defer src="./assets/js/entrance-sound-runtime.js?v=runtime-759fa2041d17"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-759fa2041d17"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-759fa2041d17"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-759fa2041d17"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -4947,6 +4947,36 @@
                     <span>本校教师教学分析基于导入的教师信息和成绩数据，展示教师所教班级的整体表现，并与乡镇学校进行对比。</span>
                     <button id="teacher-sync-cta" class="btn btn-orange" style="display:none; white-space:nowrap;"
                         onclick="openTeacherSync()">去同步任课表</button>
+                </div>
+                <div id="tmAssessmentSyncPanel" class="tm-next-card tm-assessment-sync-panel" data-role-allow="admin,director,grade_director">
+                    <div class="tm-assessment-sync-copy">
+                        <div class="tm-next-title"><i class="ti ti-cloud-upload"></i> 考核同步对账</div>
+                        <div class="tm-next-desc">
+                            <strong>联考分析的“两率一分”同步也在这里看。</strong>
+                            教师个人成绩考核全部以本学年度 <strong>7 月成绩</strong> 为基准；非 7 月考试只展示来源和原因，不写入教师教学质量考核系统。
+                        </div>
+                        <div class="tm-next-meta">
+                            <span class="status-chip info">两率一分</span>
+                            <span class="status-chip info">班级协调</span>
+                            <span class="status-chip info">学科协作</span>
+                            <span class="status-chip info">后 1/3</span>
+                            <span class="status-chip info">尖子生</span>
+                            <span class="status-chip warn">只限 7 月</span>
+                        </div>
+                    </div>
+                    <div class="tm-assessment-sync-actions">
+                        <button type="button" class="btn btn-secondary" id="tmAssessmentPreviewBtn">
+                            <i class="ti ti-eye"></i> 查看同步对账
+                        </button>
+                        <button type="button" class="btn btn-blue" id="tmAssessmentDryRunBtn">
+                            <i class="ti ti-refresh"></i> 预检当前考试
+                        </button>
+                    </div>
+                    <div id="tmAssessmentSyncResult" class="tm-assessment-sync-result">
+                        <div class="tm-assessment-sync-note">
+                            当前位置就是 system 端同步对账入口：先在“联考分析/教学管理”生成指标，系统后台只会把 7 月基准成绩写入考核系统；写入后的结果请到考核系统“管理员汇总 → system同步对账”查看。
+                        </div>
+                    </div>
                 </div>
                 <div class="analysis-inline-panel" data-role-allow="admin,director,grade_director">
                     <div class="analysis-inline-top">

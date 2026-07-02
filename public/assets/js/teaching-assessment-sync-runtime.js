@@ -1049,8 +1049,16 @@
     }
 
     function renderPanel() {
+        const existingPanel = document.getElementById('tmAssessmentSyncPanel');
+        if (existingPanel) {
+            if (!existingPanel.dataset.assessmentSyncBound) {
+                bindPanel(existingPanel);
+                existingPanel.dataset.assessmentSyncBound = 'true';
+            }
+            return;
+        }
         const container = document.getElementById('tmNextAction') || document.querySelector('#teacher-analysis .analysis-content-stack');
-        if (!container || document.getElementById('tmAssessmentSyncPanel')) return;
+        if (!container) return;
         const panel = document.createElement('div');
         panel.id = 'tmAssessmentSyncPanel';
         panel.className = 'tm-next-card tm-assessment-sync-panel';
@@ -1079,6 +1087,7 @@
         `;
         container.insertAdjacentElement('afterend', panel);
         bindPanel(panel);
+        panel.dataset.assessmentSyncBound = 'true';
     }
 
     function setBusy(panel, busy) {
@@ -1091,7 +1100,7 @@
         const previewBtn = panel.querySelector('#tmAssessmentPreviewBtn');
         const dryRunBtn = panel.querySelector('#tmAssessmentDryRunBtn');
         const syncBtn = panel.querySelector('#tmAssessmentSyncBtn');
-        previewBtn.onclick = async () => {
+        if (previewBtn) previewBtn.onclick = async () => {
             setBusy(panel, true);
             try {
                 const payload = await buildAssessmentSyncPayload();
@@ -1103,7 +1112,7 @@
                 setBusy(panel, false);
             }
         };
-        dryRunBtn.onclick = async () => {
+        if (dryRunBtn) dryRunBtn.onclick = async () => {
             setBusy(panel, true);
             try {
                 const payload = panel.__assessmentSyncPayload || await buildAssessmentSyncPayload();
@@ -1127,7 +1136,7 @@
                 setBusy(panel, false);
             }
         };
-        syncBtn.onclick = async () => {
+        if (syncBtn) syncBtn.onclick = async () => {
             setBusy(panel, true);
             try {
                 const payload = panel.__assessmentSyncPayload || await buildAssessmentSyncPayload();
@@ -1165,10 +1174,17 @@
                 ? event.target.closest('[data-target="teaching-overview"], [onclick*="teaching-overview"], [onclick*="teacher-analysis"]')
                 : null;
             if (target) setTimeout(installAssessmentSyncPanel, 180);
+            const syncPanel = event.target && typeof event.target.closest === 'function'
+                ? event.target.closest('#tmAssessmentSyncPanel')
+                : null;
+            if (syncPanel && !syncPanel.dataset.assessmentSyncBound) installAssessmentSyncPanel();
         }, true);
         if (typeof MutationObserver !== 'undefined') {
             const observer = new MutationObserver(() => {
-                if (document.getElementById('tmNextAction') && !document.getElementById('tmAssessmentSyncPanel')) {
+                const syncPanel = document.getElementById('tmAssessmentSyncPanel');
+                if (syncPanel && !syncPanel.dataset.assessmentSyncBound) {
+                    installAssessmentSyncPanel();
+                } else if (document.getElementById('tmNextAction') && !syncPanel) {
                     installAssessmentSyncPanel();
                 }
             });

@@ -67,6 +67,9 @@ assert.ok(
 assert.ok(source.includes('tmRunAutomaticAssessmentSync'), 'assessment sync should expose an automatic background sync runner');
 assert.ok(source.includes('tmBuildTeacherAssessmentSyncAudit'), 'assessment sync should expose a reconciliation audit builder');
 assert.ok(bootRuntimeSource.includes("'teaching-assessment-sync-runtime.js'"), 'assessment sync runtime should load with the workbench, not only after entering teacher analysis');
+const indexHtml = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
+assert.ok(indexHtml.includes('考核同步对账'), 'teaching management page should show a fixed assessment sync reconciliation entry');
+assert.ok(indexHtml.includes('联考分析的“两率一分”同步也在这里看'), 'fixed sync entry should explain where two-rates-one-score sync is checked');
 
 context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
   assert.match(payload.academic_year, /^20\d{2}-20\d{2}$/);
