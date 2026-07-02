@@ -14,7 +14,49 @@
         [PROJECTS.classCollaboration]: '班级协调成绩',
         [PROJECTS.subjectCollaboration]: '学科组协同成绩',
         [PROJECTS.bottomThird]: '后 1/3 学生成绩',
-        [PROJECTS.excellentContribution]: '尖子生培养贡献'
+        [PROJECTS.excellentContribution]: '尖子生培养贡献',
+        teacher_workload: '课时量成绩'
+    };
+
+    const PROJECT_RULES = {
+        [PROJECTS.twoRates]: {
+            max: 60,
+            autoMax: 54,
+            requiresJuly: true,
+            source: '联考分析 · 两率一分',
+            formula: '教师两率一分主体 =（个人优秀率/最高学校优秀率*40 + 个人及格率/最高学校及格率*30 + 个人平均分/最高学校平均分*30）/最高教师成绩*54；优秀率增幅 6 分需用本年度 7 月与上年度 7 月基准考试对比。'
+        },
+        [PROJECTS.classCollaboration]: {
+            max: 10,
+            requiresJuly: true,
+            source: '教学管理 · 任教班级总分',
+            formula: '班级协调组成绩 =（个人班级优秀率/最高班级优秀率*40 + 个人班级及格率/最高班级及格率*30 + 个人班级平均分/最高班级平均分*30）/最高班级成绩*10。'
+        },
+        [PROJECTS.subjectCollaboration]: {
+            max: 10,
+            requiresJuly: true,
+            source: '教学管理 · 本校同学科整体指标',
+            formula: '学科集体协作成绩 =（学科优秀率/最高学科优秀率*40 + 学科及格率/最高学科及格率*30 + 学科平均分/最高学科平均分*30）/最高学科成绩*10。'
+        },
+        [PROJECTS.bottomThird]: {
+            max: 10,
+            requiresJuly: true,
+            source: '联考分析 · 后 1/3 总分',
+            formula: '后 1/3 学生成绩 = 任教班级后 1/3 学生总分平均分 / 乡镇最高后 1/3 学生平均分 * 10。'
+        },
+        [PROJECTS.excellentContribution]: {
+            max: 5,
+            requiresJuly: true,
+            source: '联考分析 · 7 月期末/中考尖子生',
+            formula: '尖子生培养贡献只限 7 月成绩：非毕业年级按第二学期期末乡镇前 150 名及学科位次累加；九年级按 7 月上传的中考成绩确定尖子生/优秀尖子后折算 5 分。'
+        },
+        teacher_workload: {
+            max: 5,
+            requiresJuly: false,
+            manual: true,
+            source: '考核系统手填',
+            formula: '课时量成绩 system 暂无自动来源，由考核组长或管理员在考核系统中手动填写。'
+        }
     };
 
     const SUBJECT_ORDER = ['语文', '数学', '英语', '物理', '化学', '政治', '历史', '地理', '生物', '体育', '音乐', '美术', '信息', '科学'];
@@ -147,6 +189,34 @@
             }
         }
         return 0;
+    }
+
+    function extractExamDate(context = getCurrentExamContext()) {
+        const exam = context.exam || {};
+        const candidates = [
+            exam.date,
+            exam.examDate,
+            exam.exam_date,
+            context.currentExamId,
+            exam.name,
+            exam.title,
+            exam.label
+        ].map(text).filter(Boolean);
+        for (const value of candidates) {
+            const match = value.match(/(20\d{2})[-_/年.](\d{1,2})(?:[-_/月.](\d{1,2}))?/);
+            if (match) {
+                const year = match[1];
+                const month = String(match[2]).padStart(2, '0');
+                const day = match[3] ? String(match[3]).padStart(2, '0') : '';
+                return day ? `${year}-${month}-${day}` : `${year}-${month}`;
+            }
+        }
+        return '';
+    }
+
+    function getExamLabel(context = getCurrentExamContext()) {
+        const exam = context.exam || {};
+        return text(exam.name || exam.title || exam.label || context.currentExamId || '当前考试');
     }
 
     function isJulyExam(context = getCurrentExamContext()) {
@@ -601,6 +671,21 @@
             };
         }
         const examContext = getCurrentExamContext();
+        const examDate = extractExamDate(examContext);
+        const examLabel = getExamLabel(examContext);
+        const examMonth = extractExamMonth(examContext);
+        if (!isJulyExam(examContext)) {
+            skipped.push(`教师个人成绩考核自动同步全部以本学年度 7 月成绩为基准；当前来源考试为 ${examDate || examLabel || '未知日期'}，不是 7 月，已停止生成和写入所有教师个人成绩同步分。`);
+            return {
+                academic_year: getAcademicYearForSync(),
+                source_exam_id: examContext.currentExamId,
+                source_exam_label: examLabel,
+                source_exam_date: examDate,
+                source_exam_month: examMonth,
+                items: [],
+                skipped
+            };
+        }
         const excellentItems = isJulyExam(examContext)
             ? buildExcellentContributionItems(teachers, rows)
             : [];
@@ -613,9 +698,20 @@
             ...buildSubjectCollaborationItems(teachers, rows),
             ...buildBottomThirdItems(teachers, rows),
             ...excellentItems
-        ].filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0);
+        ].filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0)
+            .map((item) => ({
+                ...item,
+                source_exam_id: examContext.currentExamId,
+                source_exam_label: examLabel,
+                source_exam_date: examDate,
+                note: `${item.note} 来源考试：${examDate || examLabel}；本项目以 7 月成绩为基准。`
+            }));
         return {
             academic_year: getAcademicYearForSync(),
+            source_exam_id: examContext.currentExamId,
+            source_exam_label: examLabel,
+            source_exam_date: examDate,
+            source_exam_month: examMonth,
             items,
             skipped
         };
@@ -713,6 +809,103 @@
             counts[label] = (counts[label] || 0) + 1;
         });
         return Object.entries(counts).map(([label, count]) => `${label} ${count}条`).join('，') || '暂无可同步分值';
+    }
+
+    function countItemsByProject(items) {
+        const counts = {};
+        (items || []).forEach((item) => {
+            counts[item.project_id] = (counts[item.project_id] || 0) + 1;
+        });
+        return counts;
+    }
+
+    function countSkippedByProject(skipped) {
+        const counts = {};
+        (skipped || []).forEach((item) => {
+            const projectId = item?.project_id;
+            if (projectId) counts[projectId] = (counts[projectId] || 0) + 1;
+        });
+        return counts;
+    }
+
+    function buildAssessmentSyncAudit(payload = {}, result = null) {
+        const context = getCurrentExamContext();
+        const itemCounts = countItemsByProject(payload.items || []);
+        const skippedCounts = countSkippedByProject(result?.skipped || []);
+        const projectIds = [
+            PROJECTS.twoRates,
+            PROJECTS.classCollaboration,
+            PROJECTS.subjectCollaboration,
+            PROJECTS.bottomThird,
+            PROJECTS.excellentContribution,
+            'teacher_workload'
+        ];
+        const projects = {};
+        projectIds.forEach((projectId) => {
+            const rule = PROJECT_RULES[projectId] || {};
+            projects[projectId] = {
+                id: projectId,
+                label: PROJECT_LABELS[projectId] || projectId,
+                max: rule.max || 0,
+                autoMax: rule.autoMax || rule.max || 0,
+                requiresJuly: !!rule.requiresJuly,
+                manual: !!rule.manual,
+                source: rule.source || '',
+                formula: rule.formula || '',
+                syncable: itemCounts[projectId] || 0,
+                written: result?.project_counts?.[projectId] || 0,
+                skipped: skippedCounts[projectId] || 0
+            };
+        });
+        return {
+            academic_year: payload.academic_year || getAcademicYearForSync(),
+            exam: {
+                id: payload.source_exam_id || context.currentExamId,
+                label: payload.source_exam_label || getExamLabel(context),
+                date: payload.source_exam_date || extractExamDate(context),
+                month: payload.source_exam_month || extractExamMonth(context),
+                isJuly: (payload.source_exam_month || extractExamMonth(context)) === 7
+            },
+            received: result?.received || (payload.items || []).length,
+            valid: result?.valid || (payload.items || []).length,
+            written: result?.written || 0,
+            wouldWrite: result?.would_write || (payload.items || []).length,
+            skipped: [
+                ...(payload.skipped || []).map((reason) => ({ reason })),
+                ...((result?.skipped || []).map((item) => ({ ...item, label: PROJECT_LABELS[item.project_id] || item.project_id })))
+            ],
+            projects,
+            formulas: Object.fromEntries(projectIds.map((projectId) => [projectId, PROJECT_RULES[projectId]?.formula || '']))
+        };
+    }
+
+    function buildAuditHtml(audit) {
+        const projectRows = Object.values(audit.projects).map((project) => `
+            <tr>
+                <td><strong>${escapeHtml(project.label)}</strong><div class="tm-assessment-sync-mini">${escapeHtml(project.source)}</div></td>
+                <td>${project.requiresJuly ? '<span class="status-chip warn">只限 7 月</span>' : project.manual ? '<span class="status-chip info">手填</span>' : '<span class="status-chip ok">可自动</span>'}</td>
+                <td><strong>${escapeHtml(project.syncable)}</strong> 条</td>
+                <td>${project.written ? `<strong>${escapeHtml(project.written)}</strong> 条` : '-'}</td>
+                <td>${project.skipped ? `<span class="status-chip warn">${escapeHtml(project.skipped)} 条</span>` : '-'}</td>
+                <td>${escapeHtml(project.formula)}</td>
+            </tr>
+        `).join('');
+        return `
+            <div class="tm-assessment-audit">
+                <div class="tm-assessment-sync-summary">
+                    <span class="status-chip info">来源考试：${escapeHtml(audit.exam.date || audit.exam.label || '-')}</span>
+                    <span class="status-chip ${audit.exam.isJuly ? 'ok' : 'warn'}">${audit.exam.isJuly ? '7 月基准，可自动同步' : '非 7 月，禁止写入教师个人成绩'}</span>
+                    <span class="status-chip info">预计 ${escapeHtml(audit.wouldWrite)} 条</span>
+                    <span class="status-chip ok">已写入 ${escapeHtml(audit.written)} 条</span>
+                </div>
+                <div class="table-wrap analysis-table-shell tm-assessment-sync-table">
+                    <table>
+                        <thead><tr><th>项目</th><th>规则</th><th>可同步</th><th>已写入</th><th>跳过</th><th>计算口径</th></tr></thead>
+                        <tbody>${projectRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
     }
 
     function summarizeMissingProjects(items) {
@@ -819,6 +1012,7 @@
         if (!resultEl) return;
         panel.__assessmentSyncPayload = payload;
         panel.__assessmentSyncResult = result || null;
+        const audit = buildAssessmentSyncAudit(payload, result);
         const missing = summarizeMissingProjects(payload.items || []);
         const sampleRows = (payload.items || []).slice(0, 8).map((item) => `
             <tr>
@@ -841,6 +1035,7 @@
                 ${result?.skipped?.length ? `<span class="status-chip warn">跳过 ${escapeHtml(result.skipped.length)} 条</span>` : ''}
                 ${error ? `<span class="status-chip warn">${escapeHtml(error.message || error)}</span>` : ''}
             </div>
+            ${buildAuditHtml(audit)}
             ${buildProjectMatrixHtml(payload.items || [])}
             ${sampleRows ? `<div class="table-wrap analysis-table-shell tm-assessment-sync-table"><table><thead><tr><th>教师</th><th>年级</th><th>学科</th><th>项目</th><th>分值</th></tr></thead><tbody>${sampleRows}</tbody></table></div>` : ''}
             ${(payload.items?.length || result?.skipped?.length || payload.skipped?.length) ? `<div><button type="button" class="btn btn-secondary tm-assessment-export-btn"><i class="ti ti-download"></i> 导出检查结果</button></div>` : ''}
@@ -982,6 +1177,7 @@
     }
 
     root.tmBuildTeacherAssessmentSyncPayload = buildAssessmentSyncPayload;
+    root.tmBuildTeacherAssessmentSyncAudit = buildAssessmentSyncAudit;
     root.tmRenderAssessmentSyncPanel = installAssessmentSyncPanel;
     root.tmRunAutomaticAssessmentSync = runAutomaticAssessmentSync;
 

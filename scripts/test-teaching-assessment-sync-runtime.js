@@ -65,16 +65,18 @@ assert.ok(
   'teacher analysis page should load assessment sync runtime'
 );
 assert.ok(source.includes('tmRunAutomaticAssessmentSync'), 'assessment sync should expose an automatic background sync runner');
+assert.ok(source.includes('tmBuildTeacherAssessmentSyncAudit'), 'assessment sync should expose a reconciliation audit builder');
 assert.ok(bootRuntimeSource.includes("'teaching-assessment-sync-runtime.js'"), 'assessment sync runtime should load with the workbench, not only after entering teacher analysis');
 
 context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
   assert.match(payload.academic_year, /^20\d{2}-20\d{2}$/);
-  assert.ok(payload.items.length >= 4, 'sync payload should include multiple assessment score items');
+  assert.strictEqual(payload.items.length, 0, 'non-July exams must not produce any teacher assessment sync items');
   const projectIds = new Set(payload.items.map((item) => item.project_id));
-  assert.ok(projectIds.has('teacher_two_rates_one_score'), 'payload should include two-rates-one-score');
-  assert.ok(projectIds.has('teacher_class_collaboration'), 'payload should include class collaboration');
-  assert.ok(projectIds.has('teacher_subject_collaboration'), 'payload should include subject collaboration');
-  assert.ok(projectIds.has('teacher_bottom_third'), 'payload should include bottom-third score');
+  assert.ok(payload.skipped.some((item) => /7 月成绩为基准/.test(item)), 'non-July exams should explain the July baseline rule');
+  assert.ok(!projectIds.has('teacher_two_rates_one_score'), 'non-July payload must not include two-rates-one-score');
+  assert.ok(!projectIds.has('teacher_class_collaboration'), 'non-July payload must not include class collaboration');
+  assert.ok(!projectIds.has('teacher_subject_collaboration'), 'non-July payload must not include subject collaboration');
+  assert.ok(!projectIds.has('teacher_bottom_third'), 'non-July payload must not include bottom-third score');
   assert.ok(!projectIds.has('teacher_excellent_contribution'), 'non-July exams must not include excellent contribution');
   assert.ok(!projectIds.has('teacher_workload'), 'payload must not include workload scores');
   payload.items.forEach((item) => {
@@ -84,8 +86,19 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
   context.window.CURRENT_EXAM_ID = '2022级-9年级-2025-2026-暑假-7月质量监测-2026-07-12';
   return context.window.tmBuildTeacherAssessmentSyncPayload().then((julyPayload) => {
     const julyProjectIds = new Set(julyPayload.items.map((item) => item.project_id));
+    assert.ok(julyProjectIds.has('teacher_two_rates_one_score'), 'July payload should include two-rates-one-score');
+    assert.ok(julyProjectIds.has('teacher_class_collaboration'), 'July payload should include class collaboration');
+    assert.ok(julyProjectIds.has('teacher_subject_collaboration'), 'July payload should include subject collaboration');
+    assert.ok(julyProjectIds.has('teacher_bottom_third'), 'July payload should include bottom-third score');
     assert.ok(julyProjectIds.has('teacher_excellent_contribution'), 'July exams should include excellent contribution when top student data exists');
-    console.log(JSON.stringify({ ok: true, items: payload.items.length, projects: Array.from(projectIds).sort(), julyItems: julyPayload.items.length }, null, 2));
+    const audit = context.window.tmBuildTeacherAssessmentSyncAudit(payload, { written: 4, skipped: [] });
+    assert.strictEqual(audit.exam.month, 5, 'audit should expose source exam month');
+    assert.strictEqual(audit.projects.teacher_excellent_contribution.requiresJuly, true, 'excellent contribution should be marked as July-only');
+    assert.strictEqual(audit.projects.teacher_two_rates_one_score.requiresJuly, true, 'two-rates-one-score should be marked as July baseline');
+    assert.strictEqual(audit.projects.teacher_excellent_contribution.syncable, 0, 'non-July audit should show zero excellent contribution items');
+    assert.strictEqual(audit.projects.teacher_two_rates_one_score.syncable, 0, 'non-July audit should show zero two-rates-one-score items');
+    assert.match(audit.formulas.teacher_two_rates_one_score, /54/, 'audit should explain two-rates-one-score body score');
+    console.log(JSON.stringify({ ok: true, items: payload.items.length, projects: Array.from(projectIds).sort(), julyItems: julyPayload.items.length, auditProjects: Object.keys(audit.projects).length }, null, 2));
   });
 }).catch((error) => {
   console.error(error);
