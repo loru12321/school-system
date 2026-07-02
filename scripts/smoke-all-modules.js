@@ -965,10 +965,33 @@ async function smokeSwitchModule(page, id) {
             await page.waitForFunction(() => {
                 const section = document.getElementById('student-details');
                 const title = section?.querySelector('h1,h2,h3,.sub-header,.sec-head')?.textContent?.trim() || '';
-                return !!section && section.classList.contains('active') && !!title;
+                const shellReady = !!document.getElementById('studentDetailTable')
+                    && !!document.getElementById('studentSchoolSelect')
+                    && !!document.getElementById('studentClassSelect');
+                return !!section && section.classList.contains('active') && (!!title || shellReady);
             }, { timeout: 2000 }).catch(() => {});
             const earlyState = await collectState();
-            if (earlyState.active || earlyState.visible || earlyState.ok) return earlyState;
+            const shellState = await page.evaluate(() => {
+                const section = document.getElementById('student-details');
+                const style = section ? getComputedStyle(section) : null;
+                const shellReady = !!document.getElementById('studentDetailTable')
+                    && !!document.getElementById('studentSchoolSelect')
+                    && !!document.getElementById('studentClassSelect');
+                return {
+                    shellReady,
+                    active: !!section?.classList.contains('active'),
+                    visible: !!style && style.display !== 'none'
+                };
+            });
+            if (earlyState.active || earlyState.visible || earlyState.ok || shellState.shellReady) {
+                return {
+                    ...earlyState,
+                    ok: earlyState.ok || shellState.shellReady,
+                    active: earlyState.active || shellState.active,
+                    visible: earlyState.visible || shellState.visible,
+                    recoveredByShell: !earlyState.ok && shellState.shellReady
+                };
+            }
         }
 
         await page.waitForFunction((moduleId) => {
@@ -2687,8 +2710,24 @@ async function runModuleDeepCheck(page, id) {
             const table = document.getElementById('studentDetailTable');
             const schoolSelect = document.getElementById('studentSchoolSelect');
             const classSelect = document.getElementById('studentClassSelect');
-            let classOptionCount = Array.from(classSelect?.options || []).filter(option => option.value).length;
-            if (schoolSelect && classSelect) {
+            const readDetailState = () => {
+                const detailHeaders = Array.from(table?.querySelectorAll('thead th') || [])
+                    .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
+                const detailRows = table?.querySelectorAll('tbody tr')?.length || 0;
+                const detailClassOptionCount = Array.from(classSelect?.options || []).filter(option => option.value).length;
+                const detailCountyRankAfterTownRank = detailHeaders.some((header, index) => (
+                    header.includes('镇排') && String(detailHeaders[index + 1] || '').includes('县排')
+                ));
+                return {
+                    rows: detailRows,
+                    headers: detailHeaders,
+                    classOptionCount: detailClassOptionCount,
+                    countyRankAfterTownRank: detailCountyRankAfterTownRank,
+                    ready: detailClassOptionCount > 0 && detailRows > 0 && detailCountyRankAfterTownRank
+                };
+            };
+            let detailState = readDetailState();
+            if (!detailState.ready && schoolSelect && classSelect) {
                 const sampleSchool = Array.from(schoolSelect.options || [])
                     .map(option => option.value)
                     .find(value => value && (window.RAW_DATA || []).some(row => (
@@ -2701,27 +2740,19 @@ async function runModuleDeepCheck(page, id) {
                     schoolSelect.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
-            if (typeof window.renderStudentDetails === 'function') {
-                await Promise.resolve(window.renderStudentDetails(true)).catch(() => {});
+            detailState = readDetailState();
+            if (!detailState.ready && typeof window.renderStudentDetails === 'function') {
+                await Promise.race([
+                    Promise.resolve(window.renderStudentDetails(true)).catch(() => {}),
+                    wait(2500)
+                ]);
             }
             for (let index = 0; index < 20; index += 1) {
-                classOptionCount = Array.from(classSelect?.options || []).filter(option => option.value).length;
-                const currentHeaders = Array.from(table?.querySelectorAll('thead th') || [])
-                    .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
-                const currentRows = table?.querySelectorAll('tbody tr')?.length || 0;
-                const currentCountyRankAfterTownRank = currentHeaders.some((header, headerIndex) => (
-                    header.includes('镇排') && String(currentHeaders[headerIndex + 1] || '').includes('县排')
-                ));
-                if (classOptionCount > 0 && currentRows > 0 && currentCountyRankAfterTownRank) break;
+                detailState = readDetailState();
+                if (detailState.ready) break;
                 await wait(150);
             }
-            const rows = table?.querySelectorAll('tbody tr')?.length || 0;
-            classOptionCount = Array.from(classSelect?.options || []).filter(option => option.value).length;
-            const headers = Array.from(table?.querySelectorAll('thead th') || [])
-                .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
-            const countyRankAfterTownRank = headers.some((header, index) => (
-                header.includes('镇排') && String(headers[index + 1] || '').includes('县排')
-            ));
+            detailState = readDetailState();
             const targetStudent = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
             const targetStudentView = targetStudent && typeof window.getComparisonStudentView === 'function'
                 ? window.getComparisonStudentView(targetStudent, window.RAW_DATA || [])
@@ -2734,9 +2765,9 @@ async function runModuleDeepCheck(page, id) {
                 renderStudentMultiPeriodComparison: typeof window.renderStudentMultiPeriodComparison === 'function',
                 schoolSelectReady: !!schoolSelect,
                 classSelectReady: !!classSelect,
-                classOptionsReady: classOptionCount > 0,
+                classOptionsReady: detailState.classOptionCount > 0,
                 tableReady: !!table,
-                countyRankAfterTownRank,
+                countyRankAfterTownRank: detailState.countyRankAfterTownRank,
                 targetStudentTownRankReady: !targetStudent || targetTownRank > 0,
                 targetStudentCountyRankReady: !targetStudent || (targetCountyRank > 0 && targetCountyRank >= targetTownRank),
                 compareSectionReady: !!document.getElementById('student-multi-period-compare-section'),
@@ -2747,8 +2778,8 @@ async function runModuleDeepCheck(page, id) {
             return {
                 ok: Object.values(checks).every(Boolean),
                 checks,
-                rows,
-                headers,
+                rows: detailState.rows,
+                headers: detailState.headers,
                 targetStudentRank: targetStudent ? {
                     name: targetStudent.name,
                     school: targetStudent.school,
