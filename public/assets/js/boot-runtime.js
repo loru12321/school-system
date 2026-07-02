@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-f0af8f3956bf';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-6603ed34f53e';
 
 function bootDebugLog(...args) {
 try {
@@ -140,6 +140,7 @@ var APP_MODULES = [
 'auth-state-runtime.js',
 'login-entry-runtime.js',
 'edge-gateway-runtime.js',
+'teaching-assessment-sync-runtime.js',
 'workspace-state-runtime.js',
 'exam-state-runtime.js',
 'school-state-runtime.js',

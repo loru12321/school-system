@@ -100,6 +100,45 @@
         return Array.isArray(exam?.data) ? exam.data : [];
     }
 
+    function getCurrentExamContext() {
+        const db = root.CohortDB && typeof root.CohortDB.ensure === 'function' ? root.CohortDB.ensure() : null;
+        const currentExamId = text(root.CURRENT_EXAM_ID || db?.currentExamId || root.__CURRENT_EXAM_KEY || '');
+        const exam = currentExamId && db?.exams ? db.exams[currentExamId] : null;
+        return { db, currentExamId, exam };
+    }
+
+    function extractExamMonth(context = getCurrentExamContext()) {
+        const exam = context.exam || {};
+        const candidates = [
+            context.currentExamId,
+            exam.date,
+            exam.examDate,
+            exam.exam_date,
+            exam.name,
+            exam.title,
+            exam.label,
+            exam.updatedAt,
+            exam.createdAt
+        ].map(text).filter(Boolean);
+        for (const value of candidates) {
+            const dateMatches = Array.from(value.matchAll(/(20\d{2})[-_/年.](\d{1,2})(?:[-_/月.](\d{1,2}))?/g));
+            for (const dateMatch of dateMatches) {
+                const month = Number(dateMatch[2]);
+                if (month >= 1 && month <= 12) return month;
+            }
+            const cnMonth = value.match(/(?:^|[^0-9])(\d{1,2})\s*月/);
+            if (cnMonth) {
+                const month = Number(cnMonth[1]);
+                if (month >= 1 && month <= 12) return month;
+            }
+        }
+        return 0;
+    }
+
+    function isJulyExam(context = getCurrentExamContext()) {
+        return extractExamMonth(context) === 7;
+    }
+
     function getTotal(row) {
         const direct = toNumber(row?.total ?? row?.totalScore ?? row?.score_total, NaN);
         if (Number.isFinite(direct)) return direct;
@@ -536,18 +575,110 @@
                 skipped
             };
         }
+        const examContext = getCurrentExamContext();
+        const excellentItems = isJulyExam(examContext)
+            ? buildExcellentContributionItems(teachers, rows)
+            : [];
+        if (!excellentItems.length && !isJulyExam(examContext)) {
+            skipped.push('尖子生培养贡献只读取本学年度 7 月成绩；当前考试不是 7 月成绩，已跳过该项自动同步。');
+        }
         const items = [
             ...buildTwoRatesItems(teachers, rows),
             ...buildClassCollaborationItems(teachers, rows),
             ...buildSubjectCollaborationItems(teachers, rows),
             ...buildBottomThirdItems(teachers, rows),
-            ...buildExcellentContributionItems(teachers, rows)
+            ...excellentItems
         ].filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0);
         return {
             academic_year: getAcademicYearForSync(),
             items,
             skipped
         };
+    }
+
+    function getAutomaticSyncSignature(payload) {
+        const context = getCurrentExamContext();
+        const rows = getCurrentRows();
+        const teachers = groupAssignmentsByTeacher(readTeacherAssignments());
+        const counts = {};
+        (payload.items || []).forEach((item) => {
+            counts[item.project_id] = (counts[item.project_id] || 0) + 1;
+        });
+        return [
+            payload.academic_year,
+            context.currentExamId || 'no-exam',
+            rows.length,
+            teachers.length,
+            Object.keys(counts).sort().map((key) => `${key}:${counts[key]}`).join(',')
+        ].join('|');
+    }
+
+    function canRunAutomaticAssessmentSync() {
+        return !!(
+            root.EdgeGateway
+            && typeof root.EdgeGateway.syncAssessmentScores === 'function'
+            && typeof root.EdgeGateway.canUseAuthorizedRequests === 'function'
+            && root.EdgeGateway.canUseAuthorizedRequests()
+        );
+    }
+
+    async function runAutomaticAssessmentSync(options = {}) {
+        const force = !!options.force;
+        if (root.__TM_ASSESSMENT_AUTO_SYNC_RUNNING__) return root.__TM_ASSESSMENT_AUTO_SYNC_RUNNING__;
+        if (!canRunAutomaticAssessmentSync()) return null;
+        root.__TM_ASSESSMENT_AUTO_SYNC_RUNNING__ = (async () => {
+            const payload = await buildAssessmentSyncPayload();
+            if (!payload.items?.length) return { skipped: payload.skipped || [], written: 0 };
+            const signature = getAutomaticSyncSignature(payload);
+            const key = `TM_ASSESSMENT_AUTO_SYNC:${signature}`;
+            if (!force) {
+                try {
+                    if (localStorage.getItem(key) === 'done') return { skipped: ['本次成绩与任课表已自动同步过。'], written: 0 };
+                } catch (_) {}
+            }
+            const result = await root.EdgeGateway.syncAssessmentScores({
+                academic_year: payload.academic_year,
+                overwrite_manual: false,
+                automatic: true,
+                items: payload.items
+            });
+            try {
+                localStorage.setItem(key, 'done');
+                localStorage.setItem('TM_ASSESSMENT_AUTO_SYNC_LAST', JSON.stringify({
+                    at: new Date().toISOString(),
+                    signature,
+                    academic_year: payload.academic_year,
+                    written: result?.written || 0,
+                    skipped: result?.skipped?.length || 0
+                }));
+            } catch (_) {}
+            root.dispatchEvent?.(new CustomEvent('tm-assessment-auto-sync-complete', { detail: { payload, result } }));
+            return result;
+        })();
+        try {
+            return await root.__TM_ASSESSMENT_AUTO_SYNC_RUNNING__;
+        } finally {
+            root.__TM_ASSESSMENT_AUTO_SYNC_RUNNING__ = null;
+        }
+    }
+
+    function scheduleAutomaticAssessmentSync() {
+        if (root.__TM_ASSESSMENT_AUTO_SYNC_SCHEDULED__) return;
+        root.__TM_ASSESSMENT_AUTO_SYNC_SCHEDULED__ = true;
+        let attempts = 0;
+        const tick = () => {
+            attempts += 1;
+            runAutomaticAssessmentSync().catch((error) => {
+                console.warn('[assessment-sync] automatic sync skipped:', error?.message || error);
+            });
+            if (attempts < 40) setTimeout(tick, attempts < 8 ? 2500 : 10000);
+        };
+        setTimeout(tick, 2500);
+        ['cloud-sync-state', 'cohort-exam-hydrated', 'teacher-sync-complete', 'tm-teacher-analysis-ready'].forEach((eventName) => {
+            root.addEventListener?.(eventName, () => {
+                setTimeout(() => runAutomaticAssessmentSync({ force: false }).catch(() => {}), 800);
+            });
+        });
     }
 
     function summarizeItems(items) {
@@ -827,14 +958,17 @@
 
     root.tmBuildTeacherAssessmentSyncPayload = buildAssessmentSyncPayload;
     root.tmRenderAssessmentSyncPanel = installAssessmentSyncPanel;
+    root.tmRunAutomaticAssessmentSync = runAutomaticAssessmentSync;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             installAssessmentSyncPanel();
             watchAssessmentSyncMount();
+            scheduleAutomaticAssessmentSync();
         });
     } else {
         installAssessmentSyncPanel();
         watchAssessmentSyncMount();
+        scheduleAutomaticAssessmentSync();
     }
 })();

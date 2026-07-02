@@ -56,7 +56,7 @@
     </style>
     <script>
         (function () {
-            var refreshVersion = 'runtime-f0af8f3956bf';
+            var refreshVersion = 'runtime-6603ed34f53e';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -64,6 +64,14 @@
                 localStorage.setItem(refreshKey, refreshVersion);
                 var url = new URL(location.href);
                 if (url.searchParams.get('runtimeRefresh') === refreshVersion) return;
+                var hasSession = false;
+                try {
+                    hasSession = !!(
+                        sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1')
+                        || sessionStorage.getItem('edu:session:token')
+                        || sessionStorage.getItem('CURRENT_USER')
+                    );
+                } catch (_) {}
                 var jobs = [];
                 if (window.caches && typeof caches.keys === 'function') {
                     jobs.push(caches.keys().then(function (keys) {
@@ -77,6 +85,10 @@
                         return Promise.all(registrations.map(function (registration) { return registration.update(); }));
                     }));
                 }
+                if (!hasSession) {
+                    Promise.all(jobs).catch(function () {});
+                    return;
+                }
                 Promise.all(jobs).catch(function () {}).then(function () {
                     url.searchParams.set('runtimeRefresh', refreshVersion);
                     location.replace(url.href);
@@ -87,10 +99,10 @@
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
     <script defer src="./assets/js/runtime-registry-runtime.js?v=20260501-runtime-registry-v1"></script>
     <script defer src="./assets/js/cohort-sync-status-runtime.js?v=20260620-sync-status-v1"></script>
-    <script defer src="./assets/js/entrance-sound-runtime.js?v=runtime-f0af8f3956bf"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-f0af8f3956bf"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-f0af8f3956bf"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-f0af8f3956bf"></script>
+    <script defer src="./assets/js/entrance-sound-runtime.js?v=runtime-6603ed34f53e"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-6603ed34f53e"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-6603ed34f53e"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-6603ed34f53e"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {

@@ -31,6 +31,7 @@ assert.strictEqual(bootVersion, serviceWorkerVersion, 'boot runtime fallback sho
 assert.strictEqual(refreshVersion, serviceWorkerVersion, 'early refresh guard should match generated runtime version');
 assert.strictEqual(cacheVersion, `school-system-${serviceWorkerVersion}`, 'service worker cache should follow generated runtime version');
 assert.ok(srcIndex.includes('^school-system-(?:v|runtime-)'), 'early refresh guard should clear both legacy and runtime service worker caches');
+assert.ok(srcIndex.includes('if (!hasSession)') && srcIndex.includes('sessionStorage.getItem(\'EDGE_GATEWAY_TOKEN_V1\')'), 'early refresh guard should not force a login-page reload without an authenticated session');
 assert.ok(srcIndex.includes(`entrance-sound-runtime.js?v=${serviceWorkerVersion}`), 'entrance sound runtime script tag should use generated runtime version');
 assert.ok(srcIndex.includes(`runtime-loader-runtime.js?v=${serviceWorkerVersion}`), 'runtime loader script tag should use generated runtime version');
 assert.ok(srcIndex.includes(`boot-runtime.js?v=${serviceWorkerVersion}`), 'boot runtime script tag should use generated runtime version');

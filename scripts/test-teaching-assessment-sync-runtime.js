@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'public/assets/js/teaching-assessment-sync-runtime.js'), 'utf8');
 const teachingRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/teaching-management-runtime.js'), 'utf8');
 const runtimeLoaderSource = fs.readFileSync(path.join(root, 'public/assets/js/runtime-loader-runtime.js'), 'utf8');
+const bootRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
 
 const context = {
   console,
@@ -27,6 +28,7 @@ const context = {
       { school: '银山实验学校', class: '6.2', total: 260, scores: { 语文: 80, 数学: 90, 英语: 90 } },
       { school: '兄弟学校', class: '6.1', total: 300, scores: { 语文: 96, 数学: 100, 英语: 98 } }
     ],
+    CURRENT_EXAM_ID: '2022级-9年级-2025-2026-下学期-二模-2026-05-27',
     MY_SCHOOL: '银山实验学校',
     TEACHER_MAP: {
       '6.1_语文': '张老师',
@@ -66,6 +68,8 @@ assert.ok(
   /'teacher-analysis': bootSkill[\s\S]*bootEntry\('teaching-assessment-sync', bootJs\('teaching-assessment-sync-runtime\.js'\)\)/.test(runtimeLoaderSource),
   'teacher analysis page should load assessment sync runtime'
 );
+assert.ok(source.includes('tmRunAutomaticAssessmentSync'), 'assessment sync should expose an automatic background sync runner');
+assert.ok(bootRuntimeSource.includes("'teaching-assessment-sync-runtime.js'"), 'assessment sync runtime should load with the workbench, not only after entering teacher analysis');
 
 context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
   assert.match(payload.academic_year, /^20\d{2}-20\d{2}$/);
@@ -75,13 +79,18 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
   assert.ok(projectIds.has('teacher_class_collaboration'), 'payload should include class collaboration');
   assert.ok(projectIds.has('teacher_subject_collaboration'), 'payload should include subject collaboration');
   assert.ok(projectIds.has('teacher_bottom_third'), 'payload should include bottom-third score');
-  assert.ok(projectIds.has('teacher_excellent_contribution'), 'payload should include excellent contribution');
+  assert.ok(!projectIds.has('teacher_excellent_contribution'), 'non-July exams must not include excellent contribution');
   assert.ok(!projectIds.has('teacher_workload'), 'payload must not include workload scores');
   payload.items.forEach((item) => {
     assert.ok(Number.isFinite(Number(item.score)), `score should be numeric for ${item.project_id}`);
     assert.ok(Number(item.score) >= 0, `score should be non-negative for ${item.project_id}`);
   });
-  console.log(JSON.stringify({ ok: true, items: payload.items.length, projects: Array.from(projectIds).sort() }, null, 2));
+  context.window.CURRENT_EXAM_ID = '2022级-9年级-2025-2026-暑假-7月质量监测-2026-07-12';
+  return context.window.tmBuildTeacherAssessmentSyncPayload().then((julyPayload) => {
+    const julyProjectIds = new Set(julyPayload.items.map((item) => item.project_id));
+    assert.ok(julyProjectIds.has('teacher_excellent_contribution'), 'July exams should include excellent contribution when top student data exists');
+    console.log(JSON.stringify({ ok: true, items: payload.items.length, projects: Array.from(projectIds).sort(), julyItems: julyPayload.items.length }, null, 2));
+  });
 }).catch((error) => {
   console.error(error);
   process.exit(1);
