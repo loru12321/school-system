@@ -697,8 +697,17 @@
         if (exportBtn) exportBtn.onclick = () => downloadAssessmentSyncCsv(panel);
     }
 
+    function getTeachingQuickSwitchContainer() {
+        const shell = document.getElementById('shell-module-rail-shell');
+        const title = document.querySelector('#shell-module-rail-title, [data-shell-module-rail-title]');
+        const categoryTitle = document.getElementById('shell-category-title');
+        const visibleTitle = `${title?.textContent || ''} ${categoryTitle?.textContent || ''}`;
+        return shell && visibleTitle.includes('教学管理') ? shell : null;
+    }
+
     function renderPanel() {
         const container = document.getElementById('tmNextAction')
+            || getTeachingQuickSwitchContainer()
             || document.getElementById('tmModuleState-teacher-analysis')
             || document.querySelector('#teacher-analysis .analysis-inline-panel')
             || document.querySelector('#teacher-analysis .sec-head');
@@ -709,7 +718,7 @@
         panel.innerHTML = `
             <div class="tm-assessment-sync-copy">
                 <div class="tm-next-title"><i class="ti ti-cloud-upload"></i> 同步到教师教学质量考核系统</div>
-                <div class="tm-next-desc"><strong>位置：教学管理首页 / 本校教师教学分析。</strong>从当前联考成绩和教学管理任课表生成教师个人考核分值。缺成绩、缺任课表或目标系统未匹配到教师时不会写入，仍由考核组长手动填写。</div>
+                <div class="tm-next-desc"><strong>位置：教学管理母模块 / 本校教师教学分析。</strong>从当前联考成绩和教学管理任课表生成教师个人考核分值。缺成绩、缺任课表或目标系统未匹配到教师时不会写入，仍由考核组长手动填写。</div>
                 <div class="tm-next-meta">
                     <span class="status-chip info">两率一分</span>
                     <span class="status-chip info">班级协调</span>
@@ -820,7 +829,7 @@
         }, true);
         if (typeof MutationObserver !== 'undefined') {
             const observer = new MutationObserver(() => {
-                if ((document.getElementById('tmNextAction') || document.getElementById('tmModuleState-teacher-analysis'))
+                if ((document.getElementById('tmNextAction') || getTeachingQuickSwitchContainer() || document.getElementById('tmModuleState-teacher-analysis'))
                     && !document.getElementById('tmAssessmentSyncPanel')) {
                     installAssessmentSyncPanel();
                 }
