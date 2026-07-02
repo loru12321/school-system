@@ -706,7 +706,7 @@
         panel.innerHTML = `
             <div class="tm-assessment-sync-copy">
                 <div class="tm-next-title"><i class="ti ti-cloud-upload"></i> 同步到教师教学质量考核系统</div>
-                <div class="tm-next-desc">从当前联考成绩和教学管理任课表生成教师个人考核分值。缺成绩、缺任课表或目标系统未匹配到教师时不会写入，仍由考核组长手动填写。</div>
+                <div class="tm-next-desc"><strong>位置：教学管理首页。</strong>从当前联考成绩和教学管理任课表生成教师个人考核分值。缺成绩、缺任课表或目标系统未匹配到教师时不会写入，仍由考核组长手动填写。</div>
                 <div class="tm-next-meta">
                     <span class="status-chip info">两率一分</span>
                     <span class="status-chip info">班级协调</span>
@@ -806,12 +806,35 @@
         setTimeout(renderPanel, 1200);
     }
 
+    function watchAssessmentSyncMount() {
+        if (root.__TM_ASSESSMENT_SYNC_WATCHING__) return;
+        root.__TM_ASSESSMENT_SYNC_WATCHING__ = true;
+        document.addEventListener('click', (event) => {
+            const target = event.target && typeof event.target.closest === 'function'
+                ? event.target.closest('[data-target="teaching-overview"], [onclick*="teaching-overview"], [onclick*="teacher-analysis"]')
+                : null;
+            if (target) setTimeout(installAssessmentSyncPanel, 180);
+        }, true);
+        if (typeof MutationObserver !== 'undefined') {
+            const observer = new MutationObserver(() => {
+                if (document.getElementById('tmNextAction') && !document.getElementById('tmAssessmentSyncPanel')) {
+                    installAssessmentSyncPanel();
+                }
+            });
+            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+        }
+    }
+
     root.tmBuildTeacherAssessmentSyncPayload = buildAssessmentSyncPayload;
     root.tmRenderAssessmentSyncPanel = installAssessmentSyncPanel;
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', installAssessmentSyncPanel);
+        document.addEventListener('DOMContentLoaded', () => {
+            installAssessmentSyncPanel();
+            watchAssessmentSyncMount();
+        });
     } else {
         installAssessmentSyncPanel();
+        watchAssessmentSyncMount();
     }
 })();

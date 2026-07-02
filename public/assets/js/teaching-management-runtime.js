@@ -34,6 +34,7 @@ function tmScheduleTeachingOverviewRender() {
     const runner = () => {
         TM_OVERVIEW_RENDER_FRAME = 0;
         if (typeof renderTeachingOverview === 'function') renderTeachingOverview();
+        if (typeof window.tmRenderAssessmentSyncPanel === 'function') window.tmRenderAssessmentSyncPanel();
     };
     if (typeof window.requestAnimationFrame === 'function') {
         TM_OVERVIEW_RENDER_FRAME = window.requestAnimationFrame(runner);
