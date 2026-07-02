@@ -61,8 +61,7 @@ vm.runInContext(source, context);
 assert.strictEqual(typeof context.window.tmBuildTeacherAssessmentSyncPayload, 'function');
 assert.ok(source.includes('watchAssessmentSyncMount'), 'assessment sync panel should remount when teaching overview renders later');
 assert.ok(source.includes('tmModuleState-teacher-analysis'), 'assessment sync panel should mount in the visible teacher-analysis module');
-assert.ok(source.includes('getTeachingQuickSwitchContainer'), 'assessment sync panel should mount in the visible teaching quick switch module');
-assert.ok(source.includes('位置：教学管理母模块 / 本校教师教学分析'), 'assessment sync panel should identify both visible teaching locations');
+assert.ok(source.includes('位置：教学管理首页 / 本校教师教学分析'), 'assessment sync panel should identify both visible teaching locations');
 assert.ok(teachingRuntimeSource.includes('tmRenderAssessmentSyncPanel'), 'teaching overview scheduler should call assessment sync panel mount hook');
 
 context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
