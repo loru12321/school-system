@@ -29,15 +29,12 @@ const context = {
       { school: '兄弟学校', class: '6.1', total: 300, scores: { 语文: 96, 数学: 100, 英语: 98 } }
     ],
     CURRENT_EXAM_ID: '2022级-9年级-2025-2026-下学期-二模-2026-05-27',
-    MY_SCHOOL: '银山实验学校',
+    MY_SCHOOL: '银山实验',
     TEACHER_MAP: {
       '6.1_语文': '张老师',
       '6.2_语文': '张老师'
     },
-    TEACHER_SCHOOL_MAP: {
-      '6.1_语文': '银山实验学校',
-      '6.2_语文': '银山实验学校'
-    },
+    TEACHER_SCHOOL_MAP: {},
     TEACHER_STATS: {
       张老师: {
         语文: {
@@ -48,7 +45,8 @@ const context = {
         }
       }
     },
-    normalizeClass: (value) => String(value || '').trim()
+    normalizeClass: (value) => String(value || '').trim(),
+    normalizeSchoolName: (value) => String(value || '').replace(/学校$/, '').trim()
   }
 };
 context.window.window = context.window;

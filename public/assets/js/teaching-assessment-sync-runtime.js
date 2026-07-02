@@ -80,6 +80,20 @@
         return raw;
     }
 
+    function normalizeSchoolForSync(value) {
+        const raw = text(value);
+        if (!raw) return '';
+        if (typeof root.getCanonicalSchoolName === 'function') {
+            const canonical = text(root.getCanonicalSchoolName(raw));
+            if (canonical) return canonical;
+        }
+        if (typeof root.normalizeSchoolName === 'function') {
+            const normalized = text(root.normalizeSchoolName(raw));
+            if (normalized) return normalized;
+        }
+        return raw.replace(/学校$/, '').trim();
+    }
+
     function parseClasses(value) {
         const raw = Array.isArray(value) ? value : text(value).split(/[、,，;；|\s]+/);
         return Array.from(new Set(raw.map((item) => text(item).replace(/班$/, '')).filter(Boolean)));
@@ -213,7 +227,7 @@
                 className,
                 grade: inferGradeFromClass(className),
                 subject: normalizeSubject(rawSubject),
-                school: text((root.TEACHER_SCHOOL_MAP || {})[key] || root.MY_SCHOOL || '')
+                school: normalizeSchoolForSync((root.TEACHER_SCHOOL_MAP || {})[key] || root.MY_SCHOOL || '')
             };
         }).filter((item) => item.teacherName && item.className && item.subject);
     }
@@ -299,7 +313,7 @@
         });
         const schoolSubject = new Map();
         rows.forEach((row) => {
-            const school = text(row?.school);
+            const school = normalizeSchoolForSync(row?.school);
             if (!school) return;
             const scores = row?.scores && typeof row.scores === 'object' ? row.scores : {};
             Object.keys(scores).forEach((rawSubject) => {
@@ -371,7 +385,7 @@
         const thresholds = resolveTotalThresholds(rows);
         const map = new Map();
         rows.forEach((row) => {
-            const school = text(row?.school);
+            const school = normalizeSchoolForSync(row?.school);
             const className = typeof root.normalizeClass === 'function' ? root.normalizeClass(row?.class) : text(row?.class);
             if (!school || !className) return;
             const key = `${school}::${className}`;
@@ -429,7 +443,7 @@
             Object.keys(scores).forEach((rawSubject) => {
                 const subject = normalizeSubject(rawSubject);
                 if (!subject) return;
-                const school = text(row?.school);
+                const school = normalizeSchoolForSync(row?.school);
                 const value = getSubjectScore(row, subject);
                 if (!school || !Number.isFinite(value)) return;
                 const key = `${school}::${subject}`;
