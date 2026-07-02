@@ -13274,11 +13274,85 @@ function waitForIndicatorCalcInputs(timeoutMs = 6000) {
     });
 }
 
+const IndicatorCloudInputState = { promise: null, key: '' };
+
+function getIndicatorWorkspaceKey() {
+    const readCohort = typeof readWorkspaceCohortId === 'function' ? readWorkspaceCohortId : () => '';
+    const readExam = typeof readWorkspaceExamId === 'function' ? readWorkspaceExamId : () => '';
+    return [
+        String(CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || readCohort() || '').trim(),
+        String(CURRENT_EXAM_ID || window.CURRENT_EXAM_ID || readExam() || '').trim()
+    ].join('::');
+}
+
+function setIndicatorSyncTip(text = '') {
+    const tip = document.getElementById('dm-params-tip');
+    if (!tip || !isIndicatorPromptAllowed()) return;
+    if (text) {
+        tip.textContent = text;
+        tip.style.display = 'block';
+        return;
+    }
+    updateIndicatorUIState();
+}
+
+async function ensureIndicatorWorkspaceFromCloud(reason = 'indicator-refresh', timeoutMs = 12000) {
+    if (hasIndicatorCalcInputs() && isIndicatorCalcAllowed()) return true;
+    if (!isIndicatorPromptAllowed() || typeof loadCloudData !== 'function') return false;
+    const currentUser = (window.Auth && window.Auth.currentUser) || null;
+    if (currentUser?.local_only) return false;
+
+    const key = getIndicatorWorkspaceKey();
+    if (IndicatorCloudInputState.promise && IndicatorCloudInputState.key === key) {
+        return IndicatorCloudInputState.promise;
+    }
+
+    setIndicatorSyncTip('正在从云端同步指标生参数和目标人数...');
+    IndicatorCloudInputState.key = key;
+    IndicatorCloudInputState.promise = Promise.race([
+        Promise.resolve(loadCloudData()),
+        new Promise((resolve) => setTimeout(() => resolve(false), Math.max(3000, Number(timeoutMs) || 12000)))
+    ])
+        .then(() => {
+            syncRuntimeStateToWindow();
+            updateIndicatorUIState();
+            const ready = hasIndicatorCalcInputs() && isIndicatorCalcAllowed();
+            if (!ready) {
+                console.warn(`[Indicator] cloud workspace still missing inputs after ${reason}`, {
+                    rawData: Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+                    targetCount: window.TARGETS && typeof window.TARGETS === 'object' ? Object.keys(window.TARGETS).length : 0,
+                    indicator: window.SYS_VARS?.indicator || {}
+                });
+            }
+            return ready;
+        })
+        .catch((error) => {
+            console.warn(`[Indicator] 云端补载失败 (${reason}):`, error);
+            return false;
+        })
+        .finally(() => {
+            IndicatorCloudInputState.promise = null;
+            IndicatorCloudInputState.key = '';
+            if (hasIndicatorCalcInputs() && isIndicatorCalcAllowed()) setIndicatorSyncTip('');
+        });
+    return IndicatorCloudInputState.promise;
+}
+
 function refreshIndicatorResults(isSilent = true, options = {}) {
     updateIndicatorUIState();
     const waitForInputs = !!(options && options.waitForInputs);
-    if (waitForInputs && isIndicatorCalcAllowed() && !hasIndicatorCalcInputs()) {
-        return waitForIndicatorCalcInputs(options.timeoutMs || 6000).then((ready) => {
+    if (waitForInputs && isIndicatorPromptAllowed() && (!isIndicatorCalcAllowed() || !hasIndicatorCalcInputs())) {
+        const timeoutMs = options.timeoutMs || 6000;
+        return ensureIndicatorWorkspaceFromCloud('module-enter', Math.max(9000, timeoutMs)).then(() => {
+            updateIndicatorUIState();
+            if (!isIndicatorCalcAllowed()) return [];
+            if (hasIndicatorCalcInputs()) {
+                const result = calcIndicators(isSilent);
+                return Array.isArray(result) ? result : [];
+            }
+            return waitForIndicatorCalcInputs(timeoutMs);
+        }).then((ready) => {
+            if (Array.isArray(ready)) return ready;
             if (!ready) return [];
             const result = calcIndicators(isSilent);
             return Array.isArray(result) ? result : [];
