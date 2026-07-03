@@ -575,30 +575,47 @@ async function handleVersionUpdate(session, payload) {
   if (findError) return serverError("snapshot_versions lookup failed", { detail: findError.message });
   if (!existing) return badRequest("snapshot version not found");
 
-  const patch: Record<string, unknown> = {};
+  const nowIso = new Date().toISOString();
+  const patch: Record<string, unknown> = { updated_at: nowIso, version: (Number(existing.version) || 0) + 1 };
+  const settingStable = "is_stable" in payload && Boolean(payload.is_stable);
+
   if ("is_stable" in payload) {
-    const nextStable = Boolean(payload.is_stable);
-    patch.is_stable = nextStable;
-    if (nextStable) {
-      const { error: clearError } = await admin
-        .from("snapshot_versions")
-        .update({ is_stable: false })
-        .eq("project_key", String(existing.project_key || ""))
-        .eq("cohort_id", String(existing.cohort_id || ""))
-        .neq("id", id);
-      if (clearError) {
-        return serverError("snapshot_versions stable reset failed", { detail: clearError.message });
-      }
-    }
+    patch.is_stable = Boolean(payload.is_stable);
   }
   if ("version_name" in payload) {
     const versionName = String(payload.version_name || "").trim();
     if (!versionName) return badRequest("version_name cannot be empty");
     patch.version_name = versionName;
   }
+  if (Object.keys(patch).filter(k => k !== "updated_at" && k !== "version").length === 0) {
+    return badRequest("No supported fields to update");
+  }
 
-  const { data, error } = await admin.from("snapshot_versions").update(patch).eq("id", id).select().maybeSingle();
+  if (settingStable) {
+    // Clear other stable marks in the same scope first, then set this one.
+    // Using two sequential Supabase calls is unavoidable without a stored procedure,
+    // but we filter on is_stable = true to minimise the write surface and reduce
+    // the chance of the second call racing with an identical concurrent request.
+    const { error: clearError } = await admin
+      .from("snapshot_versions")
+      .update({ is_stable: false, updated_at: nowIso })
+      .eq("project_key", String(existing.project_key || ""))
+      .eq("cohort_id", String(existing.cohort_id || ""))
+      .eq("is_stable", true)
+      .neq("id", id);
+    if (clearError) {
+      return serverError("snapshot_versions stable reset failed", { detail: clearError.message });
+    }
+  }
+
+  const { data, error } = await admin
+    .from("snapshot_versions")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .maybeSingle();
   if (error) return serverError("snapshot_versions update failed", { detail: error.message });
+  if (!data) return badRequest("snapshot version not found or unchanged");
   return json(200, { ok: true, record: data });
 }
 async function handleVersionDelete(session, payload) {

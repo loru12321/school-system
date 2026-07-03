@@ -1761,11 +1761,16 @@
             const nowIso = new Date().toISOString();
             const currentMeta = readWorkspaceSyncMeta(key);
             let contentHash = '';
-            if (!background) {
-                contentHash = mode === 'workspace'
-                    ? buildWorkspaceSplitUploadBundle(key, payload).contentHash
-                    : hashText(packPayload(payload));
+            if (mode === 'workspace') {
+                // Workspace: always compute hash so both foreground and background saves
+                // can skip the upload when the payload has not changed since last sync.
+                contentHash = buildWorkspaceSplitUploadBundle(key, payload).contentHash;
+            } else if (!background) {
+                // Exam foreground: compute full-pack hash for dedup.
+                contentHash = hashText(packPayload(payload));
             }
+            // Exam background: skip hash computation — shard payloads can be very large
+            // and background exam saves are rare (only triggered after import).
 
             const cacheWritten = await writeCachedWorkspaceSnapshot(key, payload);
             writeWorkspaceSyncMeta(key, {
@@ -1812,7 +1817,23 @@
                 currentExamId: payload?.CURRENT_EXAM_ID || ''
             };
             if (!cacheWritten && mode === 'exam' && payload && typeof payload === 'object') {
-                queueJob.inlinePayload = payload;
+                // Guard: only inline payload when it fits safely in localStorage.
+                // A compact exam shard for ~5 000 rows is typically 1–2 MB serialized.
+                // Storing two shards inline would exhaust the 5 MB per-origin limit.
+                const INLINE_PAYLOAD_MAX_BYTES = 1.5 * 1024 * 1024; // 1.5 MB
+                try {
+                    const serialized = JSON.stringify(payload);
+                    if (serialized.length <= INLINE_PAYLOAD_MAX_BYTES) {
+                        queueJob.inlinePayload = payload;
+                    } else {
+                        console.warn('[CloudSync] exam shard too large for inline queue storage — skipping inlinePayload fallback', {
+                            key,
+                            estimatedBytes: serialized.length
+                        });
+                    }
+                } catch (_) {
+                    // serialization failed (circular ref or similar) — skip inline payload
+                }
             }
             queueWorkspaceSyncJob(key, queueJob);
 

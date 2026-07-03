@@ -8748,10 +8748,11 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
             for (let f of files) await readExcel(f);
             SUBJECTS.sort(sortSubjects);
             await processData(); // 这是一个耗时操作
+            // 仅更新运行时内存变量，供后续 saveCloudData 和 UI 使用。
+            // writeWorkspaceExamId 和 COHORT_DB.currentExamId 延迟到云端上传成功后写入，
+            // 避免首次上传失败时 localStorage 指向一个 db.exams 中不存在的考试 ID。
             CURRENT_EXAM_ID = currentExamId;
             window.CURRENT_EXAM_ID = currentExamId;
-            writeWorkspaceExamId(currentExamId);
-            if (COHORT_DB) COHORT_DB.currentExamId = currentExamId;
             syncRuntimeStateToWindow();
 
             updateSchoolMode();
@@ -8778,6 +8779,10 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
             }
 
             await CohortDB.syncCurrentExam();
+            // 云端上传 + 本地 CohortDB 写入均已成功，现在才持久化工作区 exam 指针。
+            // 这样若上传失败（早退），localStorage 仍指向旧的、db.exams 中存在的考试。
+            writeWorkspaceExamId(currentExamId);
+            if (COHORT_DB) COHORT_DB.currentExamId = currentExamId;
 
             scheduleExamSelectorRefresh({ teacherCompareTeacher: true });
             renderTables();

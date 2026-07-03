@@ -930,7 +930,9 @@ function normalizeVersionRow(row) {
   return {
     ...row,
     summary_json: safeJsonParse(row?.summary_json, {}),
-    is_stable: Number(row?.is_stable || 0) === 1
+    is_stable: Number(row?.is_stable || 0) === 1,
+    version: Number(row?.version || 0),
+    updated_at: normalizeText(row?.updated_at) || normalizeText(row?.created_at) || ''
   };
 }
 
@@ -1277,19 +1279,15 @@ async function handleVersionUpdate(request, db, session, payload) {
   if (!id) return badRequest(request, 'id is required');
   const existing = await querySingleRow(db, 'SELECT * FROM snapshot_versions WHERE id = ? LIMIT 1', [id], normalizeVersionRow);
   if (!existing) return badRequest(request, 'snapshot version not found');
+
+  const nowIso = new Date().toISOString();
   const patchColumns = [];
   const bindings = [];
+  const settingStable = 'is_stable' in payload && Boolean(payload.is_stable);
+
   if ('is_stable' in payload) {
-    const nextStable = payload.is_stable ? 1 : 0;
-    if (nextStable) {
-      await db.prepare(`
-        UPDATE snapshot_versions
-        SET is_stable = 0
-        WHERE project_key = ? AND cohort_id = ? AND id <> ?
-      `).bind(normalizeText(existing.project_key), normalizeText(existing.cohort_id), id).run();
-    }
     patchColumns.push('is_stable = ?');
-    bindings.push(nextStable);
+    bindings.push(payload.is_stable ? 1 : 0);
   }
   if ('version_name' in payload) {
     const versionName = normalizeText(payload.version_name);
@@ -1298,8 +1296,36 @@ async function handleVersionUpdate(request, db, session, payload) {
     bindings.push(versionName);
   }
   if (!patchColumns.length) return badRequest(request, 'No supported fields to update');
-  bindings.push(id);
-  await db.prepare(`UPDATE snapshot_versions SET ${patchColumns.join(', ')} WHERE id = ?`).bind(...bindings).run();
+
+  // Always bump version + updated_at so the row tracks its last-write time.
+  patchColumns.push('version = version + 1', 'updated_at = ?');
+  bindings.push(nowIso);
+
+  if (settingStable) {
+    // Atomically clear other stable marks and set this one in a single D1 batch
+    // (all statements in a D1 batch execute within one implicit transaction).
+    const clearStmt = db.prepare(
+      `UPDATE snapshot_versions
+       SET is_stable = 0, version = version + 1, updated_at = ?
+       WHERE project_key = ? AND cohort_id = ? AND id <> ? AND is_stable = 1`
+    ).bind(nowIso, normalizeText(existing.project_key), normalizeText(existing.cohort_id), id);
+
+    const setStmt = db.prepare(
+      `UPDATE snapshot_versions SET ${patchColumns.join(', ')} WHERE id = ?`
+    ).bind(...bindings, id);
+
+    const results = await db.batch([clearStmt, setStmt]);
+    // results[1].meta.changes === 0 means the row disappeared between SELECT and UPDATE
+    if (!results[1]?.meta?.changes) {
+      return badRequest(request, 'snapshot version not found or unchanged');
+    }
+  } else {
+    // Simple update — clearing stable flag or renaming (no cross-row invariant needed)
+    await db.prepare(
+      `UPDATE snapshot_versions SET ${patchColumns.join(', ')} WHERE id = ?`
+    ).bind(...bindings, id).run();
+  }
+
   const updated = await querySingleRow(db, 'SELECT * FROM snapshot_versions WHERE id = ? LIMIT 1', [id], normalizeVersionRow);
   return jsonResponse(200, { ok: true, record: updated }, request);
 }
