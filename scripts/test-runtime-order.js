@@ -1125,6 +1125,15 @@ assert.ok(
         uploadStart >= 0 && cloudSaveIndex > uploadStart && cohortSyncIndex > cloudSaveIndex,
         'score import should upload the exam shard to cloud before overwriting the local CohortDB archive'
     );
+    const hardResetIndex = appSource.indexOf('setRawData([]);', uploadStart);
+    const readExcelIndex = appSource.indexOf('for (let f of files) await readExcel(f);', uploadStart);
+    assert.ok(
+        hardResetIndex > uploadStart && readExcelIndex > hardResetIndex
+            && appSource.indexOf('setSchools({});', uploadStart) > uploadStart
+            && appSource.indexOf('setSubjects([]);', uploadStart) > uploadStart
+            && appSource.indexOf('setThresholds({});', uploadStart) > uploadStart,
+        'score import should explicitly clear stale score state before reading the selected Excel file'
+    );
 }
 assert.ok(
     /function tryAutoRestoreWorkspaceExam\(options = \{\}\) \{\s*if \(isScoreImportInProgress\(\)\)/.test(appSource),

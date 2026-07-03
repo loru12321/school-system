@@ -8719,7 +8719,13 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
                 ? await prepareSameExamOverwrite(currentExamId, effectiveExistingExam)
                 : { localExists: false, cloudExists: false, existingRows: 0 };
 
-            clearDataRuntimeState({ keepConfig: true }); setTeacherMap({}); setTeacherStats({});
+            clearDataRuntimeState({ keepConfig: true });
+            setRawData([]);
+            setSchools({});
+            setSubjects([]);
+            setThresholds({});
+            syncRuntimeStateToWindow();
+            setTeacherMap({}); setTeacherStats({});
             TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; clearCurrentSchool();
             const teacherCards = document.getElementById('teacherCardsContainer');
             const teacherTable = document.getElementById('teacherComparisonTable');
