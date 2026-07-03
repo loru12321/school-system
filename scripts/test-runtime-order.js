@@ -1145,6 +1145,16 @@ assert.ok(
     'exam cloud shards should store compact score rows and recalculate bulky derived data after restore'
 );
 assert.ok(
+    cloudWorkspaceRuntime.includes('this.flushWorkspaceSyncQueue({ targetKey: key, forceUpload: opts.forceUpload === true })')
+        && cloudWorkspaceRuntime.includes("if (!opts.forceUpload && currentMeta.lastUploadedHash && currentMeta.lastUploadedHash === contentHash)"),
+    'forced exam cloud saves must force the queue flush instead of being skipped by a stale uploaded hash'
+);
+assert.ok(
+    cloudWorkspaceRuntime.includes("if (targetKey && aKey === targetKey && bKey !== targetKey) return -1;")
+        && cloudWorkspaceRuntime.includes("if (targetKey && bKey === targetKey && aKey !== targetKey) return 1;"),
+    'workspace sync queue should prioritize the explicitly saved exam key before older pending jobs'
+);
+assert.ok(
     /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
     'login cohort entry should fast-enter and hydrate cloud cohort data in the background unless explicitly requested'
 );

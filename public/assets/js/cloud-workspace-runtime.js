@@ -1818,7 +1818,7 @@
                 return true;
             }
 
-            const flushOk = await this.flushWorkspaceSyncQueue({ targetKey: key });
+            const flushOk = await this.flushWorkspaceSyncQueue({ targetKey: key, forceUpload: opts.forceUpload === true });
             if (!flushOk) {
                 const nextMeta = readWorkspaceSyncMeta(key);
                 const message = nextMeta.lastCloudError || '云端同步失败';
@@ -1854,7 +1854,13 @@
             let queue = readWorkspaceSyncQueue();
             const entries = Object.values(queue)
                 .filter(item => item && typeof item === 'object' && String(item.key || '').trim())
-                .sort((a, b) => String(a.queuedAt || '').localeCompare(String(b.queuedAt || '')));
+                .sort((a, b) => {
+                    const aKey = String(a?.key || '').trim();
+                    const bKey = String(b?.key || '').trim();
+                    if (targetKey && aKey === targetKey && bKey !== targetKey) return -1;
+                    if (targetKey && bKey === targetKey && aKey !== targetKey) return 1;
+                    return String(a.queuedAt || '').localeCompare(String(b.queuedAt || ''));
+                });
 
             if (!entries.length) return !targetKey;
             if (!(await this.ensureClientReady({ silent: true, timeoutMs: 4000 }))) {
