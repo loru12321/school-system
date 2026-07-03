@@ -634,8 +634,8 @@
             COHORT_DB: {
                 cohortId: payload?.COHORT_DB?.cohortId || payload?.CURRENT_COHORT_ID || '',
                 cohortMeta: clonePayloadFragment(payload?.COHORT_DB?.cohortMeta || payload?.CURRENT_COHORT_META || null),
-                students: clonePayloadFragment(payload?.COHORT_DB?.students || {}),
-                teachingHistory: clonePayloadFragment(payload?.COHORT_DB?.teachingHistory || {}),
+                students: {},
+                teachingHistory: {},
                 exams: {},
                 currentExamId: exactExamId,
                 resetPoints: clonePayloadFragment(payload?.COHORT_DB?.resetPoints || [])
@@ -1734,10 +1734,12 @@
                     : (typeof window.readSchoolAliasState === 'function' ? window.readSchoolAliasState() : []));
             }
 
-            const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
+            let payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
             if (mode === 'workspace') normalizeWorkspacePayload(payload);
             if (mode === 'exam') {
                 key = String(opts.examKey || '').trim() || getCurrentExamIdFromPayload(payload) || String(window.CURRENT_EXAM_ID || '').trim() || key;
+                const examShardPayload = buildExamShardPayload(payload, key, buildCurrentExamEntry(payload, key));
+                if (examShardPayload) payload = examShardPayload;
             }
 
             const nowIso = new Date().toISOString();

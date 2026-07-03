@@ -1121,6 +1121,17 @@ assert.ok(
     'history exam apply should be blocked while score import is in progress unless explicitly allowed'
 );
 assert.ok(
+    /if \(mode === 'exam'\) \{\s*key = String\(opts\.examKey/.test(cloudWorkspaceRuntime)
+        && cloudWorkspaceRuntime.includes('const examShardPayload = buildExamShardPayload(payload, key, buildCurrentExamEntry(payload, key));')
+        && cloudWorkspaceRuntime.includes('if (examShardPayload) payload = examShardPayload;'),
+    'exam cloud save should upload the current exam shard instead of the full workspace snapshot'
+);
+assert.ok(
+    cloudWorkspaceRuntime.includes('students: {},')
+        && cloudWorkspaceRuntime.includes('teachingHistory: {},'),
+    'exam shard payloads should not include bulky cross-exam student history objects'
+);
+assert.ok(
     /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
     'login cohort entry should fast-enter and hydrate cloud cohort data in the background unless explicitly requested'
 );
