@@ -1101,6 +1101,21 @@
         }
     }
 
+    // Returns a short, stable prefix that scopes IDB cache keys to the current user.
+    // Multiple accounts sharing the same browser will each read their own cache entries.
+    // Falls back to '' (no prefix) when no user is logged in, preserving existing behaviour.
+    function getIdbUserPrefix() {
+        try {
+            const user = typeof window.getCurrentUser === 'function'
+                ? window.getCurrentUser()
+                : (window.Auth && window.Auth.currentUser ? window.Auth.currentUser : null);
+            const username = String(user?.username || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+            return username ? `u_${username}__` : '';
+        } catch (_) {
+            return '';
+        }
+    }
+
     function dispatchWorkspaceSyncEvent(stage, detail = {}) {
         if (typeof window.CustomEvent !== 'function') return;
         window.dispatchEvent(new CustomEvent('cloud-sync-state', {
@@ -1115,7 +1130,8 @@
         ensureLocalCacheProfile();
         if (!(window.idbKeyval && typeof window.idbKeyval.get === 'function')) return null;
         try {
-            const cached = await window.idbKeyval.get(`cache_${key}`);
+            const prefix = getIdbUserPrefix();
+            const cached = await window.idbKeyval.get(`${prefix}cache_${key}`);
             return cached && typeof cached === 'object' ? cached : null;
         } catch (error) {
             console.warn('[CloudSync] read cache failed:', error);
@@ -1127,7 +1143,8 @@
         ensureLocalCacheProfile();
         if (!(window.idbKeyval && typeof window.idbKeyval.get === 'function')) return null;
         try {
-            const meta = await window.idbKeyval.get(`cache_meta_${key}`);
+            const prefix = getIdbUserPrefix();
+            const meta = await window.idbKeyval.get(`${prefix}cache_meta_${key}`);
             return meta && typeof meta === 'object' ? meta : null;
         } catch (error) {
             console.warn('[CloudSync] read cache meta failed:', error);
@@ -1145,9 +1162,10 @@
         const machineId = ensureLocalCacheProfile();
         if (!(window.idbKeyval && typeof window.idbKeyval.set === 'function')) return false;
         try {
-            await window.idbKeyval.set(`cache_${key}`, payload);
+            const prefix = getIdbUserPrefix();
+            await window.idbKeyval.set(`${prefix}cache_${key}`, payload);
             if (machineId) {
-                await window.idbKeyval.set(`cache_meta_${key}`, {
+                await window.idbKeyval.set(`${prefix}cache_meta_${key}`, {
                     machineId,
                     key,
                     updatedAt: String(meta.updatedAt || meta.updated_at || new Date().toISOString()).trim(),
@@ -1450,7 +1468,7 @@
                     });
                 }
                 localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
-                if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, uploadPayload);
+                if (window.idbKeyval) await idbKeyval.set(`${getIdbUserPrefix()}cache_${key}`, uploadPayload);
                 if (typeof logAction === 'function') logAction('云端同步', `全量数据已同步：${key}`);
                 if (typeof updateStatusPanel === 'function') updateStatusPanel();
                 safeToast('云端同步成功', 'success');
@@ -1871,8 +1889,21 @@
     CloudManager.flushWorkspaceSyncQueue = async function (options = {}) {
         const opts = options && typeof options === 'object' ? { ...options } : {};
         const targetKey = String(opts.targetKey || '').trim();
+        // Depth guard: cap the promise chain so rapid background saves cannot
+        // accumulate an unbounded queue of pending flushWorkspaceSyncQueue calls.
+        // Once MAX_FLUSH_DEPTH concurrent waiters are chained, further calls
+        // return the in-flight task directly without adding another link.
+        const MAX_FLUSH_DEPTH = 4;
         if (this._workspaceSyncFlushTask) {
-            return this._workspaceSyncFlushTask.then(() => this.flushWorkspaceSyncQueue(opts));
+            const depth = Number(this._workspaceSyncFlushDepth) || 0;
+            if (depth >= MAX_FLUSH_DEPTH) {
+                return this._workspaceSyncFlushTask;
+            }
+            this._workspaceSyncFlushDepth = depth + 1;
+            return this._workspaceSyncFlushTask.then(() => {
+                this._workspaceSyncFlushDepth = Math.max(0, (Number(this._workspaceSyncFlushDepth) || 1) - 1);
+                return this.flushWorkspaceSyncQueue(opts);
+            });
         }
 
         this._workspaceSyncFlushTask = (async () => {

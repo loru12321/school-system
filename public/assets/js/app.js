@@ -8600,13 +8600,19 @@ async function prepareSameExamOverwrite(currentExamId, existingExam = null) {
     const examId = String(currentExamId || '').trim();
     if (!examId) return { localExists: false, cloudExists: false, existingRows: 0 };
 
-    let localExists = false;
+    // existingRows: row count from the exam entry passed in (db.exams or current workspace).
+    // This is the same source used by the confirmation dialog above, so localExists
+    // stays consistent with what the user already acknowledged.
     const existingRows = getUploadExamDataRowCount(existingExam?.data);
+    let localExists = existingRows > 0;
     try {
         const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
         if (db && typeof db === 'object') {
             db.exams = db.exams || {};
-            localExists = Boolean(db.exams[examId]) || existingRows > 0;
+            // Also flag localExists when the exam entry exists in db.exams regardless
+            // of whether the caller passed a non-null existingExam (e.g. on repeated
+            // saves the in-memory entry may differ from the one in CohortDB).
+            if (db.exams[examId]) localExists = true;
         }
     } catch (error) {
         console.warn('[upload] local overwrite check failed:', error);
@@ -8665,7 +8671,11 @@ function clearScoreImportGuard(guard) {
 function isScoreImportInProgress() {
     const guard = window.__SCORE_IMPORT_IN_PROGRESS__;
     if (!guard || typeof guard !== 'object') return false;
-    if (Date.now() - Number(guard.startedAt || 0) > 10 * 60 * 1000) {
+    // Wall-clock fallback: guard is cleared in the finally block of the upload async
+    // callback, but if that callback crashes without reaching finally (edge case), the
+    // guard would leak forever.  30 min covers even the slowest processData() runs on
+    // constrained devices while still eventually unblocking applyExamToWorkspace.
+    if (Date.now() - Number(guard.startedAt || 0) > 30 * 60 * 1000) {
         window.__SCORE_IMPORT_IN_PROGRESS__ = null;
         return false;
     }
@@ -16689,15 +16699,21 @@ const CohortDB = {
         this.removeStudentHistoryByExamId(examId);
         await this.smartLinkStudents(examId, meta);
 
+        // structuredClone is faster than JSON.parse(JSON.stringify()) and handles
+        // typed arrays correctly.  Falls back to JSON round-trip on older browsers.
+        const deepClone = (typeof structuredClone === 'function')
+            ? (v) => structuredClone(v)
+            : (v) => JSON.parse(JSON.stringify(v));
+
         db.exams[examId] = {
             examId,
             meta,
-            data: JSON.parse(JSON.stringify(RAW_DATA || [])),
-            schools: JSON.parse(JSON.stringify(SCHOOLS || {})),
-            teacherMap: JSON.parse(JSON.stringify(TEACHER_MAP || {})),
-            subjects: JSON.parse(JSON.stringify(SUBJECTS || [])),
-            thresholds: JSON.parse(JSON.stringify(THRESHOLDS || {})),
-            config: JSON.parse(JSON.stringify(CONFIG || {})),
+            data: deepClone(RAW_DATA || []),
+            schools: deepClone(SCHOOLS || {}),
+            teacherMap: deepClone(TEACHER_MAP || {}),
+            subjects: deepClone(SUBJECTS || []),
+            thresholds: deepClone(THRESHOLDS || {}),
+            config: deepClone(CONFIG || {}),
             fingerprint: computeExamDataFingerprint(RAW_DATA || []),
             createdAt: existing?.createdAt || Date.now(),
             updatedAt: Date.now()
@@ -16706,7 +16722,7 @@ const CohortDB = {
         const termId = getTermId(meta);
         if (termId) {
             db.teachingHistory = db.teachingHistory || {};
-            db.teachingHistory[termId] = JSON.parse(JSON.stringify(TEACHER_MAP || {}));
+            db.teachingHistory[termId] = deepClone(TEACHER_MAP || {});
         }
         this.renderExamList();
         if (meta.resetPoint) {
