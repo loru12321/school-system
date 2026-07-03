@@ -8789,6 +8789,13 @@ async function readExcel(file) {
 
 function parseRows(rows, defaultSchool) {
     const headers = rows[0].map(h => String(h).trim());
+    const importExamMeta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+    const importGrade = String(
+        (typeof getEffectiveGrade === 'function' ? getEffectiveGrade(importExamMeta) : '')
+        || importExamMeta?.grade
+        || (typeof getActiveGrade === 'function' ? getActiveGrade() : '')
+        || ''
+    ).trim();
 
     const idxMap = { name: -1, id: -1, school: -1, class: -1, examRoom: -1, scores: {} };
 
@@ -8895,7 +8902,7 @@ function parseRows(rows, defaultSchool) {
 
         let classStr = "未分班";
         if (idxMap.class !== -1 && r[idxMap.class]) {
-            classStr = normalizeClass(r[idxMap.class]);
+            classStr = normalizeImportedClassForGrade(r[idxMap.class], importGrade);
         }
 
         const rawSchool = idxMap.school !== -1 ? String(r[idxMap.school] || '').trim() : '';
@@ -9031,6 +9038,29 @@ function normalizeComparableClassValue(classStr) {
         return `${grade}.${String(Number(digitsOnly))}`;
     }
     return raw;
+}
+
+function normalizeImportedClassForGrade(classStr, grade) {
+    const normalized = normalizeClass(classStr);
+    const gradeText = String(grade || '').trim();
+    const gradeMatch = gradeText.match(/[6-9]/);
+    const importGrade = gradeMatch ? gradeMatch[0] : '';
+    if (!importGrade) return normalized;
+
+    const rawText = normalizeChineseClassText(classStr)
+        .replace(/[()（）]/g, '')
+        .replace(/(?:班级|行政班|班次|班|年级|grade|class)/gi, '')
+        .replace(/[／/、_-]+/g, '.')
+        .replace(/[·,，]+/g, '.')
+        .replace(/\s+/g, '')
+        .replace(/\.{2,}/g, '.')
+        .replace(/^\./, '')
+        .replace(/\.$/, '');
+
+    if (/^\d{1,2}$/.test(rawText)) {
+        return `${importGrade}.${String(Number(rawText))}`;
+    }
+    return normalized;
 }
 
 function normalizeClass(classStr) {

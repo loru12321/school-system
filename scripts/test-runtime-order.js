@@ -1099,6 +1099,14 @@ assert.ok(
     'parseRows should store display-only subject scores without adding them to global heavy subjects'
 );
 assert.ok(
+    appSource.includes('function normalizeImportedClassForGrade'),
+    'score import should expose grade-aware class normalization'
+);
+assert.ok(
+    appSource.includes('classStr = normalizeImportedClassForGrade(r[idxMap.class], importGrade);'),
+    'parseRows should normalize bare imported class numbers with the current exam grade'
+);
+assert.ok(
     /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
     'login cohort entry should fast-enter and hydrate cloud cohort data in the background unless explicitly requested'
 );
