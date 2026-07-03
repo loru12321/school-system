@@ -1409,12 +1409,13 @@
 
                 const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
                 if (mode === 'workspace') normalizeWorkspacePayload(payload);
-                const content = packPayload(payload);
                 const nowIso = new Date().toISOString();
                 const currentExamId = getCurrentExamIdFromPayload(payload);
                 const legacyShard = mode === 'exam' && currentExamId
                     ? buildExamShardPayload(payload, currentExamId, buildCurrentExamEntry(payload, currentExamId))
                     : null;
+                const uploadPayload = legacyShard || payload;
+                const content = packPayload(uploadPayload);
                 const legacyHistoryIndexRows = legacyShard
                     ? buildStudentHistoryIndexRowsForExam(payload, currentExamId, legacyShard, nowIso)
                     : [];
@@ -1434,7 +1435,7 @@
                     });
                 }
                 localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
-                if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
+                if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, uploadPayload);
                 if (typeof logAction === 'function') logAction('云端同步', `全量数据已同步：${key}`);
                 if (typeof updateStatusPanel === 'function') updateStatusPanel();
                 safeToast('云端同步成功', 'success');

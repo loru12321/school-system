@@ -1127,6 +1127,11 @@ assert.ok(
     'exam cloud save should upload the current exam shard instead of the full workspace snapshot'
 );
 assert.ok(
+    cloudWorkspaceRuntime.includes('const uploadPayload = legacyShard || payload;')
+        && cloudWorkspaceRuntime.includes('const content = packPayload(uploadPayload);'),
+    'legacy exam cloud save path should also upload the exam shard instead of the full workspace snapshot'
+);
+assert.ok(
     cloudWorkspaceRuntime.includes('students: {},')
         && cloudWorkspaceRuntime.includes('teachingHistory: {},'),
     'exam shard payloads should not include bulky cross-exam student history objects'
