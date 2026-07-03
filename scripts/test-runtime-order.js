@@ -1155,6 +1155,13 @@ assert.ok(
     'workspace sync queue should prioritize the explicitly saved exam key before older pending jobs'
 );
 assert.ok(
+    cloudWorkspaceRuntime.includes('const cacheWritten = await writeCachedWorkspaceSnapshot(key, payload);')
+        && cloudWorkspaceRuntime.includes("if (!cacheWritten && mode === 'exam' && payload && typeof payload === 'object')")
+        && cloudWorkspaceRuntime.includes('queueJob.inlinePayload = payload;')
+        && cloudWorkspaceRuntime.includes("job.inlinePayload && typeof job.inlinePayload === 'object'"),
+    'exam cloud saves should fall back to an inline compact payload when IndexedDB cache writes are unavailable'
+);
+assert.ok(
     /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
     'login cohort entry should fast-enter and hydrate cloud cohort data in the background unless explicitly requested'
 );

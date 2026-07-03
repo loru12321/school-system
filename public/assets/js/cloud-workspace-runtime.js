@@ -1767,7 +1767,7 @@
                     : hashText(packPayload(payload));
             }
 
-            await writeCachedWorkspaceSnapshot(key, payload);
+            const cacheWritten = await writeCachedWorkspaceSnapshot(key, payload);
             writeWorkspaceSyncMeta(key, {
                 contentHash: contentHash || currentMeta.contentHash || '',
                 pendingCloudSync: background ? true : Boolean(currentMeta.pendingCloudSync),
@@ -1803,14 +1803,18 @@
                 return true;
             }
 
-            queueWorkspaceSyncJob(key, {
+            const queueJob = {
                 key,
                 mode,
                 sourceLabel,
                 contentHash: contentHash || currentMeta.contentHash || '',
                 queuedAt: nowIso,
                 currentExamId: payload?.CURRENT_EXAM_ID || ''
-            });
+            };
+            if (!cacheWritten && mode === 'exam' && payload && typeof payload === 'object') {
+                queueJob.inlinePayload = payload;
+            }
+            queueWorkspaceSyncJob(key, queueJob);
 
             if (background) {
                 if (typeof updateStatusPanel === 'function') updateStatusPanel();
@@ -1890,7 +1894,10 @@
                 const cacheKey = String(job.key || '').trim();
                 if (!cacheKey) continue;
 
-                const payload = await readCachedWorkspaceSnapshot(cacheKey);
+                const payload = await readCachedWorkspaceSnapshot(cacheKey)
+                    || ((job.mode || 'workspace') === 'exam' && job.inlinePayload && typeof job.inlinePayload === 'object'
+                        ? job.inlinePayload
+                        : null);
                 if (!payload) {
                     delete queue[cacheKey];
                     writeWorkspaceSyncQueue(queue);
