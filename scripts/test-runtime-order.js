@@ -1108,6 +1108,11 @@ assert.ok(
     'school alias normalization should treat 东平银山实验学校 as 银山实验'
 );
 assert.ok(
+    /function ensureWorkspaceDefaultSchool\(\)[\s\S]*const defaultSchool = findAvailableSchool\(DEFAULT_MY_SCHOOL_NAME\);[\s\S]*candidateSet\.add\(defaultSchool\)/.test(appSource)
+        && appSource.includes("boundSchool && boundSchool !== '教育局'"),
+    'workspace default school should prefer 银山实验 aliases and ignore 教育局 as a concrete school'
+);
+assert.ok(
     appSource.includes('classStr = normalizeImportedClassForGrade(r[idxMap.class], importGrade);'),
     'parseRows should normalize bare imported class numbers with the current exam grade'
 );

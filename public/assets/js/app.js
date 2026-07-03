@@ -16364,7 +16364,20 @@ function ensureWorkspaceDefaultSchool() {
     const inferredSchool = typeof inferDefaultSchoolFromContext === 'function'
         ? String(inferDefaultSchoolFromContext() || '').trim()
         : '';
-    if (boundSchool) candidateSet.add(boundSchool);
+    const schoolNames = new Set(Object.keys(SCHOOLS || {}).map((school) => String(school || '').trim()).filter(Boolean));
+    const findAvailableSchool = (preferred) => {
+        const value = String(preferred || '').trim();
+        if (!value) return '';
+        if (schoolNames.has(value)) return value;
+        const matcher = typeof sameAppSchoolName === 'function'
+            ? sameAppSchoolName
+            : ((left, right) => String(left || '').trim() === String(right || '').trim());
+        return Array.from(schoolNames).find((school) => matcher(school, value)) || '';
+    };
+
+    const defaultSchool = findAvailableSchool(DEFAULT_MY_SCHOOL_NAME);
+    if (defaultSchool) candidateSet.add(defaultSchool);
+    if (boundSchool && boundSchool !== '教育局') candidateSet.add(boundSchool);
     if (inferredSchool) candidateSet.add(inferredSchool);
     Object.keys(SCHOOLS || {})
         .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
@@ -16373,8 +16386,7 @@ function ensureWorkspaceDefaultSchool() {
             if (normalized) candidateSet.add(normalized);
         });
 
-    const schoolNames = new Set(Object.keys(SCHOOLS || {}).map((school) => String(school || '').trim()).filter(Boolean));
-    const fallbackSchool = Array.from(candidateSet).find((school) => schoolNames.has(school)) || '';
+    const fallbackSchool = Array.from(candidateSet).map(findAvailableSchool).find(Boolean) || '';
     if (!fallbackSchool) return '';
 
     writeCurrentSchool(fallbackSchool);
