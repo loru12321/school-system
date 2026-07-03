@@ -201,16 +201,32 @@
 
     const CohortGrowthRuntime = {
         cache: { volatility: [], growth: [] },
+        cacheSignature: '',
         updateScopeControls,
         updateClassSelectForSchool,
+        getRenderSignature(scope = getSelectedScope()) {
+            return [
+                getCohortExamsSignature(),
+                normalizeText(scope.school || 'ALL'),
+                normalizeClassName(scope.className || 'ALL')
+            ].join('::');
+        },
 
         render() {
             updateScopeControls();
             if (!getCohortExams().length) {
                 return root.alert ? root.alert('当前届别暂无历史考试数据') : undefined;
             }
-            const result = this.compute();
+            const scope = getSelectedScope();
+            const signature = this.getRenderSignature(scope);
+            let result = this.cache;
+            if (this.cacheSignature === signature) {
+                result = this.cache;
+            } else {
+                result = this.compute(scope);
+            }
             this.cache = result;
+            this.cacheSignature = signature;
             this.renderVolatility(result.volatility);
             this.renderGrowth(result.growth);
             if (typeof root.refreshResponsiveMobileTables === 'function') {
@@ -219,9 +235,8 @@
             return result;
         },
 
-        compute() {
+        compute(scope = getSelectedScope()) {
             const studentSeries = {};
-            const scope = getSelectedScope();
 
             getCohortExams().forEach((exam) => {
                 const validRows = Array.isArray(exam?.data)

@@ -1141,6 +1141,7 @@ function scheduleHotspotRuntimeWarmup() {
 if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) return;
 if (window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ || getRuntimeLoadProfile() === 'lazy' || isRuntimeMobileViewport()) return;
 window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ = true;
+const HOTSPOT_RUNTIME_HYDRATE_DELAY_MS = 2200;
 const prioritySteps = [
 { label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
 { label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
@@ -1169,7 +1170,7 @@ window.setTimeout(preload, 240);
 window.setTimeout(() => {
 try { if (localStorage.getItem('SCHOOL_RUNTIME_HOTSPOT_HYDRATE') !== 'true') return; } catch (_) { return; }
 scheduleWarmup('hotspot-runtime:priority', runPrioritySteps);
-}, 12000);
+}, HOTSPOT_RUNTIME_HYDRATE_DELAY_MS);
 });
 }
 

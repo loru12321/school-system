@@ -15,6 +15,7 @@ const appFile = 'public/assets/js/app.js';
 const overviewFile = 'public/assets/js/student-overview-runtime.js';
 const freshmanFile = 'public/assets/js/freshman-exam-runtime.js';
 const progressFile = 'public/assets/js/progress-analysis-runtime.js';
+const cohortGrowthFile = 'public/assets/js/cohort-growth-runtime.js';
 const compareSharedFile = 'public/assets/js/compare-shared-runtime.js';
 const bootFile = 'public/assets/js/boot-runtime.js';
 const schoolNormalizationFile = 'public/assets/js/school-normalization-runtime.js';
@@ -24,6 +25,7 @@ const app = read(appFile);
 const overview = read(overviewFile);
 const freshman = read(freshmanFile);
 const progress = read(progressFile);
+const cohortGrowth = read(cohortGrowthFile);
 const compareShared = read(compareSharedFile);
 const boot = read(bootFile);
 const schoolNormalization = read(schoolNormalizationFile);
@@ -81,6 +83,13 @@ const pkg = JSON.parse(read(packageFile));
     'ProgressCompareSelectPerfCache.examOptionsHtml',
     'ProgressCompareSelectPerfCache.schoolOptionsHtml'
 ].forEach((token) => assertContains(progress, token, progressFile));
+
+[
+    'cacheSignature',
+    'getRenderSignature',
+    'if (this.cacheSignature === signature)',
+    'this.cacheSignature = signature'
+].forEach((token) => assertContains(cohortGrowth, token, cohortGrowthFile));
 
 [
     'getSelectorSafeExamFingerprint',

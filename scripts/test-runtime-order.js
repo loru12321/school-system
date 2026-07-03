@@ -708,6 +708,7 @@ assert.ok(bootRuntime.includes('window.setTimeout(preload, 240);'), 'desktop hot
 assert.ok(bootRuntime.includes('const prioritySteps = ['), 'desktop hotspot warmup should declare an interactive priority batch');
 assert.ok(bootRuntime.includes('SCHOOL_RUNTIME_HOTSPOT_HYDRATE'), 'desktop hotspot runtime hydration should require an explicit local switch');
 assert.ok(bootRuntime.includes('runStepsSequentially(prioritySteps'), 'interactive runtime warmup should avoid concurrent hot bundle parsing during user interaction');
+assert.ok(bootRuntime.includes("const HOTSPOT_RUNTIME_HYDRATE_DELAY_MS = 2200"), 'desktop hotspot runtime hydration should start soon after app-ready instead of waiting through early navigation');
 assert.ok(bootRuntime.includes("scheduleWarmup('hotspot-runtime:priority', runPrioritySteps)"), 'interactive runtime warmup should retain idle scheduling for boot responsiveness');
 assert.ok(bootRuntime.indexOf("{ label: 'town-submodule-compare'") < bootRuntime.indexOf('const deferredSteps = ['), 'summary interaction runtimes should remain in the priority batch');
 assert.ok(!bootRuntime.includes("{ label: 'teacher-analysis', loader: () => window.ensureTeacherAnalysisMainRuntimeLoaded?.() }"), 'teacher analysis runtime should not execute from generic hotspot warmup after login');
@@ -757,6 +758,7 @@ assert.ok(moduleEntryRuntime.includes("`county-analysis-render:${id}`"), 'county
 assert.ok(moduleEntryRuntime.includes("'report-generator-selects'"), 'report generator should defer selector refresh off the switch frame');
 assert.ok(moduleEntryRuntime.includes('function prewarmReportGeneratorRuntimes'), 'report generator should prewarm query runtimes after entry');
 assert.ok(moduleEntryRuntime.includes("'report-generator-runtime-prewarm'"), 'report generator runtime prewarm should be scheduled off the switch frame');
+assert.ok(moduleEntryRuntime.includes("{ delay: 40, idle: true, timeout: 1800 }"), 'report generator render runtime should prewarm immediately after entry paint');
 assert.ok(moduleEntryRuntime.includes('ensureReportRenderRuntimeLoaded'), 'report generator prewarm should include report rendering runtime');
 const reportPrewarmStart = moduleEntryRuntime.indexOf('function prewarmReportGeneratorRuntimes');
 const reportPrewarmEnd = moduleEntryRuntime.indexOf('function runModuleSpecificInit', reportPrewarmStart);
