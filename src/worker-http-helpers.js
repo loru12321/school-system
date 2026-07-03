@@ -96,3 +96,133 @@ export function buildCorsHeaders(request, env = {}) {
     'Vary': 'Origin'
   };
 }
+
+// ---------------------------------------------------------------------------
+// JSON response helper
+// ---------------------------------------------------------------------------
+
+/** Default timeout (ms) used when proxying upstream requests. */
+export const PROXY_TIMEOUT_MS = 15000;
+
+/**
+ * Build a JSON Response with standard security headers and CORS headers.
+ * @param {number} status HTTP status code
+ * @param {*} body Value serialized with JSON.stringify
+ * @param {Request} request Incoming request (for CORS origin resolution)
+ * @param {object} [env] Worker env bindings
+ * @param {string} [cacheControl] Cache-Control header value
+ */
+export function jsonResponse(status, body, request, env = {}, cacheControl = 'no-store') {
+  const headers = buildCorsHeaders(request, env);
+  headers['Content-Type'] = 'application/json; charset=utf-8';
+  headers['Cache-Control'] = cacheControl;
+  headers['X-Content-Type-Options'] = 'nosniff';
+  headers['X-School-System-Gateway'] = 'cloudflare-worker';
+  return new Response(JSON.stringify(body), { status, headers });
+}
+
+/**
+ * Copy upstream response headers, strip hop-by-hop headers, then inject
+ * CORS and security headers for forwarding back to the client.
+ */
+export function buildForwardHeaders(upstreamHeaders, request, env = {}) {
+  const headers = new Headers(upstreamHeaders || {});
+  HOP_BY_HOP_HEADERS.forEach((name) => headers.delete(name));
+  const corsHeaders = buildCorsHeaders(request, env);
+  Object.entries(corsHeaders).forEach(([key, value]) => headers.set(key, value));
+  headers.set('Cache-Control', 'no-store');
+  headers.set('X-Content-Type-Options', 'nosniff');
+  return headers;
+}
+
+// ---------------------------------------------------------------------------
+// Proxy request helpers
+// ---------------------------------------------------------------------------
+
+/** Strip hop-by-hop headers from a Headers object and return the new copy. */
+export function filterProxyHeaders(headers) {
+  const nextHeaders = new Headers(headers);
+  HOP_BY_HOP_HEADERS.forEach((name) => nextHeaders.delete(name));
+  return nextHeaders;
+}
+
+/**
+ * Read the request body into an ArrayBuffer.
+ * Returns null for GET/HEAD, or an ArrayBuffer (possibly zero-length) otherwise.
+ */
+export async function readRequestBody(request) {
+  const method = String(request.method || 'GET').toUpperCase();
+  if (method === 'GET' || method === 'HEAD') return null;
+  const buffer = await request.arrayBuffer();
+  return buffer.byteLength ? buffer : new ArrayBuffer(0);
+}
+
+/** Parse the request body as JSON, throwing 'INVALID_JSON_BODY' on failure. */
+export async function readJsonBody(request) {
+  try {
+    return await request.json();
+  } catch (error) {
+    throw new Error('INVALID_JSON_BODY');
+  }
+}
+
+/**
+ * Build a RequestInit suitable for proxying, stripping hop-by-hop headers and
+ * merging in any extra headers provided.
+ */
+export function buildProxyInit(request, bodyBuffer, extraHeaders = {}) {
+  const method = String(request.method || 'GET').toUpperCase();
+  const headers = filterProxyHeaders(request.headers);
+  Object.entries(extraHeaders).forEach(([key, value]) => {
+    if (value == null || value === '') {
+      headers.delete(key);
+      return;
+    }
+    headers.set(key, value);
+  });
+  const init = { method, headers, redirect: 'follow' };
+  if (bodyBuffer !== null) {
+    init.body = bodyBuffer.slice(0);
+  }
+  return init;
+}
+
+/**
+ * Proxy a request to targetUrl, forwarding X-Forwarded-* headers and applying
+ * PROXY_TIMEOUT_MS.
+ */
+export async function proxyRequest(url, request, targetUrl, bodyBuffer, extraHeaders = {}) {
+  const proxyInit = buildProxyInit(request, bodyBuffer, extraHeaders);
+  proxyInit.headers.set('x-forwarded-host', url.host);
+  proxyInit.headers.set('x-forwarded-proto', url.protocol.replace(':', ''));
+  return fetchWithTimeout(targetUrl, proxyInit, PROXY_TIMEOUT_MS);
+}
+
+// ---------------------------------------------------------------------------
+// Worker error response helpers
+// ---------------------------------------------------------------------------
+
+export function shouldExposeErrorDetails(env = {}) {
+  return normalizeText(env.WORKER_DEBUG_ERRORS).toLowerCase() === 'true';
+}
+
+export function buildWorkerErrorBody(error, env = {}) {
+  const body = {
+    ok: false,
+    error: 'WORKER_CRASHED',
+    message: error instanceof Error ? error.message : String(error)
+  };
+  if (shouldExposeErrorDetails(env) && error instanceof Error && error.stack) {
+    body.stack = error.stack;
+  }
+  return body;
+}
+
+export function buildWorkerErrorHeaders() {
+  return {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'X-School-System-Gateway': 'cloudflare-worker'
+  };
+}

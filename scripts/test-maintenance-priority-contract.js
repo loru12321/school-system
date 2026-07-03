@@ -53,6 +53,9 @@ const srcIndex = read('src/index.html');
 const gateway = read('src/worker-gateway-d1.js');
 const worker = read('src/worker-dummy.js');
 const workerHelpers = read('src/worker-http-helpers.js');
+const workerSystemData = read('src/worker-system-data.js');
+const workerAssetProtection = read('src/worker-asset-protection.js');
+const workerContractSource = [worker, workerHelpers, workerSystemData, workerAssetProtection].join('\n');
 const freshmanExamRuntime = read('public/assets/js/freshman-exam-runtime.js');
 const legacyReadme = read('scripts/legacy/README.md');
 
@@ -108,9 +111,9 @@ const guardedItems = [
   () => assert.ok(!scripts['test:release-manifest'], 'release manifest test script should stay removed'),
   () => assert.ok(!scripts['test:windows-installer-contract'], 'Windows installer contract script should stay removed'),
   () => assert.ok(!scripts['verify:windows-client-release'], 'Windows verifier script should stay removed'),
-  () => assertIncludes(worker, "return 'no-store, max-age=0, must-revalidate, no-transform';", 'Worker HTML shell should bypass browser and CDN storage'),
-  () => assert.ok(!worker.includes("pathname.startsWith('/downloads/')"), 'Worker should not route hosted installers'),
-  () => assert.ok(!worker.includes('worker-release-downloads'), 'Worker should not import installer download proxy'),
+  () => assertIncludes(workerContractSource, "return 'no-store, max-age=0, must-revalidate, no-transform';", 'Worker HTML shell should bypass browser and CDN storage'),
+  () => assert.ok(!workerContractSource.includes("pathname.startsWith('/downloads/')"), 'Worker should not route hosted installers'),
+  () => assert.ok(!workerContractSource.includes('worker-release-downloads'), 'Worker should not import installer download proxy'),
   () => assert.strictEqual(wrangler.vars?.CLOUD_SYSTEM_DATA_MODE, 'primary', 'system_data should stay on D1 primary storage'),
   () => assert.ok((wrangler.d1_databases || []).some((db) => db.binding === 'CLOUD_SYSTEM_DATA_DB'), 'system_data D1 binding should stay configured'),
   () => assertIncludes(headers, 'max-age=31536000, immutable', 'versioned runtime JS should use immutable caching'),

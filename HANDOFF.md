@@ -1,3 +1,109 @@
+# Worker 文件拆分重构（2026-07-04）
+
+## Codex 复核更正（2026-07-04）
+
+- 结论：拆分方向合理，`worker-dummy.js` 只保留入口路由，`system_data` 和静态资源保护拆到独立模块，符合当前系统继续模块化的维护方向。
+- 更正：旧合约测试仍在 `worker-dummy.js` 单文件内查找 `system_data`、HTML 缓存、安全错误响应等实现细节，已改为跨 `worker-dummy.js`、`worker-system-data.js`、`worker-asset-protection.js`、`worker-http-helpers.js` 验证同一组行为保护。
+- 构建核验：`npm run build` 后 `dist` 大面积变更恢复为构建生成状态，未保留无来源的产物噪声。
+- 本地验证：`check:syntax`、`test:cloudflare-worker-contract`、`test:worker-entrypoint-contract`、`test:security-hygiene`、`test:maintenance-priority-contract`、`check:cloudflare`、`smoke:modules:local` 均通过；本地烟测仍记录 `dm:params` 5191ms 略超 5000ms 预算，作为后续性能项观察。
+
+## 一、背景
+
+`src/worker-dummy.js` 原有 **1126 行**，将路由、system_data 全栈逻辑、静态资源保护、HTTP 工具全部混在单一文件中，维护困难。本轮按逻辑边界拆分为 4 个职责清晰的文件，不改动任何运行逻辑。
+
+---
+
+## 二、完成内容
+
+### 新建：`src/worker-system-data.js`（~500 行）
+
+提取所有 `system_data` 相关逻辑：
+
+- **env 访问器**：`getSystemDataDb`、`getSystemDataMode`、`hasSystemDataStorage`、`getSupabaseRestOrigin`、`hasSupabaseRestOrigin` 等
+- **key 元数据推断**：`inferSystemDataMeta`、`extractSystemDataCohortId`
+- **SQL 过滤器解析**：`parseSystemDataKeyFilter`、`parseSystemDataOrder`、`parseSystemDataLimit`、`parseSystemDataOffset`、`parseSystemDataSelect`
+- **SQL clause 构建**：`appendSystemDataFilterClause`、`buildSystemDataKeyFilterClause`、`buildSystemDataOrClause`
+- **D1 层**：`querySystemDataRows`、`upsertSystemDataRows`（含 R2 对象写入）
+- **边缘缓存**：`handleCachedSystemDataRead`（Cloudflare Cache API，`X-School-System-Cache` 头）
+- **Supabase proxy 层**：`proxySystemDataReadToSupabase`、`proxySystemDataWriteToSupabase`、`proxySupabaseRestRequest`
+- **统一处理器（导出）**：`handleSystemDataProxy`、`handleCloudRestProxy`
+- **健康信息聚合（导出）**：`getSystemDataHealthInfo(env)`，供 `/api/health` 调用，返回结构与原版完全一致
+
+### 新建：`src/worker-asset-protection.js`（~90 行）
+
+提取 HTML / 静态资源保护逻辑：
+
+- `protectHtmlResponse`：HTML shell 强制 `no-store`，同时写 `CDN-Cache-Control` / `Cloudflare-CDN-Cache-Control`
+- `protectAssetResponse`（导出）：带版本哈希资产设 `immutable`，`/assets/audio/` 路径加 CORS 头
+
+### 扩展：`src/worker-http-helpers.js`（+~110 行）
+
+新增通用 HTTP 工具函数（原有 CORS / normalizeText / fetchWithTimeout 不变）：
+
+| 新增导出 | 说明 |
+|---|---|
+| `PROXY_TIMEOUT_MS` | 15000，原常量提升为共享导出 |
+| `jsonResponse` | 含 CORS + 安全头的 JSON 响应构造 |
+| `buildForwardHeaders` | 去 hop-by-hop + 注入 CORS，用于上游响应转发 |
+| `filterProxyHeaders` | 仅去 hop-by-hop |
+| `readRequestBody` | GET/HEAD 返回 null，其余返回 ArrayBuffer |
+| `readJsonBody` | 解析 JSON body，失败抛 `INVALID_JSON_BODY` |
+| `buildProxyInit` | 构造代理用 RequestInit |
+| `proxyRequest` | 带 x-forwarded-* 的完整代理调用 |
+| `buildWorkerErrorBody` | 结构化 500 错误 body（可选暴露 stack） |
+| `buildWorkerErrorHeaders` | 500 响应头 |
+| `shouldExposeErrorDetails` | 读 `WORKER_DEBUG_ERRORS` env |
+
+### 精简：`src/worker-dummy.js`（1126 行 → **98 行**）
+
+保留内容：
+
+- 入口常量（`ENTRANCE_AUDIO_MANIFEST_API_PATH` 等）
+- `handleGatewayProxy`（包装 `handleGatewayRequest`）
+- `handleEntranceAudioManifest`
+- `export default { fetch() }` 主路由
+
+---
+
+## 三、验证结果
+
+| 检查项 | 结果 |
+|---|---|
+| `node --check` 对全部 4 个 worker 文件 | ✅ 全部通过 |
+| `npm run check:syntax`（260 个目标） | ✅ `{ "ok": true }` |
+| `npm run build:core`（vite build） | ✅ 407ms，无错误，产物 402 KB |
+
+---
+
+## 四、依赖关系（单向无环）
+
+```
+worker-dummy.js
+  ├── worker-http-helpers.js
+  ├── worker-system-data.js
+  │     ├── worker-http-helpers.js
+  │     └── worker-gateway-d1.js
+  ├── worker-asset-protection.js
+  │     └── worker-http-helpers.js
+  └── worker-gateway-d1.js
+        └── worker-http-helpers.js
+```
+
+Wrangler 打包行为不变，线上运行逻辑与重构前完全一致。
+
+---
+
+## 五、注意事项
+
+- **纯结构重组**，无逻辑修改，无接口变更，无新依赖
+- `SYSTEM_DATA_PATH`（`/sb/rest/v1/system_data`）和 `SYSTEM_DATA_API_PATH`（`/api/system-data`）已从 `worker-dummy.js` 移至 `worker-system-data.js`（具名 export），`worker-dummy.js` 通过 import 使用
+- `/api/health` 响应通过 `{ ok: true, ...getSystemDataHealthInfo(env) }` 构造，字段集合与原版一致
+- 可直接 `npm run sync` 部署，无需额外操作
+
+---
+
+---
+
 # 优化工作交接总结（2026-07-03 第三轮）
 
 ## 一、基本信息
