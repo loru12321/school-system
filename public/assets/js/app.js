@@ -8783,7 +8783,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
             updateSchoolSelect(); updateMySchoolSelect(); updateStudentSchoolSelect(); updateMarginalSchoolSelect();
             updateClassSelect(); updateSegmentSelects(); updatePotentialSchoolSelect();
             if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
-            updateSeatAdjSelects();
+            if (typeof updateSeatAdjSelects === 'function') updateSeatAdjSelects();
             updateProgressSchoolSelect();
             updateMutualAidSelects(); updateMpSchoolSelect();
 
@@ -16661,7 +16661,7 @@ const CohortDB = {
             updateSegmentSelects();
             updatePotentialSchoolSelect();
             if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
-            updateSeatAdjSelects();
+            if (typeof updateSeatAdjSelects === 'function') updateSeatAdjSelects();
             updateProgressSchoolSelect();
             updateMutualAidSelects();
             updateMpSchoolSelect();
