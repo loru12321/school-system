@@ -51,6 +51,21 @@ const authState = read('public/assets/js/auth-state-runtime.js');
 const accountAdmin = read('public/assets/js/account-admin-runtime.js');
 const srcIndex = read('src/index.html');
 const gateway = read('src/worker-gateway-d1.js');
+const gatewayAuth = read('src/worker-auth.js');
+const gatewayAccounts = read('src/worker-accounts.js');
+const gatewayVersions = read('src/worker-versions.js');
+const gatewayDataQuality = read('src/worker-data-quality.js');
+const gatewayAssessment = read('src/worker-assessment.js');
+const gatewayCrypto = read('src/worker-crypto.js');
+const gatewayContractSource = [
+  gateway,
+  gatewayAuth,
+  gatewayAccounts,
+  gatewayVersions,
+  gatewayDataQuality,
+  gatewayAssessment,
+  gatewayCrypto
+].join('\n');
 const worker = read('src/worker-dummy.js');
 const workerHelpers = read('src/worker-http-helpers.js');
 const workerSystemData = read('src/worker-system-data.js');
@@ -134,8 +149,8 @@ const guardedItems = [
   () => assertIncludes(cohortExamHydrationRuntime, 'window.CohortExamHydrationScheduler', 'hydration scheduler should publish its runtime surface'),
   () => assertIncludes(edgeGatewayRuntime, 'isHostedGatewayUrl', 'EdgeGateway runtime should support hosted gateway URLs'),
   () => assertIncludes(dialogRuntime, 'UI.prompt = async function', 'dialog runtime should expose shared prompt modal API'),
-  () => assert.ok(!gateway.includes('proxyGatewayActionToLegacyGateway'), 'auth cutover should keep D1 login/session verification Cloudflare-only'),
-  () => assertIncludes(gateway, 'cloudflare-only-ready', 'account migration status should expose Cloudflare-only readiness'),
+  () => assert.ok(!gatewayContractSource.includes('proxyGatewayActionToLegacyGateway'), 'auth cutover should keep D1 login/session verification Cloudflare-only'),
+  () => assertIncludes(gatewayContractSource, 'cloudflare-only-ready', 'account migration status should expose Cloudflare-only readiness'),
   () => assertIncludes(worker, 'CLOUDFLARE_GATEWAY_ACTION_NOT_SUPPORTED', 'unsupported gateway actions should not proxy to legacy Edge Functions'),
   () => assertIncludes(freshmanExamRuntime, 'window.UI.prompt', 'freshman exam access password should use shared prompt API'),
   () => ['123456', 'admin123', 'yssy2016'].forEach((token) => {
@@ -148,7 +163,7 @@ const guardedItems = [
       ['public/assets/js/runtime-loader-runtime.js', runtimeLoaderRuntime]
     ].forEach(([file, text]) => assert.ok(!text.includes(token), `${file} should not expose ${token}`));
   }),
-  () => assertIncludes(gateway, "return source !== 'cloudflare_change';", 'gateway should force password change until user changes password'),
+  () => assertIncludes(gatewayContractSource, "return source !== 'cloudflare_change';", 'gateway should force password change until user changes password'),
   () => assertIncludes(worker, "from './worker-http-helpers.js'", 'worker should use shared HTTP helpers'),
   () => assertIncludes(gateway, "from './worker-http-helpers.js'", 'D1 gateway should use shared HTTP helpers'),
   () => assertIncludes(workerHelpers, 'DEFAULT_ALLOWED_CORS_ORIGINS', 'shared worker helpers should own CORS origins'),

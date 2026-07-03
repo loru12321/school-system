@@ -226,3 +226,18 @@ export function buildWorkerErrorHeaders() {
     'X-School-System-Gateway': 'cloudflare-worker'
   };
 }
+
+// ---------------------------------------------------------------------------
+// JSON parse utility
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a JSON string without throwing.  Returns fallbackValue on any error.
+ */
+export function safeJsonParse(value, fallbackValue = null) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallbackValue;
+  }
+}

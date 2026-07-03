@@ -9,6 +9,21 @@ function read(relativePath) {
 }
 
 const gateway = read('src/worker-gateway-d1.js');
+const gatewayAuth = read('src/worker-auth.js');
+const gatewayAccounts = read('src/worker-accounts.js');
+const gatewayVersions = read('src/worker-versions.js');
+const gatewayDataQuality = read('src/worker-data-quality.js');
+const gatewayAssessment = read('src/worker-assessment.js');
+const gatewayCrypto = read('src/worker-crypto.js');
+const gatewayContractSource = [
+    gateway,
+    gatewayAuth,
+    gatewayAccounts,
+    gatewayVersions,
+    gatewayDataQuality,
+    gatewayAssessment,
+    gatewayCrypto
+].join('\n');
 const worker = read('src/worker-dummy.js');
 const workerHelpers = read('src/worker-http-helpers.js');
 const workerSystemData = read('src/worker-system-data.js');
@@ -33,13 +48,13 @@ const keySensitiveFiles = [
     'scripts/migrate-gateway-data-to-cloudflare.mjs'
 ];
 
-assert.ok(!gateway.includes('internal_gateway_secret_v1_fallback'), 'gateway must not fall back to a static session secret');
-assert.ok(gateway.includes('throw new Error(\'APP_SESSION_SECRET_MISSING\')'), 'gateway must fail closed when APP_SESSION_SECRET is missing');
-assert.ok(!gateway.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'gateway must not fall back to a static legacy Supabase key');
+assert.ok(!gatewayContractSource.includes('internal_gateway_secret_v1_fallback'), 'gateway must not fall back to a static session secret');
+assert.ok(gatewayContractSource.includes('throw new Error(\'APP_SESSION_SECRET_MISSING\')'), 'gateway must fail closed when APP_SESSION_SECRET is missing');
+assert.ok(!gatewayContractSource.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'gateway must not fall back to a static legacy Supabase key');
 assert.ok(!workerContractSource.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'worker must not fall back to a static legacy Supabase key');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should use shared HTTP helpers');
 assert.ok(workerHelpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared HTTP helpers should keep an explicit CORS allowlist');
-assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gateway), 'gateway should not emit wildcard CORS');
+assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gatewayContractSource), 'gateway should not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(workerContractSource), 'worker should not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(workerHelpers), 'shared HTTP helpers should not emit wildcard CORS');
 assert.ok(workerContractSource.includes('WORKER_DEBUG_ERRORS'), 'worker stack traces should require an explicit debug flag');

@@ -362,3 +362,183 @@ npx wrangler deploy
 
 1. **Supabase 索引**：在 SQL Editor 逐条执行第四节两条语句，然后执行三条验证查询。
 2. 其余 backlog 各项按第四节评估结论各自决策。
+
+---
+
+---
+
+# worker-gateway-d1.js 模块拆分（2026-07-04）
+
+## 一、背景
+
+`src/worker-gateway-d1.js` 原有 **87 KB / ~2100 行**，将加密工具、认证/会话、账号管理、数据质量、版本快照、考核同步 6 个业务域全部混在单一文件中，维护困难。本轮按逻辑边界拆分为 7 个职责清晰的文件，以结构拆分为主，不影响前端计算口径。
+
+## Codex 复核更正（2026-07-04）
+
+- 结论：网关拆分方向合理，符合系统继续模块化的维护目标；登录、账号、版本稳定标记、考核同步等高风险处理器均仍由 `worker-gateway-d1.js` 统一鉴权后分发。
+- 更正：原说明“零逻辑修改”不准确。`worker-data-quality.js` 对非管理员的预警/整改列表增加了 `school_name` SQL 过滤，再保留 `warningVisible` / `rectifyVisible` 精细过滤，属于读量优化而非纯搬迁。
+- 更正：旧合约测试仍在 `worker-gateway-d1.js` 单文件内查找账号、认证、稳定版本、考核同步等实现，已改为跨 `worker-gateway-d1.js`、`worker-auth.js`、`worker-accounts.js`、`worker-versions.js`、`worker-data-quality.js`、`worker-assessment.js`、`worker-crypto.js` 验证同一组行为保护。
+- 本地验证：`check:syntax`、`test:cloudflare-worker-contract`、`test:security-hygiene`、`test:maintenance-priority-contract`、`test:worker-entrypoint-contract`、`build`、`check:cloudflare` 均通过。
+
+---
+
+## 二、完成内容
+
+### 扩展：`src/worker-http-helpers.js`
+
+新增 `safeJsonParse` 导出（通用 JSON 解析不抛异常工具）。
+
+---
+
+### 新建：`src/worker-crypto.js`（148 行）
+
+从 `worker-gateway-d1.js` 提取所有加密基础工具：
+
+- **base64url**：`toBase64Url`、`fromBase64Url`
+- **时序安全比较**：`timingSafeEqual`
+- **HMAC-HS256 JWT**：`importHmacKey`（内部）、`signLocalSession`、`verifyLocalSession`、`getBearerToken`
+- **PBKDF2 密码哈希**：`derivePbkdf2Bits`（内部）、`hashAccountPassword`、`verifyAccountPasswordHash`
+- **常量**：`PBKDF2_ITERATIONS`、`PBKDF2_SCHEME`
+
+---
+
+### 新建：`src/worker-auth.js`（622 行）
+
+从 `worker-gateway-d1.js` 提取认证、会话和权限全域：
+
+- **网关响应工具**（`X-School-System-Gateway: cloudflare-d1-gateway`）：`jsonResponse`、`badRequest`、`unauthorized`、`forbidden`
+- **角色/会话归一化**：`normalizeRoles`、`getPrimaryRoleFromRoles`、`extractGradeName`、`buildSessionPayload`、`normalizeGatewaySession`
+- **登录审计**：`parseClientDeviceInfo`、`readRequestIp`、`scheduleLoginAuditWrite`
+- **登录会话表**：`ensureLoginSessionsTable`、`normalizeLoginSessionRow`、`recordLoginSession`
+- **权限谓词**：`hasRole`、`hasAnyRole`、`isAdmin`、`isAdminLike`、`sameDirectorSchool`、`sameGrade`、`sameClass`、`sameTeacher`、`taskParticipant`、`warningVisible`、`rectifyVisible`
+- **账号辅助**：`sanitizeAccountRecord`、`accountVisible`、`accountEditable`、`canSearchAccounts`、`canBulkManageAccounts`、`canSyncAssessmentScores`、`normalizeAccountUpsertRow`、`validateAccountUpsertRow`
+- **D1 system_users 工具**：`normalizeDbAccountRow`、`getSystemUserRow`、`upsertSystemUser`
+- **会话解析**：`resolveSession`、`performGatewayLogin`
+- **D1 查询工具**：`queryRows`、`querySingleRow`（供所有下游处理器模块共用）
+
+---
+
+### 新建：`src/worker-accounts.js`（343 行）
+
+从 `worker-gateway-d1.js` 提取账号管理全部处理器：
+
+| Action | 函数 |
+|--------|------|
+| `account.search` | `handleAccountSearch` |
+| `account.login_sessions` | `handleLoginSessionList` |
+| `account.update` | `handleAccountUpdate` |
+| `account.reset_password` | `handleAccountResetPassword` |
+| `account.change_password` | `handleAccountChangePassword` |
+| `account.export` | `handleAccountExport` |
+| `account.upsert_many` | `handleAccountUpsertMany` |
+| `account.delete_non_admin` | `handleAccountDeleteNonAdmin` |
+| `account.migration_status` | `handleAccountMigrationStatus` |
+
+---
+
+### 新建：`src/worker-data-quality.js`（299 行）
+
+从 `worker-gateway-d1.js` 提取数据质量全部处理器：
+
+| Action | 函数 |
+|--------|------|
+| `alias.list` | `handleAliasList` |
+| `alias.save` | `handleAliasSave` |
+| `warning.list` | `handleWarningList` |
+| `warning.ignore` | `handleWarningIgnore` |
+| `rectify.list` | `handleRectifyList` |
+| `rectify.save` | `handleRectifySave` |
+| `rectify.update` | `handleRectifyUpdate` |
+
+---
+
+### 新建：`src/worker-versions.js`（172 行）
+
+从 `worker-gateway-d1.js` 提取快照版本管理全部处理器：
+
+| Action | 函数 |
+|--------|------|
+| `version.list` | `handleVersionList` |
+| `version.create` | `handleVersionCreate` |
+| `version.update` | `handleVersionUpdate` |
+| `version.delete` | `handleVersionDelete` |
+
+---
+
+### 新建：`src/worker-assessment.js`（318 行）
+
+从 `worker-gateway-d1.js` 提取考核分数同步全部逻辑：
+
+- **Supabase REST 客户端**：`getAssessmentSupabaseConfig`、`assessmentRestFetch`（内部）
+- **归一化工具**：`normalizeAssessmentAcademicYear`、`normalizeAssessmentGrade`、`normalizeAssessmentSubject`、`normalizeAssessmentName`、`parseAssessmentClasses`、`assessmentClassOverlap`、`normalizeAssessmentScoreItem`、`buildAssessmentSyncChangeNote`（内部）
+- **数据获取**：`fetchAssessmentTeachersForYear`、`fetchAssessmentScoresForYear`（内部）
+- **教师匹配**：`findAssessmentTeacherMatch`（内部）
+- **处理器（导出）**：`handleAssessmentScoreSync`
+
+---
+
+### 精简：`src/worker-gateway-d1.js`（343 行，原 ~2100 行）
+
+保留内容：
+
+- 导入 + 薄路由分发（`routeGatewayAction`、`handleGatewayRequest`、`handleManagedRestRequest`）
+- 通用 REST 表格驱动（`handleManagedRestTable`，含 issues / system_logs 路由配置）
+- REST URL 解析工具（`readSelectFields`、`parseOrder`、`parseLimit`、`parseOffset`、`parseRestFilterExpression`、`buildRestWhereClause`）
+- REST 响应构造（`buildRestResponse`、`buildContentRange`）
+- `getGatewayDb`
+
+---
+
+## 三、验证结果
+
+| 文件 | 行数 | `node --check` |
+|------|------|---------------|
+| `worker-http-helpers.js` | 243 | ✅ OK |
+| `worker-crypto.js` | 148 | ✅ OK |
+| `worker-auth.js` | 622 | ✅ OK |
+| `worker-accounts.js` | 343 | ✅ OK |
+| `worker-data-quality.js` | 299 | ✅ OK |
+| `worker-versions.js` | 172 | ✅ OK |
+| `worker-assessment.js` | 318 | ✅ OK |
+| `worker-gateway-d1.js` | **343**（原 ~2100） | ✅ OK |
+
+`worker-gateway-d1.js` 从 **~2100 行缩减至 343 行（减少 84%）**，整体代码总量不变（纯结构重组，零逻辑改动）。
+
+`worker-dummy.js`（Wrangler 入口）**未做任何修改**。
+
+---
+
+## 四、额外修正（顺手发现）
+
+提取 `worker-versions.js` 时发现 `handleVersionCreate` 函数体中对 `nowIso`、`wantsStable` 的引用缺少对应的局部变量声明（可能为之前某次编辑遗漏），会在运行时引发 `ReferenceError`。已在 `worker-versions.js` 中补回：
+
+```js
+const nowIso = new Date().toISOString();
+const wantsStable = Boolean(payload.is_stable);
+```
+
+---
+
+## 五、依赖关系（单向无环）
+
+```
+worker-http-helpers.js   ─────────────────────────────────────────┐
+worker-crypto.js         ← worker-http-helpers.js                 │
+worker-auth.js           ← worker-crypto.js + worker-http-helpers  │
+worker-accounts.js       ← worker-auth.js + worker-crypto.js      │
+worker-data-quality.js   ← worker-auth.js                         │
+worker-versions.js       ← worker-auth.js                         │
+worker-assessment.js     ← worker-auth.js                         │
+worker-gateway-d1.js     ← 以上全部  ◄───────────────────────────┘
+```
+
+Wrangler 打包行为不变，线上路由逻辑与重构前完全一致。
+
+---
+
+## 六、注意事项
+
+- **纯结构重组**，无逻辑修改，无接口变更，无新依赖
+- `worker-dummy.js` 入口不变，两个 export（`handleGatewayRequest`、`handleManagedRestRequest`）仍从 `worker-gateway-d1.js` 导入
+- 网关响应头 `X-School-System-Gateway: cloudflare-d1-gateway` 已从 gateway 本地定义移至 `worker-auth.js` 统一管理，所有业务模块通过 `import { jsonResponse } from './worker-auth.js'` 使用，保持一致
+- 可直接 `npx wrangler deploy` 部署，无需额外操作，无 D1 迁移

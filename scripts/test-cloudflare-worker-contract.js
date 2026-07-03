@@ -29,6 +29,21 @@ const cloudWorkspaceRuntime = read('public/assets/js/cloud-workspace-runtime.js'
 const dataCloudRuntime = read('public/assets/js/data-cloud-runtime.js');
 const cloudRuntime = read('public/assets/js/cloud.js');
 const gateway = read('src/worker-gateway-d1.js');
+const gatewayAuth = read('src/worker-auth.js');
+const gatewayAccounts = read('src/worker-accounts.js');
+const gatewayVersions = read('src/worker-versions.js');
+const gatewayDataQuality = read('src/worker-data-quality.js');
+const gatewayAssessment = read('src/worker-assessment.js');
+const gatewayCrypto = read('src/worker-crypto.js');
+const gatewayContractSource = [
+  gateway,
+  gatewayAuth,
+  gatewayAccounts,
+  gatewayVersions,
+  gatewayDataQuality,
+  gatewayAssessment,
+  gatewayCrypto
+].join('\n');
 const supabaseGateway = read('supabase/functions/edu-gateway/index.ts');
 const supabaseManagementSchema = read('supabase/sql/001_management_tables.sql');
 const gatewayD1Schema = [
@@ -69,11 +84,11 @@ assert.ok(!read('public/_headers').includes('/downloads/*'), 'static headers mus
 
 assert.ok(worker.includes('Production Cloudflare Worker entrypoint'), 'worker entrypoint responsibility should be documented');
 assert.ok(gateway.includes('not the Wrangler main entrypoint'), 'D1 gateway module responsibility should be documented');
-assert.ok(gateway.includes('let nextSchool = normalizeText(payload.school ?? existing.school);'), 'account update must preserve/update bound school');
-assert.ok(gateway.includes("if (nextRole === 'director' || nextRole === 'admin') nextClassName = '';"), 'director/admin account updates should not require a grade/class range');
-assert.ok(gateway.includes("Director can only manage accounts in own school"), 'director account edits must remain school-scoped');
-assert.ok(gateway.includes("error: 'Invalid username or password'"), 'managed D1 account passwords should not fall back to stale legacy credentials');
-assert.ok(!gateway.includes('proxyGatewayActionToLegacyGateway'), 'D1 auth should not proxy login/session/change-password to the legacy gateway');
+assert.ok(gatewayContractSource.includes('let nextSchool = normalizeText(payload.school ?? existing.school);'), 'account update must preserve/update bound school');
+assert.ok(gatewayContractSource.includes("if (nextRole === 'director' || nextRole === 'admin') nextClassName = '';"), 'director/admin account updates should not require a grade/class range');
+assert.ok(gatewayContractSource.includes("Director can only manage accounts in own school"), 'director account edits must remain school-scoped');
+assert.ok(gatewayContractSource.includes("error: 'Invalid username or password'"), 'managed D1 account passwords should not fall back to stale legacy credentials');
+assert.ok(!gatewayContractSource.includes('proxyGatewayActionToLegacyGateway'), 'D1 auth should not proxy login/session/change-password to the legacy gateway');
 assert.ok(worker.includes("error: 'CLOUDFLARE_GATEWAY_ACTION_NOT_SUPPORTED'"), 'unsupported gateway actions should fail closed instead of proxying to legacy Edge Functions');
 assert.ok(worker.includes("from './worker-http-helpers.js'"), 'worker should import shared HTTP helpers');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should import shared HTTP helpers');
@@ -82,7 +97,7 @@ assert.ok(helpers.includes('HOP_BY_HOP_HEADERS'), 'shared helpers must keep hop-
 assert.ok(helpers.includes("'https://schoolsystem.com.cn'"), 'root production origin must be allowed');
 assert.ok(helpers.includes("'https://www.schoolsystem.com.cn'"), 'www production origin must be allowed');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(workerContractSource), 'worker must not emit wildcard CORS');
-assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gateway), 'gateway must not emit wildcard CORS');
+assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gatewayContractSource), 'gateway must not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(helpers), 'shared helpers must not emit wildcard CORS');
 assert.ok(workerContractSource.includes("headers['Cache-Control'] = cacheControl;"), 'JSON API responses should set Cache-Control centrally');
 assert.ok(workerContractSource.includes("headers['X-Content-Type-Options'] = 'nosniff';"), 'JSON API responses should set nosniff');
@@ -157,9 +172,9 @@ assert.ok(gatewayD1Schema.includes('idx_rectify_tasks_project_cohort_status_scho
 assert.ok(gatewayD1Schema.includes('CREATE TABLE IF NOT EXISTS login_sessions'), 'gateway schema should persist login device/session records');
 assert.ok(gatewayD1Schema.includes('idx_login_sessions_username_login'), 'login session records should index self history lookups');
 assert.ok(gatewayD1Schema.includes('uq_snapshot_versions_single_stable'), 'D1 schema should enforce one stable snapshot version per project/cohort');
-assert.ok(gateway.includes('const wantsStable = Boolean(payload.is_stable);')
-  && gateway.includes('await db.batch([clearStmt, insertStmt]);')
-  && gateway.includes('await db.batch([clearStmt, setStmt]);'),
+assert.ok(gatewayContractSource.includes('const wantsStable = Boolean(payload.is_stable);')
+  && gatewayContractSource.includes('await db.batch([clearStmt, insertStmt]);')
+  && gatewayContractSource.includes('await db.batch([clearStmt, setStmt]);'),
   'D1 version create/update should clear other stable rows and set the target in one batch');
 assert.ok(supabaseManagementSchema.includes('uq_snapshot_versions_single_stable')
   && supabaseManagementSchema.includes('version integer not null default 0')
@@ -169,19 +184,19 @@ assert.ok(supabaseGateway.includes('const wantsStable = Boolean(payload.is_stabl
   && supabaseGateway.includes('.update({ is_stable: true, updated_at: nowIso, version:')
   && supabaseGateway.includes('.eq("is_stable", true)'),
   'Supabase version create/update should handle stable marking through the same guarded path');
-assert.ok(gateway.includes("case 'account.login_sessions'"), 'gateway should expose scoped login session lookup action');
-assert.ok(gateway.includes('recordLoginSession(db, request, session'), 'gateway login should record device/session metadata');
+assert.ok(gatewayContractSource.includes("case 'account.login_sessions'"), 'gateway should expose scoped login session lookup action');
+assert.ok(gatewayContractSource.includes('recordLoginSession(db, request, session'), 'gateway login should record device/session metadata');
 assert.ok(worker.includes('handleGatewayRequest(request, env, ctx)'), 'Worker should pass execution context into the D1 gateway');
-assert.ok(gateway.includes('function scheduleLoginAuditWrite(ctx, task)'), 'gateway login audit writes should be schedulable in the background');
-assert.ok(gateway.includes('ctx.waitUntil(task.catch'), 'gateway should use waitUntil for successful login audit writes');
-assert.ok(gateway.includes('return performGatewayLogin(request, env, body, ctx);'), 'login action should receive execution context for non-blocking audit writes');
-assert.ok(gateway.includes('Only admin can view all login sessions'), 'all-account login session lookup should be admin-only');
-assert.ok(gateway.includes("case 'assessment.sync_scores'"), 'gateway should expose assessment score sync through authenticated edu-gateway');
-assert.ok(gateway.includes('ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY'), 'assessment sync service role key must be read from Worker env only');
-assert.ok(gateway.includes("change_tag: 'system_sync'"), 'assessment sync writes should mark rows as system_sync');
-assert.ok(gateway.includes('dry_run: dryRun') && gateway.includes('rows.length && !dryRun'), 'assessment sync should support a no-write dry-run match check');
-assert.ok(gateway.includes('findAssessmentTeacherMatch') && gateway.includes('目标考核系统教师匹配不唯一'), 'assessment sync should skip ambiguous teacher matches instead of writing to a guessed account');
-assert.ok(gateway.includes('teacher_workload') === false, 'assessment sync must not write workload scores without a system data source');
+assert.ok(gatewayContractSource.includes('function scheduleLoginAuditWrite(ctx, task)'), 'gateway login audit writes should be schedulable in the background');
+assert.ok(gatewayContractSource.includes('ctx.waitUntil(task.catch'), 'gateway should use waitUntil for successful login audit writes');
+assert.ok(gatewayContractSource.includes('return performGatewayLogin(request, env, body, ctx);'), 'login action should receive execution context for non-blocking audit writes');
+assert.ok(gatewayContractSource.includes('Only admin can view all login sessions'), 'all-account login session lookup should be admin-only');
+assert.ok(gatewayContractSource.includes("case 'assessment.sync_scores'"), 'gateway should expose assessment score sync through authenticated edu-gateway');
+assert.ok(gatewayContractSource.includes('ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY'), 'assessment sync service role key must be read from Worker env only');
+assert.ok(gatewayContractSource.includes("change_tag: 'system_sync'"), 'assessment sync writes should mark rows as system_sync');
+assert.ok(gatewayContractSource.includes('dry_run: dryRun') && gatewayContractSource.includes('rows.length && !dryRun'), 'assessment sync should support a no-write dry-run match check');
+assert.ok(gatewayContractSource.includes('findAssessmentTeacherMatch') && gatewayContractSource.includes('目标考核系统教师匹配不唯一'), 'assessment sync should skip ambiguous teacher matches instead of writing to a guessed account');
+assert.ok(gatewayContractSource.includes('teacher_workload') === false, 'assessment sync must not write workload scores without a system data source');
 
 console.log(JSON.stringify({
   ok: true,
