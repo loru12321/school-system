@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "source": "public/assets/brand/app-icon-source.png",
+  "web": {
+    "state": "generated",
+    "directory": "public/assets/brand"
+  }
+}
