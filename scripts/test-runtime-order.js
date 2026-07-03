@@ -1103,6 +1103,11 @@ assert.ok(
     'score import should expose grade-aware class normalization'
 );
 assert.ok(
+    schoolNormalizationRuntime.includes("'东平银山实验学校'")
+        && /canonical:\s*'银山实验'[\s\S]*东平银山实验学校/.test(schoolNormalizationRuntime),
+    'school alias normalization should treat 东平银山实验学校 as 银山实验'
+);
+assert.ok(
     appSource.includes('classStr = normalizeImportedClassForGrade(r[idxMap.class], importGrade);'),
     'parseRows should normalize bare imported class numbers with the current exam grade'
 );
