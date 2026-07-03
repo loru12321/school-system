@@ -1113,6 +1113,20 @@ assert.ok(
     'score import should hold a runtime guard while parsing and cloud sync are in progress'
 );
 assert.ok(
+    appSource.includes('same exam overwrite checked without destructive cleanup')
+        && !/async function prepareSameExamOverwrite[\s\S]*?deleteSystemDataRecords[\s\S]*?function getUploadExamDataRowCount/.test(appSource),
+    'same-exam score import overwrite should check existing data without deleting local or cloud records before upload'
+);
+{
+    const uploadStart = appSource.indexOf("document.getElementById('fileInput').addEventListener('change'");
+    const cloudSaveIndex = appSource.indexOf('cloudSynced = await saveCloudData({', uploadStart);
+    const cohortSyncIndex = appSource.indexOf('await CohortDB.syncCurrentExam();', uploadStart);
+    assert.ok(
+        uploadStart >= 0 && cloudSaveIndex > uploadStart && cohortSyncIndex > cloudSaveIndex,
+        'score import should upload the exam shard to cloud before overwriting the local CohortDB archive'
+    );
+}
+assert.ok(
     /function tryAutoRestoreWorkspaceExam\(options = \{\}\) \{\s*if \(isScoreImportInProgress\(\)\)/.test(appSource),
     'background exam auto-restore must not overwrite the workspace during score import'
 );

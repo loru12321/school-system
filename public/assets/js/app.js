@@ -8598,57 +8598,46 @@ function exportHighScoreExcel() {
 
 async function prepareSameExamOverwrite(currentExamId, existingExam = null) {
     const examId = String(currentExamId || '').trim();
-    if (!examId) return { localRemoved: false, cloudRemoved: false };
+    if (!examId) return { localExists: false, cloudExists: false, existingRows: 0 };
 
-    let localRemoved = false;
+    let localExists = false;
+    const existingRows = getUploadExamDataRowCount(existingExam?.data);
     try {
         const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
         if (db && typeof db === 'object') {
             db.exams = db.exams || {};
-            if (db.exams[examId]) {
-                delete db.exams[examId];
-                localRemoved = true;
-            }
-            if (Array.isArray(db.resetPoints)) {
-                db.resetPoints = db.resetPoints.filter((item) => String(item || '').trim() !== examId);
-            }
-            Object.values(db.students || {}).forEach((student) => {
-                if (!Array.isArray(student?.history)) return;
-                student.history = student.history.filter((item) => String(item?.examId || '').trim() !== examId);
-                if (String(student.lastExamId || '').trim() === examId) {
-                    const last = student.history[student.history.length - 1] || null;
-                    student.lastExamId = last?.examId || null;
-                    student.lastScore = typeof last?.total === 'number' ? last.total : null;
-                }
-            });
-            db.currentExamId = examId;
-            syncRuntimeStateToWindow();
+            localExists = Boolean(db.exams[examId]) || existingRows > 0;
         }
     } catch (error) {
-        console.warn('[upload] local overwrite cleanup failed:', error);
+        console.warn('[upload] local overwrite check failed:', error);
     }
 
-    let cloudRemoved = false;
+    let cloudExists = false;
     try {
-        if (typeof deleteSystemDataRecords === 'function') {
-            const { error } = await deleteSystemDataRecords({ keyEq: examId });
+        if (window.CloudDataService && typeof window.CloudDataService.readSystemDataRecord === 'function') {
+            const { data, error } = await window.CloudDataService.readSystemDataRecord(examId, 'key,updated_at');
             if (error && error.message !== 'CLOUD_CLIENT_MISSING') throw error;
-            cloudRemoved = !error;
-        }
-        if (window.idbKeyval && typeof window.idbKeyval.del === 'function') {
-            await window.idbKeyval.del(`cache_${examId}`);
+            cloudExists = Boolean(data?.key);
+        } else if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
+            const { data, error } = await window.CloudApi.selectSystemData({
+                select: 'key,updated_at',
+                keyEq: examId,
+                maybeSingle: true
+            });
+            if (error && error.message !== 'CLOUD_CLIENT_MISSING') throw error;
+            cloudExists = Boolean(data?.key);
         }
     } catch (error) {
-        console.warn('[upload] cloud overwrite cleanup failed:', error);
+        console.warn('[upload] cloud overwrite check failed:', error);
     }
 
-    appDebug('[upload] same exam overwrite prepared:', {
+    appDebug('[upload] same exam overwrite checked without destructive cleanup:', {
         examId,
-        previousRows: Array.isArray(existingExam?.data) ? existingExam.data.length : 0,
-        localRemoved,
-        cloudRemoved
+        previousRows: existingRows,
+        localExists,
+        cloudExists
     });
-    return { localRemoved, cloudRemoved };
+    return { localExists, cloudExists, existingRows };
 }
 
 function getUploadExamDataRowCount(data) {
@@ -8726,9 +8715,9 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
             if (!window.XLSX || !window.XLSX.utils) {
                 throw new Error('Excel 解析组件未加载，请刷新页面后重试');
             }
-            if (shouldOverwriteExistingExam) {
-                await prepareSameExamOverwrite(currentExamId, effectiveExistingExam);
-            }
+            const overwriteInfo = shouldOverwriteExistingExam
+                ? await prepareSameExamOverwrite(currentExamId, effectiveExistingExam)
+                : { localExists: false, cloudExists: false, existingRows: 0 };
 
             clearDataRuntimeState({ keepConfig: true }); setTeacherMap({}); setTeacherStats({});
             TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; clearCurrentSchool();
@@ -8761,23 +8750,30 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
 
             updateSchoolMode();
 
-            await CohortDB.syncCurrentExam();
-
-            scheduleExamSelectorRefresh({ teacherCompareTeacher: true });
-
             setUploadMessage(`✅ 已解析 ${Object.keys(SCHOOLS).length} 所学校，共 ${RAW_DATA.length} 名学生，正在同步云端...`, 'info');
             let cloudSynced = true;
             if (typeof saveCloudData === 'function') {
-                cloudSynced = await saveCloudData({ mode: 'exam', examKey: currentExamId, background: false, sourceLabel: 'score-import-overwrite', forceUpload: true });
+                cloudSynced = await saveCloudData({
+                    mode: 'exam',
+                    examKey: currentExamId,
+                    background: false,
+                    sourceLabel: (overwriteInfo.localExists || overwriteInfo.cloudExists) ? 'score-import-overwrite' : 'score-import-create',
+                    forceUpload: true
+                });
                 if (!cloudSynced) {
                     const cloudError = String(window.__LAST_CLOUD_SAVE_ERROR__ || '').trim();
-                    const detail = cloudError ? `原因：${cloudError}` : '请稍后点击“保存并同步”，或刷新后重新登录再试。';
-                    setUploadMessage(`⚠️ 已在当前页面导入 ${RAW_DATA.length} 名学生，但云端同步失败。${detail}`, 'warning');
+                    const preserveText = shouldOverwriteExistingExam ? '原归档考试和云端旧记录已保留。' : '';
+                    const detail = cloudError ? `原因：${cloudError}` : '请稍后重新登录再试。';
+                    setUploadMessage(`⚠️ 已在当前页面解析 ${RAW_DATA.length} 名学生，但云端同步失败，未覆盖考试归档。${preserveText}${detail}`, 'warning');
                     UI.toast(cloudError ? `⚠️ 云端同步失败：${cloudError}` : '⚠️ 成绩已导入本机，云端同步失败', 'warning');
                     return;
                 }
                 appDebug("成绩导入云端同步完成");
             }
+
+            await CohortDB.syncCurrentExam();
+
+            scheduleExamSelectorRefresh({ teacherCompareTeacher: true });
             renderTables();
             applySchoolModeToTables();
             updateSchoolSelect(); updateMySchoolSelect(); updateStudentSchoolSelect(); updateMarginalSchoolSelect();
