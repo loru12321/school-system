@@ -1107,6 +1107,20 @@ assert.ok(
     'parseRows should normalize bare imported class numbers with the current exam grade'
 );
 assert.ok(
+    appSource.includes('function beginScoreImportGuard')
+        && appSource.includes('function isScoreImportInProgress')
+        && appSource.includes('window.__SCORE_IMPORT_IN_PROGRESS__'),
+    'score import should hold a runtime guard while parsing and cloud sync are in progress'
+);
+assert.ok(
+    /function tryAutoRestoreWorkspaceExam\(options = \{\}\) \{\s*if \(isScoreImportInProgress\(\)\)/.test(appSource),
+    'background exam auto-restore must not overwrite the workspace during score import'
+);
+assert.ok(
+    /applyExamToWorkspace: function \(examId, options = \{\}\) \{\s*if \(isScoreImportInProgress\(\) && options\.allowDuringImport !== true\)/.test(appSource),
+    'history exam apply should be blocked while score import is in progress unless explicitly allowed'
+);
+assert.ok(
     /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
     'login cohort entry should fast-enter and hydrate cloud cohort data in the background unless explicitly requested'
 );

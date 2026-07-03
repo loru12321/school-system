@@ -8657,6 +8657,32 @@ function getUploadExamDataRowCount(data) {
     return 0;
 }
 
+function beginScoreImportGuard(examId) {
+    const guard = {
+        examId: String(examId || '').trim(),
+        startedAt: Date.now(),
+        token: `score-import-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    };
+    window.__SCORE_IMPORT_IN_PROGRESS__ = guard;
+    return guard;
+}
+
+function clearScoreImportGuard(guard) {
+    if (!guard || window.__SCORE_IMPORT_IN_PROGRESS__?.token === guard.token) {
+        window.__SCORE_IMPORT_IN_PROGRESS__ = null;
+    }
+}
+
+function isScoreImportInProgress() {
+    const guard = window.__SCORE_IMPORT_IN_PROGRESS__;
+    if (!guard || typeof guard !== 'object') return false;
+    if (Date.now() - Number(guard.startedAt || 0) > 10 * 60 * 1000) {
+        window.__SCORE_IMPORT_IN_PROGRESS__ = null;
+        return false;
+    }
+    return true;
+}
+
 document.getElementById('fileInput').addEventListener('change', function (e) {
     if (isArchiveLocked()) return alert("⛔ 当前考试已封存，禁止上传新数据");
     if (!CURRENT_COHORT_ID) return alert("请先选择或新建届别");
@@ -8691,6 +8717,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         }
     }
 
+    const importGuard = beginScoreImportGuard(currentExamId);
     Perf.runAsync(async () => {
         try {
             if ((!window.XLSX || !window.XLSX.utils) && typeof window.ensureXlsxVendorLoaded === 'function') {
@@ -8766,6 +8793,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
             updateStatusPanel();
         } finally {
             inputEl.value = '';
+            clearScoreImportGuard(importGuard);
         }
     }, "正在解析 Excel 并计算排名...");
 });
@@ -16360,6 +16388,10 @@ function hasUsableProcessedSchoolMetrics(schools) {
 }
 
 function tryAutoRestoreWorkspaceExam(options = {}) {
+    if (isScoreImportInProgress()) {
+        appDebug('[upload] skipped auto restore while score import is in progress', window.__SCORE_IMPORT_IN_PROGRESS__);
+        return false;
+    }
     const db = COHORT_DB || ((typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null);
     if (!db) return false;
 
@@ -16678,6 +16710,13 @@ const CohortDB = {
     },
 
     applyExamToWorkspace: function (examId, options = {}) {
+        if (isScoreImportInProgress() && options.allowDuringImport !== true) {
+            console.warn('[CohortDB] blocked exam apply during score import', {
+                requestedExamId: examId,
+                importingExamId: window.__SCORE_IMPORT_IN_PROGRESS__?.examId || ''
+            });
+            return false;
+        }
         const db = this.ensure();
         const exam = db.exams?.[examId];
         if (!exam) return false;
