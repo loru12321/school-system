@@ -1889,12 +1889,15 @@
     CloudManager.flushWorkspaceSyncQueue = async function (options = {}) {
         const opts = options && typeof options === 'object' ? { ...options } : {};
         const targetKey = String(opts.targetKey || '').trim();
-        // Depth guard: cap the promise chain so rapid background saves cannot
+        // Depth guard: cap background promise chains so rapid autosaves cannot
         // accumulate an unbounded queue of pending flushWorkspaceSyncQueue calls.
-        // Once MAX_FLUSH_DEPTH concurrent waiters are chained, further calls
-        // return the in-flight task directly without adding another link.
+        // Manual saves pass a targetKey and must still rerun after an active
+        // background flush so the newly queued overwrite is uploaded.
         const MAX_FLUSH_DEPTH = 4;
         if (this._workspaceSyncFlushTask) {
+            if (targetKey) {
+                return this._workspaceSyncFlushTask.then(() => this.flushWorkspaceSyncQueue(opts));
+            }
             const depth = Number(this._workspaceSyncFlushDepth) || 0;
             if (depth >= MAX_FLUSH_DEPTH) {
                 return this._workspaceSyncFlushTask;

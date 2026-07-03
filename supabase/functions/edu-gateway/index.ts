@@ -548,6 +548,7 @@ async function handleVersionCreate(session, payload) {
   const projectKey = String(payload.project_key || "").trim();
   const cohortId = String(payload.cohort_id || "").trim();
   if (!versionName || !projectKey || !cohortId) return badRequest("version_name, project_key and cohort_id are required");
+  const wantsStable = Boolean(payload.is_stable ?? false);
   const row = {
     version_name: versionName,
     project_key: projectKey,
@@ -560,12 +561,31 @@ async function handleVersionCreate(session, payload) {
     alias_hash: String(payload.alias_hash || "").trim() || null,
     config_hash: String(payload.config_hash || "").trim() || null,
     summary_json: payload.summary_json && typeof payload.summary_json === "object" ? payload.summary_json : {},
-    is_stable: Boolean(payload.is_stable ?? false),
+    is_stable: false,
     created_by: session.username
   };
   const { data, error } = await admin.from("snapshot_versions").insert(row).select().maybeSingle();
   if (error) return serverError("snapshot_versions insert failed", { detail: error.message });
-  return json(200, { ok: true, record: data });
+  if (!wantsStable || !data?.id) return json(200, { ok: true, record: data });
+
+  const nowIso = new Date().toISOString();
+  const { error: clearError } = await admin
+    .from("snapshot_versions")
+    .update({ is_stable: false, updated_at: nowIso })
+    .eq("project_key", projectKey)
+    .eq("cohort_id", cohortId)
+    .eq("is_stable", true)
+    .neq("id", data.id);
+  if (clearError) return serverError("snapshot_versions stable reset failed", { detail: clearError.message });
+
+  const { data: stableData, error: stableError } = await admin
+    .from("snapshot_versions")
+    .update({ is_stable: true, updated_at: nowIso, version: (Number(data.version) || 0) + 1 })
+    .eq("id", data.id)
+    .select()
+    .maybeSingle();
+  if (stableError) return serverError("snapshot_versions stable mark failed", { detail: stableError.message });
+  return json(200, { ok: true, record: stableData || data });
 }
 async function handleVersionUpdate(session, payload) {
   if (!isAdminLike(session)) return forbidden("Only admin or director can update versions");

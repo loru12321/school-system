@@ -194,11 +194,26 @@ create table if not exists public.snapshot_versions (
   summary_json jsonb not null default '{}'::jsonb,
   is_stable boolean not null default false,
   created_by text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  version integer not null default 0
 );
 
 create index if not exists idx_snapshot_versions_scope
 on public.snapshot_versions(project_key, cohort_id, created_at desc);
+
+create unique index if not exists uq_snapshot_versions_single_stable
+on public.snapshot_versions(project_key, cohort_id)
+where is_stable = true;
+
+create index if not exists idx_snapshot_versions_stable
+on public.snapshot_versions(project_key, cohort_id, is_stable, version);
+
+drop trigger if exists trg_snapshot_versions_updated_at on public.snapshot_versions;
+
+create trigger trg_snapshot_versions_updated_at
+before update on public.snapshot_versions
+for each row execute function public.set_updated_at();
 
 create table if not exists public.audit_logs (
   id uuid primary key default gen_random_uuid(),

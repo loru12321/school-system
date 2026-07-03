@@ -1146,6 +1146,8 @@ async function handleRectifySave(request, db, session, payload) {
   }
   const title = normalizeText(payload.title);
   if (!title) return badRequest(request, 'title is required');
+  const nowIso = new Date().toISOString();
+  const wantsStable = Boolean(payload.is_stable);
   const row = {
     id: crypto.randomUUID(),
     source_warning_id: normalizeText(payload.source_warning_id) || null,
@@ -1254,11 +1256,11 @@ async function handleVersionCreate(request, db, session, payload) {
     alias_hash: normalizeText(payload.alias_hash) || null,
     config_hash: normalizeText(payload.config_hash) || null,
     summary_json: JSON.stringify(payload.summary_json && typeof payload.summary_json === 'object' ? payload.summary_json : {}),
-    is_stable: payload.is_stable ? 1 : 0,
+    is_stable: wantsStable ? 1 : 0,
     created_by: normalizeText(session.username),
-    created_at: new Date().toISOString()
+    created_at: nowIso
   };
-  await db.prepare(`
+  const insertStmt = db.prepare(`
     INSERT INTO snapshot_versions (
       id, version_name, project_key, cohort_id, snapshot_key, exam_scope,
       score_hash, teacher_hash, target_hash, alias_hash, config_hash,
@@ -1268,7 +1270,17 @@ async function handleVersionCreate(request, db, session, payload) {
     row.id, row.version_name, row.project_key, row.cohort_id, row.snapshot_key, row.exam_scope,
     row.score_hash, row.teacher_hash, row.target_hash, row.alias_hash, row.config_hash,
     row.summary_json, row.is_stable, row.created_by, row.created_at
-  ).run();
+  );
+  if (wantsStable) {
+    const clearStmt = db.prepare(`
+      UPDATE snapshot_versions
+      SET is_stable = 0, version = version + 1, updated_at = ?
+      WHERE project_key = ? AND cohort_id = ? AND id <> ? AND is_stable = 1
+    `).bind(nowIso, projectKey, cohortId, row.id);
+    await db.batch([clearStmt, insertStmt]);
+  } else {
+    await insertStmt.run();
+  }
   const created = await querySingleRow(db, 'SELECT * FROM snapshot_versions WHERE id = ? LIMIT 1', [row.id], normalizeVersionRow);
   return jsonResponse(200, { ok: true, record: created }, request);
 }

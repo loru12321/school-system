@@ -133,7 +133,8 @@ assert.ok(
 );
 
 assert.ok(
-    /const compactExam = compactExamMetadata\(exactExamId, \{[\s\S]*\.\.\.exam,[\s\S]*data: rows[\s\S]*\}\);[\s\S]*shard\.COHORT_DB\.exams = \{ \[exactExamId\]: compactExam \};/.test(cloudWorkspaceSource),
+    /function compactExamMetadata\(examId, examPayload = \{\}\) \{[\s\S]*if \(field === 'data' \|\| field === 'schools' \|\| field === 'teacherMap'\) return;[\s\S]*\}/.test(cloudWorkspaceSource)
+        && /const compactExam = compactExamMetadata\(exactExamId, \{[\s\S]*\.\.\.exam,[\s\S]*data: compactRows[\s\S]*\}\);[\s\S]*shard\.COHORT_DB\.exams = \{ \[exactExamId\]: compactExam \};/.test(cloudWorkspaceSource),
     'exam shards should keep row data only at the top level and avoid duplicating it inside COHORT_DB.exams'
 );
 

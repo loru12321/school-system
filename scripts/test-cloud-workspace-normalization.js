@@ -156,7 +156,7 @@ assert.ok(
     'exam-mode saves should use the canonical current exam id instead of the legacy CloudManager key'
 );
 assert.ok(
-    appSource.includes("saveCloudData({ mode: 'exam', examKey: currentExamId"),
+    /saveCloudData\(\{[\s\S]*mode:\s*'exam'[\s\S]*examKey:\s*currentExamId/.test(appSource),
     'score imports should pass the locked exam key into cloud sync'
 );
 assert.ok(

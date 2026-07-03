@@ -95,10 +95,20 @@
 
 ## 四、部署注意事项
 
+### 2026-07-03 Codex 复审更正
+
+- `flushWorkspaceSyncQueue` 的深度保护已更正：无目标的后台重复 flush 会被限深；带 `targetKey` 的手动保存仍会等待当前后台 flush 后补跑一次，避免“手动点保存但目标队列未真正上传”。
+- `snapshot_versions` 稳定版竞态已补齐创建入口：创建版本时若直接标记稳定版，会先清理同 `project_key/cohort_id` 的其他稳定版，再设置当前版本。
+- D1 与 Supabase schema 均加入 `uq_snapshot_versions_single_stable` 部分唯一索引。迁移会先清理历史重复稳定版，确保索引可创建。
+- Supabase `updated_at/version` 补列不再视为可选：`edu-gateway` 代码会写入这两个字段，若 Supabase fallback 仍可能启用，必须先执行 `supabase/sql/008_snapshot_versions_add_version_columns.sql`。
+- 新增/更新合约测试覆盖 D1/Supabase 稳定版唯一约束、创建/更新路径，以及云同步 flush 手动保存语义。
+
 ### D1 迁移（必须手动执行，执行前先备份）
 
 ```bash
 # 开发环境验证
+npx wrangler d1 execute school-system-gateway --local \
+  --file cloudflare/d1/002_gateway_data.sql
 npx wrangler d1 execute school-system-gateway --local \
   --file cloudflare/d1/007_snapshot_versions_add_version_columns.sql
 
@@ -111,16 +121,15 @@ npx wrangler d1 execute school-system-gateway --remote \
   --file cloudflare/d1/007_snapshot_versions_add_version_columns.sql
 ```
 
-### Supabase `snapshot_versions` 补列（可选）
+### Supabase `snapshot_versions` 补列（必须执行，若 Supabase fallback 可能启用）
 
-Supabase 侧目前无 `updated_at`/`version` 列，EF 代码已写入这两个字段，若 Supabase 是活跃后端，需在 SQL Editor 执行：
+Supabase 侧原 schema 无 `updated_at`/`version` 列，EF 代码会写入这两个字段。已新增脚本：
 
 ```sql
-ALTER TABLE public.snapshot_versions
-  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 0;
-UPDATE public.snapshot_versions SET updated_at = created_at WHERE updated_at = NOW();
+supabase/sql/008_snapshot_versions_add_version_columns.sql
 ```
+
+在 SQL Editor 执行该脚本后再部署包含 `edu-gateway` 版本更新逻辑的代码。
 
 ### Worker 部署
 

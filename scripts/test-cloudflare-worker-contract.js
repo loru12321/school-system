@@ -25,9 +25,12 @@ const cloudWorkspaceRuntime = read('public/assets/js/cloud-workspace-runtime.js'
 const dataCloudRuntime = read('public/assets/js/data-cloud-runtime.js');
 const cloudRuntime = read('public/assets/js/cloud.js');
 const gateway = read('src/worker-gateway-d1.js');
+const supabaseGateway = read('supabase/functions/edu-gateway/index.ts');
+const supabaseManagementSchema = read('supabase/sql/001_management_tables.sql');
 const gatewayD1Schema = [
   read('cloudflare/d1/002_gateway_data.sql'),
-  read('cloudflare/d1/003_gateway_accounts.sql')
+  read('cloudflare/d1/003_gateway_accounts.sql'),
+  read('cloudflare/d1/007_snapshot_versions_add_version_columns.sql')
 ].join('\n');
 const helpers = read('src/worker-http-helpers.js');
 const systemDataCutoverVerifier = read('scripts/verify-system-data-cloudflare-cutover.js');
@@ -150,6 +153,19 @@ assert.ok(gatewayD1Schema.includes('idx_system_logs_operator_created'), 'system_
 assert.ok(gatewayD1Schema.includes('idx_rectify_tasks_project_cohort_status_school_created'), 'rectify tasks should index dashboard list filters');
 assert.ok(gatewayD1Schema.includes('CREATE TABLE IF NOT EXISTS login_sessions'), 'gateway schema should persist login device/session records');
 assert.ok(gatewayD1Schema.includes('idx_login_sessions_username_login'), 'login session records should index self history lookups');
+assert.ok(gatewayD1Schema.includes('uq_snapshot_versions_single_stable'), 'D1 schema should enforce one stable snapshot version per project/cohort');
+assert.ok(gateway.includes('const wantsStable = Boolean(payload.is_stable);')
+  && gateway.includes('await db.batch([clearStmt, insertStmt]);')
+  && gateway.includes('await db.batch([clearStmt, setStmt]);'),
+  'D1 version create/update should clear other stable rows and set the target in one batch');
+assert.ok(supabaseManagementSchema.includes('uq_snapshot_versions_single_stable')
+  && supabaseManagementSchema.includes('version integer not null default 0')
+  && supabaseManagementSchema.includes('trg_snapshot_versions_updated_at'),
+  'Supabase management schema should include snapshot version columns, stable uniqueness, and updated_at trigger');
+assert.ok(supabaseGateway.includes('const wantsStable = Boolean(payload.is_stable ?? false);')
+  && supabaseGateway.includes('.update({ is_stable: true, updated_at: nowIso, version:')
+  && supabaseGateway.includes('.eq("is_stable", true)'),
+  'Supabase version create/update should handle stable marking through the same guarded path');
 assert.ok(gateway.includes("case 'account.login_sessions'"), 'gateway should expose scoped login session lookup action');
 assert.ok(gateway.includes('recordLoginSession(db, request, session'), 'gateway login should record device/session metadata');
 assert.ok(worker.includes('handleGatewayRequest(request, env, ctx)'), 'Worker should pass execution context into the D1 gateway');
