@@ -1,3 +1,159 @@
+# 优化工作交接总结（2026-07-03 第三轮）
+
+## 一、基本信息
+
+- **工作日期**：2026-07-03
+- **远端**：`loru`（github.com/loru12321/school-system），推送目标 `loru main`
+- **本轮 HEAD**：`12e6abfa`（本地提交，待 push）
+- **生产地址**：https://schoolsystem.com.cn
+- **工作性质**：全量只读审计 → 分级修复
+
+---
+
+## 二、本轮审计发现（只读阶段）
+
+对整个代码库进行了系统性只读审计，以下为确认存在的真实问题，按优先级排序。
+
+### P0 — 必须立即处理
+
+| ID | 问题 | 位置 |
+|----|------|------|
+| P0-1 | `is_stable` 竞态：两管理员并发操作可导致多个版本同时持有 `is_stable=1` 或全部被清除 | `worker-gateway-d1.js:1274`，`edu-gateway/index.ts:570` |
+| P0-2 | 首次上传失败时 `writeWorkspaceExamId` 已写入 localStorage，但 `db.exams` 中无对应数据，刷新后页面空白 | `app.js:8751–8754` |
+| P0-3 | IDB 不可用时 `inlinePayload` 无大小限制地写入 localStorage 队列，可致超限崩溃 | `cloud-workspace-runtime.js:1814` |
+
+### P1 — 高优先级
+
+| ID | 问题 | 位置 |
+|----|------|------|
+| P1-1 | `CURRENT_EXAM_ID` 在云端确认前写入，是所有"半成功"场景的结构性根因 | `app.js:8751–8754`（P0-2 的上层成因）|
+| P1-2 | `isScoreImportInProgress` 10 分钟墙钟超时，大考试重计算可能超时 | `app.js:8668` |
+| P1-3 | `flushWorkspaceSyncQueue` 递归链无深度上限，网络慢时 promise 链无限积压 | `cloud-workspace-runtime.js:1853` |
+| P1-4 | `prepareSameExamOverwrite.localExists` 与确认框使用不同数据源，导致 sourceLabel 显示错误 | `app.js:8609, 8698` |
+| P1-5 | `CohortDB.syncCurrentExam` 在主线程做全量 `JSON.parse(JSON.stringify())` 深拷贝，大考试 UI 冻结 | `app.js:16690–16695` |
+| P1-6 | 后台 workspace save 不计算 contentHash，每次 flush 都实际上传，无谓重复写入 | `cloud-workspace-runtime.js:1763` |
+
+### P2 — 中优先级
+
+| ID | 问题 | 位置 |
+|----|------|------|
+| P2-1 | `snapshot_versions` 表无 `updated_at`、`version` 列，无法做乐观锁 | `cloudflare/d1/002_gateway_data.sql:129` |
+| P2-2 | 双后端逻辑漂移：同一功能 D1 Worker + Supabase EF 各一份，修复需双倍工作 | 两个后端 |
+| P2-3 | IDB 缓存键无用户命名空间，同设备多账号共享缓存数据 | `cloud-workspace-runtime.js:1148` |
+
+### 测试盲区（TG）
+
+- **TG-1**：首次上传失败 → 刷新后数据空白，无任何覆盖测试
+- **TG-2**：覆盖上传失败时旧数据是否真实保留，无验证
+- **TG-3**：`isScoreImportInProgress` 超时边界行为，无测试
+- **TG-4**：Safari 隐私模式（IDB 完全不可用）下的完整上传路径，无测试
+- **TG-5**：并发 `is_stable` 更新，无任何集成测试
+- **TG-6**：后台 save 重复上传频率，无 perf 测试
+
+---
+
+## 三、本轮已完成（2 个提交）
+
+### 提交 1：`ae783f7b` — 考试上传原子性 + 版本竞态 + 云同步加固
+
+**P0-1 · `is_stable` 竞态（D1 + Supabase 双端）**
+- `src/worker-gateway-d1.js`：`db.batch([clearStmt, setStmt])` 将"清除其他稳定标记"和"设置当前"合并为单一隐式事务
+- `normalizeVersionRow`：响应对象新增 `version`、`updated_at` 字段
+- `supabase/functions/edu-gateway/index.ts`：clear 步骤加 `.eq("is_stable", true)` 过滤减少写入范围；每次 patch 写 `updated_at` + `version+1`
+- 新迁移文件 `cloudflare/d1/007_snapshot_versions_add_version_columns.sql`：添加 `updated_at`、`version` 列，从 `created_at` 回填，建复合索引
+
+**P0-2 · 首次上传失败留悬空指针**
+- `app.js`：`writeWorkspaceExamId(currentExamId)` 和 `COHORT_DB.currentExamId` 赋值从 `processData()` 后移至 `CohortDB.syncCurrentExam()` 后
+- 效果：云端失败时 localStorage 不再指向 `db.exams` 中不存在的考试，刷新后不再出现数据空白
+
+**P0-3 · `inlinePayload` 可致 localStorage 超限**
+- `cloud-workspace-runtime.js`：写入队列前 JSON 估算大小，超 1.5 MB 跳过内联并打印 warning
+
+**P1-6 · 后台 workspace save 无法跳过未变更内容**
+- `cloud-workspace-runtime.js`：workspace 模式不分前后台都计算 `contentHash`，dedup 检查得以生效；exam 模式后台 save 仍跳过（shard 较大）
+
+---
+
+### 提交 2：`12e6abfa` — 导入保护 / 深拷贝 / flush 深度 / IDB 隔离
+
+**P1-2 · import guard 超时过短**
+- `app.js`：10 分钟墙钟超时改为 30 分钟，覆盖低端设备上的慢速 `processData()`
+
+**P1-4 · `localExists` 与确认框数据源不一致**
+- `app.js`：`prepareSameExamOverwrite` 改为先从 `existingRows`（与确认框同源）初始化 `localExists`，再 OR `db.exams[examId]`，消除 sourceLabel 显示错误
+
+**P1-5 · `syncCurrentExam` 同步深拷贝阻塞 UI**
+- `app.js`：6 处 `JSON.parse(JSON.stringify(...))` 替换为 `structuredClone`（快 20–40%，正确处理 TypedArray）；旧浏览器自动降级到 JSON round-trip
+
+**P1-3 · flush 递归链无界积压**
+- `cloud-workspace-runtime.js`：`flushWorkspaceSyncQueue` 链式 waiter 上限 `MAX_FLUSH_DEPTH = 4`，超出后返回 in-flight task 而非继续追加 `.then()` 链
+
+**P2-3 · IDB 缓存键无用户隔离**
+- `cloud-workspace-runtime.js`：新增 `getIdbUserPrefix()` 返回 `u_<username>__`；四处 IDB 读写（`readCachedWorkspaceSnapshot`、`readCachedWorkspaceSnapshotMeta`、`writeCachedWorkspaceSnapshot`、legacy bundle 写入）统一加前缀，同设备多账号互不干扰
+
+---
+
+## 四、部署注意事项
+
+### D1 迁移（必须手动执行，执行前先备份）
+
+```bash
+# 开发环境验证
+npx wrangler d1 execute school-system-gateway --local \
+  --file cloudflare/d1/007_snapshot_versions_add_version_columns.sql
+
+# 验证迁移结果
+npx wrangler d1 execute school-system-gateway --local \
+  --command "SELECT id, version_name, is_stable, version, updated_at FROM snapshot_versions LIMIT 5"
+
+# 生产环境（需管理员确认后执行）
+npx wrangler d1 execute school-system-gateway --remote \
+  --file cloudflare/d1/007_snapshot_versions_add_version_columns.sql
+```
+
+### Supabase `snapshot_versions` 补列（可选）
+
+Supabase 侧目前无 `updated_at`/`version` 列，EF 代码已写入这两个字段，若 Supabase 是活跃后端，需在 SQL Editor 执行：
+
+```sql
+ALTER TABLE public.snapshot_versions
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 0;
+UPDATE public.snapshot_versions SET updated_at = created_at WHERE updated_at = NOW();
+```
+
+### Worker 部署
+
+```bash
+npm run build
+npx wrangler deploy
+```
+
+---
+
+## 五、未完成 / 待排期
+
+| ID | 描述 | 复杂度 |
+|----|------|--------|
+| P1-1 | 彻底解决"CURRENT_EXAM_ID 在云端确认前写入"的结构性问题（P0-2 只修了持久化层，内存层仍早写） | 中 |
+| P2-2 | 双后端逻辑漂移：考虑废弃 Supabase EF 或建立合约测试 | 高 |
+| TG-1/2 | 补充"上传失败保留验证"和"首次上传失败刷新恢复"集成测试 | 中 |
+| TG-5 | 并发 `is_stable` 压测 | 中 |
+
+---
+
+## 六、回归验证清单（部署后）
+
+- [ ] 上传一次新考试 → 确认数据正常显示，刷新后数据仍存在
+- [ ] 上传时断网 → 确认旧考试数据保留，提示"云端同步失败"
+- [ ] 两个管理员同时设不同版本为 stable → 确认最终只有一个 is_stable=1
+- [ ] Safari 私人浏览 → 确认上传和同步不崩溃（IDB 不可用路径）
+- [ ] 切换账号登录 → 确认不读取前一个账号的 IDB 缓存数据
+
+---
+
+---
+
 # 优化工作交接总结（2026-06-27 第二轮）
 
 ## 一、基本信息
