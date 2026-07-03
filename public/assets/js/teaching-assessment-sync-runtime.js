@@ -60,6 +60,10 @@
     };
 
     const SUBJECT_ORDER = ['语文', '数学', '英语', '物理', '化学', '政治', '历史', '地理', '生物', '体育', '音乐', '美术', '信息', '科学'];
+    const COMPOSITE_MAKEUP_SUBJECTS_BY_GRADE = {
+        8: ['历史', '地理', '生物'],
+        9: ['政治']
+    };
 
     function text(value) {
         return String(value ?? '').trim();
@@ -221,6 +225,267 @@
 
     function isJulyExam(context = getCurrentExamContext()) {
         return extractExamMonth(context) === 7;
+    }
+
+    function getExamMeta(exam = {}) {
+        return exam?.meta && typeof exam.meta === 'object' ? exam.meta : {};
+    }
+
+    function getExamCohortId(examId = '', exam = {}) {
+        const meta = getExamMeta(exam);
+        const candidates = [
+            meta.cohortId,
+            meta.cohort_id,
+            exam.cohortId,
+            exam.cohort_id,
+            examId
+        ].map(text).filter(Boolean);
+        for (const candidate of candidates) {
+            const match = candidate.match(/20\d{2}/);
+            if (match) return match[0];
+        }
+        return '';
+    }
+
+    function getExamAcademicYear(examId = '', exam = {}) {
+        const meta = getExamMeta(exam);
+        const candidates = [
+            meta.year,
+            meta.academicYear,
+            meta.academic_year,
+            exam.academicYear,
+            exam.academic_year,
+            examId
+        ].map(text).filter(Boolean);
+        for (const candidate of candidates) {
+            const match = candidate.match(/(20\d{2})\s*[-~—至]\s*(20\d{2})/);
+            if (match) return `${match[1]}-${match[2]}`;
+        }
+        return '';
+    }
+
+    function getExamGrade(examId = '', exam = {}, rows = []) {
+        const meta = getExamMeta(exam);
+        const candidates = [
+            meta.grade,
+            meta.gradeLabel,
+            exam.grade,
+            exam.gradeLabel,
+            examId
+        ].map(text).filter(Boolean);
+        for (const candidate of candidates) {
+            const grade = normalizeGrade(candidate);
+            if (grade) return grade;
+        }
+        const classGrades = (rows || []).map((row) => inferGradeFromClass(row?.class)).filter(Boolean);
+        return classGrades.length ? classGrades[0] : '';
+    }
+
+    function getExamTimestamp(examId = '', exam = {}) {
+        if (typeof root.getExamRecordDateSortTimestamp === 'function') {
+            const ts = root.getExamRecordDateSortTimestamp(examId, exam);
+            if (Number.isFinite(Number(ts)) && Number(ts) > 0) return Number(ts);
+        }
+        const context = { currentExamId: examId, exam };
+        const date = extractExamDate(context);
+        const dateTs = date ? Date.parse(`${date.length === 7 ? `${date}-01` : date}T00:00:00`) : 0;
+        if (Number.isFinite(dateTs) && dateTs > 0) return dateTs;
+        return Number(exam?.updatedAt || exam?.createdAt || 0);
+    }
+
+    function isSecondMockExam(examId = '', exam = {}) {
+        const meta = getExamMeta(exam);
+        const haystack = [
+            examId,
+            meta.type,
+            meta.name,
+            meta.examName,
+            exam.name,
+            exam.title,
+            exam.label
+        ].map(text).join(' ');
+        return /二模/.test(haystack);
+    }
+
+    function getExamRows(exam = {}) {
+        return Array.isArray(exam?.data) ? exam.data : [];
+    }
+
+    function getMakeupSubjectsForGrade(grade) {
+        return COMPOSITE_MAKEUP_SUBJECTS_BY_GRADE[normalizeGrade(grade)] || [];
+    }
+
+    function getCurrentCompositeBaseInfo(rows, context) {
+        const currentExam = context.exam || {};
+        return {
+            cohortId: getExamCohortId(context.currentExamId, currentExam),
+            academicYear: getExamAcademicYear(context.currentExamId, currentExam),
+            grade: getExamGrade(context.currentExamId, currentExam, rows)
+        };
+    }
+
+    function findLatestSecondMockExam(baseInfo, currentContext) {
+        const exams = currentContext.db?.exams || {};
+        const candidates = Object.entries(exams)
+            .map(([examId, exam]) => ({ examId, exam }))
+            .filter(({ examId, exam }) => examId !== currentContext.currentExamId)
+            .filter(({ examId, exam }) => isSecondMockExam(examId, exam))
+            .filter(({ examId, exam }) => getExamRows(exam).length > 0)
+            .filter(({ examId, exam }) => !baseInfo.cohortId || getExamCohortId(examId, exam) === baseInfo.cohortId)
+            .filter(({ examId, exam }) => !baseInfo.academicYear || getExamAcademicYear(examId, exam) === baseInfo.academicYear)
+            .sort((left, right) => getExamTimestamp(right.examId, right.exam) - getExamTimestamp(left.examId, left.exam));
+        return candidates[0] || null;
+    }
+
+    function normalizeStudentName(row) {
+        return text(row?.name || row?.studentName || row?.student_name || row?.姓名 || row?.student || '').replace(/\s+/g, '');
+    }
+
+    function normalizeStudentClass(row) {
+        const raw = row?.class ?? row?.className ?? row?.班级 ?? '';
+        return typeof root.normalizeClass === 'function' ? root.normalizeClass(raw) : text(raw);
+    }
+
+    function buildStudentExactKey(row) {
+        return [
+            normalizeSchoolForSync(row?.school),
+            normalizeStudentName(row),
+            normalizeStudentClass(row)
+        ].join('::');
+    }
+
+    function buildStudentNameKey(row) {
+        return [
+            normalizeSchoolForSync(row?.school),
+            normalizeStudentName(row)
+        ].join('::');
+    }
+
+    function indexRowsForMakeup(rows) {
+        const exact = new Map();
+        const byName = new Map();
+        (rows || []).forEach((row) => {
+            const exactKey = buildStudentExactKey(row);
+            const nameKey = buildStudentNameKey(row);
+            if (!exact.has(exactKey)) exact.set(exactKey, []);
+            exact.get(exactKey).push(row);
+            if (!byName.has(nameKey)) byName.set(nameKey, []);
+            byName.get(nameKey).push(row);
+        });
+        return { exact, byName };
+    }
+
+    function resolveMakeupRow(row, index) {
+        const exactRows = index.exact.get(buildStudentExactKey(row)) || [];
+        if (exactRows.length === 1) return { row: exactRows[0], mode: '学校+姓名+班级' };
+        if (exactRows.length > 1) return { row: null, mode: '学校+姓名+班级', ambiguous: true };
+        const nameRows = index.byName.get(buildStudentNameKey(row)) || [];
+        if (nameRows.length === 1) return { row: nameRows[0], mode: '学校+姓名唯一' };
+        return { row: null, mode: '学校+姓名唯一', ambiguous: nameRows.length > 1 };
+    }
+
+    function teacherKeyFor(name, grade, subject) {
+        return `${text(name)}::${normalizeGrade(grade)}::${normalizeSubject(subject)}`;
+    }
+
+    function buildMissingTeacherKeys(missingRows, teachers) {
+        const classTeacher = new Map();
+        (teachers || []).forEach((teacher) => {
+            (teacher.classes || []).forEach((className) => {
+                classTeacher.set(`${text(className)}::${teacher.subject}`, teacher);
+            });
+        });
+        const keys = new Set();
+        missingRows.forEach((item) => {
+            const teacher = classTeacher.get(`${item.className}::${item.subject}`);
+            if (teacher) keys.add(teacherKeyFor(teacher.teacher_name, teacher.grade, teacher.subject));
+        });
+        return keys;
+    }
+
+    function buildCompositeAssessmentRows(julyRows, teachers, examContext) {
+        const baseInfo = getCurrentCompositeBaseInfo(julyRows, examContext);
+        const makeupSubjects = getMakeupSubjectsForGrade(baseInfo.grade);
+        const result = {
+            rows: julyRows.map((row) => ({
+                ...row,
+                scores: { ...(row?.scores || {}) }
+            })),
+            baseInfo,
+            makeupExam: null,
+            makeupSubjects,
+            missing: [],
+            missingTeacherKeys: new Set(),
+            skipped: [],
+            usedFallbackMatches: 0
+        };
+        if (!makeupSubjects.length) return result;
+
+        const candidate = findLatestSecondMockExam(baseInfo, examContext);
+        if (!candidate) {
+            result.skipped.push(`${baseInfo.grade}年级 ${makeupSubjects.join('、')} 需要二模补科，但未找到同届同学年度二模考试；相关教师自动同步将跳过。`);
+            result.missingTeacherKeys = new Set((teachers || [])
+                .filter((teacher) => normalizeGrade(teacher.grade) === baseInfo.grade && makeupSubjects.includes(teacher.subject))
+                .map((teacher) => teacherKeyFor(teacher.teacher_name, teacher.grade, teacher.subject)));
+            return result;
+        }
+
+        const makeupRows = getExamRows(candidate.exam);
+        const makeupIndex = indexRowsForMakeup(makeupRows);
+        result.makeupExam = {
+            id: candidate.examId,
+            label: getExamLabel({ currentExamId: candidate.examId, exam: candidate.exam }),
+            date: extractExamDate({ currentExamId: candidate.examId, exam: candidate.exam })
+        };
+
+        result.rows.forEach((row) => {
+            const rowGrade = getExamGrade('', {}, [row]) || baseInfo.grade;
+            if (rowGrade !== baseInfo.grade) return;
+            const resolved = resolveMakeupRow(row, makeupIndex);
+            makeupSubjects.forEach((subject) => {
+                const currentScore = getSubjectScore(row, subject);
+                if (Number.isFinite(currentScore)) return;
+                const makeupScore = resolved.row ? getSubjectScore(resolved.row, subject) : NaN;
+                if (Number.isFinite(makeupScore)) {
+                    row.scores[subject] = makeupScore;
+                    if (resolved.mode === '学校+姓名唯一') result.usedFallbackMatches += 1;
+                    return;
+                }
+                result.missing.push({
+                    school: normalizeSchoolForSync(row?.school),
+                    className: normalizeStudentClass(row),
+                    studentName: normalizeStudentName(row),
+                    subject,
+                    reason: resolved.ambiguous ? `${resolved.mode}匹配不唯一` : '二模补科成绩缺失'
+                });
+            });
+        });
+        result.missingTeacherKeys = buildMissingTeacherKeys(result.missing, teachers);
+        return result;
+    }
+
+    function filterCompositeItems(items, composite, projectId) {
+        if (!composite?.missingTeacherKeys?.size) return items;
+        return (items || []).filter((item) => {
+            if (!composite.makeupSubjects.includes(normalizeSubject(item.subject))) return true;
+            const key = teacherKeyFor(item.teacher_name, item.grade, item.subject);
+            if (!composite.missingTeacherKeys.has(key)) return true;
+            return false;
+        }).map((item) => ({ ...item, project_id: item.project_id || projectId }));
+    }
+
+    function withCompositeTeacherStats(rows, callback) {
+        const previousRows = root.RAW_DATA;
+        const previousStats = root.TEACHER_STATS;
+        root.RAW_DATA = rows;
+        root.TEACHER_STATS = {};
+        ensureTeacherStats();
+        try {
+            return callback();
+        } finally {
+            root.RAW_DATA = previousRows;
+            root.TEACHER_STATS = previousStats;
+        }
     }
 
     function getTotal(row) {
@@ -657,7 +922,6 @@
                 console.warn('[assessment-sync] load teacher-analysis failed:', error);
             }
         }
-        ensureTeacherStats();
         const rows = getCurrentRows();
         const teachers = groupAssignmentsByTeacher(readTeacherAssignments());
         const skipped = [];
@@ -686,25 +950,37 @@
                 skipped
             };
         }
-        const excellentItems = isJulyExam(examContext)
-            ? buildExcellentContributionItems(teachers, rows)
-            : [];
-        if (!excellentItems.length && !isJulyExam(examContext)) {
-            skipped.push('尖子生培养贡献只读取本学年度 7 月成绩；当前考试不是 7 月成绩，已跳过该项自动同步。');
+        const composite = buildCompositeAssessmentRows(rows, teachers, examContext);
+        skipped.push(...(composite.skipped || []));
+        if (composite.missing.length) {
+            skipped.push(`合成成绩表有 ${composite.missing.length} 条二模补科缺失或匹配异常；对应补科教师不会自动写入分数。`);
         }
-        const items = [
-            ...buildTwoRatesItems(teachers, rows),
-            ...buildClassCollaborationItems(teachers, rows),
-            ...buildSubjectCollaborationItems(teachers, rows),
-            ...buildBottomThirdItems(teachers, rows),
-            ...excellentItems
-        ].filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0)
+
+        const items = withCompositeTeacherStats(composite.rows, () => {
+            const twoRates = filterCompositeItems(buildTwoRatesItems(teachers, composite.rows), composite, PROJECTS.twoRates);
+            const classCollaboration = filterCompositeItems(buildClassCollaborationItems(teachers, composite.rows), composite, PROJECTS.classCollaboration);
+            const subjectCollaboration = filterCompositeItems(buildSubjectCollaborationItems(teachers, composite.rows), composite, PROJECTS.subjectCollaboration);
+            const bottomThird = filterCompositeItems(buildBottomThirdItems(teachers, composite.rows), composite, PROJECTS.bottomThird);
+            const excellentItems = filterCompositeItems(buildExcellentContributionItems(teachers, composite.rows), composite, PROJECTS.excellentContribution);
+            return [
+                ...twoRates,
+                ...classCollaboration,
+                ...subjectCollaboration,
+                ...bottomThird,
+                ...excellentItems
+            ];
+        }).filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0)
             .map((item) => ({
                 ...item,
                 source_exam_id: examContext.currentExamId,
                 source_exam_label: examLabel,
                 source_exam_date: examDate,
-                note: `${item.note} 来源考试：${examDate || examLabel}；本项目以 7 月成绩为基准。`
+                makeup_exam_id: composite.makeupExam?.id || '',
+                makeup_exam_label: composite.makeupExam?.label || '',
+                makeup_exam_date: composite.makeupExam?.date || '',
+                makeup_subjects: composite.makeupSubjects,
+                composite_missing_count: composite.missing.length,
+                note: `${item.note} 来源考试：${examDate || examLabel}；本项目以 7 月基准 + 二模补科合成成绩表计算。${composite.makeupSubjects.length ? `补科科目：${composite.makeupSubjects.join('、')}；二模来源：${composite.makeupExam ? (composite.makeupExam.date || composite.makeupExam.label) : '未匹配'}。` : '本年级无需二模补科。'}`
             }));
         return {
             academic_year: getAcademicYearForSync(),
@@ -712,6 +988,15 @@
             source_exam_label: examLabel,
             source_exam_date: examDate,
             source_exam_month: examMonth,
+            composite_mode: 'july_with_second_mock_makeup',
+            composite_base_grade: composite.baseInfo.grade,
+            makeup_exam_id: composite.makeupExam?.id || '',
+            makeup_exam_label: composite.makeupExam?.label || '',
+            makeup_exam_date: composite.makeupExam?.date || '',
+            makeup_subjects: composite.makeupSubjects,
+            makeup_missing_count: composite.missing.length,
+            makeup_missing: composite.missing.slice(0, 120),
+            makeup_fallback_matches: composite.usedFallbackMatches,
             items,
             skipped
         };
@@ -728,6 +1013,10 @@
         return [
             payload.academic_year,
             context.currentExamId || 'no-exam',
+            payload.composite_mode || 'plain',
+            payload.makeup_exam_id || 'no-makeup',
+            (payload.makeup_subjects || []).join(','),
+            payload.makeup_missing_count || 0,
             rows.length,
             teachers.length,
             Object.keys(counts).sort().map((key) => `${key}:${counts[key]}`).join(',')
@@ -866,6 +1155,17 @@
                 month: payload.source_exam_month || extractExamMonth(context),
                 isJuly: (payload.source_exam_month || extractExamMonth(context)) === 7
             },
+            composite: {
+                mode: payload.composite_mode || 'plain',
+                grade: payload.composite_base_grade || '',
+                makeupExamId: payload.makeup_exam_id || '',
+                makeupExamLabel: payload.makeup_exam_label || '',
+                makeupExamDate: payload.makeup_exam_date || '',
+                makeupSubjects: payload.makeup_subjects || [],
+                missingCount: payload.makeup_missing_count || 0,
+                missing: payload.makeup_missing || [],
+                fallbackMatches: payload.makeup_fallback_matches || 0
+            },
             received: result?.received || (payload.items || []).length,
             valid: result?.valid || (payload.items || []).length,
             written: result?.written || 0,
@@ -890,14 +1190,29 @@
                 <td>${escapeHtml(project.formula)}</td>
             </tr>
         `).join('');
+        const composite = audit.composite || {};
+        const missingRows = (composite.missing || []).slice(0, 10).map((item) => `
+            <tr>
+                <td>${escapeHtml(item.school || '-')}</td>
+                <td>${escapeHtml(item.className || '-')}</td>
+                <td>${escapeHtml(item.studentName || '-')}</td>
+                <td>${escapeHtml(item.subject || '-')}</td>
+                <td><span class="status-chip warn">${escapeHtml(item.reason || '缺失')}</span></td>
+            </tr>
+        `).join('');
         return `
             <div class="tm-assessment-audit">
                 <div class="tm-assessment-sync-summary">
                     <span class="status-chip info">来源考试：${escapeHtml(audit.exam.date || audit.exam.label || '-')}</span>
                     <span class="status-chip ${audit.exam.isJuly ? 'ok' : 'warn'}">${audit.exam.isJuly ? '7 月基准，可自动同步' : '非 7 月，禁止写入教师个人成绩'}</span>
+                    <span class="status-chip info">合成口径：7月 + 二模补科</span>
+                    ${composite.makeupSubjects?.length ? `<span class="status-chip info">补科：${escapeHtml(composite.makeupSubjects.join('、'))}</span>` : '<span class="status-chip ok">无需补科</span>'}
+                    ${composite.makeupExamId ? `<span class="status-chip info">二模：${escapeHtml(composite.makeupExamDate || composite.makeupExamLabel || composite.makeupExamId)}</span>` : ''}
+                    ${composite.missingCount ? `<span class="status-chip warn">补科缺失 ${escapeHtml(composite.missingCount)} 条</span>` : ''}
                     <span class="status-chip info">预计 ${escapeHtml(audit.wouldWrite)} 条</span>
                     <span class="status-chip ok">已写入 ${escapeHtml(audit.written)} 条</span>
                 </div>
+                ${missingRows ? `<div class="table-wrap analysis-table-shell tm-assessment-sync-table"><table><thead><tr><th>学校</th><th>班级</th><th>学生</th><th>补科科目</th><th>原因</th></tr></thead><tbody>${missingRows}</tbody></table></div>` : ''}
                 <div class="table-wrap analysis-table-shell tm-assessment-sync-table">
                     <table>
                         <thead><tr><th>项目</th><th>规则</th><th>可同步</th><th>已写入</th><th>跳过</th><th>计算口径</th></tr></thead>

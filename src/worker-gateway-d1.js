@@ -1746,8 +1746,32 @@ function normalizeAssessmentScoreItem(input) {
     project_id: projectId,
     score: Number(score.toFixed(3)),
     note: normalizeText(input?.note).slice(0, 500),
-    source: normalizeText(input?.source || 'schoolsystem').slice(0, 60)
+    source: normalizeText(input?.source || 'schoolsystem').slice(0, 60),
+    source_exam_date: normalizeText(input?.source_exam_date).slice(0, 40),
+    source_exam_label: normalizeText(input?.source_exam_label).slice(0, 120),
+    makeup_exam_date: normalizeText(input?.makeup_exam_date).slice(0, 40),
+    makeup_exam_label: normalizeText(input?.makeup_exam_label).slice(0, 120),
+    makeup_subjects: Array.isArray(input?.makeup_subjects)
+      ? input.makeup_subjects.map(normalizeAssessmentSubject).filter(Boolean).slice(0, 8)
+      : [],
+    composite_missing_count: Math.max(0, Number(input?.composite_missing_count || 0) || 0)
   };
+}
+
+function buildAssessmentSyncChangeNote(item) {
+  const parts = [];
+  const sourceExam = item.source_exam_date || item.source_exam_label;
+  if (sourceExam) parts.push(`来源考试：${sourceExam}`);
+  if (item.makeup_subjects?.length) {
+    parts.push(`合成口径：7月基准 + 二模补科`);
+    parts.push(`二模补科科目：${item.makeup_subjects.join('、')}`);
+    if (item.makeup_exam_date || item.makeup_exam_label) {
+      parts.push(`二模来源：${item.makeup_exam_date || item.makeup_exam_label}`);
+    }
+  }
+  if (item.composite_missing_count) parts.push(`补科缺失：${item.composite_missing_count}条，相关教师已跳过`);
+  if (!parts.length) parts.push(`来源：${item.source || 'schoolsystem'}`);
+  return parts.join('；').slice(0, 500);
 }
 
 function findAssessmentTeacherMatch(yearPeople, item) {
@@ -1893,7 +1917,7 @@ async function handleAssessmentScoreSync(request, env, session, payload) {
       previous_score: existing?.score ?? null,
       previous_note: existing?.note ?? null,
       change_tag: 'system_sync',
-      change_note: item.note || `来源：${item.source || 'schoolsystem'}`
+      change_note: buildAssessmentSyncChangeNote(item)
     });
     matchedTeacherIds.add(teacher.user_id);
     projectCounts[item.project_id] = (projectCounts[item.project_id] || 0) + 1;

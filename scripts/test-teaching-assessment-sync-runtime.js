@@ -10,6 +10,29 @@ const runtimeLoaderSource = fs.readFileSync(path.join(root, 'public/assets/js/ru
 const bootRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
 const teachingCss = fs.readFileSync(path.join(root, 'public/assets/css/teaching-management-module.css'), 'utf8');
 
+function buildTeacherStatsFromRows(win) {
+  const stats = {};
+  const rows = win.RAW_DATA || [];
+  Object.entries(win.TEACHER_MAP || {}).forEach(([key, teacherName]) => {
+    const [className, subject] = key.split('_');
+    const values = rows
+      .filter((row) => String(row.class || '').trim() === className)
+      .map((row) => Number(row.scores?.[subject]))
+      .filter(Number.isFinite);
+    if (!values.length) return;
+    if (!stats[teacherName]) stats[teacherName] = {};
+    const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+    stats[teacherName][subject] = {
+      studentCount: values.length,
+      excellentRate: values.filter((value) => value >= 85).length / values.length,
+      passRate: values.filter((value) => value >= 60).length / values.length,
+      avgValue: avg
+    };
+  });
+  win.TEACHER_STATS = stats;
+  return stats;
+}
+
 const context = {
   console,
   setTimeout: (fn) => {
@@ -54,6 +77,7 @@ context.window.window = context.window;
 context.window.document = context.document;
 context.window.console = console;
 context.window.setTimeout = context.setTimeout;
+context.window.analyzeTeachersV2 = () => buildTeacherStatsFromRows(context.window);
 
 vm.createContext(context);
 vm.runInContext(source, context);
@@ -106,7 +130,105 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
     assert.strictEqual(audit.projects.teacher_excellent_contribution.syncable, 0, 'non-July audit should show zero excellent contribution items');
     assert.strictEqual(audit.projects.teacher_two_rates_one_score.syncable, 0, 'non-July audit should show zero two-rates-one-score items');
     assert.match(audit.formulas.teacher_two_rates_one_score, /54/, 'audit should explain two-rates-one-score body score');
-    console.log(JSON.stringify({ ok: true, items: payload.items.length, projects: Array.from(projectIds).sort(), julyItems: julyPayload.items.length, auditProjects: Object.keys(audit.projects).length }, null, 2));
+    context.window.CURRENT_EXAM_ID = '2023级-8年级-2025-2026-暑假-7月质量监测-2026-07-12';
+    context.window.RAW_DATA = [
+      { name: '学生甲', school: '银山实验学校', class: '8.1', total: 270, scores: { 语文: 90, 数学: 91, 英语: 89 } },
+      { name: '学生乙', school: '银山实验学校', class: '8.1', total: 240, scores: { 语文: 78, 数学: 80, 英语: 82 } },
+      { name: '学生丙', school: '兄弟学校', class: '8.1', total: 280, scores: { 语文: 92, 数学: 94, 英语: 93 } }
+    ];
+    context.window.TEACHER_MAP = { '8.1_历史': '史老师' };
+    context.window.TEACHER_STATS = {};
+    context.window.CohortDB = {
+      ensure: () => ({
+        currentExamId: context.window.CURRENT_EXAM_ID,
+        exams: {
+          [context.window.CURRENT_EXAM_ID]: {
+            examId: context.window.CURRENT_EXAM_ID,
+            data: context.window.RAW_DATA,
+            meta: { cohortId: '2023', year: '2025-2026', type: '期末', date: '2026-07-12', grade: '8年级' },
+            createdAt: Date.parse('2026-07-12')
+          },
+          '2023级-8年级-2025-2026-下学期-二模-2026-05-27': {
+            examId: '2023级-8年级-2025-2026-下学期-二模-2026-05-27',
+            data: [
+              { name: '学生甲', school: '银山实验学校', class: '8.1', total: 260, scores: { 历史: 88, 地理: 86, 生物: 90 } },
+              { name: '学生乙', school: '银山实验学校', class: '8.1', total: 230, scores: { 历史: 76, 地理: 79, 生物: 81 } },
+              { name: '学生丙', school: '兄弟学校', class: '8.1', total: 260, scores: { 历史: 92, 地理: 90, 生物: 91 } }
+            ],
+            meta: { cohortId: '2023', year: '2025-2026', type: '二模', date: '2026-05-27', grade: '8年级' },
+            createdAt: Date.parse('2026-05-27')
+          }
+        }
+      })
+    };
+    return context.window.tmBuildTeacherAssessmentSyncPayload().then((grade8Payload) => {
+      const historyItems = grade8Payload.items.filter((item) => item.subject === '历史');
+      assert.ok(historyItems.length > 0, '8th grade history teacher should sync from July + second mock composite rows');
+      assert.strictEqual(grade8Payload.composite_mode, 'july_with_second_mock_makeup');
+      assert.deepStrictEqual(Array.from(grade8Payload.makeup_subjects), ['历史', '地理', '生物']);
+      assert.match(grade8Payload.items[0].note, /7 月基准 \+ 二模补科/);
+      assert.match(grade8Payload.items[0].note, /二模来源/);
+
+      context.window.CURRENT_EXAM_ID = '2022级-9年级-2025-2026-暑假-7月中考-2026-07-12';
+      context.window.RAW_DATA = [
+        { name: '九甲', school: '银山实验学校', class: '9.1', total: 520, scores: { 语文: 100, 数学: 105, 英语: 104, 物理: 90, 化学: 88 } },
+        { name: '九乙', school: '银山实验学校', class: '9.1', total: 480, scores: { 语文: 92, 数学: 98, 英语: 96, 物理: 82, 化学: 80 } },
+        { name: '九丙', school: '兄弟学校', class: '9.1', total: 540, scores: { 语文: 106, 数学: 108, 英语: 107, 物理: 94, 化学: 92 } }
+      ];
+      context.window.TEACHER_MAP = { '9.1_政治': '政老师' };
+      context.window.TEACHER_STATS = {};
+      context.window.CohortDB = {
+        ensure: () => ({
+          currentExamId: context.window.CURRENT_EXAM_ID,
+          exams: {
+            [context.window.CURRENT_EXAM_ID]: {
+              examId: context.window.CURRENT_EXAM_ID,
+              data: context.window.RAW_DATA,
+              meta: { cohortId: '2022', year: '2025-2026', type: '中考', date: '2026-07-12', grade: '9年级' },
+              createdAt: Date.parse('2026-07-12')
+            },
+            '2022级-9年级-2025-2026-下学期-二模-2026-05-27': {
+              examId: '2022级-9年级-2025-2026-下学期-二模-2026-05-27',
+              data: [
+                { name: '九甲', school: '银山实验学校', class: '9.1', total: 500, scores: { 政治: 84 } },
+                { name: '九乙', school: '银山实验学校', class: '9.1', total: 470, scores: { 政治: 76 } },
+                { name: '九丙', school: '兄弟学校', class: '9.1', total: 530, scores: { 政治: 90 } }
+              ],
+              meta: { cohortId: '2022', year: '2025-2026', type: '二模', date: '2026-05-27', grade: '9年级' },
+              createdAt: Date.parse('2026-05-27')
+            }
+          }
+        })
+      };
+      return context.window.tmBuildTeacherAssessmentSyncPayload().then((grade9Payload) => {
+        assert.ok(grade9Payload.items.some((item) => item.subject === '政治'), '9th grade politics teacher should sync from second mock makeup');
+        assert.deepStrictEqual(Array.from(grade9Payload.makeup_subjects), ['政治']);
+
+        context.window.CURRENT_EXAM_ID = '2023级-8年级-2025-2026-暑假-7月质量监测-2026-07-12';
+        context.window.RAW_DATA = [
+          { name: '缺失甲', school: '银山实验学校', class: '8.1', total: 270, scores: { 语文: 90 } }
+        ];
+        context.window.TEACHER_MAP = { '8.1_历史': '史老师' };
+        context.window.TEACHER_STATS = {};
+        context.window.CohortDB = {
+          ensure: () => ({
+            currentExamId: context.window.CURRENT_EXAM_ID,
+            exams: {
+              [context.window.CURRENT_EXAM_ID]: {
+                examId: context.window.CURRENT_EXAM_ID,
+                data: context.window.RAW_DATA,
+                meta: { cohortId: '2023', year: '2025-2026', type: '期末', date: '2026-07-12', grade: '8年级' }
+              }
+            }
+          })
+        };
+        return context.window.tmBuildTeacherAssessmentSyncPayload().then((missingPayload) => {
+          assert.ok(!missingPayload.items.some((item) => item.subject === '历史'), 'missing second mock data should not write pseudo history scores');
+          assert.ok(missingPayload.skipped.some((item) => /未找到同届同学年度二模/.test(item)), 'missing second mock should be visible in audit skipped reasons');
+          console.log(JSON.stringify({ ok: true, items: payload.items.length, projects: Array.from(projectIds).sort(), julyItems: julyPayload.items.length, grade8Items: grade8Payload.items.length, grade9Items: grade9Payload.items.length, auditProjects: Object.keys(audit.projects).length }, null, 2));
+        });
+      });
+    });
   });
 }).catch((error) => {
   console.error(error);
