@@ -1137,6 +1137,14 @@ assert.ok(
     'exam shard payloads should not include bulky cross-exam student history objects'
 );
 assert.ok(
+    cloudWorkspaceRuntime.includes('function compactExamShardRows')
+        && cloudWorkspaceRuntime.includes('RAW_DATA: compactRows,')
+        && cloudWorkspaceRuntime.includes('SCHOOLS: {},')
+        && cloudWorkspaceRuntime.includes('TEACHER_MAP: {},')
+        && cloudWorkspaceRuntime.includes('TARGETS: {},'),
+    'exam cloud shards should store compact score rows and recalculate bulky derived data after restore'
+);
+assert.ok(
     /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
     'login cohort entry should fast-enter and hydrate cloud cohort data in the background unless explicitly requested'
 );

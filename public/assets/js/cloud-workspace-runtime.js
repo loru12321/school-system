@@ -564,6 +564,20 @@
         };
     }
 
+    function compactExamShardRows(rows) {
+        return (Array.isArray(rows) ? rows : []).map((row) => ({
+            name: row?.name || '',
+            id: row?.id || '',
+            school: row?.school || '',
+            class: row?.class || '',
+            examRoom: row?.examRoom || '',
+            scores: clonePayloadFragment(row?.scores || {}),
+            total: Number(row?.total || 0),
+            hasValidScore: row?.hasValidScore !== false,
+            blankScoreSubjects: clonePayloadFragment(row?.blankScoreSubjects || [])
+        }));
+    }
+
     function buildWorkspaceMetaPayload(payload, workspaceKey) {
         const source = clonePayloadFragment(payload || {});
         Object.keys(source).forEach((field) => {
@@ -608,6 +622,7 @@
             : (exactExamId === getCurrentExamIdFromPayload(payload) && Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : []);
         if (!rows.length) return null;
 
+        const compactRows = compactExamShardRows(rows);
         const shard = {
             CURRENT_PROJECT_KEY: payload?.CURRENT_PROJECT_KEY || '',
             CURRENT_COHORT_ID: payload?.CURRENT_COHORT_ID || '',
@@ -618,15 +633,15 @@
             ARCHIVE_META: clonePayloadFragment(exam.meta || payload?.ARCHIVE_META || payload?.CONFIG || {}),
             ARCHIVE_LOCKED: payload?.ARCHIVE_LOCKED || '',
             ARCHIVE_LOCKED_KEY: payload?.ARCHIVE_LOCKED_KEY || '',
-            RAW_DATA: clonePayloadFragment(rows),
-            SCHOOLS: clonePayloadFragment(exam.schools || (exactExamId === getCurrentExamIdFromPayload(payload) ? payload?.SCHOOLS : {}) || {}),
+            RAW_DATA: compactRows,
+            SCHOOLS: {},
             SUBJECTS: clonePayloadFragment(exam.subjects || payload?.SUBJECTS || []),
             THRESHOLDS: clonePayloadFragment(exam.thresholds || payload?.THRESHOLDS || {}),
-            TEACHER_MAP: clonePayloadFragment(exam.teacherMap || payload?.TEACHER_MAP || {}),
-            TEACHER_SCHOOL_MAP: clonePayloadFragment(payload?.TEACHER_SCHOOL_MAP || {}),
+            TEACHER_MAP: {},
+            TEACHER_SCHOOL_MAP: {},
             CONFIG: clonePayloadFragment(exam.config || payload?.CONFIG || {}),
             MY_SCHOOL: payload?.MY_SCHOOL || '',
-            TARGETS: clonePayloadFragment(payload?.TARGETS || {}),
+            TARGETS: {},
             INDICATOR_PARAMS: clonePayloadFragment(payload?.INDICATOR_PARAMS || {}),
             SCHOOL_ALIAS_SETTINGS: clonePayloadFragment(payload?.SCHOOL_ALIAS_SETTINGS || []),
             FINGERPRINT: String(exam.fingerprint || payload?.FINGERPRINT || '').trim(),
@@ -645,7 +660,7 @@
             ...exam,
             examId: exactExamId,
             examLabel: exam.examLabel || deriveExamLabel(exactExamId),
-            data: rows,
+            data: compactRows,
             subjects: exam.subjects || payload?.SUBJECTS || [],
             thresholds: exam.thresholds || payload?.THRESHOLDS || {},
             config: exam.config || payload?.CONFIG || {},
