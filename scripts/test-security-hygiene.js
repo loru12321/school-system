@@ -55,6 +55,7 @@ assert.ok(!workerContractSource.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'wor
 assert.ok(!workerSystemData.includes("request.headers.get('apikey')"), 'Worker Supabase REST proxy must not trust browser-provided apikey headers');
 assert.ok(workerSystemData.includes("import { resolveSession } from './worker-auth.js';"), 'system_data and managed REST writes must require gateway sessions');
 assert.ok(workerSystemData.includes("'/sb/rest/v1/issues'") && workerSystemData.includes("'/sb/rest/v1/system_logs'"), 'mutable management REST tables should be session-protected');
+assert.ok(!boot.includes("localStorage.getItem('EDGE_GATEWAY_URL')"), 'boot login shell should not accept gateway endpoints from localStorage');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should use shared HTTP helpers');
 assert.ok(workerHelpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared HTTP helpers should keep an explicit CORS allowlist');
 assert.ok(workerHelpers.includes('DEFAULT_ALLOWED_CORS_HEADERS'), 'shared HTTP helpers should use a fixed CORS request-header allowlist');
