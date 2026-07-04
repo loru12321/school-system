@@ -31,6 +31,9 @@ const workerApiRuntimePath = path.resolve(__dirname, '../public/assets/js/worker
 const accountManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/account-manager-runtime.js');
 const managementFacadesRuntimePath = path.resolve(__dirname, '../public/assets/js/management-facades-runtime.js');
 const cohortExamHydrationRuntimePath = path.resolve(__dirname, '../public/assets/js/cohort-exam-hydration-runtime.js');
+const cohortExamMetaRuntimePath = path.resolve(__dirname, '../public/assets/js/cohort-exam-meta-runtime.js');
+const cohortDbCoreRuntimePath = path.resolve(__dirname, '../public/assets/js/cohort-db-core-runtime.js');
+const dataManagerCoreRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-core-runtime.js');
 const dataManagerTeacherRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-teacher-runtime.js');
 const dataManagerStudentRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-student-runtime.js');
 const dataManagerArchiveRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-archive-runtime.js');
@@ -47,6 +50,9 @@ const townSubmoduleCompareStateRuntimePath = path.resolve(__dirname, '../public/
 const townSubmoduleCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-runtime.js');
 const bootRuntimePath = path.resolve(__dirname, '../public/assets/js/boot-runtime.js');
 const loginEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/login-entry-runtime.js');
+const authLoginRuntimePath = path.resolve(__dirname, '../public/assets/js/auth-login-runtime.js');
+const studentDetailsRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/student-details-render-runtime.js');
+const comparisonRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/comparison-render-runtime.js');
 const runtimeLoaderRuntimePath = path.resolve(__dirname, '../public/assets/js/runtime-loader-runtime.js');
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
@@ -162,6 +168,12 @@ assert.ok(fs.existsSync(macroCompareCloudRuntimePath), 'macro-compare-cloud-runt
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const bootRuntimeSource = fs.readFileSync(bootRuntimePath, 'utf8');
 const loginEntryRuntime = fs.readFileSync(loginEntryRuntimePath, 'utf8');
+const authLoginRuntime = fs.readFileSync(authLoginRuntimePath, 'utf8');
+const studentDetailsRenderRuntime = fs.readFileSync(studentDetailsRenderRuntimePath, 'utf8');
+const comparisonRenderRuntime = fs.readFileSync(comparisonRenderRuntimePath, 'utf8');
+const cohortExamMetaRuntime = fs.readFileSync(cohortExamMetaRuntimePath, 'utf8');
+const cohortDbCoreRuntime = fs.readFileSync(cohortDbCoreRuntimePath, 'utf8');
+const dataManagerCoreRuntime = fs.readFileSync(dataManagerCoreRuntimePath, 'utf8');
 const runtimeLoaderRuntime = fs.readFileSync(runtimeLoaderRuntimePath, 'utf8');
 const bootRuntime = `${bootRuntimeSource}\n${runtimeLoaderRuntime}`;
 const shellRuntime = fs.readFileSync(shellRuntimePath, 'utf8');
@@ -626,6 +638,27 @@ assert.ok(bootRuntime.includes('scheduleGatewayPreflight();\n\n    const total =
 assert.strictEqual(bootRuntime.includes('正在检测网关连接'), false, 'gateway pre-flight should not hold the boot loader on a network probe');
 assert.ok(bootRuntime.includes('function markAppModulesReady()'), 'boot-runtime.js should mark app modules ready through a shared helper');
 assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js should dispatch an app modules ready event');
+[
+    'auth-login-runtime.js',
+    'data-manager-core-runtime.js',
+    'student-details-render-runtime.js',
+    'comparison-render-runtime.js',
+    'snapshot-system-runtime.js'
+].forEach((runtimeName) => {
+    assert.ok(
+        bootRuntime.indexOf(`'${runtimeName}'`) >= 0 && bootRuntime.indexOf(`'${runtimeName}'`) < bootRuntime.indexOf("'app.js'"),
+        `${runtimeName} should load before app.js`
+    );
+});
+[
+    'cohort-exam-meta-runtime.js',
+    'cohort-db-core-runtime.js'
+].forEach((runtimeName) => {
+    assert.ok(
+        bootRuntime.indexOf(`'${runtimeName}'`) > bootRuntime.indexOf("'app.js'"),
+        `${runtimeName} should load after app.js state accessors`
+    );
+});
 assert.ok(bootRuntime.includes('function scheduleMobileRuntimeBootstrap'), 'boot-runtime.js should defer mobile runtime bootstrapping');
 assert.ok(bootRuntime.includes('runAfterAppModulesReady'), 'boot-runtime.js should wait for core modules before mobile runtime bootstrap');
 assert.ok(bootRuntime.includes('function repairAuthenticatedShellVisibility()'), 'boot-runtime.js should repair authenticated mobile shell visibility after login');
@@ -636,7 +669,7 @@ assert.ok(bootRuntime.includes('startAuthenticatedShellRepairWindow()'), 'mobile
 assert.ok(bootRuntime.includes("window.__BOOT_LOGIN_CLICKED__"), 'boot-runtime.js should replay login clicks made before boot handlers bind');
 assert.ok(bootRuntime.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'boot login replay should consume the queued early click flag');
 assert.ok(loginEntryRuntime.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'login entry submit should clear stale queued early click state');
-assert.ok(appSource.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'full Auth.login should clear stale queued early click state');
+assert.ok(authLoginRuntime.includes('window.__BOOT_LOGIN_CLICKED__ = false;'), 'full Auth.login should clear stale queued early click state');
 const bootLoginSuccessIndex = bootRuntime.indexOf('if (result && result.user) {');
 const bootLoginSuccessEndIndex = bootRuntime.indexOf("} else {\n                setBootHelperMessage", bootLoginSuccessIndex);
 const bootLoginFinalizeIndex = bootRuntime.indexOf('finalizeBootLoginUi(portal);', bootLoginSuccessIndex);
@@ -862,9 +895,9 @@ assert.ok(mainCss.includes('.teacher-township-jumpbar'), 'teacher township jump 
 assert.ok(countyAnalysisRuntime.includes('function createCountyTownshipMatcher'), 'county analysis should reuse a cached township school matcher');
 assert.ok(countyAnalysisRuntime.includes('const isTownshipSchool = createCountyTownshipMatcher(scope.townshipSchools);'), 'county rank application should not fuzzy-match township schools per row');
 assert.ok(countyAnalysisRuntime.includes('const isTownshipSchool = createCountyTownshipMatcher(normalized.townshipSchools);'), 'county teacher ranking should not fuzzy-match township schools repeatedly');
-assert.ok(appSource.includes('const displaySourceList = STD_STATE.cacheData.slice(startIdx, endIdx);'), 'student details should paginate before comparison rank normalization');
-assert.ok(appSource.includes('const displayList = displaySourceList.map((student) => getComparisonStudentView(student, RAW_DATA, comparisonContext));'), 'student details should normalize comparison rank data only for the visible page');
-assert.ok(!appSource.includes('data = getComparisonStudentList(data, RAW_DATA);'), 'student details should avoid full-list comparison normalization before pagination');
+assert.ok(studentDetailsRenderRuntime.includes('const displaySourceList = STD_STATE.cacheData.slice(startIdx, endIdx);'), 'student details should paginate before comparison rank normalization');
+assert.ok(studentDetailsRenderRuntime.includes('const displayList = displaySourceList.map((student) => getComparisonStudentView(student, RAW_DATA, comparisonContext));'), 'student details should normalize comparison rank data only for the visible page');
+assert.ok(!studentDetailsRenderRuntime.includes('data = getComparisonStudentList(data, RAW_DATA);'), 'student details should avoid full-list comparison normalization before pagination');
 assert.ok(!bootRuntime.includes("'student-compare': bootSkill('demand', 'demand', ['student-details'"), 'student compare runtime should not be triggered by entering student details');
 assert.ok(bootRuntime.includes("'student-compare': bootSkill('demand', 'demand', ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares']"), 'student compare runtime should load only for explicit multi-period actions');
 assert.ok(!bootRuntime.includes("{ label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() }"), 'student compare runtime should not be part of hotspot warmup');
@@ -872,8 +905,8 @@ assert.ok(moduleEntryRuntime.includes('const canUseStudentMultiPeriod = role ===
 assert.ok(moduleEntryRuntime.includes("delay: 1400, idle: true, timeout: 3200"), 'student details should defer multi-period prewarm after first render');
 assert.ok(schoolNormalizationRuntime.includes('const townshipEligibilityCache = new Map();'), 'shared township row filtering should cache per-school eligibility');
 assert.ok(schoolNormalizationRuntime.includes('townshipEligibilityCache.get(school)'), 'shared township row filtering should reuse per-school eligibility checks');
-assert.ok(appSource.includes('const totalsBySchool = new Map();'), 'student comparison rank context should pre-group totals by school');
-assert.ok(appSource.includes('const totalsByClass = new Map();'), 'student comparison rank context should pre-group totals by class');
+assert.ok(comparisonRenderRuntime.includes('const totalsBySchool = new Map();'), 'student comparison rank context should pre-group totals by school');
+assert.ok(comparisonRenderRuntime.includes('const totalsByClass = new Map();'), 'student comparison rank context should pre-group totals by class');
 assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview should coalesce filter-change refreshes into one frame');
 assert.ok(studentOverviewRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview scheduler should live with the student overview runtime');
 assert.ok(studentOverviewEntrySource.includes("window.SystemRuntimeLoader.load('student-overview')"), 'student overview entry should load only the student overview runtime');
@@ -887,9 +920,9 @@ assert.ok(!moduleEntryRuntime.includes('window.ensureTeachingManagementRuntimeLo
 assert.ok(studentOverviewRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');
 assert.ok(studentOverviewRuntime.includes('let progressCount = 0;'), 'student overview should count progress rows in a single pass');
 assert.ok(studentOverviewRuntime.includes('const rerender = () => smScheduleStudentOverviewRender();'), 'student overview watchers should use scheduled rendering');
-assert.ok(appSource.includes('const teacherRowsHtml = displayList.map'), 'teacher table rendering should build rows off-DOM before writing to tbody');
-assert.ok(appSource.includes("tbody.innerHTML = teacherRowsHtml.join('');"), 'teacher table rendering should write teacher rows to the DOM once');
-assert.ok(!appSource.includes('displayList.forEach(t => {'), 'teacher table rendering should avoid per-row DOM writes');
+assert.ok(dataManagerCoreRuntime.includes('const teacherRowsHtml = displayList.map'), 'teacher table rendering should build rows off-DOM before writing to tbody');
+assert.ok(dataManagerCoreRuntime.includes("tbody.innerHTML = teacherRowsHtml.join('');"), 'teacher table rendering should write teacher rows to the DOM once');
+assert.ok(!dataManagerCoreRuntime.includes('displayList.forEach(t => {'), 'teacher table rendering should avoid per-row DOM writes');
 assert.ok(appSource.includes('const teacherInputFragment = document.createDocumentFragment();'), 'teacher input generation should collect controls in a fragment');
 assert.ok(appSource.includes('container.appendChild(teacherInputFragment);'), 'teacher input generation should attach controls with one fragment append');
 assert.ok(!appSource.includes('container.appendChild(inputDiv);'), 'teacher input generation should avoid per-control container appends');
@@ -914,12 +947,12 @@ assert.ok(marginalPushRuntime.includes('function setSelectOptions'), 'marginal p
 assert.ok(marginalPushRuntime.includes('.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)'), 'marginal push school/class selectors should batch option rendering');
 assert.ok(marginalPushRuntime.includes('.map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`)'), 'marginal push subject selector should batch option rendering');
 assert.ok(marginalPushRuntime.includes('setSelectOptions(classSelect, classes'), 'marginal push class selector should use batched option rendering');
-assert.ok(appSource.includes('const schoolOptionsHtml = [...schools]'), 'teacher school selector should build option HTML once');
+assert.ok(dataManagerCoreRuntime.includes('const schoolOptionsHtml = [...schools]'), 'teacher school selector should build option HTML once');
 assert.ok(marginalPushRuntime.includes('const options = Object.keys(snapshots)'), 'marginal snapshot selector should batch historical task options');
 assert.ok(marginalPushRuntime.includes("select.innerHTML = `<option value=\"\">-- 选择历史任务 --</option>${options.join('')}`;"), 'marginal snapshot selector should write options once');
-assert.ok(appSource.includes('const aidGroupFragment = document.createDocumentFragment();'), 'mutual aid group rendering should collect cards in a fragment');
-assert.ok(appSource.includes('container.appendChild(aidGroupFragment);'), 'mutual aid group rendering should attach cards with one fragment append');
-assert.ok(!appSource.includes('container.appendChild(card);'), 'mutual aid group rendering should avoid per-card container appends');
+assert.ok(comparisonRenderRuntime.includes('const aidGroupFragment = document.createDocumentFragment();'), 'mutual aid group rendering should collect cards in a fragment');
+assert.ok(comparisonRenderRuntime.includes('container.appendChild(aidGroupFragment);'), 'mutual aid group rendering should attach cards with one fragment append');
+assert.ok(!comparisonRenderRuntime.includes('container.appendChild(card);'), 'mutual aid group rendering should avoid per-card container appends');
 assert.ok(!appSource.includes('innerHTML +='), 'app.js should avoid repeated innerHTML appends');
 assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should still respond to selector changes');
 assert.ok(teacherCompareResultRuntime.includes('teacherCompareExamStatsCache'), 'teacher compare result runtime should cache per-exam teacher stats');
@@ -1146,11 +1179,11 @@ assert.ok(
     );
 }
 assert.ok(
-    /function tryAutoRestoreWorkspaceExam\(options = \{\}\) \{\s*if \(isScoreImportInProgress\(\)\)/.test(appSource),
+    /function tryAutoRestoreWorkspaceExam\(options = \{\}\) \{\s*if \(isScoreImportInProgress\(\)\)/.test(cohortExamMetaRuntime),
     'background exam auto-restore must not overwrite the workspace during score import'
 );
 assert.ok(
-    /applyExamToWorkspace: function \(examId, options = \{\}\) \{\s*if \(isScoreImportInProgress\(\) && options\.allowDuringImport !== true\)/.test(appSource),
+    /applyExamToWorkspace: function \(examId, options = \{\}\) \{\s*if \(isScoreImportInProgress\(\) && options\.allowDuringImport !== true\)/.test(cohortDbCoreRuntime),
     'history exam apply should be blocked while score import is in progress unless explicitly allowed'
 );
 assert.ok(
@@ -1195,7 +1228,7 @@ assert.ok(
     'exam cloud saves should fall back to an inline compact payload when IndexedDB cache writes are unavailable'
 );
 assert.ok(
-    /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
+    /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(cohortExamMetaRuntime),
     'login cohort entry should fast-enter and hydrate cloud cohort data in the background unless explicitly requested'
 );
 assert.ok(

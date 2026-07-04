@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-83f48c2aba99';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-571401f418f8';
 
 function bootDebugLog(...args) {
 try {
@@ -201,7 +201,14 @@ var APP_MODULES = [
 'teacher-sync-runtime.js',
 'management-facades-runtime.js',
 'cohort-exam-hydration-runtime.js',
-'app.js'
+'auth-login-runtime.js',
+'data-manager-core-runtime.js',
+'student-details-render-runtime.js',
+'comparison-render-runtime.js',
+'snapshot-system-runtime.js',
+'app.js',
+'cohort-exam-meta-runtime.js',
+'cohort-db-core-runtime.js',
 ].map(bootJs);
 
 var APP_MODULE_PRELOAD_LIMIT = 36;
