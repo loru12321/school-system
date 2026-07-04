@@ -5,24 +5,29 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const appPath = path.join(root, 'public', 'assets', 'js', 'app.js');
 const appJs = fs.readFileSync(appPath, 'utf8');
+const authLoginPath = path.join(root, 'public', 'assets', 'js', 'auth-login-runtime.js');
+const authLoginJs = fs.readFileSync(authLoginPath, 'utf8');
+const cohortExamMetaPath = path.join(root, 'public', 'assets', 'js', 'cohort-exam-meta-runtime.js');
+const cohortExamMetaJs = fs.readFileSync(cohortExamMetaPath, 'utf8');
 const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
 const entranceSoundJs = fs.readFileSync(entranceSoundPath, 'utf8');
 const bootRuntimePath = path.join(root, 'public', 'assets', 'js', 'boot-runtime.js');
 const bootRuntimeJs = fs.readFileSync(bootRuntimePath, 'utf8');
 
 function assertParentPathUsesDeferredCloudLoad(marker, legacyGuard) {
-  const rawMarkerIndex = appJs.indexOf(marker);
+  const loginSource = authLoginJs;
+  const rawMarkerIndex = loginSource.indexOf(marker);
   assert.ok(rawMarkerIndex >= 0, `${marker} marker must exist`);
-  let markerIndex = appJs.lastIndexOf('if (isParentLikeUser(this.currentUser)) {', rawMarkerIndex);
+  let markerIndex = loginSource.lastIndexOf('if (isParentLikeUser(this.currentUser)) {', rawMarkerIndex);
   if (markerIndex < 0) {
-    markerIndex = appJs.indexOf('if (isParentLikeUser(this.currentUser)) {', rawMarkerIndex);
+    markerIndex = loginSource.indexOf('if (isParentLikeUser(this.currentUser)) {', rawMarkerIndex);
   }
   assert.ok(markerIndex >= 0, `${marker} parent branch must exist`);
 
-  const renderIndex = appJs.indexOf('\n                this.renderParentView();', markerIndex);
+  const renderIndex = loginSource.indexOf('\n                this.renderParentView();', markerIndex);
   assert.ok(renderIndex > markerIndex, `${marker} must render the parent view`);
 
-  const preRenderPath = appJs.slice(markerIndex, renderIndex);
+  const preRenderPath = loginSource.slice(markerIndex, renderIndex);
   assert.match(
     preRenderPath,
     /scheduleStartupCloudTask\(\(\) => \{/,
@@ -35,7 +40,7 @@ function assertParentPathUsesDeferredCloudLoad(marker, legacyGuard) {
   );
 
   assert.ok(
-    !appJs.includes(legacyGuard),
+    !loginSource.includes(legacyGuard),
     `${marker} legacy blocking cloud branch must be removed`
   );
 }
@@ -50,30 +55,30 @@ assertParentPathUsesDeferredCloudLoad(
   'if (false && !isLocalOnlySession && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === \'function\')'
 );
 
-const selectedCohortIndex = appJs.indexOf('let pendingLoginCohortEntry = null;');
+const selectedCohortIndex = authLoginJs.indexOf('let pendingLoginCohortEntry = null;');
 assert.ok(selectedCohortIndex >= 0, 'school login must track selected cohort entry');
-const selectedCohortSetupEnd = appJs.indexOf('if (!isLocalOnlySession && (!window.EdgeGateway || !EdgeGateway.getToken())', selectedCohortIndex);
+const selectedCohortSetupEnd = authLoginJs.indexOf('if (!isLocalOnlySession && (!window.EdgeGateway || !EdgeGateway.getToken())', selectedCohortIndex);
 assert.ok(selectedCohortSetupEnd > selectedCohortIndex, 'selected cohort setup must finish before gateway session backfill');
-const selectedCohortSetup = appJs.slice(selectedCohortIndex, selectedCohortSetupEnd);
+const selectedCohortSetup = authLoginJs.slice(selectedCohortIndex, selectedCohortSetupEnd);
 assert.match(
   selectedCohortSetup,
   /enterCohortFromMask\(\{\s*fastEnter:\s*true,\s*requireCloudData:\s*false\s*\}\)/,
   'school login selected cohort entry must use fastEnter so cloud cohort data does not block login'
 );
 
-const enterMaskIndex = appJs.indexOf('async function enterCohortFromMask(');
+const enterMaskIndex = cohortExamMetaJs.indexOf('async function enterCohortFromMask(');
 assert.ok(enterMaskIndex >= 0, 'enterCohortFromMask must accept options');
-const enterMaskEnd = appJs.indexOf('\n\nfunction tryAutoEnterReadyCohortWorkspace()', enterMaskIndex);
+const enterMaskEnd = cohortExamMetaJs.indexOf('\n\nfunction tryAutoEnterReadyCohortWorkspace()', enterMaskIndex);
 assert.ok(enterMaskEnd > enterMaskIndex, 'enterCohortFromMask block must have a stable end marker');
-const enterMaskBlock = appJs.slice(enterMaskIndex, enterMaskEnd);
+const enterMaskBlock = cohortExamMetaJs.slice(enterMaskIndex, enterMaskEnd);
 assert.match(enterMaskBlock, /fastEnter:\s*options\.fastEnter\s*!==\s*false/, 'enterCohortFromMask must default to fastEnter');
 assert.match(enterMaskBlock, /requireCloudData:\s*options\.requireCloudData\s*===\s*true/, 'enterCohortFromMask must not require cloud data unless explicitly requested');
 
-const schoolBranchIndex = appJs.indexOf('} else {\n                if (typeof renderNavigation === \'function\') renderNavigation();', selectedCohortIndex);
+const schoolBranchIndex = authLoginJs.indexOf('} else {\n                if (typeof renderNavigation === \'function\') renderNavigation();', selectedCohortIndex);
 assert.ok(schoolBranchIndex > selectedCohortIndex, 'school post-login branch must exist after selected cohort handling');
-const schoolBranchEnd = appJs.indexOf('\n\n                if (this.currentUser.school)', schoolBranchIndex);
+const schoolBranchEnd = authLoginJs.indexOf('\n\n                if (this.currentUser.school)', schoolBranchIndex);
 assert.ok(schoolBranchEnd > schoolBranchIndex, 'school post-login branch must have a stable end marker');
-const schoolBranch = appJs.slice(schoolBranchIndex, schoolBranchEnd);
+const schoolBranch = authLoginJs.slice(schoolBranchIndex, schoolBranchEnd);
 
 assert.match(
   schoolBranch,

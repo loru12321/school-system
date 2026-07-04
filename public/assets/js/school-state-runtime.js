@@ -21,6 +21,50 @@
         return String(value || '').trim();
     }
 
+    function sameSchoolName(left, right) {
+        const leftName = normalizeText(left);
+        const rightName = normalizeText(right);
+        if (!leftName || !rightName) return false;
+        if (leftName === rightName) return true;
+        if (typeof root.areSchoolNamesEquivalent === 'function') return root.areSchoolNamesEquivalent(leftName, rightName);
+        if (typeof root.areSchoolNamesMatched === 'function') return root.areSchoolNamesMatched(leftName, rightName, true);
+        if (typeof root.normalizeSchoolName === 'function') {
+            const normalizedLeft = normalizeText(root.normalizeSchoolName(leftName));
+            const normalizedRight = normalizeText(root.normalizeSchoolName(rightName));
+            if (normalizedLeft && normalizedLeft === normalizedRight) return true;
+        }
+        const compact = (value) => normalizeText(value).replace(/\s+/g, '');
+        const compactLeft = compact(leftName);
+        const compactRight = compact(rightName);
+        return !!compactLeft && !!compactRight && (compactLeft === compactRight || compactLeft.includes(compactRight) || compactRight.includes(compactLeft));
+    }
+
+    function getSchoolNames() {
+        const names = new Set();
+        const add = (value) => {
+            const name = normalizeText(value);
+            if (name) names.add(name);
+        };
+        const schoolMap = root.SCHOOLS && typeof root.SCHOOLS === 'object' ? root.SCHOOLS : {};
+        Object.entries(schoolMap).forEach(([key, school]) => {
+            add(key);
+            add(school && school.name);
+        });
+        if (typeof root.listAvailableSchoolsForCompare === 'function') {
+            try {
+                root.listAvailableSchoolsForCompare('all').forEach(add);
+            } catch (_) {}
+        }
+        return Array.from(names);
+    }
+
+    function resolveAvailableSchoolName(school) {
+        const target = normalizeText(school) || DEFAULT_MY_SCHOOL_NAME;
+        const schoolNames = getSchoolNames();
+        if (!target || !schoolNames.length) return target;
+        return schoolNames.find((name) => sameSchoolName(name, target)) || target;
+    }
+
     function invalidateAnalyticsKernel() {
         if (root.AnalyticsKernel && typeof root.AnalyticsKernel.invalidate === 'function') {
             root.AnalyticsKernel.invalidate({ keepProcessCache: true });
@@ -42,18 +86,21 @@
 
     function getCurrentSchool() {
         const storage = getStorage('localStorage');
-        const nextSchool = normalizeText(
+        const nextSchool = resolveAvailableSchoolName(normalizeText(
             root.MY_SCHOOL
             || (storage && storage.getItem(CURRENT_SCHOOL_STORAGE))
             || DEFAULT_MY_SCHOOL_NAME
-        );
-        if (!normalizeText(root.MY_SCHOOL)) root.MY_SCHOOL = nextSchool;
+        ));
+        if (normalizeText(root.MY_SCHOOL) !== nextSchool) root.MY_SCHOOL = nextSchool;
+        if (storage && normalizeText(storage.getItem(CURRENT_SCHOOL_STORAGE)) !== nextSchool) {
+            storage.setItem(CURRENT_SCHOOL_STORAGE, nextSchool);
+        }
         return nextSchool;
     }
 
     function setCurrentSchool(school) {
         const storage = getStorage('localStorage');
-        const nextSchool = normalizeText(school) || DEFAULT_MY_SCHOOL_NAME;
+        const nextSchool = resolveAvailableSchoolName(school);
         if (storage) storage.setItem(CURRENT_SCHOOL_STORAGE, nextSchool);
         root.MY_SCHOOL = nextSchool;
         invalidateAnalyticsKernel();

@@ -7,6 +7,8 @@ const root = path.resolve(__dirname, '..');
 const cloudSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud.js'), 'utf8');
 const workspaceSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud-workspace-runtime.js'), 'utf8');
 const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const cohortExamMetaSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-exam-meta-runtime.js'), 'utf8');
+const cohortDbCoreSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-db-core-runtime.js'), 'utf8');
 
 const storage = {
     getItem() {
@@ -197,28 +199,28 @@ assert.ok(
     'stale workspace guard should not swallow intentional blocked-upload errors'
 );
 assert.ok(
-    appSource.includes('preferredMatchesCohort'),
+    cohortExamMetaSource.includes('preferredMatchesCohort'),
     'post-hydration exam restoration should reject a foreign-cohort active snapshot'
 );
 assert.ok(
-    appSource.includes('ensureCohortRegistered(normalizedCohortId);'),
+    cohortExamMetaSource.includes('ensureCohortRegistered(normalizedCohortId);'),
     'post-hydration exam restoration should repair stale cohort metadata'
 );
 assert.ok(
-    appSource.includes('CohortDB.applyExamToWorkspace(preferredExamId, {')
-        && appSource.includes('recalculate: !currentSchoolMetricsReady'),
+    cohortExamMetaSource.includes('CohortDB.applyExamToWorkspace(preferredExamId, {')
+        && cohortExamMetaSource.includes('recalculate: !currentSchoolMetricsReady'),
     'post-hydration exam restoration should refresh stale grade-derived settings'
 );
 assert.ok(
-    appSource.includes('function hasUsableProcessedSchoolMetrics'),
+    cohortExamMetaSource.includes('function hasUsableProcessedSchoolMetrics'),
     'workspace restore should distinguish rebuilt school rosters from processed school metrics'
 );
 assert.ok(
-    appSource.includes('const currentSchoolMetricsReady = hasUsableProcessedSchoolMetrics(SCHOOLS);'),
+    cohortExamMetaSource.includes('const currentSchoolMetricsReady = hasUsableProcessedSchoolMetrics(SCHOOLS);'),
     'auto restore should detect split cloud payloads that have rows but missing school metrics'
 );
 assert.ok(
-    appSource.includes('const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;'),
+    cohortDbCoreSource.includes('const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;'),
     'exam restore should recalculate when restored school metrics are missing even if school rosters exist'
 );
 assert.ok(

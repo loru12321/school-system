@@ -6,6 +6,7 @@ const vm = require('vm');
 async function run() {
     const source = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
     const schedulerSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/cohort-exam-hydration-runtime.js'), 'utf8');
+    const snapshotSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/snapshot-system-runtime.js'), 'utf8');
     const cloudSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/cloud.js'), 'utf8');
     const cloudWorkspaceSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/cloud-workspace-runtime.js'), 'utf8');
     const fastEntryStart = source.indexOf('if (options.fastEnter === true) {');
@@ -30,7 +31,7 @@ async function run() {
         'upgraded cloud exam sync must request a full historical fetch'
     );
     assert.ok(
-        source.includes("Object.prototype.hasOwnProperty.call(db, 'TARGETS')"),
+        snapshotSource.includes("Object.prototype.hasOwnProperty.call(db, 'TARGETS')"),
         'snapshot restore must preserve existing targets when an exam snapshot omits TARGETS'
     );
     assert.ok(

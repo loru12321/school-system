@@ -139,32 +139,31 @@ const DataManager = {
     },
 
     updateCloudPanelView: function () {
-        const switcher = this.ensureCloudPanelSwitch();
         const workflow = document.getElementById('dm-workflow-strip');
         const statusOverview = document.getElementById('dm-status-overview');
         const cloudArea = document.getElementById('dm-cloud-area');
-        const overviewBtn = document.getElementById('dm-cloud-view-overview');
-        const listBtn = document.getElementById('dm-cloud-view-list');
         const isCloudTab = this.currentTab === 'cloud';
         const isExamBatchTab = this.currentTab === 'exams';
-
-        if (switcher) {
-            switcher.style.display = isCloudTab ? 'flex' : 'none';
-        }
-
-        if (isExamBatchTab) {
-            if (workflow) workflow.style.display = 'none';
-            if (statusOverview) statusOverview.style.display = 'none';
-            if (cloudArea) cloudArea.style.display = 'none';
-            return;
-        }
+        const existingSwitcher = document.getElementById('dm-cloud-view-switcher');
 
         if (!isCloudTab) {
+            if (existingSwitcher) existingSwitcher.style.display = 'none';
+            if (isExamBatchTab) {
+                if (workflow) workflow.style.display = 'none';
+                if (statusOverview) statusOverview.style.display = 'none';
+                if (cloudArea) cloudArea.style.display = 'none';
+                return;
+            }
             if (workflow) workflow.style.display = 'flex';
             if (statusOverview) statusOverview.style.display = 'block';
             if (cloudArea) cloudArea.style.display = 'none';
             return;
         }
+
+        const switcher = this.ensureCloudPanelSwitch();
+        const overviewBtn = document.getElementById('dm-cloud-view-overview');
+        const listBtn = document.getElementById('dm-cloud-view-list');
+        if (switcher) switcher.style.display = 'flex';
 
         const showOverview = this.cloudPanelView === 'overview';
         if (workflow) workflow.style.display = showOverview ? 'flex' : 'none';
@@ -438,12 +437,7 @@ const DataManager = {
             }, 50);
         }
 
-        if (tab === 'params') {
-            this.renderParams();
-        }
-
         if (tab === 'exams') {
-            this.renderExamBatches();
             this.ensureExamBatchesHydrated();
         }
 
@@ -2326,4 +2320,4 @@ const DataManager = {
         }
     }
 }; // DataManager 对象结束；SQL 相关逻辑已拆分到 public/assets/js/data-manager-sql.js
-
+

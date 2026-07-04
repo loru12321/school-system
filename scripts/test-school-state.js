@@ -43,6 +43,25 @@ function run() {
     assert.strictEqual(schoolState.getCurrentSchool(), '银山实验');
     assert.strictEqual(root.localStorage.getItem('MY_SCHOOL'), '银山实验');
 
+    const aliasRoot = {
+        DEFAULT_MY_SCHOOL_NAME: '银山实验',
+        localStorage: createMockStorage({
+            MY_SCHOOL: '银山实验'
+        }),
+        SCHOOLS: {
+            银山实验学校: { name: '银山实验学校', students: [{ name: '甲' }] },
+            梯门中学: { name: '梯门中学', students: [] }
+        },
+        areSchoolNamesEquivalent(left, right) {
+            const normalize = (value) => String(value || '').replace(/学校$/u, '').trim();
+            return normalize(left) === normalize(right);
+        }
+    };
+    const aliasState = createSchoolStateRuntime(aliasRoot);
+    assert.strictEqual(aliasState.getCurrentSchool(), '银山实验学校');
+    assert.strictEqual(aliasRoot.MY_SCHOOL, '银山实验学校');
+    assert.strictEqual(aliasRoot.localStorage.getItem('MY_SCHOOL'), '银山实验学校');
+
     console.log('school-state-runtime tests passed');
 }
 

@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-571401f418f8';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-18b757629fb0';
 
 function bootDebugLog(...args) {
 try {
@@ -115,8 +115,8 @@ scheduleLoginPrefetch();
 scheduleAppModuleWarmup();
 });
 
-var BOOT_JS_BASE = './assets/js/';
-var BOOT_VENDOR_BASE = './assets/vendor/';
+var BOOT_JS_BASE='./assets/js/';
+var BOOT_VENDOR_BASE='./assets/vendor/';
 var BOOT_VENDOR_MODULES = [BOOT_VENDOR_BASE + 'alpinejs/cdn.min.js'];
 var DEFERRED_APP_MODULES = [
 'support-metrics-runtime.js',
@@ -132,9 +132,6 @@ var DEFERRED_APP_MODULES = [
 ].map(bootJs);
 
 function bootJs(name) { return BOOT_JS_BASE + name; }
-function bootVend(name) { return BOOT_VENDOR_BASE + name; }
-
-
 var APP_MODULES = [
 'dialog-runtime.js',
 'auth-state-runtime.js',
@@ -2265,5 +2262,3 @@ section.replaceWith(replacement);
 templateNode.remove();
 return replacement;
 };
-
-/* Runtime skill loader moved to runtime-loader-runtime.js. */

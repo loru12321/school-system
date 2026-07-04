@@ -134,22 +134,22 @@ async function run() {
 
     const rootDir = path.resolve(__dirname, '..');
     const html = fs.readFileSync(path.join(rootDir, 'src/index.html'), 'utf8');
-    const app = fs.readFileSync(path.join(rootDir, 'public/assets/js/app.js'), 'utf8');
+    const authLogin = fs.readFileSync(path.join(rootDir, 'public/assets/js/auth-login-runtime.js'), 'utf8');
     assert.ok(html.includes('一键生成所有账号 (教师)'), 'account manager should expose a teacher-only bulk generation button');
     assert.ok(html.includes('一键生成所有账号 (家长)'), 'account manager should expose a parent-only bulk generation button');
     assert.ok(!html.includes('一键生成所有账号 (教师+家长)'), 'combined teacher+parent bulk generation button should be removed');
     assert.ok(html.includes('Auth.generateTeacherAccounts()'), 'teacher bulk button should call the teacher-only entry');
     assert.ok(html.includes('Auth.generateParentAccounts()'), 'parent bulk button should call the parent-only entry');
-    assert.ok(app.includes("generateTeacherAccounts: function ()"), 'Auth should expose a teacher-only account generator');
-    assert.ok(app.includes("generateParentAccounts: function ()"), 'Auth should expose a parent-only account generator');
-    assert.ok(app.includes("options.accountType === 'teacher'"), 'account generation should support teacher-only scope');
-    assert.ok(app.includes("options.accountType === 'parent'"), 'account generation should support parent-only scope');
+    assert.ok(authLogin.includes("generateTeacherAccounts: function ()"), 'Auth should expose a teacher-only account generator');
+    assert.ok(authLogin.includes("generateParentAccounts: function ()"), 'Auth should expose a parent-only account generator');
+    assert.ok(authLogin.includes("options.accountType === 'teacher'"), 'account generation should support teacher-only scope');
+    assert.ok(authLogin.includes("options.accountType === 'parent'"), 'account generation should support parent-only scope');
     assert.ok(html.includes('id="account-edit-panel"'), 'account edit panel should render above search area');
     assert.ok(html.includes('id="acc-edit-school"'), 'account edit panel should include a school dropdown');
     assert.ok(html.includes('<select id="manual-school"'), 'manual account school input should be a dropdown');
-    assert.ok(app.includes('school: studentSchool'), 'generated parent accounts should preserve selected school');
-    assert.ok(app.includes('teacher_name: user'), 'generated teacher cloud rows should keep teacher_name');
-    assert.ok(app.includes('sameAppSchoolName(p.school, studentSchool)'), 'parent account generation should match duplicate class names by school');
+    assert.ok(authLogin.includes('school: studentSchool'), 'generated parent accounts should preserve selected school');
+    assert.ok(authLogin.includes('teacher_name: user'), 'generated teacher cloud rows should keep teacher_name');
+    assert.ok(authLogin.includes('sameAppSchoolName(p.school, studentSchool)'), 'parent account generation should match duplicate class names by school');
 
     console.log('account-manager-runtime tests passed');
 }

@@ -1428,12 +1428,12 @@ async function main() {
     }, 'same class names across schools should stay school-scoped');
     assert.deepStrictEqual(snapshot.analyticsKernelSchoolAliasPolicy, {
         available: true,
-        teacherSchoolName: '甲校别名',
+        teacherSchoolName: '甲校',
         teacherNames: ['甲校教师'],
         localStudentCount: 2,
         localAvg: 85,
         containsForeignTeacher: false
-    }, 'analytics kernel should keep teacher stats when current school is an alias');
+    }, 'analytics kernel should resolve school aliases to available school keys without losing teacher stats');
     assert.deepStrictEqual(snapshot.teacherCompareSchoolIsolationPolicy, {
         available: true,
         teacherNames: ['甲校教师'],

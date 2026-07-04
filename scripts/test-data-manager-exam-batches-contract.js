@@ -4,7 +4,8 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'src', 'index.html'), 'utf8');
-const app = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'app.js'), 'utf8');
+const dataManagerCore = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'data-manager-core-runtime.js'), 'utf8');
+const cohortExamMeta = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'cohort-exam-meta-runtime.js'), 'utf8');
 const tabRuntime = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'data-manager-tab-runtime.js'), 'utf8');
 
 assert.ok(html.includes('id="tab-data-exams"'), 'data manager must expose the exam batch tab');
@@ -29,10 +30,6 @@ assert.ok(html.includes('height:clamp(420px, 52vh, 620px)'), 'exam batch table m
     'CloudManager.fetchCohortExamsToLocal(cohortId',
     'minCount: 50',
     'getExamBatchDateSortTs: function (examId, meta = {})',
-    'function getExamRecordDateSortTimestamp(examId, exam = {})',
-    'function getLatestExamRecordId(exams = {})',
-    'sort(compareExamRecordsByDateDesc)',
-    'sort(compareExamRecordsByDateAsc)',
     'return b.examDateTs - a.examDateTs',
     'renderExamBatches: function ()',
     'selectRecognizedExamBatches: function ()',
@@ -40,7 +37,16 @@ assert.ok(html.includes('height:clamp(420px, 52vh, 620px)'), 'exam batch table m
     'removeExamBatchLocal: async function (examId)',
     "saveCloudData({ mode: 'workspace'"
 ].forEach((needle) => {
-    assert.ok(app.includes(needle), `app.js missing exam batch contract: ${needle}`);
+    assert.ok(dataManagerCore.includes(needle), `data-manager-core-runtime.js missing exam batch contract: ${needle}`);
+});
+
+[
+    'function getExamRecordDateSortTimestamp(examId, exam = {})',
+    'function getLatestExamRecordId(exams = {})',
+    'sort(compareExamRecordsByDateDesc)',
+    'function compareExamRecordsByDateAsc(left, right)'
+].forEach((needle) => {
+    assert.ok(cohortExamMeta.includes(needle), `cohort-exam-meta-runtime.js missing exam batch contract: ${needle}`);
 });
 
 assert.ok(tabRuntime.includes("manager.currentTab === 'exams'"), 'tab runtime must dispatch the exams tab');
