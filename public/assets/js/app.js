@@ -6895,6 +6895,11 @@ function cloneIndicatorCalcRows(rows) {
     return Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
 }
 
+function normalizeIndicatorTargetNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
 function buildIndicatorCalcSignature(rankLine1, rankLine2) {
     const targets = (typeof ensureNormalizedTargets === 'function')
         ? ensureNormalizedTargets()
@@ -6903,7 +6908,7 @@ function buildIndicatorCalcSignature(rankLine1, rankLine2) {
         .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
         .map((name) => {
             const target = targets[name] || {};
-            return `${String(name).trim()}:${parseInt(target.t1, 10) || 0}:${parseInt(target.t2, 10) || 0}`;
+            return `${String(name).trim()}:${normalizeIndicatorTargetNumber(target.t1)}:${normalizeIndicatorTargetNumber(target.t2)}`;
         })
         .join('|');
     return [
@@ -6983,8 +6988,15 @@ function calcIndicators(isSilent = false) {
         ? filterRowsToTownshipSchools(RAW_DATA || [])
         : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
     const allScores = townshipRows.map(s => s.total).filter(v => typeof v === 'number').sort((a, b) => b - a);
-    const line1 = allScores[r1 - 1] || 0;
-    const line2 = allScores[r2 - 1] || 0;
+    if (!allScores.length) {
+        clearIndicatorTargetMatchPanel();
+        if (!isSilent && window.UI) UI.toast('暂无可计算的指标生成绩数据', 'warning');
+        return [];
+    }
+    const line1Index = Math.min(Math.max(r1, 1), allScores.length) - 1;
+    const line2Index = Math.min(Math.max(r2, 1), allScores.length) - 1;
+    const line1 = allScores[line1Index];
+    const line2 = allScores[line2Index];
 
     let calcData = [];
     let maxExcess1 = 0; // 指标一最大超额数
@@ -7003,8 +7015,8 @@ function calcIndicators(isSilent = false) {
 
         const targetInfo = getTargetConfigBySchool(s.name);
         const studentCount = scores.length;
-        const rawT1 = parseInt(targetInfo.value?.t1, 10) || 0;
-        const rawT2 = parseInt(targetInfo.value?.t2, 10) || 0;
+        const rawT1 = normalizeIndicatorTargetNumber(targetInfo.value?.t1);
+        const rawT2 = normalizeIndicatorTargetNumber(targetInfo.value?.t2);
         const invalidTarget1 = rawT1 > 0 && studentCount > 0 && rawT1 > studentCount;
         const invalidTarget2 = rawT2 > 0 && studentCount > 0 && rawT2 > studentCount;
         const t = {

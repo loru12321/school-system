@@ -85,6 +85,7 @@ assert.ok(!read('public/_headers').includes('/downloads/*'), 'static headers mus
 assert.ok(worker.includes('Production Cloudflare Worker entrypoint'), 'worker entrypoint responsibility should be documented');
 assert.ok(gateway.includes('not the Wrangler main entrypoint'), 'D1 gateway module responsibility should be documented');
 assert.ok(gatewayContractSource.includes('let nextSchool = normalizeText(payload.school ?? existing.school);'), 'account update must preserve/update bound school');
+assert.ok(gatewayContractSource.includes('const nextRoles = payloadRoles.length'), 'account update must preserve existing role memberships unless roles are explicitly provided');
 assert.ok(gatewayContractSource.includes('const ensuredLoginSessionDbs = new WeakSet();'), 'login session table setup should be cached per Worker isolate');
 assert.ok(gatewayContractSource.includes('ensuredLoginSessionDbs.has(db)'), 'login session table setup should skip repeated D1 schema calls');
 assert.ok(gatewayContractSource.includes('const requestedLimit = Number(payload.limit ?? 500);'), 'alias list should use a bounded default limit');
@@ -116,6 +117,11 @@ assert.ok(workerContractSource.includes("const DEFAULT_LEGACY_GATEWAY_ORIGIN = '
 assert.ok(workerContractSource.includes("!hasSystemDataStorage(env) && hasSupabaseRestOrigin(env)"), 'system_data should only fall back to Supabase when an origin is explicitly configured');
 assert.ok(workerContractSource.includes("!hasGatewayDataStorage(env) && hasSupabaseRestOrigin(env)"), 'managed REST should only fall back to Supabase when an origin is explicitly configured');
 assert.ok(workerContractSource.includes("env.SUPABASE_REST_API_KEY"), 'Supabase REST key must be read from env');
+assert.ok(!workerSystemData.includes("request.headers.get('apikey')"), 'Supabase REST proxy must not trust browser-provided apikey headers');
+assert.ok(workerSystemData.includes("import { resolveSession } from './worker-auth.js';"), 'system_data and managed REST writes must reuse gateway session auth');
+assert.ok(workerSystemData.includes("const PROTECTED_REST_PATHS = new Set"), 'managed REST write paths should be explicitly protected');
+assert.ok(workerSystemData.includes("'POST', 'PUT', 'PATCH', 'DELETE'"), 'protected REST write methods should require a session');
+assert.ok(workerSystemData.includes('requireRestWriteSession(request, env)'), 'protected REST writes should enforce session validation before mutation');
 assert.ok(workerContractSource.includes("Authorization: `Bearer ${apikey}`"), 'Supabase proxy must forward bearer auth');
 assert.ok(workerContractSource.includes("return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);"), 'system data route must fail closed for unsupported methods');
 assert.ok(worker.includes("const ENTRANCE_AUDIO_MANIFEST_API_PATH = '/api/entrance-audio-manifest';"), 'file runtime should have a Worker-served entrance audio manifest route');

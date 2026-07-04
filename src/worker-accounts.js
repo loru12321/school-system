@@ -101,10 +101,19 @@ export async function handleAccountUpdate(request, db, session, payload) {
   if (normalizeText(existing.role) === 'admin' && normalizeText(existing.username) === normalizeText(session.username) && nextRole !== 'admin') {
     return forbidden(request, 'Cannot downgrade current admin account from browser');
   }
+  const payloadRoles = Array.isArray(payload.roles)
+    ? payload.roles.map((role) => normalizeText(role)).filter(Boolean)
+    : [];
+  const existingRoles = Array.isArray(existing.roles)
+    ? existing.roles.map((role) => normalizeText(role)).filter(Boolean)
+    : [];
+  const nextRoles = payloadRoles.length
+    ? Array.from(new Set(payloadRoles))
+    : Array.from(new Set([nextRole, ...existingRoles].filter(Boolean)));
   await upsertSystemUser(db, {
     ...existing,
     role: nextRole,
-    roles: [nextRole],
+    roles: nextRoles.length ? nextRoles : [nextRole],
     school: nextSchool,
     class_name: nextClassName,
     teacher_name: normalizeText(payload.teacher_name || existing.teacher_name || existing.display_name || existing.username),
@@ -120,7 +129,7 @@ export async function handleAccountResetPassword(request, db, session, payload) 
   const username = normalizeText(payload.username);
   const newPassword = normalizeText(payload.new_password);
   if (!username || !newPassword) return badRequest(request, 'username and new_password are required');
-  if (newPassword.length < 6) return badRequest(request, 'new_password must be at least 6 characters');
+  if (newPassword.length < 8) return badRequest(request, 'new_password must be at least 8 characters');
   const existing = await getSystemUserRow(db, username, { includeInactive: true });
   if (!existing || !existing.is_active) return badRequest(request, 'account not found');
   if (!accountEditable(session, existing)) return forbidden(request, 'Out of scope');
@@ -141,7 +150,7 @@ export async function handleAccountChangePassword(request, db, session, payload)
   const oldPassword = normalizeText(payload.old_password);
   const newPassword = normalizeText(payload.new_password);
   if (!oldPassword || !newPassword) return badRequest(request, 'old_password and new_password are required');
-  if (newPassword.length < 6) return badRequest(request, 'new_password must be at least 6 characters');
+  if (newPassword.length < 8) return badRequest(request, 'new_password must be at least 8 characters');
   if (oldPassword === newPassword) return badRequest(request, 'new_password must differ from old_password');
   const existing = await getSystemUserRow(db, normalizeText(session.username), { includeInactive: true });
   if (!existing || !existing.is_active) return badRequest(request, 'current account not found');

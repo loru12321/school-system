@@ -51,7 +51,6 @@ var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
         }
 
         pushCandidate(this.resolvedGatewayUrl);
-        pushCandidate(localStorage.getItem('EDGE_GATEWAY_URL'));
         pushCandidate(window.EDGE_GATEWAY_URL);
 
         if (typeof DIRECT_EDGE_GATEWAY_URL !== 'undefined') {

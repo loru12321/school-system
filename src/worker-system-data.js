@@ -1,4 +1,5 @@
 import { handleManagedRestRequest } from './worker-gateway-d1.js';
+import { resolveSession } from './worker-auth.js';
 import {
   normalizeText,
   normalizeOrigin,
@@ -26,6 +27,11 @@ const SYSTEM_DATA_COMPARE_PREFIXES = [
   'TEACHER_COMPARE_',
   'TOWN_SUB_COMPARE_'
 ];
+const PROTECTED_REST_PATHS = new Set([
+  '/sb/rest/v1/issues',
+  '/sb/rest/v1/system_logs'
+]);
+const PROTECTED_REST_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // ---------------------------------------------------------------------------
 // Environment accessors
@@ -35,12 +41,11 @@ function getLegacyGatewayOrigin(env) {
   return normalizeOrigin(env.LEGACY_GATEWAY_ORIGIN || env.SUPABASE_ORIGIN || DEFAULT_LEGACY_GATEWAY_ORIGIN);
 }
 
-function getLegacyGatewayApiKey(env, request) {
+function getLegacyGatewayApiKey(env) {
   return normalizeText(
     env.SUPABASE_REST_API_KEY
     || env.LEGACY_GATEWAY_API_KEY
     || env.LEGACY_SUPABASE_KEY
-    || request.headers.get('apikey')
   );
 }
 
@@ -48,8 +53,8 @@ function getSupabaseRestOrigin(env) {
   return getLegacyGatewayOrigin(env);
 }
 
-function getSupabaseRestApiKey(env, request) {
-  return getLegacyGatewayApiKey(env, request);
+function getSupabaseRestApiKey(env) {
+  return getLegacyGatewayApiKey(env);
 }
 
 function hasSupabaseRestOrigin(env) {
@@ -77,6 +82,16 @@ function getSystemDataMode(env) {
   if (mode === 'primary') return 'primary';
   if (mode === 'supabase') return 'supabase';
   return 'hybrid';
+}
+
+function requiresRestWriteSession(method) {
+  return PROTECTED_REST_METHODS.has(String(method || 'GET').toUpperCase());
+}
+
+async function requireRestWriteSession(request, env) {
+  const resolved = await resolveSession(request, env);
+  if (resolved?.error) return resolved.error;
+  return null;
 }
 
 function isSystemDataHybridMode(env) {
@@ -585,7 +600,7 @@ async function readNormalizedSystemDataProxyBody(request) {
 
 async function proxySupabaseRestRequest(request, env, url, explicitPath = '', options = {}) {
   const targetUrl = buildSupabaseRestTargetUrl(env, url, explicitPath);
-  const apikey = getSupabaseRestApiKey(env, request);
+  const apikey = getSupabaseRestApiKey(env);
   if (!targetUrl || !apikey) {
     return jsonResponse(503, { ok: false, error: 'SUPABASE_REST_PROXY_UNAVAILABLE' }, request);
   }
@@ -596,7 +611,7 @@ async function proxySupabaseRestRequest(request, env, url, explicitPath = '', op
 
 async function proxySystemDataReadToSupabase(request, env, url) {
   const targetUrl = new URL(buildSupabaseRestTargetUrl(env, url, '/rest/v1/system_data'));
-  const apikey = getSupabaseRestApiKey(env, request);
+  const apikey = getSupabaseRestApiKey(env);
   if (!apikey) return jsonResponse(503, { ok: false, error: 'SUPABASE_REST_PROXY_UNAVAILABLE' }, request);
 
   const selectSet = parseSystemDataSelect(url.searchParams);
@@ -664,8 +679,13 @@ async function proxySystemDataWriteToSupabase(request, env, url) {
  * depending on env configuration.
  */
 export async function handleSystemDataProxy(request, env, url) {
+  const method = String(request.method || 'GET').toUpperCase();
+  if (requiresRestWriteSession(method)) {
+    const authError = await requireRestWriteSession(request, env);
+    if (authError) return authError;
+  }
+
   if (shouldProxySystemDataToSupabase(env)) {
-    const method = String(request.method || 'GET').toUpperCase();
     if (method === 'GET' || method === 'HEAD') return proxySystemDataReadToSupabase(request, env, url);
     if (method === 'POST' || method === 'PUT' || method === 'PATCH') return proxySystemDataWriteToSupabase(request, env, url);
     if (method === 'DELETE') return proxySupabaseRestRequest(request, env, url, '/rest/v1/system_data');
@@ -674,7 +694,6 @@ export async function handleSystemDataProxy(request, env, url) {
 
   if (!hasSystemDataStorage(env)) return jsonResponse(503, { ok: false, error: 'SYSTEM_DATA_STORAGE_UNAVAILABLE' }, request);
 
-  const method = String(request.method || 'GET').toUpperCase();
   if (isSystemDataHybridMode(env)) {
     if (method === 'GET' || method === 'HEAD') {
       const d1Response = method === 'GET'
@@ -715,6 +734,11 @@ export async function handleSystemDataProxy(request, env, url) {
  */
 export async function handleCloudRestProxy(request, env, url) {
   if (url.pathname === SYSTEM_DATA_PATH) return handleSystemDataProxy(request, env, url);
+
+  if (PROTECTED_REST_PATHS.has(url.pathname) && requiresRestWriteSession(request.method)) {
+    const authError = await requireRestWriteSession(request, env);
+    if (authError) return authError;
+  }
 
   if (shouldProxyManagedRestToSupabase(env)) return proxySupabaseRestRequest(request, env, url);
 

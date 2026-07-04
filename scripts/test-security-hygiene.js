@@ -52,6 +52,9 @@ assert.ok(!gatewayContractSource.includes('internal_gateway_secret_v1_fallback')
 assert.ok(gatewayContractSource.includes('throw new Error(\'APP_SESSION_SECRET_MISSING\')'), 'gateway must fail closed when APP_SESSION_SECRET is missing');
 assert.ok(!gatewayContractSource.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'gateway must not fall back to a static legacy Supabase key');
 assert.ok(!workerContractSource.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'worker must not fall back to a static legacy Supabase key');
+assert.ok(!workerSystemData.includes("request.headers.get('apikey')"), 'Worker Supabase REST proxy must not trust browser-provided apikey headers');
+assert.ok(workerSystemData.includes("import { resolveSession } from './worker-auth.js';"), 'system_data and managed REST writes must require gateway sessions');
+assert.ok(workerSystemData.includes("'/sb/rest/v1/issues'") && workerSystemData.includes("'/sb/rest/v1/system_logs'"), 'mutable management REST tables should be session-protected');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should use shared HTTP helpers');
 assert.ok(workerHelpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared HTTP helpers should keep an explicit CORS allowlist');
 assert.ok(workerHelpers.includes('DEFAULT_ALLOWED_CORS_HEADERS'), 'shared HTTP helpers should use a fixed CORS request-header allowlist');
@@ -93,6 +96,7 @@ assert.ok(
     'EdgeGateway runtime should allow same-origin hosted gateway calls without a browser-side publishable key'
 );
 assert.ok(edgeGateway.includes('if (apikey) headers.apikey = apikey;'), 'EdgeGateway runtime should omit empty apikey headers for hosted gateway calls');
+assert.ok(!edgeGateway.includes("localStorage.getItem('EDGE_GATEWAY_URL')"), 'EdgeGateway runtime should not accept gateway endpoints from localStorage');
 assert.ok(serviceWorker.includes('isApiCacheEligible'), 'service worker should gate API caching');
 assert.ok(!serviceWorker.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 assert.ok(publicHeaders.includes('Content-Security-Policy-Report-Only:'), 'static headers should start CSP in report-only mode');
