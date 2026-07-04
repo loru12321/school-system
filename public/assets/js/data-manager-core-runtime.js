@@ -188,6 +188,33 @@ const DataManager = {
         if (listBtn) Object.assign(listBtn.style, showOverview ? idleStyle : activeStyle);
     },
 
+    scheduleDataManagerStatusRender: function (options = {}) {
+        const run = () => {
+            if (this && typeof this.renderDataManagerStatus === 'function') {
+                this.renderDataManagerStatus();
+            }
+        };
+        if (options && options.immediate) {
+            run();
+            return;
+        }
+        const delay = Number.isFinite(Number(options.delay)) ? Number(options.delay) : 80;
+        const timeout = Number.isFinite(Number(options.timeout)) ? Number(options.timeout) : 1200;
+        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
+            window.SystemPerformance.scheduleTask('data-manager-status-render', run, {
+                delay,
+                idle: true,
+                timeout
+            });
+            return;
+        }
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(run, { timeout });
+            return;
+        }
+        window.setTimeout(run, delay);
+    },
+
     decorateLayout: function () {
         const modal = document.getElementById('data-manager-modal');
         const content = modal?.querySelector('.modal-content');
@@ -447,7 +474,7 @@ const DataManager = {
         }
 
         this.renderCurrentTab();
-        this.renderDataManagerStatus();
+        this.scheduleDataManagerStatusRender();
         this.updateCloudPanelView();
     },
 
