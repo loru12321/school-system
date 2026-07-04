@@ -136,8 +136,15 @@ function updateStudentSchoolSelect() {
     const schoolOptionsHtml = '<option value="">--请选择本校--</option>'
         + accessibleSchools.map(school => `<option value="${school}">${school}</option>`).join('');
     setOptionsIfChanged(select, schoolOptionsHtml, `schools:${accessibleSchools.join('|')}`);
+    const currentSchool = String(
+        (typeof readCurrentSchool === 'function' ? readCurrentSchool() : '')
+        || (typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '')
+        || ''
+    ).trim();
     const previousSchoolMatch = findMatchingSchoolOption(previousSchool);
+    const currentSchoolMatch = findMatchingSchoolOption(currentSchool);
     if (previousSchoolMatch) select.value = previousSchoolMatch;
+    else if (currentSchoolMatch) select.value = currentSchoolMatch;
 
     const updateClassOptionsForSchool = (school, options = {}) => {
         const includeAll = options.includeAll !== false;

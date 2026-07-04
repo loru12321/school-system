@@ -187,14 +187,18 @@ function updateProgressSchoolSelect() {
     setProgressSelectOptionsIfChanged(sel, optionsHtml, `progress-school:${schools.join('|')}`);
 
     const role = user?.role || 'guest';
+    const previousSchool = progressResolveSchoolOption(schools, sel.value);
+    const currentSchool = progressResolveSchoolOption(schools, progressGetCurrentSchoolName());
     if (role === 'teacher' || role === 'class_teacher' || role === 'director' || role === 'grade_director') {
-        const school = PermissionPolicy.getBoundSchool(user);
+        const school = progressResolveSchoolOption(schools, PermissionPolicy.getBoundSchool(user));
         if (school) {
             sel.value = school;
             sel.disabled = true;
         }
     } else {
         sel.disabled = false;
+        if (previousSchool) sel.value = previousSchool;
+        else if (currentSchool) sel.value = currentSchool;
     }
 
     requestAnimationFrame(() => {
