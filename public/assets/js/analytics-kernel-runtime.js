@@ -13,7 +13,7 @@
     root.AnalyticsKernel = runtime;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createAnalyticsKernel(root) {
     const HASH_SEED = 2166136261;
-    const PROCESS_CACHE_LIMIT = 2;
+    const PROCESS_CACHE_LIMIT = normalizeProcessCacheLimit(root.ANALYTICS_PROCESS_CACHE_LIMIT, 5);
     const SUBJECT_ALIAS_MAP = Object.freeze({
         '语文': '语文',
         '数学': '数学',
@@ -54,6 +54,12 @@
 
     function normalizeText(value) {
         return String(value == null ? '' : value).trim();
+    }
+
+    function normalizeProcessCacheLimit(value, fallback = 5) {
+        const limit = Number(value);
+        if (!Number.isFinite(limit)) return fallback;
+        return Math.max(1, Math.min(Math.floor(limit), 20));
     }
 
     function normalizeName(value) {
@@ -199,7 +205,8 @@
     function hashJson(value, hash = HASH_SEED) {
         if (value == null) return hashText(hash, '');
         if (Array.isArray(value)) {
-            return value.reduce((next, item) => hashJson(item, hashText(next, '[')), hashText(hash, ']'));
+            const listHash = value.reduce((next, item) => hashJson(item, next), hashText(hash, '['));
+            return hashText(listHash, ']');
         }
         if (typeof value === 'object') {
             return Object.keys(value).sort().reduce((next, key) => {

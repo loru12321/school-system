@@ -40,4 +40,27 @@ assert.strictEqual(teacherStats['甲校教师'].数学.studentCount, 2);
 assert.strictEqual(teacherStats['甲校教师'].数学.avg, 85);
 assert.strictEqual(teacherStats['乙校教师'], undefined);
 
+const defaultCacheKernel = createAnalyticsKernelRuntime({});
+['a', 'b', 'c', 'd', 'e'].forEach((key) => defaultCacheKernel.setProcessResult(key, { key }));
+assert.deepStrictEqual(defaultCacheKernel.getProcessResult('a'), { key: 'a' }, 'default process cache should retain five entries');
+defaultCacheKernel.setProcessResult('f', { key: 'f' });
+assert.strictEqual(defaultCacheKernel.getProcessResult('a'), null, 'default process cache should evict the sixth-oldest entry');
+assert.deepStrictEqual(defaultCacheKernel.getProcessResult('b'), { key: 'b' }, 'default process cache should retain the remaining recent entries');
+
+const customCacheKernel = createAnalyticsKernelRuntime({ ANALYTICS_PROCESS_CACHE_LIMIT: 3 });
+['a', 'b', 'c', 'd'].forEach((key) => customCacheKernel.setProcessResult(key, { key }));
+assert.strictEqual(customCacheKernel.getProcessResult('a'), null, 'custom process cache limit should be honored');
+assert.deepStrictEqual(customCacheKernel.getProcessResult('b'), { key: 'b' });
+
+assert.strictEqual(
+    createAnalyticsKernelRuntime({ CONFIG: { name: '2019年期末' } }).inferGradeNumber(),
+    null,
+    'grade inference should not treat a year containing 9 as grade 9'
+);
+assert.strictEqual(
+    createAnalyticsKernelRuntime({ CONFIG: { name: '9年级二模' } }).inferGradeNumber(),
+    9,
+    'grade inference should still recognize explicit grade 9 labels'
+);
+
 console.log('analytics-kernel-runtime tests passed');

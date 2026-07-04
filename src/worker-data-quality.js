@@ -53,13 +53,16 @@ export async function handleAliasList(request, db, session, payload) {
     conditions.push('cohort_id = ?');
     bindings.push(normalizeText(payload.cohort_id));
   }
+  const requestedLimit = Number(payload.limit ?? 500);
+  const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? Math.floor(requestedLimit) : 500, 500));
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const rows = await queryRows(db, `
     SELECT * FROM config_alias_rules
     ${where}
     ORDER BY priority ASC, created_at DESC
-  `, bindings);
-  return jsonResponse(200, { ok: true, records: rows }, request);
+    LIMIT ?
+  `, [...bindings, limit]);
+  return jsonResponse(200, { ok: true, records: rows, limit }, request);
 }
 
 export async function handleAliasSave(request, db, session, payload) {

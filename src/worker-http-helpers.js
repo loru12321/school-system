@@ -4,6 +4,15 @@ export const DEFAULT_ALLOWED_CORS_ORIGINS = [
   'https://school-system.hkakjiweu.workers.dev'
 ];
 
+export const DEFAULT_ALLOWED_CORS_HEADERS = [
+  'authorization',
+  'apikey',
+  'content-type',
+  'x-client-info',
+  'x-school-client',
+  'x-requested-with'
+].join(', ');
+
 export const HOP_BY_HOP_HEADERS = [
   'connection',
   'content-length',
@@ -77,7 +86,7 @@ export function isLocalDevelopmentOrigin(origin) {
 
 export function resolveCorsOrigin(request, env = {}) {
   const normalizedOrigin = normalizeOrigin(request.headers.get('Origin'));
-  if (normalizedOrigin === 'null') return 'null';
+  if (normalizedOrigin === 'null') return '';
   if (!normalizedOrigin) return DEFAULT_ALLOWED_CORS_ORIGINS[0];
   if (getAllowedCorsOrigins(env).has(normalizedOrigin)) return normalizedOrigin;
   if (isLocalDevelopmentOrigin(normalizedOrigin)) return normalizedOrigin;
@@ -88,13 +97,15 @@ export function resolveCorsOrigin(request, env = {}) {
 }
 
 export function buildCorsHeaders(request, env = {}) {
-  return {
-    'Access-Control-Allow-Origin': resolveCorsOrigin(request, env),
-    'Access-Control-Allow-Headers': request.headers.get('Access-Control-Request-Headers') || 'authorization, apikey, content-type, x-client-info',
+  const origin = resolveCorsOrigin(request, env);
+  const headers = {
+    'Access-Control-Allow-Headers': DEFAULT_ALLOWED_CORS_HEADERS,
     'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'
   };
+  if (origin) headers['Access-Control-Allow-Origin'] = origin;
+  return headers;
 }
 
 // ---------------------------------------------------------------------------

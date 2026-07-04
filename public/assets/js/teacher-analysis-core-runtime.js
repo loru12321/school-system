@@ -16,7 +16,14 @@
     const syncTeacherSchoolContext = typeof window.syncTeacherAnalysisSchoolContext === 'function'
         ? window.syncTeacherAnalysisSchoolContext
         : ((preferredSchool = '') => {
-            const nextSchool = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验').trim();
+            const nextSchool = String(
+                preferredSchool
+                || window.DEFAULT_MY_SCHOOL_NAME
+                || (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function' ? window.SchoolState.getCurrentSchool() : '')
+                || window.MY_SCHOOL
+                || localStorage.getItem('MY_SCHOOL')
+                || ''
+            ).trim();
             if (nextSchool) {
                 window.MY_SCHOOL = nextSchool;
                 localStorage.setItem('MY_SCHOOL', nextSchool);
@@ -278,9 +285,20 @@
             .toLowerCase();
     }
 
+    function teacherIsGrade9Context() {
+        if (window.AnalyticsKernel && typeof window.AnalyticsKernel.inferGradeNumber === 'function') {
+            return window.AnalyticsKernel.inferGradeNumber({
+                config: window.CONFIG,
+                examId: window.CURRENT_EXAM_ID,
+                examName: window.CONFIG?.name
+            }) === 9;
+        }
+        const grade = Number(window.CONFIG?.grade ?? window.CONFIG?.gradeNumber);
+        return Number.isFinite(grade) && grade === 9;
+    }
+
     function teacherGetWeightConfig() {
-        const isGrade9 = String(window.CONFIG?.name || '').includes('9');
-        return isGrade9
+        return teacherIsGrade9Context()
             ? { avg: 50, exc: 80, pass: 50, total: 180 }
             : { avg: 60, exc: 70, pass: 70, total: 200 };
     }

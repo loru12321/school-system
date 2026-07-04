@@ -151,7 +151,10 @@ export function readRequestIp(request) {
 // Login session table helpers
 // ---------------------------------------------------------------------------
 
+const ensuredLoginSessionDbs = new WeakSet();
+
 export async function ensureLoginSessionsTable(db) {
+  if (db && typeof db === 'object' && ensuredLoginSessionDbs.has(db)) return;
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS login_sessions (
       id TEXT PRIMARY KEY,
@@ -178,6 +181,7 @@ export async function ensureLoginSessionsTable(db) {
   `).run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_login_sessions_username_login ON login_sessions(username, login_at DESC)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_login_sessions_status_login ON login_sessions(status, login_at DESC)').run();
+  if (db && typeof db === 'object') ensuredLoginSessionDbs.add(db);
 }
 
 export function normalizeLoginSessionRow(row) {

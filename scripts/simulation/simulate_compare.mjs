@@ -120,11 +120,15 @@ function analyzeTeachers(students, mySchool, teacherMap) {
 
   const gradeStats = {};
   for (const sub of SUBJECTS) {
-    const vals = myStudents.map((s) => s.scores[sub]);
-    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const vals = myStudents.map((s) => s.scores[sub]).filter(Number.isFinite);
     const exc = THRESHOLDS[sub].exc;
     const pass = THRESHOLDS[sub].pass;
     const low = pass * 0.6;
+    if (!vals.length) {
+      gradeStats[sub] = { avg: 0, exc, pass, low };
+      continue;
+    }
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
     gradeStats[sub] = { avg, exc, pass, low };
   }
 
@@ -143,6 +147,19 @@ function analyzeTeachers(students, mySchool, teacherMap) {
       const data = teacherStats[teacher][sub];
       const scores = data.students.map((s) => s.scores[sub]);
       const gs = gradeStats[sub];
+      if (!scores.length) {
+        Object.assign(data, {
+          avg: 0,
+          studentCount: 0,
+          classes: [...new Set(data.classes)].sort().join(','),
+          excellentRate: 0,
+          passRate: 0,
+          lowRate: 0,
+          contribution: 0,
+          finalScore: 0,
+        });
+        continue;
+      }
       const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
       const excellentRate = scores.filter((v) => v >= gs.exc).length / scores.length;
       const passRate = scores.filter((v) => v >= gs.pass).length / scores.length;

@@ -85,6 +85,11 @@ assert.ok(!read('public/_headers').includes('/downloads/*'), 'static headers mus
 assert.ok(worker.includes('Production Cloudflare Worker entrypoint'), 'worker entrypoint responsibility should be documented');
 assert.ok(gateway.includes('not the Wrangler main entrypoint'), 'D1 gateway module responsibility should be documented');
 assert.ok(gatewayContractSource.includes('let nextSchool = normalizeText(payload.school ?? existing.school);'), 'account update must preserve/update bound school');
+assert.ok(gatewayContractSource.includes('const ensuredLoginSessionDbs = new WeakSet();'), 'login session table setup should be cached per Worker isolate');
+assert.ok(gatewayContractSource.includes('ensuredLoginSessionDbs.has(db)'), 'login session table setup should skip repeated D1 schema calls');
+assert.ok(gatewayContractSource.includes('const requestedLimit = Number(payload.limit ?? 500);'), 'alias list should use a bounded default limit');
+assert.ok(gatewayContractSource.includes('Math.min(Number.isFinite(requestedLimit) ? Math.floor(requestedLimit) : 500, 500)'), 'alias list should clamp caller-provided limits');
+assert.ok(gatewayContractSource.includes('LIMIT ?'), 'alias list query should include a D1 row limit');
 assert.ok(gatewayContractSource.includes("if (nextRole === 'director' || nextRole === 'admin') nextClassName = '';"), 'director/admin account updates should not require a grade/class range');
 assert.ok(gatewayContractSource.includes("Director can only manage accounts in own school"), 'director account edits must remain school-scoped');
 assert.ok(gatewayContractSource.includes("error: 'Invalid username or password'"), 'managed D1 account passwords should not fall back to stale legacy credentials');
@@ -93,6 +98,9 @@ assert.ok(worker.includes("error: 'CLOUDFLARE_GATEWAY_ACTION_NOT_SUPPORTED'"), '
 assert.ok(worker.includes("from './worker-http-helpers.js'"), 'worker should import shared HTTP helpers');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should import shared HTTP helpers');
 assert.ok(helpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared helpers must keep explicit CORS allowlist usage');
+assert.ok(helpers.includes('DEFAULT_ALLOWED_CORS_HEADERS'), 'shared helpers must use a fixed CORS request-header allowlist');
+assert.ok(!helpers.includes("request.headers.get('Access-Control-Request-Headers')"), 'shared helpers must not reflect arbitrary request headers in CORS responses');
+assert.ok(helpers.includes("if (normalizedOrigin === 'null') return '';"), 'shared helpers must not reflect null Origin');
 assert.ok(helpers.includes('HOP_BY_HOP_HEADERS'), 'shared helpers must keep hop-by-hop header list');
 assert.ok(helpers.includes("'https://schoolsystem.com.cn'"), 'root production origin must be allowed');
 assert.ok(helpers.includes("'https://www.schoolsystem.com.cn'"), 'www production origin must be allowed');

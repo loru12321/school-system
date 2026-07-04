@@ -149,9 +149,20 @@
         return idx >= 0 ? idx : 999;
     }
 
+    function isCountyGrade9Context() {
+        if (window.AnalyticsKernel && typeof window.AnalyticsKernel.inferGradeNumber === 'function') {
+            return window.AnalyticsKernel.inferGradeNumber({
+                config: window.CONFIG,
+                examId: window.CURRENT_EXAM_ID,
+                examName: window.CONFIG?.name
+            }) === 9;
+        }
+        const grade = Number(window.CONFIG?.grade ?? window.CONFIG?.gradeNumber);
+        return Number.isFinite(grade) && grade === 9;
+    }
+
     function getTwoRateWeights() {
-        const name = String(window.CONFIG?.name || '').trim();
-        return name.includes('9')
+        return isCountyGrade9Context()
             ? { avg: 50, excellent: 80, pass: 50 }
             : { avg: 60, excellent: 70, pass: 70 };
     }
@@ -1035,7 +1046,15 @@
             };
         })();
         try {
-            const result = await state.teacherContextPromise;
+            const result = await state.teacherContextPromise.catch((error) => {
+                console.warn('[county-analysis] teacher context refresh failed:', error);
+                return {
+                    hasTeacherAssignments: hasTeacherAssignments(),
+                    hasTeacherStats: hasTeacherStats(),
+                    changed: false,
+                    cancelled: true
+                };
+            });
             if (result?.hasTeacherAssignments || result?.hasTeacherStats) {
                 state.lastTeacherContextSignature = teacherSig;
                 state.lastTeacherContextAt = Date.now();
@@ -1097,7 +1116,7 @@
         const rankingDataMap = {};
 
         sortCountySubjects(window.SUBJECTS || []).forEach((subject) => {
-            const rankingData = [];
+        const rankingData = [];
 
             Object.entries(teacherStats).forEach(([teacherName, subjectMap]) => {
                 const data = subjectMap?.[subject];
@@ -1131,12 +1150,9 @@
 
             if (!rankingData.length) return;
 
-            rankingData.sort((a, b) => b.avg - a.avg);
-            rankingData.forEach((item, index) => { item.rankAvg = index + 1; });
-            rankingData.sort((a, b) => b.excellentRate - a.excellentRate);
-            rankingData.forEach((item, index) => { item.rankExc = index + 1; });
-            rankingData.sort((a, b) => b.passRate - a.passRate);
-            rankingData.forEach((item, index) => { item.rankPass = index + 1; });
+            assignCompetitionRanks(rankingData, (item) => item.avg, (item, rank) => { item.rankAvg = rank; });
+            assignCompetitionRanks(rankingData, (item) => item.excellentRate, (item, rank) => { item.rankExc = rank; });
+            assignCompetitionRanks(rankingData, (item) => item.passRate, (item, rank) => { item.rankPass = rank; });
             rankingData.sort((a, b) => {
                 if ((a.rankAvg || 9999) !== (b.rankAvg || 9999)) return (a.rankAvg || 9999) - (b.rankAvg || 9999);
                 if (a.type !== b.type) return a.type === 'teacher' ? -1 : 1;
@@ -2160,7 +2176,7 @@
             if (countyRankVisible) headers.push(`${subject} 县排`);
         });
 
-        const totalLabel = String(window.CONFIG?.name || '').includes('9') ? '五科总分' : '总分';
+        const totalLabel = isCountyGrade9Context() ? '五科总分' : '总分';
         if (isTeacher || isClassTeacher) {
             headers.push(totalLabel, '总分班排', '总分级排');
         } else {

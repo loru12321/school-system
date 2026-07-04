@@ -54,6 +54,9 @@ assert.ok(!gatewayContractSource.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'ga
 assert.ok(!workerContractSource.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'worker must not fall back to a static legacy Supabase key');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should use shared HTTP helpers');
 assert.ok(workerHelpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared HTTP helpers should keep an explicit CORS allowlist');
+assert.ok(workerHelpers.includes('DEFAULT_ALLOWED_CORS_HEADERS'), 'shared HTTP helpers should use a fixed CORS request-header allowlist');
+assert.ok(!workerHelpers.includes("request.headers.get('Access-Control-Request-Headers')"), 'shared HTTP helpers must not reflect arbitrary CORS request headers');
+assert.ok(workerHelpers.includes("if (normalizedOrigin === 'null') return '';"), 'shared HTTP helpers should reject null Origin instead of reflecting it');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gatewayContractSource), 'gateway should not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(workerContractSource), 'worker should not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(workerHelpers), 'shared HTTP helpers should not emit wildcard CORS');
