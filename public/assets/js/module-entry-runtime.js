@@ -479,8 +479,9 @@
         clearModuleTask('student-details-render-primary');
         clearModuleTask('student-details-render-fallback');
         window.__STUDENT_DETAILS_RENDER_TIMER__ = scheduleModuleTask('student-details-render-primary', triggerRender, {
-            delay: 80,
-            frame: true
+            delay: 260,
+            idle: true,
+            timeout: 1800
         });
         scheduleModuleTask('student-details-render-fallback', () => {
             const section = document.getElementById('student-details');

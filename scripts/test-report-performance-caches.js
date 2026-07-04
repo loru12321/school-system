@@ -13,12 +13,18 @@ const assertContains = (content, token, file) => {
 
 const reportRenderFile = 'public/assets/js/report-render-runtime.js';
 const reportChartFile = 'public/assets/js/report-chart-runtime.js';
+const reportHistoryFile = 'public/assets/js/report-history-runtime.js';
+const studentDetailsFile = 'public/assets/js/student-details-render-runtime.js';
+const comparisonRenderFile = 'public/assets/js/comparison-render-runtime.js';
 const cloudFile = 'public/assets/js/cloud.js';
 const countyFile = 'public/assets/js/county-analysis-runtime.js';
 const packageFile = 'package.json';
 
 const reportRender = read(reportRenderFile);
 const reportChart = read(reportChartFile);
+const reportHistory = read(reportHistoryFile);
+const studentDetails = read(studentDetailsFile);
+const comparisonRender = read(comparisonRenderFile);
 const cloud = read(cloudFile);
 const county = read(countyFile);
 const app = read('public/assets/js/app.js');
@@ -76,7 +82,18 @@ const pkg = JSON.parse(read(packageFile));
     "renderSingleReportCardHTML(stu, 'FULL', {",
     'reportExamHistory: getReportHistoryForQuery()',
     'getMissingReportHistoryExamIds'
-].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
+].forEach((token) => {
+    const reportHistoryToken = [
+        'getCachedStudentReportHistory',
+        'hydratingKeys',
+        'getHistoricalReportExamIds',
+        'getReportHistoryForQuery',
+        "renderSingleReportCardHTML(stu, 'FULL', {",
+        'reportExamHistory: getReportHistoryForQuery()',
+        'getMissingReportHistoryExamIds'
+    ].includes(token);
+    assertContains(reportHistoryToken ? reportHistory : app, token, reportHistoryToken ? reportHistoryFile : 'public/assets/js/app.js');
+});
 
 [
     'function scheduleStudentReportCharts(student, history)',
@@ -84,21 +101,21 @@ const pkg = JSON.parse(read(packageFile));
     'function scheduleStudentReportStrengthAnalysis(student, strengthKey)',
     "window.SystemPerformance.scheduleIdle(run, { label: 'report-strength-analysis'",
     'scheduleStudentReportStrengthAnalysis(stu, strengthKey)'
-].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
+].forEach((token) => assertContains(token === 'scheduleStudentReportStrengthAnalysis(stu, strengthKey)' ? reportHistory : studentDetails, token, token === 'scheduleStudentReportStrengthAnalysis(stu, strengthKey)' ? reportHistoryFile : studentDetailsFile));
 
 [
     "const chartNarrativeHtml = typeof buildChartNarrative === 'function' ? buildChartNarrative(reportStu) : '';"
 ].forEach((token) => assertContains(reportRender, token, reportRenderFile));
 
-const refreshReportStart = app.indexOf('async function refreshRenderedStudentReportAfterHistory');
-const refreshReportEnd = app.indexOf('function hydrateStudentReportHistoryInBackground', refreshReportStart);
+const refreshReportStart = reportHistory.indexOf('async function refreshRenderedStudentReportAfterHistory');
+const refreshReportEnd = reportHistory.indexOf('function hydrateStudentReportHistoryInBackground', refreshReportStart);
 const refreshReportSource = refreshReportStart >= 0 && refreshReportEnd > refreshReportStart
-    ? app.slice(refreshReportStart, refreshReportEnd)
+    ? reportHistory.slice(refreshReportStart, refreshReportEnd)
     : '';
-const doQueryStart = app.indexOf('async function doQuery');
-const doQueryEnd = app.indexOf('function setSingleSelectOptions', doQueryStart);
+const doQueryStart = reportHistory.indexOf('async function doQuery');
+const doQueryEnd = reportHistory.length;
 const doQuerySource = doQueryStart >= 0 && doQueryEnd > doQueryStart
-    ? app.slice(doQueryStart, doQueryEnd)
+    ? reportHistory.slice(doQueryStart, doQueryEnd)
     : '';
 if (!refreshReportSource || refreshReportSource.includes('container.innerHTML !== nextReportHtml')) {
     fail('refreshRenderedStudentReportAfterHistory should trust reportHtmlCacheKey instead of serializing report innerHTML');
@@ -125,9 +142,9 @@ if (!doQuerySource || doQuerySource.includes('container.innerHTML !== nextReport
     "if (typeof value !== 'object') return value;"
 ].forEach((token) => assertContains(read('public/assets/js/report-performance-runtime.js'), token, 'public/assets/js/report-performance-runtime.js'));
 
-const historyStart = app.indexOf('function getStudentExamHistory(student)');
-const historyEnd = app.indexOf('// 🟢 [新增]：生成进退步胶囊标签', historyStart);
-const historySource = historyStart >= 0 && historyEnd > historyStart ? app.slice(historyStart, historyEnd) : '';
+const historyStart = comparisonRender.indexOf('function getStudentExamHistory(student)');
+const historyEnd = comparisonRender.indexOf('// 🟢 [新增]：生成进退步胶囊标签', historyStart);
+const historySource = historyStart >= 0 && historyEnd > historyStart ? comparisonRender.slice(historyStart, historyEnd) : '';
 if (!historySource || historySource.includes('getReportSubjectSortedScores(')) {
     fail('student exam history should not precompute subject percentile score arrays');
 }
@@ -135,17 +152,17 @@ if (!historySource || historySource.includes('getReportSubjectSortedScores(')) {
     'hasUsableStoredHistoryRanks',
     'createHistoryStudentView',
     'getCachedHistoryExamStudent(examData, student, examFingerprint)'
-].forEach((token) => assertContains(historySource, token, 'public/assets/js/app.js'));
+].forEach((token) => assertContains(historySource, token, comparisonRenderFile));
 [
     'examStudentLookup: new Map()',
     'function getCachedHistoryExamStudent(examData, student, examFingerprint = \'\')',
     'ReportHistoryPerfCache.examStudentLookup.set(lookupKey, found || null)'
 ].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
 
-const previousRecordStart = app.indexOf('function findPreviousRecord(student)');
-const previousRecordEnd = app.indexOf('function getStudentExamHistory(student)', previousRecordStart);
+const previousRecordStart = comparisonRender.indexOf('function findPreviousRecord(student)');
+const previousRecordEnd = comparisonRender.indexOf('function getStudentExamHistory(student)', previousRecordStart);
 const previousRecordSource = previousRecordStart >= 0 && previousRecordEnd > previousRecordStart
-    ? app.slice(previousRecordStart, previousRecordEnd)
+    ? comparisonRender.slice(previousRecordStart, previousRecordEnd)
     : '';
 if (!previousRecordSource || !previousRecordSource.includes('getCurrentReportDataFingerprint()')) {
     fail('findPreviousRecord should reuse cached current report fingerprint');
@@ -166,7 +183,7 @@ if (!historySource || historySource.includes('computeExamDataFingerprint(examDat
     'county: h.rankCounty || h.subjectRanks?.total?.county ||',
     'examIds: missingHistoricalExamIds',
     'if (!missingHistoricalExamIds.length) return;'
-].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
+].forEach((token) => assertContains(reportHistory, token, reportHistoryFile));
 
 const cloudHistoryStart = cloud.indexOf('fetchStudentExamHistory: async function');
 const cloudHistoryEnd = cloud.indexOf('// 届别考试补拉运行时', cloudHistoryStart);

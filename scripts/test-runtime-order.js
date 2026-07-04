@@ -53,6 +53,7 @@ const loginEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/login
 const authLoginRuntimePath = path.resolve(__dirname, '../public/assets/js/auth-login-runtime.js');
 const studentDetailsRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/student-details-render-runtime.js');
 const comparisonRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/comparison-render-runtime.js');
+const reportHistoryRuntimePath = path.resolve(__dirname, '../public/assets/js/report-history-runtime.js');
 const runtimeLoaderRuntimePath = path.resolve(__dirname, '../public/assets/js/runtime-loader-runtime.js');
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
@@ -202,6 +203,7 @@ const cloudWorkspaceRuntime = fs.readFileSync(cloudWorkspaceRuntimePath, 'utf8')
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
+const reportHistoryRuntime = fs.readFileSync(reportHistoryRuntimePath, 'utf8');
 const townSubmoduleCompareRuntime = fs.readFileSync(townSubmoduleCompareRuntimePath, 'utf8');
 const cloudRuntime = fs.readFileSync(cloudRuntimePath, 'utf8');
 const smokeAllModules = fs.readFileSync(smokeAllModulesPath, 'utf8');
@@ -643,7 +645,8 @@ assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js sho
     'data-manager-core-runtime.js',
     'student-details-render-runtime.js',
     'comparison-render-runtime.js',
-    'snapshot-system-runtime.js'
+    'snapshot-system-runtime.js',
+    'report-history-runtime.js'
 ].forEach((runtimeName) => {
     assert.ok(
         bootRuntime.indexOf(`'${runtimeName}'`) >= 0 && bootRuntime.indexOf(`'${runtimeName}'`) < bootRuntime.indexOf("'app.js'"),
@@ -825,7 +828,8 @@ const historyDoQueryWrapperSource = historyDoQueryWrapperStart >= 0 && historyDo
 assert.ok(historyDoQueryWrapperSource.includes('report-history-compare-target-sync'), 'report history hook should only sync compare targets when the compare runtime is already loaded');
 assert.ok(!historyDoQueryWrapperSource.includes('ensureStudentCompareRuntimeLoaded'), 'report history hook should not load the student compare runtime during normal report generation');
 assert.ok(!appSource.includes('report-student-compare-warmup'), 'report queries should not warm student compare runtime unless the user opens compare features');
-assert.ok(appSource.includes('function examKeyEq'), 'report history should use a local safe exam-key comparator');
+assert.ok(appSource.includes('Moved to report-history-runtime.js'), 'app.js should keep a stub for the split report history runtime');
+assert.ok(reportHistoryRuntime.includes('function examKeyEq'), 'report history should use a local safe exam-key comparator');
 assert.ok(!/[^.\w]isExamKeyEquivalentForCompare\s*\(/.test(appSource), 'app.js should not call compare-shared exam-key helper as an unguarded global');
 assert.ok(!moduleEntryRuntime.includes("id === 'exam-arranger'\n            && typeof window.ensureGradeSchedulerRuntimeLoaded"), 'exam arranger should not eagerly load the grade scheduler runtime');
 assert.ok(bootRuntime.includes("'grade-scheduler': bootSkill('demand', 'demand', ['grade-scheduler']"), 'grade scheduler runtime should load only for the grade scheduler module');
@@ -1335,7 +1339,7 @@ assert.ok(schoolNormalizationRuntime.includes('const IndicatorSchoolBucketPerfCa
 assert.ok(schoolNormalizationRuntime.includes('function getIndicatorSchoolBucketSignature'), 'indicator bucket cache should use an explicit dependency signature');
 assert.ok(schoolNormalizationRuntime.includes('scoreNameMap'), 'indicator score sync should cache repeated school-name matching');
 assert.ok(moduleEntryRuntime.includes("node.dataset.released === 'true'"), 'teacher heavy DOM release should not rewrite already released placeholders on later module switches');
-assert.ok(appSource.includes('background: true') && appSource.includes('delay: 4800'), 'student report cloud-history hydration should stay delayed and low priority');
+assert.ok(reportHistoryRuntime.includes('background: true') && reportHistoryRuntime.includes('delay: 4800'), 'student report cloud-history hydration should stay delayed and low priority');
 const countyRankFallbackStart = cloudRuntime.indexOf('const getCountyRankFallback = (payload, match, subject =');
 const countyRankFallbackEnd = cloudRuntime.indexOf('const buildHistoryEntry =', countyRankFallbackStart);
 const countyRankFallbackSource = countyRankFallbackStart >= 0 && countyRankFallbackEnd > countyRankFallbackStart
