@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-boot-auth="logged_out">
 
 <head>
     <meta charset="UTF-8">
@@ -32,6 +32,20 @@
     <meta name="format-detection" content="telephone=no, email=no, address=no">
     <title>校衡台</title>
     <link rel="icon" href="./favicon.ico?v=20260321-localgrades-v4" sizes="any" type="image/x-icon">
+    <script>
+        (function () {
+            try {
+                var hasSession = !!(
+                    sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1')
+                    || sessionStorage.getItem('edu:session:token')
+                    || sessionStorage.getItem('CURRENT_USER')
+                );
+                document.documentElement.dataset.bootAuth = hasSession ? 'logged_in' : 'logged_out';
+            } catch (_) {
+                document.documentElement.dataset.bootAuth = 'logged_out';
+            }
+        }());
+    </script>
     <link rel="stylesheet" href="/assets/vendor/tabler-icons/tabler-icons.min.css">
     <link rel="stylesheet" href="./assets/css/main.css?v=20260402-structure-v1">
     <link rel="stylesheet" href="./assets/css/shell.css?v=20260402-structure-v1">
@@ -53,10 +67,24 @@
         [hidden] {
             display: none !important;
         }
+
+        html[data-boot-auth="logged_out"] #login-overlay {
+            display: flex;
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        html[data-boot-auth="logged_in"] #login-overlay {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
     </style>
     <script>
         (function () {
-            var refreshVersion = 'runtime-51d9860f24c2';
+            var refreshVersion = 'runtime-7349422655e5';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -99,10 +127,10 @@
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
     <script defer src="./assets/js/runtime-registry-runtime.js?v=20260501-runtime-registry-v1"></script>
     <script defer src="./assets/js/cohort-sync-status-runtime.js?v=20260620-sync-status-v1"></script>
-    <script defer src="./assets/js/entrance-sound-runtime.js?v=runtime-51d9860f24c2"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-51d9860f24c2"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-51d9860f24c2"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-51d9860f24c2"></script>
+    <script defer src="./assets/js/entrance-sound-runtime.js?v=runtime-7349422655e5"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-7349422655e5"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-7349422655e5"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-7349422655e5"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -137,7 +165,7 @@
     
 </head>
 
-<body class="shell-sidebar-collapsed">
+<body class="shell-sidebar-collapsed login-overlay-active role-guest" data-auth-state="logged_out" data-role="guest">
 
     <!-- 全局加载遮罩 -->
     <div id="global-loader" class="hidden">
@@ -320,7 +348,7 @@
         </div>
     </div>
 
-    <div id="login-overlay" data-login-portal="school" data-login-skin="clean">
+    <div id="login-overlay" data-login-portal="school" data-login-skin="clean" data-login-state="active" aria-hidden="false" style="display:flex; visibility:visible; opacity:1; pointer-events:auto;">
         <div class="login-clean-shell" aria-label="系统登录">
             <section class="login-clean-stage">
                 <div class="login-clean-brand">
