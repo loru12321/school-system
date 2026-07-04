@@ -3669,7 +3669,7 @@ function tmApplySelectValue(selectId, preferredValue = '', preferredText = '') {
 
 
 function forceHideAllSectionsExcept(targetId = '') {
-    const sections = getModuleSectionsCached(true);
+    const sections = getModuleSectionsCached(false);
     sections.forEach(el => {
         if (targetId && el.id === targetId) return;
         if (!el.classList.contains('active') && el.style.display === 'none') return;
@@ -5457,21 +5457,63 @@ function getStudentZeroScoreAuditSubjects(student, visibleSubjects = SUBJECTS) {
     };
 }
 
+const BlankScoreAuditPerfCache = {
+    rowsSignature: '',
+    rows: [],
+    summarySignature: '',
+    summaryHtml: '',
+    tableSignature: '',
+    tableHtml: ''
+};
+
+function buildBlankScoreAuditSignature(visibleSubjects = SUBJECTS) {
+    const subjects = Array.isArray(visibleSubjects) ? visibleSubjects : [];
+    const rows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+    let blankCount = 0;
+    let zeroCount = 0;
+    let totalSum = 0;
+    rows.forEach(student => {
+        totalSum += Number(student?.total) || 0;
+        const blankSubjects = Array.isArray(student?.blankScoreSubjects) ? student.blankScoreSubjects : [];
+        blankCount += blankSubjects.length;
+        subjects.forEach(subject => {
+            const score = Number(student?.scores?.[subject]);
+            if (Number.isFinite(score) && score === 0 && !blankSubjects.includes(subject)) zeroCount += 1;
+        });
+    });
+    return [
+        window.__RAW_DATA_VERSION || 0,
+        rows.length,
+        subjects.join('|'),
+        blankCount,
+        zeroCount,
+        totalSum.toFixed(2)
+    ].join('::');
+}
+
 function collectBlankScoreAuditRows(visibleSubjects = SUBJECTS) {
     const subjects = Array.isArray(visibleSubjects) ? visibleSubjects : (Array.isArray(SUBJECTS) ? SUBJECTS : []);
+    const signature = buildBlankScoreAuditSignature(subjects);
+    if (BlankScoreAuditPerfCache.rowsSignature === signature) {
+        return BlankScoreAuditPerfCache.rows;
+    }
     const rows = [];
     (Array.isArray(RAW_DATA) ? RAW_DATA : []).forEach(student => {
         const audit = getStudentZeroScoreAuditSubjects(student, subjects);
         audit.blankSubjects.forEach(subject => rows.push({ student, subject, type: '原始空白，按0分计' }));
         audit.zeroSubjects.forEach(subject => rows.push({ student, subject, type: '0分记录，需核对是否空分' }));
     });
+    BlankScoreAuditPerfCache.rowsSignature = signature;
+    BlankScoreAuditPerfCache.rows = rows;
     return rows;
 }
 
 function renderBlankScoreAuditTable(tbody, rows, options = {}) {
     if (!tbody) return;
     const limit = Number(options.limit || 120);
-    tbody.innerHTML = rows.slice(0, limit).map(({ student, subject, type }) => {
+    const tableSignature = `${BlankScoreAuditPerfCache.rowsSignature}::${limit}`;
+    if (tbody.dataset.blankScoreAuditSig === tableSignature && BlankScoreAuditPerfCache.tableSignature === tableSignature) return;
+    const html = rows.slice(0, limit).map(({ student, subject, type }) => {
         const rank = student?.ranks || {};
         const subjectRank = rank?.[subject] || {};
         const townRank = subjectRank.township ?? subjectRank.town ?? '-';
@@ -5488,9 +5530,18 @@ function renderBlankScoreAuditTable(tbody, rows, options = {}) {
             <td>${subjectRank.county ?? '-'}</td>
         </tr>`;
     }).join('');
+    tbody.innerHTML = html;
+    tbody.dataset.blankScoreAuditSig = tableSignature;
+    BlankScoreAuditPerfCache.tableSignature = tableSignature;
+    BlankScoreAuditPerfCache.tableHtml = html;
 }
 
 function buildBlankScoreAuditSummaryHtml(rows, options = {}) {
+    const limit = Number(options.limit || 120);
+    const summarySignature = `${BlankScoreAuditPerfCache.rowsSignature}::${limit}`;
+    if (BlankScoreAuditPerfCache.summarySignature === summarySignature) {
+        return BlankScoreAuditPerfCache.summaryHtml;
+    }
     const subjectCounts = rows.reduce((acc, item) => {
         acc[item.subject] = (acc[item.subject] || 0) + 1;
         return acc;
@@ -5499,9 +5550,11 @@ function buildBlankScoreAuditSummaryHtml(rows, options = {}) {
         .sort((a, b) => b[1] - a[1])
         .map(([subject, count]) => `<span><strong>${escapeAppHtml(subject)}：</strong>${count} 人次</span>`)
         .join('');
-    const limit = Number(options.limit || 120);
     const tail = rows.length > limit ? `当前展示前 ${limit} 条，完整名单请按学校/班级继续筛选。` : '已展示全部核对记录。';
-    return `<span><strong>共 ${rows.length} 条学科记录</strong></span>${summaryText}<span>${tail}</span>`;
+    const html = `<span><strong>共 ${rows.length} 条学科记录</strong></span>${summaryText}<span>${tail}</span>`;
+    BlankScoreAuditPerfCache.summarySignature = summarySignature;
+    BlankScoreAuditPerfCache.summaryHtml = html;
+    return html;
 }
 
 function renderBlankScoreAuditPanel() {
@@ -5522,13 +5575,15 @@ function renderBlankScoreAuditModule() {
     if (!root || !summary || !tbody) return;
     const rows = collectBlankScoreAuditRows(SUBJECTS);
     if (!rows.length) {
-        summary.innerHTML = '<span><strong>暂无需要单独核对的空分/0分学科。</strong></span><span>如学生单科为空，系统会按 0 分参与排名，并自动在这里生成记录。</span>';
-        tbody.innerHTML = '';
+        const emptyHtml = '<span><strong>暂无需要单独核对的空分/0分学科。</strong></span><span>如学生单科为空，系统会按 0 分参与排名，并自动在这里生成记录。</span>';
+        if (summary.innerHTML !== emptyHtml) summary.innerHTML = emptyHtml;
+        if (tbody.innerHTML) tbody.innerHTML = '';
         if (empty) empty.style.display = '';
         return;
     }
     if (empty) empty.style.display = 'none';
-    summary.innerHTML = buildBlankScoreAuditSummaryHtml(rows, { limit: 500 });
+    const summaryHtml = buildBlankScoreAuditSummaryHtml(rows, { limit: 500 });
+    if (summary.innerHTML !== summaryHtml) summary.innerHTML = summaryHtml;
     renderBlankScoreAuditTable(tbody, rows, { limit: 500 });
 }
 

@@ -165,6 +165,7 @@
 
     const MAX_CLOUD_BACKUP_RENDER_ROWS = 80;
     const CLOUD_BACKUP_LIST_CACHE_MS = 45 * 1000;
+    const DATA_MANAGER_STATUS_MODEL_CACHE_MS = 1200;
 
     function nowMs() {
         return root.performance && typeof root.performance.now === 'function'
@@ -1661,6 +1662,27 @@
 
     function getDataManagerStatusModel() {
         const indicator = api.getCurrentIndicatorValues();
+        const syncState = api.readDataManagerSyncState();
+        const teacherKey = [
+            normalizeText(root.CURRENT_TEACHER_TERM_ID || (root.getPreferredTeacherTermId && root.getPreferredTeacherTermId()) || ''),
+            root.TEACHER_MAP ? Object.keys(root.TEACHER_MAP).length : 0,
+            root.TEACHER_SCHOOL_MAP ? Object.keys(root.TEACHER_SCHOOL_MAP).length : 0
+        ].join('|');
+        const cacheKey = JSON.stringify({
+            rawVersion: root.__RAW_DATA_VERSION || 0,
+            cohortId: root.CURRENT_COHORT_ID || '',
+            examId: root.CURRENT_EXAM_ID || '',
+            ind1: indicator.ind1 || '',
+            ind2: indicator.ind2 || '',
+            targetsVersion: root.__TARGETS_VERSION || 0,
+            targetRefSize: root.TARGETS ? Object.keys(root.TARGETS).length : 0,
+            teacherKey,
+            syncState
+        });
+        const cached = root.__DATA_MANAGER_STATUS_MODEL_CACHE__;
+        if (cached && cached.key === cacheKey && Date.now() - Number(cached.at || 0) < DATA_MANAGER_STATUS_MODEL_CACHE_MS) {
+            return cached.model;
+        }
         const paramsNeeded = typeof root.isIndicatorPromptAllowed === 'function' ? !!root.isIndicatorPromptAllowed() : true;
         const paramsFilledCount = [indicator.ind1, indicator.ind2].filter(Boolean).length;
         const paramsSignature = api.getParamsSyncSignature();
@@ -1670,7 +1692,6 @@
         const targetNames = Object.keys(targets).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
         const targetsSignature = api.getTargetsSyncSignature();
         const teacherSnapshot = api.getTeacherStatusSnapshot();
-        const syncState = api.readDataManagerSyncState();
         const hasBaseline = !!(syncState.paramsSignature || syncState.targetsSignature || syncState.lastCloudSyncAt);
         const pendingCloudSync = !!syncState.pendingCloudSync;
         const pendingSyncSource = normalizeText(syncState.pendingSyncSource);
@@ -1702,7 +1723,7 @@
         else if (!teacherMatchesBaseline) teachersState = 'pending';
         else teachersState = teacherSnapshot.loadedMatches ? 'synced' : 'synced_unloaded';
 
-        return {
+        const model = {
             paramsNeeded,
             indicator,
             paramsFilledCount,
@@ -1727,6 +1748,12 @@
                     ? `最近失败：${lastCloudError}`
                     : (syncState.lastSyncSource || ''))
         };
+        root.__DATA_MANAGER_STATUS_MODEL_CACHE__ = {
+            key: cacheKey,
+            at: Date.now(),
+            model
+        };
+        return model;
     }
 
     function renderDataManagerStatus() {
@@ -1806,7 +1833,7 @@
         }
 
         if (summaryEl) {
-            summaryEl.innerHTML = `
+            const summaryHtml = `
                 <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:stretch;">
                     <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #dbeafe; border-radius:10px; padding:12px;">
                         <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
@@ -1840,35 +1867,51 @@
                     </div>
                 </div>
             `;
+            if (summaryEl.dataset.dmStatusSig !== summaryHtml) {
+                summaryEl.innerHTML = summaryHtml;
+                summaryEl.dataset.dmStatusSig = summaryHtml;
+            }
         }
 
         if (tipEl) {
             const tipTheme = toneMap[tipTone] || toneMap.info;
-            tipEl.innerHTML = `
+            const tipHtml = `
                 <div style="padding:10px 12px; border-radius:10px; border:1px solid ${tipTheme.border}; background:${tipTheme.bg}; color:${tipTheme.color}; font-size:12px; line-height:1.8;">
                     <strong>当前提醒：</strong>${tipText}
                 </div>
             `;
+            if (tipEl.dataset.dmStatusSig !== tipHtml) {
+                tipEl.innerHTML = tipHtml;
+                tipEl.dataset.dmStatusSig = tipHtml;
+            }
         }
 
         if (paramsEl) {
-            paramsEl.innerHTML = `
+            const paramsHtml = `
                 <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
                     <div><strong>参数状态：</strong>${paramsMeta.title}</div>
                     ${pill(paramsMeta.title, paramsMeta.tone)}
                 </div>
                 <div style="margin-top:6px; line-height:1.8;">${paramsMeta.detail}</div>
             `;
+            if (paramsEl.dataset.dmStatusSig !== paramsHtml) {
+                paramsEl.innerHTML = paramsHtml;
+                paramsEl.dataset.dmStatusSig = paramsHtml;
+            }
         }
 
         if (targetsEl) {
-            targetsEl.innerHTML = `
+            const targetsHtml = `
                 <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
                     <div><strong>目标人数状态：</strong>${targetsMeta.title}</div>
                     ${pill(targetsMeta.title, targetsMeta.tone)}
                 </div>
                 <div style="margin-top:6px; line-height:1.8;">${targetsMeta.detail}</div>
             `;
+            if (targetsEl.dataset.dmStatusSig !== targetsHtml) {
+                targetsEl.innerHTML = targetsHtml;
+                targetsEl.dataset.dmStatusSig = targetsHtml;
+            }
         }
     }
 

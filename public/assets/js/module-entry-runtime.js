@@ -452,6 +452,25 @@
             if (!section || !section.classList.contains('active')) return;
             applyStudentDetailsRoleVisibility();
             if (typeof window.renderStudentDetails === 'function') {
+                const schoolValue = String(document.getElementById('studentSchoolSelect')?.value || '');
+                const classValue = String(document.getElementById('studentClassSelect')?.value || '');
+                const modeValue = String(document.getElementById('classTeacherViewMode')?.value || '');
+                const entrySignature = [
+                    window.__RAW_DATA_VERSION || 0,
+                    Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+                    schoolValue,
+                    classValue,
+                    modeValue,
+                    String(user?.role || ''),
+                    Array.isArray(user?.roles) ? user.roles.join('|') : '',
+                    String(user?.school || ''),
+                    String(user?.class_name || user?.class || '')
+                ].join('::');
+                const renderedRows = document.querySelectorAll('#student-details table tbody tr').length;
+                if (section.dataset.studentDetailsEntrySig === entrySignature && renderedRows > 1) {
+                    return;
+                }
+                section.dataset.studentDetailsEntrySig = entrySignature;
                 window.renderStudentDetails(true);
                 applyStudentDetailsRoleVisibility();
             }

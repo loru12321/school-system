@@ -192,6 +192,10 @@ const DataManager = {
         const modal = document.getElementById('data-manager-modal');
         const content = modal?.querySelector('.modal-content');
         if (!content) return;
+        if (content.dataset.dmLayoutDecorated === '1') {
+            this.ensureCloudPanelSwitch();
+            return;
+        }
 
         content.style.width = 'min(1480px, 96vw)';
         content.style.maxWidth = '1480px';
@@ -341,6 +345,7 @@ const DataManager = {
         }
 
         this.ensureCloudPanelSwitch();
+        content.dataset.dmLayoutDecorated = '1';
     },
 
     switchTab: function (tab) {
