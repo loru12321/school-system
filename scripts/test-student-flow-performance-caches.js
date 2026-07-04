@@ -17,6 +17,8 @@ const freshmanFile = 'public/assets/js/freshman-exam-runtime.js';
 const progressFile = 'public/assets/js/progress-analysis-runtime.js';
 const cohortGrowthFile = 'public/assets/js/cohort-growth-runtime.js';
 const compareSharedFile = 'public/assets/js/compare-shared-runtime.js';
+const comparisonRenderFile = 'public/assets/js/comparison-render-runtime.js';
+const studentDetailsFile = 'public/assets/js/student-details-render-runtime.js';
 const bootFile = 'public/assets/js/boot-runtime.js';
 const schoolNormalizationFile = 'public/assets/js/school-normalization-runtime.js';
 const teacherBridgeFile = 'public/assets/js/teacher-analysis-bridge-runtime.js';
@@ -27,21 +29,32 @@ const freshman = read(freshmanFile);
 const progress = read(progressFile);
 const cohortGrowth = read(cohortGrowthFile);
 const compareShared = read(compareSharedFile);
+const comparisonRender = read(comparisonRenderFile);
+const studentDetails = read(studentDetailsFile);
 const boot = read(bootFile);
 const schoolNormalization = read(schoolNormalizationFile);
 const teacherBridge = read(teacherBridgeFile);
 const pkg = JSON.parse(read(packageFile));
 
 [
-    'StudentDetailsPerfCache',
-    'ComparisonRankContextPerfCache',
-    'buildComparisonRankContextSignature',
-    'getCachedComparisonStudentRankContext',
     'ModuleSwitchPerfCache',
     'getModuleSectionsCached',
     'getModuleSectionById',
     'getModuleCategoryKeyCached',
     'scheduleModuleDockRefresh',
+    'ReportHistoryPerfCache',
+    'getReportSubjectSortedScores',
+    'lastScrollKey'
+].forEach((token) => assertContains(app, token, appFile));
+
+[
+    'ComparisonRankContextPerfCache',
+    'buildComparisonRankContextSignature',
+    'getCachedComparisonStudentRankContext'
+].forEach((token) => assertContains(comparisonRender, token, comparisonRenderFile));
+
+[
+    'StudentDetailsPerfCache',
     'getStudentDetailsDomCache',
     'getStudentDetailsRankSnapshot',
     'rankSnapshotByStudent',
@@ -57,14 +70,11 @@ const pkg = JSON.parse(read(packageFile));
     'querySignature',
     'studentDetailsFilterMenuSig',
     'dataset.studentDetailsRenderSig',
-    'ReportHistoryPerfCache',
-    'getReportSubjectSortedScores',
-    'lastScrollKey',
     'getStudentDetailsClassTeacherQueryMode',
     'classTeacherClasses = Array.from(new Set([',
     '...Array.from(scope.classes || [])',
     'scope?.classes?.has(normalizedSelectedClass) ? \'teaching\' : \'homeroom\''
-].forEach((token) => assertContains(app, token, appFile));
+].forEach((token) => assertContains(studentDetails, token, studentDetailsFile));
 
 [
     'StudentOverviewPerfCache',

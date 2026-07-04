@@ -17,6 +17,7 @@
         dashboardSignature: '',
         dashboardHtml: '',
         balanceSignature: '',
+        balanceChartSignature: '',
         balanceTableHtml: '',
         examOverviewSignature: '',
         examOverviewHtml: '',
@@ -27,6 +28,7 @@
         examPrintSignature: '',
         examPrintHtml: ''
     };
+    let balanceChartLoadPending = false;
 
     function fbClassSignature(classes = FB_CLASSES) {
         return (Array.isArray(classes) ? classes : []).map((c) => [
@@ -382,14 +384,12 @@ function FB_renderDashboard() {
 function FB_renderBalanceChart() {
     const ctx = document.getElementById('balanceChart'); const tableContainer = document.getElementById('balanceTableContainer'); const labels = FB_CLASSES.map(c => c.name);
     const signature = fbClassSignature(FB_CLASSES);
-    if (FreshmanExamPerfCache.balanceSignature === signature && tableContainer?.dataset.freshmanBalanceSig === signature) {
+    if (FreshmanExamPerfCache.balanceSignature === signature
+        && tableContainer?.dataset.freshmanBalanceSig === signature
+        && FreshmanExamPerfCache.balanceChartSignature === signature) {
         return;
     }
     const statsData = FB_CLASSES.map(c => { const scores = c.students.map(s => s.score).sort((a, b) => a - b); const qs = calculateQuartiles(scores); return { min: scores[0], max: scores[scores.length - 1], q1: qs.q1, median: qs.q2, q3: qs.q3, avg: c.stats.avg, sd: calculateSD(scores) }; });
-    if (balanceChartInstance) balanceChartInstance.destroy();
-    balanceChartInstance = new Chart(ctx, {
-        type: 'bar', data: { labels: labels, datasets: [{ label: '平均分', data: statsData.map(s => s.avg), type: 'scatter', backgroundColor: '#2563eb', borderColor: '#2563eb', pointStyle: 'rectRot', pointRadius: 6 }, { label: '分数区间 (Min-Max)', data: statsData.map(s => [s.min, s.max]), backgroundColor: 'rgba(156, 163, 175, 0.2)', borderColor: 'rgba(156, 163, 175, 0.5)', borderWidth: 1, barPercentage: 0.1 }, { label: '核心分布 (Q1-Q3)', data: statsData.map(s => [s.q1, s.q3]), backgroundColor: 'rgba(37, 99, 235, 0.5)', borderColor: '#1e40af', borderWidth: 1, barPercentage: 0.6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: function (context) { const s = statsData[context.dataIndex]; if (context.dataset.type === 'scatter') return `平均分: ${s.avg.toFixed(2)}`; if (context.datasetIndex === 1) return `范围: ${s.min} - ${s.max}`; if (context.datasetIndex === 2) return `核心区间: ${s.q1} - ${s.q3}`; } } }, title: { display: true, text: '班级分数结构对比 (箱线图)' } }, scales: { y: { beginAtZero: false, title: { display: true, text: '分数' } } } }
-    });
     let tableHtml = `<table class="comparison-table" style="font-size:12px;"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>标准差 (SD)</th><th>极差 (Max-Min)</th><th>前25%线 (Q3)</th><th>后25%线 (Q1)</th></tr></thead><tbody>`;
     statsData.forEach((s, i) => { tableHtml += `<tr><td>${labels[i]}</td><td>${FB_CLASSES[i].students.length}</td><td>${s.avg.toFixed(2)}</td><td>${s.sd.toFixed(2)}</td><td>${(s.max - s.min).toFixed(1)}</td><td>${s.q3}</td><td>${s.q1}</td></tr>`; });
     const nextTableHtml = tableHtml + `</tbody></table>`;
@@ -399,6 +399,32 @@ function FB_renderBalanceChart() {
     }
     FreshmanExamPerfCache.balanceSignature = signature;
     FreshmanExamPerfCache.balanceTableHtml = nextTableHtml;
+    if (!ctx) return;
+    if (!window.Chart) {
+        if (!balanceChartLoadPending && typeof window.ensureChartVendorLoaded === 'function') {
+            balanceChartLoadPending = true;
+            window.ensureChartVendorLoaded()
+                .then(() => {
+                    balanceChartLoadPending = false;
+                    if (document.getElementById('freshman-simulator')?.classList.contains('active')
+                        || document.getElementById('exam-arranger')?.classList.contains('active')) {
+                        FreshmanExamPerfCache.balanceChartSignature = '';
+                        FB_renderBalanceChart();
+                    }
+                })
+                .catch((error) => {
+                    balanceChartLoadPending = false;
+                    console.warn('[freshman] chart runtime load failed:', error);
+                });
+        }
+        return;
+    }
+    if (FreshmanExamPerfCache.balanceChartSignature === signature) return;
+    if (balanceChartInstance) balanceChartInstance.destroy();
+    balanceChartInstance = new Chart(ctx, {
+        type: 'bar', data: { labels: labels, datasets: [{ label: '平均分', data: statsData.map(s => s.avg), type: 'scatter', backgroundColor: '#2563eb', borderColor: '#2563eb', pointStyle: 'rectRot', pointRadius: 6 }, { label: '分数区间 (Min-Max)', data: statsData.map(s => [s.min, s.max]), backgroundColor: 'rgba(156, 163, 175, 0.2)', borderColor: 'rgba(156, 163, 175, 0.5)', borderWidth: 1, barPercentage: 0.1 }, { label: '核心分布 (Q1-Q3)', data: statsData.map(s => [s.q1, s.q3]), backgroundColor: 'rgba(37, 99, 235, 0.5)', borderColor: '#1e40af', borderWidth: 1, barPercentage: 0.6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: function (context) { const s = statsData[context.dataIndex]; if (context.dataset.type === 'scatter') return `平均分: ${s.avg.toFixed(2)}`; if (context.datasetIndex === 1) return `范围: ${s.min} - ${s.max}`; if (context.datasetIndex === 2) return `核心区间: ${s.q1} - ${s.q3}`; } } }, title: { display: true, text: '班级分数结构对比 (箱线图)' } }, scales: { y: { beginAtZero: false, title: { display: true, text: '分数' } } } }
+    });
+    FreshmanExamPerfCache.balanceChartSignature = signature;
 }
 
 const HistoryManager = {
