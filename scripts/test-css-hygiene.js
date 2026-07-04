@@ -9,12 +9,14 @@ const activeThemeLayers = [
   ['readable-pop-workspace.css', 13_000, 130],
   ['designer-studio-workspace.css', 164_000, 2_160],
   ['editorial-control-system.css', 33_000, 540],
+  ['mature-system-shell.css', 26_000, 280],
 ];
 const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
 const entranceAudioPath = path.join(root, 'public', 'assets', 'audio', 'entrance');
 const entranceManifestPath = path.join(entranceAudioPath, 'manifest.json');
 const source = fs.readFileSync(mobileLoginPath, 'utf8');
 const productRedesign = fs.readFileSync(productRedesignPath, 'utf8');
+const matureSystemShell = fs.readFileSync(path.join(root, 'src', 'assets', 'css', 'mature-system-shell.css'), 'utf8');
 const entranceSound = fs.readFileSync(entranceSoundPath, 'utf8');
 const entranceManifest = JSON.parse(fs.readFileSync(entranceManifestPath, 'utf8'));
 
@@ -74,6 +76,18 @@ for (const marker of favoriteThemeMarkers) {
     throw new Error(`Favorite-inspired UI marker is missing: ${marker}`);
   }
 }
+
+[
+  '--mature-surface',
+  '.shell-overview-card--dock',
+  '.shell-module-rail-chip.is-active',
+  '.starter-card--status',
+  '.workspace-drawer-panel'
+].forEach((marker) => {
+  if (!matureSystemShell.includes(marker)) {
+    throw new Error(`Mature system shell marker is missing: ${marker}`);
+  }
+});
 
 const audioFiles = fs.readdirSync(entranceAudioPath).filter((name) => name.endsWith('.wav'));
 if (audioFiles.length !== 0) {
