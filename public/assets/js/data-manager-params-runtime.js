@@ -12,6 +12,8 @@
     if (!root || root.DataManagerParamsRuntime) return;
     root.DataManagerParamsRuntime = runtime;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createDataManagerParamsRuntime(root) {
+    let pendingStatusRender = false;
+
     function call(fn, fallback) {
         if (typeof fn !== 'function') return fallback;
         return fn();
@@ -57,6 +59,23 @@
         }
     }
 
+    function scheduleStatusRender(manager) {
+        const raf = typeof root.requestAnimationFrame === 'function' ? root.requestAnimationFrame : null;
+        const timer = typeof root.setTimeout === 'function' ? root.setTimeout : null;
+        if (!raf && !timer) {
+            renderStatus(manager);
+            return;
+        }
+        if (pendingStatusRender) return;
+        pendingStatusRender = true;
+        const run = function () {
+            pendingStatusRender = false;
+            renderStatus(manager);
+        };
+        if (raf) raf(run);
+        else timer(run, 0);
+    }
+
     function renderParams(manager) {
         if (!manager) return;
 
@@ -92,17 +111,17 @@
         if (el1) {
             el1.oninput = function () {
                 setIndicatorState({ ...getIndicatorState(), ind1: this.value });
-                renderStatus(manager);
+                scheduleStatusRender(manager);
             };
         }
         if (el2) {
             el2.oninput = function () {
                 setIndicatorState({ ...getIndicatorState(), ind2: this.value });
-                renderStatus(manager);
+                scheduleStatusRender(manager);
             };
         }
 
-        renderStatus(manager);
+        scheduleStatusRender(manager);
     }
 
     async function saveParamsLocally(manager, skipCloudSync = false) {

@@ -1,9 +1,3 @@
-/*
- * Mature System Shell
- * A restrained control-system layer inspired by modern platform UI:
- * translucent surfaces, tight hierarchy, durable navigation, and calmer states.
- */
-
 :root {
     --mature-bg: #f5f7fb;
     --mature-surface: rgba(255, 255, 255, 0.78);
@@ -338,13 +332,6 @@ html body:not(.dark-mode) #app .shell-module-rail-chip[aria-selected="true"] .sh
     color: #ffffff !important;
 }
 
-body:not(.dark-mode) #app :is(.quick-switch-card.active, .quick-switch-card.is-active) {
-    border-color: rgba(29, 78, 216, 0.3) !important;
-    background: linear-gradient(180deg, #ffffff, #eef4ff) !important;
-    color: var(--mature-blue) !important;
-    box-shadow: inset 0 -2px 0 var(--mature-blue) !important;
-}
-
 html body:not(.dark-mode) #app :is(.quick-switch-card.active, .quick-switch-card.is-active) {
     border-color: rgba(29, 78, 216, 0.3) !important;
     background: linear-gradient(180deg, #ffffff, #eef4ff) !important;
@@ -353,10 +340,6 @@ html body:not(.dark-mode) #app :is(.quick-switch-card.active, .quick-switch-card
 }
 
 html body:not(.dark-mode) #app :is(.quick-switch-card.active, .quick-switch-card.is-active) :is(span, strong, small, i) {
-    color: inherit !important;
-}
-
-body:not(.dark-mode) #app :is(.quick-switch-card.active, .quick-switch-card.is-active) :is(span, strong, small, i) {
     color: inherit !important;
 }
 
@@ -472,23 +455,22 @@ body:not(.dark-mode) .btn.btn-purple {
     background: #1d4ed8 !important;
 }
 
-html body:not(.dark-mode) #app :is(.btn.btn-blue, .btn.btn-purple) {
+html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-primary, .btn.btn-purple, .btn.btn-blue, .primary-btn, .analysis-action-btn.primary, button.primary, .advanced-submit.login-clean-submit),
+html body:not(.dark-mode) #login-overlay[data-login-skin="clean"] :is(.login-clean-submit, .btn-primary, .btn.btn-primary, .advanced-submit) {
     background: #1d4ed8 !important;
     border-color: rgba(29, 78, 216, 0.34) !important;
     color: #ffffff !important;
 }
 
-html body:not(.dark-mode) #app :is(.btn.btn-primary, .btn.btn-purple, .btn.btn-blue, .advanced-submit.login-clean-submit) {
+html body:not(.dark-mode) #app :is(#app .btn-primary, #app .btn.btn-primary, #app .btn.btn-purple) {
     background: #1d4ed8 !important;
     border-color: rgba(29, 78, 216, 0.34) !important;
-    color: #ffffff !important;
 }
 
-html body:not(.dark-mode) #app #starter-hub .starter-card--entry :is(button.btn.btn-primary, button.btn.btn-purple, button.btn.btn-blue),
-html body:not(.dark-mode) #app #starter-hub .starter-card--backup :is(button.btn.btn-primary, button.btn.btn-purple, button.btn.btn-blue),
-html body:not(.dark-mode) #app #starter-hub .starter-card--templates :is(button.btn.btn-primary, button.btn.btn-purple, button.btn.btn-blue) {
-    background: #1d4ed8 !important;
-    border-color: rgba(29, 78, 216, 0.34) !important;
+html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-primary, .btn.btn-purple, .btn.btn-blue, .primary-btn, .analysis-action-btn.primary, button.primary, .advanced-submit.login-clean-submit):hover,
+html body:not(.dark-mode) #login-overlay[data-login-skin="clean"] :is(.login-clean-submit, .btn-primary, .btn.btn-primary, .advanced-submit):hover {
+    background: #1e40af !important;
+    border-color: rgba(30, 64, 175, 0.42) !important;
     color: #ffffff !important;
 }
 
@@ -520,13 +502,11 @@ body:not(.dark-mode) .workspace-drawer-panel {
         var(--mature-surface-strong) !important;
     box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22) !important;
     backdrop-filter: blur(12px) saturate(1.08) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(1.08) !important;
 }
 
 body:not(.dark-mode) .workspace-drawer-backdrop {
     background: rgba(15, 23, 42, 0.18) !important;
     backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
 }
 
 body:not(.dark-mode) input,
@@ -547,6 +527,160 @@ body:not(.dark-mode) th {
 
 body:not(.dark-mode) .shell-module-rail-shell--floating {
     top: calc(var(--mature-header-h) + 10px) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] {
+    background:
+        linear-gradient(180deg, #f8fafc 0%, #eef4f8 100%) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
+    grid-template-columns: minmax(360px, 0.44fr) minmax(520px, 0.56fr) !important;
+    background: #ffffff !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
+    border-right: 1px solid rgba(17, 24, 39, 0.08) !important;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(236, 253, 245, 0.46)),
+        #f8fafc !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-mark {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: var(--mature-radius) !important;
+    background: #1d4ed8 !important;
+    box-shadow: 0 14px 34px rgba(29, 78, 216, 0.18) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-copy {
+    max-width: 440px !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-copy span,
+html body #login-overlay[data-login-skin="clean"] .login-portal-badge {
+    color: var(--mature-teal) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    color: var(--mature-ink) !important;
+    font-size: clamp(48px, 5.4vw, 78px) !important;
+    letter-spacing: 0 !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-card {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.88)),
+        #ffffff !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-form-header,
+html body #login-overlay[data-login-skin="clean"] .login-clean-switch,
+html body #login-overlay[data-login-skin="clean"] .login-clean-form {
+    width: min(100%, 500px) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-portal-badge {
+    border-color: rgba(15, 118, 110, 0.16) !important;
+    background: rgba(15, 118, 110, 0.08) !important;
+    border-radius: var(--mature-radius) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-switch {
+    border-color: rgba(17, 24, 39, 0.1) !important;
+    border-radius: var(--mature-radius) !important;
+    background: #eef2f7 !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .role-btn {
+    border-radius: 6px !important;
+    color: #475467 !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .role-btn.active {
+    color: var(--mature-blue) !important;
+    background: #ffffff !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-entry-field {
+    min-height: 48px !important;
+    border-color: rgba(17, 24, 39, 0.12) !important;
+    border-radius: var(--mature-radius) !important;
+    background: rgba(248, 250, 252, 0.92) !important;
+    transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-entry-field:focus-within {
+    border-color: rgba(29, 78, 216, 0.42) !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.1) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-entry-prefix,
+html body #login-overlay[data-login-skin="clean"] .login-clean-label {
+    color: #475467 !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] :is(.login-clean-brand small, .login-form-header p, .login-clean-copy p, .login-clean-helper, .login-graduate-cohort-helper) {
+    color: var(--mature-muted) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-submit {
+    min-height: 50px !important;
+    border-radius: var(--mature-radius) !important;
+    box-shadow: 0 14px 34px rgba(29, 78, 216, 0.18) !important;
+}
+
+html body #app :is(button, .btn, .shell-module-rail-chip, .sidebar-menu-item, select, input, textarea):focus-visible,
+html body #login-overlay[data-login-skin="clean"] :is(button, input, select):focus-visible {
+    outline: 2px solid rgba(29, 78, 216, 0.72) !important;
+    outline-offset: 2px !important;
+}
+
+html body #app :is(button, .btn, .shell-module-rail-chip):disabled,
+html body #app :is(button, .btn, .shell-module-rail-chip)[aria-disabled="true"] {
+    cursor: not-allowed !important;
+    opacity: 0.56 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+html body #app :is(button, .btn)[aria-busy="true"],
+html body #login-overlay[data-login-skin="clean"] .login-clean-submit[aria-busy="true"] {
+    position: relative;
+    pointer-events: none !important;
+}
+
+html body #app :is(button, .btn)[aria-busy="true"]::after,
+html body #login-overlay[data-login-skin="clean"] .login-clean-submit[aria-busy="true"]::after {
+    content: "" !important;
+    width: 14px;
+    height: 14px;
+    margin-left: 8px;
+    display: inline-block;
+    vertical-align: -2px;
+    border: 2px solid rgba(255, 255, 255, 0.48);
+    border-top-color: #ffffff;
+    border-radius: 999px;
+    animation: mature-spin 740ms linear infinite;
+}
+
+@keyframes mature-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html body #app *,
+    html body #login-overlay[data-login-skin="clean"] * {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }
 
 @media (max-width: 1180px) {
