@@ -1829,6 +1829,12 @@ if (!window.__LOGGED_OUT_SHELL_GATE_BOUND__) {
     setTimeout(runLoggedOutGate, 16000);
 }
 
+const initialWorkspaceSnapshot = readWorkspaceSnapshot();
+var COHORT_DB = initialWorkspaceSnapshot.cohortDb || null;
+var CURRENT_COHORT_ID = initialWorkspaceSnapshot.currentCohortId || '';
+var CURRENT_COHORT_META = initialWorkspaceSnapshot.currentCohortMeta || null;
+var CURRENT_EXAM_ID = initialWorkspaceSnapshot.currentExamId || '';
+
 async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
     const cohortKey = getCohortKey(cohortId);
@@ -2650,11 +2656,6 @@ function syncRuntimeStateToWindow() {
     window.TEACHER_STATS = TEACHER_STATS;
 }
 
-const initialWorkspaceSnapshot = readWorkspaceSnapshot();
-var COHORT_DB = initialWorkspaceSnapshot.cohortDb || null;
-var CURRENT_COHORT_ID = initialWorkspaceSnapshot.currentCohortId || '';
-var CURRENT_COHORT_META = initialWorkspaceSnapshot.currentCohortMeta || null;
-var CURRENT_EXAM_ID = initialWorkspaceSnapshot.currentExamId || '';
 let TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {};
 let POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {};
 let radarChartInstance = null;

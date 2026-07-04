@@ -4,18 +4,22 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const authLoginSource = fs.readFileSync(path.join(root, 'public/assets/js/auth-login-runtime.js'), 'utf8');
+const cohortDbSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-db-core-runtime.js'), 'utf8');
+const cohortExamMetaSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-exam-meta-runtime.js'), 'utf8');
 const cloudSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud.js'), 'utf8');
 const dataCloudSource = fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8');
 const cloudWorkspaceSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud-workspace-runtime.js'), 'utf8');
+const snapshotSystemSource = fs.readFileSync(path.join(root, 'public/assets/js/snapshot-system-runtime.js'), 'utf8');
 const smokeSource = fs.readFileSync(path.join(root, 'scripts/smoke-all-modules.js'), 'utf8');
 
 assert.ok(
-    /function showCohortPicker\(\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade: 6 \}, \{\s*skipConfirm: true,\s*fastEnter: false,\s*requireCloudData: true\s*\}\)/.test(appSource),
+    /function showCohortPicker\(\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade: 6 \}, \{\s*skipConfirm: true,\s*fastEnter: false,\s*requireCloudData: true\s*\}\)/.test(cohortExamMetaSource),
     'automatic cohort picker entry should wait for cloud data instead of opening an empty local shell'
 );
 
 assert.ok(
-    /async function enterCohortFromMask\(options = \{\}\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(appSource),
+    /async function enterCohortFromMask\(options = \{\}\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(cohortExamMetaSource),
     'login-selected cohort entry should fast-enter and restore cloud data in the background by default'
 );
 
@@ -25,7 +29,7 @@ assert.ok(
 );
 
 assert.ok(
-    /enterCohortFromMask\(\{\s*fastEnter:\s*true,\s*requireCloudData:\s*false\s*\}\)/.test(appSource),
+    /switchTo: function \(cohortId, options = \{\}\) \{[\s\S]*const switchOptions = Object\.assign\(\{ fastEnter: true \}, options \|\| \{\}\);[\s\S]*return switchCohort\(cohortId, switchOptions\);/.test(cohortExamMetaSource),
     'selected login cohort should explicitly request fast entry so cloud data does not block the login screen'
 );
 
@@ -35,9 +39,9 @@ assert.ok(
 );
 
 assert.ok(
-    appSource.includes('const hasSessionUser = !!(window.AuthState')
-        && appSource.includes('const shouldShowLogin = !!visible || !hasSessionUser;')
-        && appSource.includes("document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';"),
+    authLoginSource.includes('const hasSessionUser = !!(window.AuthState')
+        && authLoginSource.includes('const shouldShowLogin = !!visible || !hasSessionUser;')
+        && authLoginSource.includes("document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';"),
     'login overlay state must fail closed and keep the app hidden when no authenticated session exists'
 );
 
@@ -159,22 +163,22 @@ assert.ok(
 );
 
 assert.ok(
-    appSource.includes('function getSnapshotPayloadCohortId(db)')
-        && appSource.includes('blocked cross-cohort snapshot apply')
-        && appSource.includes('return false;')
-        && appSource.includes('return true;'),
+    snapshotSystemSource.includes('function getSnapshotPayloadCohortId(db)')
+        && snapshotSystemSource.includes('blocked cross-cohort snapshot apply')
+        && snapshotSystemSource.includes('return false;')
+        && snapshotSystemSource.includes('return true;'),
     'snapshot restores should reject cross-cohort payloads before they can overwrite the active workspace'
 );
 
 assert.ok(
-    /applyExamToWorkspace: function \(examId, options = \{\}\) \{[\s\S]*const examCohortId = inferCohortIdFromValue\(examId\)[\s\S]*blocked cross-cohort exam apply[\s\S]*return false;/.test(appSource),
+    /applyExamToWorkspace: function \(examId, options = \{\}\) \{[\s\S]*const examCohortId = inferCohortIdFromValue\(examId\)[\s\S]*blocked cross-cohort exam apply[\s\S]*return false;/.test(cohortDbSource),
     'applying an exam batch to the workspace should reject exam IDs from another cohort'
 );
 
 assert.ok(
-    appSource.includes('function getExplicitCohortSelection()')
-        && /if \(explicitSelection && current === explicitSelection && restoreActiveCohortUI\(current\)\) \{[\s\S]*rememberUserCohort\(current\);[\s\S]*return;[\s\S]*\}/.test(appSource)
-        && appSource.includes('if (explicitSelection && saved !== explicitSelection)'),
+    cohortExamMetaSource.includes('function getExplicitCohortSelection()')
+        && /if \(explicitSelection && current === explicitSelection && restoreActiveCohortUI\(current\)\) \{[\s\S]*rememberUserCohort\(current\);[\s\S]*return;[\s\S]*\}/.test(cohortExamMetaSource)
+        && cohortExamMetaSource.includes('if (explicitSelection && saved !== explicitSelection)'),
     'login-selected cohorts should take precedence over stale saved cohort preferences'
 );
 
@@ -196,7 +200,7 @@ assert.ok(
 );
 
 assert.ok(
-    /switchTo: function \(cohortId, options = \{\}\) \{[\s\S]*lockRuntimeCohortId\(cohortId\);[\s\S]*CURRENT_EXAM_ID = '';[\s\S]*window\.CURRENT_EXAM_ID = '';[\s\S]*currentExamId: '',/.test(appSource),
+    /switchTo: function \(cohortId, options = \{\}\) \{[\s\S]*lockRuntimeCohortId\(cohortId\);[\s\S]*CURRENT_EXAM_ID = '';[\s\S]*window\.CURRENT_EXAM_ID = '';[\s\S]*currentExamId: '',/.test(cohortExamMetaSource),
     'manual cohort switching should clear the previous exam before syncing the target cohort identity'
 );
 
@@ -208,8 +212,8 @@ assert.ok(
 assert.ok(
     appSource.includes('function persistWorkspaceExamIdentity(examId, db = COHORT_DB, options = {})')
         && appSource.includes('window.persistWorkspaceExamIdentity = window.persistWorkspaceExamIdentity || persistWorkspaceExamIdentity;')
-        && appSource.includes('if (!persistWorkspaceExamIdentity(preferredExamId, db, { cohortId: normalizedCohortId })) return false;')
-        && appSource.includes('if (!persistWorkspaceExamIdentity(autoExamId, db, { cohortId: normalizedCohortId })) return false;'),
+        && cohortExamMetaSource.includes('if (!persistWorkspaceExamIdentity(preferredExamId, db, { cohortId: normalizedCohortId })) return false;')
+        && cohortExamMetaSource.includes('if (!persistWorkspaceExamIdentity(autoExamId, db, { cohortId: normalizedCohortId })) return false;'),
     'auto restored exams should update CURRENT_EXAM_ID, localStorage, and COHORT_DB through one guarded persistence path'
 );
 
