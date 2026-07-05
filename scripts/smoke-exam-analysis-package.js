@@ -21,6 +21,7 @@ function xmlTextToList(xml) {
 
 async function readWorkbookSummary(buffer) {
     const zip = await JSZip.loadAsync(buffer);
+    const workbookFiles = Object.keys(zip.files);
     const sharedStringsXml = await zip.file('xl/sharedStrings.xml')?.async('string').catch(() => '') || '';
     const stylesXml = await zip.file('xl/styles.xml')?.async('string').catch(() => '') || '';
     const sharedStrings = xmlTextToList(sharedStringsXml).join('|');
@@ -36,7 +37,7 @@ async function readWorkbookSummary(buffer) {
         sheetTextParts.push(xml.replace(/<[^>]+>/g, '|'));
         sheetXmlParts.push(xml);
     }
-    return { text: `${sharedStrings}|${sheetTextParts.join('|')}`, stylesXml, sheetXml: sheetXmlParts.join('\n'), rowCounts };
+    return { text: `${sharedStrings}|${sheetTextParts.join('|')}`, stylesXml, sheetXml: sheetXmlParts.join('\n'), rowCounts, workbookFiles };
 }
 
 async function login(page) {
@@ -114,6 +115,9 @@ async function login(page) {
         if (!/hidden="1"|hidden="true"/i.test(teacherCountySummary.sheetXml)) {
             throw new Error('county teacher workbook marker columns should be hidden');
         }
+        if (teacherCountySummary.workbookFiles.some((name) => /comments|threadedComments/i.test(name))) {
+            throw new Error('county teacher workbook should not contain popup comments');
+        }
         if (!/horizontal="center"/i.test(teacherCountySummary.stylesXml) || !/vertical="center"/i.test(teacherCountySummary.stylesXml)) {
             throw new Error('county teacher workbook is missing centered alignment styles');
         }
@@ -129,6 +133,9 @@ async function login(page) {
         }
         if (!/hidden="1"|hidden="true"/i.test(rawScoreSummary.sheetXml)) {
             throw new Error('raw score workbook marker columns should be hidden');
+        }
+        if (rawScoreSummary.workbookFiles.some((name) => /comments|threadedComments/i.test(name))) {
+            throw new Error('raw score workbook should not contain popup comments');
         }
         if (!/horizontal="center"/i.test(rawScoreSummary.stylesXml) || !/EAF6FF/i.test(rawScoreSummary.stylesXml)) {
             throw new Error('raw score workbook is missing centered alignment or highlight colors');

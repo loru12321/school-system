@@ -159,14 +159,11 @@
             const headerText = String(header || '');
             const numericLike = /分|率|排|人数|名次|序号|考场/.test(headerText);
             const minWidth = index === 0 ? 10 : (numericLike ? 9 : 12);
-            const maxAllowed = /学校|教师/.test(headerText) ? 28 : (/姓名/.test(headerText) ? 14 : 18);
+            const maxAllowed = /内容|说明|学科/.test(headerText)
+                ? 46
+                : (/学校|教师/.test(headerText) ? 28 : (/姓名/.test(headerText) ? 14 : (maxWidth > 24 ? 42 : 18)));
             return { wch: Math.max(minWidth, Math.min(maxWidth + 3, maxAllowed)) };
         });
-    }
-
-    function maybeAddMarkerComment(cell, marker) {
-        if (!cell || !marker) return;
-        cell.c = [{ a: 'SmartEdu', t: marker }];
     }
 
     function applyPackageSheetStyle(ws, rows) {
@@ -212,7 +209,6 @@
                         right: { style: 'thin', color: { rgb: 'D8DEE6' } }
                     }
                 });
-                if (R > 0 && marker && isTextIdentityCol) maybeAddMarkerComment(cell, marker);
                 if (rankValue && rankValue <= 3) {
                     mergeCellStyle(cell, {
                         font: { bold: true, color: { rgb: 'DC2626' } }
