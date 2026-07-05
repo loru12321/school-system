@@ -1063,6 +1063,10 @@ async function runModuleDeepCheck(page, id) {
                 await window.ensureSchoolProfileRuntimeLoaded();
             }
             captureState('school-profile-runtime-loaded');
+            if (typeof window.ensureExamAnalysisPackageRuntimeLoaded === 'function') {
+                await window.ensureExamAnalysisPackageRuntimeLoaded();
+            }
+            captureState('exam-analysis-package-runtime-loaded');
             const checks = {
                 ensureTownSubmoduleCompareUIs: typeof window.ensureTownSubmoduleCompareUIs === 'function',
                 openTownSubmoduleCompareDialog: typeof window.openTownSubmoduleCompareDialog === 'function',
@@ -1073,7 +1077,10 @@ async function runModuleDeepCheck(page, id) {
                 loadCloudTownSubmoduleCompare: typeof window.loadCloudTownSubmoduleCompare === 'function',
                 showSchoolProfile: typeof window.showSchoolProfile === 'function' || typeof showSchoolProfile === 'function',
                 schoolProfileModal: !!document.getElementById('school-profile-modal'),
-                schoolProfileClose: !!document.querySelector('#school-profile-modal .school-modal-close')
+                schoolProfileClose: !!document.querySelector('#school-profile-modal .school-modal-close'),
+                examAnalysisPackageButton: !!document.querySelector('button[onclick="downloadExamAnalysisPackage()"]'),
+                examAnalysisPackageRuntime: typeof window.downloadExamAnalysisPackage === 'function',
+                examAnalysisPackageZipVendor: !!window.JSZip
             };
             const panel = document.querySelector('.town-submodule-compare-panel[data-submodule="summary"]');
             let schoolProfileCloseWorks = false;

@@ -125,6 +125,10 @@ var SYSTEM_RUNTIME_SKILLS = {
 'packager': bootSkill('demand', 'demand', ['exportDistributableHTML'], [
     bootEntry('packager', bootJs('packager-runtime.js'))
 ]),
+'exam-analysis-package': bootSkill('demand', 'demand', ['downloadExamAnalysisPackage'], [
+    bootEntry('jszip-vendor', bootVend('jszip/jszip.min.js')),
+    bootEntry('exam-analysis-package', bootJs('exam-analysis-package-runtime.js'))
+]),
 'worker-api': bootSkill('demand', 'demand', ['WorkerAPI.run'], [
     bootEntry('worker-api', bootJs('worker-api-runtime.js'))
 ])
@@ -729,6 +733,10 @@ window.ensurePackagerRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('packager');
 };
 
+window.ensureExamAnalysisPackageRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('exam-analysis-package');
+};
+
 window.ensureWorkerApiRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('worker-api');
 };
@@ -782,6 +790,7 @@ const XLSX_RUNTIME_FUNCTIONS = [
 'exportTeacherComparisonExcel',
 'exportTeacherComparisonExcelV2',
 'exportTeacherTownshipRankExcel',
+'downloadExamAnalysisPackage',
 'FB_loadData',
 'FB_exportResult',
 'EXAM_loadData',
@@ -1051,6 +1060,7 @@ window.VoiceControl = voiceControlStub;
 }
 
 installOptionalRuntimeMethod('showModuleHelp', window.ensureModuleHelpRuntimeLoaded);
+installOptionalRuntimeMethod('downloadExamAnalysisPackage', window.ensureExamAnalysisPackageRuntimeLoaded);
 window.wrapXlsxRuntimeExports();
 
 if (typeof window.ensureModuleHelpButton !== 'function') {
