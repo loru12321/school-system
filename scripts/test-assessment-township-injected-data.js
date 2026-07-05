@@ -33,7 +33,7 @@ function buildTeacherStatsFromRows(win) {
   return stats;
 }
 
-function createContext({ examId, rows, teacherMap, exams = {} }) {
+function createContext({ examId, rows, teacherMap, exams = {}, syncSettings = { grade6_growth_baseline: 'first_term_final' } }) {
   const context = {
     console,
     setTimeout: (fn) => {
@@ -59,7 +59,10 @@ function createContext({ examId, rows, teacherMap, exams = {} }) {
         const raw = String(value || '').trim();
         return /银山实验/.test(raw) ? '银山实验学校' : raw.replace(/学校$/, '');
       },
-      readIndicatorState: () => ({ ind1: '2', ind2: '4', highSchoolLine: '390' })
+      readIndicatorState: () => ({ ind1: '2', ind2: '4', highSchoolLine: '390' }),
+      EdgeGateway: {
+        getAssessmentSyncSettings: async () => ({ settings: syncSettings })
+      }
     }
   };
   context.window.window = context.window;
@@ -84,6 +87,82 @@ function createContext({ examId, rows, teacherMap, exams = {} }) {
   vm.createContext(context);
   vm.runInContext(source, context);
   return context.window;
+}
+
+async function checkGrade6GrowthStudentRemap() {
+  const examId = '2023级-6年级-2025-2026-暑假-7月质量监测-2026-07-12';
+  const baselineId = '2023级-6年级-2025-2026-上学期-期末-2026-01-12';
+  const rows = [
+    { name: '重名', school: '银山实验学校', class: '6.1', total: 280, scores: { 语文: 96, 数学: 92, 英语: 92 } },
+    { name: '重名', school: '银山实验学校', class: '6.1', total: 210, scores: { 语文: 72, 数学: 70, 英语: 68 } },
+    { name: '转班甲', school: '银山实验学校', class: '6.1', total: 265, scores: { 语文: 90, 数学: 88, 英语: 87 } },
+    { name: '病假缺基准', school: '银山实验学校', class: '6.1', total: 240, scores: { 语文: 82, 数学: 80, 英语: 78 } },
+    { name: '六乙', school: '银山实验学校', class: '6.2', total: 250, scores: { 语文: 86, 数学: 84, 英语: 80 } }
+  ];
+  const baselineRows = [
+    { name: '重名', school: '银山实验学校', class: '6.9', total: 290, scores: { 语文: 98, 数学: 96, 英语: 96 } },
+    { name: '重名', school: '银山实验学校', class: '6.8', total: 180, scores: { 语文: 60, 数学: 60, 英语: 60 } },
+    { name: '转班甲', school: '银山实验学校', class: '6.3', total: 200, scores: { 语文: 64, 数学: 68, 英语: 68 } },
+    { name: '无关旧6.1', school: '银山实验学校', class: '6.1', total: 300, scores: { 语文: 100, 数学: 100, 英语: 100 } }
+  ];
+  const win = createContext({
+    examId,
+    rows,
+    teacherMap: { '6.1_语文': '六语一', '6.2_语文': '六语二' },
+    exams: {
+      [baselineId]: {
+        examId: baselineId,
+        data: baselineRows,
+        meta: { cohortId: '2023', year: '2025-2026', type: '期末', term: '上学期', date: '2026-01-12', grade: '6年级' },
+        createdAt: Date.parse('2026-01-12')
+      }
+    },
+    syncSettings: { grade6_growth_baseline: 'first_term_final' }
+  });
+  const payload = await win.tmBuildTeacherAssessmentSyncPayload();
+  const item = payload.items.find((entry) => entry.teacher_name === '六语一' && entry.project_id === 'teacher_two_rates_one_score');
+  assert.ok(item, '6年级语文教师应生成两率一分');
+  assert.ok(/重组基准成绩 3\/4 人/.test(item.note), '6年级增幅应按当前班级学生名单重组基准成绩，并忽略无基准学生');
+  assert.ok(/顺位配对 2 人/.test(item.note), '同年级重名学生应按当前/基准总分高低顺位配对');
+  assert.ok(/1 名学生因只有一次可比成绩/.test(item.note), '只有一次可比成绩的学生应在说明中透明提示');
+  assert.ok(item.warning && /病假缺基准/.test(item.warning.message), '分值旁应提供可点击警示说明，列出被忽略学生');
+  assert.ok(/厌学、生病、缺考/.test(item.warning.message), '警示说明应覆盖现实缺考/生病等原因');
+  assert.ok(!/无关旧6\.1/.test(item.note), '旧班号里的无关学生不得进入当前班级基准');
+  assert.ok(payload.growth_baseline_exam_id === baselineId, 'payload 应记录实际增幅基准考试');
+  return payload;
+}
+
+async function checkGrade7GrowthPreviousJulyStudentRemap() {
+  const examId = '2023级-7年级-2025-2026-暑假-7月质量监测-2026-07-12';
+  const baselineId = '2023级-6年级-2024-2025-暑假-7月质量监测-2025-07-12';
+  const rows = [
+    { name: '七甲', school: '银山实验学校', class: '7.1', total: 275, scores: { 语文: 95, 数学: 90, 英语: 90 } },
+    { name: '七乙', school: '银山实验学校', class: '7.1', total: 235, scores: { 语文: 80, 数学: 80, 英语: 75 } }
+  ];
+  const baselineRows = [
+    { name: '七甲', school: '银山实验学校', class: '6.3', total: 210, scores: { 语文: 70, 数学: 70, 英语: 70 } },
+    { name: '七乙', school: '银山实验学校', class: '6.4', total: 200, scores: { 语文: 68, 数学: 66, 英语: 66 } }
+  ];
+  const win = createContext({
+    examId,
+    rows,
+    teacherMap: { '7.1_语文': '七语一' },
+    exams: {
+      [baselineId]: {
+        examId: baselineId,
+        data: baselineRows,
+        meta: { cohortId: '2023', year: '2024-2025', type: '期末', date: '2025-07-12', grade: '6年级' },
+        createdAt: Date.parse('2025-07-12')
+      }
+    }
+  });
+  const payload = await win.tmBuildTeacherAssessmentSyncPayload();
+  const item = payload.items.find((entry) => entry.teacher_name === '七语一' && entry.project_id === 'teacher_two_rates_one_score');
+  assert.ok(item, '7年级教师应生成两率一分');
+  assert.ok(/优秀率增幅基准：上年度7月同一批学生/.test(item.note), '7年级增幅应使用上年度7月同一批学生');
+  assert.ok(/重组基准成绩 2\/2 人/.test(item.note), '7年级增幅应按当前学生名单重组上一年7月成绩');
+  assert.strictEqual(payload.growth_baseline_exam_id, baselineId);
+  return payload;
 }
 
 function nonGradRows(grade) {
@@ -131,6 +210,7 @@ async function checkNonGrad(grade) {
   assert.ok(payload.preview_items.every((item) => item.preview_only), `${grade}年级预览项必须标记 preview_only`);
   const audit = win.tmBuildTeacherAssessmentSyncAudit(payload, { written: payload.items.length, skipped: [] });
   assert.ok(audit.formulas.teacher_two_rates_one_score.includes('乡镇最高值比较含银山实验本校'));
+  assert.ok(audit.formulas.teacher_two_rates_one_score.includes('当前任教班级学生名单反查基准考试'));
   assert.ok(audit.formulas.class_average_non_grad.includes('本校同级部最高班级平均分'));
   assert.ok(payload.items.some((item) => /含本校/.test(item.note)), `${grade}年级说明应体现最高值含本校`);
   return payload;
@@ -195,9 +275,13 @@ function checkAssessmentAppGradeNormalizer() {
   const html = fs.readFileSync(assessmentAppPath, 'utf8');
   assert.ok(html.includes('9\\s*年级'), '考核管理系统应显式识别9年级');
   assert.ok(!html.includes('/[6六]/.test(text)'), '考核管理系统年级识别不能被年份中的6误导');
+  assert.ok(html.includes('同年级重名学生按当前成绩高低与基准成绩高低顺位对应'), '考核管理系统应说明重名学生增幅配对规则');
+  assert.ok(html.includes('只有一次可比成绩的学生按规则忽略'), '考核管理系统应说明单次成绩学生在增幅中忽略并提示');
 }
 
 (async () => {
+  const grade6Growth = await checkGrade6GrowthStudentRemap();
+  const grade7Growth = await checkGrade7GrowthPreviousJulyStudentRemap();
   const grade6 = await checkNonGrad(6);
   const grade7 = await checkNonGrad(7);
   const grade8 = await checkGrade8Makeup();
@@ -207,6 +291,8 @@ function checkAssessmentAppGradeNormalizer() {
     ok: true,
     injected: 'memory-only',
     highSchoolLine: 390,
+    grade6GrowthItems: grade6Growth.items.length,
+    grade7GrowthItems: grade7Growth.items.length,
     grade6Items: grade6.items.length,
     grade7Items: grade7.items.length,
     grade8Items: grade8.items.length,

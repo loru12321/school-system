@@ -290,6 +290,35 @@
     min-width: 620px;
 }
 
+#tmAssessmentSyncPanel .tm-assessment-score-warning {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    margin: 0 4px;
+    border: 1px solid #f59e0b;
+    border-radius: 999px;
+    background: #fffbeb;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: 1px;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-score-warning:hover {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+#tmAssessmentSyncPanel .tm-assessment-warning-dialog {
+    margin: 0;
+    white-space: pre-wrap;
+    font: inherit;
+    line-height: 1.7;
+}
+
 #tmAssessmentSyncPanel .tm-assessment-sync-note {
     padding: 10px 12px;
     border-radius: 12px;

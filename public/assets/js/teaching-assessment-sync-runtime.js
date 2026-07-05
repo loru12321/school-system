@@ -67,7 +67,7 @@
             requiresJuly: true,
             syncMode: 'sync',
             source: '联考分析 · 两率一分',
-            formula: '教师两率一分主体 =（个人优秀率/最高学校优秀率*40 + 个人及格率/最高学校及格率*30 + 个人平均分/最高学校平均分*30）/最高教师成绩*54；乡镇最高值比较含银山实验本校；优秀率增幅 6 分需用本年度 7 月与上年度 7 月基准考试对比。'
+            formula: '教师两率一分主体 =（个人优秀率/最高学校优秀率*40 + 个人及格率/最高学校及格率*30 + 个人平均分/最高学校平均分*30）/最高教师成绩*54；乡镇最高值比较含银山实验本校；优秀率增幅6分按当前任教班级学生名单反查基准考试并重组基准成绩：7-9年级用上年度7月同一批学生成绩，6年级用已确认的上学期期中或期末同一批学生成绩。'
         },
         [PROJECTS.classCollaboration]: {
             max: 10,
@@ -102,7 +102,7 @@
             requiresJuly: true,
             syncMode: 'preview',
             source: '公式审计 · 非毕业年级第二学期期末成绩',
-            formula: '非毕业年级班级期末成绩 = 班级总成绩两率一分 50 分 + 班级优秀率增幅 10 分；乡镇最高值比较含银山实验本校；依赖7月/期末成绩、上一基准成绩和95%人数补零规则。'
+            formula: '非毕业年级班级期末成绩 = 班级总成绩两率一分 50 分 + 班级优秀率增幅 10 分；乡镇最高值比较含银山实验本校；增幅基准必须按当前班级学生名单反查上一基准考试并重组，不按旧班号直接相减；依赖7月/期末成绩、上一基准成绩和95%人数补零规则。'
         },
         [PROJECTS.classTopStudentsNonGrad]: {
             max: 10,
@@ -137,7 +137,7 @@
             requiresJuly: true,
             syncMode: 'preview',
             source: '公式审计 · 9 年级 7 月中考/统一模拟',
-            formula: '毕业班两率一分 = 及格率10分 + 平均分10分 + 优秀率20分 + 优秀率增幅5分；涉及乡镇最高值比较时含银山实验本校；依赖9年级7月中考或最后一次统一模拟。'
+            formula: '毕业班两率一分 = 及格率10分 + 平均分10分 + 优秀率20分 + 优秀率增幅5分；涉及乡镇最高值比较时含银山实验本校；优秀率增幅按当前班级学生名单反查上一基准考试并重组，不按旧班号直接相减；依赖9年级7月中考或最后一次统一模拟。'
         },
         [PROJECTS.classHighSchoolContribution]: {
             max: 15,
@@ -196,6 +196,10 @@
             '"': '&quot;',
             "'": '&#39;'
         }[char]));
+    }
+
+    function escapeAttr(value) {
+        return escapeHtml(value).replace(/`/g, '&#96;');
     }
 
     function toNumber(value, fallback = NaN) {
@@ -526,6 +530,34 @@
         return candidates[0] || null;
     }
 
+    function findPreviousJulyGrowthBaselineExam(baseInfo, currentContext) {
+        const exams = currentContext.db?.exams || {};
+        const currentTs = getExamTimestamp(currentContext.currentExamId, currentContext.exam || {});
+        const currentGrade = Number(normalizeGrade(baseInfo.grade));
+        const previousGrade = Number.isFinite(currentGrade) && currentGrade > 6 ? String(currentGrade - 1) : '';
+        const candidates = Object.entries(exams)
+            .map(([examId, exam]) => ({ examId, exam }))
+            .filter(({ examId }) => examId !== currentContext.currentExamId)
+            .filter(({ exam }) => getExamRows(exam).length > 0)
+            .filter(({ examId, exam }) => extractExamMonth({ currentExamId: examId, exam }) === 7)
+            .filter(({ examId, exam }) => {
+                const ts = getExamTimestamp(examId, exam);
+                return !currentTs || !ts || ts < currentTs;
+            })
+            .filter(({ examId, exam }) => !baseInfo.cohortId || getExamCohortId(examId, exam) === baseInfo.cohortId)
+            .filter(({ examId, exam }) => !previousGrade || normalizeGrade(getExamGrade(examId, exam, getExamRows(exam))) === previousGrade)
+            .sort((left, right) => getExamTimestamp(right.examId, right.exam) - getExamTimestamp(left.examId, left.exam));
+        return candidates[0] || null;
+    }
+
+    function findGrowthBaselineExam(baseInfo, currentContext, syncSettings = {}) {
+        const grade = normalizeGrade(baseInfo.grade);
+        if (grade === '6') {
+            return findGrade6GrowthBaselineExam(baseInfo, currentContext, syncSettings.grade6_growth_baseline);
+        }
+        return findPreviousJulyGrowthBaselineExam(baseInfo, currentContext);
+    }
+
     function normalizeStudentName(row) {
         return text(row?.name || row?.studentName || row?.student_name || row?.姓名 || row?.student || '').replace(/\s+/g, '');
     }
@@ -550,6 +582,14 @@
         ].join('::');
     }
 
+    function buildStudentGradeNameKey(row, fallbackGrade = '') {
+        return [
+            normalizeSchoolForSync(row?.school),
+            normalizeGrade(fallbackGrade || getExamGrade('', {}, [row])),
+            normalizeStudentName(row)
+        ].join('::');
+    }
+
     function indexRowsForMakeup(rows) {
         const exact = new Map();
         const byName = new Map();
@@ -562,6 +602,28 @@
             byName.get(nameKey).push(row);
         });
         return { exact, byName };
+    }
+
+    function sortRowsByTotalDesc(rows) {
+        return (rows || []).slice().sort((left, right) => getTotal(right) - getTotal(left));
+    }
+
+    function indexBaselineRowsForGrowth(rows, fallbackGrade = '') {
+        const exact = new Map();
+        const byGradeName = new Map();
+        (rows || []).forEach((row) => {
+            const exactKey = buildStudentExactKey(row);
+            if (!exact.has(exactKey)) exact.set(exactKey, []);
+            exact.get(exactKey).push(row);
+
+            const nameKey = buildStudentGradeNameKey(row, fallbackGrade);
+            if (!byGradeName.has(nameKey)) byGradeName.set(nameKey, []);
+            byGradeName.get(nameKey).push(row);
+        });
+        byGradeName.forEach((items, key) => {
+            byGradeName.set(key, sortRowsByTotalDesc(items));
+        });
+        return { exact, byGradeName };
     }
 
     function resolveMakeupRow(row, index) {
@@ -863,46 +925,122 @@
         return highest;
     }
 
-    function buildTeacherStatsSnapshot(rows) {
-        const previousRows = root.RAW_DATA;
-        const previousStats = root.TEACHER_STATS;
-        root.RAW_DATA = rows;
-        root.TEACHER_STATS = {};
-        ensureTeacherStats();
-        const snapshot = root.TEACHER_STATS || {};
-        root.RAW_DATA = previousRows;
-        root.TEACHER_STATS = previousStats;
-        return snapshot;
+    function getSubjectExcellentThreshold(rows, subject) {
+        const values = (rows || []).map((row) => getSubjectScore(row, subject)).filter(Number.isFinite).sort((a, b) => b - a);
+        if (!values.length) return NaN;
+        const top = values[0] || 0;
+        return Math.max(values[Math.floor(values.length * 0.2)] || 0, top * 0.8);
     }
 
-    function buildGrade6GrowthContext(teachers, currentStats, baselineRows, baselineInfo) {
+    function buildGrowthBaselineMatchedRows(teacher, currentRows, baselineRows, fallbackGrade = '') {
+        const baselineIndex = indexBaselineRowsForGrowth(baselineRows, fallbackGrade);
+        const teacherClasses = new Set((teacher.classes || []).map(text));
+        const currentCandidates = (currentRows || [])
+            .filter((row) => teacherClasses.has(normalizeStudentClass(row)))
+            .filter((row) => Number.isFinite(getSubjectScore(row, teacher.subject)))
+            .filter((row) => normalizeSchoolForSync(row?.school) === normalizeSchoolForSync(teacher.school));
+        const exactMatchedBaselineRows = new Set();
+        const matched = [];
+        const unmatched = [];
+
+        currentCandidates.forEach((row) => {
+            const exactRows = baselineIndex.exact.get(buildStudentExactKey(row)) || [];
+            const available = exactRows.filter((item) => !exactMatchedBaselineRows.has(item));
+            if (available.length === 1) {
+                exactMatchedBaselineRows.add(available[0]);
+                matched.push({ current: row, baseline: available[0], mode: 'same-class' });
+                return;
+            }
+            unmatched.push(row);
+        });
+
+        const currentGroups = new Map();
+        unmatched.forEach((row) => {
+            const key = buildStudentGradeNameKey(row, fallbackGrade);
+            if (!currentGroups.has(key)) currentGroups.set(key, []);
+            currentGroups.get(key).push(row);
+        });
+
+        const matchedCurrentRows = new Set(matched.map((item) => item.current));
+        currentGroups.forEach((groupRows, key) => {
+            const orderedCurrent = sortRowsByTotalDesc(groupRows);
+            const orderedBaseline = (baselineIndex.byGradeName.get(key) || [])
+                .filter((row) => !exactMatchedBaselineRows.has(row));
+            orderedCurrent.forEach((row, index) => {
+                const baseline = orderedBaseline[index];
+                if (!baseline) return;
+                matched.push({ current: row, baseline, mode: orderedBaseline.length > 1 ? 'same-name-rank' : 'same-name' });
+                matchedCurrentRows.add(row);
+            });
+        });
+
+        return {
+            matched,
+            unmatched: currentCandidates
+                .filter((row) => !matchedCurrentRows.has(row))
+                .map((row) => ({
+                    row,
+                    reason: '基准考试中未找到同一学生可比成绩，可能是厌学、生病、缺考、转入转出或只有一次成绩记录'
+                })),
+            currentCount: currentCandidates.length
+        };
+    }
+
+    function summarizeBaselineGrowthForTeacher(teacher, currentRows, baselineRows, fallbackGrade = '') {
+        const current = getTeacherSubjectStats(root.TEACHER_STATS || {}, teacher.teacher_name, teacher.subject);
+        if (!current || !toNumber(current.studentCount, 0)) return null;
+        const matchResult = buildGrowthBaselineMatchedRows(teacher, currentRows, baselineRows, fallbackGrade);
+        const usableMatches = matchResult.matched.filter((item) => Number.isFinite(getSubjectScore(item.baseline, teacher.subject)));
+        const baselineScores = usableMatches.map((item) => getSubjectScore(item.baseline, teacher.subject));
+        const subjectMissing = matchResult.matched
+            .filter((item) => !Number.isFinite(getSubjectScore(item.baseline, teacher.subject)))
+            .map((item) => ({
+                row: item.current,
+                reason: `基准考试中找到学生，但缺少${teacher.subject}成绩，不能参与优秀率增幅比较`
+            }));
+        const ignored = matchResult.unmatched.concat(subjectMissing);
+        if (!baselineScores.length && !ignored.length) return null;
+        const baselineThreshold = getSubjectExcellentThreshold(baselineRows, teacher.subject);
+        if (!Number.isFinite(baselineThreshold)) return null;
+        if (!baselineScores.length) return null;
+        return {
+            teacher,
+            currentExcellentRate: toNumber(current.excellentRate, 0),
+            currentStudentCount: toNumber(current.studentCount, 0),
+            baselineStudentCount: baselineScores.length,
+            baselineExcellentRate: baselineScores.filter((score) => score >= baselineThreshold).length / baselineScores.length,
+            rankMatchedCount: usableMatches.filter((item) => item.mode === 'same-name-rank').length,
+            fallbackMatchedCount: usableMatches.filter((item) => item.mode === 'same-name').length,
+            ignoredStudentCount: ignored.length,
+            ignoredStudents: ignored.slice(0, 12).map((item) => ({
+                name: normalizeStudentName(item.row),
+                className: normalizeStudentClass(item.row),
+                reason: item.reason
+            })),
+            ignoredStudentOverflow: Math.max(ignored.length - 12, 0)
+        };
+    }
+
+    function buildStudentGrowthContext(teachers, currentRows, baselineRows, baselineInfo) {
         if (!baselineRows?.length) return null;
-        const baselineStats = buildTeacherStatsSnapshot(baselineRows);
+        const fallbackGrade = normalizeGrade(baselineInfo?.baselineGrade || baselineInfo?.grade || '');
+        const targetGrade = normalizeGrade(baselineInfo?.grade || '');
         const entries = teachers
-            .filter((teacher) => normalizeGrade(teacher.grade) === '6')
-            .map((teacher) => {
-                const current = getTeacherSubjectStats(currentStats, teacher.teacher_name, teacher.subject);
-                const baseline = getTeacherSubjectStats(baselineStats, teacher.teacher_name, teacher.subject);
-                if (!current || !baseline || !toNumber(current.studentCount, 0) || !toNumber(baseline.studentCount, 0)) return null;
-                return {
-                    teacher,
-                    currentExcellentRate: toNumber(current.excellentRate, 0),
-                    baselineExcellentRate: toNumber(baseline.excellentRate, 0)
-                };
-            })
+            .filter((teacher) => !targetGrade || normalizeGrade(teacher.grade) === targetGrade)
+            .map((teacher) => summarizeBaselineGrowthForTeacher(teacher, currentRows, baselineRows, fallbackGrade))
             .filter(Boolean);
         if (!entries.length) return null;
 
         const subjectAverages = new Map();
         entries.forEach((entry) => {
             const subject = entry.teacher.subject;
-            if (!subjectAverages.has(subject)) subjectAverages.set(subject, { sum: 0, count: 0 });
+            if (!subjectAverages.has(subject)) subjectAverages.set(subject, { weightedSum: 0, count: 0 });
             const current = subjectAverages.get(subject);
-            current.sum += entry.currentExcellentRate;
-            current.count += 1;
+            current.weightedSum += entry.currentExcellentRate * entry.currentStudentCount;
+            current.count += entry.currentStudentCount;
         });
         subjectAverages.forEach((value, subject) => {
-            subjectAverages.set(subject, value.count ? value.sum / value.count : 0);
+            subjectAverages.set(subject, value.count ? value.weightedSum / value.count : 0);
         });
 
         const byKey = new Map();
@@ -910,16 +1048,16 @@
         entries.forEach((entry) => {
             const subjectAverage = subjectAverages.get(entry.teacher.subject) || 0;
             const regularGrowth = entry.currentExcellentRate - entry.baselineExcellentRate;
-            const maintainGrowth = entry.currentExcellentRate >= entry.baselineExcellentRate
+            const specialGrowth = entry.currentExcellentRate >= entry.baselineExcellentRate
                 ? entry.currentExcellentRate - subjectAverage
                 : 0;
-            const growth = Math.max(regularGrowth, maintainGrowth, 0);
+            const growth = Math.max(regularGrowth, specialGrowth, 0);
             const key = teacherKeyFor(entry.teacher.teacher_name, entry.teacher.grade, entry.teacher.subject);
             byKey.set(key, {
                 ...entry,
                 subjectAverage,
                 regularGrowth,
-                maintainGrowth,
+                specialGrowth,
                 growth
             });
             highestBySubject.set(entry.teacher.subject, Math.max(highestBySubject.get(entry.teacher.subject) || 0, growth));
@@ -970,15 +1108,30 @@
             scaleWithinGroup(rawScores, 54).forEach((entry) => {
                 const growth = getGrade6GrowthScore(growthContext, entry.teacher);
                 const score = round(entry.score + (growth?.score || 0), 2);
+                const ignoredSummary = growth?.ignoredStudentCount
+                    ? `；${growth.ignoredStudentCount} 名学生因只有一次可比成绩或基准学科成绩缺失已按规则忽略`
+                    : '';
                 const growthNote = growth
-                    ? `优秀率增幅 ${growth.score}/6；基准：${growthContext.baselineInfo.label || growthContext.baselineInfo.id}；常规增幅 ${pct(growth.regularGrowth)}，维持增幅 ${pct(growth.maintainGrowth)}，采用 ${pct(growth.growth)}，本学科最高增幅 ${pct(growth.highest)}。`
-                    : '优秀率增幅未自动加入：未确认6年级基准、当前非6年级，或未匹配到基准考试/教师数据。';
+                    ? `优秀率增幅 ${growth.score}/6；基准：${growthContext.baselineInfo.label || growthContext.baselineInfo.id}；按当前任教班级学生名单重组基准成绩 ${growth.baselineStudentCount}/${growth.currentStudentCount} 人，同年级重名按当前/基准总分高低顺位配对 ${growth.rankMatchedCount} 人${ignoredSummary}；常规增幅 ${pct(growth.regularGrowth)}，特殊增幅 ${pct(growth.specialGrowth)}，采用 ${pct(growth.growth)}，本学科最高增幅 ${pct(growth.highest)}。`
+                    : '优秀率增幅未自动加入：未匹配到对应基准考试，或当前学生在基准考试中无法按姓名/年级匹配重组。';
+                const growthWarning = growth?.ignoredStudentCount ? {
+                    title: '优秀率增幅有学生未参与比较',
+                    message: [
+                        `${entry.teacher.teacher_name} ${gradeLabel(entry.teacher.grade)} ${entry.teacher.subject} 有 ${growth.ignoredStudentCount} 名当前任教学生没有进入增幅计算。`,
+                        '原因：增幅只比较前后两次都有可比成绩的同一批学生；厌学、生病、缺考、转入转出或只有一次成绩记录的学生按规则忽略，不补零、不强行配对。',
+                        `已匹配重组基准成绩 ${growth.baselineStudentCount}/${growth.currentStudentCount} 人；同年级重名顺位配对 ${growth.rankMatchedCount} 人。`,
+                        growth.ignoredStudents?.length
+                            ? `被忽略学生：${growth.ignoredStudents.map((student) => `${student.name || '未命名'}（${student.className || '未识别班级'}，${student.reason}）`).join('；')}${growth.ignoredStudentOverflow ? `；另有 ${growth.ignoredStudentOverflow} 人未展开` : ''}`
+                            : ''
+                    ].filter(Boolean).join('\n')
+                } : null;
                 items.push({
                     ...entry.teacher,
                     project_id: PROJECTS.twoRates,
                     score,
                     max_score: 60,
                     note: `联考两率一分主体 ${entry.score}/54；乡镇最高值比较含本校；优秀率 ${pct(entry.data.excellentRate)}，及格率 ${pct(entry.data.passRate)}，均分 ${round(entry.data.avgValue ?? entry.data.avg, 2)}。${growthNote}`,
+                    warning: growthWarning,
                     source: 'teaching-management'
                 });
             });
@@ -1505,28 +1658,32 @@
             skipped.push(`合成成绩表有 ${composite.missing.length} 条二模补科缺失或匹配异常；对应补科教师不会自动写入分数。`);
         }
         const syncSettings = await fetchAssessmentSyncSettings(getAcademicYearForSync());
-        let grade6GrowthBaselineExam = null;
-        if (normalizeGrade(composite.baseInfo.grade) === '6') {
-            grade6GrowthBaselineExam = findGrade6GrowthBaselineExam(composite.baseInfo, examContext, syncSettings.grade6_growth_baseline);
-            if (!grade6GrowthBaselineExam) {
+        let growthBaselineExam = findGrowthBaselineExam(composite.baseInfo, examContext, syncSettings);
+        const compositeGrade = normalizeGrade(composite.baseInfo.grade);
+        if (!growthBaselineExam) {
+            if (compositeGrade === '6') {
                 skipped.push(`6年级优秀率增幅基准已设置为${syncSettings.grade6_growth_baseline === 'first_term_midterm' ? '上学期期中' : '上学期期末'}，但 system 未找到同届同学年度对应考试；两率一分仅同步54分主体。`);
+            } else if (compositeGrade) {
+                skipped.push(`${compositeGrade}年级优秀率增幅需要同一届学生上年度7月成绩作基准，但 system 未找到对应考试；两率一分仅同步54分主体。`);
             }
         }
 
         const items = withCompositeTeacherStats(composite.rows, () => {
-            let grade6GrowthContext = null;
-            if (grade6GrowthBaselineExam) {
-                grade6GrowthContext = buildGrade6GrowthContext(teachers, root.TEACHER_STATS || {}, getExamRows(grade6GrowthBaselineExam.exam), {
-                    id: grade6GrowthBaselineExam.examId,
-                    label: getExamLabel({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }),
-                    date: extractExamDate({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }),
-                    type: syncSettings.grade6_growth_baseline
+            let growthContext = null;
+            if (growthBaselineExam) {
+                growthContext = buildStudentGrowthContext(teachers, composite.rows, getExamRows(growthBaselineExam.exam), {
+                    id: growthBaselineExam.examId,
+                    label: getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }),
+                    date: extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }),
+                    type: syncSettings.grade6_growth_baseline,
+                    grade: composite.baseInfo.grade,
+                    baselineGrade: getExamGrade(growthBaselineExam.examId, growthBaselineExam.exam, getExamRows(growthBaselineExam.exam))
                 });
-                if (!grade6GrowthContext) {
-                    skipped.push('6年级优秀率增幅基准考试已匹配，但教师/学科数据无法对应；两率一分仅同步54分主体。');
+                if (!growthContext) {
+                    skipped.push(`${gradeLabel(composite.baseInfo.grade)}优秀率增幅基准考试已匹配，但当前学生无法与基准考试按姓名/年级重组；两率一分仅同步54分主体。`);
                 }
             }
-            const twoRates = filterCompositeItems(buildTwoRatesItems(teachers, composite.rows, { grade6GrowthContext }), composite, PROJECTS.twoRates);
+            const twoRates = filterCompositeItems(buildTwoRatesItems(teachers, composite.rows, { grade6GrowthContext: growthContext }), composite, PROJECTS.twoRates);
             const classCollaboration = filterCompositeItems(buildClassCollaborationItems(teachers, composite.rows), composite, PROJECTS.classCollaboration);
             const subjectCollaboration = filterCompositeItems(buildSubjectCollaborationItems(teachers, composite.rows), composite, PROJECTS.subjectCollaboration);
             const bottomThird = filterCompositeItems(buildBottomThirdItems(teachers, composite.rows), composite, PROJECTS.bottomThird);
@@ -1549,7 +1706,7 @@
                 makeup_exam_date: composite.makeupExam?.date || '',
                 makeup_subjects: composite.makeupSubjects,
                 composite_missing_count: composite.missing.length,
-                note: `${item.note} 来源考试：${examDate || examLabel}；本项目以 7 月基准 + 二模补科合成成绩表计算。${composite.makeupSubjects.length ? `补科科目：${composite.makeupSubjects.join('、')}；二模来源：${composite.makeupExam ? (composite.makeupExam.date || composite.makeupExam.label) : '未匹配'}。` : '本年级无需二模补科。'}${normalizeGrade(item.grade) === '6' && item.project_id === PROJECTS.twoRates ? `6年级增幅基准：${syncSettings.grade6_growth_baseline === 'first_term_midterm' ? '上学期期中' : '上学期期末'}；基准考试：${grade6GrowthBaselineExam ? (extractExamDate({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }) || getExamLabel({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam })) : '未匹配'}。` : ''}`
+                note: `${item.note} 来源考试：${examDate || examLabel}；本项目以 7 月基准 + 二模补科合成成绩表计算。${composite.makeupSubjects.length ? `补科科目：${composite.makeupSubjects.join('、')}；二模来源：${composite.makeupExam ? (composite.makeupExam.date || composite.makeupExam.label) : '未匹配'}。` : '本年级无需二模补科。'}${item.project_id === PROJECTS.twoRates ? `${normalizeGrade(item.grade) === '6' ? `6年级增幅基准：${syncSettings.grade6_growth_baseline === 'first_term_midterm' ? '上学期期中' : '上学期期末'}；` : '优秀率增幅基准：上年度7月同一批学生；'}基准考试：${growthBaselineExam ? (extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) || getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam })) : '未匹配'}。` : ''}`
             }));
         const previewItems = buildFormulaAuditPreviewItems({ teachers, rows, examContext, highSchoolLine, skipped })
             .map((item) => ({
@@ -1566,11 +1723,14 @@
             source_exam_month: examMonth,
                 composite_mode: 'july_with_second_mock_makeup',
                 composite_base_grade: composite.baseInfo.grade,
-                grade6_growth_baseline: syncSettings.grade6_growth_baseline || 'first_term_final',
-                grade6_growth_baseline_exam_id: grade6GrowthBaselineExam?.examId || '',
-                grade6_growth_baseline_exam_label: grade6GrowthBaselineExam ? getExamLabel({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }) : '',
-                grade6_growth_baseline_exam_date: grade6GrowthBaselineExam ? extractExamDate({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }) : '',
-                makeup_exam_id: composite.makeupExam?.id || '',
+            growth_baseline_exam_id: growthBaselineExam?.examId || '',
+            growth_baseline_exam_label: growthBaselineExam ? getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) : '',
+            growth_baseline_exam_date: growthBaselineExam ? extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) : '',
+            grade6_growth_baseline: syncSettings.grade6_growth_baseline || 'first_term_final',
+            grade6_growth_baseline_exam_id: compositeGrade === '6' ? (growthBaselineExam?.examId || '') : '',
+            grade6_growth_baseline_exam_label: compositeGrade === '6' && growthBaselineExam ? getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) : '',
+            grade6_growth_baseline_exam_date: compositeGrade === '6' && growthBaselineExam ? extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) : '',
+            makeup_exam_id: composite.makeupExam?.id || '',
             makeup_exam_label: composite.makeupExam?.label || '',
             makeup_exam_date: composite.makeupExam?.date || '',
             makeup_subjects: composite.makeupSubjects,
@@ -1600,6 +1760,7 @@
             payload.makeup_exam_id || 'no-makeup',
             (payload.makeup_subjects || []).join(','),
             payload.makeup_missing_count || 0,
+            `growth:${payload.growth_baseline_exam_id || 'none'}`,
             `g6base:${payload.grade6_growth_baseline || 'none'}`,
             `g6exam:${payload.grade6_growth_baseline_exam_id || 'none'}`,
             `ind1:${indicatorLines.ind1}`,
@@ -1879,7 +2040,7 @@
         const payload = panel.__assessmentSyncPayload || { academic_year: getAcademicYearForSync(), items: [] };
         const result = panel.__assessmentSyncResult || null;
         const rows = [[
-            '类型', '教师', '年级', '学科', '项目', '分值', '满分', '说明'
+            '类型', '教师', '年级', '学科', '项目', '分值', '满分', '说明', '警示说明'
         ]];
         (payload.items || []).forEach((item) => {
             rows.push([
@@ -1890,7 +2051,8 @@
                 PROJECT_LABELS[item.project_id] || item.project_id,
                 item.score,
                 item.max_score,
-                item.note
+                item.note,
+                item.warning?.message || ''
             ]);
         });
         (payload.preview_items || []).forEach((item) => {
@@ -1902,7 +2064,8 @@
                 PROJECT_LABELS[item.project_id] || item.project_id,
                 item.score,
                 item.max_score,
-                item.note
+                item.note,
+                item.warning?.message || ''
             ]);
         });
         (result?.skipped || []).forEach((item) => {
@@ -1914,11 +2077,12 @@
                 PROJECT_LABELS[item.project_id] || item.project_id,
                 '',
                 '',
+                '',
                 item.reason
             ]);
         });
         (payload.skipped || []).forEach((reason) => {
-            rows.push(['本地缺项', '', '', '', '', '', '', reason]);
+            rows.push(['本地缺项', '', '', '', '', '', '', reason, '']);
         });
         const csv = `\ufeff${rows.map((row) => row.map(csvEscape).join(',')).join('\r\n')}`;
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -1930,6 +2094,17 @@
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function renderScoreCell(item) {
+        const warning = item.warning?.message ? `
+            <button type="button"
+                class="tm-assessment-score-warning"
+                data-title="${escapeAttr(item.warning.title || '分值说明')}"
+                data-message="${escapeAttr(item.warning.message)}"
+                aria-label="查看分值警示说明">!</button>
+        ` : '';
+        return `<strong>${escapeHtml(item.score)}</strong>${warning} / ${escapeHtml(item.max_score || '')}`;
     }
 
     function renderResult(panel, payload, result = null, error = null) {
@@ -1947,7 +2122,7 @@
                 <td>${escapeHtml(gradeLabel(item.grade))}</td>
                 <td>${escapeHtml(item.subject)}</td>
                 <td>${escapeHtml(PROJECT_LABELS[item.project_id] || item.project_id)}</td>
-                <td><strong>${escapeHtml(item.score)}</strong> / ${escapeHtml(item.max_score || '')}</td>
+                <td>${renderScoreCell(item)}</td>
             </tr>
         `).join('');
         const previewRows = (payload.preview_items || []).slice(0, 8).map((item) => `
@@ -1956,7 +2131,7 @@
                 <td>${escapeHtml(gradeLabel(item.grade))}</td>
                 <td>${escapeHtml(item.subject || '-')}</td>
                 <td>${escapeHtml(PROJECT_LABELS[item.project_id] || item.project_id)}</td>
-                <td><strong>${escapeHtml(item.score)}</strong> / ${escapeHtml(item.max_score || '')}</td>
+                <td>${renderScoreCell(item)}</td>
                 <td>${escapeHtml(item.note || '')}</td>
             </tr>
         `).join('');
@@ -1984,6 +2159,17 @@
             ${skippedRows ? `<div class="tm-assessment-sync-note"><strong>同步跳过：</strong><ul>${skippedRows}</ul></div>` : ''}
         `;
         setPreviewButtonState(panel, true);
+        resultEl.querySelectorAll('.tm-assessment-score-warning').forEach((button) => {
+            button.addEventListener('click', () => {
+                const title = button.dataset.title || '分值说明';
+                const message = button.dataset.message || '';
+                if (typeof root.tmShowModal === 'function') {
+                    root.tmShowModal(title, `<pre class="tm-assessment-warning-dialog">${escapeHtml(message)}</pre>`);
+                    return;
+                }
+                root.alert?.(`${title}\n\n${message}`);
+            });
+        });
         const exportBtn = resultEl.querySelector('.tm-assessment-export-btn');
         if (exportBtn) exportBtn.onclick = () => downloadAssessmentSyncCsv(panel);
     }
