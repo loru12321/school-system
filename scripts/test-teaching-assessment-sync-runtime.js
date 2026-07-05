@@ -98,6 +98,11 @@ assert.ok(indexHtml.includes('考核同步对账'), 'teaching management page sh
 assert.ok(indexHtml.includes('联考分析的“两率一分”同步也在这里看'), 'fixed sync entry should explain where two-rates-one-score sync is checked');
 assert.ok(source.includes('collapseAssessmentResult'), 'assessment sync preview button should collapse the result on second click');
 assert.ok(source.includes('assessmentSyncOpen'), 'assessment sync panel should track expanded and collapsed state');
+assert.ok(source.includes('fetchAssessmentSyncSettings'), 'assessment sync should read cross-system settings before building payload');
+assert.ok(source.includes('findGrade6GrowthBaselineExam'), 'assessment sync should find the confirmed grade 6 growth baseline exam');
+assert.ok(source.includes('buildGrade6GrowthContext'), 'assessment sync should calculate grade 6 excellent-rate growth context');
+assert.ok(source.includes('grade6_growth_baseline_exam_id'), 'automatic sync signature should include the grade 6 baseline exam');
+assert.ok(source.includes('优秀率增幅'), 'two-rates-one-score notes should expose excellent-rate growth scoring');
 assert.ok(teachingCss.includes('min-width: 1180px'), 'assessment sync table should keep a wide scrollable layout');
 assert.ok(teachingCss.includes('overscroll-behavior-x: contain'), 'assessment sync table should support horizontal scrolling inside the panel');
 

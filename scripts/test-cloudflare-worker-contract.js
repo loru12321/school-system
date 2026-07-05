@@ -206,6 +206,8 @@ assert.ok(gatewayContractSource.includes('ctx.waitUntil(task.catch'), 'gateway s
 assert.ok(gatewayContractSource.includes('return performGatewayLogin(request, env, body, ctx);'), 'login action should receive execution context for non-blocking audit writes');
 assert.ok(gatewayContractSource.includes('Only admin can view all login sessions'), 'all-account login session lookup should be admin-only');
 assert.ok(gatewayContractSource.includes("case 'assessment.sync_scores'"), 'gateway should expose assessment score sync through authenticated edu-gateway');
+assert.ok(gatewayContractSource.includes("case 'assessment.get_sync_settings'"), 'gateway should expose assessment sync settings through authenticated edu-gateway');
+assert.ok(gatewayContractSource.includes('assessment_sync_settings'), 'gateway should read assessment sync settings from the assessment Supabase project');
 assert.ok(gatewayContractSource.includes('ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY'), 'assessment sync service role key must be read from Worker env only');
 assert.ok(gatewayContractSource.includes("change_tag: 'system_sync'"), 'assessment sync writes should mark rows as system_sync');
 assert.ok(gatewayContractSource.includes('dry_run: dryRun') && gatewayContractSource.includes('rows.length && !dryRun'), 'assessment sync should support a no-write dry-run match check');

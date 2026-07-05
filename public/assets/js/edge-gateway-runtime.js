@@ -350,6 +350,9 @@ var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
     },
     syncAssessmentScores: async function (payload = {}) {
         return await this.request('assessment.sync_scores', payload || {});
+    },
+    getAssessmentSyncSettings: async function (payload = {}) {
+        return await this.request('assessment.get_sync_settings', payload || {});
     }
 });
 

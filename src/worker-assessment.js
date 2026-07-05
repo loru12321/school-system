@@ -224,9 +224,38 @@ async function fetchAssessmentScoresForYear(env, academicYear) {
   return map;
 }
 
+async function fetchAssessmentSyncSettingsForYear(env, academicYear) {
+  const year = encodeURIComponent(academicYear);
+  const rows = await assessmentRestFetch(env, `/rest/v1/assessment_sync_settings?select=academic_year,grade6_growth_baseline,confirmed_at,confirmed_by_name,updated_at&academic_year=eq.${year}&limit=1`);
+  const row = Array.isArray(rows) ? rows[0] : null;
+  return {
+    academic_year: academicYear,
+    grade6_growth_baseline: normalizeText(row?.grade6_growth_baseline) || 'first_term_final',
+    confirmed_at: normalizeText(row?.confirmed_at),
+    confirmed_by_name: normalizeText(row?.confirmed_by_name),
+    updated_at: normalizeText(row?.updated_at)
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Exported handler
 // ---------------------------------------------------------------------------
+
+export async function handleAssessmentSyncSettingsGet(request, env, session, payload) {
+  if (!canSyncAssessmentScores(session)) return forbidden(request, 'No permission to read assessment sync settings');
+  const academicYear = normalizeAssessmentAcademicYear(payload?.academic_year);
+  if (!academicYear) return badRequest(request, 'academic_year is invalid');
+  const config = getAssessmentSupabaseConfig(env);
+  if (!config.ready) {
+    return jsonResponse(503, {
+      ok: false,
+      error: 'ASSESSMENT_SUPABASE_NOT_CONFIGURED',
+      message: 'Set ASSESSMENT_SUPABASE_URL and ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY on the Worker.'
+    }, request);
+  }
+  const settings = await fetchAssessmentSyncSettingsForYear(env, academicYear);
+  return jsonResponse(200, { ok: true, settings }, request);
+}
 
 export async function handleAssessmentScoreSync(request, env, session, payload) {
   if (!canSyncAssessmentScores(session)) return forbidden(request, 'No permission to sync assessment scores');

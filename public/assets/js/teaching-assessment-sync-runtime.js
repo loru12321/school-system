@@ -484,6 +484,48 @@
         return candidates[0] || null;
     }
 
+    function getExamSearchText(examId = '', exam = {}) {
+        const meta = getExamMeta(exam);
+        return [
+            examId,
+            meta.type,
+            meta.name,
+            meta.examName,
+            meta.term,
+            exam.name,
+            exam.title,
+            exam.label
+        ].map(text).join(' ');
+    }
+
+    function isGrade6GrowthBaselineExam(examId = '', exam = {}, baselineType = 'first_term_final') {
+        const haystack = getExamSearchText(examId, exam);
+        if (baselineType === 'first_term_midterm') return /期中/.test(haystack);
+        return /期末/.test(haystack);
+    }
+
+    function isLikelyFirstTermExam(examId = '', exam = {}) {
+        const haystack = getExamSearchText(examId, exam);
+        if (/上学期|第一学期|一学期|上期/.test(haystack)) return true;
+        const month = extractExamMonth({ currentExamId: examId, exam });
+        return [9, 10, 11, 12, 1, 2].includes(month);
+    }
+
+    function findGrade6GrowthBaselineExam(baseInfo, currentContext, baselineType = 'first_term_final') {
+        const exams = currentContext.db?.exams || {};
+        const candidates = Object.entries(exams)
+            .map(([examId, exam]) => ({ examId, exam }))
+            .filter(({ examId }) => examId !== currentContext.currentExamId)
+            .filter(({ examId, exam }) => getExamRows(exam).length > 0)
+            .filter(({ examId, exam }) => normalizeGrade(getExamGrade(examId, exam, getExamRows(exam))) === '6')
+            .filter(({ examId, exam }) => !baseInfo.cohortId || getExamCohortId(examId, exam) === baseInfo.cohortId)
+            .filter(({ examId, exam }) => !baseInfo.academicYear || getExamAcademicYear(examId, exam) === baseInfo.academicYear)
+            .filter(({ examId, exam }) => isGrade6GrowthBaselineExam(examId, exam, baselineType))
+            .filter(({ examId, exam }) => isLikelyFirstTermExam(examId, exam))
+            .sort((left, right) => getExamTimestamp(right.examId, right.exam) - getExamTimestamp(left.examId, left.exam));
+        return candidates[0] || null;
+    }
+
     function normalizeStudentName(row) {
         return text(row?.name || row?.studentName || row?.student_name || row?.姓名 || row?.student || '').replace(/\s+/g, '');
     }
@@ -821,9 +863,85 @@
         return highest;
     }
 
-    function buildTwoRatesItems(teachers, rows) {
+    function buildTeacherStatsSnapshot(rows) {
+        const previousRows = root.RAW_DATA;
+        const previousStats = root.TEACHER_STATS;
+        root.RAW_DATA = rows;
+        root.TEACHER_STATS = {};
+        ensureTeacherStats();
+        const snapshot = root.TEACHER_STATS || {};
+        root.RAW_DATA = previousRows;
+        root.TEACHER_STATS = previousStats;
+        return snapshot;
+    }
+
+    function buildGrade6GrowthContext(teachers, currentStats, baselineRows, baselineInfo) {
+        if (!baselineRows?.length) return null;
+        const baselineStats = buildTeacherStatsSnapshot(baselineRows);
+        const entries = teachers
+            .filter((teacher) => normalizeGrade(teacher.grade) === '6')
+            .map((teacher) => {
+                const current = getTeacherSubjectStats(currentStats, teacher.teacher_name, teacher.subject);
+                const baseline = getTeacherSubjectStats(baselineStats, teacher.teacher_name, teacher.subject);
+                if (!current || !baseline || !toNumber(current.studentCount, 0) || !toNumber(baseline.studentCount, 0)) return null;
+                return {
+                    teacher,
+                    currentExcellentRate: toNumber(current.excellentRate, 0),
+                    baselineExcellentRate: toNumber(baseline.excellentRate, 0)
+                };
+            })
+            .filter(Boolean);
+        if (!entries.length) return null;
+
+        const subjectAverages = new Map();
+        entries.forEach((entry) => {
+            const subject = entry.teacher.subject;
+            if (!subjectAverages.has(subject)) subjectAverages.set(subject, { sum: 0, count: 0 });
+            const current = subjectAverages.get(subject);
+            current.sum += entry.currentExcellentRate;
+            current.count += 1;
+        });
+        subjectAverages.forEach((value, subject) => {
+            subjectAverages.set(subject, value.count ? value.sum / value.count : 0);
+        });
+
+        const byKey = new Map();
+        const highestBySubject = new Map();
+        entries.forEach((entry) => {
+            const subjectAverage = subjectAverages.get(entry.teacher.subject) || 0;
+            const regularGrowth = entry.currentExcellentRate - entry.baselineExcellentRate;
+            const maintainGrowth = entry.currentExcellentRate >= entry.baselineExcellentRate
+                ? entry.currentExcellentRate - subjectAverage
+                : 0;
+            const growth = Math.max(regularGrowth, maintainGrowth, 0);
+            const key = teacherKeyFor(entry.teacher.teacher_name, entry.teacher.grade, entry.teacher.subject);
+            byKey.set(key, {
+                ...entry,
+                subjectAverage,
+                regularGrowth,
+                maintainGrowth,
+                growth
+            });
+            highestBySubject.set(entry.teacher.subject, Math.max(highestBySubject.get(entry.teacher.subject) || 0, growth));
+        });
+
+        return { byKey, highestBySubject, baselineInfo };
+    }
+
+    function getGrade6GrowthScore(context, teacher) {
+        if (!context) return null;
+        const key = teacherKeyFor(teacher.teacher_name, teacher.grade, teacher.subject);
+        const entry = context.byKey.get(key);
+        if (!entry) return null;
+        const highest = context.highestBySubject.get(teacher.subject) || 0;
+        const score = highest > 0 ? round((entry.growth / highest) * 6, 2) : 0;
+        return { ...entry, highest, score };
+    }
+
+    function buildTwoRatesItems(teachers, rows, options = {}) {
         const stats = root.TEACHER_STATS || {};
         const townHighestBySubject = buildTownSubjectHighest(rows);
+        const growthContext = options.grade6GrowthContext || null;
         const bySubject = new Map();
         teachers.forEach((teacher) => {
             const data = getTeacherSubjectStats(stats, teacher.teacher_name, teacher.subject);
@@ -850,12 +968,17 @@
                 }, highest)
             })).filter((entry) => Number.isFinite(entry.raw));
             scaleWithinGroup(rawScores, 54).forEach((entry) => {
+                const growth = getGrade6GrowthScore(growthContext, entry.teacher);
+                const score = round(entry.score + (growth?.score || 0), 2);
+                const growthNote = growth
+                    ? `优秀率增幅 ${growth.score}/6；基准：${growthContext.baselineInfo.label || growthContext.baselineInfo.id}；常规增幅 ${pct(growth.regularGrowth)}，维持增幅 ${pct(growth.maintainGrowth)}，采用 ${pct(growth.growth)}，本学科最高增幅 ${pct(growth.highest)}。`
+                    : '优秀率增幅未自动加入：未确认6年级基准、当前非6年级，或未匹配到基准考试/教师数据。';
                 items.push({
                     ...entry.teacher,
                     project_id: PROJECTS.twoRates,
-                    score: entry.score,
+                    score,
                     max_score: 60,
-                    note: `联考两率一分主体 ${entry.score}/54；乡镇最高值比较含本校；优秀率 ${pct(entry.data.excellentRate)}，及格率 ${pct(entry.data.passRate)}，均分 ${round(entry.data.avgValue ?? entry.data.avg, 2)}。优秀率增幅需有基准考试后另行同步或手填。`,
+                    note: `联考两率一分主体 ${entry.score}/54；乡镇最高值比较含本校；优秀率 ${pct(entry.data.excellentRate)}，及格率 ${pct(entry.data.passRate)}，均分 ${round(entry.data.avgValue ?? entry.data.avg, 2)}。${growthNote}`,
                     source: 'teaching-management'
                 });
             });
@@ -1381,9 +1504,29 @@
         if (composite.missing.length) {
             skipped.push(`合成成绩表有 ${composite.missing.length} 条二模补科缺失或匹配异常；对应补科教师不会自动写入分数。`);
         }
+        const syncSettings = await fetchAssessmentSyncSettings(getAcademicYearForSync());
+        let grade6GrowthBaselineExam = null;
+        if (normalizeGrade(composite.baseInfo.grade) === '6') {
+            grade6GrowthBaselineExam = findGrade6GrowthBaselineExam(composite.baseInfo, examContext, syncSettings.grade6_growth_baseline);
+            if (!grade6GrowthBaselineExam) {
+                skipped.push(`6年级优秀率增幅基准已设置为${syncSettings.grade6_growth_baseline === 'first_term_midterm' ? '上学期期中' : '上学期期末'}，但 system 未找到同届同学年度对应考试；两率一分仅同步54分主体。`);
+            }
+        }
 
         const items = withCompositeTeacherStats(composite.rows, () => {
-            const twoRates = filterCompositeItems(buildTwoRatesItems(teachers, composite.rows), composite, PROJECTS.twoRates);
+            let grade6GrowthContext = null;
+            if (grade6GrowthBaselineExam) {
+                grade6GrowthContext = buildGrade6GrowthContext(teachers, root.TEACHER_STATS || {}, getExamRows(grade6GrowthBaselineExam.exam), {
+                    id: grade6GrowthBaselineExam.examId,
+                    label: getExamLabel({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }),
+                    date: extractExamDate({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }),
+                    type: syncSettings.grade6_growth_baseline
+                });
+                if (!grade6GrowthContext) {
+                    skipped.push('6年级优秀率增幅基准考试已匹配，但教师/学科数据无法对应；两率一分仅同步54分主体。');
+                }
+            }
+            const twoRates = filterCompositeItems(buildTwoRatesItems(teachers, composite.rows, { grade6GrowthContext }), composite, PROJECTS.twoRates);
             const classCollaboration = filterCompositeItems(buildClassCollaborationItems(teachers, composite.rows), composite, PROJECTS.classCollaboration);
             const subjectCollaboration = filterCompositeItems(buildSubjectCollaborationItems(teachers, composite.rows), composite, PROJECTS.subjectCollaboration);
             const bottomThird = filterCompositeItems(buildBottomThirdItems(teachers, composite.rows), composite, PROJECTS.bottomThird);
@@ -1406,7 +1549,7 @@
                 makeup_exam_date: composite.makeupExam?.date || '',
                 makeup_subjects: composite.makeupSubjects,
                 composite_missing_count: composite.missing.length,
-                note: `${item.note} 来源考试：${examDate || examLabel}；本项目以 7 月基准 + 二模补科合成成绩表计算。${composite.makeupSubjects.length ? `补科科目：${composite.makeupSubjects.join('、')}；二模来源：${composite.makeupExam ? (composite.makeupExam.date || composite.makeupExam.label) : '未匹配'}。` : '本年级无需二模补科。'}`
+                note: `${item.note} 来源考试：${examDate || examLabel}；本项目以 7 月基准 + 二模补科合成成绩表计算。${composite.makeupSubjects.length ? `补科科目：${composite.makeupSubjects.join('、')}；二模来源：${composite.makeupExam ? (composite.makeupExam.date || composite.makeupExam.label) : '未匹配'}。` : '本年级无需二模补科。'}${normalizeGrade(item.grade) === '6' && item.project_id === PROJECTS.twoRates ? `6年级增幅基准：${syncSettings.grade6_growth_baseline === 'first_term_midterm' ? '上学期期中' : '上学期期末'}；基准考试：${grade6GrowthBaselineExam ? (extractExamDate({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }) || getExamLabel({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam })) : '未匹配'}。` : ''}`
             }));
         const previewItems = buildFormulaAuditPreviewItems({ teachers, rows, examContext, highSchoolLine, skipped })
             .map((item) => ({
@@ -1421,9 +1564,13 @@
             source_exam_label: examLabel,
             source_exam_date: examDate,
             source_exam_month: examMonth,
-            composite_mode: 'july_with_second_mock_makeup',
-            composite_base_grade: composite.baseInfo.grade,
-            makeup_exam_id: composite.makeupExam?.id || '',
+                composite_mode: 'july_with_second_mock_makeup',
+                composite_base_grade: composite.baseInfo.grade,
+                grade6_growth_baseline: syncSettings.grade6_growth_baseline || 'first_term_final',
+                grade6_growth_baseline_exam_id: grade6GrowthBaselineExam?.examId || '',
+                grade6_growth_baseline_exam_label: grade6GrowthBaselineExam ? getExamLabel({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }) : '',
+                grade6_growth_baseline_exam_date: grade6GrowthBaselineExam ? extractExamDate({ currentExamId: grade6GrowthBaselineExam.examId, exam: grade6GrowthBaselineExam.exam }) : '',
+                makeup_exam_id: composite.makeupExam?.id || '',
             makeup_exam_label: composite.makeupExam?.label || '',
             makeup_exam_date: composite.makeupExam?.date || '',
             makeup_subjects: composite.makeupSubjects,
@@ -1453,6 +1600,8 @@
             payload.makeup_exam_id || 'no-makeup',
             (payload.makeup_subjects || []).join(','),
             payload.makeup_missing_count || 0,
+            `g6base:${payload.grade6_growth_baseline || 'none'}`,
+            `g6exam:${payload.grade6_growth_baseline_exam_id || 'none'}`,
             `ind1:${indicatorLines.ind1}`,
             `ind2:${indicatorLines.ind2}`,
             `hs:${highSchoolLine || 0}`,
@@ -1469,6 +1618,19 @@
             && typeof root.EdgeGateway.canUseAuthorizedRequests === 'function'
             && root.EdgeGateway.canUseAuthorizedRequests()
         );
+    }
+
+    async function fetchAssessmentSyncSettings(academicYear) {
+        if (!root.EdgeGateway || typeof root.EdgeGateway.getAssessmentSyncSettings !== 'function') {
+            return { grade6_growth_baseline: 'first_term_final', unavailable: true };
+        }
+        try {
+            const response = await root.EdgeGateway.getAssessmentSyncSettings({ academic_year: academicYear });
+            return response?.settings || { grade6_growth_baseline: 'first_term_final' };
+        } catch (error) {
+            console.warn('[assessment-sync] load sync settings failed:', error?.message || error);
+            return { grade6_growth_baseline: 'first_term_final', unavailable: true, error: error?.message || String(error) };
+        }
     }
 
     async function runAutomaticAssessmentSync(options = {}) {
