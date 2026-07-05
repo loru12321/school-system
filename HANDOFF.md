@@ -18,6 +18,8 @@
 | 登录契约/布局 | ✅ `test:responsive-login-contract`、`test:responsive-login-layout` 通过 |
 | `npm run smoke:layout:local` | ✅ 桌面/移动主要模块无 overflow/遮挡 |
 | `npm run smoke:modules:local` | ✅ errorCount 0；budgetFailures `[]`；`dm:params=3867ms`（预算 5000ms） |
+| Cloudflare 发布 | ✅ commit `5d84707e` 已部署；version `88bfb06e-70de-48aa-955e-57e64c0b62ae` |
+| 生产验证 | ✅ `smoke:prod-minimal` 通过；`smoke:modules:prod` 第二次通过，errorCount 0、budgetFailures `[]`、`dm:params=4560ms` |
 | 关键数据 | ✅ 本校=银山实验学校；scoreCount=7790；examId=`2022级-9年级-2025-2026-下学期-二模-2026-05-27`；termId=`9年级_下学期` |
 
 **本轮改动摘要：**
