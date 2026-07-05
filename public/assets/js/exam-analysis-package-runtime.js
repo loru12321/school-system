@@ -112,6 +112,16 @@
         return Object.values(window.SCHOOLS || {}).filter((school) => !nameSet.size || nameSet.has(String(school?.name || '').trim()));
     }
 
+    function isTownshipSchoolForPackage(schoolName) {
+        const name = String(schoolName || '').trim();
+        if (!name) return false;
+        const schoolNames = Object.keys(window.SCHOOLS || {});
+        if (typeof window.isTownshipManagedSchool === 'function') {
+            return window.isTownshipManagedSchool(name, schoolNames);
+        }
+        return getTownshipSchools().some((school) => sameSchool(school?.name, name));
+    }
+
     function hasCountyScope() {
         const rows = getAllRows();
         const townshipRows = getTownshipRows();
@@ -377,6 +387,32 @@
         return Number(school?.score2Rate) || 0;
     }
 
+    function buildSchoolMetricRankMap(schools, subject) {
+        const entries = (schools || [])
+            .filter((school) => school?.metrics?.[subject])
+            .map((school) => ({ school, metric: school.metrics[subject] || {} }));
+        const rankMap = new Map();
+        const assign = (key, valueGetter) => {
+            const ranked = entries
+                .filter((entry) => Number.isFinite(Number(valueGetter(entry))))
+                .sort((left, right) => Number(valueGetter(right)) - Number(valueGetter(left)));
+            let lastValue = null;
+            let lastRank = 0;
+            ranked.forEach((entry, index) => {
+                const value = Number(valueGetter(entry));
+                const rank = lastValue !== null && Math.abs(value - lastValue) < 0.0001 ? lastRank : index + 1;
+                if (!rankMap.has(entry.school)) rankMap.set(entry.school, {});
+                rankMap.get(entry.school)[key] = rank;
+                lastValue = value;
+                lastRank = rank;
+            });
+        };
+        assign('avg', (entry) => entry.metric.avg);
+        assign('excRate', (entry) => entry.metric.excRate);
+        assign('passRate', (entry) => entry.metric.passRate);
+        return rankMap;
+    }
+
     function buildSchoolAnalysisWorkbook(scope = 'township') {
         const wb = window.XLSX.utils.book_new();
         const schools = scope === 'county' ? Object.values(window.SCHOOLS || {}) : getTownshipSchools();
@@ -486,6 +522,17 @@
         return rows;
     }
 
+    function formatHorizontalValue(value, rank, options = {}) {
+        const display = options.percent ? pct(value) : num(value);
+        if (display === '') return '';
+        return `${display}${options.percent ? '%' : ''}${rank ? `（${rank}）` : ''}`;
+    }
+
+    function getHorizontalMetricRank(rankMaps, school, subject, key, scope) {
+        if (scope === 'county') return rankMaps.get(subject)?.get(school)?.[key] || '';
+        return school?.rankings?.[subject]?.[key] || rankMaps.get(subject)?.get(school)?.[key] || '';
+    }
+
     function buildHorizontalRows(schools, subjects, scope = 'township') {
         const sortedSchools = schools.slice().sort((a, b) => {
             const leftRank = scope === 'county' ? (a.countyRank2Rate || 9999) : (a.rank2Rate || 9999);
@@ -493,12 +540,24 @@
             if (leftRank !== rightRank) return leftRank - rightRank;
             return getSchoolScoreForHorizontal(b, scope) - getSchoolScoreForHorizontal(a, scope);
         });
+        const rankMaps = new Map([...subjects, 'total'].map((subject) => [subject, buildSchoolMetricRankMap(schools, subject)]));
         const rows = [['统计项目 / 学校', ...sortedSchools.map((school) => `${school.name}${sameSchool(school.name, getMySchoolName()) ? '（本校）' : ''}`)]];
         [...subjects, 'total'].forEach((subject) => {
             const label = subject === 'total' ? (window.CONFIG?.label || '总分') : subject;
-            rows.push([`${label}平均分`, ...sortedSchools.map((school) => num(school.metrics?.[subject]?.avg))]);
-            rows.push([`${label}优秀率(%)`, ...sortedSchools.map((school) => pct(school.metrics?.[subject]?.excRate))]);
-            rows.push([`${label}及格率(%)`, ...sortedSchools.map((school) => pct(school.metrics?.[subject]?.passRate))]);
+            rows.push([`${label}平均分（排名）`, ...sortedSchools.map((school) => formatHorizontalValue(
+                school.metrics?.[subject]?.avg,
+                getHorizontalMetricRank(rankMaps, school, subject, 'avg', scope)
+            ))]);
+            rows.push([`${label}优秀率（排名）`, ...sortedSchools.map((school) => formatHorizontalValue(
+                school.metrics?.[subject]?.excRate,
+                getHorizontalMetricRank(rankMaps, school, subject, 'excRate', scope),
+                { percent: true }
+            ))]);
+            rows.push([`${label}及格率（排名）`, ...sortedSchools.map((school) => formatHorizontalValue(
+                school.metrics?.[subject]?.passRate,
+                getHorizontalMetricRank(rankMaps, school, subject, 'passRate', scope),
+                { percent: true }
+            ))]);
         });
         return rows;
     }
@@ -628,7 +687,8 @@
     function buildStudentRankFallbacks(rows, subjects, includeCounty) {
         const rankMap = new Map();
         const list = Array.isArray(rows) ? rows : [];
-        assignStudentRankMap(rankMap, list, (student) => student.total, 'totalScope');
+        const townshipList = includeCounty ? getTownshipRows() : list;
+        assignStudentRankMap(rankMap, townshipList, (student) => student.total, 'totalScope');
         if (includeCounty) assignStudentRankMap(rankMap, getAllRows(), (student) => student.total, 'totalCounty');
 
         const bySchool = new Map();
@@ -646,7 +706,7 @@
         byClass.forEach((students) => assignStudentRankMap(rankMap, students, (student) => student.total, 'totalClass'));
 
         (subjects || []).forEach((subject) => {
-            assignStudentRankMap(rankMap, list, (student) => student.scores?.[subject], `${subject}:scope`);
+            assignStudentRankMap(rankMap, townshipList, (student) => student.scores?.[subject], `${subject}:scope`);
             if (includeCounty) assignStudentRankMap(rankMap, getAllRows(), (student) => student.scores?.[subject], `${subject}:county`);
             bySchool.forEach((students) => assignStudentRankMap(rankMap, students, (student) => student.scores?.[subject], `${subject}:school`));
         });
@@ -660,6 +720,11 @@
     function rankValueOrFallback(value, rankMap, student, key) {
         const number = Number(value);
         return Number.isFinite(number) && number > 0 ? number : getStudentFallbackRank(rankMap, student, key);
+    }
+
+    function townshipRankValueOrBlank(value, rankMap, student, key, includeCounty) {
+        if (includeCounty && !isTownshipSchoolForPackage(student?.school)) return '';
+        return rankValueOrFallback(value, rankMap, student, key);
     }
 
     function buildStudentDetailWorkbook(rows, options = {}) {
@@ -687,7 +752,7 @@
                 row.push(
                     student.scores?.[subject] ?? '',
                     rankValueOrFallback(student.ranks?.[subject]?.school, fallbackRanks, student, `${subject}:school`),
-                    rankValueOrFallback(student.ranks?.[subject]?.township, fallbackRanks, student, `${subject}:scope`)
+                    townshipRankValueOrBlank(student.ranks?.[subject]?.township, fallbackRanks, student, `${subject}:scope`, includeCounty)
                 );
                 if (includeCounty) row.push(rankValueOrFallback(student.ranks?.[subject]?.county, fallbackRanks, student, `${subject}:county`));
             });
@@ -695,7 +760,7 @@
                 num(student.total, 1),
                 rankValueOrFallback(student.ranks?.total?.class, fallbackRanks, student, 'totalClass'),
                 rankValueOrFallback(student.ranks?.total?.school, fallbackRanks, student, 'totalSchool'),
-                rankValueOrFallback(student.ranks?.total?.township, fallbackRanks, student, 'totalScope')
+                townshipRankValueOrBlank(student.ranks?.total?.township, fallbackRanks, student, 'totalScope', includeCounty)
             );
             if (includeCounty) row.push(rankValueOrFallback(student.ranks?.total?.county, fallbackRanks, student, 'totalCounty'));
             row.push(sameSchool(student.school, getMySchoolName()) ? '本校' : '');

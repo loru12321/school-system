@@ -160,6 +160,29 @@ function assertNumericColumn(rows, header, keyIndex, columnNames, label, options
     return { columnIndex, rows: dataRows };
 }
 
+function assertHorizontalRankCells(summary, sheetName, label) {
+    const rows = summary.rowsBySheetName[sheetName] || [];
+    const header = rows[0] || [];
+    if (!header.length) fail(`${label} missing horizontal sheet ${sheetName}`);
+    const dataRows = rows.slice(1).filter((row) => String(row?.[0] || '').trim());
+    if (!dataRows.length) fail(`${label} horizontal sheet has no rows`);
+    const headerText = dataRows.map((row) => String(row[0] || '')).join('|');
+    if (!/平均分（排名）/.test(headerText) || !/优秀率（排名）/.test(headerText) || !/及格率（排名）/.test(headerText)) {
+        fail(`${label} horizontal rows should be value-with-rank labels: ${headerText}`);
+    }
+    const sampleValues = dataRows.flatMap((row) => row.slice(1).map((value) => String(value || '').trim()).filter(Boolean));
+    if (!sampleValues.some((value) => /（\d+）/.test(value))) {
+        fail(`${label} horizontal values should include rank in same cell`);
+    }
+}
+
+function getColumnIndexesByPattern(header, pattern) {
+    return (header || [])
+        .map((cell, index) => ({ cell: String(cell || ''), index }))
+        .filter((item) => pattern.test(item.cell))
+        .map((item) => item.index);
+}
+
 function assertWorkbookCommon(summary, workbookName) {
     if (!summary.sheetNames.length) fail(`${workbookName} has no sheets`);
     const rowCounts = Object.values(summary.rowCounts);
@@ -238,6 +261,21 @@ async function login(page) {
             }
             if (typeof window.switchTab === 'function') window.switchTab('summary');
         });
+        const packageScope = await page.evaluate(() => {
+            const names = Object.keys(window.SCHOOLS || {});
+            const townshipNames = typeof window.getTownshipManagedSchoolNames === 'function'
+                ? window.getTownshipManagedSchoolNames(names)
+                : names;
+            return {
+                townshipNames,
+                countyDirectNames: names.filter((name) => {
+                    if (typeof window.isTownshipManagedSchool === 'function') {
+                        return !window.isTownshipManagedSchool(name, names);
+                    }
+                    return !(townshipNames || []).some((item) => String(item || '').trim() === String(name || '').trim());
+                })
+            };
+        });
         const [download] = await Promise.all([
             page.waitForEvent('download', { timeout: 120000 }),
             page.evaluate(() => window.downloadExamAnalysisPackage())
@@ -300,6 +338,7 @@ async function login(page) {
         const townshipSchoolIndex = findColumn(townshipHeader, ['学校']);
         assertNumericColumn(townshipTotalRows, townshipHeader, townshipSchoolIndex, ['两率一分'], `${schoolAnalysisName}:五科总 - 综合分析表`, { minimumRows: 5 });
         assertNumericColumn(townshipTotalRows, townshipHeader, townshipSchoolIndex, ['综合排名'], `${schoolAnalysisName}:五科总 - 综合分析表`, { minimumRows: 5 });
+        assertHorizontalRankCells(schoolAnalysisSummary, '横向对比一览表', schoolAnalysisName);
 
         const { name: schoolCountyName, summary: schoolCountySummary } = await readWorkbookFromPackage(outerZip, files, /学校\/二模学校县域分析0527\.xlsx$/, 'county school analysis workbook');
         if (schoolCountySummary.sheetNames.includes('综合分析报告')) {
@@ -325,6 +364,7 @@ async function login(page) {
         if (blankCountyRows.length) {
             fail(`county total sheet has blank/zero score rows: ${blankCountyRows.slice(0, 5).map((row) => row[schoolIndex]).join(', ')}`);
         }
+        assertHorizontalRankCells(schoolCountySummary, '横向对比一览表', schoolCountyName);
         Object.entries(schoolCountySummary.rowsBySheetName)
             .filter(([sheet]) => /学科明细/.test(sheet))
             .forEach(([sheet, rows]) => {
@@ -345,8 +385,19 @@ async function login(page) {
         const studentCountyRows = studentCountySummary.rowsBySheetName['学生考试明细'] || [];
         const studentCountyHeader = studentCountyRows[0] || [];
         const studentCountyNameIndex = findColumn(studentCountyHeader, ['姓名']);
+        const studentCountySchoolIndex = findColumn(studentCountyHeader, ['学校']);
         assertNumericColumn(studentCountyRows, studentCountyHeader, studentCountyNameIndex, ['总分', '五科总'], `${studentCountyName}:学生考试明细`, { minimumRows: 50, allowZero: true });
         assertNumericColumn(studentCountyRows, studentCountyHeader, studentCountyNameIndex, ['总分县排'], `${studentCountyName}:学生考试明细`, { minimumRows: 50, requiredWhenColumnNames: ['总分', '五科总'] });
+        const townshipRankColumns = getColumnIndexesByPattern(studentCountyHeader, /镇排/);
+        const countyDirectSet = new Set((packageScope.countyDirectNames || []).map((name) => String(name || '').trim()));
+        const badCountyDirectTownRanks = studentCountyRows.slice(1).filter((row) => {
+            const school = String(row?.[studentCountySchoolIndex] || '').trim();
+            if (!countyDirectSet.has(school)) return false;
+            return townshipRankColumns.some((index) => String(row?.[index] || '').trim());
+        });
+        if (badCountyDirectTownRanks.length) {
+            fail(`county-direct schools should not have township ranks: ${badCountyDirectTownRanks.slice(0, 5).map((row) => `${row[studentCountySchoolIndex]}:${row[studentCountyNameIndex]}`).join(', ')}`);
+        }
 
         const { name: teacherTownName, summary: teacherTownSummary } = await readWorkbookFromPackage(outerZip, files, /教师\/二模教师分析0527\.xlsx$/, 'township teacher workbook');
         Object.entries(teacherTownSummary.rowsBySheetName).forEach(([sheet, rows]) => {
