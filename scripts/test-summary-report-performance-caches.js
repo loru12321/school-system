@@ -14,10 +14,12 @@ const assertContains = (content, token, file) => {
 const appFile = 'public/assets/js/app.js';
 const profileFile = 'public/assets/js/school-profile-runtime.js';
 const townCompareFile = 'public/assets/js/town-submodule-compare-runtime.js';
+const studentDetailsFile = 'public/assets/js/student-details-render-runtime.js';
 const packageFile = 'package.json';
 const app = read(appFile);
 const profile = read(profileFile);
 const townCompare = read(townCompareFile);
+const studentDetails = read(studentDetailsFile);
 const pkg = JSON.parse(read(packageFile));
 
 [
@@ -30,8 +32,7 @@ const pkg = JSON.parse(read(packageFile));
     'Math.min(100, m.avg / maxAvg * 100).toFixed(1)',
     'subjectRenderKey',
     'dataset.summaryRenderSig',
-    'reportHtmlCacheKey',
-    'reportChartCacheKey'
+    'reportHtmlCacheKey'
 ].forEach((token) => assertContains(app, token, appFile));
 
 [
@@ -61,6 +62,10 @@ const pkg = JSON.parse(read(packageFile));
     'buildSchoolSummaryForExam(rows)',
     'filterRowsBySchool(rows, school)'
 ].forEach((token) => assertContains(townCompare, token, townCompareFile));
+
+[
+    'reportChartCacheKey'
+].forEach((token) => assertContains(studentDetails, token, studentDetailsFile));
 
 if (pkg.scripts['test:summary-report-performance-caches'] !== 'node scripts/test-summary-report-performance-caches.js') {
     fail('test:summary-report-performance-caches script is missing or changed');
