@@ -1574,14 +1574,18 @@
         const doc = getDocument();
         const input1 = doc ? (doc.getElementById('dm_ind1_input') || doc.getElementById('ind1')) : null;
         const input2 = doc ? (doc.getElementById('dm_ind2_input') || doc.getElementById('ind2')) : null;
+        const highSchoolLineInput = doc ? doc.getElementById('dm_high_school_line_input') : null;
         const ind1 = normalizeText((input1 && input1.value) || indicator.ind1 || '');
         const ind2 = normalizeText((input2 && input2.value) || indicator.ind2 || '');
-        return { ind1, ind2 };
+        const highSchoolLine = normalizeText((highSchoolLineInput && highSchoolLineInput.value) || indicator.highSchoolLine || indicator.graduateHighSchoolLine || '');
+        return { ind1, ind2, highSchoolLine };
     }
 
     function getParamsSyncSignature() {
         const current = api.getCurrentIndicatorValues();
-        return current.ind1 || current.ind2 ? `${current.ind1}::${current.ind2}` : '';
+        return current.ind1 || current.ind2 || current.highSchoolLine
+            ? `${current.ind1}::${current.ind2}::${current.highSchoolLine}`
+            : '';
     }
 
     function getTargetsSyncSignature() {
@@ -1674,6 +1678,7 @@
             examId: root.CURRENT_EXAM_ID || '',
             ind1: indicator.ind1 || '',
             ind2: indicator.ind2 || '',
+            highSchoolLine: indicator.highSchoolLine || '',
             targetsVersion: root.__TARGETS_VERSION || 0,
             targetRefSize: root.TARGETS ? Object.keys(root.TARGETS).length : 0,
             teacherKey,

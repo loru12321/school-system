@@ -4,7 +4,7 @@ const path = require('path');
 const createDataManagerParamsRuntime = require(path.resolve(__dirname, '../public/assets/js/data-manager-params-runtime.js'));
 
 async function run() {
-    let indicatorState = { ind1: '', ind2: '' };
+    let indicatorState = { ind1: '', ind2: '', highSchoolLine: '' };
     let ensureCalled = 0;
     let saveCloudCalls = 0;
     const toasts = [];
@@ -14,7 +14,9 @@ async function run() {
         ind1: { value: '100' },
         ind2: { value: '200' },
         dm_ind1_input: { value: '' },
-        dm_ind2_input: { value: '' }
+        dm_ind2_input: { value: '' },
+        dm_high_school_line_input: { value: '' },
+        dm_high_school_line_summary: { innerHTML: '' }
     };
 
     const root = {
@@ -63,7 +65,7 @@ async function run() {
         },
         restoreGrade9IndicatorTemplate() {
             restoreCalls += 1;
-            indicatorState = { ind1: '111', ind2: '222' };
+            indicatorState = { ind1: '111', ind2: '222', highSchoolLine: '420' };
             return true;
         },
         persistGrade9IndicatorTemplate() {
@@ -75,6 +77,7 @@ async function run() {
     assert.strictEqual(restoreCalls, 1);
     assert.strictEqual(elements.dm_ind1_input.value, '111');
     assert.strictEqual(elements.dm_ind2_input.value, '222');
+    assert.strictEqual(elements.dm_high_school_line_input.value, '420');
     assert.strictEqual(renderStatusCalls > 0, true);
     assert.strictEqual(renderStatusCalls, 1);
 
@@ -87,6 +90,11 @@ async function run() {
     elements.dm_ind2_input.oninput();
     assert.strictEqual(indicatorState.ind2, '270');
     assert.strictEqual(renderStatusCalls, 3);
+
+    elements.dm_high_school_line_input.value = '430';
+    elements.dm_high_school_line_input.oninput();
+    assert.strictEqual(indicatorState.highSchoolLine, '430');
+    assert.strictEqual(renderStatusCalls, 4);
 
     await runtime.saveParamsLocally(manager, false);
     assert.strictEqual(ensureCalled > 0, true);

@@ -6,7 +6,7 @@ const createSupportStateRuntime = require(path.resolve(__dirname, '../public/ass
 function run() {
     const root = {
         SYS_VARS: {
-            indicator: { ind1: '120', ind2: '240' },
+            indicator: { ind1: '120', ind2: '240', highSchoolLine: '420' },
             targets: { SchoolA: { t1: 10, t2: 20 } },
             schoolAliases: [{ canonical: 'SchoolA', alias: 'AliasA' }],
             dataManagerSyncState: { paramsSignature: '120::240' }
@@ -20,7 +20,7 @@ function run() {
 
     const supportState = createSupportStateRuntime(root);
 
-    assert.deepStrictEqual(supportState.getIndicator(), { ind1: '120', ind2: '240' });
+    assert.deepStrictEqual(supportState.getIndicator(), { ind1: '120', ind2: '240', highSchoolLine: '420' });
     assert.deepStrictEqual(supportState.getTargets(), { SchoolA: { t1: 10, t2: 20 } });
     assert.deepStrictEqual(supportState.getSchoolAliases(), [{ canonical: 'SchoolA', alias: 'AliasA' }]);
     assert.deepStrictEqual(supportState.getDataManagerSyncState(), { paramsSignature: '120::240' });
@@ -30,7 +30,7 @@ function run() {
     assert.deepStrictEqual(supportState.getMpSnapshots(), { task1: { count: 5 } });
 
     const snapshot = supportState.syncSupportState({
-        indicator: { ind1: '100', ind2: '200' },
+        indicator: { ind1: '100', ind2: '200', highSchoolLine: '410' },
         targets: { SchoolB: { t1: 12, t2: 18 } },
         schoolAliases: [{ canonical: 'SchoolB', alias: 'AliasB' }],
         dataManagerSyncState: { paramsSignature: '100::200', targetsSignature: 'SchoolB:12:18' },
@@ -40,7 +40,7 @@ function run() {
         mpSnapshots: { task2: { count: 8 } }
     });
 
-    assert.deepStrictEqual(snapshot.indicator, { ind1: '100', ind2: '200' });
+    assert.deepStrictEqual(snapshot.indicator, { ind1: '100', ind2: '200', highSchoolLine: '410' });
     assert.deepStrictEqual(snapshot.targets, { SchoolB: { t1: 12, t2: 18 } });
     assert.deepStrictEqual(snapshot.schoolAliases, [{ canonical: 'SchoolB', alias: 'AliasB' }]);
     assert.deepStrictEqual(snapshot.dataManagerSyncState, { paramsSignature: '100::200', targetsSignature: 'SchoolB:12:18' });
@@ -50,7 +50,7 @@ function run() {
     assert.deepStrictEqual(snapshot.mpSnapshots, { task2: { count: 8 } });
 
     supportState.clearSupportState();
-    assert.deepStrictEqual(supportState.getIndicator(), { ind1: '', ind2: '' });
+    assert.deepStrictEqual(supportState.getIndicator(), { ind1: '', ind2: '', highSchoolLine: '' });
     assert.deepStrictEqual(supportState.getTargets(), {});
     assert.deepStrictEqual(supportState.getSchoolAliases(), []);
     assert.deepStrictEqual(supportState.getDataManagerSyncState(), {});

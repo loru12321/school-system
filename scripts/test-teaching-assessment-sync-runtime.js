@@ -70,7 +70,8 @@ const context = {
       }
     },
     normalizeClass: (value) => String(value || '').trim(),
-    normalizeSchoolName: (value) => String(value || '').replace(/学校$/, '').trim()
+    normalizeSchoolName: (value) => String(value || '').replace(/学校$/, '').trim(),
+    readIndicatorState: () => ({ ind1: '2', ind2: '5', highSchoolLine: '600' })
   }
 };
 context.window.window = context.window;
@@ -115,7 +116,7 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
     assert.ok(Number.isFinite(Number(item.score)), `score should be numeric for ${item.project_id}`);
     assert.ok(Number(item.score) >= 0, `score should be non-negative for ${item.project_id}`);
   });
-  context.window.CURRENT_EXAM_ID = '2022级-9年级-2025-2026-暑假-7月质量监测-2026-07-12';
+  context.window.CURRENT_EXAM_ID = '2025级-6年级-2025-2026-暑假-7月质量监测-2026-07-12';
   return context.window.tmBuildTeacherAssessmentSyncPayload().then((julyPayload) => {
     const julyProjectIds = new Set(julyPayload.items.map((item) => item.project_id));
     assert.ok(julyProjectIds.has('teacher_two_rates_one_score'), 'July payload should include two-rates-one-score');
@@ -171,11 +172,13 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
 
       context.window.CURRENT_EXAM_ID = '2022级-9年级-2025-2026-暑假-7月中考-2026-07-12';
       context.window.RAW_DATA = [
-        { name: '九甲', school: '银山实验学校', class: '9.1', total: 520, scores: { 语文: 100, 数学: 105, 英语: 104, 物理: 90, 化学: 88 } },
-        { name: '九乙', school: '银山实验学校', class: '9.1', total: 480, scores: { 语文: 92, 数学: 98, 英语: 96, 物理: 82, 化学: 80 } },
-        { name: '九丙', school: '兄弟学校', class: '9.1', total: 540, scores: { 语文: 106, 数学: 108, 英语: 107, 物理: 94, 化学: 92 } }
+        { name: '九甲', school: '银山实验学校', class: '9.1', total: 620, scores: { 语文: 108, 数学: 112, 英语: 110, 物理: 96, 化学: 94 } },
+        { name: '九乙', school: '银山实验学校', class: '9.1', total: 560, scores: { 语文: 98, 数学: 101, 英语: 100, 物理: 88, 化学: 86 } },
+        { name: '九丁', school: '银山实验学校', class: '9.2', total: 610, scores: { 语文: 106, 数学: 110, 英语: 108, 物理: 94, 化学: 92 } },
+        { name: '九戊', school: '银山实验学校', class: '9.2', total: 605, scores: { 语文: 105, 数学: 109, 英语: 107, 物理: 93, 化学: 91 } },
+        { name: '九丙', school: '兄弟学校', class: '9.1', total: 630, scores: { 语文: 110, 数学: 114, 英语: 112, 物理: 98, 化学: 96 } }
       ];
-      context.window.TEACHER_MAP = { '9.1_政治': '政老师' };
+      context.window.TEACHER_MAP = { '9.1_政治': '政一', '9.2_政治': '政二', '9.1_语文': '语一', '9.2_语文': '语二' };
       context.window.TEACHER_STATS = {};
       context.window.CohortDB = {
         ensure: () => ({
@@ -190,9 +193,11 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
             '2022级-9年级-2025-2026-下学期-二模-2026-05-27': {
               examId: '2022级-9年级-2025-2026-下学期-二模-2026-05-27',
               data: [
-                { name: '九甲', school: '银山实验学校', class: '9.1', total: 500, scores: { 政治: 84 } },
-                { name: '九乙', school: '银山实验学校', class: '9.1', total: 470, scores: { 政治: 76 } },
-                { name: '九丙', school: '兄弟学校', class: '9.1', total: 530, scores: { 政治: 90 } }
+                { name: '九甲', school: '银山实验学校', class: '9.1', total: 620, scores: { 政治: 88 } },
+                { name: '九乙', school: '银山实验学校', class: '9.1', total: 560, scores: { 政治: 78 } },
+                { name: '九丁', school: '银山实验学校', class: '9.2', total: 610, scores: { 政治: 86 } },
+                { name: '九戊', school: '银山实验学校', class: '9.2', total: 605, scores: { 政治: 84 } },
+                { name: '九丙', school: '兄弟学校', class: '9.1', total: 630, scores: { 政治: 90 } }
               ],
               meta: { cohortId: '2022', year: '2025-2026', type: '二模', date: '2026-05-27', grade: '9年级' },
               createdAt: Date.parse('2026-05-27')
@@ -203,6 +208,23 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
       return context.window.tmBuildTeacherAssessmentSyncPayload().then((grade9Payload) => {
         assert.ok(grade9Payload.items.some((item) => item.subject === '政治'), '9th grade politics teacher should sync from second mock makeup');
         assert.deepStrictEqual(Array.from(grade9Payload.makeup_subjects), ['政治']);
+        const grade9ExcellentItems = grade9Payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution');
+        assert.ok(grade9ExcellentItems.length > 0, '9th grade excellent contribution should be generated from 550/600 high-score tiers');
+        assert.ok(grade9ExcellentItems.every((item) => /600分以上为优秀尖子/.test(item.note)), '9th grade excellent contribution notes should explain 550/600 rules');
+        assert.ok(!grade9ExcellentItems.some((item) => /前 150 名/.test(item.note)), '9th grade excellent contribution must not use non-graduating top-150 logic');
+        const classTargetItems = grade9Payload.items.filter((item) => item.project_id === 'class_target_grad');
+        assert.ok(classTargetItems.length >= 2, '9th grade class target completion should sync class assessment rows');
+        assert.ok(classTargetItems.every((item) => item.max_score === 33), 'class target completion max should include extra 5 and 8 bonus points');
+        assert.ok(classTargetItems.every((item) => /额外最高\+5分/.test(item.note) && /额外最高\+8分/.test(item.note)), 'class target notes should mark the 5 and 8 points as extra bonus');
+        const highSchoolItems = grade9Payload.items.filter((item) => item.project_id === 'class_high_school_contribution_grad');
+        assert.ok(highSchoolItems.length >= 2, '9th grade July exam should sync own-school class high-school contribution rows');
+        assert.ok(highSchoolItems.every((item) => item.max_score === 15), 'high-school contribution max score should be 15');
+        const highSchoolScores = Object.fromEntries(highSchoolItems.map((item) => [item.teacher_name, item.score]));
+        assert.strictEqual(highSchoolScores['政一'], 7.5, 'class 9.1 rate 1/2 should score 7.5 against own-school best class rate 1');
+        assert.strictEqual(highSchoolScores['政二'], 15, 'class 9.2 rate 2/2 should score 15 as own-school best class');
+        assert.strictEqual(highSchoolScores['语一'], 7.5, 'class 9.1 language teacher should receive the same class high-school contribution score');
+        assert.strictEqual(highSchoolScores['语二'], 15, 'class 9.2 language teacher should receive the same class high-school contribution score');
+        assert.ok(highSchoolItems.every((item) => /本校级部班级最高过线率/.test(item.note)), 'notes should explain own-school grade best-class denominator');
 
         context.window.CURRENT_EXAM_ID = '2023级-8年级-2025-2026-暑假-7月质量监测-2026-07-12';
         context.window.RAW_DATA = [

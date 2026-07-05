@@ -1113,7 +1113,7 @@ function ensureSupportSysVars() {
         return SupportStateRuntime.ensureSysVars();
     }
     window.SYS_VARS = window.SYS_VARS || {};
-    if (!window.SYS_VARS.indicator || typeof window.SYS_VARS.indicator !== 'object') window.SYS_VARS.indicator = { ind1: '', ind2: '' };
+    if (!window.SYS_VARS.indicator || typeof window.SYS_VARS.indicator !== 'object') window.SYS_VARS.indicator = { ind1: '', ind2: '', highSchoolLine: '' };
     if (!window.SYS_VARS.targets || typeof window.SYS_VARS.targets !== 'object') window.SYS_VARS.targets = {};
     if (!Array.isArray(window.SYS_VARS.schoolAliases)) window.SYS_VARS.schoolAliases = [];
     if (!window.SYS_VARS.dataManagerSyncState || typeof window.SYS_VARS.dataManagerSyncState !== 'object') window.SYS_VARS.dataManagerSyncState = {};
@@ -1133,7 +1133,8 @@ function setIndicatorState(indicator) {
         ? (SupportStateRuntime.setIndicator(indicator) || { ind1: '', ind2: '' })
         : {
             ind1: String(indicator?.ind1 || '').trim(),
-            ind2: String(indicator?.ind2 || '').trim()
+            ind2: String(indicator?.ind2 || '').trim(),
+            highSchoolLine: String(indicator?.highSchoolLine || indicator?.graduateHighSchoolLine || '').trim()
         };
     ensureSupportSysVars().indicator = nextIndicator;
     return nextIndicator;

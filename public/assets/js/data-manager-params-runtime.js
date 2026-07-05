@@ -20,7 +20,7 @@
     }
 
     function getIndicatorState() {
-        return call(root.readIndicatorState, { ind1: '', ind2: '' }) || { ind1: '', ind2: '' };
+        return call(root.readIndicatorState, { ind1: '', ind2: '', highSchoolLine: '' }) || { ind1: '', ind2: '', highSchoolLine: '' };
     }
 
     function setIndicatorState(nextState) {
@@ -107,6 +107,8 @@
 
         const el1 = writeInputValue('dm_ind1_input', i1 || '');
         const el2 = writeInputValue('dm_ind2_input', i2 || '');
+        const highSchoolLine = getIndicatorState().highSchoolLine || '';
+        const highSchoolLineEl = writeInputValue('dm_high_school_line_input', highSchoolLine);
 
         if (el1) {
             el1.oninput = function () {
@@ -119,6 +121,15 @@
                 setIndicatorState({ ...getIndicatorState(), ind2: this.value });
                 scheduleStatusRender(manager);
             };
+        }
+        if (highSchoolLineEl) {
+            const updateHighSchoolSummary = function () {
+                setIndicatorState({ ...getIndicatorState(), highSchoolLine: this.value });
+                renderHighSchoolLineSummary();
+                scheduleStatusRender(manager);
+            };
+            highSchoolLineEl.oninput = updateHighSchoolSummary;
+            renderHighSchoolLineSummary();
         }
 
         scheduleStatusRender(manager);
@@ -133,10 +144,12 @@
 
         const v1 = readInputValue('dm_ind1_input');
         const v2 = readInputValue('dm_ind2_input');
-        setIndicatorState({ ind1: v1, ind2: v2 });
+        const highSchoolLine = readInputValue('dm_high_school_line_input');
+        setIndicatorState({ ind1: v1, ind2: v2, highSchoolLine });
 
         writeInputValue('ind1', v1);
         writeInputValue('ind2', v2);
+        renderHighSchoolLineSummary();
 
         if (manager && typeof manager.persistGrade9IndicatorTemplate === 'function') {
             manager.persistGrade9IndicatorTemplate();
@@ -152,8 +165,74 @@
         safeToast('✅ 参数已暂存到内存 (未连接云端)', 'success');
     }
 
+    function getTotal(row) {
+        const total = Number(row?.total ?? row?.总分 ?? row?.score ?? row?.总成绩);
+        if (Number.isFinite(total)) return total;
+        const scores = row?.scores && typeof row.scores === 'object' ? Object.values(row.scores) : [];
+        const sum = scores.reduce((acc, value) => {
+            const number = Number(value);
+            return Number.isFinite(number) ? acc + number : acc;
+        }, 0);
+        return sum > 0 ? sum : NaN;
+    }
+
+    function renderHighSchoolLineSummary() {
+        const doc = root.document;
+        const summary = doc && typeof doc.getElementById === 'function' ? doc.getElementById('dm_high_school_line_summary') : null;
+        if (!summary) return;
+        const line = Number(readInputValue('dm_high_school_line_input') || getIndicatorState().highSchoolLine || 0);
+        const rows = Array.isArray(root.RAW_DATA) ? root.RAW_DATA : [];
+        const isGrade9July = isCurrentGrade9JulyExam(rows);
+        if (!isGrade9July) {
+            summary.innerHTML = '此项仅用于 9 年级 7 月中考成绩。当前考试不会计算高中过线人数/率，但分数会随云端参数保存。';
+            return;
+        }
+        const ownRows = filterOwnSchoolRows(rows);
+        const totals = ownRows.map(getTotal).filter(Number.isFinite);
+        const over = Number.isFinite(line) && line > 0 ? totals.filter((value) => value >= line).length : 0;
+        const rate = totals.length ? ((over / totals.length) * 100).toFixed(1) : '0.0';
+        summary.innerHTML = line > 0
+            ? `本校9年级7月中考：考籍人数 <strong>${totals.length}</strong>，高中过线 <strong>${over}</strong>，过线率 <strong>${rate}%</strong>`
+            : '填写 9 年级 7 月中考高中过线分数后，自动计算过线人数和过线率。';
+    }
+
+    function sameSchool(left, right) {
+        const normalize = typeof root.normalizeSchoolName === 'function'
+            ? root.normalizeSchoolName
+            : (value) => String(value || '').replace(/学校$/, '').trim();
+        return !!left && !!right && normalize(left) === normalize(right);
+    }
+
+    function filterOwnSchoolRows(rows) {
+        const ownSchool = root.MY_SCHOOL || root.CURRENT_SCHOOL || '银山实验学校';
+        return (rows || []).filter((row) => sameSchool(row?.school || row?.学校, ownSchool));
+    }
+
+    function isCurrentGrade9JulyExam(rows) {
+        const examId = String(root.CURRENT_EXAM_ID || root.__CURRENT_EXAM_KEY || '').trim();
+        const exam = root.CohortDB && typeof root.CohortDB.ensure === 'function'
+            ? root.CohortDB.ensure()?.exams?.[examId]
+            : null;
+        const haystack = [
+            examId,
+            exam?.date,
+            exam?.examDate,
+            exam?.name,
+            exam?.title,
+            exam?.label,
+            exam?.meta?.grade,
+            exam?.meta?.gradeLabel
+        ].filter(Boolean).join(' ');
+        const monthMatch = haystack.match(/20\d{2}[-_/年.](\d{1,2})(?:[-_/月.]|月)/) || haystack.match(/(?:^|[^0-9])(\d{1,2})\s*月/);
+        const month = monthMatch ? Number(monthMatch[1]) : 0;
+        const hasGrade9Meta = /9年级|九年级|(^|[^0-9])9([^0-9]|$)/.test(haystack);
+        const hasGrade9Class = (rows || []).some((row) => /(^|[^0-9])9[.\-班]?/.test(String(row?.class || row?.班级 || '')));
+        return month === 7 && (hasGrade9Meta || hasGrade9Class);
+    }
+
     return {
         renderParams,
-        saveParamsLocally
+        saveParamsLocally,
+        renderHighSchoolLineSummary
     };
 });

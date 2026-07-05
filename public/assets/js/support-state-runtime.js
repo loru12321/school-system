@@ -18,7 +18,7 @@
             root.SYS_VARS = {};
         }
         if (!root.SYS_VARS.indicator || typeof root.SYS_VARS.indicator !== 'object' || Array.isArray(root.SYS_VARS.indicator)) {
-            root.SYS_VARS.indicator = { ind1: '', ind2: '' };
+            root.SYS_VARS.indicator = { ind1: '', ind2: '', highSchoolLine: '' };
         }
         if (!root.SYS_VARS.targets || typeof root.SYS_VARS.targets !== 'object' || Array.isArray(root.SYS_VARS.targets)) {
             root.SYS_VARS.targets = {};
@@ -44,7 +44,8 @@
         const source = value && typeof value === 'object' ? value : {};
         return {
             ind1: String(source.ind1 || '').trim(),
-            ind2: String(source.ind2 || '').trim()
+            ind2: String(source.ind2 || '').trim(),
+            highSchoolLine: String(source.highSchoolLine || source.graduateHighSchoolLine || '').trim()
         };
     }
 
@@ -203,7 +204,7 @@
     }
 
     function clearSupportState(options = {}) {
-        setIndicator({ ind1: '', ind2: '' });
+        setIndicator({ ind1: '', ind2: '', highSchoolLine: '' });
         setTargets({});
         setSchoolAliases([]);
         if (!options.keepSyncState) setDataManagerSyncState({});
