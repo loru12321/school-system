@@ -8,25 +8,31 @@ function read(relativePath) {
     return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
-const appSource = read('public/assets/js/app.js');
 const packageJson = JSON.parse(read('package.json'));
 const scripts = packageJson.scripts || {};
+const sources = {
+    app: read('public/assets/js/app.js'),
+    cohortExamMeta: read('public/assets/js/cohort-exam-meta-runtime.js'),
+    snapshotSystem: read('public/assets/js/snapshot-system-runtime.js')
+};
 
-function extractFunction(name) {
-    const start = appSource.indexOf(`function ${name}`);
-    assert.ok(start >= 0, `${name} should exist`);
-    const next = appSource.indexOf('\nfunction ', start + 1);
-    return appSource.slice(start, next > start ? next : appSource.length);
+function extractFunction(source, name) {
+    const pattern = new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`);
+    const match = pattern.exec(source);
+    assert.ok(match, `${name} should exist`);
+    const start = match.index;
+    const next = source.slice(start + 1).search(/\n(?:async\s+)?function\s+/);
+    return source.slice(start, next >= 0 ? start + 1 + next : source.length);
 }
 
 [
-    'archiveCurrentExam',
-    'unlockArchive',
-    'restoreAutoSnapshot',
-    'promptHistoryRecoveryIfEmpty',
-    'loadProjectSnapshot'
-].forEach((name) => {
-    const body = extractFunction(name);
+    ['cohortExamMeta', 'archiveCurrentExam'],
+    ['cohortExamMeta', 'unlockArchive'],
+    ['snapshotSystem', 'restoreAutoSnapshot'],
+    ['snapshotSystem', 'promptHistoryRecoveryIfEmpty'],
+    ['snapshotSystem', 'loadProjectSnapshot']
+].forEach(([sourceName, name]) => {
+    const body = extractFunction(sources[sourceName], name);
     assert.ok(body.includes('UI.confirm'), `${name} should use shared UI.confirm`);
     assert.ok(!/(^|[^\w$.])confirm\s*\(/.test(body), `${name} should not call bare confirm()`);
 });
