@@ -1,0 +1,219 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const root = path.resolve(__dirname, '..');
+const source = fs.readFileSync(path.join(root, 'public/assets/js/teaching-assessment-sync-runtime.js'), 'utf8');
+const assessmentAppPath = path.resolve(root, '..', '教学质量评价方案', 'app.html');
+
+function normalizeClass(value) {
+  return String(value || '').trim().replace(/班$/, '');
+}
+
+function buildTeacherStatsFromRows(win) {
+  const stats = {};
+  Object.entries(win.TEACHER_MAP || {}).forEach(([key, teacherName]) => {
+    const [className, subject] = key.split('_');
+    const values = (win.RAW_DATA || [])
+      .filter((row) => normalizeClass(row.class) === normalizeClass(className))
+      .map((row) => Number(row.scores?.[subject]))
+      .filter(Number.isFinite);
+    if (!values.length) return;
+    const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+    if (!stats[teacherName]) stats[teacherName] = {};
+    stats[teacherName][subject] = {
+      studentCount: values.length,
+      excellentRate: values.filter((value) => value >= 85).length / values.length,
+      passRate: values.filter((value) => value >= 60).length / values.length,
+      avgValue: avg
+    };
+  });
+  win.TEACHER_STATS = stats;
+  return stats;
+}
+
+function createContext({ examId, rows, teacherMap, exams = {} }) {
+  const context = {
+    console,
+    setTimeout: (fn) => {
+      if (typeof fn === 'function') fn();
+      return 1;
+    },
+    document: {
+      readyState: 'complete',
+      getElementById: () => null,
+      querySelector: () => null,
+      addEventListener: () => {}
+    },
+    window: {
+      RAW_DATA: rows,
+      CURRENT_EXAM_ID: examId,
+      MY_SCHOOL: '银山实验学校',
+      TEACHER_MAP: teacherMap,
+      TEACHER_SCHOOL_MAP: {},
+      TEACHER_STATS: {},
+      normalizeClass,
+      normalizeSchoolName: (value) => String(value || '').replace(/学校$/, '').trim(),
+      getCanonicalSchoolName: (value) => {
+        const raw = String(value || '').trim();
+        return /银山实验/.test(raw) ? '银山实验学校' : raw.replace(/学校$/, '');
+      },
+      readIndicatorState: () => ({ ind1: '2', ind2: '4', highSchoolLine: '390' })
+    }
+  };
+  context.window.window = context.window;
+  context.window.document = context.document;
+  context.window.console = console;
+  context.window.setTimeout = context.setTimeout;
+  context.window.analyzeTeachersV2 = () => buildTeacherStatsFromRows(context.window);
+  context.window.CohortDB = {
+    ensure: () => ({
+      currentExamId: examId,
+      exams: {
+        [examId]: {
+          examId,
+          data: rows,
+          meta: {},
+          createdAt: Date.parse('2026-07-12')
+        },
+        ...exams
+      }
+    })
+  };
+  vm.createContext(context);
+  vm.runInContext(source, context);
+  return context.window;
+}
+
+function nonGradRows(grade) {
+  return [
+    { name: `${grade}甲`, school: '银山实验学校', class: `${grade}.1`, total: 285, scores: { 语文: 96, 数学: 95, 英语: 94 } },
+    { name: `${grade}乙`, school: '银山实验学校', class: `${grade}.1`, total: 252, scores: { 语文: 84, 数学: 85, 英语: 83 } },
+    { name: `${grade}丙`, school: '银山实验学校', class: `${grade}.2`, total: 270, scores: { 语文: 90, 数学: 89, 英语: 91 } },
+    { name: `${grade}丁`, school: '兄弟学校', class: `${grade}.1`, total: 300, scores: { 语文: 100, 数学: 100, 英语: 100 } }
+  ];
+}
+
+function secondMockExam(examId, rows, grade, subjects) {
+  return {
+    [examId]: {
+      examId,
+      data: rows.map((row) => ({
+        ...row,
+        scores: subjects.reduce((scores, subject, index) => {
+          scores[subject] = 80 + index + (row.school === '兄弟学校' ? 10 : 0);
+          return scores;
+        }, {})
+      })),
+      meta: { cohortId: '2023', year: '2025-2026', type: '二模', date: '2026-05-27', grade: `${grade}年级` },
+      createdAt: Date.parse('2026-05-27')
+    }
+  };
+}
+
+async function checkNonGrad(grade) {
+  const rows = nonGradRows(grade);
+  const examId = `2023级-${grade}年级-2025-2026-暑假-7月质量监测-2026-07-12`;
+  const teacherMap = {
+    [`${grade}.1_语文`]: `${grade}语一`,
+    [`${grade}.2_语文`]: `${grade}语二`
+  };
+  const win = createContext({ examId, rows, teacherMap });
+  const payload = await win.tmBuildTeacherAssessmentSyncPayload();
+  const projectIds = new Set(payload.items.map((item) => item.project_id));
+  assert.ok(projectIds.has('teacher_two_rates_one_score'), `${grade}年级应生成教师两率一分`);
+  assert.ok(projectIds.has('teacher_class_collaboration'), `${grade}年级应生成班级协调`);
+  assert.ok(projectIds.has('teacher_subject_collaboration'), `${grade}年级应生成学科协作`);
+  assert.ok(projectIds.has('teacher_bottom_third'), `${grade}年级应生成后1/3`);
+  assert.ok(projectIds.has('teacher_excellent_contribution'), `${grade}年级应生成尖子生培养`);
+  assert.ok(!projectIds.has('class_high_school_contribution_grad'), `${grade}年级不应正式生成高中过线率`);
+  assert.ok(payload.preview_items.every((item) => item.preview_only), `${grade}年级预览项必须标记 preview_only`);
+  const audit = win.tmBuildTeacherAssessmentSyncAudit(payload, { written: payload.items.length, skipped: [] });
+  assert.ok(audit.formulas.teacher_two_rates_one_score.includes('乡镇最高值比较含银山实验本校'));
+  assert.ok(audit.formulas.class_average_non_grad.includes('本校同级部最高班级平均分'));
+  assert.ok(payload.items.some((item) => /含本校/.test(item.note)), `${grade}年级说明应体现最高值含本校`);
+  return payload;
+}
+
+async function checkGrade8Makeup() {
+  const grade = 8;
+  const rows = nonGradRows(grade).map((row) => ({ ...row, scores: { 语文: row.scores.语文, 数学: row.scores.数学, 英语: row.scores.英语 } }));
+  const examId = '2023级-8年级-2025-2026-暑假-7月质量监测-2026-07-12';
+  const mockId = '2023级-8年级-2025-2026-下学期-二模-2026-05-27';
+  const win = createContext({
+    examId,
+    rows,
+    teacherMap: { '8.1_历史': '八史一', '8.2_历史': '八史二' },
+    exams: secondMockExam(mockId, rows, 8, ['历史', '地理', '生物'])
+  });
+  const payload = await win.tmBuildTeacherAssessmentSyncPayload();
+  assert.strictEqual(payload.composite_mode, 'july_with_second_mock_makeup');
+  assert.deepStrictEqual(Array.from(payload.makeup_subjects), ['历史', '地理', '生物']);
+  assert.ok(payload.items.some((item) => item.subject === '历史'), '8年级历史应由7月+二模补科生成');
+  assert.ok(payload.items.some((item) => /二模来源/.test(item.note)), '8年级补科说明应写明二模来源');
+  return payload;
+}
+
+async function checkGrade9() {
+  const rows = [
+    { name: '九甲', school: '银山实验学校', class: '9.1', scores: { 语文: 120, 数学: 115, 英语: 112, 物理: 85, 化学: 58, 政治: 10, 体育: 60 } },
+    { name: '九乙', school: '银山实验学校', class: '9.1', scores: { 语文: 86, 数学: 84, 英语: 80, 物理: 68, 化学: 45, 政治: 12, 体育: 5 } },
+    { name: '九丙', school: '银山实验学校', class: '9.2', scores: { 语文: 128, 数学: 124, 英语: 120, 物理: 88, 化学: 60, 政治: 30, 体育: 60 } },
+    { name: '九丁', school: '银山实验学校', class: '9.2', scores: { 语文: 124, 数学: 120, 英语: 116, 物理: 84, 化学: 58, 政治: 28, 体育: 60 } },
+    { name: '外校高分', school: '兄弟学校', class: '9.1', scores: { 语文: 130, 数学: 128, 英语: 126, 物理: 90, 化学: 60, 政治: 46, 体育: 60 } }
+  ];
+  rows.forEach((row) => {
+    row.total = Object.values(row.scores).reduce((sum, value) => sum + value, 0);
+  });
+  const examId = '2022级-2025-2026学年-9年级-7月中考-2026-07-12';
+  const win = createContext({
+    examId,
+    rows,
+    teacherMap: { '9.1_语文': '九语一', '9.2_语文': '九语二', '9.1_体育': '九体一', '9.2_体育': '九体二' }
+  });
+  const payload = await win.tmBuildTeacherAssessmentSyncPayload();
+  assert.ok(payload.items.some((item) => item.subject === '体育'), '9年级体育教师应参与教师考核同步项目');
+  const sportsExcellentItems = payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution' && item.subject === '体育');
+  assert.ok(sportsExcellentItems.length > 0, '9年级体育教师应参与尖子生培养贡献');
+  assert.ok(sportsExcellentItems.every((item) => /体育60分/.test(item.note)), '9年级尖子生贡献说明应写明体育60分计入总分');
+  const highSchoolItems = payload.preview_items.filter((item) => item.project_id === 'class_high_school_contribution_grad');
+  assert.ok(highSchoolItems.length >= 2, '9年级应生成高中过线率预览项');
+  assert.ok(highSchoolItems.every((item) => item.preview_only), '9年级高中过线率只能预览，不能正式同步');
+  const scores = Object.fromEntries(highSchoolItems.map((item) => [item.teacher_name, item.score]));
+  assert.strictEqual(scores['九语一'], 7.5, '9.1 在390线下过线率1/2，应按本校最高1折算7.5分');
+  assert.strictEqual(scores['九语二'], 15, '9.2 在390线下过线率2/2，应按本校最高1折算15分');
+  assert.ok(highSchoolItems.every((item) => /高中过线分数 390/.test(item.note)), '9年级测试必须使用390过线分数');
+  assert.ok(highSchoolItems.every((item) => /2\/2|1\/2/.test(item.note)), '9年级过线率应按含体育后的总分统计');
+  assert.ok(highSchoolItems.every((item) => /本校级部班级最高过线率/.test(item.note)), '9年级过线率分母必须是本校级部班级最高');
+  assert.ok(!payload.items.some((item) => item.project_id === 'class_high_school_contribution_grad'), '9年级过线率不能进入正式同步 items');
+  assert.ok(payload.preview_items.some((item) => item.project_id === 'class_target_grad' && item.max_score === 33), '毕业班指标完成应按33分预览');
+  return payload;
+}
+
+function checkAssessmentAppGradeNormalizer() {
+  const html = fs.readFileSync(assessmentAppPath, 'utf8');
+  assert.ok(html.includes('9\\s*年级'), '考核管理系统应显式识别9年级');
+  assert.ok(!html.includes('/[6六]/.test(text)'), '考核管理系统年级识别不能被年份中的6误导');
+}
+
+(async () => {
+  const grade6 = await checkNonGrad(6);
+  const grade7 = await checkNonGrad(7);
+  const grade8 = await checkGrade8Makeup();
+  const grade9 = await checkGrade9();
+  checkAssessmentAppGradeNormalizer();
+  console.log(JSON.stringify({
+    ok: true,
+    injected: 'memory-only',
+    highSchoolLine: 390,
+    grade6Items: grade6.items.length,
+    grade7Items: grade7.items.length,
+    grade8Items: grade8.items.length,
+    grade9Items: grade9.items.length,
+    grade9PreviewItems: grade9.preview_items.length
+  }, null, 2));
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

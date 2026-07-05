@@ -95,7 +95,7 @@
             requiresJuly: true,
             syncMode: 'sync',
             source: '联考分析 · 7 月期末/中考尖子生',
-            formula: '尖子生培养贡献只限 7 月成绩：非毕业年级按第二学期期末乡镇前 150 名及学科位次累加；九年级按 7 月上传的中考成绩确定尖子生/优秀尖子；教师原始贡献按最高教师折算 5 分，最高教师比较含银山实验本校。'
+            formula: '尖子生培养贡献只限 7 月成绩：非毕业年级按第二学期期末乡镇前 150 名及学科位次累加；九年级按 7 月上传的中考成绩确定尖子生/优秀尖子，中考总分含体育60分且体育教师参与考核；教师原始贡献按最高教师折算 5 分，最高教师比较含银山实验本校。'
         },
         [PROJECTS.classTermScoreNonGrad]: {
             max: 60,
@@ -144,14 +144,14 @@
             requiresJuly: true,
             syncMode: 'preview',
             source: '教学管理 · 9 年级 7 月中考高中过线',
-            formula: '高中贡献率只使用 9 年级 7 月上传的中考成绩：按云端管理填写的中考高中过线分数统计本校每班过线率，再按“本班过线率 / 本校级部班级最高过线率 × 15”折算；当前仅预览，不写入考核系统。'
+            formula: '高中贡献率只使用 9 年级 7 月上传的中考成绩：中考总分含体育60分，按云端管理填写的中考高中过线分数统计本校每班过线率，再按“本班过线率 / 本校级部班级最高过线率 × 15”折算；当前仅预览，不写入考核系统。'
         },
         [PROJECTS.classTargetGrad]: {
             max: 33,
             requiresJuly: true,
             syncMode: 'preview',
             source: '教学管理 · 9 年级 7 月中考指标完成',
-            formula: '毕业班指标完成只使用 9 年级 7 月中考成绩：指标一每班9人基础10分、超额额外按本校级部最高超额人数加5分；指标二每班40人基础10分、超额额外按本校级部最高超额人数加8分；当前仅预览，不写入考核系统。'
+            formula: '毕业班指标完成只使用 9 年级 7 月中考成绩：中考总分含体育60分；指标一每班9人基础10分、超额额外按本校级部最高超额人数加5分；指标二每班40人基础10分、超额额外按本校级部最高超额人数加8分；当前仅预览，不写入考核系统。'
         },
         [PROJECTS.classBottomThirdGrad]: {
             max: 5,
@@ -165,7 +165,7 @@
             requiresJuly: true,
             syncMode: 'preview',
             source: '公式审计 · 9 年级 7 月中考高分段',
-            formula: '高分段贡献只使用9年级7月中考，总分550分以上人数 / 本校级部最高班级550分以上人数 × 15；这是本校内部班级比较，当前仅预览，不写入考核系统。'
+            formula: '高分段贡献只使用9年级7月中考，中考总分含体育60分；总分550分以上人数 / 本校级部最高班级550分以上人数 × 15；这是本校内部班级比较，当前仅预览，不写入考核系统。'
         },
         [PROJECTS.teacherWorkload]: {
             max: 5,
@@ -219,8 +219,12 @@
         for (const [key, grade] of Object.entries(cn)) {
             if (source.includes(`${key}年级`) || source === key) return grade;
         }
-        const match = source.match(/[6-9]/);
-        return match ? match[0] : '';
+        const explicit = source.match(/([6-9])\s*年级/);
+        if (explicit) return explicit[1];
+        const dottedClass = source.match(/\b([6-9])\s*[.．]\s*\d+\b/);
+        if (dottedClass) return dottedClass[1];
+        const match = source.match(/(?:^|[^\d])([6-9])(?:$|[^\d])/);
+        return match ? match[1] : '';
     }
 
     function gradeLabel(value) {
@@ -1137,7 +1141,7 @@
             project_id: PROJECTS.excellentContribution,
             score: entry.score,
             max_score: 5,
-            note: `9年级中考尖子生培养：总分600分以上为优秀尖子，按学科位次10分起递减2分；550-599分为尖子生，按学科位次5分起递减1分。原始贡献 ${entry.raw}（优秀尖子${entry.counters.excellent || 0}项，尖子生${entry.counters.top || 0}项），再按最高教师折算5分（最高教师比较含本校）。`,
+            note: `9年级中考尖子生培养：中考总分含体育60分；总分600分以上为优秀尖子，按学科位次10分起递减2分；550-599分为尖子生，按学科位次5分起递减1分。原始贡献 ${entry.raw}（优秀尖子${entry.counters.excellent || 0}项，尖子生${entry.counters.top || 0}项），再按最高教师折算5分（最高教师比较含本校）。`,
             source: 'teaching-management'
         }));
     }
