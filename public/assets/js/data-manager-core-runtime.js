@@ -474,7 +474,9 @@ const DataManager = {
         }
 
         this.renderCurrentTab();
-        this.scheduleDataManagerStatusRender();
+        if (tab !== 'params') {
+            this.scheduleDataManagerStatusRender();
+        }
         this.updateCloudPanelView();
     },
 

@@ -1,0 +1,15 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const source = fs.readFileSync(
+    path.resolve(__dirname, '../public/assets/js/data-manager-core-runtime.js'),
+    'utf8'
+);
+
+assert.ok(
+    source.includes('this.renderCurrentTab();\n        if (tab !== \'params\') {\n            this.scheduleDataManagerStatusRender();\n        }'),
+    'params tab should avoid duplicate status scheduling because renderParams already schedules it'
+);
+
+console.log('data-manager-core-runtime contract tests passed');
