@@ -67,56 +67,56 @@
             requiresJuly: true,
             syncMode: 'sync',
             source: '联考分析 · 两率一分',
-            formula: '教师两率一分主体 =（个人优秀率/最高学校优秀率*40 + 个人及格率/最高学校及格率*30 + 个人平均分/最高学校平均分*30）/最高教师成绩*54；优秀率增幅 6 分需用本年度 7 月与上年度 7 月基准考试对比。'
+            formula: '教师两率一分主体 =（个人优秀率/最高学校优秀率*40 + 个人及格率/最高学校及格率*30 + 个人平均分/最高学校平均分*30）/最高教师成绩*54；乡镇最高值比较含银山实验本校；优秀率增幅 6 分需用本年度 7 月与上年度 7 月基准考试对比。'
         },
         [PROJECTS.classCollaboration]: {
             max: 10,
             requiresJuly: true,
             syncMode: 'sync',
             source: '教学管理 · 任教班级总分',
-            formula: '班级协调组成绩 =（个人班级优秀率/最高班级优秀率*40 + 个人班级及格率/最高班级及格率*30 + 个人班级平均分/最高班级平均分*30）/最高班级成绩*10。'
+            formula: '班级协调组成绩 =（个人班级优秀率/最高班级优秀率*40 + 个人班级及格率/最高班级及格率*30 + 个人班级平均分/最高班级平均分*30）/最高班级成绩*10；乡镇最高值比较含银山实验本校。'
         },
         [PROJECTS.subjectCollaboration]: {
             max: 10,
             requiresJuly: true,
             syncMode: 'sync',
             source: '教学管理 · 本校同学科整体指标',
-            formula: '学科集体协作成绩 =（学科优秀率/最高学科优秀率*40 + 学科及格率/最高学科及格率*30 + 学科平均分/最高学科平均分*30）/最高学科成绩*10。'
+            formula: '学科集体协作成绩 =（学科优秀率/最高学科优秀率*40 + 学科及格率/最高学科及格率*30 + 学科平均分/最高学科平均分*30）/最高学科成绩*10；乡镇同学科最高值比较含银山实验本校。'
         },
         [PROJECTS.bottomThird]: {
             max: 10,
             requiresJuly: true,
             syncMode: 'sync',
             source: '联考分析 · 后 1/3 总分',
-            formula: '后 1/3 学生成绩 = 任教班级后 1/3 学生总分平均分 / 乡镇最高后 1/3 学生平均分 * 10。'
+            formula: '后 1/3 学生成绩 = 任教班级后 1/3 学生总分平均分 / 乡镇最高后 1/3 学生平均分 * 10；乡镇最高值比较含银山实验本校。'
         },
         [PROJECTS.excellentContribution]: {
             max: 5,
             requiresJuly: true,
             syncMode: 'sync',
             source: '联考分析 · 7 月期末/中考尖子生',
-            formula: '尖子生培养贡献只限 7 月成绩：非毕业年级按第二学期期末乡镇前 150 名及学科位次累加；九年级按 7 月上传的中考成绩确定尖子生/优秀尖子后折算 5 分。'
+            formula: '尖子生培养贡献只限 7 月成绩：非毕业年级按第二学期期末乡镇前 150 名及学科位次累加；九年级按 7 月上传的中考成绩确定尖子生/优秀尖子；教师原始贡献按最高教师折算 5 分，最高教师比较含银山实验本校。'
         },
         [PROJECTS.classTermScoreNonGrad]: {
             max: 60,
             requiresJuly: true,
             syncMode: 'preview',
             source: '公式审计 · 非毕业年级第二学期期末成绩',
-            formula: '非毕业年级班级期末成绩 = 班级总成绩两率一分 50 分 + 班级优秀率增幅 10 分；依赖7月/期末成绩、上一基准成绩和95%人数补零规则。'
+            formula: '非毕业年级班级期末成绩 = 班级总成绩两率一分 50 分 + 班级优秀率增幅 10 分；乡镇最高值比较含银山实验本校；依赖7月/期末成绩、上一基准成绩和95%人数补零规则。'
         },
         [PROJECTS.classTopStudentsNonGrad]: {
             max: 10,
             requiresJuly: true,
             syncMode: 'preview',
             source: '公式审计 · 非毕业年级尖优学生名次段',
-            formula: '尖优学生得分按名次段赋原始分后，再以本班原始分 / 最高班级原始分 × 10 折算；全校/乡镇排名范围仍需最终确认。'
+            formula: '尖优学生得分按名次段赋原始分后，再以本班原始分 / 本校最高班级原始分 × 10 折算；学生排名范围仍需最终确认，不按乡镇最高班级作分母。'
         },
         [PROJECTS.classAverageNonGrad]: {
             max: 10,
             requiresJuly: true,
             syncMode: 'preview',
             source: '公式审计 · 非毕业年级班级平均分',
-            formula: '班级平均分 = 本班总成绩平均分 / 同级部最高班级平均分 × 10；适合自动化，但先只做预览。'
+            formula: '班级平均分 = 本班总成绩平均分 / 本校同级部最高班级平均分 × 10；这是本校内部班级比较，适合自动化但先只做预览。'
         },
         [PROJECTS.classTargetNonGrad]: {
             max: 15,
@@ -137,7 +137,7 @@
             requiresJuly: true,
             syncMode: 'preview',
             source: '公式审计 · 9 年级 7 月中考/统一模拟',
-            formula: '毕业班两率一分 = 及格率10分 + 平均分10分 + 优秀率20分 + 优秀率增幅5分；依赖9年级7月中考或最后一次统一模拟。'
+            formula: '毕业班两率一分 = 及格率10分 + 平均分10分 + 优秀率20分 + 优秀率增幅5分；涉及乡镇最高值比较时含银山实验本校；依赖9年级7月中考或最后一次统一模拟。'
         },
         [PROJECTS.classHighSchoolContribution]: {
             max: 15,
@@ -151,7 +151,7 @@
             requiresJuly: true,
             syncMode: 'preview',
             source: '教学管理 · 9 年级 7 月中考指标完成',
-            formula: '毕业班指标完成只使用 9 年级 7 月中考成绩：指标一每班9人基础10分、超额额外最高加5分；指标二每班40人基础10分、超额额外最高加8分；当前仅预览，不写入考核系统。'
+            formula: '毕业班指标完成只使用 9 年级 7 月中考成绩：指标一每班9人基础10分、超额额外按本校级部最高超额人数加5分；指标二每班40人基础10分、超额额外按本校级部最高超额人数加8分；当前仅预览，不写入考核系统。'
         },
         [PROJECTS.classBottomThirdGrad]: {
             max: 5,
@@ -165,7 +165,7 @@
             requiresJuly: true,
             syncMode: 'preview',
             source: '公式审计 · 9 年级 7 月中考高分段',
-            formula: '高分段贡献只使用9年级7月中考，总分550分以上人数 / 本校级部最高班级高分段人数 × 15；当前仅预览，不写入考核系统。'
+            formula: '高分段贡献只使用9年级7月中考，总分550分以上人数 / 本校级部最高班级550分以上人数 × 15；这是本校内部班级比较，当前仅预览，不写入考核系统。'
         },
         [PROJECTS.teacherWorkload]: {
             max: 5,
@@ -851,7 +851,7 @@
                     project_id: PROJECTS.twoRates,
                     score: entry.score,
                     max_score: 60,
-                    note: `联考两率一分主体 ${entry.score}/54；优秀率 ${pct(entry.data.excellentRate)}，及格率 ${pct(entry.data.passRate)}，均分 ${round(entry.data.avgValue ?? entry.data.avg, 2)}。优秀率增幅需有基准考试后另行同步或手填。`,
+                    note: `联考两率一分主体 ${entry.score}/54；乡镇最高值比较含本校；优秀率 ${pct(entry.data.excellentRate)}，及格率 ${pct(entry.data.passRate)}，均分 ${round(entry.data.avgValue ?? entry.data.avg, 2)}。优秀率增幅需有基准考试后另行同步或手填。`,
                     source: 'teaching-management'
                 });
             });
@@ -908,7 +908,7 @@
             project_id: PROJECTS.classCollaboration,
             score: entry.score,
             max_score: 10,
-            note: `按任教班级总分三项核算：优秀率 ${pct(entry.metric.excellentRate)}，及格率 ${pct(entry.metric.passRate)}，均分 ${round(entry.metric.avg, 2)}。`,
+            note: `按任教班级总分三项核算，乡镇最高值比较含本校：优秀率 ${pct(entry.metric.excellentRate)}，及格率 ${pct(entry.metric.passRate)}，均分 ${round(entry.metric.avg, 2)}。`,
             source: 'teaching-management'
         }));
     }
@@ -985,7 +985,7 @@
                     project_id: PROJECTS.subjectCollaboration,
                     score,
                     max_score: 10,
-                    note: `本校同学科协作项按全镇同学科最高指标折算；${entry.teacher.subject}优秀率 ${pct(subjectMetric.excellentRate)}，及格率 ${pct(subjectMetric.passRate)}，均分 ${round(subjectMetric.avg, 2)}。`,
+                    note: `本校同学科协作项按全镇同学科最高指标折算，最高值比较含本校；${entry.teacher.subject}优秀率 ${pct(subjectMetric.excellentRate)}，及格率 ${pct(subjectMetric.passRate)}，均分 ${round(subjectMetric.avg, 2)}。`,
                     source: 'teaching-management'
                 });
             });
@@ -1014,7 +1014,7 @@
                 project_id: PROJECTS.bottomThird,
                 score: round((avg / highest) * 10, 2),
                 max_score: 10,
-                note: `任教班级后 1/3 总分均分 ${round(avg, 2)}，全镇最高 ${round(highest, 2)}。`,
+                note: `任教班级后 1/3 总分均分 ${round(avg, 2)}，全镇最高 ${round(highest, 2)}（含本校）。`,
                 source: 'teaching-management'
             };
         }).filter(Boolean);
@@ -1054,7 +1054,7 @@
             project_id: PROJECTS.excellentContribution,
             score: entry.score,
             max_score: 5,
-            note: `按全镇前 150 名学生与任教学科匹配生成贡献值 ${entry.raw}，再按最高教师折算 5 分。`,
+            note: `按全镇前 150 名学生与任教学科匹配生成贡献值 ${entry.raw}，再按最高教师折算 5 分（最高教师比较含本校）。`,
             source: 'teaching-management'
         }));
     }
@@ -1137,7 +1137,7 @@
             project_id: PROJECTS.excellentContribution,
             score: entry.score,
             max_score: 5,
-            note: `9年级中考尖子生培养：总分600分以上为优秀尖子，按学科位次10分起递减2分；550-599分为尖子生，按学科位次5分起递减1分。原始贡献 ${entry.raw}（优秀尖子${entry.counters.excellent || 0}项，尖子生${entry.counters.top || 0}项），再按最高教师折算5分。`,
+            note: `9年级中考尖子生培养：总分600分以上为优秀尖子，按学科位次10分起递减2分；550-599分为尖子生，按学科位次5分起递减1分。原始贡献 ${entry.raw}（优秀尖子${entry.counters.excellent || 0}项，尖子生${entry.counters.top || 0}项），再按最高教师折算5分（最高教师比较含本校）。`,
             source: 'teaching-management'
         }));
     }
