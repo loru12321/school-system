@@ -146,11 +146,32 @@ async function login(page) {
         if (/FEF3C7|FDE68A/i.test(rawScoreSummary.stylesXml)) {
             throw new Error('raw score workbook should not use ambiguous yellow highlights');
         }
+        const schoolAnalysisName = files.find((name) => /学校\/二模成绩分析0527\.xlsx$/.test(name));
+        if (!schoolAnalysisName) throw new Error(`missing school analysis workbook; files=${files.join(', ')}`);
+        const schoolAnalysisBuffer = await outerZip.file(schoolAnalysisName).async('nodebuffer');
+        const schoolAnalysisSummary = await readWorkbookSummary(schoolAnalysisBuffer);
+        const schoolFirstSheetRows = schoolAnalysisSummary.rowCounts['xl/worksheets/sheet1.xml'] || 0;
+        if (schoolFirstSheetRows < 18) {
+            throw new Error(`school comprehensive report is too short: ${JSON.stringify(schoolAnalysisSummary.rowCounts)}`);
+        }
+        ['学校名称', '两率一分得分', '后1/3得分', '综合总分', '总排名', '银山实验学校'].forEach((needle) => {
+            if (!schoolAnalysisSummary.text.includes(needle)) {
+                throw new Error(`school comprehensive report missing ${needle}`);
+            }
+        });
+        if (!/高分段赋分\(70\)|高分段赋分&#40;70&#41;/.test(schoolAnalysisSummary.text)) {
+            throw new Error('grade 9 school comprehensive report is missing high-score contribution column');
+        }
+        if (!schoolAnalysisSummary.text.includes('_标记') || !schoolAnalysisSummary.text.includes('本校')) {
+            throw new Error('school comprehensive report is missing own-school marker');
+        }
         const result = {
             ok: true,
             suggestedName,
             fileCount: files.length,
             teacherCountyName,
+            schoolAnalysisName,
+            schoolSummaryRows: schoolFirstSheetRows,
             teacherCountyRows: teacherCountySummary.rowCounts
         };
         console.log(JSON.stringify(result, null, 2));

@@ -51,6 +51,11 @@
         return `${cohortLabel}${grade}`;
     }
 
+    function isGrade9Exam() {
+        const source = `${window.CONFIG?.name || ''} ${window.CURRENT_EXAM_ID || ''} ${getCohortGradeLabel()}`;
+        return /9\s*年级|九年级/.test(source);
+    }
+
     function sameSchool(left, right) {
         if (typeof window.sameAppSchoolName === 'function') return window.sameAppSchoolName(left, right);
         if (typeof window.areSchoolNamesEquivalent === 'function') return window.areSchoolNamesEquivalent(left, right);
@@ -274,18 +279,7 @@
         const wb = window.XLSX.utils.book_new();
         const schools = scope === 'county' ? Object.values(window.SCHOOLS || {}) : getTownshipSchools();
         const subjects = getSubjectList(getAllRows());
-        const mySchool = getMySchoolName();
-        const examLabel = getExamLabel();
-        addWorksheet(wb, '综合分析报告', [
-            ['项目', '内容'],
-            ['考试', examLabel],
-            ['考试日期', getCurrentExamDate()],
-            ['范围', scope === 'county' ? '县域全部学校' : '乡镇学校'],
-            ['本校', mySchool],
-            ['学校数', schools.length],
-            ['学生数', scope === 'county' ? getAllRows().length : getTownshipRows().length],
-            ['学科', subjects.join('、')]
-        ]);
+        addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope));
         addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects));
         addWorksheet(wb, '五科总 - 综合分析表', schoolRankRows(schools, 'total'));
         subjects.forEach((subject) => addWorksheet(wb, `${subject} 学科明细`, schoolRankRows(schools, subject)));
@@ -295,6 +289,99 @@
             addWorksheet(wb, '后三分之一学生核算', buildBottomRows(schools));
         }
         return wb;
+    }
+
+    function getIndicatorScoreMap() {
+        let indicatorRows = [];
+        if (Array.isArray(window.INDICATOR_LAST_RESULT) && window.INDICATOR_LAST_RESULT.length) {
+            indicatorRows = window.INDICATOR_LAST_RESULT;
+        } else if (Array.isArray(window.__LAST_INDICATOR_CALC_DATA__) && window.__LAST_INDICATOR_CALC_DATA__.length) {
+            indicatorRows = window.__LAST_INDICATOR_CALC_DATA__;
+        } else if (typeof window.calcIndicators === 'function') {
+            try {
+                const result = window.calcIndicators(true);
+                if (Array.isArray(result)) indicatorRows = result;
+            } catch (error) {
+                console.warn('[exam-analysis-package] indicator warmup failed:', error);
+            }
+        }
+        const map = new Map();
+        indicatorRows.forEach((row) => {
+            const score = Number(row?.finalScore);
+            if (!Number.isFinite(score)) return;
+            const names = [row?.name, ...(Array.isArray(row?.rawNames) ? row.rawNames : [])]
+                .map((name) => String(name || '').trim())
+                .filter(Boolean);
+            names.forEach((name) => {
+                map.set(name, score);
+                if (typeof window.normalizeSchoolName === 'function') {
+                    const normalized = window.normalizeSchoolName(name);
+                    if (normalized) map.set(normalized, score);
+                }
+            });
+        });
+        return map;
+    }
+
+    function getIndicatorScoreForSchool(school, indicatorScoreMap) {
+        const name = String(school?.name || '').trim();
+        const normalized = typeof window.normalizeSchoolName === 'function' ? window.normalizeSchoolName(name) : '';
+        return Number(school?.scoreInd) || indicatorScoreMap.get(name) || indicatorScoreMap.get(normalized) || 0;
+    }
+
+    function buildComprehensiveSummaryRows(schools, subjects, scope) {
+        const grade9 = isGrade9Exam();
+        const indicatorScoreMap = grade9 ? getIndicatorScoreMap() : new Map();
+        const rows = [[
+            '学校名称',
+            '两率一分得分',
+            '后1/3得分',
+            ...(grade9 ? ['指标生得分', '高分段赋分(70)'] : []),
+            '综合总分',
+            '总排名',
+            '_标记'
+        ]];
+        const summaryRows = (schools || [])
+            .filter((school) => school && school.name)
+            .map((school) => {
+                const twoRates = Number(school.score2Rate) || 0;
+                const bottom = Number(school.scoreBottom) || 0;
+                const indicator = grade9 ? getIndicatorScoreForSchool(school, indicatorScoreMap) : 0;
+                const highScore = grade9 ? (Number(school.highScoreStats?.score) || 0) : 0;
+                return {
+                    name: school.name || '',
+                    twoRates,
+                    bottom,
+                    indicator,
+                    highScore,
+                    total: twoRates + bottom + indicator + highScore
+                };
+            })
+            .sort((left, right) => right.total - left.total || String(left.name).localeCompare(String(right.name), 'zh-CN', { numeric: true }))
+            .map((item, index) => ({ ...item, rank: index + 1 }));
+
+        summaryRows.forEach((item) => {
+            rows.push([
+                item.name,
+                num(item.twoRates),
+                num(item.bottom),
+                ...(grade9 ? [num(item.indicator), num(item.highScore)] : []),
+                num(item.total),
+                item.rank,
+                sameSchool(item.name, getMySchoolName()) ? '本校' : ''
+            ]);
+        });
+
+        rows.push([]);
+        rows.push(['考试概况', '内容']);
+        rows.push(['考试', getExamLabel()]);
+        rows.push(['考试日期', getCurrentExamDate()]);
+        rows.push(['范围', scope === 'county' ? '县域全部学校' : '乡镇学校']);
+        rows.push(['本校', getMySchoolName()]);
+        rows.push(['学校数', schools.length]);
+        rows.push(['学生数', scope === 'county' ? getAllRows().length : getTownshipRows().length]);
+        rows.push(['学科', subjects.join('、')]);
+        return rows;
     }
 
     function buildHorizontalRows(schools, subjects) {
