@@ -130,48 +130,104 @@
         };
     }
 
+    function textDisplayWidth(value) {
+        return String(value ?? '').split('').reduce((sum, char) => sum + (char.charCodeAt(0) > 255 ? 2 : 1), 0);
+    }
+
+    function isMarkerHeader(header) {
+        return /^_/.test(String(header || '')) || /标记/.test(String(header || ''));
+    }
+
     function rowHasHighlightMarker(row) {
         return (Array.isArray(row) ? row : []).some((value) => /本校|本校教师|当前教师/.test(String(value || '')));
+    }
+
+    function getRankValue(header, value) {
+        if (!/排|名次|序号/.test(String(header || ''))) return null;
+        const number = Number(value);
+        return Number.isFinite(number) ? number : null;
+    }
+
+    function buildPackageColumns(rows, range, hiddenCols) {
+        return Array.from({ length: range.e.c + 1 }, (_, index) => {
+            const header = rows?.[0]?.[index] ?? '';
+            if (hiddenCols.has(index)) return { hidden: true, wch: 0 };
+            let maxWidth = textDisplayWidth(header);
+            for (let R = 1; R <= Math.min(range.e.r, 80); R += 1) {
+                maxWidth = Math.max(maxWidth, textDisplayWidth(rows?.[R]?.[index] ?? ''));
+            }
+            const headerText = String(header || '');
+            const numericLike = /分|率|排|人数|名次|序号|考场/.test(headerText);
+            const minWidth = index === 0 ? 10 : (numericLike ? 9 : 12);
+            const maxAllowed = /学校|教师/.test(headerText) ? 28 : (/姓名/.test(headerText) ? 14 : 18);
+            return { wch: Math.max(minWidth, Math.min(maxWidth + 3, maxAllowed)) };
+        });
+    }
+
+    function maybeAddMarkerComment(cell, marker) {
+        if (!cell || !marker) return;
+        cell.c = [{ a: 'SmartEdu', t: marker }];
     }
 
     function applyPackageSheetStyle(ws, rows) {
         if (!ws?.['!ref']) return;
         const range = window.XLSX.utils.decode_range(ws['!ref']);
         const markerCols = new Set();
+        const hiddenCols = new Set();
         const headers = Array.isArray(rows?.[0]) ? rows[0] : [];
         headers.forEach((header, index) => {
-            if (/标记|类型/.test(String(header || ''))) markerCols.add(index);
+            if (isMarkerHeader(header)) {
+                markerCols.add(index);
+                hiddenCols.add(index);
+            }
         });
         for (let R = range.s.r; R <= range.e.r; R += 1) {
             const row = rows?.[R] || [];
-            const highlight = R > 0 && rowHasHighlightMarker(row);
+            const marker = markerCols.size
+                ? Array.from(markerCols).map((index) => String(row[index] || '')).filter(Boolean).join(' / ')
+                : '';
+            const highlight = R > 0 && (marker || rowHasHighlightMarker(row));
             for (let C = range.s.c; C <= range.e.c; C += 1) {
                 const ref = window.XLSX.utils.encode_cell({ r: R, c: C });
                 const cell = ws[ref];
                 if (!cell) continue;
+                const header = headers[C] || '';
+                const rankValue = R > 0 ? getRankValue(header, cell.v) : null;
+                const isTextIdentityCol = /学校|教师|姓名/.test(String(header || '')) || C === 0;
                 mergeCellStyle(cell, {
-                    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-                    font: R === 0 ? { bold: true, color: { rgb: '0F172A' } } : {},
+                    alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
+                    font: R === 0
+                        ? { bold: true, color: { rgb: 'FFFFFF' } }
+                        : {
+                            bold: highlight && isTextIdentityCol,
+                            color: rankValue && rankValue <= 3 ? { rgb: 'DC2626' } : (highlight ? { rgb: '0F3D5E' } : { rgb: '111827' })
+                        },
                     fill: R === 0
-                        ? { fgColor: { rgb: 'E0F2FE' } }
-                        : (highlight ? { fgColor: { rgb: 'FEF3C7' } } : undefined)
+                        ? { fgColor: { rgb: '0F766E' } }
+                        : (highlight ? { fgColor: { rgb: 'EAF6FF' } } : (R % 2 === 0 ? { fgColor: { rgb: 'F8FAFC' } } : undefined)),
+                    border: {
+                        top: { style: 'thin', color: { rgb: 'D8DEE6' } },
+                        bottom: { style: 'thin', color: { rgb: 'D8DEE6' } },
+                        left: { style: 'thin', color: { rgb: highlight && C === range.s.c ? '0284C7' : 'D8DEE6' } },
+                        right: { style: 'thin', color: { rgb: 'D8DEE6' } }
+                    }
                 });
-                if (highlight && (markerCols.has(C) || /本校|本校教师|当前教师/.test(String(cell.v || '')))) {
+                if (R > 0 && marker && isTextIdentityCol) maybeAddMarkerComment(cell, marker);
+                if (rankValue && rankValue <= 3) {
                     mergeCellStyle(cell, {
-                        font: { bold: true, color: { rgb: '92400E' } },
-                        fill: { fgColor: { rgb: 'FDE68A' } }
+                        font: { bold: true, color: { rgb: 'DC2626' } }
                     });
                 }
+                if (typeof cell.v === 'number') cell.z = Number.isInteger(cell.v) ? '#,##0' : '0.00';
             }
         }
         ws['!autofilter'] = { ref: ws['!ref'] };
-        ws['!rows'] = Array.from({ length: range.e.r + 1 }, (_, index) => ({ hpt: index === 0 ? 24 : 20 }));
+        ws['!cols'] = buildPackageColumns(rows, range, hiddenCols);
+        ws['!rows'] = Array.from({ length: range.e.r + 1 }, (_, index) => ({ hpt: index === 0 ? 26 : 22 }));
     }
 
     function addWorksheet(workbook, name, rows, options = {}) {
         const ws = window.XLSX.utils.aoa_to_sheet(rows && rows.length ? rows : [['暂无数据']]);
-        const widthCount = (rows || []).reduce((max, row) => Math.max(max, Array.isArray(row) ? row.length : 0), 1);
-        ws['!cols'] = Array.from({ length: widthCount }, (_, index) => ({ wch: index === 0 ? 18 : 14 }));
         if (options.freeze) ws['!freeze'] = options.freeze;
         if (typeof window.decorateExcelSheet === 'function' && rows?.[0]) {
             try { window.decorateExcelSheet(ws, rows[0]); } catch (_) {}
@@ -189,8 +245,8 @@
         const isTotal = subject === 'total';
         const title = isTotal ? (window.CONFIG?.label || '总分') : subject;
         const rows = [[
-            '序号', '学校', '本校标记', '实考人数', `${title}平均分`, '优秀率(%)', '及格率(%)',
-            '平均分排名', '优秀率排名', '及格率排名', '两率一分', '综合排名'
+            '序号', '学校', '实考人数', `${title}平均分`, '优秀率(%)', '及格率(%)',
+            '平均分排名', '优秀率排名', '及格率排名', '两率一分', '综合排名', '_标记'
         ]];
         const list = schools
             .filter((school) => school?.metrics?.[subject])
@@ -206,7 +262,6 @@
             rows.push([
                 index + 1,
                 school.name || '',
-                sameSchool(school.name, mySchool) ? '本校' : '',
                 metric.count || 0,
                 num(metric.avg),
                 pct(metric.excRate),
@@ -215,7 +270,8 @@
                 ranking.excRate || '',
                 ranking.passRate || '',
                 num(isTotal ? school.score2Rate : ((metric.ratedAvg || 0) + (metric.ratedExc || 0) + (metric.ratedPass || 0))),
-                isTotal ? (school.rank2Rate || '') : ''
+                isTotal ? (school.rank2Rate || '') : '',
+                sameSchool(school.name, mySchool) ? '本校' : ''
             ]);
         });
         return rows;
@@ -261,15 +317,15 @@
     }
 
     function buildHighScoreRows(schools) {
-        const rows = [['学校', '本校标记', '高分人数', '高分率(%)', '高分段赋分']];
+        const rows = [['学校', '高分人数', '高分率(%)', '高分段赋分', '_标记']];
         schools.forEach((school) => {
             const stats = school.highScoreStats || {};
             rows.push([
                 school.name || '',
-                sameSchool(school.name, getMySchoolName()) ? '本校' : '',
                 stats.count || stats.hsCount || 0,
                 pct(stats.ratio || stats.hsRatio || 0),
-                num(stats.score || 0)
+                num(stats.score || 0),
+                sameSchool(school.name, getMySchoolName()) ? '本校' : ''
             ]);
         });
         return rows;
@@ -284,31 +340,31 @@
             } catch (_) {}
         }
         return [
-            ['学校', '本校标记', '指标生得分', '名次', '说明'],
+            ['学校', '指标生得分', '名次', '说明', '_标记'],
             ...rows.map((row) => [
                 row.name || '',
-                sameSchool(row.name, getMySchoolName()) ? '本校' : '',
                 num(row.finalScore),
                 row.rank || '',
-                row.missingTarget ? '缺目标人数' : ''
+                row.missingTarget ? '缺目标人数' : '',
+                sameSchool(row.name, getMySchoolName()) ? '本校' : ''
             ])
         ];
     }
 
     function buildBottomRows(schools) {
         return [
-            ['学校', '本校标记', '总人数', '后1/3人数', '剔除人数', '后1/3平均分', '后1/3得分', '排名'],
+            ['学校', '总人数', '后1/3人数', '剔除人数', '后1/3平均分', '后1/3得分', '排名', '_标记'],
             ...schools.map((school) => {
                 const bottom = school.bottom3 || {};
                 return [
                     school.name || '',
-                    sameSchool(school.name, getMySchoolName()) ? '本校' : '',
                     bottom.totalN || '',
                     bottom.bottomN || '',
                     bottom.excN || '',
                     num(bottom.avg),
                     num(school.scoreBottom),
-                    school.rankBottom || ''
+                    school.rankBottom || '',
+                    sameSchool(school.name, getMySchoolName()) ? '本校' : ''
                 ];
             })
         ];
@@ -324,20 +380,20 @@
             grouped.get(school).push(student);
         });
         grouped.forEach((students, school) => {
-            const data = [['学校', '本校标记', '班级', '姓名', '考号', '考场', ...subjects, window.CONFIG?.label || '总分']];
+            const data = [['学校', '班级', '姓名', '考号', '考场', ...subjects, window.CONFIG?.label || '总分', '_标记']];
             students
                 .slice()
                 .sort((a, b) => String(a.class || '').localeCompare(String(b.class || ''), 'zh-CN', { numeric: true }) || (Number(b.total) || 0) - (Number(a.total) || 0))
                 .forEach((student) => {
                     data.push([
                         student.school || '',
-                        sameSchool(student.school, getMySchoolName()) ? '本校' : '',
                         student.class || '',
                         student.name || '',
                         student.id || student.examNo || '',
                         student.examRoom || '',
                         ...subjects.map((subject) => student.scores?.[subject] ?? ''),
-                        num(student.total, 1)
+                        num(student.total, 1),
+                        sameSchool(student.school, getMySchoolName()) ? '本校' : ''
                     ]);
                 });
             addWorksheet(wb, school, data, { freeze: { xSplit: 0, ySplit: 1 } });
@@ -348,18 +404,18 @@
     function buildStudentDetailWorkbook(rows, options = {}) {
         const subjects = getSubjectList(rows);
         const includeCounty = !!options.includeCounty;
-        const headers = ['学校', '本校标记', '班级', '姓名', '考号', '考场'];
+        const headers = ['学校', '班级', '姓名', '考号', '考场'];
         subjects.forEach((subject) => {
             headers.push(`${subject}分数`, `${subject}校排`, `${subject}镇排`);
             if (includeCounty) headers.push(`${subject}县排`);
         });
         headers.push(`${window.CONFIG?.label || '总分'}`, '总分班排', '总分校排', '总分镇排');
         if (includeCounty) headers.push('总分县排');
+        headers.push('_标记');
         const data = [headers];
         rows.slice().sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0)).forEach((student) => {
             const row = [
                 student.school || '',
-                sameSchool(student.school, getMySchoolName()) ? '本校' : '',
                 student.class || '',
                 student.name || '',
                 student.id || student.examNo || '',
@@ -380,6 +436,7 @@
                 student.ranks?.total?.township ?? ''
             );
             if (includeCounty) row.push(student.ranks?.total?.county ?? '');
+            row.push(sameSchool(student.school, getMySchoolName()) ? '本校' : '');
             data.push(row);
         });
         const wb = window.XLSX.utils.book_new();
@@ -424,10 +481,9 @@
         subjects.forEach((subject) => {
             const rows = data[subject] || [];
             addWorksheet(wb, `${subject} 教师乡镇排名`, [
-                ['教师/学校', '对象标记', '类型', '平均分', '乡镇均分排名', '优秀率(%)', '乡镇优率排名', '及格率(%)', '乡镇及格排名', '样本人数'],
+                ['教师/学校', '类型', '平均分', '乡镇均分排名', '优秀率(%)', '乡镇优率排名', '及格率(%)', '乡镇及格排名', '样本人数', '_对象标记'],
                 ...rows.map((item) => [
                     item.name || '',
-                    buildTeacherMark(item),
                     item.type === 'teacher' ? '教师' : '学校',
                     num(item.avg),
                     item.rankAvg || '',
@@ -435,7 +491,8 @@
                     item.rankExc || '',
                     pct(item.passRate),
                     item.rankPass || '',
-                    item.studentCount || ''
+                    item.studentCount || '',
+                    buildTeacherMark(item)
                 ])
             ]);
         });
@@ -453,18 +510,18 @@
                 return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { numeric: true });
             });
             addWorksheet(wb, `${subject} 同学科县域排名`, [
-                ['县均分排', '教师/学校', '对象标记', '类型', '平均分', '县优率排', '优秀率(%)', '县及格排', '及格率(%)', '样本人数'],
+                ['县均分排', '教师/学校', '类型', '平均分', '县优率排', '优秀率(%)', '县及格排', '及格率(%)', '样本人数', '_对象标记'],
                 ...rows.map((item) => [
                     item.rankAvg || '',
                     item.name || '',
-                    buildTeacherMark(item),
                     item.type === 'teacher' ? '教师' : '学校整体',
                     num(item.avg),
                     item.rankExc || '',
                     pct(item.excellentRate),
                     item.rankPass || '',
                     pct(item.passRate),
-                    item.studentCount || ''
+                    item.studentCount || '',
+                    buildTeacherMark(item)
                 ])
             ]);
         });

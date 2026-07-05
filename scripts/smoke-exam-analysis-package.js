@@ -29,12 +29,14 @@ async function readWorkbookSummary(buffer) {
         .sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
     const rowCounts = {};
     const sheetTextParts = [];
+    const sheetXmlParts = [];
     for (const sheetName of sheetEntries) {
         const xml = await zip.file(sheetName).async('string');
         rowCounts[sheetName] = (xml.match(/<row\b/g) || []).length;
         sheetTextParts.push(xml.replace(/<[^>]+>/g, '|'));
+        sheetXmlParts.push(xml);
     }
-    return { text: `${sharedStrings}|${sheetTextParts.join('|')}`, stylesXml, rowCounts };
+    return { text: `${sharedStrings}|${sheetTextParts.join('|')}`, stylesXml, sheetXml: sheetXmlParts.join('\n'), rowCounts };
 }
 
 async function login(page) {
@@ -106,23 +108,29 @@ async function login(page) {
         if (!rowCounts.length || rowCounts.some((count) => count <= 1)) {
             throw new Error(`county teacher workbook has blank sheet(s): ${JSON.stringify(teacherCountySummary.rowCounts)}`);
         }
-        if (!teacherCountySummary.text.includes('对象标记') || !teacherCountySummary.text.includes('本校教师')) {
+        if (!teacherCountySummary.text.includes('_对象标记') || !teacherCountySummary.text.includes('本校教师')) {
             throw new Error('county teacher workbook is missing object markers');
+        }
+        if (!/hidden="1"|hidden="true"/i.test(teacherCountySummary.sheetXml)) {
+            throw new Error('county teacher workbook marker columns should be hidden');
         }
         if (!/horizontal="center"/i.test(teacherCountySummary.stylesXml) || !/vertical="center"/i.test(teacherCountySummary.stylesXml)) {
             throw new Error('county teacher workbook is missing centered alignment styles');
         }
-        if (!/FEF3C7|FDE68A/i.test(teacherCountySummary.stylesXml)) {
+        if (!/EAF6FF/i.test(teacherCountySummary.stylesXml)) {
             throw new Error('county teacher workbook is missing highlight colors');
         }
         const rawScoreName = files.find((name) => /二模成绩0527\.xlsx$/.test(name));
         if (!rawScoreName) throw new Error(`missing raw score workbook; files=${files.join(', ')}`);
         const rawScoreBuffer = await outerZip.file(rawScoreName).async('nodebuffer');
         const rawScoreSummary = await readWorkbookSummary(rawScoreBuffer);
-        if (!rawScoreSummary.text.includes('本校标记') || !rawScoreSummary.text.includes('本校')) {
+        if (!rawScoreSummary.text.includes('_标记') || !rawScoreSummary.text.includes('本校')) {
             throw new Error('raw score workbook is missing own-school markers');
         }
-        if (!/horizontal="center"/i.test(rawScoreSummary.stylesXml) || !/FEF3C7|FDE68A/i.test(rawScoreSummary.stylesXml)) {
+        if (!/hidden="1"|hidden="true"/i.test(rawScoreSummary.sheetXml)) {
+            throw new Error('raw score workbook marker columns should be hidden');
+        }
+        if (!/horizontal="center"/i.test(rawScoreSummary.stylesXml) || !/EAF6FF/i.test(rawScoreSummary.stylesXml)) {
             throw new Error('raw score workbook is missing centered alignment or highlight colors');
         }
         const result = {
