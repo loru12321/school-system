@@ -151,7 +151,15 @@
             </div>
         `:`<div style="padding:24px; color:#64748b;">${o(l.empty)}</div>`;window.Swal&&typeof window.Swal.fire=="function"?window.Swal.fire({title:o(d),html:e,width:760,confirmButtonText:"关闭",confirmButtonColor:l.color}):window.UI.alert(`${d}
 ${c.map(p=>{var w;return`${p.className||"-"} ${p.name||"-"} ${(w=p.score)!=null?w:"-"}`}).join(`
-`)||l.empty}`)}function Q(t){t&&V(t.dataset.teacher||"",t.dataset.subject||"",t.dataset.focusType||"passEdges")}function W(){const t=document.getElementById("teacherComparisonTable"),i=A();if(!t)return;if(!Object.keys(i).length){t.innerHTML='<p style="text-align:center; color:#666;">暂无教师统计数据</p>';return}const r=B(i,["comparison",window.innerWidth<=860?"mobile":"desktop"].join("|"));if(E.comparisonSignature===r&&E.comparisonHtml){t.dataset.teacherComparisonSignature!==r&&(t.classList.add("comparison-table"),t.innerHTML=E.comparisonHtml,t.dataset.teacherComparisonSignature=r,typeof window.refreshResponsiveMobileTables=="function"&&window.refreshResponsiveMobileTables(t.closest(".section")||t));return}const n={};Object.keys(i).forEach(c=>{Object.keys(i[c]||{}).forEach(d=>{n[d]||(n[d]=[]),n[d].push({teacher:c,data:i[c][d]})})});let l=`
+`)||l.empty}`)}function Q(t){t&&V(t.dataset.teacher||"",t.dataset.subject||"",t.dataset.focusType||"passEdges")}function W(){const t=document.getElementById("teacherComparisonTable"),i=A();if(!t)return;if(!Object.keys(i).length){t.innerHTML=`
+                <tbody>
+                    <tr>
+                        <td colspan="14">
+                            <div class="analysis-empty-state">暂无教师统计数据</div>
+                        </td>
+                    </tr>
+                </tbody>
+            `;return}const r=B(i,["comparison",window.innerWidth<=860?"mobile":"desktop"].join("|"));if(E.comparisonSignature===r&&E.comparisonHtml){t.dataset.teacherComparisonSignature!==r&&(t.classList.add("comparison-table"),t.innerHTML=E.comparisonHtml,t.dataset.teacherComparisonSignature=r,typeof window.refreshResponsiveMobileTables=="function"&&window.refreshResponsiveMobileTables(t.closest(".section")||t));return}const n={};Object.keys(i).forEach(c=>{Object.keys(i[c]||{}).forEach(d=>{n[d]||(n[d]=[]),n[d].push({teacher:c,data:i[c][d]})})});let l=`
             <thead>
                 <tr>
                     <th rowspan="2">教师</th>

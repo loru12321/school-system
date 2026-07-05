@@ -184,6 +184,9 @@
                 if (typeof ensureTownSubmoduleCompareUIs === 'function') ensureTownSubmoduleCompareUIs(id);
             }, { delay: 420, idle: true, timeout: 1800 });
         }
+        if (typeof window.applyComparisonPanelCollapses === 'function') {
+            scheduleModuleTask('comparison-panel-collapse-enter', window.applyComparisonPanelCollapses, { delay: 120, idle: true, timeout: 800 });
+        }
     }
 
     function isTeacherAnalysisActive() {
@@ -273,12 +276,31 @@
         return true;
     }
 
+    function setTeacherComparisonTableState(message, detail = '') {
+        const table = document.getElementById('teacherComparisonTable');
+        if (!table) return false;
+        table.classList.add('comparison-table');
+        table.innerHTML = `
+            <tbody>
+                <tr>
+                    <td colspan="14">
+                        <div class="analysis-empty-state">
+                            ${message}
+                            ${detail ? `<div style="margin-top:8px; color:#64748b; font-size:12px;">${detail}</div>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        `;
+        return true;
+    }
+
     function showTeacherAnalysisPendingState() {
         const placeholders = [
             ['teacherCardsContainer', '正在后台生成教师画像。'],
-            ['teacherComparisonTable', '正在整理教师对比表。'],
             ['teacher-township-ranking-container', '正在生成教师乡镇排名。']
         ];
+        setTeacherComparisonTableState('正在整理教师对比表。', '页面会自动刷新结果，也可点击上方按钮手动刷新。');
         placeholders.forEach(([id, message]) => {
             const node = document.getElementById(id);
             if (!node) return;
@@ -611,20 +633,10 @@
     }
 
     function renderTeacherAnalysisEmptyState() {
-        const compTable = document.getElementById('teacherComparisonTable');
-        if (compTable) {
-            compTable.innerHTML = `
-                <div style="text-align:center; padding:40px; color:#999;">
-                    <div style="font-size:48px; margin-bottom:10px;">🏫❓</div>
-                    <p style="font-size:16px; font-weight:bold; color:#333;">暂时无法自动识别本校</p>
-                    <div style="background:#f9fafb; padding:10px 20px; border-radius:6px; display:inline-block; text-align:left; margin-top:10px; font-size:13px; color:#666; line-height:1.8;">
-                        <strong>可能原因：</strong><br>
-                        1. 只导入了教师配置，还没有上传学生成绩。<br>
-                        <span style="color:#d97706;">系统需要结合学生名单确认班级归属。</span><br>
-                        2. 任课表中的班级名与成绩表中的班级名不一致。<br>
-                    </div>
-                </div>`;
-        }
+        setTeacherComparisonTableState(
+            '暂时无法自动识别本校',
+            '可能原因：只导入了教师配置，还没有上传学生成绩；或任课表中的班级名与成绩表中的班级名不一致。'
+        );
         const townshipContainer = document.getElementById('teacher-township-ranking-container');
         if (townshipContainer) townshipContainer.innerHTML = '';
     }
@@ -750,9 +762,13 @@
         if (!section || section.classList.contains('active')) return;
         const heavyTargets = [
             ['teacherCardsContainer', '教师卡片已收起，重新进入本模块后自动刷新。'],
-            ['teacherComparisonTable', '教师对比表已收起，重新进入本模块后自动刷新。'],
             ['teacher-township-ranking-container', '教师乡镇排名已收起，重新进入本模块后自动刷新。']
         ];
+        const table = document.getElementById('teacherComparisonTable');
+        if (table && table.innerHTML && table.dataset.released !== 'true') {
+            table.dataset.released = 'true';
+            setTeacherComparisonTableState('教师对比表已收起，重新进入本模块后自动刷新。');
+        }
         heavyTargets.forEach(([id, message]) => {
             const node = document.getElementById(id);
             if (!node || !node.innerHTML || node.dataset.released === 'true') return;

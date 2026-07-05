@@ -536,7 +536,15 @@
         const stats = getTeacherStats();
         if (!container) return;
         if (!Object.keys(stats).length) {
-            container.innerHTML = '<p style="text-align:center; color:#666;">暂无教师统计数据</p>';
+            container.innerHTML = `
+                <tbody>
+                    <tr>
+                        <td colspan="14">
+                            <div class="analysis-empty-state">暂无教师统计数据</div>
+                        </td>
+                    </tr>
+                </tbody>
+            `;
             return;
         }
 

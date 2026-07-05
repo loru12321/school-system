@@ -7,7 +7,7 @@
         if (panel.classList.contains('town-submodule-compare-panel')) return true;
         if (!panel.classList.contains('analysis-inline-panel')) return false;
         if (panel.querySelector('[id*="Compare"], [id*="compare"], [onclick*="Compare"], [onclick*="Comparison"], [onclick*="compare"]')) return true;
-        return /对比|compare|comparison/i.test(String(panel.textContent || ''));
+        return /多期|云端对比|历史对比|对比|compare|comparison/i.test(String(panel.textContent || ''));
     }
 
     function getPanelTitle(panel) {
@@ -75,6 +75,15 @@
         document.querySelectorAll('.analysis-inline-panel, .town-submodule-compare-panel').forEach(bindPanel);
     }
 
+    let applyTimer = 0;
+    function scheduleComparisonPanelCollapses() {
+        if (applyTimer) return;
+        applyTimer = window.setTimeout(() => {
+            applyTimer = 0;
+            applyComparisonPanelCollapses();
+        }, 80);
+    }
+
     window.applyComparisonPanelCollapses = applyComparisonPanelCollapses;
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', applyComparisonPanelCollapses, { once: true });
@@ -82,4 +91,17 @@
         applyComparisonPanelCollapses();
     }
     window.addEventListener('load', applyComparisonPanelCollapses, { once: true });
+    if (window.MutationObserver) {
+        const observer = new MutationObserver((mutations) => {
+            if (mutations.some((mutation) => Array.from(mutation.addedNodes || []).some((node) => (
+                node && node.nodeType === 1 && (
+                    node.matches?.('.analysis-inline-panel, .town-submodule-compare-panel')
+                    || node.querySelector?.('.analysis-inline-panel, .town-submodule-compare-panel')
+                )
+            )))) {
+                scheduleComparisonPanelCollapses();
+            }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
 })();
