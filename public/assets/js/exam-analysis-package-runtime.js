@@ -201,7 +201,7 @@
                         },
                     fill: R === 0
                         ? { fgColor: { rgb: '0F766E' } }
-                        : (highlight ? { fgColor: { rgb: 'EAF6FF' } } : (R % 2 === 0 ? { fgColor: { rgb: 'F8FAFC' } } : undefined)),
+                        : (highlight ? { fgColor: { rgb: 'EAF6FF' } } : { fgColor: { rgb: R % 2 === 0 ? 'F8FAFC' : 'FFFFFF' } }),
                     border: {
                         top: { style: 'thin', color: { rgb: 'D8DEE6' } },
                         bottom: { style: 'thin', color: { rgb: 'D8DEE6' } },
@@ -225,9 +225,6 @@
     function addWorksheet(workbook, name, rows, options = {}) {
         const ws = window.XLSX.utils.aoa_to_sheet(rows && rows.length ? rows : [['暂无数据']]);
         if (options.freeze) ws['!freeze'] = options.freeze;
-        if (typeof window.decorateExcelSheet === 'function' && rows?.[0]) {
-            try { window.decorateExcelSheet(ws, rows[0]); } catch (_) {}
-        }
         applyPackageSheetStyle(ws, rows);
         window.XLSX.utils.book_append_sheet(workbook, ws, excelSafeName(name));
         return ws;

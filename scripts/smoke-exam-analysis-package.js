@@ -124,6 +124,9 @@ async function login(page) {
         if (!/EAF6FF/i.test(teacherCountySummary.stylesXml)) {
             throw new Error('county teacher workbook is missing highlight colors');
         }
+        if (/FEF3C7|FDE68A/i.test(teacherCountySummary.stylesXml)) {
+            throw new Error('county teacher workbook should not use ambiguous yellow highlights');
+        }
         const rawScoreName = files.find((name) => /二模成绩0527\.xlsx$/.test(name));
         if (!rawScoreName) throw new Error(`missing raw score workbook; files=${files.join(', ')}`);
         const rawScoreBuffer = await outerZip.file(rawScoreName).async('nodebuffer');
@@ -139,6 +142,9 @@ async function login(page) {
         }
         if (!/horizontal="center"/i.test(rawScoreSummary.stylesXml) || !/EAF6FF/i.test(rawScoreSummary.stylesXml)) {
             throw new Error('raw score workbook is missing centered alignment or highlight colors');
+        }
+        if (/FEF3C7|FDE68A/i.test(rawScoreSummary.stylesXml)) {
+            throw new Error('raw score workbook should not use ambiguous yellow highlights');
         }
         const result = {
             ok: true,
