@@ -11,12 +11,14 @@
     }
 
     function num(value, digits = 2) {
+        if (value === null || value === undefined || String(value).trim() === '') return '';
         const number = Number(value);
         if (!Number.isFinite(number)) return '';
         return Number(number.toFixed(digits));
     }
 
     function pct(value) {
+        if (value === null || value === undefined || String(value).trim() === '') return '';
         const number = Number(value);
         if (!Number.isFinite(number)) return '';
         return Number((number * 100).toFixed(2));
@@ -147,6 +149,27 @@
         return (Array.isArray(row) ? row : []).some((value) => /本校|本校教师|当前教师/.test(String(value || '')));
     }
 
+    function getTwoRateWeightsForPackage() {
+        return isGrade9Exam()
+            ? { avg: 50, excellent: 80, pass: 50 }
+            : { avg: 60, excellent: 70, pass: 70 };
+    }
+
+    function assignCompetitionRanks(rows, valueGetter, rankKey) {
+        const sorted = (rows || [])
+            .filter((row) => Number.isFinite(Number(valueGetter(row))))
+            .sort((left, right) => Number(valueGetter(right)) - Number(valueGetter(left)));
+        let lastValue = null;
+        let lastRank = 0;
+        sorted.forEach((row, index) => {
+            const value = Number(valueGetter(row));
+            const rank = lastValue !== null && Math.abs(value - lastValue) < 0.0001 ? lastRank : index + 1;
+            row[rankKey] = rank;
+            lastValue = value;
+            lastRank = rank;
+        });
+    }
+
     function getRankValue(header, value) {
         if (!/排|名次|序号/.test(String(header || ''))) return null;
         const number = Number(value);
@@ -235,11 +258,19 @@
         return ws;
     }
 
+    function addWorksheetIfUseful(workbook, name, rows, options = {}) {
+        if (!Array.isArray(rows) || rows.length <= 1) return null;
+        return addWorksheet(workbook, name, rows, options);
+    }
+
     function workbookToArrayBuffer(workbook) {
         return window.XLSX.write(workbook, { bookType: 'xlsx', type: 'array', cellStyles: true });
     }
 
-    function schoolRankRows(schools, subject) {
+    function schoolRankRows(schools, subject, scope = 'township') {
+        if (scope === 'county') {
+            return countySchoolRankRows(schools, subject);
+        }
         const isTotal = subject === 'total';
         const title = isTotal ? (window.CONFIG?.label || '总分') : subject;
         const rows = [[
@@ -275,18 +306,89 @@
         return rows;
     }
 
+    function countySchoolRankRows(schools, subject) {
+        const isTotal = subject === 'total';
+        const title = isTotal ? (window.CONFIG?.label || '总分') : subject;
+        const weights = getTwoRateWeightsForPackage();
+        const entries = (schools || [])
+            .filter((school) => school?.metrics?.[subject])
+            .map((school) => {
+                const metric = school.metrics[subject] || {};
+                return {
+                    school,
+                    name: school.name || '',
+                    count: Number(metric.count) || 0,
+                    avg: Number(metric.avg) || 0,
+                    excRate: Number(metric.excRate) || 0,
+                    passRate: Number(metric.passRate) || 0
+                };
+            });
+        const maxes = entries.reduce((acc, row) => {
+            acc.avg = Math.max(acc.avg, row.avg);
+            acc.excRate = Math.max(acc.excRate, row.excRate);
+            acc.passRate = Math.max(acc.passRate, row.passRate);
+            return acc;
+        }, { avg: 0, excRate: 0, passRate: 0 });
+        entries.forEach((row) => {
+            row.ratedAvg = maxes.avg ? row.avg / maxes.avg * weights.avg : 0;
+            row.ratedExc = maxes.excRate ? row.excRate / maxes.excRate * weights.excellent : 0;
+            row.ratedPass = maxes.passRate ? row.passRate / maxes.passRate * weights.pass : 0;
+            row.score = row.ratedAvg + row.ratedExc + row.ratedPass;
+        });
+        assignCompetitionRanks(entries, (row) => row.avg, 'rankAvg');
+        assignCompetitionRanks(entries, (row) => row.excRate, 'rankExc');
+        assignCompetitionRanks(entries, (row) => row.passRate, 'rankPass');
+        assignCompetitionRanks(entries, (row) => row.score, 'rankScore');
+        entries.sort((left, right) => (left.rankScore || 9999) - (right.rankScore || 9999) || String(left.name).localeCompare(String(right.name), 'zh-CN', { numeric: true }));
+
+        const rows = [[
+            '序号', '学校名称', '实考人数', `${title}平均分`, '平均分排名', '优秀率(%)', '优秀率排名',
+            '及格率(%)', '及格率排名', '平均分赋分', '优秀率赋分', '及格率赋分',
+            isTotal ? '两率一分总分' : '两率一分', '县域排名', '_标记'
+        ]];
+        entries.forEach((entry, index) => {
+            rows.push([
+                index + 1,
+                entry.name,
+                entry.count,
+                num(entry.avg),
+                entry.rankAvg || '',
+                pct(entry.excRate),
+                entry.rankExc || '',
+                pct(entry.passRate),
+                entry.rankPass || '',
+                num(entry.ratedAvg),
+                num(entry.ratedExc),
+                num(entry.ratedPass),
+                num(entry.score),
+                entry.rankScore || '',
+                sameSchool(entry.name, getMySchoolName()) ? '本校' : ''
+            ]);
+        });
+        return rows;
+    }
+
+    function getSchoolScoreForHorizontal(school, scope) {
+        if (scope === 'county') {
+            const metric = school?.metrics?.total || {};
+            const score = Number(metric.countyScore2Rate ?? school?.countyScore2Rate);
+            if (Number.isFinite(score) && score > 0) return score;
+        }
+        return Number(school?.score2Rate) || 0;
+    }
+
     function buildSchoolAnalysisWorkbook(scope = 'township') {
         const wb = window.XLSX.utils.book_new();
         const schools = scope === 'county' ? Object.values(window.SCHOOLS || {}) : getTownshipSchools();
         const subjects = getSubjectList(getAllRows());
-        addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope));
-        addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects));
-        addWorksheet(wb, '五科总 - 综合分析表', schoolRankRows(schools, 'total'));
-        subjects.forEach((subject) => addWorksheet(wb, `${subject} 学科明细`, schoolRankRows(schools, subject)));
+        if (scope !== 'county') addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope));
+        addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects, scope));
+        addWorksheet(wb, '五科总 - 综合分析表', schoolRankRows(schools, 'total', scope));
+        subjects.forEach((subject) => addWorksheet(wb, `${subject} 学科明细`, schoolRankRows(schools, subject, scope)));
         if (scope !== 'county') {
-            addWorksheet(wb, '高分段赋分详情', buildHighScoreRows(schools));
-            addWorksheet(wb, '指标生达标核算', buildIndicatorRows());
-            addWorksheet(wb, '后三分之一学生核算', buildBottomRows(schools));
+            addWorksheetIfUseful(wb, '高分段赋分详情', buildHighScoreRows(schools));
+            addWorksheetIfUseful(wb, '指标生达标核算', buildIndicatorRows());
+            addWorksheetIfUseful(wb, '后三分之一学生核算', buildBottomRows(schools));
         }
         return wb;
     }
@@ -384,8 +486,13 @@
         return rows;
     }
 
-    function buildHorizontalRows(schools, subjects) {
-        const sortedSchools = schools.slice().sort((a, b) => (a.rank2Rate || 9999) - (b.rank2Rate || 9999));
+    function buildHorizontalRows(schools, subjects, scope = 'township') {
+        const sortedSchools = schools.slice().sort((a, b) => {
+            const leftRank = scope === 'county' ? (a.countyRank2Rate || 9999) : (a.rank2Rate || 9999);
+            const rightRank = scope === 'county' ? (b.countyRank2Rate || 9999) : (b.rank2Rate || 9999);
+            if (leftRank !== rightRank) return leftRank - rightRank;
+            return getSchoolScoreForHorizontal(b, scope) - getSchoolScoreForHorizontal(a, scope);
+        });
         const rows = [['统计项目 / 学校', ...sortedSchools.map((school) => `${school.name}${sameSchool(school.name, getMySchoolName()) ? '（本校）' : ''}`)]];
         [...subjects, 'total'].forEach((subject) => {
             const label = subject === 'total' ? (window.CONFIG?.label || '总分') : subject;
@@ -481,9 +588,84 @@
         return wb;
     }
 
+    function studentRankKey(student) {
+        return [
+            student?.school,
+            student?.class,
+            student?.name,
+            student?.id || student?.examNo,
+            student?.total
+        ].map((value) => String(value ?? '').trim()).join('::');
+    }
+
+    function writeStudentRank(rankMap, student, label, rank) {
+        const current = rankMap.get(student) || {};
+        current[label] = rank;
+        rankMap.set(student, current);
+        const key = studentRankKey(student);
+        if (key.replace(/:/g, '')) {
+            const keyed = rankMap.get(key) || {};
+            keyed[label] = rank;
+            rankMap.set(key, keyed);
+        }
+    }
+
+    function assignStudentRankMap(rankMap, students, valueGetter, label) {
+        const ranked = (students || [])
+            .filter((student) => Number.isFinite(Number(valueGetter(student))))
+            .sort((left, right) => Number(valueGetter(right)) - Number(valueGetter(left)));
+        let lastValue = null;
+        let lastRank = 0;
+        ranked.forEach((student, index) => {
+            const value = Number(valueGetter(student));
+            const rank = lastValue !== null && Math.abs(value - lastValue) < 0.0001 ? lastRank : index + 1;
+            writeStudentRank(rankMap, student, label, rank);
+            lastValue = value;
+            lastRank = rank;
+        });
+    }
+
+    function buildStudentRankFallbacks(rows, subjects, includeCounty) {
+        const rankMap = new Map();
+        const list = Array.isArray(rows) ? rows : [];
+        assignStudentRankMap(rankMap, list, (student) => student.total, 'totalScope');
+        if (includeCounty) assignStudentRankMap(rankMap, getAllRows(), (student) => student.total, 'totalCounty');
+
+        const bySchool = new Map();
+        const byClass = new Map();
+        list.forEach((student) => {
+            const school = String(student?.school || '').trim();
+            const className = String(student?.class || '').trim();
+            if (!bySchool.has(school)) bySchool.set(school, []);
+            bySchool.get(school).push(student);
+            const classKey = `${school}::${className}`;
+            if (!byClass.has(classKey)) byClass.set(classKey, []);
+            byClass.get(classKey).push(student);
+        });
+        bySchool.forEach((students) => assignStudentRankMap(rankMap, students, (student) => student.total, 'totalSchool'));
+        byClass.forEach((students) => assignStudentRankMap(rankMap, students, (student) => student.total, 'totalClass'));
+
+        (subjects || []).forEach((subject) => {
+            assignStudentRankMap(rankMap, list, (student) => student.scores?.[subject], `${subject}:scope`);
+            if (includeCounty) assignStudentRankMap(rankMap, getAllRows(), (student) => student.scores?.[subject], `${subject}:county`);
+            bySchool.forEach((students) => assignStudentRankMap(rankMap, students, (student) => student.scores?.[subject], `${subject}:school`));
+        });
+        return rankMap;
+    }
+
+    function getStudentFallbackRank(rankMap, student, key) {
+        return rankMap.get(student)?.[key] || rankMap.get(studentRankKey(student))?.[key] || '';
+    }
+
+    function rankValueOrFallback(value, rankMap, student, key) {
+        const number = Number(value);
+        return Number.isFinite(number) && number > 0 ? number : getStudentFallbackRank(rankMap, student, key);
+    }
+
     function buildStudentDetailWorkbook(rows, options = {}) {
         const subjects = getSubjectList(rows);
         const includeCounty = !!options.includeCounty;
+        const fallbackRanks = buildStudentRankFallbacks(rows, subjects, includeCounty);
         const headers = ['学校', '班级', '姓名', '考号', '考场'];
         subjects.forEach((subject) => {
             headers.push(`${subject}分数`, `${subject}校排`, `${subject}镇排`);
@@ -504,18 +686,18 @@
             subjects.forEach((subject) => {
                 row.push(
                     student.scores?.[subject] ?? '',
-                    student.ranks?.[subject]?.school ?? '',
-                    student.ranks?.[subject]?.township ?? ''
+                    rankValueOrFallback(student.ranks?.[subject]?.school, fallbackRanks, student, `${subject}:school`),
+                    rankValueOrFallback(student.ranks?.[subject]?.township, fallbackRanks, student, `${subject}:scope`)
                 );
-                if (includeCounty) row.push(student.ranks?.[subject]?.county ?? '');
+                if (includeCounty) row.push(rankValueOrFallback(student.ranks?.[subject]?.county, fallbackRanks, student, `${subject}:county`));
             });
             row.push(
                 num(student.total, 1),
-                student.ranks?.total?.class ?? '',
-                student.ranks?.total?.school ?? '',
-                student.ranks?.total?.township ?? ''
+                rankValueOrFallback(student.ranks?.total?.class, fallbackRanks, student, 'totalClass'),
+                rankValueOrFallback(student.ranks?.total?.school, fallbackRanks, student, 'totalSchool'),
+                rankValueOrFallback(student.ranks?.total?.township, fallbackRanks, student, 'totalScope')
             );
-            if (includeCounty) row.push(student.ranks?.total?.county ?? '');
+            if (includeCounty) row.push(rankValueOrFallback(student.ranks?.total?.county, fallbackRanks, student, 'totalCounty'));
             row.push(sameSchool(student.school, getMySchoolName()) ? '本校' : '');
             data.push(row);
         });
