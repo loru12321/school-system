@@ -1,61 +1,16 @@
 /* Designer studio workspace: short-video energy with Win11 clarity. */
 :root {
-    --ds-ink: #0b1020;
-    --ds-text: #101827;
-    --ds-muted: #536174;
-    --ds-subtle: #7b8798;
-    --ds-canvas: #f5f7fb;
     --ds-stage: #0f1117;
-    --ds-stage-2: #171924;
-    --ds-panel: rgba(255, 255, 255, 0.94);
-    --ds-panel-solid: #ffffff;
-    --ds-panel-soft: #f8fafc;
-    --ds-line: rgba(148, 163, 184, 0.30);
-    --ds-line-strong: rgba(100, 116, 139, 0.32);
     --ds-pink: #ff416d;
     --ds-pink-strong: #e92b59;
     --ds-coral: #ff7a4f;
     --ds-cyan: #12c8bc;
-    --ds-blue: #2563eb;
-    --ds-violet: #6757f5;
-    --ds-radius: 14px;
-    --ds-radius-sm: 8px;
-    --ds-shadow: 0 24px 60px rgba(15, 23, 42, 0.11);
-    --ds-shadow-soft: 0 10px 26px rgba(15, 23, 42, 0.07);
     --ds-focus: 0 0 0 3px rgba(255, 61, 104, 0.18);
     --ds-stage-text: #f8fafc;
     --ds-stage-muted: rgba(248, 250, 252, 0.68);
-    --rp-canvas: var(--ds-canvas);
-    --rp-surface: var(--ds-panel-solid);
-    --rp-text: var(--ds-text);
-    --rp-muted: var(--ds-muted);
-    --rp-line: var(--ds-line);
-    --rp-blue: var(--ds-blue);
-    --rp-pink: var(--ds-pink);
-    --rp-cyan: var(--ds-cyan);
-    --pd-bg: var(--ds-canvas);
-    --pd-surface: var(--ds-panel-solid);
-    --pd-border: var(--ds-line);
-    --pd-text: var(--ds-text);
-    --pd-muted: var(--ds-muted);
-    --pd-primary: var(--ds-blue);
-    --pd-accent: var(--ds-cyan);
-    --pd-radius: var(--ds-radius);
-    --pd-shadow: var(--ds-shadow-soft);
-    --bg-body: var(--ds-canvas);
-    --bg-card: var(--ds-panel-solid);
-    --border: var(--ds-line);
-    --primary: var(--ds-blue);
 }
 
 /* Login poster: black video-stage energy, quiet professional form. */
-#login-overlay[data-login-skin="clean"],
-body.dark-mode #login-overlay[data-login-skin="clean"] {
-    background:
-        linear-gradient(90deg, rgba(15, 17, 23, 0.99) 0 54%, rgba(247, 249, 252, 0.97) 54%),
-        linear-gradient(135deg, rgba(255, 65, 109, 0.22), transparent 34%),
-        linear-gradient(225deg, rgba(18, 200, 188, 0.18), transparent 38%) !important;
-}
 
 #login-overlay[data-login-skin="clean"]::before {
     content: "";
@@ -67,27 +22,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
         linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
     background-size: 84px 84px;
     mask-image: linear-gradient(90deg, #000 0 51%, transparent 68%);
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-shell {
-    width: min(1660px, calc(100vw - 72px)) !important;
-    min-height: min(820px, calc(100vh - 72px)) !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 1.16fr) minmax(420px, 0.72fr) !important;
-    gap: 44px !important;
-    align-items: stretch !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage {
-    position: relative;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.10) !important;
-    border-radius: 30px !important;
-    background:
-        linear-gradient(135deg, rgba(255, 65, 109, 0.18), transparent 34%),
-        linear-gradient(225deg, rgba(18, 200, 188, 0.14), transparent 42%),
-        linear-gradient(180deg, #191c27, #0f1117) !important;
-    box-shadow: 0 38px 86px rgba(0, 0, 0, 0.34) !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-stage::before {
@@ -125,53 +59,10 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     z-index: 0;
 }
 
-#login-overlay[data-login-skin="clean"] .login-clean-brand {
-    position: relative;
-    z-index: 1;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    display: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-mark {
-    background: linear-gradient(135deg, var(--ds-pink), var(--ds-coral)) !important;
-    color: #fff !important;
-    border: 0 !important;
-    box-shadow: 0 18px 38px rgba(255, 65, 109, 0.30) !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-clean-brand strong,
 #login-overlay[data-login-skin="clean"] .login-clean-brand small,
 #login-overlay[data-login-skin="clean"] .login-clean-copy span {
     color: var(--ds-stage-muted) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    position: relative;
-    z-index: 2;
-    max-width: 640px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy span {
-    color: var(--ds-pink) !important;
-    letter-spacing: 0.08em !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    max-width: 640px;
-    color: var(--ds-stage-text) !important;
-    font-size: clamp(62px, 6.4vw, 104px) !important;
-    line-height: 0.92 !important;
-    letter-spacing: 0 !important;
-    text-shadow: 0 22px 58px rgba(0, 0, 0, 0.38) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy p {
-    max-width: 620px;
-    color: rgba(248, 250, 252, 0.72) !important;
-    font-size: 18px !important;
-    line-height: 1.9 !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-card {
@@ -186,36 +77,11 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     backdrop-filter: blur(26px) saturate(150%) !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-form-header {
-    margin-bottom: 24px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-form-header h2 {
-    color: var(--ds-ink) !important;
-    font-size: 28px !important;
-    letter-spacing: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-form-header p {
-    color: var(--ds-muted) !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-clean-switch {
     padding: 5px !important;
     border-radius: 18px !important;
     background: #eef1f5 !important;
     border: 1px solid rgba(148, 163, 184, 0.24) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .role-btn {
-    min-height: 46px !important;
-    border-radius: 14px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .role-btn.active {
-    background: #ffffff !important;
-    color: var(--ds-ink) !important;
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.10) !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-entry-field {
@@ -224,18 +90,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     background: #ffffff !important;
     border: 1px solid rgba(148, 163, 184, 0.26) !important;
     box-shadow: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-entry-prefix {
-    color: var(--ds-pink-strong) !important;
-    letter-spacing: 0.08em !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-submit {
-    min-height: 58px !important;
-    border-radius: 18px !important;
-    background: linear-gradient(135deg, var(--ds-pink), var(--ds-coral)) !important;
-    box-shadow: 0 22px 42px rgba(255, 65, 109, 0.28) !important;
 }
 
 #login-overlay[data-login-skin="clean"] .entrance-sound-panel {
@@ -275,13 +129,6 @@ body::before {
     position: relative;
     z-index: 1;
     background: transparent !important;
-}
-
-#app :is(h1, h2, h3, h4, h5, h6, strong, label, th),
-body.dark-mode #app :is(h1, h2, h3, h4, h5, h6, strong, label, th) {
-    color: var(--ds-ink) !important;
-    letter-spacing: 0 !important;
-    text-shadow: none !important;
 }
 
 #app :is(p, small, td, li, .text-muted, .muted, .subtle, .analysis-side-note, .shell-overview-copy),
@@ -360,10 +207,6 @@ body.dark-mode #app-sidebar.sidebar-spacious {
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-#app-sidebar .sidebar-nav-container {
-    padding-top: 86px !important;
-}
-
 #app-sidebar :is(.sidebar-menu-item, .sidebar-footer-item, .nav-link, .nav-cat-item) {
     width: 54px;
     min-height: 48px;
@@ -389,30 +232,8 @@ body.dark-mode #app-sidebar.sidebar-spacious {
     color: #ffffff !important;
 }
 
-#app-sidebar :is(.sidebar-menu-item.active, .nav-link.active, .nav-cat-item.active) {
-    background: linear-gradient(135deg, var(--ds-pink), var(--ds-coral)) !important;
-    border-color: rgba(255, 255, 255, 0.26) !important;
-    color: #ffffff !important;
-    box-shadow: 0 18px 34px rgba(255, 61, 104, 0.34) !important;
-}
-
-#app-sidebar :is(.sidebar-menu-item.active, .nav-link.active, .nav-cat-item.active)::after {
-    background: var(--ds-cyan) !important;
-    box-shadow: 0 0 18px rgba(17, 201, 191, 0.80);
-}
-
 #app-sidebar :is(.sidebar-menu-item__text, .sidebar-menu-item__meta, .sidebar-footer-item span) {
     color: inherit !important;
-}
-
-#main-header.shell-toolbar,
-body.dark-mode #main-header.shell-toolbar {
-    min-height: 66px;
-    background: rgba(255, 255, 255, 0.90) !important;
-    border: 1px solid rgba(255, 255, 255, 0.76) !important;
-    border-radius: 22px !important;
-    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.90) !important;
-    backdrop-filter: blur(24px) saturate(160%);
 }
 
 #main-header.shell-toolbar::before {
@@ -421,16 +242,6 @@ body.dark-mode #main-header.shell-toolbar {
     inset: auto 18px 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255, 65, 109, 0.55), rgba(18, 200, 188, 0.48), transparent);
-}
-
-#main-header.shell-toolbar :is(button, .btn, select, input),
-#app :is(select, input, textarea) {
-    min-height: 40px;
-    background: rgba(255, 255, 255, 0.88) !important;
-    border: 1px solid var(--ds-line-strong) !important;
-    border-radius: var(--ds-radius-sm) !important;
-    color: var(--ds-text) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
 }
 
 #app :is(button, .btn, select, input, textarea):focus-visible {
@@ -486,38 +297,12 @@ body.dark-mode .shell-overview-card--dock {
     background-size: auto, auto, 72px 72px, 72px 72px;
 }
 
-.shell-overview-card--dock::before {
-    width: 4px !important;
-    inset: 22px auto 22px 22px !important;
-    border-radius: 99px;
-    background: linear-gradient(180deg, var(--ds-pink), var(--ds-coral) 44%, var(--ds-cyan)) !important;
-}
-
-.shell-overview-card--dock :is(#shell-category-kicker, .shell-overview-kicker) {
-    color: var(--ds-pink) !important;
-    font-weight: 900 !important;
-}
-
-.shell-overview-card--dock :is(#shell-category-title, .shell-current-title) {
-    font-size: clamp(30px, 3.8vw, 46px) !important;
-    line-height: 1.04 !important;
-    color: #ffffff !important;
-}
-
-.shell-overview-card--dock :is(.shell-overview-copy, p, small, span:not(.shell-overview-kicker)) {
-    color: rgba(248, 250, 252, 0.74) !important;
-}
-
 .shell-overview-context-row {
     position: relative;
     z-index: 1;
     background: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 12px !important;
-}
-
-.shell-overview-context-row :is(button, .btn, .badge, span, strong) {
-    color: #ffffff !important;
 }
 
 .shell-module-rail-shell,
@@ -543,11 +328,6 @@ body.dark-mode .shell-overview-card--dock {
     opacity: 0.54;
 }
 
-.shell-module-rail-label,
-.shell-module-rail-status {
-    color: var(--ds-subtle) !important;
-}
-
 .shell-module-rail-chip,
 #app .sub-nav-chips :is(.chip-item, button) {
     position: relative;
@@ -557,21 +337,6 @@ body.dark-mode .shell-overview-card--dock {
     border-radius: 13px !important;
     color: var(--ds-text) !important;
     box-shadow: none !important;
-}
-
-.shell-module-rail-chip:hover,
-#app .sub-nav-chips :is(.chip-item, button):hover {
-    background: rgba(255, 255, 255, 0.96) !important;
-    border-color: rgba(255, 61, 104, 0.26) !important;
-    transform: translateY(-2px) !important;
-}
-
-.shell-module-rail-chip.is-active,
-#app .sub-nav-chips :is(.chip-item.active, button.active) {
-    background: linear-gradient(135deg, #171923, #232737) !important;
-    border-color: rgba(255, 65, 109, 0.30) !important;
-    color: #ffffff !important;
-    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.20) !important;
 }
 
 .shell-module-rail-chip.is-active::after,
@@ -584,16 +349,6 @@ body.dark-mode .shell-overview-card--dock {
     height: 2px;
     border-radius: 99px;
     background: linear-gradient(90deg, var(--ds-pink), var(--ds-coral), var(--ds-cyan));
-}
-
-.shell-module-rail-chip-index {
-    background: rgba(17, 201, 191, 0.16) !important;
-    color: var(--ds-cyan) !important;
-}
-
-.shell-module-rail-chip.is-active .shell-module-rail-chip-index {
-    background: rgba(255, 255, 255, 0.18) !important;
-    color: #ffffff !important;
 }
 
 .section.card-box,
@@ -631,11 +386,6 @@ body.dark-mode .shell-overview-card--dock {
     opacity: 0.90;
 }
 
-.section.card-box,
-.analysis-workspace {
-    padding: 18px !important;
-}
-
 .analysis-shell-head,
 .sec-head {
     background: rgba(255, 255, 255, 0.82) !important;
@@ -663,45 +413,11 @@ body.dark-mode .shell-overview-card--dock {
     font-weight: 800 !important;
 }
 
-#app tbody td {
-    border-bottom: 1px solid rgba(148, 163, 184, 0.16) !important;
-}
-
-#app tbody tr:hover td {
-    background: rgba(18, 200, 188, 0.06) !important;
-}
-
-#app :is(.metric-card, .stat-card, .summary-card, .rank-card, .feature-card) {
-    border-radius: 15px !important;
-    border: 1px solid rgba(148, 163, 184, 0.22) !important;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.90)) !important;
-    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.065) !important;
-}
-
-#app :is(.metric-card, .stat-card, .summary-card, .rank-card, .feature-card):hover {
-    border-color: rgba(255, 65, 109, 0.24) !important;
-    transform: translateY(-2px);
-}
-
-#app :is(.badge, .tag, .pill, .status-pill) {
-    border-radius: 999px !important;
-    border: 1px solid rgba(148, 163, 184, 0.24) !important;
-    background: rgba(255, 255, 255, 0.74) !important;
-    color: var(--ds-text) !important;
-}
-
 #app :is(.active, .selected, [aria-selected="true"]) > :is(.badge, .tag, .pill, .status-pill),
 #app :is(.badge.active, .tag.active, .pill.active, .status-pill.active) {
     background: rgba(255, 65, 109, 0.12) !important;
     border-color: rgba(255, 65, 109, 0.30) !important;
     color: var(--ds-pink-strong) !important;
-}
-
-#app .voice-fab,
-.voice-fab,
-#voice-control-btn {
-    background: linear-gradient(135deg, var(--ds-pink), #f92f72) !important;
-    box-shadow: 0 18px 34px rgba(255, 61, 104, 0.32) !important;
 }
 
 @media (max-width: 900px) {
@@ -762,78 +478,6 @@ body.dark-mode .shell-overview-card--dock {
 }
 
 /* Final login art direction: light, content-first, INS-inspired restraint. */
-#login-overlay[data-login-skin="clean"],
-body.dark-mode #login-overlay[data-login-skin="clean"] {
-    padding: clamp(22px, 4vw, 46px) !important;
-    background:
-        radial-gradient(circle at 10% 12%, rgba(254, 44, 85, 0.09), transparent 27%),
-        radial-gradient(circle at 80% 10%, rgba(255, 189, 89, 0.11), transparent 28%),
-        radial-gradient(circle at 34% 88%, rgba(37, 244, 238, 0.10), transparent 29%),
-        #ffffff !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-shell {
-    width: min(1320px, calc(100vw - 64px)) !important;
-    min-height: min(760px, calc(100vh - 56px)) !important;
-    grid-template-columns: minmax(560px, 1fr) minmax(390px, 470px) !important;
-    gap: clamp(28px, 4vw, 58px) !important;
-    align-items: center !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage {
-    min-height: min(720px, calc(100vh - 92px)) !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.72fr) !important;
-    grid-template-rows: auto 1fr auto !important;
-    gap: 22px !important;
-    padding: clamp(34px, 4.2vw, 58px) !important;
-    overflow: hidden !important;
-    border-radius: 22px !important;
-    color: #161823 !important;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.88)),
-        radial-gradient(circle at 12% 20%, rgba(254, 44, 85, 0.10), transparent 28%),
-        radial-gradient(circle at 86% 28%, rgba(255, 189, 89, 0.13), transparent 30%),
-        radial-gradient(circle at 70% 78%, rgba(37, 244, 238, 0.12), transparent 32%) !important;
-    border: 1px solid rgba(219, 226, 236, 0.92) !important;
-    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.10) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-    content: "" !important;
-    position: absolute !important;
-    top: 58px !important;
-    right: clamp(34px, 5vw, 66px) !important;
-    left: auto !important;
-    bottom: auto !important;
-    width: min(300px, 34%) !important;
-    height: min(560px, calc(100% - 116px)) !important;
-    border-radius: 28px !important;
-    background:
-        linear-gradient(#ffffff, #ffffff) padding-box,
-        linear-gradient(145deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
-    border: 2px solid transparent !important;
-    box-shadow: 0 26px 56px rgba(22, 24, 35, 0.16) !important;
-    opacity: 1 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-    content: "" !important;
-    position: absolute !important;
-    top: 92px !important;
-    right: clamp(54px, 6.6vw, 90px) !important;
-    left: auto !important;
-    bottom: auto !important;
-    width: min(244px, 28%) !important;
-    height: min(430px, calc(100% - 184px)) !important;
-    border-radius: 22px !important;
-    background:
-        linear-gradient(180deg, rgba(22, 24, 35, 0.92) 0 14%, transparent 14%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96)),
-        repeating-linear-gradient(180deg, transparent 0 82px, rgba(226, 232, 240, 0.8) 82px 83px) !important;
-    box-shadow: inset 0 0 0 1px rgba(222, 230, 240, 0.92) !important;
-    opacity: 1 !important;
-}
 
 #login-overlay[data-login-skin="clean"] .login-clean-copy {
     position: relative !important;
@@ -908,11 +552,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     padding: 0 !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-look-grid {
-    display: grid !important;
-    gap: 12px !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-look-card,
 #login-overlay[data-login-skin="clean"] .login-rhythm-strip {
     border: 1px solid rgba(222, 230, 240, 0.92) !important;
@@ -920,15 +559,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     background: rgba(255, 255, 255, 0.88) !important;
     color: #161823 !important;
     box-shadow: 0 16px 36px rgba(22, 24, 35, 0.08) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card {
-    min-height: 118px !important;
-    padding: 18px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card::before {
-    background: linear-gradient(180deg, #fe2c55, #25f4ee) !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-look-card strong,
@@ -974,60 +604,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
 }
 
 /* Lock final login composition after all legacy overrides. */
-#login-overlay[data-login-skin="clean"] .login-clean-stage {
-    grid-template-columns: minmax(380px, 1fr) minmax(238px, 300px) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    max-width: 500px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    max-width: none !important;
-    white-space: nowrap !important;
-    font-size: clamp(42px, 3.4vw, 58px) !important;
-    letter-spacing: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    transform: translateX(-10px) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card {
-    min-height: 104px !important;
-    background: rgba(255, 255, 255, 0.94) !important;
-    background-image: none !important;
-    color: #161823 !important;
-    box-shadow: 0 14px 30px rgba(22, 24, 35, 0.08) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card::after {
-    display: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card::before {
-    display: block !important;
-    inset: 18px auto 18px 14px !important;
-    width: 4px !important;
-    height: auto !important;
-    border-radius: 999px !important;
-    background: linear-gradient(180deg, #fe2c55, #25f4ee) !important;
-    opacity: 1 !important;
-    filter: none !important;
-    transform: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card span,
-#login-overlay[data-login-skin="clean"] .login-look-card strong,
-#login-overlay[data-login-skin="clean"] .login-look-card small {
-    color: #161823 !important;
-    text-shadow: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card span:last-child,
-#login-overlay[data-login-skin="clean"] .login-look-card small {
-    color: #667488 !important;
-}
 
 @media (max-width: 980px) {
     #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
@@ -1041,80 +617,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
 }
 
 /* Instagram-inspired login reset: white canvas, content preview, restrained gradient accent. */
-#login-overlay[data-login-skin="clean"],
-body.dark-mode #login-overlay[data-login-skin="clean"] {
-    padding: clamp(22px, 4vw, 46px) !important;
-    background:
-        radial-gradient(circle at 10% 12%, rgba(254, 44, 85, 0.10), transparent 26%),
-        radial-gradient(circle at 78% 10%, rgba(255, 189, 89, 0.12), transparent 28%),
-        radial-gradient(circle at 34% 88%, rgba(37, 244, 238, 0.10), transparent 28%),
-        #ffffff !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-shell {
-    width: min(1320px, calc(100vw - 64px)) !important;
-    min-height: min(760px, calc(100vh - 56px)) !important;
-    grid-template-columns: minmax(560px, 1fr) minmax(390px, 470px) !important;
-    gap: clamp(28px, 4vw, 58px) !important;
-    align-items: center !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage {
-    min-height: min(720px, calc(100vh - 92px)) !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.72fr) !important;
-    grid-template-rows: auto 1fr auto !important;
-    gap: 22px !important;
-    padding: clamp(34px, 4.2vw, 58px) !important;
-    overflow: hidden !important;
-    border-radius: 22px !important;
-    color: #161823 !important;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82)),
-        radial-gradient(circle at 12% 20%, rgba(254, 44, 85, 0.10), transparent 28%),
-        radial-gradient(circle at 86% 28%, rgba(255, 189, 89, 0.13), transparent 30%),
-        radial-gradient(circle at 70% 78%, rgba(37, 244, 238, 0.12), transparent 32%) !important;
-    border: 1px solid rgba(219, 226, 236, 0.92) !important;
-    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.10) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-    content: "" !important;
-    position: absolute !important;
-    top: 58px !important;
-    right: clamp(34px, 5vw, 66px) !important;
-    left: auto !important;
-    bottom: auto !important;
-    width: min(300px, 34%) !important;
-    height: min(560px, calc(100% - 116px)) !important;
-    border-radius: 28px !important;
-    background:
-        linear-gradient(#ffffff, #ffffff) padding-box,
-        linear-gradient(145deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
-    border: 2px solid transparent !important;
-    box-shadow: 0 26px 56px rgba(22, 24, 35, 0.16) !important;
-    opacity: 1 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-    content: "" !important;
-    position: absolute !important;
-    top: 92px !important;
-    right: clamp(54px, 6.6vw, 90px) !important;
-    left: auto !important;
-    bottom: auto !important;
-    width: min(244px, 28%) !important;
-    height: min(430px, calc(100% - 184px)) !important;
-    padding: 0 !important;
-    border-radius: 22px !important;
-    background:
-        linear-gradient(180deg, rgba(22, 24, 35, 0.92) 0 14%, transparent 14%),
-        linear-gradient(90deg, rgba(254, 44, 85, 0.86) 0 31%, rgba(255, 245, 232, 0.96) 31% 66%, rgba(37, 244, 238, 0.78) 66% 100%),
-        linear-gradient(180deg, #ffffff, #f8fafc) !important;
-    border: 1px solid rgba(219, 226, 236, 0.9) !important;
-    box-shadow: inset 0 0 0 10px #ffffff !important;
-    opacity: 1 !important;
-}
 
 #login-overlay[data-login-skin="clean"] .login-clean-brand {
     grid-column: 1 / 2 !important;
@@ -1130,14 +632,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     background: linear-gradient(135deg, #fe2c55, #ffbd59 48%, #25f4ee) !important;
     color: #ffffff !important;
     box-shadow: 0 14px 30px rgba(254, 44, 85, 0.18) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-brand strong {
-    color: #161823 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-brand small {
-    color: #7a8598 !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-copy {
@@ -1165,26 +659,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     text-shadow: none !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-clean-copy p {
-    max-width: 480px !important;
-    color: #5f6b80 !important;
-    font-size: 16px !important;
-    line-height: 1.8 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    grid-column: 1 / 3 !important;
-    align-self: center !important;
-    justify-self: end !important;
-    width: min(360px, 40%) !important;
-    margin-right: clamp(10px, 5vw, 70px) !important;
-    position: relative !important;
-    z-index: 5 !important;
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-look-card {
     min-height: 78px !important;
     display: grid !important;
@@ -1200,58 +674,11 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     backdrop-filter: blur(18px) saturate(150%) !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-look-card span {
-    grid-row: 1 / 3 !important;
-    width: 34px !important;
-    height: 34px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0 !important;
-    border-radius: 11px !important;
-    background: rgba(37, 244, 238, 0.18) !important;
-    color: #007a73 !important;
-    font-size: 12px !important;
-    font-weight: 900 !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-look-card strong {
     margin: 0 !important;
     color: #161823 !important;
     font-size: 16px !important;
     letter-spacing: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card small {
-    margin: 3px 0 0 !important;
-    color: #7a8598 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card--warm span {
-    background: rgba(255, 189, 89, 0.20) !important;
-    color: #9a5f00 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card--mint span {
-    background: rgba(254, 44, 85, 0.12) !important;
-    color: #c0183f !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
-    display: flex !important;
-    gap: 8px !important;
-    flex-wrap: wrap !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
-    height: 30px !important;
-    padding: 0 12px !important;
-    border-radius: 999px !important;
-    color: #38445a !important;
-    background: rgba(255, 255, 255, 0.86) !important;
-    border: 1px solid rgba(221, 227, 236, 0.95) !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
 }
 
 @media (max-width: 900px) {
@@ -1300,10 +727,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     --login-brand-initials: "ZH";
 }
 
-#login-overlay[data-login-skin="clean"] .login-clean-mark {
-    font-size: 0 !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-clean-mark::before {
     content: var(--login-brand-initials) !important;
     font-size: 13px !important;
@@ -1323,17 +746,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
         radial-gradient(circle at 82% 18%, rgba(37, 244, 238, 0.16), transparent 28%),
         radial-gradient(circle at 18% 86%, rgba(254, 44, 85, 0.13), transparent 32%),
         linear-gradient(150deg, #161823 0%, #192235 48%, #0f3537 100%) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-    inset: clamp(26px, 3vw, 42px) !important;
-    border-radius: 18px !important;
-    background:
-        linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-        linear-gradient(135deg, transparent 0 58%, rgba(37, 244, 238, 0.08) 58% 59%, transparent 59%) !important;
-    background-size: 84px 84px, 84px 84px, 100% 100% !important;
-    opacity: 0.72 !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
@@ -1363,40 +775,12 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     color: #ffffff !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-clean-brand small {
-    color: rgba(248, 250, 252, 0.66) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    align-self: end !important;
-    max-width: 640px !important;
-    margin: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy span {
-    color: var(--ds-favorite-cyan) !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
     max-width: 620px !important;
     margin: 12px 0 12px !important;
     font-size: clamp(54px, 5.4vw, 86px) !important;
     line-height: 1 !important;
     color: #ffffff !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy p {
-    max-width: 620px !important;
-    color: rgba(248, 250, 252, 0.74) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    position: relative !important;
-    z-index: 3 !important;
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 12px !important;
-    align-self: start !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-look-card {
@@ -1407,18 +791,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     border: 1px solid rgba(255, 255, 255, 0.13) !important;
     box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16) !important;
     backdrop-filter: blur(18px) saturate(150%) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card span {
-    display: inline-flex !important;
-    height: 22px !important;
-    align-items: center !important;
-    padding: 0 8px !important;
-    border-radius: 999px !important;
-    color: #161823 !important;
-    background: rgba(37, 244, 238, 0.88) !important;
-    font-size: 11px !important;
-    font-weight: 900 !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-look-card strong {
@@ -1434,15 +806,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     margin-top: 6px !important;
     color: rgba(248, 250, 252, 0.62) !important;
     font-size: 12px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card--warm span {
-    background: rgba(255, 245, 232, 0.92) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card--mint span {
-    background: rgba(254, 44, 85, 0.86) !important;
-    color: #ffffff !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-rhythm-strip {
@@ -1510,137 +873,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     --shell-sidebar-current: 82px !important;
 }
 
-body.shell-dashboard {
-    background:
-        radial-gradient(circle at 12% 4%, rgba(254, 44, 85, 0.035), transparent 28%),
-        radial-gradient(circle at 72% 2%, rgba(37, 244, 238, 0.045), transparent 30%),
-        linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%) !important;
-}
-
-#watermark-layer {
-    opacity: 0.016 !important;
-    background-size: 420px 290px !important;
-    filter: grayscale(1) contrast(0.72) !important;
-    mix-blend-mode: normal !important;
-}
-
-#app-sidebar.sidebar-spacious,
-.sidebar-spacious {
-    top: 18px !important;
-    left: 24px !important;
-    width: 82px !important;
-    min-width: 82px !important;
-    max-width: 82px !important;
-    height: calc(100vh - 36px) !important;
-    padding: 14px 10px !important;
-    border-radius: 18px !important;
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 250, 252, 0.84)) !important;
-    border: 1px solid rgba(204, 216, 230, 0.92) !important;
-    box-shadow: 0 18px 42px rgba(20, 30, 46, 0.12) !important;
-    backdrop-filter: blur(18px) saturate(150%) !important;
-    color: var(--ds-favorite-ink) !important;
-}
-
-#app-sidebar.sidebar-spacious::before,
-.sidebar-spacious::before {
-    content: "" !important;
-    position: absolute !important;
-    top: 12px !important;
-    left: 50% !important;
-    width: 30px !important;
-    height: 3px !important;
-    border-radius: 999px !important;
-    transform: translateX(-50%) !important;
-    background: linear-gradient(90deg, var(--ds-favorite-cyan), var(--ds-favorite-rose)) !important;
-    opacity: 0.9 !important;
-    pointer-events: none !important;
-}
-
-#app-sidebar.sidebar-spacious::after,
-.sidebar-spacious::after {
-    content: "" !important;
-    position: absolute !important;
-    inset: auto 15px 14px !important;
-    height: 1px !important;
-    border-radius: 999px !important;
-    background: linear-gradient(90deg, transparent, rgba(22, 24, 35, 0.18), transparent) !important;
-    pointer-events: none !important;
-}
-
-#app-sidebar.sidebar-spacious .sidebar-nav,
-.sidebar-spacious .sidebar-nav,
-#app-sidebar.sidebar-spacious .sidebar-spacious-nav,
-.sidebar-spacious .sidebar-spacious-nav {
-    width: 100% !important;
-    gap: 11px !important;
-    margin-top: 14px !important;
-    align-items: center !important;
-}
-
-#app-sidebar.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a),
-.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a) {
-    width: 46px !important;
-    min-width: 46px !important;
-    height: 46px !important;
-    min-height: 46px !important;
-    border-radius: 14px !important;
-    border: 1px solid rgba(202, 214, 230, 0.92) !important;
-    background: rgba(255, 255, 255, 0.82) !important;
-    color: #2f3b4f !important;
-    box-shadow: 0 8px 18px rgba(31, 42, 62, 0.07) !important;
-    opacity: 1 !important;
-}
-
-#app-sidebar.sidebar-spacious .sidebar-menu-item,
-.sidebar-spacious .sidebar-menu-item {
-    width: 52px !important;
-    min-width: 52px !important;
-    height: 60px !important;
-    border-radius: 14px !important;
-    color: #38445a !important;
-    opacity: 1 !important;
-}
-
-#app-sidebar.sidebar-spacious .sidebar-menu-item__icon,
-.sidebar-spacious .sidebar-menu-item__icon {
-    width: 40px !important;
-    height: 40px !important;
-    border-radius: 13px !important;
-    background: rgba(255, 255, 255, 0.92) !important;
-    border: 1px solid rgba(202, 214, 230, 0.95) !important;
-    color: #38445a !important;
-    box-shadow: 0 8px 16px rgba(31, 42, 62, 0.075) !important;
-}
-
-#app-sidebar.sidebar-spacious .sidebar-menu-item__icon i,
-.sidebar-spacious .sidebar-menu-item__icon i {
-    color: currentColor !important;
-    opacity: 1 !important;
-}
-
-#app-sidebar.sidebar-spacious .sidebar-menu-item:hover .sidebar-menu-item__icon,
-.sidebar-spacious .sidebar-menu-item:hover .sidebar-menu-item__icon {
-    border-color: rgba(37, 244, 238, 0.58) !important;
-    color: var(--ds-favorite-ink) !important;
-    box-shadow: 0 12px 22px rgba(22, 24, 35, 0.10) !important;
-}
-
-#app-sidebar.sidebar-spacious .sidebar-menu-item.active,
-.sidebar-spacious .sidebar-menu-item.active {
-    color: var(--ds-favorite-ink) !important;
-}
-
-#app-sidebar.sidebar-spacious .sidebar-menu-item.active .sidebar-menu-item__icon,
-.sidebar-spacious .sidebar-menu-item.active .sidebar-menu-item__icon {
-    background:
-        linear-gradient(135deg, rgba(37, 244, 238, 0.22), rgba(254, 44, 85, 0.18)),
-        #ffffff !important;
-    border-color: rgba(37, 244, 238, 0.66) !important;
-    color: var(--ds-favorite-ink) !important;
-    box-shadow: 0 14px 26px rgba(254, 44, 85, 0.12), 0 10px 20px rgba(37, 244, 238, 0.10) !important;
-}
-
 /* Login adaptation: graphite media-stage energy with a calm, legible education form. */
 #login-overlay[data-login-skin="clean"],
 body.dark-mode #login-overlay[data-login-skin="clean"] {
@@ -1704,30 +936,9 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     opacity: 0.86 !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-clean-brand,
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    position: relative !important;
-    z-index: 2 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-mark {
-    background: linear-gradient(135deg, var(--ds-favorite-cyan), var(--ds-favorite-rose)) !important;
-    color: #ffffff !important;
-    box-shadow: 0 16px 30px rgba(254, 44, 85, 0.28) !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-clean-brand strong,
 #login-overlay[data-login-skin="clean"] .login-clean-brand small {
     color: rgba(248, 250, 252, 0.78) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    max-width: 650px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy span {
-    color: var(--ds-favorite-cyan) !important;
-    letter-spacing: 0.08em !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
@@ -1737,13 +948,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     letter-spacing: 0 !important;
     color: #ffffff !important;
     text-shadow: 0 18px 38px rgba(0, 0, 0, 0.24) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy p {
-    max-width: 620px !important;
-    color: rgba(248, 250, 252, 0.72) !important;
-    font-size: 17px !important;
-    line-height: 1.85 !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-card {
@@ -1788,15 +992,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     color: #66758a !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-clean-switch,
-#login-overlay[data-login-skin="clean"] .login-entry-field,
-#login-overlay[data-login-skin="clean"] .entrance-sound-panel {
-    border-radius: 10px !important;
-    border: 1px solid rgba(205, 218, 232, 0.94) !important;
-    background: rgba(255, 255, 255, 0.92) !important;
-    box-shadow: none !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-clean-form {
     gap: 12px !important;
 }
@@ -1816,27 +1011,9 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     color: #536178 !important;
 }
 
-#login-overlay[data-login-skin="clean"] .role-btn.active {
-    background: var(--ds-favorite-ink) !important;
-    color: #ffffff !important;
-    box-shadow: 0 12px 24px rgba(22, 24, 35, 0.16) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-entry-prefix {
-    color: #00877e !important;
-    letter-spacing: 0.08em !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-entry-field:focus-within {
     border-color: rgba(37, 244, 238, 0.66) !important;
     box-shadow: 0 0 0 4px rgba(37, 244, 238, 0.12) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-submit {
-    min-height: 52px !important;
-    border-radius: 10px !important;
-    background: linear-gradient(135deg, #009e96, #0f6dff) !important;
-    box-shadow: 0 16px 30px rgba(0, 158, 150, 0.20) !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
@@ -1895,64 +1072,10 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     }
 }
 
-#app-sidebar.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a):hover,
-.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a):hover {
-    border-color: rgba(37, 244, 238, 0.58) !important;
-    background: #ffffff !important;
-    color: var(--ds-favorite-ink) !important;
-    box-shadow: 0 12px 24px rgba(22, 24, 35, 0.10) !important;
-}
-
-#app-sidebar.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"]),
-.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"]) {
-    border-color: rgba(37, 244, 238, 0.64) !important;
-    background:
-        linear-gradient(135deg, rgba(37, 244, 238, 0.18), rgba(254, 44, 85, 0.16)),
-        #ffffff !important;
-    color: var(--ds-favorite-ink) !important;
-    box-shadow: 0 14px 26px rgba(254, 44, 85, 0.12), 0 10px 20px rgba(37, 244, 238, 0.10) !important;
-}
-
-#app-sidebar.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"])::after,
-.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"])::after {
-    content: "" !important;
-    position: absolute !important;
-    right: -8px !important;
-    top: 12px !important;
-    bottom: 12px !important;
-    width: 3px !important;
-    border-radius: 999px !important;
-    background: var(--ds-favorite-rose) !important;
-    box-shadow: 0 0 0 4px rgba(254, 44, 85, 0.10) !important;
-}
-
-#app-sidebar.sidebar-spacious :is(svg, i, .icon, .lucide),
-.sidebar-spacious :is(svg, i, .icon, .lucide) {
-    width: 20px !important;
-    height: 20px !important;
-    color: currentColor !important;
-    stroke: currentColor !important;
-    fill: none !important;
-    opacity: 1 !important;
-}
-
 #app-sidebar.sidebar-spacious :is(.nav-label, .sidebar-label, .sidebar-text, small, span:not(.icon):not(.badge)),
 .sidebar-spacious :is(.nav-label, .sidebar-label, .sidebar-text, small, span:not(.icon):not(.badge)) {
     color: currentColor !important;
     opacity: 1 !important;
-}
-
-#main-header.shell-toolbar {
-    border-color: rgba(205, 218, 232, 0.86) !important;
-    background:
-        linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 252, 0.91)) !important;
-    box-shadow: 0 12px 32px rgba(24, 36, 56, 0.08) !important;
-}
-
-#shell-overview {
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(247, 253, 252, 0.92)) !important;
-    border-color: rgba(196, 224, 224, 0.9) !important;
 }
 
 .shell-eyebrow,
@@ -1961,42 +1084,8 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     color: #00877e !important;
 }
 
-.shell-module-rail-chip.is-active,
-#app .sub-nav-chips :is(.chip-item.active, button.active) {
-    background: var(--ds-favorite-ink) !important;
-    border-color: var(--ds-favorite-ink) !important;
-    box-shadow: 0 12px 24px rgba(22, 24, 35, 0.15) !important;
-}
-
-.shell-module-rail-chip-index {
-    background: var(--ds-favorite-mint) !important;
-    color: #007a73 !important;
-}
-
-.analysis-action-stack::before,
-.analysis-anchor-panel::before {
-    background: linear-gradient(180deg, var(--ds-favorite-rose), var(--ds-favorite-cyan)) !important;
-}
-
-#app :is(.btn-primary, .primary-btn, .report-btn, .analysis-primary-action) {
-    background: #009e96 !important;
-    box-shadow: 0 12px 22px rgba(0, 158, 150, 0.18) !important;
-}
-
 #app :is(.btn-primary, .primary-btn, .report-btn, .analysis-primary-action):hover {
     background: #008a83 !important;
-}
-
-#app tbody tr:hover td {
-    background: rgba(37, 244, 238, 0.055) !important;
-}
-
-#app tbody tr.highlight td,
-#app tbody tr.is-current td,
-#app tbody tr.current-school td,
-#app tbody tr:has(.badge-school) td,
-#app tbody tr:has(.school-current) td {
-    background: linear-gradient(90deg, rgba(254, 44, 85, 0.07), rgba(255, 245, 232, 0.75), rgba(37, 244, 238, 0.05)) !important;
 }
 
 @media (max-width: 900px) {
@@ -2026,257 +1115,8 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
 }
 
 /* EOF login lock: keep the entrance light, readable, and product-led. */
-#login-overlay[data-login-skin="clean"] .login-clean-stage {
-    grid-template-columns: minmax(380px, 1fr) minmax(238px, 300px) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    max-width: 500px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    max-width: none !important;
-    white-space: nowrap !important;
-    font-size: clamp(42px, 3.4vw, 58px) !important;
-    letter-spacing: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    transform: translateX(-10px) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card {
-    min-height: 104px !important;
-    background: rgba(255, 255, 255, 0.94) !important;
-    background-image: none !important;
-    color: #161823 !important;
-    box-shadow: 0 14px 30px rgba(22, 24, 35, 0.08) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card::before {
-    display: block !important;
-    inset: 18px auto 18px 14px !important;
-    width: 4px !important;
-    height: auto !important;
-    border-radius: 999px !important;
-    background: linear-gradient(180deg, #fe2c55, #25f4ee) !important;
-    opacity: 1 !important;
-    filter: none !important;
-    transform: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card::after {
-    display: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card span,
-#login-overlay[data-login-skin="clean"] .login-look-card strong,
-#login-overlay[data-login-skin="clean"] .login-look-card small {
-    color: #161823 !important;
-    text-shadow: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card span:last-child,
-#login-overlay[data-login-skin="clean"] .login-look-card small {
-    color: #667488 !important;
-}
 
 /* Absolute last pass: INS-inspired light login surface. */
-#login-overlay[data-login-skin="clean"],
-body.dark-mode #login-overlay[data-login-skin="clean"] {
-    padding: clamp(22px, 4vw, 46px) !important;
-    background:
-        radial-gradient(circle at 10% 12%, rgba(254, 44, 85, 0.10), transparent 26%),
-        radial-gradient(circle at 78% 10%, rgba(255, 189, 89, 0.12), transparent 28%),
-        radial-gradient(circle at 34% 88%, rgba(37, 244, 238, 0.10), transparent 28%),
-        #ffffff !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-shell {
-    width: min(1320px, calc(100vw - 64px)) !important;
-    min-height: min(760px, calc(100vh - 56px)) !important;
-    grid-template-columns: minmax(560px, 1fr) minmax(390px, 470px) !important;
-    gap: clamp(28px, 4vw, 58px) !important;
-    align-items: center !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage {
-    min-height: min(720px, calc(100vh - 92px)) !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.72fr) !important;
-    grid-template-rows: auto 1fr auto !important;
-    gap: 22px !important;
-    padding: clamp(34px, 4.2vw, 58px) !important;
-    overflow: hidden !important;
-    border-radius: 22px !important;
-    color: #161823 !important;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(255, 255, 255, 0.86)),
-        radial-gradient(circle at 12% 20%, rgba(254, 44, 85, 0.10), transparent 28%),
-        radial-gradient(circle at 86% 28%, rgba(255, 189, 89, 0.13), transparent 30%),
-        radial-gradient(circle at 70% 78%, rgba(37, 244, 238, 0.12), transparent 32%) !important;
-    border: 1px solid rgba(219, 226, 236, 0.92) !important;
-    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.10) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-    content: "" !important;
-    position: absolute !important;
-    top: 58px !important;
-    right: clamp(34px, 5vw, 66px) !important;
-    left: auto !important;
-    bottom: auto !important;
-    width: min(300px, 34%) !important;
-    height: min(560px, calc(100% - 116px)) !important;
-    border-radius: 28px !important;
-    background:
-        linear-gradient(#ffffff, #ffffff) padding-box,
-        linear-gradient(145deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
-    border: 2px solid transparent !important;
-    box-shadow: 0 26px 56px rgba(22, 24, 35, 0.16) !important;
-    opacity: 1 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-    content: "" !important;
-    position: absolute !important;
-    top: 92px !important;
-    right: clamp(54px, 6.6vw, 90px) !important;
-    left: auto !important;
-    bottom: auto !important;
-    width: min(244px, 28%) !important;
-    height: min(430px, calc(100% - 184px)) !important;
-    padding: 0 !important;
-    border-radius: 22px !important;
-    background:
-        linear-gradient(180deg, rgba(22, 24, 35, 0.92) 0 14%, transparent 14%),
-        linear-gradient(90deg, rgba(254, 44, 85, 0.86) 0 31%, rgba(255, 245, 232, 0.96) 31% 66%, rgba(37, 244, 238, 0.78) 66% 100%),
-        linear-gradient(180deg, #ffffff, #f8fafc) !important;
-    border: 1px solid rgba(219, 226, 236, 0.9) !important;
-    box-shadow: inset 0 0 0 10px #ffffff !important;
-    opacity: 1 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-brand,
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    grid-column: 1 / 2 !important;
-    position: relative !important;
-    z-index: 4 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-brand strong,
-#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    color: #161823 !important;
-    text-shadow: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-brand small {
-    color: #7a8598 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    align-self: end !important;
-    max-width: 500px !important;
-    margin: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy span {
-    color: #fe2c55 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    max-width: 500px !important;
-    margin: 12px 0 !important;
-    font-size: clamp(54px, 5.2vw, 78px) !important;
-    line-height: 1.02 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy p {
-    max-width: 480px !important;
-    color: #5f6b80 !important;
-    font-size: 16px !important;
-    line-height: 1.8 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    grid-column: 1 / 3 !important;
-    align-self: center !important;
-    justify-self: end !important;
-    width: min(360px, 40%) !important;
-    margin-right: clamp(10px, 5vw, 70px) !important;
-    position: relative !important;
-    z-index: 5 !important;
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card {
-    min-height: 78px !important;
-    display: grid !important;
-    grid-template-columns: auto 1fr !important;
-    grid-template-rows: auto auto !important;
-    column-gap: 12px !important;
-    align-items: center !important;
-    padding: 13px 14px !important;
-    border-radius: 14px !important;
-    background: rgba(255, 255, 255, 0.92) !important;
-    border: 1px solid rgba(221, 227, 236, 0.96) !important;
-    box-shadow: 0 16px 34px rgba(22, 24, 35, 0.10) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card span {
-    grid-row: 1 / 3 !important;
-    width: 34px !important;
-    height: 34px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0 !important;
-    border-radius: 11px !important;
-    background: rgba(37, 244, 238, 0.18) !important;
-    color: #007a73 !important;
-    font-size: 12px !important;
-    font-weight: 900 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card strong {
-    margin: 0 !important;
-    color: #161823 !important;
-    font-size: 16px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card small {
-    margin: 3px 0 0 !important;
-    color: #7a8598 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card--warm span {
-    background: rgba(255, 189, 89, 0.20) !important;
-    color: #9a5f00 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card--mint span {
-    background: rgba(254, 44, 85, 0.12) !important;
-    color: #c0183f !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
-    display: flex !important;
-    gap: 8px !important;
-    flex-wrap: wrap !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
-    height: 30px !important;
-    padding: 0 12px !important;
-    border-radius: 999px !important;
-    color: #38445a !important;
-    background: rgba(255, 255, 255, 0.86) !important;
-    border: 1px solid rgba(221, 227, 236, 0.95) !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
-}
 
 @media (max-width: 900px) {
     #login-overlay[data-login-skin="clean"] .login-clean-shell {
@@ -2306,201 +1146,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
 }
 
 /* True final login override: Instagram-like light product preview, not a dark poster. */
-#login-overlay[data-login-skin="clean"],
-body.dark-mode #login-overlay[data-login-skin="clean"] {
-    padding: clamp(22px, 4vw, 46px) !important;
-    background:
-        radial-gradient(circle at 10% 12%, rgba(254, 44, 85, 0.10), transparent 26%),
-        radial-gradient(circle at 78% 10%, rgba(255, 189, 89, 0.12), transparent 28%),
-        radial-gradient(circle at 34% 88%, rgba(37, 244, 238, 0.10), transparent 28%),
-        #ffffff !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-shell {
-    width: min(1320px, calc(100vw - 64px)) !important;
-    min-height: min(760px, calc(100vh - 56px)) !important;
-    grid-template-columns: minmax(560px, 1fr) minmax(390px, 470px) !important;
-    gap: clamp(28px, 4vw, 58px) !important;
-    align-items: center !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage {
-    min-height: min(720px, calc(100vh - 92px)) !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.72fr) !important;
-    grid-template-rows: auto 1fr auto !important;
-    gap: 22px !important;
-    padding: clamp(34px, 4.2vw, 58px) !important;
-    overflow: hidden !important;
-    border-radius: 22px !important;
-    color: #161823 !important;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(255, 255, 255, 0.86)),
-        radial-gradient(circle at 12% 20%, rgba(254, 44, 85, 0.10), transparent 28%),
-        radial-gradient(circle at 86% 28%, rgba(255, 189, 89, 0.13), transparent 30%),
-        radial-gradient(circle at 70% 78%, rgba(37, 244, 238, 0.12), transparent 32%) !important;
-    border: 1px solid rgba(219, 226, 236, 0.92) !important;
-    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.10) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-    content: "" !important;
-    position: absolute !important;
-    top: 58px !important;
-    right: clamp(34px, 5vw, 66px) !important;
-    left: auto !important;
-    bottom: auto !important;
-    width: min(300px, 34%) !important;
-    height: min(560px, calc(100% - 116px)) !important;
-    border-radius: 28px !important;
-    background:
-        linear-gradient(#ffffff, #ffffff) padding-box,
-        linear-gradient(145deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
-    border: 2px solid transparent !important;
-    box-shadow: 0 26px 56px rgba(22, 24, 35, 0.16) !important;
-    opacity: 1 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-    content: "" !important;
-    position: absolute !important;
-    top: 92px !important;
-    right: clamp(54px, 6.6vw, 90px) !important;
-    left: auto !important;
-    bottom: auto !important;
-    width: min(244px, 28%) !important;
-    height: min(430px, calc(100% - 184px)) !important;
-    padding: 0 !important;
-    border-radius: 22px !important;
-    background:
-        linear-gradient(180deg, rgba(22, 24, 35, 0.92) 0 14%, transparent 14%),
-        linear-gradient(90deg, rgba(254, 44, 85, 0.86) 0 31%, rgba(255, 245, 232, 0.96) 31% 66%, rgba(37, 244, 238, 0.78) 66% 100%),
-        linear-gradient(180deg, #ffffff, #f8fafc) !important;
-    border: 1px solid rgba(219, 226, 236, 0.9) !important;
-    box-shadow: inset 0 0 0 10px #ffffff !important;
-    opacity: 1 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-brand,
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    grid-column: 1 / 2 !important;
-    position: relative !important;
-    z-index: 4 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-brand strong,
-#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    color: #161823 !important;
-    text-shadow: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-brand small {
-    color: #7a8598 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    align-self: end !important;
-    max-width: 500px !important;
-    margin: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy span {
-    color: #fe2c55 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    max-width: 500px !important;
-    margin: 12px 0 !important;
-    font-size: clamp(54px, 5.2vw, 78px) !important;
-    line-height: 1.02 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy p {
-    max-width: 480px !important;
-    color: #5f6b80 !important;
-    font-size: 16px !important;
-    line-height: 1.8 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    grid-column: 1 / 3 !important;
-    align-self: center !important;
-    justify-self: end !important;
-    width: min(360px, 40%) !important;
-    margin-right: clamp(10px, 5vw, 70px) !important;
-    position: relative !important;
-    z-index: 5 !important;
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card {
-    min-height: 78px !important;
-    display: grid !important;
-    grid-template-columns: auto 1fr !important;
-    grid-template-rows: auto auto !important;
-    column-gap: 12px !important;
-    align-items: center !important;
-    padding: 13px 14px !important;
-    border-radius: 14px !important;
-    background: rgba(255, 255, 255, 0.92) !important;
-    border: 1px solid rgba(221, 227, 236, 0.96) !important;
-    box-shadow: 0 16px 34px rgba(22, 24, 35, 0.10) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card span {
-    grid-row: 1 / 3 !important;
-    width: 34px !important;
-    height: 34px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0 !important;
-    border-radius: 11px !important;
-    background: rgba(37, 244, 238, 0.18) !important;
-    color: #007a73 !important;
-    font-size: 12px !important;
-    font-weight: 900 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card strong {
-    margin: 0 !important;
-    color: #161823 !important;
-    font-size: 16px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card small {
-    margin: 3px 0 0 !important;
-    color: #7a8598 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card--warm span {
-    background: rgba(255, 189, 89, 0.20) !important;
-    color: #9a5f00 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card--mint span {
-    background: rgba(254, 44, 85, 0.12) !important;
-    color: #c0183f !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
-    display: flex !important;
-    gap: 8px !important;
-    flex-wrap: wrap !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
-    height: 30px !important;
-    padding: 0 12px !important;
-    border-radius: 999px !important;
-    color: #38445a !important;
-    background: rgba(255, 255, 255, 0.86) !important;
-    border: 1px solid rgba(221, 227, 236, 0.95) !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
-}
 
 @media (max-width: 900px) {
     #login-overlay[data-login-skin="clean"] .login-clean-shell {
@@ -2905,11 +1550,6 @@ body.dark-mode .shell-overview-card--dock {
     display: none !important;
 }
 
-.shell-module-rail-chip-index {
-    background: #e7f8f5 !important;
-    color: var(--ds-teal) !important;
-}
-
 .shell-module-rail-chip.is-active .shell-module-rail-chip-index {
     background: rgba(255, 255, 255, 0.14) !important;
     color: #ffffff !important;
@@ -2986,10 +1626,6 @@ body.dark-mode .table-wrap {
     border-bottom: 1px solid rgba(217, 225, 236, 0.72) !important;
 }
 
-#app tbody tr:hover td {
-    background: #f8fafc !important;
-}
-
 #app :is(.badge, .tag, .pill, .status-pill) {
     border-radius: 999px !important;
     border: 1px solid var(--ds-line) !important;
@@ -3011,21 +1647,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
         linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%) !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-clean-shell {
-    width: min(1480px, calc(100vw - 64px)) !important;
-    min-height: min(760px, calc(100vh - 64px)) !important;
-    grid-template-columns: minmax(0, 1.04fr) minmax(410px, 0.62fr) !important;
-    gap: 36px !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-stage {
-    border-radius: 22px !important;
-    background:
-        linear-gradient(135deg, #111827 0%, #182235 58%, #173b3d 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.10) !important;
-    box-shadow: 0 28px 64px rgba(15, 23, 42, 0.22) !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-clean-stage::before {
     inset: 30px !important;
     border-radius: 16px !important;
@@ -3038,21 +1659,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
 
 #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
     display: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-mark {
-    background: var(--ds-blue) !important;
-    box-shadow: 0 14px 28px rgba(31, 94, 255, 0.22) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    font-size: clamp(60px, 6vw, 96px) !important;
-    line-height: 0.98 !important;
-    color: #ffffff !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy span {
-    color: #55d6c5 !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-copy p,
@@ -3089,10 +1695,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     background: #101827 !important;
     color: #ffffff !important;
     box-shadow: none !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-entry-prefix {
-    color: var(--ds-blue) !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-submit {
@@ -3233,18 +1835,10 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     text-shadow: none !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-clean-brand small {
-    color: #7a8598 !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-clean-copy {
     align-self: end !important;
     max-width: 500px !important;
     margin: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy span {
-    color: #fe2c55 !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
@@ -3252,13 +1846,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     margin: 12px 0 !important;
     font-size: clamp(54px, 5.2vw, 78px) !important;
     line-height: 1.02 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy p {
-    max-width: 480px !important;
-    color: #5f6b80 !important;
-    font-size: 16px !important;
-    line-height: 1.8 !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-styleboard {
@@ -3301,12 +1888,6 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
     color: #007a73 !important;
     font-size: 12px !important;
     font-weight: 900 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card strong {
-    margin: 0 !important;
-    color: #161823 !important;
-    font-size: 16px !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-look-card small {
@@ -3573,31 +2154,12 @@ body.shell-dashboard {
 }
 
 /* TRUE EOF login lock: final entrance composition. */
-#login-overlay[data-login-skin="clean"] .login-clean-stage {
-    grid-template-columns: minmax(380px, 1fr) minmax(238px, 300px) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-clean-copy {
-    max-width: 500px !important;
-}
 
 #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
     max-width: none !important;
     white-space: nowrap !important;
     font-size: clamp(42px, 3.4vw, 58px) !important;
     letter-spacing: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    transform: translateX(-10px) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card {
-    min-height: 104px !important;
-    background: rgba(255, 255, 255, 0.94) !important;
-    background-image: none !important;
-    color: #161823 !important;
-    box-shadow: 0 14px 30px rgba(22, 24, 35, 0.08) !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-look-card::before {
@@ -3629,14 +2191,6 @@ body.shell-dashboard {
 }
 
 /* TRUE EOF login micro-polish: keep preview pills on one line. */
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    width: min(280px, 100%) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
-    gap: 6px !important;
-    padding: 12px 10px !important;
-}
 
 #login-overlay[data-login-skin="clean"] .login-rhythm-strip span,
 #login-overlay[data-login-skin="clean"] .login-rhythm-strip strong {
@@ -3675,33 +2229,11 @@ body.shell-dashboard {
     padding-bottom: clamp(36px, 5vh, 58px) !important;
 }
 
-#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    width: max-content !important;
-    max-width: 100% !important;
-    white-space: nowrap !important;
-    font-size: clamp(42px, 3vw, 48px) !important;
-    line-height: 1.04 !important;
-}
-
 #login-overlay[data-login-skin="clean"] .login-clean-copy p,
 #login-overlay[data-login-skin="clean"] .login-clean-copy .login-clean-lead {
     max-width: 285px !important;
     font-size: 15px !important;
     line-height: 1.75 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    grid-column: 2 !important;
-    align-self: center !important;
-    justify-self: end !important;
-    width: min(268px, 100%) !important;
-    transform: none !important;
-    margin: 0 !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card {
-    min-height: 96px !important;
-    padding: 16px 18px 16px 58px !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-rhythm-strip {
@@ -3734,10 +2266,6 @@ body.shell-dashboard {
 }
 
 /* TRUE EOF login preview redesign: remove the crude phone outline and use a quiet feed panel. */
-#login-overlay[data-login-skin="clean"] .login-clean-stage::before,
-#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-    display: none !important;
-}
 
 #login-overlay[data-login-skin="clean"] .login-styleboard {
     position: relative !important;
@@ -3862,13 +2390,6 @@ body.shell-dashboard {
 }
 
 /* TRUE EOF favorite palette pass: soften pure black into graphite and keep accents small. */
-:root {
-    --ds-favorite-ink: #242a38 !important;
-    --ds-favorite-ink-soft: #38445a !important;
-    --ds-favorite-rose: #fe2c55 !important;
-    --ds-favorite-cyan: #25dcd6 !important;
-    --ds-favorite-warm: #ffb86a !important;
-}
 
 #login-overlay[data-login-skin="clean"] .login-clean-copy h1,
 #login-overlay[data-login-skin="clean"] .login-clean-panel h2,
@@ -3894,24 +2415,6 @@ body.shell-dashboard {
     color: #ffffff !important;
     background: linear-gradient(135deg, #2563eb 0%, #315df4 52%, #25dcd6 100%) !important;
     box-shadow: 0 16px 30px rgba(37, 99, 235, 0.18) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-styleboard {
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 252, 255, 0.92)),
-        radial-gradient(circle at 18% 10%, rgba(254, 44, 85, 0.07), transparent 28%),
-        radial-gradient(circle at 88% 94%, rgba(37, 220, 214, 0.10), transparent 32%),
-        radial-gradient(circle at 52% 100%, rgba(255, 184, 106, 0.08), transparent 24%) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-look-card span:first-child {
-    color: var(--ds-favorite-ink) !important;
-    background: linear-gradient(135deg, rgba(37, 220, 214, 0.16), rgba(254, 44, 85, 0.08)) !important;
-}
-
-#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
-    color: var(--ds-favorite-ink-soft) !important;
-    background: rgba(255, 255, 255, 0.86) !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-panel button[type="submit"],

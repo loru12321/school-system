@@ -5,9 +5,8 @@ const root = path.resolve(__dirname, '..');
 const mobileLoginPath = path.join(root, 'src', 'assets', 'css', 'mobile-login.css');
 const productRedesignPath = path.join(root, 'src', 'assets', 'css', 'product-redesign.css');
 const activeThemeLayers = [
-  ['product-redesign.css', 118_000, 900],
-  ['readable-pop-workspace.css', 13_000, 130],
-  ['designer-studio-workspace.css', 164_000, 2_160],
+  ['product-redesign.css', 104_000, 900],
+  ['designer-studio-workspace.css', 115_000, 1_500],
   ['editorial-control-system.css', 33_000, 540],
   ['mature-system-shell.css', 26_000, 280],
 ];
