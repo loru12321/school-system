@@ -2104,6 +2104,35 @@ async function runModuleDeepCheck(page, id) {
             }
         };
     }
+    if (id === 'teacher-detail-comparison') {
+        return page.evaluate(async () => {
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const deadline = Date.now() + 8000;
+            let state = null;
+            while (Date.now() < deadline) {
+                const table = document.getElementById('teacherComparisonTable');
+                const text = String(table?.textContent || '');
+                const rows = table ? table.querySelectorAll('tbody tr').length : 0;
+                state = {
+                    tableReady: !!table,
+                    rows,
+                    pendingCleared: !/正在整理教师对比表/.test(text),
+                    hasTeacherRows: rows > 1 && /联考赋分|教学质量分/.test(text)
+                };
+                if (state.tableReady && state.pendingCleared && state.hasTeacherRows) break;
+                await wait(150);
+            }
+            return {
+                ok: !!(state?.tableReady && state?.pendingCleared && state?.hasTeacherRows),
+                checks: state || {
+                    tableReady: false,
+                    rows: 0,
+                    pendingCleared: false,
+                    hasTeacherRows: false
+                }
+            };
+        });
+    }
     if (id === 'county-analysis') {
         return page.evaluate(async () => {
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));

@@ -280,6 +280,7 @@
         const table = document.getElementById('teacherComparisonTable');
         if (!table) return false;
         table.classList.add('comparison-table');
+        delete table.dataset.teacherComparisonSignature;
         table.innerHTML = `
             <tbody>
                 <tr>
@@ -759,7 +760,7 @@
     function releaseTeacherAnalysisHeavyDom() {
         clearTeacherAnalysisDeferredRender();
         const section = document.getElementById('teacher-analysis');
-        if (!section || section.classList.contains('active')) return;
+        if (!section || isTeacherAnalysisActive()) return;
         const heavyTargets = [
             ['teacherCardsContainer', '教师卡片已收起，重新进入本模块后自动刷新。'],
             ['teacher-township-ranking-container', '教师乡镇排名已收起，重新进入本模块后自动刷新。']

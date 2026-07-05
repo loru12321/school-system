@@ -8445,8 +8445,12 @@ window.addEventListener('load', () => {
         `;
     document.head.appendChild(style);
     appDebug("✅ 已限定表格滚动容器修复范围");
-    applyExamMetaUI();
-    applyArchiveLockUI();
+    const applyExamChromeWhenReady = () => {
+        if (typeof window.applyExamMetaUI === 'function') window.applyExamMetaUI();
+        if (typeof window.applyArchiveLockUI === 'function') window.applyArchiveLockUI();
+    };
+    applyExamChromeWhenReady();
+    setTimeout(applyExamChromeWhenReady, 240);
     if (typeof CohortDB !== 'undefined') CohortDB.renderExamList();
     updateIndicatorUIState();
     ['exam-year', 'exam-term', 'exam-type', 'exam-name', 'exam-date', 'exam-reset-point'].forEach(id => {
