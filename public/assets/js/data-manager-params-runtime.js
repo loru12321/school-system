@@ -60,19 +60,6 @@
     }
 
     function scheduleStatusRender(manager) {
-        if (manager && typeof manager.scheduleDataManagerStatusRender === 'function') {
-            manager.scheduleDataManagerStatusRender({ delay: 0, timeout: 900 });
-            return;
-        }
-        if (root.SystemPerformance && typeof root.SystemPerformance.scheduleIdle === 'function') {
-            if (pendingStatusRender) return;
-            pendingStatusRender = true;
-            root.SystemPerformance.scheduleIdle(() => {
-                pendingStatusRender = false;
-                renderStatus(manager);
-            }, { label: 'data-manager-params-status', delay: 0, timeout: 900 });
-            return;
-        }
         const raf = typeof root.requestAnimationFrame === 'function' ? root.requestAnimationFrame : null;
         const timer = typeof root.setTimeout === 'function' ? root.setTimeout : null;
         if (!raf && !timer) {

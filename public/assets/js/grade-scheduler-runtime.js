@@ -5,6 +5,7 @@ const SCHEDULER = {
     data: [], // 存储导入的 {teacher, subject, classes:[], hours}
     schedule: {}, // 结果
     classes: [], // 所有班级列表
+    teacherSlotIndex: null,
     maxIterations: 8000,
 
     // 存储动态添加的规则
@@ -204,6 +205,7 @@ const SCHEDULER = {
             try {
                 // 初始化
                 this.schedule = {};
+                this.resetTeacherSlotIndex();
                 this.classes.forEach(c => this.schedule[c] = {});
 
                 const days = ['周一', '周二', '周三', '周四', '周五'];
@@ -247,6 +249,7 @@ const SCHEDULER = {
                     this.classes.forEach(cls => {
                         if (!this.schedule[cls][slotId]) {
                             this.schedule[cls][slotId] = { subject: '班会', teacher: '班主任', fixed: true };
+                            this.markTeacherBusy('班主任', slotId);
                         }
                     });
                 });
@@ -296,6 +299,7 @@ const SCHEDULER = {
                                         fixed: true,
                                         isCombined: true
                                     };
+                                    this.markTeacherBusy(t.name, fullSlotId);
                                 });
 
                                 // 4. 扣减该老师的待排课时
@@ -346,6 +350,7 @@ const SCHEDULER = {
                             if (isFriEve) continue;
 
                             this.schedule[cls][sid] = { subject: t.subject, teacher: t.name };
+                            this.markTeacherBusy(t.name, sid);
                             remaining--;
                             placedCount++;
                         }
@@ -562,12 +567,28 @@ const SCHEDULER = {
         return res;
     },
 
+    normalizeTeacherName: function (teacherName) {
+        return String(teacherName || '').replace(/\([^)]*\)/g, '').trim();
+    },
+
+    resetTeacherSlotIndex: function () {
+        this.teacherSlotIndex = Object.create(null);
+    },
+
+    markTeacherBusy: function (teacherName, slotId) {
+        const normalizedTeacher = this.normalizeTeacherName(teacherName);
+        if (!normalizedTeacher || !slotId) return;
+        if (!this.teacherSlotIndex) this.resetTeacherSlotIndex();
+        this.teacherSlotIndex[`${normalizedTeacher}_${slotId}`] = true;
+    },
+
     isTeacherBusyInOtherClass: function (teacherName, slotId) {
-        const normalizedTeacher = String(teacherName || '').replace(/\([^)]*\)/g, '').trim();
+        const normalizedTeacher = this.normalizeTeacherName(teacherName);
         if (!normalizedTeacher) return false;
+        if (this.teacherSlotIndex && this.teacherSlotIndex[`${normalizedTeacher}_${slotId}`]) return true;
         for (let cls of this.classes) {
             const cell = this.schedule[cls][slotId];
-            const cellTeacher = String(cell?.teacher || '').replace(/\([^)]*\)/g, '').trim();
+            const cellTeacher = this.normalizeTeacherName(cell?.teacher);
             if (cellTeacher === normalizedTeacher) return true;
         }
         return false;

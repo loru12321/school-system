@@ -4848,10 +4848,37 @@ h1 {
     margin-top: 15px;
     width: 100%;
 
-    /* 关键修复：绝对禁止限制高度，有多少数据显示多少行 */
-    max-height: none !important;
-    overflow-y: visible !important;
-    display: block !important;
+    max-height: none;
+    overflow-y: visible;
+    display: block;
+}
+
+.analysis-table-shell,
+.analysis-workspace .table-wrap.analysis-table-shell {
+    position: relative;
+    max-height: min(72vh, 720px) !important;
+    overflow: auto !important;
+    scroll-padding-top: 42px;
+}
+
+.analysis-table-shell .analysis-generated-table thead th,
+.analysis-table-shell table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.analysis-table-shell .analysis-generated-table th:first-child,
+.analysis-table-shell .analysis-generated-table td:first-child,
+.analysis-table-shell table th:first-child,
+.analysis-table-shell table td:first-child {
+    position: sticky;
+    left: 0;
+}
+
+.analysis-table-shell .analysis-generated-table thead th:first-child,
+.analysis-table-shell table thead th:first-child {
+    z-index: 40;
 }
 
 /* 优化表格字体 */

@@ -8417,17 +8417,33 @@ window.bindModalInteractionGuards = bindModalInteractionGuards;
 window.addEventListener('load', () => {
     const style = document.createElement('style');
     style.innerHTML = `
-            .table-wrap {
+            .table-wrap:not(.analysis-table-shell):not(.analysis-scroll-shell):not([style*="overflow"]) {
                 max-height: none !important;
                 height: auto !important;
                 overflow-y: visible !important;
                 display: block !important;
             }
+            .analysis-table-shell {
+                position: relative !important;
+                max-height: min(72vh, 720px) !important;
+                overflow: auto !important;
+                scroll-padding-top: 42px !important;
+            }
+            .analysis-table-shell table thead th,
+            .analysis-table-shell .analysis-generated-table thead th {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 30 !important;
+            }
+            .analysis-table-shell table thead th:first-child,
+            .analysis-table-shell .analysis-generated-table thead th:first-child {
+                z-index: 40 !important;
+            }
             /* 防止 rank2Rate 计算错误导致行隐藏 */
             tr { display: table-row !important; }
         `;
     document.head.appendChild(style);
-    appDebug("✅ 已强制解除表格高度限制");
+    appDebug("✅ 已限定表格滚动容器修复范围");
     applyExamMetaUI();
     applyArchiveLockUI();
     if (typeof CohortDB !== 'undefined') CohortDB.renderExamList();
