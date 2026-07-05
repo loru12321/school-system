@@ -1398,122 +1398,6 @@
         return window.TEACHER_STATS;
     }
 
-    function generateTeacherPairing() {
-        const container = document.getElementById('teacher-pairing-suggestions');
-        if (!container) return;
-        container.innerHTML = '';
-        const schoolRecord = teacherGetSchoolRecord(window.MY_SCHOOL);
-        if (!window.MY_SCHOOL || !schoolRecord) return;
-
-        const schoolMetrics = schoolRecord.metrics || {};
-        const pairs = [];
-        const seenPairIds = new Set();
-        const addPair = (pair) => {
-            if (!pair || !pair.teacher1 || !pair.teacher2 || pair.teacher1.name === pair.teacher2.name) return false;
-            if (seenPairIds.has(pair.id)) return false;
-            seenPairIds.add(pair.id);
-            pairs.push(pair);
-            return true;
-        };
-        const buildPairId = (left, right, subject) => `${[left.name, right.name].sort().join('-')}-${subject}`;
-        (window.SUBJECTS || []).forEach((subject) => {
-            const baseline = schoolMetrics[subject];
-            const teachers = [];
-            Object.keys(window.TEACHER_STATS || {}).forEach((teacherName) => {
-                if (window.TEACHER_STATS[teacherName]?.[subject]) {
-                    teachers.push({ name: teacherName, data: window.TEACHER_STATS[teacherName][subject] });
-                }
-            });
-            if (teachers.length < 2) return;
-
-            const typeA = teachers.filter((teacher) => (
-                baseline
-                && teacher.data.passRate > baseline.passRate
-                && teacher.data.excellentRate < baseline.excRate
-            ));
-            const typeB = teachers.filter((teacher) => (
-                baseline
-                && teacher.data.excellentRate > baseline.excRate
-                && teacher.data.passRate < baseline.passRate
-            ));
-            const subjectPairs = [];
-            typeA.forEach((left) => {
-                typeB.forEach((right) => {
-                    if (left.name === right.name) return;
-                    subjectPairs.push({
-                        id: buildPairId(left, right, subject),
-                        subject,
-                        teacher1: left,
-                        teacher2: right,
-                        score: Math.abs(teacherToNumber(left.data.passRate, 0) - teacherToNumber(right.data.passRate, 0))
-                            + Math.abs(teacherToNumber(right.data.excellentRate, 0) - teacherToNumber(left.data.excellentRate, 0)),
-                        source: 'baseline'
-                    });
-                });
-            });
-
-            if (!subjectPairs.length) {
-                teachers.forEach((left) => {
-                    teachers.forEach((right) => {
-                        if (left.name === right.name) return;
-                        const passGap = teacherToNumber(left.data.passRate, 0) - teacherToNumber(right.data.passRate, 0);
-                        const excellentGap = teacherToNumber(right.data.excellentRate, 0) - teacherToNumber(left.data.excellentRate, 0);
-                        const countGapPenalty = Math.abs(
-                            Math.sqrt(Math.max(teacherToNumber(left.data.studentCount, 0), 0))
-                            - Math.sqrt(Math.max(teacherToNumber(right.data.studentCount, 0), 0))
-                        ) * 0.01;
-                        const score = passGap + excellentGap - countGapPenalty;
-                        if (score <= 0.015 || passGap <= 0 || excellentGap <= 0) return;
-                        subjectPairs.push({
-                            id: buildPairId(left, right, subject),
-                            subject,
-                            teacher1: left,
-                            teacher2: right,
-                            score,
-                            source: 'complement'
-                        });
-                    });
-                });
-            }
-
-            subjectPairs
-                .sort((left, right) => right.score - left.score)
-                .slice(0, 2)
-                .forEach(addPair);
-        });
-
-        if (!pairs.length) {
-            container.innerHTML = '<div style="text-align:center; color:#999; grid-column:1/-1;">暂无明显的互补型结对建议，说明各位老师发展较为均衡或差异不大。</div>';
-            return;
-        }
-
-        pairs.forEach((pair) => {
-            const card = document.createElement('div');
-            card.className = 'pairing-card';
-            card.innerHTML = `
-                <div class="pairing-side">
-                    <div class="pairing-role">基础扎实型</div>
-                    <div class="pairing-name">${teacherEscapeHtml(pair.teacher1.name)}</div>
-                    <div class="pairing-skill">及格率高 (${teacherFormatPercent(pair.teacher1.data.passRate, 1)})</div>
-                    <div class="pairing-need">需提升优秀率</div>
-                </div>
-                <div class="pairing-arrow">
-                    <div style="text-align:center;">
-                        <i class="ti ti-arrows-left-right"></i>
-                        <div class="pairing-tag">${teacherEscapeHtml(pair.subject)}</div>
-                    </div>
-                </div>
-                <div class="pairing-side" style="text-align:right;">
-                    <div class="pairing-role">培优拔尖型</div>
-                    <div class="pairing-name">${teacherEscapeHtml(pair.teacher2.name)}</div>
-                    <div class="pairing-skill">优秀率高 (${teacherFormatPercent(pair.teacher2.data.excellentRate, 1)})</div>
-                    <div class="pairing-need">需提升及格率</div>
-                </div>
-            `;
-            container.appendChild(card);
-        });
-    }
-
     function calculateTeacherTownshipRanking(options = {}) {
         let sourceTeacherStats = options.teacherStats || null;
         if (!sourceTeacherStats && options.teacherMetricScope === 'admin' && typeof analyzeTeachersV2 === 'function') {
@@ -1684,6 +1568,7 @@
         teacherFormatSigned,
         teacherFormatPercent,
         teacherEscapeHtml,
+        teacherGetSchoolRecord,
         teacherGetWeightConfig,
         getProgressBaselineExamList,
         resolveProgressBaselineExamEntry,
@@ -1693,7 +1578,6 @@
         teacherGetRollingBaselineExamEntries,
         analyzeTeachers: analyzeTeachersV2,
         analyzeTeachersV2,
-        generateTeacherPairing,
         calculateTeacherTownshipRanking
     });
 

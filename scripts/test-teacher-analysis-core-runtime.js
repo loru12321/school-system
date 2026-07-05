@@ -4,7 +4,9 @@ const path = require('path');
 const vm = require('vm');
 
 const runtimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-core-runtime.js');
+const pairingRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-pairing-runtime.js');
 const source = fs.readFileSync(runtimePath, 'utf8');
+const pairingSource = fs.readFileSync(pairingRuntimePath, 'utf8');
 
 function normalizeAliasSchool(value) {
     return String(value || '').trim().replace(/别名/g, '');
@@ -69,8 +71,8 @@ const context = {
     CURRENT_EXAM_ID: '',
     CURRENT_TERM_ID: '',
     TARGETS: {},
-    SUBJECTS: ['数学', '语文'],
-    THRESHOLDS: { 数学: { exc: 90, pass: 60 }, 语文: { exc: 90, pass: 60 } },
+    SUBJECTS: ['数学', '语文', '物理'],
+    THRESHOLDS: { 数学: { exc: 90, pass: 60 }, 语文: { exc: 90, pass: 60 }, 物理: { exc: 90, pass: 60 } },
     RAW_DATA: [],
     SCHOOLS: {},
     TEACHER_MAP: {},
@@ -81,26 +83,32 @@ context.window = context;
 
 vm.createContext(context);
 vm.runInContext(source, context, { filename: runtimePath });
+vm.runInContext(pairingSource, context, { filename: pairingRuntimePath });
 
 context.MY_SCHOOL = '甲校别名';
 context.SCHOOLS = {
     甲校: {
         metrics: {
             数学: { avg: 80, excRate: 0.4, passRate: 0.8, count: 2 },
-            语文: { avg: 82, excRate: 0.35, passRate: 0.75, count: 2 }
+            语文: { avg: 82, excRate: 0.35, passRate: 0.75, count: 2 },
+            物理: { avg: 76, excRate: 0.3, passRate: 0.7, count: 2 }
         }
     },
     乙校: { metrics: { 数学: { avg: 70, excRate: 0.2, passRate: 0.7, count: 2 } } }
 };
 context.TEACHER_STATS = {
-    基础老师: { 数学: { passRate: 0.9, excellentRate: 0.2 }, 语文: { passRate: 0.88, excellentRate: 0.3 } },
+    基础老师: { 数学: { passRate: 0.9, excellentRate: 0.2 }, 语文: { passRate: 0.88, excellentRate: 0.3 }, 物理: { passRate: 0.74, excellentRate: 0.28, avg: 76 } },
     培优老师: { 数学: { passRate: 0.7, excellentRate: 0.6 }, 语文: { passRate: 0.74, excellentRate: 0.52 } }
 };
 context.generateTeacherPairing();
-assert.strictEqual(pairingContainer.children.length, 2, 'pairing should generate suggestions across available subjects');
+assert.strictEqual(pairingContainer.children.length, 3, 'pairing should generate at least one suggestion for each configured subject');
 assert.ok(
     pairingContainer.children.some((child) => String(child.innerHTML || '').includes('语文')),
     'pairing should include non-math subject suggestions when complementary teachers exist'
+);
+assert.ok(
+    pairingContainer.children.some((child) => String(child.innerHTML || '').includes('物理')),
+    'pairing should include a subject-level advice card when a configured subject lacks enough pairable teachers'
 );
 
 context.TEACHER_STATS = {

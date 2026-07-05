@@ -2142,24 +2142,34 @@ async function runModuleDeepCheck(page, id) {
                 const container = document.getElementById('teacher-pairing-suggestions');
                 const cards = container ? Array.from(container.querySelectorAll('.pairing-card')) : [];
                 const subjects = new Set(cards.map((card) => String(card.textContent || '').match(/语文|数学|英语|物理|化学|政治|道法|历史|地理|生物/)?.[0]).filter(Boolean));
+                const expectedSubjects = Array.from(new Set((window.SUBJECTS || [])
+                    .map((subject) => String(subject || '').trim())
+                    .filter(Boolean)));
+                const missingSubjects = expectedSubjects.filter((subject) => !subjects.has(subject));
                 state = {
                     containerReady: !!container,
                     pairCount: cards.length,
                     subjectCount: subjects.size,
+                    expectedSubjectCount: expectedSubjects.length,
+                    missingSubjects,
                     hasMultipleSuggestions: cards.length > 1,
-                    hasMultipleSubjects: subjects.size > 1
+                    hasMultipleSubjects: subjects.size > 1,
+                    coversAllSubjects: expectedSubjects.length > 0 && missingSubjects.length === 0
                 };
-                if (state.containerReady && state.hasMultipleSuggestions && state.hasMultipleSubjects) break;
+                if (state.containerReady && state.hasMultipleSuggestions && state.hasMultipleSubjects && state.coversAllSubjects) break;
                 await wait(150);
             }
             return {
-                ok: !!(state?.containerReady && state?.hasMultipleSuggestions && state?.hasMultipleSubjects),
+                ok: !!(state?.containerReady && state?.hasMultipleSuggestions && state?.hasMultipleSubjects && state?.coversAllSubjects),
                 checks: state || {
                     containerReady: false,
                     pairCount: 0,
                     subjectCount: 0,
+                    expectedSubjectCount: 0,
+                    missingSubjects: [],
                     hasMultipleSuggestions: false,
-                    hasMultipleSubjects: false
+                    hasMultipleSubjects: false,
+                    coversAllSubjects: false
                 }
             };
         });

@@ -45,6 +45,7 @@ var SYSTEM_RUNTIME_SKILLS = {
 ]),
 'teacher-analysis': bootSkill('demand', 'demand', ['teacher-analysis'], [
     bootEntry('teacher-analysis-core', bootJs('teacher-analysis-core-runtime.js')),
+    bootEntry('teacher-pairing', bootJs('teacher-pairing-runtime.js')),
     bootEntry('teacher-analysis-ui', bootJs('teacher-analysis-ui-runtime.js')),
     bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js')),
     bootEntry('teacher-analysis-main', bootJs('teacher-analysis-main-runtime.js')),
@@ -374,6 +375,8 @@ switch (String(key || '').trim()) {
         return window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__ ? true : null;
     case 'teacher-analysis-core':
         return window.__TEACHER_ANALYSIS_CORE_RUNTIME_PATCHED__ ? true : null;
+    case 'teacher-pairing':
+        return window.__TEACHER_PAIRING_RUNTIME_PATCHED__ ? true : null;
     case 'teacher-analysis-bridge':
         return window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__ ? true : null;
     case 'cohort-growth':
