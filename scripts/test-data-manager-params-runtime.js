@@ -54,9 +54,16 @@ async function run() {
     let renderStatusCalls = 0;
     let restoreCalls = 0;
     let persistCalls = 0;
+    let scheduledStatusCalls = 0;
     const manager = {
         renderDataManagerStatus() {
             renderStatusCalls += 1;
+        },
+        scheduleDataManagerStatusRender(options = {}) {
+            scheduledStatusCalls += 1;
+            assert.strictEqual(options.delay, 0);
+            assert.strictEqual(options.timeout, 900);
+            this.renderDataManagerStatus();
         },
         restoreGrade9IndicatorTemplate() {
             restoreCalls += 1;
@@ -73,14 +80,17 @@ async function run() {
     assert.strictEqual(elements.dm_ind1_input.value, '111');
     assert.strictEqual(elements.dm_ind2_input.value, '222');
     assert.strictEqual(renderStatusCalls > 0, true);
+    assert.strictEqual(scheduledStatusCalls, 1);
 
     elements.dm_ind1_input.value = '130';
     elements.dm_ind1_input.oninput();
     assert.strictEqual(indicatorState.ind1, '130');
+    assert.strictEqual(scheduledStatusCalls, 2);
 
     elements.dm_ind2_input.value = '270';
     elements.dm_ind2_input.oninput();
     assert.strictEqual(indicatorState.ind2, '270');
+    assert.strictEqual(scheduledStatusCalls, 3);
 
     await runtime.saveParamsLocally(manager, false);
     assert.strictEqual(ensureCalled > 0, true);

@@ -7,6 +7,20 @@
 
 ## 一、当前系统状态（2026-07-05，最新）
 
+**Codex 最新修复：DataManager 参数页性能预算已清零。** 针对上一轮生产 smoke 中 `dm:params` 5232/5364ms > 5000ms 的问题，已把 `data-manager-params-runtime.js` 的状态刷新接回 `DataManager.scheduleDataManagerStatusRender` 统一合并调度，避免参数页自建 idle 队列造成重复/延迟刷新；同时修正 `test-runtime-hygiene.js`，让 report-history 后台 hydrate 契约检查模块化后的 `report-history-runtime.js`，不再错误盯旧 `app.js`。
+
+| 维度 | 最新结果 |
+|------|------|
+| `npm run validate` | ✅ 全量通过 |
+| `npm run smoke:modules:local` | ✅ errorCount 0；budgetFailures `[]` |
+| DataManager tab 性能 | ✅ `dm:params=3968ms`（预算 5000ms）；student/teacher/targets/sql/cloud 均通过 |
+| 关键数据 | ✅ 本校=银山实验学校；scoreCount=7790；examId=`2022级-9年级-2025-2026-下学期-二模-2026-05-27`；termId=`9年级_下学期` |
+| 计算快照 | ✅ 通过；未改计算口径、学校识别、Excel 导入规则 |
+
+**本轮待完成：** 已本地验证，下一步提交、推送、Cloudflare 部署并跑生产 smoke。当前 runtime cache version：`runtime-70f9ac312c49`。
+
+---
+
 **功能、计算与布局验证通过。** 计算逻辑、数据导入、本校名、模块结构全程未改；全模块 smoke 功能通过，但 `switch:student-details` 仍有性能预算波动，需作为下一轮优化项跟踪。
 
 | 维度 | 状态 |

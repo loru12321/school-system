@@ -60,6 +60,10 @@
     }
 
     function scheduleStatusRender(manager) {
+        if (manager && typeof manager.scheduleDataManagerStatusRender === 'function') {
+            manager.scheduleDataManagerStatusRender({ delay: 0, timeout: 900 });
+            return;
+        }
         if (root.SystemPerformance && typeof root.SystemPerformance.scheduleIdle === 'function') {
             if (pendingStatusRender) return;
             pendingStatusRender = true;

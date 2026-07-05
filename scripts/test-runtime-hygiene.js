@@ -93,6 +93,7 @@ assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(schoolName)'), 
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(maxSub)'), 'school profile should escape dynamic advantage subject names');
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(minSub)'), 'school profile should escape dynamic weak subject names');
 const appRuntime = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const reportHistoryRuntime = fs.readFileSync(path.join(root, 'public/assets/js/report-history-runtime.js'), 'utf8');
 const analyticsKernelRuntime = fs.readFileSync(path.join(root, 'public/assets/js/analytics-kernel-runtime.js'), 'utf8');
 const countyAnalysisRuntime = fs.readFileSync(path.join(root, 'public/assets/js/county-analysis-runtime.js'), 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(path.join(root, 'public/assets/js/teacher-analysis-core-runtime.js'), 'utf8');
@@ -110,8 +111,8 @@ assert.ok(!teacherAnalysisCoreRuntime.includes("|| '银山实验'"), 'teacher an
 assert.ok(!appRuntime.includes("onclick=\"showSchoolProfile('${s.name}')\""), 'summary table should not inject dynamic school names into inline handlers');
 assert.ok(appRuntime.includes('const safeSchoolName = escapeAppHtml(s.name)'), 'summary table should escape dynamic school names before rendering');
 assert.ok(appRuntime.includes('data-school-profile-name="${safeSchoolName}"'), 'summary table should bind school profile actions through a safe data attribute');
-assert.ok(appRuntime.includes('window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task'), 'report history hydration should be delayed as a scheduled background task');
-assert.ok(appRuntime.includes('delay: 4800'), 'report history hydration should stay well after the first report paint');
+assert.ok(reportHistoryRuntime.includes('window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task'), 'report history hydration should be delayed as a scheduled background task');
+assert.ok(reportHistoryRuntime.includes('delay: 4800'), 'report history hydration should stay well after the first report paint');
 assert.ok(appRuntime.includes('function buildSummaryDependencySignature'), 'summary stale prompt should compare dependency signatures');
 assert.ok(appRuntime.includes('markSummaryDataChangedIfDependencyChanged('), 'summary stale prompt should not be triggered unconditionally by prerequisite renders');
 assert.ok(appRuntime.includes("buildSummaryDependencySignature('twoRateBottom', townshipSchools)"), 'two-rate/bottom3 refresh should use a stable dependency signature');
