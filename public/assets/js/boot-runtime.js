@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-ed05142678cd';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-57d86a336440';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -1838,6 +1838,45 @@ function startAuthenticatedShellRepairWindow() {
     }, 1000);
 }
 
+function repairLoggedOutLoginVisibility() {
+    if (hasBootAuthenticatedSession()) return false;
+    const overlay = document.getElementById('login-overlay');
+    const app = document.getElementById('app');
+    document.body.classList.add('login-overlay-active');
+    document.body.dataset.authState = 'logged_out';
+    document.body.dataset.role = 'guest';
+    document.body.className = document.body.className.replace(/\brole-\w+\b/g, '').trim();
+    document.body.classList.add('role-guest');
+    if (overlay) {
+        overlay.style.setProperty('display', 'flex', 'important');
+        overlay.style.setProperty('visibility', 'visible', 'important');
+        overlay.style.setProperty('opacity', '1', 'important');
+        overlay.style.setProperty('pointer-events', 'auto', 'important');
+        overlay.setAttribute('aria-hidden', 'false');
+        try { overlay.inert = false; } catch (_) {}
+    }
+    if (app) {
+        app.classList.add('hidden');
+        app.setAttribute('aria-hidden', 'true');
+    }
+    return true;
+}
+
+function startLoggedOutShellRepairWindow() {
+    if (window.__LOGGED_OUT_SHELL_REPAIR_INTERVAL__) return;
+    const startedAt = Date.now();
+    window.__LOGGED_OUT_SHELL_REPAIR_INTERVAL__ = window.setInterval(() => {
+        if (Date.now() - startedAt > 30000 || hasBootAuthenticatedSession()) {
+            window.clearInterval(window.__LOGGED_OUT_SHELL_REPAIR_INTERVAL__);
+            window.__LOGGED_OUT_SHELL_REPAIR_INTERVAL__ = 0;
+            return;
+        }
+        const overlay = document.getElementById('login-overlay');
+        const overlayHidden = !overlay || getComputedStyle(overlay).visibility === 'hidden' || getComputedStyle(overlay).opacity === '0';
+        if (overlayHidden) repairLoggedOutLoginVisibility();
+    }, 500);
+}
+
 const bootAuth = window.Auth || {
     __bootLoginShell: true,
     __bootLoginBusy: false,
@@ -2051,6 +2090,10 @@ function initBootAuthOnce() {
     window.__BOOT_AUTH_INIT_DONE__ = true;
     bindBootLoginActions();
     bootAuth.init();
+    if (!hasBootAuthenticatedSession()) {
+        repairLoggedOutLoginVisibility();
+        startLoggedOutShellRepairWindow();
+    }
     if (window.__BOOT_LOGIN_CLICKED__) {
         window.__BOOT_LOGIN_CLICKED__ = false;
         setTimeout(submitBootLogin);
