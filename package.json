@@ -180,6 +180,7 @@
     "esbuild": "0.28.1"
   },
   "dependencies": {
-    "jszip": "3.10.1"
+    "jszip": "3.10.1",
+    "xlsx-js-style": "1.2.0"
   }
 }

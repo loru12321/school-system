@@ -35,6 +35,22 @@
         return String(window.MY_SCHOOL || window.DEFAULT_MY_SCHOOL_NAME || '银山实验学校').trim();
     }
 
+    function getCurrentTeacherName() {
+        const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : null;
+        return String(user?.name || user?.username || '').trim();
+    }
+
+    function getCohortGradeLabel() {
+        const examId = String(window.CURRENT_EXAM_ID || '').trim();
+        const cohortFromExam = (examId.match(/(\d{4})级/) || [])[1] || '';
+        const cohort = String(window.CURRENT_COHORT_ID || window.CURRENT_COHORT || cohortFromExam || '').trim();
+        const configName = String(window.CONFIG?.name || '').trim();
+        const gradeMatch = configName.match(/[6-9]年级/) || examId.match(/[6-9]年级/);
+        const grade = gradeMatch ? gradeMatch[0] : (configName || '当前年级');
+        const cohortLabel = cohort ? `${cohort.replace(/届$/, '')}届` : '当前届别';
+        return `${cohortLabel}${grade}`;
+    }
+
     function sameSchool(left, right) {
         if (typeof window.sameAppSchoolName === 'function') return window.sameAppSchoolName(left, right);
         if (typeof window.areSchoolNamesEquivalent === 'function') return window.areSchoolNamesEquivalent(left, right);
@@ -97,20 +113,76 @@
         return rows.length > 0 && townshipRows.length > 0 && rows.length > townshipRows.length;
     }
 
+    function cloneStyle(style) {
+        return style ? JSON.parse(JSON.stringify(style)) : {};
+    }
+
+    function mergeCellStyle(cell, patch) {
+        if (!cell) return;
+        const base = cloneStyle(cell.s);
+        cell.s = {
+            ...base,
+            ...patch,
+            font: { ...(base.font || {}), ...(patch.font || {}) },
+            fill: patch.fill || base.fill,
+            alignment: { ...(base.alignment || {}), ...(patch.alignment || {}) },
+            border: patch.border || base.border
+        };
+    }
+
+    function rowHasHighlightMarker(row) {
+        return (Array.isArray(row) ? row : []).some((value) => /本校|本校教师|当前教师/.test(String(value || '')));
+    }
+
+    function applyPackageSheetStyle(ws, rows) {
+        if (!ws?.['!ref']) return;
+        const range = window.XLSX.utils.decode_range(ws['!ref']);
+        const markerCols = new Set();
+        const headers = Array.isArray(rows?.[0]) ? rows[0] : [];
+        headers.forEach((header, index) => {
+            if (/标记|类型/.test(String(header || ''))) markerCols.add(index);
+        });
+        for (let R = range.s.r; R <= range.e.r; R += 1) {
+            const row = rows?.[R] || [];
+            const highlight = R > 0 && rowHasHighlightMarker(row);
+            for (let C = range.s.c; C <= range.e.c; C += 1) {
+                const ref = window.XLSX.utils.encode_cell({ r: R, c: C });
+                const cell = ws[ref];
+                if (!cell) continue;
+                mergeCellStyle(cell, {
+                    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+                    font: R === 0 ? { bold: true, color: { rgb: '0F172A' } } : {},
+                    fill: R === 0
+                        ? { fgColor: { rgb: 'E0F2FE' } }
+                        : (highlight ? { fgColor: { rgb: 'FEF3C7' } } : undefined)
+                });
+                if (highlight && (markerCols.has(C) || /本校|本校教师|当前教师/.test(String(cell.v || '')))) {
+                    mergeCellStyle(cell, {
+                        font: { bold: true, color: { rgb: '92400E' } },
+                        fill: { fgColor: { rgb: 'FDE68A' } }
+                    });
+                }
+            }
+        }
+        ws['!autofilter'] = { ref: ws['!ref'] };
+        ws['!rows'] = Array.from({ length: range.e.r + 1 }, (_, index) => ({ hpt: index === 0 ? 24 : 20 }));
+    }
+
     function addWorksheet(workbook, name, rows, options = {}) {
         const ws = window.XLSX.utils.aoa_to_sheet(rows && rows.length ? rows : [['暂无数据']]);
         const widthCount = (rows || []).reduce((max, row) => Math.max(max, Array.isArray(row) ? row.length : 0), 1);
-        ws['!cols'] = Array.from({ length: widthCount }, (_, index) => ({ wch: index === 0 ? 18 : 13 }));
+        ws['!cols'] = Array.from({ length: widthCount }, (_, index) => ({ wch: index === 0 ? 18 : 14 }));
         if (options.freeze) ws['!freeze'] = options.freeze;
         if (typeof window.decorateExcelSheet === 'function' && rows?.[0]) {
             try { window.decorateExcelSheet(ws, rows[0]); } catch (_) {}
         }
+        applyPackageSheetStyle(ws, rows);
         window.XLSX.utils.book_append_sheet(workbook, ws, excelSafeName(name));
         return ws;
     }
 
     function workbookToArrayBuffer(workbook) {
-        return window.XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        return window.XLSX.write(workbook, { bookType: 'xlsx', type: 'array', cellStyles: true });
     }
 
     function schoolRankRows(schools, subject) {
@@ -252,13 +324,14 @@
             grouped.get(school).push(student);
         });
         grouped.forEach((students, school) => {
-            const data = [['学校', '班级', '姓名', '考号', '考场', ...subjects, window.CONFIG?.label || '总分']];
+            const data = [['学校', '本校标记', '班级', '姓名', '考号', '考场', ...subjects, window.CONFIG?.label || '总分']];
             students
                 .slice()
                 .sort((a, b) => String(a.class || '').localeCompare(String(b.class || ''), 'zh-CN', { numeric: true }) || (Number(b.total) || 0) - (Number(a.total) || 0))
                 .forEach((student) => {
                     data.push([
                         student.school || '',
+                        sameSchool(student.school, getMySchoolName()) ? '本校' : '',
                         student.class || '',
                         student.name || '',
                         student.id || student.examNo || '',
@@ -275,7 +348,7 @@
     function buildStudentDetailWorkbook(rows, options = {}) {
         const subjects = getSubjectList(rows);
         const includeCounty = !!options.includeCounty;
-        const headers = ['学校', '班级', '姓名', '考号', '考场'];
+        const headers = ['学校', '本校标记', '班级', '姓名', '考号', '考场'];
         subjects.forEach((subject) => {
             headers.push(`${subject}分数`, `${subject}校排`, `${subject}镇排`);
             if (includeCounty) headers.push(`${subject}县排`);
@@ -284,7 +357,14 @@
         if (includeCounty) headers.push('总分县排');
         const data = [headers];
         rows.slice().sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0)).forEach((student) => {
-            const row = [student.school || '', student.class || '', student.name || '', student.id || student.examNo || '', student.examRoom || ''];
+            const row = [
+                student.school || '',
+                sameSchool(student.school, getMySchoolName()) ? '本校' : '',
+                student.class || '',
+                student.name || '',
+                student.id || student.examNo || '',
+                student.examRoom || ''
+            ];
             subjects.forEach((subject) => {
                 row.push(
                     student.scores?.[subject] ?? '',
@@ -307,13 +387,34 @@
         return wb;
     }
 
-    async function ensureTeacherRankings() {
+    async function ensureTeacherRankings(includeCounty = false) {
         if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
             await window.SystemRuntimeLoader.load('teacher-analysis').catch(() => {});
         }
         if (typeof window.calculateTeacherTownshipRanking === 'function') {
             window.calculateTeacherTownshipRanking({ teacherMetricScope: 'admin' });
         }
+        if (includeCounty && window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+            await window.SystemRuntimeLoader.load('county-analysis').catch(() => {});
+            try {
+                if (window.CountyAnalysisRuntime?.ensureTeacherContextForCountyAnalysis) {
+                    await window.CountyAnalysisRuntime.ensureTeacherContextForCountyAnalysis(true, { requireActive: false });
+                }
+                if (window.CountyAnalysisRuntime?.applyCountyRanks) window.CountyAnalysisRuntime.applyCountyRanks();
+                if (window.CountyAnalysisRuntime?.renderCountyAnalysis) window.CountyAnalysisRuntime.renderCountyAnalysis();
+            } catch (error) {
+                console.warn('[exam-analysis-package] county teacher ranking warmup failed:', error);
+            }
+        }
+    }
+
+    function buildTeacherMark(item) {
+        const name = String(item?.name || '').trim();
+        const currentTeacher = getCurrentTeacherName();
+        if (item?.type === 'teacher') {
+            return currentTeacher && name === currentTeacher ? '当前教师/本校教师' : '本校教师';
+        }
+        return sameSchool(name, getMySchoolName()) ? '本校' : '';
     }
 
     function buildTeacherTownWorkbook() {
@@ -323,16 +424,18 @@
         subjects.forEach((subject) => {
             const rows = data[subject] || [];
             addWorksheet(wb, `${subject} 教师乡镇排名`, [
-                ['教师/学校', '类型', '平均分', '乡镇均分排名', '优秀率(%)', '乡镇优率排名', '及格率(%)', '乡镇及格排名'],
+                ['教师/学校', '对象标记', '类型', '平均分', '乡镇均分排名', '优秀率(%)', '乡镇优率排名', '及格率(%)', '乡镇及格排名', '样本人数'],
                 ...rows.map((item) => [
                     item.name || '',
+                    buildTeacherMark(item),
                     item.type === 'teacher' ? '教师' : '学校',
                     num(item.avg),
                     item.rankAvg || '',
                     pct(item.excellentRate),
                     item.rankExc || '',
                     pct(item.passRate),
-                    item.rankPass || ''
+                    item.rankPass || '',
+                    item.studentCount || ''
                 ])
             ]);
         });
@@ -341,26 +444,29 @@
 
     function buildTeacherCountyWorkbook() {
         const wb = window.XLSX.utils.book_new();
-        const stats = window.TEACHER_STATS || {};
+        const rankingData = window.COUNTY_TEACHER_RANKING_DATA || {};
         const subjects = getSubjectList(getAllRows());
         subjects.forEach((subject) => {
-            const rows = [['教师', '学校', '班级', '学科', '平均分', '优秀率(%)', '及格率(%)', '样本人数']];
-            Object.entries(stats).forEach(([teacherName, subjectMap]) => {
-                const data = subjectMap?.[subject];
-                if (!data) return;
-                rows.push([
-                    teacherName,
-                    data.school || data.schoolName || '',
-                    Array.isArray(data.classes) ? data.classes.join('、') : (data.className || ''),
-                    subject,
-                    num(data.avg),
-                    pct(data.excellentRate ?? data.excRate),
-                    pct(data.passRate),
-                    data.count || data.studentCount || (Array.isArray(data.students) ? data.students.length : '')
-                ]);
+            const rows = (rankingData[subject] || []).slice().sort((a, b) => {
+                if ((a.rankAvg || 9999) !== (b.rankAvg || 9999)) return (a.rankAvg || 9999) - (b.rankAvg || 9999);
+                if (a.type !== b.type) return a.type === 'teacher' ? -1 : 1;
+                return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { numeric: true });
             });
-            const sortedRows = [rows[0], ...rows.slice(1).sort((a, b) => (Number(b[4]) || 0) - (Number(a[4]) || 0))];
-            addWorksheet(wb, `${subject} 同学科县域排名`, sortedRows);
+            addWorksheet(wb, `${subject} 同学科县域排名`, [
+                ['县均分排', '教师/学校', '对象标记', '类型', '平均分', '县优率排', '优秀率(%)', '县及格排', '及格率(%)', '样本人数'],
+                ...rows.map((item) => [
+                    item.rankAvg || '',
+                    item.name || '',
+                    buildTeacherMark(item),
+                    item.type === 'teacher' ? '教师' : '学校整体',
+                    num(item.avg),
+                    item.rankExc || '',
+                    pct(item.excellentRate),
+                    item.rankPass || '',
+                    pct(item.passRate),
+                    item.studentCount || ''
+                ])
+            ]);
         });
         return wb;
     }
@@ -377,13 +483,13 @@
             if (!window.JSZip) throw new Error('JSZip 组件未加载');
             if (typeof window.renderTables === 'function') window.renderTables();
             if (typeof window.calcSummary === 'function') window.calcSummary(true);
-            await ensureTeacherRankings();
 
             const zip = new window.JSZip();
             const suffix = getDateSuffix();
             const includeCounty = hasCountyScope();
             const townshipRows = getTownshipRows();
             const allRows = getAllRows();
+            await ensureTeacherRankings(includeCounty);
 
             await addWorkbook(zip, `二模成绩${suffix}.xlsx`, buildRawScoreWorkbook(allRows));
             await addWorkbook(zip, `学校/二模成绩分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('township'));
@@ -395,9 +501,8 @@
 
             const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
             const link = document.createElement('a');
-            const cohort = String(window.CURRENT_COHORT || window.CohortManager?.getCurrentCohort?.() || '').trim();
             link.href = URL.createObjectURL(blob);
-            link.download = fileSafeName(`二模分析_${cohort || '当前届别'}_${getCurrentExamDate()}.zip`);
+            link.download = fileSafeName(`二模分析_${getCohortGradeLabel()}_${getCurrentExamDate()}.zip`);
             document.body.appendChild(link);
             link.click();
             link.remove();

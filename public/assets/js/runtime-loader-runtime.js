@@ -127,6 +127,7 @@ var SYSTEM_RUNTIME_SKILLS = {
 ]),
 'exam-analysis-package': bootSkill('demand', 'demand', ['downloadExamAnalysisPackage'], [
     bootEntry('jszip-vendor', bootVend('jszip/jszip.min.js')),
+    bootEntry('xlsx-js-style-vendor', bootVend('xlsx-js-style/xlsx.min.js')),
     bootEntry('exam-analysis-package', bootJs('exam-analysis-package-runtime.js'))
 ]),
 'worker-api': bootSkill('demand', 'demand', ['WorkerAPI.run'], [
