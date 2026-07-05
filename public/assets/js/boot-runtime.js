@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-57d86a336440';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-85ddc297e9f4';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -78,7 +78,7 @@ function armAuthReadySafetyTimeout(timeoutMs = 15000) {
 if (window.__AUTH_READY__ || window.__AUTH_READY_TIMEOUT_ID__) return;
 window.__AUTH_READY_TIMEOUT_ID__ = window.setTimeout(() => {
     if (window.__AUTH_READY__) return;
-    console.warn('[boot-runtime] AuthReady safety timeout reached');
+    console.warn('[boot-runtime] auth timeout');
     markAuthReadyResolved();
 }, timeoutMs);
 }
@@ -450,7 +450,7 @@ const runWarmup = () => {
     window.setTimeout(() => {
         if (typeof loadDeferredAppModules === 'function') {
             loadDeferredAppModules().catch((error) => {
-                console.warn('[boot-runtime] Deferred module hydration failed:', error);
+                console.warn('[boot-runtime] hydration failed:', error);
             });
         }
     }, 1200);
@@ -474,7 +474,7 @@ return new Promise((resolve) => {
 
     let finished = false;
     const timeout = setTimeout(() => {
-        console.warn(`[boot-runtime] Script load timeout (${timeoutMs}ms): ${src}`);
+        console.warn(`[boot-runtime] load timeout ${timeoutMs}: ${src}`);
         markBootScriptState(src, 'timeout', script);
         finished = true;
         resolve();
@@ -488,7 +488,7 @@ return new Promise((resolve) => {
         resolve();
     };
     script.onerror = () => {
-        console.warn(`[boot-runtime] Script load error: ${src}`);
+        console.warn(`[boot-runtime] load error: ${src}`);
         markBootScriptState(src, 'error', script);
         if (finished) return;
         finished = true;
@@ -578,13 +578,13 @@ for (let index = 0; index < list.length; index += batchSize) {
                 settle(src, status);
             };
             const timeout = setTimeout(() => {
-                console.warn(`[boot-runtime] Ordered script load timeout (${timeoutMs}ms): ${src}`);
+                console.warn(`[boot-runtime] ordered timeout ${timeoutMs}: ${src}`);
                 finish('timeout');
             }, timeoutMs);
 
             script.onload = () => finish('loaded');
             script.onerror = () => {
-                console.warn(`[boot-runtime] Ordered script load error: ${src}`);
+                console.warn(`[boot-runtime] ordered error: ${src}`);
                 finish('error');
             };
             document.head.appendChild(script);
@@ -645,7 +645,7 @@ const run = async () => {
         return 'ok';
     } catch (fetchErr) {
         window.__GATEWAY_PREFLIGHT_STATUS__ = 'fallback';
-        console.warn('[boot-runtime] Gateway pre-flight failed, activating fallback:', fetchErr);
+        console.warn('[boot-runtime] gateway fallback:', fetchErr);
         window.__API_FALLBACK_ACTIVE__ = true;
         return 'fallback';
     } finally {
@@ -806,7 +806,7 @@ return shouldUseSameOriginSupabaseProxy();
 function normalizeProxyOrigin(origin) {
 var text = String(origin || '').trim().replace(/\/$/, '');
 if (text.indexOf('schoolsystem.com.cn') !== -1 && text.startsWith('http:')) {
-    console.warn('[boot-runtime] Enforcing HTTPS for production domain:', text);
+    console.warn('[boot-runtime] HTTPS:', text);
     text = text.replace('http:', 'https:');
 }
 return text;
@@ -1151,7 +1151,7 @@ function createQuery(tableName) {
                     var finalMsg = rawMsg;
 
                     if ((response.status >= 500 || response.status === 404) && !window.__API_FALLBACK_ACTIVE__) {
-                        console.warn('[boot-runtime] Proxy fallback', response.status);
+        console.warn('[boot-runtime] proxy', response.status);
                         window.__API_FALLBACK_ACTIVE__ = true;
                     }
 
@@ -1188,7 +1188,7 @@ function createQuery(tableName) {
                 };
             } catch (error) {
                 if (!window.__API_FALLBACK_ACTIVE__) {
-                    console.warn('[boot-runtime] Network fallback', error);
+                    console.warn('[boot-runtime] net', error);
                     window.__API_FALLBACK_ACTIVE__ = true;
                 }
                 return {
@@ -1643,7 +1643,7 @@ const bootGateway = window.EdgeGateway || {
                 const isNetworkError = lastError.message.toLowerCase().includes('failed to fetch') || lastError.message.toLowerCase().includes('networkerror');
                 if (isNetworkError) {
                     const origin = window.location ? window.location.origin : 'unknown';
-                    console.warn(`[boot-runtime] Network error for ${url}:`, {
+                    console.warn(`[boot-runtime] net ${url}:`, {
                         message: lastError.message,
                         origin: origin,
                         protocol: window.location ? window.location.protocol : 'unknown',
@@ -1838,45 +1838,6 @@ function startAuthenticatedShellRepairWindow() {
     }, 1000);
 }
 
-function repairLoggedOutLoginVisibility() {
-    if (hasBootAuthenticatedSession()) return false;
-    const overlay = document.getElementById('login-overlay');
-    const app = document.getElementById('app');
-    document.body.classList.add('login-overlay-active');
-    document.body.dataset.authState = 'logged_out';
-    document.body.dataset.role = 'guest';
-    document.body.className = document.body.className.replace(/\brole-\w+\b/g, '').trim();
-    document.body.classList.add('role-guest');
-    if (overlay) {
-        overlay.style.setProperty('display', 'flex', 'important');
-        overlay.style.setProperty('visibility', 'visible', 'important');
-        overlay.style.setProperty('opacity', '1', 'important');
-        overlay.style.setProperty('pointer-events', 'auto', 'important');
-        overlay.setAttribute('aria-hidden', 'false');
-        try { overlay.inert = false; } catch (_) {}
-    }
-    if (app) {
-        app.classList.add('hidden');
-        app.setAttribute('aria-hidden', 'true');
-    }
-    return true;
-}
-
-function startLoggedOutShellRepairWindow() {
-    if (window.__LOGGED_OUT_SHELL_REPAIR_INTERVAL__) return;
-    const startedAt = Date.now();
-    window.__LOGGED_OUT_SHELL_REPAIR_INTERVAL__ = window.setInterval(() => {
-        if (Date.now() - startedAt > 30000 || hasBootAuthenticatedSession()) {
-            window.clearInterval(window.__LOGGED_OUT_SHELL_REPAIR_INTERVAL__);
-            window.__LOGGED_OUT_SHELL_REPAIR_INTERVAL__ = 0;
-            return;
-        }
-        const overlay = document.getElementById('login-overlay');
-        const overlayHidden = !overlay || getComputedStyle(overlay).visibility === 'hidden' || getComputedStyle(overlay).opacity === '0';
-        if (overlayHidden) repairLoggedOutLoginVisibility();
-    }, 500);
-}
-
 const bootAuth = window.Auth || {
     __bootLoginShell: true,
     __bootLoginBusy: false,
@@ -1937,13 +1898,13 @@ const bootAuth = window.Auth || {
             clearStaleBootSession();
             this.syncLoginOverlayState(true);
         } else {
-            bootDebugLog('[boot-auth] User already logged in, bypassing overlay and loading modules');
+            bootDebugLog('[boot-auth] logged in');
             this.syncLoginOverlayState(false);
             loadAppModules();
         }
     },
     ensureLoginWorkbench() {
-        bootDebugLog('[boot-auth] ensureLoginWorkbench called on shell, waiting for modules...');
+        bootDebugLog('[boot-auth] shell login wait');
         return null;
     },
     async login() {
@@ -2010,7 +1971,7 @@ const bootAuth = window.Auth || {
                             .catch(() => null)
                             .then(() => enterSelectedBootCohort(cohortYear));
                     })
-                    .catch((error) => console.warn('[boot-auth] background module/cohort restore failed:', error))
+                    .catch((error) => console.warn('[boot-auth] restore failed:', error))
                     .finally(() => {
                         if (loader) {
                             loader.style.opacity = '0';
@@ -2091,8 +2052,13 @@ function initBootAuthOnce() {
     bindBootLoginActions();
     bootAuth.init();
     if (!hasBootAuthenticatedSession()) {
-        repairLoggedOutLoginVisibility();
-        startLoggedOutShellRepairWindow();
+        [500, 1500].forEach((delay) => setTimeout(() => {
+            if (!hasBootAuthenticatedSession()) {
+                bootAuth.syncLoginOverlayState(true);
+                const overlay = document.getElementById('login-overlay');
+                if (overlay) overlay.style.cssText += ';display:flex!important;visibility:visible!important;opacity:1!important';
+            }
+        }, delay));
     }
     if (window.__BOOT_LOGIN_CLICKED__) {
         window.__BOOT_LOGIN_CLICKED__ = false;
