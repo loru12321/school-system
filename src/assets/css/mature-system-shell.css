@@ -522,14 +522,19 @@ body:not(.dark-mode) table {
     border-spacing: 0 !important;
 }
 
-body:not(.dark-mode) th {
+body:not(.dark-mode) table thead th {
     position: sticky;
-    top: var(--mature-header-h);
+    top: 0;
     z-index: 2;
     background: #f8fafc !important;
     color: #344054 !important;
     font-weight: 750 !important;
     box-shadow: inset 0 -1px 0 rgba(17, 24, 39, 0.08);
+}
+
+body:not(.dark-mode) .page-sticky,
+body:not(.dark-mode) .shell-page-sticky {
+    top: var(--mature-header-h);
 }
 
 body:not(.dark-mode) td {

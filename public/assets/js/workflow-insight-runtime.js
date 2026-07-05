@@ -120,9 +120,36 @@
         global.setTimeout(() => refreshWorkflowInsights(), 250);
     });
 
+    let workflowRefreshScheduled = false;
+    function scheduleWorkflowRefresh(root = document) {
+        if (workflowRefreshScheduled) return;
+        workflowRefreshScheduled = true;
+        const run = () => {
+            workflowRefreshScheduled = false;
+            ensureWorkflowStyles();
+            renderWorkflowPath();
+            decorateTableAffordances(root);
+            renderCalculationPolicyStrip(root);
+        };
+        if (typeof global.requestIdleCallback === 'function') {
+            global.requestIdleCallback(run, { timeout: 800 });
+        } else if (typeof global.requestAnimationFrame === 'function') {
+            global.requestAnimationFrame(run);
+        } else {
+            global.setTimeout(run, 80);
+        }
+    }
+
     const observer = new MutationObserver((mutations) => {
         if (!mutations.some((mutation) => mutation.addedNodes && mutation.addedNodes.length)) return;
-        global.requestAnimationFrame?.(() => refreshWorkflowInsights()) || global.setTimeout(() => refreshWorkflowInsights(), 0);
+        const roots = [];
+        mutations.forEach((mutation) => {
+            mutation.addedNodes && mutation.addedNodes.forEach((node) => {
+                if (node && node.nodeType === 1) roots.push(node);
+            });
+        });
+        const root = roots.length === 1 ? roots[0] : document;
+        scheduleWorkflowRefresh(root);
     });
 
     if (document.documentElement) {

@@ -4861,10 +4861,17 @@ h1 {
     scroll-padding-top: 42px;
 }
 
+.table-wrap.analysis-table-shell thead th,
+.table-affordance-shell.analysis-table-shell thead th,
+.table-wrap[style*="overflow"] thead th,
+.table-wrap[style*="max-height"] thead th {
+    top: 0 !important;
+}
+
 .analysis-table-shell .analysis-generated-table thead th,
 .analysis-table-shell table thead th {
     position: sticky;
-    top: 0;
+    top: 0 !important;
     z-index: 30;
 }
 

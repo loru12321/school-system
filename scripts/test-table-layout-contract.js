@@ -7,6 +7,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 const appRuntime = read('public/assets/js/app.js');
 const mainCss = read('src/assets/css/main.css');
+const matureCss = read('src/assets/css/mature-system-shell.css');
 
 assert.ok(
   appRuntime.includes('.table-wrap:not(.analysis-table-shell):not(.analysis-scroll-shell):not([style*="overflow"])'),
@@ -27,6 +28,18 @@ assert.ok(
 assert.ok(
   /(?:\.analysis-table-shell[\s\S]{0,360}thead th[\s\S]{0,180}top:\s*0)/.test(mainCss),
   'analysis table headers should stick to the top of their own scroll shell'
+);
+assert.ok(
+  appRuntime.includes('table-wrap analysis-table-shell indicator-target-match-table'),
+  'indicator target match table should use the standard analysis table shell'
+);
+assert.ok(
+  /(?:\.table-wrap\.analysis-table-shell[\s\S]{0,220}thead th[\s\S]{0,120}top:\s*0\s*!important)/.test(mainCss),
+  'table shell headers should override page-level sticky offsets'
+);
+assert.ok(
+  !/body:not\(\.dark-mode\)\s+th\s*\{[\s\S]{0,160}top:\s*var\(--mature-header-h\)/.test(matureCss),
+  'mature shell must not apply toolbar-height sticky offsets to every table header cell'
 );
 assert.ok(
   !/\.table-wrap\s*\{[\s\S]{0,360}overflow-y:\s*visible\s*!important/.test(mainCss),

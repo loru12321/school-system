@@ -5221,20 +5221,21 @@ function renderBottom3TableOnly() {
 }
 
 function bindSummaryProfileEvents(tbTotal) {
-    if (!tbTotal || tbTotal.dataset.summaryProfileEventsBound === '1') return;
-    tbTotal.addEventListener('click', event => {
+    const profileEventRoot = tbTotal?.closest('table') || tbTotal;
+    if (!profileEventRoot || profileEventRoot.dataset.summaryProfileEventsBound === '1') return;
+    profileEventRoot.addEventListener('click', event => {
         const cell = event.target.closest('[data-school-profile-name]');
-        if (!cell || !tbTotal.contains(cell)) return;
+        if (!cell || !profileEventRoot.contains(cell)) return;
         showSchoolProfile(cell.dataset.schoolProfileName || '');
     });
-    tbTotal.addEventListener('keydown', event => {
+    profileEventRoot.addEventListener('keydown', event => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         const cell = event.target.closest('[data-school-profile-name]');
-        if (!cell || !tbTotal.contains(cell)) return;
+        if (!cell || !profileEventRoot.contains(cell)) return;
         event.preventDefault();
         showSchoolProfile(cell.dataset.schoolProfileName || '');
     });
-    tbTotal.dataset.summaryProfileEventsBound = '1';
+    profileEventRoot.dataset.summaryProfileEventsBound = '1';
 }
 
 function getTownAnalysisVisibleSubjectsForCurrentUser() {
@@ -6572,7 +6573,7 @@ function renderIndicatorTargetMatchPanel(calcData, line1, line2) {
         <div style="padding:10px 12px;border-bottom:1px solid #dbeafe;color:#1e3a8a;font-weight:700;">
             目标人数匹配明细（参考线：指标一 ${line1}，指标二 ${line2}）
         </div>
-        <div class="table-wrap" style="max-height:260px;overflow:auto;">
+        <div class="table-wrap analysis-table-shell indicator-target-match-table" style="max-height:260px;overflow:auto;">
             <table>
                 <thead>
                     <tr>

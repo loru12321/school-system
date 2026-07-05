@@ -2,7 +2,7 @@
     const root = window;
     const nav = root.navigator;
     const loc = root.location;
-    const SERVICE_WORKER_VERSION = 'runtime-4e13bda6888f';
+    const SERVICE_WORKER_VERSION = 'runtime-ed05142678cd';
     const SERVICE_WORKER_PATH = `./sw.js?v=${SERVICE_WORKER_VERSION}`;
     const ALLOWED_HOSTS = new Set([
         'schoolsystem.com.cn',
@@ -33,11 +33,37 @@
         root.setTimeout(task, 1500);
     }
 
+    function isLoginOverlayVisible() {
+        try {
+            const overlay = root.document && root.document.getElementById('login-overlay');
+            if (!overlay) return false;
+            const style = root.getComputedStyle ? root.getComputedStyle(overlay) : null;
+            return style ? style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' : true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function shouldReloadAfterControllerChange() {
+        if (isLoginOverlayVisible()) return false;
+        try {
+            const app = root.document && root.document.getElementById('app');
+            const appVisible = app && root.getComputedStyle
+                ? root.getComputedStyle(app).display !== 'none'
+                : !!app;
+            const loggedIn = root.document && root.document.body && /role-/.test(root.document.body.className || '');
+            return !!(appVisible && loggedIn);
+        } catch (_) {
+            return false;
+        }
+    }
+
     function registerServiceWorker() {
         if (!canRegisterServiceWorker()) return;
         const hadController = !!nav.serviceWorker.controller;
         nav.serviceWorker.addEventListener('controllerchange', function () {
             if (!hadController) return;
+            if (!shouldReloadAfterControllerChange()) return;
             try {
                 if (root.sessionStorage && root.sessionStorage.SCHOOL_SW_RELOADED_VERSION === SERVICE_WORKER_VERSION) return;
                 if (root.sessionStorage) root.sessionStorage.SCHOOL_SW_RELOADED_VERSION = SERVICE_WORKER_VERSION;
