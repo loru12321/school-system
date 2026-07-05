@@ -112,14 +112,23 @@
         return Object.values(window.SCHOOLS || {}).filter((school) => !nameSet.size || nameSet.has(String(school?.name || '').trim()));
     }
 
+    const townshipSchoolPackageCache = new Map();
+    let townshipSchoolPackageNames = null;
+
     function isTownshipSchoolForPackage(schoolName) {
         const name = String(schoolName || '').trim();
         if (!name) return false;
-        const schoolNames = Object.keys(window.SCHOOLS || {});
+        if (townshipSchoolPackageCache.has(name)) return townshipSchoolPackageCache.get(name);
+        if (!townshipSchoolPackageNames) townshipSchoolPackageNames = Object.keys(window.SCHOOLS || {});
+        const schoolNames = townshipSchoolPackageNames;
+        let result;
         if (typeof window.isTownshipManagedSchool === 'function') {
-            return window.isTownshipManagedSchool(name, schoolNames);
+            result = window.isTownshipManagedSchool(name, schoolNames);
+        } else {
+            result = getTownshipSchools().some((school) => sameSchool(school?.name, name));
         }
-        return getTownshipSchools().some((school) => sameSchool(school?.name, name));
+        townshipSchoolPackageCache.set(name, result);
+        return result;
     }
 
     function hasCountyScope() {
@@ -883,7 +892,7 @@
             await addWorkbook(zip, `教师/二模教师分析${suffix}.xlsx`, buildTeacherTownWorkbook());
             if (includeCounty) await addWorkbook(zip, `教师/二模教师县域分析${suffix}.xlsx`, buildTeacherCountyWorkbook());
 
-            const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+            const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 1 } });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = fileSafeName(`二模分析_${getCohortGradeLabel()}_${getCurrentExamDate()}.zip`);
