@@ -1,7 +1,7 @@
 :root {
-    --mature-bg: #f5f7fb;
-    --mature-surface: rgba(255, 255, 255, 0.78);
-    --mature-surface-strong: rgba(255, 255, 255, 0.92);
+    --mature-bg: #f3f6fb;
+    --mature-surface: rgba(255, 255, 255, 0.84);
+    --mature-surface-strong: rgba(255, 255, 255, 0.96);
     --mature-ink: #111827;
     --mature-muted: #667085;
     --mature-soft: #e5e9f2;
@@ -13,8 +13,8 @@
     --mature-teal-soft: rgba(15, 118, 110, 0.1);
     --mature-warn: #b45309;
     --mature-warn-soft: rgba(180, 83, 9, 0.1);
-    --mature-shadow: 0 12px 36px rgba(15, 23, 42, 0.09);
-    --mature-shadow-soft: 0 8px 22px rgba(15, 23, 42, 0.06);
+    --mature-shadow: 0 18px 46px rgba(15, 23, 42, 0.1);
+    --mature-shadow-soft: 0 10px 26px rgba(15, 23, 42, 0.06);
     --mature-radius: 10px;
     --mature-header-h: 64px;
     --mature-rail-w: 76px;
@@ -48,8 +48,8 @@ body:not(.dark-mode) .sidebar-spacious {
     border-right: 1px solid rgba(255, 255, 255, 0.42) !important;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5)),
-        rgba(248, 250, 252, 0.84) !important;
-    box-shadow: 10px 0 38px rgba(15, 23, 42, 0.07) !important;
+        rgba(248, 250, 252, 0.9) !important;
+    box-shadow: 12px 0 42px rgba(15, 23, 42, 0.08) !important;
     backdrop-filter: blur(14px) saturate(1.12) !important;
     -webkit-backdrop-filter: blur(14px) saturate(1.12) !important;
 }
@@ -68,7 +68,7 @@ body:not(.dark-mode) .sidebar-menu-item {
     justify-content: center;
     border: 1px solid var(--mature-line) !important;
     border-radius: var(--mature-radius) !important;
-    background: rgba(255, 255, 255, 0.54) !important;
+    background: rgba(255, 255, 255, 0.66) !important;
     color: #344054 !important;
     box-shadow: none !important;
     transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
@@ -124,9 +124,9 @@ body:not(.dark-mode) #main-header.shell-toolbar {
     gap: 14px;
     align-items: center;
     border: 0 !important;
-    border-bottom: 1px solid rgba(17, 24, 39, 0.08) !important;
-    background: rgba(248, 250, 252, 0.74) !important;
-    box-shadow: none !important;
+    border-bottom: 1px solid rgba(17, 24, 39, 0.1) !important;
+    background: rgba(248, 250, 252, 0.86) !important;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05) !important;
     backdrop-filter: blur(12px) saturate(1.1) !important;
     -webkit-backdrop-filter: blur(12px) saturate(1.1) !important;
 }
@@ -135,8 +135,8 @@ body:not(.dark-mode) #global-search-container {
     width: 100%;
     border: 1px solid rgba(17, 24, 39, 0.1) !important;
     border-radius: var(--mature-radius) !important;
-    background: rgba(255, 255, 255, 0.74) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 10px 30px rgba(15, 23, 42, 0.06) !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 26px rgba(15, 23, 42, 0.05) !important;
 }
 
 body:not(.dark-mode) #global-search-container input {
@@ -178,15 +178,15 @@ body:not(.dark-mode) .shell-overview {
 }
 
 body:not(.dark-mode) .shell-overview-card--dock {
-    min-height: 124px !important;
-    padding: 22px 24px !important;
+    min-height: 116px !important;
+    padding: 20px 24px !important;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.72) !important;
+    border: 1px solid rgba(17, 24, 39, 0.08) !important;
     border-radius: var(--mature-radius) !important;
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(241, 247, 255, 0.74) 52%, rgba(236, 253, 245, 0.58)),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(241, 247, 255, 0.82) 56%, rgba(240, 253, 250, 0.62)),
         var(--mature-surface) !important;
     box-shadow: var(--mature-shadow) !important;
     backdrop-filter: blur(10px) saturate(1.08) !important;
@@ -210,8 +210,8 @@ body:not(.dark-mode) .workspace-drawer-kicker {
 
 body:not(.dark-mode) .shell-overview-heading h2 {
     color: var(--mature-ink) !important;
-    font-size: clamp(28px, 2.4vw, 40px) !important;
-    line-height: 1.04 !important;
+    font-size: clamp(26px, 2.1vw, 36px) !important;
+    line-height: 1.08 !important;
     font-weight: 850 !important;
     letter-spacing: 0 !important;
 }
@@ -269,7 +269,7 @@ body:not(.dark-mode) .shell-module-rail-shell {
     padding: 14px 16px !important;
     border: 1px solid rgba(17, 24, 39, 0.08) !important;
     border-radius: var(--mature-radius) !important;
-    background: rgba(255, 255, 255, 0.66) !important;
+    background: rgba(255, 255, 255, 0.82) !important;
     box-shadow: var(--mature-shadow-soft) !important;
     backdrop-filter: blur(8px) saturate(1.06) !important;
     -webkit-backdrop-filter: blur(8px) saturate(1.06) !important;
@@ -281,15 +281,15 @@ body:not(.dark-mode) .shell-module-rail-meta {
 
 body:not(.dark-mode) .shell-module-rail {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 8px;
 }
 
 body:not(.dark-mode) .shell-module-rail-chip {
-    min-height: 54px;
+    min-height: 50px;
     border-radius: var(--mature-radius) !important;
     border: 1px solid rgba(17, 24, 39, 0.08) !important;
-    background: rgba(255, 255, 255, 0.74) !important;
+    background: rgba(255, 255, 255, 0.86) !important;
     color: #344054 !important;
     box-shadow: none !important;
 }
@@ -362,8 +362,8 @@ body:not(.dark-mode) .analysis-workspace {
     margin-right: auto;
     border: 1px solid rgba(17, 24, 39, 0.08) !important;
     border-radius: var(--mature-radius) !important;
-    background: rgba(255, 255, 255, 0.7) !important;
-    box-shadow: var(--mature-shadow-soft) !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045) !important;
 }
 
 body:not(.dark-mode) #starter-hub.section.card-box {
@@ -388,8 +388,8 @@ body:not(.dark-mode) .starter-grid {
 body:not(.dark-mode) .starter-card {
     border: 1px solid rgba(17, 24, 39, 0.08) !important;
     border-radius: var(--mature-radius) !important;
-    background: rgba(255, 255, 255, 0.74) !important;
-    box-shadow: var(--mature-shadow-soft) !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
@@ -518,11 +518,58 @@ body:not(.dark-mode) textarea {
 
 body:not(.dark-mode) table {
     border-color: rgba(17, 24, 39, 0.08) !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
 }
 
 body:not(.dark-mode) th {
+    position: sticky;
+    top: var(--mature-header-h);
+    z-index: 2;
     background: #f8fafc !important;
     color: #344054 !important;
+    font-weight: 750 !important;
+    box-shadow: inset 0 -1px 0 rgba(17, 24, 39, 0.08);
+}
+
+body:not(.dark-mode) td {
+    border-color: rgba(17, 24, 39, 0.06) !important;
+}
+
+body:not(.dark-mode) tbody tr:nth-child(even) td {
+    background: rgba(248, 250, 252, 0.52);
+}
+
+body:not(.dark-mode) tbody tr:hover td {
+    background: rgba(239, 246, 255, 0.72) !important;
+}
+
+body:not(.dark-mode) #data-manager-modal .modal-content {
+    border: 1px solid rgba(17, 24, 39, 0.1) !important;
+    background: rgba(248, 250, 252, 0.96) !important;
+    box-shadow: 0 30px 90px rgba(15, 23, 42, 0.22) !important;
+}
+
+body:not(.dark-mode) #data-manager-modal .login-tab {
+    border-radius: var(--mature-radius) !important;
+    border: 1px solid rgba(17, 24, 39, 0.08) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+}
+
+body:not(.dark-mode) #data-manager-modal .login-tab.active {
+    border-color: rgba(29, 78, 216, 0.28) !important;
+    background: #ffffff !important;
+    color: var(--mature-blue) !important;
+    box-shadow: inset 0 -2px 0 var(--mature-blue) !important;
+}
+
+body:not(.dark-mode) #data-manager-modal th {
+    top: 0;
+}
+
+body:not(.dark-mode) #watermark-layer {
+    opacity: 0.006 !important;
+    background-size: 520px 360px !important;
 }
 
 body:not(.dark-mode) .shell-module-rail-shell--floating {

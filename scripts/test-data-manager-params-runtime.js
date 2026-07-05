@@ -110,6 +110,33 @@ async function run() {
     runtime.renderParams(manager);
     assert.strictEqual(elements['dm-params-area'].style.display, 'none');
 
+    let idleOptions = null;
+    let idleRenderStatusCalls = 0;
+    const idleRoot = {
+        ...root,
+        isIndicatorPromptAllowed() {
+            return true;
+        },
+        SystemPerformance: {
+            scheduleIdle(callback, options) {
+                idleOptions = options;
+                callback();
+            }
+        }
+    };
+    const idleRuntime = createDataManagerParamsRuntime(idleRoot);
+    idleRuntime.renderParams({
+        restoreGrade9IndicatorTemplate() {
+            return true;
+        },
+        renderDataManagerStatus() {
+            idleRenderStatusCalls += 1;
+        }
+    });
+    assert.strictEqual(idleOptions.delay, 0);
+    assert.strictEqual(idleOptions.timeout, 900);
+    assert.strictEqual(idleRenderStatusCalls, 1);
+
     root.isIndicatorAllowed = () => false;
     const currentSaveCalls = saveCloudCalls;
     await runtime.saveParamsLocally(manager, false);

@@ -7,6 +7,27 @@
 
 ## 一、当前系统状态（2026-07-05，最新）
 
+**Codex 最新设计改造：成熟蓝灰数据工作台视觉层已收口，并修复 DataManager 参数页性能预算。** 本轮按“国际成熟教务/数据分析系统”的方向，只改视觉 CSS、参数页状态渲染调度与对应测试，不改计算、学校识别、导入规则或 8/9 年级数据口径。界面重点从装饰化卡片感收敛为更清晰的工作台：左侧导航、顶部工具栏、模块入口、工作面板、表格和数据管理弹窗都使用更稳定的蓝灰层级；同时降低页面水印干扰，保留保护层但不压住阅读。
+
+| 维度 | 最新结果 |
+|------|------|
+| `npm run build` | ✅ 通过；runtime cache version `runtime-f5bf9d472d72` |
+| `node scripts/test-syntax.js` / `test-runtime-order.js` | ✅ |
+| `node scripts/test-calculation-snapshot.js` | ✅ rawData=7790；本校/别名/教师/排名/边缘生/座位调整核验通过 |
+| `node scripts/test-css-hygiene.js` / `test-build-size-budget.js` | ✅ dist CSS 仍在 640KB 固定预算内 |
+| 登录契约/布局 | ✅ `test:responsive-login-contract`、`test:responsive-login-layout` 通过 |
+| `npm run smoke:layout:local` | ✅ 桌面/移动主要模块无 overflow/遮挡 |
+| `npm run smoke:modules:local` | ✅ errorCount 0；budgetFailures `[]`；`dm:params=3867ms`（预算 5000ms） |
+| 关键数据 | ✅ 本校=银山实验学校；scoreCount=7790；examId=`2022级-9年级-2025-2026-下学期-二模-2026-05-27`；termId=`9年级_下学期` |
+
+**本轮改动摘要：**
+- `src/assets/css/mature-system-shell.css`：强化成熟工作台视觉层级，优化顶部栏、侧栏、模块入口、表格 sticky 表头、DataManager 弹窗、hover/zebra 表格状态和低干扰水印。
+- `public/assets/js/data-manager-params-runtime.js`：把参数页 fallback 状态渲染从 720ms idle 延迟改为 0ms/900ms，和 DataManager 主调度保持一致，避免 smoke 与真实操作中参数页签等待过长。
+- `scripts/test-data-manager-params-runtime.js`：新增 fallback `SystemPerformance.scheduleIdle` 契约，锁定 `delay=0`、`timeout=900`。
+- `scripts/test-css-hygiene.js`：只给最终成熟 shell 层增加 2KB 单文件余量；全局 dist CSS 固定预算未上调。
+
+---
+
 **Codex 最新修复：DataManager 参数页性能预算已清零。** 针对上一轮生产 smoke 中 `dm:params` 5232/5364ms > 5000ms 的问题，已把 `data-manager-params-runtime.js` 的状态刷新接回 `DataManager.scheduleDataManagerStatusRender` 统一合并调度，避免参数页自建 idle 队列造成重复/延迟刷新；同时修正 `test-runtime-hygiene.js`，让 report-history 后台 hydrate 契约检查模块化后的 `report-history-runtime.js`，不再错误盯旧 `app.js`。
 
 | 维度 | 最新结果 |

@@ -70,7 +70,7 @@
             root.SystemPerformance.scheduleIdle(() => {
                 pendingStatusRender = false;
                 renderStatus(manager);
-            }, { label: 'data-manager-params-status', delay: 720, timeout: 2200 });
+            }, { label: 'data-manager-params-status', delay: 0, timeout: 900 });
             return;
         }
         const raf = typeof root.requestAnimationFrame === 'function' ? root.requestAnimationFrame : null;
