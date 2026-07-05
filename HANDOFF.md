@@ -17,7 +17,7 @@
 | 关键数据 | ✅ 本校=银山实验学校；scoreCount=7790；examId=`2022级-9年级-2025-2026-下学期-二模-2026-05-27`；termId=`9年级_下学期` |
 | 计算快照 | ✅ 通过；未改计算口径、学校识别、Excel 导入规则 |
 
-**本轮待完成：** 已本地验证，下一步提交、推送、Cloudflare 部署并跑生产 smoke。当前 runtime cache version：`runtime-70f9ac312c49`。
+**本轮已完成发布：** commit `1d1e188f` 已推送 GitHub；Cloudflare version `b9ed2f0b-2755-4507-9f2f-57332a3bbff9`；runtime cache version `runtime-70f9ac312c49`。生产 `smoke:prod-minimal` 与 `smoke:modules:prod` 均通过，`errorCount=0`、`budgetFailures=[]`，生产 `dm:params=4808ms`（预算 5000ms）。
 
 ---
 
