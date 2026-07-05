@@ -176,6 +176,36 @@ function assertHorizontalRankCells(summary, sheetName, label) {
     }
 }
 
+function normalizeCompareValue(value) {
+    if (value === null || value === undefined) return '';
+    const text = String(value).trim();
+    if (!text) return '';
+    const numeric = Number(text.replace(/%$/, ''));
+    if (Number.isFinite(numeric)) return Number(numeric.toFixed(2));
+    return text.replace(/\s+/g, '');
+}
+
+function assertSheetRowsMatchExpected(rows, expectedRows, label, columns) {
+    const header = rows[0] || [];
+    const nameIndex = findColumn(header, ['学校', '学校名称']);
+    if (nameIndex < 0) fail(`${label} missing school column: ${header.join(',')}`);
+    const byName = new Map(rows.slice(1).filter((row) => String(row?.[nameIndex] || '').trim()).map((row) => [String(row[nameIndex]).trim(), row]));
+    if (byName.size < expectedRows.length) fail(`${label} has too few school rows: ${byName.size} < ${expectedRows.length}`);
+    expectedRows.forEach((expected) => {
+        const actual = byName.get(expected.name);
+        if (!actual) fail(`${label} missing row for ${expected.name}`);
+        columns.forEach((column) => {
+            const columnIndex = findColumn(header, column.names);
+            if (columnIndex < 0) fail(`${label} missing column ${column.names.join('/')}: ${header.join(',')}`);
+            const actualValue = normalizeCompareValue(actual[columnIndex]);
+            const expectedValue = normalizeCompareValue(expected[column.key]);
+            if (actualValue !== expectedValue) {
+                fail(`${label} mismatch ${expected.name}.${column.key}: actual=${actualValue} expected=${expectedValue} row=${JSON.stringify(actual)} header=${JSON.stringify(header)}`);
+            }
+        });
+    });
+}
+
 function getColumnIndexesByPattern(header, pattern) {
     return (header || [])
         .map((cell, index) => ({ cell: String(cell || ''), index }))
@@ -276,6 +306,150 @@ async function login(page) {
                 })
             };
         });
+        const expectedSupportRows = await page.evaluate(() => {
+            if (typeof window.renderTables === 'function') window.renderTables();
+            if (typeof window.calcSummary === 'function') window.calcSummary(true);
+            if (typeof window.renderHighScoreTable === 'function') window.renderHighScoreTable();
+            if (typeof window.renderBottom3TableOnly === 'function') window.renderBottom3TableOnly();
+            let indicatorRows = [];
+            if (typeof window.calcIndicators === 'function') {
+                const result = window.calcIndicators(true);
+                if (Array.isArray(result)) indicatorRows = result;
+            }
+            if (!indicatorRows.length && Array.isArray(window.__LAST_INDICATOR_CALC_DATA__)) indicatorRows = window.__LAST_INDICATOR_CALC_DATA__;
+            const schools = typeof window.getSummaryTownshipSchools === 'function'
+                ? window.getSummaryTownshipSchools()
+                : Object.values(window.SCHOOLS || {});
+            const round = (value, digits = 2) => {
+                const number = Number(value);
+                return Number.isFinite(number) ? Number(number.toFixed(digits)) : '';
+            };
+            const pct = (value) => {
+                const number = Number(value);
+                return Number.isFinite(number) ? Number((number * 100).toFixed(2)) : '';
+            };
+            const countStudentsForSchool = (name) => {
+                const target = String(name || '').trim();
+                return (window.RAW_DATA || []).filter((student) => {
+                    const schoolName = String(student?.school || '').trim();
+                    if (typeof window.sameAppSchoolName === 'function') return window.sameAppSchoolName(schoolName, target);
+                    return schoolName === target;
+                }).length;
+            };
+            const domHighRows = Array.from(document.querySelectorAll('#tb-high-score tbody tr')).map((tr) => {
+                const cells = Array.from(tr.querySelectorAll('td')).map((td) => td.textContent.trim());
+                if (cells.length < 6 || !cells[0] || /无高分段|请先上传/.test(cells.join(''))) return null;
+                return {
+                    name: cells[0],
+                    count: Number(cells[1]) || 0,
+                    highCount: Number(cells[2]) || 0,
+                    highRate: Number(String(cells[3] || '').replace(/%$/, '')) || 0,
+                    score: round(cells[4]),
+                    rank: Number(cells[5]) || 0
+                };
+            }).filter(Boolean);
+            if (domHighRows.length) {
+                const highScore = domHighRows;
+                const indicator = (indicatorRows || []).slice()
+                    .sort((left, right) => (Number(left.rank) || 9999) - (Number(right.rank) || 9999) || String(left.name || '').localeCompare(String(right.name || ''), 'zh-CN', { numeric: true }))
+                    .map((row) => ({
+                        name: row.name || '',
+                        studentCount: row.studentCount || '',
+                        targetKey: row.targetKey || '',
+                        ind1: `${row.t1 || (row.invalidTarget ? '异常' : (row.missingTarget ? '未匹配' : 0))}/${row.r1 || 0}`,
+                        base1: round(row.base1),
+                        bonus1: round(row.bonus1),
+                        score1: round(row.score1),
+                        ind2: `${row.t2 || (row.invalidTarget ? '异常' : (row.missingTarget ? '未匹配' : 0))}/${row.r2 || 0}`,
+                        base2: round(row.base2),
+                        bonus2: round(row.bonus2),
+                        score2: round(row.score2),
+                        finalScore: round(row.finalScore),
+                        rank: row.rank || '',
+                    }));
+                const bottomBase = schools.map((school) => {
+                    const name = school.name || '';
+                    const schoolRows = (window.RAW_DATA || []).filter((student) => {
+                        const schoolName = String(student?.school || '').trim();
+                        if (typeof window.sameAppSchoolName === 'function') return window.sameAppSchoolName(schoolName, name);
+                        return schoolName === String(name || '').trim();
+                    }).filter((student) => Number.isFinite(Number(student?.total)));
+                    const totals = schoolRows.map((student) => Number(student.total)).sort((left, right) => left - right);
+                    const totalN = totals.length;
+                    const bottomN = Math.floor(totalN / 3);
+                    const excRate = Number(window.CONFIG?.excRate) || 0;
+                    const excN = Math.ceil(bottomN * excRate);
+                    const bottomTotals = totals.slice(0, bottomN);
+                    const validTotals = bottomTotals.slice(excN);
+                    const avg = validTotals.length ? validTotals.reduce((sum, value) => sum + value, 0) / validTotals.length : 0;
+                    return { name, totalN, bottomN, excN, avg };
+                });
+                const maxBottomAvg = Math.max(...bottomBase.map((row) => Number(row.avg) || 0), 0);
+                const bottom = bottomBase.map((row) => ({
+                    ...row,
+                    avg: round(row.avg),
+                    score: round(maxBottomAvg ? row.avg / maxBottomAvg * 40 : 0)
+                })).sort((left, right) => Number(right.score) - Number(left.score))
+                    .map((row, index) => ({ ...row, rank: index + 1 }));
+                return { highScore, indicator, bottom };
+            }
+            const highSource = schools.map((school) => {
+                const name = school.name || '';
+                const schoolRows = (window.RAW_DATA || []).filter((student) => {
+                    const schoolName = String(student?.school || '').trim();
+                    if (typeof window.sameAppSchoolName === 'function') return window.sameAppSchoolName(schoolName, name);
+                    return schoolName === String(name || '').trim();
+                });
+                const highCount = schoolRows.filter((student) => Number(student?.total) >= 490).length;
+                return {
+                    name,
+                    count: schoolRows.length || Number(school.metrics?.total?.count) || countStudentsForSchool(name),
+                    highCount,
+                    highRatioRaw: schoolRows.length ? highCount / schoolRows.length : 0
+                };
+            });
+            const maxHighRatio = Math.max(...highSource.map((row) => Number(row.highRatioRaw) || 0), 0);
+            const highScore = highSource.map((row) => {
+                const score = maxHighRatio > 0 ? row.highRatioRaw / maxHighRatio * 70 : 0;
+                return {
+                    name: row.name,
+                    count: row.count,
+                    highCount: row.highCount,
+                    highRate: pct(row.highRatioRaw),
+                    score: round(score),
+                };
+            }).sort((left, right) => Number(right.score) - Number(left.score))
+                .map((row, index) => ({ ...row, rank: index + 1 }));
+            const indicator = (indicatorRows || []).slice()
+                .sort((left, right) => (Number(left.rank) || 9999) - (Number(right.rank) || 9999) || String(left.name || '').localeCompare(String(right.name || ''), 'zh-CN', { numeric: true }))
+                .map((row) => ({
+                    name: row.name || '',
+                    studentCount: row.studentCount || '',
+                    targetKey: row.targetKey || '',
+                    ind1: `${row.t1 || (row.invalidTarget ? '异常' : (row.missingTarget ? '未匹配' : 0))}/${row.r1 || 0}`,
+                    base1: round(row.base1),
+                    bonus1: round(row.bonus1),
+                    score1: round(row.score1),
+                    ind2: `${row.t2 || (row.invalidTarget ? '异常' : (row.missingTarget ? '未匹配' : 0))}/${row.r2 || 0}`,
+                    base2: round(row.base2),
+                    bonus2: round(row.bonus2),
+                    score2: round(row.score2),
+                    finalScore: round(row.finalScore),
+                    rank: row.rank || '',
+                }));
+            const bottom = schools.slice()
+                .sort((left, right) => (left.rankBottom || 9999) - (right.rankBottom || 9999) || String(left.name || '').localeCompare(String(right.name || ''), 'zh-CN', { numeric: true }))
+                .map((school) => ({
+                    name: school.name || '',
+                    totalN: school.bottom3?.totalN || '',
+                    bottomN: school.bottom3?.bottomN || '',
+                    excN: school.bottom3?.excN || '',
+                    avg: round(school.bottom3?.avg),
+                    score: round(school.scoreBottom),
+                    rank: school.rankBottom || '',
+                }));
+            return { highScore, indicator, bottom };
+        });
         const [download] = await Promise.all([
             page.waitForEvent('download', { timeout: 120000 }),
             page.evaluate(() => window.downloadExamAnalysisPackage())
@@ -339,6 +513,40 @@ async function login(page) {
         assertNumericColumn(townshipTotalRows, townshipHeader, townshipSchoolIndex, ['两率一分'], `${schoolAnalysisName}:五科总 - 综合分析表`, { minimumRows: 5 });
         assertNumericColumn(townshipTotalRows, townshipHeader, townshipSchoolIndex, ['综合排名'], `${schoolAnalysisName}:五科总 - 综合分析表`, { minimumRows: 5 });
         assertHorizontalRankCells(schoolAnalysisSummary, '横向对比一览表', schoolAnalysisName);
+        const highScoreRows = schoolAnalysisSummary.rowsBySheetName['高分段赋分详情'] || [];
+        assertSheetRowsMatchExpected(highScoreRows, expectedSupportRows.highScore, `${schoolAnalysisName}:高分段赋分详情`, [
+            { key: 'count', names: ['实考人数'] },
+            { key: 'highCount', names: ['高分人数(≥490)', '高分人数'] },
+            { key: 'highRate', names: ['高分率(%)'] },
+            { key: 'score', names: ['高分赋分(70)', '高分段赋分'] },
+            { key: 'rank', names: ['排名'] }
+        ]);
+        const indicatorRows = schoolAnalysisSummary.rowsBySheetName['指标生达标核算'] || [];
+        assertSheetRowsMatchExpected(indicatorRows, expectedSupportRows.indicator, `${schoolAnalysisName}:指标生达标核算`, [
+            { key: 'studentCount', names: ['学生数'] },
+            { key: 'ind1', names: ['指标一目标/达标'] },
+            { key: 'base1', names: ['指标一基础分'] },
+            { key: 'bonus1', names: ['指标一附加分'] },
+            { key: 'score1', names: ['指标一小计'] },
+            { key: 'ind2', names: ['指标二目标/达标'] },
+            { key: 'base2', names: ['指标二基础分'] },
+            { key: 'bonus2', names: ['指标二附加分'] },
+            { key: 'score2', names: ['指标二小计'] },
+            { key: 'finalScore', names: ['指标总分'] },
+            { key: 'rank', names: ['排名'] }
+        ]);
+        const bottomRows = schoolAnalysisSummary.rowsBySheetName['后三分之一学生核算'] || schoolAnalysisSummary.rowsBySheetName['后1/3学生核算'] || [];
+        assertSheetRowsMatchExpected(bottomRows, expectedSupportRows.bottom, `${schoolAnalysisName}:后三分之一学生核算`, [
+            { key: 'totalN', names: ['总人数'] },
+            { key: 'bottomN', names: ['后1/3人数'] },
+            { key: 'excN', names: ['剔除人数'] },
+            { key: 'avg', names: ['有效后1/3均分', '后1/3平均分'] },
+            { key: 'score', names: ['后1/3得分'] },
+            { key: 'rank', names: ['排名'] }
+        ]);
+        if (!schoolAnalysisSummary.sheetNames.includes('专项核算对照表')) {
+            fail(`school analysis workbook missing 专项核算对照表: ${schoolAnalysisSummary.sheetNames.join(', ')}`);
+        }
 
         const { name: schoolCountyName, summary: schoolCountySummary } = await readWorkbookFromPackage(outerZip, files, /学校\/二模学校县域分析0527\.xlsx$/, 'county school analysis workbook');
         if (schoolCountySummary.sheetNames.includes('综合分析报告')) {

@@ -4195,16 +4195,23 @@ function renderHighScoreTable() {
         return;
     }
 
-    const list = townshipSchools.map(s => {
-        const hs = s.highScoreStats || { count: 0, ratio: 0, score: 0 };
+    const baseList = townshipSchools.map(s => {
+        const students = getEquivalentSchoolStudents(s.name);
+        const count = students.length || (s.metrics.total ? s.metrics.total.count : 0);
+        const hsCount = students.filter(stu => Number(stu.total) >= 490).length;
+        const hsRatio = count ? hsCount / count : 0;
         return {
             name: s.name,
-            count: s.metrics.total ? s.metrics.total.count : 0,
-            hsCount: hs.count,
-            hsRatio: hs.ratio,
-            score: hs.score
+            count,
+            hsCount,
+            hsRatio
         };
     });
+    const maxHighRatio = Math.max(...baseList.map(d => d.hsRatio), 0);
+    const list = baseList.map(d => ({
+        ...d,
+        score: maxHighRatio ? d.hsRatio / maxHighRatio * 70 : 0
+    }));
 
     list.sort((a, b) => b.score - a.score);
 
@@ -4254,16 +4261,23 @@ function exportHighScoreExcel() {
     const headers = ["学校名称", "实考人数", "高分人数(≥490)", "高分率", "高分赋分(70)", "排名"];
     const wsData = [headers];
 
-    const list = townshipSchools.map(s => {
-        const hs = s.highScoreStats || { count: 0, ratio: 0, score: 0 };
+    const baseList = townshipSchools.map(s => {
+        const students = getEquivalentSchoolStudents(s.name);
+        const count = students.length || (s.metrics.total ? s.metrics.total.count : 0);
+        const hsCount = students.filter(stu => Number(stu.total) >= 490).length;
+        const hsRatio = count ? hsCount / count : 0;
         return {
             name: s.name,
-            count: s.metrics.total ? s.metrics.total.count : 0,
-            hsCount: hs.count,
-            hsRatio: hs.ratio,
-            score: hs.score
+            count,
+            hsCount,
+            hsRatio
         };
-    }).sort((a, b) => b.score - a.score);
+    });
+    const maxHighRatio = Math.max(...baseList.map(d => d.hsRatio), 0);
+    const list = baseList.map(d => ({
+        ...d,
+        score: maxHighRatio ? d.hsRatio / maxHighRatio * 70 : 0
+    })).sort((a, b) => b.score - a.score);
 
     list.forEach((d, i) => {
         wsData.push([

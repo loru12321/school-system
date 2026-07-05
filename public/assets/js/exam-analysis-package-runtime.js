@@ -428,6 +428,7 @@
         const subjects = getSubjectList(getAllRows());
         if (scope !== 'county') addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope));
         addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects, scope));
+        if (scope !== 'county' && isGrade9Exam()) addWorksheet(wb, '专项核算对照表', buildSupportMetricComparisonRows(schools));
         addWorksheet(wb, '五科总 - 综合分析表', schoolRankRows(schools, 'total', scope));
         subjects.forEach((subject) => addWorksheet(wb, `${subject} 学科明细`, schoolRankRows(schools, subject, scope)));
         if (scope !== 'county') {
@@ -572,46 +573,86 @@
     }
 
     function buildHighScoreRows(schools) {
-        const rows = [['学校', '高分人数', '高分率(%)', '高分段赋分', '_标记']];
-        schools.forEach((school) => {
-            const stats = school.highScoreStats || {};
+        const rows = [['学校名称', '实考人数', '高分人数(≥490)', '高分率(%)', '高分赋分(70)', '排名', '_标记']];
+        const baseList = (schools || []).map((school) => {
+            const students = Array.isArray(school.students) ? school.students : getAllRows().filter((student) => sameSchool(student?.school, school.name));
+            const studentCount = Number(school.metrics?.total?.count) || (Array.isArray(school.students) ? school.students.length : 0);
+            const highCount = students.filter((student) => Number(student?.total) >= 490).length;
+            const highRate = studentCount ? highCount / studentCount : 0;
+            return {
+                name: school.name || '',
+                count: studentCount,
+                highCount,
+                highRate
+            };
+        });
+        const maxHighRate = Math.max(...baseList.map((item) => item.highRate), 0);
+        const list = baseList.map((item) => ({
+            ...item,
+            score: maxHighRate ? item.highRate / maxHighRate * 70 : 0
+        })).sort((left, right) => right.score - left.score);
+        list.forEach((item, index) => {
             rows.push([
-                school.name || '',
-                stats.count || stats.hsCount || 0,
-                pct(stats.ratio || stats.hsRatio || 0),
-                num(stats.score || 0),
-                sameSchool(school.name, getMySchoolName()) ? '本校' : ''
+                item.name,
+                item.count,
+                item.highCount,
+                pct(item.highRate),
+                num(item.score),
+                index + 1,
+                sameSchool(item.name, getMySchoolName()) ? '本校' : ''
             ]);
         });
         return rows;
     }
 
-    function buildIndicatorRows() {
+    function getIndicatorCalcRows() {
         let rows = Array.isArray(window.__LAST_INDICATOR_CALC_DATA__) ? window.__LAST_INDICATOR_CALC_DATA__ : [];
+        if (!rows.length && Array.isArray(window.INDICATOR_LAST_RESULT)) rows = window.INDICATOR_LAST_RESULT;
         if (!rows.length && typeof window.calcIndicators === 'function') {
             try {
                 const result = window.calcIndicators(true);
                 if (Array.isArray(result)) rows = result;
             } catch (_) {}
         }
+        return Array.isArray(rows) ? rows.slice() : [];
+    }
+
+    function buildIndicatorRows() {
+        const rows = getIndicatorCalcRows()
+            .sort((left, right) => (Number(left.rank) || 9999) - (Number(right.rank) || 9999) || String(left.name || '').localeCompare(String(right.name || ''), 'zh-CN', { numeric: true }));
         return [
-            ['学校', '指标生得分', '名次', '说明', '_标记'],
+            ['学校', '学生数', '目标匹配', '指标一目标/达标', '指标一基础分', '指标一附加分', '指标一小计', '指标二目标/达标', '指标二基础分', '指标二附加分', '指标二小计', '指标总分', '排名', '说明', '_标记'],
             ...rows.map((row) => [
                 row.name || '',
+                row.studentCount || '',
+                row.targetKey || '',
+                `${row.t1 || (row.invalidTarget ? '异常' : (row.missingTarget ? '未匹配' : 0))}/${row.r1 || 0}`,
+                num(row.base1),
+                num(row.bonus1),
+                num(row.score1),
+                `${row.t2 || (row.invalidTarget ? '异常' : (row.missingTarget ? '未匹配' : 0))}/${row.r2 || 0}`,
+                num(row.base2),
+                num(row.bonus2),
+                num(row.score2),
                 num(row.finalScore),
                 row.rank || '',
-                row.missingTarget ? '缺目标人数' : '',
+                [
+                    row.invalidTarget ? `目标异常：学生数${row.studentCount || 0}，原目标${row.rawT1 || 0}/${row.rawT2 || 0}` : '',
+                    row.missingTarget ? '未匹配目标人数' : ''
+                ].filter(Boolean).join('；'),
                 sameSchool(row.name, getMySchoolName()) ? '本校' : ''
             ])
         ];
     }
 
     function buildBottomRows(schools) {
-        return [
-            ['学校', '总人数', '后1/3人数', '剔除人数', '后1/3平均分', '后1/3得分', '排名', '_标记'],
-            ...schools.map((school) => {
+        const rows = [['学校', '总人数', '后1/3人数', '剔除人数', '有效后1/3均分', '后1/3得分', '排名', '_标记']];
+        (schools || [])
+            .slice()
+            .sort((left, right) => (left.rankBottom || 9999) - (right.rankBottom || 9999) || String(left.name || '').localeCompare(String(right.name || ''), 'zh-CN', { numeric: true }))
+            .forEach((school) => {
                 const bottom = school.bottom3 || {};
-                return [
+                rows.push([
                     school.name || '',
                     bottom.totalN || '',
                     bottom.bottomN || '',
@@ -620,6 +661,39 @@
                     num(school.scoreBottom),
                     school.rankBottom || '',
                     sameSchool(school.name, getMySchoolName()) ? '本校' : ''
+                ]);
+            });
+        return rows;
+    }
+
+    function buildSupportMetricComparisonRows(schools) {
+        const highRows = buildHighScoreRows(schools).slice(1);
+        const indicatorRows = buildIndicatorRows().slice(1);
+        const bottomRows = buildBottomRows(schools).slice(1);
+        const highMap = new Map(highRows.map((row) => [String(row[0] || '').trim(), row]));
+        const indicatorMap = new Map(indicatorRows.map((row) => [String(row[0] || '').trim(), row]));
+        const bottomMap = new Map(bottomRows.map((row) => [String(row[0] || '').trim(), row]));
+        return [
+            ['学校', '高分人数', '高分率(%)', '高分赋分(70)', '高分排名', '指标一目标/达标', '指标二目标/达标', '指标总分', '指标排名', '后1/3均分', '后1/3得分', '后1/3排名', '_标记'],
+            ...(schools || []).map((school) => {
+                const name = String(school?.name || '').trim();
+                const high = highMap.get(name) || [];
+                const indicator = indicatorMap.get(name) || [];
+                const bottom = bottomMap.get(name) || [];
+                return [
+                    name,
+                    high[2] ?? '',
+                    high[3] ?? '',
+                    high[4] ?? '',
+                    high[5] ?? '',
+                    indicator[3] ?? '',
+                    indicator[7] ?? '',
+                    indicator[11] ?? '',
+                    indicator[12] ?? '',
+                    bottom[4] ?? '',
+                    bottom[5] ?? '',
+                    bottom[6] ?? '',
+                    sameSchool(name, getMySchoolName()) ? '本校' : ''
                 ];
             })
         ];
