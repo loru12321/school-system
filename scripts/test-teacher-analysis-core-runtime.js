@@ -69,8 +69,8 @@ const context = {
     CURRENT_EXAM_ID: '',
     CURRENT_TERM_ID: '',
     TARGETS: {},
-    SUBJECTS: ['数学'],
-    THRESHOLDS: { 数学: { exc: 90, pass: 60 } },
+    SUBJECTS: ['数学', '语文'],
+    THRESHOLDS: { 数学: { exc: 90, pass: 60 }, 语文: { exc: 90, pass: 60 } },
     RAW_DATA: [],
     SCHOOLS: {},
     TEACHER_MAP: {},
@@ -84,15 +84,24 @@ vm.runInContext(source, context, { filename: runtimePath });
 
 context.MY_SCHOOL = '甲校别名';
 context.SCHOOLS = {
-    甲校: { metrics: { 数学: { avg: 80, excRate: 0.4, passRate: 0.8, count: 2 } } },
+    甲校: {
+        metrics: {
+            数学: { avg: 80, excRate: 0.4, passRate: 0.8, count: 2 },
+            语文: { avg: 82, excRate: 0.35, passRate: 0.75, count: 2 }
+        }
+    },
     乙校: { metrics: { 数学: { avg: 70, excRate: 0.2, passRate: 0.7, count: 2 } } }
 };
 context.TEACHER_STATS = {
-    基础老师: { 数学: { passRate: 0.9, excellentRate: 0.2 } },
-    培优老师: { 数学: { passRate: 0.7, excellentRate: 0.6 } }
+    基础老师: { 数学: { passRate: 0.9, excellentRate: 0.2 }, 语文: { passRate: 0.88, excellentRate: 0.3 } },
+    培优老师: { 数学: { passRate: 0.7, excellentRate: 0.6 }, 语文: { passRate: 0.74, excellentRate: 0.52 } }
 };
 context.generateTeacherPairing();
-assert.strictEqual(pairingContainer.children.length, 1, 'pairing should use the equivalent canonical school metrics');
+assert.strictEqual(pairingContainer.children.length, 2, 'pairing should generate suggestions across available subjects');
+assert.ok(
+    pairingContainer.children.some((child) => String(child.innerHTML || '').includes('语文')),
+    'pairing should include non-math subject suggestions when complementary teachers exist'
+);
 
 context.TEACHER_STATS = {
     甲校教师: {

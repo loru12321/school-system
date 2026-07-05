@@ -1407,9 +1407,17 @@
 
         const schoolMetrics = schoolRecord.metrics || {};
         const pairs = [];
+        const seenPairIds = new Set();
+        const addPair = (pair) => {
+            if (!pair || !pair.teacher1 || !pair.teacher2 || pair.teacher1.name === pair.teacher2.name) return false;
+            if (seenPairIds.has(pair.id)) return false;
+            seenPairIds.add(pair.id);
+            pairs.push(pair);
+            return true;
+        };
+        const buildPairId = (left, right, subject) => `${[left.name, right.name].sort().join('-')}-${subject}`;
         (window.SUBJECTS || []).forEach((subject) => {
             const baseline = schoolMetrics[subject];
-            if (!baseline) return;
             const teachers = [];
             Object.keys(window.TEACHER_STATS || {}).forEach((teacherName) => {
                 if (window.TEACHER_STATS[teacherName]?.[subject]) {
@@ -1419,19 +1427,59 @@
             if (teachers.length < 2) return;
 
             const typeA = teachers.filter((teacher) => (
-                teacher.data.passRate > baseline.passRate && teacher.data.excellentRate < baseline.excRate
+                baseline
+                && teacher.data.passRate > baseline.passRate
+                && teacher.data.excellentRate < baseline.excRate
             ));
             const typeB = teachers.filter((teacher) => (
-                teacher.data.excellentRate > baseline.excRate && teacher.data.passRate < baseline.passRate
+                baseline
+                && teacher.data.excellentRate > baseline.excRate
+                && teacher.data.passRate < baseline.passRate
             ));
+            const subjectPairs = [];
             typeA.forEach((left) => {
                 typeB.forEach((right) => {
-                    const id = `${[left.name, right.name].sort().join('-')}-${subject}`;
-                    if (!pairs.some((item) => item.id === id)) {
-                        pairs.push({ id, subject, teacher1: left, teacher2: right });
-                    }
+                    if (left.name === right.name) return;
+                    subjectPairs.push({
+                        id: buildPairId(left, right, subject),
+                        subject,
+                        teacher1: left,
+                        teacher2: right,
+                        score: Math.abs(teacherToNumber(left.data.passRate, 0) - teacherToNumber(right.data.passRate, 0))
+                            + Math.abs(teacherToNumber(right.data.excellentRate, 0) - teacherToNumber(left.data.excellentRate, 0)),
+                        source: 'baseline'
+                    });
                 });
             });
+
+            if (!subjectPairs.length) {
+                teachers.forEach((left) => {
+                    teachers.forEach((right) => {
+                        if (left.name === right.name) return;
+                        const passGap = teacherToNumber(left.data.passRate, 0) - teacherToNumber(right.data.passRate, 0);
+                        const excellentGap = teacherToNumber(right.data.excellentRate, 0) - teacherToNumber(left.data.excellentRate, 0);
+                        const countGapPenalty = Math.abs(
+                            Math.sqrt(Math.max(teacherToNumber(left.data.studentCount, 0), 0))
+                            - Math.sqrt(Math.max(teacherToNumber(right.data.studentCount, 0), 0))
+                        ) * 0.01;
+                        const score = passGap + excellentGap - countGapPenalty;
+                        if (score <= 0.015 || passGap <= 0 || excellentGap <= 0) return;
+                        subjectPairs.push({
+                            id: buildPairId(left, right, subject),
+                            subject,
+                            teacher1: left,
+                            teacher2: right,
+                            score,
+                            source: 'complement'
+                        });
+                    });
+                });
+            }
+
+            subjectPairs
+                .sort((left, right) => right.score - left.score)
+                .slice(0, 2)
+                .forEach(addPair);
         });
 
         if (!pairs.length) {

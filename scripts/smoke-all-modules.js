@@ -2133,6 +2133,37 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'teacher-pairing') {
+        return page.evaluate(async () => {
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const deadline = Date.now() + 8000;
+            let state = null;
+            while (Date.now() < deadline) {
+                const container = document.getElementById('teacher-pairing-suggestions');
+                const cards = container ? Array.from(container.querySelectorAll('.pairing-card')) : [];
+                const subjects = new Set(cards.map((card) => String(card.textContent || '').match(/语文|数学|英语|物理|化学|政治|道法|历史|地理|生物/)?.[0]).filter(Boolean));
+                state = {
+                    containerReady: !!container,
+                    pairCount: cards.length,
+                    subjectCount: subjects.size,
+                    hasMultipleSuggestions: cards.length > 1,
+                    hasMultipleSubjects: subjects.size > 1
+                };
+                if (state.containerReady && state.hasMultipleSuggestions && state.hasMultipleSubjects) break;
+                await wait(150);
+            }
+            return {
+                ok: !!(state?.containerReady && state?.hasMultipleSuggestions && state?.hasMultipleSubjects),
+                checks: state || {
+                    containerReady: false,
+                    pairCount: 0,
+                    subjectCount: 0,
+                    hasMultipleSuggestions: false,
+                    hasMultipleSubjects: false
+                }
+            };
+        });
+    }
     if (id === 'county-analysis') {
         return page.evaluate(async () => {
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
