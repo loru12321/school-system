@@ -7,9 +7,39 @@
         subjectCollaboration: 'teacher_subject_collaboration',
         bottomThird: 'teacher_bottom_third',
         excellentContribution: 'teacher_excellent_contribution',
+        teacherWorkload: 'teacher_workload',
+        classTermScoreNonGrad: 'class_term_score_non_grad',
+        classTopStudentsNonGrad: 'class_top_students_non_grad',
+        classAverageNonGrad: 'class_average_non_grad',
+        classTargetNonGrad: 'class_target_non_grad',
+        classBottomThirdNonGrad: 'class_bottom_third_non_grad',
+        classTwoRatesOneScoreGrad: 'class_two_rates_one_score_grad',
         classTargetGrad: 'class_target_grad',
-        classHighSchoolContribution: 'class_high_school_contribution_grad'
+        classBottomThirdGrad: 'class_bottom_third_grad',
+        classHighSchoolContribution: 'class_high_school_contribution_grad',
+        classHighScoreGrad: 'class_high_score_grad'
     };
+
+    const SYNC_ENABLED_PROJECT_IDS = [
+        PROJECTS.twoRates,
+        PROJECTS.classCollaboration,
+        PROJECTS.subjectCollaboration,
+        PROJECTS.bottomThird,
+        PROJECTS.excellentContribution
+    ];
+
+    const PREVIEW_ONLY_PROJECT_IDS = [
+        PROJECTS.classTermScoreNonGrad,
+        PROJECTS.classTopStudentsNonGrad,
+        PROJECTS.classAverageNonGrad,
+        PROJECTS.classTargetNonGrad,
+        PROJECTS.classBottomThirdNonGrad,
+        PROJECTS.classTwoRatesOneScoreGrad,
+        PROJECTS.classTargetGrad,
+        PROJECTS.classBottomThirdGrad,
+        PROJECTS.classHighSchoolContribution,
+        PROJECTS.classHighScoreGrad
+    ];
 
     const PROJECT_LABELS = {
         [PROJECTS.twoRates]: '两率一分',
@@ -17,9 +47,17 @@
         [PROJECTS.subjectCollaboration]: '学科组协同成绩',
         [PROJECTS.bottomThird]: '后 1/3 学生成绩',
         [PROJECTS.excellentContribution]: '尖子生培养贡献',
+        [PROJECTS.teacherWorkload]: '课时量成绩',
+        [PROJECTS.classTermScoreNonGrad]: '班级期末成绩',
+        [PROJECTS.classTopStudentsNonGrad]: '尖优学生得分',
+        [PROJECTS.classAverageNonGrad]: '班级平均分',
+        [PROJECTS.classTargetNonGrad]: '优秀指标完成',
+        [PROJECTS.classBottomThirdNonGrad]: '班级后 1/3 学生成绩',
+        [PROJECTS.classTwoRatesOneScoreGrad]: '毕业班两率一分',
         [PROJECTS.classTargetGrad]: '毕业班指标完成',
+        [PROJECTS.classBottomThirdGrad]: '毕业班后 1/3 学生成绩',
         [PROJECTS.classHighSchoolContribution]: '高中贡献率',
-        teacher_workload: '课时量成绩'
+        [PROJECTS.classHighScoreGrad]: '高分段贡献'
     };
 
     const PROJECT_RULES = {
@@ -27,49 +65,113 @@
             max: 60,
             autoMax: 54,
             requiresJuly: true,
+            syncMode: 'sync',
             source: '联考分析 · 两率一分',
             formula: '教师两率一分主体 =（个人优秀率/最高学校优秀率*40 + 个人及格率/最高学校及格率*30 + 个人平均分/最高学校平均分*30）/最高教师成绩*54；优秀率增幅 6 分需用本年度 7 月与上年度 7 月基准考试对比。'
         },
         [PROJECTS.classCollaboration]: {
             max: 10,
             requiresJuly: true,
+            syncMode: 'sync',
             source: '教学管理 · 任教班级总分',
             formula: '班级协调组成绩 =（个人班级优秀率/最高班级优秀率*40 + 个人班级及格率/最高班级及格率*30 + 个人班级平均分/最高班级平均分*30）/最高班级成绩*10。'
         },
         [PROJECTS.subjectCollaboration]: {
             max: 10,
             requiresJuly: true,
+            syncMode: 'sync',
             source: '教学管理 · 本校同学科整体指标',
             formula: '学科集体协作成绩 =（学科优秀率/最高学科优秀率*40 + 学科及格率/最高学科及格率*30 + 学科平均分/最高学科平均分*30）/最高学科成绩*10。'
         },
         [PROJECTS.bottomThird]: {
             max: 10,
             requiresJuly: true,
+            syncMode: 'sync',
             source: '联考分析 · 后 1/3 总分',
             formula: '后 1/3 学生成绩 = 任教班级后 1/3 学生总分平均分 / 乡镇最高后 1/3 学生平均分 * 10。'
         },
         [PROJECTS.excellentContribution]: {
             max: 5,
             requiresJuly: true,
+            syncMode: 'sync',
             source: '联考分析 · 7 月期末/中考尖子生',
             formula: '尖子生培养贡献只限 7 月成绩：非毕业年级按第二学期期末乡镇前 150 名及学科位次累加；九年级按 7 月上传的中考成绩确定尖子生/优秀尖子后折算 5 分。'
+        },
+        [PROJECTS.classTermScoreNonGrad]: {
+            max: 60,
+            requiresJuly: true,
+            syncMode: 'preview',
+            source: '公式审计 · 非毕业年级第二学期期末成绩',
+            formula: '非毕业年级班级期末成绩 = 班级总成绩两率一分 50 分 + 班级优秀率增幅 10 分；依赖7月/期末成绩、上一基准成绩和95%人数补零规则。'
+        },
+        [PROJECTS.classTopStudentsNonGrad]: {
+            max: 10,
+            requiresJuly: true,
+            syncMode: 'preview',
+            source: '公式审计 · 非毕业年级尖优学生名次段',
+            formula: '尖优学生得分按名次段赋原始分后，再以本班原始分 / 最高班级原始分 × 10 折算；全校/乡镇排名范围仍需最终确认。'
+        },
+        [PROJECTS.classAverageNonGrad]: {
+            max: 10,
+            requiresJuly: true,
+            syncMode: 'preview',
+            source: '公式审计 · 非毕业年级班级平均分',
+            formula: '班级平均分 = 本班总成绩平均分 / 同级部最高班级平均分 × 10；适合自动化，但先只做预览。'
+        },
+        [PROJECTS.classTargetNonGrad]: {
+            max: 15,
+            requiresJuly: true,
+            syncMode: 'blocked',
+            source: '公式审计 · 非毕业年级优秀指标/尖子生育苗',
+            formula: '优秀指标完成/尖子生育苗依赖上一基准考试、6年级抽签基准和“达标+附加后再除最高×15”的二次折算，需人工确认后再自动化。'
+        },
+        [PROJECTS.classBottomThirdNonGrad]: {
+            max: 5,
+            requiresJuly: true,
+            syncMode: 'blocked',
+            source: '公式审计 · 非毕业年级后 1/3',
+            formula: '方案写“同文化课教师相同”，需确认是沿用后1/3平均分口径还是完整两率一分口径后再接入。'
+        },
+        [PROJECTS.classTwoRatesOneScoreGrad]: {
+            max: 45,
+            requiresJuly: true,
+            syncMode: 'preview',
+            source: '公式审计 · 9 年级 7 月中考/统一模拟',
+            formula: '毕业班两率一分 = 及格率10分 + 平均分10分 + 优秀率20分 + 优秀率增幅5分；依赖9年级7月中考或最后一次统一模拟。'
         },
         [PROJECTS.classHighSchoolContribution]: {
             max: 15,
             requiresJuly: true,
+            syncMode: 'preview',
             source: '教学管理 · 9 年级 7 月中考高中过线',
-            formula: '高中贡献率只使用 9 年级 7 月上传的中考成绩：按云端管理填写的中考高中过线分数统计本校每班过线率，再按“本班过线率 / 本校级部班级最高过线率 × 15”折算。'
+            formula: '高中贡献率只使用 9 年级 7 月上传的中考成绩：按云端管理填写的中考高中过线分数统计本校每班过线率，再按“本班过线率 / 本校级部班级最高过线率 × 15”折算；当前仅预览，不写入考核系统。'
         },
         [PROJECTS.classTargetGrad]: {
             max: 33,
             requiresJuly: true,
+            syncMode: 'preview',
             source: '教学管理 · 9 年级 7 月中考指标完成',
-            formula: '毕业班指标完成只使用 9 年级 7 月中考成绩：指标一基础分 10 分、超额额外最高加 5 分；指标二基础分 10 分、超额额外最高加 8 分。附加分是额外分，不挤占基础 20 分。'
+            formula: '毕业班指标完成只使用 9 年级 7 月中考成绩：指标一每班9人基础10分、超额额外最高加5分；指标二每班40人基础10分、超额额外最高加8分；当前仅预览，不写入考核系统。'
         },
-        teacher_workload: {
+        [PROJECTS.classBottomThirdGrad]: {
+            max: 5,
+            requiresJuly: true,
+            syncMode: 'blocked',
+            source: '公式审计 · 毕业班后 1/3',
+            formula: '毕业班后1/3需沿用已确认的教师后1/3口径后再自动化；当前只列入审计，不生成分值。'
+        },
+        [PROJECTS.classHighScoreGrad]: {
+            max: 15,
+            requiresJuly: true,
+            syncMode: 'preview',
+            source: '公式审计 · 9 年级 7 月中考高分段',
+            formula: '高分段贡献只使用9年级7月中考，总分550分以上人数 / 本校级部最高班级高分段人数 × 15；当前仅预览，不写入考核系统。'
+        },
+        [PROJECTS.teacherWorkload]: {
             max: 5,
             requiresJuly: false,
             manual: true,
+            syncMode: 'manual',
             source: '考核系统手填',
             formula: '课时量成绩 system 暂无自动来源，由考核组长或管理员在考核系统中手动填写。'
         }
@@ -1170,6 +1272,67 @@
             .filter(Boolean);
     }
 
+    function buildClassHighScoreGradItems(teachers, rows) {
+        const ownSchool = normalizeSchoolForSync(root.MY_SCHOOL || '银山实验学校');
+        const classMap = new Map();
+        rows.filter((row) => normalizeSchoolForSync(row?.school) === ownSchool).forEach((row) => {
+            const className = typeof root.normalizeClass === 'function' ? root.normalizeClass(row?.class) : text(row?.class);
+            const total = getTotal(row);
+            if (!className || !Number.isFinite(total)) return;
+            if (!classMap.has(className)) classMap.set(className, { className, total: 0, high: 0 });
+            const metric = classMap.get(className);
+            metric.total += 1;
+            if (total >= 550) metric.high += 1;
+        });
+        const metrics = Array.from(classMap.values());
+        const highest = Math.max(...metrics.map((item) => item.high), 0);
+        if (highest <= 0) return [];
+        const metricByClass = new Map(metrics.map((item) => [item.className, item]));
+        return teachers
+            .filter((teacher) => normalizeGrade(teacher.grade) === '9')
+            .filter((teacher) => normalizeSchoolForSync(teacher.school) === ownSchool)
+            .map((teacher) => {
+                const teacherMetrics = teacher.classes.map((className) => metricByClass.get(className)).filter(Boolean);
+                if (!teacherMetrics.length) return null;
+                const high = teacherMetrics.reduce((sum, item) => sum + item.high, 0);
+                const total = teacherMetrics.reduce((sum, item) => sum + item.total, 0);
+                const score = round((high / highest) * 15, 2);
+                return {
+                    ...teacher,
+                    project_id: PROJECTS.classHighScoreGrad,
+                    score,
+                    max_score: 15,
+                    preview_only: true,
+                    note: `9年级7月中考高分段贡献预览：任教班级550分以上 ${high}/${total} 人，本校级部最高班级高分段 ${highest} 人，折算 ${score}/15。`,
+                    source: 'teaching-management-preview'
+                };
+            })
+            .filter(Boolean);
+    }
+
+    function markPreviewOnly(items, reason) {
+        return (items || []).map((item) => ({
+            ...item,
+            preview_only: true,
+            note: `${item.note || ''}${item.note ? ' ' : ''}${reason || '当前仅做公式审计预览，不写入考核系统。'}`
+        }));
+    }
+
+    function buildFormulaAuditPreviewItems({ teachers, rows, examContext, highSchoolLine, skipped }) {
+        if (!isJulyExam(examContext)) return [];
+        if (!isGrade9Exam(examContext, rows)) return [];
+        const preview = [
+            ...markPreviewOnly(buildClassTargetGradItems(teachers, rows), '当前仅做毕业班指标完成公式预览，不写入考核系统。')
+        ];
+        if (highSchoolLine > 0) {
+            preview.push(...markPreviewOnly(buildClassHighSchoolContributionItems(teachers, rows, highSchoolLine), '当前仅做高中贡献率公式预览，不写入考核系统。'));
+        } else {
+            skipped.push('9年级7月中考缺少“中考高中过线分数”，高中贡献率只显示公式审计，不生成预览分。');
+        }
+        preview.push(...markPreviewOnly(buildClassHighScoreGradItems(teachers, rows), '当前仅做高分段贡献公式预览，不写入考核系统。'));
+        return preview.filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0);
+    }
+
     async function buildAssessmentSyncPayload() {
         if (root.SystemRuntimeLoader && typeof root.SystemRuntimeLoader.load === 'function') {
             try {
@@ -1187,6 +1350,7 @@
             return {
                 academic_year: getAcademicYearForSync(),
                 items: [],
+                preview_items: [],
                 skipped
             };
         }
@@ -1204,6 +1368,7 @@
                 source_exam_date: examDate,
                 source_exam_month: examMonth,
                 items: [],
+                preview_items: [],
                 skipped
             };
         }
@@ -1219,23 +1384,12 @@
             const subjectCollaboration = filterCompositeItems(buildSubjectCollaborationItems(teachers, composite.rows), composite, PROJECTS.subjectCollaboration);
             const bottomThird = filterCompositeItems(buildBottomThirdItems(teachers, composite.rows), composite, PROJECTS.bottomThird);
             const excellentItems = filterCompositeItems(buildExcellentContributionItems(teachers, composite.rows), composite, PROJECTS.excellentContribution);
-            const classTargetGrad = isGrade9Exam(examContext, rows)
-                ? buildClassTargetGradItems(teachers, rows)
-                : [];
-            const highSchoolContribution = isGrade9Exam(examContext, rows) && highSchoolLine > 0
-                ? buildClassHighSchoolContributionItems(teachers, rows, highSchoolLine)
-                : [];
-            if (isGrade9Exam(examContext, rows) && highSchoolLine <= 0) {
-                skipped.push('9年级7月中考缺少“中考高中过线分数”，高中贡献率不会自动同步。');
-            }
             return [
                 ...twoRates,
                 ...classCollaboration,
                 ...subjectCollaboration,
                 ...bottomThird,
-                ...excellentItems,
-                ...classTargetGrad,
-                ...highSchoolContribution
+                ...excellentItems
             ];
         }).filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0)
             .map((item) => ({
@@ -1249,6 +1403,13 @@
                 makeup_subjects: composite.makeupSubjects,
                 composite_missing_count: composite.missing.length,
                 note: `${item.note} 来源考试：${examDate || examLabel}；本项目以 7 月基准 + 二模补科合成成绩表计算。${composite.makeupSubjects.length ? `补科科目：${composite.makeupSubjects.join('、')}；二模来源：${composite.makeupExam ? (composite.makeupExam.date || composite.makeupExam.label) : '未匹配'}。` : '本年级无需二模补科。'}`
+            }));
+        const previewItems = buildFormulaAuditPreviewItems({ teachers, rows, examContext, highSchoolLine, skipped })
+            .map((item) => ({
+                ...item,
+                source_exam_id: examContext.currentExamId,
+                source_exam_label: examLabel,
+                source_exam_date: examDate
             }));
         return {
             academic_year: getAcademicYearForSync(),
@@ -1266,6 +1427,7 @@
             makeup_missing: composite.missing.slice(0, 120),
             makeup_fallback_matches: composite.usedFallbackMatches,
             items,
+            preview_items: previewItems,
             skipped
         };
     }
@@ -1393,20 +1555,17 @@
     function buildAssessmentSyncAudit(payload = {}, result = null) {
         const context = getCurrentExamContext();
         const itemCounts = countItemsByProject(payload.items || []);
+        const previewCounts = countItemsByProject(payload.preview_items || []);
         const skippedCounts = countSkippedByProject(result?.skipped || []);
         const projectIds = [
-            PROJECTS.twoRates,
-            PROJECTS.classCollaboration,
-            PROJECTS.subjectCollaboration,
-            PROJECTS.bottomThird,
-            PROJECTS.excellentContribution,
-            PROJECTS.classTargetGrad,
-            PROJECTS.classHighSchoolContribution,
-            'teacher_workload'
+            ...SYNC_ENABLED_PROJECT_IDS,
+            PROJECTS.teacherWorkload,
+            ...PREVIEW_ONLY_PROJECT_IDS
         ];
         const projects = {};
         projectIds.forEach((projectId) => {
             const rule = PROJECT_RULES[projectId] || {};
+            const mode = rule.syncMode || (rule.manual ? 'manual' : 'blocked');
             projects[projectId] = {
                 id: projectId,
                 label: PROJECT_LABELS[projectId] || projectId,
@@ -1414,9 +1573,11 @@
                 autoMax: rule.autoMax || rule.max || 0,
                 requiresJuly: !!rule.requiresJuly,
                 manual: !!rule.manual,
+                mode,
                 source: rule.source || '',
                 formula: rule.formula || '',
                 syncable: itemCounts[projectId] || 0,
+                preview: previewCounts[projectId] || 0,
                 written: result?.project_counts?.[projectId] || 0,
                 skipped: skippedCounts[projectId] || 0
             };
@@ -1445,6 +1606,7 @@
             valid: result?.valid || (payload.items || []).length,
             written: result?.written || 0,
             wouldWrite: result?.would_write || (payload.items || []).length,
+            previewOnly: (payload.preview_items || []).length,
             skipped: [
                 ...(payload.skipped || []).map((reason) => ({ reason })),
                 ...((result?.skipped || []).map((item) => ({ ...item, label: PROJECT_LABELS[item.project_id] || item.project_id })))
@@ -1455,11 +1617,18 @@
     }
 
     function buildAuditHtml(audit) {
+        const ruleChip = (project) => {
+            if (project.mode === 'sync') return project.requiresJuly ? '<span class="status-chip ok">7月可同步</span>' : '<span class="status-chip ok">可同步</span>';
+            if (project.mode === 'preview') return '<span class="status-chip info">只预览</span>';
+            if (project.mode === 'manual') return '<span class="status-chip info">手填</span>';
+            return '<span class="status-chip warn">需确认</span>';
+        };
         const projectRows = Object.values(audit.projects).map((project) => `
             <tr>
                 <td><strong>${escapeHtml(project.label)}</strong><div class="tm-assessment-sync-mini">${escapeHtml(project.source)}</div></td>
-                <td>${project.requiresJuly ? '<span class="status-chip warn">只限 7 月</span>' : project.manual ? '<span class="status-chip info">手填</span>' : '<span class="status-chip ok">可自动</span>'}</td>
+                <td>${ruleChip(project)}</td>
                 <td><strong>${escapeHtml(project.syncable)}</strong> 条</td>
+                <td><strong>${escapeHtml(project.preview)}</strong> 条</td>
                 <td>${project.written ? `<strong>${escapeHtml(project.written)}</strong> 条` : '-'}</td>
                 <td>${project.skipped ? `<span class="status-chip warn">${escapeHtml(project.skipped)} 条</span>` : '-'}</td>
                 <td>${escapeHtml(project.formula)}</td>
@@ -1484,13 +1653,14 @@
                     ${composite.makeupSubjects?.length ? `<span class="status-chip info">补科：${escapeHtml(composite.makeupSubjects.join('、'))}</span>` : '<span class="status-chip ok">无需补科</span>'}
                     ${composite.makeupExamId ? `<span class="status-chip info">二模：${escapeHtml(composite.makeupExamDate || composite.makeupExamLabel || composite.makeupExamId)}</span>` : ''}
                     ${composite.missingCount ? `<span class="status-chip warn">补科缺失 ${escapeHtml(composite.missingCount)} 条</span>` : ''}
-                    <span class="status-chip info">预计 ${escapeHtml(audit.wouldWrite)} 条</span>
+                    <span class="status-chip info">预计写入 ${escapeHtml(audit.wouldWrite)} 条</span>
+                    <span class="status-chip info">只读预览 ${escapeHtml(audit.previewOnly)} 条</span>
                     <span class="status-chip ok">已写入 ${escapeHtml(audit.written)} 条</span>
                 </div>
                 ${missingRows ? `<div class="table-wrap analysis-table-shell tm-assessment-sync-table"><table><thead><tr><th>学校</th><th>班级</th><th>学生</th><th>补科科目</th><th>原因</th></tr></thead><tbody>${missingRows}</tbody></table></div>` : ''}
                 <div class="table-wrap analysis-table-shell tm-assessment-sync-table">
                     <table>
-                        <thead><tr><th>项目</th><th>规则</th><th>可同步</th><th>已写入</th><th>跳过</th><th>计算口径</th></tr></thead>
+                        <thead><tr><th>项目</th><th>规则</th><th>可同步</th><th>只读预览</th><th>已写入</th><th>跳过</th><th>计算口径</th></tr></thead>
                         <tbody>${projectRows}</tbody>
                     </table>
                 </div>
@@ -1500,15 +1670,7 @@
 
     function summarizeMissingProjects(items) {
         const projectSet = new Set((items || []).map((item) => item.project_id));
-        const missing = [
-            PROJECTS.twoRates,
-            PROJECTS.classCollaboration,
-            PROJECTS.subjectCollaboration,
-            PROJECTS.bottomThird,
-            PROJECTS.excellentContribution,
-            PROJECTS.classTargetGrad,
-            PROJECTS.classHighSchoolContribution
-        ].filter((projectId) => !projectSet.has(projectId));
+        const missing = SYNC_ENABLED_PROJECT_IDS.filter((projectId) => !projectSet.has(projectId));
         const manual = ['课时量'];
         return {
             missing: missing.map((projectId) => PROJECT_LABELS[projectId] || projectId),
@@ -1521,16 +1683,7 @@
         (items || []).forEach((item) => {
             counts[item.project_id] = (counts[item.project_id] || 0) + 1;
         });
-        const autoProjects = [
-            PROJECTS.twoRates,
-            PROJECTS.classCollaboration,
-            PROJECTS.subjectCollaboration,
-            PROJECTS.bottomThird,
-            PROJECTS.excellentContribution,
-            PROJECTS.classTargetGrad,
-            PROJECTS.classHighSchoolContribution
-        ];
-        const rows = autoProjects.map((projectId) => {
+        const rows = SYNC_ENABLED_PROJECT_IDS.map((projectId) => {
             const count = counts[projectId] || 0;
             const ok = count > 0;
             return `
@@ -1565,6 +1718,18 @@
         (payload.items || []).forEach((item) => {
             rows.push([
                 result?.dry_run ? '预计写入' : '预览可同步',
+                item.teacher_name,
+                gradeLabel(item.grade),
+                item.subject,
+                PROJECT_LABELS[item.project_id] || item.project_id,
+                item.score,
+                item.max_score,
+                item.note
+            ]);
+        });
+        (payload.preview_items || []).forEach((item) => {
+            rows.push([
+                '只读预览',
                 item.teacher_name,
                 gradeLabel(item.grade),
                 item.subject,
@@ -1619,6 +1784,16 @@
                 <td><strong>${escapeHtml(item.score)}</strong> / ${escapeHtml(item.max_score || '')}</td>
             </tr>
         `).join('');
+        const previewRows = (payload.preview_items || []).slice(0, 8).map((item) => `
+            <tr>
+                <td>${escapeHtml(item.teacher_name || '-')}</td>
+                <td>${escapeHtml(gradeLabel(item.grade))}</td>
+                <td>${escapeHtml(item.subject || '-')}</td>
+                <td>${escapeHtml(PROJECT_LABELS[item.project_id] || item.project_id)}</td>
+                <td><strong>${escapeHtml(item.score)}</strong> / ${escapeHtml(item.max_score || '')}</td>
+                <td>${escapeHtml(item.note || '')}</td>
+            </tr>
+        `).join('');
         const skippedRows = (result?.skipped || []).slice(0, 8).map((item) => `
             <li><strong>${escapeHtml(item.teacher_name || '')}</strong> ${escapeHtml(gradeLabel(item.grade || ''))} ${escapeHtml(item.subject || '')} ${escapeHtml(PROJECT_LABELS[item.project_id] || item.project_id || '')}：${escapeHtml(item.reason || '')}</li>
         `).join('');
@@ -1626,6 +1801,7 @@
             <div class="tm-assessment-sync-summary">
                 <span class="status-chip info">学年度 ${escapeHtml(payload.academic_year)}</span>
                 <span class="status-chip ${payload.items?.length ? 'ok' : 'warn'}">${escapeHtml(summarizeItems(payload.items))}</span>
+                ${payload.preview_items?.length ? `<span class="status-chip info">只读预览 ${escapeHtml(payload.preview_items.length)} 条</span>` : ''}
                 ${result?.dry_run ? `<span class="status-chip info">预计写入 ${escapeHtml(result.would_write || 0)} 条</span>` : ''}
                 ${result && !result.dry_run ? `<span class="status-chip ok">已写入 ${escapeHtml(result.written || 0)} 条</span>` : ''}
                 ${result?.skipped?.length ? `<span class="status-chip warn">跳过 ${escapeHtml(result.skipped.length)} 条</span>` : ''}
@@ -1634,7 +1810,8 @@
             ${buildAuditHtml(audit)}
             ${buildProjectMatrixHtml(payload.items || [])}
             ${sampleRows ? `<div class="table-wrap analysis-table-shell tm-assessment-sync-table"><table><thead><tr><th>教师</th><th>年级</th><th>学科</th><th>项目</th><th>分值</th></tr></thead><tbody>${sampleRows}</tbody></table></div>` : ''}
-            ${(payload.items?.length || result?.skipped?.length || payload.skipped?.length) ? `<div><button type="button" class="btn btn-secondary tm-assessment-export-btn"><i class="ti ti-download"></i> 导出检查结果</button></div>` : ''}
+            ${previewRows ? `<div class="table-wrap analysis-table-shell tm-assessment-sync-table"><table><thead><tr><th>教师</th><th>年级</th><th>学科</th><th>预览项目</th><th>分值</th><th>说明</th></tr></thead><tbody>${previewRows}</tbody></table></div>` : ''}
+            ${(payload.items?.length || payload.preview_items?.length || result?.skipped?.length || payload.skipped?.length) ? `<div><button type="button" class="btn btn-secondary tm-assessment-export-btn"><i class="ti ti-download"></i> 导出检查结果</button></div>` : ''}
             ${payload.skipped?.length ? `<div class="tm-assessment-sync-note">${payload.skipped.map(escapeHtml).join('<br>')}</div>` : ''}
             ${missing.missing.length ? `<div class="tm-assessment-sync-note"><strong>暂未自动生成：</strong>${escapeHtml(missing.missing.join('、'))}。请检查当前成绩、任课表或对应公式数据是否完整。</div>` : ''}
             <div class="tm-assessment-sync-note is-soft"><strong>保留手填：</strong>${escapeHtml(missing.manual.join('、'))}。</div>
@@ -1687,6 +1864,7 @@
             <div class="tm-assessment-sync-copy">
                 <div class="tm-next-title"><i class="ti ti-cloud-upload"></i> 同步到教师教学质量考核系统</div>
                 <div class="tm-next-desc"><strong>位置：教学管理首页。</strong>从当前联考成绩和教学管理任课表生成教师个人考核分值。缺成绩、缺任课表或目标系统未匹配到教师时不会写入，仍由考核组长手动填写。</div>
+                <div class="tm-assessment-sync-note is-soft">班级考核项目当前只做公式审计预览，不写入考核系统；6-9年级缺少对应7月成绩时不会生成真实同步分。</div>
                 <div class="tm-next-meta">
                     <span class="status-chip info">两率一分</span>
                     <span class="status-chip info">班级协调</span>

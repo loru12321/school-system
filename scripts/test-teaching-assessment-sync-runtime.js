@@ -212,12 +212,15 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         assert.ok(grade9ExcellentItems.length > 0, '9th grade excellent contribution should be generated from 550/600 high-score tiers');
         assert.ok(grade9ExcellentItems.every((item) => /600分以上为优秀尖子/.test(item.note)), '9th grade excellent contribution notes should explain 550/600 rules');
         assert.ok(!grade9ExcellentItems.some((item) => /前 150 名/.test(item.note)), '9th grade excellent contribution must not use non-graduating top-150 logic');
-        const classTargetItems = grade9Payload.items.filter((item) => item.project_id === 'class_target_grad');
-        assert.ok(classTargetItems.length >= 2, '9th grade class target completion should sync class assessment rows');
+        const classTargetItems = grade9Payload.preview_items.filter((item) => item.project_id === 'class_target_grad');
+        assert.ok(!grade9Payload.items.some((item) => item.project_id === 'class_target_grad'), 'class target completion must stay out of formal sync payload');
+        assert.ok(classTargetItems.length >= 2, '9th grade class target completion should be available as preview rows');
         assert.ok(classTargetItems.every((item) => item.max_score === 33), 'class target completion max should include extra 5 and 8 bonus points');
         assert.ok(classTargetItems.every((item) => /额外最高\+5分/.test(item.note) && /额外最高\+8分/.test(item.note)), 'class target notes should mark the 5 and 8 points as extra bonus');
-        const highSchoolItems = grade9Payload.items.filter((item) => item.project_id === 'class_high_school_contribution_grad');
-        assert.ok(highSchoolItems.length >= 2, '9th grade July exam should sync own-school class high-school contribution rows');
+        assert.ok(classTargetItems.every((item) => item.preview_only === true), 'class target completion should be marked preview-only');
+        const highSchoolItems = grade9Payload.preview_items.filter((item) => item.project_id === 'class_high_school_contribution_grad');
+        assert.ok(!grade9Payload.items.some((item) => item.project_id === 'class_high_school_contribution_grad'), 'high-school contribution must stay out of formal sync payload');
+        assert.ok(highSchoolItems.length >= 2, '9th grade July exam should preview own-school class high-school contribution rows');
         assert.ok(highSchoolItems.every((item) => item.max_score === 15), 'high-school contribution max score should be 15');
         const highSchoolScores = Object.fromEntries(highSchoolItems.map((item) => [item.teacher_name, item.score]));
         assert.strictEqual(highSchoolScores['政一'], 7.5, 'class 9.1 rate 1/2 should score 7.5 against own-school best class rate 1');
@@ -225,6 +228,15 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         assert.strictEqual(highSchoolScores['语一'], 7.5, 'class 9.1 language teacher should receive the same class high-school contribution score');
         assert.strictEqual(highSchoolScores['语二'], 15, 'class 9.2 language teacher should receive the same class high-school contribution score');
         assert.ok(highSchoolItems.every((item) => /本校级部班级最高过线率/.test(item.note)), 'notes should explain own-school grade best-class denominator');
+        assert.ok(highSchoolItems.every((item) => item.preview_only === true), 'high-school contribution should be marked preview-only');
+        const highScoreItems = grade9Payload.preview_items.filter((item) => item.project_id === 'class_high_score_grad');
+        assert.ok(highScoreItems.length >= 2, '9th grade high-score contribution should be available as preview rows');
+        assert.ok(highScoreItems.every((item) => item.max_score === 15 && /550分以上/.test(item.note)), 'high-score preview should explain the 550-point rule');
+        const previewAudit = context.window.tmBuildTeacherAssessmentSyncAudit(grade9Payload, { written: grade9Payload.items.length, skipped: [] });
+        assert.strictEqual(previewAudit.projects.class_target_grad.mode, 'preview', 'class target should be represented as preview-only in audit');
+        assert.strictEqual(previewAudit.projects.class_target_grad.preview, classTargetItems.length, 'audit should count preview-only class target rows');
+        assert.strictEqual(previewAudit.projects.class_high_school_contribution_grad.mode, 'preview', 'high-school contribution should be represented as preview-only in audit');
+        assert.strictEqual(previewAudit.projects.teacher_workload.mode, 'manual', 'workload should stay manual');
 
         context.window.CURRENT_EXAM_ID = '2023级-8年级-2025-2026-暑假-7月质量监测-2026-07-12';
         context.window.RAW_DATA = [

@@ -16,9 +16,7 @@ const ASSESSMENT_PROJECT_LIMITS = {
   teacher_class_collaboration: 10,
   teacher_subject_collaboration: 10,
   teacher_bottom_third: 10,
-  teacher_excellent_contribution: 5,
-  class_target_grad: 33,
-  class_high_school_contribution_grad: 15
+  teacher_excellent_contribution: 5
 };
 
 // ---------------------------------------------------------------------------
