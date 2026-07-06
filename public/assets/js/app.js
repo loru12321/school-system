@@ -2294,8 +2294,10 @@ window.addEventListener('load', async () => {
             setTimeout(() => {
                 const i1 = document.getElementById('ind1');
                 const i2 = document.getElementById('ind2');
+                const highSchoolLineInput = document.getElementById('dm_high_school_line_input');
                 if (i1) i1.value = db.INDICATOR_PARAMS.ind1 || '';
                 if (i2) i2.value = db.INDICATOR_PARAMS.ind2 || '';
+                if (highSchoolLineInput) highSchoolLineInput.value = db.INDICATOR_PARAMS.highSchoolLine || db.INDICATOR_PARAMS.graduateHighSchoolLine || '';
             }, 100);
         }
         if (db.TARGETS) setTargetsState(db.TARGETS);

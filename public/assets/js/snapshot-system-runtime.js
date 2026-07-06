@@ -311,10 +311,12 @@ function applySnapshotPayload(db, options = {}) {
         const indicator = setIndicatorState(db.INDICATOR_PARAMS);
         const dm1 = document.getElementById('dm_ind1_input');
         const dm2 = document.getElementById('dm_ind2_input');
+        const highSchoolLineInput = document.getElementById('dm_high_school_line_input');
         const main1 = document.getElementById('ind1');
         const main2 = document.getElementById('ind2');
         if (dm1) dm1.value = indicator.ind1;
         if (dm2) dm2.value = indicator.ind2;
+        if (highSchoolLineInput) highSchoolLineInput.value = indicator.highSchoolLine || '';
         if (main1) main1.value = indicator.ind1;
         if (main2) main2.value = indicator.ind2;
     }
@@ -521,7 +523,7 @@ async function loadProjectSnapshot(input) {
                 TARGETS: db.TARGETS || {},
 
                 /* 👇👇👇 🟢 关键：写入 指标参数 到缓存 🟢 👇👇👇 */
-                INDICATOR_PARAMS: db.INDICATOR_PARAMS || { ind1: '', ind2: '' },
+                INDICATOR_PARAMS: db.INDICATOR_PARAMS || { ind1: '', ind2: '', highSchoolLine: '' },
 
                 TEACHER_MAP: db.TEACHER_MAP || {},
                 TEACHER_STATS: db.TEACHER_STATS || {},

@@ -133,9 +133,16 @@ async function run() {
     assert.strictEqual(idleRenderStatusCalls, 1);
 
     root.isIndicatorAllowed = () => false;
+    elements.dm_high_school_line_input.value = '';
     const currentSaveCalls = saveCloudCalls;
     await runtime.saveParamsLocally(manager, false);
     assert.strictEqual(saveCloudCalls, currentSaveCalls);
+    assert.strictEqual(toasts[toasts.length - 1].type, 'warning');
+
+    elements.dm_high_school_line_input.value = '390';
+    await runtime.saveParamsLocally(manager, false);
+    assert.strictEqual(indicatorState.highSchoolLine, '390');
+    assert.strictEqual(saveCloudCalls, currentSaveCalls + 1);
 
     console.log('data-manager-params-runtime tests passed');
 }

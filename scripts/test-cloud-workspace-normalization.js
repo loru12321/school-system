@@ -154,6 +154,11 @@ assert.ok(
     'manual save should rerun queue flush after an active background flush so the newly queued overwrite is uploaded'
 );
 assert.ok(
+    workspaceSource.includes("document.getElementById('dm_high_school_line_input')")
+        && workspaceSource.includes('highSchoolLine: highSchoolLineInput ? highSchoolLineInput.value : currentIndicator.highSchoolLine'),
+    'cloud sync should preserve the high-school admission score line when saving indicator params'
+);
+assert.ok(
     workspaceSource.includes("key = String(opts.examKey || '').trim() || getCurrentExamIdFromPayload(payload) || String(window.CURRENT_EXAM_ID || '').trim() || key;"),
     'exam-mode saves should use the canonical current exam id instead of the legacy CloudManager key'
 );

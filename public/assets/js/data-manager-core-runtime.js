@@ -30,12 +30,15 @@ const DataManager = {
             const raw = localStorage.getItem(this.getGrade9TemplateKey('INDICATOR'));
             if (!raw) return false;
             const saved = JSON.parse(raw);
-            if (!saved || (!saved.ind1 && !saved.ind2)) return false;
-            setIndicatorState({ ind1: saved.ind1 || '', ind2: saved.ind2 || '' });
+            if (!saved || (!saved.ind1 && !saved.ind2 && !saved.highSchoolLine)) return false;
+            const current = readIndicatorState();
+            setIndicatorState({ ind1: saved.ind1 || '', ind2: saved.ind2 || '', highSchoolLine: saved.highSchoolLine || current.highSchoolLine || '' });
             const main1 = document.getElementById('ind1');
             const main2 = document.getElementById('ind2');
+            const highSchoolLineInput = document.getElementById('dm_high_school_line_input');
             if (main1 && !main1.value) main1.value = saved.ind1 || '';
             if (main2 && !main2.value) main2.value = saved.ind2 || '';
+            if (highSchoolLineInput && !highSchoolLineInput.value) highSchoolLineInput.value = saved.highSchoolLine || '';
             return true;
         } catch (e) {
             return false;
@@ -45,8 +48,8 @@ const DataManager = {
     persistGrade9IndicatorTemplate: function () {
         if (!this.isGrade9Context()) return;
         const ind = readIndicatorState();
-        const payload = { ind1: ind.ind1 || '', ind2: ind.ind2 || '' };
-        if (!payload.ind1 && !payload.ind2) return;
+        const payload = { ind1: ind.ind1 || '', ind2: ind.ind2 || '', highSchoolLine: ind.highSchoolLine || '' };
+        if (!payload.ind1 && !payload.ind2 && !payload.highSchoolLine) return;
         localStorage.setItem(this.getGrade9TemplateKey('INDICATOR'), JSON.stringify(payload));
     },
 
@@ -2003,13 +2006,14 @@ const DataManager = {
     },
 
     saveParamsLocally: async function (skipCloudSync = false) {
-        if (!isIndicatorAllowed()) return;
         ensureSupportSysVars();
 
         const v1 = document.getElementById('dm_ind1_input').value;
         const v2 = document.getElementById('dm_ind2_input').value;
+        const highSchoolLine = document.getElementById('dm_high_school_line_input')?.value || '';
+        if (!isIndicatorAllowed() && !highSchoolLine) return;
 
-        setIndicatorState({ ind1: v1, ind2: v2 });
+        setIndicatorState({ ind1: v1, ind2: v2, highSchoolLine });
 
         const main1 = document.getElementById('ind1');
         const main2 = document.getElementById('ind2');

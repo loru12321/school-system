@@ -22,7 +22,8 @@ async function run() {
     const storage = createMemoryStorage();
     const indicatorInput = { value: '' };
     const indicatorInput2 = { value: '' };
-    let indicatorState = { ind1: '', ind2: '' };
+    const highSchoolLineInput = { value: '' };
+    let indicatorState = { ind1: '', ind2: '', highSchoolLine: '' };
     let targetsState = {};
 
     const root = {
@@ -51,6 +52,7 @@ async function run() {
             getElementById(id) {
                 if (id === 'ind1') return indicatorInput;
                 if (id === 'ind2') return indicatorInput2;
+                if (id === 'dm_high_school_line_input') return highSchoolLineInput;
                 return null;
             }
         }
@@ -61,16 +63,17 @@ async function run() {
     assert.strictEqual(runtime.isGrade9Context(), true);
     assert.strictEqual(runtime.getGrade9TemplateKey({}, 'INDICATOR'), 'GRADE9_INDICATOR_2026');
 
-    storage.setItem('GRADE9_INDICATOR_2026', JSON.stringify({ ind1: '120', ind2: '300' }));
+    storage.setItem('GRADE9_INDICATOR_2026', JSON.stringify({ ind1: '120', ind2: '300', highSchoolLine: '390' }));
     const restoredIndicator = runtime.restoreGrade9IndicatorTemplate({});
     assert.strictEqual(restoredIndicator, true);
-    assert.deepStrictEqual(indicatorState, { ind1: '120', ind2: '300' });
+    assert.deepStrictEqual(indicatorState, { ind1: '120', ind2: '300', highSchoolLine: '390' });
     assert.strictEqual(indicatorInput.value, '120');
     assert.strictEqual(indicatorInput2.value, '300');
+    assert.strictEqual(highSchoolLineInput.value, '390');
 
-    indicatorState = { ind1: '110', ind2: '260' };
+    indicatorState = { ind1: '110', ind2: '260', highSchoolLine: '400' };
     runtime.persistGrade9IndicatorTemplate({});
-    assert.deepStrictEqual(JSON.parse(storage.getItem('GRADE9_INDICATOR_2026')), { ind1: '110', ind2: '260' });
+    assert.deepStrictEqual(JSON.parse(storage.getItem('GRADE9_INDICATOR_2026')), { ind1: '110', ind2: '260', highSchoolLine: '400' });
 
     storage.setItem('GRADE9_TARGETS_2026', JSON.stringify({ A: { t1: 1, t2: 2 } }));
     const restoredTargets = runtime.restoreGrade9TargetsTemplate({});

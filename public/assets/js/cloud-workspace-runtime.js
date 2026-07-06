@@ -1423,14 +1423,16 @@
             try {
                 const ind1 = document.getElementById('dm_ind1_input');
                 const ind2 = document.getElementById('dm_ind2_input');
+                const highSchoolLineInput = document.getElementById('dm_high_school_line_input');
                 if (typeof window.ensureSupportSysVars === 'function') window.ensureSupportSysVars();
                 if (typeof window.setIndicatorState === 'function') {
                     const currentIndicator = typeof window.readIndicatorState === 'function'
                         ? window.readIndicatorState()
-                        : { ind1: '', ind2: '' };
+                        : { ind1: '', ind2: '', highSchoolLine: '' };
                     window.setIndicatorState({
                         ind1: ind1 ? ind1.value : currentIndicator.ind1,
-                        ind2: ind2 ? ind2.value : currentIndicator.ind2
+                        ind2: ind2 ? ind2.value : currentIndicator.ind2,
+                        highSchoolLine: highSchoolLineInput ? highSchoolLineInput.value : currentIndicator.highSchoolLine
                     });
                 }
                 if (typeof window.setTargetsState === 'function') {
@@ -1749,14 +1751,16 @@
 
             const ind1 = document.getElementById('dm_ind1_input');
             const ind2 = document.getElementById('dm_ind2_input');
+            const highSchoolLineInput = document.getElementById('dm_high_school_line_input');
             if (typeof window.ensureSupportSysVars === 'function') window.ensureSupportSysVars();
             if (typeof window.setIndicatorState === 'function') {
                 const currentIndicator = typeof window.readIndicatorState === 'function'
                     ? window.readIndicatorState()
-                    : { ind1: '', ind2: '' };
+                    : { ind1: '', ind2: '', highSchoolLine: '' };
                 window.setIndicatorState({
                     ind1: ind1 ? ind1.value : currentIndicator.ind1,
-                    ind2: ind2 ? ind2.value : currentIndicator.ind2
+                    ind2: ind2 ? ind2.value : currentIndicator.ind2,
+                    highSchoolLine: highSchoolLineInput ? highSchoolLineInput.value : currentIndicator.highSchoolLine
                 });
             }
             if (typeof window.setTargetsState === 'function') {

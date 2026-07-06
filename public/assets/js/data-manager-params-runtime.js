@@ -139,12 +139,15 @@
         const indicatorAllowed = typeof root.isIndicatorAllowed === 'function'
             ? root.isIndicatorAllowed()
             : false;
-        if (!indicatorAllowed) return;
         if (typeof root.ensureSupportSysVars === 'function') root.ensureSupportSysVars();
 
         const v1 = readInputValue('dm_ind1_input');
         const v2 = readInputValue('dm_ind2_input');
         const highSchoolLine = readInputValue('dm_high_school_line_input');
+        if (!indicatorAllowed && !highSchoolLine) {
+            safeToast('当前考试不需要指标参数；如需保存中考高中过线分数，请先填写分数。', 'warning');
+            return;
+        }
         setIndicatorState({ ind1: v1, ind2: v2, highSchoolLine });
 
         writeInputValue('ind1', v1);

@@ -63,24 +63,31 @@
         const raw = storage.getItem(key);
         if (!raw) return false;
         const saved = safeParseJson(raw);
-        if (!saved || (!saved.ind1 && !saved.ind2)) return false;
+        if (!saved || (!saved.ind1 && !saved.ind2 && !saved.highSchoolLine)) return false;
 
         if (typeof root.setIndicatorState === 'function') {
-            root.setIndicatorState({ ind1: saved.ind1 || '', ind2: saved.ind2 || '' });
+            const current = getIndicatorState();
+            root.setIndicatorState({
+                ind1: saved.ind1 || '',
+                ind2: saved.ind2 || '',
+                highSchoolLine: saved.highSchoolLine || current.highSchoolLine || ''
+            });
         }
         const doc = root.document;
         const main1 = doc && typeof doc.getElementById === 'function' ? doc.getElementById('ind1') : null;
         const main2 = doc && typeof doc.getElementById === 'function' ? doc.getElementById('ind2') : null;
+        const highSchoolLineInput = doc && typeof doc.getElementById === 'function' ? doc.getElementById('dm_high_school_line_input') : null;
         if (main1 && !main1.value) main1.value = saved.ind1 || '';
         if (main2 && !main2.value) main2.value = saved.ind2 || '';
+        if (highSchoolLineInput && !highSchoolLineInput.value) highSchoolLineInput.value = saved.highSchoolLine || '';
         return true;
     }
 
     function persistGrade9IndicatorTemplate(manager) {
         if (!isGrade9Context(manager)) return;
         const indicator = getIndicatorState();
-        const payload = { ind1: indicator.ind1 || '', ind2: indicator.ind2 || '' };
-        if (!payload.ind1 && !payload.ind2) return;
+        const payload = { ind1: indicator.ind1 || '', ind2: indicator.ind2 || '', highSchoolLine: indicator.highSchoolLine || '' };
+        if (!payload.ind1 && !payload.ind2 && !payload.highSchoolLine) return;
 
         const key = getGrade9TemplateKey(manager, 'INDICATOR');
         const storage = root.localStorage;
