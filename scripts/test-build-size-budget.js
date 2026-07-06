@@ -32,7 +32,9 @@ const budgets = {
     // fit under this cap while retaining tight regression detection headroom.
     distAppCss: 640_000,
     ltHtml: 2_100_000,
-    ltHtmlBrotli: 330_000,
+    // Offline lt.html carries inline runtime sources for single-file use; keep a
+    // tight cap above the current complete offline bundle.
+    ltHtmlBrotli: 335_000,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,

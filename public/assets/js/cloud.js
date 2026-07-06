@@ -2123,7 +2123,16 @@
     }
 
     let cloudLoadPromise = null;
-    window.loadCloudData = () => {
+    window.loadCloudData = (options = {}) => {
+        const forceLoad = !!(options && (options.force || options.refresh || options.forceRefresh));
+        const hasRuntimeScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
+        if (!forceLoad && hasRuntimeScores) {
+            dispatchCloudLoadState('cached', {
+                ok: true,
+                hasScores: true
+            });
+            return Promise.resolve(true);
+        }
         if (cloudLoadPromise) return cloudLoadPromise;
         window.__CLOUD_WORKSPACE_HYDRATING__ = true;
         dispatchCloudLoadState('start');

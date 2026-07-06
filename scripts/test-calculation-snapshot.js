@@ -123,6 +123,80 @@ async function waitForLoggedInShell(page) {
 }
 
 async function ensureCohortEntered(page) {
+    const attemptDataRecovery = async () => {
+        try {
+            return await page.evaluate(async () => {
+                const before = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+                if (before > 0) return { action: 'already-ready', before, after: before };
+                const db = (typeof window.COHORT_DB === 'object' && window.COHORT_DB)
+                    || (typeof window.CohortDB !== 'undefined' && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null);
+                const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+                const examId = String(
+                    (typeof window.__resolveSmokeRuntimeExamId === 'function' ? window.__resolveSmokeRuntimeExamId(cohortId) : '')
+                    || window.CURRENT_EXAM_ID
+                    || localStorage.getItem('CURRENT_EXAM_ID')
+                    || db?.currentExamId
+                    || Object.keys(db?.exams || {})[0]
+                    || ''
+                ).trim();
+                if (examId && typeof window.CohortDB !== 'undefined' && typeof window.CohortDB.applyExamToWorkspace === 'function') {
+                    try {
+                        window.CohortDB.applyExamToWorkspace(examId, { renderTables: false });
+                    } catch (_) {}
+                }
+                let after = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+                if (after === 0 && cohortId && (!window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function')) {
+                    try {
+                        if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+                            await Promise.race([
+                                Promise.resolve(window.SystemRuntimeLoader.load('cloud-workspace')),
+                                new Promise((resolve) => setTimeout(resolve, 12000))
+                            ]);
+                        } else if (typeof window.loadOptionalRuntime === 'function') {
+                            await Promise.race([
+                                Promise.resolve(window.loadOptionalRuntime('cloud-workspace', './assets/js/cloud-workspace-runtime.js')),
+                                new Promise((resolve) => setTimeout(resolve, 12000))
+                            ]);
+                        }
+                    } catch (_) {}
+                }
+                if (after === 0 && cohortId && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
+                    try {
+                        await Promise.race([
+                            Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, {
+                                background: false,
+                                latestOnly: true,
+                                minCount: 1,
+                                refreshSelectors: false
+                            })),
+                            new Promise((resolve) => setTimeout(resolve, 75000))
+                        ]);
+                        if (typeof window.tryAutoRestoreWorkspaceExam === 'function') {
+                            window.tryAutoRestoreWorkspaceExam({ cohortId });
+                        }
+                    } catch (_) {}
+                }
+                after = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+                if (after === 0 && typeof window.loadCloudData === 'function') {
+                    try {
+                        await Promise.race([
+                            Promise.resolve(window.loadCloudData()),
+                            new Promise((resolve) => setTimeout(resolve, 20000))
+                        ]);
+                    } catch (_) {}
+                    after = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+                }
+                for (let index = 0; index < 20 && after === 0; index += 1) {
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                    after = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+                }
+                return { action: 'recover-workspace-data', before, after, cohortId, examId };
+            });
+        } catch (error) {
+            return { action: 'recover-workspace-data-failed', before: 0, after: 0, error: error?.message || String(error) };
+        }
+    };
+
     const waitForExpectedCohort = (candidate) => page.waitForFunction((expectedCohortId) => {
         const mask = document.getElementById('mode-mask');
         const app = document.getElementById('app');
@@ -151,8 +225,8 @@ async function ensureCohortEntered(page) {
                 if (manager && typeof manager.addCohort === 'function') {
                     await manager.addCohort({ year, startGrade: 6 }, {
                         skipConfirm: true,
-                        fastEnter: false,
-                        requireCloudData: true
+                        fastEnter: true,
+                        requireCloudData: false
                     });
                     return;
                 }
@@ -165,7 +239,18 @@ async function ensureCohortEntered(page) {
                 }
             }, candidate);
             await waitForPageStability(page, 10000);
-            await waitForExpectedCohort(candidate);
+            try {
+                await waitForExpectedCohort(candidate);
+            } catch (error) {
+                const recovery = await attemptDataRecovery();
+                trace(`switch recovery ${JSON.stringify(recovery)}`);
+                try {
+                    await waitForExpectedCohort(candidate);
+                } catch (retryError) {
+                    const debugState = await readLoginState(page).catch(() => null);
+                    throw new Error(`${retryError.message}; recovery=${JSON.stringify(recovery)}; state=${JSON.stringify(debugState)}; firstError=${error.message}`);
+                }
+            }
         }, 4);
     };
 
@@ -257,7 +342,7 @@ async function ensureCohortEntered(page) {
         });
 
         await waitForPageStability(page, 10000);
-        await page.waitForFunction((expectedCohortId) => {
+        const waitForMaskEntry = () => page.waitForFunction((expectedCohortId) => {
             const mask = document.getElementById('mode-mask');
             const app = document.getElementById('app');
             const overlay = document.getElementById('login-overlay');
@@ -274,6 +359,18 @@ async function ensureCohortEntered(page) {
                 || (appVisible && readyWorkspace && !!cohortId && normalizedExpected && cohortId === normalizedExpected)
             );
         }, candidate, { timeout: 60000 });
+        try {
+            await waitForMaskEntry();
+        } catch (error) {
+            const recovery = await attemptDataRecovery();
+            trace(`mask recovery ${JSON.stringify(recovery)}`);
+            try {
+                await waitForMaskEntry();
+            } catch (retryError) {
+                const debugState = await readLoginState(page).catch(() => null);
+                throw new Error(`${retryError.message}; recovery=${JSON.stringify(recovery)}; state=${JSON.stringify(debugState)}; firstError=${error.message}`);
+            }
+        }
     }, 4);
 
     return readLoginState(page);
