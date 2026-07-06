@@ -112,6 +112,18 @@
         return Object.values(window.SCHOOLS || {}).filter((school) => !nameSet.size || nameSet.has(String(school?.name || '').trim()));
     }
 
+    function getHighSchoolAdmissionLine() {
+        const indicator = typeof window.readIndicatorState === 'function'
+            ? window.readIndicatorState()
+            : (window.SYS_VARS?.indicator || {});
+        const value = indicator?.highSchoolLine
+            || indicator?.graduateHighSchoolLine
+            || window.document?.getElementById?.('dm_high_school_line_input')?.value
+            || '';
+        const line = Number(value);
+        return Number.isFinite(line) && line > 0 ? line : 0;
+    }
+
     const townshipSchoolPackageCache = new Map();
     let townshipSchoolPackageNames = null;
 
@@ -434,6 +446,7 @@
         if (scope !== 'county') {
             addWorksheetIfUseful(wb, '高分段赋分详情', buildHighScoreRows(schools));
             addWorksheetIfUseful(wb, '指标生达标核算', buildIndicatorRows());
+            if (isGrade9Exam()) addWorksheetIfUseful(wb, '高中上线率赋分详情', buildHighSchoolAdmissionRows(schools));
             addWorksheetIfUseful(wb, '后三分之一学生核算', buildBottomRows(schools));
         }
         return wb;
@@ -481,11 +494,12 @@
         const grade9 = isGrade9Exam();
         const indicatorScoreMap = grade9 ? getIndicatorScoreMap() : new Map();
         const highScoreMap = grade9 ? getHighScoreMap(schools) : new Map();
+        const highSchoolAdmissionMap = grade9 ? getHighSchoolAdmissionMap(schools) : new Map();
         const rows = [[
             '学校名称',
             '两率一分得分',
             '后1/3得分',
-            ...(grade9 ? ['指标生得分', '高分段赋分(70)'] : []),
+            ...(grade9 ? ['指标生得分', '高分段赋分(70)', '高中上线率赋分(50)'] : []),
             '综合总分',
             '总排名',
             '_标记'
@@ -499,13 +513,15 @@
                 const highScoreName = String(school.name || '').trim();
                 const highScoreKey = typeof window.normalizeSchoolName === 'function' ? window.normalizeSchoolName(highScoreName) : '';
                 const highScore = grade9 ? (highScoreMap.get(highScoreName) ?? highScoreMap.get(highScoreKey) ?? 0) : 0;
+                const highSchoolAdmission = grade9 ? (highSchoolAdmissionMap.get(highScoreName) ?? highSchoolAdmissionMap.get(highScoreKey) ?? 0) : 0;
                 return {
                     name: school.name || '',
                     twoRates,
                     bottom,
                     indicator,
                     highScore,
-                    total: twoRates + bottom + indicator + highScore
+                    highSchoolAdmission,
+                    total: twoRates + bottom + indicator + highScore + highSchoolAdmission
                 };
             })
             .sort((left, right) => right.total - left.total || String(left.name).localeCompare(String(right.name), 'zh-CN', { numeric: true }))
@@ -516,7 +532,7 @@
                 item.name,
                 num(item.twoRates),
                 num(item.bottom),
-                ...(grade9 ? [num(item.indicator), num(item.highScore)] : []),
+                ...(grade9 ? [num(item.indicator), num(item.highScore), num(item.highSchoolAdmission)] : []),
                 num(item.total),
                 item.rank,
                 sameSchool(item.name, getMySchoolName()) ? '本校' : ''
@@ -591,6 +607,22 @@
         return map;
     }
 
+    function getHighSchoolAdmissionMap(schools) {
+        const map = new Map();
+        buildHighSchoolAdmissionRows(schools).slice(1).forEach((row) => {
+            const name = String(row?.[0] || '').trim();
+            if (!name) return;
+            const score = Number(row?.[5]);
+            if (!Number.isFinite(score)) return;
+            map.set(name, score);
+            if (typeof window.normalizeSchoolName === 'function') {
+                const normalized = window.normalizeSchoolName(name);
+                if (normalized) map.set(normalized, score);
+            }
+        });
+        return map;
+    }
+
     function buildHighScoreRows(schools) {
         const rows = [['学校名称', '实考人数', '高分人数(≥490)', '高分率(%)', '高分赋分(70)', '排名', '_标记']];
         const baseList = (schools || []).map((school) => {
@@ -616,6 +648,42 @@
                 item.count,
                 item.highCount,
                 pct(item.highRate),
+                num(item.score),
+                index + 1,
+                sameSchool(item.name, getMySchoolName()) ? '本校' : ''
+            ]);
+        });
+        return rows;
+    }
+
+    function buildHighSchoolAdmissionRows(schools) {
+        const line = getHighSchoolAdmissionLine();
+        const rows = [['学校名称', '公办高中录取分数线', '实考人数', '高中上线人数', '高中上线率(%)', '高中上线率赋分(50)', '排名', '_标记']];
+        const baseList = (schools || []).map((school) => {
+            const students = Array.isArray(school.students) ? school.students : getAllRows().filter((student) => sameSchool(student?.school, school.name));
+            const studentCount = Number(school.metrics?.total?.count) || students.length || 0;
+            const admissionCount = line > 0 ? students.filter((student) => Number(student?.total) >= line).length : 0;
+            const admissionRate = studentCount ? admissionCount / studentCount : 0;
+            return {
+                name: school.name || '',
+                line,
+                count: studentCount,
+                admissionCount,
+                admissionRate
+            };
+        });
+        const maxAdmissionRate = Math.max(...baseList.map((item) => item.admissionRate), 0);
+        const list = baseList.map((item) => ({
+            ...item,
+            score: maxAdmissionRate ? item.admissionRate / maxAdmissionRate * 50 : 0
+        })).sort((left, right) => right.score - left.score || String(left.name).localeCompare(String(right.name), 'zh-CN', { numeric: true }));
+        list.forEach((item, index) => {
+            rows.push([
+                item.name,
+                item.line || '',
+                item.count,
+                item.admissionCount,
+                pct(item.admissionRate),
                 num(item.score),
                 index + 1,
                 sameSchool(item.name, getMySchoolName()) ? '本校' : ''

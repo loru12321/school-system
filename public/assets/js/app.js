@@ -4172,6 +4172,46 @@ function markSummaryFresh() {
     updateSummaryRefreshState();
 }
 
+function readHighSchoolAdmissionLine() {
+    const indicator = typeof readIndicatorState === 'function'
+        ? readIndicatorState()
+        : (window.SYS_VARS?.indicator || {});
+    const value = indicator?.highSchoolLine
+        || indicator?.graduateHighSchoolLine
+        || document.getElementById('dm_high_school_line_input')?.value
+        || '';
+    const line = Number(value);
+    return Number.isFinite(line) && line > 0 ? line : 0;
+}
+
+function calculateHighSchoolAdmissionStatsForSummary(schools = getSummaryTownshipSchools()) {
+    const line = readHighSchoolAdmissionLine();
+    const rows = (schools || []).map((school) => {
+        const students = typeof getEquivalentSchoolStudents === 'function'
+            ? getEquivalentSchoolStudents(school.name)
+            : (Array.isArray(school.students) ? school.students : []);
+        const total = students.length || Number(school?.metrics?.total?.count) || 0;
+        const count = line > 0
+            ? students.filter((stu) => Number(stu?.total) >= line).length
+            : 0;
+        const ratio = total ? count / total : 0;
+        return { school, line, count, ratio, score: 0 };
+    });
+    const maxRatio = Math.max(...rows.map((row) => Number(row.ratio) || 0), 0);
+    rows.forEach((row) => {
+        row.score = maxRatio > 0 ? row.ratio / maxRatio * 50 : 0;
+        if (row.school && typeof row.school === 'object') {
+            row.school.highSchoolAdmissionStats = {
+                line: row.line,
+                count: row.count,
+                ratio: row.ratio,
+                score: row.score
+            };
+        }
+    });
+    return rows;
+}
+
 function renderHighScoreTable() {
     const tbody = document.querySelector('#tb-high-score tbody');
     tbody.innerHTML = '';
@@ -4883,6 +4923,7 @@ async function processData() {
 
     const input1 = parseFloat(window.SYS_VARS?.indicator?.ind1) || 0;
     const input2 = parseFloat(window.SYS_VARS?.indicator?.ind2) || 0;
+    const highSchoolLine = parseFloat(window.SYS_VARS?.indicator?.highSchoolLine || window.SYS_VARS?.indicator?.graduateHighSchoolLine) || 0;
 
     const townshipRowsForCore = (typeof filterRowsToTownshipSchools === 'function')
         ? filterRowsToTownshipSchools(RAW_DATA || [])
@@ -4931,7 +4972,7 @@ async function processData() {
             ))
         ]))
         : schoolKeysForWorker;
-    const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker });
+    const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker, HIGH_SCHOOL_LINE: highSchoolLine });
 
     setRawData(result.RAW_DATA || []);
 
@@ -7128,13 +7169,16 @@ function calcSummary(isSilent = false) {
         : Object.keys(SCHOOLS || {});
     const summarySchoolSet = new Set((summarySchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
 
-    const list = Object.values(SCHOOLS || {}).filter(s => (
+    const summarySchools = Object.values(SCHOOLS || {}).filter(s => (
         hasSummaryScopeHelper
             ? (typeof isTownshipManagedSchool === 'function'
                 ? isTownshipManagedSchool(s?.name, Object.keys(SCHOOLS || {}))
                 : summarySchoolSet.has(String(s?.name || '').trim()))
             : true
-    )).map(s => {
+    ));
+    if (isGrade9) calculateHighSchoolAdmissionStatsForSummary(summarySchools);
+
+    const list = summarySchools.map(s => {
         const s1 = s.score2Rate || 0;  // 两率一分
         const s2 = s.scoreBottom || 0; // 后1/3
         const indicatorFallbackKey = typeof normalizeSchoolName === 'function' ? normalizeSchoolName(s.name) : '';
@@ -7145,9 +7189,10 @@ function calcSummary(isSilent = false) {
         if (isGrade9 && s.highScoreStats) {
             s4 = s.highScoreStats.score || 0;
         }
+        const s5 = isGrade9 ? (Number(s.highSchoolAdmissionStats?.score) || 0) : 0; // 高中上线率赋分
 
-        const total = s1 + s2 + s3 + s4;
-        return { name: s.name, s1, s2, s3, s4, total };
+        const total = s1 + s2 + s3 + s4 + s5;
+        return { name: s.name, s1, s2, s3, s4, s5, total };
     });
 
     list.sort((a, b) => b.total - a.total).forEach((d, i) => d.rank = i + 1);
@@ -7156,6 +7201,7 @@ function calcSummary(isSilent = false) {
     let theadHtml = `<tr><th>学校名称</th><th>两率一分得分</th><th>后1/3得分</th>`;
     if (isGrade9) theadHtml += `<th>指标生得分</th>`;
     if (isGrade9) theadHtml += `<th style="color:#b45309; background:#fff7ed;">高分段赋分(70)</th>`;
+    if (isGrade9) theadHtml += `<th style="color:#047857; background:#ecfdf5;">高中上线率赋分(50)</th>`;
     theadHtml += `<th>综合总分</th><th>总排名</th></tr>`;
     thead.innerHTML = theadHtml;
 
@@ -7168,6 +7214,8 @@ function calcSummary(isSilent = false) {
         if (isGrade9) indicatorCell = `<td data-label="指标生得分">${d.s3.toFixed(2)}</td>`;
         let highScoreCell = '';
         if (isGrade9) highScoreCell = `<td data-label="高分段赋分" style="color:#b45309; background:#fff7ed; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighClick(${safeSchoolArg})" title="点击查看高分段学生名单">${d.s4.toFixed(2)}</button></td>`;
+        let highSchoolAdmissionCell = '';
+        if (isGrade9) highSchoolAdmissionCell = `<td data-label="高中上线率赋分" style="color:#047857; background:#ecfdf5; font-weight:bold;" title="高中上线率赋分 = 本校上线率 / 最高学校上线率 × 50">${d.s5.toFixed(2)}</td>`;
         const rankClass = ['rank-cell', d.rank === 1 ? 'r-1' : '', d.rank === 2 ? 'r-2' : '', d.rank === 3 ? 'r-3' : '']
             .filter(Boolean)
             .join(' ');
@@ -7178,6 +7226,7 @@ function calcSummary(isSilent = false) {
                 <td data-label="后1/3得分"><button type="button" class="summary-drill-link" onclick="handleExcludedClick(${safeSchoolArg})" title="点击查看后1/3核算剔除名单">${d.s2.toFixed(2)}</button></td>
                 ${indicatorCell}
                 ${highScoreCell}
+                ${highSchoolAdmissionCell}
                 <td data-label="综合总分" class="text-red" style="font-size:16px; font-weight:bold;">${d.total.toFixed(2)}</td>
                 <td data-label="总排名" class="${rankClass}">${d.rank}</td>
             </tr>`;

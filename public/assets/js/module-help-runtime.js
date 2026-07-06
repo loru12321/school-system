@@ -31,7 +31,7 @@ const SYSTEM_MANUAL = {
         fit: `用于<strong>尖子生培养</strong>与拔尖人才监测。`,
         when: `中考备考阶段或重点关注拔尖学生结构时使用。`,
         use: `仅针对 9 年级中考备考。统计总分 ≥ 490分 (可配置) 的尖子生情况。`,
-        calc: `<div class="formula-box">得分 = (本校高分率 ÷ 全镇最高高分率) × 50</div>
+        calc: `<div class="formula-box">得分 = (本校高分率 ÷ 全镇最高高分率) × 70</div>
                    旨在鼓励学校培养拔尖人才。`
     },
     'value-added': {
@@ -67,7 +67,7 @@ const SYSTEM_MANUAL = {
         fit: `用于<strong>汇总全模块成绩</strong>形成总排名报告。`,
         when: `需要一键出具综合汇报或向上级汇报时使用。`,
         use: `点击“生成总排名”汇总所有模块得分。`,
-        calc: `<div class="formula-box">总榜得分 = 两率一分得分 + 后1/3得分 + 指标生得分 + (高分段得分)</div>`
+        calc: `<div class="formula-box">非9年级：总榜得分 = 两率一分得分 + 后1/3得分<br>9年级：总榜得分 = 两率一分得分 + 后1/3得分 + 指标生得分 + 高分段赋分 + 高中上线率赋分(50)</div>`
     },
     'teacher': {
         title: '👩‍🏫 教师教学质量画像·评价模型',

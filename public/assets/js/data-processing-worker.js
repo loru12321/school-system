@@ -2,6 +2,7 @@ self.onmessage = function(e) {
     const { cmd, data } = e.data;
     if (cmd === 'PROCESS_ALL') {
         const { RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS } = data;
+        const HIGH_SCHOOL_LINE = Number(data.HIGH_SCHOOL_LINE) || 0;
         const TOWNSHIP_SCHOOL_NAMES = Array.isArray(data.TOWNSHIP_SCHOOL_NAMES)
             ? data.TOWNSHIP_SCHOOL_NAMES.map(name => String(name || '').trim()).filter(Boolean)
             : null;
@@ -183,8 +184,9 @@ self.onmessage = function(e) {
             let max = { avg:0, exc:0, pass:0 };
             Object.values(schoolMap).forEach(s => { if((hasTownshipScopeHelper ? townshipSchoolSet.has(String(s?.name || '').trim()) : true) && s.metrics.total) { max.avg = Math.max(max.avg, s.metrics.total.avg); max.exc = Math.max(max.exc, s.metrics.total.excRate); max.pass = Math.max(max.pass, s.metrics.total.passRate); } });
 
-            // === 🔥 1. 新增：9年级高分段统计 (>=490分) ===
+            // === 1. 9年级高分段统计 (>=490分) 与高中上线率统计 ===
             let maxHighRatio = 0;
+            let maxAdmissionRatio = 0;
             // 判断是否为9年级模式
             const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
 
@@ -193,19 +195,31 @@ self.onmessage = function(e) {
                     // 计算高分人数 (总分 >= 490)
                     if (hasTownshipScopeHelper && !townshipSchoolSet.has(String(s?.name || '').trim())) {
                         s.highScoreStats = { count: 0, ratio: 0, score: 0 };
+                        s.highSchoolAdmissionStats = { line: HIGH_SCHOOL_LINE, count: 0, ratio: 0, score: 0 };
                         return;
                     }
                     const highCount = s.students.filter(stu => stu.total >= 490).length;
                     const totalCount = s.metrics.total ? s.metrics.total.count : 1;
                     const ratio = totalCount > 0 ? (highCount / totalCount) : 0;
+                    const admissionCount = HIGH_SCHOOL_LINE > 0
+                        ? s.students.filter(stu => Number(stu.total) >= HIGH_SCHOOL_LINE).length
+                        : 0;
+                    const admissionRatio = totalCount > 0 ? (admissionCount / totalCount) : 0;
 
                     s.highScoreStats = {
                         count: highCount,
                         ratio: ratio,
                         score: 0 // 稍后计算
                     };
+                    s.highSchoolAdmissionStats = {
+                        line: HIGH_SCHOOL_LINE,
+                        count: admissionCount,
+                        ratio: admissionRatio,
+                        score: 0
+                    };
 
                     if (ratio > maxHighRatio) maxHighRatio = ratio;
+                    if (admissionRatio > maxAdmissionRatio) maxAdmissionRatio = admissionRatio;
                 });
             }
 
@@ -247,11 +261,16 @@ self.onmessage = function(e) {
                         // 如果需要叠加进总排名，请取消下一行的注释：
                         // s.score2Rate += highScore;
                     }
+                    if (isGrade9 && s.highSchoolAdmissionStats) {
+                        const admissionScore = maxAdmissionRatio > 0 ? (s.highSchoolAdmissionStats.ratio / maxAdmissionRatio * 50) : 0;
+                        s.highSchoolAdmissionStats.score = isTownshipSchool ? admissionScore : 0;
+                    }
 
                 } else {
                     s.score2Rate = 0;
                     // 防止空对象报错
                     if(isGrade9) s.highScoreStats = { count:0, ratio:0, score:0 };
+                    if(isGrade9) s.highSchoolAdmissionStats = { line: HIGH_SCHOOL_LINE, count:0, ratio:0, score:0 };
                 }
             });
 

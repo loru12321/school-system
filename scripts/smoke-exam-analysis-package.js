@@ -504,6 +504,11 @@ async function login(page) {
         if (!/高分段赋分\(70\)|高分段赋分&#40;70&#41;/.test(schoolAnalysisSummary.text)) {
             fail('grade 9 school comprehensive report is missing high-score contribution column');
         }
+        const comprehensiveRows = schoolAnalysisSummary.rowsBySheetName['综合分析报告'] || [];
+        const comprehensiveHeader = comprehensiveRows[0] || [];
+        if (findColumn(comprehensiveHeader, ['高中上线率赋分(50)', '高中上线率赋分']) < 0) {
+            fail('grade 9 school comprehensive report is missing high-school admission contribution column');
+        }
         if (!schoolAnalysisSummary.text.includes('_标记') || !schoolAnalysisSummary.text.includes('本校')) {
             fail('school comprehensive report is missing own-school marker');
         }
@@ -521,6 +526,14 @@ async function login(page) {
             { key: 'score', names: ['高分赋分(70)', '高分段赋分'] },
             { key: 'rank', names: ['排名'] }
         ]);
+        const highSchoolAdmissionRows = schoolAnalysisSummary.rowsBySheetName['高中上线率赋分详情'] || [];
+        if (!highSchoolAdmissionRows.length) {
+            fail(`${schoolAnalysisName}:高中上线率赋分详情 is empty; sheets=${schoolAnalysisSummary.sheetNames.join(', ')}`);
+        }
+        const highSchoolAdmissionHeader = highSchoolAdmissionRows[0] || [];
+        const highSchoolAdmissionSchoolIndex = findColumn(highSchoolAdmissionHeader, ['学校名称', '学校']);
+        assertNumericColumn(highSchoolAdmissionRows, highSchoolAdmissionHeader, highSchoolAdmissionSchoolIndex, ['高中上线人数'], `${schoolAnalysisName}:高中上线率赋分详情`, { minimumRows: 5, allowZero: true });
+        assertNumericColumn(highSchoolAdmissionRows, highSchoolAdmissionHeader, highSchoolAdmissionSchoolIndex, ['高中上线率赋分(50)', '高中上线率赋分'], `${schoolAnalysisName}:高中上线率赋分详情`, { minimumRows: 5, allowZero: true });
         const indicatorRows = schoolAnalysisSummary.rowsBySheetName['指标生达标核算'] || [];
         if (!indicatorRows.length) {
             fail(`${schoolAnalysisName}:指标生达标核算 is empty; sheets=${schoolAnalysisSummary.sheetNames.join(', ')}; rowCounts=${JSON.stringify(schoolAnalysisSummary.rowCounts)}; availableKeys=${Object.keys(schoolAnalysisSummary.rowsBySheetName).join(', ')}`);
