@@ -680,6 +680,15 @@ assert.ok(
 ].forEach((needle) => {
     assert.ok(cohortExamMetaRuntime.includes(needle), `cohort-exam-meta-runtime.js should own early workspace helper ${needle}`);
 });
+assert.ok(
+    cohortExamMetaRuntime.includes("typeof window.syncShellChromeBridge === 'function'"),
+    'cohort-exam-meta-runtime.js should guard shell chrome bridge because it runs before app.js'
+);
+assert.strictEqual(
+    cohortExamMetaRuntime.includes('\n        syncShellChromeBridge();'),
+    false,
+    'cohort-exam-meta-runtime.js should not call syncShellChromeBridge before app.js without a guard'
+);
 assert.ok(bootRuntime.includes('function scheduleMobileRuntimeBootstrap'), 'boot-runtime.js should defer mobile runtime bootstrapping');
 assert.ok(bootRuntime.includes('runAfterAppModulesReady'), 'boot-runtime.js should wait for core modules before mobile runtime bootstrap');
 assert.ok(bootRuntime.includes('function repairAuthenticatedShellVisibility()'), 'boot-runtime.js should repair authenticated mobile shell visibility after login');

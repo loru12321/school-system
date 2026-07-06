@@ -601,7 +601,9 @@ const CohortManager = {
                 setTimeout(() => scheduleTeacherSyncPrompt(), 1200);
             }
         };
-        syncShellChromeBridge();
+        if (typeof window.syncShellChromeBridge === 'function') {
+            window.syncShellChromeBridge();
+        }
     },
 
     addFromUI: function () {
