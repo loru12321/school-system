@@ -12,6 +12,7 @@ function getCohortKey(cohortId) {
     }
     return `cohort::${cohortId}`;
 }
+window.getCohortKey = window.getCohortKey || getCohortKey;
 
 function inferCohortIdFromValue(value) {
     const WorkspaceStateRuntime = getWorkspaceStateRuntime();
@@ -424,6 +425,7 @@ function showCohortPicker() {
         }, 0);
     }
 }
+window.showCohortPicker = window.showCohortPicker || showCohortPicker;
 
 function setManualCohortSelectionGate(required = false) {
     window.__REQUIRE_MANUAL_COHORT_SELECTION__ = !!required;
@@ -812,6 +814,7 @@ function refreshExamGradePreview() {
     const gradeEl = document.getElementById('exam-grade-label');
     if (gradeEl) gradeEl.textContent = meta.grade || '-';
 }
+window.refreshExamGradePreview = window.refreshExamGradePreview || refreshExamGradePreview;
 
 function onExamTermChange() {
     const meta = getExamMetaFromUI();
@@ -881,6 +884,7 @@ function onExamTermChange() {
         DataManager.refreshTeacherAnalysis();
     }
 }
+window.onExamTermChange = window.onExamTermChange || onExamTermChange;
 
 function getAutoRestoreExamId(db, cohortId = '') {
     const sourceDb = db && typeof db === 'object' ? db : null;

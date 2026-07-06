@@ -641,6 +641,7 @@ assert.strictEqual(bootRuntime.includes('正在检测网关连接'), false, 'gat
 assert.ok(bootRuntime.includes('function markAppModulesReady()'), 'boot-runtime.js should mark app modules ready through a shared helper');
 assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js should dispatch an app modules ready event');
 [
+    'cohort-exam-meta-runtime.js',
     'auth-login-runtime.js',
     'data-manager-core-runtime.js',
     'student-details-render-runtime.js',
@@ -653,14 +654,22 @@ assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js sho
         `${runtimeName} should load before app.js`
     );
 });
+assert.ok(
+    bootRuntime.indexOf("'cohort-exam-meta-runtime.js'") < bootRuntime.indexOf("'auth-login-runtime.js'")
+        && bootRuntime.indexOf("'cohort-exam-meta-runtime.js'") < bootRuntime.indexOf("'snapshot-system-runtime.js'"),
+    'cohort exam metadata runtime should load before login/snapshot runtimes that call cohort helpers'
+);
+assert.ok(
+    bootRuntime.indexOf("'cohort-db-core-runtime.js'") > bootRuntime.indexOf("'app.js'"),
+    'cohort-db-core-runtime.js should load after app.js state accessors'
+);
 [
-    'cohort-exam-meta-runtime.js',
-    'cohort-db-core-runtime.js'
-].forEach((runtimeName) => {
-    assert.ok(
-        bootRuntime.indexOf(`'${runtimeName}'`) > bootRuntime.indexOf("'app.js'"),
-        `${runtimeName} should load after app.js state accessors`
-    );
+    'window.getCohortKey = window.getCohortKey || getCohortKey;',
+    'window.showCohortPicker = window.showCohortPicker || showCohortPicker;',
+    'window.refreshExamGradePreview = window.refreshExamGradePreview || refreshExamGradePreview;',
+    'window.onExamTermChange = window.onExamTermChange || onExamTermChange;'
+].forEach((needle) => {
+    assert.ok(cohortExamMetaRuntime.includes(needle), `cohort-exam-meta-runtime.js should expose ${needle}`);
 });
 assert.ok(bootRuntime.includes('function scheduleMobileRuntimeBootstrap'), 'boot-runtime.js should defer mobile runtime bootstrapping');
 assert.ok(bootRuntime.includes('runAfterAppModulesReady'), 'boot-runtime.js should wait for core modules before mobile runtime bootstrap');

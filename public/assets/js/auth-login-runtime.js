@@ -469,7 +469,7 @@ var Auth = {
                     tryAutoRestoreWorkspaceExam({ preferredExamId: restoredExamId, cohortId: restoredCohortId });
                     tryAutoEnterReadyCohortWorkspace();
                 } else {
-                    showCohortPicker();
+                    if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
                 }
                 if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
                     scheduleStartupCloudTask(() => {
@@ -759,7 +759,7 @@ var Auth = {
                     tryResumeReadyWorkspace();
                 } else {
                     setManualCohortSelectionGate(!hasReadyWorkspace);
-                    showCohortPicker();
+                    if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
                 }
                 if (!pendingLoginCohortEntry && hasReadyWorkspace) {
                     tryResumeReadyWorkspace();
@@ -2037,5 +2037,4 @@ window.confirm = function (msg) {
 };
 
 if (!window.originalConfirm) window.originalConfirm = window.confirm;
-
 

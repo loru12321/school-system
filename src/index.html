@@ -84,7 +84,7 @@
     </style>
     <script>
         (function () {
-            var refreshVersion = 'runtime-d3fc9044317f';
+            var refreshVersion = 'runtime-c04f51a3b8e6';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -127,10 +127,10 @@
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
     <script defer src="./assets/js/runtime-registry-runtime.js?v=20260501-runtime-registry-v1"></script>
     <script defer src="./assets/js/cohort-sync-status-runtime.js?v=20260620-sync-status-v1"></script>
-    <script defer src="./assets/js/entrance-sound-runtime.js?v=runtime-d3fc9044317f"></script>
-    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-d3fc9044317f"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=runtime-d3fc9044317f"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-d3fc9044317f"></script>
+    <script defer src="./assets/js/entrance-sound-runtime.js?v=runtime-c04f51a3b8e6"></script>
+    <script defer src="./assets/js/runtime-loader-runtime.js?v=runtime-c04f51a3b8e6"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=runtime-c04f51a3b8e6"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=runtime-c04f51a3b8e6"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -1048,7 +1048,7 @@
                         <label class="upload-field">
                             <span class="upload-field-label">学年</span>
                             <select id="exam-year" class="upload-field-input"
-                                onchange="refreshExamGradePreview(); onExamTermChange();">
+                                onchange="window.refreshExamGradePreview?.(); window.onExamTermChange?.();">
                                 <option value="2025-2026">2025-2026</option>
                                 <option value="2026-2027">2026-2027</option>
                                 <option value="2027-2028">2027-2028</option>
@@ -1057,7 +1057,7 @@
                         <label class="upload-field">
                             <span class="upload-field-label">学期</span>
                             <select id="exam-term" class="upload-field-input"
-                                onchange="refreshExamGradePreview(); onExamTermChange();">
+                                onchange="window.refreshExamGradePreview?.(); window.onExamTermChange?.();">
                                 <option value="上学期">上学期</option>
                                 <option value="下学期">下学期</option>
                             </select>

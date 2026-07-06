@@ -279,7 +279,9 @@ function applySnapshotPayload(db, options = {}) {
         archiveLockedKey: db.ARCHIVE_LOCKED_KEY || ''
     });
     syncWorkspaceRuntimeState({
-        currentProjectKey: String(db.CURRENT_PROJECT_KEY || '').trim() || (CURRENT_COHORT_ID ? getCohortKey(CURRENT_COHORT_ID) : readWorkspaceProjectKey()),
+        currentProjectKey: String(db.CURRENT_PROJECT_KEY || '').trim() || (CURRENT_COHORT_ID
+            ? (typeof window.getCohortKey === 'function' ? window.getCohortKey(CURRENT_COHORT_ID) : `cohort::${CURRENT_COHORT_ID}`)
+            : readWorkspaceProjectKey()),
         cohortDb: COHORT_DB,
         currentCohortId: CURRENT_COHORT_ID,
         currentCohortMeta: CURRENT_COHORT_META,

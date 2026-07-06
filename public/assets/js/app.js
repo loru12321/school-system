@@ -1836,9 +1836,17 @@ var CURRENT_COHORT_ID = initialWorkspaceSnapshot.currentCohortId || '';
 var CURRENT_COHORT_META = initialWorkspaceSnapshot.currentCohortMeta || null;
 var CURRENT_EXAM_ID = initialWorkspaceSnapshot.currentExamId || '';
 
+function getAppCohortKey(cohortId) {
+    if (typeof window.getCohortKey === 'function') return window.getCohortKey(cohortId);
+    if (window.WorkspaceState && typeof window.WorkspaceState.getCohortKey === 'function') {
+        return window.WorkspaceState.getCohortKey(cohortId);
+    }
+    return `cohort::${cohortId}`;
+}
+
 async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
-    const cohortKey = getCohortKey(cohortId);
+    const cohortKey = getAppCohortKey(cohortId);
     const current = readWorkspaceProjectKey() || '';
     const currentExamId = CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '';
     const hasReadyData = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
@@ -2315,7 +2323,7 @@ window.addEventListener('load', async () => {
         const savedCohortId = readWorkspaceCohortId();
         const savedProjectKey = readWorkspaceProjectKey();
         if (savedCohortId && savedProjectKey) {
-            const expectedKey = getCohortKey(savedCohortId);
+            const expectedKey = getAppCohortKey(savedCohortId);
             if (savedProjectKey !== expectedKey && savedProjectKey !== 'autosave_backup') {
                 console.warn(`[届别校验] CURRENT_PROJECT_KEY (${savedProjectKey}) 与 CURRENT_COHORT_ID (${savedCohortId}) 不匹配，自动修正为 ${expectedKey}`);
                 writeWorkspaceProjectKey(expectedKey);
@@ -2442,7 +2450,7 @@ window.addEventListener('load', async () => {
             await performRestore();
         }
         else {
-            showCohortPicker();
+            if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
         }
     }
 
@@ -2637,7 +2645,7 @@ function syncRuntimeStateToWindow() {
         currentCohortId: CURRENT_COHORT_ID,
         currentCohortMeta: CURRENT_COHORT_META,
         currentExamId: CURRENT_EXAM_ID,
-        currentProjectKey: CURRENT_COHORT_ID ? getCohortKey(CURRENT_COHORT_ID) : readWorkspaceProjectKey()
+        currentProjectKey: CURRENT_COHORT_ID ? getAppCohortKey(CURRENT_COHORT_ID) : readWorkspaceProjectKey()
     });
     COHORT_DB = workspaceSnapshot.cohortDb || null;
     CURRENT_COHORT_ID = workspaceSnapshot.currentCohortId || '';
@@ -8627,13 +8635,19 @@ window.addEventListener('load', () => {
     updateIndicatorUIState();
     ['exam-year', 'exam-term', 'exam-type', 'exam-name', 'exam-date', 'exam-reset-point'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener('change', refreshExamGradePreview);
+        if (el) {
+            el.addEventListener('change', () => {
+                if (typeof window.refreshExamGradePreview === 'function') {
+                    window.refreshExamGradePreview();
+                }
+            });
+        }
     });
     renderAutoSnapshotsUI();
     updateAdminOnlyButtons();
     updateWatermark();
     if (Auth?.currentUser && !ensureCurrentCohortIdentity()) {
-        showCohortPicker();
+        if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
     }
     bindModalInteractionGuards();
 });

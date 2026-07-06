@@ -87,7 +87,7 @@ assert.match(
 );
 assert.match(
   schoolBranch,
-  /else\s*\{[\s\S]*?showCohortPicker\(\)/,
+  /else\s*\{[\s\S]*?window\.showCohortPicker\(\)/,
   'school login must only show the cohort picker when no selected cohort entry is pending'
 );
 
