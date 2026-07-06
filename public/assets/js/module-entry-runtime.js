@@ -1097,7 +1097,19 @@
         if (id === 'subject-balance') updateSubjectBalanceSelects();
         if (id === 'progress-analysis') return initProgressAnalysisEntry();
         if (id === 'mutual-aid') updateMutualAidSelects();
-        if (id === 'marginal-push') updateMpSchoolSelect();
+        if (id === 'marginal-push') {
+            if (typeof updateMpSchoolSelect === 'function') {
+                updateMpSchoolSelect();
+                return Promise.resolve(true);
+            }
+            if (typeof window.loadDeferredAppModules === 'function') {
+                return Promise.resolve(window.loadDeferredAppModules()).then(() => {
+                    if (typeof updateMpSchoolSelect === 'function') updateMpSchoolSelect();
+                    return typeof updateMpSchoolSelect === 'function';
+                });
+            }
+            return Promise.resolve(false);
+        }
         if (id === 'single-school-eval') return false;
         return Promise.resolve();
     }
