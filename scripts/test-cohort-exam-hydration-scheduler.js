@@ -31,6 +31,11 @@ async function run() {
         'upgraded cloud exam sync must request a full historical fetch'
     );
     assert.ok(
+        cloudWorkspaceSource.includes('const backgroundContentLimit = options.background === true && !forceSync ? minCount : 0;')
+            && cloudWorkspaceSource.includes('const maxKeysToFetch = maxFetch > 0 ? maxFetch : (latestOnly ? 1 : backgroundContentLimit);'),
+        'background cloud hydration should only fetch enough exam payloads for its minCount requirement'
+    );
+    assert.ok(
         snapshotSource.includes("Object.prototype.hasOwnProperty.call(db, 'TARGETS')"),
         'snapshot restore must preserve existing targets when an exam snapshot omits TARGETS'
     );

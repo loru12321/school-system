@@ -377,7 +377,7 @@ const trySyncCompareExamOptions = CompareExamSyncRuntime && typeof CompareExamSy
     ? function trySyncCompareExamOptions() {
         return CompareExamSyncRuntime.trySyncOptions({
             cohortId: CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'),
-            fetchOptions: { latestOnly: false, maxFetch: 0, minCount: 50 },
+            fetchOptions: { latestOnly: false, maxFetch: 2, minCount: 2, background: true },
             refreshBaseline: true
         });
     }
@@ -389,7 +389,7 @@ const trySyncCompareExamOptions = CompareExamSyncRuntime && typeof CompareExamSy
         if (Date.now() - Number(state.lastAttempt || 0) < 5000) return false;
         state.pending = true;
         state.lastAttempt = Date.now();
-        Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { latestOnly: false, maxFetch: 0, minCount: 50 }))
+        Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { latestOnly: false, maxFetch: 2, minCount: 2, background: true }))
             .catch((err) => {
                 console.warn('[compare-sync] fetchCohortExamsToLocal failed:', err);
             })
@@ -431,7 +431,7 @@ function syncProgressBaselineExamOptions() {
 
     state.pending = true;
     state.lastAttempt = Date.now();
-    state.promise = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { latestOnly: false, maxFetch: 0, minCount: 50 }))
+    state.promise = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { latestOnly: false, maxFetch: 2, minCount: 2, background: true }))
         .then(() => {
             if (typeof updateProgressBaselineSelect === 'function') updateProgressBaselineSelect();
             if (typeof refreshCompareExamSelectors === 'function') refreshCompareExamSelectors();

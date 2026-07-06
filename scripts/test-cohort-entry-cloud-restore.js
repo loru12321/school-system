@@ -29,8 +29,11 @@ assert.ok(
 );
 
 assert.ok(
-    /switchTo: function \(cohortId, options = \{\}\) \{[\s\S]*const switchOptions = Object\.assign\(\{ fastEnter: true \}, options \|\| \{\}\);[\s\S]*return switchCohort\(cohortId, switchOptions\);/.test(cohortExamMetaSource),
-    'selected login cohort should explicitly request fast entry so cloud data does not block the login screen'
+    /function requestCohortSwitchRuntime\(cohortId, switchOptions\) \{[\s\S]*typeof window\.switchCohort === 'function'[\s\S]*__PENDING_COHORT_SWITCH_QUEUE__[\s\S]*return requestCohortSwitchRuntime\(cohortId, switchOptions\);/.test(cohortExamMetaSource)
+        && appSource.includes('window.switchCohort = switchCohort;')
+        && appSource.includes('function flushPendingCohortSwitches()')
+        && appSource.includes('window.__flushPendingCohortSwitches = flushPendingCohortSwitches;'),
+    'selected login cohort should fast-enter through a guarded early-runtime bridge until app switchCohort is ready'
 );
 
 assert.ok(

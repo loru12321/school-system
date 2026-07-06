@@ -2107,7 +2107,28 @@ async function switchCohort(cohortId, options = {}) {
     return true;
 }
 
+function flushPendingCohortSwitches() {
+    const queue = Array.isArray(window.__PENDING_COHORT_SWITCH_QUEUE__)
+        ? window.__PENDING_COHORT_SWITCH_QUEUE__.splice(0)
+        : [];
+    if (!queue.length) return;
+    queue.forEach((entry) => {
+        Promise.resolve()
+            .then(() => switchCohort(entry.cohortId, entry.switchOptions || {}))
+            .then((result) => {
+                if (typeof entry.resolve === 'function') entry.resolve(result);
+            })
+            .catch((error) => {
+                if (typeof entry.reject === 'function') entry.reject(error);
+                else console.warn('[switchCohort] queued cohort switch failed:', error);
+            });
+    });
+}
+
+window.switchCohort = switchCohort;
 window.switchProject = switchCohort;
+window.__flushPendingCohortSwitches = flushPendingCohortSwitches;
+flushPendingCohortSwitches();
 
 let __workspaceRefreshTimer = null;
 function scheduleWorkspaceUiRefresh(label = 'workspace-refresh', options = {}) {
@@ -5373,22 +5394,33 @@ function renderBottom3TableOnly() {
 
 function bindSummaryProfileEvents(tbTotal) {
     const profileEventRoot = tbTotal?.closest('table') || tbTotal;
-    if (!profileEventRoot || profileEventRoot.dataset.summaryProfileEventsBound === '1') return;
+    if (!profileEventRoot) return;
+    const openProfileFromCell = (cell) => {
+        if (!cell || typeof window.showSchoolProfile !== 'function') return;
+        window.showSchoolProfile(cell.dataset.schoolProfileName || '');
+    };
+    tbTotal.querySelectorAll('[data-school-profile-name]').forEach((cell) => {
+        if (cell.dataset.summaryProfileCellBound === '1') return;
+        cell.addEventListener('click', () => openProfileFromCell(cell));
+        cell.addEventListener('keydown', event => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            openProfileFromCell(cell);
+        });
+        cell.dataset.summaryProfileCellBound = '1';
+    });
+    if (profileEventRoot.dataset.summaryProfileEventsBound === '1') return;
     profileEventRoot.addEventListener('click', event => {
         const cell = event.target.closest('[data-school-profile-name]');
         if (!cell || !profileEventRoot.contains(cell)) return;
-        if (typeof window.showSchoolProfile === 'function') {
-            window.showSchoolProfile(cell.dataset.schoolProfileName || '');
-        }
+        openProfileFromCell(cell);
     });
     profileEventRoot.addEventListener('keydown', event => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         const cell = event.target.closest('[data-school-profile-name]');
         if (!cell || !profileEventRoot.contains(cell)) return;
         event.preventDefault();
-        if (typeof window.showSchoolProfile === 'function') {
-            window.showSchoolProfile(cell.dataset.schoolProfileName || '');
-        }
+        openProfileFromCell(cell);
     });
     profileEventRoot.dataset.summaryProfileEventsBound = '1';
 }

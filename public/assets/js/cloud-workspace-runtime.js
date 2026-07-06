@@ -1634,7 +1634,8 @@
                         keysToFetch.push(candidates[candidates.length - 1].key);
                     }
 
-                    const maxKeysToFetch = maxFetch > 0 ? maxFetch : (latestOnly ? 1 : 0);
+                    const backgroundContentLimit = options.background === true && !forceSync ? minCount : 0;
+                    const maxKeysToFetch = maxFetch > 0 ? maxFetch : (latestOnly ? 1 : backgroundContentLimit);
                     if (maxKeysToFetch > 0 && keysToFetch.length > maxKeysToFetch) {
                         const candidateByKey = new Map(candidates.map(row => [row.key, row]));
                         keysToFetch.sort((left, right) => {

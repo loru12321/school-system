@@ -676,6 +676,10 @@ assert.ok(
     'function readWorkspaceCohortId()',
     'function readWorkspaceCohortMeta()',
     'function readWorkspaceExamId()',
+    'function lockRuntimeCohortId(cohortId)',
+    'function writeWorkspaceCohortMeta(meta, options = {})',
+    'function writeWorkspaceExamId(examId)',
+    'function clearWorkspaceRuntimeIdentity(options = {})',
     'function syncWorkspaceRuntimeState(patch = {})'
 ].forEach((needle) => {
     assert.ok(cohortExamMetaRuntime.includes(needle), `cohort-exam-meta-runtime.js should own early workspace helper ${needle}`);
@@ -1263,6 +1267,16 @@ assert.ok(
     'login cohort entry should fast-enter and hydrate cloud cohort data in the background unless explicitly requested'
 );
 assert.ok(
+    cohortExamMetaRuntime.includes('function requestCohortSwitchRuntime(cohortId, switchOptions)')
+        && cohortExamMetaRuntime.includes("typeof window.switchCohort === 'function'")
+        && cohortExamMetaRuntime.includes('__PENDING_COHORT_SWITCH_QUEUE__')
+        && cohortExamMetaRuntime.includes('return requestCohortSwitchRuntime(cohortId, switchOptions);')
+        && appSource.includes('window.switchCohort = switchCohort;')
+        && appSource.includes('function flushPendingCohortSwitches()')
+        && appSource.includes('window.__flushPendingCohortSwitches = flushPendingCohortSwitches;'),
+    'early CohortManager switching should queue until app switchCohort is exported'
+);
+assert.ok(
     appSource.includes('void hydrateFromExamArchive();'),
     'fast cohort entry should restore the downloaded cloud snapshot into the already-open workspace'
 );
@@ -1276,9 +1290,10 @@ assert.ok(
 );
 assert.ok(
     cloudWorkspaceRuntime.includes('function getExamKeyRecencyScore')
-        && cloudWorkspaceRuntime.includes('const maxKeysToFetch = maxFetch > 0 ? maxFetch : (latestOnly ? 1 : 0)')
+        && cloudWorkspaceRuntime.includes('const backgroundContentLimit = options.background === true && !forceSync ? minCount : 0;')
+        && cloudWorkspaceRuntime.includes('const maxKeysToFetch = maxFetch > 0 ? maxFetch : (latestOnly ? 1 : backgroundContentLimit);')
         && cloudWorkspaceRuntime.includes('keysToFetch.length = maxKeysToFetch'),
-    'limited cohort hydration should pick recency-ranked exam snapshots'
+    'limited cohort hydration should pick recency-ranked exam snapshots and cap background payload fetches'
 );
 assert.ok(authStateIndex < workspaceStateIndex, 'auth-state-runtime.js must load before workspace-state-runtime.js');
 assert.ok(workspaceStateIndex < examStateIndex, 'workspace-state-runtime.js must load before exam-state-runtime.js');
