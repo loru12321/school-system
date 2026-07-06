@@ -188,7 +188,7 @@ function normalizeCompareValue(value) {
 function assertSheetRowsMatchExpected(rows, expectedRows, label, columns) {
     const header = rows[0] || [];
     const nameIndex = findColumn(header, ['学校', '学校名称']);
-    if (nameIndex < 0) fail(`${label} missing school column: ${header.join(',')}`);
+    if (nameIndex < 0) fail(`${label} missing school column: ${header.join(',')}; firstRows=${JSON.stringify((rows || []).slice(0, 5))}`);
     const byName = new Map(rows.slice(1).filter((row) => String(row?.[nameIndex] || '').trim()).map((row) => [String(row[nameIndex]).trim(), row]));
     if (byName.size < expectedRows.length) fail(`${label} has too few school rows: ${byName.size} < ${expectedRows.length}`);
     expectedRows.forEach((expected) => {
@@ -522,6 +522,9 @@ async function login(page) {
             { key: 'rank', names: ['排名'] }
         ]);
         const indicatorRows = schoolAnalysisSummary.rowsBySheetName['指标生达标核算'] || [];
+        if (!indicatorRows.length) {
+            fail(`${schoolAnalysisName}:指标生达标核算 is empty; sheets=${schoolAnalysisSummary.sheetNames.join(', ')}; rowCounts=${JSON.stringify(schoolAnalysisSummary.rowCounts)}; availableKeys=${Object.keys(schoolAnalysisSummary.rowsBySheetName).join(', ')}`);
+        }
         assertSheetRowsMatchExpected(indicatorRows, expectedSupportRows.indicator, `${schoolAnalysisName}:指标生达标核算`, [
             { key: 'studentCount', names: ['学生数'] },
             { key: 'ind1', names: ['指标一目标/达标'] },

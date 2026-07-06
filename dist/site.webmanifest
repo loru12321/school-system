@@ -1,0 +1,84 @@
+{
+  "name": "校衡台",
+  "short_name": "校衡台",
+  "description": "面向学校教务、班主任和教师的成绩管理、横向评价、成长分析与教学决策工作台。",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f7f9fc",
+  "theme_color": "#eef2f8",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": [
+    "education",
+    "productivity",
+    "utilities"
+  ],
+  "shortcuts": [
+    {
+      "name": "数据导入",
+      "short_name": "导入",
+      "description": "打开成绩与基础数据导入入口。",
+      "url": "/#upload",
+      "icons": [
+        {
+          "src": "/assets/brand/app-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any maskable"
+        },
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "学情总览",
+      "short_name": "总览",
+      "description": "进入学生画像、进退步与家校报告入口。",
+      "url": "/#student-overview",
+      "icons": [
+        {
+          "src": "/assets/brand/app-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any maskable"
+        },
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/brand/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/brand/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

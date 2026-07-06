@@ -480,6 +480,7 @@
     function buildComprehensiveSummaryRows(schools, subjects, scope) {
         const grade9 = isGrade9Exam();
         const indicatorScoreMap = grade9 ? getIndicatorScoreMap() : new Map();
+        const highScoreMap = grade9 ? getHighScoreMap(schools) : new Map();
         const rows = [[
             '学校名称',
             '两率一分得分',
@@ -495,7 +496,9 @@
                 const twoRates = Number(school.score2Rate) || 0;
                 const bottom = Number(school.scoreBottom) || 0;
                 const indicator = grade9 ? getIndicatorScoreForSchool(school, indicatorScoreMap) : 0;
-                const highScore = grade9 ? (Number(school.highScoreStats?.score) || 0) : 0;
+                const highScoreName = String(school.name || '').trim();
+                const highScoreKey = typeof window.normalizeSchoolName === 'function' ? window.normalizeSchoolName(highScoreName) : '';
+                const highScore = grade9 ? (highScoreMap.get(highScoreName) ?? highScoreMap.get(highScoreKey) ?? 0) : 0;
                 return {
                     name: school.name || '',
                     twoRates,
@@ -570,6 +573,22 @@
             ))]);
         });
         return rows;
+    }
+
+    function getHighScoreMap(schools) {
+        const map = new Map();
+        buildHighScoreRows(schools).slice(1).forEach((row) => {
+            const name = String(row?.[0] || '').trim();
+            if (!name) return;
+            const score = Number(row?.[4]);
+            if (!Number.isFinite(score)) return;
+            map.set(name, score);
+            if (typeof window.normalizeSchoolName === 'function') {
+                const normalized = window.normalizeSchoolName(name);
+                if (normalized) map.set(normalized, score);
+            }
+        });
+        return map;
     }
 
     function buildHighScoreRows(schools) {
@@ -875,6 +894,34 @@
         }
     }
 
+    async function ensureSupportMetricsForPackage() {
+        if (typeof window.renderHighScoreTable === 'function') {
+            try {
+                window.renderHighScoreTable();
+            } catch (error) {
+                console.warn('[exam-analysis-package] high-score warmup failed:', error);
+            }
+        }
+        if (typeof window.renderBottom3TableOnly === 'function') {
+            try {
+                window.renderBottom3TableOnly();
+            } catch (error) {
+                console.warn('[exam-analysis-package] bottom3 warmup failed:', error);
+            }
+        }
+        if (!isGrade9Exam()) return;
+        try {
+            if (typeof window.refreshIndicatorResults === 'function') {
+                await Promise.resolve(window.refreshIndicatorResults(true, { waitForInputs: true, timeoutMs: 12000 }));
+            } else if (typeof window.ensureIndicatorWorkspaceFromCloud === 'function') {
+                await Promise.resolve(window.ensureIndicatorWorkspaceFromCloud('analysis-package', 12000));
+            }
+            if (typeof window.calcIndicators === 'function') window.calcIndicators(true);
+        } catch (error) {
+            console.warn('[exam-analysis-package] indicator warmup failed:', error);
+        }
+    }
+
     function buildTeacherMark(item) {
         const name = String(item?.name || '').trim();
         const currentTeacher = getCurrentTeacherName();
@@ -949,6 +996,8 @@
             if (!window.XLSX || !window.XLSX.utils) throw new Error('XLSX 组件未加载');
             if (!window.JSZip) throw new Error('JSZip 组件未加载');
             if (typeof window.renderTables === 'function') window.renderTables();
+            if (typeof window.calcSummary === 'function') window.calcSummary(true);
+            await ensureSupportMetricsForPackage();
             if (typeof window.calcSummary === 'function') window.calcSummary(true);
 
             const zip = new window.JSZip();
