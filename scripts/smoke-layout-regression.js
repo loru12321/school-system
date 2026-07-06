@@ -49,11 +49,53 @@ async function loginAndEnterCohort(page) {
         });
     }
 
-    await page.waitForFunction(() => {
+    const waitForScores = () => page.waitForFunction(() => {
         const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
         const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
         return !!cohortId && rawDataLen > 0;
     }, null, { timeout: 90000 });
+    try {
+        await waitForScores();
+    } catch (error) {
+        await page.evaluate(async () => {
+            const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            if (cohortId && (!window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function')) {
+                if (typeof window.loadDeferredAppModules === 'function') {
+                    await Promise.race([Promise.resolve(window.loadDeferredAppModules()), wait(20000)]).catch(() => {});
+                }
+                if ((!window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function')
+                    && typeof window.loadOptionalRuntime === 'function') {
+                    await Promise.race([
+                        Promise.resolve(window.loadOptionalRuntime('cloud-workspace-layout-smoke', './assets/js/cloud-workspace-runtime.js')),
+                        wait(12000)
+                    ]).catch(() => {});
+                }
+            }
+            if (cohortId && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
+                await Promise.race([
+                    Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, {
+                        background: false,
+                        latestOnly: true,
+                        minCount: 1,
+                        refreshSelectors: false
+                    })),
+                    wait(75000)
+                ]).catch(() => {});
+                if (typeof window.tryAutoRestoreWorkspaceExam === 'function') {
+                    window.tryAutoRestoreWorkspaceExam({ cohortId });
+                }
+            }
+        }).catch(() => {});
+        await waitForScores().catch(async (retryError) => {
+            const state = await page.evaluate(() => ({
+                cohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
+                examId: String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || window.COHORT_DB?.currentExamId || '').trim(),
+                rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
+            })).catch(() => null);
+            throw new Error(`${retryError.message}; firstError=${error.message}; state=${JSON.stringify(state)}`);
+        });
+    }
 }
 
 async function openUploadModule(page) {
@@ -359,6 +401,24 @@ async function openCohortGrowthModule(page) {
 
 async function openMarginalPushModule(page) {
     await openModule(page, 'marginal-push');
+    await page.evaluate(async () => {
+        if (typeof window.generateMarginalTickets === 'function') return true;
+        if (typeof window.loadDeferredAppModules === 'function') {
+            await Promise.race([
+                Promise.resolve(window.loadDeferredAppModules()),
+                new Promise(resolve => setTimeout(resolve, 20000))
+            ]);
+        }
+        if (typeof window.generateMarginalTickets === 'function') return true;
+        if (typeof window.loadOptionalRuntime === 'function') {
+            await Promise.race([
+                Promise.resolve(window.loadOptionalRuntime('marginal-push-layout-smoke', './assets/js/marginal-push-runtime.js')),
+                new Promise(resolve => setTimeout(resolve, 12000))
+            ]);
+        }
+        return typeof window.generateMarginalTickets === 'function';
+    }).catch(() => {});
+    await page.waitForFunction(() => typeof window.generateMarginalTickets === 'function', null, { timeout: 30000 });
     await page.evaluate(() => {
         if (typeof window.updateMpSchoolSelect === 'function') window.updateMpSchoolSelect();
         const schoolSelect = document.getElementById('mpSchoolSelect');
