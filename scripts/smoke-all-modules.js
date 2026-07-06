@@ -31,7 +31,7 @@ const DEFAULT_SWITCH_MODULE_IDS = [
     'summary',
     'analysis',
     'high-score',
-    'county-analysis',
+    'county-teacher-portrait',
     'teacher-analysis',
     'teacher-detail-comparison',
     'teacher-pairing',
@@ -2281,7 +2281,7 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
-    if (id === 'county-analysis') {
+    if (id === 'county-analysis' || id === 'county-teacher-portrait') {
         return page.evaluate(async () => {
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
             const waitUntil = async (predicate, timeout = 15000) => {
