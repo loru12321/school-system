@@ -64,6 +64,47 @@
         return String(left || '').trim() === String(right || '').trim();
     }
 
+    function getSchoolLookupKeys(name, extraNames = []) {
+        const keys = new Set();
+        const add = (value) => {
+            const text = String(value || '').trim();
+            if (!text) return;
+            keys.add(text);
+            if (typeof window.normalizeSchoolName === 'function') {
+                const normalized = window.normalizeSchoolName(text);
+                if (normalized) keys.add(normalized);
+            }
+            if (typeof window.getCanonicalSchoolName === 'function') {
+                const canonical = window.getCanonicalSchoolName(text);
+                if (canonical) keys.add(canonical);
+            }
+        };
+        add(name);
+        (Array.isArray(extraNames) ? extraNames : []).forEach(add);
+        return Array.from(keys);
+    }
+
+    function mapRowsBySchool(rows, nameIndex = 0, extraNamesGetter = null) {
+        const map = new Map();
+        (rows || []).forEach((row) => {
+            const name = Array.isArray(row) ? row[nameIndex] : row?.name;
+            const extraNames = typeof extraNamesGetter === 'function' ? extraNamesGetter(row) : [];
+            getSchoolLookupKeys(name, extraNames).forEach((key) => map.set(key, row));
+        });
+        return map;
+    }
+
+    function findSchoolRow(map, name) {
+        for (const key of getSchoolLookupKeys(name)) {
+            if (map.has(key)) return map.get(key);
+        }
+        for (const row of map.values()) {
+            const rowName = Array.isArray(row) ? row[0] : row?.name;
+            if (sameSchool(rowName, name)) return row;
+        }
+        return null;
+    }
+
     function getSubjectList(rows) {
         if (Array.isArray(window.SUBJECTS) && window.SUBJECTS.length) return window.SUBJECTS.filter(Boolean);
         const subjectSet = new Set();
@@ -440,7 +481,7 @@
         const subjects = getSubjectList(getAllRows());
         if (scope !== 'county') addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope));
         addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects, scope));
-        if (scope !== 'county' && isGrade9Exam()) addWorksheet(wb, '专项核算对照表', buildSupportMetricComparisonRows(schools));
+        if (scope !== 'county' && isGrade9Exam()) addWorksheet(wb, '9年级专项核算对照表', buildSupportMetricComparisonRows(schools));
         addWorksheet(wb, '五科总 - 综合分析表', schoolRankRows(schools, 'total', scope));
         subjects.forEach((subject) => addWorksheet(wb, `${subject} 学科明细`, schoolRankRows(schools, subject, scope)));
         if (scope !== 'county') {
@@ -755,31 +796,38 @@
 
     function buildSupportMetricComparisonRows(schools) {
         const highRows = buildHighScoreRows(schools).slice(1);
-        const indicatorRows = buildIndicatorRows().slice(1);
+        const indicatorCalcRows = getIndicatorCalcRows();
         const bottomRows = buildBottomRows(schools).slice(1);
-        const highMap = new Map(highRows.map((row) => [String(row[0] || '').trim(), row]));
-        const indicatorMap = new Map(indicatorRows.map((row) => [String(row[0] || '').trim(), row]));
-        const bottomMap = new Map(bottomRows.map((row) => [String(row[0] || '').trim(), row]));
+        const highMap = mapRowsBySchool(highRows);
+        const indicatorMap = mapRowsBySchool(indicatorCalcRows, 0, (row) => row?.rawNames || []);
+        const bottomMap = mapRowsBySchool(bottomRows);
         return [
             ['学校', '高分人数', '高分率(%)', '高分赋分(50)', '高分排名', '指标一目标/达标', '指标二目标/达标', '指标总分', '指标排名', '后1/3均分', '后1/3得分', '后1/3排名', '_标记'],
+            ['说明', '本表用于把9年级综合总分相关专项放在同一行核对。', '高分段按高分率折算50分。', '', '', '未设置目标表示未匹配到该校指标生目标。', '', '未设置目标时按0分展示。', '未参与表示未进入指标排名。', '后1/3取有效后1/3均分。', '', '', ''],
             ...(schools || []).map((school) => {
                 const name = String(school?.name || '').trim();
-                const high = highMap.get(name) || [];
-                const indicator = indicatorMap.get(name) || [];
-                const bottom = bottomMap.get(name) || [];
+                const high = findSchoolRow(highMap, name) || [];
+                const indicator = findSchoolRow(indicatorMap, name) || null;
+                const bottom = findSchoolRow(bottomMap, name) || [];
+                const indicatorOne = indicator
+                    ? `${indicator.t1 || (indicator.invalidTarget ? '异常' : (indicator.missingTarget ? '未匹配' : 0))}/${indicator.r1 || 0}`
+                    : '未设置目标';
+                const indicatorTwo = indicator
+                    ? `${indicator.t2 || (indicator.invalidTarget ? '异常' : (indicator.missingTarget ? '未匹配' : 0))}/${indicator.r2 || 0}`
+                    : '未设置目标';
                 return [
                     name,
-                    high[2] ?? '',
-                    high[3] ?? '',
-                    high[4] ?? '',
-                    high[5] ?? '',
-                    indicator[3] ?? '',
-                    indicator[7] ?? '',
-                    indicator[11] ?? '',
-                    indicator[12] ?? '',
-                    bottom[4] ?? '',
-                    bottom[5] ?? '',
-                    bottom[6] ?? '',
+                    high[2] ?? 0,
+                    high[3] ?? 0,
+                    high[4] ?? 0,
+                    high[5] ?? '未排名',
+                    indicatorOne,
+                    indicatorTwo,
+                    indicator ? num(indicator.finalScore) : 0,
+                    indicator?.rank || '未参与',
+                    bottom[4] ?? 0,
+                    bottom[5] ?? 0,
+                    bottom[6] ?? '未排名',
                     sameSchool(name, getMySchoolName()) ? '本校' : ''
                 ];
             })

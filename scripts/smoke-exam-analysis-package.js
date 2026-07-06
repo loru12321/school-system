@@ -560,9 +560,36 @@ async function login(page) {
             { key: 'score', names: ['后1/3得分'] },
             { key: 'rank', names: ['排名'] }
         ]);
-        if (!schoolAnalysisSummary.sheetNames.includes('专项核算对照表')) {
-            fail(`school analysis workbook missing 专项核算对照表: ${schoolAnalysisSummary.sheetNames.join(', ')}`);
+        if (!schoolAnalysisSummary.sheetNames.includes('9年级专项核算对照表')) {
+            fail(`school analysis workbook missing 9年级专项核算对照表: ${schoolAnalysisSummary.sheetNames.join(', ')}`);
         }
+        const supportRows = schoolAnalysisSummary.rowsBySheetName['9年级专项核算对照表'] || [];
+        const supportHeader = supportRows[0] || [];
+        const supportSchoolIndex = findColumn(supportHeader, ['学校']);
+        const requiredSupportColumns = [
+            '高分人数',
+            '高分率(%)',
+            '高分赋分(50)',
+            '高分排名',
+            '指标一目标/达标',
+            '指标二目标/达标',
+            '指标总分',
+            '指标排名',
+            '后1/3均分',
+            '后1/3得分',
+            '后1/3排名'
+        ].map((name) => ({ name, index: findColumn(supportHeader, [name]) }));
+        requiredSupportColumns.forEach((column) => {
+            if (column.index < 0) fail(`${schoolAnalysisName}:9年级专项核算对照表 missing column ${column.name}`);
+        });
+        supportRows.slice(1).forEach((row, index) => {
+            const schoolName = String(row[supportSchoolIndex] || '').trim();
+            if (!schoolName || schoolName === '说明') return;
+            requiredSupportColumns.forEach((column) => {
+                const value = String(row[column.index] ?? '').trim();
+                if (!value) fail(`${schoolAnalysisName}:9年级专项核算对照表 row ${index + 2} ${schoolName} blank ${column.name}`);
+            });
+        });
 
         const { name: schoolCountyName, summary: schoolCountySummary } = await readWorkbookFromPackage(outerZip, files, /学校\/二模学校县域分析0527\.xlsx$/, 'county school analysis workbook');
         if (schoolCountySummary.sheetNames.includes('综合分析报告')) {
