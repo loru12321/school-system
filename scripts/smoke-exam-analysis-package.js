@@ -584,7 +584,8 @@ async function login(page) {
         });
         supportRows.slice(1).forEach((row, index) => {
             const schoolName = String(row[supportSchoolIndex] || '').trim();
-            if (!schoolName || schoolName === '说明') return;
+            if (!schoolName) return;
+            if (schoolName === '说明') fail(`${schoolAnalysisName}:9年级专项核算对照表 should not include explanation rows inside the data table`);
             requiredSupportColumns.forEach((column) => {
                 const value = String(row[column.index] ?? '').trim();
                 if (!value) fail(`${schoolAnalysisName}:9年级专项核算对照表 row ${index + 2} ${schoolName} blank ${column.name}`);
