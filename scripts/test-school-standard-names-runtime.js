@@ -34,6 +34,8 @@ assert.strictEqual(context.getCanonicalSchoolName('商老庄'), '商老庄中学
 assert.strictEqual(context.getCanonicalSchoolName('彭集'), '彭集中学');
 assert.strictEqual(context.getCanonicalSchoolName('接山'), '接山中学');
 assert.strictEqual(context.getCanonicalSchoolName('州城'), '州城中学');
+assert.strictEqual(context.getCanonicalSchoolName('州城一中'), '州城中学');
+assert.strictEqual(context.getCanonicalSchoolName('州城二中'), '州城中学');
 assert.strictEqual(context.getCanonicalSchoolName('新湖'), '新湖中学');
 assert.strictEqual(context.getCanonicalSchoolName('沙河站'), '沙河站中学');
 assert.strictEqual(context.getCanonicalSchoolName('东平实验中学'), '东平县实验中学');
@@ -45,12 +47,16 @@ assert.notStrictEqual(context.getCanonicalSchoolName('实验中学'), '东平县
 context.RAW_DATA = [
     { school: '银山实验学校' },
     { school: '旧县乡中心学校' },
+    { school: '州城一中' },
+    { school: '州城二中' },
     { school: '东平实验中学' },
     { school: '东平一中' }
 ];
 context.SCHOOLS = {
     银山实验学校: { name: '银山实验学校' },
     旧县乡中心学校: { name: '旧县乡中心学校' },
+    州城一中: { name: '州城一中' },
+    州城二中: { name: '州城二中' },
     东平实验中学: { name: '东平实验中学' },
     东平一中: { name: '东平一中' }
 };
@@ -58,6 +64,8 @@ context.SCHOOLS = {
 const allNames = Object.keys(context.SCHOOLS);
 assert.strictEqual(context.isTownshipManagedSchool('银山实验学校', allNames), true);
 assert.strictEqual(context.isTownshipManagedSchool('旧县乡中心学校', allNames), true);
+assert.strictEqual(context.isTownshipManagedSchool('州城一中', allNames), true);
+assert.strictEqual(context.isTownshipManagedSchool('州城二中', allNames), true);
 assert.strictEqual(context.isTownshipManagedSchool('东平实验中学', allNames), false);
 assert.strictEqual(context.isTownshipManagedSchool('东平一中', allNames), false);
 assert.strictEqual(

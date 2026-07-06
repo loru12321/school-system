@@ -278,7 +278,11 @@
     }
 
     function getAccessToken() {
-        return getSessionValue('edu:session:token');
+        return normalizeText(
+            getSessionValue('edu:session:token')
+            || (root.EdgeGateway && typeof root.EdgeGateway.getToken === 'function' ? root.EdgeGateway.getToken() : '')
+            || getSessionValue('EDGE_GATEWAY_TOKEN_V1')
+        );
     }
 
     function buildApiHeaders(extraHeaders) {

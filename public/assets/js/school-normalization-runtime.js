@@ -8,7 +8,7 @@ const SCHOOL_ALIAS_GROUPS = [
     { canonical: '商老庄中学', aliases: ['商老庄', '商老庄实验学校'] },
     { canonical: '彭集中学', aliases: ['彭集', '彭集街道中学'] },
     { canonical: '接山中学', aliases: ['接山', '接山镇中学'] },
-    { canonical: '州城中学', aliases: ['州城', '州城街道', '州城街道中学'] },
+    { canonical: '州城中学', aliases: ['州城', '州城街道', '州城街道中学', '州城一中', '州城二中', '州城镇一中', '州城镇二中'] },
     { canonical: '新湖中学', aliases: ['新湖', '新湖镇中学'] },
     { canonical: '大羊中学', aliases: ['大羊'] },
     { canonical: '沙河站中学', aliases: ['沙河站', '沙河站镇中学'] },

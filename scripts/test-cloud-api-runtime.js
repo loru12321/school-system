@@ -215,6 +215,33 @@ async function run() {
     assert.strictEqual(fetchLog[2].headers.apikey, 'sb_publishable_example');
     assert.strictEqual(fetchLog[2].headers.Authorization, 'Bearer session-token-example');
 
+    const gatewayFetchLog = [];
+    const gatewayRoot = {
+        location: {
+            protocol: 'https:',
+            origin: 'https://schoolsystem.com.cn',
+            hostname: 'schoolsystem.com.cn',
+            href: 'https://schoolsystem.com.cn/'
+        },
+        SUPABASE_KEY: 'sb_publishable_example',
+        sessionStorage: createMockStorage({
+            EDGE_GATEWAY_TOKEN_V1: 'edge-session-token'
+        }),
+        fetch: async (url, init = {}) => {
+            gatewayFetchLog.push({
+                url: String(url),
+                method: init.method || 'GET',
+                headers: init.headers || {},
+                body: init.body || ''
+            });
+            return createJsonResponse(200, [{ key: 'REMOTE_KEY' }]);
+        }
+    };
+    const gatewayRuntime = createCloudApiRuntime(gatewayRoot);
+    await gatewayRuntime.upsertSystemData({ key: 'REMOTE_KEY', content: '{}' });
+    assert.strictEqual(gatewayFetchLog[0].method, 'POST');
+    assert.strictEqual(gatewayFetchLog[0].headers.Authorization, 'Bearer edge-session-token');
+
     const compatLog = [];
     const localRoot = {
         location: {
