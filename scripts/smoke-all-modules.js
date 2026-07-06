@@ -72,6 +72,7 @@ const DATA_MANAGER_TAB_STABILIZE_MS = {
 };
 const DATA_MANAGER_TAB_TIMEOUT_MS = 8000;
 const MODULE_SWITCH_TIMEOUT_MS = 12000;
+const MODULE_SWITCH_READY_TIMEOUT_MS = 1800;
 const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
 const SMOKE_HOTSPOT_PREWARM_TIMEOUT_MS = 4500;
@@ -1006,7 +1007,7 @@ async function smokeSwitchModule(page, id) {
             if (!section) return false;
             const style = getComputedStyle(section);
             return style.display !== 'none' && section.classList.contains('active');
-        }, id, { timeout: MODULE_SWITCH_TIMEOUT_MS });
+        }, id, { timeout: Math.min(MODULE_SWITCH_TIMEOUT_MS, MODULE_SWITCH_READY_TIMEOUT_MS) });
     } catch (error) {
         const fallback = await collectState();
         if (fallback.ok) {
