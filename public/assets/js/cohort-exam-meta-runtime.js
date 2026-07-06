@@ -5,6 +5,93 @@ function getWorkspaceStateRuntime() {
     return window.WorkspaceState || null;
 }
 
+function readWorkspaceProjectKey() {
+    const WorkspaceStateRuntime = getWorkspaceStateRuntime();
+    if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.getCurrentProjectKey === 'function') {
+        return String(WorkspaceStateRuntime.getCurrentProjectKey() || '').trim();
+    }
+    return String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim();
+}
+
+function readWorkspaceCohortId() {
+    const WorkspaceStateRuntime = getWorkspaceStateRuntime();
+    if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.getCurrentCohortId === 'function') {
+        return String(WorkspaceStateRuntime.getCurrentCohortId() || '').trim();
+    }
+    return String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+}
+
+function readWorkspaceCohortMeta() {
+    const WorkspaceStateRuntime = getWorkspaceStateRuntime();
+    if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.getCurrentCohortMeta === 'function') {
+        return WorkspaceStateRuntime.getCurrentCohortMeta() || null;
+    }
+    if (window.CURRENT_COHORT_META && typeof window.CURRENT_COHORT_META === 'object') return window.CURRENT_COHORT_META;
+    try {
+        return JSON.parse(localStorage.getItem('CURRENT_COHORT_META') || 'null');
+    } catch (e) {
+        return null;
+    }
+}
+
+function readWorkspaceExamId() {
+    const WorkspaceStateRuntime = getWorkspaceStateRuntime();
+    if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.getCurrentExamId === 'function') {
+        return String(WorkspaceStateRuntime.getCurrentExamId() || '').trim();
+    }
+    return String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+}
+
+function readWorkspaceSnapshot() {
+    const WorkspaceStateRuntime = getWorkspaceStateRuntime();
+    if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.snapshotWorkspaceState === 'function') {
+        return WorkspaceStateRuntime.snapshotWorkspaceState();
+    }
+    return {
+        currentProjectKey: readWorkspaceProjectKey(),
+        currentCohortId: readWorkspaceCohortId(),
+        currentCohortMeta: readWorkspaceCohortMeta(),
+        currentExamId: readWorkspaceExamId(),
+        cohortDb: window.COHORT_DB || null
+    };
+}
+
+function syncWorkspaceRuntimeState(patch = {}) {
+    const WorkspaceStateRuntime = getWorkspaceStateRuntime();
+    if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.syncWorkspaceState === 'function') {
+        return WorkspaceStateRuntime.syncWorkspaceState(patch);
+    }
+    const next = patch && typeof patch === 'object' ? patch : {};
+    if (Object.prototype.hasOwnProperty.call(next, 'cohortDb')) window.COHORT_DB = next.cohortDb || null;
+    if (Object.prototype.hasOwnProperty.call(next, 'currentCohortId')) {
+        const cohortId = String(next.currentCohortId || '').trim();
+        if (cohortId) {
+            localStorage.setItem('CURRENT_COHORT_ID', cohortId);
+            window.CURRENT_COHORT_ID = cohortId;
+        }
+    }
+    if (Object.prototype.hasOwnProperty.call(next, 'currentCohortMeta')) {
+        const meta = next.currentCohortMeta || null;
+        if (meta) localStorage.setItem('CURRENT_COHORT_META', JSON.stringify(meta));
+        window.CURRENT_COHORT_META = meta;
+    }
+    if (Object.prototype.hasOwnProperty.call(next, 'currentExamId')) {
+        const examId = String(next.currentExamId || '').trim();
+        if (examId) {
+            localStorage.setItem('CURRENT_EXAM_ID', examId);
+            window.CURRENT_EXAM_ID = examId;
+        }
+    }
+    const projectKey = Object.prototype.hasOwnProperty.call(next, 'currentProjectKey')
+        ? String(next.currentProjectKey || '').trim()
+        : (readWorkspaceCohortId() ? getCohortKey(readWorkspaceCohortId()) : readWorkspaceProjectKey());
+    if (projectKey) {
+        localStorage.setItem('CURRENT_PROJECT_KEY', projectKey);
+        window.CURRENT_PROJECT_KEY = projectKey;
+    }
+    return readWorkspaceSnapshot();
+}
+
 function getCohortKey(cohortId) {
     const WorkspaceStateRuntime = getWorkspaceStateRuntime();
     if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.getCohortKey === 'function') {
