@@ -134,13 +134,19 @@ async function run() {
 
     root.isIndicatorAllowed = () => false;
     elements.dm_high_school_line_input.value = '';
+    indicatorState = { ind1: '', ind2: '', highSchoolLine: '' };
     const currentSaveCalls = saveCloudCalls;
     await runtime.saveParamsLocally(manager, false);
     assert.strictEqual(saveCloudCalls, currentSaveCalls);
     assert.strictEqual(toasts[toasts.length - 1].type, 'warning');
 
     elements.dm_high_school_line_input.value = '390';
+    indicatorState = { ind1: '111', ind2: '222', highSchoolLine: '' };
+    elements.dm_ind1_input.value = '';
+    elements.dm_ind2_input.value = '';
     await runtime.saveParamsLocally(manager, false);
+    assert.strictEqual(indicatorState.ind1, '111');
+    assert.strictEqual(indicatorState.ind2, '222');
     assert.strictEqual(indicatorState.highSchoolLine, '390');
     assert.strictEqual(saveCloudCalls, currentSaveCalls + 1);
 

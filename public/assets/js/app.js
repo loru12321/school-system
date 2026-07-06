@@ -7130,11 +7130,20 @@ function analyzeTargetGap(schoolName, type, lineScore) {
     document.getElementById('drill-modal').style.display = 'flex';
 }
 
-function calcSummary(isSilent = false) {
+async function calcSummary(isSilent = false) {
     const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
     let indicatorRowsForSummary = [];
 
-    if (isGrade9 && typeof calcIndicators === 'function') {
+    if (isGrade9 && typeof refreshIndicatorResults === 'function') {
+        try {
+            const result = await Promise.resolve(refreshIndicatorResults(true, { waitForInputs: true, timeoutMs: 9000 }));
+            indicatorRowsForSummary = Array.isArray(result) ? result : [];
+        } catch (e) {
+            console.warn('[calcSummary] 指标生补载重算失败:', e);
+        }
+    }
+
+    if (isGrade9 && !indicatorRowsForSummary.length && typeof calcIndicators === 'function') {
         const previousSuppress = SummaryRefreshState.suppress;
         SummaryRefreshState.suppress = true;
         try {

@@ -155,8 +155,10 @@ assert.ok(
 );
 assert.ok(
     workspaceSource.includes("document.getElementById('dm_high_school_line_input')")
-        && workspaceSource.includes('highSchoolLine: highSchoolLineInput ? highSchoolLineInput.value : currentIndicator.highSchoolLine'),
-    'cloud sync should preserve the high-school admission score line when saving indicator params'
+        && workspaceSource.includes('function readWorkspaceParamValue')
+        && workspaceSource.includes('ind1: readWorkspaceParamValue(ind1, currentIndicator.ind1)')
+        && workspaceSource.includes('highSchoolLine: readWorkspaceParamValue(highSchoolLineInput, currentIndicator.highSchoolLine)'),
+    'cloud sync should preserve existing indicator params and the high-school admission score line when input boxes are blank'
 );
 assert.ok(
     workspaceSource.includes("key = String(opts.examKey || '').trim() || getCurrentExamIdFromPayload(payload) || String(window.CURRENT_EXAM_ID || '').trim() || key;"),

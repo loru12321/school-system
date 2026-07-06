@@ -2008,9 +2008,10 @@ const DataManager = {
     saveParamsLocally: async function (skipCloudSync = false) {
         ensureSupportSysVars();
 
-        const v1 = document.getElementById('dm_ind1_input').value;
-        const v2 = document.getElementById('dm_ind2_input').value;
-        const highSchoolLine = document.getElementById('dm_high_school_line_input')?.value || '';
+        const currentIndicator = readIndicatorState();
+        const v1 = String(document.getElementById('dm_ind1_input')?.value || '').trim() || currentIndicator.ind1 || '';
+        const v2 = String(document.getElementById('dm_ind2_input')?.value || '').trim() || currentIndicator.ind2 || '';
+        const highSchoolLine = String(document.getElementById('dm_high_school_line_input')?.value || '').trim() || currentIndicator.highSchoolLine || '';
         if (!isIndicatorAllowed() && !highSchoolLine) return;
 
         setIndicatorState({ ind1: v1, ind2: v2, highSchoolLine });

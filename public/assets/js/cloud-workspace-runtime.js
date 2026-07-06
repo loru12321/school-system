@@ -1221,6 +1221,13 @@
         return !!String(params.ind1 || '').trim() && !!String(params.ind2 || '').trim();
     }
 
+    function readWorkspaceParamValue(input, fallback = '') {
+        const current = String(fallback || '').trim();
+        if (!input) return current;
+        const value = String(input.value || '').trim();
+        return value || current;
+    }
+
     function needsWorkspaceIndicatorRefresh(payload) {
         if (!payload || typeof payload !== 'object') return false;
         return !hasWorkspaceTargetConfig(payload) || !hasWorkspaceIndicatorParams(payload);
@@ -1430,9 +1437,9 @@
                         ? window.readIndicatorState()
                         : { ind1: '', ind2: '', highSchoolLine: '' };
                     window.setIndicatorState({
-                        ind1: ind1 ? ind1.value : currentIndicator.ind1,
-                        ind2: ind2 ? ind2.value : currentIndicator.ind2,
-                        highSchoolLine: highSchoolLineInput ? highSchoolLineInput.value : currentIndicator.highSchoolLine
+                        ind1: readWorkspaceParamValue(ind1, currentIndicator.ind1),
+                        ind2: readWorkspaceParamValue(ind2, currentIndicator.ind2),
+                        highSchoolLine: readWorkspaceParamValue(highSchoolLineInput, currentIndicator.highSchoolLine)
                     });
                 }
                 if (typeof window.setTargetsState === 'function') {
@@ -1758,9 +1765,9 @@
                     ? window.readIndicatorState()
                     : { ind1: '', ind2: '', highSchoolLine: '' };
                 window.setIndicatorState({
-                    ind1: ind1 ? ind1.value : currentIndicator.ind1,
-                    ind2: ind2 ? ind2.value : currentIndicator.ind2,
-                    highSchoolLine: highSchoolLineInput ? highSchoolLineInput.value : currentIndicator.highSchoolLine
+                    ind1: readWorkspaceParamValue(ind1, currentIndicator.ind1),
+                    ind2: readWorkspaceParamValue(ind2, currentIndicator.ind2),
+                    highSchoolLine: readWorkspaceParamValue(highSchoolLineInput, currentIndicator.highSchoolLine)
                 });
             }
             if (typeof window.setTargetsState === 'function') {

@@ -1067,6 +1067,34 @@ async function runModuleDeepCheck(page, id) {
                 await window.ensureExamAnalysisPackageRuntimeLoaded();
             }
             captureState('exam-analysis-package-runtime-loaded');
+            let summaryIndicatorDiagnostics = {
+                isGrade9: false,
+                indicatorRowsPositive: 0,
+                summaryIndicatorPositive: 0,
+                summaryIndicatorValues: []
+            };
+            if (typeof window.calcSummary === 'function') {
+                await Promise.resolve(window.calcSummary(true));
+                await new Promise(resolve => setTimeout(resolve, 180));
+                const isGrade9 = String(window.CONFIG?.name || '').includes('9');
+                const indicatorRows = Array.isArray(window.INDICATOR_LAST_RESULT) ? window.INDICATOR_LAST_RESULT : [];
+                const indicatorRowsPositive = indicatorRows.filter((row) => Number(row?.finalScore) > 0).length;
+                const headers = Array.from(document.querySelectorAll('#tb-summary thead th'))
+                    .map((th) => String(th?.innerText || th?.textContent || '').trim());
+                const indicatorIndex = headers.findIndex((text) => /指标生得分/.test(text));
+                const summaryIndicatorValues = indicatorIndex >= 0
+                    ? Array.from(document.querySelectorAll('#tb-summary tbody tr')).map((tr) => {
+                        const cell = tr.querySelectorAll('td')[indicatorIndex];
+                        return Number(String(cell?.innerText || cell?.textContent || '').replace(/[^\d.-]/g, ''));
+                    }).filter(Number.isFinite)
+                    : [];
+                summaryIndicatorDiagnostics = {
+                    isGrade9,
+                    indicatorRowsPositive,
+                    summaryIndicatorPositive: summaryIndicatorValues.filter((value) => value > 0).length,
+                    summaryIndicatorValues: summaryIndicatorValues.slice(0, 8)
+                };
+            }
             const checks = {
                 ensureTownSubmoduleCompareUIs: typeof window.ensureTownSubmoduleCompareUIs === 'function',
                 openTownSubmoduleCompareDialog: typeof window.openTownSubmoduleCompareDialog === 'function',
@@ -1080,7 +1108,10 @@ async function runModuleDeepCheck(page, id) {
                 schoolProfileClose: !!document.querySelector('#school-profile-modal .school-modal-close'),
                 examAnalysisPackageButton: !!document.querySelector('button[onclick="downloadExamAnalysisPackage()"]'),
                 examAnalysisPackageRuntime: typeof window.downloadExamAnalysisPackage === 'function',
-                examAnalysisPackageZipVendor: !!window.JSZip
+                examAnalysisPackageZipVendor: !!window.JSZip,
+                summaryIndicatorColumnPopulated: !summaryIndicatorDiagnostics.isGrade9
+                    || summaryIndicatorDiagnostics.indicatorRowsPositive === 0
+                    || summaryIndicatorDiagnostics.summaryIndicatorPositive > 0
             };
             const panel = document.querySelector('.town-submodule-compare-panel[data-submodule="summary"]');
             let schoolProfileCloseWorks = false;
@@ -1134,6 +1165,7 @@ async function runModuleDeepCheck(page, id) {
                 schoolProfileCellReady: !!schoolProfileCell,
                 schoolProfileCellClickWorks,
                 summaryDirty,
+                summaryIndicatorDiagnostics,
                 staleTexts,
                 stateTrace
             };

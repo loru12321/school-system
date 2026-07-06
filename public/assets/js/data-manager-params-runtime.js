@@ -34,6 +34,11 @@
         return el ? String(el.value || '') : '';
     }
 
+    function mergeParamValue(value, fallback = '') {
+        const text = String(value || '').trim();
+        return text || String(fallback || '').trim();
+    }
+
     function writeInputValue(id, value) {
         const doc = root.document;
         if (!doc || typeof doc.getElementById !== 'function') return null;
@@ -141,9 +146,10 @@
             : false;
         if (typeof root.ensureSupportSysVars === 'function') root.ensureSupportSysVars();
 
-        const v1 = readInputValue('dm_ind1_input');
-        const v2 = readInputValue('dm_ind2_input');
-        const highSchoolLine = readInputValue('dm_high_school_line_input');
+        const currentIndicator = getIndicatorState();
+        const v1 = mergeParamValue(readInputValue('dm_ind1_input'), currentIndicator.ind1);
+        const v2 = mergeParamValue(readInputValue('dm_ind2_input'), currentIndicator.ind2);
+        const highSchoolLine = mergeParamValue(readInputValue('dm_high_school_line_input'), currentIndicator.highSchoolLine);
         if (!indicatorAllowed && !highSchoolLine) {
             safeToast('当前考试不需要指标参数；如需保存中考高中过线分数，请先填写分数。', 'warning');
             return;
