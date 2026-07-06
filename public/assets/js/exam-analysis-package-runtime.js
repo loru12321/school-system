@@ -499,7 +499,7 @@
             '学校名称',
             '两率一分得分',
             '后1/3得分',
-            ...(grade9 ? ['指标生得分', '高分段赋分(70)', '高中上线率赋分(50)'] : []),
+            ...(grade9 ? ['指标生得分', '高分段赋分(50)', '高中上线率赋分(50)'] : []),
             '综合总分',
             '总排名',
             '_标记'
@@ -624,7 +624,7 @@
     }
 
     function buildHighScoreRows(schools) {
-        const rows = [['学校名称', '实考人数', '高分人数(≥490)', '高分率(%)', '高分赋分(70)', '排名', '_标记']];
+        const rows = [['学校名称', '实考人数', '高分人数(≥490)', '高分率(%)', '高分赋分(50)', '排名', '_标记']];
         const baseList = (schools || []).map((school) => {
             const students = Array.isArray(school.students) ? school.students : getAllRows().filter((student) => sameSchool(student?.school, school.name));
             const studentCount = Number(school.metrics?.total?.count) || (Array.isArray(school.students) ? school.students.length : 0);
@@ -640,7 +640,7 @@
         const maxHighRate = Math.max(...baseList.map((item) => item.highRate), 0);
         const list = baseList.map((item) => ({
             ...item,
-            score: maxHighRate ? item.highRate / maxHighRate * 70 : 0
+            score: maxHighRate ? item.highRate / maxHighRate * 50 : 0
         })).sort((left, right) => right.score - left.score);
         list.forEach((item, index) => {
             rows.push([
@@ -761,7 +761,7 @@
         const indicatorMap = new Map(indicatorRows.map((row) => [String(row[0] || '').trim(), row]));
         const bottomMap = new Map(bottomRows.map((row) => [String(row[0] || '').trim(), row]));
         return [
-            ['学校', '高分人数', '高分率(%)', '高分赋分(70)', '高分排名', '指标一目标/达标', '指标二目标/达标', '指标总分', '指标排名', '后1/3均分', '后1/3得分', '后1/3排名', '_标记'],
+            ['学校', '高分人数', '高分率(%)', '高分赋分(50)', '高分排名', '指标一目标/达标', '指标二目标/达标', '指标总分', '指标排名', '后1/3均分', '后1/3得分', '后1/3排名', '_标记'],
             ...(schools || []).map((school) => {
                 const name = String(school?.name || '').trim();
                 const high = highMap.get(name) || [];

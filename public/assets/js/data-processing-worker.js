@@ -253,8 +253,8 @@ self.onmessage = function(e) {
 
                     // === 🔥 3. 如果是9年级，计算高分赋分 ===
                     if (isGrade9 && s.highScoreStats) {
-                        // 赋分公式：(本校比例 / 最高比例) * 70
-                        const highScore = maxHighRatio > 0 ? (s.highScoreStats.ratio / maxHighRatio * 70) : 0;
+                        // 赋分公式：(本校比例 / 最高比例) * 50
+                        const highScore = maxHighRatio > 0 ? (s.highScoreStats.ratio / maxHighRatio * 50) : 0;
                         s.highScoreStats.score = isTownshipSchool ? highScore : 0;
 
                         // ⚠️ 注意：目前高分赋分仅做展示，暂未叠加到 score2Rate (总排名分) 中。

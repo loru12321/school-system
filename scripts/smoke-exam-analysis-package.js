@@ -410,7 +410,7 @@ async function login(page) {
             });
             const maxHighRatio = Math.max(...highSource.map((row) => Number(row.highRatioRaw) || 0), 0);
             const highScore = highSource.map((row) => {
-                const score = maxHighRatio > 0 ? row.highRatioRaw / maxHighRatio * 70 : 0;
+                const score = maxHighRatio > 0 ? row.highRatioRaw / maxHighRatio * 50 : 0;
                 return {
                     name: row.name,
                     count: row.count,
@@ -501,7 +501,7 @@ async function login(page) {
                 fail(`school comprehensive report missing ${needle}`);
             }
         });
-        if (!/高分段赋分\(70\)|高分段赋分&#40;70&#41;/.test(schoolAnalysisSummary.text)) {
+        if (!/高分段赋分\(50\)|高分段赋分&#40;50&#41;/.test(schoolAnalysisSummary.text)) {
             fail('grade 9 school comprehensive report is missing high-score contribution column');
         }
         const comprehensiveRows = schoolAnalysisSummary.rowsBySheetName['综合分析报告'] || [];
@@ -523,7 +523,7 @@ async function login(page) {
             { key: 'count', names: ['实考人数'] },
             { key: 'highCount', names: ['高分人数(≥490)', '高分人数'] },
             { key: 'highRate', names: ['高分率(%)'] },
-            { key: 'score', names: ['高分赋分(70)', '高分段赋分'] },
+            { key: 'score', names: ['高分赋分(50)', '高分段赋分'] },
             { key: 'rank', names: ['排名'] }
         ]);
         const highSchoolAdmissionRows = schoolAnalysisSummary.rowsBySheetName['高中上线率赋分详情'] || [];

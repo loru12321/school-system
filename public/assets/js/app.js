@@ -4250,7 +4250,7 @@ function renderHighScoreTable() {
     const maxHighRatio = Math.max(...baseList.map(d => d.hsRatio), 0);
     const list = baseList.map(d => ({
         ...d,
-        score: maxHighRatio ? d.hsRatio / maxHighRatio * 70 : 0
+        score: maxHighRatio ? d.hsRatio / maxHighRatio * 50 : 0
     }));
 
     list.sort((a, b) => b.score - a.score);
@@ -4298,7 +4298,7 @@ function exportHighScoreExcel() {
     if (!CONFIG.name.includes('9')) return alert("非9年级模式无此数据");
 
     const wb = XLSX.utils.book_new();
-    const headers = ["学校名称", "实考人数", "高分人数(≥490)", "高分率", "高分赋分(70)", "排名"];
+    const headers = ["学校名称", "实考人数", "高分人数(≥490)", "高分率", "高分赋分(50)", "排名"];
     const wsData = [headers];
 
     const baseList = townshipSchools.map(s => {
@@ -4316,7 +4316,7 @@ function exportHighScoreExcel() {
     const maxHighRatio = Math.max(...baseList.map(d => d.hsRatio), 0);
     const list = baseList.map(d => ({
         ...d,
-        score: maxHighRatio ? d.hsRatio / maxHighRatio * 70 : 0
+        score: maxHighRatio ? d.hsRatio / maxHighRatio * 50 : 0
     })).sort((a, b) => b.score - a.score);
 
     list.forEach((d, i) => {
@@ -7200,7 +7200,7 @@ function calcSummary(isSilent = false) {
     const thead = document.querySelector('#tb-summary thead');
     let theadHtml = `<tr><th>学校名称</th><th>两率一分得分</th><th>后1/3得分</th>`;
     if (isGrade9) theadHtml += `<th>指标生得分</th>`;
-    if (isGrade9) theadHtml += `<th style="color:#b45309; background:#fff7ed;">高分段赋分(70)</th>`;
+    if (isGrade9) theadHtml += `<th style="color:#b45309; background:#fff7ed;">高分段赋分(50)</th>`;
     if (isGrade9) theadHtml += `<th style="color:#047857; background:#ecfdf5;">高中上线率赋分(50)</th>`;
     theadHtml += `<th>综合总分</th><th>总排名</th></tr>`;
     thead.innerHTML = theadHtml;
