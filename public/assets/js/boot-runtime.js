@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-c52525cea879';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-d3fc9044317f';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();

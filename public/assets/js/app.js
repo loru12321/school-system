@@ -3709,6 +3709,9 @@ function scheduleCountyAnalysisRenderAfterSwitch(id) {
     if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
         return;
     }
+    if (window.__MODULE_ENTRY_RUNTIME_PATCHED__ || typeof window.runModuleTabEnter === 'function') {
+        return;
+    }
     if (id !== 'county-teacher-portrait' && id !== 'county-school-horizontal' && id !== 'county-analysis') {
         return;
     }
@@ -5366,14 +5369,18 @@ function bindSummaryProfileEvents(tbTotal) {
     profileEventRoot.addEventListener('click', event => {
         const cell = event.target.closest('[data-school-profile-name]');
         if (!cell || !profileEventRoot.contains(cell)) return;
-        showSchoolProfile(cell.dataset.schoolProfileName || '');
+        if (typeof window.showSchoolProfile === 'function') {
+            window.showSchoolProfile(cell.dataset.schoolProfileName || '');
+        }
     });
     profileEventRoot.addEventListener('keydown', event => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         const cell = event.target.closest('[data-school-profile-name]');
         if (!cell || !profileEventRoot.contains(cell)) return;
         event.preventDefault();
-        showSchoolProfile(cell.dataset.schoolProfileName || '');
+        if (typeof window.showSchoolProfile === 'function') {
+            window.showSchoolProfile(cell.dataset.schoolProfileName || '');
+        }
     });
     profileEventRoot.dataset.summaryProfileEventsBound = '1';
 }

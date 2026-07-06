@@ -14,8 +14,8 @@ const snapshotSystemSource = fs.readFileSync(path.join(root, 'public/assets/js/s
 const smokeSource = fs.readFileSync(path.join(root, 'scripts/smoke-all-modules.js'), 'utf8');
 
 assert.ok(
-    /function showCohortPicker\(\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade: 6 \}, \{\s*skipConfirm: true,\s*fastEnter: false,\s*requireCloudData: true\s*\}\)/.test(cohortExamMetaSource),
-    'automatic cohort picker entry should wait for cloud data instead of opening an empty local shell'
+    /function showCohortPicker\(\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade: 6 \}, \{\s*skipConfirm: true,\s*fastEnter: true,\s*requireCloudData: false\s*\}\)/.test(cohortExamMetaSource),
+    'automatic cohort picker entry should fast-enter from local data and hydrate cloud data in the background'
 );
 
 assert.ok(

@@ -871,15 +871,20 @@ const DataManager = {
         const summary = document.getElementById('dm-exams-summary');
         if (summary && this.currentTab === 'exams') {
             summary.dataset.loading = 'true';
-            summary.innerHTML = `${summary.innerHTML || ''}<div style="margin-top:6px; color:#2563eb; font-weight:700;">正在补齐云端历史考试...</div>`;
+            const label = force ? '正在补齐云端历史考试...' : '正在后台检查最新云端考试...';
+            if (!summary.querySelector('[data-exam-hydration-status]')) {
+                summary.insertAdjacentHTML('beforeend', `<div data-exam-hydration-status="true" style="margin-top:6px; color:#2563eb; font-weight:700;">${label}</div>`);
+            } else {
+                summary.querySelector('[data-exam-hydration-status]').textContent = label;
+            }
         }
 
         this._examBatchHydrationPromise = Promise.resolve(CloudManager.fetchCohortExamsToLocal(cohortId, {
             background: true,
-            force: true,
-            latestOnly: false,
-            maxFetch: 0,
-            minCount: 50,
+            force,
+            latestOnly: !force,
+            maxFetch: force ? 0 : 1,
+            minCount: force ? 50 : 1,
             refreshSelectors: false
         })).then((result) => {
             this.examBatchHydratedCohorts.add(cohortId);

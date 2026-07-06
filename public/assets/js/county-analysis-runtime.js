@@ -2288,6 +2288,9 @@
             applyCountyRanks();
         });
         patchGlobalFunction('switchTab', (id) => {
+            if (window.__MODULE_ENTRY_RUNTIME_PATCHED__ || typeof window.runModuleTabEnter === 'function') {
+                return;
+            }
             if (id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal') {
                 setTimeout(() => renderCountyAnalysis(id), 0);
             }

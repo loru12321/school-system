@@ -415,8 +415,8 @@ function showCohortPicker() {
             try {
                 await CohortManager.addCohort({ year, startGrade: 6 }, {
                     skipConfirm: true,
-                    fastEnter: false,
-                    requireCloudData: true
+                    fastEnter: true,
+                    requireCloudData: false
                 });
             } catch (error) {
                 console.warn('[CohortPicker] auto-enter failed:', error);
