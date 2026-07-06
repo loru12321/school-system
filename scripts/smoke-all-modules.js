@@ -961,6 +961,13 @@ async function smokeSwitchModule(page, id) {
             window.switchTab(moduleId);
         }, id);
 
+        const immediateState = await collectState();
+        if (immediateState.ok) {
+            const settleMs = getModuleSwitchSettleMs(id);
+            if (settleMs > 0) await page.waitForTimeout(settleMs);
+            return immediateState;
+        }
+
         if (id === 'student-details') {
             await page.waitForFunction(() => {
                 const section = document.getElementById('student-details');
