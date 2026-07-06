@@ -145,6 +145,7 @@ const guardAlias = new Map([
   ['county-teacher-portrait', 'county-analysis'],
   ['county-school-horizontal', 'county-analysis']
 ]);
+const countySmokeCovered = smokeIds.has('county-analysis') || smokeIds.has('county-teacher-portrait');
 
 const missingSections = navIds.filter((id) => !sectionIds.includes(id) && !dynamicSectionIds.has(id));
 const missingGuards = navIds.filter((id) => {
@@ -154,12 +155,12 @@ const missingGuards = navIds.filter((id) => {
 });
 const smokeGaps = navIds.filter((id) => {
   if (id === 'county-teacher-portrait' || id === 'county-school-horizontal') {
-    return smokeIds.has('county-analysis') ? false : true;
+    return countySmokeCovered ? false : true;
   }
   return !smokeIds.has(id);
 });
 const staleScoreFreeIds = Array.from(scoreFreeIds).filter((id) => !validModuleIds.has(id));
-const missingDynamicCountySmoke = Array.from(dynamicSectionIds).length && !smokeIds.has('county-analysis')
+const missingDynamicCountySmoke = Array.from(dynamicSectionIds).length && !countySmokeCovered
   ? ['county-analysis']
   : [];
 
