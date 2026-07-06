@@ -273,6 +273,10 @@ async function checkGrade9() {
 }
 
 function checkAssessmentAppGradeNormalizer() {
+  if (!fs.existsSync(assessmentAppPath)) {
+    console.warn(`[assessment-app] skip external app normalizer check: ${assessmentAppPath} not found`);
+    return;
+  }
   const html = fs.readFileSync(assessmentAppPath, 'utf8');
   assert.ok(html.includes('9\\s*年级'), '考核管理系统应显式识别9年级');
   assert.ok(!html.includes('/[6六]/.test(text)'), '考核管理系统年级识别不能被年份中的6误导');
