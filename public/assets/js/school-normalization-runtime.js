@@ -5,17 +5,62 @@ const SCHOOL_ALIAS_GROUPS = [
     { canonical: '银山中学', aliases: ['银山镇中学'] },
     { canonical: '老湖中学', aliases: ['老湖'] },
     { canonical: '梯门中学', aliases: ['梯门'] },
-    { canonical: '商老庄中学', aliases: ['商老庄实验学校'] },
-    { canonical: '彭集中学', aliases: ['彭集街道中学'] },
-    { canonical: '接山中学', aliases: ['接山镇中学'] },
-    { canonical: '州城中学', aliases: ['州城街道', '州城街道中学'] },
-    { canonical: '新湖中学', aliases: ['新湖镇中学'] },
+    { canonical: '商老庄中学', aliases: ['商老庄', '商老庄实验学校'] },
+    { canonical: '彭集中学', aliases: ['彭集', '彭集街道中学'] },
+    { canonical: '接山中学', aliases: ['接山', '接山镇中学'] },
+    { canonical: '州城中学', aliases: ['州城', '州城街道', '州城街道中学'] },
+    { canonical: '新湖中学', aliases: ['新湖', '新湖镇中学'] },
     { canonical: '大羊中学', aliases: ['大羊'] },
-    { canonical: '沙河站中学', aliases: ['沙河站镇中学'] },
+    { canonical: '沙河站中学', aliases: ['沙河站', '沙河站镇中学'] },
     { canonical: '银山实验', aliases: ['银山实验学校', '东平银山实验学校', '银山镇实验学校', '银山实验中学', '银山镇实验中学', '实验完全中学'] },
     { canonical: '旧县中学', aliases: ['旧县乡中心学校', '旧县中心学校'] },
     { canonical: '斑鸠店镇中', aliases: ['斑鸠店中学', '斑鸠店镇中学', '斑鸠店中'] },
-    { canonical: '戴庙中学', aliases: ['戴庙'] }
+    { canonical: '戴庙中学', aliases: ['戴庙', '戴庙镇中学'] },
+    { canonical: '东平县实验中学', aliases: ['东平实验中学', '泰安市东平实验中学'] },
+    { canonical: '东平县佛山中学', aliases: ['东平佛山中学', '泰安市东平佛山中学'] },
+    { canonical: '东平明湖中学', aliases: ['东平县明湖中学'] },
+    { canonical: '东平县江河实验学校', aliases: ['东平江河实验学校'] },
+    { canonical: '东平县东原实验学校', aliases: ['东平东原实验学校'] },
+    { canonical: '东平县清河实验学校', aliases: ['东平清河实验学校'] },
+    { canonical: '东平县青峰山实验学校', aliases: ['东平实验中学青峰山校区', '青峰山校区'] },
+    { canonical: '东平县嘉和实验学校', aliases: ['东平嘉和实验学校'] },
+    { canonical: '东平县第二实验中学', aliases: ['东平第二实验中学'] },
+    { canonical: '东平县第一中学', aliases: ['东平一中'] }
+];
+
+const TOWNSHIP_STANDARD_SCHOOL_NAMES = [
+    '银山中学',
+    '老湖中学',
+    '梯门中学',
+    '商老庄中学',
+    '彭集中学',
+    '接山中学',
+    '州城中学',
+    '新湖中学',
+    '大羊中学',
+    '沙河站中学',
+    '银山实验',
+    '旧县中学',
+    '斑鸠店镇中',
+    '戴庙中学'
+];
+
+const COUNTY_DIRECT_STANDARD_SCHOOL_NAMES = [
+    '东平县实验中学',
+    '东平县佛山中学',
+    '东平明湖中学',
+    '东平县江河实验学校',
+    '东平县东原实验学校',
+    '东平县清河实验学校',
+    '东平县青峰山实验学校',
+    '东平县嘉和实验学校',
+    '东平县第二实验中学',
+    '东平县第一中学'
+];
+
+const COUNTY_STANDARD_SCHOOL_NAMES = [
+    ...TOWNSHIP_STANDARD_SCHOOL_NAMES,
+    ...COUNTY_DIRECT_STANDARD_SCHOOL_NAMES
 ];
 
 const SchoolCompareListPerfCache = {
@@ -660,7 +705,7 @@ function getTownshipManagedSchoolNames(candidateNames = []) {
     const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {});
     const knownTownshipKeys = targetKeys.length
         ? []
-        : SCHOOL_ALIAS_GROUPS.flatMap((group) => [group?.canonical, ...(group?.aliases || [])]).filter(Boolean);
+        : TOWNSHIP_STANDARD_SCHOOL_NAMES.slice();
     const currentSchoolKeys = [
         String(MY_SCHOOL || '').trim(),
         String(localStorage.getItem('MY_SCHOOL') || '').trim(),
@@ -890,6 +935,9 @@ function inferDefaultSchoolFromContext() {
 
     Object.assign(window, {
         SCHOOL_ALIAS_GROUPS,
+        TOWNSHIP_STANDARD_SCHOOL_NAMES,
+        COUNTY_DIRECT_STANDARD_SCHOOL_NAMES,
+        COUNTY_STANDARD_SCHOOL_NAMES,
         sanitizeSchoolText,
         stripSchoolAdministrativePrefix,
         stripSchoolOrganizationalSuffixes,

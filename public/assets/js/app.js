@@ -4186,8 +4186,69 @@ function readHighSchoolAdmissionLine() {
     return Number.isFinite(line) && line > 0 ? line : 0;
 }
 
+function getCurrentExamDescriptorText() {
+    const parts = [];
+    const push = (value) => {
+        const text = String(value || '').trim();
+        if (text) parts.push(text);
+    };
+    push(CURRENT_EXAM_ID);
+    push(window.CURRENT_EXAM_ID);
+    push(CONFIG?.name);
+    try {
+        const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : null;
+        push(meta?.type);
+        push(meta?.date);
+        push(meta?.grade);
+        push(meta?.term);
+    } catch (e) {}
+    try {
+        const archiveMeta = typeof readArchiveMeta === 'function' ? readArchiveMeta() : null;
+        push(archiveMeta?.type);
+        push(archiveMeta?.date);
+        push(archiveMeta?.grade);
+        push(archiveMeta?.term);
+    } catch (e) {}
+    return parts.join(' ');
+}
+
+function isHighSchoolAdmissionExamAllowed() {
+    const ctx = typeof getIndicatorContext === 'function' ? getIndicatorContext() : {};
+    const grade = String(ctx?.grade || CONFIG?.name || '');
+    const text = getCurrentExamDescriptorText();
+    const isGrade9 = grade.includes('9') || String(CONFIG?.name || '').includes('9');
+    const isZhongkao = /中考/.test(text);
+    const isJuly = /(?:7月|07月|[-/]07[-/])/.test(text);
+    return isGrade9 && isZhongkao && isJuly;
+}
+
+function calculateHighScoreStatsForSummary(schools = getSummaryTownshipSchools()) {
+    const rows = (schools || []).map((school) => {
+        const students = typeof getEquivalentSchoolStudents === 'function'
+            ? getEquivalentSchoolStudents(school.name)
+            : (Array.isArray(school.students) ? school.students : []);
+        const total = students.length || Number(school?.metrics?.total?.count) || 0;
+        const count = students.filter((stu) => Number(stu?.total) >= 490).length;
+        const ratio = total ? count / total : 0;
+        return { school, count, ratio, score: 0 };
+    });
+    const maxRatio = Math.max(...rows.map((row) => Number(row.ratio) || 0), 0);
+    rows.forEach((row) => {
+        row.score = maxRatio > 0 ? row.ratio / maxRatio * 50 : 0;
+        if (row.school && typeof row.school === 'object') {
+            row.school.highScoreStats = {
+                count: row.count,
+                ratio: row.ratio,
+                score: row.score
+            };
+        }
+    });
+    return rows;
+}
+
 function calculateHighSchoolAdmissionStatsForSummary(schools = getSummaryTownshipSchools()) {
-    const line = readHighSchoolAdmissionLine();
+    const allowed = isHighSchoolAdmissionExamAllowed();
+    const line = allowed ? readHighSchoolAdmissionLine() : 0;
     const rows = (schools || []).map((school) => {
         const students = typeof getEquivalentSchoolStudents === 'function'
             ? getEquivalentSchoolStudents(school.name)
@@ -4201,7 +4262,7 @@ function calculateHighSchoolAdmissionStatsForSummary(schools = getSummaryTownshi
     });
     const maxRatio = Math.max(...rows.map((row) => Number(row.ratio) || 0), 0);
     rows.forEach((row) => {
-        row.score = maxRatio > 0 ? row.ratio / maxRatio * 50 : 0;
+        row.score = allowed && maxRatio > 0 ? row.ratio / maxRatio * 50 : 0;
         if (row.school && typeof row.school === 'object') {
             row.school.highSchoolAdmissionStats = {
                 line: row.line,
@@ -4496,6 +4557,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
             if (marginalResult) marginalResult.innerHTML = '';
 
             for (let f of files) await readExcel(f);
+            await confirmUploadSchoolNameMappings();
             SUBJECTS.sort(sortSubjects);
             await processData(); // 这是一个耗时操作
             // 仅更新运行时内存变量，供后续 saveCloudData 和 UI 使用。
@@ -4554,6 +4616,186 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         }
     }, "正在解析 Excel 并计算排名...");
 });
+
+function getUploadSchoolStandardOptions(rawNames = []) {
+    const options = new Set();
+    const add = (value) => {
+        const text = String(value || '').trim();
+        if (text && !/^Sheet\d+$/i.test(text) && !/教育局|教体局|市局|区局/.test(text)) options.add(text);
+    };
+    if (Array.isArray(window.SCHOOL_ALIAS_GROUPS)) {
+        window.SCHOOL_ALIAS_GROUPS.forEach((group) => {
+            add(group?.canonical);
+        });
+    }
+    (window.COUNTY_STANDARD_SCHOOL_NAMES || []).forEach(add);
+    Object.keys(window.TARGETS || {}).forEach(add);
+    Object.keys(window.SCHOOLS || {}).forEach(add);
+    rawNames.forEach((name) => {
+        const canonical = typeof getCanonicalSchoolName === 'function'
+            ? getCanonicalSchoolName(name, Array.from(options))
+            : '';
+        add(canonical || name);
+    });
+    add(window.MY_SCHOOL || MY_SCHOOL);
+    add(window.DEFAULT_MY_SCHOOL_NAME);
+    return Array.from(options).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+}
+
+function escapeUploadSchoolMapHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function inferUploadStandardSchoolName(rawName, options = []) {
+    const raw = String(rawName || '').trim();
+    if (!raw) return '';
+    const candidates = Array.isArray(options) ? options.filter(Boolean) : [];
+    if (typeof getCanonicalSchoolName === 'function') {
+        const canonical = getCanonicalSchoolName(raw, candidates);
+        if (canonical) return canonical;
+    }
+    if (typeof resolveSchoolNameFromCollection === 'function') {
+        const resolved = resolveSchoolNameFromCollection(candidates, raw);
+        if (resolved) return resolved;
+    }
+    return raw;
+}
+
+function rebuildSchoolsFromRawData() {
+    const nextSchools = {};
+    (Array.isArray(RAW_DATA) ? RAW_DATA : []).forEach((stu) => {
+        const school = String(stu?.school || '').trim() || '未知学校';
+        if (!nextSchools[school]) nextSchools[school] = { name: school, students: [], metrics: {}, rankings: {} };
+        nextSchools[school].students.push(stu);
+    });
+    setSchools(nextSchools);
+    if (typeof SCHOOLS !== 'undefined') SCHOOLS = nextSchools;
+    window.SCHOOLS = nextSchools;
+    return nextSchools;
+}
+
+function applyUploadSchoolNameMappings(mapping = {}) {
+    const rows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+    rows.forEach((stu) => {
+        const raw = String(stu?.originalSchoolName || stu?.school || '').trim();
+        const mapped = String(mapping[raw] || stu?.school || raw || '未知学校').trim();
+        stu.school = mapped;
+    });
+    setRawData(rows);
+    rebuildSchoolsFromRawData();
+
+    const existing = typeof readSchoolAliasState === 'function' ? readSchoolAliasState() : (window.SYS_VARS?.schoolAliases || []);
+    const aliasMap = new Map((Array.isArray(existing) ? existing : []).map((item) => [
+        `${String(item?.alias || '').trim()}=>${String(item?.canonical || '').trim()}`,
+        {
+            alias: String(item?.alias || '').trim(),
+            canonical: String(item?.canonical || '').trim()
+        }
+    ]));
+    Object.entries(mapping).forEach(([alias, canonical]) => {
+        const rawAlias = String(alias || '').trim();
+        const standard = String(canonical || '').trim();
+        if (!rawAlias || !standard || rawAlias === standard) return;
+        aliasMap.set(`${rawAlias}=>${standard}`, { alias: rawAlias, canonical: standard });
+    });
+    const nextAliases = Array.from(aliasMap.values()).filter((item) => item.alias && item.canonical);
+    if (typeof setSchoolAliasState === 'function') setSchoolAliasState(nextAliases);
+    else {
+        window.SYS_VARS = window.SYS_VARS || {};
+        window.SYS_VARS.schoolAliases = nextAliases;
+    }
+    if (typeof persistSchoolAliasSettingsLocal === 'function') persistSchoolAliasSettingsLocal();
+}
+
+function buildUploadSchoolMappingRows() {
+    const counter = new Map();
+    (Array.isArray(RAW_DATA) ? RAW_DATA : []).forEach((row) => {
+        const raw = String(row?.originalSchoolName || row?.school || '').trim();
+        if (!raw) return;
+        counter.set(raw, (counter.get(raw) || 0) + 1);
+    });
+    const rawNames = Array.from(counter.keys());
+    const options = getUploadSchoolStandardOptions(rawNames);
+    const rows = rawNames.map((raw) => ({
+        raw,
+        count: counter.get(raw) || 0,
+        standard: inferUploadStandardSchoolName(raw, options)
+    })).sort((a, b) => b.count - a.count || a.raw.localeCompare(b.raw, 'zh-CN'));
+    return { rows, options };
+}
+
+function confirmUploadSchoolNameMappings() {
+    const { rows, options } = buildUploadSchoolMappingRows();
+    if (!rows.length) return Promise.resolve({});
+
+    return new Promise((resolve, reject) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'upload-school-map-modal';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:20px;';
+        const optionHtml = (selected) => options.map((name) => {
+            const value = String(name || '').trim();
+            return `<option value="${escapeUploadSchoolMapHtml(value)}"${value === selected ? ' selected' : ''}>${escapeUploadSchoolMapHtml(value)}</option>`;
+        }).join('');
+        overlay.innerHTML = `
+            <div style="width:min(920px,96vw);max-height:86vh;overflow:hidden;background:#fff;border-radius:12px;box-shadow:0 24px 80px rgba(15,23,42,.25);display:flex;flex-direction:column;">
+                <div style="padding:18px 22px;border-bottom:1px solid #e5e7eb;">
+                    <div style="font-size:18px;font-weight:800;color:#0f172a;">确认学校名称对应关系</div>
+                    <div style="margin-top:6px;color:#64748b;font-size:13px;">左侧为本次 Excel 识别出的原始学校名，右侧为系统将使用的标准学校名。确认后再计算、排名和同步云端。</div>
+                </div>
+                <div style="padding:14px 22px;overflow:auto;">
+                    <table class="mobile-card-table" style="width:100%;border-collapse:collapse;">
+                        <thead><tr><th style="text-align:left;">本次学校名称</th><th>人数</th><th style="text-align:left;">标准学校名称</th><th>状态</th></tr></thead>
+                        <tbody>
+                            ${rows.map((row, index) => {
+                                const changed = row.raw !== row.standard;
+                                return `<tr>
+                                    <td style="font-weight:700;color:#0f172a;">${escapeUploadSchoolMapHtml(row.raw)}</td>
+                                    <td>${row.count}</td>
+                                    <td>
+                                        <select class="upload-school-map-select" data-index="${index}" data-raw="${escapeUploadSchoolMapHtml(row.raw)}" style="width:100%;min-width:220px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
+                                            ${optionHtml(row.standard)}
+                                            ${options.includes(row.raw) ? '' : `<option value="${escapeUploadSchoolMapHtml(row.raw)}"${row.raw === row.standard ? ' selected' : ''}>${escapeUploadSchoolMapHtml(row.raw)}（保持原名）</option>`}
+                                        </select>
+                                    </td>
+                                    <td style="color:${changed ? '#b45309' : '#047857'};font-weight:700;">${changed ? '自动匹配' : '一致'}</td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="padding:14px 22px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;gap:12px;align-items:center;">
+                    <div style="font-size:12px;color:#64748b;">如发现自动匹配不对，请先在右侧下拉框改正，再点击确认。</div>
+                    <div style="display:flex;gap:10px;">
+                        <button type="button" class="btn btn-gray" data-action="cancel">取消上传</button>
+                        <button type="button" class="btn btn-blue" data-action="confirm">确认并继续</button>
+                    </div>
+                </div>
+            </div>`;
+
+        const cleanup = () => overlay.remove();
+        overlay.querySelector('[data-action="cancel"]')?.addEventListener('click', () => {
+            cleanup();
+            reject(new Error('已取消上传，未写入学校名称映射'));
+        });
+        overlay.querySelector('[data-action="confirm"]')?.addEventListener('click', () => {
+            const mapping = {};
+            overlay.querySelectorAll('.upload-school-map-select').forEach((select) => {
+                const raw = String(select.getAttribute('data-raw') || '').trim();
+                const standard = String(select.value || '').trim();
+                if (raw && standard) mapping[raw] = standard;
+            });
+            applyUploadSchoolNameMappings(mapping);
+            cleanup();
+            resolve(mapping);
+        });
+        document.body.appendChild(overlay);
+    });
+}
 
 async function readExcel(file) {
     if ((!window.XLSX || !window.XLSX.utils) && typeof window.ensureXlsxVendorLoaded === 'function') {
@@ -4711,6 +4953,7 @@ function parseRows(rows, defaultSchool) {
             id: idxMap.id !== -1 ? r[idxMap.id] : '-',
 
             school: schoolName || fallbackSchool || '未知学校',
+            originalSchoolName: rawSchool || schoolName || fallbackSchool || '未知学校',
             class: classStr,
 
             examRoom: idxMap.examRoom !== -1 ? r[idxMap.examRoom] : '-',
@@ -4926,6 +5169,9 @@ async function processData() {
     const input1 = parseFloat(window.SYS_VARS?.indicator?.ind1) || 0;
     const input2 = parseFloat(window.SYS_VARS?.indicator?.ind2) || 0;
     const highSchoolLine = parseFloat(window.SYS_VARS?.indicator?.highSchoolLine || window.SYS_VARS?.indicator?.graduateHighSchoolLine) || 0;
+    const highSchoolAdmissionAllowed = typeof isHighSchoolAdmissionExamAllowed === 'function'
+        ? isHighSchoolAdmissionExamAllowed()
+        : false;
 
     const townshipRowsForCore = (typeof filterRowsToTownshipSchools === 'function')
         ? filterRowsToTownshipSchools(RAW_DATA || [])
@@ -4974,7 +5220,7 @@ async function processData() {
             ))
         ]))
         : schoolKeysForWorker;
-    const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker, HIGH_SCHOOL_LINE: highSchoolLine });
+    const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker, HIGH_SCHOOL_LINE: highSchoolLine, HIGH_SCHOOL_ADMISSION_ALLOWED: highSchoolAdmissionAllowed });
 
     setRawData(result.RAW_DATA || []);
 
@@ -7136,7 +7382,7 @@ async function calcSummary(isSilent = false) {
 
     if (isGrade9 && typeof refreshIndicatorResults === 'function') {
         try {
-            const result = await Promise.resolve(refreshIndicatorResults(true, { waitForInputs: true, timeoutMs: 9000 }));
+            const result = await Promise.resolve(refreshIndicatorResults(true, { waitForInputs: false }));
             indicatorRowsForSummary = Array.isArray(result) ? result : [];
         } catch (e) {
             console.warn('[calcSummary] 指标生补载重算失败:', e);
@@ -7187,7 +7433,10 @@ async function calcSummary(isSilent = false) {
                 : summarySchoolSet.has(String(s?.name || '').trim()))
             : true
     ));
-    if (isGrade9) calculateHighSchoolAdmissionStatsForSummary(summarySchools);
+    if (isGrade9) {
+        calculateHighScoreStatsForSummary(summarySchools);
+        calculateHighSchoolAdmissionStatsForSummary(summarySchools);
+    }
 
     const list = summarySchools.map(s => {
         const s1 = s.score2Rate || 0;  // 两率一分
@@ -7226,7 +7475,12 @@ async function calcSummary(isSilent = false) {
         let highScoreCell = '';
         if (isGrade9) highScoreCell = `<td data-label="高分段赋分" style="color:#b45309; background:#fff7ed; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighClick(${safeSchoolArg})" title="点击查看高分段学生名单">${d.s4.toFixed(2)}</button></td>`;
         let highSchoolAdmissionCell = '';
-        if (isGrade9) highSchoolAdmissionCell = `<td data-label="高中上线率赋分" style="color:#047857; background:#ecfdf5; font-weight:bold;" title="高中上线率赋分 = 本校上线率 / 最高学校上线率 × 50">${d.s5.toFixed(2)}</td>`;
+        if (isGrade9) {
+            const admissionTitle = isHighSchoolAdmissionExamAllowed()
+                ? '高中上线率赋分 = 本校上线率 / 最高学校上线率 × 50'
+                : '仅 9 年级 7 月中考成绩计算；当前考试不参与高中上线率赋分';
+            highSchoolAdmissionCell = `<td data-label="高中上线率赋分" style="color:#047857; background:#ecfdf5; font-weight:bold;" title="${admissionTitle}">${d.s5.toFixed(2)}</td>`;
+        }
         const rankClass = ['rank-cell', d.rank === 1 ? 'r-1' : '', d.rank === 2 ? 'r-2' : '', d.rank === 3 ? 'r-3' : '']
             .filter(Boolean)
             .join(' ');

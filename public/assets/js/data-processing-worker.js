@@ -3,6 +3,7 @@ self.onmessage = function(e) {
     if (cmd === 'PROCESS_ALL') {
         const { RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS } = data;
         const HIGH_SCHOOL_LINE = Number(data.HIGH_SCHOOL_LINE) || 0;
+        const HIGH_SCHOOL_ADMISSION_ALLOWED = data.HIGH_SCHOOL_ADMISSION_ALLOWED === true;
         const TOWNSHIP_SCHOOL_NAMES = Array.isArray(data.TOWNSHIP_SCHOOL_NAMES)
             ? data.TOWNSHIP_SCHOOL_NAMES.map(name => String(name || '').trim()).filter(Boolean)
             : null;
@@ -201,7 +202,7 @@ self.onmessage = function(e) {
                     const highCount = s.students.filter(stu => stu.total >= 490).length;
                     const totalCount = s.metrics.total ? s.metrics.total.count : 1;
                     const ratio = totalCount > 0 ? (highCount / totalCount) : 0;
-                    const admissionCount = HIGH_SCHOOL_LINE > 0
+                    const admissionCount = HIGH_SCHOOL_ADMISSION_ALLOWED && HIGH_SCHOOL_LINE > 0
                         ? s.students.filter(stu => Number(stu.total) >= HIGH_SCHOOL_LINE).length
                         : 0;
                     const admissionRatio = totalCount > 0 ? (admissionCount / totalCount) : 0;
@@ -212,7 +213,7 @@ self.onmessage = function(e) {
                         score: 0 // 稍后计算
                     };
                     s.highSchoolAdmissionStats = {
-                        line: HIGH_SCHOOL_LINE,
+                        line: HIGH_SCHOOL_ADMISSION_ALLOWED ? HIGH_SCHOOL_LINE : 0,
                         count: admissionCount,
                         ratio: admissionRatio,
                         score: 0
@@ -262,7 +263,7 @@ self.onmessage = function(e) {
                         // s.score2Rate += highScore;
                     }
                     if (isGrade9 && s.highSchoolAdmissionStats) {
-                        const admissionScore = maxAdmissionRatio > 0 ? (s.highSchoolAdmissionStats.ratio / maxAdmissionRatio * 50) : 0;
+                        const admissionScore = HIGH_SCHOOL_ADMISSION_ALLOWED && maxAdmissionRatio > 0 ? (s.highSchoolAdmissionStats.ratio / maxAdmissionRatio * 50) : 0;
                         s.highSchoolAdmissionStats.score = isTownshipSchool ? admissionScore : 0;
                     }
 

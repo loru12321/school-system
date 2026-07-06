@@ -1073,6 +1073,13 @@ async function runModuleDeepCheck(page, id) {
                 summaryIndicatorPositive: 0,
                 summaryIndicatorValues: []
             };
+            let summaryHighScoreDiagnostics = {
+                isGrade9: false,
+                highScoreMatches: true,
+                admissionAllowed: false,
+                admissionAllZeroWhenDisallowed: true,
+                rows: []
+            };
             if (typeof window.calcSummary === 'function') {
                 await Promise.resolve(window.calcSummary(true));
                 await new Promise(resolve => setTimeout(resolve, 180));
@@ -1094,6 +1101,56 @@ async function runModuleDeepCheck(page, id) {
                     summaryIndicatorPositive: summaryIndicatorValues.filter((value) => value > 0).length,
                     summaryIndicatorValues: summaryIndicatorValues.slice(0, 8)
                 };
+                const highScoreIndex = headers.findIndex((text) => /高分段/.test(text));
+                const admissionIndex = headers.findIndex((text) => /高中上线率/.test(text));
+                const summaryRows = Array.from(document.querySelectorAll('#tb-summary tbody tr')).map((tr) => {
+                    const cells = Array.from(tr.querySelectorAll('td')).map((td) => String(td?.innerText || td?.textContent || '').trim());
+                    return {
+                        school: cells[0] || '',
+                        highScore: Number(String(cells[highScoreIndex] || '').replace(/[^\d.-]/g, '')),
+                        admission: Number(String(cells[admissionIndex] || '').replace(/[^\d.-]/g, ''))
+                    };
+                }).filter((row) => row.school);
+                const summarySchoolsForHighScore = typeof window.getSummaryTownshipSchools === 'function'
+                    ? window.getSummaryTownshipSchools()
+                    : Object.values(window.SCHOOLS || {});
+                const sourceSchools = summarySchoolsForHighScore.map((school) => (
+                    typeof school === 'string' ? school : String(school?.name || '').trim()
+                )).filter(Boolean);
+                const highRows = sourceSchools.map((school) => {
+                    const students = typeof window.getEquivalentSchoolStudents === 'function'
+                        ? window.getEquivalentSchoolStudents(school)
+                        : (window.SCHOOLS?.[school]?.students || []);
+                    const total = Array.isArray(students) ? students.length : 0;
+                    const highCount = Array.isArray(students) ? students.filter((student) => Number(student?.total) >= 490).length : 0;
+                    const ratio = total ? highCount / total : 0;
+                    return { school, total, highCount, ratio };
+                });
+                const maxRatio = Math.max(...highRows.map((row) => Number(row.ratio) || 0), 0);
+                const normalize = typeof window.normalizeSchoolName === 'function' ? window.normalizeSchoolName : (value) => String(value || '').trim();
+                const expectedMap = new Map();
+                highRows.forEach((row) => {
+                    const score = maxRatio > 0 ? row.ratio / maxRatio * 50 : 0;
+                    expectedMap.set(String(row.school || '').trim(), score);
+                    expectedMap.set(normalize(row.school), score);
+                });
+                const highScoreMismatches = summaryRows
+                    .map((row) => {
+                        const expected = expectedMap.get(row.school) ?? expectedMap.get(normalize(row.school)) ?? 0;
+                        return { school: row.school, rendered: row.highScore, expected };
+                    })
+                    .filter((row) => Number.isFinite(row.rendered) && Math.abs(row.rendered - Number(row.expected.toFixed(2))) > 0.02);
+                const admissionAllowed = typeof window.isHighSchoolAdmissionExamAllowed === 'function'
+                    ? window.isHighSchoolAdmissionExamAllowed()
+                    : false;
+                summaryHighScoreDiagnostics = {
+                    isGrade9,
+                    highScoreMatches: !isGrade9 || highScoreMismatches.length === 0,
+                    admissionAllowed,
+                    admissionAllZeroWhenDisallowed: admissionAllowed || summaryRows.every((row) => !Number(row.admission)),
+                    rows: summaryRows.slice(0, 8),
+                    mismatches: highScoreMismatches.slice(0, 8)
+                };
             }
             const checks = {
                 ensureTownSubmoduleCompareUIs: typeof window.ensureTownSubmoduleCompareUIs === 'function',
@@ -1111,7 +1168,9 @@ async function runModuleDeepCheck(page, id) {
                 examAnalysisPackageZipVendor: !!window.JSZip,
                 summaryIndicatorColumnPopulated: !summaryIndicatorDiagnostics.isGrade9
                     || summaryIndicatorDiagnostics.indicatorRowsPositive === 0
-                    || summaryIndicatorDiagnostics.summaryIndicatorPositive > 0
+                    || summaryIndicatorDiagnostics.summaryIndicatorPositive > 0,
+                summaryHighScoreMatchesFormula: summaryHighScoreDiagnostics.highScoreMatches,
+                summaryAdmissionZeroUnlessJulyZhongkao: summaryHighScoreDiagnostics.admissionAllZeroWhenDisallowed
             };
             const panel = document.querySelector('.town-submodule-compare-panel[data-submodule="summary"]');
             let schoolProfileCloseWorks = false;
@@ -1166,6 +1225,7 @@ async function runModuleDeepCheck(page, id) {
                 schoolProfileCellClickWorks,
                 summaryDirty,
                 summaryIndicatorDiagnostics,
+                summaryHighScoreDiagnostics,
                 staleTexts,
                 stateTrace
             };
