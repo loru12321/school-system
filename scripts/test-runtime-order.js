@@ -1295,6 +1295,13 @@ assert.ok(
         && cloudWorkspaceRuntime.includes('keysToFetch.length = maxKeysToFetch'),
     'limited cohort hydration should pick recency-ranked exam snapshots and cap background payload fetches'
 );
+assert.ok(
+    appSource.includes('const dispatchModuleEnter = () => {')
+        && appSource.includes('const activeSection = getModuleSectionById(id);')
+        && appSource.includes("if (!activeSection || !activeSection.classList.contains('active')) return false;")
+        && appSource.includes('window.setTimeout(dispatchModuleEnter, 700);'),
+    'delayed module-entry dispatch should not let a previous module steal active state after a fast switch'
+);
 assert.ok(authStateIndex < workspaceStateIndex, 'auth-state-runtime.js must load before workspace-state-runtime.js');
 assert.ok(workspaceStateIndex < examStateIndex, 'workspace-state-runtime.js must load before exam-state-runtime.js');
 assert.ok(examStateIndex < schoolStateIndex, 'exam-state-runtime.js must load before school-state-runtime.js');

@@ -3898,6 +3898,8 @@ function switchTab(id) {
 
     const currentCategoryMeta = NAV_STRUCTURE[currentCategory] || NAV_STRUCTURE.data || null;
     const dispatchModuleEnter = () => {
+        const activeSection = getModuleSectionById(id);
+        if (!activeSection || !activeSection.classList.contains('active')) return false;
         if (typeof window.runModuleTabEnter !== 'function') return false;
         window.runModuleTabEnter({ id, currentCategory, currentCategoryMeta }).catch((error) => {
             console.error('switchTab module dispatch failed:', error);
