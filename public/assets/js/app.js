@@ -3724,7 +3724,15 @@ function scheduleCountyAnalysisRenderAfterSwitch(id) {
         const result = window.renderCountyAnalysis(id);
         if (result && typeof result.then === 'function') {
             result
-                .then(() => window.setTimeout(renderCounty, 0))
+                .then(() => {
+                    if (!isCountyTargetActive()) return;
+                    const activeId = id === 'county-analysis' ? 'county-teacher-portrait' : id;
+                    const root = document.querySelector(`#${activeId} .county-analysis-root`)
+                        || document.getElementById('county-analysis-root');
+                    if (!root || !String(root.innerHTML || '').trim()) {
+                        window.setTimeout(renderCounty, 0);
+                    }
+                })
                 .catch(error => console.warn('county analysis runtime render failed:', error));
             return false;
         }
@@ -3737,7 +3745,6 @@ function scheduleCountyAnalysisRenderAfterSwitch(id) {
         window.ensureCountyAnalysisRuntimeLoaded()
             .then(() => {
                 renderCounty();
-                window.setTimeout(renderCounty, 120);
             })
             .catch(error => console.warn('county analysis runtime load failed:', error));
     }
