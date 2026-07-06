@@ -95,7 +95,7 @@
             requiresJuly: true,
             syncMode: 'sync',
             source: '联考分析 · 7 月期末/中考尖子生',
-            formula: '尖子生培养贡献只限 7 月成绩：非毕业年级按第二学期期末乡镇前 150 名及学科位次累加；九年级按 7 月上传的中考成绩确定尖子生/优秀尖子，中考总分含体育60分且体育教师参与考核；教师原始贡献按最高教师折算 5 分，最高教师比较含银山实验本校。'
+            formula: '尖子生培养贡献只限 7 月成绩：非毕业年级按第二学期期末乡镇前 150 名及学科位次累加；九年级按 7 月上传的中考成绩确定尖子生/优秀尖子，中考总分含体育60分，但体育教师不进入教师考核；教师原始贡献按本校最高教师折算 5 分。'
         },
         [PROJECTS.classTermScoreNonGrad]: {
             max: 60,
@@ -815,7 +815,11 @@
                 subject: normalizeSubject(rawSubject),
                 school: normalizeSchoolForSync((root.TEACHER_SCHOOL_MAP || {})[key] || root.MY_SCHOOL || '')
             };
-        }).filter((item) => item.teacherName && item.className && item.subject);
+        }).filter((item) => item.teacherName && item.className && item.subject && isTeacherAssessmentSubject(item.subject));
+    }
+
+    function isTeacherAssessmentSubject(subject) {
+        return normalizeSubject(subject) !== '体育';
     }
 
     function groupAssignmentsByTeacher(assignments) {
@@ -1334,7 +1338,7 @@
             project_id: PROJECTS.excellentContribution,
             score: entry.score,
             max_score: 5,
-            note: `按全镇前 150 名学生与任教学科匹配生成贡献值 ${entry.raw}，再按最高教师折算 5 分（最高教师比较含本校）。`,
+            note: `按全镇前 150 名学生与本校任教学科匹配生成贡献值 ${entry.raw}，再按本校教师内部最高贡献折算 5 分。`,
             source: 'teaching-management'
         }));
     }
@@ -1369,7 +1373,7 @@
 
     function buildGrade9ExcellentContributionItems(teachers, rows) {
         const ownSchool = normalizeSchoolForSync(root.MY_SCHOOL || '银山实验学校');
-        const subjects = Array.from(new Set(rows.flatMap((row) => Object.keys(row?.scores || {}).map(normalizeSubject)).filter(Boolean)));
+        const subjects = Array.from(new Set(rows.flatMap((row) => Object.keys(row?.scores || {}).map(normalizeSubject)).filter(isTeacherAssessmentSubject)));
         const rankMaps = new Map(subjects.map((subject) => [subject, getSubjectRankMap(rows, subject)]));
         const contribution = new Map();
         const tierCounters = new Map();
@@ -1417,7 +1421,7 @@
             project_id: PROJECTS.excellentContribution,
             score: entry.score,
             max_score: 5,
-            note: `9年级中考尖子生培养：中考总分含体育60分；总分600分以上为优秀尖子，按学科位次10分起递减2分；550-599分为尖子生，按学科位次5分起递减1分。原始贡献 ${entry.raw}（优秀尖子${entry.counters.excellent || 0}项，尖子生${entry.counters.top || 0}项），再按最高教师折算5分（最高教师比较含本校）。`,
+            note: `9年级中考尖子生培养：中考总分含体育60分，但体育教师不进入教师考核；总分600分以上为优秀尖子，按文化学科位次10分起递减2分；550-599分为尖子生，按文化学科位次5分起递减1分。原始贡献 ${entry.raw}（优秀尖子${entry.counters.excellent || 0}项，尖子生${entry.counters.top || 0}项），再按本校最高教师折算5分。`,
             source: 'teaching-management'
         }));
     }

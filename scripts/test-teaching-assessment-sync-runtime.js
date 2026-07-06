@@ -184,7 +184,7 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         { name: '九戊', school: '银山实验学校', class: '9.2', total: 605, scores: { 语文: 105, 数学: 109, 英语: 107, 物理: 93, 化学: 91 } },
         { name: '九丙', school: '兄弟学校', class: '9.1', total: 630, scores: { 语文: 110, 数学: 114, 英语: 112, 物理: 98, 化学: 96 } }
       ];
-      context.window.TEACHER_MAP = { '9.1_政治': '政一', '9.2_政治': '政二', '9.1_语文': '语一', '9.2_语文': '语二' };
+      context.window.TEACHER_MAP = { '9.1_政治': '政一', '9.2_政治': '政二', '9.1_语文': '语一', '9.2_语文': '语二', '9.1_体育': '体一', '9.2_体育': '体二' };
       context.window.TEACHER_STATS = {};
       context.window.CohortDB = {
         ensure: () => ({
@@ -217,7 +217,10 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         const grade9ExcellentItems = grade9Payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution');
         assert.ok(grade9ExcellentItems.length > 0, '9th grade excellent contribution should be generated from 550/600 high-score tiers');
         assert.ok(grade9ExcellentItems.every((item) => /600分以上为优秀尖子/.test(item.note)), '9th grade excellent contribution notes should explain 550/600 rules');
+        assert.ok(grade9ExcellentItems.every((item) => /体育教师不进入教师考核/.test(item.note)), '9th grade excellent contribution notes should exclude PE teachers from assessment');
         assert.ok(!grade9ExcellentItems.some((item) => /前 150 名/.test(item.note)), '9th grade excellent contribution must not use non-graduating top-150 logic');
+        assert.ok(!grade9Payload.items.some((item) => item.subject === '体育'), 'PE teachers must not be included in formal teacher assessment items');
+        assert.ok(!grade9Payload.preview_items.some((item) => item.subject === '体育'), 'PE teachers must not be included in preview teacher assessment rows');
         const classTargetItems = grade9Payload.preview_items.filter((item) => item.project_id === 'class_target_grad');
         assert.ok(!grade9Payload.items.some((item) => item.project_id === 'class_target_grad'), 'class target completion must stay out of formal sync payload');
         assert.ok(classTargetItems.length >= 2, '9th grade class target completion should be available as preview rows');

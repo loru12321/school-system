@@ -253,10 +253,11 @@ async function checkGrade9() {
     teacherMap: { '9.1_语文': '九语一', '9.2_语文': '九语二', '9.1_体育': '九体一', '9.2_体育': '九体二' }
   });
   const payload = await win.tmBuildTeacherAssessmentSyncPayload();
-  assert.ok(payload.items.some((item) => item.subject === '体育'), '9年级体育教师应参与教师考核同步项目');
-  const sportsExcellentItems = payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution' && item.subject === '体育');
-  assert.ok(sportsExcellentItems.length > 0, '9年级体育教师应参与尖子生培养贡献');
-  assert.ok(sportsExcellentItems.every((item) => /体育60分/.test(item.note)), '9年级尖子生贡献说明应写明体育60分计入总分');
+  assert.ok(!payload.items.some((item) => item.subject === '体育'), '9年级体育教师不应参与教师考核同步项目');
+  assert.ok(!payload.preview_items.some((item) => item.subject === '体育'), '9年级体育教师不应出现在教师考核预览项目中');
+  const excellentItems = payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution');
+  assert.ok(excellentItems.length > 0, '9年级应生成文化学科教师尖子生培养贡献');
+  assert.ok(excellentItems.every((item) => /体育60分/.test(item.note) && /体育教师不进入教师考核/.test(item.note)), '9年级尖子生贡献说明应写明体育只计入总分、不考核体育教师');
   const highSchoolItems = payload.preview_items.filter((item) => item.project_id === 'class_high_school_contribution_grad');
   assert.ok(highSchoolItems.length >= 2, '9年级应生成高中过线率预览项');
   assert.ok(highSchoolItems.every((item) => item.preview_only), '9年级高中过线率只能预览，不能正式同步');
