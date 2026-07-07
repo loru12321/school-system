@@ -5030,7 +5030,28 @@ function normalizeStudentTotalsForCurrentConfig(rows = RAW_DATA, subjects = SUBJ
     return { changed, subjects: configuredTotalSubs.slice() };
 }
 
+function perfYieldToMain() {
+    const runtime = window.SystemPerformance;
+    if (runtime && typeof runtime.yieldToMain === 'function') return runtime.yieldToMain();
+    return Promise.resolve();
+}
+
+function perfBeginPhase(label) {
+    const runtime = window.SystemPerformance;
+    if (runtime && typeof runtime.beginPhase === 'function') return runtime.beginPhase(label);
+    return () => {};
+}
+
 async function processData() {
+    const endProcessPhase = perfBeginPhase('processData');
+    try {
+        return await processDataInner();
+    } finally {
+        endProcessPhase();
+    }
+}
+
+async function processDataInner() {
 
     const totalNormalization = normalizeStudentTotalsForCurrentConfig(RAW_DATA, SUBJECTS, CONFIG);
     if (totalNormalization.changed) {
@@ -5098,6 +5119,10 @@ async function processData() {
 
     setRawData(result.RAW_DATA || []);
 
+    // Yield before the synchronous post-worker tail so applying the worker
+    // result (SCHOOLS rebuild + class ranks + summary) does not fuse into a
+    // single multi-second main-thread block on cohort entry.
+    await perfYieldToMain();
 
     Object.keys(SCHOOLS).forEach(k => {
         if (SCHOOLS[k]) SCHOOLS[k].students = [];
@@ -5118,6 +5143,7 @@ async function processData() {
         }
     });
 
+    await perfYieldToMain();
     calculateClassRanksOnly();
 
     if (typeof fuseInstance !== 'undefined') fuseInstance = null; // 强制重建索引
@@ -5142,6 +5168,7 @@ async function processData() {
         if (analysisMod) analysisMod.classList.remove('single-school-mode');
     }
 
+    await perfYieldToMain();
     try {
         appDebug("🔄 正在自动执行衍生计算...");
 
@@ -5153,7 +5180,7 @@ async function processData() {
         }
 
         if (typeof calcSummary === 'function') {
-            calcSummary(true);    // 汇总内部会按需同步指标生，避免上传后重复全量计算。
+            await Promise.resolve(calcSummary(true));    // 汇总内部会按需同步指标生，避免上传后重复全量计算。
         }
         if (typeof scheduleIndicatorAutoScoreAfterDataReady === 'function') {
             scheduleIndicatorAutoScoreAfterDataReady('processData');
@@ -5163,6 +5190,7 @@ async function processData() {
         console.warn("⚠️ 自动计算衍生指标时遇到非致命错误:", e);
     }
 
+    await perfYieldToMain();
     if (typeof DB !== 'undefined') {
         const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
         const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'

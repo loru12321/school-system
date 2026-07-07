@@ -13,11 +13,70 @@
         cache: new Map(),
         patchAttempts: 0,
         patchedStableTicks: 0,
-        longTasks: []
+        longTasks: [],
+        phaseStack: []
     };
 
     function now() {
         return Date.now();
+    }
+
+    // Cooperative main-thread yield: lets the browser paint / handle input and
+    // splits a long synchronous burst into shorter tasks. Prefers the native
+    // scheduler.yield, then a MessageChannel microtask hop, then setTimeout(0).
+    let yieldChannel = null;
+    function yieldToMain() {
+        const scheduler = window.scheduler;
+        if (scheduler && typeof scheduler.yield === 'function') {
+            try {
+                return scheduler.yield();
+            } catch (_) { /* fall through */ }
+        }
+        if (typeof MessageChannel === 'function') {
+            if (!yieldChannel) yieldChannel = new MessageChannel();
+            return new Promise((resolve) => {
+                const port = yieldChannel.port2;
+                const handler = () => {
+                    port.removeEventListener('message', handler);
+                    resolve();
+                };
+                port.addEventListener('message', handler);
+                port.start();
+                yieldChannel.port1.postMessage(0);
+            });
+        }
+        return new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
+
+    // Lightweight phase beacon so the long-task observer can attribute a native
+    // `self` long task to the code section that was running when it fired. This
+    // is diagnostic only and must never change calculation behavior.
+    function beginPhase(label) {
+        const name = String(label || '').trim();
+        if (!name) return () => {};
+        const entry = { name, start: now() };
+        state.phaseStack.push(entry);
+        let ended = false;
+        return function endPhase() {
+            if (ended) return;
+            ended = true;
+            const idx = state.phaseStack.lastIndexOf(entry);
+            if (idx >= 0) state.phaseStack.splice(idx, 1);
+        };
+    }
+
+    async function runPhase(label, task) {
+        const end = beginPhase(label);
+        try {
+            return await task();
+        } finally {
+            end();
+        }
+    }
+
+    function currentPhase() {
+        const top = state.phaseStack[state.phaseStack.length - 1];
+        return top ? top.name : '';
     }
 
     function stableStringify(value) {
@@ -328,16 +387,79 @@
             .every((method) => typeof manager[method] !== 'function' || manager[method].__systemPerformanceWrapped);
     }
 
+    function currentPhase() {
+        const stack = state.phaseStack;
+        return stack.length ? stack[stack.length - 1].label : '';
+    }
+
+    function beginPhase(label) {
+        const name = String(label || '').trim();
+        if (!name) return () => {};
+        const entry = { label: name, startedAt: now() };
+        state.phaseStack.push(entry);
+        let ended = false;
+        return function endPhase() {
+            if (ended) return;
+            ended = true;
+            const index = state.phaseStack.lastIndexOf(entry);
+            if (index >= 0) state.phaseStack.splice(index, 1);
+        };
+    }
+
+    // Break a long synchronous burst into browser tasks so the main thread can
+    // paint/respond between chunks. `scheduler.yield` keeps our continuation at
+    // high priority; MessageChannel is a fast fallback; setTimeout(0) is last.
+    function yieldToMain() {
+        const scheduler = window.scheduler;
+        if (scheduler && typeof scheduler.yield === 'function') {
+            return scheduler.yield().catch(() => {});
+        }
+        if (typeof MessageChannel === 'function') {
+            return new Promise((resolve) => {
+                const channel = new MessageChannel();
+                channel.port1.onmessage = () => {
+                    channel.port1.close();
+                    resolve();
+                };
+                channel.port2.postMessage(0);
+            });
+        }
+        return new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
+
+    // Run an ordered list of synchronous steps, yielding to the main thread
+    // between them. Preserves execution order and results; only adds task
+    // boundaries so no single step keeps the thread busy for the whole run.
+    async function runChunked(steps, options = {}) {
+        const list = Array.isArray(steps) ? steps.filter((step) => typeof step === 'function') : [];
+        const phaseLabel = String(options.phase || '').trim();
+        const endPhase = phaseLabel ? beginPhase(phaseLabel) : null;
+        try {
+            for (let i = 0; i < list.length; i += 1) {
+                await list[i]();
+                if (i < list.length - 1) await yieldToMain();
+            }
+        } finally {
+            if (endPhase) endPhase();
+        }
+    }
+
     function installLongTaskObserver() {
         if (typeof PerformanceObserver !== 'function') return;
         try {
             const observer = new PerformanceObserver((list) => {
                 list.getEntries().forEach((entry) => {
-                    state.longTasks.push({
+                    const record = {
                         key: entry.name || 'longtask',
                         duration: Math.round(entry.duration || 0),
                         time: new Date().toISOString()
-                    });
+                    };
+                    // Native longtask entries only expose a coarse `self` /
+                    // `same-origin` container name. Attach the active app phase
+                    // (if any) so real user jank can be told apart from noise.
+                    const phase = currentPhase();
+                    if (phase) record.phase = phase;
+                    state.longTasks.push(record);
                 });
                 state.longTasks = state.longTasks.slice(-20);
             });
@@ -364,7 +486,11 @@
         clearScheduledTask,
         clearCache,
         patchCloudManager,
-        getSnapshot
+        getSnapshot,
+        beginPhase,
+        currentPhase,
+        yieldToMain,
+        runChunked
     };
 
     installLongTaskObserver();
