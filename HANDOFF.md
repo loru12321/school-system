@@ -5,7 +5,32 @@
 
 ---
 
-## 〇、本轮（2026-07-07）登录页与系统体验优化（最新）
+## ★ 修复记录（2026-07-07）：高中上线率导出口径门禁对齐（最新）
+
+本次**只改一个点**、**不拆 app.js**、**不动 CloudManager.load / worker / runner 配置**。修复文件：`public/assets/js/exam-analysis-package-runtime.js` 的 `getHighSchoolAdmissionLine()`。
+
+### 修复了什么（根因）
+- 网页 summary 侧 `calculateHighSchoolAdmissionStatsForSummary`（`app.js` ~4324）用 `isHighSchoolAdmissionExamAllowed()` 门禁：**只有 9年级 且 中考 且 7月** 才允许高中上线率赋分，否则强制归零。
+- 导出侧 `getHighSchoolAdmissionLine()` 原来**只判断 `highSchoolLine` 值是否 > 0**，缺这道门禁。
+- 后果（潜伏 bug，当前未发作）：二模/非7月数据下若配置了公办高中录取线，网页赋分为 0，但**分析包/Excel 会按 `total >= line` 算出非零上线率赋分并计入综合总分** → Excel 与网页背离，违反「无7月中考不得出现正式非零上线率分」。
+- 修复：在 `getHighSchoolAdmissionLine()` 开头复用同一门禁，`isHighSchoolAdmissionExamAllowed()` 为 false 时直接返回 0。`typeof window.isHighSchoolAdmissionExamAllowed === 'function'` 守卫兜底（app.js 全局，导出 runtime 懒加载时已就绪）。
+
+### 永久注意事项（下一位接手必读）
+1. **二模 / 非7月中考：高中上线率导出必须为 0。** 即使 `highSchoolLine`（公办高中录取线）已配置，也不得产生非零上线率赋分。
+2. **导出侧必须复用 `isHighSchoolAdmissionExamAllowed` 门禁**（9年级 且 中考 且 7月），不得另起一套判断。
+3. **不能只因为 `highSchoolLine` 非空就在 Excel/分析包里计算高中上线率**；分数线非空 ≠ 允许赋分，考试类型门禁优先。
+4. **网页 summary 与分析包 Excel 必须一致**：任何一侧改高中上线率/高分段/指标/后1/3 口径，另一侧必须同步核对。
+5. `2026-05-27` 是二模、不是7月中考；本校仍为 `银山实验学校 / 银山实验`；9年级二模总分仍按 700 处理。
+
+### 当前验证结果（commit `b40a1b5f`，均通过）
+- 本地：`node scripts/test-syntax.js` ✅、`node scripts/test-calculation-snapshot.js` ✅（rawData=7790，无 mismatch）、`npm run build` ✅（Integrity passed）、`npm run check:release-fast` ✅、本地严格模块 smoke ✅（errorCount 0、budgetFailures []、`summaryAdmissionZeroUnlessJulyZhongkao=true`、admission 全 0、mySchool=银山实验学校）。
+- GitHub Actions ✅ CI / Deploy Cloudflare / Performance Trend 三项全绿。
+- 生产：`smoke:prod-minimal` ✅（15 项）、生产全模块严格 smoke ✅（EXIT=0，errors []、budgetFailures []）。
+- 行为影响：**当前二模数据零可见变化**（`highSchoolLine` 为空，门禁前后都返回 0）；仅封堵未来配线时的口径背离。未改数据进入规则、学校/班级归一、考试识别、计算公式、考核同步。
+
+---
+
+## 〇、本轮（2026-07-07）登录页与系统体验优化
 
 本轮聚焦四个生产体验问题，均只做稳定性/交互优化，**不改任何成绩计算公式、赋分口径、学校识别或届别识别**。本校仍为银山实验学校/银山实验。
 
