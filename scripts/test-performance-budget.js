@@ -71,7 +71,8 @@ assert.strictEqual(scripts['check:syntax'], 'node scripts/test-syntax.js', 'synt
 const budgets = {
   publicAppJs: 835_000,
   publicCohortExamHydrationJs: 7_000,
-  publicBootJs: 85_700,
+  // 2026-07-07: 85_700 -> 85_800 for phase-4 startup-hydration-runtime.js manifest registration.
+  publicBootJs: 85_800,
   publicRuntimeLoaderJs: 58_000,
   publicCountyAnalysisJs: 125_000,
   publicProgressAnalysisJs: 95_000,

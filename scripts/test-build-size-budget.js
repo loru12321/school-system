@@ -42,7 +42,9 @@ const budgets = {
     // Keep first-screen boot focused; optional runtime manifest/loaders live in runtime-loader-runtime.js.
     // 2026-07-05: raised from 85_000 to cover the existing 85_465B baseline (fail-closed login gate +
     // cloud sync guards) plus a small headroom; the file is already comment/whitespace-clean.
-    publicBootJs: 85_700,
+    // 2026-07-07: raised 85_700 -> 85_800 for the phase-4 startup-hydration-runtime.js APP_MODULES
+    // registration string (one manifest line, no new logic/loaders, no removed safety check).
+    publicBootJs: 85_800,
     publicRuntimeLoaderJs: 58_000,
     // Current minified app bundle baseline after runtime splits, cache guards,
     // and the product redesign CSS layer being accounted in the singlefile build.

@@ -2158,7 +2158,19 @@ function scheduleWorkspaceUiRefresh(label = 'workspace-refresh', options = {}) {
     __workspaceRefreshTimer = window.setTimeout(run, delay);
 }
 
+// Moved to startup-hydration-runtime.js (window.StartupHydrationScheduler).
+// Orchestration-only scheduling shell: it only decides *when* a startup/
+// hydration callback runs (idle / double-rAF / timeout + optional delay) and
+// guards it with try/catch. No data/calc coupling — the callback body and all
+// app.js-local state it closes over stay in app.js. The inline fallback below
+// is used only when the runtime module is not loaded.
 function scheduleStartupHydration(label, callback, options = {}) {
+    const scheduler = window.StartupHydrationScheduler;
+    if (scheduler && typeof scheduler.run === 'function') {
+        scheduler.run(label, callback, options);
+        return;
+    }
+
     const safeRun = () => {
         try {
             callback();
