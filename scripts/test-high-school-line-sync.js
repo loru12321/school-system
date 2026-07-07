@@ -258,8 +258,12 @@ assert.ok(
         && workspaceSource.includes("params['中考高中过线分数']"),
     'cloud-workspace-runtime: hasWorkspaceIndicatorParams must include all highSchoolLine aliases'
 );
+assert.ok(
+    !/function mergeWorkspaceSplitPayload[\s\S]*\[\s*[\s\S]*'TARGETS'[\s\S]*'INDICATOR_PARAMS'[\s\S]*'SCHOOL_ALIAS_SETTINGS'[\s\S]*\]\.forEach/.test(workspaceSource),
+    'cloud-workspace-runtime: split exam shard merge must not let old exam config overwrite workspace TARGETS/INDICATOR_PARAMS/SCHOOL_ALIAS_SETTINGS'
+);
 
-console.log('✅ 7. cloud-workspace-runtime hasWorkspaceIndicatorParams — passed');
+console.log('✅ 7. cloud-workspace-runtime highSchoolLine restore guards — passed');
 
 // ─── 8. cloud.js exports normalizeIndicatorParams (new helper used in merge) ──
 
