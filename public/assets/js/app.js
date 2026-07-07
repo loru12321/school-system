@@ -2194,7 +2194,11 @@ function scheduleStartupHydration(label, callback, options = {}) {
     trigger();
 }
 
-const ExamSelectorRefreshScheduler = (() => {
+// Moved to exam-selector-refresh-runtime.js (window.ExamSelectorRefreshScheduler).
+// Orchestration-only coalescing scheduler for the exam-selector UI refreshers;
+// no data/calc coupling. The inline IIFE below is a compatibility fallback used
+// only when the runtime module is not loaded.
+const ExamSelectorRefreshScheduler = window.ExamSelectorRefreshScheduler || (() => {
     let queued = false;
     let pending = null;
 
