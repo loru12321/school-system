@@ -5213,26 +5213,44 @@ async function processDataInner() {
 
     await perfYieldToMain();
     await perfRunPhase('processData:autosave', async () => {
-    if (typeof DB !== 'undefined') {
-        const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
-        const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
-            ? getCurrentSnapshotPayload()
-            : {
-                timestamp: Date.now(),
-                RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS, TEACHER_MAP, CONFIG, MY_SCHOOL
-            };
-        const isCohortKey = /^cohort::/i.test(currentKey);
-        const indicatorRequired = typeof isIndicatorCalcAllowed === 'function' ? isIndicatorCalcAllowed() : false;
-        const targetCount = snapshotPayload?.TARGETS && typeof snapshotPayload.TARGETS === 'object'
-            ? Object.keys(snapshotPayload.TARGETS).length
-            : 0;
+    if (typeof DB === 'undefined') return;
+    // The autosave snapshot (full-cohort structured clone + fingerprint) is a
+    // local backup — it is NOT needed to render the first module after cohort
+    // entry. Building + writing it inline was a top contributor to the ~1s
+    // startup "self" long task. Defer it to idle so first paint isn't blocked;
+    // scheduleTask(replace:true) means if processData runs again (double-apply /
+    // remote refresh) only the latest autosave fires, always capturing the most
+    // current state. No calculation/口径 change — the same payload is saved.
+    const runAutosave = () => {
+        try {
+            const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
+            const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
+                ? getCurrentSnapshotPayload()
+                : {
+                    timestamp: Date.now(),
+                    RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS, TEACHER_MAP, CONFIG, MY_SCHOOL
+                };
+            const isCohortKey = /^cohort::/i.test(currentKey);
+            const indicatorRequired = typeof isIndicatorCalcAllowed === 'function' ? isIndicatorCalcAllowed() : false;
+            const targetCount = snapshotPayload?.TARGETS && typeof snapshotPayload.TARGETS === 'object'
+                ? Object.keys(snapshotPayload.TARGETS).length
+                : 0;
 
-        if (isCohortKey && indicatorRequired && Array.isArray(snapshotPayload?.RAW_DATA) && snapshotPayload.RAW_DATA.length > 0 && targetCount === 0) {
-            console.warn(`[AutoSave] skip partial cohort snapshot without targets: ${currentKey}`);
-        } else {
-            DB.save(currentKey, snapshotPayload, getLegacyDbSaveOptionsForKey(currentKey));
-            appDebug(`✅ 数据已自动保存至: ${currentKey}`);
+            if (isCohortKey && indicatorRequired && Array.isArray(snapshotPayload?.RAW_DATA) && snapshotPayload.RAW_DATA.length > 0 && targetCount === 0) {
+                console.warn(`[AutoSave] skip partial cohort snapshot without targets: ${currentKey}`);
+            } else {
+                DB.save(currentKey, snapshotPayload, getLegacyDbSaveOptionsForKey(currentKey));
+                appDebug(`✅ 数据已自动保存至: ${currentKey}`);
+            }
+        } catch (e) {
+            console.warn('⚠️ 自动保存快照时遇到非致命错误:', e);
         }
+    };
+    const perf = window.SystemPerformance;
+    if (perf && typeof perf.scheduleTask === 'function') {
+        perf.scheduleTask('processData:autosave', runAutosave, { idle: true, timeout: 2000 });
+    } else {
+        runAutosave();
     }
     });
     await perfYieldToMain();

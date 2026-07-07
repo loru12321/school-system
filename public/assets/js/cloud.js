@@ -1096,6 +1096,14 @@
     }
 
     function computeExamDataFingerprint(rows) {
+        // Prefer the shared memoized implementation (compare-shared-runtime) once it
+        // has loaded: identical algorithm/value, but it caches by row identity +
+        // __RAW_DATA_VERSION so repeated processData/autosave passes reuse one hash
+        // instead of re-sorting (zh-CN collation) + stringifying all rows each time.
+        const shared = window.computeExamDataFingerprint;
+        if (typeof shared === 'function' && shared !== computeExamDataFingerprint) {
+            return shared(rows);
+        }
         const list = Array.isArray(rows) ? rows : [];
         const normalized = list.map(row => ({
             school: String(row?.school || '').trim(),

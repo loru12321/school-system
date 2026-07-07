@@ -48,9 +48,15 @@
         const cohort = String(window.CURRENT_COHORT_ID || window.CURRENT_COHORT || cohortFromExam || '').trim();
         const configName = String(window.CONFIG?.name || '').trim();
         const gradeMatch = configName.match(/[6-9]年级/) || examId.match(/[6-9]年级/);
-        const grade = gradeMatch ? gradeMatch[0] : (configName || '当前年级');
-        const cohortLabel = cohort ? `${cohort.replace(/届$/, '')}届` : '当前届别';
-        return `${cohortLabel}${grade}`;
+        const grade = gradeMatch ? gradeMatch[0] : '';
+        const cohortLabel = cohort ? `${cohort.replace(/届$/, '')}届` : '';
+        // Build the label from whatever is actually resolved; never emit vague
+        // placeholders like "当前届别"/"当前年级". If neither cohort nor grade is
+        // known yet (e.g. label refresh before data loads), fall back to the
+        // config name or an empty stem so the exam-type label still carries meaning.
+        const label = `${cohortLabel}${grade}`.trim();
+        if (label) return label;
+        return configName;
     }
 
     function isGrade9Exam() {
@@ -164,7 +170,11 @@
     function getDateSuffix() {
         const date = getCurrentExamDate();
         const parts = date.split('-');
-        return parts.length === 3 ? `${parts[1]}${parts[2]}` : '0527';
+        if (parts.length === 3) return `${parts[1]}${parts[2]}`;
+        // Keep the suffix consistent with the resolved exam date instead of a
+        // fixed literal; DEFAULT_EXAM_DATE is the only source when date is absent.
+        const fallbackParts = DEFAULT_EXAM_DATE.split('-');
+        return fallbackParts.length === 3 ? `${fallbackParts[1]}${fallbackParts[2]}` : '';
     }
 
     function getAllRows() {
