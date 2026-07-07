@@ -3896,6 +3896,10 @@ function switchTab(id) {
         }
     }
 
+    // 类别已解析后，同步更新导航/导航栏芯片的 active 高亮，使其与 section 可见状态同帧呈现，
+    // 消除高亮滞后。延迟的 renderNavigation/renderSubNavigation 仍作为冗余全量刷新运行。
+    if (typeof window.syncShellChrome === 'function') window.syncShellChrome(id);
+
     const currentCategoryMeta = NAV_STRUCTURE[currentCategory] || NAV_STRUCTURE.data || null;
     const dispatchModuleEnter = () => {
         const activeSection = getModuleSectionById(id);

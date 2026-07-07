@@ -704,7 +704,7 @@ function applyModeByGrade(grade) {
     document.querySelectorAll('.label-total').forEach(e => e.innerText = CONFIG.label);
     const excEl = document.getElementById('label-exc');
     if (excEl) excEl.innerText = (CONFIG.excRate * 100) + '%';
-    renderNavigation();
+    if (typeof renderNavigation === 'function') renderNavigation();
 }
 
 const CohortManager = {

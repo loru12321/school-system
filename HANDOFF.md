@@ -1,7 +1,39 @@
 # app.js 分拆 + 视觉/CSS 治理 交接文档
 
 > 本文档随多轮接手持续更新。**最新状态在最上面**，历史记录按时间倒序排在后面。
-> 更新时间：2026-07-05
+> 更新时间：2026-07-07
+
+---
+
+## 〇、本轮（2026-07-07）登录页与系统体验优化（最新）
+
+本轮聚焦四个生产体验问题，均只做稳定性/交互优化，**不改任何成绩计算公式、赋分口径、学校识别或届别识别**。本校仍为银山实验学校/银山实验。
+
+改动文件与原因：
+
+1. **登录页 ~1s 闪烁/重排（已修复）**
+   - 根因：静态 HTML 首屏后，`boot-runtime.js` 在 `DOMContentLoaded` 把毕业生档案面板从 `hidden` 切成可见，造成布局下移。
+   - 修复：`src/index.html` 头部同步脚本在首屏前根据 `LOGIN_PORTAL_V1` 设置 `html[data-login-portal]`；关键 CSS 让学校端默认展示、家长端隐藏毕业生面板；移除面板静态 `hidden`。面板首屏即以正确状态渲染，启动脚本不再触发 hidden→visible 重排。
+   - `entrance-sound-runtime.js`：登录期巡检间隔由 600ms 放宽到 1500ms，并在遮罩消失后自动停止，减少首屏后的 getComputedStyle 读取与重复重绘。
+
+2. **启动“程序遇到意外错误”弹窗（已修复）**
+   - 根因：加载顺序竞态。`cohort-exam-meta-runtime.js` 在 `app.js` 之前执行，`applyModeByGrade()` 第 707 行裸调 `renderNavigation()`（app.js 定义），抛 ReferenceError → `window.onerror` → SweetAlert 通用错误弹窗；随后 app.js 加载、竞态自愈，弹窗一闪而过。
+   - 修复：`cohort-exam-meta-runtime.js:707` 加 `typeof renderNavigation === 'function'` 守卫（与同文件 866 行、741 行一致）。`app-foundation-runtime.js` 只静默已知的 `renderNavigation is not defined` 启动竞态；其他启动错误仍会按原逻辑弹框，避免掩盖真实故障。`unhandledrejection` 仅对启动期登录/会话探测类预期拒绝调用 `preventDefault()`。
+
+3. **模块切换高亮滞后（已修复）**
+   - 根因：`switchTab` 同步设置 section `.active`，但导航/导航栏芯片高亮走双 rAF 延迟渲染，高亮比 section 慢 ≥2 帧。
+   - 修复：`app.js switchTab` 在类别解析完成后同步调用 `window.syncShellChrome(id)`，高亮与 section 同帧呈现；延迟的 renderNavigation/renderSubNavigation 仍作冗余全量刷新。`shell-runtime.js` 子导航自动进入回退计时器由 100ms 放宽到 300ms，避免覆盖用户主动切换。
+   - 注意：延迟分发的 180ms/700ms 重试与 active 守卫是刻意的防抢占机制（有 runtime-order 合约保护），未改动。
+
+4. **云端到本地同步慢（本轮未改数据路径）**
+   - 根因（已定位、未在本轮修复）：登录后完整届别考试同步在主线程串行执行「LZString 解压 + JSON.parse + 逐条 await 写 IndexedDB」（`cloud-workspace-runtime.js` 约 1672-1686 行）。这是最大瓶颈。
+   - 结论：将该循环搬到 worker 或改批量写入属于较大重构，风险高，**本轮不动数据/水合/重算路径**，留待单独评审。已有后台状态提示（`setCloudStatus` + 同步芯片）保留。
+
+### 性能分析钩子（如何测量云同步瓶颈）
+- 在浏览器控制台执行 `localStorage.setItem('SCHOOL_SYSTEM_PERF','true')` 后刷新，开启慢操作日志（阈值 `PERF_SLOW_MS = 250ms`，见 `cloud-api-runtime.js` / `cloud-data-service-runtime.js`）。
+- `window.__SCHOOL_PERF_TIMINGS__` 收集各阶段耗时条目（`cloud-workspace-runtime.js`）。
+- `window.CloudDataService.getPerfTimings()` 返回云数据服务的分段计时。
+- 下一步优化云同步前，应先用上述钩子采样定位串行解析/写入的实际占比，再决定 worker 化或批量写入方案。
 
 ---
 

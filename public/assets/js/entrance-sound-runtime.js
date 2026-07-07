@@ -431,12 +431,19 @@
         polishLoginCopy();
         prewarmCustomAudio();
         observeEntrance();
-        window.setInterval(() => {
+        // 登录遮罩期间低频巡检：绑定后插入控件并侦测遮罩关闭（用于入场音乐）。
+        // 频率由 600ms 放宽到 1500ms，并在登录完成（遮罩消失）后自动停止，
+        // 减少首屏后持续的 getComputedStyle 读取与重复重绘。
+        const timer = window.setInterval(() => {
             bindControls();
             bindUnlockGestures();
             polishLoginCopy();
             observeEntrance();
-        }, 600);
+            const overlay = document.getElementById('login-overlay');
+            if (!overlay || getComputedStyle(overlay).display === 'none') {
+                window.clearInterval(timer);
+            }
+        }, 1500);
     }
 
     if (document.readyState === 'loading') {

@@ -4,7 +4,14 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
     if (message.includes('Script error')) return false;
     if (!message && !error) return true;
 
-    console.error('全局错误捕获:', error || message);
+    console.error('全局错误捕获:', error || message, url ? `@ ${url}:${lineNo}` : '');
+
+    // 仅静默已知的启动加载顺序竞态，其他启动错误仍弹出，避免把真实故障藏起来。
+    const isKnownStartupRace = window.__APP_MODULES_LOADED__ !== true
+        && /renderNavigation is not defined/i.test(message);
+    if (isKnownStartupRace) {
+        return true;
+    }
 
     // 如果 SweetAlert2 已加载，用它提示
     if (typeof Swal !== 'undefined') {
@@ -33,6 +40,17 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
     }
     return false;
 };
+
+window.addEventListener('unhandledrejection', function (event) {
+    const reason = event && event.reason;
+    const message = String(reason && reason.message ? reason.message : reason || '');
+    console.warn('未处理的 Promise 拒绝:', message || reason);
+    const isExpectedStartupProbe = window.__APP_MODULES_LOADED__ !== true
+        && /(not authenticated|auth|session|login|abort|network|failed to fetch)/i.test(message);
+    if (isExpectedStartupProbe && event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
+});
 
 function isAppDebugEnabled() {
     if (window.LoggerRuntime && typeof window.LoggerRuntime.isDebugEnabled === 'function') {

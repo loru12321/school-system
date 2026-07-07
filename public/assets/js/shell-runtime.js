@@ -1023,7 +1023,7 @@
                 window.__SHELL_LAST_DEFAULT_MODULE_AUTO__ = { id: firstModuleId, time: now };
                 firstCard.click();
             }
-        }, 100);
+        }, 300); // 从 100ms 增加到 300ms，让用户主动切换的 switchTab（及其 500ms 重试）有时间完成，避免自动进入覆盖用户意图
 
         window.requestAnimationFrame(function () {
             updateHorizontalScrollState(subNavContainer, subNavContainer);
