@@ -5056,8 +5056,19 @@ async function processData() {
 }
 
 async function processDataInner() {
+    // Phase 2 of the app.js slimming effort: the *sequencing* of processData's
+    // phases (order, yields, worker-result dispatch, autosave/status hook points)
+    // now lives in data-processing-orchestrator-runtime.js. Each phase *body*
+    // below stays here as a closure over app.js-local state (RAW_DATA / SCHOOLS /
+    // THRESHOLDS / fuseInstance / setRawData / calcSummary ...) because those are
+    // calculation-coupled and must not move. Nothing app.js-local is put on
+    // window; the orchestrator receives the closures through this context bag.
+    // No calculation / school-normalization / Excel / assessment 口径 changed —
+    // the phase order, labels and yield placement are identical to the former
+    // inline implementation.
 
-    const isSingleSchool = await perfRunPhase('processData:thresholds', async () => {
+    // --- Phase bodies (calculation code, unchanged) ---------------------------
+    const runThresholds = () => {
         const totalNormalization = normalizeStudentTotalsForCurrentConfig(RAW_DATA, SUBJECTS, CONFIG);
         if (totalNormalization.changed) {
             appDebug('[score] normalized student totals for current config:', totalNormalization);
@@ -5106,42 +5117,41 @@ async function processDataInner() {
         });
 
         return singleSchool;
+    };
+
+    // Worker input prep runs OUTSIDE the timed worker-submit phase, as before.
+    const prepareWorkerInput = () => {
+        const highSchoolLine = parseFloat(window.SYS_VARS?.indicator?.highSchoolLine || window.SYS_VARS?.indicator?.graduateHighSchoolLine) || 0;
+        const highSchoolAdmissionAllowed = typeof isHighSchoolAdmissionExamAllowed === 'function'
+            ? isHighSchoolAdmissionExamAllowed()
+            : false;
+
+        const schoolKeysForWorker = Object.keys(SCHOOLS || {});
+        const townshipSchoolNamesForWorker = (typeof getTownshipManagedSchoolNames === 'function')
+            ? Array.from(new Set([
+                ...getTownshipManagedSchoolNames(schoolKeysForWorker),
+                ...schoolKeysForWorker.filter((name) => (
+                    typeof isTownshipManagedSchool === 'function'
+                        ? isTownshipManagedSchool(name, schoolKeysForWorker)
+                        : false
+                ))
+            ]))
+            : schoolKeysForWorker;
+        return { highSchoolLine, highSchoolAdmissionAllowed, townshipSchoolNamesForWorker };
+    };
+
+    const submitWorker = (input) => WorkerAPI.run({
+        RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS,
+        TOWNSHIP_SCHOOL_NAMES: input.townshipSchoolNamesForWorker,
+        HIGH_SCHOOL_LINE: input.highSchoolLine,
+        HIGH_SCHOOL_ADMISSION_ALLOWED: input.highSchoolAdmissionAllowed
     });
-    const highSchoolLine = parseFloat(window.SYS_VARS?.indicator?.highSchoolLine || window.SYS_VARS?.indicator?.graduateHighSchoolLine) || 0;
-    const highSchoolAdmissionAllowed = typeof isHighSchoolAdmissionExamAllowed === 'function'
-        ? isHighSchoolAdmissionExamAllowed()
-        : false;
 
-    const schoolKeysForWorker = Object.keys(SCHOOLS || {});
-    const townshipSchoolNamesForWorker = (typeof getTownshipManagedSchoolNames === 'function')
-        ? Array.from(new Set([
-            ...getTownshipManagedSchoolNames(schoolKeysForWorker),
-            ...schoolKeysForWorker.filter((name) => (
-                typeof isTownshipManagedSchool === 'function'
-                    ? isTownshipManagedSchool(name, schoolKeysForWorker)
-                    : false
-            ))
-        ]))
-        : schoolKeysForWorker;
-    let workerTask;
-    const endWorkerSubmitPhase = perfBeginPhase('processData:worker-submit');
-    try {
-        workerTask = WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker, HIGH_SCHOOL_LINE: highSchoolLine, HIGH_SCHOOL_ADMISSION_ALLOWED: highSchoolAdmissionAllowed });
-    } finally {
-        endWorkerSubmitPhase();
-    }
-    await perfYieldToMain();
-    const result = await workerTask;
-    await perfRunPhase('processData:worker-result', async () => {});
+    const receiveWorkerResult = (result) => {
+        setRawData(result.RAW_DATA || []);
+    };
 
-    setRawData(result.RAW_DATA || []);
-
-    // Yield before the synchronous post-worker tail so applying the worker
-    // result (SCHOOLS rebuild + class ranks + summary) does not fuse into a
-    // single multi-second main-thread block on cohort entry.
-    await perfYieldToMain();
-
-    await perfRunPhase('processData:apply-worker-result', async () => {
+    const applyWorkerResult = (result) => {
         Object.keys(SCHOOLS).forEach(k => {
             if (SCHOOLS[k]) SCHOOLS[k].students = [];
         });
@@ -5160,119 +5170,173 @@ async function processDataInner() {
                 Object.assign(SCHOOLS[k], metricsData);
             }
         });
-    });
+    };
 
-    await perfYieldToMain();
-    await perfRunPhase('processData:class-ranks', async () => calculateClassRanksOnly());
+    const computeClassRanks = () => calculateClassRanksOnly();
 
-    if (typeof fuseInstance !== 'undefined') fuseInstance = null; // 强制重建索引
+    const finalizeSchools = (isSingleSchool) => {
+        if (typeof fuseInstance !== 'undefined') fuseInstance = null; // 强制重建索引
 
-    setSchools(SCHOOLS);
-    setThresholds(THRESHOLDS);
+        setSchools(SCHOOLS);
+        setThresholds(THRESHOLDS);
 
-    if (isSingleSchool) {
-        appDebug("🏫 检测到单校数据，自动切换 UI 为年级模式...");
+        if (isSingleSchool) {
+            appDebug("🏫 检测到单校数据，自动切换 UI 为年级模式...");
 
-        const analysisMod = document.getElementById('analysis');
-        if (analysisMod) analysisMod.classList.add('single-school-mode');
+            const analysisMod = document.getElementById('analysis');
+            if (analysisMod) analysisMod.classList.add('single-school-mode');
 
-        setTimeout(() => {
-            document.querySelectorAll('th').forEach(th => {
-                if (th.innerText.includes('镇排')) th.innerHTML = th.innerHTML.replace('镇排', '级排');
-                if (th.innerText.includes('全镇')) th.innerHTML = th.innerHTML.replace('全镇', '年级');
-            });
-        }, 500);
-    } else {
-        const analysisMod = document.getElementById('analysis');
-        if (analysisMod) analysisMod.classList.remove('single-school-mode');
-    }
-
-    await perfYieldToMain();
-    await perfRunPhase('processData:summary', async () => {
-    try {
-        appDebug("🔄 正在自动执行衍生计算...");
-
-        if (typeof DataManager !== 'undefined' && DataManager && typeof DataManager.isGrade9Context === 'function' && DataManager.isGrade9Context()) {
-            if (typeof hasIndicatorCalcInputs === 'function' && !hasIndicatorCalcInputs()) {
-                if (typeof DataManager.restoreGrade9IndicatorTemplate === 'function') DataManager.restoreGrade9IndicatorTemplate();
-                if (typeof DataManager.restoreGrade9TargetsTemplate === 'function') DataManager.restoreGrade9TargetsTemplate();
-            }
-        }
-
-        if (typeof calcSummary === 'function') {
-            await Promise.resolve(calcSummary(true));    // 汇总内部会按需同步指标生，避免上传后重复全量计算。
-        }
-        if (typeof scheduleIndicatorAutoScoreAfterDataReady === 'function') {
-            scheduleIndicatorAutoScoreAfterDataReady('processData');
-        }
-
-    } catch (e) {
-        console.warn("⚠️ 自动计算衍生指标时遇到非致命错误:", e);
-    }
-    });
-
-    await perfYieldToMain();
-    await perfRunPhase('processData:autosave', async () => {
-    if (typeof DB === 'undefined') return;
-    // The autosave snapshot (full-cohort structured clone + fingerprint) is a
-    // local backup — it is NOT needed to render the first module after cohort
-    // entry. Building + writing it inline was a top contributor to the ~1s
-    // startup "self" long task. Defer it to idle so first paint isn't blocked;
-    // scheduleTask(replace:true) means if processData runs again (double-apply /
-    // remote refresh) only the latest autosave fires, always capturing the most
-    // current state. No calculation/口径 change — the same payload is saved.
-    // Autosave persistence lives in autosave-runtime.js. app.js still owns the
-    // scheduling (below); the runtime only builds + writes the payload, using
-    // app.js-local DB / options / fallback-payload injected via this context bag.
-    // Payload bytes are unchanged from the former inline implementation.
-    const autosaveContext = () => ({
-        DB,
-        isIndicatorCalcAllowed: typeof isIndicatorCalcAllowed === 'function' ? isIndicatorCalcAllowed : null,
-        getSaveOptions: (key) => getLegacyDbSaveOptionsForKey(key),
-        buildFallbackPayload: () => ({
-            timestamp: Date.now(),
-            RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS, TEACHER_MAP, CONFIG, MY_SCHOOL
-        })
-    });
-    const runAutosave = () => {
-        if (window.AutosaveRuntime && typeof window.AutosaveRuntime.buildAndSaveSnapshot === 'function') {
-            window.AutosaveRuntime.buildAndSaveSnapshot(autosaveContext());
-            return;
-        }
-        // Compatibility fallback (runtime not yet loaded): identical inline behavior.
-        try {
-            const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
-            const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
-                ? getCurrentSnapshotPayload()
-                : {
-                    timestamp: Date.now(),
-                    RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS, TEACHER_MAP, CONFIG, MY_SCHOOL
-                };
-            const isCohortKey = /^cohort::/i.test(currentKey);
-            const indicatorRequired = typeof isIndicatorCalcAllowed === 'function' ? isIndicatorCalcAllowed() : false;
-            const targetCount = snapshotPayload?.TARGETS && typeof snapshotPayload.TARGETS === 'object'
-                ? Object.keys(snapshotPayload.TARGETS).length
-                : 0;
-
-            if (isCohortKey && indicatorRequired && Array.isArray(snapshotPayload?.RAW_DATA) && snapshotPayload.RAW_DATA.length > 0 && targetCount === 0) {
-                console.warn(`[AutoSave] skip partial cohort snapshot without targets: ${currentKey}`);
-            } else {
-                DB.save(currentKey, snapshotPayload, getLegacyDbSaveOptionsForKey(currentKey));
-                appDebug(`✅ 数据已自动保存至: ${currentKey}`);
-            }
-        } catch (e) {
-            console.warn('⚠️ 自动保存快照时遇到非致命错误:', e);
+            setTimeout(() => {
+                document.querySelectorAll('th').forEach(th => {
+                    if (th.innerText.includes('镇排')) th.innerHTML = th.innerHTML.replace('镇排', '级排');
+                    if (th.innerText.includes('全镇')) th.innerHTML = th.innerHTML.replace('全镇', '年级');
+                });
+            }, 500);
+        } else {
+            const analysisMod = document.getElementById('analysis');
+            if (analysisMod) analysisMod.classList.remove('single-school-mode');
         }
     };
-    const perf = window.SystemPerformance;
-    if (perf && typeof perf.scheduleTask === 'function') {
-        perf.scheduleTask('processData:autosave', runAutosave, { idle: true, timeout: 2000 });
-    } else {
-        runAutosave();
+
+    const runSummary = async () => {
+        try {
+            appDebug("🔄 正在自动执行衍生计算...");
+
+            if (typeof DataManager !== 'undefined' && DataManager && typeof DataManager.isGrade9Context === 'function' && DataManager.isGrade9Context()) {
+                if (typeof hasIndicatorCalcInputs === 'function' && !hasIndicatorCalcInputs()) {
+                    if (typeof DataManager.restoreGrade9IndicatorTemplate === 'function') DataManager.restoreGrade9IndicatorTemplate();
+                    if (typeof DataManager.restoreGrade9TargetsTemplate === 'function') DataManager.restoreGrade9TargetsTemplate();
+                }
+            }
+
+            if (typeof calcSummary === 'function') {
+                await Promise.resolve(calcSummary(true));    // 汇总内部会按需同步指标生，避免上传后重复全量计算。
+            }
+            if (typeof scheduleIndicatorAutoScoreAfterDataReady === 'function') {
+                scheduleIndicatorAutoScoreAfterDataReady('processData');
+            }
+
+        } catch (e) {
+            console.warn("⚠️ 自动计算衍生指标时遇到非致命错误:", e);
+        }
+    };
+
+    const runAutosavePhase = () => {
+        if (typeof DB === 'undefined') return;
+        // The autosave snapshot (full-cohort structured clone + fingerprint) is a
+        // local backup — it is NOT needed to render the first module after cohort
+        // entry. Building + writing it inline was a top contributor to the ~1s
+        // startup "self" long task. Defer it to idle so first paint isn't blocked;
+        // scheduleTask(replace:true) means if processData runs again (double-apply /
+        // remote refresh) only the latest autosave fires, always capturing the most
+        // current state. No calculation/口径 change — the same payload is saved.
+        // Autosave persistence lives in autosave-runtime.js. app.js still owns the
+        // scheduling (below); the runtime only builds + writes the payload, using
+        // app.js-local DB / options / fallback-payload injected via this context bag.
+        // Payload bytes are unchanged from the former inline implementation.
+        const autosaveContext = () => ({
+            DB,
+            isIndicatorCalcAllowed: typeof isIndicatorCalcAllowed === 'function' ? isIndicatorCalcAllowed : null,
+            getSaveOptions: (key) => getLegacyDbSaveOptionsForKey(key),
+            buildFallbackPayload: () => ({
+                timestamp: Date.now(),
+                RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS, TEACHER_MAP, CONFIG, MY_SCHOOL
+            })
+        });
+        const runAutosave = () => {
+            if (window.AutosaveRuntime && typeof window.AutosaveRuntime.buildAndSaveSnapshot === 'function') {
+                window.AutosaveRuntime.buildAndSaveSnapshot(autosaveContext());
+                return;
+            }
+            // Compatibility fallback (runtime not yet loaded): identical inline behavior.
+            try {
+                const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
+                const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
+                    ? getCurrentSnapshotPayload()
+                    : {
+                        timestamp: Date.now(),
+                        RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS, TEACHER_MAP, CONFIG, MY_SCHOOL
+                    };
+                const isCohortKey = /^cohort::/i.test(currentKey);
+                const indicatorRequired = typeof isIndicatorCalcAllowed === 'function' ? isIndicatorCalcAllowed() : false;
+                const targetCount = snapshotPayload?.TARGETS && typeof snapshotPayload.TARGETS === 'object'
+                    ? Object.keys(snapshotPayload.TARGETS).length
+                    : 0;
+
+                if (isCohortKey && indicatorRequired && Array.isArray(snapshotPayload?.RAW_DATA) && snapshotPayload.RAW_DATA.length > 0 && targetCount === 0) {
+                    console.warn(`[AutoSave] skip partial cohort snapshot without targets: ${currentKey}`);
+                } else {
+                    DB.save(currentKey, snapshotPayload, getLegacyDbSaveOptionsForKey(currentKey));
+                    appDebug(`✅ 数据已自动保存至: ${currentKey}`);
+                }
+            } catch (e) {
+                console.warn('⚠️ 自动保存快照时遇到非致命错误:', e);
+            }
+        };
+        const perf = window.SystemPerformance;
+        if (perf && typeof perf.scheduleTask === 'function') {
+            perf.scheduleTask('processData:autosave', runAutosave, { idle: true, timeout: 2000 });
+        } else {
+            runAutosave();
+        }
+    };
+
+    const runStatus = () => updateStatusPanel();
+
+    const orchestration = {
+        runThresholds,
+        prepareWorkerInput,
+        submitWorker,
+        receiveWorkerResult,
+        applyWorkerResult,
+        computeClassRanks,
+        finalizeSchools,
+        runSummary,
+        runAutosave: runAutosavePhase,
+        runStatus
+    };
+
+    // Delegate the phase sequencing to the orchestrator runtime when present.
+    const orchestrator = window.DataProcessingOrchestrator;
+    if (orchestrator && typeof orchestrator.run === 'function') {
+        return orchestrator.run(orchestration);
     }
-    });
+
+    // --- Compatibility fallback (runtime not loaded): identical inline sequence.
+    const isSingleSchool = await perfRunPhase('processData:thresholds', async () => runThresholds());
+    const workerInput = prepareWorkerInput();
+    let workerTask;
+    const endWorkerSubmitPhase = perfBeginPhase('processData:worker-submit');
+    try {
+        workerTask = submitWorker(workerInput);
+    } finally {
+        endWorkerSubmitPhase();
+    }
     await perfYieldToMain();
-    await perfRunPhase('processData:status', async () => updateStatusPanel());
+    const result = await workerTask;
+    await perfRunPhase('processData:worker-result', async () => {});
+
+    receiveWorkerResult(result);
+
+    // Yield before the synchronous post-worker tail so applying the worker
+    // result (SCHOOLS rebuild + class ranks + summary) does not fuse into a
+    // single multi-second main-thread block on cohort entry.
+    await perfYieldToMain();
+    await perfRunPhase('processData:apply-worker-result', async () => applyWorkerResult(result));
+
+    await perfYieldToMain();
+    await perfRunPhase('processData:class-ranks', async () => computeClassRanks());
+
+    finalizeSchools(isSingleSchool);
+
+    await perfYieldToMain();
+    await perfRunPhase('processData:summary', async () => runSummary());
+
+    await perfYieldToMain();
+    await perfRunPhase('processData:autosave', async () => runAutosavePhase());
+
+    await perfYieldToMain();
+    await perfRunPhase('processData:status', async () => runStatus());
 }
 
 function calculateClassRanksOnly() {
