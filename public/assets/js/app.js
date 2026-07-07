@@ -5221,7 +5221,25 @@ async function processDataInner() {
     // scheduleTask(replace:true) means if processData runs again (double-apply /
     // remote refresh) only the latest autosave fires, always capturing the most
     // current state. No calculation/口径 change — the same payload is saved.
+    // Autosave persistence lives in autosave-runtime.js. app.js still owns the
+    // scheduling (below); the runtime only builds + writes the payload, using
+    // app.js-local DB / options / fallback-payload injected via this context bag.
+    // Payload bytes are unchanged from the former inline implementation.
+    const autosaveContext = () => ({
+        DB,
+        isIndicatorCalcAllowed: typeof isIndicatorCalcAllowed === 'function' ? isIndicatorCalcAllowed : null,
+        getSaveOptions: (key) => getLegacyDbSaveOptionsForKey(key),
+        buildFallbackPayload: () => ({
+            timestamp: Date.now(),
+            RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS, TEACHER_MAP, CONFIG, MY_SCHOOL
+        })
+    });
     const runAutosave = () => {
+        if (window.AutosaveRuntime && typeof window.AutosaveRuntime.buildAndSaveSnapshot === 'function') {
+            window.AutosaveRuntime.buildAndSaveSnapshot(autosaveContext());
+            return;
+        }
+        // Compatibility fallback (runtime not yet loaded): identical inline behavior.
         try {
             const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
             const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
@@ -6229,10 +6247,10 @@ function generateTeacherInputs() {
             const key = this.dataset.key; const value = this.value.trim(); if (value) TEACHER_MAP[key] = value; else delete TEACHER_MAP[key];             // 防抖保存：输入停止 1 秒后保存，避免频繁写入
             clearTimeout(window.saveTimer);
             window.saveTimer = setTimeout(() => {
-                const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
-                const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
-                    ? getCurrentSnapshotPayload()
-                    : {
+                const teacherSaveContext = {
+                    DB,
+                    getSaveOptions: (key) => getLegacyDbSaveOptionsForKey(key),
+                    buildFallbackPayload: () => ({
                         timestamp: Date.now(),
                         RAW_DATA: RAW_DATA,
                         SCHOOLS: SCHOOLS,
@@ -6243,7 +6261,17 @@ function generateTeacherInputs() {
                         FB_CLASSES: FB_CLASSES,
                         CONFIG: CONFIG,
                         MY_SCHOOL: MY_SCHOOL
-                    };
+                    })
+                };
+                if (window.AutosaveRuntime && typeof window.AutosaveRuntime.saveTeacherInputSnapshot === 'function') {
+                    window.AutosaveRuntime.saveTeacherInputSnapshot(teacherSaveContext);
+                    return;
+                }
+                // Compatibility fallback (runtime not yet loaded): identical inline behavior.
+                const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
+                const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
+                    ? getCurrentSnapshotPayload()
+                    : teacherSaveContext.buildFallbackPayload();
                 DB.save(currentKey, snapshotPayload, getLegacyDbSaveOptionsForKey(currentKey));
             }, 1000);
         });

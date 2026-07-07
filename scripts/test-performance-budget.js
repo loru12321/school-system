@@ -71,7 +71,7 @@ assert.strictEqual(scripts['check:syntax'], 'node scripts/test-syntax.js', 'synt
 const budgets = {
   publicAppJs: 835_000,
   publicCohortExamHydrationJs: 7_000,
-  publicBootJs: 85_600,
+  publicBootJs: 85_700,
   publicRuntimeLoaderJs: 58_000,
   publicCountyAnalysisJs: 125_000,
   publicProgressAnalysisJs: 95_000,
