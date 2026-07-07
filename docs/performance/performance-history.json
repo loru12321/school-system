@@ -6033,5 +6033,90 @@
     "maxLongTaskMs": 1040,
     "budgetFailureCount": 0,
     "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-07T18:50:50.029Z",
+    "commit": "4f4d8ae6250e",
+    "branch": "main",
+    "runId": "28890427363",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 12629,
+    "appReadyMs": 423,
+    "totalMs": 40005,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "cohort-growth",
+        "switchMs": 335,
+        "deepCheckMs": 1669,
+        "totalMs": 2004
+      },
+      {
+        "id": "summary",
+        "switchMs": 233,
+        "deepCheckMs": 1495,
+        "totalMs": 1728
+      },
+      {
+        "id": "audio-debug",
+        "switchMs": 1110,
+        "deepCheckMs": 0,
+        "totalMs": 1110
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 205,
+        "deepCheckMs": 844,
+        "totalMs": 1049
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 236,
+        "deepCheckMs": 720,
+        "totalMs": 956
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 240,
+        "deepCheckMs": 666,
+        "totalMs": 906
+      },
+      {
+        "id": "upload",
+        "switchMs": 323,
+        "deepCheckMs": 430,
+        "totalMs": 753
+      },
+      {
+        "id": "teacher-detail-comparison",
+        "switchMs": 276,
+        "deepCheckMs": 456,
+        "totalMs": 732
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1109
+      },
+      {
+        "id": "teacher",
+        "durationMs": 675
+      },
+      {
+        "id": "targets",
+        "durationMs": 657
+      },
+      {
+        "id": "student",
+        "durationMs": 651
+      }
+    ],
+    "longTaskCount": 2,
+    "maxLongTaskMs": 1034,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
   }
 ]
