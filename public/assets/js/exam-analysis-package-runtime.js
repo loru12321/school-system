@@ -197,6 +197,14 @@
     }
 
     function getHighSchoolAdmissionLine() {
+        // 与网页 summary 口径对齐：高中上线率只适用于真正的9年级7月中考。
+        // 二模/非7月数据下网页 calculateHighSchoolAdmissionStatsForSummary 强制 line=0、赋分为0，
+        // 导出也必须为0，否则分析包会按 total>=line 算出非零上线率赋分并计入综合总分，与网页背离，
+        // 且违反「没有7月中考成绩时高中上线率不能出现正式非零分」。
+        if (typeof window.isHighSchoolAdmissionExamAllowed === 'function'
+            && !window.isHighSchoolAdmissionExamAllowed()) {
+            return 0;
+        }
         const indicator = typeof window.readIndicatorState === 'function'
             ? window.readIndicatorState()
             : (window.SYS_VARS?.indicator || {});
