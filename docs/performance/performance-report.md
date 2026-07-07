@@ -4,12 +4,12 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `eb47ab0b48a0`
-- Recorded at: 2026-07-07T01:46:00.490Z
-- Total smoke time: 33947 ms (-929 ms vs previous)
-- Login: 6448 ms
-- App ready: 1788 ms
-- Long tasks: 1, max 984 ms
+- Commit: `e9348edcb09a`
+- Recorded at: 2026-07-07T03:20:08.911Z
+- Total smoke time: 32479 ms (-1468 ms vs previous)
+- Login: 5839 ms
+- App ready: 65 ms
+- Long tasks: 0, max 0 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `upload` | 681 ms | 1994 ms | 2675 ms |
-| `cohort-growth` | 219 ms | 1661 ms | 1880 ms |
-| `summary` | 271 ms | 1556 ms | 1827 ms |
-| `student-overview` | 231 ms | 605 ms | 836 ms |
-| `teacher-detail-comparison` | 262 ms | 507 ms | 769 ms |
-| `county-teacher-portrait` | 215 ms | 479 ms | 694 ms |
-| `student-details` | 40 ms | 576 ms | 616 ms |
-| `grade-scheduler` | 205 ms | 384 ms | 589 ms |
+| `summary` | 261 ms | 1336 ms | 1597 ms |
+| `cohort-growth` | 301 ms | 1243 ms | 1544 ms |
+| `report-generator` | 253 ms | 690 ms | 943 ms |
+| `student-overview` | 210 ms | 530 ms | 740 ms |
+| `progress-analysis` | 212 ms | 489 ms | 701 ms |
+| `teacher-detail-comparison` | 223 ms | 456 ms | 679 ms |
+| `county-teacher-portrait` | 213 ms | 410 ms | 623 ms |
+| `grade-scheduler` | 212 ms | 376 ms | 588 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `e9348edcb09a` | 32479 ms | 5839 ms | 65 ms | 0 | 0 | 0 |
 | `eb47ab0b48a0` | 33947 ms | 6448 ms | 1788 ms | 1 | 0 | 0 |
 | `b4d8371e4eb7` | 34876 ms | 6055 ms | 1667 ms | 1 | 0 | 0 |
 | `0cdc386e7827` | 36669 ms | 7965 ms | 1949 ms | 1 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `43959e6993a3` | 35229 ms | 6041 ms | 1613 ms | 2 | 0 | 0 |
 | `8855664a28f9` | 39667 ms | 3878 ms | 2322 ms | 2 | 0 | 0 |
 | `5a4e643fc778` | 41261 ms | 4499 ms | 2625 ms | 2 | 0 | 0 |
-| `6f694388ccbb` | 38530 ms | 6132 ms | 6 ms | 2 | 0 | 0 |
 
 ## Data Files
 
