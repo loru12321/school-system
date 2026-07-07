@@ -985,8 +985,6 @@
             'SCHOOLS',
             'SUBJECTS',
             'THRESHOLDS',
-            'TEACHER_MAP',
-            'TEACHER_SCHOOL_MAP',
             'CONFIG',
             'MY_SCHOOL',
             'FINGERPRINT',
@@ -1007,6 +1005,10 @@
         merged.COHORT_DB = {
             ...metaDb,
             ...currentDb,
+            teachingHistory: {
+                ...(metaDb.teachingHistory || {}),
+                ...(currentDb.teachingHistory || {})
+            },
             exams: {
                 ...(metaDb.exams || {}),
                 ...(currentDb.exams || {})
@@ -1581,7 +1583,9 @@
                 if (!data) return false;
 
                 let payload = parsePayload(data.content);
-                payload = normalizeWorkspacePayload(payload);
+                payload = isSplitWorkspacePayload(payload)
+                    ? await hydrateSplitWorkspacePayload(key, payload)
+                    : normalizeWorkspacePayload(payload);
                 payload = await supplementIndicatorPayload(key, payload);
                 seedCurrentExamToCohortDb(payload, key, data.updated_at);
                 if (typeof applySnapshotPayload === 'function') {

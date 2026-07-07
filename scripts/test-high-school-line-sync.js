@@ -262,6 +262,22 @@ assert.ok(
     !/function mergeWorkspaceSplitPayload[\s\S]*\[\s*[\s\S]*'TARGETS'[\s\S]*'INDICATOR_PARAMS'[\s\S]*'SCHOOL_ALIAS_SETTINGS'[\s\S]*\]\.forEach/.test(workspaceSource),
     'cloud-workspace-runtime: split exam shard merge must not let old exam config overwrite workspace TARGETS/INDICATOR_PARAMS/SCHOOL_ALIAS_SETTINGS'
 );
+assert.ok(
+    !/function mergeWorkspaceSplitPayload[\s\S]*\[\s*[\s\S]*'TEACHER_MAP'[\s\S]*'TEACHER_SCHOOL_MAP'[\s\S]*\]\.forEach/.test(workspaceSource),
+    'cloud-workspace-runtime: split exam shard merge must not let compact empty teacher maps overwrite workspace teacher maps'
+);
+assert.ok(
+    workspaceSource.includes('teachingHistory: {')
+        && workspaceSource.includes('...(metaDb.teachingHistory || {})')
+        && workspaceSource.includes('...(currentDb.teachingHistory || {})'),
+    'cloud-workspace-runtime: split exam shard merge must preserve workspace teachingHistory instead of replacing it with compact empty history'
+);
+assert.ok(
+    workspaceSource.includes('payload = isSplitWorkspacePayload(payload)')
+        && workspaceSource.includes('await hydrateSplitWorkspacePayload(key, payload)')
+        && !workspaceSource.includes('let payload = parsePayload(data.content);\n                payload = normalizeWorkspacePayload(payload);'),
+    'cloud-workspace-runtime: foreground cloud load must hydrate split workspace payload before applying it'
+);
 
 console.log('✅ 7. cloud-workspace-runtime highSchoolLine restore guards — passed');
 
@@ -270,6 +286,39 @@ console.log('✅ 7. cloud-workspace-runtime highSchoolLine restore guards — pa
 assert.ok(
     typeof deps.mergeIndicatorPayloadFields === 'function',
     'cloud.js: mergeIndicatorPayloadFields must be exported for use by workspace runtime'
+);
+assert.ok(
+    cloudSource.includes('function normalizeTeacherSchoolMapForApply')
+        && cloudSource.includes('!hasExplicitSchool && fallbackSchool && Object.keys(teacherMap).length')
+        && cloudSource.includes('nextSchoolMap[key] = fallbackSchool'),
+    'cloud.js: legacy teacher maps without TEACHER_SCHOOL_MAP must be restored as current-school teacher mappings'
+);
+assert.ok(
+    cloudSource.includes('const payloadTeacherMap = payload?.TEACHER_MAP')
+        && cloudSource.includes('existing.teacherMap = clonePayloadFragment(payloadTeacherMap)')
+        && cloudSource.includes('db.teachingHistory[termId] = {'),
+    'cloud.js: workspace-level TEACHER_MAP must seed empty current exam teacherMap and teachingHistory during restore'
+);
+assert.ok(
+    cloudSource.includes('const preferredTeacherMap = preferredCurrentExamPayload.teacherMap')
+        && cloudSource.includes('Object.keys(preferredTeacherMap).length > 0'),
+    'cloud.js: empty compact exam teacherMap must not overwrite workspace-level TEACHER_MAP'
+);
+
+const cohortDbCoreSource = fs.readFileSync(
+    path.join(root, 'public/assets/js/cohort-db-core-runtime.js'), 'utf8');
+assert.ok(
+    cohortDbCoreSource.includes('const examTeacherMap = exam.teacherMap')
+        && cohortDbCoreSource.includes('Object.keys(examTeacherMap).length > 0')
+        && !cohortDbCoreSource.includes('setTeacherMap(exam.teacherMap || {})'),
+    'cohort-db-core-runtime: applyExamToWorkspace must preserve workspace teacher map when exam has no teacher map'
+);
+
+const cohortExamMetaSource = fs.readFileSync(
+    path.join(root, 'public/assets/js/cohort-exam-meta-runtime.js'), 'utf8');
+assert.ok(
+    !/本地无 \$\{baseTerm\} 的任课数据[\s\S]*setTeacherMap\(\{\}\)[\s\S]*setTeacherSchoolMap\(\{\}\)/.test(cohortExamMetaSource),
+    'cohort-exam-meta-runtime: missing local term history must not clear workspace teacher maps before cloud fallback'
 );
 
 console.log('✅ 8. cloud.js exports — passed');

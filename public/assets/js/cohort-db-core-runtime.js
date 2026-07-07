@@ -169,7 +169,10 @@ const CohortDB = {
             thresholds: exam.thresholds || {},
             config: exam.config || readConfigState()
         });
-        setTeacherMap(exam.teacherMap || {});
+        const examTeacherMap = exam.teacherMap && typeof exam.teacherMap === 'object' ? exam.teacherMap : null;
+        if (examTeacherMap && Object.keys(examTeacherMap).length > 0) {
+            setTeacherMap(examTeacherMap);
+        }
 
         if (!SCHOOLS || Object.keys(SCHOOLS).length === 0) {
             const rebuiltSchools = {};

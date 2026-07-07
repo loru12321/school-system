@@ -270,7 +270,21 @@
         return window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
     }
 
+    function normalizeTeacherSchoolMapForApply(map, schoolMap) {
+        const teacherMap = map && typeof map === 'object' ? map : {};
+        const nextSchoolMap = schoolMap && typeof schoolMap === 'object' ? { ...schoolMap } : {};
+        const hasExplicitSchool = Object.values(nextSchoolMap).some(value => String(value || '').trim());
+        const fallbackSchool = String(window.MY_SCHOOL || window.readCurrentSchool?.() || '').trim();
+        if (!hasExplicitSchool && fallbackSchool && Object.keys(teacherMap).length) {
+            Object.keys(teacherMap).forEach(key => {
+                nextSchoolMap[key] = fallbackSchool;
+            });
+        }
+        return nextSchoolMap;
+    }
+
     function applyTeacherState(map, schoolMap) {
+        const normalizedSchoolMap = normalizeTeacherSchoolMapForApply(map, schoolMap);
         if (typeof window.setTeacherMap === 'function') {
             window.setTeacherMap(map || {});
         } else if (TeacherState && typeof TeacherState.setTeacherMap === 'function') {
@@ -280,11 +294,11 @@
         }
 
         if (typeof window.setTeacherSchoolMap === 'function') {
-            window.setTeacherSchoolMap(schoolMap || {});
+            window.setTeacherSchoolMap(normalizedSchoolMap);
         } else if (TeacherState && typeof TeacherState.setTeacherSchoolMap === 'function') {
-            TeacherState.setTeacherSchoolMap(schoolMap || {});
+            TeacherState.setTeacherSchoolMap(normalizedSchoolMap);
         } else {
-            window.TEACHER_SCHOOL_MAP = schoolMap || {};
+            window.TEACHER_SCHOOL_MAP = normalizedSchoolMap;
         }
     }
 
@@ -532,7 +546,14 @@
             next.SCHOOLS = schools;
             next.SUBJECTS = clonePayloadFragment(preferredCurrentExamPayload.subjects || next.SUBJECTS || []);
             next.THRESHOLDS = clonePayloadFragment(preferredCurrentExamPayload.thresholds || next.THRESHOLDS || {});
-            next.TEACHER_MAP = clonePayloadFragment(preferredCurrentExamPayload.teacherMap || next.TEACHER_MAP || {});
+            const preferredTeacherMap = preferredCurrentExamPayload.teacherMap && typeof preferredCurrentExamPayload.teacherMap === 'object'
+                ? preferredCurrentExamPayload.teacherMap
+                : null;
+            if (preferredTeacherMap && Object.keys(preferredTeacherMap).length > 0) {
+                next.TEACHER_MAP = clonePayloadFragment(preferredTeacherMap);
+            } else {
+                next.TEACHER_MAP = clonePayloadFragment(next.TEACHER_MAP || {});
+            }
             next.CONFIG = clonePayloadFragment(preferredCurrentExamPayload.config || next.CONFIG || {});
             next.FINGERPRINT = String(preferredCurrentExamPayload.fingerprint || next.FINGERPRINT || '').trim();
         }
@@ -1177,6 +1198,8 @@
 
         const db = CohortDB.ensure();
         db.exams = db.exams || {};
+        const payloadTeacherMap = payload?.TEACHER_MAP && typeof payload.TEACHER_MAP === 'object' ? payload.TEACHER_MAP : {};
+        const payloadTeacherSchoolMap = payload?.TEACHER_SCHOOL_MAP && typeof payload.TEACHER_SCHOOL_MAP === 'object' ? payload.TEACHER_SCHOOL_MAP : {};
 
         const keyParts = examId.split('_');
         const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId;
@@ -1199,6 +1222,33 @@
                 createdAt: remoteTs,
                 updatedAt: updatedAt || ''
             };
+        } else if (Object.keys(payloadTeacherMap).length > 0) {
+            const existingTeacherMap = existing.teacherMap && typeof existing.teacherMap === 'object' ? existing.teacherMap : {};
+            if (Object.keys(existingTeacherMap).length === 0) {
+                existing.teacherMap = clonePayloadFragment(payloadTeacherMap);
+            }
+        }
+        if (Object.keys(payloadTeacherMap).length > 0) {
+            db.teachingHistory = db.teachingHistory || {};
+            const termCandidates = [
+                payload?.CURRENT_TEACHER_TERM_ID,
+                payload?.CURRENT_TERM_ID,
+                payload?.ARCHIVE_META?.year && payload?.ARCHIVE_META?.term
+                    ? `${payload.ARCHIVE_META.year}_${payload.ARCHIVE_META.term}${payload.ARCHIVE_META.grade ? '_' + payload.ARCHIVE_META.grade + '年级' : ''}`
+                    : ''
+            ].map(value => String(value || '').trim()).filter(Boolean);
+            termCandidates.forEach(termId => {
+                const existingHistory = db.teachingHistory[termId];
+                const existingMap = existingHistory?.map && typeof existingHistory.map === 'object'
+                    ? existingHistory.map
+                    : (existingHistory && typeof existingHistory === 'object' ? existingHistory : {});
+                if (!existingMap || Object.keys(existingMap).length === 0) {
+                    db.teachingHistory[termId] = {
+                        map: clonePayloadFragment(payloadTeacherMap),
+                        schoolMap: clonePayloadFragment(payloadTeacherSchoolMap)
+                    };
+                }
+            });
         }
 
         db.currentExamId = examId;

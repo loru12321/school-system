@@ -848,9 +848,10 @@ function readTeacherSchoolMap() {
 }
 
 function setTeacherSchoolMap(map) {
+    const sourceMap = map && typeof map === 'object' ? { ...map } : {};
     const nextSchoolMap = TeacherStateRuntime && typeof TeacherStateRuntime.setTeacherSchoolMap === 'function'
-        ? (TeacherStateRuntime.setTeacherSchoolMap(map) || {})
-        : (map && typeof map === 'object' ? map : {});
+        ? (TeacherStateRuntime.setTeacherSchoolMap(sourceMap) || {})
+        : sourceMap;
     if (typeof TEACHER_SCHOOL_MAP !== 'undefined') TEACHER_SCHOOL_MAP = nextSchoolMap;
     window.TEACHER_SCHOOL_MAP = nextSchoolMap;
     return nextSchoolMap;

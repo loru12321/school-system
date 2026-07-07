@@ -1081,8 +1081,6 @@ function onExamTermChange() {
         if (window.UI) UI.toast(`✅ 已加载该学期任课表（${Object.keys(resolved.map || {}).length}条）`, 'success');
     } else {
         appDebug(`⚠️ 本地无 ${baseTerm} 的任课数据，尝试从云端加载...`);
-        setTeacherMap({});
-        setTeacherSchoolMap({});
         if (window.DataManager && typeof DataManager.renderTeachers === 'function') {
             DataManager.renderTeachers();
         }

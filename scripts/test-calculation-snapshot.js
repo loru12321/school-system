@@ -1425,6 +1425,15 @@ async function main() {
             rankingDataServiceSchoolAliasPolicy,
             teacherAnalysisCoreSchoolAliasPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
+            teacherMapKeys: Object.keys(window.TEACHER_MAP || {}).length,
+            teacherSchoolMapKeys: Object.keys(window.TEACHER_SCHOOL_MAP || {}).length,
+            cohortTeacherMapKeys: Object.keys(window.COHORT_DB?.exams?.[window.CURRENT_EXAM_ID || window.COHORT_DB?.currentExamId || '']?.teacherMap || {}).length,
+            cohortTeachingHistoryKeys: Object.keys(window.COHORT_DB?.teachingHistory || {}).map(key => `${key}:${Object.keys((window.COHORT_DB?.teachingHistory || {})[key]?.map || (window.COHORT_DB?.teachingHistory || {})[key] || {}).length}`).slice(0, 8),
+            localStorageTeacherTermId: localStorage.getItem('CURRENT_TEACHER_TERM_ID') || '',
+            archiveTerm: (window.ARCHIVE_META && window.ARCHIVE_META.term) || '',
+            archiveYear: (window.ARCHIVE_META && window.ARCHIVE_META.year) || '',
+            teacherCurrentSchool: window.MY_SCHOOL || '',
+            teacherTermId: window.CURRENT_TEACHER_TERM_ID || window.CURRENT_TERM_ID || '',
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
             teacherPositive: Object.values(window.TEACHER_STATS || {}).flatMap((subjects) => Object.values(subjects || {}))
                 .filter((row) => Number(row?.avgValue) > 0 || Number(row?.fairScore) > 0).length,
@@ -1593,7 +1602,20 @@ async function main() {
         pairingCount: 1
     }, 'teacher analysis core should treat equivalent school aliases consistently');
     assert.ok(snapshot.score2RatePositive >= minimumSchoolCount, `score2Rate positive schools too low: ${snapshot.score2RatePositive} < ${minimumSchoolCount}`);
-    assert.ok(snapshot.teacherRows >= 10, `teacher row count too low: ${snapshot.teacherRows}`);
+    assert.ok(
+        snapshot.teacherRows >= 10,
+        `teacher row count too low: ${snapshot.teacherRows}; diagnostics=${JSON.stringify({
+            teacherMapKeys: snapshot.teacherMapKeys,
+            teacherSchoolMapKeys: snapshot.teacherSchoolMapKeys,
+            cohortTeacherMapKeys: snapshot.cohortTeacherMapKeys,
+            cohortTeachingHistoryKeys: snapshot.cohortTeachingHistoryKeys,
+            localStorageTeacherTermId: snapshot.localStorageTeacherTermId,
+            archiveTerm: snapshot.archiveTerm,
+            archiveYear: snapshot.archiveYear,
+            teacherCurrentSchool: snapshot.teacherCurrentSchool,
+            teacherTermId: snapshot.teacherTermId
+        })}`
+    );
     assert.strictEqual(snapshot.teacherPositive, snapshot.teacherRows, 'teacher rows should all contain positive calculated metrics');
     assert.ok(snapshot.countyTeacherRankRows >= minimumCountyTeacherRankRows, `county teacher rank rows too low: ${snapshot.countyTeacherRankRows} < ${minimumCountyTeacherRankRows}`);
     assert.strictEqual(snapshot.countyOwnTeacherRows, snapshot.teacherRows, 'county own teacher rows should match calculated teacher rows');
