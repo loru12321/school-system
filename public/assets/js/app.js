@@ -3102,7 +3102,7 @@ function decorateExcelSheet(ws, headers = []) {
 }
 
 
-function togglePrivacyMode() {
+async function togglePrivacyMode() {
     const btn = document.getElementById('btn-privacy-toggle');
     const indicator = document.getElementById('privacy-indicator');
 
@@ -3173,7 +3173,7 @@ function togglePrivacyMode() {
     setTeacherStats({});
     TEACHER_TOWNSHIP_RANKINGS = {};
 
-    processData();
+    await processData();
     calculateRankings();
 
     if (Object.keys(TEACHER_MAP).length > 0 && MY_SCHOOL) {
@@ -5042,6 +5042,15 @@ function perfBeginPhase(label) {
     return () => {};
 }
 
+async function perfRunPhase(label, task) {
+    const endPhase = perfBeginPhase(label);
+    try {
+        return await task();
+    } finally {
+        endPhase();
+    }
+}
+
 async function processData() {
     const endProcessPhase = perfBeginPhase('processData');
     try {
@@ -5053,56 +5062,60 @@ async function processData() {
 
 async function processDataInner() {
 
-    const totalNormalization = normalizeStudentTotalsForCurrentConfig(RAW_DATA, SUBJECTS, CONFIG);
-    if (totalNormalization.changed) {
-        appDebug('[score] normalized student totals for current config:', totalNormalization);
-    }
+    const isSingleSchool = await perfRunPhase('processData:thresholds', async () => {
+        const totalNormalization = normalizeStudentTotalsForCurrentConfig(RAW_DATA, SUBJECTS, CONFIG);
+        if (totalNormalization.changed) {
+            appDebug('[score] normalized student totals for current config:', totalNormalization);
+        }
 
-    const schoolSet = new Set(RAW_DATA.map(s => s.school));
-    const isSingleSchool = schoolSet.size === 1;
+        const schoolSet = new Set(RAW_DATA.map(s => s.school));
+        const singleSchool = schoolSet.size === 1;
 
-    const input1 = parseFloat(window.SYS_VARS?.indicator?.ind1) || 0;
-    const input2 = parseFloat(window.SYS_VARS?.indicator?.ind2) || 0;
+        const input1 = parseFloat(window.SYS_VARS?.indicator?.ind1) || 0;
+        const input2 = parseFloat(window.SYS_VARS?.indicator?.ind2) || 0;
+
+        const townshipRowsForCore = (typeof filterRowsToTownshipSchools === 'function')
+            ? filterRowsToTownshipSchools(RAW_DATA || [])
+            : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+        const thresholdSourceRows = townshipRowsForCore.length ? townshipRowsForCore : (RAW_DATA || []);
+
+        const keys = [...SUBJECTS, 'total'];
+        keys.forEach(k => {
+            const vals = thresholdSourceRows
+                .map(s => k === 'total' ? Number(s.total) : Number(s.scores[k]))
+                .filter(Number.isFinite)
+                .sort((a, b) => b - a);
+
+            if (vals.length) {
+                if (singleSchool && k === 'total' && input1 > 0 && input2 > 0) {
+                    const idx1 = Math.min(Math.floor(input1), vals.length) - 1;
+                    const idx2 = Math.min(Math.floor(input2), vals.length) - 1;
+
+                    THRESHOLDS[k] = {
+                        exc: vals[Math.max(0, idx1)] || 0,
+                        pass: vals[Math.max(0, idx2)] || 0
+                    };
+                    appDebug(`[单校模式] 总分划线锁定: 优=${THRESHOLDS[k].exc} (Top${input1}), 良=${THRESHOLDS[k].pass} (Top${input2})`);
+                } else {
+                    const excRatio = (CONFIG.name && CONFIG.name.includes('9')) ? 0.15 : 0.2;
+                    const pickPercentileLine = (ratio) => {
+                        const index = Math.max(0, Math.ceil(vals.length * ratio) - 1);
+                        return vals[index] || 0;
+                    };
+                    THRESHOLDS[k] = {
+                        exc: pickPercentileLine(excRatio),
+                        pass: pickPercentileLine(0.5)
+                    };
+                }
+            }
+        });
+
+        return singleSchool;
+    });
     const highSchoolLine = parseFloat(window.SYS_VARS?.indicator?.highSchoolLine || window.SYS_VARS?.indicator?.graduateHighSchoolLine) || 0;
     const highSchoolAdmissionAllowed = typeof isHighSchoolAdmissionExamAllowed === 'function'
         ? isHighSchoolAdmissionExamAllowed()
         : false;
-
-    const townshipRowsForCore = (typeof filterRowsToTownshipSchools === 'function')
-        ? filterRowsToTownshipSchools(RAW_DATA || [])
-        : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
-    const thresholdSourceRows = townshipRowsForCore.length ? townshipRowsForCore : (RAW_DATA || []);
-
-    const keys = [...SUBJECTS, 'total'];
-    keys.forEach(k => {
-        const vals = thresholdSourceRows
-            .map(s => k === 'total' ? Number(s.total) : Number(s.scores[k]))
-            .filter(Number.isFinite)
-            .sort((a, b) => b - a);
-
-        if (vals.length) {
-            if (isSingleSchool && k === 'total' && input1 > 0 && input2 > 0) {
-                const idx1 = Math.min(Math.floor(input1), vals.length) - 1;
-                const idx2 = Math.min(Math.floor(input2), vals.length) - 1;
-
-                THRESHOLDS[k] = {
-                    exc: vals[Math.max(0, idx1)] || 0,
-                    pass: vals[Math.max(0, idx2)] || 0
-                };
-                appDebug(`[单校模式] 总分划线锁定: 优=${THRESHOLDS[k].exc} (Top${input1}), 良=${THRESHOLDS[k].pass} (Top${input2})`);
-            } else {
-                const excRatio = (CONFIG.name && CONFIG.name.includes('9')) ? 0.15 : 0.2;
-                const pickPercentileLine = (ratio) => {
-                    const index = Math.max(0, Math.ceil(vals.length * ratio) - 1);
-                    return vals[index] || 0;
-                };
-                THRESHOLDS[k] = {
-                    exc: pickPercentileLine(excRatio),
-                    pass: pickPercentileLine(0.5)
-                };
-            }
-        }
-    });
 
     const schoolKeysForWorker = Object.keys(SCHOOLS || {});
     const townshipSchoolNamesForWorker = (typeof getTownshipManagedSchoolNames === 'function')
@@ -5115,7 +5128,7 @@ async function processDataInner() {
             ))
         ]))
         : schoolKeysForWorker;
-    const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker, HIGH_SCHOOL_LINE: highSchoolLine, HIGH_SCHOOL_ADMISSION_ALLOWED: highSchoolAdmissionAllowed });
+    const result = await perfRunPhase('processData:worker', () => WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker, HIGH_SCHOOL_LINE: highSchoolLine, HIGH_SCHOOL_ADMISSION_ALLOWED: highSchoolAdmissionAllowed }));
 
     setRawData(result.RAW_DATA || []);
 
@@ -5124,27 +5137,29 @@ async function processDataInner() {
     // single multi-second main-thread block on cohort entry.
     await perfYieldToMain();
 
-    Object.keys(SCHOOLS).forEach(k => {
-        if (SCHOOLS[k]) SCHOOLS[k].students = [];
-    });
+    await perfRunPhase('processData:apply-worker-result', async () => {
+        Object.keys(SCHOOLS).forEach(k => {
+            if (SCHOOLS[k]) SCHOOLS[k].students = [];
+        });
 
-    RAW_DATA.forEach(stu => {
-        if (!SCHOOLS[stu.school]) {
-            SCHOOLS[stu.school] = { name: stu.school, students: [], metrics: {}, rankings: {} };
-        }
-        SCHOOLS[stu.school].students.push(stu);
-    });
+        RAW_DATA.forEach(stu => {
+            if (!SCHOOLS[stu.school]) {
+                SCHOOLS[stu.school] = { name: stu.school, students: [], metrics: {}, rankings: {} };
+            }
+            SCHOOLS[stu.school].students.push(stu);
+        });
 
-    const newSchools = result.SCHOOLS;
-    Object.keys(newSchools).forEach(k => {
-        if (SCHOOLS[k]) {
-            const { students, ...metricsData } = newSchools[k];
-            Object.assign(SCHOOLS[k], metricsData);
-        }
+        const newSchools = result.SCHOOLS;
+        Object.keys(newSchools).forEach(k => {
+            if (SCHOOLS[k]) {
+                const { students, ...metricsData } = newSchools[k];
+                Object.assign(SCHOOLS[k], metricsData);
+            }
+        });
     });
 
     await perfYieldToMain();
-    calculateClassRanksOnly();
+    await perfRunPhase('processData:class-ranks', async () => calculateClassRanksOnly());
 
     if (typeof fuseInstance !== 'undefined') fuseInstance = null; // 强制重建索引
 
@@ -5169,6 +5184,7 @@ async function processDataInner() {
     }
 
     await perfYieldToMain();
+    await perfRunPhase('processData:summary', async () => {
     try {
         appDebug("🔄 正在自动执行衍生计算...");
 
@@ -5189,8 +5205,10 @@ async function processDataInner() {
     } catch (e) {
         console.warn("⚠️ 自动计算衍生指标时遇到非致命错误:", e);
     }
+    });
 
     await perfYieldToMain();
+    await perfRunPhase('processData:autosave', async () => {
     if (typeof DB !== 'undefined') {
         const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
         const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
@@ -5212,7 +5230,9 @@ async function processDataInner() {
             appDebug(`✅ 数据已自动保存至: ${currentKey}`);
         }
     }
-    updateStatusPanel();
+    });
+    await perfYieldToMain();
+    await perfRunPhase('processData:status', async () => updateStatusPanel());
 }
 
 function calculateClassRanksOnly() {

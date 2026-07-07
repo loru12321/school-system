@@ -1011,6 +1011,7 @@ async function smokeSwitchModule(page, id) {
             return style.display !== 'none' && section.classList.contains('active');
         }, id, { timeout: Math.min(MODULE_SWITCH_TIMEOUT_MS, MODULE_SWITCH_READY_TIMEOUT_MS) });
     } catch (error) {
+        await page.waitForTimeout(250).catch(() => {});
         const fallback = await collectState();
         if (fallback.ok) {
             const settleMs = getModuleSwitchSettleMs(id);

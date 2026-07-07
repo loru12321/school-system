@@ -21,64 +21,6 @@
         return Date.now();
     }
 
-    // Cooperative main-thread yield: lets the browser paint / handle input and
-    // splits a long synchronous burst into shorter tasks. Prefers the native
-    // scheduler.yield, then a MessageChannel microtask hop, then setTimeout(0).
-    let yieldChannel = null;
-    function yieldToMain() {
-        const scheduler = window.scheduler;
-        if (scheduler && typeof scheduler.yield === 'function') {
-            try {
-                return scheduler.yield();
-            } catch (_) { /* fall through */ }
-        }
-        if (typeof MessageChannel === 'function') {
-            if (!yieldChannel) yieldChannel = new MessageChannel();
-            return new Promise((resolve) => {
-                const port = yieldChannel.port2;
-                const handler = () => {
-                    port.removeEventListener('message', handler);
-                    resolve();
-                };
-                port.addEventListener('message', handler);
-                port.start();
-                yieldChannel.port1.postMessage(0);
-            });
-        }
-        return new Promise((resolve) => window.setTimeout(resolve, 0));
-    }
-
-    // Lightweight phase beacon so the long-task observer can attribute a native
-    // `self` long task to the code section that was running when it fired. This
-    // is diagnostic only and must never change calculation behavior.
-    function beginPhase(label) {
-        const name = String(label || '').trim();
-        if (!name) return () => {};
-        const entry = { name, start: now() };
-        state.phaseStack.push(entry);
-        let ended = false;
-        return function endPhase() {
-            if (ended) return;
-            ended = true;
-            const idx = state.phaseStack.lastIndexOf(entry);
-            if (idx >= 0) state.phaseStack.splice(idx, 1);
-        };
-    }
-
-    async function runPhase(label, task) {
-        const end = beginPhase(label);
-        try {
-            return await task();
-        } finally {
-            end();
-        }
-    }
-
-    function currentPhase() {
-        const top = state.phaseStack[state.phaseStack.length - 1];
-        return top ? top.name : '';
-    }
-
     function stableStringify(value) {
         if (value == null) return '';
         if (typeof value !== 'object') return String(value);
