@@ -125,7 +125,40 @@
     function getExamLabel() {
         const id = String(window.CURRENT_EXAM_ID || '').trim();
         const meta = window.COHORT_DB?.exams?.[id]?.meta || {};
-        return meta.name || meta.examName || id || `${window.CONFIG?.name || ''}二模${getCurrentExamDate()}`;
+        return meta.name || meta.examName || id || `${window.CONFIG?.name || ''}${getCurrentExamDate()}`;
+    }
+
+    function getExamTypeLabel() {
+        const source = `${getExamLabel()} ${window.CURRENT_EXAM_ID || ''} ${window.CONFIG?.name || ''}`;
+        const patterns = ['中考', '期末', '期中', '一模', '二模', '三模', '四模', '月考', '联考', '模拟', '摸底'];
+        const found = patterns.find((label) => source.includes(label));
+        return found || '考试';
+    }
+
+    function getExamPackageStem() {
+        return `${getCohortGradeLabel()}${getExamTypeLabel()}`;
+    }
+
+    function getExamPackageTitle() {
+        return `${getExamPackageStem()}分析包`;
+    }
+
+    function refreshExamAnalysisPackageButtonLabel() {
+        const button = document.getElementById('btn-exam-analysis-package');
+        if (!button) return;
+        const title = getExamPackageTitle();
+        button.title = `下载包含学校、学生、教师明细的${title} ZIP`;
+        const icon = button.querySelector('i');
+        const nextText = ` 下载${title}`;
+        if (button.textContent !== nextText) button.textContent = nextText;
+        if (icon) button.prepend(icon);
+    }
+
+    function startExamAnalysisPackageButtonRefresh() {
+        refreshExamAnalysisPackageButtonLabel();
+        window.setTimeout(refreshExamAnalysisPackageButtonLabel, 300);
+        window.setTimeout(refreshExamAnalysisPackageButtonLabel, 1200);
+        window.setInterval(refreshExamAnalysisPackageButtonLabel, 5000);
     }
 
     function getDateSuffix() {
@@ -1106,7 +1139,10 @@
 
     async function downloadExamAnalysisPackage() {
         try {
-            if (!getAllRows().length) return toast('请先上传成绩数据，再下载二模分析包。', 'error');
+            refreshExamAnalysisPackageButtonLabel();
+            const packageTitle = getExamPackageTitle();
+            const packageStem = fileSafeName(getExamPackageStem());
+            if (!getAllRows().length) return toast(`请先上传成绩数据，再下载${packageTitle}。`, 'error');
             if (!window.XLSX || !window.XLSX.utils) await window.ensureXlsxVendorLoaded?.();
             if (!window.XLSX || !window.XLSX.utils) throw new Error('XLSX 组件未加载');
             if (!window.JSZip) throw new Error('JSZip 组件未加载');
@@ -1122,31 +1158,36 @@
             const allRows = getAllRows();
             await ensureTeacherRankings(includeCounty);
 
-            await addWorkbook(zip, `二模成绩${suffix}.xlsx`, buildRawScoreWorkbook(allRows));
-            await addWorkbook(zip, `学校/二模成绩分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('township'));
-            if (includeCounty) await addWorkbook(zip, `学校/二模学校县域分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('county'));
-            await addWorkbook(zip, `学生/二模学生乡镇考试明细.xlsx`, buildStudentDetailWorkbook(townshipRows, { includeCounty: false }));
-            if (includeCounty) await addWorkbook(zip, `学生/二模学生考试明细 县域排名.xlsx`, buildStudentDetailWorkbook(allRows, { includeCounty: true }));
-            await addWorkbook(zip, `教师/二模教师分析${suffix}.xlsx`, buildTeacherTownWorkbook());
-            if (includeCounty) await addWorkbook(zip, `教师/二模教师县域分析${suffix}.xlsx`, buildTeacherCountyWorkbook());
+            await addWorkbook(zip, `${packageStem}成绩${suffix}.xlsx`, buildRawScoreWorkbook(allRows));
+            await addWorkbook(zip, `学校/${packageStem}学校分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('township'));
+            if (includeCounty) await addWorkbook(zip, `学校/${packageStem}学校县域分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('county'));
+            await addWorkbook(zip, `学生/${packageStem}学生乡镇考试明细.xlsx`, buildStudentDetailWorkbook(townshipRows, { includeCounty: false }));
+            if (includeCounty) await addWorkbook(zip, `学生/${packageStem}学生考试明细 县域排名.xlsx`, buildStudentDetailWorkbook(allRows, { includeCounty: true }));
+            await addWorkbook(zip, `教师/${packageStem}教师分析${suffix}.xlsx`, buildTeacherTownWorkbook());
+            if (includeCounty) await addWorkbook(zip, `教师/${packageStem}教师县域分析${suffix}.xlsx`, buildTeacherCountyWorkbook());
 
             const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 1 } });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = fileSafeName(`二模分析_${getCohortGradeLabel()}_${getCurrentExamDate()}.zip`);
+            link.download = fileSafeName(`${packageStem}分析_${getCurrentExamDate()}.zip`);
             document.body.appendChild(link);
             link.click();
             link.remove();
             setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-            toast(`已生成二模分析包：${link.download}`, 'success');
+            toast(`已生成${packageTitle}：${link.download}`, 'success');
             return link.download;
         } catch (error) {
             console.error('[exam-analysis-package] download failed:', error);
-            toast(`二模分析包生成失败：${error?.message || error}`, 'error');
+            toast(`${getExamPackageTitle()}生成失败：${error?.message || error}`, 'error');
             throw error;
         }
     }
 
-    Object.assign(window, { downloadExamAnalysisPackage });
+    Object.assign(window, { downloadExamAnalysisPackage, refreshExamAnalysisPackageButtonLabel });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startExamAnalysisPackageButtonRefresh, { once: true });
+    } else {
+        startExamAnalysisPackageButtonRefresh();
+    }
     window.__EXAM_ANALYSIS_PACKAGE_RUNTIME_PATCHED__ = true;
 })();

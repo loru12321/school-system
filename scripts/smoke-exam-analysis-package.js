@@ -468,7 +468,7 @@ async function login(page) {
         if (workbookEntries.length < 7) fail(`analysis package has too few workbooks: ${workbookEntries.map((entry) => entry.name).join(', ')}`);
         workbookEntries.forEach((entry) => assertWorkbookCommon(entry.summary, entry.name));
 
-        const { name: teacherCountyName, summary: teacherCountySummary } = await readWorkbookFromPackage(outerZip, files, /教师\/二模教师县域分析0527\.xlsx$/, 'county teacher workbook');
+        const { name: teacherCountyName, summary: teacherCountySummary } = await readWorkbookFromPackage(outerZip, files, /教师\/.*教师县域分析0527\.xlsx$/, 'county teacher workbook');
         if (!teacherCountySummary.text.includes('_对象标记') || !teacherCountySummary.text.includes('本校教师')) {
             fail('county teacher workbook is missing object markers');
         }
@@ -480,7 +480,7 @@ async function login(page) {
             assertNumericColumn(rows, header, nameIndex, ['平均分'], `${teacherCountyName}:${sheet}`, { minimumRows: 2 });
         });
 
-        const { name: rawScoreName, summary: rawScoreSummary } = await readWorkbookFromPackage(outerZip, files, /(^|\/)二模成绩0527\.xlsx$/, 'raw score workbook');
+        const { name: rawScoreName, summary: rawScoreSummary } = await readWorkbookFromPackage(outerZip, files, /(^|\/).*成绩0527\.xlsx$/, 'raw score workbook');
         if (!rawScoreSummary.text.includes('_标记') || !rawScoreSummary.text.includes('本校')) {
             fail('raw score workbook is missing own-school markers');
         }
@@ -491,7 +491,7 @@ async function login(page) {
             assertNumericColumn(rows, header, nameIndex, ['总分', '五科总'], `${rawScoreName}:${sheet}`, { minimumRows: 1, allowZero: true });
         });
 
-        const { name: schoolAnalysisName, summary: schoolAnalysisSummary } = await readWorkbookFromPackage(outerZip, files, /学校\/二模成绩分析0527\.xlsx$/, 'school analysis workbook');
+        const { name: schoolAnalysisName, summary: schoolAnalysisSummary } = await readWorkbookFromPackage(outerZip, files, /学校\/.*学校分析0527\.xlsx$/, 'school analysis workbook');
         const schoolFirstSheetRows = schoolAnalysisSummary.rowCounts['xl/worksheets/sheet1.xml'] || 0;
         if (schoolFirstSheetRows < 18) {
             fail(`school comprehensive report is too short: ${JSON.stringify(schoolAnalysisSummary.rowCounts)}`);
@@ -592,7 +592,7 @@ async function login(page) {
             });
         });
 
-        const { name: schoolCountyName, summary: schoolCountySummary } = await readWorkbookFromPackage(outerZip, files, /学校\/二模学校县域分析0527\.xlsx$/, 'county school analysis workbook');
+        const { name: schoolCountyName, summary: schoolCountySummary } = await readWorkbookFromPackage(outerZip, files, /学校\/.*学校县域分析0527\.xlsx$/, 'county school analysis workbook');
         if (schoolCountySummary.sheetNames.includes('综合分析报告')) {
             fail(`county school workbook should not include 综合分析报告: ${schoolCountySummary.sheetNames.join(', ')}`);
         }
@@ -626,14 +626,14 @@ async function login(page) {
                 assertNumericColumn(rows, header, keyIndex, ['县域排名', '综合排名'], `${schoolCountyName}:${sheet}`, { minimumRows: 20 });
             });
 
-        const { name: studentTownName, summary: studentTownSummary } = await readWorkbookFromPackage(outerZip, files, /学生\/二模学生乡镇考试明细\.xlsx$/, 'township student workbook');
+        const { name: studentTownName, summary: studentTownSummary } = await readWorkbookFromPackage(outerZip, files, /学生\/.*学生乡镇考试明细\.xlsx$/, 'township student workbook');
         const studentTownRows = studentTownSummary.rowsBySheetName['学生考试明细'] || [];
         const studentTownHeader = studentTownRows[0] || [];
         const studentTownNameIndex = findColumn(studentTownHeader, ['姓名']);
         assertNumericColumn(studentTownRows, studentTownHeader, studentTownNameIndex, ['总分', '五科总'], `${studentTownName}:学生考试明细`, { minimumRows: 50, allowZero: true });
         assertNumericColumn(studentTownRows, studentTownHeader, studentTownNameIndex, ['总分镇排'], `${studentTownName}:学生考试明细`, { minimumRows: 50, requiredWhenColumnNames: ['总分', '五科总'] });
 
-        const { name: studentCountyName, summary: studentCountySummary } = await readWorkbookFromPackage(outerZip, files, /学生\/二模学生考试明细 县域排名\.xlsx$/, 'county student workbook');
+        const { name: studentCountyName, summary: studentCountySummary } = await readWorkbookFromPackage(outerZip, files, /学生\/.*学生考试明细 县域排名\.xlsx$/, 'county student workbook');
         const studentCountyRows = studentCountySummary.rowsBySheetName['学生考试明细'] || [];
         const studentCountyHeader = studentCountyRows[0] || [];
         const studentCountyNameIndex = findColumn(studentCountyHeader, ['姓名']);
@@ -651,7 +651,7 @@ async function login(page) {
             fail(`county-direct schools should not have township ranks: ${badCountyDirectTownRanks.slice(0, 5).map((row) => `${row[studentCountySchoolIndex]}:${row[studentCountyNameIndex]}`).join(', ')}`);
         }
 
-        const { name: teacherTownName, summary: teacherTownSummary } = await readWorkbookFromPackage(outerZip, files, /教师\/二模教师分析0527\.xlsx$/, 'township teacher workbook');
+        const { name: teacherTownName, summary: teacherTownSummary } = await readWorkbookFromPackage(outerZip, files, /教师\/.*教师分析0527\.xlsx$/, 'township teacher workbook');
         Object.entries(teacherTownSummary.rowsBySheetName).forEach(([sheet, rows]) => {
             const header = rows[0] || [];
             const nameIndex = findColumn(header, ['教师/学校']);
