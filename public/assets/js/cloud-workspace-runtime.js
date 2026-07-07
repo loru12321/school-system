@@ -1272,7 +1272,11 @@
     function hasWorkspaceIndicatorParams(payload) {
         const params = payload?.INDICATOR_PARAMS;
         if (!params || typeof params !== 'object') return false;
-        return !!String(params.ind1 || '').trim() && !!String(params.ind2 || '').trim();
+        // Consider the payload "populated" when ANY indicator field is present —
+        // including highSchoolLine — so a params-only save is not needlessly
+        // re-supplemented and overwritten on the next load.
+        return (!!String(params.ind1 || '').trim() && !!String(params.ind2 || '').trim())
+            || !!String(params.highSchoolLine || params.graduateHighSchoolLine || params.highSchoolAdmissionLine || '').trim();
     }
 
     function readWorkspaceParamValue(input, fallback = '') {

@@ -945,7 +945,11 @@
     function hasPayloadIndicatorParams(payload) {
         const params = payload?.INDICATOR_PARAMS;
         if (!params || typeof params !== 'object') return false;
-        return !!String(params.ind1 || '').trim() || !!String(params.ind2 || '').trim();
+        // Include highSchoolLine / alias so a payload with only the admission line
+        // set (but empty ind1/ind2) is not needlessly overwritten by supplement.
+        return !!String(params.ind1 || '').trim()
+            || !!String(params.ind2 || '').trim()
+            || !!String(params.highSchoolLine || params.graduateHighSchoolLine || params.highSchoolAdmissionLine || '').trim();
     }
 
     function hasPayloadAliasSettings(payload) {
@@ -956,6 +960,22 @@
         return getPayloadTargetCount(payload) === 0 || !hasPayloadIndicatorParams(payload) || !hasPayloadAliasSettings(payload);
     }
 
+    function normalizeIndicatorParams(params) {
+        const src = params && typeof params === 'object' ? params : {};
+        return {
+            ind1: String(src.ind1 || '').trim(),
+            ind2: String(src.ind2 || '').trim(),
+            // Standardise on highSchoolLine; read legacy aliases as fallback.
+            highSchoolLine: String(
+                src.highSchoolLine
+                || src.graduateHighSchoolLine
+                || src.highSchoolAdmissionLine
+                || src.highSchoolScoreLine
+                || ''
+            ).trim()
+        };
+    }
+
     function mergeIndicatorPayloadFields(payload, supplement) {
         const base = (payload && typeof payload === 'object') ? { ...payload } : {};
         if (!supplement || typeof supplement !== 'object') return base;
@@ -963,8 +983,17 @@
         if (getPayloadTargetCount(base) === 0 && getPayloadTargetCount(supplement) > 0) {
             base.TARGETS = clonePayloadFragment(supplement.TARGETS);
         }
-        if (!hasPayloadIndicatorParams(base) && hasPayloadIndicatorParams(supplement)) {
-            base.INDICATOR_PARAMS = clonePayloadFragment(supplement.INDICATOR_PARAMS);
+        // Field-level merge: never overwrite an existing value with a supplement's value.
+        // This prevents a wholesale INDICATOR_PARAMS replace from wiping a saved
+        // highSchoolLine when ind1/ind2 happen to be empty.
+        if (hasPayloadIndicatorParams(supplement)) {
+            const baseInd = normalizeIndicatorParams(base.INDICATOR_PARAMS);
+            const suppInd = normalizeIndicatorParams(supplement.INDICATOR_PARAMS);
+            base.INDICATOR_PARAMS = {
+                ind1: baseInd.ind1 || suppInd.ind1,
+                ind2: baseInd.ind2 || suppInd.ind2,
+                highSchoolLine: baseInd.highSchoolLine || suppInd.highSchoolLine
+            };
         }
         if (!hasPayloadAliasSettings(base) && hasPayloadAliasSettings(supplement)) {
             base.SCHOOL_ALIAS_SETTINGS = clonePayloadFragment(supplement.SCHOOL_ALIAS_SETTINGS);

@@ -1134,7 +1134,7 @@ function setIndicatorState(indicator) {
         : {
             ind1: String(indicator?.ind1 || '').trim(),
             ind2: String(indicator?.ind2 || '').trim(),
-            highSchoolLine: String(indicator?.highSchoolLine || indicator?.graduateHighSchoolLine || '').trim()
+            highSchoolLine: String(indicator?.highSchoolLine || indicator?.graduateHighSchoolLine || indicator?.highSchoolAdmissionLine || indicator?.highSchoolScoreLine || '').trim()
         };
     ensureSupportSysVars().indicator = nextIndicator;
     return nextIndicator;

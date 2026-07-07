@@ -45,7 +45,15 @@
         return {
             ind1: String(source.ind1 || '').trim(),
             ind2: String(source.ind2 || '').trim(),
-            highSchoolLine: String(source.highSchoolLine || source.graduateHighSchoolLine || '').trim()
+            // Standard field: highSchoolLine. Backwards-compat aliases:
+            // graduateHighSchoolLine, highSchoolAdmissionLine, highSchoolScoreLine.
+            highSchoolLine: String(
+                source.highSchoolLine
+                || source.graduateHighSchoolLine
+                || source.highSchoolAdmissionLine
+                || source.highSchoolScoreLine
+                || ''
+            ).trim()
         };
     }
 
