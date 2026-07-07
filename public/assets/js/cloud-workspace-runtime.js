@@ -33,6 +33,28 @@
     const STUDENT_HISTORY_INDEX_UPLOAD_CHUNK_SIZE = 80;
     const WORKSPACE_BUNDLE_UPLOAD_CHUNK_SIZE = 1;
 
+    // Break a synchronous hydration burst into browser tasks so a large LZ
+    // decompress (parsePayload) + snapshot upsert never keeps the main thread
+    // busy for the whole cohort pull. Delegates to the shared SystemPerformance
+    // helper (scheduler.yield) when available; falls back to MessageChannel /
+    // setTimeout in case load order runs this before that runtime is ready.
+    function yieldToMain() {
+        if (window.SystemPerformance && typeof window.SystemPerformance.yieldToMain === 'function') {
+            return window.SystemPerformance.yieldToMain();
+        }
+        if (typeof MessageChannel === 'function') {
+            return new Promise((resolve) => {
+                const channel = new MessageChannel();
+                channel.port1.onmessage = () => {
+                    channel.port1.close();
+                    resolve();
+                };
+                channel.port2.postMessage(0);
+            });
+        }
+        return new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
+
     function normalizeWorkspacePayload(payload) {
         if (typeof normalizeCloudWorkspacePayload === 'function') {
             return normalizeCloudWorkspacePayload(payload);
@@ -1700,9 +1722,21 @@
 
                     let loadedCount = 0;
                     const loadedKeys = [];
-                    for (const key of keysToFetch) {
+                    // Hydrate one exam row per task, yielding to the main thread
+                    // between rows. Each row can carry a large RAW_DATA payload
+                    // whose LZ decompress + upsert is a long synchronous step; a
+                    // yield between them lets the browser paint/respond so the
+                    // cohort pull no longer blocks the UI as one macrotask.
+                    for (let rowIndex = 0; rowIndex < keysToFetch.length; rowIndex += 1) {
+                        const key = keysToFetch[rowIndex];
                         const row = rowMap.get(key);
                         if (!row) continue;
+                        // Re-check cohort after each yield: a mid-hydration cohort
+                        // switch must not merge stale exams into the new workspace.
+                        const cohortDuringApply = getCurrentCohortId();
+                        if (cohortDuringApply && cid !== cohortDuringApply && !allowCrossCohort) {
+                            return { success: false, skipped: true, staleCohort: true, cohortId: cid, currentCohortId: cohortDuringApply };
+                        }
                         try {
                             const payload = parsePayload(row.content);
                             if (!payload) continue;
@@ -1718,6 +1752,7 @@
                         } catch (rowErr) {
                             console.warn('[CloudExams] parse row failed:', rowErr);
                         }
+                        if (rowIndex < keysToFetch.length - 1) await yieldToMain();
                     }
 
                     window.COHORT_DB = db;
