@@ -55,6 +55,7 @@ assert.ok(smoke.includes('STRICT_PERFORMANCE_BUDGETS && summary.performance.budg
 assert.ok(smoke.includes('loginMs: 30000'), 'login performance budget should protect the optimized entry path');
 assert.ok(smoke.includes('appReadyMs: 15000'), 'app-ready performance budget should catch startup regressions');
 assert.ok(smoke.includes('moduleSwitchMs: 6000'), 'module switch performance budget should catch slow navigation');
+assert.ok(smoke.includes('MODULE_SWITCH_READY_TIMEOUT_MS = 5000'), 'module switch readiness wait should leave headroom under the switch budget');
 assert.ok(smoke.includes('dataManagerTabMs: 5000'), 'data manager performance budget should catch slow tab changes');
 assert.ok(performanceWorkflow.includes('SMOKE_PERF_STRICT: "true"'), 'performance workflow should fail when a browser timing budget regresses');
 assert.ok(schedulerTest.includes('scheduleTask'), 'system performance scheduler test should still cover task scheduling');

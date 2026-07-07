@@ -292,7 +292,7 @@
                 cacheKey,
                 ttlMs: noCache ? 0 : ttlMs,
                 priority: isBackground ? -1 : 1,
-                trackLongTask: !(isBackground && method === 'fetchCohortExamsToLocal')
+                trackLongTask: method !== 'load' && !(isBackground && method === 'fetchCohortExamsToLocal')
             });
         };
         wrapped.__systemPerformanceWrapped = true;

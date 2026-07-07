@@ -267,12 +267,26 @@ function runSnapshotPostApplyRender() {
     if (typeof DataManager !== 'undefined' && DataManager.renderHistoryPreview) DataManager.renderHistoryPreview();
 }
 
+function runSnapshotPostApplyLightRender() {
+    try { if (typeof updateSchoolSelect === 'function') updateSchoolSelect(); } catch (e) { }
+    try {
+        if (typeof DataManager !== 'undefined' && typeof DataManager.renderSchoolAliasMappings === 'function') {
+            DataManager.renderSchoolAliasMappings();
+        }
+        if (typeof DataManager !== 'undefined' && typeof DataManager.syncSchoolAliasSettingsFromGateway === 'function') {
+            DataManager.syncSchoolAliasSettingsFromGateway().catch(err => console.warn('[EdgeGateway] post-load alias refresh skipped:', err?.message || err));
+        }
+    } catch (e) { }
+    try { updateExamHistoryStatusBar(); } catch (e) { }
+    if (typeof DataManager !== 'undefined' && DataManager.renderHistoryPreview) DataManager.renderHistoryPreview();
+}
+
 function scheduleSnapshotPostApplyRender() {
     if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
-        window.SystemPerformance.scheduleTask('snapshot-post-apply-render', runSnapshotPostApplyRender, { idle: true, timeout: 2500 });
+        window.SystemPerformance.scheduleTask('snapshot-post-apply-light-render', runSnapshotPostApplyLightRender, { idle: true, timeout: 1800 });
         return;
     }
-    setTimeout(runSnapshotPostApplyRender, 0);
+    setTimeout(runSnapshotPostApplyLightRender, 0);
 }
 
 function applySnapshotPayload(db, options = {}) {

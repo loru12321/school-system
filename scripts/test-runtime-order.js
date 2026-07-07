@@ -1274,9 +1274,11 @@ assert.ok(
 );
 assert.ok(
     snapshotSystemRuntime.includes('function scheduleSnapshotPostApplyRender')
+        && snapshotSystemRuntime.includes('function runSnapshotPostApplyLightRender')
+        && snapshotSystemRuntime.includes('snapshot-post-apply-light-render')
         && cloudWorkspaceRuntime.includes('applySnapshotPayload(payload, { deferRender: true })')
         && cloudWorkspaceRuntime.includes('applySnapshotPayload(normalizedPayload, { deferRender: true })'),
-    'cloud workspace restore should defer heavy post-apply rendering until after the critical load path'
+    'cloud workspace restore should use light deferred post-apply rendering off the critical load path'
 );
 assert.ok(
     /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(cohortExamMetaRuntime),
