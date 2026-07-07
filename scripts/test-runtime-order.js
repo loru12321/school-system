@@ -21,6 +21,7 @@ const compareSummaryRuntimePath = path.resolve(__dirname, '../public/assets/js/c
 const cloudApiRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud-api-runtime.js');
 const cloudConnectionRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud-connection-runtime.js');
 const cloudWorkspaceRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud-workspace-runtime.js');
+const snapshotSystemRuntimePath = path.resolve(__dirname, '../public/assets/js/snapshot-system-runtime.js');
 const systemPerformanceRuntimePath = path.resolve(__dirname, '../public/assets/js/system-performance-runtime.js');
 const dataCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/data-cloud-runtime.js');
 const issueManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/issue-manager-runtime.js');
@@ -107,6 +108,7 @@ assert.ok(fs.existsSync(compareResultRuntimePath), 'compare-result-state-runtime
 assert.ok(fs.existsSync(compareSummaryRuntimePath), 'compare-summary-state-runtime.js should exist');
 assert.ok(fs.existsSync(cloudApiRuntimePath), 'cloud-api-runtime.js should exist');
 assert.ok(fs.existsSync(cloudConnectionRuntimePath), 'cloud-connection-runtime.js should exist');
+assert.ok(fs.existsSync(snapshotSystemRuntimePath), 'snapshot-system-runtime.js should exist');
 assert.ok(fs.existsSync(systemPerformanceRuntimePath), 'system-performance-runtime.js should exist');
 assert.ok(fs.existsSync(dataCloudRuntimePath), 'data-cloud-runtime.js should exist');
 assert.ok(fs.existsSync(issueManagerRuntimePath), 'issue-manager-runtime.js should exist');
@@ -200,6 +202,7 @@ const supportMetricsRuntime = fs.readFileSync(supportMetricsRuntimePath, 'utf8')
 const mainCss = fs.readFileSync(path.resolve(__dirname, '../src/assets/css/main.css'), 'utf8');
 const layoutRefinementCss = fs.readFileSync(path.resolve(__dirname, '../src/assets/css/layout-refinement.css'), 'utf8');
 const cloudWorkspaceRuntime = fs.readFileSync(cloudWorkspaceRuntimePath, 'utf8');
+const snapshotSystemRuntime = fs.readFileSync(snapshotSystemRuntimePath, 'utf8');
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
@@ -1261,6 +1264,19 @@ assert.ok(
         && cloudWorkspaceRuntime.includes('queueJob.inlinePayload = payload;')
         && cloudWorkspaceRuntime.includes("job.inlinePayload && typeof job.inlinePayload === 'object'"),
     'exam cloud saves should fall back to an inline compact payload when IndexedDB cache writes are unavailable'
+);
+assert.ok(
+    cloudWorkspaceRuntime.includes('function scheduleCachedWorkspaceSnapshotWrite')
+        && cloudWorkspaceRuntime.includes('function scheduleCompareSelectorsRefresh')
+        && cloudWorkspaceRuntime.includes('refreshCompareSelectorsForMode(options.background === true)')
+        && cloudWorkspaceRuntime.includes('scheduleCachedWorkspaceSnapshotWrite(row.key, payload, { updatedAt: row.updated_at })'),
+    'background cloud hydration should defer cache writes and compare selector refreshes off the critical load path'
+);
+assert.ok(
+    snapshotSystemRuntime.includes('function scheduleSnapshotPostApplyRender')
+        && cloudWorkspaceRuntime.includes('applySnapshotPayload(payload, { deferRender: true })')
+        && cloudWorkspaceRuntime.includes('applySnapshotPayload(normalizedPayload, { deferRender: true })'),
+    'cloud workspace restore should defer heavy post-apply rendering until after the critical load path'
 );
 assert.ok(
     /CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(cohortExamMetaRuntime),

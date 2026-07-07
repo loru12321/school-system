@@ -1025,7 +1025,7 @@
         if (!examRow?.content && !examRow?.payload) return normalizeWorkspacePayload(metaPayload);
         const examPayload = examRow.payload || parsePayload(examRow.content);
         if (!examRow.cached && examRow.key && examPayload) {
-            await writeCachedWorkspaceSnapshot(examRow.key, examPayload, { updatedAt: examRow.updated_at }).catch(() => false);
+            scheduleCachedWorkspaceSnapshotWrite(examRow.key, examPayload, { updatedAt: examRow.updated_at });
         }
         return normalizeWorkspacePayload(mergeWorkspaceSplitPayload(metaPayload, examPayload, examRow.key || currentExamKey || key));
     }
@@ -1179,6 +1179,38 @@
         }
     }
 
+    function scheduleCachedWorkspaceSnapshotWrite(key, payload, meta = {}) {
+        if (!key || !payload || typeof payload !== 'object') return;
+        scheduleBackgroundCloudTask(() => {
+            writeCachedWorkspaceSnapshot(key, payload, meta).catch((error) => {
+                console.warn('[CloudSync] background cache write failed:', error);
+            });
+        }, 0, 5000);
+    }
+
+    let compareSelectorRefreshScheduled = false;
+    function scheduleCompareSelectorsRefresh() {
+        if (compareSelectorRefreshScheduled) return;
+        compareSelectorRefreshScheduled = true;
+        scheduleBackgroundCloudTask(async () => {
+            try {
+                await refreshCompareSelectors();
+            } catch (error) {
+                console.warn('[CloudSync] background compare selector refresh failed:', error);
+            } finally {
+                compareSelectorRefreshScheduled = false;
+            }
+        }, 0, 5000);
+    }
+
+    async function refreshCompareSelectorsForMode(background = false) {
+        if (background) {
+            scheduleCompareSelectorsRefresh();
+            return;
+        }
+        await refreshCompareSelectors();
+    }
+
     function buildWorkspaceApplySignature(key, payload, updatedAt = '', meta = {}) {
         const source = payload && typeof payload === 'object' ? payload : {};
         const fingerprint = String(source.FINGERPRINT || '').trim();
@@ -1245,15 +1277,14 @@
         if (isWorkspaceSnapshotAlreadyApplied(signature)) return true;
         seedCurrentExamToCohortDb(normalizedPayload, key, updatedAt);
         if (typeof applySnapshotPayload === 'function') {
-            const applied = applySnapshotPayload(normalizedPayload);
+            const applied = applySnapshotPayload(normalizedPayload, { deferRender: true });
             if (applied === false) return false;
         }
         syncWorkspaceState({
             currentProjectKey: key,
             currentExamId: normalizedPayload?.CURRENT_EXAM_ID || ''
         });
-        await writeCachedWorkspaceSnapshot(key, normalizedPayload, { updatedAt });
-        await refreshCompareSelectors();
+        scheduleCompareSelectorsRefresh();
         markWorkspaceSnapshotApplied(signature);
         return true;
     }
@@ -1366,14 +1397,14 @@
 
         seedCurrentExamToCohortDb(payload, key, snapshotRow.updated_at || '');
         if (typeof applySnapshotPayload === 'function') {
-            const applied = applySnapshotPayload(payload);
+            const applied = applySnapshotPayload(payload, { deferRender: true });
             if (applied === false) return false;
         }
 
         const contentHash = hashText(snapshotRow.content);
         const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || getCurrentCohortId());
 
-        await writeCachedWorkspaceSnapshot(key, payload, { updatedAt: snapshotRow.updated_at });
+        scheduleCachedWorkspaceSnapshotWrite(key, payload, { updatedAt: snapshotRow.updated_at });
         writeWorkspaceSyncMeta(key, {
             contentHash,
             lastUploadedHash: contentHash,
@@ -1397,7 +1428,7 @@
             currentExamId: payload?.CURRENT_EXAM_ID || ''
         }));
 
-        await refreshCompareSelectors();
+        scheduleCompareSelectorsRefresh();
         if (cohortId && typeof manager.fetchCohortExamsToLocal === 'function') {
             manager.fetchCohortExamsToLocal(cohortId, { background: true }).catch((syncError) => {
                 console.warn('[CloudExams] background sync failed:', syncError);
@@ -1525,11 +1556,11 @@
                 payload = await supplementIndicatorPayload(key, payload);
                 seedCurrentExamToCohortDb(payload, key, data.updated_at);
                 if (typeof applySnapshotPayload === 'function') {
-                    const applied = applySnapshotPayload(payload);
+                    const applied = applySnapshotPayload(payload, { deferRender: true });
                     if (applied === false) return false;
                 }
                 const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || getCurrentCohortId());
-                await refreshCompareSelectors();
+                scheduleCompareSelectorsRefresh();
                 if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
                     this.fetchCohortExamsToLocal(cohortId, { background: true }).catch((syncError) => {
                         console.warn('[CloudExams] background sync failed:', syncError);
@@ -1608,7 +1639,7 @@
                 const localExamCount = countCachedCohortExams(db, cid);
 
                 if (!forceSync && localExamCount >= minCount && lastSyncAt && (Date.now() - lastSyncAt) < AUTO_COHORT_SYNC_COOLDOWN_MS) {
-                    if (shouldRefreshSelectors) await refreshCompareSelectors();
+                    if (shouldRefreshSelectors) await refreshCompareSelectorsForMode(options.background === true);
                     markFullCloudSyncComplete(new Date(lastSyncAt).toISOString());
                     setCloudStatus('success', '使用缓存');
                     return { success: true, count: localExamCount, updated: 0, cached: true };
@@ -1653,7 +1684,7 @@
                         const syncedAt = new Date().toISOString();
                         promoteCachedCohortExamIfMissing(db, cid, candidates.map(row => row.key));
                         localStorage.setItem(cacheKey, String(Date.now()));
-                        if (shouldRefreshSelectors) await refreshCompareSelectors();
+                        if (shouldRefreshSelectors) await refreshCompareSelectorsForMode(options.background === true);
                         markFullCloudSyncComplete(syncedAt, `全量考试已检查：${cid}`);
                         setCloudStatus('success', '已最新');
                         return { success: true, count: candidates.length, updated: 0 };
@@ -1675,7 +1706,11 @@
                         try {
                             const payload = parsePayload(row.content);
                             if (!payload) continue;
-                            await writeCachedWorkspaceSnapshot(row.key, payload, { updatedAt: row.updated_at }).catch(() => false);
+                            if (options.background === true) {
+                                scheduleCachedWorkspaceSnapshotWrite(row.key, payload, { updatedAt: row.updated_at });
+                            } else {
+                                await writeCachedWorkspaceSnapshot(row.key, payload, { updatedAt: row.updated_at }).catch(() => false);
+                            }
                             const beforeCount = loadedCount;
                             loadedCount += upsertCloudExamSnapshot(db, row.key, payload, row.updated_at, deriveExamLabel(row.key));
                             loadedCount += hydrateBundledCohortExams(db, payload, row.updated_at);
@@ -1689,7 +1724,7 @@
                     promoteCachedCohortExamIfMissing(db, cid, loadedKeys.length ? loadedKeys : candidates.map(row => row.key));
                     const syncedAt = new Date().toISOString();
                     localStorage.setItem(cacheKey, String(Date.now()));
-                    if (shouldRefreshSelectors) await refreshCompareSelectors();
+                    if (shouldRefreshSelectors) await refreshCompareSelectorsForMode(options.background === true);
                     markFullCloudSyncComplete(syncedAt, `全量考试已同步：${cid}，更新 ${loadedCount} 期`);
 
                     if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
