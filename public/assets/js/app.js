@@ -2131,31 +2131,45 @@ window.__flushPendingCohortSwitches = flushPendingCohortSwitches;
 flushPendingCohortSwitches();
 
 let __workspaceRefreshTimer = null;
+// Moved to workspace-ui-refresh-runtime.js (window.WorkspaceUiRefreshScheduler).
+// Orchestration-only debounce shell: it only collapses bursts of refresh
+// requests into a single trailing timer (the leading `delay`) and then defers
+// the callback to the startup-hydration scheduler (idle / double-rAF / timeout).
+// No data/calc coupling. The real refresh callback body — and every app.js-local
+// function it closes over (updateSchoolSelect / updateMySchoolSelect /
+// renderTables / generateTeacherInputs) plus the MY_SCHOOL global — stays here
+// in app.js. The inline fallback below is used only when the runtime module is
+// not loaded.
 function scheduleWorkspaceUiRefresh(label = 'workspace-refresh', options = {}) {
+    const shouldRenderTables = options.renderTables !== false;
+    const shouldGenerateTeacherInputs = options.generateTeacherInputs !== false;
+    const refresh = () => {
+        try { if (typeof updateSchoolSelect === 'function') updateSchoolSelect(); } catch (e) { console.warn(e); }
+        try { if (typeof updateMySchoolSelect === 'function') updateMySchoolSelect(); } catch (e) { console.warn(e); }
+        try { if (shouldRenderTables && typeof renderTables === 'function') renderTables(); } catch (e) { console.warn(e); }
+        try { if (shouldGenerateTeacherInputs && MY_SCHOOL && typeof generateTeacherInputs === 'function') generateTeacherInputs(); } catch (e) { console.warn(e); }
+        try { if (typeof updateStatusPanel === 'function') updateStatusPanel(); } catch (e) { console.warn(e); }
+    };
+
+    const scheduler = window.WorkspaceUiRefreshScheduler;
+    if (scheduler && typeof scheduler.schedule === 'function') {
+        scheduler.schedule(label, refresh, options);
+        return;
+    }
+
     if (__workspaceRefreshTimer) {
         clearTimeout(__workspaceRefreshTimer);
         __workspaceRefreshTimer = null;
     }
 
     const delay = Math.max(0, Number(options.delay || 120));
-    const run = () => {
+    __workspaceRefreshTimer = window.setTimeout(() => {
         __workspaceRefreshTimer = null;
-        const shouldRenderTables = options.renderTables !== false;
-        const shouldGenerateTeacherInputs = options.generateTeacherInputs !== false;
-        const refresh = () => {
-            try { if (typeof updateSchoolSelect === 'function') updateSchoolSelect(); } catch (e) { console.warn(e); }
-            try { if (typeof updateMySchoolSelect === 'function') updateMySchoolSelect(); } catch (e) { console.warn(e); }
-            try { if (shouldRenderTables && typeof renderTables === 'function') renderTables(); } catch (e) { console.warn(e); }
-            try { if (shouldGenerateTeacherInputs && MY_SCHOOL && typeof generateTeacherInputs === 'function') generateTeacherInputs(); } catch (e) { console.warn(e); }
-            try { if (typeof updateStatusPanel === 'function') updateStatusPanel(); } catch (e) { console.warn(e); }
-        };
         scheduleStartupHydration(label, refresh, {
             idle: options.idle !== false,
             timeout: Number(options.timeout || 1600)
         });
-    };
-
-    __workspaceRefreshTimer = window.setTimeout(run, delay);
+    }, delay);
 }
 
 // Moved to startup-hydration-runtime.js (window.StartupHydrationScheduler).
