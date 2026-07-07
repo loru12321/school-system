@@ -2028,10 +2028,10 @@ const DataManager = {
         this.persistGrade9IndicatorTemplate();
 
         if (!skipCloudSync && typeof saveCloudData === 'function') {
-            UI.toast('💾 参数已暂存，正在后台同步...', 'info');
-            const ok = await saveCloudData({ background: true, sourceLabel: 'params-auto-save' });
+            UI.toast('💾 参数已暂存，正在同步云端...', 'info');
+            const ok = await saveCloudData({ background: false, forceUpload: true, sourceLabel: 'params-save' });
             if (ok) {
-                UI.toast('✅ 参数已写入本地缓存，云端将继续后台同步', 'success');
+                UI.toast('✅ 参数已同步到云端', 'success');
             } else {
                 UI.toast('⚠️ 参数已暂存，本次未成功同步到云端', 'warning');
             }
@@ -2364,4 +2364,3 @@ const DataManager = {
         }
     }
 }; // DataManager 对象结束；SQL 相关逻辑已拆分到 public/assets/js/data-manager-sql.js
-

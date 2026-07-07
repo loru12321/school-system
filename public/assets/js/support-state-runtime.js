@@ -46,12 +46,14 @@
             ind1: String(source.ind1 || '').trim(),
             ind2: String(source.ind2 || '').trim(),
             // Standard field: highSchoolLine. Backwards-compat aliases:
-            // graduateHighSchoolLine, highSchoolAdmissionLine, highSchoolScoreLine.
+            // graduateHighSchoolLine, highSchoolAdmissionLine, highSchoolScoreLine,
+            // and the Chinese import/export label.
             highSchoolLine: String(
                 source.highSchoolLine
                 || source.graduateHighSchoolLine
                 || source.highSchoolAdmissionLine
                 || source.highSchoolScoreLine
+                || source['中考高中过线分数']
                 || ''
             ).trim()
         };

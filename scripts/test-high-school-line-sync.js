@@ -75,6 +75,16 @@ assert.strictEqual(
     true,
     'hasPayloadIndicatorParams: highSchoolAdmissionLine alias must be recognised'
 );
+assert.strictEqual(
+    hasPayloadIndicatorParams({ INDICATOR_PARAMS: { highSchoolScoreLine: '390' } }),
+    true,
+    'hasPayloadIndicatorParams: highSchoolScoreLine alias must be recognised'
+);
+assert.strictEqual(
+    hasPayloadIndicatorParams({ INDICATOR_PARAMS: { 中考高中过线分数: '390' } }),
+    true,
+    'hasPayloadIndicatorParams: Chinese high-school line field must be recognised'
+);
 
 // All empty → must return false
 assert.strictEqual(
@@ -176,6 +186,11 @@ SupportState.setIndicator({ ind1: '', ind2: '', highSchoolScoreLine: '430' });
 ind = SupportState.getIndicator();
 assert.strictEqual(ind.highSchoolLine, '430', 'support-state: highSchoolScoreLine alias must normalise to highSchoolLine');
 
+// Chinese field name
+SupportState.setIndicator({ ind1: '', ind2: '', 中考高中过线分数: '440' });
+ind = SupportState.getIndicator();
+assert.strictEqual(ind.highSchoolLine, '440', 'support-state: Chinese high-school line field must normalise to highSchoolLine');
+
 // Round-trip: clearSupportState resets to empty string (not undefined)
 SupportState.clearSupportState();
 ind = SupportState.getIndicator();
@@ -233,8 +248,15 @@ console.log('✅ 6. 二模 admission gate intact — passed');
 const workspaceSource = fs.readFileSync(
     path.join(root, 'public/assets/js/cloud-workspace-runtime.js'), 'utf8');
 assert.ok(
-    workspaceSource.includes('params.highSchoolLine || params.graduateHighSchoolLine || params.highSchoolAdmissionLine'),
+    workspaceSource.includes('params.highSchoolLine')
+        && workspaceSource.includes('params.graduateHighSchoolLine')
+        && workspaceSource.includes('params.highSchoolAdmissionLine'),
     'cloud-workspace-runtime: hasWorkspaceIndicatorParams must include highSchoolLine in the check'
+);
+assert.ok(
+    workspaceSource.includes("params.highSchoolScoreLine")
+        && workspaceSource.includes("params['中考高中过线分数']"),
+    'cloud-workspace-runtime: hasWorkspaceIndicatorParams must include all highSchoolLine aliases'
 );
 
 console.log('✅ 7. cloud-workspace-runtime hasWorkspaceIndicatorParams — passed');
@@ -247,5 +269,30 @@ assert.ok(
 );
 
 console.log('✅ 8. cloud.js exports — passed');
+
+// ─── 9. Explicit parameter saves must wait for cloud flush ──────────────────
+
+const paramsRuntimeSource = fs.readFileSync(
+    path.join(root, 'public/assets/js/data-manager-params-runtime.js'), 'utf8');
+assert.ok(
+    paramsRuntimeSource.includes("saveCloudData({ background: false, forceUpload: true, sourceLabel: 'params-save' })"),
+    'parameter save must foreground-flush highSchoolLine to cloud before showing success'
+);
+
+const saveSyncSource = fs.readFileSync(
+    path.join(root, 'public/assets/js/data-manager-save-sync-runtime.js'), 'utf8');
+assert.ok(
+    saveSyncSource.includes("saveCloudData({ background: false, forceUpload: true, sourceLabel: 'save-and-sync' })"),
+    'save-and-sync must foreground-flush to cloud instead of only creating a background queue'
+);
+
+const coreRuntimeSource = fs.readFileSync(
+    path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8');
+assert.ok(
+    coreRuntimeSource.includes("saveCloudData({ background: false, forceUpload: true, sourceLabel: 'params-save' })"),
+    'legacy data-manager params save must also foreground-flush highSchoolLine to cloud'
+);
+
+console.log('✅ 9. explicit cloud flush contract — passed');
 
 console.log('\n✅ All highSchoolLine sync round-trip tests passed.');

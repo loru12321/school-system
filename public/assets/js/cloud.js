@@ -949,7 +949,12 @@
         // set (but empty ind1/ind2) is not needlessly overwritten by supplement.
         return !!String(params.ind1 || '').trim()
             || !!String(params.ind2 || '').trim()
-            || !!String(params.highSchoolLine || params.graduateHighSchoolLine || params.highSchoolAdmissionLine || '').trim();
+            || !!String(params.highSchoolLine
+                || params.graduateHighSchoolLine
+                || params.highSchoolAdmissionLine
+                || params.highSchoolScoreLine
+                || params['中考高中过线分数']
+                || '').trim();
     }
 
     function hasPayloadAliasSettings(payload) {
@@ -971,6 +976,7 @@
                 || src.graduateHighSchoolLine
                 || src.highSchoolAdmissionLine
                 || src.highSchoolScoreLine
+                || src['中考高中过线分数']
                 || ''
             ).trim()
         };

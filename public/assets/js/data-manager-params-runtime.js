@@ -165,9 +165,9 @@
         }
 
         if (!skipCloudSync && typeof root.saveCloudData === 'function') {
-            safeToast('💾 参数已暂存，正在后台同步...', 'info');
-            const ok = await root.saveCloudData({ background: true, sourceLabel: 'params-auto-save' });
-            if (ok) safeToast('✅ 参数已写入本地缓存，云端将继续后台同步', 'success');
+            safeToast('💾 参数已暂存，正在同步云端...', 'info');
+            const ok = await root.saveCloudData({ background: false, forceUpload: true, sourceLabel: 'params-save' });
+            if (ok) safeToast('✅ 参数已同步到云端', 'success');
             else safeToast('⚠️ 参数已暂存，本次未成功同步到云端', 'warning');
             return;
         }

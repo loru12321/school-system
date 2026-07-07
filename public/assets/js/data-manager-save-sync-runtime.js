@@ -58,14 +58,14 @@
             if (typeof root.saveCloudData !== 'function') {
                 throw new Error('saveCloudData unavailable');
             }
-            const ok = await root.saveCloudData({ background: true, sourceLabel: 'save-and-sync' });
-            if (!ok) throw new Error('云端同步任务未能创建');
+            const ok = await root.saveCloudData({ background: false, forceUpload: true, sourceLabel: 'save-and-sync' });
+            if (!ok) throw new Error('云端同步失败');
 
             if (root.UI && typeof root.UI === 'object' && typeof root.UI.loading === 'function') {
                 root.UI.loading(false);
             }
             if (root.Swal && typeof root.Swal.fire === 'function') {
-                root.Swal.fire('成功', '数据已更新，本地已秒级生效，云端正在后台同步。', 'success');
+                root.Swal.fire('成功', '数据已更新，并已同步到云端。', 'success');
             }
         } catch (error) {
             if (root.UI && typeof root.UI === 'object' && typeof root.UI.loading === 'function') {
