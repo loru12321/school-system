@@ -1008,10 +1008,25 @@ async function smokeSwitchModule(page, id) {
             const section = document.getElementById(moduleId);
             if (!section) return false;
             const style = getComputedStyle(section);
-            return style.display !== 'none' && section.classList.contains('active');
+            const ready = style.display !== 'none' && section.classList.contains('active');
+            if (ready) return true;
+
+            const retryState = window.__SMOKE_SWITCH_RETRY_STATE__ || (window.__SMOKE_SWITCH_RETRY_STATE__ = {});
+            const state = retryState[moduleId] || (retryState[moduleId] = { count: 0, lastAt: 0 });
+            const now = performance.now();
+            if (typeof window.switchTab === 'function' && state.count < 2 && now - state.lastAt > 900) {
+                state.count += 1;
+                state.lastAt = now;
+                try {
+                    window.switchTab(moduleId);
+                } catch (_) {
+                    // The outer smoke path will collect the real module state.
+                }
+            }
+            return false;
         }, id, { timeout: Math.min(MODULE_SWITCH_TIMEOUT_MS, MODULE_SWITCH_READY_TIMEOUT_MS) });
     } catch (error) {
-        await page.waitForTimeout(250).catch(() => {});
+        await page.waitForTimeout(650).catch(() => {});
         const fallback = await collectState();
         if (fallback.ok) {
             const settleMs = getModuleSwitchSettleMs(id);
