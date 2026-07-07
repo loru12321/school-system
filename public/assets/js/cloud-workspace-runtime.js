@@ -407,6 +407,7 @@
     const COHORT_EXAM_META_CACHE_MS = 2 * 60 * 1000;
     const COHORT_EXAM_META_PAGE_SIZE = 120;
     const COHORT_EXAM_LATEST_META_LIMIT = 24;
+    const workspaceSyncInlinePayloads = new Map();
 
     function nowMs() {
         return window.performance && typeof window.performance.now === 'function'
@@ -1925,6 +1926,9 @@
                 queuedAt: nowIso,
                 currentExamId: payload?.CURRENT_EXAM_ID || ''
             };
+            if (!cacheWritten && payload && typeof payload === 'object' && !background && opts.forceUpload === true) {
+                workspaceSyncInlinePayloads.set(key, payload);
+            }
             if (!cacheWritten && mode === 'exam' && payload && typeof payload === 'object') {
                 // Guard: only inline payload when it fits safely in localStorage.
                 // A compact exam shard for ~5 000 rows is typically 1–2 MB serialized.
@@ -2041,10 +2045,19 @@
                 if (!cacheKey) continue;
 
                 const payload = await readCachedWorkspaceSnapshot(cacheKey)
+                    || (workspaceSyncInlinePayloads.has(cacheKey) ? workspaceSyncInlinePayloads.get(cacheKey) : null)
                     || ((job.mode || 'workspace') === 'exam' && job.inlinePayload && typeof job.inlinePayload === 'object'
                         ? job.inlinePayload
                         : null);
                 if (!payload) {
+                    if (targetKey && cacheKey === targetKey) {
+                        writeWorkspaceSyncMeta(cacheKey, {
+                            pendingCloudSync: true,
+                            pendingSyncSource: String(job.sourceLabel || '').trim(),
+                            lastCloudError: '本地同步缓存不可用，请刷新后重试',
+                            lastFailedSyncAt: new Date().toISOString()
+                        });
+                    }
                     delete queue[cacheKey];
                     writeWorkspaceSyncQueue(queue);
                     continue;
@@ -2060,6 +2073,7 @@
 
                 if (!opts.forceUpload && currentMeta.lastUploadedHash && currentMeta.lastUploadedHash === contentHash) {
                     delete queue[cacheKey];
+                    workspaceSyncInlinePayloads.delete(cacheKey);
                     writeWorkspaceSyncQueue(queue);
                     writeWorkspaceSyncMeta(cacheKey, {
                         contentHash,
@@ -2153,6 +2167,8 @@
                         message
                     });
                     if (targetKey && cacheKey === targetKey) targetOk = false;
+                } finally {
+                    if (!targetKey || cacheKey === targetKey) workspaceSyncInlinePayloads.delete(cacheKey);
                 }
             }
 

@@ -1266,6 +1266,13 @@ assert.ok(
     'exam cloud saves should fall back to an inline compact payload when IndexedDB cache writes are unavailable'
 );
 assert.ok(
+    cloudWorkspaceRuntime.includes('const workspaceSyncInlinePayloads = new Map();')
+        && cloudWorkspaceRuntime.includes('workspaceSyncInlinePayloads.set(key, payload);')
+        && cloudWorkspaceRuntime.includes('workspaceSyncInlinePayloads.has(cacheKey) ? workspaceSyncInlinePayloads.get(cacheKey) : null')
+        && cloudWorkspaceRuntime.includes("lastCloudError: '本地同步缓存不可用，请刷新后重试'"),
+    'foreground workspace cloud saves should keep an in-memory payload fallback when IndexedDB cache writes are unavailable'
+);
+assert.ok(
     cloudWorkspaceRuntime.includes('function scheduleCachedWorkspaceSnapshotWrite')
         && cloudWorkspaceRuntime.includes('function scheduleCompareSelectorsRefresh')
         && cloudWorkspaceRuntime.includes('refreshCompareSelectorsForMode(options.background === true)')
