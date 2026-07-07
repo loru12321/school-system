@@ -5052,12 +5052,7 @@ async function perfRunPhase(label, task) {
 }
 
 async function processData() {
-    const endProcessPhase = perfBeginPhase('processData');
-    try {
-        return await processDataInner();
-    } finally {
-        endProcessPhase();
-    }
+    return processDataInner();
 }
 
 async function processDataInner() {
@@ -5128,7 +5123,16 @@ async function processDataInner() {
             ))
         ]))
         : schoolKeysForWorker;
-    const result = await perfRunPhase('processData:worker', () => WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker, HIGH_SCHOOL_LINE: highSchoolLine, HIGH_SCHOOL_ADMISSION_ALLOWED: highSchoolAdmissionAllowed }));
+    let workerTask;
+    const endWorkerSubmitPhase = perfBeginPhase('processData:worker-submit');
+    try {
+        workerTask = WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker, HIGH_SCHOOL_LINE: highSchoolLine, HIGH_SCHOOL_ADMISSION_ALLOWED: highSchoolAdmissionAllowed });
+    } finally {
+        endWorkerSubmitPhase();
+    }
+    await perfYieldToMain();
+    const result = await workerTask;
+    await perfRunPhase('processData:worker-result', async () => {});
 
     setRawData(result.RAW_DATA || []);
 

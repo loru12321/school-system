@@ -98,9 +98,13 @@
             worker.onerror = (event) => reject(event && event.message ? event.message : 'worker-error');
 
             const schoolsLite = buildSchoolsLite(data || {});
+            const payload = Object.assign({}, data || {}, {
+                SCHOOLS: undefined,
+                SCHOOLS_LITE: schoolsLite
+            });
             worker.postMessage({
                 cmd: 'PROCESS_ALL',
-                data: Object.assign({}, data || {}, { SCHOOLS_LITE: schoolsLite })
+                data: payload
             });
         });
     }
