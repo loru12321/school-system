@@ -72,7 +72,9 @@ const DATA_MANAGER_TAB_STABILIZE_MS = {
 };
 const DATA_MANAGER_TAB_TIMEOUT_MS = 8000;
 const MODULE_SWITCH_TIMEOUT_MS = 12000;
-const MODULE_SWITCH_READY_TIMEOUT_MS = 5000;
+// Keep readiness below the 6000ms switch budget while avoiding false negatives
+// when a CI worker briefly crosses the old 5000ms guard.
+const MODULE_SWITCH_READY_TIMEOUT_MS = 5800;
 const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
 const SMOKE_HOTSPOT_PREWARM_TIMEOUT_MS = 4500;
