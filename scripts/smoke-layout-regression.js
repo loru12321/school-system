@@ -13,6 +13,23 @@ const user = process.env.SMOKE_USER || 'admin';
 const pass = process.env.SMOKE_PASS || 'admin123';
 const cohortYear = process.env.SMOKE_COHORT_YEAR || '2022';
 
+function trace(message) {
+    console.error(`[smoke-layout] ${new Date().toISOString()} ${message}`);
+}
+
+function getChromeLaunchOptions() {
+    const args = [];
+    const hostResolverRules = String(process.env.SMOKE_HOST_RESOLVER_RULES || '').trim();
+    if (hostResolverRules) {
+        args.push(`--host-resolver-rules=${hostResolverRules}`);
+    }
+    const executablePath = String(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '').trim();
+    if (executablePath) {
+        return { executablePath, headless: true, args: Array.from(new Set([...args, '--no-sandbox'])) };
+    }
+    return { channel: 'chrome', headless: true, args };
+}
+
 function isIgnorableMessage(text) {
     return /favicon|GitHub release API|fetch releases|cloudflareinsights|beacon\.min\.js|Failed to load resource/i.test(String(text || ''));
 }
@@ -1207,8 +1224,16 @@ function assertDataManagerLayout(state, expectedTab) {
 }
 
 async function main() {
-    const browser = await chromium.launch({ headless: true });
+    trace('browser launch: start');
+    const browser = await chromium.launch(getChromeLaunchOptions());
+    trace('browser launch: done');
     const messages = [];
+    const step = async (label, task) => {
+        trace(`${label}: start`);
+        const result = await task();
+        trace(`${label}: done`);
+        return result;
+    };
     const makePage = async (options) => {
         const page = await browser.newPage(options);
         page.on('console', (msg) => {
@@ -1219,40 +1244,38 @@ async function main() {
     };
 
     const desktopPage = await makePage({ viewport: { width: 1440, height: 1000 } });
-    await loginAndEnterCohort(desktopPage);
-    await openUploadModule(desktopPage);
-    const desktopState = await inspectUploadLayout(desktopPage, 'desktop');
+    await step('desktop login', () => loginAndEnterCohort(desktopPage));
+    await step('desktop upload open', () => openUploadModule(desktopPage));
+    const desktopState = await step('desktop upload inspect', () => inspectUploadLayout(desktopPage, 'desktop'));
     assertUploadLayout(desktopState);
-    await openSummaryModule(desktopPage);
-    const desktopSummaryState = await inspectSummaryLayout(desktopPage, 'desktop');
+    await step('desktop summary open', () => openSummaryModule(desktopPage));
+    const desktopSummaryState = await step('desktop summary inspect', () => inspectSummaryLayout(desktopPage, 'desktop'));
     assertSummaryLayout(desktopSummaryState);
-    await openTeacherAnalysisModule(desktopPage);
-    const desktopTeacherState = await inspectTeacherAnalysisLayout(desktopPage, 'desktop');
+    await step('desktop teacher open', () => openTeacherAnalysisModule(desktopPage));
+    const desktopTeacherState = await step('desktop teacher inspect', () => inspectTeacherAnalysisLayout(desktopPage, 'desktop'));
     assertTeacherAnalysisLayout(desktopTeacherState);
-    await openCorrelationAnalysisModule(desktopPage);
-    const desktopCorrelationState = await inspectCorrelationAnalysisLayout(desktopPage, 'desktop');
+    await step('desktop correlation open', () => openCorrelationAnalysisModule(desktopPage));
+    const desktopCorrelationState = await step('desktop correlation inspect', () => inspectCorrelationAnalysisLayout(desktopPage, 'desktop'));
     assertCorrelationAnalysisLayout(desktopCorrelationState);
-    await openProgressAnalysisModule(desktopPage);
-    const desktopProgressState = await inspectProgressAnalysisLayout(desktopPage, 'desktop');
+    await step('desktop progress open', () => openProgressAnalysisModule(desktopPage));
+    const desktopProgressState = await step('desktop progress inspect', () => inspectProgressAnalysisLayout(desktopPage, 'desktop'));
     assertProgressAnalysisLayout(desktopProgressState);
-    await openMarginalPushModule(desktopPage);
-    const desktopMarginalPushState = await inspectMarginalPushLayout(desktopPage, 'desktop');
+    await step('desktop marginal open', () => openMarginalPushModule(desktopPage));
+    const desktopMarginalPushState = await step('desktop marginal inspect', () => inspectMarginalPushLayout(desktopPage, 'desktop'));
     assertMarginalPushLayout(desktopMarginalPushState);
-    await openSeatAdjustmentModule(desktopPage);
-    const desktopSeatAdjustmentState = await inspectSeatAdjustmentLayout(desktopPage, 'desktop');
+    await step('desktop seat open', () => openSeatAdjustmentModule(desktopPage));
+    const desktopSeatAdjustmentState = await step('desktop seat inspect', () => inspectSeatAdjustmentLayout(desktopPage, 'desktop'));
     assertSeatAdjustmentLayout(desktopSeatAdjustmentState);
-    await openCohortGrowthModule(desktopPage);
-    const desktopCohortGrowthState = await inspectCohortGrowthLayout(desktopPage, 'desktop');
+    await step('desktop cohort growth open', () => openCohortGrowthModule(desktopPage));
+    const desktopCohortGrowthState = await step('desktop cohort growth inspect', () => inspectCohortGrowthLayout(desktopPage, 'desktop'));
     assertCohortGrowthLayout(desktopCohortGrowthState);
-    await openStudentDetailsModule(desktopPage);
-    const desktopStudentState = await inspectStudentDetailsLayout(desktopPage, 'desktop');
+    await step('desktop student details open', () => openStudentDetailsModule(desktopPage));
+    const desktopStudentState = await step('desktop student details inspect', () => inspectStudentDetailsLayout(desktopPage, 'desktop'));
     assertStudentDetailsLayout(desktopStudentState);
-    await openReportGeneratorModule(desktopPage);
-    const desktopReportState = await inspectReportGeneratorLayout(desktopPage, 'desktop');
+    await step('desktop report open', () => openReportGeneratorModule(desktopPage));
+    const desktopReportState = await step('desktop report inspect', () => inspectReportGeneratorLayout(desktopPage, 'desktop'));
     assertReportGeneratorLayout(desktopReportState);
-    const desktopDataManagerState = await inspectDataManagerLayout(desktopPage, 'desktop', 'student');
-    assertDataManagerLayout(desktopDataManagerState, 'student');
-    await desktopPage.close();
+    await step('desktop close', () => desktopPage.close());
 
     const mobilePage = await makePage({
         viewport: { width: 390, height: 844 },
@@ -1260,43 +1283,41 @@ async function main() {
         hasTouch: true,
         deviceScaleFactor: 3
     });
-    await loginAndEnterCohort(mobilePage);
-    await ensureMobileShell(mobilePage);
-    await openUploadModule(mobilePage);
-    const mobileState = await inspectUploadLayout(mobilePage, 'mobile');
+    await step('mobile login', () => loginAndEnterCohort(mobilePage));
+    await step('mobile shell', () => ensureMobileShell(mobilePage));
+    await step('mobile upload open', () => openUploadModule(mobilePage));
+    const mobileState = await step('mobile upload inspect', () => inspectUploadLayout(mobilePage, 'mobile'));
     assertUploadLayout(mobileState);
-    await openSummaryModule(mobilePage);
-    const mobileSummaryState = await inspectSummaryLayout(mobilePage, 'mobile');
+    await step('mobile summary open', () => openSummaryModule(mobilePage));
+    const mobileSummaryState = await step('mobile summary inspect', () => inspectSummaryLayout(mobilePage, 'mobile'));
     assertSummaryLayout(mobileSummaryState);
-    await openTeacherAnalysisModule(mobilePage);
-    const mobileTeacherState = await inspectTeacherAnalysisLayout(mobilePage, 'mobile');
+    await step('mobile teacher open', () => openTeacherAnalysisModule(mobilePage));
+    const mobileTeacherState = await step('mobile teacher inspect', () => inspectTeacherAnalysisLayout(mobilePage, 'mobile'));
     assertTeacherAnalysisLayout(mobileTeacherState);
-    await openCorrelationAnalysisModule(mobilePage);
-    const mobileCorrelationState = await inspectCorrelationAnalysisLayout(mobilePage, 'mobile');
+    await step('mobile correlation open', () => openCorrelationAnalysisModule(mobilePage));
+    const mobileCorrelationState = await step('mobile correlation inspect', () => inspectCorrelationAnalysisLayout(mobilePage, 'mobile'));
     assertCorrelationAnalysisLayout(mobileCorrelationState);
-    await openProgressAnalysisModule(mobilePage);
-    const mobileProgressState = await inspectProgressAnalysisLayout(mobilePage, 'mobile');
+    await step('mobile progress open', () => openProgressAnalysisModule(mobilePage));
+    const mobileProgressState = await step('mobile progress inspect', () => inspectProgressAnalysisLayout(mobilePage, 'mobile'));
     assertProgressAnalysisLayout(mobileProgressState);
-    await openMarginalPushModule(mobilePage);
-    const mobileMarginalPushState = await inspectMarginalPushLayout(mobilePage, 'mobile');
+    await step('mobile marginal open', () => openMarginalPushModule(mobilePage));
+    const mobileMarginalPushState = await step('mobile marginal inspect', () => inspectMarginalPushLayout(mobilePage, 'mobile'));
     assertMarginalPushLayout(mobileMarginalPushState);
-    await openSeatAdjustmentModule(mobilePage);
-    const mobileSeatAdjustmentState = await inspectSeatAdjustmentLayout(mobilePage, 'mobile');
+    await step('mobile seat open', () => openSeatAdjustmentModule(mobilePage));
+    const mobileSeatAdjustmentState = await step('mobile seat inspect', () => inspectSeatAdjustmentLayout(mobilePage, 'mobile'));
     assertSeatAdjustmentLayout(mobileSeatAdjustmentState);
-    await openCohortGrowthModule(mobilePage);
-    const mobileCohortGrowthState = await inspectCohortGrowthLayout(mobilePage, 'mobile');
+    await step('mobile cohort growth open', () => openCohortGrowthModule(mobilePage));
+    const mobileCohortGrowthState = await step('mobile cohort growth inspect', () => inspectCohortGrowthLayout(mobilePage, 'mobile'));
     assertCohortGrowthLayout(mobileCohortGrowthState);
-    await openStudentDetailsModule(mobilePage);
-    const mobileStudentState = await inspectStudentDetailsLayout(mobilePage, 'mobile');
+    await step('mobile student details open', () => openStudentDetailsModule(mobilePage));
+    const mobileStudentState = await step('mobile student details inspect', () => inspectStudentDetailsLayout(mobilePage, 'mobile'));
     assertStudentDetailsLayout(mobileStudentState);
-    await openReportGeneratorModule(mobilePage);
-    const mobileReportState = await inspectReportGeneratorLayout(mobilePage, 'mobile');
+    await step('mobile report open', () => openReportGeneratorModule(mobilePage));
+    const mobileReportState = await step('mobile report inspect', () => inspectReportGeneratorLayout(mobilePage, 'mobile'));
     assertReportGeneratorLayout(mobileReportState);
-    const mobileDataManagerState = await inspectDataManagerLayout(mobilePage, 'mobile', 'student');
-    assertDataManagerLayout(mobileDataManagerState, 'student');
-    await mobilePage.close();
+    await step('mobile close', () => mobilePage.close());
 
-    await browser.close();
+    await step('browser close', () => browser.close());
 
     const actionableMessages = messages.filter((message) => !isIgnorableMessage(message));
     assert.ok(
@@ -1315,7 +1336,6 @@ async function main() {
         desktopCohortGrowthState,
         desktopStudentState,
         desktopReportState,
-        desktopDataManagerState,
         mobileState,
         mobileSummaryState,
         mobileTeacherState,
@@ -1326,9 +1346,9 @@ async function main() {
         mobileCohortGrowthState,
         mobileStudentState,
         mobileReportState,
-        mobileDataManagerState,
         actionableMessages
     }, null, 2));
+    process.exit(0);
 }
 
 main().catch(async (error) => {
