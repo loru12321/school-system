@@ -77,7 +77,11 @@ const budgets = {
   publicCountyAnalysisJs: 125_000,
   publicProgressAnalysisJs: 95_000,
   publicTeacherAnalysisCoreJs: 85_000,
-  publicReportRenderJs: 65_000
+  // 2026-07-08: 65_000 -> 65_200 for P1-S3 XSS escaping (6 tmEscapeHtml wraps on
+  // attacker-influenceable student name/school/class before innerHTML). File was
+  // already 13 bytes under the old ceiling; the security fix is at minimum size
+  // (bare global tmEscapeHtml, no local helper) so a small bump is unavoidable.
+  publicReportRenderJs: 65_200
 };
 
 const actual = {

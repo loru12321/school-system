@@ -678,7 +678,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         ${fluentStyle}
         <div class="${shellClass}">
         <div class="report-header" style="border-bottom:none; margin-bottom:10px; text-align:center;">
-            <h3 style="font-family:'Microsoft YaHei', sans-serif; font-weight:800; color:#1e293b; letter-spacing:1px; margin:0;">${stu.school} 学生学业发展报告</h3>
+            <h3 style="font-family:'Microsoft YaHei', sans-serif; font-weight:800; color:#1e293b; letter-spacing:1px; margin:0;">${tmEscapeHtml(stu.school)} 学生学业发展报告</h3>
             <p style="color:#94a3b8; font-size:12px; margin-top:5px;">生成日期: ${genDate}</p>
         </div>
         ${cloudCompareHintHtml}
@@ -686,8 +686,8 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         <div class="fluent-card report-student-strip" style="padding:15px 25px; background:linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div style="display:flex; align-items:baseline; gap:15px;">
-                    <span style="font-size:24px; font-weight:800; color:#1e3a8a;">${stu.name}</span>
-                    <span style="font-size:14px; color:#475569; background:#fff; padding:2px 8px; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">${stu.class}</span>
+                    <span style="font-size:24px; font-weight:800; color:#1e3a8a;">${tmEscapeHtml(stu.name)}</span>
+                    <span style="font-size:14px; color:#475569; background:#fff; padding:2px 8px; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">${tmEscapeHtml(stu.class)}</span>
                 </div>
                 <div style="font-size:13px; color:#64748b; font-family:monospace;">考号: ${stu.id}</div>
             </div>
@@ -1045,8 +1045,8 @@ function renderInstagramCard(stu) {
                     <div class="insta-header">
                         <div class="insta-avatar-ring"><div class="insta-avatar">${avatarLetter}</div></div>
                         <div class="insta-user-info">
-                            <div class="insta-username">${stu.name} <i class="ti ti-discount-check insta-verified"></i></div>
-                            <div class="insta-location">${stu.school} · ${stu.class}</div>
+                            <div class="insta-username">${tmEscapeHtml(stu.name)} <i class="ti ti-discount-check insta-verified"></i></div>
+                            <div class="insta-location">${tmEscapeHtml(stu.school)} · ${tmEscapeHtml(stu.class)}</div>
                         </div>
                         <i class="ti ti-dots"></i>
                     </div>
@@ -1072,7 +1072,7 @@ function renderInstagramCard(stu) {
                     <div class="insta-caption">
                         <span class="insta-caption-name">${CONFIG.name}教务处</span>
                         本次考试成绩已出炉！${statusTag}，请查收您的学习报告。
-                        <span class="insta-tags">#期末考试 #${stu.school} #学习报告</span>
+                        <span class="insta-tags">#期末考试 #${tmEscapeHtml(stu.school)} #学习报告</span>
                     </div>
 
                     <!-- 2. 🟢 新增：模块④ 学情结构一句话诊断 -->

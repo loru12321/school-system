@@ -1,4 +1,14 @@
 // comparison-render-runtime.js — Comparison views, mutual aid groups, findPreviousRecord, getStudentExamHistory (extracted from app.js)
+
+const comparisonEscapeHtml = typeof window.tmEscapeHtml === 'function'
+    ? window.tmEscapeHtml
+    : (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
 function setSingleSelectOptions(selectEl, values, placeholderText, preferredValue) {
     if (!selectEl) return '';
     const list = Array.isArray(values)
@@ -8,7 +18,7 @@ function setSingleSelectOptions(selectEl, values, placeholderText, preferredValu
     if (placeholderText !== null && placeholderText !== undefined) {
         html += `<option value="">${placeholderText}</option>`;
     }
-    html += list.map(value => `<option value="${value}">${value}</option>`).join('');
+    html += list.map(value => `<option value="${comparisonEscapeHtml(value)}">${comparisonEscapeHtml(value)}</option>`).join('');
     selectEl.innerHTML = html;
 
     const preferred = preferredValue == null ? '' : String(preferredValue).trim();
@@ -141,11 +151,11 @@ function renderAidGroupsHTML(groups, sub) {
         const allScores = [g.leader, ...g.members].map(s => sub === 'total' ? s.total : (s.scores[sub] || 0)); const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
         const membersHtml = g.members.map(m => {
             const score = sub === 'total' ? m.total : (m.scores[sub] || 0); let tag = ''; if (m._subRankPct > 0.8) tag = `<span class="aid-tag tag-weak">需帮扶</span>`;
-            return `<div class="aid-role-row aid-member"><div class="aid-avatar">${m.name[0]}</div><div class="aid-info"><div class="aid-name">${m.name} ${tag}</div><div class="aid-score">${sub}: ${score}</div></div></div>`;
+            return `<div class="aid-role-row aid-member"><div class="aid-avatar">${comparisonEscapeHtml(m.name[0])}</div><div class="aid-info"><div class="aid-name">${comparisonEscapeHtml(m.name)} ${tag}</div><div class="aid-score">${sub}: ${score}</div></div></div>`;
         }).join('');
         const leaderScore = sub === 'total' ? g.leader.total : (g.leader.scores[sub] || 0);
         const card = document.createElement('div'); card.className = 'aid-card';
-        card.innerHTML = `<div class="aid-header"><span>第 ${g.id} 组</span><span style="font-weight:normal; color:#666;">均分: ${avg.toFixed(1)}</span></div><div class="aid-body"><div class="aid-role-row aid-leader"><div class="aid-avatar">组</div><div class="aid-info"><div class="aid-name">${g.leader.name} <span class="aid-tag tag-strong">组长</span></div><div class="aid-score">${sub}: ${leaderScore}</div></div></div>${membersHtml}</div>`;
+        card.innerHTML = `<div class="aid-header"><span>第 ${g.id} 组</span><span style="font-weight:normal; color:#666;">均分: ${avg.toFixed(1)}</span></div><div class="aid-body"><div class="aid-role-row aid-leader"><div class="aid-avatar">组</div><div class="aid-info"><div class="aid-name">${comparisonEscapeHtml(g.leader.name)} <span class="aid-tag tag-strong">组长</span></div><div class="aid-score">${sub}: ${leaderScore}</div></div></div>${membersHtml}</div>`;
         aidGroupFragment.appendChild(card);
     });
     container.appendChild(aidGroupFragment);

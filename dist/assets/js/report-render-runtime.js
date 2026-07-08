@@ -205,7 +205,7 @@
         ${ne}
         <div class="${L?"student-report-shell student-report-shell-full":"student-report-shell"}">
         <div class="report-header" style="border-bottom:none; margin-bottom:10px; text-align:center;">
-            <h3 style="font-family:'Microsoft YaHei', sans-serif; font-weight:800; color:#1e293b; letter-spacing:1px; margin:0;">${e.school} 学生学业发展报告</h3>
+            <h3 style="font-family:'Microsoft YaHei', sans-serif; font-weight:800; color:#1e293b; letter-spacing:1px; margin:0;">${tmEscapeHtml(e.school)} 学生学业发展报告</h3>
             <p style="color:#94a3b8; font-size:12px; margin-top:5px;">生成日期: ${Tt}</p>
         </div>
         ${ce}
@@ -213,8 +213,8 @@
         <div class="fluent-card report-student-strip" style="padding:15px 25px; background:linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div style="display:flex; align-items:baseline; gap:15px;">
-                    <span style="font-size:24px; font-weight:800; color:#1e3a8a;">${e.name}</span>
-                    <span style="font-size:14px; color:#475569; background:#fff; padding:2px 8px; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">${e.class}</span>
+                    <span style="font-size:24px; font-weight:800; color:#1e3a8a;">${tmEscapeHtml(e.name)}</span>
+                    <span style="font-size:14px; color:#475569; background:#fff; padding:2px 8px; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">${tmEscapeHtml(e.class)}</span>
                 </div>
                 <div style="font-size:13px; color:#64748b; font-family:monospace;">考号: ${e.id}</div>
             </div>
@@ -368,8 +368,8 @@
                     <div class="insta-header">
                         <div class="insta-avatar-ring"><div class="insta-avatar">${H}</div></div>
                         <div class="insta-user-info">
-                            <div class="insta-username">${e.name} <i class="ti ti-discount-check insta-verified"></i></div>
-                            <div class="insta-location">${e.school} · ${e.class}</div>
+                            <div class="insta-username">${tmEscapeHtml(e.name)} <i class="ti ti-discount-check insta-verified"></i></div>
+                            <div class="insta-location">${tmEscapeHtml(e.school)} · ${tmEscapeHtml(e.class)}</div>
                         </div>
                         <i class="ti ti-dots"></i>
                     </div>
@@ -395,7 +395,7 @@
                     <div class="insta-caption">
                         <span class="insta-caption-name">${CONFIG.name}教务处</span>
                         本次考试成绩已出炉！${S}，请查收您的学习报告。
-                        <span class="insta-tags">#期末考试 #${e.school} #学习报告</span>
+                        <span class="insta-tags">#期末考试 #${tmEscapeHtml(e.school)} #学习报告</span>
                     </div>
 
                     <!-- 2. 🟢 新增：模块④ 学情结构一句话诊断 -->

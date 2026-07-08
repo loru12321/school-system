@@ -1030,6 +1030,15 @@ const DataManager = {
         }
     },
 
+    getScopedCacheKey: function (key) {
+        // Reuse the canonical user-prefix helper from cloud-workspace-runtime if
+        // available; fall back to local equivalent. Prevents cross-user PII leaks.
+        const prefix = typeof window.getIdbUserCachePrefix === 'function'
+            ? window.getIdbUserCachePrefix()
+            : '';
+        return prefix ? `cache_${prefix}${key}` : `cache_${key}`;
+    },
+
     removeExamBatchLocal: async function (examId) {
         const key = String(examId || '').trim();
         const db = CohortDB?.ensure?.();
@@ -1040,7 +1049,7 @@ const DataManager = {
         }
         CohortDB.removeStudentHistoryByExamId?.(key);
         if (window.idbKeyval?.del) {
-            try { await window.idbKeyval.del(`cache_${key}`); } catch (e) { console.warn('[DataManager] exam cache delete skipped:', e); }
+            try { await window.idbKeyval.del(this.getScopedCacheKey(key)); } catch (e) { console.warn('[DataManager] exam cache delete skipped:', e); }
         }
         if (String(CURRENT_EXAM_ID || window.CURRENT_EXAM_ID || db.currentExamId || '').trim() === key) {
             const fallback = getLatestExamRecordId(db.exams || {});

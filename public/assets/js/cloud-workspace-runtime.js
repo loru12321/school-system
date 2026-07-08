@@ -1222,6 +1222,14 @@
         }
     }
 
+    // Expose the canonical user-prefix helper so other cache writers (cloud.js,
+    // data-manager-core-runtime.js) can scope their IDB keys through ONE
+    // implementation instead of keeping divergent copies. Read-only reference;
+    // callers fall back to a local equivalent only if this is absent (load order).
+    if (typeof window.getIdbUserCachePrefix !== 'function') {
+        window.getIdbUserCachePrefix = getIdbUserPrefix;
+    }
+
     function dispatchWorkspaceSyncEvent(stage, detail = {}) {
         if (typeof window.CustomEvent !== 'function') return;
         window.dispatchEvent(new CustomEvent('cloud-sync-state', {

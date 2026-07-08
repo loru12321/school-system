@@ -1064,13 +1064,23 @@
         return base;
     }
 
+    function getScopedCacheKey(key) {
+        // Reuse the canonical user-prefix helper from cloud-workspace-runtime if
+        // available; fall back to a local equivalent. This ensures every IDB cache
+        // key is scoped per user, preventing cross-user PII leaks on shared devices.
+        const prefix = typeof window.getIdbUserCachePrefix === 'function'
+            ? window.getIdbUserCachePrefix()
+            : '';
+        return prefix ? `cache_${prefix}${key}` : `cache_${key}`;
+    }
+
     async function loadSnapshotPayloadByKey(key) {
         const snapshotKey = String(key || '').trim();
         if (!snapshotKey) return null;
 
         try {
             if (window.idbKeyval) {
-                const cached = await idbKeyval.get(`cache_${snapshotKey}`);
+                const cached = await idbKeyval.get(getScopedCacheKey(snapshotKey));
                 if (cached && typeof cached === 'object' && !needsIndicatorPayloadSupplement(cached)) return cached;
             }
         } catch (e) {
@@ -1088,7 +1098,7 @@
         const payload = parsePayload(data.content);
         try {
             if (window.idbKeyval && payload && typeof payload === 'object') {
-                await idbKeyval.set(`cache_${snapshotKey}`, payload);
+                await idbKeyval.set(getScopedCacheKey(snapshotKey), payload);
             }
         } catch (e) {
             console.warn('[CloudLoad] write snapshot cache failed:', e);
@@ -1178,7 +1188,7 @@
 
         try {
             if (window.idbKeyval && merged && typeof merged === 'object') {
-                await idbKeyval.set(`cache_${preferredKey}`, merged);
+                await idbKeyval.set(getScopedCacheKey(preferredKey), merged);
             }
         } catch (e) {
             console.warn('[CloudLoad] cache merged payload failed:', e);
