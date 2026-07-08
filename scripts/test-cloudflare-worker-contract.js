@@ -118,7 +118,9 @@ assert.ok(workerContractSource.includes("!hasSystemDataStorage(env) && hasSupaba
 assert.ok(workerContractSource.includes("!hasGatewayDataStorage(env) && hasSupabaseRestOrigin(env)"), 'managed REST should only fall back to Supabase when an origin is explicitly configured');
 assert.ok(workerContractSource.includes("env.SUPABASE_REST_API_KEY"), 'Supabase REST key must be read from env');
 assert.ok(!workerSystemData.includes("request.headers.get('apikey')"), 'Supabase REST proxy must not trust browser-provided apikey headers');
-assert.ok(workerSystemData.includes("import { resolveSession } from './worker-auth.js';"), 'system_data and managed REST writes must reuse gateway session auth');
+assert.ok(workerSystemData.includes("import { resolveSession, hasAnyRole, isAdmin } from './worker-auth.js';"), 'system_data auth must reuse gateway session and role helpers');
+assert.ok(workerSystemData.includes('const auth = await requireSystemDataSession(request, env);'), 'system_data reads and writes must require an app session before backend dispatch');
+assert.ok(workerSystemData.includes("hasAnyRole(session, ['admin', 'director', 'grade_director'])"), 'system_data writes should preserve existing management-role writers');
 assert.ok(workerSystemData.includes("const PROTECTED_REST_PATHS = new Set"), 'managed REST write paths should be explicitly protected');
 assert.ok(workerSystemData.includes("'POST', 'PUT', 'PATCH', 'DELETE'"), 'protected REST write methods should require a session');
 assert.ok(workerSystemData.includes('requireRestWriteSession(request, env)'), 'protected REST writes should enforce session validation before mutation');

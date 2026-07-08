@@ -1,5 +1,5 @@
 import { handleManagedRestRequest } from './worker-gateway-d1.js';
-import { resolveSession } from './worker-auth.js';
+import { resolveSession, hasAnyRole, isAdmin } from './worker-auth.js';
 import {
   normalizeText,
   normalizeOrigin,
@@ -92,6 +92,66 @@ async function requireRestWriteSession(request, env) {
   const resolved = await resolveSession(request, env);
   if (resolved?.error) return resolved.error;
   return null;
+}
+
+async function requireSystemDataSession(request, env) {
+  const resolved = await resolveSession(request, env);
+  if (resolved?.error) return { error: resolved.error };
+  return { session: resolved.session };
+}
+
+function canWriteSystemData(session) {
+  return hasAnyRole(session, ['admin', 'director', 'grade_director']);
+}
+
+function canWriteSystemDataKey(session, key) {
+  if (isAdmin(session)) return true;
+  const meta = inferSystemDataMeta(key);
+  return !!meta.cohortId;
+}
+
+function authorizeSystemDataMutationKeys(request, session, keys) {
+  if (!canWriteSystemData(session)) {
+    return jsonResponse(403, { ok: false, error: 'INSUFFICIENT_ROLE' }, request);
+  }
+  const normalizedKeys = Array.isArray(keys)
+    ? keys.map((key) => normalizeText(key)).filter(Boolean)
+    : [];
+  if (!normalizedKeys.length) {
+    return jsonResponse(400, { ok: false, error: 'SYSTEM_DATA_ROWS_MISSING' }, request);
+  }
+  const blockedKey = normalizedKeys.find((key) => !canWriteSystemDataKey(session, key));
+  if (blockedKey) {
+    return jsonResponse(403, { ok: false, error: 'OUT_OF_SCOPE', key: blockedKey }, request);
+  }
+  return null;
+}
+
+async function authorizeSystemDataWriteRequest(request, session) {
+  let payload = null;
+  try {
+    payload = await request.json();
+  } catch (error) {
+    return jsonResponse(400, { ok: false, error: 'INVALID_JSON_BODY' }, request);
+  }
+
+  const rows = Array.isArray(payload) ? payload : [payload];
+  return authorizeSystemDataMutationKeys(request, session, rows.map((row) => row?.key));
+}
+
+function authorizeSystemDataDeleteRequest(request, session, url) {
+  const keyFilter = parseSystemDataKeyFilter(url.searchParams.get('key'));
+  let keys = [];
+  if (keyFilter?.op === 'eq') {
+    keys = [keyFilter.value];
+  } else if (keyFilter?.op === 'in' && Array.isArray(keyFilter.values) && keyFilter.values.length) {
+    keys = keyFilter.values;
+  }
+
+  if (!keys.length) {
+    return jsonResponse(400, { ok: false, error: 'SYSTEM_DATA_DELETE_FILTER_MISSING' }, request);
+  }
+  return authorizeSystemDataMutationKeys(request, session, keys);
 }
 
 function isSystemDataHybridMode(env) {
@@ -680,9 +740,18 @@ async function proxySystemDataWriteToSupabase(request, env, url) {
  */
 export async function handleSystemDataProxy(request, env, url) {
   const method = String(request.method || 'GET').toUpperCase();
-  if (requiresRestWriteSession(method)) {
-    const authError = await requireRestWriteSession(request, env);
-    if (authError) return authError;
+  const auth = await requireSystemDataSession(request, env);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
+  if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+    const authorizationError = await authorizeSystemDataWriteRequest(request.clone(), session);
+    if (authorizationError) return authorizationError;
+  }
+
+  if (method === 'DELETE') {
+    const authorizationError = authorizeSystemDataDeleteRequest(request, session, url);
+    if (authorizationError) return authorizationError;
   }
 
   if (shouldProxySystemDataToSupabase(env)) {

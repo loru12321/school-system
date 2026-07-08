@@ -54,7 +54,9 @@ assert.ok(gatewayContractSource.includes('throw new Error(\'APP_SESSION_SECRET_M
 assert.ok(!gatewayContractSource.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'gateway must not fall back to a static legacy Supabase key');
 assert.ok(!workerContractSource.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'worker must not fall back to a static legacy Supabase key');
 assert.ok(!workerSystemData.includes("request.headers.get('apikey')"), 'Worker Supabase REST proxy must not trust browser-provided apikey headers');
-assert.ok(workerSystemData.includes("import { resolveSession } from './worker-auth.js';"), 'system_data and managed REST writes must require gateway sessions');
+assert.ok(workerSystemData.includes("import { resolveSession, hasAnyRole, isAdmin } from './worker-auth.js';"), 'system_data auth must require gateway sessions and role helpers');
+assert.ok(workerSystemData.includes('const auth = await requireSystemDataSession(request, env);'), 'system_data reads and writes must require gateway sessions before backend dispatch');
+assert.ok(workerSystemData.includes('requireRestWriteSession(request, env)'), 'managed REST writes must require gateway sessions');
 assert.ok(workerSystemData.includes("'/sb/rest/v1/issues'") && workerSystemData.includes("'/sb/rest/v1/system_logs'"), 'mutable management REST tables should be session-protected');
 assert.ok(!boot.includes("localStorage.getItem('EDGE_GATEWAY_URL')"), 'boot login shell should not accept gateway endpoints from localStorage');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should use shared HTTP helpers');
