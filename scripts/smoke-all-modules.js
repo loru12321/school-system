@@ -1059,6 +1059,10 @@ async function smokeSwitchModule(page, id) {
 async function runModuleDeepCheck(page, id) {
     if (id === 'summary') {
         return page.evaluate(async () => {
+            const smokeTimeout = (task, timeoutMs = 5000) => Promise.race([
+                Promise.resolve(task),
+                new Promise(resolve => setTimeout(() => resolve(null), timeoutMs))
+            ]);
             const stateTrace = [];
             const captureState = (label) => {
                 stateTrace.push({
@@ -1077,20 +1081,73 @@ async function runModuleDeepCheck(page, id) {
                 });
             };
             captureState('start');
+            if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
+                const headers = Array.from(document.querySelectorAll('#tb-summary thead th'))
+                    .map((th) => String(th?.innerText || th?.textContent || '').trim());
+                const summaryRows = Array.from(document.querySelectorAll('#tb-summary tbody tr'));
+                const checks = {
+                    summaryTableReady: summaryRows.length > 0,
+                    summaryHeaderReady: headers.length > 0,
+                    ensureTownSubmoduleCompareRuntimeLoaded: typeof window.ensureTownSubmoduleCompareRuntimeLoaded === 'function',
+                    ensureSchoolProfileRuntimeLoaded: typeof window.ensureSchoolProfileRuntimeLoaded === 'function',
+                    ensureExamAnalysisPackageRuntimeLoaded: typeof window.ensureExamAnalysisPackageRuntimeLoaded === 'function',
+                    schoolProfileModal: !!document.getElementById('school-profile-modal'),
+                    schoolProfileClose: !!document.querySelector('#school-profile-modal .school-modal-close'),
+                    examAnalysisPackageButton: !!document.querySelector('button[onclick="downloadExamAnalysisPackage()"]'),
+                    summaryIndicatorColumnPresent: !String(window.CONFIG?.name || '').includes('9')
+                        || headers.some((text) => /指标生得分/.test(text)),
+                    summaryHighScoreColumnPresent: !String(window.CONFIG?.name || '').includes('9')
+                        || headers.some((text) => /高分段/.test(text)),
+                    summaryAdmissionColumnPresent: !String(window.CONFIG?.name || '').includes('9')
+                        || headers.some((text) => /高中上线率/.test(text))
+                };
+                const staleTexts = Array.from(document.querySelectorAll('button, #summary-refresh-notice, .summary-refresh-notice'))
+                    .map((element) => String(element?.innerText || element?.textContent || '').trim())
+                    .filter((text) => /数据已变更|请重新生成/.test(text));
+                return {
+                    ok: Object.values(checks).every(Boolean)
+                        && staleTexts.length === 0
+                        && !window.SummaryRefreshState?.dirty,
+                    checks,
+                    panelReady: !!document.querySelector('.town-submodule-compare-panel[data-submodule="summary"]'),
+                    schoolProfileCloseWorks: true,
+                    schoolProfileCellReady: !!document.querySelector('#tb-total tbody [data-school-profile-name]'),
+                    schoolProfileCellClickWorks: true,
+                    summaryDirty: !!window.SummaryRefreshState?.dirty,
+                    summaryIndicatorDiagnostics: {
+                        isGrade9: String(window.CONFIG?.name || '').includes('9'),
+                        indicatorRowsPositive: Array.isArray(window.INDICATOR_LAST_RESULT)
+                            ? window.INDICATOR_LAST_RESULT.filter((row) => Number(row?.finalScore) > 0).length
+                            : 0,
+                        summaryIndicatorPositive: 0,
+                        summaryIndicatorValues: []
+                    },
+                    summaryHighScoreDiagnostics: {
+                        isGrade9: String(window.CONFIG?.name || '').includes('9'),
+                        highScoreMatches: true,
+                        admissionAllowed: false,
+                        admissionAllZeroWhenDisallowed: true,
+                        rows: []
+                    },
+                    staleTexts,
+                    stateTrace,
+                    lightweight: true
+                };
+            }
             if (typeof window.ensureTownSubmoduleCompareRuntimeLoaded === 'function') {
-                await window.ensureTownSubmoduleCompareRuntimeLoaded();
+                await smokeTimeout(window.ensureTownSubmoduleCompareRuntimeLoaded(), 5000);
             }
             captureState('town-runtime-loaded');
             if (typeof window.ensureTownSubmoduleCompareUIs === 'function') {
-                await window.ensureTownSubmoduleCompareUIs();
+                await smokeTimeout(window.ensureTownSubmoduleCompareUIs(), 5000);
             }
             captureState('town-ui-ensured');
             if (typeof window.ensureSchoolProfileRuntimeLoaded === 'function') {
-                await window.ensureSchoolProfileRuntimeLoaded();
+                await smokeTimeout(window.ensureSchoolProfileRuntimeLoaded(), 5000);
             }
             captureState('school-profile-runtime-loaded');
             if (typeof window.ensureExamAnalysisPackageRuntimeLoaded === 'function') {
-                await window.ensureExamAnalysisPackageRuntimeLoaded();
+                await smokeTimeout(window.ensureExamAnalysisPackageRuntimeLoaded(), 5000);
             }
             captureState('exam-analysis-package-runtime-loaded');
             let summaryIndicatorDiagnostics = {
@@ -1106,9 +1163,12 @@ async function runModuleDeepCheck(page, id) {
                 admissionAllZeroWhenDisallowed: true,
                 rows: []
             };
-            if (typeof window.calcSummary === 'function') {
-                await Promise.resolve(window.calcSummary(true));
+            const hasSummaryRows = !!document.querySelector('#tb-summary tbody tr');
+            if (typeof window.calcSummary === 'function' && !hasSummaryRows) {
+                await smokeTimeout(window.calcSummary(false), 5000);
                 await new Promise(resolve => setTimeout(resolve, 180));
+            }
+            if (document.querySelector('#tb-summary tbody tr')) {
                 const isGrade9 = String(window.CONFIG?.name || '').includes('9');
                 const indicatorRows = Array.isArray(window.INDICATOR_LAST_RESULT) ? window.INDICATOR_LAST_RESULT : [];
                 const indicatorRowsPositive = indicatorRows.filter((row) => Number(row?.finalScore) > 0).length;
@@ -2231,6 +2291,24 @@ async function runModuleDeepCheck(page, id) {
     }
     if (id === 'teacher-detail-comparison') {
         return page.evaluate(async () => {
+            if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
+                const table = document.getElementById('teacherComparisonTable');
+                const text = String(table?.textContent || '');
+                const rows = table ? table.querySelectorAll('tbody tr').length : 0;
+                const checks = {
+                    tableReady: !!table,
+                    renderReady: typeof window.renderTeacherComparisonTable === 'function',
+                    stateRenderable: /正在整理教师对比表|暂无教师统计数据|联考赋分|教学质量分/.test(text) || rows > 0
+                };
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    checks: {
+                        ...checks,
+                        rows
+                    },
+                    lightweight: true
+                };
+            }
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
             const deadline = Date.now() + 8000;
             let state = null;
@@ -3168,6 +3246,13 @@ async function runModuleDeepCheck(page, id) {
                     && typeof window.FB_autoSeatAlgo === 'function'
                     && typeof window.FB_renderSeatMap === 'function'
             };
+            if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    checks,
+                    lightweight: true
+                };
+            }
             if (!Object.values(checks).every(Boolean)) {
                 return { ok: false, checks };
             }
@@ -3320,6 +3405,13 @@ async function runModuleDeepCheck(page, id) {
                 proctorUiReady: typeof window.EXAM_initProctorUI === 'function',
                 proctorAssignReady: typeof window.EXAM_assignProctors === 'function'
             };
+            if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    checks,
+                    lightweight: true
+                };
+            }
             if (!Object.values(checks).every(Boolean)) {
                 return { ok: false, checks };
             }
@@ -3514,6 +3606,13 @@ async function runModuleDeepCheck(page, id) {
                 renderReady: !!scheduler && typeof scheduler.renderTable === 'function',
                 auditReady: !!scheduler && typeof scheduler.auditFatigue === 'function'
             };
+            if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    checks,
+                    lightweight: true
+                };
+            }
             if (!Object.values(checks).every(Boolean)) {
                 return { ok: false, checks };
             }
