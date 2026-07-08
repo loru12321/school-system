@@ -85,7 +85,7 @@ const DataManager={init:function(){window.DataManager=this},currentTab:"student"
 
 ${d.length>0?`错误示例：
 `+d.join(`
-`):""}`);return}if(DataManager.syncTeacherHistory(),updateStatusPanel(),DataManager.renderTeachers(),logAction("导入",`任课表导入 ${l} 条（${a}）`),window.CloudManager&&CloudManager.saveTeachers)try{appDebug("[TeacherSync] 尝试上传任课表到云端...");const m=await CloudManager.saveTeachers();window.UI&&UI.loading(!1),m?window.UI?UI.toast(`✅ 成功导入 ${l} 条任课信息并同步到云端！`,"success"):alert(`✅ 成功导入 ${l} 条任课信息并同步到云端！`):alert(`✅ 成功导入 ${l} 条任课信息！
+`):""}`);return}if(DataManager.syncTeacherHistory({termId:a,source:"upload"}),updateStatusPanel(),DataManager.renderTeachers(),logAction("导入",`任课表导入 ${l} 条（${a}）`),window.CloudManager&&CloudManager.saveTeachers)try{appDebug("[TeacherSync] 尝试上传任课表到云端...");const m=await CloudManager.saveTeachers({termId:a});window.UI&&UI.loading(!1),m?window.UI?UI.toast(`✅ 成功导入 ${l} 条任课信息并同步到云端！`,"success"):alert(`✅ 成功导入 ${l} 条任课信息并同步到云端！`):alert(`✅ 成功导入 ${l} 条任课信息！
 
 ⚠️ 但云端同步失败，请检查 Cloudflare 数据接口或登录状态。`)}catch(m){window.UI&&UI.loading(!1),logCloudSyncIssue("云端同步失败:",m),alert(`✅ 成功导入 ${l} 条任课信息！
 

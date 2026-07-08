@@ -251,6 +251,78 @@ function getSnapshotPayloadCohortId(db) {
     );
 }
 
+function getSnapshotTeacherTermBase(termId) {
+    if (typeof getTeacherTermBase === 'function') {
+        try { return String(getTeacherTermBase(termId) || '').trim(); } catch (e) { }
+    }
+    const text = String(termId || '').trim();
+    const parts = text.split('_').filter(Boolean);
+    if (parts.length >= 2 && /^\d{4}-\d{4}$/.test(parts[0])) return parts.slice(0, 2).join('_');
+    return text;
+}
+
+function cloneSnapshotTeacherObject(value) {
+    if (!value || typeof value !== 'object') return {};
+    try { return JSON.parse(JSON.stringify(value)); } catch (e) { return { ...value }; }
+}
+
+function resolveSnapshotTeacherMaps(db = {}, incomingMap = {}, incomingSchoolMap = {}) {
+    if (incomingMap && typeof incomingMap === 'object' && Object.keys(incomingMap).length > 0) {
+        return {
+            map: incomingMap,
+            schoolMap: incomingSchoolMap && typeof incomingSchoolMap === 'object' ? incomingSchoolMap : {},
+            termId: db.CURRENT_TEACHER_TERM_ID || ''
+        };
+    }
+
+    if (window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' && Object.keys(window.TEACHER_MAP).length > 0) {
+        return {
+            map: cloneSnapshotTeacherObject(window.TEACHER_MAP),
+            schoolMap: cloneSnapshotTeacherObject(window.TEACHER_SCHOOL_MAP || {}),
+            termId: readCurrentTeacherTermId()
+        };
+    }
+
+    const history = db.COHORT_DB?.teachingHistory || COHORT_DB?.teachingHistory || {};
+    const candidates = [];
+    const pushUnique = (value) => {
+        const text = String(value || '').trim();
+        if (text && !candidates.includes(text)) candidates.push(text);
+    };
+    const preferred = typeof getPreferredTeacherTermId === 'function' ? getPreferredTeacherTermId() : '';
+    [
+        db.CURRENT_TEACHER_TERM_ID,
+        preferred,
+        readCurrentTeacherTermId(),
+        db.CURRENT_TERM_ID,
+        readCurrentTermId(),
+        getSnapshotTeacherTermBase(db.CURRENT_TEACHER_TERM_ID),
+        getSnapshotTeacherTermBase(preferred)
+    ].forEach(pushUnique);
+
+    const baseTerms = [...new Set(candidates.map(getSnapshotTeacherTermBase).filter(Boolean))];
+    Object.keys(history || {}).forEach((key) => {
+        const text = String(key || '').trim();
+        if (!text || candidates.includes(text)) return;
+        if (baseTerms.includes(getSnapshotTeacherTermBase(text))) pushUnique(text);
+    });
+
+    for (const key of candidates) {
+        const entry = history[key];
+        const map = entry?.map && typeof entry.map === 'object' ? entry.map : (entry || {});
+        if (map && typeof map === 'object' && Object.keys(map).length > 0) {
+            const schoolMap = entry?.schoolMap && typeof entry.schoolMap === 'object' ? entry.schoolMap : {};
+            return {
+                map: cloneSnapshotTeacherObject(map),
+                schoolMap: cloneSnapshotTeacherObject(schoolMap),
+                termId: key
+            };
+        }
+    }
+
+    return { map: {}, schoolMap: {}, termId: db.CURRENT_TEACHER_TERM_ID || '' };
+}
+
 function runSnapshotPostApplyRender() {
     try { if (typeof renderTables === 'function') renderTables(); } catch (e) { }
     try { if (typeof updateSchoolSelect === 'function') updateSchoolSelect(); } catch (e) { }
@@ -309,9 +381,10 @@ function applySnapshotPayload(db, options = {}) {
     CURRENT_COHORT_ID = db.CURRENT_COHORT_ID || CURRENT_COHORT_ID || '';
     CURRENT_COHORT_META = db.CURRENT_COHORT_META || CURRENT_COHORT_META || null;
     CURRENT_EXAM_ID = db.CURRENT_EXAM_ID || CURRENT_EXAM_ID || '';
+    const snapshotHasTeacherMap = !!(db.TEACHER_MAP && typeof db.TEACHER_MAP === 'object' && Object.keys(db.TEACHER_MAP).length > 0);
     syncExamRuntimeState({
         currentTermId: db.CURRENT_TERM_ID || readCurrentTermId(),
-        currentTeacherTermId: db.CURRENT_TEACHER_TERM_ID || readCurrentTeacherTermId(),
+        currentTeacherTermId: snapshotHasTeacherMap ? (db.CURRENT_TEACHER_TERM_ID || readCurrentTeacherTermId()) : readCurrentTeacherTermId(),
         archiveMeta: db.ARCHIVE_META || readArchiveMeta(),
         archiveLocked: String(db.ARCHIVE_LOCKED || '').trim() === 'true',
         archiveLockedKey: db.ARCHIVE_LOCKED_KEY || ''
@@ -339,8 +412,14 @@ function applySnapshotPayload(db, options = {}) {
         thresholds: db.THRESHOLDS || {},
         config: db.CONFIG || readConfigState()
     });
-    setTeacherMap(db.TEACHER_MAP || {});
-    setTeacherSchoolMap(db.TEACHER_SCHOOL_MAP || {});
+    const incomingTeacherMap = db.TEACHER_MAP && typeof db.TEACHER_MAP === 'object' ? db.TEACHER_MAP : {};
+    const incomingTeacherSchoolMap = db.TEACHER_SCHOOL_MAP && typeof db.TEACHER_SCHOOL_MAP === 'object' ? db.TEACHER_SCHOOL_MAP : {};
+    const resolvedTeachers = resolveSnapshotTeacherMaps(db, incomingTeacherMap, incomingTeacherSchoolMap);
+    if (resolvedTeachers.termId && typeof syncTeacherTermStorage === 'function') {
+        try { syncTeacherTermStorage(resolvedTeachers.termId); } catch (e) { }
+    }
+    setTeacherMap(resolvedTeachers.map || {});
+    setTeacherSchoolMap(resolvedTeachers.schoolMap || {});
     writeCurrentSchool(db.MY_SCHOOL || '');
     if (Object.prototype.hasOwnProperty.call(db, 'TARGETS')) {
         setTargetsState(db.TARGETS || {});
@@ -487,7 +566,10 @@ function saveProjectSnapshot() {
 
             INDICATOR_PARAMS: {
                 ind1: elInd1 ? elInd1.value : '',
-                ind2: elInd2 ? elInd2.value : ''
+                ind2: elInd2 ? elInd2.value : '',
+                highSchoolLine: typeof readIndicatorState === 'function'
+                    ? (readIndicatorState().highSchoolLine || '')
+                    : ''
             }
         },
         settings: {

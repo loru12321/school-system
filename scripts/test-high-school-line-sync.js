@@ -282,6 +282,14 @@ assert.ok(
     'cloud-workspace-runtime: pending local cache must not block remote refresh when highSchoolLine is missing'
 );
 assert.ok(
+    workspaceSource.includes('async function shouldDeferPendingWorkspaceFlush')
+        && workspaceSource.includes('fetchWorkspaceSnapshotMeta(normalizedKey)')
+        && workspaceSource.includes('return remoteTs <= localTs + 1000')
+        && workspaceSource.includes('await shouldDeferPendingWorkspaceFlush(this, requestedKey, cachedMeta)')
+        && workspaceSource.includes('await shouldDeferPendingWorkspaceFlush(this, key, cachedMeta)'),
+    'cloud-workspace-runtime: pending local flush must compare remote/local timestamps before skipping foreground refresh'
+);
+assert.ok(
     !/function mergeWorkspaceSplitPayload[\s\S]*\[\s*[\s\S]*'TARGETS'[\s\S]*'INDICATOR_PARAMS'[\s\S]*'SCHOOL_ALIAS_SETTINGS'[\s\S]*\]\.forEach/.test(workspaceSource),
     'cloud-workspace-runtime: split exam shard merge must not let old exam config overwrite workspace TARGETS/INDICATOR_PARAMS/SCHOOL_ALIAS_SETTINGS'
 );

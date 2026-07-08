@@ -1590,7 +1590,7 @@ const DataManager = {
                     return;
                 }
 
-                DataManager.syncTeacherHistory();
+                DataManager.syncTeacherHistory({ termId, source: 'upload' });
                 updateStatusPanel();
 
                 DataManager.renderTeachers();
@@ -1599,7 +1599,7 @@ const DataManager = {
                 if (window.CloudManager && CloudManager.saveTeachers) {
                     try {
                         appDebug('[TeacherSync] 尝试上传任课表到云端...');
-                        const ok = await CloudManager.saveTeachers();
+                        const ok = await CloudManager.saveTeachers({ termId });
                         if (window.UI) UI.loading(false);
                         if (ok) {
                             if (window.UI) {

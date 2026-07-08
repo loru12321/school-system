@@ -1717,10 +1717,11 @@
 
         const teacherBaselineTerm = normalizeText(syncState.teacherTermId);
         const teacherBaselineSignature = normalizeText(syncState.teacherSignature);
-        const teacherHasBaseline = !!teacherBaselineSignature;
+        const teacherHasBaseline = !!teacherBaselineSignature && !!teacherBaselineTerm;
         const teacherMatchesBaseline = !!teacherSnapshot.signature
             && teacherSnapshot.signature === teacherBaselineSignature
-            && (!teacherBaselineTerm || !teacherSnapshot.termId || teacherBaselineTerm === teacherSnapshot.termId);
+            && !!teacherSnapshot.termId
+            && teacherBaselineTerm === teacherSnapshot.termId;
 
         let teachersState = 'missing';
         if (teacherSnapshot.count === 0) teachersState = 'missing';

@@ -50,6 +50,12 @@ function parseTeacherTermApproxMs(termId) {
 function pickAutoTeacherTerm() {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     const history = db?.teachingHistory || {};
+    const preferred = typeof getPreferredTeacherTermId === 'function' ? String(getPreferredTeacherTermId() || '').trim() : '';
+    if (preferred) {
+        const direct = history[preferred];
+        const directMap = direct?.map && typeof direct.map === 'object' ? direct.map : (direct || {});
+        if (directMap && typeof directMap === 'object' && Object.keys(directMap).length > 0) return preferred;
+    }
     const now = Date.now();
     const entries = Object.entries(history)
         .map(([termId, entry]) => {
@@ -181,8 +187,8 @@ function buildTeacherExportTag(user, subjectSet) {
 }
 
 function promptTeacherSyncIfNeeded() {
-    if (applyTeacherTermWithoutPrompt(pickAutoTeacherTerm())) return true;
     if (!shouldAutoLoadTeacherData()) return false;
+    if (applyTeacherTermWithoutPrompt(pickAutoTeacherTerm())) return true;
     if (localStorage.getItem('SUPPRESS_TEACHER_SYNC_PROMPT') === '1') return;
     if (sessionStorage.getItem('TEACHER_SYNC_PROMPT_SHOWN') === '1') return;
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
@@ -235,7 +241,7 @@ async function tryAutoRestoreTeacherMap() {
     if (!shouldAutoLoadTeacherData()) return false;
     if (!(window.CloudManager && typeof CloudManager.loadTeachers === 'function')) return false;
 
-    const preferredTerm = getPreferredTeacherTermId() || pickAutoTeacherTerm();
+    const preferredTerm = getPreferredTeacherTermId() || '';
     if (preferredTerm) {
         syncTeacherTermStorage(preferredTerm);
     }

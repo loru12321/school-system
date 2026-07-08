@@ -397,7 +397,15 @@ function isTeacherTermSelectActive(selectEl) {
     if (!selectEl) return false;
     const teacherArea = document.getElementById('dm-teacher-area');
     if (!teacherArea) return true;
-    return teacherArea.style.display !== 'none';
+    if (teacherArea.style.display === 'none') return false;
+    if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+        const style = window.getComputedStyle(teacherArea);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+    }
+    if (typeof teacherArea.getClientRects === 'function' && teacherArea.getClientRects().length === 0) {
+        return false;
+    }
+    return true;
 }
 
 function getPreferredTeacherTermId() {
@@ -405,6 +413,10 @@ function getPreferredTeacherTermId() {
     const uiTeacherTermId = buildTeacherTermId(uiMeta);
     const termSel = document.getElementById('dm-teacher-term-select');
     const selectedTeacherTermId = isTeacherTermSelectActive(termSel) ? String(termSel?.value || '').trim() : '';
+    // Pure preferred term: active DataManager select / current exam-derived term /
+    // saved teacher term / saved base term. This is the AUTHORITATIVE current-exam
+    // teacher term semantic — it must NOT be widened with teachingHistory fallbacks,
+    // or a compatible old-semester 任课表 would pollute the current exam term.
     return String(
         selectedTeacherTermId
         || uiTeacherTermId

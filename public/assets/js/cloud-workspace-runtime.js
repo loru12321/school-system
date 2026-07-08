@@ -601,6 +601,83 @@
         }));
     }
 
+    // Parse the { year, grade } identity out of a teacher term id, e.g.
+    // "2025-2026_下学期_9年级" -> { year: '2025-2026', grade: '9年级' }.
+    // Used only by the save-side teaching-history bundler to keep same-cohort
+    // same-grade entries and drop unrelated ones.
+    function extractBundleTermYearGrade(termId) {
+        const text = String(termId || '').trim();
+        if (!text) return { year: '', grade: '' };
+        let year = '';
+        let grade = '';
+        text.split('_').filter(Boolean).forEach((part) => {
+            if (/^\d{4}-\d{4}$/.test(part)) year = part;
+            else if (/\d+年级/.test(part)) grade = part;
+        });
+        return { year, grade };
+    }
+
+    // Resolve the CURRENT exam's teacher term id from the payload, preferring the
+    // explicit CURRENT_TEACHER_TERM_ID and falling back to ARCHIVE_META. Never
+    // returns a compatible/old-semester term — this is the term the loaded 任课表
+    // is bundled UNDER, so restore resolves it by exact match for the current exam.
+    function deriveBundleCurrentTeacherTermId(payload) {
+        const explicit = String(payload?.CURRENT_TEACHER_TERM_ID || '').trim();
+        if (explicit) return explicit;
+        const meta = payload?.ARCHIVE_META && typeof payload.ARCHIVE_META === 'object' ? payload.ARCHIVE_META : {};
+        const year = String(meta.year || '').trim();
+        const term = String(meta.term || '').trim();
+        const grade = String(meta.grade || '').trim();
+        if (!year || !term) return '';
+        return grade ? `${year}_${term}_${grade}年级` : `${year}_${term}`;
+    }
+
+    // Save-side teaching-history bundler (narrow scope).
+    // 1. Keep ONLY same-cohort(year) + same-grade teaching-history entries; drop
+    //    other cohorts / other grades so the workspace meta is not bloated and no
+    //    unrelated 任课表 leaks in.
+    // 2. When a teacher map is loaded at save time, persist it under the CURRENT
+    //    teacher term so a later restore resolves it by exact match — avoiding the
+    //    live TEACHERS_* multi-round-trip. The content may have originated from a
+    //    compatible cross-semester 任课表, but it is stored under the current exam
+    //    term; restore keeps the current term and never writes an older semester
+    //    back to CURRENT_TEACHER_TERM_ID / CURRENT_TERM_ID.
+    function bundleCompatibleTeachingHistory(payload, cohortDb) {
+        const teacherMap = payload?.TEACHER_MAP && typeof payload.TEACHER_MAP === 'object' ? payload.TEACHER_MAP : {};
+        const teacherSchoolMap = payload?.TEACHER_SCHOOL_MAP && typeof payload.TEACHER_SCHOOL_MAP === 'object' ? payload.TEACHER_SCHOOL_MAP : {};
+        const currentTermId = deriveBundleCurrentTeacherTermId(payload);
+        const targetYG = extractBundleTermYearGrade(currentTermId);
+        const sourceHistory = cohortDb && cohortDb.teachingHistory && typeof cohortDb.teachingHistory === 'object'
+            ? cohortDb.teachingHistory
+            : {};
+        const nextHistory = {};
+
+        Object.keys(sourceHistory).forEach((key) => {
+            const entry = sourceHistory[key];
+            if (!entry || typeof entry !== 'object') return;
+            const yg = extractBundleTermYearGrade(key);
+            const yearOk = !targetYG.year || !yg.year || yg.year === targetYG.year;
+            const gradeOk = !targetYG.grade || !yg.grade || yg.grade === targetYG.grade;
+            if (!yearOk || !gradeOk) return;
+            nextHistory[key] = clonePayloadFragment(entry);
+        });
+
+        if (currentTermId && Object.keys(teacherMap).length > 0) {
+            const existing = nextHistory[currentTermId];
+            const existingMap = existing?.map && typeof existing.map === 'object' ? existing.map : null;
+            if (!existingMap || Object.keys(existingMap).length === 0) {
+                nextHistory[currentTermId] = {
+                    map: clonePayloadFragment(teacherMap),
+                    schoolMap: clonePayloadFragment(teacherSchoolMap),
+                    savedAt: Date.now(),
+                    source: 'workspace-bundle'
+                };
+            }
+        }
+
+        return nextHistory;
+    }
+
     function buildWorkspaceMetaPayload(payload, workspaceKey) {
         const source = clonePayloadFragment(payload || {});
         Object.keys(source).forEach((field) => {
@@ -625,6 +702,7 @@
         source.COHORT_DB = {
             ...cohortDb,
             exams,
+            teachingHistory: bundleCompatibleTeachingHistory(payload, cohortDb),
             currentExamId: currentExamId || cohortDb.currentExamId || ''
         };
         source.CURRENT_PROJECT_KEY = String(source.CURRENT_PROJECT_KEY || workspaceKey || '').trim();
@@ -1435,6 +1513,22 @@
             });
     }
 
+    async function shouldDeferPendingWorkspaceFlush(manager, key, cachedMeta = {}) {
+        const normalizedKey = String(key || '').trim();
+        if (!normalizedKey) return true;
+        try {
+            if (!(await manager.ensureClientReady({ silent: true, timeoutMs: 3500 }))) return true;
+            const remoteMeta = await fetchWorkspaceSnapshotMeta(normalizedKey);
+            const remoteTs = Date.parse(String(remoteMeta?.updated_at || '')) || 0;
+            const localTs = Date.parse(String(cachedMeta.remoteUpdatedAt || cachedMeta.lastSyncedAt || '')) || 0;
+            if (!remoteMeta?.updated_at || !remoteTs) return true;
+            return remoteTs <= localTs + 1000;
+        } catch (error) {
+            console.warn('[CloudLoad] pending flush freshness check failed:', error);
+            return true;
+        }
+    }
+
     async function fetchAndApplyWorkspaceSnapshot(manager, key, row) {
         if (!workspaceKeyMatchesCurrentCohort(key)) return false;
         const snapshotRow = row && typeof row === 'object' ? row : await fetchWorkspaceSnapshotRow(key);
@@ -2227,7 +2321,8 @@
             }
         }
 
-        if (requestedKey && cachedMeta.pendingCloudSync && !lastAppliedCachedNeedsIndicatorRefresh) {
+        if (requestedKey && cachedMeta.pendingCloudSync && !lastAppliedCachedNeedsIndicatorRefresh
+            && await shouldDeferPendingWorkspaceFlush(this, requestedKey, cachedMeta)) {
             scheduleBackgroundQueueFlush(this);
             setCloudStatus('success', '本地已就绪');
             return true;
@@ -2282,7 +2377,8 @@
                     console.warn('[CloudLoad] apply resolved cached snapshot failed:', error);
                 }
             }
-            if (cachedMeta.pendingCloudSync && !lastAppliedCachedNeedsIndicatorRefresh) {
+            if (cachedMeta.pendingCloudSync && !lastAppliedCachedNeedsIndicatorRefresh
+                && await shouldDeferPendingWorkspaceFlush(this, key, cachedMeta)) {
                 scheduleBackgroundQueueFlush(this);
                 setCloudStatus('success', '本地已就绪');
                 return true;
@@ -2444,6 +2540,29 @@
             });
         }, 3500);
     });
+
+    // Test-only surface: expose the save-side teaching-history bundler so unit
+    // tests can verify behaviour without a live browser/cloud. Gated behind an
+    // explicit test switch so it is NEVER present on a normal production visit
+    // (schoolsystem.com.cn). Exposes read-only function references only — no
+    // writable production state and no auto-execution.
+    function shouldExposeCloudWorkspaceTestHooks() {
+        try {
+            if (window.__SCHOOL_SYSTEM_TEST_MODE__ === true) return true;
+            if (window.localStorage && window.localStorage.getItem('SCHOOL_SYSTEM_TEST_HOOKS') === 'true') return true;
+            const search = window.location && typeof window.location.search === 'string' ? window.location.search : '';
+            if (/[?&]testHooks=1(?:&|$)/.test(search)) return true;
+        } catch (_) { /* location/localStorage may be unavailable */ }
+        return false;
+    }
+    if (shouldExposeCloudWorkspaceTestHooks()) {
+        window.__CloudWorkspaceRuntimeTestHooks = {
+            buildWorkspaceMetaPayload,
+            bundleCompatibleTeachingHistory,
+            deriveBundleCurrentTeacherTermId,
+            extractBundleTermYearGrade
+        };
+    }
 
     window.__CLOUD_WORKSPACE_RUNTIME_PATCHED__ = true;
 })();

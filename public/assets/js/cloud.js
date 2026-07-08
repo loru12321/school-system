@@ -228,6 +228,21 @@
         return text;
     }
 
+    function isTeacherTermSelectActive(selectEl) {
+        if (!selectEl) return false;
+        const teacherArea = document.getElementById('dm-teacher-area');
+        if (!teacherArea) return true;
+        if (teacherArea.style.display === 'none') return false;
+        if (typeof window.getComputedStyle === 'function') {
+            const style = window.getComputedStyle(teacherArea);
+            if (style.display === 'none' || style.visibility === 'hidden') return false;
+        }
+        if (typeof teacherArea.getClientRects === 'function' && teacherArea.getClientRects().length === 0) {
+            return false;
+        }
+        return true;
+    }
+
     function syncTeacherTermState(termId) {
         const exactTermId = String(termId || '').trim();
         if (ExamState && typeof ExamState.syncTeacherTerm === 'function') {
@@ -1468,19 +1483,20 @@
         },
 
         getTeacherKey: (options = {}) => {
+            const explicitTermId = options && typeof options === 'object' ? String(options.termId || '').trim() : '';
             const termSel = document.getElementById('dm-teacher-term-select');
             const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
             const exactUiTeacherTerm = meta.year && meta.term
                 ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
                 : '';
-            const teacherArea = document.getElementById('dm-teacher-area');
-            const selectedTeacherTermId = termSel && (!teacherArea || teacherArea.style.display !== 'none')
+            const selectedTeacherTermId = isTeacherTermSelectActive(termSel)
                 ? String(termSel.value || '').trim()
                 : '';
             const preferredTeacherTermId = typeof window.getPreferredTeacherTermId === 'function'
                 ? String(window.getPreferredTeacherTermId() || '').trim()
                 : '';
-            const termId = selectedTeacherTermId
+            const termId = explicitTermId
+                || selectedTeacherTermId
                 || preferredTeacherTermId
                 || exactUiTeacherTerm
                 || getCurrentTeacherTermId()
@@ -1495,10 +1511,11 @@
 
         // 工作区/考试快照运行时已拆分到 public/assets/js/cloud-workspace-runtime.js
 
-        saveTeachers: async function () {
+        saveTeachers: async function (options = {}) {
             if (!(await this.ensureClientReady())) return false;
             setCloudStatus('syncing', '同步任课');
-            const key = this.getTeacherKey();
+            const opts = options && typeof options === 'object' ? { ...options } : {};
+            const key = this.getTeacherKey(opts);
             if (!key) {
                 safeToast('无法确定学期或年级信息', 'error');
                 return false;
@@ -1523,7 +1540,7 @@
                 });
                 if (error) throw error;
 
-                const schoolKey = this.getTeacherKey({ schoolName: getCurrentSchoolName() });
+                const schoolKey = this.getTeacherKey({ ...opts, schoolName: getCurrentSchoolName() });
                 if (schoolKey && schoolKey !== key) {
                     const { error: schoolError } = await upsertSystemData({
                         key: schoolKey,
@@ -1553,7 +1570,7 @@
                 return true;
             } catch (e) {
                 console.error('Teacher save error:', e);
-                window.UI.alert(`任课同步失败: ${e.message || e}`);
+                safeToast(`任课同步失败: ${e.message || e}`, 'error');
                 setCloudStatus('error', '任课同步失败');
                 return false;
             } finally {
@@ -1599,8 +1616,7 @@
                     const exactUiTeacherTerm = meta.year && meta.term
                         ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
                         : '';
-                    const teacherArea = document.getElementById('dm-teacher-area');
-                    const selectedTeacherTermId = termSel && (!teacherArea || teacherArea.style.display !== 'none')
+                    const selectedTeacherTermId = isTeacherTermSelectActive(termSel)
                         ? String(termSel.value || '').trim()
                         : '';
                     const preferredTeacherTermId = typeof window.getPreferredTeacherTermId === 'function'
@@ -1612,6 +1628,11 @@
                         exactUiTeacherTerm,
                         getCurrentTeacherTermId(),
                         getCurrentTermId()
+                    ].map(v => String(v || '').trim()).filter(Boolean);
+                    const primaryDesiredTerms = [
+                        selectedTeacherTermId,
+                        preferredTeacherTermId,
+                        exactUiTeacherTerm
                     ].map(v => String(v || '').trim()).filter(Boolean);
 
                     if (key) {
@@ -1641,19 +1662,54 @@
                         if (scopedError) throw scopedError;
                         if (fallbackError) throw fallbackError;
                         const rows = (scopedRows && scopedRows.length) ? scopedRows : (fallbackRows || []);
+
+                        // Extract year+grade from the primary desired terms to find compatible keys
+                        const extractYearGrade = (termId) => {
+                            const text = String(termId || '').trim();
+                            if (!text) return { year: '', grade: '' };
+                            let year = '';
+                            let grade = '';
+                            text.split('_').filter(Boolean).forEach((part) => {
+                                if (/^\d{4}-\d{4}$/.test(part)) year = part;
+                                else if (/\d+年级/.test(part)) grade = part;
+                            });
+                            return { year, grade };
+                        };
+                        const desiredYG = extractYearGrade(primaryDesiredTerms[0] || desiredTerms[0] || '');
+
                         metaRow = (requestedSchool && scopedKeyPrefix
                             ? (rows || []).find(item => String(item?.key || '').startsWith(scopedKeyPrefix)
                                 && desiredTerms.some(term => String(item?.key || '').endsWith(`_${term}`)))
                             : null)
                             || (rows || []).find(item => desiredTerms.some(term => {
-                            const keyText = String(item?.key || '');
-                            return keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`);
-                        })) || rows?.[0] || null;
+                                const keyText = String(item?.key || '');
+                                return keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`);
+                            }))
+                            // When no exact desired-term match, prefer a compatible same-cohort
+                            // same-grade key (e.g. 上学期 when exam is 下学期) over an unrelated
+                            // key, so the teacher view renders when only a cross-semester 任课表
+                            // was imported. Applied with the CURRENT exam term to avoid polluting
+                            // CURRENT_TEACHER_TERM_ID / CURRENT_TERM_ID.
+                            || (desiredYG.year || desiredYG.grade
+                                ? (rows || []).find(item => {
+                                    const keyYG = extractYearGrade(extractTeacherTermIdFromKey(String(item?.key || ''), requestedSchool));
+                                    const yearOk = !desiredYG.year || !keyYG.year || keyYG.year === desiredYG.year;
+                                    const gradeOk = !desiredYG.grade || !keyYG.grade || keyYG.grade === desiredYG.grade;
+                                    return yearOk && gradeOk;
+                                })
+                                : null)
+                            || rows?.[0] || null;
                         key = metaRow?.key || key;
                     }
 
                     const keyTermId = extractTeacherTermIdFromKey(key || metaRow?.key || '', requestedSchool).trim();
-                    const localEntry = resolveLocalTeacherHistoryEntry(keyTermId || desiredTerms[0] || '');
+                    const metaKeyText = String(metaRow?.key || key || '').trim();
+                    const metaMatchesDesiredTerm = primaryDesiredTerms.some(term => {
+                        const text = String(term || '').trim();
+                        return text && (metaKeyText.endsWith(`_${text}`) || metaKeyText.includes(`_${text}_`));
+                    });
+                    const applyTermId = metaMatchesDesiredTerm ? keyTermId : (primaryDesiredTerms[0] || desiredTerms[0] || keyTermId);
+                    const localEntry = resolveLocalTeacherHistoryEntry(applyTermId || keyTermId || '');
                     const remoteTs = Number.isFinite(Date.parse(String(metaRow?.updated_at || '')))
                         ? Date.parse(String(metaRow?.updated_at || ''))
                         : 0;
@@ -1663,7 +1719,10 @@
                             ? filterTeacherPayloadBySchool(localEntry.map, localEntry.schoolMap, requestedSchool)
                             : { map: localEntry.map, schoolMap: localEntry.schoolMap, matched: true, scoped: false };
                         if (!requestedSchool || localPayload.matched || !localPayload.scoped) {
-                            applyLoadedTeacherPayload(localPayload.map, localPayload.schoolMap, localEntry.key || keyTermId, metaRow?.updated_at || localEntry.savedAt || '');
+                            const localApplyTermId = metaMatchesDesiredTerm
+                                ? (localEntry.key || applyTermId || keyTermId)
+                                : (applyTermId || localEntry.key || keyTermId);
+                            applyLoadedTeacherPayload(localPayload.map, localPayload.schoolMap, localApplyTermId, metaRow?.updated_at || localEntry.savedAt || '');
                             if (showToast && !metaRow) safeToast(`已使用本地任课缓存（${Object.keys(localPayload.map).length} 条）`, 'success');
                             if (typeof logAction === 'function') logAction('任课同步', `任课表使用缓存：${localEntry.key || keyTermId || 'local'}`);
                             setCloudStatus('success', '任课已就绪');
@@ -1703,7 +1762,7 @@
                         setCloudStatus('success', '暂无本校任课');
                         return false;
                     }
-                    applyLoadedTeacherPayload(payload.map, payload.schoolMap, keyTermId, row?.updated_at || '');
+                    applyLoadedTeacherPayload(payload.map, payload.schoolMap, applyTermId || keyTermId, row?.updated_at || '');
 
                     if (showToast) safeToast(`已加载任课表（${Object.keys(payload.map).length} 条）`, 'success');
                     if (typeof logAction === 'function') logAction('任课同步', `任课表已加载：${metaRow.key || key || 'latest'}`);
