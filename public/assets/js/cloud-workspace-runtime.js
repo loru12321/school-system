@@ -450,7 +450,7 @@
         window.__CLOUD_WORKSPACE_STORAGE_CACHE_BOUND__ = true;
         window.addEventListener('storage', (event) => {
             const key = String(event?.key || '');
-            if (key === WORKSPACE_SYNC_QUEUE_KEY || key.startsWith(WORKSPACE_SYNC_META_PREFIX)) {
+            if (key === WORKSPACE_SYNC_QUEUE_KEY || key.startsWith(`${WORKSPACE_SYNC_QUEUE_KEY}::`) || key.startsWith(WORKSPACE_SYNC_META_PREFIX)) {
                 storedJsonCache.delete(key);
             }
         });
@@ -1131,7 +1131,13 @@
     }
 
     function getWorkspaceMetaStorageKey(key) {
-        return `${WORKSPACE_SYNC_META_PREFIX}${encodeURIComponent(String(key || '').trim())}`;
+        const userPrefix = getIdbUserPrefix();
+        return `${WORKSPACE_SYNC_META_PREFIX}${userPrefix}${encodeURIComponent(String(key || '').trim())}`;
+    }
+
+    function getWorkspaceSyncQueueStorageKey() {
+        const userPrefix = getIdbUserPrefix();
+        return userPrefix ? `${WORKSPACE_SYNC_QUEUE_KEY}::${userPrefix}` : WORKSPACE_SYNC_QUEUE_KEY;
     }
 
     function readStoredJson(key, fallbackValue) {
@@ -1178,11 +1184,11 @@
     }
 
     function readWorkspaceSyncQueue() {
-        return readStoredJson(WORKSPACE_SYNC_QUEUE_KEY, {});
+        return readStoredJson(getWorkspaceSyncQueueStorageKey(), {});
     }
 
     function writeWorkspaceSyncQueue(queue) {
-        return writeStoredJson(WORKSPACE_SYNC_QUEUE_KEY, queue && typeof queue === 'object' ? queue : {});
+        return writeStoredJson(getWorkspaceSyncQueueStorageKey(), queue && typeof queue === 'object' ? queue : {});
     }
 
     function ensureLocalCacheProfile() {

@@ -463,8 +463,8 @@
     async function deleteLocalCache(key) {
         const store = getIdbKeyval();
         if (!store || typeof store.del !== 'function') return false;
-        await store.del(`cache_${key}`);
-        await store.del(`cache_meta_${key}`);
+        await store.del(getLocalCacheStorageKey(key));
+        await store.del(getLocalCacheStorageKey(key, '_meta'));
         return true;
     }
 
@@ -507,12 +507,29 @@
         return root.idbKeyval && typeof root.idbKeyval === 'object' ? root.idbKeyval : null;
     }
 
+    function getIdbUserPrefix() {
+        try {
+            const user = typeof root.getCurrentUser === 'function'
+                ? root.getCurrentUser()
+                : (root.Auth && root.Auth.currentUser ? root.Auth.currentUser : null);
+            const username = normalizeText(user?.username || '').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+            return username ? `u_${username}__` : '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function getLocalCacheStorageKey(key, suffix = '') {
+        const prefix = getIdbUserPrefix();
+        return `${prefix}cache${suffix}_${key}`;
+    }
+
     async function writeLocalCache(key, value, meta = {}) {
         const store = getIdbKeyval();
         if (!store || typeof store.set !== 'function') return false;
-        await store.set(`cache_${key}`, value);
+        await store.set(getLocalCacheStorageKey(key), value);
         if (meta && typeof meta === 'object' && Object.keys(meta).length > 0) {
-            await store.set(`cache_meta_${key}`, {
+            await store.set(getLocalCacheStorageKey(key, '_meta'), {
                 key,
                 updatedAt: normalizeText(meta.updatedAt || meta.updated_at),
                 cachedAt: new Date().toISOString()
@@ -524,13 +541,13 @@
     async function readLocalCache(key) {
         const store = getIdbKeyval();
         if (!store || typeof store.get !== 'function') return null;
-        return store.get(`cache_${key}`);
+        return store.get(getLocalCacheStorageKey(key));
     }
 
     async function readLocalCacheMeta(key) {
         const store = getIdbKeyval();
         if (!store || typeof store.get !== 'function') return null;
-        const meta = await store.get(`cache_meta_${key}`);
+        const meta = await store.get(getLocalCacheStorageKey(key, '_meta'));
         return meta && typeof meta === 'object' ? meta : null;
     }
 
