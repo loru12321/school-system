@@ -346,6 +346,43 @@ function buildTeacherTermId(meta) {
     return grade ? `${year}_${term}_${grade}年级` : `${year}_${term}`;
 }
 
+function readArchiveExamMetaForTeacherTerm() {
+    const archiveMeta = (() => {
+        if (typeof readArchiveMeta === 'function') return readArchiveMeta();
+        if (window.ARCHIVE_META && typeof window.ARCHIVE_META === 'object') return window.ARCHIVE_META;
+        try {
+            return JSON.parse(localStorage.getItem('ARCHIVE_META') || 'null');
+        } catch (_) {
+            return null;
+        }
+    })();
+    if (!archiveMeta || typeof archiveMeta !== 'object') return null;
+    const year = String(archiveMeta.year || '').trim();
+    const term = String(archiveMeta.term || '').trim();
+    if (!year || !term) return null;
+    const currentExamId = String(readWorkspaceExamId() || '').trim();
+    const archiveExamId = String(archiveMeta.examId || archiveMeta.id || '').trim();
+    if (currentExamId && archiveExamId && currentExamId !== archiveExamId) return null;
+    return archiveMeta;
+}
+
+function getTeacherTermMetaFromRuntime() {
+    const uiMeta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+    const archiveMeta = readArchiveExamMetaForTeacherTerm();
+    if (!archiveMeta) return uiMeta;
+    const archiveTermId = buildTeacherTermId(archiveMeta);
+    const uiTermId = buildTeacherTermId(uiMeta);
+    if (archiveTermId && archiveTermId !== uiTermId) {
+        return {
+            ...uiMeta,
+            ...archiveMeta,
+            cohortId: archiveMeta.cohortId || uiMeta.cohortId,
+            grade: archiveMeta.grade || uiMeta.grade
+        };
+    }
+    return uiMeta;
+}
+
 function getTeacherTermBase(termId) {
     const text = String(termId || '').trim();
     if (!text) return '';
@@ -356,14 +393,22 @@ function getTeacherTermBase(termId) {
     return text;
 }
 
+function isTeacherTermSelectActive(selectEl) {
+    if (!selectEl) return false;
+    const teacherArea = document.getElementById('dm-teacher-area');
+    if (!teacherArea) return true;
+    return teacherArea.style.display !== 'none';
+}
+
 function getPreferredTeacherTermId() {
-    const uiMeta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+    const uiMeta = getTeacherTermMetaFromRuntime();
     const uiTeacherTermId = buildTeacherTermId(uiMeta);
     const termSel = document.getElementById('dm-teacher-term-select');
+    const selectedTeacherTermId = isTeacherTermSelectActive(termSel) ? String(termSel?.value || '').trim() : '';
     return String(
-        termSel?.value
-        || readCurrentTeacherTermId()
+        selectedTeacherTermId
         || uiTeacherTermId
+        || readCurrentTeacherTermId()
         || readCurrentTermId()
         || ''
     ).trim();
@@ -375,7 +420,7 @@ function syncTeacherTermStorage(termId) {
 
 function getTeacherTermCandidates(termId) {
     const preferred = String(termId || '').trim();
-    const uiMeta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+    const uiMeta = getTeacherTermMetaFromRuntime();
     const uiTeacherTermId = buildTeacherTermId(uiMeta);
     const savedTeacherTermId = readCurrentTeacherTermId();
     const savedBaseTerm = readCurrentTermId();
@@ -390,11 +435,11 @@ function getTeacherTermCandidates(termId) {
 
     [
         preferred,
-        savedTeacherTermId,
         uiTeacherTermId,
+        savedTeacherTermId,
         getTeacherTermBase(preferred),
-        getTeacherTermBase(savedTeacherTermId),
         getTeacherTermBase(uiTeacherTermId),
+        getTeacherTermBase(savedTeacherTermId),
         savedBaseTerm
     ].forEach(pushUnique);
 

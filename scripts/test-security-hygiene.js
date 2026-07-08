@@ -39,6 +39,7 @@ const srcIndex = read('src/index.html');
 const serviceWorker = read('public/sw.js');
 const publicHeaders = read('public/_headers');
 const supabaseBootstrap = read('supabase/sql/000_app_tables_bootstrap.sql');
+const supabaseLegacyLockdown = read('supabase/sql/009_lockdown_legacy_public_tables.sql');
 const keySensitiveFiles = [
     'wrangler.jsonc',
     'src/worker-gateway-d1.js',
@@ -107,5 +108,18 @@ assert.ok(worker.includes("url.pathname === '/api/csp-report'"), 'worker should 
 assert.ok(!boot.includes('DEMO_TOKEN'), 'boot runtime should not provide an offline admin demo token');
 assert.ok(!runtimeLoader.includes('DEMO_TOKEN'), 'runtime loader should not provide an offline admin demo token');
 assert.ok(!/\bpassword\s+text\b/i.test(supabaseBootstrap), 'Supabase bootstrap should not recreate the legacy plaintext password column');
+[
+    'system_data',
+    'issues',
+    'system_logs',
+    'migration_runs'
+].forEach((table) => {
+    const enableRls = new RegExp(`alter table (if exists )?public\\.${table} enable row level security`, 'i');
+    const revokeDirect = new RegExp(`revoke all on public\\.${table} from anon, authenticated`, 'i');
+    assert.ok(enableRls.test(supabaseBootstrap), `Supabase bootstrap should enable RLS on ${table}`);
+    assert.ok(revokeDirect.test(supabaseBootstrap), `Supabase bootstrap should revoke direct browser grants on ${table}`);
+    assert.ok(enableRls.test(supabaseLegacyLockdown), `legacy lockdown migration should enable RLS on ${table}`);
+    assert.ok(revokeDirect.test(supabaseLegacyLockdown), `legacy lockdown migration should revoke direct browser grants on ${table}`);
+});
 
 console.log('security hygiene tests passed');

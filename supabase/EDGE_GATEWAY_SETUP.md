@@ -16,6 +16,7 @@ The front end currently prefers `edu-gateway-v2` and will automatically fall bac
 - `supabase/sql/003_system_users_password_hardening.sql`
 - `supabase/sql/004_drop_plaintext_password_column.sql`
 - `supabase/sql/005_drop_password_display_column.sql`
+- `supabase/sql/009_lockdown_legacy_public_tables.sql`
 - `supabase/functions/edu-gateway/index.ts`
 
 ## Step 1: Create the management tables
@@ -28,6 +29,7 @@ In Supabase Dashboard:
 4. Run `supabase/sql/003_system_users_password_hardening.sql`
 5. Run `supabase/sql/004_drop_plaintext_password_column.sql`
 6. Run `supabase/sql/005_drop_password_display_column.sql`
+7. Run `supabase/sql/009_lockdown_legacy_public_tables.sql`
 
 Result:
 
@@ -37,6 +39,7 @@ Result:
 - `system_users.password` is migrated to bcrypt hashes in `password_hash`
 - legacy plaintext passwords are cleared after migration
 - legacy `password_display` columns are removed; password status is derived at runtime from `has_password` / `password_hash`
+- legacy public REST tables (`system_data`, `issues`, `system_logs`, `migration_runs`) are protected with RLS; production access should go through Cloudflare D1/Worker routes
 
 ## Step 2: Create the Edge Function
 

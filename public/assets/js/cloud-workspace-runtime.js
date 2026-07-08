@@ -1284,6 +1284,24 @@
                 || '').trim();
     }
 
+    function hasWorkspaceHighSchoolLine(payload) {
+        const params = payload?.INDICATOR_PARAMS;
+        if (!params || typeof params !== 'object') return false;
+        return !!String(params.highSchoolLine
+            || params.graduateHighSchoolLine
+            || params.highSchoolAdmissionLine
+            || params.highSchoolScoreLine
+            || params['中考高中过线分数']
+            || '').trim();
+    }
+
+    function isGrade9WorkspacePayload(payload) {
+        const meta = payload?.ARCHIVE_META || payload?.CONFIG || {};
+        const grade = String(meta.grade || meta.gradeLabel || '').trim();
+        const examId = String(payload?.CURRENT_EXAM_ID || '').trim();
+        return grade === '9' || grade === '9年级' || /(?:^|[-_])9年级(?:[-_]|$)/.test(examId);
+    }
+
     function readWorkspaceParamValue(input, fallback = '') {
         const current = String(fallback || '').trim();
         if (!input) return current;
@@ -1293,7 +1311,9 @@
 
     function needsWorkspaceIndicatorRefresh(payload) {
         if (!payload || typeof payload !== 'object') return false;
-        return !hasWorkspaceTargetConfig(payload) || !hasWorkspaceIndicatorParams(payload);
+        return !hasWorkspaceTargetConfig(payload)
+            || !hasWorkspaceIndicatorParams(payload)
+            || (isGrade9WorkspacePayload(payload) && !hasWorkspaceHighSchoolLine(payload));
     }
 
     async function applyCachedWorkspaceSnapshot(key, payload, updatedAt = '') {
@@ -2207,7 +2227,7 @@
             }
         }
 
-        if (requestedKey && cachedMeta.pendingCloudSync) {
+        if (requestedKey && cachedMeta.pendingCloudSync && !lastAppliedCachedNeedsIndicatorRefresh) {
             scheduleBackgroundQueueFlush(this);
             setCloudStatus('success', '本地已就绪');
             return true;
@@ -2262,7 +2282,7 @@
                     console.warn('[CloudLoad] apply resolved cached snapshot failed:', error);
                 }
             }
-            if (cachedMeta.pendingCloudSync) {
+            if (cachedMeta.pendingCloudSync && !lastAppliedCachedNeedsIndicatorRefresh) {
                 scheduleBackgroundQueueFlush(this);
                 setCloudStatus('success', '本地已就绪');
                 return true;

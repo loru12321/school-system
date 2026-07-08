@@ -501,6 +501,54 @@ async function main() {
         await loadRuntimeSkill('teaching-management');
         await loadRuntimeSkill('teacher-analysis');
         snapshotStep('runtime:teaching-management/teacher-analysis');
+        const ensureTeacherMapForArchiveExam = async () => {
+            const archiveMeta = (typeof window.readArchiveMeta === 'function' ? window.readArchiveMeta() : window.ARCHIVE_META) || {};
+            const year = String(archiveMeta.year || '').trim();
+            const term = String(archiveMeta.term || '').trim();
+            if (!year || !term) return { ok: false, reason: 'archive-meta-missing' };
+            const termId = typeof window.buildTeacherTermId === 'function'
+                ? window.buildTeacherTermId(archiveMeta)
+                : `${year}_${term}${archiveMeta.grade ? '_' + archiveMeta.grade : ''}`;
+            if (!termId) return { ok: false, reason: 'term-id-missing' };
+            const teacherArea = document.getElementById('dm-teacher-area');
+            const previousTeacherAreaDisplay = teacherArea ? teacherArea.style.display : '';
+            try {
+                if (teacherArea) teacherArea.style.display = 'none';
+                if (typeof window.syncTeacherTermStorage === 'function') {
+                    window.syncTeacherTermStorage(termId);
+                } else {
+                    window.CURRENT_TEACHER_TERM_ID = termId;
+                    localStorage.setItem('CURRENT_TEACHER_TERM_ID', termId);
+                }
+                const termSelect = document.getElementById('dm-teacher-term-select');
+                if (termSelect) termSelect.value = termId;
+                const localResolved = typeof window.resolveTeacherHistoryEntry === 'function'
+                    ? window.resolveTeacherHistoryEntry(termId)
+                    : null;
+                if (localResolved?.map && Object.keys(localResolved.map).length > 0) {
+                    if (typeof window.setTeacherMap === 'function') window.setTeacherMap(JSON.parse(JSON.stringify(localResolved.map || {})));
+                    if (typeof window.setTeacherSchoolMap === 'function') window.setTeacherSchoolMap(JSON.parse(JSON.stringify(localResolved.schoolMap || {})));
+                    return { ok: true, source: 'local', termId, count: Object.keys(localResolved.map || {}).length };
+                }
+                if (window.CloudManager && typeof window.CloudManager.loadTeachers === 'function') {
+                    const ok = await Promise.race([
+                        Promise.resolve(window.CloudManager.loadTeachers({ background: true, toast: false, blocking: false, force: true })),
+                        new Promise((resolve) => setTimeout(() => resolve(false), 30000))
+                    ]);
+                    return {
+                        ok: !!ok && Object.keys(window.TEACHER_MAP || {}).length > 0,
+                        source: ok ? 'cloud' : 'cloud-miss',
+                        termId,
+                        count: Object.keys(window.TEACHER_MAP || {}).length
+                    };
+                }
+                return { ok: false, reason: 'cloud-manager-missing', termId };
+            } finally {
+                if (teacherArea) teacherArea.style.display = previousTeacherAreaDisplay;
+            }
+        };
+        const teacherMapRestore = await ensureTeacherMapForArchiveExam();
+        snapshotStep(`teacher-map-restore:${teacherMapRestore.source || teacherMapRestore.reason || 'unknown'}:${teacherMapRestore.count || 0}`);
         await boundedSwitchTab('teacher-analysis');
         window.TeachingManagementModulesRuntime?.relocateTeacherBlocks?.();
         await boundedSwitchTab('teacher-township-ranking');

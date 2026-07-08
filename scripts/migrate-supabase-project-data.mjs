@@ -24,7 +24,8 @@ const schemaFiles = [
   path.resolve(workspaceRoot, 'supabase', 'sql', '000_app_tables_bootstrap.sql'),
   path.resolve(workspaceRoot, 'supabase', 'sql', '001_management_tables.sql'),
   path.resolve(workspaceRoot, 'supabase', 'sql', '002_management_rls_minimal.sql'),
-  path.resolve(workspaceRoot, 'supabase', 'sql', '003_system_users_password_hardening.sql')
+  path.resolve(workspaceRoot, 'supabase', 'sql', '003_system_users_password_hardening.sql'),
+  path.resolve(workspaceRoot, 'supabase', 'sql', '009_lockdown_legacy_public_tables.sql')
 ];
 
 function normalizeBaseUrl(value) {

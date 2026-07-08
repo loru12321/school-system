@@ -154,6 +154,19 @@ assert.strictEqual(
     'needsIndicatorPayloadSupplement: highSchoolLine-only payload with TARGETS and aliases must NOT need supplement'
 );
 
+const staleGrade9Payload = {
+    CURRENT_EXAM_ID: '2022级-9年级-2025-2026-下学期-二模-2026-05-27',
+    ARCHIVE_META: { grade: '9', year: '2025-2026', term: '下学期', examName: '二模' },
+    INDICATOR_PARAMS: { ind1: '222', ind2: '1353', highSchoolLine: '' },
+    TARGETS: { '银山实验学校': { t1: 5, t2: 10 } },
+    SCHOOL_ALIAS_SETTINGS: [{ canonical: '州城中学', alias: '州城一中' }]
+};
+assert.strictEqual(
+    needsIndicatorPayloadSupplement(staleGrade9Payload),
+    true,
+    'needsIndicatorPayloadSupplement: grade-9 payload with ind1/ind2 but missing highSchoolLine must refresh from cloud'
+);
+
 console.log('✅ 3. needsIndicatorPayloadSupplement — passed (no spurious supplement)');
 
 // ─── 4. support-state-runtime normalizeIndicator ─────────────────────────────
@@ -257,6 +270,16 @@ assert.ok(
     workspaceSource.includes("params.highSchoolScoreLine")
         && workspaceSource.includes("params['中考高中过线分数']"),
     'cloud-workspace-runtime: hasWorkspaceIndicatorParams must include all highSchoolLine aliases'
+);
+assert.ok(
+    workspaceSource.includes('function hasWorkspaceHighSchoolLine(payload)')
+        && workspaceSource.includes('function isGrade9WorkspacePayload(payload)')
+        && workspaceSource.includes('(isGrade9WorkspacePayload(payload) && !hasWorkspaceHighSchoolLine(payload))'),
+    'cloud-workspace-runtime: stale grade-9 workspace payload without highSchoolLine must require remote refresh'
+);
+assert.ok(
+    workspaceSource.includes('cachedMeta.pendingCloudSync && !lastAppliedCachedNeedsIndicatorRefresh'),
+    'cloud-workspace-runtime: pending local cache must not block remote refresh when highSchoolLine is missing'
 );
 assert.ok(
     !/function mergeWorkspaceSplitPayload[\s\S]*\[\s*[\s\S]*'TARGETS'[\s\S]*'INDICATOR_PARAMS'[\s\S]*'SCHOOL_ALIAS_SETTINGS'[\s\S]*\]\.forEach/.test(workspaceSource),

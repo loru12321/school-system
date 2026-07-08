@@ -1490,7 +1490,7 @@ const DataManager = {
             return;
         }
 
-        const termId = readCurrentTermId() || getTermId(getExamMetaFromUI());
+        const termId = getPreferredTeacherTermId() || buildTeacherTermId(getExamMetaFromUI()) || readCurrentTermId() || getTermId(getExamMetaFromUI());
         if (!termId) {
             alert('⚠️ 请先选择学期！\n\n点击【学期】下拉框选择一个学期后再导入Excel。');
             return;

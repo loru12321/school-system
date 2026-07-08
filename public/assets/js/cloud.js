@@ -978,12 +978,33 @@
                 || '').trim();
     }
 
+    function hasPayloadHighSchoolLine(payload) {
+        const params = payload?.INDICATOR_PARAMS;
+        if (!params || typeof params !== 'object') return false;
+        return !!String(params.highSchoolLine
+            || params.graduateHighSchoolLine
+            || params.highSchoolAdmissionLine
+            || params.highSchoolScoreLine
+            || params['中考高中过线分数']
+            || '').trim();
+    }
+
+    function isGrade9Payload(payload) {
+        const meta = payload?.ARCHIVE_META || payload?.CONFIG || {};
+        const grade = String(meta.grade || meta.gradeLabel || '').trim();
+        const examId = String(payload?.CURRENT_EXAM_ID || '').trim();
+        return grade === '9' || grade === '9年级' || /(?:^|[-_])9年级(?:[-_]|$)/.test(examId);
+    }
+
     function hasPayloadAliasSettings(payload) {
         return Array.isArray(payload?.SCHOOL_ALIAS_SETTINGS) && payload.SCHOOL_ALIAS_SETTINGS.length > 0;
     }
 
     function needsIndicatorPayloadSupplement(payload) {
-        return getPayloadTargetCount(payload) === 0 || !hasPayloadIndicatorParams(payload) || !hasPayloadAliasSettings(payload);
+        return getPayloadTargetCount(payload) === 0
+            || !hasPayloadIndicatorParams(payload)
+            || !hasPayloadAliasSettings(payload)
+            || (isGrade9Payload(payload) && !hasPayloadHighSchoolLine(payload));
     }
 
     function normalizeIndicatorParams(params) {
@@ -1452,9 +1473,17 @@
             const exactUiTeacherTerm = meta.year && meta.term
                 ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
                 : '';
-            const termId = termSel?.value
-                || getCurrentTeacherTermId()
+            const teacherArea = document.getElementById('dm-teacher-area');
+            const selectedTeacherTermId = termSel && (!teacherArea || teacherArea.style.display !== 'none')
+                ? String(termSel.value || '').trim()
+                : '';
+            const preferredTeacherTermId = typeof window.getPreferredTeacherTermId === 'function'
+                ? String(window.getPreferredTeacherTermId() || '').trim()
+                : '';
+            const termId = selectedTeacherTermId
+                || preferredTeacherTermId
                 || exactUiTeacherTerm
+                || getCurrentTeacherTermId()
                 || getCurrentTermId()
                 || (typeof getTermId === 'function' ? getTermId(meta) : '');
             const cohortId = getCurrentCohortId() || window.CURRENT_COHORT_META?.id || meta.cohortId;
@@ -1570,10 +1599,18 @@
                     const exactUiTeacherTerm = meta.year && meta.term
                         ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
                         : '';
+                    const teacherArea = document.getElementById('dm-teacher-area');
+                    const selectedTeacherTermId = termSel && (!teacherArea || teacherArea.style.display !== 'none')
+                        ? String(termSel.value || '').trim()
+                        : '';
+                    const preferredTeacherTermId = typeof window.getPreferredTeacherTermId === 'function'
+                        ? String(window.getPreferredTeacherTermId() || '').trim()
+                        : '';
                     const desiredTerms = [
-                        termSel?.value,
-                        getCurrentTeacherTermId(),
+                        selectedTeacherTermId,
+                        preferredTeacherTermId,
                         exactUiTeacherTerm,
+                        getCurrentTeacherTermId(),
                         getCurrentTermId()
                     ].map(v => String(v || '').trim()).filter(Boolean);
 
