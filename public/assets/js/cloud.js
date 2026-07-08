@@ -1634,6 +1634,10 @@
                         preferredTeacherTermId,
                         exactUiTeacherTerm
                     ].map(v => String(v || '').trim()).filter(Boolean);
+                    const currentApplyTerms = [
+                        preferredTeacherTermId,
+                        exactUiTeacherTerm
+                    ].map(v => String(v || '').trim()).filter(Boolean);
 
                     if (key) {
                         const { data, error } = await selectSystemData({
@@ -1675,7 +1679,7 @@
                             });
                             return { year, grade };
                         };
-                        const desiredYG = extractYearGrade(primaryDesiredTerms[0] || desiredTerms[0] || '');
+                        const desiredYG = extractYearGrade(currentApplyTerms[0] || primaryDesiredTerms[0] || desiredTerms[0] || '');
 
                         metaRow = (requestedSchool && scopedKeyPrefix
                             ? (rows || []).find(item => String(item?.key || '').startsWith(scopedKeyPrefix)
@@ -1708,7 +1712,13 @@
                         const text = String(term || '').trim();
                         return text && (metaKeyText.endsWith(`_${text}`) || metaKeyText.includes(`_${text}_`));
                     });
-                    const applyTermId = metaMatchesDesiredTerm ? keyTermId : (primaryDesiredTerms[0] || desiredTerms[0] || keyTermId);
+                    const metaMatchesCurrentTerm = currentApplyTerms.some(term => {
+                        const text = String(term || '').trim();
+                        return text && (metaKeyText.endsWith(`_${text}`) || metaKeyText.includes(`_${text}_`));
+                    });
+                    const applyTermId = metaMatchesCurrentTerm
+                        ? keyTermId
+                        : (currentApplyTerms[0] || primaryDesiredTerms[0] || desiredTerms[0] || keyTermId);
                     const localEntry = resolveLocalTeacherHistoryEntry(applyTermId || keyTermId || '');
                     const remoteTs = Number.isFinite(Date.parse(String(metaRow?.updated_at || '')))
                         ? Date.parse(String(metaRow?.updated_at || ''))
@@ -1719,9 +1729,7 @@
                             ? filterTeacherPayloadBySchool(localEntry.map, localEntry.schoolMap, requestedSchool)
                             : { map: localEntry.map, schoolMap: localEntry.schoolMap, matched: true, scoped: false };
                         if (!requestedSchool || localPayload.matched || !localPayload.scoped) {
-                            const localApplyTermId = metaMatchesDesiredTerm
-                                ? (localEntry.key || applyTermId || keyTermId)
-                                : (applyTermId || localEntry.key || keyTermId);
+                            const localApplyTermId = applyTermId || localEntry.key || keyTermId;
                             applyLoadedTeacherPayload(localPayload.map, localPayload.schoolMap, localApplyTermId, metaRow?.updated_at || localEntry.savedAt || '');
                             if (showToast && !metaRow) safeToast(`已使用本地任课缓存（${Object.keys(localPayload.map).length} 条）`, 'success');
                             if (typeof logAction === 'function') logAction('任课同步', `任课表使用缓存：${localEntry.key || keyTermId || 'local'}`);

@@ -71,9 +71,11 @@ assert.ok(
 assert.ok(
   cloud.includes('const primaryDesiredTerms = [')
     && cloud.includes('const metaMatchesDesiredTerm = primaryDesiredTerms.some')
-    && cloud.includes('const applyTermId = metaMatchesDesiredTerm ? keyTermId : (primaryDesiredTerms[0] || desiredTerms[0] || keyTermId)')
-    && cloud.includes('const localApplyTermId = metaMatchesDesiredTerm')
-    && cloud.includes(': (applyTermId || localEntry.key || keyTermId)')
+    && cloud.includes('const currentApplyTerms = [')
+    && cloud.includes('const metaMatchesCurrentTerm = currentApplyTerms.some')
+    && cloud.includes('const applyTermId = metaMatchesCurrentTerm')
+    && cloud.includes(': (currentApplyTerms[0] || primaryDesiredTerms[0] || desiredTerms[0] || keyTermId)')
+    && cloud.includes('const localApplyTermId = applyTermId || localEntry.key || keyTermId')
     && cloud.includes('applyLoadedTeacherPayload(payload.map, payload.schoolMap, applyTermId || keyTermId'),
   'CloudManager.loadTeachers may reuse fallback teacher payloads but must keep the current desired teacher term'
 );
