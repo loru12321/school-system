@@ -134,7 +134,7 @@ function updateStudentSchoolSelect() {
     }
     const accessibleSchools = StudentDetailsPerfCache.accessibleSchools;
     const schoolOptionsHtml = '<option value="">--请选择本校--</option>'
-        + accessibleSchools.map(school => `<option value="${school}">${school}</option>`).join('');
+        + accessibleSchools.map(school => `<option value="${tmEscapeHtml(school)}">${tmEscapeHtml(school)}</option>`).join('');
     setOptionsIfChanged(select, schoolOptionsHtml, `schools:${accessibleSchools.join('|')}`);
     const currentSchool = String(
         (typeof readCurrentSchool === 'function' ? readCurrentSchool() : '')
@@ -654,7 +654,8 @@ function buildStudentScoreAuditBadge(student, subject, escapeFn = escapeAppHtml)
 function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible) {
     const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
     const townRank = getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' });
-    const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
+    const scoreArg = Number.isFinite(Number(score)) ? Number(score) : jsStringLiteral(score);
+    const clickAttr = `onclick="updateStudentScore(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.class)}, ${jsStringLiteral(sub)}, ${scoreArg})"`;
     const auditBadge = buildStudentScoreAuditBadge(student, sub, tmEscapeHtml);
     const scoreButton = `
         <button type="button" class="student-detail-mobile-score-btn" ${clickAttr} title="点击修改${tmEscapeHtml(sub)}成绩">
@@ -1131,48 +1132,49 @@ function renderStudentDetails(reset = true) {
         StudentDetailsPerfCache.mobileRowsHtml = rowsHTML;
     } else {
         rowsHTML = displayList.map(student => {
-            const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.school)}, ${jsStringLiteral(student.class)})" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
+            const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.school)}, ${jsStringLiteral(student.class)})" style="color:var(--primary); font-weight:800;">${tmEscapeHtml(student.name || '-')}</a>`;
             const rank = getStudentDetailsRankSnapshot(student, visibleSubjects, townRankVisible, countyRankVisible, STD_STATE.dataSignature);
 
             let row = `<tr>
-                    <td data-label="学校">${student.school}</td>
-                    <td data-label="班级">${student.class}</td>
+                    <td data-label="学校">${tmEscapeHtml(student.school || '-')}</td>
+                    <td data-label="班级">${tmEscapeHtml(student.class || '-')}</td>
                     <td data-label="姓名">${nameLink}</td>
-                    ${!isTeacher && !isClassTeacher ? `<td data-label="考号">${student.id}</td><td data-label="考场">${student.examRoom || '-'}</td>` : ''}`;
+                    ${!isTeacher && !isClassTeacher ? `<td data-label="考号">${tmEscapeHtml(student.id || '-')}</td><td data-label="考场">${tmEscapeHtml(student.examRoom || '-')}</td>` : ''}`;
 
             visibleSubjects.forEach(sub => {
                 const rankItem = rank?.subjects?.[sub] || {};
                 const score = rankItem.score !== undefined ? rankItem.score : '-';
                 const scoreDisplay = `${escapeAppHtml(String(score))}${buildStudentScoreAuditBadge(student, sub, escapeAppHtml)}`;
 
-                const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
+                const scoreArg = Number.isFinite(Number(score)) ? Number(score) : jsStringLiteral(score);
+                const clickAttr = `onclick="updateStudentScore(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.class)}, ${jsStringLiteral(sub)}, ${scoreArg})"`;
 
                 if (!isTeacher && !isClassTeacher) {
-                    row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${scoreDisplay}</td>
-                                <td data-label="${sub}校排" class="text-gray">${rankItem.school ?? '-'}</td>
-                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${rankItem.township ?? '-'}</td>
-                                <td data-label="${sub}县排" class="text-gray" style="${countyHeaderStyle}">${rankItem.county ?? '-'}</td>`;
+                    row += `<td data-label="${tmEscapeHtml(sub)}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${scoreDisplay}</td>
+                                <td data-label="${tmEscapeHtml(sub)}校排" class="text-gray">${tmEscapeHtml(rankItem.school ?? '-')}</td>
+                                <td data-label="${tmEscapeHtml(sub)}镇排" class="text-gray" style="${townHeaderStyle}">${tmEscapeHtml(rankItem.township ?? '-')}</td>
+                                <td data-label="${tmEscapeHtml(sub)}县排" class="text-gray" style="${countyHeaderStyle}">${tmEscapeHtml(rankItem.county ?? '-')}</td>`;
                 } else {
-                    row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${scoreDisplay}</td>
-                                <td data-label="${sub}级排" class="text-gray">${rankItem.school ?? '-'}</td>
-                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${rankItem.township ?? '-'}</td>
-                                <td data-label="${sub}县排" class="text-gray" style="${countyHeaderStyle}">${rankItem.county ?? '-'}</td>`;
+                    row += `<td data-label="${tmEscapeHtml(sub)}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${scoreDisplay}</td>
+                                <td data-label="${tmEscapeHtml(sub)}级排" class="text-gray">${tmEscapeHtml(rankItem.school ?? '-')}</td>
+                                <td data-label="${tmEscapeHtml(sub)}镇排" class="text-gray" style="${townHeaderStyle}">${tmEscapeHtml(rankItem.township ?? '-')}</td>
+                                <td data-label="${tmEscapeHtml(sub)}县排" class="text-gray" style="${countyHeaderStyle}">${tmEscapeHtml(rankItem.county ?? '-')}</td>`;
                 }
             });
 
             if (!isTeacher && !isClassTeacher) {
-                row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
-                            <td data-label="总分班排">${rank?.totalClass ?? '-'}</td>
-                            <td data-label="总分校排">${rank?.totalSchool ?? '-'}</td>
-                            <td data-label="总分镇排" style="${townHeaderStyle}">${rank?.totalTown ?? '-'}</td>
-                            <td data-label="总分县排" style="${countyHeaderStyle}">${rank?.totalCounty ?? '-'}</td>
+                row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${tmEscapeHtml(student.total ?? '-')}</td>
+                            <td data-label="总分班排">${tmEscapeHtml(rank?.totalClass ?? '-')}</td>
+                            <td data-label="总分校排">${tmEscapeHtml(rank?.totalSchool ?? '-')}</td>
+                            <td data-label="总分镇排" style="${townHeaderStyle}">${tmEscapeHtml(rank?.totalTown ?? '-')}</td>
+                            <td data-label="总分县排" style="${countyHeaderStyle}">${tmEscapeHtml(rank?.totalCounty ?? '-')}</td>
                         </tr>`;
             } else {
-                row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
-                        <td data-label="总分班排">${rank?.totalClass ?? '-'}</td>
-                        <td data-label="总分级排">${rank?.totalSchool ?? '-'}</td>
-                        <td data-label="总分镇排" style="${townHeaderStyle}">${rank?.totalTown ?? '-'}</td>
-                        <td data-label="总分县排" style="${countyHeaderStyle}">${rank?.totalCounty ?? '-'}</td>
+                row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${tmEscapeHtml(student.total ?? '-')}</td>
+                        <td data-label="总分班排">${tmEscapeHtml(rank?.totalClass ?? '-')}</td>
+                        <td data-label="总分级排">${tmEscapeHtml(rank?.totalSchool ?? '-')}</td>
+                        <td data-label="总分镇排" style="${townHeaderStyle}">${tmEscapeHtml(rank?.totalTown ?? '-')}</td>
+                        <td data-label="总分县排" style="${countyHeaderStyle}">${tmEscapeHtml(rank?.totalCounty ?? '-')}</td>
                     </tr>`;
             }
             return row;
@@ -1318,7 +1320,7 @@ function buildFilterMenuContent(colKey, container) {
         const checked = isAllChecked || currentSet.has(v) ? 'checked' : '';
         listHtml += `
                 <label class="menu-item">
-                    <input type="checkbox" value="${v}" ${checked} class="filter-cb-${colKey}"> ${v}
+                    <input type="checkbox" value="${tmEscapeHtml(v)}" ${checked} class="filter-cb-${colKey}"> ${tmEscapeHtml(v)}
                 </label>`;
     });
 

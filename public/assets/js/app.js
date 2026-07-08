@@ -4036,8 +4036,8 @@ const DrillSystem = {
         classes.forEach(cls => {
             const count = classMap[cls].length;
             html += `
-                    <div class="drill-class-card" onclick="DrillSystem.renderStudentView('${cls}')">
-                        <div class="drill-label">${cls}</div>
+                    <div class="drill-class-card" onclick="DrillSystem.renderStudentView(${jsStringLiteral(cls)})">
+                        <div class="drill-label">${escapeAppHtml(cls)}</div>
                         <div class="drill-val">${count} 人</div>
                         <div class="drill-label" style="font-size:10px;">点击查看名单 &gt;</div>
                     </div>`;
@@ -4063,8 +4063,8 @@ const DrillSystem = {
         students.forEach(s => {
             html += `
                     <div class="drill-stu-tag">
-                        <span style="cursor:pointer;" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)}); document.getElementById('drill-modal').style.display='none';">${s.name}</span>
-                        <span class="drill-stu-score">${s.total}</span>
+                        <span style="cursor:pointer;" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)}); document.getElementById('drill-modal').style.display='none';">${escapeAppHtml(s.name)}</span>
+                        <span class="drill-stu-score">${escapeAppHtml(s.total)}</span>
                     </div>`;
         });
         html += `</div>`;
@@ -4397,12 +4397,14 @@ function renderHighScoreTable() {
     let html = '';
     list.forEach((d, i) => {
         const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
+        const safeName = escapeAppHtml(d.name);
+        const safeNameArg = jsStringLiteral(d.name);
         html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
-                <td>${d.name}</td>
+                <td>${safeName}</td>
                 <td>${d.count}</td>
                 <td style="font-weight:bold;">
                     <!-- 添加点击事件 -->
-                    <span class="clickable-num" onclick="handleHighClick('${d.name}')" title="点击查看高分学生名单">
+                    <span class="clickable-num" onclick="handleHighClick(${safeNameArg})" title="点击查看高分学生名单">
                         ${d.hsCount}
                     </span>
                 </td>
@@ -5553,13 +5555,15 @@ function renderBottom3TableBody(summarySignature = getSummaryRenderSignature(), 
     const bottomList = townshipSchools.slice().sort((a, b) => (a.rankBottom || 9999) - (b.rankBottom || 9999));
     bottomList.forEach(s => {
         const isMySchool = sameAppSchoolName(s.name, MY_SCHOOL);
+        const safeName = escapeAppHtml(s.name);
+        const safeNameArg = jsStringLiteral(s.name);
         htmlBottom += `
             <tr class="${isMySchool ? 'bg-highlight' : ''}">
-                <td>${s.name}</td>
+                <td>${safeName}</td>
                 <td>${s.bottom3 ? s.bottom3.totalN : ''}</td>
                 <td>${s.bottom3 ? s.bottom3.bottomN : ''}</td>
                 <td>
-                    <span class="clickable-num" onclick="handleExcludedClick('${s.name}')" title="点击查看被剔除的低分学生">
+                    <span class="clickable-num" onclick="handleExcludedClick(${safeNameArg})" title="点击查看被剔除的低分学生">
                         ${s.bottom3 ? s.bottom3.excN : ''}
                     </span>
                 </td>
@@ -5788,7 +5792,7 @@ function renderTables() {
                 const m = s.metrics[sub];
                 const r = s.rankings[sub];
                 const isMySchool = sameAppSchoolName(s.name, MY_SCHOOL);
-                htmlSub += `<tr class="${isMySchool ? 'bg-highlight' : ''}"><td data-label="学校名称">${s.name}</td><td data-label="实考人数">${m.count}</td><td data-label="平均分">${formatRankDisplay(m.avg, r.avg)}</td><td data-label="优秀率">${formatRankDisplay(m.excRate, r.excRate, 'school', true)}</td><td data-label="及格率">${formatRankDisplay(m.passRate, r.passRate, 'school', true)}</td></tr>`;
+                htmlSub += `<tr class="${isMySchool ? 'bg-highlight' : ''}"><td data-label="学校名称">${escapeAppHtml(s.name)}</td><td data-label="实考人数">${m.count}</td><td data-label="平均分">${formatRankDisplay(m.avg, r.avg)}</td><td data-label="优秀率">${formatRankDisplay(m.excRate, r.excRate, 'school', true)}</td><td data-label="及格率">${formatRankDisplay(m.passRate, r.passRate, 'school', true)}</td></tr>`;
             });
         }
         tbody.innerHTML = htmlSub; subContainer.appendChild(box); const navLink = document.createElement('a'); navLink.className = 'side-nav-sub-link'; navLink.innerText = sub; navLink.onclick = () => scrollToSubAnchor(anchorId, navLink); sideNavSubjects.appendChild(navLink);
@@ -6031,9 +6035,11 @@ function renderTrafficLightDashboard() {
 
             if (passP < 60 || rank === totalSchools) {
                 const reason = passP < 60 ? `及格率过低 (${passP.toFixed(1)}%)` : `全镇排名倒数第一`;
+                const schoolArg = jsStringLiteral(s.name);
+                const subjectArg = jsStringLiteral(sub);
                 const html = `
-                        <div class="traffic-item" onclick="jumpToDetail('${s.name}', '${sub}')">
-                            <div class="t-school">${s.name} <span class="t-badge bg-red-light">${subName}</span></div>
+                        <div class="traffic-item" onclick="jumpToDetail(${schoolArg}, ${subjectArg})">
+                            <div class="t-school">${escapeAppHtml(s.name)} <span class="t-badge bg-red-light">${escapeAppHtml(subName)}</span></div>
                             <div class="t-sub">
                                 <span>${reason}</span>
                                 <span style="font-weight:bold;">📉 Avg: ${m.avg.toFixed(1)}</span>
@@ -6045,9 +6051,11 @@ function renderTrafficLightDashboard() {
             else if (excP > 30 || rank === 1) {
                 const reason = rank === 1 ? `全镇排名第一` : `优秀率突出 (${excP.toFixed(1)}%)`;
                 const rankText = Number.isFinite(Number(rank)) && Number(rank) > 0 ? `排：${Number(rank)}` : '排：-';
+                const schoolArg = jsStringLiteral(s.name);
+                const subjectArg = jsStringLiteral(sub);
                 const html = `
-                        <div class="traffic-item" onclick="jumpToDetail('${s.name}', '${sub}')">
-                            <div class="t-school">${s.name} <span class="t-badge bg-green-light">${subName}</span></div>
+                        <div class="traffic-item" onclick="jumpToDetail(${schoolArg}, ${subjectArg})">
+                            <div class="t-school">${escapeAppHtml(s.name)} <span class="t-badge bg-green-light">${escapeAppHtml(subName)}</span></div>
                             <div class="t-sub">
                                 <span>${reason}</span>
                                 <span style="font-weight:bold;">${rankText}</span>
@@ -6057,9 +6065,11 @@ function renderTrafficLightDashboard() {
                 cntGreen++;
             }
             else if (excP < 15) {
+                const schoolArg = jsStringLiteral(s.name);
+                const subjectArg = jsStringLiteral(sub);
                 const html = `
-                        <div class="traffic-item" onclick="jumpToDetail('${s.name}', '${sub}')">
-                            <div class="t-school">${s.name} <span class="t-badge bg-yellow-light">${subName}</span></div>
+                        <div class="traffic-item" onclick="jumpToDetail(${schoolArg}, ${subjectArg})">
+                            <div class="t-school">${escapeAppHtml(s.name)} <span class="t-badge bg-yellow-light">${escapeAppHtml(subName)}</span></div>
                             <div class="t-sub">
                                 <span>尖子生匮乏 (优率${excP.toFixed(1)}%)</span>
                                 <span>排: ${rank}</span>
@@ -6318,7 +6328,7 @@ function updateMarginalSchoolSelect() {
     const select = document.getElementById('marginalSchoolSelect');
     if (!select) return;
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare('all') : Object.keys(SCHOOLS || {});
-    select.innerHTML = `<option value="">--请选择本校--</option>${schoolList.map(school => `<option value="${school}">${school}</option>`).join('')}`;
+    select.innerHTML = `<option value="">--请选择本校--</option>${schoolList.map(school => `<option value="${escapeAppHtml(school)}">${escapeAppHtml(school)}</option>`).join('')}`;
     const currentSchool = readCurrentSchool();
     const matched = Array.from(select.options || []).find(option => sameAppSchoolName(option.value, currentSchool));
     if (matched) select.value = matched.value;
@@ -6334,7 +6344,7 @@ function generateTeacherInputs() {
     const classes = [...new Set(mySchoolData.students.map(s => s.class))].sort((a, b) => { const [gradeA, classA] = a.split('.').map(Number); const [gradeB, classB] = b.split('.').map(Number); if (gradeA !== gradeB) return gradeA - gradeB; return classA - classB; });
     const teacherInputFragment = document.createDocumentFragment();
     classes.forEach(cls => {
-        SUBJECTS.forEach(sub => { const key = `${cls}_${sub}`; const currentTeacher = TEACHER_MAP[key] || ''; const inputDiv = document.createElement('div'); inputDiv.innerHTML = `<label style="font-size:12px;color:#666;">${cls}班 ${sub}</label><input type="text" class="teacher-input" data-key="${key}" value="${currentTeacher}" placeholder="姓名" style="width:100%;margin-top:2px;">`; teacherInputFragment.appendChild(inputDiv); });
+        SUBJECTS.forEach(sub => { const key = `${cls}_${sub}`; const currentTeacher = TEACHER_MAP[key] || ''; const inputDiv = document.createElement('div'); inputDiv.innerHTML = `<label style="font-size:12px;color:#666;">${escapeAppHtml(cls)}班 ${escapeAppHtml(sub)}</label><input type="text" class="teacher-input" data-key="${escapeAppHtml(key)}" value="${escapeAppHtml(currentTeacher)}" placeholder="姓名" style="width:100%;margin-top:2px;">`; teacherInputFragment.appendChild(inputDiv); });
     });
     container.appendChild(teacherInputFragment);
     container.querySelectorAll('.teacher-input').forEach(input => {
@@ -6945,8 +6955,8 @@ function renderIndicatorTargetMatchPanel(calcData, line1, line2) {
                     : '<span style="color:#15803d;font-weight:700;">正常</span>');
             return `<tr>
                 <td>${d.rank}</td>
-                <td>${d.name}</td>
-                <td>${d.targetKey || '-'}</td>
+                <td>${escapeAppHtml(d.name)}</td>
+                <td>${escapeAppHtml(d.targetKey || '-')}</td>
                 <td>${d.studentCount}</td>
                 <td>${d.rawT1 || 0} / ${d.rawT2 || 0}</td>
                 <td>${d.t1 || 0} / ${d.t2 || 0}</td>
@@ -7188,19 +7198,22 @@ function calcIndicators(isSilent = false) {
     let html = '';
     calcData.forEach(d => {
         const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
+        const safeName = escapeAppHtml(d.name);
+        const safeNameArg = jsStringLiteral(d.name);
+        const targetTitle = d.targetKey ? `目标人数匹配：${d.targetKey}` : '未匹配目标人数';
         html += `
             <tr class="${isMySchool ? 'bg-highlight' : ''}">
-                <td style="font-weight:bold;" title="${d.targetKey ? `目标人数匹配：${d.targetKey}` : '未匹配目标人数'}">${d.name}${d.invalidTarget ? '<span style="display:block; font-size:11px; color:#d97706; font-weight:600;">目标异常</span>' : (d.missingTarget ? '<span style="display:block; font-size:11px; color:#dc2626; font-weight:600;">未匹配目标人数</span>' : '')}</td>
+                <td style="font-weight:bold;" title="${escapeAppHtml(targetTitle)}">${safeName}${d.invalidTarget ? '<span style="display:block; font-size:11px; color:#d97706; font-weight:600;">目标异常</span>' : (d.missingTarget ? '<span style="display:block; font-size:11px; color:#dc2626; font-weight:600;">未匹配目标人数</span>' : '')}</td>
 
                 <!-- 指标一 -->
                 <td>
                     <!-- 👇 新增点击事件：点击目标人数，分析如何达标 -->
                     <span class="clickable-num" style="color:#d97706; border-bottom:1px dashed #d97706;"
-                          onclick="analyzeTargetGap('${d.name}', 'ind1', ${line1})"
+                          onclick="analyzeTargetGap(${safeNameArg}, 'ind1', ${line1})"
                           title="点击分析：哪些学生差一点就达标？补哪科？">
                         ${d.t1 || (d.invalidTarget ? '异常' : (d.missingTarget ? '未匹配' : 0))}
                     </span> /
-                    <strong class="clickable-num" onclick="handleIndicatorClick('${d.name}', 'ind1')">${d.r1}</strong>
+                    <strong class="clickable-num" onclick="handleIndicatorClick(${safeNameArg}, 'ind1')">${d.r1}</strong>
                 </td>
                 <td>${d.base1.toFixed(2)}</td>
                 <td style="color:${d.bonus1 > 0 ? 'green' : '#ccc'}; font-weight:bold;">${d.bonus1 > 0 ? '+' : ''}${d.bonus1.toFixed(2)}</td>
@@ -7210,11 +7223,11 @@ function calcIndicators(isSilent = false) {
                 <td>
 
                     <span class="clickable-num" style="color:#d97706; border-bottom:1px dashed #d97706;"
-                          onclick="analyzeTargetGap('${d.name}', 'ind2', ${line2})"
+                          onclick="analyzeTargetGap(${safeNameArg}, 'ind2', ${line2})"
                           title="点击分析：哪些学生差一点就达标？补哪科？">
                         ${d.t2 || (d.invalidTarget ? '异常' : (d.missingTarget ? '未匹配' : 0))}
                     </span> /
-                    <strong class="clickable-num" onclick="handleIndicatorClick('${d.name}', 'ind2')">${d.r2}</strong>
+                    <strong class="clickable-num" onclick="handleIndicatorClick(${safeNameArg}, 'ind2')">${d.r2}</strong>
                 </td>
                 <td>${d.base2.toFixed(2)}</td>
                 <td style="color:${d.bonus2 > 0 ? 'green' : '#ccc'}; font-weight:bold;">${d.bonus2 > 0 ? '+' : ''}${d.bonus2.toFixed(2)}</td>
@@ -7631,8 +7644,8 @@ function updateSegmentSelects() {
     if (!schSel || !subSel) return;
     const oldSch = schSel.value;
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare('all') : Object.keys(SCHOOLS || {});
-    schSel.innerHTML = `<option value="ALL">全部学校</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`; if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
-    const oldSub = subSel.value; subSel.innerHTML = `<option value="total">总分</option>${SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('')}`; if (oldSub) subSel.value = oldSub;
+    schSel.innerHTML = `<option value="ALL">全部学校</option>${schoolList.map(s => `<option value="${escapeAppHtml(s)}">${escapeAppHtml(s)}</option>`).join('')}`; if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
+    const oldSub = subSel.value; subSel.innerHTML = `<option value="total">总分</option>${SUBJECTS.map(s => `<option value="${escapeAppHtml(s)}">${escapeAppHtml(s)}</option>`).join('')}`; if (oldSub) subSel.value = oldSub;
     schSel.onchange = updateSegmentClassSelect;
     updateSegmentClassSelect();
 }
@@ -7647,7 +7660,7 @@ function updateSegmentClassSelect() {
     const students = schSel.value === 'ALL' ? townshipRows : (schoolRecord?.students || []);
     const classes = Array.from(new Set(students.map(s => s.class).filter(Boolean)))
         .sort((a, b) => normalizeClass(a).localeCompare(normalizeClass(b), 'zh-Hans-CN', { numeric: true }));
-    clsSel.innerHTML = `<option value="ALL">全部班级</option>${classes.map(c => `<option value="${c}">${c}</option>`).join('')}`;
+    clsSel.innerHTML = `<option value="ALL">全部班级</option>${classes.map(c => `<option value="${escapeAppHtml(c)}">${escapeAppHtml(c)}</option>`).join('')}`;
     if (oldClass && Array.from(clsSel.options || []).some(option => option.value === oldClass)) clsSel.value = oldClass;
 }
 
@@ -7806,7 +7819,7 @@ function updateSubjectBalanceSelects() {
     const clsSel = document.getElementById('sbClassSelect');
 
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare('all') : Object.keys(SCHOOLS || {});
-    schSel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+    schSel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${escapeAppHtml(s)}">${escapeAppHtml(s)}</option>`).join('')}`;
     const currentSchool = readCurrentSchool();
     const matched = Array.from(schSel.options || []).find(option => sameAppSchoolName(option.value, currentSchool));
     if (matched) schSel.value = matched.value;
@@ -7814,7 +7827,7 @@ function updateSubjectBalanceSelects() {
     schSel.onchange = () => {
         const schoolRecord = getAppSchoolRecord(schSel.value);
         const classes = schoolRecord ? [...new Set((schoolRecord.students || []).map(s => s.class))].sort() : [];
-        clsSel.innerHTML = `<option value="">全部</option>${classes.map(c => `<option value="${c}">${c}</option>`).join('')}`;
+        clsSel.innerHTML = `<option value="">全部</option>${classes.map(c => `<option value="${escapeAppHtml(c)}">${escapeAppHtml(c)}</option>`).join('')}`;
     };
     schSel.onchange();
 }
@@ -8020,9 +8033,9 @@ function SB_renderClusterResults(clusterMap, clusterLabels) {
         const label = clusterLabels[k] || '未命名';
         const list = clusterMap[k] || [];
         html += `<div style="margin-bottom:12px; padding:10px; border:1px dashed #fed7aa; border-radius:8px; background:#fff;">
-                <div style="font-weight:bold; color:#9a3412;">${label}（${list.length}人）</div>
-                <div style="margin:6px 0; color:#7c2d12;">${strategy[label] || ''}</div>
-                <div style="font-size:11px; color:#64748b;">示例名单：${list.slice(0, 8).map(s => `${s.name}(${s.class})`).join('、')}${list.length > 8 ? ' …' : ''}</div>
+                <div style="font-weight:bold; color:#9a3412;">${escapeAppHtml(label)}（${list.length}人）</div>
+                <div style="margin:6px 0; color:#7c2d12;">${escapeAppHtml(strategy[label] || '')}</div>
+                <div style="font-size:11px; color:#64748b;">示例名单：${list.slice(0, 8).map(s => `${escapeAppHtml(s.name)}(${escapeAppHtml(s.class)})`).join('、')}${list.length > 8 ? ' …' : ''}</div>
             </div>`;
     });
     container.innerHTML = html || '暂无聚类结果';
@@ -8108,7 +8121,7 @@ function updatePotentialSchoolSelect() {
     const old = sel.value;
 
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare('all') : Object.keys(SCHOOLS || {});
-    sel.innerHTML = `<option value="ALL">全部学校</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+    sel.innerHTML = `<option value="ALL">全部学校</option>${schoolList.map(s => `<option value="${escapeAppHtml(s)}">${escapeAppHtml(s)}</option>`).join('')}`;
 
     if (old && (old === 'ALL' || SCHOOLS[old])) sel.value = old;
     sel.onchange = updatePotentialClassSelect;
@@ -8125,7 +8138,7 @@ function updatePotentialClassSelect() {
     const students = schoolSelect.value === 'ALL' ? townshipRows : (schoolRecord?.students || []);
     const classes = Array.from(new Set(students.map(s => s.class).filter(Boolean)))
         .sort((a, b) => normalizeClass(a).localeCompare(normalizeClass(b), 'zh-Hans-CN', { numeric: true }));
-    classSelect.innerHTML = `<option value="ALL">全部班级</option>${classes.map(c => `<option value="${c}">${c}</option>`).join('')}`;
+    classSelect.innerHTML = `<option value="ALL">全部班级</option>${classes.map(c => `<option value="${escapeAppHtml(c)}">${escapeAppHtml(c)}</option>`).join('')}`;
     if (oldClass && Array.from(classSelect.options || []).some(option => option.value === oldClass)) classSelect.value = oldClass;
 }
 
@@ -8209,11 +8222,11 @@ function renderPotentialAnalysis() {
     } else {
         candidates.forEach(c => {
             html += `<tr>
-                    <td>${c.school}</td>
-                    <td>${c.class}</td>
-                    <td><strong>${c.name}</strong></td>
+                    <td>${escapeAppHtml(c.school)}</td>
+                    <td>${escapeAppHtml(c.class)}</td>
+                    <td><strong>${escapeAppHtml(c.name)}</strong></td>
                     <td class="text-green">${c.totalRank}</td>
-                    <td style="color:var(--primary); font-weight:bold;">${c.subject}</td>
+                    <td style="color:var(--primary); font-weight:bold;">${escapeAppHtml(c.subject)}</td>
                     <td>${formatVal(c.subScore)}</td>
                     <td class="text-red">${c.subRank}</td>
                     <td style="color:red; font-weight:bold;">📉 ${c.gap}</td>
@@ -8358,7 +8371,7 @@ function updatePosterSelects() {
         prevSchool
     );
 
-    subSel.innerHTML = `<option value="total">🏆 总分光荣榜</option>${SUBJECTS.map(s => `<option value="${s}">📘 ${s}单科状元</option>`).join('')}`;
+    subSel.innerHTML = `<option value="total">🏆 总分光荣榜</option>${SUBJECTS.map(s => `<option value="${escapeAppHtml(s)}">📘 ${escapeAppHtml(s)}单科状元</option>`).join('')}`;
     subSel.value = (prevSubject === 'total' || SUBJECTS.includes(prevSubject)) ? prevSubject : 'total';
 
     schSel.onchange = () => updatePosterClassSelect();
@@ -8426,9 +8439,9 @@ function renderPoster() {
                 <div class="p-item">
                     <div class="p-rank">${rankDisplay}</div>
                     <div class="p-name">
-                        ${s.name} <span style="font-size:0.8em; opacity:0.8; font-weight:normal;">(${s.class})</span>
+                        ${escapeAppHtml(s.name)} <span style="font-size:0.8em; opacity:0.8; font-weight:normal;">(${escapeAppHtml(s.class)})</span>
                     </div>
-                    <div class="p-score">${scoreVal}</div>
+                    <div class="p-score">${escapeAppHtml(scoreVal)}</div>
                 </div>`;
         });
     }
@@ -8505,7 +8518,7 @@ function initTagWidget(wrapperId, hiddenInputId) {
             const val = this.value.trim().toLowerCase();
             if (!val) { dropdown.style.display = 'none'; return; }
             const matches = readCurrentContextStudentsState().filter(s => s.name.includes(val)).slice(0, 8);
-            if (matches.length) { dropdown.innerHTML = matches.map(s => `<div class="suggestion-item" onclick="addTagToWidget('${wrapperId}', '${hiddenInputId}', '${s.name}')">${s.name} <small>${s.score || s.total}分</small></div>`).join(''); dropdown.style.display = 'block'; }
+            if (matches.length) { dropdown.innerHTML = matches.map(s => `<div class="suggestion-item" onclick="addTagToWidget(${jsStringLiteral(wrapperId)}, ${jsStringLiteral(hiddenInputId)}, ${jsStringLiteral(s.name)})">${escapeAppHtml(s.name)} <small>${escapeAppHtml(s.score || s.total)}分</small></div>`).join(''); dropdown.style.display = 'block'; }
             else { dropdown.style.display = 'none'; }
         });
         input.addEventListener('blur', () => { setTimeout(() => dropdown.style.display = 'none', 200); });
@@ -8529,7 +8542,7 @@ function renderTagsUI(wrapperId, hiddenInputId) {
     const input = wrapper.querySelector('.tag-input-field');
     tags.forEach(tag => {
         const chip = document.createElement('div'); chip.className = 'tag-chip';
-        chip.innerHTML = `${tag} <span class="tag-chip-remove" onclick="removeTagFromWidget('${wrapperId}', '${hiddenInputId}', '${tag}')">&times;</span>`;
+        chip.innerHTML = `${escapeAppHtml(tag)} <span class="tag-chip-remove" onclick="removeTagFromWidget(${jsStringLiteral(wrapperId)}, ${jsStringLiteral(hiddenInputId)}, ${jsStringLiteral(tag)})">&times;</span>`;
         if (input) wrapper.insertBefore(chip, input); else wrapper.appendChild(chip);
     });
 }
@@ -8591,7 +8604,7 @@ function updateConstraintWidgetsContext(type) {
     let opts = '<option value="">--点击选择--</option>';
     if (students.length > 0) {
         students.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
-        opts += students.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+        opts += students.map(s => `<option value="${escapeAppHtml(s.name)}">${escapeAppHtml(s.name)}</option>`).join('');
     } else {
         opts = '<option value="">(暂无学生数据)</option>';
     }
@@ -8715,7 +8728,7 @@ function initColFilterUI() {
 
         const label = document.createElement('label');
         label.className = 'filter-check-label';
-        label.innerHTML = `<input type="checkbox" value="${sub}" ${COL_FILTER_STATE[sub] ? 'checked' : ''} onchange="applyColFilter(this)"> ${sub}`;
+        label.innerHTML = `<input type="checkbox" value="${escapeAppHtml(sub)}" ${COL_FILTER_STATE[sub] ? 'checked' : ''} onchange="applyColFilter(this)"> ${escapeAppHtml(sub)}`;
         popover.appendChild(label);
     });
 
@@ -8967,8 +8980,8 @@ function openTargetEditor() {
         const t = getTargetConfigBySchool(sch).value || { t1: 0, t2: 0 };
 
         return `
-                <tr data-school="${sch}">
-                    <td style="font-weight:bold;">${sch}</td>
+                <tr data-school="${escapeAppHtml(sch)}">
+                    <td style="font-weight:bold;">${escapeAppHtml(sch)}</td>
                     <td>
                         <input type="number" class="inp-t1" value="${t.t1}" style="width:80px; text-align:center; border:1px solid #93c5fd;">
                     </td>
@@ -9192,8 +9205,8 @@ function doSpotlightSearch() {
         matches.forEach(s => {
             spotlightRowsHtml.push(`
                     <div class="spotlight-item" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)})">
-                        <span>👤 ${s.name} <small style="color:#666">(${s.school} ${s.class})</small></span>
-                        <span style="font-weight:bold;">${s.total}分</span>
+                        <span>👤 ${escapeAppHtml(s.name)} <small style="color:#666">(${escapeAppHtml(s.school)} ${escapeAppHtml(s.class)})</small></span>
+                        <span style="font-weight:bold;">${escapeAppHtml(s.total)}分</span>
                     </div>`);
         });
     }

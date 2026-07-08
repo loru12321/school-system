@@ -733,11 +733,14 @@ const DataManager = {
         let html = '';
         window.PREV_DATA.slice(0, 50).forEach(s => {
             const townRankDisplay = isSingleSchool ? '<span style="color:#ccc">-</span>' : s.townRank;
+            const schoolText = this.escapeDataManagerHtml(s.school);
+            const classText = this.escapeDataManagerHtml(s.class);
+            const nameText = this.escapeDataManagerHtml(s.name);
             html += `
                 <tr>
-                    <td>${s.school}</td>
-                    <td>${s.class}</td>
-                    <td>${s.name.includes('无名氏') ? '<span style="color:#999;font-style:italic;">' + s.name + '</span>' : '<strong>' + s.name + '</strong>'}</td>
+                    <td>${schoolText}</td>
+                    <td>${classText}</td>
+                    <td>${String(s.name || '').includes('无名氏') ? '<span style="color:#999;font-style:italic;">' + nameText + '</span>' : '<strong>' + nameText + '</strong>'}</td>
                     <td style="font-weight:bold; color:#1e3a8a;">${s.total}</td>
                     <td>${s.schoolRank}</td>
                     <td>${townRankDisplay}</td>
@@ -791,6 +794,15 @@ const DataManager = {
             '"': '&quot;',
             "'": '&#39;'
         }[ch]));
+    },
+
+    dataManagerJsStringLiteral: function (value) {
+        if (typeof window.jsStringLiteral === 'function') return window.jsStringLiteral(value);
+        return JSON.stringify(String(value ?? ''))
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     },
 
     getExamBatchDateSortTs: function (examId, meta = {}) {
@@ -1125,10 +1137,10 @@ const DataManager = {
             const rows = pageData.map(s => `
                 <tr>
                     <td style="text-align:center;"><input type="checkbox" class="dm-stu-select" data-idx="${s._originalIndex}" ${this.studentSelection.has(s._originalIndex) ? 'checked' : ''} onchange="DataManager.toggleStudentSelection(this)"></td>
-                    <td>${s.school}</td>
-                    <td>${s.class}</td>
-                    <td style="font-weight:bold;">${s.name}</td>
-                    <td>${s.id}</td>
+                    <td>${this.escapeDataManagerHtml(s.school)}</td>
+                    <td>${this.escapeDataManagerHtml(s.class)}</td>
+                    <td style="font-weight:bold;">${this.escapeDataManagerHtml(s.name)}</td>
+                    <td>${this.escapeDataManagerHtml(s.id)}</td>
                     <td>${s.total}</td>
                     <td>
                         <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${s._originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button>
@@ -1230,7 +1242,7 @@ const DataManager = {
 
         const schoolOptionsHtml = [...schools]
             .sort((a, b) => a.localeCompare(b, 'zh-CN'))
-            .map(s => `<option value="${s}">${s}</option>`)
+            .map(s => `<option value="${this.escapeDataManagerHtml(s)}">${this.escapeDataManagerHtml(s)}</option>`)
             .join('');
         sel.innerHTML = `<option value="">-- 显示全部 --</option>${schoolOptionsHtml}`;
 
@@ -1733,15 +1745,17 @@ const DataManager = {
 
             const teacherRowsHtml = displayList.map(t => {
                 const schoolStyle = t.school.includes("未知") ? "color:#94a3b8; font-style:italic;" : "color:#475569;";
+                const keyArg = this.dataManagerJsStringLiteral(t.key);
+                const nameArg = this.dataManagerJsStringLiteral(t.name);
                 return `
                     <tr>
-                        <td style="${schoolStyle}">${t.school}</td>
-                        <td style="font-weight:bold;">${t.class}</td>
-                        <td><span class="badge" style="background:#f1f5f9; color:#475569;">${t.subject}</span></td>
-                        <td style="font-weight:bold; color:#1e293b;">${t.name}</td>
+                        <td style="${schoolStyle}">${this.escapeDataManagerHtml(t.school)}</td>
+                        <td style="font-weight:bold;">${this.escapeDataManagerHtml(t.class)}</td>
+                        <td><span class="badge" style="background:#f1f5f9; color:#475569;">${this.escapeDataManagerHtml(t.subject)}</span></td>
+                        <td style="font-weight:bold; color:#1e293b;">${this.escapeDataManagerHtml(t.name)}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="DataManager.editTeacher('${t.key}', '${t.name}')" style="padding:2px 6px; font-size:11px;">修改</button>
-                            <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTeacher('${t.key}')" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
+                            <button class="btn btn-sm btn-primary" onclick="DataManager.editTeacher(${keyArg}, ${nameArg})" style="padding:2px 6px; font-size:11px;">修改</button>
+                            <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTeacher(${keyArg})" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
                         </td>
                     </tr>`;
             });
@@ -1766,13 +1780,17 @@ const DataManager = {
 
     editStudent: function (index) {
         const s = RAW_DATA[index];
+        const nameValue = this.escapeDataManagerHtml(s.name);
+        const classValue = this.escapeDataManagerHtml(s.class);
+        const idValue = this.escapeDataManagerHtml(s.id);
+        const schoolValue = this.escapeDataManagerHtml(s.school);
         Swal.fire({
             title: '编辑学生信息',
             html: `<div style="text-align:left; font-size:14px; line-height:2.5;">
-                <label style="width:50px; display:inline-block;">姓名:</label> <input id="swal-name" class="swal2-input" value="${s.name}" style="width:200px; height:30px; margin:0;"><br>
-                <label style="width:50px; display:inline-block;">班级:</label> <input id="swal-class" class="swal2-input" value="${s.class}" style="width:200px; height:30px; margin:0;"><br>
-                <label style="width:50px; display:inline-block;">考号:</label> <input id="swal-id" class="swal2-input" value="${s.id}" style="width:200px; height:30px; margin:0;"><br>
-                <label style="width:50px; display:inline-block;">学校:</label> <input id="swal-school" class="swal2-input" value="${s.school}" style="width:200px; height:30px; margin:0;"><br>
+                <label style="width:50px; display:inline-block;">姓名:</label> <input id="swal-name" class="swal2-input" value="${nameValue}" style="width:200px; height:30px; margin:0;"><br>
+                <label style="width:50px; display:inline-block;">班级:</label> <input id="swal-class" class="swal2-input" value="${classValue}" style="width:200px; height:30px; margin:0;"><br>
+                <label style="width:50px; display:inline-block;">考号:</label> <input id="swal-id" class="swal2-input" value="${idValue}" style="width:200px; height:30px; margin:0;"><br>
+                <label style="width:50px; display:inline-block;">学校:</label> <input id="swal-school" class="swal2-input" value="${schoolValue}" style="width:200px; height:30px; margin:0;"><br>
                 <label style="width:50px; display:inline-block;">状态:</label>
                 <select id="swal-status" class="swal2-input" style="width:200px; height:30px; margin:0;">
                     <option value="active">正常</option>
@@ -1880,7 +1898,8 @@ const DataManager = {
         } else {
             let html = '';
             Object.keys(examStats).forEach(examName => {
-                html += `<tr><td style="font-weight:bold;">${examName}</td><td>${examStats[examName]} 条记录</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.renameHistoryExam('${examName}')" style="padding:2px 6px;">重命名</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteHistoryExam('${examName}')" style="padding:2px 6px; background:#dc2626;">删除</button></td></tr>`;
+                const examArg = this.dataManagerJsStringLiteral(examName);
+                html += `<tr><td style="font-weight:bold;">${this.escapeDataManagerHtml(examName)}</td><td>${examStats[examName]} 条记录</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.renameHistoryExam(${examArg})" style="padding:2px 6px;">重命名</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteHistoryExam(${examArg})" style="padding:2px 6px; background:#dc2626;">删除</button></td></tr>`;
             });
             tbody.innerHTML = html;
         }
@@ -2062,7 +2081,8 @@ const DataManager = {
         let html = '';
         list.forEach(sch => {
             const t = readTargetsState()[sch];
-            html += `<tr><td style="font-weight:bold;">${sch}</td><td>${t.t1}</td><td>${t.t2}</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.editTarget('${sch}')" style="padding:2px 6px;">修改</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTarget('${sch}')" style="padding:2px 6px;">删除</button></td></tr>`;
+            const schoolArg = this.dataManagerJsStringLiteral(sch);
+            html += `<tr><td style="font-weight:bold;">${this.escapeDataManagerHtml(sch)}</td><td>${t.t1}</td><td>${t.t2}</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.editTarget(${schoolArg})" style="padding:2px 6px;">修改</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTarget(${schoolArg})" style="padding:2px 6px;">删除</button></td></tr>`;
         });
         tbody.innerHTML = html;
         this.renderDataManagerStatus();
