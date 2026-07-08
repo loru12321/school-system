@@ -29,9 +29,15 @@ const pairingContainer = {
 };
 elementMap.set('teacher-pairing-suggestions', pairingContainer);
 
+const perfTables = [];
 const storage = { MY_SCHOOL: '甲校别名' };
 const context = {
-    console,
+    console: {
+        ...console,
+        table(rows) {
+            perfTables.push(Array.isArray(rows) ? rows : []);
+        }
+    },
     DEFAULT_MY_SCHOOL_NAME: '甲校别名',
     alert(message) {
         context.lastAlert = message;
@@ -46,6 +52,9 @@ const context = {
                 innerHTML: ''
             };
         }
+    },
+    performance: {
+        now: () => Date.now()
     },
     localStorage: {
         getItem(key) {
@@ -223,5 +232,17 @@ assert.ok(townshipStats, 'teacher township ranking should include class teacher 
 assert.strictEqual(Number(townshipStats.avg), 75, 'teacher township ranking should use the admin/full-school teacher metric average');
 assert.strictEqual(context.TEACHER_STATS['甲校教师'].数学.studentCount, 2, 'admin-scope township calculation should not overwrite role-scoped teacher stats');
 assert.strictEqual(Number(context.TEACHER_STATS['甲校教师'].数学.avg), 95, 'admin-scope township calculation should restore class teacher analysis values');
+
+perfTables.length = 0;
+context.__TEACHER_ANALYSIS_PERF_DEBUG__ = true;
+context.__RAW_DATA_VERSION = Number(context.__RAW_DATA_VERSION || 0) + 1;
+context.calculateTeacherTownshipRanking({ teacherMetricScope: 'admin' });
+context.calculateTeacherTownshipRanking({ teacherMetricScope: 'admin' });
+const adminMetricRecomputes = perfTables.filter((rows) => (
+    rows.some((row) => row?.label === 'analyzeTeachersV2' && row?.step === 'teacher metrics')
+)).length;
+assert.strictEqual(adminMetricRecomputes, 1, 'admin-scope township ranking should reuse cached teacher stats after the first calculation');
+assert.strictEqual(context.TEACHER_STATS['甲校教师'].数学.studentCount, 2, 'cached admin ranking should still preserve role-scoped teacher stats');
+assert.strictEqual(Number(context.TEACHER_STATS['甲校教师'].数学.avg), 95, 'cached admin ranking should not overwrite role-scoped teacher metrics');
 
 console.log('teacher-analysis-core-runtime tests passed');

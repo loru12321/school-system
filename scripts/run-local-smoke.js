@@ -157,7 +157,12 @@ async function main() {
         stdio: 'inherit'
     });
 
-    const closeServer = () => new Promise(resolve => server.close(() => resolve()));
+    const closeServer = () => new Promise(resolve => {
+        server.close(() => resolve());
+        if (typeof server.closeAllConnections === 'function') {
+            server.closeAllConnections();
+        }
+    });
 
     child.on('exit', async code => {
         await closeServer();

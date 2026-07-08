@@ -3977,6 +3977,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     ) {
         process.exit(1);
     }
+    process.exit(0);
 })().catch(async (error) => {
     console.error(error);
     process.exit(1);

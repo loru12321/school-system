@@ -109,8 +109,18 @@
     const teacherAnalysisCacheState = {
         signature: '',
         townshipSignature: '',
-        historyEntryCache: new Map()
+        historyEntryCache: new Map(),
+        statsBySignature: new Map()
     };
+
+    function cacheTeacherStatsForSignature(signature, stats) {
+        if (!signature || !stats || typeof stats !== 'object' || !Object.keys(stats).length) return;
+        teacherAnalysisCacheState.statsBySignature.set(signature, stats);
+        if (teacherAnalysisCacheState.statsBySignature.size > 6) {
+            const firstKey = teacherAnalysisCacheState.statsBySignature.keys().next().value;
+            if (firstKey) teacherAnalysisCacheState.statsBySignature.delete(firstKey);
+        }
+    }
 
     function teacherStableObjectSignature(value) {
         if (!value || typeof value !== 'object') return '';
@@ -967,16 +977,31 @@
         }
 
         const runtimeSignature = `${buildTeacherRuntimeSignature(rows, activeSchool)}::teacherMetricScope:${useAdminTeacherMetricScope ? 'admin' : 'role'}`;
+        const preserveCurrentStats = renderOptions.preserveCurrentStats === true;
+        const cachedStats = teacherAnalysisCacheState.statsBySignature.get(runtimeSignature);
+        if (renderOptions.force !== true && cachedStats && Object.keys(cachedStats || {}).length) {
+            if (!preserveCurrentStats) {
+                window.TEACHER_STATS = cachedStats;
+                teacherAnalysisCacheState.signature = runtimeSignature;
+                renderTeacherAnalysisOutputs(renderOptions);
+            }
+            perfProbe.mark('cached stats');
+            perfProbe.flush();
+            return cachedStats;
+        }
         if (renderOptions.force !== true
             && teacherAnalysisCacheState.signature === runtimeSignature
             && window.TEACHER_STATS
             && Object.keys(window.TEACHER_STATS).length) {
+            cacheTeacherStatsForSignature(runtimeSignature, window.TEACHER_STATS);
             renderTeacherAnalysisOutputs(renderOptions);
             perfProbe.mark('cached render');
             perfProbe.flush();
             return window.TEACHER_STATS;
         }
 
+        const previousStatsForPreserve = preserveCurrentStats ? window.TEACHER_STATS : null;
+        const previousSignatureForPreserve = preserveCurrentStats ? teacherAnalysisCacheState.signature : '';
         window.TEACHER_STATS = {};
         teacherAnalysisCacheState.historyEntryCache = new Map();
         const classSchoolMap = (typeof window.getClassSchoolMapForAllData === 'function')
@@ -1045,7 +1070,13 @@
                 mySchoolStudents = window.PermissionPolicy.filterStudentRows(user, pickTeacherStudentsForSchool(activeSchool), { mode: queryMode });
             }
         }
-        if (!mySchoolStudents.length) return;
+        if (!mySchoolStudents.length) {
+            if (preserveCurrentStats) {
+                window.TEACHER_STATS = previousStatsForPreserve;
+                teacherAnalysisCacheState.signature = previousSignatureForPreserve;
+            }
+            return;
+        }
         const studentKeyCache = new WeakMap();
         const getStudentKey = (student) => {
             if (!student || typeof student !== 'object') return teacherBuildStudentKey(student);
@@ -1391,11 +1422,20 @@
         });
         perfProbe.mark('fair scoring');
 
+        const computedStats = window.TEACHER_STATS;
+        cacheTeacherStatsForSignature(runtimeSignature, computedStats);
         teacherAnalysisCacheState.signature = runtimeSignature;
+        if (preserveCurrentStats) {
+            window.TEACHER_STATS = previousStatsForPreserve;
+            teacherAnalysisCacheState.signature = previousSignatureForPreserve;
+            perfProbe.mark('cache detached stats');
+            perfProbe.flush();
+            return computedStats;
+        }
         renderTeacherAnalysisOutputs(renderOptions);
         perfProbe.mark('render outputs');
         perfProbe.flush();
-        return window.TEACHER_STATS;
+        return computedStats;
     }
 
     function calculateTeacherTownshipRanking(options = {}) {
@@ -1405,11 +1445,12 @@
             const previousSignature = teacherAnalysisCacheState.signature;
             try {
                 sourceTeacherStats = analyzeTeachersV2({
-                    force: true,
+                    force: options.force === true,
                     render: false,
                     township: false,
-                    teacherMetricScope: 'admin'
-                }) || window.TEACHER_STATS || {};
+                    teacherMetricScope: 'admin',
+                    preserveCurrentStats: true
+                }) || {};
             } finally {
                 window.TEACHER_STATS = previousStats;
                 teacherAnalysisCacheState.signature = previousSignature;
