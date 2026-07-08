@@ -611,7 +611,7 @@ var Auth = {
                 lockRuntimeCohortId(selectedLoginCohort);
                 if (typeof enterCohortFromMask === 'function') {
                     pendingLoginCohortEntry = Promise.resolve()
-                        .then(() => enterCohortFromMask({ fastEnter: true, requireCloudData: false }))
+                        .then(() => enterCohortFromMask({ fastEnter: false, requireCloudData: true }))
                         .then(() => {
                             if (window.BootCohortLifecycle?.clearGraduateTarget) {
                                 window.BootCohortLifecycle.clearGraduateTarget();

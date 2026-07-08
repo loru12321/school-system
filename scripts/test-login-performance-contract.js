@@ -62,8 +62,8 @@ assert.ok(selectedCohortSetupEnd > selectedCohortIndex, 'selected cohort setup m
 const selectedCohortSetup = authLoginJs.slice(selectedCohortIndex, selectedCohortSetupEnd);
 assert.match(
   selectedCohortSetup,
-  /enterCohortFromMask\(\{\s*fastEnter:\s*true,\s*requireCloudData:\s*false\s*\}\)/,
-  'school login selected cohort entry must use fastEnter so cloud cohort data does not block login'
+  /enterCohortFromMask\(\{\s*fastEnter:\s*false,\s*requireCloudData:\s*true\s*\}\)/,
+  'school login selected cohort entry must wait for cloud cohort data so first login lands on the selected data page'
 );
 
 const enterMaskIndex = cohortExamMetaJs.indexOf('async function enterCohortFromMask(');

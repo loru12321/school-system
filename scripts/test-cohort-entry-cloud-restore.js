@@ -114,7 +114,7 @@ assert.ok(
 );
 
 assert.ok(
-    dataCloudSource.includes('cache_meta_${key}')
+    dataCloudSource.includes("getLocalCacheStorageKey(key, '_meta')")
         && dataCloudSource.includes("readSystemDataRecord(examKey, 'updated_at')")
         && dataCloudSource.includes('isLocalCacheFresh(localMeta, remoteUpdatedAt)')
         && dataCloudSource.includes("readSystemDataRecord(normalizedKey, 'content,updated_at')"),
@@ -200,6 +200,11 @@ assert.ok(
 assert.ok(
     /const currentExamCohortId = normalizeCompareCohortId\(currentExamId\);[\s\S]*const targetCohortId = normalizeCompareCohortId\(cohortId\);[\s\S]*const readyDataMatchesTarget = !!targetCohortId && !!currentExamCohortId && currentExamCohortId === targetCohortId;[\s\S]*if \(current === cohortKey && currentExamId && hasReadyData && readyDataMatchesTarget\)/.test(appSource),
     'cohort switching should not early-return when the loaded exam still belongs to another cohort'
+);
+
+assert.ok(
+    /async function switchCohort\(cohortId, options = \{\}\) \{[\s\S]*if \(!cohortId\) return;[\s\S]*lockRuntimeCohortId\(cohortId\);[\s\S]*const cohortKey = getAppCohortKey\(cohortId\);/.test(appSource),
+    'direct cohort switches should refresh the runtime cohort guard before restoring target cloud data'
 );
 
 assert.ok(

@@ -1847,6 +1847,7 @@ function getAppCohortKey(cohortId) {
 
 async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
+    lockRuntimeCohortId(cohortId);
     const cohortKey = getAppCohortKey(cohortId);
     const current = readWorkspaceProjectKey() || '';
     const currentExamId = CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '';
