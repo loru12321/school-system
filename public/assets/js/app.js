@@ -4636,7 +4636,14 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
 
             for (let f of files) await readExcel(f);
             await ensureUploadSchoolMapRuntimeLoaded();
+            if (typeof window.resetUploadSchoolMappingConfirmation === 'function') {
+                window.resetUploadSchoolMappingConfirmation();
+            }
+            setUploadMessage('请先确认学校名称对应关系；确认前不会计算排名，也不会同步云端。', 'info');
             await confirmUploadSchoolNameMappings();
+            if (typeof window.hasUploadSchoolMappingConfirmation === 'function' && !window.hasUploadSchoolMappingConfirmation()) {
+                throw new Error('学校名称对应关系尚未确认，已停止上传同步');
+            }
             SUBJECTS.sort(sortSubjects);
             await processData(); // 这是一个耗时操作
             // 仅更新运行时内存变量，供后续 saveCloudData 和 UI 使用。
@@ -4651,6 +4658,9 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
             setUploadMessage(`✅ 已解析 ${Object.keys(SCHOOLS).length} 所学校，共 ${RAW_DATA.length} 名学生，正在同步云端...`, 'info');
             let cloudSynced = true;
             if (typeof saveCloudData === 'function') {
+                if (typeof window.hasUploadSchoolMappingConfirmation === 'function' && !window.hasUploadSchoolMappingConfirmation()) {
+                    throw new Error('学校名称对应关系尚未确认，已阻止云端同步');
+                }
                 cloudSynced = await saveCloudData({
                     mode: 'exam',
                     examKey: currentExamId,
@@ -4699,7 +4709,12 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
 function ensureUploadSchoolMapRuntimeLoaded() {
     if (typeof window.confirmUploadSchoolNameMappings === 'function') return Promise.resolve(true);
     if (typeof loadOptionalRuntime === 'function') {
-        return loadOptionalRuntime('upload-school-map', './assets/js/upload-school-map-runtime.js');
+        return loadOptionalRuntime('upload-school-map', './assets/js/upload-school-map-runtime.js').then(() => {
+            if (typeof window.confirmUploadSchoolNameMappings !== 'function') {
+                throw new Error('上传学校名称确认组件未加载');
+            }
+            return true;
+        });
     }
     return Promise.reject(new Error('上传学校名称确认组件未加载'));
 }

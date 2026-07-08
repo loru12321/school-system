@@ -105,14 +105,52 @@
         return { rows, options };
     }
 
-    function confirmUploadSchoolNameMappings() {
-        const { rows, options } = buildUploadSchoolMappingRows();
-        if (!rows.length) return Promise.resolve({});
+    let uploadSchoolMappingConfirmation = {
+        confirmed: false,
+        confirmedAt: 0,
+        mapping: null
+    };
 
+    function resetUploadSchoolMappingConfirmation() {
+        uploadSchoolMappingConfirmation = {
+            confirmed: false,
+            confirmedAt: 0,
+            mapping: null
+        };
+    }
+
+    function markUploadSchoolMappingConfirmed(mapping = {}) {
+        uploadSchoolMappingConfirmation = {
+            confirmed: true,
+            confirmedAt: Date.now(),
+            mapping: { ...mapping }
+        };
+        return uploadSchoolMappingConfirmation;
+    }
+
+    function hasUploadSchoolMappingConfirmation() {
+        return !!uploadSchoolMappingConfirmation.confirmed;
+    }
+
+    function getUploadSchoolMappingConfirmation() {
+        return uploadSchoolMappingConfirmation && typeof uploadSchoolMappingConfirmation === 'object'
+            ? { ...uploadSchoolMappingConfirmation, mapping: { ...(uploadSchoolMappingConfirmation.mapping || {}) } }
+            : { confirmed: false, confirmedAt: 0, mapping: {} };
+    }
+
+    function bringUploadSchoolMapModalToFront(overlay) {
+        if (typeof window.bringSchoolModalToFront === 'function') {
+            window.bringSchoolModalToFront(overlay);
+            return;
+        }
+        overlay.style.zIndex = '1000000';
+    }
+
+    function renderUploadSchoolMappingModal({ rows, options, title, description, confirmText = '确认并继续', cancelText = '取消' }) {
         return new Promise((resolve, reject) => {
             const overlay = document.createElement('div');
             overlay.className = 'upload-school-map-modal';
-            overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:20px;';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:20px;';
             const optionHtml = (selected) => options.map((name) => {
                 const value = String(name || '').trim();
                 return `<option value="${escapeHtml(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(value)}</option>`;
@@ -120,8 +158,8 @@
             overlay.innerHTML = `
                 <div style="width:min(920px,96vw);max-height:86vh;overflow:hidden;background:#fff;border-radius:12px;box-shadow:0 24px 80px rgba(15,23,42,.25);display:flex;flex-direction:column;">
                     <div style="padding:18px 22px;border-bottom:1px solid #e5e7eb;">
-                        <div style="font-size:18px;font-weight:800;color:#0f172a;">确认学校名称对应关系</div>
-                        <div style="margin-top:6px;color:#64748b;font-size:13px;">左侧为本次 Excel 识别出的原始学校名，右侧为系统将使用的标准学校名。确认后再计算、排名和同步云端。</div>
+                        <div style="font-size:18px;font-weight:800;color:#0f172a;">${escapeHtml(title || '确认学校名称对应关系')}</div>
+                        <div style="margin-top:6px;color:#64748b;font-size:13px;">${escapeHtml(description || '左侧为本次 Excel 识别出的原始学校名，右侧为系统将使用的标准学校名。确认后再计算、排名和同步云端。')}</div>
                     </div>
                     <div style="padding:14px 22px;overflow:auto;">
                         <table class="mobile-card-table" style="width:100%;border-collapse:collapse;">
@@ -147,8 +185,8 @@
                     <div style="padding:14px 22px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;gap:12px;align-items:center;">
                         <div style="font-size:12px;color:#64748b;">如发现自动匹配不对，请先在右侧下拉框改正，再点击确认。</div>
                         <div style="display:flex;gap:10px;">
-                            <button type="button" class="btn btn-gray" data-action="cancel">取消上传</button>
-                            <button type="button" class="btn btn-blue" data-action="confirm">确认并继续</button>
+                            <button type="button" class="btn btn-gray" data-action="cancel">${escapeHtml(cancelText)}</button>
+                            <button type="button" class="btn btn-blue" data-action="confirm">${escapeHtml(confirmText)}</button>
                         </div>
                     </div>
                 </div>`;
@@ -156,7 +194,7 @@
             const cleanup = () => overlay.remove();
             overlay.querySelector('[data-action="cancel"]')?.addEventListener('click', () => {
                 cleanup();
-                reject(new Error('已取消上传，未写入学校名称映射'));
+                reject(new Error('已取消学校名称映射确认'));
             });
             overlay.querySelector('[data-action="confirm"]')?.addEventListener('click', () => {
                 const mapping = {};
@@ -165,17 +203,129 @@
                     const standard = String(select.value || '').trim();
                     if (raw && standard) mapping[raw] = standard;
                 });
-                applyUploadSchoolNameMappings(mapping);
                 cleanup();
                 resolve(mapping);
             });
             document.body.appendChild(overlay);
+            bringUploadSchoolMapModalToFront(overlay);
         });
+    }
+
+    function confirmUploadSchoolNameMappings() {
+        resetUploadSchoolMappingConfirmation();
+        const { rows, options } = buildUploadSchoolMappingRows();
+        if (!rows.length) {
+            markUploadSchoolMappingConfirmed({});
+            return Promise.resolve({});
+        }
+
+        return renderUploadSchoolMappingModal({
+            rows,
+            options,
+            title: '确认学校名称对应关系',
+            description: '左侧为本次 Excel 识别出的原始学校名，右侧为系统将使用的标准学校名。确认后再计算、排名和同步云端。',
+            confirmText: '确认并继续',
+            cancelText: '取消上传'
+        }).then((mapping) => {
+                applyUploadSchoolNameMappings(mapping);
+                markUploadSchoolMappingConfirmed(mapping);
+                return mapping;
+        });
+    }
+
+    function buildSchoolMappingRowsFromData(data = [], existingMapping = {}) {
+        const counter = new Map();
+        (Array.isArray(data) ? data : []).forEach((row) => {
+            const raw = String(row?.originalSchoolName || row?.school || '').trim();
+            if (raw) counter.set(raw, (counter.get(raw) || 0) + 1);
+        });
+        const rawNames = Array.from(counter.keys());
+        const options = getUploadSchoolStandardOptions(rawNames);
+        return {
+            rows: rawNames.map((raw) => ({
+                raw,
+                count: counter.get(raw) || 0,
+                standard: String(existingMapping[raw] || '').trim() || inferUploadStandardSchoolName(raw, options)
+            })).sort((a, b) => b.count - a.count || a.raw.localeCompare(b.raw, 'zh-CN')),
+            options
+        };
+    }
+
+    async function editExamSchoolNameMappings(examId) {
+        const key = String(examId || '').trim();
+        const db = window.CohortDB && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null;
+        const exam = db?.exams?.[key];
+        if (!key || !exam) return window.UI?.toast?.('未找到该考试批次', 'warning');
+        const data = Array.isArray(exam.data) ? exam.data : [];
+        if (!data.length) return window.UI?.toast?.('该考试暂无成绩数据，无法调整学校映射', 'warning');
+
+        const existingMapping = exam.schoolNameMapping || exam.meta?.schoolNameMapping || {};
+        const { rows, options } = buildSchoolMappingRowsFromData(data, existingMapping);
+        if (!rows.length) return window.UI?.toast?.('该考试没有可识别的学校名称', 'warning');
+
+        const mapping = await renderUploadSchoolMappingModal({
+            rows,
+            options,
+            title: '查看 / 修改本场考试学校名称映射',
+            description: `考试批次：${key}。修改后会按最新映射重算本场考试，并同步云端。`,
+            confirmText: '应用并重算',
+            cancelText: '暂不修改'
+        });
+        await applyExamSchoolNameMappings(key, mapping);
+    }
+
+    async function applyExamSchoolNameMappings(examId, mapping = {}) {
+        const key = String(examId || '').trim();
+        const db = window.CohortDB && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null;
+        const exam = db?.exams?.[key];
+        if (!key || !exam) throw new Error('未找到该考试批次');
+        const deepClone = typeof structuredClone === 'function'
+            ? (value) => structuredClone(value)
+            : (value) => JSON.parse(JSON.stringify(value));
+        exam.data = deepClone(Array.isArray(exam.data) ? exam.data : []).map((row) => {
+            const raw = String(row?.originalSchoolName || row?.school || '').trim();
+            return { ...row, originalSchoolName: raw || row?.originalSchoolName || '', school: String(mapping[raw] || row?.school || raw || '未知学校').trim() };
+        });
+        exam.schoolNameMapping = { ...mapping };
+        exam.meta = { ...(exam.meta || {}), schoolNameMapping: { ...mapping } };
+        exam.updatedAt = Date.now();
+
+        const applied = window.CohortDB.applyExamToWorkspace(key, { recalculate: false, renderTables: false, allowDuringImport: true });
+        if (!applied) throw new Error('切换考试批次失败，无法重算学校映射');
+        syncRuntimeStateToWindow?.();
+        if (typeof processData === 'function') await processData();
+        exam.data = deepClone(window.RAW_DATA || []);
+        exam.schools = deepClone(window.SCHOOLS || {});
+        exam.subjects = deepClone(window.SUBJECTS || []);
+        exam.thresholds = deepClone(window.THRESHOLDS || {});
+        exam.config = deepClone(window.CONFIG || {});
+        exam.fingerprint = typeof computeExamDataFingerprint === 'function' ? computeExamDataFingerprint(window.RAW_DATA || []) : exam.fingerprint;
+        exam.updatedAt = Date.now();
+        db.currentExamId = key;
+        syncRuntimeStateToWindow?.();
+        if (typeof renderTables === 'function') renderTables();
+        if (typeof updateStatusPanel === 'function') updateStatusPanel();
+        if (typeof window.saveCloudData === 'function') {
+            const ok = await window.saveCloudData({ mode: 'exam', examKey: key, background: false, sourceLabel: 'school-mapping-edit', forceUpload: true });
+            if (!ok) throw new Error(window.__LAST_CLOUD_SAVE_ERROR__ || '学校映射已重算，但云端同步失败');
+        }
+        if (typeof window.saveCloudData === 'function') {
+            await window.saveCloudData({ mode: 'workspace', background: true, sourceLabel: 'school-mapping-edit-workspace', forceUpload: true }).catch(() => false);
+        }
+        window.CohortDB.renderExamList?.();
+        window.DataManager?.renderExamBatches?.();
+        window.UI?.toast?.('学校名称映射已应用，本场考试已重算并同步云端', 'success');
     }
 
     Object.assign(window, {
         confirmUploadSchoolNameMappings,
         buildUploadSchoolMappingRows,
-        applyUploadSchoolNameMappings
+        applyUploadSchoolNameMappings,
+        resetUploadSchoolMappingConfirmation,
+        hasUploadSchoolMappingConfirmation,
+        getUploadSchoolMappingConfirmation,
+        editExamSchoolNameMappings,
+        applyExamSchoolNameMappings,
+        buildSchoolMappingRowsFromData
     });
 })();

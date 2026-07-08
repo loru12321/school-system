@@ -22,6 +22,61 @@
         return root.Swal && typeof root.Swal.fire === 'function' ? root.Swal : null;
     }
 
+    const TOP_MODAL_BASE_Z_INDEX = 1000000;
+    let topModalZIndex = TOP_MODAL_BASE_Z_INDEX;
+
+    function isTopLayerCandidate(node) {
+        if (!node || node.nodeType !== 1) return false;
+        if (node.matches?.('.modal, .upload-school-map-modal, .swal2-container, [role="dialog"], [aria-modal="true"]')) return true;
+        return false;
+    }
+
+    function isDisplayed(node) {
+        if (!node || node.nodeType !== 1) return false;
+        const style = root.getComputedStyle ? root.getComputedStyle(node) : null;
+        if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+        return node.style?.display !== 'none';
+    }
+
+    function bringSchoolModalToFront(node) {
+        if (!isTopLayerCandidate(node) || !isDisplayed(node)) return 0;
+        topModalZIndex += 10;
+        node.style.zIndex = String(topModalZIndex);
+        node.dataset.schoolTopLayer = String(topModalZIndex);
+        return topModalZIndex;
+    }
+
+    function scanTopLayerCandidates(rootNode) {
+        if (!rootNode || !rootNode.querySelectorAll) return;
+        if (isTopLayerCandidate(rootNode)) bringSchoolModalToFront(rootNode);
+        rootNode.querySelectorAll('.modal, .upload-school-map-modal, .swal2-container, [role="dialog"], [aria-modal="true"]').forEach((node) => {
+            bringSchoolModalToFront(node);
+        });
+    }
+
+    function installTopLayerObserver() {
+        if (!root.document || !root.MutationObserver || root.__SCHOOL_TOP_LAYER_OBSERVER__) return;
+        root.__SCHOOL_TOP_LAYER_OBSERVER__ = new root.MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach(scanTopLayerCandidates);
+                    return;
+                }
+                if (mutation.type === 'attributes') {
+                    bringSchoolModalToFront(mutation.target);
+                }
+            });
+        });
+        root.__SCHOOL_TOP_LAYER_OBSERVER__.observe(root.document.documentElement || root.document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style', 'open', 'aria-hidden']
+        });
+    }
+
+    installTopLayerObserver();
+
     UI.alert = async function alertDialog(message, type = 'info') {
         const swal = getSwal();
         if (swal) {
@@ -78,6 +133,8 @@
     root.SchoolDialogRuntime = {
         alert: UI.alert,
         confirm: UI.confirm,
-        prompt: UI.prompt
+        prompt: UI.prompt,
+        bringToFront: bringSchoolModalToFront
     };
+    root.bringSchoolModalToFront = bringSchoolModalToFront;
 })(window);

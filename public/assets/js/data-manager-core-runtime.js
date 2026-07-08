@@ -967,6 +967,7 @@ const DataManager = {
                     <td>${h(updatedText)}</td>
                     <td>
                         <button class="btn btn-sm btn-primary" type="button" onclick="DataManager.switchToExamBatch(decodeURIComponent('${encodedExamId}'))" style="padding:3px 7px;">切换</button>
+                        <button class="btn btn-sm btn-gray" type="button" onclick="DataManager.editExamSchoolMappings(decodeURIComponent('${encodedExamId}'))" style="padding:3px 7px;">学校映射</button>
                         <button class="btn btn-sm btn-danger" type="button" onclick="DataManager.deleteExamBatch(decodeURIComponent('${encodedExamId}'))" style="padding:3px 7px; background:#dc2626;">删除</button>
                     </td>
                 </tr>
@@ -1027,6 +1028,28 @@ const DataManager = {
             if (window.UI) UI.toast(`已切换到考试批次：${key}`, 'success');
         } else {
             alert('未找到该考试批次，可能已被删除或尚未同步。');
+        }
+    },
+
+    editExamSchoolMappings: async function (examId) {
+        const key = String(examId || '').trim();
+        if (!key) return;
+        if (typeof window.editExamSchoolNameMappings !== 'function') {
+            if (typeof ensureUploadSchoolMapRuntimeLoaded === 'function') {
+                await ensureUploadSchoolMapRuntimeLoaded();
+            }
+        }
+        if (typeof window.editExamSchoolNameMappings !== 'function') {
+            return alert('学校名称映射组件未加载，请刷新页面后重试。');
+        }
+        try {
+            await window.editExamSchoolNameMappings(key);
+        } catch (error) {
+            const message = error?.message || String(error || '');
+            if (/取消|暂不修改/.test(message)) return;
+            console.error('[DataManager] edit exam school mappings failed:', error);
+            if (window.UI) UI.toast(`学校映射更新失败：${message}`, 'warning');
+            else alert(`学校映射更新失败：${message}`);
         }
     },
 

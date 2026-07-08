@@ -123,9 +123,16 @@ const CohortDB = {
             subjects: deepClone(SUBJECTS || []),
             thresholds: deepClone(THRESHOLDS || {}),
             config: deepClone(CONFIG || {}),
+            schoolNameMapping: typeof window.getUploadSchoolMappingConfirmation === 'function'
+                ? deepClone(window.getUploadSchoolMappingConfirmation().mapping || {})
+                : deepClone(existing?.schoolNameMapping || meta?.schoolNameMapping || {}),
             fingerprint: computeExamDataFingerprint(RAW_DATA || []),
             createdAt: existing?.createdAt || Date.now(),
             updatedAt: Date.now()
+        };
+        db.exams[examId].meta = {
+            ...(db.exams[examId].meta || {}),
+            schoolNameMapping: deepClone(db.exams[examId].schoolNameMapping || {})
         };
         db.currentExamId = examId;
         const termId = getTermId(meta);

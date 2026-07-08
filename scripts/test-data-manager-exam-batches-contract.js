@@ -34,6 +34,8 @@ assert.ok(html.includes('height:clamp(420px, 52vh, 620px)'), 'exam batch table m
     'getExamBatchDateSortTs: function (examId, meta = {})',
     'return b.examDateTs - a.examDateTs',
     'renderExamBatches: function ()',
+    'DataManager.editExamSchoolMappings',
+    'editExamSchoolMappings: async function (examId)',
     'selectRecognizedExamBatches: function ()',
     'deleteSelectedExamBatches: async function ()',
     'removeExamBatchLocal: async function (examId)',
@@ -41,6 +43,20 @@ assert.ok(html.includes('height:clamp(420px, 52vh, 620px)'), 'exam batch table m
 ].forEach((needle) => {
     assert.ok(dataManagerCore.includes(needle), `data-manager-core-runtime.js missing exam batch contract: ${needle}`);
 });
+
+[
+    'getUploadSchoolMappingConfirmation',
+    'editExamSchoolNameMappings',
+    'applyExamSchoolNameMappings',
+    "sourceLabel: 'school-mapping-edit'",
+    '学校名称映射已应用，本场考试已重算并同步云端'
+].forEach((needle) => {
+    const uploadSchoolMapRuntime = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'upload-school-map-runtime.js'), 'utf8');
+    assert.ok(uploadSchoolMapRuntime.includes(needle), `upload-school-map-runtime.js missing exam mapping edit contract: ${needle}`);
+});
+
+const cohortDbCore = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'cohort-db-core-runtime.js'), 'utf8');
+assert.ok(cohortDbCore.includes('schoolNameMapping'), 'cohort exam snapshots must persist school name mappings');
 
 [
     'function getExamRecordDateSortTimestamp(examId, exam = {})',
