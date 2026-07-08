@@ -66,6 +66,12 @@ assert.match(
   'school login selected cohort entry must wait for cloud cohort data so first login lands on the selected data page'
 );
 
+assert.ok(
+  bootRuntimeJs.includes('const preserveSelection = years.includes(select.value);')
+    && authLoginJs.includes('getSelectedLoginCohortYear'),
+  'login cohort selection should survive boot redraws instead of being reset to the default cohort'
+);
+
 const enterMaskIndex = cohortExamMetaJs.indexOf('async function enterCohortFromMask(');
 assert.ok(enterMaskIndex >= 0, 'enterCohortFromMask must accept options');
 const enterMaskEnd = cohortExamMetaJs.indexOf('\n\nfunction tryAutoEnterReadyCohortWorkspace()', enterMaskIndex);

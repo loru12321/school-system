@@ -61,6 +61,7 @@
     }
 
     const GRADUATE_TARGET_KEY = 'LOGIN_GRADUATE_COHORT_TARGET_V1';
+    const SELECTED_COHORT_KEY = 'LOGIN_SELECTED_COHORT_TARGET_V1';
 
     function getGraduatedCohortYears(now = new Date()) {
         const grade9CohortYear = Number(getCurrentGrade9CohortYear(now));
@@ -97,8 +98,27 @@
         return /^\d{4}$/.test(value) ? value : '';
     }
 
+    function readSelectedCohortTarget() {
+        try {
+            const value = sessionStorage.getItem(SELECTED_COHORT_KEY) || '';
+            return /^\d{4}$/.test(value) ? value : '';
+        } catch (error) {
+            return '';
+        }
+    }
+
+    function writeSelectedCohortTarget(year) {
+        const value = String(year || '').trim();
+        try {
+            if (/^\d{4}$/.test(value)) sessionStorage.setItem(SELECTED_COHORT_KEY, value);
+            else sessionStorage.removeItem(SELECTED_COHORT_KEY);
+        } catch (error) { }
+        return /^\d{4}$/.test(value) ? value : '';
+    }
+
     function getSelectedLoginCohortYear() {
         return readGraduateTarget()
+            || readSelectedCohortTarget()
             || String(document.getElementById('login-cohort-select')?.value || '').trim();
     }
 
@@ -133,6 +153,7 @@
         if (activeSelect && activeSelect.dataset.graduateResetBound !== '1') {
             activeSelect.dataset.graduateResetBound = '1';
             activeSelect.addEventListener('change', () => {
+                writeSelectedCohortTarget(activeSelect.value);
                 writeGraduateTarget('');
                 document.getElementById('login-graduate-cohort-panel')?.classList.remove('is-selected');
             });
@@ -172,14 +193,18 @@
         if (!select) return;
         const years = getRecentCohortYears();
         const defaultYear = getCurrentGrade9CohortYear();
+        const storedSelection = readSelectedCohortTarget();
         const preserveSelection = select.dataset.cohortInitialized === '1' && years.includes(select.value);
-        const currentValue = preserveSelection ? select.value : defaultYear;
+        const currentValue = years.includes(storedSelection)
+            ? storedSelection
+            : (preserveSelection ? select.value : defaultYear);
         const nextHtml = years.map((year) => `<option value="${year}">${year}届</option>`).join('');
         if (select.dataset.cohortYears !== years.join('|')) {
             select.innerHTML = nextHtml;
             select.dataset.cohortYears = years.join('|');
         }
         select.value = currentValue;
+        writeSelectedCohortTarget(currentValue);
         select.dataset.cohortInitialized = '1';
         group.style.display = portal === 'parent' ? 'none' : '';
         group.setAttribute('aria-hidden', portal === 'parent' ? 'true' : 'false');

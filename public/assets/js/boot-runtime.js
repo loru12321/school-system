@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-455057057934';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-4f0792bf2e56';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -1445,7 +1445,7 @@ function syncBootLoginCohortSelect(portal) {
     if (!select) return '';
     const years = getBootLoginCohortYears();
     const defaultYear = getBootCurrentGrade9CohortYear();
-    const preserveSelection = select.dataset.cohortInitialized === '1' && years.includes(select.value);
+    const preserveSelection = years.includes(select.value);
     const selected = preserveSelection ? select.value : defaultYear;
     const html = years.map((year) => `<option value="${year}">${year}届</option>`).join('');
     if (select.dataset.cohortYears !== years.join('|')) {
