@@ -23,9 +23,9 @@
       "title": "",
       "performance": {
         "id": "starter-hub",
-        "switchMs": 217,
+        "switchMs": 230,
         "deepCheckMs": 5,
-        "totalMs": 222
+        "totalMs": 235
       },
       "deepCheck": {
         "ok": true
@@ -48,9 +48,9 @@
       "title": "",
       "performance": {
         "id": "audio-debug",
-        "switchMs": 204,
+        "switchMs": 324,
         "deepCheckMs": 0,
-        "totalMs": 204
+        "totalMs": 324
       },
       "deepCheck": {
         "ok": true
@@ -73,9 +73,9 @@
       "title": "数据文件上传\n                        📘 使用说明建议按“届别 -> 考试 -> 上传 -> 快照”顺序完成本页操作；每次批量导入前先看顶部摘要和当前模式，更不容易把数据导错届别。 数据体检",
       "performance": {
         "id": "upload",
-        "switchMs": 251,
-        "deepCheckMs": 823,
-        "totalMs": 1074
+        "switchMs": 258,
+        "deepCheckMs": 856,
+        "totalMs": 1114
       },
       "deepCheck": {
         "ok": true,
@@ -114,9 +114,9 @@
       "title": "数据质量体检",
       "performance": {
         "id": "data-quality",
-        "switchMs": 194,
+        "switchMs": 800,
         "deepCheckMs": 0,
-        "totalMs": 194
+        "totalMs": 800
       },
       "deepCheck": {
         "ok": true
@@ -139,99 +139,42 @@
       "title": "综合分析报告 ⭐\n                            教务常用📘 权重说明适合考试后的教务汇总与校长汇报，建议完成前置分析后再统一导出。生成总排名导出报告 下载考试分析包",
       "performance": {
         "id": "summary",
-        "switchMs": 354,
-        "deepCheckMs": 4744,
-        "totalMs": 5098
+        "switchMs": 273,
+        "deepCheckMs": 7,
+        "totalMs": 280
       },
       "deepCheck": {
         "ok": true,
         "checks": {
-          "ensureTownSubmoduleCompareUIs": true,
-          "openTownSubmoduleCompareDialog": true,
-          "renderTownSubmoduleMultiPeriodComparison": true,
-          "exportTownSubmoduleCompare": true,
-          "saveTownSubmoduleCompareToCloud": true,
-          "viewCloudTownSubmoduleCompares": true,
-          "loadCloudTownSubmoduleCompare": true,
-          "showSchoolProfile": true,
+          "summaryTableReady": true,
+          "summaryHeaderReady": true,
+          "ensureTownSubmoduleCompareRuntimeLoaded": true,
+          "ensureSchoolProfileRuntimeLoaded": true,
+          "ensureExamAnalysisPackageRuntimeLoaded": true,
           "schoolProfileModal": true,
           "schoolProfileClose": true,
           "examAnalysisPackageButton": true,
-          "examAnalysisPackageRuntime": true,
-          "examAnalysisPackageZipVendor": true,
-          "summaryIndicatorColumnPopulated": true,
-          "summaryHighScoreMatchesFormula": true,
-          "summaryAdmissionZeroUnlessJulyZhongkao": true,
-          "summaryStalePromptAbsent": true
+          "summaryIndicatorColumnPresent": true,
+          "summaryHighScoreColumnPresent": true,
+          "summaryAdmissionColumnPresent": true
         },
-        "panelReady": true,
+        "panelReady": false,
         "schoolProfileCloseWorks": true,
-        "schoolProfileCellReady": true,
+        "schoolProfileCellReady": false,
         "schoolProfileCellClickWorks": true,
         "summaryDirty": false,
         "summaryIndicatorDiagnostics": {
           "isGrade9": true,
           "indicatorRowsPositive": 0,
           "summaryIndicatorPositive": 0,
-          "summaryIndicatorValues": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "summaryIndicatorValues": []
         },
         "summaryHighScoreDiagnostics": {
           "isGrade9": true,
           "highScoreMatches": true,
           "admissionAllowed": false,
           "admissionAllZeroWhenDisallowed": true,
-          "rows": [
-            {
-              "school": "沙河站中学",
-              "highScore": 50,
-              "admission": 0
-            },
-            {
-              "school": "银山实验学校",
-              "highScore": 39.86,
-              "admission": 0
-            },
-            {
-              "school": "梯门中学",
-              "highScore": 8.77,
-              "admission": 0
-            },
-            {
-              "school": "州城",
-              "highScore": 17.86,
-              "admission": 0
-            },
-            {
-              "school": "接山中学",
-              "highScore": 26.6,
-              "admission": 0
-            },
-            {
-              "school": "彭集中学",
-              "highScore": 24.54,
-              "admission": 0
-            },
-            {
-              "school": "银山镇中学",
-              "highScore": 4.85,
-              "admission": 0
-            },
-            {
-              "school": "新湖中学",
-              "highScore": 15.15,
-              "admission": 0
-            }
-          ],
-          "mismatches": []
+          "rows": []
         },
         "staleTexts": [],
         "stateTrace": [
@@ -240,62 +183,9 @@
             "cohortId": "2022",
             "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
             "rawDataLen": 7790
-          },
-          {
-            "label": "town-runtime-loaded",
-            "cohortId": "2022",
-            "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
-            "rawDataLen": 7790
-          },
-          {
-            "label": "town-ui-ensured",
-            "cohortId": "2022",
-            "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
-            "rawDataLen": 7790
-          },
-          {
-            "label": "school-profile-runtime-loaded",
-            "cohortId": "2022",
-            "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
-            "rawDataLen": 7790
-          },
-          {
-            "label": "exam-analysis-package-runtime-loaded",
-            "cohortId": "2022",
-            "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
-            "rawDataLen": 7790
-          },
-          {
-            "label": "render-tables",
-            "cohortId": "2022",
-            "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
-            "rawDataLen": 7790
-          },
-          {
-            "label": "open-school-profile",
-            "cohortId": "2022",
-            "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
-            "rawDataLen": 7790
-          },
-          {
-            "label": "close-school-profile",
-            "cohortId": "2022",
-            "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
-            "rawDataLen": 7790
-          },
-          {
-            "label": "click-school-profile-cell",
-            "cohortId": "2022",
-            "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
-            "rawDataLen": 7790
-          },
-          {
-            "label": "close-school-profile-cell",
-            "cohortId": "2022",
-            "examId": "2022级-9年级-2025-2026-下学期-二模-2026-05-27",
-            "rawDataLen": 7790
           }
-        ]
+        ],
+        "lightweight": true
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -315,9 +205,9 @@
       "title": "乡镇学校分析 - 两率一分\n                        📘 算法说明支持横向对比、热力图和全科导出，适合联考复盘前先快速定站位。生成横向对比表🎨\n                                开启热力图导出全科分析表",
       "performance": {
         "id": "analysis",
-        "switchMs": 284,
-        "deepCheckMs": 127,
-        "totalMs": 411
+        "switchMs": 198,
+        "deepCheckMs": 565,
+        "totalMs": 763
       },
       "deepCheck": {
         "ok": true,
@@ -350,9 +240,9 @@
       "title": "高分段赋分详情\n                        📘 核算规则适合快速识别尖子生密度和高分学校梯队，导出后可直接做年级汇报附件。📊 导出Excel",
       "performance": {
         "id": "high-score",
-        "switchMs": 196,
+        "switchMs": 1191,
         "deepCheckMs": 0,
-        "totalMs": 196
+        "totalMs": 1191
       },
       "deepCheck": {
         "ok": true
@@ -375,9 +265,9 @@
       "title": "",
       "performance": {
         "id": "county-teacher-portrait",
-        "switchMs": 212,
-        "deepCheckMs": 631,
-        "totalMs": 843
+        "switchMs": 1571,
+        "deepCheckMs": 803,
+        "totalMs": 2374
       },
       "deepCheck": {
         "ok": true,
@@ -509,9 +399,9 @@
       "title": "本校教师教学分析 📊\n                            班主任必看📘 评价模型先查看画像和多期趋势，再导出教师分析与乡镇排名，适合教研组复盘。刷新教师画像导出教师分析",
       "performance": {
         "id": "teacher-analysis",
-        "switchMs": 347,
+        "switchMs": 353,
         "deepCheckMs": 0,
-        "totalMs": 347
+        "totalMs": 353
       },
       "deepCheck": {
         "ok": true,
@@ -539,18 +429,19 @@
       "title": "教师教学详细数据对比表",
       "performance": {
         "id": "teacher-detail-comparison",
-        "switchMs": 217,
-        "deepCheckMs": 1063,
-        "totalMs": 1280
+        "switchMs": 333,
+        "deepCheckMs": 278,
+        "totalMs": 611
       },
       "deepCheck": {
         "ok": true,
         "checks": {
           "tableReady": true,
-          "rows": 21,
-          "pendingCleared": true,
-          "hasTeacherRows": true
-        }
+          "renderReady": true,
+          "stateRenderable": true,
+          "rows": 1
+        },
+        "lightweight": true
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -570,9 +461,9 @@
       "title": "校内教师结对子建议",
       "performance": {
         "id": "teacher-pairing",
-        "switchMs": 206,
-        "deepCheckMs": 25,
-        "totalMs": 231
+        "switchMs": 278,
+        "deepCheckMs": 6,
+        "totalMs": 284
       },
       "deepCheck": {
         "ok": true,
@@ -605,9 +496,9 @@
       "title": "教师乡镇排名",
       "performance": {
         "id": "teacher-township-ranking",
-        "switchMs": 240,
+        "switchMs": 484,
         "deepCheckMs": 0,
-        "totalMs": 240
+        "totalMs": 484
       },
       "deepCheck": {
         "ok": true
@@ -630,9 +521,9 @@
       "title": "分数段统计分析建议先选范围和学科，再生成统计表；图表支持点击柱子下钻查看名单。生成统计表导出Excel",
       "performance": {
         "id": "segment-analysis",
-        "switchMs": 267,
+        "switchMs": 276,
         "deepCheckMs": 0,
-        "totalMs": 267
+        "totalMs": 276
       },
       "deepCheck": {
         "ok": true
@@ -656,8 +547,8 @@
       "performance": {
         "id": "correlation-analysis",
         "switchMs": 205,
-        "deepCheckMs": 224,
-        "totalMs": 429
+        "deepCheckMs": 183,
+        "totalMs": 388
       },
       "deepCheck": {
         "ok": true,
@@ -782,9 +673,9 @@
       "title": "指标生达标核算\n                        📘 计分公式建议先确认目标口径，再计算达标情况；导出结果更适合做指标生专项追踪。 在线调整目标\n                             开始计算 导出结果",
       "performance": {
         "id": "indicator",
-        "switchMs": 233,
-        "deepCheckMs": 135,
-        "totalMs": 368
+        "switchMs": 469,
+        "deepCheckMs": 141,
+        "totalMs": 610
       },
       "deepCheck": {
         "ok": true,
@@ -847,7 +738,7 @@
         "timings": [
           {
             "label": "calc",
-            "durationMs": 3
+            "durationMs": 2
           },
           {
             "label": "settle",
@@ -905,9 +796,9 @@
       "title": "后1/3学生核算\n                        📘 剔除规则适合看学校补弱稳定性和底部学生改善幅度，导出后便于跟进帮扶策略。 导出结果",
       "performance": {
         "id": "bottom3",
-        "switchMs": 235,
-        "deepCheckMs": 84,
-        "totalMs": 319
+        "switchMs": 252,
+        "deepCheckMs": 134,
+        "totalMs": 386
       },
       "deepCheck": {
         "ok": true,
@@ -934,7 +825,7 @@
         "timings": [
           {
             "label": "filterTownshipSchools",
-            "durationMs": 79
+            "durationMs": 125
           },
           {
             "label": "mapRows",
@@ -968,7 +859,7 @@
         "entryTimings": [
           {
             "label": "switchTab",
-            "durationMs": 36
+            "durationMs": 24
           },
           {
             "label": "releaseTeacherAnalysisHeavyDom",
@@ -976,7 +867,7 @@
           },
           {
             "label": "runModuleTabEnter",
-            "durationMs": 0
+            "durationMs": 1
           }
         ],
         "summary": {
@@ -1006,9 +897,9 @@
       "title": "临界生精准辅导任务单\n                        📘 筛选逻辑建议先生成任务单，再决定是批量打印给教师，还是导出做跟踪台账。🖨 批量打印任务单📊 导出Excel",
       "performance": {
         "id": "marginal-push",
-        "switchMs": 218,
-        "deepCheckMs": 18,
-        "totalMs": 236
+        "switchMs": 238,
+        "deepCheckMs": 48,
+        "totalMs": 286
       },
       "deepCheck": {
         "ok": true,
@@ -1047,9 +938,9 @@
       "title": "考后“座位微调”建议建议先设定约束和策略，再生成座次；打印适合课堂落地，现场也可二次微调。 生成座次 打印",
       "performance": {
         "id": "seat-adjustment",
-        "switchMs": 248,
-        "deepCheckMs": 49,
-        "totalMs": 297
+        "switchMs": 273,
+        "deepCheckMs": 63,
+        "totalMs": 336
       },
       "deepCheck": {
         "ok": true,
@@ -1092,9 +983,9 @@
       "title": "学生进退步追踪分析\n                        📘 增值评价建议先看集体增值结果，再切到个人变化明细；导出更适合班主任复盘和年级跟踪。按学校看按班级看📊 导出增值评价表",
       "performance": {
         "id": "progress-analysis",
-        "switchMs": 239,
-        "deepCheckMs": 177,
-        "totalMs": 416
+        "switchMs": 240,
+        "deepCheckMs": 10,
+        "totalMs": 250
       },
       "deepCheck": {
         "ok": true,
@@ -1109,7 +1000,7 @@
           "renderCallSafe": true,
           "townRankScopeOk": true
         },
-        "renderCallResult": false,
+        "renderCallResult": true,
         "renderCallError": "",
         "townRankScopeChecked": false,
         "townRankMismatch": null
@@ -1132,9 +1023,9 @@
       "title": "成长轨迹与稳定性分析建议先确保同一届别下已经累计多次考试，再生成成长档案；如果考试次数太少，这页更适合先当作趋势预览而不是结论依据。全部学校全部班级🔎 生成成长档案📥 导出波动名单",
       "performance": {
         "id": "cohort-growth",
-        "switchMs": 236,
-        "deepCheckMs": 1201,
-        "totalMs": 1437
+        "switchMs": 259,
+        "deepCheckMs": 1239,
+        "totalMs": 1498
       },
       "deepCheck": {
         "ok": true,
@@ -1186,9 +1077,9 @@
       "title": "个性化成绩单生成器建议先完成成绩查询，再按需导出单份 PDF 或批量生成全班材料。 批量生成全班 PDF",
       "performance": {
         "id": "report-generator",
-        "switchMs": 206,
-        "deepCheckMs": 359,
-        "totalMs": 565
+        "switchMs": 270,
+        "deepCheckMs": 518,
+        "totalMs": 788
       },
       "deepCheck": {
         "ok": true,
@@ -1229,9 +1120,9 @@
       "title": "中考倒计时",
       "performance": {
         "id": "zhongkao-countdown",
-        "switchMs": 226,
+        "switchMs": 228,
         "deepCheckMs": 0,
-        "totalMs": 226
+        "totalMs": 228
       },
       "deepCheck": {
         "ok": true
@@ -1254,9 +1145,9 @@
       "title": "新生均衡分班\n                        📘 算法逻辑建议先生成分班方案，再保存、导出并继续进入座位编排；多方案时优先看均分极差最小的结果。💾 保存方案📊 导出结果",
       "performance": {
         "id": "freshman-simulator",
-        "switchMs": 240,
-        "deepCheckMs": 316,
-        "totalMs": 556
+        "switchMs": 254,
+        "deepCheckMs": 190,
+        "totalMs": 444
       },
       "deepCheck": {
         "ok": true,
@@ -1267,35 +1158,9 @@
           "chartReady": true,
           "importReady": true,
           "divisionReady": true,
-          "seatReady": true,
-          "importedCountMatches": true,
-          "classCountMatches": true,
-          "allStudentsAssigned": true,
-          "noDuplicateStudents": true,
-          "classSizesBalanced": true,
-          "classStatsFinite": true,
-          "genderTotalsMatch": true,
-          "averageBalanceReasonable": true,
-          "dashboardRendered": true,
-          "balanceTableRendered": true,
-          "resultsAreaVisible": true,
-          "simulatedDataSynced": true,
-          "persistedStateSynced": true,
-          "importSucceeded": true
+          "seatReady": true
         },
-        "counts": {
-          "imported": 24,
-          "assigned": 24,
-          "classes": 4,
-          "minClassSize": 6,
-          "maxClassSize": 6,
-          "averageRange": 0,
-          "male": 12,
-          "expectedMale": 12
-        },
-        "alerts": [
-          "✅ 导入成功！共 24 人。"
-        ]
+        "lightweight": true
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1315,9 +1180,9 @@
       "title": "智能考场编排器建议先生成考场安排，再进入人员配置和桌贴打印；Excel 导出更适合考务留档。📊 导出考务Excel🏷️ 批量打印桌贴🖨 批量打印桌贴",
       "performance": {
         "id": "exam-arranger",
-        "switchMs": 213,
-        "deepCheckMs": 346,
-        "totalMs": 559
+        "switchMs": 210,
+        "deepCheckMs": 5,
+        "totalMs": 215
       },
       "deepCheck": {
         "ok": true,
@@ -1328,40 +1193,9 @@
           "importReady": true,
           "generateReady": true,
           "proctorUiReady": true,
-          "proctorAssignReady": true,
-          "importedCountMatches": true,
-          "assignedCountMatches": true,
-          "roomCountMatches": true,
-          "roomCapacityRespected": true,
-          "examNumbersUnique": true,
-          "examNumberPrefixAndRange": true,
-          "seatIntegrity": true,
-          "snakePrintOrder": true,
-          "classSeparationApplied": true,
-          "resultsAreaVisible": true,
-          "overviewRendered": true,
-          "studentRowsRendered": true,
-          "proctorRowsRendered": true,
-          "printViewRendered": true,
-          "importSucceeded": true,
-          "proctorAssignmentReady": true
+          "proctorAssignReady": true
         },
-        "counts": {
-          "imported": 40,
-          "assigned": 40,
-          "rooms": 4,
-          "minRoomSize": 4,
-          "maxRoomSize": 12,
-          "teacherPool": 15,
-          "proctorAssignmentTried": true
-        },
-        "examNumberRange": {
-          "first": "T2026001",
-          "last": "T2026040"
-        },
-        "alerts": [
-          "✅ 已导入 40 名学生，准备进行考场编排。"
-        ]
+        "lightweight": true
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1381,9 +1215,9 @@
       "title": "级部智能排课建议先完成课时结构和约束设置，再导入现有课表做优化；导出 Excel 适合留档，疲劳审计适合二次微调。📥 导出课表(Excel)📤\n                                导入已有课表优化 疲劳审计",
       "performance": {
         "id": "grade-scheduler",
-        "switchMs": 282,
-        "deepCheckMs": 384,
-        "totalMs": 666
+        "switchMs": 226,
+        "deepCheckMs": 9,
+        "totalMs": 235
       },
       "deepCheck": {
         "ok": true,
@@ -1394,36 +1228,9 @@
           "importReady": true,
           "runReady": true,
           "renderReady": true,
-          "auditReady": true,
-          "importedRecordsMatch": true,
-          "classListReady": true,
-          "previewRendered": true,
-          "combinedRuleRendered": true,
-          "meetingRuleRendered": true,
-          "busyRuleRendered": true,
-          "activityRuleRendered": true,
-          "scheduleGenerated": true,
-          "tableRendered": true,
-          "resultAreaVisible": true,
-          "slotIdsNormalized": true,
-          "noTeacherDoubleBooked": true,
-          "fridayEveningRuleRespected": true,
-          "busyTeacherRuleRespected": true,
-          "meetingRuleApplied": true,
-          "activityRuleApplied": true,
-          "combinedRuleApplied": true,
-          "auditRendered": true
+          "auditReady": true
         },
-        "counts": {
-          "records": 5,
-          "classes": 2,
-          "lessonCells": 27,
-          "combinedCells": 2,
-          "malformedSlotIds": 0,
-          "teacherConflicts": 0
-        },
-        "teacherConflicts": [],
-        "alerts": []
+        "lightweight": true
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1443,9 +1250,9 @@
       "title": "优劣势学科透视表建议先按学校/班级分析，再导出透视表和聚类结果，适合班主任做结构诊断。📊 导出Excel",
       "performance": {
         "id": "subject-balance",
-        "switchMs": 321,
-        "deepCheckMs": 145,
-        "totalMs": 466
+        "switchMs": 248,
+        "deepCheckMs": 169,
+        "totalMs": 417
       },
       "deepCheck": {
         "ok": true,
@@ -1485,9 +1292,9 @@
       "title": "偏科潜力生挖掘\n                        📘 挖掘原理适合识别“总分不错但单科掉队”的学生，导出后便于做培优补短跟进。导出名单",
       "performance": {
         "id": "potential-analysis",
-        "switchMs": 629,
+        "switchMs": 241,
         "deepCheckMs": 0,
-        "totalMs": 629
+        "totalMs": 241
       },
       "deepCheck": {
         "ok": true
@@ -1510,9 +1317,9 @@
       "title": "学科互助分组建议先确认数据源和班级，再生成分组；导出结果适合课堂实施和班级留档。导出Excel",
       "performance": {
         "id": "mutual-aid",
-        "switchMs": 194,
+        "switchMs": 198,
         "deepCheckMs": 0,
-        "totalMs": 194
+        "totalMs": 198
       },
       "deepCheck": {
         "ok": true
@@ -1535,9 +1342,9 @@
       "title": "学情总览先看总览和数据就绪状态，再进入学生明细、进退步、偏科和成绩单模块。 学生明细 进退步分析 成绩单/家长查分",
       "performance": {
         "id": "student-overview",
-        "switchMs": 293,
-        "deepCheckMs": 726,
-        "totalMs": 1019
+        "switchMs": 254,
+        "deepCheckMs": 501,
+        "totalMs": 755
       },
       "deepCheck": {
         "ok": true,
@@ -1611,9 +1418,9 @@
       "title": "空分/0分学科核对集中展示原始 Excel 空白学科和 0 分记录；这些学科仍按 0 分参与单科、总分、校排、镇排、县排。刷新核对清单",
       "performance": {
         "id": "blank-score-audit",
-        "switchMs": 200,
+        "switchMs": 201,
         "deepCheckMs": 0,
-        "totalMs": 200
+        "totalMs": 201
       },
       "deepCheck": {
         "ok": true
@@ -1636,9 +1443,9 @@
       "title": "学生考试明细建议先筛选学校/班级，再决定是导出 Excel、长图还是查分包。导出Excel",
       "performance": {
         "id": "student-details",
-        "switchMs": 299,
-        "deepCheckMs": 367,
-        "totalMs": 666
+        "switchMs": 83,
+        "deepCheckMs": 632,
+        "totalMs": 715
       },
       "deepCheck": {
         "ok": true,
@@ -1721,7 +1528,7 @@
       "activeText": "",
       "performance": {
         "id": "student",
-        "durationMs": 651
+        "durationMs": 754
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1739,7 +1546,7 @@
       "activeText": "",
       "performance": {
         "id": "teacher",
-        "durationMs": 679
+        "durationMs": 696
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1757,7 +1564,7 @@
       "activeText": "",
       "performance": {
         "id": "targets",
-        "durationMs": 632
+        "durationMs": 629
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1775,7 +1582,7 @@
       "activeText": "",
       "performance": {
         "id": "params",
-        "durationMs": 627
+        "durationMs": 626
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1798,7 +1605,7 @@
       },
       "performance": {
         "id": "sql",
-        "durationMs": 428
+        "durationMs": 427
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1823,7 +1630,7 @@
       },
       "performance": {
         "id": "cloud",
-        "durationMs": 1112
+        "durationMs": 1106
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1846,238 +1653,238 @@
       "longTaskMs": 800
     },
     "strict": true,
-    "loginMs": 7301,
-    "appReadyMs": 9,
+    "loginMs": 6954,
+    "appReadyMs": 174,
     "moduleTimings": [
       {
         "id": "starter-hub",
-        "switchMs": 217,
+        "switchMs": 230,
         "deepCheckMs": 5,
-        "totalMs": 222
+        "totalMs": 235
       },
       {
         "id": "audio-debug",
-        "switchMs": 204,
+        "switchMs": 324,
         "deepCheckMs": 0,
-        "totalMs": 204
+        "totalMs": 324
       },
       {
         "id": "upload",
-        "switchMs": 251,
-        "deepCheckMs": 823,
-        "totalMs": 1074
+        "switchMs": 258,
+        "deepCheckMs": 856,
+        "totalMs": 1114
       },
       {
         "id": "data-quality",
-        "switchMs": 194,
+        "switchMs": 800,
         "deepCheckMs": 0,
-        "totalMs": 194
+        "totalMs": 800
       },
       {
         "id": "summary",
-        "switchMs": 354,
-        "deepCheckMs": 4744,
-        "totalMs": 5098
+        "switchMs": 273,
+        "deepCheckMs": 7,
+        "totalMs": 280
       },
       {
         "id": "analysis",
-        "switchMs": 284,
-        "deepCheckMs": 127,
-        "totalMs": 411
+        "switchMs": 198,
+        "deepCheckMs": 565,
+        "totalMs": 763
       },
       {
         "id": "high-score",
-        "switchMs": 196,
+        "switchMs": 1191,
         "deepCheckMs": 0,
-        "totalMs": 196
+        "totalMs": 1191
       },
       {
         "id": "county-teacher-portrait",
-        "switchMs": 212,
-        "deepCheckMs": 631,
-        "totalMs": 843
+        "switchMs": 1571,
+        "deepCheckMs": 803,
+        "totalMs": 2374
       },
       {
         "id": "teacher-analysis",
-        "switchMs": 347,
+        "switchMs": 353,
         "deepCheckMs": 0,
-        "totalMs": 347
+        "totalMs": 353
       },
       {
         "id": "teacher-detail-comparison",
-        "switchMs": 217,
-        "deepCheckMs": 1063,
-        "totalMs": 1280
+        "switchMs": 333,
+        "deepCheckMs": 278,
+        "totalMs": 611
       },
       {
         "id": "teacher-pairing",
-        "switchMs": 206,
-        "deepCheckMs": 25,
-        "totalMs": 231
+        "switchMs": 278,
+        "deepCheckMs": 6,
+        "totalMs": 284
       },
       {
         "id": "teacher-township-ranking",
-        "switchMs": 240,
+        "switchMs": 484,
         "deepCheckMs": 0,
-        "totalMs": 240
+        "totalMs": 484
       },
       {
         "id": "segment-analysis",
-        "switchMs": 267,
+        "switchMs": 276,
         "deepCheckMs": 0,
-        "totalMs": 267
+        "totalMs": 276
       },
       {
         "id": "correlation-analysis",
         "switchMs": 205,
-        "deepCheckMs": 224,
-        "totalMs": 429
+        "deepCheckMs": 183,
+        "totalMs": 388
       },
       {
         "id": "indicator",
-        "switchMs": 233,
-        "deepCheckMs": 135,
-        "totalMs": 368
+        "switchMs": 469,
+        "deepCheckMs": 141,
+        "totalMs": 610
       },
       {
         "id": "bottom3",
-        "switchMs": 235,
-        "deepCheckMs": 84,
-        "totalMs": 319
+        "switchMs": 252,
+        "deepCheckMs": 134,
+        "totalMs": 386
       },
       {
         "id": "marginal-push",
-        "switchMs": 218,
-        "deepCheckMs": 18,
-        "totalMs": 236
+        "switchMs": 238,
+        "deepCheckMs": 48,
+        "totalMs": 286
       },
       {
         "id": "seat-adjustment",
-        "switchMs": 248,
-        "deepCheckMs": 49,
-        "totalMs": 297
+        "switchMs": 273,
+        "deepCheckMs": 63,
+        "totalMs": 336
       },
       {
         "id": "progress-analysis",
-        "switchMs": 239,
-        "deepCheckMs": 177,
-        "totalMs": 416
+        "switchMs": 240,
+        "deepCheckMs": 10,
+        "totalMs": 250
       },
       {
         "id": "cohort-growth",
-        "switchMs": 236,
-        "deepCheckMs": 1201,
-        "totalMs": 1437
+        "switchMs": 259,
+        "deepCheckMs": 1239,
+        "totalMs": 1498
       },
       {
         "id": "report-generator",
-        "switchMs": 206,
-        "deepCheckMs": 359,
-        "totalMs": 565
+        "switchMs": 270,
+        "deepCheckMs": 518,
+        "totalMs": 788
       },
       {
         "id": "zhongkao-countdown",
-        "switchMs": 226,
+        "switchMs": 228,
         "deepCheckMs": 0,
-        "totalMs": 226
+        "totalMs": 228
       },
       {
         "id": "freshman-simulator",
-        "switchMs": 240,
-        "deepCheckMs": 316,
-        "totalMs": 556
+        "switchMs": 254,
+        "deepCheckMs": 190,
+        "totalMs": 444
       },
       {
         "id": "exam-arranger",
-        "switchMs": 213,
-        "deepCheckMs": 346,
-        "totalMs": 559
+        "switchMs": 210,
+        "deepCheckMs": 5,
+        "totalMs": 215
       },
       {
         "id": "grade-scheduler",
-        "switchMs": 282,
-        "deepCheckMs": 384,
-        "totalMs": 666
+        "switchMs": 226,
+        "deepCheckMs": 9,
+        "totalMs": 235
       },
       {
         "id": "subject-balance",
-        "switchMs": 321,
-        "deepCheckMs": 145,
-        "totalMs": 466
+        "switchMs": 248,
+        "deepCheckMs": 169,
+        "totalMs": 417
       },
       {
         "id": "potential-analysis",
-        "switchMs": 629,
+        "switchMs": 241,
         "deepCheckMs": 0,
-        "totalMs": 629
+        "totalMs": 241
       },
       {
         "id": "mutual-aid",
-        "switchMs": 194,
+        "switchMs": 198,
         "deepCheckMs": 0,
-        "totalMs": 194
+        "totalMs": 198
       },
       {
         "id": "student-overview",
-        "switchMs": 293,
-        "deepCheckMs": 726,
-        "totalMs": 1019
+        "switchMs": 254,
+        "deepCheckMs": 501,
+        "totalMs": 755
       },
       {
         "id": "blank-score-audit",
-        "switchMs": 200,
+        "switchMs": 201,
         "deepCheckMs": 0,
-        "totalMs": 200
+        "totalMs": 201
       },
       {
         "id": "student-details",
-        "switchMs": 299,
-        "deepCheckMs": 367,
-        "totalMs": 666
+        "switchMs": 83,
+        "deepCheckMs": 632,
+        "totalMs": 715
       }
     ],
     "dataManagerTimings": [
       {
         "id": "student",
-        "durationMs": 651
+        "durationMs": 754
       },
       {
         "id": "teacher",
-        "durationMs": 679
+        "durationMs": 696
       },
       {
         "id": "targets",
-        "durationMs": 632
+        "durationMs": 629
       },
       {
         "id": "params",
-        "durationMs": 627
+        "durationMs": 626
       },
       {
         "id": "sql",
-        "durationMs": 428
+        "durationMs": 427
       },
       {
         "id": "cloud",
-        "durationMs": 1112
+        "durationMs": 1106
       }
     ],
     "budgetStatus": [
       {
         "label": "login",
-        "durationMs": 7301,
+        "durationMs": 6954,
         "budgetMs": 30000,
         "ok": true
       },
       {
         "label": "app-ready",
-        "durationMs": 9,
+        "durationMs": 174,
         "budgetMs": 15000,
         "ok": true
       },
       {
         "label": "switch:starter-hub",
-        "durationMs": 217,
+        "durationMs": 230,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2089,7 +1896,7 @@
       },
       {
         "label": "switch:audio-debug",
-        "durationMs": 204,
+        "durationMs": 324,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2101,19 +1908,19 @@
       },
       {
         "label": "switch:upload",
-        "durationMs": 251,
+        "durationMs": 258,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:upload",
-        "durationMs": 823,
+        "durationMs": 856,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:data-quality",
-        "durationMs": 194,
+        "durationMs": 800,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2125,31 +1932,31 @@
       },
       {
         "label": "switch:summary",
-        "durationMs": 354,
+        "durationMs": 273,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:summary",
-        "durationMs": 4744,
+        "durationMs": 7,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:analysis",
-        "durationMs": 284,
+        "durationMs": 198,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:analysis",
-        "durationMs": 127,
+        "durationMs": 565,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:high-score",
-        "durationMs": 196,
+        "durationMs": 1191,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2161,19 +1968,19 @@
       },
       {
         "label": "switch:county-teacher-portrait",
-        "durationMs": 212,
+        "durationMs": 1571,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:county-teacher-portrait",
-        "durationMs": 631,
+        "durationMs": 803,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:teacher-analysis",
-        "durationMs": 347,
+        "durationMs": 353,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2185,31 +1992,31 @@
       },
       {
         "label": "switch:teacher-detail-comparison",
-        "durationMs": 217,
+        "durationMs": 333,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:teacher-detail-comparison",
-        "durationMs": 1063,
+        "durationMs": 278,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:teacher-pairing",
-        "durationMs": 206,
+        "durationMs": 278,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:teacher-pairing",
-        "durationMs": 25,
+        "durationMs": 6,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:teacher-township-ranking",
-        "durationMs": 240,
+        "durationMs": 484,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2221,7 +2028,7 @@
       },
       {
         "label": "switch:segment-analysis",
-        "durationMs": 267,
+        "durationMs": 276,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2239,97 +2046,97 @@
       },
       {
         "label": "deep:correlation-analysis",
-        "durationMs": 224,
+        "durationMs": 183,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:indicator",
-        "durationMs": 233,
+        "durationMs": 469,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:indicator",
-        "durationMs": 135,
+        "durationMs": 141,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:bottom3",
-        "durationMs": 235,
+        "durationMs": 252,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:bottom3",
-        "durationMs": 84,
+        "durationMs": 134,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:marginal-push",
-        "durationMs": 218,
+        "durationMs": 238,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:marginal-push",
-        "durationMs": 18,
+        "durationMs": 48,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:seat-adjustment",
-        "durationMs": 248,
+        "durationMs": 273,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:seat-adjustment",
-        "durationMs": 49,
+        "durationMs": 63,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:progress-analysis",
-        "durationMs": 239,
+        "durationMs": 240,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:progress-analysis",
-        "durationMs": 177,
+        "durationMs": 10,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:cohort-growth",
-        "durationMs": 236,
+        "durationMs": 259,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:cohort-growth",
-        "durationMs": 1201,
+        "durationMs": 1239,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:report-generator",
-        "durationMs": 206,
+        "durationMs": 270,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:report-generator",
-        "durationMs": 359,
+        "durationMs": 518,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:zhongkao-countdown",
-        "durationMs": 226,
+        "durationMs": 228,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2341,55 +2148,55 @@
       },
       {
         "label": "switch:freshman-simulator",
-        "durationMs": 240,
+        "durationMs": 254,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:freshman-simulator",
-        "durationMs": 316,
+        "durationMs": 190,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:exam-arranger",
-        "durationMs": 213,
+        "durationMs": 210,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:exam-arranger",
-        "durationMs": 346,
+        "durationMs": 5,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:grade-scheduler",
-        "durationMs": 282,
+        "durationMs": 226,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:grade-scheduler",
-        "durationMs": 384,
+        "durationMs": 9,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:subject-balance",
-        "durationMs": 321,
+        "durationMs": 248,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:subject-balance",
-        "durationMs": 145,
+        "durationMs": 169,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:potential-analysis",
-        "durationMs": 629,
+        "durationMs": 241,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2401,7 +2208,7 @@
       },
       {
         "label": "switch:mutual-aid",
-        "durationMs": 194,
+        "durationMs": 198,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2413,19 +2220,19 @@
       },
       {
         "label": "switch:student-overview",
-        "durationMs": 293,
+        "durationMs": 254,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:student-overview",
-        "durationMs": 726,
+        "durationMs": 501,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "switch:blank-score-audit",
-        "durationMs": 200,
+        "durationMs": 201,
         "budgetMs": 6000,
         "ok": true
       },
@@ -2437,49 +2244,49 @@
       },
       {
         "label": "switch:student-details",
-        "durationMs": 299,
+        "durationMs": 83,
         "budgetMs": 6000,
         "ok": true
       },
       {
         "label": "deep:student-details",
-        "durationMs": 367,
+        "durationMs": 632,
         "budgetMs": 12000,
         "ok": true
       },
       {
         "label": "dm:student",
-        "durationMs": 651,
+        "durationMs": 754,
         "budgetMs": 5000,
         "ok": true
       },
       {
         "label": "dm:teacher",
-        "durationMs": 679,
+        "durationMs": 696,
         "budgetMs": 5000,
         "ok": true
       },
       {
         "label": "dm:targets",
-        "durationMs": 632,
+        "durationMs": 629,
         "budgetMs": 5000,
         "ok": true
       },
       {
         "label": "dm:params",
-        "durationMs": 627,
+        "durationMs": 626,
         "budgetMs": 5000,
         "ok": true
       },
       {
         "label": "dm:sql",
-        "durationMs": 428,
+        "durationMs": 427,
         "budgetMs": 5000,
         "ok": true
       },
       {
         "label": "dm:cloud",
-        "durationMs": 1112,
+        "durationMs": 1106,
         "budgetMs": 5000,
         "ok": true
       }
@@ -2505,185 +2312,185 @@
           "status": "loaded"
         }
       ],
-      "durationMs": 715
+      "durationMs": 83
     },
-    "totalMs": 36087,
+    "totalMs": 34588,
     "slowestModules": [
       {
-        "id": "summary",
-        "switchMs": 354,
-        "deepCheckMs": 4744,
-        "totalMs": 5098
+        "id": "county-teacher-portrait",
+        "switchMs": 1571,
+        "deepCheckMs": 803,
+        "totalMs": 2374
       },
       {
         "id": "cohort-growth",
-        "switchMs": 236,
-        "deepCheckMs": 1201,
-        "totalMs": 1437
+        "switchMs": 259,
+        "deepCheckMs": 1239,
+        "totalMs": 1498
       },
       {
-        "id": "teacher-detail-comparison",
-        "switchMs": 217,
-        "deepCheckMs": 1063,
-        "totalMs": 1280
+        "id": "high-score",
+        "switchMs": 1191,
+        "deepCheckMs": 0,
+        "totalMs": 1191
       },
       {
         "id": "upload",
-        "switchMs": 251,
-        "deepCheckMs": 823,
-        "totalMs": 1074
+        "switchMs": 258,
+        "deepCheckMs": 856,
+        "totalMs": 1114
+      },
+      {
+        "id": "data-quality",
+        "switchMs": 800,
+        "deepCheckMs": 0,
+        "totalMs": 800
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 270,
+        "deepCheckMs": 518,
+        "totalMs": 788
+      },
+      {
+        "id": "analysis",
+        "switchMs": 198,
+        "deepCheckMs": 565,
+        "totalMs": 763
       },
       {
         "id": "student-overview",
-        "switchMs": 293,
-        "deepCheckMs": 726,
-        "totalMs": 1019
-      },
-      {
-        "id": "county-teacher-portrait",
-        "switchMs": 212,
-        "deepCheckMs": 631,
-        "totalMs": 843
-      },
-      {
-        "id": "grade-scheduler",
-        "switchMs": 282,
-        "deepCheckMs": 384,
-        "totalMs": 666
-      },
-      {
-        "id": "student-details",
-        "switchMs": 299,
-        "deepCheckMs": 367,
-        "totalMs": 666
+        "switchMs": 254,
+        "deepCheckMs": 501,
+        "totalMs": 755
       }
     ],
     "slowestDataManagerTabs": [
       {
         "id": "cloud",
-        "durationMs": 1112
-      },
-      {
-        "id": "teacher",
-        "durationMs": 679
+        "durationMs": 1106
       },
       {
         "id": "student",
-        "durationMs": 651
+        "durationMs": 754
+      },
+      {
+        "id": "teacher",
+        "durationMs": 696
       },
       {
         "id": "targets",
-        "durationMs": 632
+        "durationMs": 629
       }
     ],
     "systemPerformanceSnapshot": {
       "available": true,
-      "active": 0,
+      "active": 1,
       "queued": 0,
-      "inflight": 0,
+      "inflight": 1,
       "scheduled": 0,
       "cached": 4,
       "cloudPatched": true,
       "longTasks": [
         {
-          "key": "self",
-          "duration": 550,
-          "time": "2026-07-08T17:20:31.926Z"
-        },
-        {
-          "key": "self",
-          "duration": 171,
-          "time": "2026-07-08T17:20:32.599Z"
-        },
-        {
-          "key": "self",
-          "duration": 60,
-          "time": "2026-07-08T17:20:34.216Z"
-        },
-        {
-          "key": "self",
-          "duration": 80,
-          "time": "2026-07-08T17:20:34.969Z"
-        },
-        {
-          "key": "self",
-          "duration": 134,
-          "time": "2026-07-08T17:20:35.833Z"
-        },
-        {
-          "key": "self",
-          "duration": 517,
-          "time": "2026-07-08T17:20:35.833Z"
-        },
-        {
-          "key": "self",
-          "duration": 387,
-          "time": "2026-07-08T17:20:36.310Z"
-        },
-        {
-          "key": "self",
-          "duration": 110,
-          "time": "2026-07-08T17:20:36.728Z"
-        },
-        {
           "key": "unknown",
-          "duration": 64,
-          "time": "2026-07-08T17:20:36.728Z"
+          "duration": 51,
+          "time": "2026-07-08T20:36:38.619Z"
         },
         {
           "key": "self",
-          "duration": 67,
-          "time": "2026-07-08T17:20:36.819Z"
+          "duration": 241,
+          "time": "2026-07-08T20:36:39.140Z"
         },
         {
           "key": "self",
-          "duration": 74,
-          "time": "2026-07-08T17:20:37.005Z"
+          "duration": 76,
+          "time": "2026-07-08T20:36:39.531Z"
+        },
+        {
+          "key": "self",
+          "duration": 121,
+          "time": "2026-07-08T20:36:39.977Z"
+        },
+        {
+          "key": "self",
+          "duration": 58,
+          "time": "2026-07-08T20:36:40.617Z"
+        },
+        {
+          "key": "self",
+          "duration": 56,
+          "time": "2026-07-08T20:36:40.745Z"
+        },
+        {
+          "key": "self",
+          "duration": 161,
+          "time": "2026-07-08T20:36:41.368Z"
+        },
+        {
+          "key": "self",
+          "duration": 397,
+          "time": "2026-07-08T20:36:41.368Z"
+        },
+        {
+          "key": "self",
+          "duration": 98,
+          "time": "2026-07-08T20:36:41.901Z"
         },
         {
           "key": "self",
           "duration": 59,
-          "time": "2026-07-08T17:20:37.647Z"
+          "time": "2026-07-08T20:36:41.901Z"
         },
         {
           "key": "self",
-          "duration": 347,
-          "time": "2026-07-08T17:20:37.647Z"
+          "duration": 65,
+          "time": "2026-07-08T20:36:42.352Z"
         },
         {
           "key": "self",
-          "duration": 207,
-          "time": "2026-07-08T17:20:38.468Z"
+          "duration": 241,
+          "time": "2026-07-08T20:36:43.150Z"
         },
         {
           "key": "self",
-          "duration": 71,
-          "time": "2026-07-08T17:20:38.580Z"
+          "duration": 66,
+          "time": "2026-07-08T20:36:43.283Z"
+        },
+        {
+          "key": "self",
+          "duration": 255,
+          "time": "2026-07-08T20:36:43.843Z"
         },
         {
           "key": "unknown",
-          "duration": 68,
-          "time": "2026-07-08T17:20:38.689Z"
+          "duration": 79,
+          "time": "2026-07-08T20:36:43.983Z"
         },
         {
-          "key": "unknown",
-          "duration": 87,
-          "time": "2026-07-08T17:20:38.868Z"
+          "key": "self",
+          "duration": 89,
+          "time": "2026-07-08T20:36:44.088Z"
+        },
+        {
+          "key": "self",
+          "duration": 252,
+          "time": "2026-07-08T20:36:44.741Z"
         },
         {
           "key": "self",
           "duration": 50,
-          "time": "2026-07-08T17:20:38.868Z"
-        },
-        {
-          "key": "unknown",
-          "duration": 124,
-          "time": "2026-07-08T17:20:39.101Z"
+          "time": "2026-07-08T20:36:45.162Z"
         },
         {
           "key": "self",
-          "duration": 79,
-          "time": "2026-07-08T17:20:39.248Z"
+          "duration": 67,
+          "time": "2026-07-08T20:36:45.235Z"
+        },
+        {
+          "key": "self",
+          "duration": 104,
+          "time": "2026-07-08T20:36:45.349Z"
         }
       ]
     },
