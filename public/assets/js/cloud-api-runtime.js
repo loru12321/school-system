@@ -446,6 +446,33 @@
         return error;
     }
 
+    let cloudAuthExpiredHandled = false;
+
+    function handleCloudSessionExpired(error) {
+        const status = Number(error && error.status);
+        if (status !== 401) return false;
+        if (cloudAuthExpiredHandled) return true;
+        cloudAuthExpiredHandled = true;
+        try {
+            if (root.sessionStorage && typeof root.sessionStorage.removeItem === 'function') {
+                root.sessionStorage.removeItem('edu:session:token');
+            }
+            if (root.EdgeGateway && typeof root.EdgeGateway.clearSession === 'function') {
+                root.EdgeGateway.clearSession();
+            }
+            if (root.AuthState && typeof root.AuthState.clearCurrentUser === 'function') {
+                root.AuthState.clearCurrentUser();
+            }
+            if (root.Auth && typeof root.Auth.syncLoginOverlayState === 'function') {
+                root.Auth.syncLoginOverlayState(true);
+            }
+            if (root.UI && typeof root.UI.toast === 'function') {
+                root.UI.toast('登录状态已过期，请重新登录', 'warning');
+            }
+        } catch (_) { }
+        return true;
+    }
+
     async function selectViaApi(options) {
         const fetchImpl = getFetch();
         const requestUrl = buildSystemDataUrl(options || {});
@@ -472,9 +499,11 @@
                 if (options && options.maybeSingle && (response.status === 404 || response.status === 406)) {
                     return { data: null, error: null, source: 'api' };
                 }
+                const error = buildApiError(response, body);
+                handleCloudSessionExpired(error);
                 return {
                     data: options && options.maybeSingle ? null : [],
-                    error: buildApiError(response, body),
+                    error,
                     source: 'api'
                 };
             }
@@ -665,7 +694,9 @@
                 });
                 const body = await parseJsonResponse(response).catch(() => null);
                 if (!response.ok) {
-                    return { data: body, error: buildApiError(response, body), source: 'api' };
+                    const error = buildApiError(response, body);
+                    handleCloudSessionExpired(error);
+                    return { data: body, error, source: 'api' };
                 }
                 clearSystemDataCache();
                 return { data: body, error: null, source: 'api' };
@@ -714,7 +745,9 @@
                 });
                 const body = await parseJsonResponse(response).catch(() => null);
                 if (!response.ok) {
-                    return { data: body, error: buildApiError(response, body), source: 'api' };
+                    const error = buildApiError(response, body);
+                    handleCloudSessionExpired(error);
+                    return { data: body, error, source: 'api' };
                 }
                 clearSystemDataCache();
                 return { data: body, error: null, source: 'api' };
@@ -760,7 +793,7 @@
         };
     }
 
-    return {
+    const apiRuntime = {
         SYSTEM_DATA_TABLE,
         SYSTEM_DATA_API_PATH,
         getSystemDataApiUrl,
@@ -778,4 +811,10 @@
         },
         probeSystemData
     };
+    if (typeof module === 'object' && module.exports) {
+        apiRuntime._test = {
+            handleCloudSessionExpired
+        };
+    }
+    return apiRuntime;
 });
