@@ -293,6 +293,27 @@
         return { db, currentExamId, exam };
     }
 
+    async function ensureCompositeExamHistoryReady(rows) {
+        let context = getCurrentExamContext();
+        if (!isJulyExam(context)) return context;
+        const baseInfo = getCurrentCompositeBaseInfo(rows, context);
+        if (!getMakeupSubjectsForGrade(baseInfo.grade).length) return context;
+        if (findLatestSecondMockExam(baseInfo, context)) return context;
+        if (!baseInfo.cohortId || !root.CloudManager || typeof root.CloudManager.fetchCohortExamsToLocal !== 'function') return context;
+        try {
+            await root.CloudManager.fetchCohortExamsToLocal(baseInfo.cohortId, {
+                background: false,
+                latestOnly: false,
+                minCount: 3,
+                refreshSelectors: false
+            });
+            context = getCurrentExamContext();
+        } catch (error) {
+            console.warn('[assessment-sync] failed to hydrate cohort exam history before composite build:', error?.message || error);
+        }
+        return context;
+    }
+
     function extractExamMonth(context = getCurrentExamContext()) {
         const exam = context.exam || {};
         const candidates = [
@@ -1638,7 +1659,7 @@
                 skipped
             };
         }
-        const examContext = getCurrentExamContext();
+        const examContext = await ensureCompositeExamHistoryReady(rows);
         const examDate = extractExamDate(examContext);
         const examLabel = getExamLabel(examContext);
         const examMonth = extractExamMonth(examContext);

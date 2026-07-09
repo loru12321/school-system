@@ -120,6 +120,22 @@
         return direct;
     }
 
+    function hasCountyScope(rows, options = {}) {
+        if (options.forceCounty === true) return true;
+        const uploadedScopes = options.uploadedScopes && typeof options.uploadedScopes === 'object'
+            ? options.uploadedScopes
+            : {};
+        if (uploadedScopes.county === true) return true;
+        if (!root || typeof root.getCountyDirectSchoolNames !== 'function' || typeof root.getTownshipManagedSchoolNames !== 'function') {
+            return false;
+        }
+        const candidateNames = getCandidateSchoolNames(rows);
+        if (!candidateNames.length) return false;
+        const townshipNames = root.getTownshipManagedSchoolNames(candidateNames);
+        if (!townshipNames || !townshipNames.length) return false;
+        return root.getCountyDirectSchoolNames(candidateNames).length > 0;
+    }
+
     function getStudentRankValue(studentLike, subject = 'total', scope = 'school', options = {}) {
         if (!studentLike || typeof studentLike !== 'object') return '-';
         const normalizedScope = normalizeText(scope);
@@ -134,6 +150,7 @@
         let result = '-';
         if (normalizedScope === 'class' && !hasStudentClassRankScope(studentLike)) return '-';
         if ((normalizedScope === 'township' || normalizedScope === 'town') && isCountyDirectStudent(studentLike, options)) return '-';
+        if (normalizedScope === 'county' && !hasCountyScope(options.rows, options)) return '-';
         const fallback = key === 'total' && normalizedScope === 'county'
             ? normalizeRankValue(studentLike && studentLike.countyRank, '-')
             : '-';
@@ -234,7 +251,7 @@
             rowCount: list.length,
             schoolCount: schoolSet.size,
             townCount: townSet.size,
-            hasCountyDataset: uploadedScopes.county === true || schoolSet.size > 1 || options.forceCounty === true,
+            hasCountyDataset: hasCountyScope(list, options),
             hasTownDataset: uploadedScopes.town === true || uploadedScopes.township === true || townSet.size > 0 || options.forceTown === true,
             hasSchoolDataset: schoolSet.size > 0,
             hasClassDataset: list.some((row) => normalizeText(row && row.class))
@@ -475,6 +492,7 @@
         hasRankValue,
         hasStudentClassRankScope,
         isCountyDirectStudent,
+        hasCountyScope,
         getStudentRankValue,
         hasStudentRankData,
         getStudentRankVisibility,

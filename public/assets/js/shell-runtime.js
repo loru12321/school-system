@@ -182,6 +182,17 @@
         return gradeMatch ? `Grade ${gradeMatch[1]}` : text.replace(/\s*模式$/, ' Mode');
     }
 
+    function resolveShellModeText() {
+        try {
+            if (typeof window.getExamMetaFromUI === 'function' && typeof window.getEffectiveGrade === 'function') {
+                const grade = String(window.getEffectiveGrade(window.getExamMetaFromUI()) || '').trim();
+                if (grade) return `${grade}年级`;
+            }
+        } catch (_) { }
+        const modeBadge = document.getElementById('mode-badge');
+        return modeBadge ? String(modeBadge.textContent || '').trim() : '';
+    }
+
     function normalizeScopeClass(value) {
         if (window.AuthState && typeof window.AuthState.normalizeClassName === 'function') {
             return window.AuthState.normalizeClassName(value || '');
@@ -846,8 +857,7 @@
 
         const modeChip = document.getElementById('shell-mode-chip');
         if (modeChip) {
-            const modeBadge = document.getElementById('mode-badge');
-            const modeText = modeBadge ? String(modeBadge.textContent || '').trim() : '';
+            const modeText = resolveShellModeText();
             const shellModeText = modeText ? `${modeText} 模式` : '模式待加载';
             setTextAndTooltip(modeChip, formatOverviewModeText(shellModeText), `当前模式：${shellModeText}`);
         }
