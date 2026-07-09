@@ -13,7 +13,7 @@ const SCHOOL_ALIAS_GROUPS = [
     { canonical: '大羊中学', aliases: ['大羊'] },
     { canonical: '沙河站中学', aliases: ['沙河站', '沙河站镇中学'] },
     { canonical: '银山实验', aliases: ['银山实验学校', '东平银山实验学校', '银山镇实验学校', '银山实验中学', '银山镇实验中学', '实验完全中学'] },
-    { canonical: '旧县中学', aliases: ['旧县乡中心学校', '旧县中心学校', '旧县中心小学'] },
+    { canonical: '旧县中学', aliases: ['旧县', '旧县乡中心学校', '旧县中心学校', '旧县中心小学'] },
     { canonical: '斑鸠店镇中', aliases: ['斑鸠店中学', '斑鸠店镇中学', '斑鸠店中'] },
     { canonical: '戴庙中学', aliases: ['戴庙', '戴庙镇中学'] },
     { canonical: '东平县实验中学', aliases: ['东平实验中学', '泰安市东平实验中学'] },
@@ -703,9 +703,7 @@ function getTownshipManagedSchoolNames(candidateNames = []) {
     if (!currentNames.length) return [];
 
     const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {});
-    const knownTownshipKeys = targetKeys.length
-        ? []
-        : TOWNSHIP_STANDARD_SCHOOL_NAMES.slice();
+    const knownTownshipKeys = TOWNSHIP_STANDARD_SCHOOL_NAMES.slice();
     const currentSchoolKeys = [
         String(MY_SCHOOL || '').trim(),
         String(localStorage.getItem('MY_SCHOOL') || '').trim(),
@@ -721,6 +719,11 @@ function getTownshipManagedSchoolNames(candidateNames = []) {
         if (directMatches.length) return directMatches;
         const canonical = getCanonicalSchoolName(rawName, currentNames);
         if (canonical && currentNames.includes(canonical)) return [canonical];
+        const canonicalKey = getCanonicalSchoolName(rawName);
+        if (canonicalKey) {
+            const aliasMatches = currentNames.filter((name) => getCanonicalSchoolName(name) === canonicalKey);
+            if (aliasMatches.length) return aliasMatches;
+        }
         return currentNames.filter((name) => areSchoolNamesMatched(name, rawName, true));
     });
 

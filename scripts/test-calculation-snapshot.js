@@ -1473,6 +1473,9 @@ async function main() {
             rankingDataServiceSchoolAliasPolicy,
             teacherAnalysisCoreSchoolAliasPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
+            townshipSchoolNamesForSnapshot: typeof window.getTownshipManagedSchoolNames === 'function'
+                ? window.getTownshipManagedSchoolNames(Object.keys(window.SCHOOLS || {}))
+                : [],
             teacherMapKeys: Object.keys(window.TEACHER_MAP || {}).length,
             teacherSchoolMapKeys: Object.keys(window.TEACHER_SCHOOL_MAP || {}).length,
             cohortTeacherMapKeys: Object.keys(window.COHORT_DB?.exams?.[window.CURRENT_EXAM_ID || window.COHORT_DB?.currentExamId || '']?.teacherMap || {}).length,
@@ -1649,7 +1652,14 @@ async function main() {
         switchedExcludesNewSchool: true,
         pairingCount: 1
     }, 'teacher analysis core should treat equivalent school aliases consistently');
-    assert.ok(snapshot.score2RatePositive >= minimumSchoolCount, `score2Rate positive schools too low: ${snapshot.score2RatePositive} < ${minimumSchoolCount}`);
+    assert.ok(
+        (snapshot.townshipSchoolNamesForSnapshot || []).includes('旧县'),
+        `township school names should include 旧县; township=${JSON.stringify(snapshot.townshipSchoolNamesForSnapshot)}`
+    );
+    assert.ok(
+        snapshot.score2RatePositive >= minimumSchoolCount,
+        `score2Rate positive schools too low: ${snapshot.score2RatePositive} < ${minimumSchoolCount}; township=${JSON.stringify(snapshot.townshipSchoolNamesForSnapshot)}`
+    );
     assert.ok(
         snapshot.teacherRows >= 10,
         `teacher row count too low: ${snapshot.teacherRows}; diagnostics=${JSON.stringify({
