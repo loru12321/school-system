@@ -88,7 +88,7 @@
             requiresJuly: true,
             syncMode: 'sync',
             source: '联考分析 · 后 1/3 总分',
-            formula: '后 1/3 学生成绩 = 任教班级后 1/3 学生总分平均分 / 乡镇最高后 1/3 学生平均分 * 10；乡镇最高值比较含银山实验本校。'
+            formula: '后 1/3 学生成绩 =（任教班级后 1/3 学生优秀率/最高后 1/3 优秀率*40 + 后 1/3 及格率/最高后 1/3 及格率*30 + 后 1/3 平均分/最高后 1/3 平均分*30）/最高教师后 1/3 成绩*10；乡镇最高值比较含银山实验本校。'
         },
         [PROJECTS.excellentContribution]: {
             max: 5,
@@ -622,20 +622,6 @@
         ].join('::');
     }
 
-    function indexRowsForMakeup(rows) {
-        const exact = new Map();
-        const byName = new Map();
-        (rows || []).forEach((row) => {
-            const exactKey = buildStudentExactKey(row);
-            const nameKey = buildStudentNameKey(row);
-            if (!exact.has(exactKey)) exact.set(exactKey, []);
-            exact.get(exactKey).push(row);
-            if (!byName.has(nameKey)) byName.set(nameKey, []);
-            byName.get(nameKey).push(row);
-        });
-        return { exact, byName };
-    }
-
     function sortRowsByTotalDesc(rows) {
         return (rows || []).slice().sort((left, right) => getTotal(right) - getTotal(left));
     }
@@ -658,103 +644,8 @@
         return { exact, byGradeName };
     }
 
-    function resolveMakeupRow(row, index) {
-        const exactRows = index.exact.get(buildStudentExactKey(row)) || [];
-        if (exactRows.length === 1) return { row: exactRows[0], mode: '学校+姓名+班级' };
-        if (exactRows.length > 1) return { row: null, mode: '学校+姓名+班级', ambiguous: true };
-        const nameRows = index.byName.get(buildStudentNameKey(row)) || [];
-        if (nameRows.length === 1) return { row: nameRows[0], mode: '学校+姓名唯一' };
-        return { row: null, mode: '学校+姓名唯一', ambiguous: nameRows.length > 1 };
-    }
-
     function teacherKeyFor(name, grade, subject) {
         return `${text(name)}::${normalizeGrade(grade)}::${normalizeSubject(subject)}`;
-    }
-
-    function buildMissingTeacherKeys(missingRows, teachers) {
-        const classTeacher = new Map();
-        (teachers || []).forEach((teacher) => {
-            (teacher.classes || []).forEach((className) => {
-                classTeacher.set(`${text(className)}::${teacher.subject}`, teacher);
-            });
-        });
-        const keys = new Set();
-        missingRows.forEach((item) => {
-            const teacher = classTeacher.get(`${item.className}::${item.subject}`);
-            if (teacher) keys.add(teacherKeyFor(teacher.teacher_name, teacher.grade, teacher.subject));
-        });
-        return keys;
-    }
-
-    function buildCompositeAssessmentRows(julyRows, teachers, examContext) {
-        const baseInfo = getCurrentCompositeBaseInfo(julyRows, examContext);
-        const makeupSubjects = getMakeupSubjectsForGrade(baseInfo.grade);
-        const result = {
-            rows: julyRows.map((row) => ({
-                ...row,
-                scores: { ...(row?.scores || {}) }
-            })),
-            baseInfo,
-            makeupExam: null,
-            makeupSubjects,
-            missing: [],
-            missingTeacherKeys: new Set(),
-            skipped: [],
-            usedFallbackMatches: 0
-        };
-        if (!makeupSubjects.length) return result;
-
-        const candidate = findLatestSecondMockExam(baseInfo, examContext);
-        if (!candidate) {
-            result.skipped.push(`${baseInfo.grade}年级 ${makeupSubjects.join('、')} 需要二模补科，但未找到同届同学年度二模考试；相关教师自动同步将跳过。`);
-            result.missingTeacherKeys = new Set((teachers || [])
-                .filter((teacher) => normalizeGrade(teacher.grade) === baseInfo.grade && makeupSubjects.includes(teacher.subject))
-                .map((teacher) => teacherKeyFor(teacher.teacher_name, teacher.grade, teacher.subject)));
-            return result;
-        }
-
-        const makeupRows = getExamRows(candidate.exam);
-        const makeupIndex = indexRowsForMakeup(makeupRows);
-        result.makeupExam = {
-            id: candidate.examId,
-            label: getExamLabel({ currentExamId: candidate.examId, exam: candidate.exam }),
-            date: extractExamDate({ currentExamId: candidate.examId, exam: candidate.exam })
-        };
-
-        result.rows.forEach((row) => {
-            const rowGrade = getExamGrade('', {}, [row]) || baseInfo.grade;
-            if (rowGrade !== baseInfo.grade) return;
-            const resolved = resolveMakeupRow(row, makeupIndex);
-            makeupSubjects.forEach((subject) => {
-                const currentScore = getSubjectScore(row, subject);
-                if (Number.isFinite(currentScore)) return;
-                const makeupScore = resolved.row ? getSubjectScore(resolved.row, subject) : NaN;
-                if (Number.isFinite(makeupScore)) {
-                    row.scores[subject] = makeupScore;
-                    if (resolved.mode === '学校+姓名唯一') result.usedFallbackMatches += 1;
-                    return;
-                }
-                result.missing.push({
-                    school: normalizeSchoolForSync(row?.school),
-                    className: normalizeStudentClass(row),
-                    studentName: normalizeStudentName(row),
-                    subject,
-                    reason: resolved.ambiguous ? `${resolved.mode}匹配不唯一` : '二模补科成绩缺失'
-                });
-            });
-        });
-        result.missingTeacherKeys = buildMissingTeacherKeys(result.missing, teachers);
-        return result;
-    }
-
-    function filterCompositeItems(items, composite, projectId) {
-        if (!composite?.missingTeacherKeys?.size) return items;
-        return (items || []).filter((item) => {
-            if (!composite.makeupSubjects.includes(normalizeSubject(item.subject))) return true;
-            const key = teacherKeyFor(item.teacher_name, item.grade, item.subject);
-            if (!composite.missingTeacherKeys.has(key)) return true;
-            return false;
-        }).map((item) => ({ ...item, project_id: item.project_id || projectId }));
     }
 
     function filterItemsByTeacherSet(items, teacherSet) {
@@ -1396,24 +1287,43 @@
             const totals = item.totals.slice().sort((a, b) => a - b);
             const count = Math.max(1, Math.ceil(totals.length / 3));
             const bottom = totals.slice(0, count);
-            const avg = bottom.reduce((sum, value) => sum + value, 0) / bottom.length;
-            bottomByClass.set(`${item.school}::${item.className}`, { avg, count: bottom.length });
+            const metric = metricFromValues(bottom, resolveTotalThresholds(rows));
+            if (metric) bottomByClass.set(`${item.school}::${item.className}`, metric);
         });
-        const highest = Math.max(...Array.from(bottomByClass.values()).map((item) => item.avg), 0);
-        return teachers.map((teacher) => {
-            const metrics = teacher.classes.map((className) => bottomByClass.get(`${teacher.school}::${className}`)).filter(Boolean);
-            const count = metrics.reduce((sum, item) => sum + item.count, 0);
-            if (!count || highest <= 0) return null;
-            const avg = metrics.reduce((sum, item) => sum + item.avg * item.count, 0) / count;
+        const bottomMetrics = Array.from(bottomByClass.values());
+        const highest = {
+            excellentRate: Math.max(...bottomMetrics.map((item) => item.excellentRate), 0),
+            passRate: Math.max(...bottomMetrics.map((item) => item.passRate), 0),
+            avg: Math.max(...bottomMetrics.map((item) => item.avg), 0)
+        };
+        const rawScores = teachers.map((teacher) => {
+            const metrics = teacher.classes
+                .map((className) => bottomByClass.get(`${teacher.school}::${className}`))
+                .filter(Boolean);
+            const totalCount = metrics.reduce((sum, item) => sum + item.count, 0);
+            if (!totalCount) return null;
+            const metric = {
+                count: totalCount,
+                avg: metrics.reduce((sum, item) => sum + item.avg * item.count, 0) / totalCount,
+                excellentRate: metrics.reduce((sum, item) => sum + item.excellentRate * item.count, 0) / totalCount,
+                passRate: metrics.reduce((sum, item) => sum + item.passRate * item.count, 0) / totalCount
+            };
             return {
-                ...teacher,
-                project_id: PROJECTS.bottomThird,
-                score: round((avg / highest) * 10, 2),
-                max_score: 10,
-                note: `任教班级后 1/3 总分均分 ${round(avg, 2)}，全镇最高 ${round(highest, 2)}（含本校）。`,
-                source: 'teaching-management'
+                teacher,
+                metric,
+                raw: weightedScore(metric, highest)
             };
         }).filter(Boolean);
+        return scaleWithinGroup(rawScores, 10).map((entry) => {
+            return {
+                ...entry.teacher,
+                project_id: PROJECTS.bottomThird,
+                score: entry.score,
+                max_score: 10,
+                note: `任教班级后 1/3 学生按两率一分三项核算，乡镇最高值比较含本校：优秀率 ${pct(entry.metric.excellentRate)}，及格率 ${pct(entry.metric.passRate)}，均分 ${round(entry.metric.avg, 2)}。`,
+                source: 'teaching-management'
+            };
+        });
     }
 
     function buildExcellentContributionItems(teachers, rows) {

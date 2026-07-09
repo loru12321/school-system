@@ -130,6 +130,10 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
     assert.ok(julyProjectIds.has('teacher_subject_collaboration'), 'July payload should include subject collaboration');
     assert.ok(julyProjectIds.has('teacher_bottom_third'), 'July payload should include bottom-third score');
     assert.ok(julyProjectIds.has('teacher_excellent_contribution'), 'July exams should include excellent contribution when top student data exists');
+    const bottomThirdItems = julyPayload.items.filter((item) => item.project_id === 'teacher_bottom_third');
+    assert.ok(bottomThirdItems.length > 0, 'July payload should generate bottom-third teacher items');
+    assert.ok(bottomThirdItems.every((item) => /两率一分三项核算/.test(item.note)), 'bottom-third sync should follow the plan three-metric formula');
+    assert.ok(!bottomThirdItems.some((item) => /总分均分 .*全镇最高/.test(item.note)), 'bottom-third sync must not fall back to average-only scoring');
     const audit = context.window.tmBuildTeacherAssessmentSyncAudit(payload, { written: 4, skipped: [] });
     assert.strictEqual(audit.exam.month, 5, 'audit should expose source exam month');
     assert.strictEqual(audit.projects.teacher_excellent_contribution.requiresJuly, true, 'excellent contribution should be marked as July-only');
@@ -137,6 +141,7 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
     assert.strictEqual(audit.projects.teacher_excellent_contribution.syncable, 0, 'non-July audit should show zero excellent contribution items');
     assert.strictEqual(audit.projects.teacher_two_rates_one_score.syncable, 0, 'non-July audit should show zero two-rates-one-score items');
     assert.match(audit.formulas.teacher_two_rates_one_score, /54/, 'audit should explain two-rates-one-score body score');
+    assert.match(audit.formulas.teacher_bottom_third, /优秀率\/最高后 1\/3 优秀率/, 'audit should document bottom-third as a three-metric formula');
     context.window.CURRENT_EXAM_ID = '2023级-8年级-2025-2026-暑假-7月质量监测-2026-07-12';
     context.window.RAW_DATA = [
       { name: '学生甲', school: '银山实验学校', class: '8.1', total: 270, scores: { 语文: 90, 数学: 91, 英语: 89 } },
