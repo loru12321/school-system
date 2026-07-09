@@ -662,6 +662,29 @@
         return merged;
     }
 
+    function normalizeWorkspacePayload(payload) {
+        if (root.CloudWorkspaceRuntimeDeps && typeof root.CloudWorkspaceRuntimeDeps.normalizeWorkspacePayload === 'function') {
+            return root.CloudWorkspaceRuntimeDeps.normalizeWorkspacePayload(payload);
+        }
+        return payload;
+    }
+
+    function getWorkspaceExamOrderScore(key, payload) {
+        if (root.CloudWorkspaceRuntimeDeps && typeof root.CloudWorkspaceRuntimeDeps.getWorkspaceExamOrderScore === 'function') {
+            return root.CloudWorkspaceRuntimeDeps.getWorkspaceExamOrderScore(key, payload);
+        }
+        return 0;
+    }
+
+    function compareWorkspaceExamRows(left, right) {
+        const leftKey = normalizeText(left && left.key);
+        const rightKey = normalizeText(right && right.key);
+        const leftScore = getWorkspaceExamOrderScore(leftKey, {});
+        const rightScore = getWorkspaceExamOrderScore(rightKey, {});
+        if (leftScore !== rightScore) return rightScore - leftScore;
+        return String(right && right.updated_at || '').localeCompare(String(left && left.updated_at || ''));
+    }
+
     async function readSplitExamPayload(examKey, metaPayload) {
         const readSystemDataRecord = getReadSystemDataRecord();
         if (readSystemDataRecord && examKey) {
@@ -697,8 +720,8 @@
         });
         if (error) throw error;
 
-        const rows = Array.isArray(data) ? data : [];
-        const selected = rows.find(row => normalizeText(row && row.key) === examKey) || rows[0] || null;
+        const rows = Array.isArray(data) ? data.slice().sort(compareWorkspaceExamRows) : [];
+        const selected = rows[0] || rows.find(row => normalizeText(row && row.key) === examKey) || null;
         if (!selected || !selected.content) return null;
         const payload = parseCloudPayload(selected.content);
         if (selected.key) {
@@ -708,11 +731,11 @@
     }
 
     async function hydrateSplitWorkspacePayload(key, payload) {
-        if (!isSplitWorkspacePayload(payload)) return payload;
-        const examKey = getSplitCurrentExamKey(payload);
-        const exam = await readSplitExamPayload(examKey, payload);
-        if (!exam || !exam.payload) return payload;
-        return mergeSplitWorkspacePayload(payload, exam.payload, exam.key || examKey);
+        if (!isSplitWorkspacePayload(payload)) return normalizeWorkspacePayload(payload);
+        const fallbackExamKey = getSplitCurrentExamKey(payload);
+        const exam = await readSplitExamPayload('', payload);
+        if (!exam || !exam.payload) return normalizeWorkspacePayload(payload);
+        return normalizeWorkspacePayload(mergeSplitWorkspacePayload(payload, exam.payload, exam.key || fallbackExamKey));
     }
 
     function packCloudPayload(value) {

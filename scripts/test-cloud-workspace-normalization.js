@@ -89,6 +89,11 @@ assert.strictEqual(
     '2022',
     'split metadata payload should repair cohort metadata before exam data is hydrated'
 );
+assert.strictEqual(
+    normalize({ CURRENT_COHORT_ID: '2025', CURRENT_PROJECT_KEY: 'cohort::2022' }).CURRENT_PROJECT_KEY,
+    'cohort::2025',
+    'workspace normalizer should repair stale project keys when a cloud payload belongs to another cohort'
+);
 
 const erMoRows = rows(7812, '银山实验学校');
 const erMoPayload = normalize({
@@ -136,6 +141,13 @@ assert.ok(
 assert.ok(
     workspaceSource.includes('normalizedPayload = await supplementIndicatorPayload'),
     'cached workspace payloads should be normalized before application'
+);
+const dataCloudSource = fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8');
+assert.ok(
+    dataCloudSource.includes('function compareWorkspaceExamRows')
+        && dataCloudSource.includes('readSplitExamPayload(\'\', payload)')
+        && dataCloudSource.includes('return normalizeWorkspacePayload(mergeSplitWorkspacePayload'),
+    'data-cloud split workspace restore should choose the latest same-cohort exam shard and normalize the merged payload'
 );
 assert.ok(
     workspaceSource.includes('async function assertWorkspaceBundleSafeForUpload'),

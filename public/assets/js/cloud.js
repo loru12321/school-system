@@ -498,6 +498,10 @@
     function normalizeWorkspacePayload(payload) {
         const next = ensureCurrentExamBundled((payload && typeof payload === 'object') ? payload : {});
         const workspaceCohortId = normalizeCohortId(next.CURRENT_COHORT_ID || getCurrentCohortId());
+        if (workspaceCohortId) {
+            next.CURRENT_COHORT_ID = workspaceCohortId;
+            next.CURRENT_PROJECT_KEY = `cohort::${workspaceCohortId}`;
+        }
         if (workspaceCohortId && normalizeCohortId(next.CURRENT_COHORT_META?.id) !== workspaceCohortId) {
             next.CURRENT_COHORT_META = {
                 ...(next.CURRENT_COHORT_META || {}),
