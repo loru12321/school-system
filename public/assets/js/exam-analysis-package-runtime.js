@@ -117,6 +117,34 @@
         return /9\s*年级|九年级/.test(source);
     }
 
+    function getCurrentGradeNumberForPackage() {
+        const source = currentExamMatchesActiveCohort()
+            ? `${window.CURRENT_EXAM_ID || ''} ${window.CONFIG?.name || ''} ${getCohortGradeLabel()}`
+            : `${window.CONFIG?.name || ''} ${getCohortGradeLabel()}`;
+        const digit = String(source || '').match(/([6-9])\s*年级/);
+        if (digit) return digit[1];
+        if (/六年级/.test(source)) return '6';
+        if (/七年级/.test(source)) return '7';
+        if (/八年级/.test(source)) return '8';
+        if (/九年级/.test(source)) return '9';
+        const effective = typeof window.getEffectiveGrade === 'function'
+            ? String(window.getEffectiveGrade(getCurrentExamMeta()) || '').trim()
+            : getEffectiveCohortGrade(getCurrentExamMeta());
+        const match = effective.match(/[6-9]/);
+        return match ? match[0] : '';
+    }
+
+    function getMajorSubjectsForPackage(rows = getAllRows()) {
+        const grade = getCurrentGradeNumberForPackage();
+        if (grade === '9') return [];
+        const allowed = grade === '8'
+            ? ['语文', '数学', '英语', '物理', '化学']
+            : (grade === '6' || grade === '7' ? ['语文', '数学', '英语'] : []);
+        if (!allowed.length) return [];
+        const present = new Set(getSubjectList(rows));
+        return allowed.filter((subject) => present.has(subject));
+    }
+
     function sameSchool(left, right) {
         if (typeof window.sameAppSchoolName === 'function') return window.sameAppSchoolName(left, right);
         if (typeof window.areSchoolNamesEquivalent === 'function') return window.areSchoolNamesEquivalent(left, right);
@@ -583,10 +611,10 @@
         return rankMap;
     }
 
-    function buildSchoolAnalysisWorkbook(scope = 'township') {
+    function buildSchoolAnalysisWorkbook(scope = 'township', options = {}) {
         const wb = window.XLSX.utils.book_new();
-        const schools = scope === 'county' ? Object.values(window.SCHOOLS || {}) : getTownshipSchools();
-        const subjects = getSubjectList(getAllRows());
+        const schools = options.schools || (scope === 'county' ? Object.values(window.SCHOOLS || {}) : getTownshipSchools());
+        const subjects = options.subjects || getSubjectList(getAllRows());
         if (scope !== 'county') addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope));
         addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects, scope));
         if (scope !== 'county' && isGrade9Exam()) addWorksheet(wb, '9年级专项核算对照表', buildSupportMetricComparisonRows(schools));
@@ -599,6 +627,165 @@
             addWorksheetIfUseful(wb, '后三分之一学生核算', buildBottomRows(schools));
         }
         return wb;
+    }
+
+    function buildMajorSubjectRows(rows, subjects) {
+        return (rows || []).map((student) => {
+            const scores = {};
+            subjects.forEach((subject) => {
+                const value = Number(student?.scores?.[subject]);
+                if (Number.isFinite(value)) scores[subject] = value;
+            });
+            const total = subjects.reduce((sum, subject) => sum + (Number.isFinite(scores[subject]) ? scores[subject] : 0), 0);
+            return {
+                ...student,
+                scores,
+                total: Number(total.toFixed(2)),
+                ranks: {}
+            };
+        });
+    }
+
+    function buildMajorSubjectSchools(rows) {
+        const schools = {};
+        (rows || []).forEach((student) => {
+            const schoolName = String(student?.school || '未知学校').trim() || '未知学校';
+            if (!schools[schoolName]) schools[schoolName] = { name: schoolName, students: [], metrics: {}, rankings: {} };
+            schools[schoolName].students.push(student);
+        });
+        return schools;
+    }
+
+    function calculateMajorSubjectThresholds(rows, subjects) {
+        const thresholdRows = typeof window.filterRowsToTownshipSchools === 'function'
+            ? window.filterRowsToTownshipSchools(rows || [])
+            : (rows || []);
+        const sourceRows = thresholdRows.length ? thresholdRows : (rows || []);
+        const thresholds = {};
+        const pick = (values, ratio) => {
+            const index = Math.max(0, Math.ceil(values.length * ratio) - 1);
+            return values[index] || 0;
+        };
+        [...subjects, 'total'].forEach((subject) => {
+            const values = sourceRows
+                .map((student) => subject === 'total' ? Number(student.total) : Number(student.scores?.[subject]))
+                .filter(Number.isFinite)
+                .sort((left, right) => right - left);
+            thresholds[subject] = values.length ? { exc: pick(values, 0.2), pass: pick(values, 0.5) } : { exc: 0, pass: 0 };
+        });
+        return thresholds;
+    }
+
+    function assignMajorCompetitionRanks(items, valueGetter, setter) {
+        const rows = (items || []).slice()
+            .filter((item) => Number.isFinite(Number(valueGetter(item))))
+            .sort((left, right) => Number(valueGetter(right)) - Number(valueGetter(left)));
+        let lastValue = null;
+        let lastRank = 0;
+        rows.forEach((item, index) => {
+            const value = Number(valueGetter(item));
+            const rank = lastValue !== null && Math.abs(value - lastValue) < 0.0001 ? lastRank : index + 1;
+            setter(item, rank);
+            lastValue = value;
+            lastRank = rank;
+        });
+    }
+
+    function calculateMajorSubjectSnapshot(rows, subjects) {
+        const majorRows = buildMajorSubjectRows(rows, subjects);
+        const schoolsMap = buildMajorSubjectSchools(majorRows);
+        const thresholds = calculateMajorSubjectThresholds(majorRows, subjects);
+        Object.values(schoolsMap).forEach((school) => {
+            [...subjects, 'total'].forEach((subject) => {
+                const values = school.students
+                    .map((student) => subject === 'total' ? Number(student.total) : Number(student.scores?.[subject]))
+                    .filter(Number.isFinite);
+                if (!values.length) {
+                    school.metrics[subject] = { count: 0, avg: 0, excRate: 0, passRate: 0 };
+                    return;
+                }
+                const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+                const lines = thresholds[subject] || { exc: 0, pass: 0 };
+                school.metrics[subject] = {
+                    count: values.length,
+                    avg,
+                    excRate: values.filter((value) => value >= lines.exc).length / values.length,
+                    passRate: values.filter((value) => value >= lines.pass).length / values.length
+                };
+            });
+            const totalN = school.students.length;
+            const bottomN = Math.max(0, Math.floor(totalN / 3));
+            const excN = bottomN > 0 ? Math.ceil(bottomN * (Number(window.CONFIG?.excRate) || 0.15)) : 0;
+            const bottomGroup = school.students.slice().sort((left, right) => Number(right.total) - Number(left.total)).slice(-bottomN);
+            const validGroup = bottomGroup.slice(0, Math.max(0, bottomGroup.length - excN));
+            const avg = validGroup.length ? validGroup.reduce((sum, student) => sum + Number(student.total || 0), 0) / validGroup.length : 0;
+            school.bottom3 = { totalN, bottomN, excN, avg };
+        });
+        subjects.forEach((subject) => {
+            assignMajorCompetitionRanks(majorRows.filter((student) => Number.isFinite(Number(student.scores?.[subject]))), (student) => student.scores[subject], (student, rank) => {
+                if (!student.ranks[subject]) student.ranks[subject] = {};
+                student.ranks[subject].township = rank;
+            });
+        });
+        assignMajorCompetitionRanks(majorRows, (student) => student.total, (student, rank) => {
+            if (!student.ranks.total) student.ranks.total = {};
+            student.ranks.total.township = rank;
+        });
+        Object.values(schoolsMap).forEach((school) => {
+            assignMajorCompetitionRanks(school.students, (student) => student.total, (student, rank) => {
+                if (!student.ranks.total) student.ranks.total = {};
+                student.ranks.total.school = rank;
+            });
+            subjects.forEach((subject) => {
+                assignMajorCompetitionRanks(school.students.filter((student) => Number.isFinite(Number(student.scores?.[subject]))), (student) => student.scores[subject], (student, rank) => {
+                    if (!student.ranks[subject]) student.ranks[subject] = {};
+                    student.ranks[subject].school = rank;
+                });
+            });
+        });
+        const schoolValues = Object.values(schoolsMap);
+        [...subjects, 'total'].forEach((subject) => {
+            ['avg', 'excRate', 'passRate'].forEach((key) => {
+                assignMajorCompetitionRanks(schoolValues.filter((school) => school.metrics?.[subject]), (school) => school.metrics[subject][key], (school, rank) => {
+                    if (!school.rankings[subject]) school.rankings[subject] = {};
+                    school.rankings[subject][key] = rank;
+                });
+            });
+        });
+        const weights = getTwoRateWeightsForPackage();
+        const max = schoolValues.reduce((acc, school) => {
+            const metric = school.metrics?.total || {};
+            acc.avg = Math.max(acc.avg, Number(metric.avg) || 0);
+            acc.excRate = Math.max(acc.excRate, Number(metric.excRate) || 0);
+            acc.passRate = Math.max(acc.passRate, Number(metric.passRate) || 0);
+            return acc;
+        }, { avg: 0, excRate: 0, passRate: 0 });
+        schoolValues.forEach((school) => {
+            const metric = school.metrics?.total || {};
+            metric.ratedAvg = max.avg ? (Number(metric.avg) || 0) / max.avg * weights.avg : 0;
+            metric.ratedExc = max.excRate ? (Number(metric.excRate) || 0) / max.excRate * weights.excellent : 0;
+            metric.ratedPass = max.passRate ? (Number(metric.passRate) || 0) / max.passRate * weights.pass : 0;
+            school.score2Rate = metric.ratedAvg + metric.ratedExc + metric.ratedPass;
+        });
+        schoolValues.slice()
+            .sort((left, right) => (Number(right.score2Rate) || 0) - (Number(left.score2Rate) || 0))
+            .forEach((school, index) => { school.rank2Rate = index + 1; });
+        const maxBottomAvg = Math.max(...schoolValues.map((school) => Number(school.bottom3?.avg) || 0), 0);
+        schoolValues.forEach((school) => {
+            school.scoreBottom = maxBottomAvg ? (Number(school.bottom3?.avg) || 0) / maxBottomAvg * 40 : 0;
+        });
+        schoolValues.slice()
+            .sort((left, right) => (Number(right.scoreBottom) || 0) - (Number(left.scoreBottom) || 0))
+            .forEach((school, index) => { school.rankBottom = index + 1; });
+        return { rows: majorRows, schools: schoolValues, subjects };
+    }
+
+    function buildMajorSubjectSchoolAnalysisWorkbook() {
+        const rows = getTownshipRows();
+        const subjects = getMajorSubjectsForPackage(rows);
+        if (!subjects.length) return null;
+        const snapshot = calculateMajorSubjectSnapshot(rows, subjects);
+        return buildSchoolAnalysisWorkbook('township', { schools: snapshot.schools, subjects: snapshot.subjects });
     }
 
     function getIndicatorScoreMap() {
@@ -1235,6 +1422,8 @@
 
             await addWorkbook(zip, `${packageStem}成绩${suffix}.xlsx`, buildRawScoreWorkbook(allRows));
             await addWorkbook(zip, `学校/${packageStem}学校分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('township'));
+            const majorSubjectWorkbook = buildMajorSubjectSchoolAnalysisWorkbook();
+            if (majorSubjectWorkbook) await addWorkbook(zip, `学校/${packageStem}主科学校分析${suffix}.xlsx`, majorSubjectWorkbook);
             if (includeCounty) await addWorkbook(zip, `学校/${packageStem}学校县域分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('county'));
             await addWorkbook(zip, `学生/${packageStem}学生乡镇考试明细.xlsx`, buildStudentDetailWorkbook(townshipRows, { includeCounty: false }));
             if (includeCounty) await addWorkbook(zip, `学生/${packageStem}学生考试明细 县域排名.xlsx`, buildStudentDetailWorkbook(allRows, { includeCounty: true }));
