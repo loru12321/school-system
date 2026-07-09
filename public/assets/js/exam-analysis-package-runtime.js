@@ -42,13 +42,65 @@
         return String(user?.name || user?.username || '').trim();
     }
 
+    function normalizeCohortId(value) {
+        const text = String(value || '').trim();
+        const match = text.match(/20\d{2}/);
+        return match ? match[0] : '';
+    }
+
+    function getActiveCohortId() {
+        return normalizeCohortId(
+            window.CURRENT_COHORT_ID
+            || window.CURRENT_COHORT
+            || window.CURRENT_COHORT_META?.id
+            || window.CURRENT_COHORT_META?.year
+        );
+    }
+
+    function getCurrentExamCohortId() {
+        return normalizeCohortId(window.CURRENT_EXAM_ID);
+    }
+
+    function currentExamMatchesActiveCohort() {
+        const active = getActiveCohortId();
+        const examCohort = getCurrentExamCohortId();
+        return !active || !examCohort || active === examCohort;
+    }
+
+    function getCurrentExamMeta() {
+        if (!currentExamMatchesActiveCohort()) return {};
+        const examId = String(window.CURRENT_EXAM_ID || '').trim();
+        return window.COHORT_DB?.exams?.[examId]?.meta || {};
+    }
+
+    function getAcademicYearStart(meta = {}) {
+        const yearText = String(meta?.year || '').trim();
+        const start = parseInt((yearText.split('-')[0] || ''), 10);
+        if (Number.isFinite(start)) return start;
+        const now = new Date();
+        return now.getMonth() + 1 >= 9 ? now.getFullYear() : now.getFullYear() - 1;
+    }
+
+    function getEffectiveCohortGrade(meta = {}) {
+        const cohort = getActiveCohortId();
+        const entryYear = parseInt(cohort, 10);
+        if (!Number.isFinite(entryYear)) return '';
+        const grade = 6 + (getAcademicYearStart(meta) - entryYear);
+        return grade >= 1 && grade <= 12 ? String(grade) : '';
+    }
+
     function getCohortGradeLabel() {
         const examId = String(window.CURRENT_EXAM_ID || '').trim();
-        const cohortFromExam = (examId.match(/(\d{4})级/) || [])[1] || '';
-        const cohort = String(window.CURRENT_COHORT_ID || window.CURRENT_COHORT || cohortFromExam || '').trim();
+        const cohortFromExam = currentExamMatchesActiveCohort() ? ((examId.match(/(\d{4})级/) || [])[1] || '') : '';
+        const cohort = String(getActiveCohortId() || cohortFromExam || '').trim();
         const configName = String(window.CONFIG?.name || '').trim();
-        const gradeMatch = configName.match(/[6-9]年级/) || examId.match(/[6-9]年级/);
-        const grade = gradeMatch ? gradeMatch[0] : '';
+        const examMeta = getCurrentExamMeta();
+        const effectiveGrade = typeof window.getEffectiveGrade === 'function'
+            ? String(window.getEffectiveGrade(examMeta) || '').trim()
+            : getEffectiveCohortGrade(examMeta);
+        const matchedConfigGrade = currentExamMatchesActiveCohort() ? (configName.match(/[6-9]年级/) || [])[0] : '';
+        const matchedExamGrade = currentExamMatchesActiveCohort() ? (examId.match(/[6-9]年级/) || [])[0] : '';
+        const grade = effectiveGrade ? `${effectiveGrade}年级` : (matchedConfigGrade || matchedExamGrade || '');
         const cohortLabel = cohort ? `${cohort.replace(/届$/, '')}届` : '';
         // Build the label from whatever is actually resolved; never emit vague
         // placeholders like "当前届别"/"当前年级". If neither cohort nor grade is
@@ -60,7 +112,8 @@
     }
 
     function isGrade9Exam() {
-        const source = `${window.CONFIG?.name || ''} ${window.CURRENT_EXAM_ID || ''} ${getCohortGradeLabel()}`;
+        const examSource = currentExamMatchesActiveCohort() ? `${window.CONFIG?.name || ''} ${window.CURRENT_EXAM_ID || ''}` : '';
+        const source = `${examSource} ${getCohortGradeLabel()}`;
         return /9\s*年级|九年级/.test(source);
     }
 
@@ -121,21 +174,25 @@
     }
 
     function getCurrentExamDate() {
+        if (!currentExamMatchesActiveCohort()) return DEFAULT_EXAM_DATE;
         const id = String(window.CURRENT_EXAM_ID || '').trim();
         const match = id.match(/\d{4}-\d{2}-\d{2}/);
         if (match) return match[0];
-        const meta = window.COHORT_DB?.exams?.[id]?.meta || {};
+        const meta = getCurrentExamMeta();
         return String(meta.date || meta.examDate || DEFAULT_EXAM_DATE).trim() || DEFAULT_EXAM_DATE;
     }
 
     function getExamLabel() {
+        if (!currentExamMatchesActiveCohort()) return '';
         const id = String(window.CURRENT_EXAM_ID || '').trim();
-        const meta = window.COHORT_DB?.exams?.[id]?.meta || {};
+        const meta = getCurrentExamMeta();
         return meta.name || meta.examName || id || `${window.CONFIG?.name || ''}${getCurrentExamDate()}`;
     }
 
     function getExamTypeLabel() {
-        const source = `${getExamLabel()} ${window.CURRENT_EXAM_ID || ''} ${window.CONFIG?.name || ''}`;
+        const source = currentExamMatchesActiveCohort()
+            ? `${getExamLabel()} ${window.CURRENT_EXAM_ID || ''} ${window.CONFIG?.name || ''}`
+            : '';
         const patterns = ['中考', '期末', '期中', '一模', '二模', '三模', '四模', '月考', '联考', '模拟', '摸底'];
         const found = patterns.find((label) => source.includes(label));
         return found || '考试';

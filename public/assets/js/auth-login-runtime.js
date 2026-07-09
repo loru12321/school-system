@@ -604,21 +604,61 @@ var Auth = {
                 || document.getElementById('login-cohort-select')?.value
                 || ''
             ).trim();
+            const clearRuntimeForSelectedLoginCohort = (cohortId) => {
+                const normalizedCohortId = String(cohortId || '').trim();
+                if (!normalizedCohortId) return;
+                try {
+                    if (typeof syncWorkspaceRuntimeState === 'function') {
+                        syncWorkspaceRuntimeState({
+                            currentProjectKey: `cohort::${normalizedCohortId}`,
+                            currentCohortId: normalizedCohortId,
+                            currentExamId: '',
+                            cohortDb: null
+                        });
+                    } else if (window.WorkspaceState && typeof window.WorkspaceState.syncWorkspaceState === 'function') {
+                        window.WorkspaceState.syncWorkspaceState({
+                            currentProjectKey: `cohort::${normalizedCohortId}`,
+                            currentCohortId: normalizedCohortId,
+                            currentExamId: '',
+                            cohortDb: null
+                        });
+                    }
+                    if (typeof clearDataRuntimeState === 'function') clearDataRuntimeState();
+                    else {
+                        window.RAW_DATA = [];
+                        window.SCHOOLS = {};
+                        window.SUBJECTS = [];
+                        window.THRESHOLDS = {};
+                        window.CONFIG = {};
+                    }
+                    if (typeof setTeacherMap === 'function') setTeacherMap({});
+                    if (typeof setTeacherSchoolMap === 'function') setTeacherSchoolMap({});
+                    CURRENT_EXAM_ID = '';
+                    window.CURRENT_EXAM_ID = '';
+                    COHORT_DB = null;
+                    window.COHORT_DB = null;
+                } catch (clearError) {
+                    console.warn('[Auth] failed to clear stale workspace before selected cohort entry:', clearError?.message || clearError);
+                }
+            };
             let pendingLoginCohortEntry = null;
             if (!isParentLikeUser(this.currentUser) && selectedLoginCohort) {
                 const yearInput = document.getElementById('entry-cohort-year');
                 if (yearInput) yearInput.value = selectedLoginCohort;
                 lockRuntimeCohortId(selectedLoginCohort);
+                clearRuntimeForSelectedLoginCohort(selectedLoginCohort);
                 if (typeof enterCohortFromMask === 'function') {
                     pendingLoginCohortEntry = Promise.resolve()
                         .then(() => enterCohortFromMask({ fastEnter: false, requireCloudData: true }))
-                        .then(() => {
+                        .then((entered) => {
                             if (window.BootCohortLifecycle?.clearGraduateTarget) {
                                 window.BootCohortLifecycle.clearGraduateTarget();
                             }
+                            return entered !== false;
                         })
                         .catch((cohortError) => {
                             console.warn('[Auth] failed to enter selected login cohort:', cohortError?.message || cohortError);
+                            return false;
                         });
                     window.setTimeout(() => {
                         pendingLoginCohortEntry?.catch(() => { });
@@ -760,8 +800,13 @@ var Auth = {
                     && RAW_DATA.length > 0;
                 if (pendingLoginCohortEntry) {
                     setManualCohortSelectionGate(false);
-                    await pendingLoginCohortEntry;
-                    tryResumeReadyWorkspace();
+                    const selectedCohortReady = await pendingLoginCohortEntry;
+                    if (selectedCohortReady) {
+                        tryResumeReadyWorkspace();
+                    } else {
+                        setManualCohortSelectionGate(true);
+                        if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
+                    }
                 } else {
                     setManualCohortSelectionGate(!hasReadyWorkspace);
                     if (typeof window.showCohortPicker === 'function') window.showCohortPicker();

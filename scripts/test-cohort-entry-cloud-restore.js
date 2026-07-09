@@ -11,6 +11,7 @@ const cloudSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud.js')
 const dataCloudSource = fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8');
 const cloudWorkspaceSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud-workspace-runtime.js'), 'utf8');
 const snapshotSystemSource = fs.readFileSync(path.join(root, 'public/assets/js/snapshot-system-runtime.js'), 'utf8');
+const examAnalysisPackageSource = fs.readFileSync(path.join(root, 'public/assets/js/exam-analysis-package-runtime.js'), 'utf8');
 const smokeSource = fs.readFileSync(path.join(root, 'scripts/smoke-all-modules.js'), 'utf8');
 
 assert.ok(
@@ -19,13 +20,29 @@ assert.ok(
 );
 
 assert.ok(
-    /async function enterCohortFromMask\(options = \{\}\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\)/.test(cohortExamMetaSource),
-    'login-selected cohort entry should fast-enter and restore cloud data in the background by default'
+    /async function enterCohortFromMask\(options = \{\}\)[\s\S]*const entered = await CohortManager\.addCohort\(\{ year, startGrade \}, \{\s*skipConfirm: true,\s*fastEnter: options\.fastEnter !== false,\s*requireCloudData: options\.requireCloudData === true\s*\}\);[\s\S]*return entered !== false;/.test(cohortExamMetaSource),
+    'login-selected cohort entry should return whether the target cohort was actually entered'
 );
 
 assert.ok(
     /if \(options\.requireCloudData === true\) \{[\s\S]*setManualCohortSelectionGate\(true\);[\s\S]*return false;[\s\S]*\}\s*clearDataRuntimeState\(\);/.test(appSource),
     'cloud-required cohort entry should stop before creating an empty workspace when restore fails'
+);
+
+assert.ok(
+    authLoginSource.includes('const clearRuntimeForSelectedLoginCohort = (cohortId) =>')
+        && authLoginSource.includes('currentProjectKey: `cohort::${normalizedCohortId}`')
+        && authLoginSource.includes("currentExamId: ''")
+        && authLoginSource.includes('cohortDb: null')
+        && authLoginSource.includes('clearDataRuntimeState()')
+        && authLoginSource.includes("CURRENT_EXAM_ID = '';")
+        && authLoginSource.includes('COHORT_DB = null;'),
+    'login-selected cohort entry should clear stale runtime exam/data before restoring the target cohort'
+);
+
+assert.ok(
+    /const selectedCohortReady = await pendingLoginCohortEntry;[\s\S]*if \(selectedCohortReady\) \{[\s\S]*tryResumeReadyWorkspace\(\);[\s\S]*\} else \{[\s\S]*setManualCohortSelectionGate\(true\);[\s\S]*showCohortPicker/.test(authLoginSource),
+    'failed selected-cohort cloud restore should not fall back to the previous cached workspace'
 );
 
 assert.ok(
@@ -278,6 +295,16 @@ assert.ok(
         && appSource.includes('const incomingRows = patch.rawData ?? patch.RAW_DATA;')
         && appSource.includes('const incomingCohortId = getSnapshotPayloadCohortId({'),
     'low-level data writes should reject score rows from a different active cohort'
+);
+
+assert.ok(
+    examAnalysisPackageSource.includes('function currentExamMatchesActiveCohort()')
+        && examAnalysisPackageSource.includes('if (!currentExamMatchesActiveCohort()) return {};')
+        && examAnalysisPackageSource.includes('getEffectiveCohortGrade(examMeta)')
+        && examAnalysisPackageSource.includes('currentExamMatchesActiveCohort() ? (configName.match')
+        && examAnalysisPackageSource.includes("if (!currentExamMatchesActiveCohort()) return DEFAULT_EXAM_DATE;")
+        && examAnalysisPackageSource.includes('const source = currentExamMatchesActiveCohort()'),
+    'exam analysis package labels should ignore stale cross-cohort exam/config state'
 );
 
 assert.ok(

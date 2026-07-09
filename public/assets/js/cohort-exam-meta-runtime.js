@@ -890,13 +890,14 @@ async function enterCohortFromMask(options = {}) {
     }
     lockRuntimeCohortId(String(year));
     setManualCohortSelectionGate(false);
-    await CohortManager.addCohort({ year, startGrade }, {
+    const entered = await CohortManager.addCohort({ year, startGrade }, {
         skipConfirm: true,
         fastEnter: options.fastEnter !== false,
         requireCloudData: options.requireCloudData === true
     });
     rememberUserCohort(String(year));
     refreshAuthRoleViewFromSession();
+    return entered !== false;
 }
 
 function tryAutoEnterReadyCohortWorkspace() {
