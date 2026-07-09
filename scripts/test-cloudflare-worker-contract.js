@@ -141,6 +141,9 @@ assert.ok(workerContractSource.includes('buildWorkerErrorHeaders()'), 'worker cr
 assert.ok(workerContractSource.includes("if (method === 'GET' || method === 'HEAD') return null;"), 'GET/HEAD proxy requests should not attach a body');
 assert.ok(workerContractSource.includes("Math.min(Math.floor(raw), 1000)"), 'system_data read limit should be capped');
 assert.ok(workerContractSource.includes("'LIMIT ? OFFSET ?'"), 'system_data reads should push pagination into D1 instead of slicing in memory');
+assert.ok(workerContractSource.includes('function buildSystemDataSelectColumns(selectSet)'), 'system_data D1 reads should build SQL columns from the requested select list');
+assert.ok(workerContractSource.includes("if (selectSet.has('content'))") && workerContractSource.includes("columns.add('content_text');"), 'system_data D1 reads should only load content_text when content is requested');
+assert.ok(!workerContractSource.includes('SELECT key, created_at, updated_at, size_bytes, content_text, object_key'), 'system_data metadata reads must not always hydrate large content_text blobs');
 assert.ok(workerContractSource.includes("function buildSystemDataKeyFilterClause(filter)"), 'system_data reads should optimize compatible key filters before querying D1');
 assert.ok(workerContractSource.includes("value.match(/^(\\d{4})%$/)"), 'cohort exam key-prefix reads should be recognized without scanning generic keys');
 assert.ok(workerContractSource.includes("'cohort_id = ?'") && workerContractSource.includes("\"kind = 'exam'\""), 'cohort exam reads should use structured D1 metadata filters without an OR key scan');

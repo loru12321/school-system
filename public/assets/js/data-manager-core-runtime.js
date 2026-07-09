@@ -88,7 +88,7 @@ const DataManager = {
         document.getElementById('data-manager-modal').style.display = 'flex';
         this.decorateLayout();
         this.switchTab(initialTab || 'student');
-        if (typeof this.syncSchoolAliasSettingsFromGateway === 'function') {
+        if ((initialTab || 'student') !== 'cloud' && typeof this.syncSchoolAliasSettingsFromGateway === 'function') {
             this.syncSchoolAliasSettingsFromGateway().catch(err => {
                 console.warn('[EdgeGateway] school alias refresh skipped:', err?.message || err);
             });
@@ -222,6 +222,8 @@ const DataManager = {
         const modal = document.getElementById('data-manager-modal');
         const content = modal?.querySelector('.modal-content');
         if (!content) return;
+        modal.setAttribute('data-mojibake-skip', 'true');
+        content.setAttribute('data-mojibake-skip', 'true');
         if (content.dataset.dmLayoutDecorated === '1') {
             this.ensureCloudPanelSwitch();
             return;

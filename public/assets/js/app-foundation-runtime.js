@@ -205,6 +205,7 @@ function normalizeMojibakeText(value) {
 
 function normalizeMojibakeElement(el) {
     if (!el || el.nodeType !== 1) return 0;
+    if (el.closest && el.closest('[data-mojibake-skip="true"]')) return 0;
     let changeCount = 0;
     ['placeholder', 'title', 'aria-label', 'value'].forEach((attr) => {
         if (!el.hasAttribute(attr)) return;
@@ -222,6 +223,7 @@ function normalizeMojibakeSubtree(root) {
     if (!root) return 0;
     const elementRoot = root.nodeType === 1 ? root : root.parentElement;
     if (elementRoot && /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA)$/i.test(elementRoot.tagName)) return 0;
+    if (elementRoot && elementRoot.closest && elementRoot.closest('[data-mojibake-skip="true"]')) return 0;
 
     let changeCount = 0;
 
@@ -243,6 +245,9 @@ function normalizeMojibakeSubtree(root) {
         acceptNode(node) {
             const parent = node.parentElement;
             if (!parent || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA)$/i.test(parent.tagName)) {
+                return NodeFilter.FILTER_REJECT;
+            }
+            if (parent.closest && parent.closest('[data-mojibake-skip="true"]')) {
                 return NodeFilter.FILTER_REJECT;
             }
             return NodeFilter.FILTER_ACCEPT;

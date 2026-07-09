@@ -52,6 +52,7 @@ const townSubmoduleCompareRuntimePath = path.resolve(__dirname, '../public/asset
 const bootRuntimePath = path.resolve(__dirname, '../public/assets/js/boot-runtime.js');
 const loginEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/login-entry-runtime.js');
 const authLoginRuntimePath = path.resolve(__dirname, '../public/assets/js/auth-login-runtime.js');
+const appFoundationRuntimePath = path.resolve(__dirname, '../public/assets/js/app-foundation-runtime.js');
 const studentDetailsRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/student-details-render-runtime.js');
 const comparisonRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/comparison-render-runtime.js');
 const reportHistoryRuntimePath = path.resolve(__dirname, '../public/assets/js/report-history-runtime.js');
@@ -206,6 +207,7 @@ const snapshotSystemRuntime = fs.readFileSync(snapshotSystemRuntimePath, 'utf8')
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
+const appFoundationRuntime = fs.readFileSync(appFoundationRuntimePath, 'utf8');
 const reportHistoryRuntime = fs.readFileSync(reportHistoryRuntimePath, 'utf8');
 const townSubmoduleCompareRuntime = fs.readFileSync(townSubmoduleCompareRuntimePath, 'utf8');
 const cloudRuntime = fs.readFileSync(cloudRuntimePath, 'utf8');
@@ -763,8 +765,17 @@ assert.ok(
     'header cloud data button should open the cloud tab directly'
 );
 assert.ok(
+    appSource.includes("function openCloudRollback()") && appSource.includes("DataManager.open('cloud');"),
+    'cloud rollback entry should also open the cloud tab through DataManager.open'
+);
+assert.ok(
     !authLoginRuntime.includes("DataManager.open();\n                setTimeout(() =>"),
     'header cloud data button should not render the student tab before switching to cloud'
+);
+assert.ok(
+    dataManagerCoreRuntime.includes("modal.setAttribute('data-mojibake-skip', 'true');")
+        && appFoundationRuntime.includes("closest('[data-mojibake-skip=\"true\"]')"),
+    'data manager modal should opt out of global mojibake subtree scans'
 );
 assert.ok(
     appSource.includes("DataManager.open('params');")

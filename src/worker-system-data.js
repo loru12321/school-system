@@ -254,6 +254,18 @@ function parseSystemDataSelect(searchParams) {
   return new Set(raw.split(',').map((item) => normalizeText(item)).filter(Boolean));
 }
 
+function buildSystemDataSelectColumns(selectSet) {
+  const columns = new Set(['key']);
+  if (selectSet.has('created_at')) columns.add('created_at');
+  if (selectSet.has('updated_at')) columns.add('updated_at');
+  if (selectSet.has('size_bytes')) columns.add('size_bytes');
+  if (selectSet.has('content')) {
+    columns.add('content_text');
+    columns.add('object_key');
+  }
+  return Array.from(columns).join(', ');
+}
+
 function wantsSingleSystemDataObject(request) {
   const accept = String(request.headers.get('accept') || '').toLowerCase();
   return accept.includes('application/vnd.pgrst.object+json');
@@ -392,7 +404,7 @@ async function querySystemDataRows(env, request, url) {
   if (orClause.clause) { whereClauses.push(orClause.clause); bindings.push(...orClause.bindings); }
 
   const sql = [
-    'SELECT key, created_at, updated_at, size_bytes, content_text, object_key',
+    `SELECT ${buildSystemDataSelectColumns(selectSet)}`,
     `FROM ${SYSTEM_DATA_TABLE}`,
     whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '',
     `ORDER BY ${order.column} ${order.direction}`,
