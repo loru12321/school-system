@@ -34,8 +34,6 @@ assert.ok(html.includes('height:clamp(420px, 52vh, 620px)'), 'exam batch table m
     'getExamBatchDateSortTs: function (examId, meta = {})',
     'return b.examDateTs - a.examDateTs',
     'renderExamBatches: function ()',
-    'DataManager.editExamSchoolMappings',
-    'editExamSchoolMappings: async function (examId)',
     'selectRecognizedExamBatches: function ()',
     'deleteSelectedExamBatches: async function ()',
     'removeExamBatchLocal: async function (examId)',
@@ -46,13 +44,24 @@ assert.ok(html.includes('height:clamp(420px, 52vh, 620px)'), 'exam batch table m
 
 [
     'getUploadSchoolMappingConfirmation',
+    'confirmUploadSchoolNameMappings',
+    'applyUploadSchoolNameMappings'
+].forEach((needle) => {
+    const uploadSchoolMapRuntime = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'upload-school-map-runtime.js'), 'utf8');
+    assert.ok(uploadSchoolMapRuntime.includes(needle), `upload-school-map-runtime.js missing initial upload mapping contract: ${needle}`);
+});
+
+[
+    'DataManager.editExamSchoolMappings',
+    'editExamSchoolMappings: async function',
     'editExamSchoolNameMappings',
     'applyExamSchoolNameMappings',
     "sourceLabel: 'school-mapping-edit'",
-    '学校名称映射已应用，本场考试已重算并同步云端'
+    '查看 / 修改本场考试学校名称映射'
 ].forEach((needle) => {
+    assert.ok(!dataManagerCore.includes(needle), `exam batch view must not expose post-upload school mapping edits: ${needle}`);
     const uploadSchoolMapRuntime = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'upload-school-map-runtime.js'), 'utf8');
-    assert.ok(uploadSchoolMapRuntime.includes(needle), `upload-school-map-runtime.js missing exam mapping edit contract: ${needle}`);
+    assert.ok(!uploadSchoolMapRuntime.includes(needle), `upload runtime must keep school mapping limited to initial upload confirmation: ${needle}`);
 });
 
 const cohortDbCore = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'cohort-db-core-runtime.js'), 'utf8');

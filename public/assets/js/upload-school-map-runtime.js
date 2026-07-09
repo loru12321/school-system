@@ -233,99 +233,12 @@
         });
     }
 
-    function buildSchoolMappingRowsFromData(data = [], existingMapping = {}) {
-        const counter = new Map();
-        (Array.isArray(data) ? data : []).forEach((row) => {
-            const raw = String(row?.originalSchoolName || row?.school || '').trim();
-            if (raw) counter.set(raw, (counter.get(raw) || 0) + 1);
-        });
-        const rawNames = Array.from(counter.keys());
-        const options = getUploadSchoolStandardOptions(rawNames);
-        return {
-            rows: rawNames.map((raw) => ({
-                raw,
-                count: counter.get(raw) || 0,
-                standard: String(existingMapping[raw] || '').trim() || inferUploadStandardSchoolName(raw, options)
-            })).sort((a, b) => b.count - a.count || a.raw.localeCompare(b.raw, 'zh-CN')),
-            options
-        };
-    }
-
-    async function editExamSchoolNameMappings(examId) {
-        const key = String(examId || '').trim();
-        const db = window.CohortDB && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null;
-        const exam = db?.exams?.[key];
-        if (!key || !exam) return window.UI?.toast?.('未找到该考试批次', 'warning');
-        const data = Array.isArray(exam.data) ? exam.data : [];
-        if (!data.length) return window.UI?.toast?.('该考试暂无成绩数据，无法调整学校映射', 'warning');
-
-        const existingMapping = exam.schoolNameMapping || exam.meta?.schoolNameMapping || {};
-        const { rows, options } = buildSchoolMappingRowsFromData(data, existingMapping);
-        if (!rows.length) return window.UI?.toast?.('该考试没有可识别的学校名称', 'warning');
-
-        const mapping = await renderUploadSchoolMappingModal({
-            rows,
-            options,
-            title: '查看 / 修改本场考试学校名称映射',
-            description: `考试批次：${key}。修改后会按最新映射重算本场考试，并同步云端。`,
-            confirmText: '应用并重算',
-            cancelText: '暂不修改'
-        });
-        await applyExamSchoolNameMappings(key, mapping);
-    }
-
-    async function applyExamSchoolNameMappings(examId, mapping = {}) {
-        const key = String(examId || '').trim();
-        const db = window.CohortDB && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null;
-        const exam = db?.exams?.[key];
-        if (!key || !exam) throw new Error('未找到该考试批次');
-        const deepClone = typeof structuredClone === 'function'
-            ? (value) => structuredClone(value)
-            : (value) => JSON.parse(JSON.stringify(value));
-        exam.data = deepClone(Array.isArray(exam.data) ? exam.data : []).map((row) => {
-            const raw = String(row?.originalSchoolName || row?.school || '').trim();
-            return { ...row, originalSchoolName: raw || row?.originalSchoolName || '', school: String(mapping[raw] || row?.school || raw || '未知学校').trim() };
-        });
-        exam.schoolNameMapping = { ...mapping };
-        exam.meta = { ...(exam.meta || {}), schoolNameMapping: { ...mapping } };
-        exam.updatedAt = Date.now();
-
-        const applied = window.CohortDB.applyExamToWorkspace(key, { recalculate: false, renderTables: false, allowDuringImport: true });
-        if (!applied) throw new Error('切换考试批次失败，无法重算学校映射');
-        syncRuntimeStateToWindow?.();
-        if (typeof processData === 'function') await processData();
-        exam.data = deepClone(window.RAW_DATA || []);
-        exam.schools = deepClone(window.SCHOOLS || {});
-        exam.subjects = deepClone(window.SUBJECTS || []);
-        exam.thresholds = deepClone(window.THRESHOLDS || {});
-        exam.config = deepClone(window.CONFIG || {});
-        exam.fingerprint = typeof computeExamDataFingerprint === 'function' ? computeExamDataFingerprint(window.RAW_DATA || []) : exam.fingerprint;
-        exam.updatedAt = Date.now();
-        db.currentExamId = key;
-        syncRuntimeStateToWindow?.();
-        if (typeof renderTables === 'function') renderTables();
-        if (typeof updateStatusPanel === 'function') updateStatusPanel();
-        if (typeof window.saveCloudData === 'function') {
-            const ok = await window.saveCloudData({ mode: 'exam', examKey: key, background: false, sourceLabel: 'school-mapping-edit', forceUpload: true });
-            if (!ok) throw new Error(window.__LAST_CLOUD_SAVE_ERROR__ || '学校映射已重算，但云端同步失败');
-        }
-        if (typeof window.saveCloudData === 'function') {
-            await window.saveCloudData({ mode: 'workspace', background: true, sourceLabel: 'school-mapping-edit-workspace', forceUpload: true }).catch(() => false);
-        }
-        window.CohortDB.renderExamList?.();
-        window.DataManager?.renderExamBatches?.();
-        window.UI?.toast?.('学校名称映射已应用，本场考试已重算并同步云端', 'success');
-    }
-
     Object.assign(window, {
         confirmUploadSchoolNameMappings,
         buildUploadSchoolMappingRows,
         applyUploadSchoolNameMappings,
         resetUploadSchoolMappingConfirmation,
         hasUploadSchoolMappingConfirmation,
-        getUploadSchoolMappingConfirmation,
-        editExamSchoolNameMappings,
-        applyExamSchoolNameMappings,
-        buildSchoolMappingRowsFromData
+        getUploadSchoolMappingConfirmation
     });
 })();
