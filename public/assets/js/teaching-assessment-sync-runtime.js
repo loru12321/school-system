@@ -178,10 +178,11 @@
     };
 
     const SUBJECT_ORDER = ['语文', '数学', '英语', '物理', '化学', '政治', '历史', '地理', '生物', '体育', '音乐', '美术', '信息', '科学'];
-    const COMPOSITE_MAKEUP_SUBJECTS_BY_GRADE = {
+    const ASSESSMENT_SECOND_MOCK_SUBJECTS_BY_GRADE = {
         8: ['历史', '地理', '生物'],
         9: ['政治']
     };
+    const GRADE8_SECOND_MOCK_ASSESSMENT_SUBJECTS = new Set(['历史', '地理', '生物']);
 
     function text(value) {
         return String(value ?? '').trim();
@@ -293,11 +294,11 @@
         return { db, currentExamId, exam };
     }
 
-    async function ensureCompositeExamHistoryReady(rows) {
+    async function ensureAssessmentSecondMockHistoryReady(rows) {
         let context = getCurrentExamContext();
         if (!isJulyExam(context)) return context;
         const baseInfo = getCurrentCompositeBaseInfo(rows, context);
-        if (!getMakeupSubjectsForGrade(baseInfo.grade).length) return context;
+        if (!getSecondMockSubjectsForGrade(baseInfo.grade).length) return context;
         if (findLatestSecondMockExam(baseInfo, context)) return context;
         if (!baseInfo.cohortId || !root.CloudManager || typeof root.CloudManager.fetchCohortExamsToLocal !== 'function') return context;
         try {
@@ -483,8 +484,18 @@
         return Array.isArray(exam?.data) ? exam.data : [];
     }
 
-    function getMakeupSubjectsForGrade(grade) {
-        return COMPOSITE_MAKEUP_SUBJECTS_BY_GRADE[normalizeGrade(grade)] || [];
+    function getSecondMockSubjectsForGrade(grade) {
+        return ASSESSMENT_SECOND_MOCK_SUBJECTS_BY_GRADE[normalizeGrade(grade)] || [];
+    }
+
+    function isSecondMockAssessmentTeacher(teacher) {
+        return getSecondMockSubjectsForGrade(teacher?.grade).includes(normalizeSubject(teacher?.subject));
+    }
+
+    function isGrade8SecondMockAssessmentTeacher(teacher) {
+        return isSecondMockAssessmentTeacher(teacher)
+            && normalizeGrade(teacher?.grade) === '8'
+            && GRADE8_SECOND_MOCK_ASSESSMENT_SUBJECTS.has(normalizeSubject(teacher?.subject));
     }
 
     function getCurrentCompositeBaseInfo(rows, context) {
@@ -746,6 +757,22 @@
         }).map((item) => ({ ...item, project_id: item.project_id || projectId }));
     }
 
+    function filterItemsByTeacherSet(items, teacherSet) {
+        if (!teacherSet?.size) return [];
+        return (items || []).filter((item) => teacherSet.has(teacherKeyFor(item.teacher_name, item.grade, item.subject)));
+    }
+
+    function attachSourceToItems(items, source = {}) {
+        const suffix = source.noteSuffix ? ` ${source.noteSuffix}` : '';
+        return (items || []).map((item) => ({
+            ...item,
+            source_exam_id: source.examId || '',
+            source_exam_label: source.examLabel || '',
+            source_exam_date: source.examDate || '',
+            note: `${item.note} 来源考试：${source.examDate || source.examLabel || source.examId || '未识别'}。${suffix}`.trim()
+        }));
+    }
+
     function withCompositeTeacherStats(rows, callback) {
         const previousRows = root.RAW_DATA;
         const previousStats = root.TEACHER_STATS;
@@ -758,6 +785,70 @@
             root.RAW_DATA = previousRows;
             root.TEACHER_STATS = previousStats;
         }
+    }
+
+    function buildAssessmentItemsForRows({ teachers, rows, examContext, syncSettings, skipped, sourceNoteSuffix = '' }) {
+        const baseInfo = getCurrentCompositeBaseInfo(rows, examContext);
+        const growthBaselineExam = findGrowthBaselineExam(baseInfo, examContext, syncSettings);
+        const grade = normalizeGrade(baseInfo.grade);
+        if (!growthBaselineExam) {
+            if (grade === '6') {
+                skipped.push(`6年级优秀率增幅基准已设置为${syncSettings.grade6_growth_baseline === 'first_term_midterm' ? '上学期期中' : '上学期期末'}，但 system 未找到同届同学年度对应考试；两率一分仅同步54分主体。`);
+            } else if (grade) {
+                skipped.push(`${grade}年级优秀率增幅需要同一届学生上年度7月成绩作基准，但 system 未找到对应考试；两率一分仅同步54分主体。`);
+            }
+        }
+        const items = withCompositeTeacherStats(rows, () => {
+            let growthContext = null;
+            if (growthBaselineExam) {
+                growthContext = buildStudentGrowthContext(teachers, rows, getExamRows(growthBaselineExam.exam), {
+                    id: growthBaselineExam.examId,
+                    label: getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }),
+                    date: extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }),
+                    type: syncSettings.grade6_growth_baseline,
+                    grade: baseInfo.grade,
+                    baselineGrade: getExamGrade(growthBaselineExam.examId, growthBaselineExam.exam, getExamRows(growthBaselineExam.exam))
+                });
+                if (!growthContext) {
+                    skipped.push(`${gradeLabel(baseInfo.grade)}优秀率增幅基准考试已匹配，但当前学生无法与基准考试按姓名/年级重组；两率一分仅同步54分主体。`);
+                }
+            }
+            return [
+                ...buildTwoRatesItems(teachers, rows, { grade6GrowthContext: growthContext }),
+                ...buildClassCollaborationItems(teachers, rows),
+                ...buildSubjectCollaborationItems(teachers, rows),
+                ...buildBottomThirdItems(teachers, rows),
+                ...buildExcellentContributionItems(teachers, rows)
+            ];
+        }).filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0);
+        const examDate = extractExamDate(examContext);
+        const examLabel = getExamLabel(examContext);
+        const source = {
+            baseInfo,
+            growthBaselineExam,
+            examId: examContext.currentExamId,
+            examLabel,
+            examDate
+        };
+        const withGrowthNotes = items.map((item) => {
+            const growthSuffix = item.project_id === PROJECTS.twoRates
+                ? `${normalizeGrade(item.grade) === '6' ? `6年级增幅基准：${syncSettings.grade6_growth_baseline === 'first_term_midterm' ? '上学期期中' : '上学期期末'}；` : '优秀率增幅基准：上年度7月同一批学生；'}基准考试：${growthBaselineExam ? (extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) || getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam })) : '未匹配'}。`
+                : '';
+            return {
+                ...item,
+                note: `${item.note}${growthSuffix}`
+            };
+        });
+        return {
+            baseInfo,
+            growthBaselineExam,
+            items: attachSourceToItems(withGrowthNotes, {
+                examId: source.examId,
+                examLabel: source.examLabel,
+                examDate: source.examDate,
+                noteSuffix: sourceNoteSuffix
+            })
+        };
     }
 
     function getTotal(row) {
@@ -1659,7 +1750,7 @@
                 skipped
             };
         }
-        const examContext = await ensureCompositeExamHistoryReady(rows);
+        const examContext = await ensureAssessmentSecondMockHistoryReady(rows);
         const examDate = extractExamDate(examContext);
         const examLabel = getExamLabel(examContext);
         const examMonth = extractExamMonth(examContext);
@@ -1677,62 +1768,55 @@
                 skipped
             };
         }
-        const composite = buildCompositeAssessmentRows(rows, teachers, examContext);
-        skipped.push(...(composite.skipped || []));
-        if (composite.missing.length) {
-            skipped.push(`合成成绩表有 ${composite.missing.length} 条二模补科缺失或匹配异常；对应补科教师不会自动写入分数。`);
-        }
         const syncSettings = await fetchAssessmentSyncSettings(getAcademicYearForSync());
-        let growthBaselineExam = findGrowthBaselineExam(composite.baseInfo, examContext, syncSettings);
-        const compositeGrade = normalizeGrade(composite.baseInfo.grade);
-        if (!growthBaselineExam) {
-            if (compositeGrade === '6') {
-                skipped.push(`6年级优秀率增幅基准已设置为${syncSettings.grade6_growth_baseline === 'first_term_midterm' ? '上学期期中' : '上学期期末'}，但 system 未找到同届同学年度对应考试；两率一分仅同步54分主体。`);
-            } else if (compositeGrade) {
-                skipped.push(`${compositeGrade}年级优秀率增幅需要同一届学生上年度7月成绩作基准，但 system 未找到对应考试；两率一分仅同步54分主体。`);
+        const julyTeachers = teachers.filter((teacher) => !isSecondMockAssessmentTeacher(teacher));
+        const grade8SecondMockTeachers = teachers.filter(isGrade8SecondMockAssessmentTeacher);
+        const secondMockTeachers = teachers.filter(isSecondMockAssessmentTeacher);
+        const julyBuild = buildAssessmentItemsForRows({
+            teachers: julyTeachers,
+            rows,
+            examContext,
+            syncSettings,
+            skipped,
+            sourceNoteSuffix: '本系统所有模块均只按7月期末上传成绩本身计算，不合并二模补科。'
+        });
+        const secondMockSubjects = getSecondMockSubjectsForGrade(julyBuild.baseInfo.grade)
+            .filter((subject) => GRADE8_SECOND_MOCK_ASSESSMENT_SUBJECTS.has(subject));
+        let secondMockExam = null;
+        let secondMockItems = [];
+        if (secondMockTeachers.length) {
+            secondMockExam = findLatestSecondMockExam(julyBuild.baseInfo, examContext);
+            if (!secondMockExam) {
+                skipped.push(`${gradeLabel(julyBuild.baseInfo.grade)}${getSecondMockSubjectsForGrade(julyBuild.baseInfo.grade).join('、')}教师考核需从同届同学年度二模读取，但未找到二模考试；相关教师自动同步将跳过。`);
+            } else {
+                const mockRows = getExamRows(secondMockExam.exam);
+                const mockContext = {
+                    db: examContext.db,
+                    currentExamId: secondMockExam.examId,
+                    exam: secondMockExam.exam
+                };
+                const mockBuild = buildAssessmentItemsForRows({
+                    teachers: secondMockTeachers,
+                    rows: mockRows,
+                    examContext: mockContext,
+                    syncSettings,
+                    skipped,
+                    sourceNoteSuffix: `${gradeLabel(julyBuild.baseInfo.grade)}${getSecondMockSubjectsForGrade(julyBuild.baseInfo.grade).join('、')}教师考核按规则单独读取二模结果；该二模数据不参与本系统7月期末任何模块统计。`
+                });
+                const allowedKeys = new Set(secondMockTeachers.map((teacher) => teacherKeyFor(teacher.teacher_name, teacher.grade, teacher.subject)));
+                const grade8Keys = new Set(grade8SecondMockTeachers.map((teacher) => teacherKeyFor(teacher.teacher_name, teacher.grade, teacher.subject)));
+                secondMockItems = filterItemsByTeacherSet(mockBuild.items, allowedKeys).map((item) => ({
+                    ...item,
+                    second_mock_source: true,
+                    second_mock_subjects: getSecondMockSubjectsForGrade(item.grade),
+                    grade8_second_mock_source: grade8Keys.has(teacherKeyFor(item.teacher_name, item.grade, item.subject))
+                }));
             }
         }
-
-        const items = withCompositeTeacherStats(composite.rows, () => {
-            let growthContext = null;
-            if (growthBaselineExam) {
-                growthContext = buildStudentGrowthContext(teachers, composite.rows, getExamRows(growthBaselineExam.exam), {
-                    id: growthBaselineExam.examId,
-                    label: getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }),
-                    date: extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }),
-                    type: syncSettings.grade6_growth_baseline,
-                    grade: composite.baseInfo.grade,
-                    baselineGrade: getExamGrade(growthBaselineExam.examId, growthBaselineExam.exam, getExamRows(growthBaselineExam.exam))
-                });
-                if (!growthContext) {
-                    skipped.push(`${gradeLabel(composite.baseInfo.grade)}优秀率增幅基准考试已匹配，但当前学生无法与基准考试按姓名/年级重组；两率一分仅同步54分主体。`);
-                }
-            }
-            const twoRates = filterCompositeItems(buildTwoRatesItems(teachers, composite.rows, { grade6GrowthContext: growthContext }), composite, PROJECTS.twoRates);
-            const classCollaboration = filterCompositeItems(buildClassCollaborationItems(teachers, composite.rows), composite, PROJECTS.classCollaboration);
-            const subjectCollaboration = filterCompositeItems(buildSubjectCollaborationItems(teachers, composite.rows), composite, PROJECTS.subjectCollaboration);
-            const bottomThird = filterCompositeItems(buildBottomThirdItems(teachers, composite.rows), composite, PROJECTS.bottomThird);
-            const excellentItems = filterCompositeItems(buildExcellentContributionItems(teachers, composite.rows), composite, PROJECTS.excellentContribution);
-            return [
-                ...twoRates,
-                ...classCollaboration,
-                ...subjectCollaboration,
-                ...bottomThird,
-                ...excellentItems
-            ];
-        }).filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0)
-            .map((item) => ({
-                ...item,
-                source_exam_id: examContext.currentExamId,
-                source_exam_label: examLabel,
-                source_exam_date: examDate,
-                makeup_exam_id: composite.makeupExam?.id || '',
-                makeup_exam_label: composite.makeupExam?.label || '',
-                makeup_exam_date: composite.makeupExam?.date || '',
-                makeup_subjects: composite.makeupSubjects,
-                composite_missing_count: composite.missing.length,
-                note: `${item.note} 来源考试：${examDate || examLabel}；本项目以 7 月基准 + 二模补科合成成绩表计算。${composite.makeupSubjects.length ? `补科科目：${composite.makeupSubjects.join('、')}；二模来源：${composite.makeupExam ? (composite.makeupExam.date || composite.makeupExam.label) : '未匹配'}。` : '本年级无需二模补科。'}${item.project_id === PROJECTS.twoRates ? `${normalizeGrade(item.grade) === '6' ? `6年级增幅基准：${syncSettings.grade6_growth_baseline === 'first_term_midterm' ? '上学期期中' : '上学期期末'}；` : '优秀率增幅基准：上年度7月同一批学生；'}基准考试：${growthBaselineExam ? (extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) || getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam })) : '未匹配'}。` : ''}`
-            }));
+        const items = [
+            ...julyBuild.items,
+            ...secondMockItems
+        ];
         const previewItems = buildFormulaAuditPreviewItems({ teachers, rows, examContext, highSchoolLine, skipped })
             .map((item) => ({
                 ...item,
@@ -1740,14 +1824,18 @@
                 source_exam_label: examLabel,
                 source_exam_date: examDate
             }));
+        const compositeGrade = normalizeGrade(julyBuild.baseInfo.grade);
+        const growthBaselineExam = julyBuild.growthBaselineExam;
+        const grade8SecondMockItems = secondMockItems.filter((item) => item.grade8_second_mock_source);
+        const hasGrade8SecondMockItems = grade8SecondMockItems.length > 0;
         return {
             academic_year: getAcademicYearForSync(),
             source_exam_id: examContext.currentExamId,
             source_exam_label: examLabel,
             source_exam_date: examDate,
             source_exam_month: examMonth,
-                composite_mode: 'july_with_second_mock_makeup',
-                composite_base_grade: composite.baseInfo.grade,
+            composite_mode: secondMockItems.length ? 'july_plain_with_second_mock_teacher_source' : 'plain_july',
+            composite_base_grade: julyBuild.baseInfo.grade,
             growth_baseline_exam_id: growthBaselineExam?.examId || '',
             growth_baseline_exam_label: growthBaselineExam ? getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) : '',
             growth_baseline_exam_date: growthBaselineExam ? extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) : '',
@@ -1755,13 +1843,23 @@
             grade6_growth_baseline_exam_id: compositeGrade === '6' ? (growthBaselineExam?.examId || '') : '',
             grade6_growth_baseline_exam_label: compositeGrade === '6' && growthBaselineExam ? getExamLabel({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) : '',
             grade6_growth_baseline_exam_date: compositeGrade === '6' && growthBaselineExam ? extractExamDate({ currentExamId: growthBaselineExam.examId, exam: growthBaselineExam.exam }) : '',
-            makeup_exam_id: composite.makeupExam?.id || '',
-            makeup_exam_label: composite.makeupExam?.label || '',
-            makeup_exam_date: composite.makeupExam?.date || '',
-            makeup_subjects: composite.makeupSubjects,
-            makeup_missing_count: composite.missing.length,
-            makeup_missing: composite.missing.slice(0, 120),
-            makeup_fallback_matches: composite.usedFallbackMatches,
+            makeup_exam_id: '',
+            makeup_exam_label: '',
+            makeup_exam_date: '',
+            makeup_subjects: [],
+            makeup_missing_count: 0,
+            makeup_missing: [],
+            makeup_fallback_matches: 0,
+            second_mock_exam_id: secondMockExam?.examId || '',
+            second_mock_exam_label: secondMockExam ? getExamLabel({ currentExamId: secondMockExam.examId, exam: secondMockExam.exam }) : '',
+            second_mock_exam_date: secondMockExam ? extractExamDate({ currentExamId: secondMockExam.examId, exam: secondMockExam.exam }) : '',
+            second_mock_subjects: getSecondMockSubjectsForGrade(julyBuild.baseInfo.grade),
+            second_mock_items: secondMockItems.length,
+            grade8_second_mock_exam_id: hasGrade8SecondMockItems ? (secondMockExam?.examId || '') : '',
+            grade8_second_mock_exam_label: hasGrade8SecondMockItems && secondMockExam ? getExamLabel({ currentExamId: secondMockExam.examId, exam: secondMockExam.exam }) : '',
+            grade8_second_mock_exam_date: hasGrade8SecondMockItems && secondMockExam ? extractExamDate({ currentExamId: secondMockExam.examId, exam: secondMockExam.exam }) : '',
+            grade8_second_mock_subjects: hasGrade8SecondMockItems ? secondMockSubjects : [],
+            grade8_second_mock_items: grade8SecondMockItems.length,
             items,
             preview_items: previewItems,
             skipped
@@ -1785,6 +1883,9 @@
             payload.makeup_exam_id || 'no-makeup',
             (payload.makeup_subjects || []).join(','),
             payload.makeup_missing_count || 0,
+            `g8mock:${payload.grade8_second_mock_exam_id || 'none'}`,
+            `g8subjects:${(payload.grade8_second_mock_subjects || []).join(',')}`,
+            `g8items:${payload.grade8_second_mock_items || 0}`,
             `growth:${payload.growth_baseline_exam_id || 'none'}`,
             `g6base:${payload.grade6_growth_baseline || 'none'}`,
             `g6exam:${payload.grade6_growth_baseline_exam_id || 'none'}`,
@@ -1952,7 +2053,12 @@
                 makeupSubjects: payload.makeup_subjects || [],
                 missingCount: payload.makeup_missing_count || 0,
                 missing: payload.makeup_missing || [],
-                fallbackMatches: payload.makeup_fallback_matches || 0
+                fallbackMatches: payload.makeup_fallback_matches || 0,
+                grade8SecondMockExamId: payload.grade8_second_mock_exam_id || '',
+                grade8SecondMockExamLabel: payload.grade8_second_mock_exam_label || '',
+                grade8SecondMockExamDate: payload.grade8_second_mock_exam_date || '',
+                grade8SecondMockSubjects: payload.grade8_second_mock_subjects || [],
+                grade8SecondMockItems: payload.grade8_second_mock_items || 0
             },
             received: result?.received || (payload.items || []).length,
             valid: result?.valid || (payload.items || []).length,
@@ -1987,6 +2093,7 @@
             </tr>
         `).join('');
         const composite = audit.composite || {};
+        const hasGrade8SecondMockSource = !!composite.grade8SecondMockExamId || !!composite.grade8SecondMockItems;
         const missingRows = (composite.missing || []).slice(0, 10).map((item) => `
             <tr>
                 <td>${escapeHtml(item.school || '-')}</td>
@@ -2001,9 +2108,9 @@
                 <div class="tm-assessment-sync-summary">
                     <span class="status-chip info">来源考试：${escapeHtml(audit.exam.date || audit.exam.label || '-')}</span>
                     <span class="status-chip ${audit.exam.isJuly ? 'ok' : 'warn'}">${audit.exam.isJuly ? '7 月基准，可自动同步' : '非 7 月，禁止写入教师个人成绩'}</span>
-                    <span class="status-chip info">合成口径：7月 + 二模补科</span>
-                    ${composite.makeupSubjects?.length ? `<span class="status-chip info">补科：${escapeHtml(composite.makeupSubjects.join('、'))}</span>` : '<span class="status-chip ok">无需补科</span>'}
-                    ${composite.makeupExamId ? `<span class="status-chip info">二模：${escapeHtml(composite.makeupExamDate || composite.makeupExamLabel || composite.makeupExamId)}</span>` : ''}
+                    <span class="status-chip ok">本系统7月数据不合并二模</span>
+                    ${hasGrade8SecondMockSource ? `<span class="status-chip info">8年级史地生考核取二模：${escapeHtml(composite.grade8SecondMockExamDate || composite.grade8SecondMockExamLabel || composite.grade8SecondMockExamId)}</span>` : '<span class="status-chip ok">无8年级史地生二模考核源</span>'}
+                    ${composite.grade8SecondMockSubjects?.length ? `<span class="status-chip info">二模科目：${escapeHtml(composite.grade8SecondMockSubjects.join('、'))}</span>` : ''}
                     ${composite.missingCount ? `<span class="status-chip warn">补科缺失 ${escapeHtml(composite.missingCount)} 条</span>` : ''}
                     <span class="status-chip info">预计写入 ${escapeHtml(audit.wouldWrite)} 条</span>
                     <span class="status-chip info">只读预览 ${escapeHtml(audit.previewOnly)} 条</span>

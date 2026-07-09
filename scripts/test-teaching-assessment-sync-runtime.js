@@ -170,11 +170,19 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
     };
     return context.window.tmBuildTeacherAssessmentSyncPayload().then((grade8Payload) => {
       const historyItems = grade8Payload.items.filter((item) => item.subject === '历史');
-      assert.ok(historyItems.length > 0, '8th grade history teacher should sync from July + second mock composite rows');
-      assert.strictEqual(grade8Payload.composite_mode, 'july_with_second_mock_makeup');
-      assert.deepStrictEqual(Array.from(grade8Payload.makeup_subjects), ['历史', '地理', '生物']);
-      assert.match(grade8Payload.items[0].note, /7 月基准 \+ 二模补科/);
-      assert.match(grade8Payload.items[0].note, /二模来源/);
+      assert.ok(historyItems.length > 0, '8th grade history teacher should sync from second mock rows only');
+      assert.strictEqual(grade8Payload.composite_mode, 'july_plain_with_second_mock_teacher_source');
+      assert.deepStrictEqual(Array.from(grade8Payload.grade8_second_mock_subjects), ['历史', '地理', '生物']);
+      assert.strictEqual(grade8Payload.makeup_subjects.length, 0, '8th grade July final rows must not be patched with second mock makeup subjects');
+      assert.ok(historyItems.every((item) => item.source_exam_id === '2023级-8年级-2025-2026-下学期-二模-2026-05-27'), '8th grade history items should use the second mock source exam');
+      assert.ok(historyItems.every((item) => item.second_mock_source === true), '8th grade history items should be marked as second-mock sourced');
+      assert.match(historyItems[0].note, /单独读取二模结果/);
+      assert.match(historyItems[0].note, /不参与本系统7月期末任何模块统计/);
+      assert.deepStrictEqual(context.window.RAW_DATA.map((row) => row.scores), [
+        { 语文: 90, 数学: 91, 英语: 89 },
+        { 语文: 78, 数学: 80, 英语: 82 },
+        { 语文: 92, 数学: 94, 英语: 93 }
+      ], 'building assessment sync payload must not mutate July final RAW_DATA with history/geography/biology scores');
 
       context.window.CURRENT_EXAM_ID = '2022级-9年级-2025-2026-暑假-7月中考-2026-07-12';
       context.window.RAW_DATA = [
@@ -212,8 +220,8 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         })
       };
       return context.window.tmBuildTeacherAssessmentSyncPayload().then((grade9Payload) => {
-        assert.ok(grade9Payload.items.some((item) => item.subject === '政治'), '9th grade politics teacher should sync from second mock makeup');
-        assert.deepStrictEqual(Array.from(grade9Payload.makeup_subjects), ['政治']);
+        assert.ok(grade9Payload.items.some((item) => item.subject === '政治' && item.second_mock_source === true), '9th grade politics teacher should sync from second mock source rows');
+        assert.deepStrictEqual(Array.from(grade9Payload.makeup_subjects), [], 'second mock source rows should not be reported as July makeup subjects');
         const grade9ExcellentItems = grade9Payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution');
         assert.ok(grade9ExcellentItems.length > 0, '9th grade excellent contribution should be generated from 550/600 high-score tiers');
         assert.ok(grade9ExcellentItems.every((item) => /600分以上为优秀尖子/.test(item.note)), '9th grade excellent contribution notes should explain 550/600 rules');
@@ -267,7 +275,7 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         };
         return context.window.tmBuildTeacherAssessmentSyncPayload().then((missingPayload) => {
           assert.ok(!missingPayload.items.some((item) => item.subject === '历史'), 'missing second mock data should not write pseudo history scores');
-          assert.ok(missingPayload.skipped.some((item) => /未找到同届同学年度二模/.test(item)), 'missing second mock should be visible in audit skipped reasons');
+          assert.ok(missingPayload.skipped.some((item) => /8年级历史、地理、生物教师考核需从同届同学年度二模读取/.test(item)), 'missing second mock should be visible in audit skipped reasons');
           console.log(JSON.stringify({ ok: true, items: payload.items.length, projects: Array.from(projectIds).sort(), julyItems: julyPayload.items.length, grade8Items: grade8Payload.items.length, grade9Items: grade9Payload.items.length, auditProjects: Object.keys(audit.projects).length }, null, 2));
         });
       });

@@ -136,7 +136,11 @@ function normalizeAssessmentScoreItem(input) {
     makeup_subjects: Array.isArray(input?.makeup_subjects)
       ? input.makeup_subjects.map(normalizeAssessmentSubject).filter(Boolean).slice(0, 8)
       : [],
-    composite_missing_count: Math.max(0, Number(input?.composite_missing_count || 0) || 0)
+    composite_missing_count: Math.max(0, Number(input?.composite_missing_count || 0) || 0),
+    second_mock_source: input?.second_mock_source === true,
+    second_mock_subjects: Array.isArray(input?.second_mock_subjects)
+      ? input.second_mock_subjects.map(normalizeAssessmentSubject).filter(Boolean).slice(0, 8)
+      : []
   };
 }
 
@@ -145,11 +149,14 @@ function buildAssessmentSyncChangeNote(item) {
   const sourceExam = item.source_exam_date || item.source_exam_label;
   if (sourceExam) parts.push(`来源考试：${sourceExam}`);
   if (item.makeup_subjects?.length) {
-    parts.push(`合成口径：7月基准 + 二模补科`);
-    parts.push(`二模补科科目：${item.makeup_subjects.join('、')}`);
+    parts.push(`二模单独来源科目：${item.makeup_subjects.join('、')}`);
     if (item.makeup_exam_date || item.makeup_exam_label) {
       parts.push(`二模来源：${item.makeup_exam_date || item.makeup_exam_label}`);
     }
+  }
+  if (item.second_mock_source) {
+    parts.push(`二模单独来源：该教师项目不使用7月期末合成成绩`);
+    if (item.second_mock_subjects?.length) parts.push(`二模科目：${item.second_mock_subjects.join('、')}`);
   }
   if (item.composite_missing_count) parts.push(`补科缺失：${item.composite_missing_count}条，相关教师已跳过`);
   if (!parts.length) parts.push(`来源：${item.source || 'schoolsystem'}`);

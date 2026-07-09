@@ -215,6 +215,8 @@ assert.ok(gatewayContractSource.includes('ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY')
 assert.ok(gatewayContractSource.includes("change_tag: 'system_sync'"), 'assessment sync writes should mark rows as system_sync');
 assert.ok(gatewayContractSource.includes('dry_run: dryRun') && gatewayContractSource.includes('rows.length && !dryRun'), 'assessment sync should support a no-write dry-run match check');
 assert.ok(gatewayContractSource.includes('findAssessmentTeacherMatch') && gatewayContractSource.includes('目标考核系统教师匹配不唯一'), 'assessment sync should skip ambiguous teacher matches instead of writing to a guessed account');
+assert.ok(gatewayContractSource.includes('second_mock_source') && gatewayContractSource.includes('二模单独来源'), 'assessment sync should mark second-mock sourced teacher items without calling them July makeup composites');
+assert.ok(!gatewayContractSource.includes('合成口径：7月基准 + 二模补科'), 'assessment sync change notes must not claim July final data is composited with second mock data');
 assert.ok(gatewayContractSource.includes('teacher_workload') === false, 'assessment sync must not write workload scores without a system data source');
 
 console.log(JSON.stringify({

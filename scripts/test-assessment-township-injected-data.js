@@ -228,10 +228,12 @@ async function checkGrade8Makeup() {
     exams: secondMockExam(mockId, rows, 8, ['历史', '地理', '生物'])
   });
   const payload = await win.tmBuildTeacherAssessmentSyncPayload();
-  assert.strictEqual(payload.composite_mode, 'july_with_second_mock_makeup');
-  assert.deepStrictEqual(Array.from(payload.makeup_subjects), ['历史', '地理', '生物']);
-  assert.ok(payload.items.some((item) => item.subject === '历史'), '8年级历史应由7月+二模补科生成');
-  assert.ok(payload.items.some((item) => /二模来源/.test(item.note)), '8年级补科说明应写明二模来源');
+  assert.strictEqual(payload.composite_mode, 'july_plain_with_second_mock_teacher_source');
+  assert.deepStrictEqual(Array.from(payload.grade8_second_mock_subjects), ['历史', '地理', '生物']);
+  assert.strictEqual(payload.makeup_subjects.length, 0, '8年级7月期末不应再合并二模补科');
+  assert.ok(payload.items.some((item) => item.subject === '历史' && item.second_mock_source === true), '8年级历史应从二模源单独生成');
+  assert.ok(payload.items.some((item) => /单独读取二模结果/.test(item.note)), '8年级史地生说明应写明二模单独来源');
+  assert.ok(!payload.items.some((item) => /7 月基准 \+ 二模补科/.test(item.note)), '8年级同步说明不能再声称7月+二模合成');
   return payload;
 }
 
