@@ -88,7 +88,7 @@
             requiresJuly: true,
             syncMode: 'sync',
             source: '联考分析 · 后 1/3 总分',
-            formula: '后 1/3 学生成绩 =（任教班级后 1/3 学生优秀率/最高后 1/3 优秀率*40 + 后 1/3 及格率/最高后 1/3 及格率*30 + 后 1/3 平均分/最高后 1/3 平均分*30）/最高教师后 1/3 成绩*10；乡镇最高值比较含银山实验本校。'
+            formula: '后 1/3 学生成绩 = 任教班级后 1/3 学生平均分 / 乡镇最高后 1/3 学生平均分 * 10；教师个人成绩以《教师个人成绩计算》为准，只看平均分，乡镇最高值比较含银山实验本校。'
         },
         [PROJECTS.excellentContribution]: {
             max: 5,
@@ -1288,14 +1288,12 @@
             const count = Math.max(1, Math.ceil(totals.length / 3));
             const bottom = totals.slice(0, count);
             const metric = metricFromValues(bottom, resolveTotalThresholds(rows));
-            if (metric) bottomByClass.set(`${item.school}::${item.className}`, metric);
+            if (metric) bottomByClass.set(`${item.school}::${item.className}`, {
+                count: metric.count,
+                avg: metric.avg
+            });
         });
-        const bottomMetrics = Array.from(bottomByClass.values());
-        const highest = {
-            excellentRate: Math.max(...bottomMetrics.map((item) => item.excellentRate), 0),
-            passRate: Math.max(...bottomMetrics.map((item) => item.passRate), 0),
-            avg: Math.max(...bottomMetrics.map((item) => item.avg), 0)
-        };
+        const highestAvg = Math.max(...Array.from(bottomByClass.values()).map((item) => item.avg), 0);
         const rawScores = teachers.map((teacher) => {
             const metrics = teacher.classes
                 .map((className) => bottomByClass.get(`${teacher.school}::${className}`))
@@ -1304,14 +1302,12 @@
             if (!totalCount) return null;
             const metric = {
                 count: totalCount,
-                avg: metrics.reduce((sum, item) => sum + item.avg * item.count, 0) / totalCount,
-                excellentRate: metrics.reduce((sum, item) => sum + item.excellentRate * item.count, 0) / totalCount,
-                passRate: metrics.reduce((sum, item) => sum + item.passRate * item.count, 0) / totalCount
+                avg: metrics.reduce((sum, item) => sum + item.avg * item.count, 0) / totalCount
             };
             return {
                 teacher,
                 metric,
-                raw: weightedScore(metric, highest)
+                raw: highestAvg > 0 ? (metric.avg / highestAvg) * 10 : 0
             };
         }).filter(Boolean);
         return scaleWithinGroup(rawScores, 10).map((entry) => {
@@ -1320,7 +1316,7 @@
                 project_id: PROJECTS.bottomThird,
                 score: entry.score,
                 max_score: 10,
-                note: `任教班级后 1/3 学生按两率一分三项核算，乡镇最高值比较含本校：优秀率 ${pct(entry.metric.excellentRate)}，及格率 ${pct(entry.metric.passRate)}，均分 ${round(entry.metric.avg, 2)}。`,
+                note: `任教班级后 1/3 学生只按总分平均分核算，乡镇最高值比较含本校：后 1/3 均分 ${round(entry.metric.avg, 2)}，乡镇最高后 1/3 均分 ${round(highestAvg, 2)}。`,
                 source: 'teaching-management'
             };
         });
