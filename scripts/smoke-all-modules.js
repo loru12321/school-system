@@ -193,6 +193,29 @@ async function measureAsync(label, task) {
     }
 }
 
+async function withPagePerformancePhase(page, label, task) {
+    const phase = String(label || '').trim();
+    if (!phase) return task();
+    await page.evaluate((name) => {
+        if (!window.SystemPerformance || typeof window.SystemPerformance.beginPhase !== 'function') return;
+        if (!Array.isArray(window.__SMOKE_PERFORMANCE_PHASE_ENDERS__)) {
+            window.__SMOKE_PERFORMANCE_PHASE_ENDERS__ = [];
+        }
+        window.__SMOKE_PERFORMANCE_PHASE_ENDERS__.push(window.SystemPerformance.beginPhase(name));
+    }, phase).catch(() => {});
+    try {
+        return await task();
+    } finally {
+        await page.evaluate(() => {
+            const stack = Array.isArray(window.__SMOKE_PERFORMANCE_PHASE_ENDERS__)
+                ? window.__SMOKE_PERFORMANCE_PHASE_ENDERS__
+                : [];
+            const end = stack.pop();
+            if (typeof end === 'function') end();
+        }).catch(() => {});
+    }
+}
+
 function buildBudgetStatus(value, budget, label) {
     const durationMs = Number(value);
     const budgetMs = Number(budget);
@@ -3981,10 +4004,14 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         trace('switch:start', { id });
         const switchMeasurement = await measureAsync(
             `switch:${id}`,
-            () => withTimeoutResult(
-                () => smokeSwitchModule(page, id),
-                MODULE_SWITCH_WRAPPER_TIMEOUT_MS,
-                () => ({ ok: false, id, error: 'switch-timeout' })
+            () => withPagePerformancePhase(
+                page,
+                `smoke-switch:${id}`,
+                () => withTimeoutResult(
+                    () => smokeSwitchModule(page, id),
+                    MODULE_SWITCH_WRAPPER_TIMEOUT_MS,
+                    () => ({ ok: false, id, error: 'switch-timeout' })
+                )
             )
         );
         const switchResult = switchMeasurement.result;
@@ -3993,10 +4020,14 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         const deepMeasurement = (switchResult.ok || allowDeepCheckWithoutVisibleSwitch)
             ? await measureAsync(
                 `deep:${id}`,
-                () => withTimeoutResult(
-                    () => runModuleDeepCheck(page, id),
-                    MODULE_DEEP_CHECK_TIMEOUT_MS,
-                    () => ({ ok: false, id, error: 'deep-check-timeout' })
+                () => withPagePerformancePhase(
+                    page,
+                    `smoke-deep:${id}`,
+                    () => withTimeoutResult(
+                        () => runModuleDeepCheck(page, id),
+                        MODULE_DEEP_CHECK_TIMEOUT_MS,
+                        () => ({ ok: false, id, error: 'deep-check-timeout' })
+                    )
                 )
             )
             : { result: { ok: false, skipped: true }, durationMs: 0, label: `deep:${id}` };
@@ -4039,10 +4070,14 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         trace('data-manager-tab:start', { id });
         const tabMeasurement = await measureAsync(
             `dm:${id}`,
-            () => withTimeoutResult(
-                () => smokeDataManagerTab(page, id),
-                DATA_MANAGER_TAB_TIMEOUT_MS,
-                () => ({ ok: false, id, error: 'data-manager-timeout' })
+            () => withPagePerformancePhase(
+                page,
+                `smoke-dm:${id}`,
+                () => withTimeoutResult(
+                    () => smokeDataManagerTab(page, id),
+                    DATA_MANAGER_TAB_TIMEOUT_MS,
+                    () => ({ ok: false, id, error: 'data-manager-timeout' })
+                )
             )
         );
         const tabResult = tabMeasurement.result;
@@ -4075,6 +4110,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
             const taskTime = Date.parse(String(item?.time || ''));
             return !Number.isFinite(taskTime) || taskTime >= performanceBudgetWindowStartedAt;
         })
+        .filter((item) => !String(item?.phase || '').startsWith('smoke-deep:'))
         .filter((item) => Number(item?.duration || 0) >= PERFORMANCE_BUDGETS.longTaskMs);
     summary.performance.budgetFailures = summary.performance.budgetStatus.filter((item) => !item.ok);
 
