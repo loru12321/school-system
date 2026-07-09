@@ -133,7 +133,8 @@ assert.ok(workerContractSource.includes('WORKER_DEBUG_ERRORS'), 'worker crash st
 assert.ok(workerContractSource.includes('function getHtmlShellCacheControl()'), 'HTML shell cache policy should be centralized');
 assert.ok(workerContractSource.includes("return 'no-store, max-age=0, must-revalidate, no-transform';"), 'HTML responses should bypass CDN and browser storage');
 assert.ok(workerContractSource.includes("pathname.startsWith('/assets/audio/')"), 'hosted entrance audio should expose matching CORS for file:// lt.html');
-assert.ok(workerContractSource.includes("return 'public, max-age=31536000, immutable';"), 'versioned static assets should get immutable caching');
+assert.ok(workerContractSource.includes("pathname.startsWith('/assets/js/')") && workerContractSource.includes('return getHtmlShellCacheControl();'), 'runtime JS should bypass CDN and browser storage');
+assert.ok(workerContractSource.includes("return 'public, max-age=31536000, immutable';"), 'hashed/vendor static assets should get immutable caching');
 assert.ok(workerContractSource.includes("return 'public, max-age=3600, stale-while-revalidate=86400';"), 'unversioned static assets should get short browser caching');
 assert.ok(workerContractSource.includes("pathname === '/sw.js'"), 'service worker script should stay revalidation-friendly');
 assert.ok(workerContractSource.includes('buildWorkerErrorHeaders()'), 'worker crash responses should use hardened headers');

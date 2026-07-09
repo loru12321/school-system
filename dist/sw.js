@@ -4,15 +4,13 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-runtime-fcc40fdce53e';
+const CACHE_VERSION = 'school-system-runtime-71b69b3995b7';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 // Only precache deterministic app shell assets to avoid install failures.
 const APP_SHELL_ASSETS = [
-    './',
-    './index.html',
     './favicon.ico',
     './icon.svg',
     './site.webmanifest',
@@ -64,9 +62,7 @@ self.addEventListener('fetch', event => {
     }
 
     if (isRuntimeAsset(url.pathname)) {
-        event.respondWith(isVersionedRuntimeAsset(url)
-            ? cacheFirstRuntimeAsset(request)
-            : networkFirstRuntimeAsset(request));
+        event.respondWith(networkFirstRuntimeAsset(request));
         return;
     }
 
@@ -117,22 +113,6 @@ async function networkFirstRuntimeAsset(request) {
     }
 }
 
-async function cacheFirstRuntimeAsset(request) {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-
-    try {
-        const response = await fetch(request);
-        if (isCacheable(response)) {
-            const cache = await caches.open(STATIC_CACHE);
-            cache.put(request, response.clone());
-        }
-        return response;
-    } catch (error) {
-        return new Response('Runtime resource unavailable while offline', { status: 404 });
-    }
-}
-
 async function networkFirstApi(request, url) {
     const eligible = isApiCacheEligible(url);
     if (eligible) {
@@ -165,7 +145,7 @@ async function networkFirstApi(request, url) {
 
 async function networkFirstHtml(request) {
     try {
-        const response = await fetch(request);
+        const response = await fetch(new Request(request, { cache: 'reload' }));
         if (isCacheable(response)) {
             const cache = await caches.open(DYNAMIC_CACHE);
             cache.put(request, response.clone());
@@ -174,9 +154,6 @@ async function networkFirstHtml(request) {
     } catch (error) {
         const cached = await caches.match(request);
         if (cached) return cached;
-
-        const shell = await caches.match('./index.html') || await caches.match('./');
-        if (shell) return shell;
 
         return new Response(
             '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>离线模式</title><body><h1>离线模式</h1><p>网络恢复后请刷新页面。</p></body></html>',
@@ -211,11 +188,6 @@ function isStaticAsset(pathname) {
 
 function isRuntimeAsset(pathname) {
     return /\.(js|css)$/i.test(pathname) && !pathname.includes('/assets/vendor/');
-}
-
-function isVersionedRuntimeAsset(url) {
-    if (!url || !isRuntimeAsset(url.pathname)) return false;
-    return url.searchParams.has('v') || /-[0-9a-f]{8,}\.(?:js|css)$/i.test(url.pathname);
 }
 
 function isApiRequest(pathname) {

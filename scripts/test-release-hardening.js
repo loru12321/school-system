@@ -72,7 +72,8 @@ assert.ok(manifest.icons?.some((icon) => icon.src === '/assets/brand/app-icon-51
 const swVersionMatch = swRuntime.match(/const\s+SERVICE_WORKER_VERSION\s*=\s*['"]([^'"]+)['"]/);
 const swVersion = swVersionMatch ? swVersionMatch[1] : '';
 assert.ok(swVersion, 'could not extract SERVICE_WORKER_VERSION from service-worker-runtime.js');
-assert.ok(srcIndex.includes(`var refreshVersion = '${swVersion}';`), 'early runtime refresh should match the current service worker runtime');
+assert.ok(!srcIndex.includes('runtimeRefresh') && !srcIndex.includes('SCHOOL_RUNTIME_REFRESH_VERSION'), 'HTML should not rely on runtime-version refresh churn');
+assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(srcIndex), 'HTML should not query-version runtime JS entries');
 assert.ok(srcIndex.includes('校衡台'), 'HTML metadata should keep readable Chinese application name');
 userFacingReleaseFiles.forEach((relativePath) => {
   assert.ok(!read(relativePath).includes('\uFFFD'), `${relativePath} should not contain replacement characters`);
@@ -80,7 +81,7 @@ userFacingReleaseFiles.forEach((relativePath) => {
 
 assert.ok(publicHeaders.includes('/index.html'), 'Cloudflare static headers should cover index.html');
 assert.ok(publicHeaders.includes('Content-Type: text/html; charset=utf-8'), 'HTML responses should declare UTF-8 charset');
-assert.ok(publicHeaders.includes('/assets/js/*') && publicHeaders.includes('max-age=31536000, immutable'), 'versioned runtime JS headers should allow immutable caching');
+assert.ok(publicHeaders.includes('/assets/js/*') && publicHeaders.includes('Cache-Control: no-store, max-age=0, must-revalidate'), 'runtime JS headers should bypass browser and CDN storage');
 assert.ok(publicHeaders.includes('/sw.js') && publicHeaders.includes('max-age=0, must-revalidate'), 'service worker headers should still require revalidation');
 assert.ok(worker.includes('buildWorkerErrorHeaders()'), 'Worker crash responses should use hardened headers');
 assert.ok(worker.includes("'Cache-Control': 'no-store'"), 'Worker crash responses should be no-store');

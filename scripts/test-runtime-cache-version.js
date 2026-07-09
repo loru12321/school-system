@@ -23,19 +23,18 @@ const buildScript = read('scripts/build/update-runtime-cache-version.mjs');
 
 const serviceWorkerVersion = extract(serviceWorkerRuntime, /const\s+SERVICE_WORKER_VERSION\s*=\s*'([^']+)'/, 'service worker version');
 const bootVersion = extract(bootRuntime, /var\s+BOOT_ASSET_VERSION_FALLBACK\s*=\s*'([^']+)'/, 'boot asset version');
-const refreshVersion = extract(srcIndex, /var\s+refreshVersion\s*=\s*'([^']+)'/, 'early refresh version');
 const cacheVersion = extract(publicSw, /const\s+CACHE_VERSION\s*=\s*'([^']+)'/, 'service worker cache version');
 
 assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'runtime version should be content-hash shaped');
 assert.strictEqual(bootVersion, serviceWorkerVersion, 'boot runtime fallback should match generated runtime version');
-assert.strictEqual(refreshVersion, serviceWorkerVersion, 'early refresh guard should match generated runtime version');
 assert.strictEqual(cacheVersion, `school-system-${serviceWorkerVersion}`, 'service worker cache should follow generated runtime version');
-assert.ok(srcIndex.includes('^school-system-(?:v|runtime-)'), 'early refresh guard should clear both legacy and runtime service worker caches');
-assert.ok(srcIndex.includes('if (!hasSession)') && srcIndex.includes('sessionStorage.getItem(\'EDGE_GATEWAY_TOKEN_V1\')'), 'early refresh guard should not force a login-page reload without an authenticated session');
-assert.ok(srcIndex.includes(`entrance-sound-runtime.js?v=${serviceWorkerVersion}`), 'entrance sound runtime script tag should use generated runtime version');
-assert.ok(srcIndex.includes(`runtime-loader-runtime.js?v=${serviceWorkerVersion}`), 'runtime loader script tag should use generated runtime version');
-assert.ok(srcIndex.includes(`boot-runtime.js?v=${serviceWorkerVersion}`), 'boot runtime script tag should use generated runtime version');
-assert.ok(srcIndex.includes(`service-worker-runtime.js?v=${serviceWorkerVersion}`), 'service worker runtime script tag should use generated runtime version');
+assert.ok(!srcIndex.includes('runtimeRefresh'), 'HTML should not depend on runtimeRefresh query-cache churn');
+assert.ok(!srcIndex.includes('SCHOOL_RUNTIME_REFRESH_VERSION'), 'HTML should not depend on local runtime version stamps');
+assert.ok(srcIndex.includes('entrance-sound-runtime.js') && !srcIndex.includes('entrance-sound-runtime.js?v='), 'entrance sound runtime should not depend on query-versioned caching');
+assert.ok(srcIndex.includes('runtime-loader-runtime.js') && !srcIndex.includes('runtime-loader-runtime.js?v='), 'runtime loader should not depend on query-versioned caching');
+assert.ok(srcIndex.includes('boot-runtime.js') && !srcIndex.includes('boot-runtime.js?v='), 'boot runtime should not depend on query-versioned caching');
+assert.ok(srcIndex.includes('service-worker-runtime.js') && !srcIndex.includes('service-worker-runtime.js?v='), 'service worker runtime loader should not depend on query-versioned caching');
+assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(srcIndex), 'HTML should not query-version any runtime JS entry');
 assert.ok(packageJson.scripts['build:pre'] && packageJson.scripts['build:pre'].includes('scripts/build/update-runtime-cache-version.mjs'), 'build:pre should update runtime versions before bundling');
 assert.ok(buildScript.includes('normalizeVersionTokens'), 'version generator should normalize existing version tokens before hashing');
 assert.ok(buildScript.includes("public', 'assets', 'js'"), 'version generator should hash public runtime JS sources');

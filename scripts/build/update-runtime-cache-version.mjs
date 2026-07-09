@@ -35,12 +35,7 @@ function normalizeVersionTokens(filePath, content) {
   const relative = path.relative(root, filePath).replace(/\\/g, '/');
   let normalized = String(content || '');
   if (relative === 'src/index.html') {
-    normalized = normalized
-      .replace(/var refreshVersion = '[^']+';/g, "var refreshVersion = '__RUNTIME_VERSION__';")
-      .replace(/entrance-sound-runtime\.js\?v=[^"']+/g, 'entrance-sound-runtime.js?v=__RUNTIME_VERSION__')
-      .replace(/runtime-loader-runtime\.js\?v=[^"']+/g, 'runtime-loader-runtime.js?v=__RUNTIME_VERSION__')
-      .replace(/boot-runtime\.js\?v=[^"']+/g, 'boot-runtime.js?v=__RUNTIME_VERSION__')
-      .replace(/service-worker-runtime\.js\?v=[^"']+/g, 'service-worker-runtime.js?v=__RUNTIME_VERSION__');
+    normalized = normalized.replace(/(\.\/assets\/js\/[^"']+\.js)\?v=[^"']+/g, '$1');
   }
   if (relative === 'public/assets/js/boot-runtime.js') {
     normalized = normalized.replace(/var BOOT_ASSET_VERSION_FALLBACK = '[^']+';/g, "var BOOT_ASSET_VERSION_FALLBACK = '__RUNTIME_VERSION__';");
@@ -69,12 +64,7 @@ function updateRuntimeVersions(version) {
     {
       file: path.join(root, 'src', 'index.html'),
       update(content) {
-        return content
-          .replace(/var refreshVersion = '[^']+';/g, `var refreshVersion = '${version}';`)
-          .replace(/entrance-sound-runtime\.js\?v=[^"']+/g, `entrance-sound-runtime.js?v=${version}`)
-          .replace(/runtime-loader-runtime\.js\?v=[^"']+/g, `runtime-loader-runtime.js?v=${version}`)
-          .replace(/boot-runtime\.js\?v=[^"']+/g, `boot-runtime.js?v=${version}`)
-          .replace(/service-worker-runtime\.js\?v=[^"']+/g, `service-worker-runtime.js?v=${version}`);
+        return content.replace(/(\.\/assets\/js\/[^"']+\.js)\?v=[^"']+/g, '$1');
       }
     },
     {

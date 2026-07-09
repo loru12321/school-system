@@ -39,10 +39,12 @@ assert.ok(html.indexOf('layout-refinement.css') < html.indexOf('product-redesign
 assert.ok(html.includes('id="critical-visibility-guard"'), 'index.html should inline a critical visibility guard before scripts run');
 assert.ok(/\.hidden,\s*\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/.test(html), 'critical visibility guard must keep hidden app content invisible before login');
 assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker runtime version should be generated from runtime content');
-assert.ok(html.includes(`var refreshVersion = '${serviceWorkerVersion}';`), 'early runtime refresh version should match the service worker runtime');
-assert.ok(html.includes(`runtime-loader-runtime.js?v=${serviceWorkerVersion}`), 'runtime loader query version should match the generated runtime version');
-assert.ok(html.includes(`boot-runtime.js?v=${serviceWorkerVersion}`), 'boot runtime query version should match the generated runtime version');
-assert.ok(html.includes(`service-worker-runtime.js?v=${serviceWorkerVersion}`), 'service worker runtime query version should match the generated runtime version');
+assert.ok(!html.includes('runtimeRefresh'), 'index.html should not rely on runtimeRefresh query churn');
+assert.ok(!html.includes('SCHOOL_RUNTIME_REFRESH_VERSION'), 'index.html should not rely on local runtime version stamps');
+assert.ok(html.includes('runtime-loader-runtime.js') && !html.includes('runtime-loader-runtime.js?v='), 'runtime loader should load without query-version dependency');
+assert.ok(html.includes('boot-runtime.js') && !html.includes('boot-runtime.js?v='), 'boot runtime should load without query-version dependency');
+assert.ok(html.includes('service-worker-runtime.js') && !html.includes('service-worker-runtime.js?v='), 'service worker runtime should load without query-version dependency');
+assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
 assert.ok(inlineHandlerCount <= 354, `inline event handler count grew: ${inlineHandlerCount} > 354`);

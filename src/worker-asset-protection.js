@@ -39,7 +39,6 @@ function isStaticAssetPath(pathname) {
 
 function isVersionedStaticAsset(url) {
   const pathname = String(url.pathname || '');
-  if (url.searchParams.has('v')) return true;
   if (/\/assets\/vendor\//.test(pathname)) return true;
   if (/\.(?:woff2?|ttf|eot)$/i.test(pathname)) return true;
   return /-[A-Za-z0-9_-]{6,}\.(?:js|css|png|jpg|jpeg|gif|svg|webp|avif)$/i.test(pathname);
@@ -49,6 +48,9 @@ function getStaticAssetCacheControl(url) {
   const pathname = String(url.pathname || '');
   if (pathname === '/sw.js' || pathname.endsWith('/sw.js')) {
     return 'public, max-age=0, must-revalidate';
+  }
+  if (pathname.startsWith('/assets/js/')) {
+    return getHtmlShellCacheControl();
   }
   if (!isStaticAssetPath(pathname)) return '';
   if (isVersionedStaticAsset(url)) {
