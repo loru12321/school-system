@@ -733,6 +733,45 @@ assert.ok(
         && appSource.includes('return;'),
     'UI.loading should suppress full-screen loader show requests during boot background hydration'
 );
+const globalLoaderCssStart = mainCss.indexOf('#global-loader {');
+const globalLoaderCssEnd = mainCss.indexOf('.loader-spinner', globalLoaderCssStart);
+const globalLoaderCssBlock = globalLoaderCssStart >= 0 && globalLoaderCssEnd > globalLoaderCssStart
+    ? mainCss.slice(globalLoaderCssStart, globalLoaderCssEnd)
+    : '';
+assert.ok(
+    globalLoaderCssBlock.includes('pointer-events: none;'),
+    'global loader should never intercept clicks while background hydration is running'
+);
+assert.ok(
+    appSource.includes("loader.style.pointerEvents = 'none';"),
+    'UI.loading should keep the global loader visually passive when shown or fading out'
+);
+assert.ok(
+    dataManagerCoreRuntime.includes("open: function (initialTab = 'student')"),
+    'DataManager.open should accept an initial tab so targeted entries avoid rendering the student tab first'
+);
+assert.ok(
+    dataManagerCoreRuntime.includes("this.switchTab(initialTab || 'student');"),
+    'DataManager.open should switch directly to the requested initial tab'
+);
+assert.ok(
+    dataManagerCoreRuntime.includes("window.setTimeout(() => {\n                if (manager.currentTab === 'cloud') manager.renderCloudBackups();\n            }, 0);"),
+    'cloud backup rendering should run after the click stack so the cloud button remains actionable'
+);
+assert.ok(
+    authLoginRuntime.includes("DataManager.open('cloud');"),
+    'header cloud data button should open the cloud tab directly'
+);
+assert.ok(
+    !authLoginRuntime.includes("DataManager.open();\n                setTimeout(() =>"),
+    'header cloud data button should not render the student tab before switching to cloud'
+);
+assert.ok(
+    appSource.includes("DataManager.open('params');")
+        && appSource.includes("DataManager.open('targets');")
+        && appSource.includes("DataManager.open('teacher');"),
+    'targeted data manager entries should open their requested tabs directly'
+);
 assert.ok(!bootRuntime.includes('await window.waitForAuthReady();'), 'boot login should not block workbench entry on Auth readiness');
 assert.ok(!bootRuntime.includes('await enterSelectedBootCohort(cohortYear);'), 'boot login should not block workbench entry on cohort restoration');
 assert.ok(indexHtml.includes('type="button" class="advanced-submit login-clean-submit"'), 'login submit button should not default-submit before boot handlers bind');

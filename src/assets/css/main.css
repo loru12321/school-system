@@ -9495,6 +9495,7 @@ body[data-mobile-query="true"] .shell-module-rail-shell--floating {
     align-items: center;
     flex-direction: column;
     backdrop-filter: blur(2px);
+    pointer-events: none;
     transition: opacity 0.3s;
 }
 

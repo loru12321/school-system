@@ -78,7 +78,7 @@ const DataManager = {
         localStorage.setItem(key, JSON.stringify(targets));
     },
 
-    open: function () {
+    open: function (initialTab = 'student') {
         const user = Auth.currentUser;
         if (!user) return alert("请先登录");
         if (user.role !== 'admin' && user.role !== 'director') {
@@ -87,7 +87,7 @@ const DataManager = {
 
         document.getElementById('data-manager-modal').style.display = 'flex';
         this.decorateLayout();
-        this.switchTab('student');
+        this.switchTab(initialTab || 'student');
         if (typeof this.syncSchoolAliasSettingsFromGateway === 'function') {
             this.syncSchoolAliasSettingsFromGateway().catch(err => {
                 console.warn('[EdgeGateway] school alias refresh skipped:', err?.message || err);
@@ -428,7 +428,12 @@ const DataManager = {
         if (cloudArea) cloudArea.style.display = tab === 'cloud' ? 'flex' : 'none';
 
 
-        if (tab === 'cloud') this.renderCloudBackups();
+        if (tab === 'cloud') {
+            const manager = this;
+            window.setTimeout(() => {
+                if (manager.currentTab === 'cloud') manager.renderCloudBackups();
+            }, 0);
+        }
         if (tab === 'sql') {
             if (typeof this.renderSQLHistory === 'function') {
                 this.renderSQLHistory();

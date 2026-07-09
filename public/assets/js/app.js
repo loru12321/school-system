@@ -10,8 +10,10 @@ const UI = Object.assign(window.UI || {}, {
                 loader.classList.remove('hidden');
                 loader.style.display = 'flex';
                 loader.style.opacity = '1';
+                loader.style.pointerEvents = 'none';
             }
         } else {
+            if (loader) loader.style.pointerEvents = 'none';
             setTimeout(() => {
                 if (loader) {
                     loader.style.opacity = '0';
@@ -7054,8 +7056,7 @@ function calcIndicators(isSilent = false) {
     if (!r1 || !r2) {
         clearIndicatorTargetMatchPanel();
         if (!isSilent && confirm("❌ 检测到【划线名次】尚未设置！\n\n是否立即打开「教务数据综合控制台」进行设置？")) {
-            DataManager.open(); // 打开弹窗
-            DataManager.switchTab('params'); // 自动切换到参数设置Tab
+            DataManager.open('params'); // 打开弹窗并切换到参数设置Tab
         }
         return [];
     }
@@ -7074,8 +7075,7 @@ function calcIndicators(isSilent = false) {
     if (!window.TARGETS || Object.keys(window.TARGETS).length === 0) {
         clearIndicatorTargetMatchPanel();
         if (!isSilent && confirm("❌ 检测到【目标人数】尚未导入！\n\n是否立即打开「教务数据综合控制台」进行导入？")) {
-            DataManager.open(); // 打开弹窗
-            DataManager.switchTab('targets'); // 自动切换到目标管理Tab
+            DataManager.open('targets'); // 打开弹窗并切换到目标管理Tab
         }
         return [];
     }
@@ -9494,8 +9494,7 @@ async function openTeacherSync() {
         }
 
         if (window.DataManager && typeof DataManager.open === 'function') {
-            DataManager.open();
-            DataManager.switchTab('teacher');
+            DataManager.open('teacher');
         } else {
             switchTab('upload');
         }

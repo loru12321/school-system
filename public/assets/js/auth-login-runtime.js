@@ -912,12 +912,7 @@ var Auth = {
             dataBtn.title = "打开云端教务数据管理";
 
             dataBtn.onclick = () => {
-                DataManager.open();
-                setTimeout(() => {
-                    if (window.DataManager && typeof window.DataManager.switchTab === 'function') {
-                        window.DataManager.switchTab('cloud');
-                    }
-                }, 0);
+                DataManager.open('cloud');
             };
 
             toolbar.insertBefore(dataBtn, toolbar.firstChild);
