@@ -60,6 +60,18 @@ function run() {
     assert.strictEqual(root.CURRENT_PROJECT_KEY, 'cohort::2026');
     assert.strictEqual(root.CURRENT_COHORT_ID, '2026');
 
+    root.localStorage.setItem('CURRENT_PROJECT_KEY', 'cohort::2022');
+    root.CURRENT_PROJECT_KEY = 'cohort::2022';
+    const switchedSnapshot = workspaceState.syncWorkspaceState({
+        currentCohortId: '2023',
+        currentCohortMeta: { id: '2023', year: '2023', startGrade: 6 },
+        currentExamId: '',
+        cohortDb: null
+    });
+    assert.strictEqual(switchedSnapshot.currentProjectKey, 'cohort::2023');
+    assert.strictEqual(root.localStorage.getItem('CURRENT_PROJECT_KEY'), 'cohort::2023');
+    assert.strictEqual(switchedSnapshot.currentCohortId, '2023');
+
     assert.strictEqual(workspaceState.hasSavedWorkspace(), true);
 
     workspaceState.clearWorkspaceIdentity({ clearCohortDb: true });

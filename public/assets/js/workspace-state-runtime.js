@@ -227,9 +227,13 @@
                 Object.prototype.hasOwnProperty.call(source, 'CURRENT_EXAM_ID') ? source.CURRENT_EXAM_ID : getCurrentExamId()
             )
         );
+        const hasExplicitCohortId = Object.prototype.hasOwnProperty.call(source, 'currentCohortId')
+            || Object.prototype.hasOwnProperty.call(source, 'CURRENT_COHORT_ID');
         const nextProjectKeyInput = normalizeText(
             Object.prototype.hasOwnProperty.call(source, 'currentProjectKey') ? source.currentProjectKey : (
-                Object.prototype.hasOwnProperty.call(source, 'CURRENT_PROJECT_KEY') ? source.CURRENT_PROJECT_KEY : getCurrentProjectKey()
+                Object.prototype.hasOwnProperty.call(source, 'CURRENT_PROJECT_KEY') ? source.CURRENT_PROJECT_KEY : (
+                    hasExplicitCohortId && nextCohortId ? getCohortKey(nextCohortId) : getCurrentProjectKey()
+                )
             )
         );
         const nextProjectKey = nextProjectKeyInput || (nextCohortId ? getCohortKey(nextCohortId) : '');
