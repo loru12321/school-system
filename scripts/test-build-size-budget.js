@@ -34,7 +34,9 @@ const budgets = {
     ltHtml: 2_100_000,
     // Offline lt.html carries inline runtime sources for single-file use; keep a
     // tight cap above the current complete offline bundle.
-    ltHtmlBrotli: 335_000,
+    // 2026-07-09: raised 335_000 -> 336_000 for the non-grade-9 major-subject
+    // school-analysis workbook export path; CI Brotli output measured 335_338B.
+    ltHtmlBrotli: 336_000,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,
