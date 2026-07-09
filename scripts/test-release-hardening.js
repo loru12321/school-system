@@ -82,7 +82,7 @@ userFacingReleaseFiles.forEach((relativePath) => {
 assert.ok(publicHeaders.includes('/index.html'), 'Cloudflare static headers should cover index.html');
 assert.ok(publicHeaders.includes('Content-Type: text/html; charset=utf-8'), 'HTML responses should declare UTF-8 charset');
 assert.ok(publicHeaders.includes('/assets/js/*') && publicHeaders.includes('Cache-Control: no-store, max-age=0, must-revalidate'), 'runtime JS headers should bypass browser and CDN storage');
-assert.ok(publicHeaders.includes('/sw.js') && publicHeaders.includes('max-age=0, must-revalidate'), 'service worker headers should still require revalidation');
+assert.ok(publicHeaders.includes('/sw.js') && publicHeaders.includes('Cache-Control: no-store, max-age=0, must-revalidate'), 'service worker headers should bypass browser and CDN storage');
 assert.ok(worker.includes('buildWorkerErrorHeaders()'), 'Worker crash responses should use hardened headers');
 assert.ok(worker.includes("'Cache-Control': 'no-store'"), 'Worker crash responses should be no-store');
 assert.ok(worker.includes("'X-Content-Type-Options': 'nosniff'"), 'Worker crash responses should set nosniff');

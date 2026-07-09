@@ -136,7 +136,7 @@ assert.ok(workerContractSource.includes("pathname.startsWith('/assets/audio/')")
 assert.ok(workerContractSource.includes("pathname.startsWith('/assets/js/')") && workerContractSource.includes('return getHtmlShellCacheControl();'), 'runtime JS should bypass CDN and browser storage');
 assert.ok(workerContractSource.includes("return 'public, max-age=31536000, immutable';"), 'hashed/vendor static assets should get immutable caching');
 assert.ok(workerContractSource.includes("return 'public, max-age=3600, stale-while-revalidate=86400';"), 'unversioned static assets should get short browser caching');
-assert.ok(workerContractSource.includes("pathname === '/sw.js'"), 'service worker script should stay revalidation-friendly');
+assert.ok(workerContractSource.includes("pathname === '/sw.js'") && workerContractSource.includes('return getHtmlShellCacheControl();'), 'service worker script should bypass CDN and browser storage');
 assert.ok(workerContractSource.includes('buildWorkerErrorHeaders()'), 'worker crash responses should use hardened headers');
 assert.ok(workerContractSource.includes("if (method === 'GET' || method === 'HEAD') return null;"), 'GET/HEAD proxy requests should not attach a body');
 assert.ok(workerContractSource.includes("Math.min(Math.floor(raw), 1000)"), 'system_data read limit should be capped');

@@ -47,7 +47,7 @@ function isVersionedStaticAsset(url) {
 function getStaticAssetCacheControl(url) {
   const pathname = String(url.pathname || '');
   if (pathname === '/sw.js' || pathname.endsWith('/sw.js')) {
-    return 'public, max-age=0, must-revalidate';
+    return getHtmlShellCacheControl();
   }
   if (pathname.startsWith('/assets/js/')) {
     return getHtmlShellCacheControl();

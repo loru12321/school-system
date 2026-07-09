@@ -132,6 +132,7 @@ const guardedItems = [
   () => assert.strictEqual(wrangler.vars?.CLOUD_SYSTEM_DATA_MODE, 'primary', 'system_data should stay on D1 primary storage'),
   () => assert.ok((wrangler.d1_databases || []).some((db) => db.binding === 'CLOUD_SYSTEM_DATA_DB'), 'system_data D1 binding should stay configured'),
   () => assertIncludes(headers, '/assets/js/*\n  Cache-Control: no-store, max-age=0, must-revalidate', 'runtime JS should bypass browser and CDN storage'),
+  () => assertIncludes(headers, '/sw.js\n  Cache-Control: no-store, max-age=0, must-revalidate', 'service worker script should bypass browser and CDN storage'),
   () => assertIncludes(headers, '/assets/css/*\n  Cache-Control: public, max-age=31536000, immutable', 'versioned runtime CSS should use immutable caching'),
   () => assertIncludes(sw, 'event.respondWith(networkFirstRuntimeAsset(request));', 'service worker should always network-first runtime assets'),
   () => assert.ok(!sw.includes('isVersionedRuntimeAsset') && !sw.includes('cacheFirstRuntimeAsset'), 'service worker should not keep query-version runtime cache-first branches'),

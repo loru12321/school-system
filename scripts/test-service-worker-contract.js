@@ -89,7 +89,7 @@ assert.ok(!/\/\/[^\n]*const\s+APP_SHELL_ASSETS/.test(publicSw), 'APP_SHELL_ASSET
 assert.ok(scripts['build:pre'] && scripts['build:pre'].includes('scripts/build/update-runtime-cache-version.mjs'), 'build:pre should update runtime cache versions before Vite runs');
 assertHeaderRule(publicHeaders, '/assets/js/*', 'no-store, max-age=0, must-revalidate', 'runtime JS assets should bypass browser and CDN storage');
 assertHeaderRule(publicHeaders, '/assets/css/*', 'public, max-age=31536000, immutable', 'versioned CSS runtime assets should use immutable cache headers');
-assertHeaderRule(publicHeaders, '/sw.js', 'public, max-age=0, must-revalidate', 'service worker script should still revalidate');
+assertHeaderRule(publicHeaders, '/sw.js', 'no-store, max-age=0, must-revalidate', 'service worker script should bypass browser and CDN storage');
 assertIncludes(serviceWorkerRuntime, `const SERVICE_WORKER_VERSION = '${serviceWorkerVersion}';`, 'service worker runtime should version registration updates');
 assertIncludes(serviceWorkerRuntime, "const SERVICE_WORKER_PATH = './sw.js';", 'service worker runtime should not depend on a query-versioned sw.js URL');
 assert.ok(srcIndex.includes('entrance-sound-runtime.js') && !srcIndex.includes('entrance-sound-runtime.js?v='), 'HTML should not cache-bust the entrance sound runtime with query versions');
