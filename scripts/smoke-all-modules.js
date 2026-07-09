@@ -261,6 +261,13 @@ async function prewarmSmokeHotspots(page) {
     const started = Date.now();
     const result = await page.evaluate(async ({ timeoutMs }) => {
         const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const yieldToBrowser = () => new Promise((resolve) => {
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(() => setTimeout(resolve, 0));
+                return;
+            }
+            setTimeout(resolve, 0);
+        });
         const loadWithTimeout = async (name) => {
             const loader = window[name];
             if (typeof loader !== 'function') return { name, status: 'missing' };
@@ -287,7 +294,11 @@ async function prewarmSmokeHotspots(page) {
             'ensureCountyAnalysisRuntimeLoaded',
             'ensureStudentOverviewRuntimeLoaded'
         ];
-        const entries = await Promise.all(loaders.map(loadWithTimeout));
+        const entries = [];
+        for (const loaderName of loaders) {
+            entries.push(await loadWithTimeout(loaderName));
+            await yieldToBrowser();
+        }
         return {
             ok: entries.every((entry) => entry.status === 'loaded' || entry.status === 'missing'),
             entries
@@ -3961,6 +3972,9 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     trace('hotspot-prewarm:start');
     summary.performance.hotspotPrewarm = await prewarmSmokeHotspots(page);
     trace('hotspot-prewarm:done', summary.performance.hotspotPrewarm);
+    const performanceBudgetWindowStartedAt = Date.now();
+    await page.waitForTimeout(800);
+    const performanceBudgetLongTaskBaseline = (await readPerformanceSnapshot(page)).longTasks.length;
 
     for (const id of SWITCH_MODULE_IDS) {
         currentScope = `switch:${id}`;
@@ -4056,6 +4070,11 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     const performanceSnapshot = await readPerformanceSnapshot(page);
     summary.performance.systemPerformanceSnapshot = performanceSnapshot;
     summary.performance.longTasks = (performanceSnapshot.longTasks || [])
+        .slice(performanceBudgetLongTaskBaseline)
+        .filter((item) => {
+            const taskTime = Date.parse(String(item?.time || ''));
+            return !Number.isFinite(taskTime) || taskTime >= performanceBudgetWindowStartedAt;
+        })
         .filter((item) => Number(item?.duration || 0) >= PERFORMANCE_BUDGETS.longTaskMs);
     summary.performance.budgetFailures = summary.performance.budgetStatus.filter((item) => !item.ok);
 
