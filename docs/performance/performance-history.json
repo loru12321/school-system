@@ -1,90 +1,5 @@
 [
   {
-    "recordedAt": "2026-05-20T08:21:06.084Z",
-    "commit": "9ce791464039",
-    "branch": "main",
-    "runId": "",
-    "runAttempt": "",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 19624,
-    "appReadyMs": 4906,
-    "totalMs": 70273,
-    "moduleCount": 26,
-    "slowestModules": [
-      {
-        "id": "report-generator",
-        "switchMs": 547,
-        "deepCheckMs": 5282,
-        "totalMs": 5829
-      },
-      {
-        "id": "starter-hub",
-        "switchMs": 4465,
-        "deepCheckMs": 2,
-        "totalMs": 4467
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 518,
-        "deepCheckMs": 2076,
-        "totalMs": 2594
-      },
-      {
-        "id": "upload",
-        "switchMs": 1816,
-        "deepCheckMs": 232,
-        "totalMs": 2048
-      },
-      {
-        "id": "student-details",
-        "switchMs": 2012,
-        "deepCheckMs": 3,
-        "totalMs": 2015
-      },
-      {
-        "id": "progress-analysis",
-        "switchMs": 1578,
-        "deepCheckMs": 57,
-        "totalMs": 1635
-      },
-      {
-        "id": "analysis",
-        "switchMs": 583,
-        "deepCheckMs": 1034,
-        "totalMs": 1617
-      },
-      {
-        "id": "indicator",
-        "switchMs": 591,
-        "deepCheckMs": 925,
-        "totalMs": 1516
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "teacher",
-        "durationMs": 1400
-      },
-      {
-        "id": "targets",
-        "durationMs": 1265
-      },
-      {
-        "id": "student",
-        "durationMs": 1168
-      },
-      {
-        "id": "cloud",
-        "durationMs": 1157
-      }
-    ],
-    "longTaskCount": 2,
-    "maxLongTaskMs": 1274,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-06-25T08:11:23.387Z",
     "commit": "573a59c12100",
     "branch": "main",
@@ -6792,6 +6707,91 @@
       {
         "id": "targets",
         "durationMs": 633
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-09T07:41:59.243Z",
+    "commit": "61329cbea8e0",
+    "branch": "main",
+    "runId": "29002247770",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 7102,
+    "appReadyMs": 250,
+    "totalMs": 37883,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "student-details",
+        "switchMs": 57,
+        "deepCheckMs": 4278,
+        "totalMs": 4335
+      },
+      {
+        "id": "data-quality",
+        "switchMs": 3179,
+        "deepCheckMs": 2,
+        "totalMs": 3181
+      },
+      {
+        "id": "cohort-growth",
+        "switchMs": 674,
+        "deepCheckMs": 882,
+        "totalMs": 1556
+      },
+      {
+        "id": "summary",
+        "switchMs": 643,
+        "deepCheckMs": 71,
+        "totalMs": 714
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 248,
+        "deepCheckMs": 451,
+        "totalMs": 699
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 222,
+        "deepCheckMs": 463,
+        "totalMs": 685
+      },
+      {
+        "id": "upload",
+        "switchMs": 332,
+        "deepCheckMs": 307,
+        "totalMs": 639
+      },
+      {
+        "id": "county-teacher-portrait",
+        "switchMs": 231,
+        "deepCheckMs": 333,
+        "totalMs": 564
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1107
+      },
+      {
+        "id": "teacher",
+        "durationMs": 671
+      },
+      {
+        "id": "student",
+        "durationMs": 640
+      },
+      {
+        "id": "targets",
+        "durationMs": 634
       }
     ],
     "longTaskCount": 0,
