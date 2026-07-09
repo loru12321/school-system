@@ -8919,8 +8919,8 @@ function openCloudRollback() {
     const user = Auth?.currentUser;
     if (!user) return alert('请先登录');
     if (user.role !== 'admin') return alert('⛔ 权限不足');
-    if (typeof DataManager !== 'undefined' && typeof DataManager.open === 'function') {
-        DataManager.open('cloud');
+    if (typeof DataManager !== 'undefined' && typeof DataManager.openCloudManager === 'function') {
+        DataManager.openCloudManager();
         setTimeout(() => {
             const chkSnap = document.getElementById('cloud-filter-snapshots');
             const chkCur = document.getElementById('cloud-filter-current');

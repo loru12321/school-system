@@ -95,6 +95,80 @@ const DataManager = {
         }
     },
 
+    ensureCloudManagerModal: function () {
+        let modal = document.getElementById('cloud-manager-modal');
+        if (modal) return modal;
+        modal = document.createElement('div');
+        modal.id = 'cloud-manager-modal';
+        modal.className = 'modal';
+        modal.setAttribute('data-mojibake-skip', 'true');
+        modal.style.display = 'none';
+        modal.innerHTML = `
+            <div class="modal-content" data-mojibake-skip="true" style="width:min(1120px,96vw); height:min(86vh,820px); padding:18px; border-radius:18px; display:flex; flex-direction:column; overflow:hidden;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i class="ti ti-cloud-data-connection"></i> 云端数据</h3>
+                        <div style="margin-top:4px; font-size:12px; color:#64748b;">只加载云端存档清单，不进入底层数据管理页。</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-gray" onclick="DataManager.closeCloudManager()" title="关闭">
+                        <i class="ti ti-x"></i>
+                    </button>
+                </div>
+                <div id="cloud-manager-body" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) this.closeCloudManager();
+        });
+        return modal;
+    },
+
+    mountCloudAreaInCloudManager: function () {
+        const cloudArea = document.getElementById('dm-cloud-area');
+        const body = document.getElementById('cloud-manager-body');
+        if (!cloudArea || !body) return false;
+        if (!this.cloudAreaHome) {
+            const placeholder = document.createComment('dm-cloud-area-home');
+            cloudArea.parentNode?.insertBefore(placeholder, cloudArea);
+            this.cloudAreaHome = placeholder;
+        }
+        if (cloudArea.parentElement !== body) body.appendChild(cloudArea);
+        cloudArea.style.display = 'flex';
+        cloudArea.style.padding = '0';
+        cloudArea.style.height = '100%';
+        cloudArea.setAttribute('data-mojibake-skip', 'true');
+        return true;
+    },
+
+    openCloudManager: function () {
+        const user = Auth.currentUser;
+        if (!user) return alert("请先登录");
+        if (user.role !== 'admin' && user.role !== 'director') {
+            return alert("⛔ 权限不足：只有管理员或教务主任可操作云端数据。");
+        }
+        const modal = this.ensureCloudManagerModal();
+        modal.style.display = 'flex';
+        this.currentTab = 'cloud';
+        this.cloudPanelView = 'list';
+        if (!this.mountCloudAreaInCloudManager()) return;
+        window.setTimeout(() => {
+            this.renderCloudBackups();
+        }, 0);
+    },
+
+    closeCloudManager: function () {
+        const modal = document.getElementById('cloud-manager-modal');
+        if (modal) modal.style.display = 'none';
+        const cloudArea = document.getElementById('dm-cloud-area');
+        if (cloudArea && this.cloudAreaHome && this.cloudAreaHome.parentNode && cloudArea.parentElement !== this.cloudAreaHome.parentNode) {
+            this.cloudAreaHome.parentNode.insertBefore(cloudArea, this.cloudAreaHome.nextSibling);
+            cloudArea.style.display = 'none';
+            cloudArea.style.padding = '15px';
+        }
+        if (this.currentTab === 'cloud') this.currentTab = 'student';
+    },
+
     ensureCloudPanelSwitch: function () {
         const modal = document.getElementById('data-manager-modal');
         const content = modal?.querySelector('.modal-content');

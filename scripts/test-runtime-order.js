@@ -761,12 +761,20 @@ assert.ok(
     'cloud backup rendering should run after the click stack so the cloud button remains actionable'
 );
 assert.ok(
-    authLoginRuntime.includes("DataManager.open('cloud');"),
-    'header cloud data button should open the cloud tab directly'
+    dataManagerCoreRuntime.includes('openCloudManager: function ()'),
+    'DataManager should expose a lightweight standalone cloud manager entry'
 );
 assert.ok(
-    appSource.includes("function openCloudRollback()") && appSource.includes("DataManager.open('cloud');"),
-    'cloud rollback entry should also open the cloud tab through DataManager.open'
+    authLoginRuntime.includes('DataManager.openCloudManager();'),
+    'header cloud data button should open the standalone cloud manager'
+);
+assert.ok(
+    !authLoginRuntime.includes("DataManager.open('cloud');"),
+    'header cloud data button must not open the full DataManager shell'
+);
+assert.ok(
+    appSource.includes("function openCloudRollback()") && appSource.includes('DataManager.openCloudManager();'),
+    'cloud rollback entry should also open the standalone cloud manager'
 );
 assert.ok(
     !authLoginRuntime.includes("DataManager.open();\n                setTimeout(() =>"),

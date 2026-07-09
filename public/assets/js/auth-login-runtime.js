@@ -957,7 +957,7 @@ var Auth = {
             dataBtn.title = "打开云端教务数据管理";
 
             dataBtn.onclick = () => {
-                DataManager.open('cloud');
+                DataManager.openCloudManager();
             };
 
             toolbar.insertBefore(dataBtn, toolbar.firstChild);
