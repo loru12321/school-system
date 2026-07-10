@@ -897,7 +897,9 @@ assert.ok(moduleEntryRuntime.includes('ensureReportRenderRuntimeLoaded'), 'repor
 assert.ok(moduleEntryRuntime.includes('function initSummaryEntry()'), 'summary module should have a dedicated automatic entry initializer');
 assert.ok(moduleEntryRuntime.includes('window.calcSummary(true)'), 'summary module entry should automatically calculate the overview table');
 assert.ok(moduleEntryRuntime.includes('function prewarmStudentDiagnosisRuntimes'), 'student diagnosis should prewarm shared runtimes after the active module paints');
-assert.ok(moduleEntryRuntime.includes("['student-overview', 'report-render', 'report-chart']"), 'student diagnosis prewarm should cover overview and report shared runtimes');
+assert.ok(moduleEntryRuntime.includes("SystemRuntimeLoader.load('student-overview')"), 'student diagnosis prewarm should cover the overview runtime');
+assert.ok(moduleEntryRuntime.includes("SystemRuntimeLoader.load('report-render')"), 'student diagnosis prewarm should cover the report query runtime');
+assert.ok(!moduleEntryRuntime.includes("SystemRuntimeLoader.load('report-chart')"), 'student diagnosis entry should not prewarm chart rendering on the shared switch path');
 const reportPrewarmStart = moduleEntryRuntime.indexOf('function prewarmReportGeneratorRuntimes');
 const reportPrewarmEnd = moduleEntryRuntime.indexOf('function runModuleSpecificInit', reportPrewarmStart);
 const reportPrewarmSource = reportPrewarmStart >= 0 && reportPrewarmEnd > reportPrewarmStart

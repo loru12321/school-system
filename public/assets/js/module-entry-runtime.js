@@ -1017,10 +1017,11 @@
         if (!STUDENT_DIAGNOSIS_MODULE_IDS.has(activeModuleId)) return;
         scheduleModuleTask('student-diagnosis-runtime-prewarm', () => {
             if (!window.SystemRuntimeLoader || typeof window.SystemRuntimeLoader.load !== 'function') return;
-            ['student-overview', 'report-render', 'report-chart'].forEach((runtimeId) => {
-                Promise.resolve(window.SystemRuntimeLoader.load(runtimeId))
-                    .catch((error) => console.warn(`[student-diagnosis] ${runtimeId} prewarm failed:`, error));
-            });
+            // 串行预热两个查询关键 runtime，避免并发解析脚本合并成超阈值长任务。
+            Promise.resolve(window.SystemRuntimeLoader.load('student-overview'))
+                .catch((error) => console.warn('[student-diagnosis] student-overview prewarm failed:', error))
+                .then(() => window.SystemRuntimeLoader.load('report-render'))
+                .catch((error) => console.warn('[student-diagnosis] report-render prewarm failed:', error));
         }, { delay: 500, idle: true, timeout: 2400 });
     }
 
