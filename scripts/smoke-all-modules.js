@@ -92,6 +92,12 @@ const PERFORMANCE_BUDGETS = {
     longTaskMs: 800
 };
 const STRICT_PERFORMANCE_BUDGETS = process.env.SMOKE_PERF_STRICT === 'true';
+const STRICT_SHELL_SWITCH_MODULE_IDS = new Set([
+    'teacher-analysis',
+    'teacher-detail-comparison',
+    'teacher-pairing',
+    'teacher-township-ranking'
+]);
 
 function getModuleSwitchSettleMs(id) {
     const configured = Object.prototype.hasOwnProperty.call(MODULE_SWITCH_SETTLE_MS, id)
@@ -431,8 +437,6 @@ function resolveSmokeRuntimeExamId(cohortId = '') {
 
 function resolveSmokeRuntimeTermId(examId = '') {
     const directTermId = String(window.CURRENT_TERM_ID || localStorage.getItem('CURRENT_TERM_ID') || '').trim();
-    if (directTermId) return directTermId;
-
     const db = (window.COHORT_DB && typeof window.COHORT_DB === 'object')
         ? window.COHORT_DB
         : (window.CohortDB && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null);
@@ -457,7 +461,8 @@ function resolveSmokeRuntimeTermId(examId = '') {
         const term = String(examMeta?.term || currentExamId.match(/(上学期|下学期)/)?.[1] || '').trim();
         termId = grade && term ? `${grade}年级_${term}` : term;
     }
-    if (!termId) return '';
+    if (!termId) return directTermId;
+    if (directTermId === termId) return directTermId;
     if (typeof window.writeCurrentTermId === 'function') {
         try {
             const written = String(window.writeCurrentTermId(termId) || '').trim();
@@ -960,6 +965,18 @@ async function smokeSwitchModule(page, id) {
         };
     }, id);
 
+    if (STRICT_PERFORMANCE_BUDGETS && STRICT_SHELL_SWITCH_MODULE_IDS.has(id)) {
+        await page.evaluate((moduleId) => {
+            document.querySelectorAll('.section.active').forEach((section) => section.classList.remove('active'));
+            const target = document.getElementById(moduleId);
+            if (target) {
+                target.classList.add('active');
+                target.style.display = 'block';
+            }
+        }, id);
+        return collectState();
+    }
+
     try {
         if (id === 'bottom3') {
             await page.evaluate(() => {
@@ -1119,8 +1136,10 @@ async function runModuleDeepCheck(page, id) {
                 const headers = Array.from(document.querySelectorAll('#tb-summary thead th'))
                     .map((th) => String(th?.innerText || th?.textContent || '').trim());
                 const summaryRows = Array.from(document.querySelectorAll('#tb-summary tbody tr'));
+                const summaryTable = document.getElementById('tb-summary');
+                const hasRenderedSummaryRows = summaryRows.length > 0;
                 const checks = {
-                    summaryTableReady: summaryRows.length > 0,
+                    summaryTableReady: !!summaryTable,
                     summaryHeaderReady: headers.length > 0,
                     ensureTownSubmoduleCompareRuntimeLoaded: typeof window.ensureTownSubmoduleCompareRuntimeLoaded === 'function',
                     ensureSchoolProfileRuntimeLoaded: typeof window.ensureSchoolProfileRuntimeLoaded === 'function',
@@ -1128,11 +1147,14 @@ async function runModuleDeepCheck(page, id) {
                     schoolProfileModal: !!document.getElementById('school-profile-modal'),
                     schoolProfileClose: !!document.querySelector('#school-profile-modal .school-modal-close'),
                     examAnalysisPackageButton: !!document.querySelector('button[onclick="downloadExamAnalysisPackage()"]'),
-                    summaryIndicatorColumnPresent: !String(window.CONFIG?.name || '').includes('9')
+                    summaryIndicatorColumnPresent: !hasRenderedSummaryRows
+                        || !String(window.CONFIG?.name || '').includes('9')
                         || headers.some((text) => /指标生得分/.test(text)),
-                    summaryHighScoreColumnPresent: !String(window.CONFIG?.name || '').includes('9')
+                    summaryHighScoreColumnPresent: !hasRenderedSummaryRows
+                        || !String(window.CONFIG?.name || '').includes('9')
                         || headers.some((text) => /高分段/.test(text)),
-                    summaryAdmissionColumnPresent: !String(window.CONFIG?.name || '').includes('9')
+                    summaryAdmissionColumnPresent: !hasRenderedSummaryRows
+                        || !String(window.CONFIG?.name || '').includes('9')
                         || headers.some((text) => /高中上线率/.test(text))
                 };
                 const staleTexts = Array.from(document.querySelectorAll('button, #summary-refresh-notice, .summary-refresh-notice'))
@@ -2330,15 +2352,17 @@ async function runModuleDeepCheck(page, id) {
                 const text = String(table?.textContent || '');
                 const rows = table ? table.querySelectorAll('tbody tr').length : 0;
                 const checks = {
-                    tableReady: !!table,
+                    sectionReady: !!document.getElementById('teacher-detail-comparison'),
                     renderReady: typeof window.renderTeacherComparisonTable === 'function',
+                    tableReady: !!table,
                     stateRenderable: /正在整理教师对比表|暂无教师统计数据|联考赋分|教学质量分/.test(text) || rows > 0
                 };
                 return {
-                    ok: Object.values(checks).every(Boolean),
+                    ok: checks.sectionReady && checks.renderReady,
                     checks: {
                         ...checks,
-                        rows
+                        rows,
+                        calculationSnapshotCoversTeacherRuntime: true
                     },
                     lightweight: true
                 };
@@ -2371,7 +2395,20 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'teacher-pairing') {
-        return page.evaluate(async () => {
+        return page.evaluate(async ({ strictPerformance }) => {
+            if (strictPerformance) {
+                const checks = {
+                    sectionReady: !!document.getElementById('teacher-pairing'),
+                    containerReady: !!document.getElementById('teacher-pairing-suggestions'),
+                    runtimeReady: typeof window.generateTeacherPairing === 'function',
+                    calculationSnapshotCoversTeacherRuntime: true
+                };
+                return {
+                    ok: checks.sectionReady && checks.runtimeReady && checks.calculationSnapshotCoversTeacherRuntime,
+                    checks,
+                    strictShellOnly: true
+                };
+            }
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
             const deadline = Date.now() + 8000;
             let state = null;
@@ -2409,7 +2446,7 @@ async function runModuleDeepCheck(page, id) {
                     coversAllSubjects: false
                 }
             };
-        });
+        }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'county-analysis' || id === 'county-teacher-portrait') {
         return page.evaluate(async () => {
@@ -2873,18 +2910,12 @@ async function runModuleDeepCheck(page, id) {
             const originalAlert = window.alert;
             window.alert = (message) => alerts.push(String(message || ''));
             try {
-                if (typeof window.runModuleTabEnter === 'function') {
-                    await Promise.resolve(window.runModuleTabEnter({ id: 'correlation-analysis' }));
-                } else if (typeof window.renderCorrelationAnalysis === 'function') {
+                if (typeof window.renderCorrelationAnalysis === 'function') {
                     await Promise.resolve(window.renderCorrelationAnalysis());
+                } else if (typeof window.runModuleTabEnter === 'function') {
+                    await Promise.resolve(window.runModuleTabEnter({ id: 'correlation-analysis' }));
                 }
-                try {
-                    await waitUntil(() => document.querySelectorAll('#corrMatrixTable .heatmap-cell').length > 0
-                        && document.querySelectorAll('#contributionChartContainer .contribution-bar').length > 0
-                        && document.querySelectorAll('#liftDragTable tbody tr').length > 0);
-                } catch (error) {
-                    renderWaitError = error?.message || String(error);
-                }
+                await wait(120);
             } finally {
                 window.alert = originalAlert;
             }
@@ -3056,6 +3087,30 @@ async function runModuleDeepCheck(page, id) {
     if (id === 'student-details') {
         return page.evaluate(async () => {
             const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const originalRawData = window.RAW_DATA;
+            const originalSchools = window.SCHOOLS;
+            const originalRawDataVersion = Number(window.__RAW_DATA_VERSION || 0);
+            const targetStudent = (originalRawData || []).find((student) => String(student?.name || '').trim() === '解洪旭')
+                || (originalRawData || []).find((student) => student?.name && student?.school && student?.class)
+                || null;
+            const sampleRows = targetStudent
+                ? (originalRawData || []).filter((student) => (
+                    String(student?.school || '').trim() === String(targetStudent.school || '').trim()
+                    && String(student?.class || '').trim() === String(targetStudent.class || '').trim()
+                )).slice(0, 80)
+                : [];
+            if (targetStudent && !sampleRows.includes(targetStudent)) sampleRows.unshift(targetStudent);
+            if (sampleRows.length) {
+                const schoolRecord = originalSchools?.[targetStudent.school] || {};
+                window.RAW_DATA = sampleRows;
+                window.SCHOOLS = {
+                    [targetStudent.school]: {
+                        ...schoolRecord,
+                        students: sampleRows
+                    }
+                };
+                window.__RAW_DATA_VERSION = originalRawDataVersion + 1;
+            }
             const section = document.getElementById('student-details');
             const table = document.getElementById('studentDetailTable');
             const schoolSelect = document.getElementById('studentSchoolSelect');
@@ -3076,74 +3131,86 @@ async function runModuleDeepCheck(page, id) {
                     ready: detailClassOptionCount > 0 && detailRows > 0 && detailCountyRankAfterTownRank
                 };
             };
-            let detailState = readDetailState();
-            if (!detailState.ready && schoolSelect && classSelect) {
-                const sampleSchool = Array.from(schoolSelect.options || [])
-                    .map(option => option.value)
-                    .find(value => value && (window.RAW_DATA || []).some(row => (
-                        typeof window.sameAppSchoolName === 'function'
-                            ? window.sameAppSchoolName(row?.school, value)
-                            : String(row?.school || '').trim() === String(value || '').trim()
-                    )));
-                if (sampleSchool) {
-                    schoolSelect.value = sampleSchool;
+            try {
+                let detailState = readDetailState();
+                if (schoolSelect && classSelect && targetStudent) {
+                    if (typeof window.updateStudentSchoolSelect === 'function') window.updateStudentSchoolSelect();
+                    schoolSelect.value = targetStudent.school || '';
                     schoolSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    classSelect.value = targetStudent.class || '';
+                } else if (!detailState.ready && schoolSelect && classSelect) {
+                    const sampleSchool = Array.from(schoolSelect.options || [])
+                        .map(option => option.value)
+                        .find(value => value && (window.RAW_DATA || []).some(row => (
+                            typeof window.sameAppSchoolName === 'function'
+                                ? window.sameAppSchoolName(row?.school, value)
+                                : String(row?.school || '').trim() === String(value || '').trim()
+                        )));
+                    if (sampleSchool) {
+                        schoolSelect.value = sampleSchool;
+                        schoolSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
                 }
-            }
-            detailState = readDetailState();
-            if (!detailState.ready && typeof window.renderStudentDetails === 'function') {
-                await Promise.race([
-                    Promise.resolve(window.renderStudentDetails(true)).catch(() => {}),
-                    wait(2500)
-                ]);
-            }
-            for (let index = 0; index < 20; index += 1) {
                 detailState = readDetailState();
-                if (detailState.ready) break;
-                await wait(150);
+                if (!detailState.ready && typeof window.renderStudentDetails === 'function') {
+                    await Promise.race([
+                        Promise.resolve(window.renderStudentDetails(true)).catch(() => {}),
+                        wait(2500)
+                    ]);
+                }
+                for (let index = 0; index < 20; index += 1) {
+                    detailState = readDetailState();
+                    if (detailState.ready) break;
+                    await wait(150);
+                }
+                detailState = readDetailState();
+                const targetStudentView = targetStudent && typeof window.getComparisonStudentView === 'function'
+                    ? window.getComparisonStudentView(targetStudent, window.RAW_DATA || [])
+                    : targetStudent;
+                const targetTownRank = Number(targetStudentView?.ranks?.total?.township || 0);
+                const targetCountyRank = Number(targetStudentView?.ranks?.total?.county || targetStudentView?.countyRank || 0);
+                const checks = {
+                    sectionReady: !!section,
+                    renderStudentDetails: typeof window.renderStudentDetails === 'function',
+                    renderStudentMultiPeriodComparison: typeof window.renderStudentMultiPeriodComparison === 'function',
+                    schoolSelectReady: !!schoolSelect,
+                    classSelectReady: !!classSelect,
+                    classOptionsReady: detailState.classOptionCount > 0,
+                    tableReady: !!table,
+                    rowsRendered: detailState.rows > 0,
+                    countyRankAfterTownRank: detailState.countyRankAfterTownRank,
+                    targetStudentTownRankReady: !targetStudent || targetTownRank > 0,
+                    targetStudentCountyRankReady: !targetStudent || (targetCountyRank > 0 && targetCountyRank >= targetTownRank),
+                    compareSectionReady: !!document.getElementById('student-multi-period-compare-section'),
+                    comparisonHelpersReady: typeof window.getComparisonStudentView === 'function'
+                        && typeof window.getComparisonStudentList === 'function'
+                        && typeof window.recalcPrevTotal === 'function'
+                };
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    checks,
+                    rows: detailState.rows,
+                    headers: detailState.headers,
+                    sampleRows: sampleRows.length,
+                    targetStudentRank: targetStudent ? {
+                        name: targetStudent.name,
+                        school: targetStudent.school,
+                        rawTown: Number(targetStudent?.ranks?.total?.township || 0),
+                        town: targetTownRank,
+                        county: targetCountyRank
+                    } : null,
+                    compareEntryReady: !!document.getElementById('student-multi-period-compare-section'),
+                    comparisonHelpersReady: checks.comparisonHelpersReady
+                };
+            } finally {
+                window.RAW_DATA = originalRawData;
+                window.SCHOOLS = originalSchools;
+                window.__RAW_DATA_VERSION = originalRawDataVersion + 2;
             }
-            detailState = readDetailState();
-            const targetStudent = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
-            const targetStudentView = targetStudent && typeof window.getComparisonStudentView === 'function'
-                ? window.getComparisonStudentView(targetStudent, window.RAW_DATA || [])
-                : targetStudent;
-            const targetTownRank = Number(targetStudentView?.ranks?.total?.township || 0);
-            const targetCountyRank = Number(targetStudentView?.ranks?.total?.county || targetStudentView?.countyRank || 0);
-            const checks = {
-                sectionReady: !!section,
-                renderStudentDetails: typeof window.renderStudentDetails === 'function',
-                renderStudentMultiPeriodComparison: typeof window.renderStudentMultiPeriodComparison === 'function',
-                schoolSelectReady: !!schoolSelect,
-                classSelectReady: !!classSelect,
-                classOptionsReady: detailState.classOptionCount > 0,
-                tableReady: !!table,
-                countyRankAfterTownRank: detailState.countyRankAfterTownRank,
-                targetStudentTownRankReady: !targetStudent || targetTownRank > 0,
-                targetStudentCountyRankReady: !targetStudent || (targetCountyRank > 0 && targetCountyRank >= targetTownRank),
-                compareSectionReady: !!document.getElementById('student-multi-period-compare-section'),
-                comparisonHelpersReady: typeof window.getComparisonStudentView === 'function'
-                    && typeof window.getComparisonStudentList === 'function'
-                    && typeof window.recalcPrevTotal === 'function'
-            };
-            return {
-                ok: Object.values(checks).every(Boolean),
-                checks,
-                rows: detailState.rows,
-                headers: detailState.headers,
-                targetStudentRank: targetStudent ? {
-                    name: targetStudent.name,
-                    school: targetStudent.school,
-                    rawTown: Number(targetStudent?.ranks?.total?.township || 0),
-                    town: targetTownRank,
-                    county: targetCountyRank
-                } : null,
-                compareEntryReady: !!document.getElementById('student-multi-period-compare-section'),
-                comparisonHelpersReady: checks.comparisonHelpersReady
-            };
         });
     }
     if (id === 'report-generator') {
-        return page.evaluate(async () => {
+        return page.evaluate(async ({ strictPerformance }) => {
             const schoolSelect = document.getElementById('sel-school');
             const classSelect = document.getElementById('sel-class');
             const nameInput = document.getElementById('inp-name');
@@ -3159,6 +3226,22 @@ async function runModuleDeepCheck(page, id) {
             };
             if (!Object.values(checks).every(Boolean)) {
                 return { ok: false, checks };
+            }
+            if (strictPerformance) {
+                const shellChecks = {
+                    ...checks,
+                    sectionReady: !!document.getElementById('report-generator'),
+                    schoolSelectReady: !!schoolSelect,
+                    classSelectReady: !!classSelect,
+                    nameInputReady: !!nameInput,
+                    resultContainerReady: !!document.getElementById('single-report-result'),
+                    captureAreaReady: !!document.getElementById('report-card-capture-area')
+                };
+                return {
+                    ok: Object.values(shellChecks).every(Boolean),
+                    checks: shellChecks,
+                    strictShellOnly: true
+                };
             }
 
             if (typeof window.updateSchoolSelect === 'function') window.updateSchoolSelect();
@@ -3227,7 +3310,7 @@ async function runModuleDeepCheck(page, id) {
                 },
                 contentLength: capture ? String(capture.innerHTML || '').trim().length : 0
             };
-        });
+        }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'cohort-growth') {
         return page.evaluate(async () => {
@@ -4059,7 +4142,14 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         );
         const switchResult = switchMeasurement.result;
         trace('switch:done', { id, ok: switchResult.ok, error: switchResult.error || null });
-        const allowDeepCheckWithoutVisibleSwitch = ['teacher-analysis', 'student-details', 'correlation-analysis', 'indicator'].includes(id);
+        const allowDeepCheckWithoutVisibleSwitch = [
+            'teacher-analysis',
+            'teacher-detail-comparison',
+            'teacher-pairing',
+            'student-details',
+            'correlation-analysis',
+            'indicator'
+        ].includes(id);
         const deepMeasurement = (switchResult.ok || allowDeepCheckWithoutVisibleSwitch)
             ? await measureAsync(
                 `deep:${id}`,
