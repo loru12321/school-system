@@ -168,12 +168,13 @@ assert.ok(
 assert.ok(
     indexSource.includes('id="cloud-manager-modal" class="modal" x-ignore')
         && indexSource.includes('id="cloud-manager-body"')
+        && indexSource.includes('#cloud-manager-modal:target { display: flex !important; }')
         && indexSource.includes('DataManager.closeCloudManager()'),
     'the lightweight cloud manager modal should be present in the static DOM before the first header click'
 );
 
 assert.ok(
-    /modal\.style\.display = 'flex';[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*this\.mountCloudAreaInCloudManager\(\);/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
+    /window\.location\.hash = 'cloud-manager-modal';[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*this\.mountCloudAreaInCloudManager\(\);/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
     'the cloud manager should paint its modal shell before mounting the large cloud data subtree'
 );
 

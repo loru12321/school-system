@@ -153,18 +153,16 @@ const DataManager = {
         // effect ("云端数据 点击无反应"); now the dialog always appears and any
         // failure downstream is surfaced inside it instead of swallowed.
         const modal = this.ensureCloudManagerModal();
-        modal.style.display = 'flex';
+        if (window.location.hash !== '#cloud-manager-modal') {
+            window.location.hash = 'cloud-manager-modal';
+        }
         this.currentTab = 'cloud';
         this.cloudPanelView = 'list';
-        const body = document.getElementById('cloud-manager-body');
-        if (body) {
-            body.innerHTML = '<div style="padding:24px; text-align:center; color:#64748b;">正在打开云端数据面板…</div>';
-        }
         // Moving the large dm-cloud-area subtree can trigger framework DOM scans.
         // Keep both that mount and the network-bound list render off the click
         // stack so the modal shell paints before any expensive follow-up work.
         window.setTimeout(() => {
-            if (this.currentTab !== 'cloud' || modal.style.display === 'none') return;
+            if (this.currentTab !== 'cloud' || window.location.hash !== '#cloud-manager-modal') return;
             const mounted = this.mountCloudAreaInCloudManager();
             if (!mounted) {
                 const currentBody = document.getElementById('cloud-manager-body');
@@ -182,7 +180,9 @@ const DataManager = {
 
     closeCloudManager: function () {
         const modal = document.getElementById('cloud-manager-modal');
-        if (modal) modal.style.display = 'none';
+        if (window.location.hash === '#cloud-manager-modal') {
+            history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+        }
         const cloudArea = document.getElementById('dm-cloud-area');
         if (cloudArea && this.cloudAreaHome && this.cloudAreaHome.parentNode && cloudArea.parentElement !== this.cloudAreaHome.parentNode) {
             this.cloudAreaHome.parentNode.insertBefore(cloudArea, this.cloudAreaHome.nextSibling);

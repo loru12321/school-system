@@ -34,7 +34,8 @@ const pass = process.env.SMOKE_PASS || 'admin123';
             document.getElementById('header-data-mgr-btn')?.click();
             const modal = document.getElementById('cloud-manager-modal');
             return {
-                modalVisible: !!modal && getComputedStyle(modal).display !== 'none',
+                modalVisible: window.location.hash === '#cloud-manager-modal'
+                    && !!modal && getComputedStyle(modal).display !== 'none',
                 heading: String(document.querySelector('#cloud-manager-modal h3')?.textContent || '').trim(),
                 currentTab: window.DataManager?.currentTab || '',
                 scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0

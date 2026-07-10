@@ -3811,6 +3811,10 @@
         </div>
     </div>
 
+    <style id="cloud-manager-target-style">
+        #cloud-manager-modal { display: none !important; }
+        #cloud-manager-modal:target { display: flex !important; }
+    </style>
     <!-- 云端数据轻量弹窗预置在静态 DOM 中，避免首次点击时动态插入节点触发框架全树扫描。 -->
     <div id="cloud-manager-modal" class="modal" x-ignore data-mojibake-skip="true" style="display:none;"
         onclick="if(event.target===this) DataManager.closeCloudManager()">
