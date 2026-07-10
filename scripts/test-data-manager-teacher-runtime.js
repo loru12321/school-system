@@ -171,6 +171,29 @@ async function run() {
     ]);
     assert.strictEqual(conflictingTeacher.conflicts.length, 1);
 
+    const termContext = runtime.parseTeacherTermContext('2025-2026_下学期_9年级', 'fallback');
+    assert.deepStrictEqual(termContext, {
+        termId: '2025-2026_下学期_9年级',
+        academicYear: '2025-2026',
+        term: '下学期',
+        grade: 9,
+        cohortId: '2022',
+        label: '2022届 · 2025-2026学年 · 下学期 · 9年级'
+    });
+    const importContext = runtime.summarizeTeacherImportContext([
+        { key: '9.1_数学', teacher: '张老师', school: '银山实验学校' },
+        { key: '9.2_语文', teacher: '李老师', school: '银山实验学校' }
+    ], '2025-2026_下学期_9年级', '');
+    assert.deepStrictEqual(importContext.detectedGrades, [9]);
+    assert.deepStrictEqual(importContext.mismatchedGrades, []);
+    assert.strictEqual(importContext.subjectCount, 2);
+    assert.strictEqual(importContext.schoolCount, 1);
+
+    const wrongGradeImport = runtime.summarizeTeacherImportContext([
+        { key: '8.1_数学', teacher: '张老师', school: '银山实验学校' }
+    ], '2025-2026_下学期_9年级', '');
+    assert.deepStrictEqual(wrongGradeImport.mismatchedGrades, [8]);
+
     console.log('data-manager-teacher-runtime tests passed');
 }
 

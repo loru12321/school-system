@@ -1399,6 +1399,21 @@ const DataManager = {
             sel.value = prefer;
             syncTeacherTermStorage(prefer);
         } else if (sel.options.length > 0) sel.value = sel.options[0].value;
+        this.renderTeacherContextStatus();
+    },
+
+    renderTeacherContextStatus: function () {
+        const status = document.getElementById('dm-teacher-context-status');
+        if (!status) return;
+        const termId = String(document.getElementById('dm-teacher-term-select')?.value
+            || getPreferredTeacherTermId()
+            || '').trim();
+        const cohortId = String(window.CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+        const context = requireDataManagerTeacherRuntime().parseTeacherTermContext(termId, cohortId);
+        const rowCount = Object.keys(window.TEACHER_MAP || {}).length;
+        status.innerHTML = `<strong>当前正在维护：</strong>${this.escapeDataManagerHtml(context.label)}`
+            + ` <span style="margin-left:8px; color:#475569;">当前 ${rowCount} 条任课记录</span>`
+            + `<div style="margin-top:4px; color:#475569;">Excel 导入、手动新增和“更换教师”都只写入这个学期；切换学期后会读取另一份任课表。</div>`;
     },
 
     switchTeacherTerm: function (termId) {
@@ -1642,6 +1657,28 @@ const DataManager = {
                 const newTeacherSchoolMap = importResult.schoolMap;
                 count = importResult.count;
 
+                const importContext = requireDataManagerTeacherRuntime().summarizeTeacherImportContext(
+                    teacherAssignments,
+                    termId,
+                    window.CURRENT_COHORT_ID || readWorkspaceCohortId() || ''
+                );
+                if (importContext.mismatchedGrades.length > 0) {
+                    if (window.UI) UI.loading(false);
+                    alert(`❌ 任课表年级与当前选择不一致\n\n当前归属：${importContext.label}\n文件中识别到：${importContext.detectedGrades.map(grade => grade + '年级').join('、')}\n\n请切换到正确的届别/学期后重新导入。`);
+                    input.value = '';
+                    return;
+                }
+
+                const confirmText = `确认导入这份任课表吗？\n\n文件：${file.name}\n归属：${importContext.label}\n记录：${count} 条\n学校：${importContext.schoolCount || '未在文件中标明'}\n学科：${importContext.subjectCount}\n\n导入会替换当前所选学期的任课表，不会修改其他届别或学期。`;
+                const confirmed = window.UI && typeof UI.confirm === 'function'
+                    ? await UI.confirm(confirmText)
+                    : confirm(confirmText);
+                if (!confirmed) {
+                    if (window.UI) UI.loading(false);
+                    input.value = '';
+                    return;
+                }
+
                 if (count > 0) {
                     setTeacherMap(newTeacherMap);
                     setTeacherSchoolMap(newTeacherSchoolMap);
@@ -1664,6 +1701,7 @@ const DataManager = {
                 updateStatusPanel();
 
                 DataManager.renderTeachers();
+                DataManager.renderTeacherContextStatus();
                 logAction('导入', `任课表导入 ${count} 条（${termId}）`);
 
                 if (window.CloudManager && CloudManager.saveTeachers) {
@@ -1722,6 +1760,7 @@ const DataManager = {
                 this.renderTeacherTermSelect();
             }
         }
+        this.renderTeacherContextStatus();
 
         const classSchoolMap = (typeof getClassSchoolMapForAllData === 'function') ? getClassSchoolMapForAllData() : {};
         const inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
@@ -1812,7 +1851,7 @@ const DataManager = {
                         <td><span class="badge" style="background:#f1f5f9; color:#475569;">${this.escapeDataManagerHtml(t.subject)}</span></td>
                         <td style="font-weight:bold; color:#1e293b;">${this.escapeDataManagerHtml(t.name)}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="DataManager.editTeacher(${keyArg}, ${nameArg})" style="padding:2px 6px; font-size:11px;">修改</button>
+                            <button class="btn btn-sm btn-primary" onclick="DataManager.editTeacher(${keyArg}, ${nameArg})" style="padding:2px 6px; font-size:11px;">更换教师</button>
                             <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTeacher(${keyArg})" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
                         </td>
                     </tr>`;
@@ -1886,13 +1925,45 @@ const DataManager = {
     },
 
     editTeacher: function (key, oldName) {
-        const newName = prompt(`修改 [${key.replace('_', ' ')}] 的任课教师：`, oldName);
-        if (newName && newName.trim()) {
-            setTeacherMap({ ...TEACHER_MAP, [key]: newName.trim() });
-            this.syncTeacherHistory();
+        const separator = String(key || '').indexOf('_');
+        const className = separator >= 0 ? String(key).slice(0, separator) : String(key || '');
+        const subject = separator >= 0 ? String(key).slice(separator + 1) : '';
+        const school = String((window.TEACHER_SCHOOL_MAP || {})[key]
+            || document.getElementById('dm-teacher-school-select')?.value
+            || readCurrentSchool()
+            || '未标明学校').trim();
+        const termId = String(document.getElementById('dm-teacher-term-select')?.value
+            || getPreferredTeacherTermId()
+            || '').trim();
+        const context = requireDataManagerTeacherRuntime().parseTeacherTermContext(
+            termId,
+            window.CURRENT_COHORT_ID || readWorkspaceCohortId() || ''
+        );
+        Swal.fire({
+            title: '更换任课教师',
+            html: `<div style="text-align:left; font-size:13px; line-height:1.9; padding:0 8px;">`
+                + `<div style="padding:10px 12px; border-radius:10px; background:#eff6ff; color:#1e3a8a; margin-bottom:12px;"><strong>归属：</strong>${this.escapeDataManagerHtml(context.label)}</div>`
+                + `<div><strong>学校：</strong>${this.escapeDataManagerHtml(school)}</div>`
+                + `<div><strong>班级 / 学科：</strong>${this.escapeDataManagerHtml(className)} / ${this.escapeDataManagerHtml(subject)}</div>`
+                + `<div><strong>原教师：</strong>${this.escapeDataManagerHtml(oldName)}</div>`
+                + `<label for="replace-teacher-name" style="display:block; margin-top:12px; font-weight:700;">新教师姓名：</label>`
+                + `<input id="replace-teacher-name" class="swal2-input" value="${this.escapeDataManagerHtml(oldName)}" style="width:100%; margin:6px 0 0; box-sizing:border-box;">`
+                + `<div style="margin-top:8px; color:#64748b;">本次更换只影响上面显示的学期。确认后请点击“上传云端”或右上角“保存修改并同步云端”。</div>`
+                + `</div>`,
+            showCancelButton: true,
+            confirmButtonText: '确认更换',
+            cancelButtonText: '取消',
+            preConfirm: () => String(document.getElementById('replace-teacher-name')?.value || '').trim()
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            const newName = String(result.value || '').trim();
+            if (!newName || newName === String(oldName || '').trim()) return;
+            setTeacherMap({ ...TEACHER_MAP, [key]: newName });
+            this.syncTeacherHistory({ termId, source: 'teacher-replacement' });
             this.renderTeachers();
-            UI.toast("已修改 (需点击保存)", "info");
-        }
+            this.renderTeacherContextStatus();
+            UI.toast(`已将 ${className} ${subject} 从“${oldName}”更换为“${newName}”，请同步云端`, "info");
+        });
     },
 
     deleteTeacher: function (key) {

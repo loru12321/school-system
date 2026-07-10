@@ -98,6 +98,66 @@
         return `❌ ${String(key || '').replace('_', ' ')} 已属于 ${existingSchool}，不能直接覆盖为 ${selectedSchool} 的教师。\n\n请分别维护存在同名班级/学科的学校任课表。`;
     }
 
+    function parseTeacherTermContext(termId, fallbackCohortId = '') {
+        const exactTermId = String(termId || '').trim();
+        const parts = exactTermId.split('_').filter(Boolean);
+        const academicYear = /^\d{4}-\d{4}$/.test(parts[0] || '') ? parts[0] : '';
+        const term = parts[1] || '';
+        const gradeMatch = String(parts[2] || '').match(/(\d+)/);
+        const grade = gradeMatch ? Number(gradeMatch[1]) : 0;
+        const yearMatch = academicYear.match(/^(\d{4})/);
+        const inferredCohortId = yearMatch && grade >= 6
+            ? String(Number(yearMatch[1]) - (grade - 6))
+            : '';
+        const cohortId = inferredCohortId || String(fallbackCohortId || '').trim();
+        const scopeParts = [
+            cohortId ? `${cohortId}届` : '',
+            academicYear ? `${academicYear}学年` : '',
+            term,
+            grade ? `${grade}年级` : ''
+        ].filter(Boolean);
+        return {
+            termId: exactTermId,
+            academicYear,
+            term,
+            grade,
+            cohortId,
+            label: scopeParts.join(' · ') || exactTermId || '未选择学期'
+        };
+    }
+
+    function summarizeTeacherImportContext(assignments, termId, fallbackCohortId = '') {
+        const context = parseTeacherTermContext(termId, fallbackCohortId);
+        const schools = new Set();
+        const subjects = new Set();
+        const detectedGrades = new Set();
+        let unknownGradeCount = 0;
+        (Array.isArray(assignments) ? assignments : []).forEach((assignment) => {
+            const key = String(assignment?.key || '').trim();
+            const separator = key.indexOf('_');
+            const className = separator >= 0 ? key.slice(0, separator) : key;
+            const subject = separator >= 0 ? key.slice(separator + 1) : '';
+            const gradeMatch = String(className || '').match(/^\s*(\d{1,2})/);
+            const grade = gradeMatch ? Number(String(gradeMatch[1])[0]) : 0;
+            if (grade >= 6 && grade <= 9) detectedGrades.add(grade);
+            else unknownGradeCount += 1;
+            if (subject) subjects.add(subject);
+            if (assignment?.school) schools.add(String(assignment.school).trim());
+        });
+        const mismatchedGrades = context.grade
+            ? [...detectedGrades].filter((grade) => grade !== context.grade).sort((a, b) => a - b)
+            : [];
+        return {
+            ...context,
+            assignmentCount: Array.isArray(assignments) ? assignments.length : 0,
+            schoolCount: schools.size,
+            subjectCount: subjects.size,
+            detectedGrades: [...detectedGrades].sort((a, b) => a - b),
+            mismatchedGrades,
+            unknownGradeCount
+        };
+    }
+
     function switchTeacherTerm(manager, termId) {
         if (!termId) return;
         const exactTermId = String(termId || '').trim();
@@ -106,6 +166,7 @@
             : activeTermId;
         if (activeTermId === exactTermId && storedTermId === exactTermId
             && root.TEACHER_MAP && Object.keys(root.TEACHER_MAP).length > 0) {
+            callManagerMethod(manager, 'renderTeacherContextStatus');
             return true;
         }
 
@@ -143,6 +204,7 @@
                 root.setTeacherSchoolMap(asPlainMap(resolved.schoolMap));
             }
             callManagerMethod(manager, 'renderTeachers');
+            callManagerMethod(manager, 'renderTeacherContextStatus');
             callManagerMethod(manager, 'refreshTeacherAnalysis');
             return true;
         }
@@ -151,6 +213,7 @@
         if (typeof root.setTeacherMap === 'function') root.setTeacherMap({});
         if (typeof root.setTeacherSchoolMap === 'function') root.setTeacherSchoolMap({});
         callManagerMethod(manager, 'renderTeachers');
+        callManagerMethod(manager, 'renderTeacherContextStatus');
 
         console.log(`⚠️ 本地无学期 ${baseTermId || exactTermId} 的任课数据，尝试从云端同步...`);
         if (root.CloudManager && typeof root.CloudManager.loadTeachers === 'function') {
@@ -256,6 +319,8 @@
         refreshTeacherAnalysis,
         buildTeacherImportMaps,
         formatTeacherImportConflictMessage,
-        formatTeacherSchoolOwnershipConflictMessage
+        formatTeacherSchoolOwnershipConflictMessage,
+        parseTeacherTermContext,
+        summarizeTeacherImportContext
     };
 });

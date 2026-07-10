@@ -2214,10 +2214,37 @@
         }
 
         if (paramsEl) {
+            const cohortId = normalizeText(
+                root.CURRENT_COHORT_ID
+                || (typeof root.readWorkspaceCohortId === 'function' ? root.readWorkspaceCohortId() : '')
+            ) || '未选择';
+            const currentExamId = getCurrentExamKey();
+            const cohortDb = root.COHORT_DB && typeof root.COHORT_DB === 'object'
+                ? root.COHORT_DB
+                : (root.CohortDB && typeof root.CohortDB.ensure === 'function' ? root.CohortDB.ensure() : null);
+            const storedExamMeta = currentExamId && cohortDb?.exams?.[currentExamId]?.meta
+                ? cohortDb.exams[currentExamId].meta
+                : null;
+            const examMeta = storedExamMeta
+                || (typeof root.getExamMetaFromUI === 'function' ? (root.getExamMetaFromUI() || {}) : {});
+            const grade = typeof root.computeCohortGrade === 'function'
+                ? normalizeText(root.computeCohortGrade({ id: cohortId, year: cohortId, startGrade: 6 }, examMeta))
+                : normalizeText(examMeta.grade);
+            const scopeParts = [
+                cohortId !== '未选择' ? `${cohortId}届` : '未选择届别',
+                normalizeText(examMeta.year) ? `${normalizeText(examMeta.year)}学年` : '',
+                normalizeText(examMeta.term),
+                grade ? `${grade}年级` : ''
+            ].filter(Boolean);
+            const scopeText = scopeParts.join(' · ');
             const paramsHtml = `
                 <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
                     <div><strong>参数状态：</strong>${paramsMeta.title}</div>
                     ${pill(paramsMeta.title, paramsMeta.tone)}
+                </div>
+                <div style="margin-top:8px; padding:8px 10px; border-radius:8px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; line-height:1.8;">
+                    <strong>当前参数归属：</strong>${escapeHtml(scopeText)}<br>
+                    参数按届别单独保存；切换到另一届后，会读取另一届自己的指标参数。
                 </div>
                 <div style="margin-top:6px; line-height:1.8;">${paramsMeta.detail}</div>
             `;

@@ -103,6 +103,22 @@ const pass = process.env.SMOKE_PASS || 'admin123';
         if (backupList.activeCategory !== 'backup' || backupList.backupRows < 1) throw new Error('backup category did not isolate historical backups');
         if ([scoreList, teacherList, workspaceList, backupList].some((item) => item.internalHistoryRows > 0)) throw new Error('internal student history records leaked into a cloud category');
         if (Object.values(categoryCounts).reduce((sum, count) => sum + count, 0) < 26) throw new Error('cloud category counts are incomplete');
+        await page.evaluate(() => window.DataManager?.switchTab?.('teacher'));
+        await page.waitForFunction(() => {
+            const text = String(document.getElementById('dm-teacher-context-status')?.textContent || '');
+            return text.includes('当前正在维护') && text.includes('2022届') && text.includes('9年级');
+        }, null, { timeout: 10000 });
+        const teacherContext = await page.evaluate(() => ({
+            termId: String(document.getElementById('dm-teacher-term-select')?.value || ''),
+            text: String(document.getElementById('dm-teacher-context-status')?.textContent || '').replace(/\s+/g, ' ').trim()
+        }));
+        await page.evaluate(() => window.DataManager?.switchTab?.('params'));
+        await page.waitForFunction(() => {
+            const text = String(document.getElementById('dm-params-status')?.textContent || '');
+            return text.includes('当前参数归属') && text.includes('2022届') && text.includes('2025-2026学年')
+                && text.includes('下学期') && text.includes('9年级');
+        }, null, { timeout: 10000 });
+        const paramsContext = await page.evaluate(() => String(document.getElementById('dm-params-status')?.textContent || '').replace(/\s+/g, ' ').trim());
         await page.locator('#data-manager-modal .modal-close-btn').click();
         await page.waitForFunction(() => {
             const modal = document.getElementById('data-manager-modal');
@@ -115,6 +131,8 @@ const pass = process.env.SMOKE_PASS || 'admin123';
             clickResponseMs,
             ...result,
             modalClosed,
+            teacherContext,
+            paramsContext,
             cloudList
         }, null, 2));
     } finally {

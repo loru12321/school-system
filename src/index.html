@@ -100,8 +100,8 @@
     <script defer src="./assets/js/cohort-sync-status-runtime.js"></script>
     <script defer src="./assets/js/entrance-sound-runtime.js"></script>
     <script defer src="./assets/js/runtime-loader-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-5f8d5e97babd.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-5f8d5e97babd.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-e285f2366348.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-e285f2366348.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -3952,6 +3952,10 @@
 
                 <!-- ==================== 教师任课管理区域 ==================== -->
                 <div id="dm-teacher-area" style="display:none;">
+                    <div id="dm-teacher-context-status"
+                        style="margin:0 10px 10px; padding:12px 14px; border-radius:12px; border:1px solid #bfdbfe; background:#eff6ff; color:#1e3a8a; font-size:13px; line-height:1.7;">
+                        请先选择要维护的届别和学期。Excel 导入及教师更换只会写入这里显示的学期。
+                    </div>
                     <!-- 顶部控制栏 -->
                     <div
                         style="background:#f8fafc; padding:12px; border-bottom:2px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; position:sticky; top:0; z-index:10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -3992,7 +3996,7 @@
                             <button class="btn btn-sm btn-green"
                                 onclick="document.getElementById('dm-teacher-file').click()" title="导入Excel格式的教师任课表"
                                 style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:4px;">
-                                <i class="ti ti-file-import"></i> Excel导入
+                                <i class="ti ti-file-import"></i> 导入到当前学期
                             </button>
                             <input type="file" id="dm-teacher-file" accept=".xlsx,.xls" hidden
                                 onchange="DataManager.handleTeacherUpload(this)">

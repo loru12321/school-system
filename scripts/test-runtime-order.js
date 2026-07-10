@@ -178,6 +178,7 @@ const comparisonRenderRuntime = fs.readFileSync(comparisonRenderRuntimePath, 'ut
 const cohortExamMetaRuntime = fs.readFileSync(cohortExamMetaRuntimePath, 'utf8');
 const cohortDbCoreRuntime = fs.readFileSync(cohortDbCoreRuntimePath, 'utf8');
 const dataManagerCoreRuntime = fs.readFileSync(dataManagerCoreRuntimePath, 'utf8');
+const dataCloudRuntime = fs.readFileSync(dataCloudRuntimePath, 'utf8');
 const runtimeLoaderRuntime = fs.readFileSync(runtimeLoaderRuntimePath, 'utf8');
 const bootRuntime = `${bootRuntimeSource}\n${runtimeLoaderRuntime}`;
 const shellRuntime = fs.readFileSync(shellRuntimePath, 'utf8');
@@ -1035,6 +1036,18 @@ assert.ok(studentOverviewRuntime.includes('const rerender = () => smScheduleStud
 assert.ok(dataManagerCoreRuntime.includes('const teacherRowsHtml = displayList.map'), 'teacher table rendering should build rows off-DOM before writing to tbody');
 assert.ok(dataManagerCoreRuntime.includes("tbody.innerHTML = teacherRowsHtml.join('');"), 'teacher table rendering should write teacher rows to the DOM once');
 assert.ok(!dataManagerCoreRuntime.includes('displayList.forEach(t => {'), 'teacher table rendering should avoid per-row DOM writes');
+assert.ok(
+    indexHtml.includes('id="dm-teacher-context-status"')
+        && dataManagerCoreRuntime.includes('renderTeacherContextStatus: function ()')
+        && dataManagerCoreRuntime.includes('更换任课教师')
+        && dataManagerCoreRuntime.includes('summarizeTeacherImportContext'),
+    'teacher maintenance should show the active cohort/term, confirm imports, and expose an explicit teacher replacement flow'
+);
+assert.ok(
+    dataCloudRuntime.includes('<strong>当前参数归属：</strong>')
+        && dataCloudRuntime.includes('参数按届别单独保存；切换到另一届后，会读取另一届自己的指标参数。'),
+    'indicator parameter status should identify the active cohort, school year, term, and grade'
+);
 assert.ok(appSource.includes('const teacherInputFragment = document.createDocumentFragment();'), 'teacher input generation should collect controls in a fragment');
 assert.ok(appSource.includes('container.appendChild(teacherInputFragment);'), 'teacher input generation should attach controls with one fragment append');
 assert.ok(!appSource.includes('container.appendChild(inputDiv);'), 'teacher input generation should avoid per-control container appends');
