@@ -958,7 +958,7 @@
             } else {
                 const fetchStartedAt = nowMs();
                 const metaResult = await selectSystemDataRecords({
-                    select: 'key, created_at, updated_at',
+                    select: 'key, created_at, updated_at, size_bytes',
                     ...listQueryOptions
                 }, { force: !!options.force });
                 rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.fetchMetadata', fetchStartedAt, {

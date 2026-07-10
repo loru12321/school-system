@@ -174,6 +174,17 @@ assert.ok(
 );
 
 assert.ok(
+    /id="cloud-filter-current"\s+onchange=/.test(indexSource)
+        && !/id="cloud-filter-current"\s+checked/.test(indexSource),
+    'cloud data management should show all user-visible snapshots by default instead of silently limiting the list to the current workspace'
+);
+assert.ok(
+    fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8')
+        .includes("select: 'key, created_at, updated_at, size_bytes'"),
+    'cloud snapshot metadata queries should include stored byte sizes for the list summary'
+);
+
+assert.ok(
     /window\.location\.hash = 'cloud-manager-modal';[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*this\.mountCloudAreaInCloudManager\(\);/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
     'the cloud manager should paint its modal shell before mounting the large cloud data subtree'
 );
