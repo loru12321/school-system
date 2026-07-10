@@ -593,6 +593,7 @@ const DataManager = {
         if (/^cohort::/i.test(text)) return 'cohort';
         if (isLegacyWorkspaceShadowExamId(text)) return 'shadow';
         if (/^TEACHERS_/i.test(text)) return 'teacher';
+        if (/^STUDENT_HISTORY_V1_/i.test(text)) return 'student-history';
         if (/^(STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(text)) return 'compare';
         if (normalizeCompareCohortId(text)) return 'snapshot';
         return 'other';

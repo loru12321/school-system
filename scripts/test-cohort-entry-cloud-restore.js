@@ -180,8 +180,17 @@ assert.ok(
 );
 assert.ok(
     fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8')
-        .includes("select: 'key, created_at, updated_at, size_bytes'"),
+        .includes("const select = 'key, created_at, updated_at, size_bytes';"),
     'cloud snapshot metadata queries should include stored byte sizes for the list summary'
+);
+assert.ok(
+    fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8')
+        .includes("kind: 'exam', limit: 1000")
+        && fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8')
+            .includes("kind: 'workspace', limit: 1000")
+        && fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')
+            .includes("if (/^STUDENT_HISTORY_V1_/i.test(text)) return 'student-history';"),
+    'the default cloud list should query user-visible snapshots without exposing internal student history index rows'
 );
 
 assert.ok(

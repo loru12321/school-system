@@ -242,6 +242,25 @@
         }
     }
 
+    async function fetchCloudBackupMetadata(selectSystemDataRecords, listQueryOptions, filterCurrent, filterSnapshotsOnly, force) {
+        const select = 'key, created_at, updated_at, size_bytes';
+        if (!filterCurrent && filterSnapshotsOnly) {
+            const baseOptions = { ...listQueryOptions };
+            delete baseOptions.keyIn;
+            const [examResult, workspaceResult] = await Promise.all([
+                selectSystemDataRecords({ select, ...baseOptions, kind: 'exam', limit: 1000 }, { force }),
+                selectSystemDataRecords({ select, ...baseOptions, kind: 'workspace', limit: 1000 }, { force })
+            ]);
+            const error = examResult?.error || workspaceResult?.error || null;
+            const data = [
+                ...(Array.isArray(examResult?.data) ? examResult.data : []),
+                ...(Array.isArray(workspaceResult?.data) ? workspaceResult.data : [])
+            ].sort((left, right) => new Date(right?.updated_at || 0) - new Date(left?.updated_at || 0));
+            return { data, error };
+        }
+        return selectSystemDataRecords({ select, ...listQueryOptions }, { force });
+    }
+
     function getCachedCloudBackupList(manager, cacheKey) {
         const cached = manager && manager.cloudBackupListCache;
         if (!cached || cached.key !== cacheKey) return null;
@@ -957,10 +976,13 @@
                 });
             } else {
                 const fetchStartedAt = nowMs();
-                const metaResult = await selectSystemDataRecords({
-                    select: 'key, created_at, updated_at, size_bytes',
-                    ...listQueryOptions
-                }, { force: !!options.force });
+                const metaResult = await fetchCloudBackupMetadata(
+                    selectSystemDataRecords,
+                    listQueryOptions,
+                    filterCurrent,
+                    filterSnapshotsOnly,
+                    !!options.force
+                );
                 rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.fetchMetadata', fetchStartedAt, {
                     cache: options.force ? 'force' : 'miss',
                     rows: Array.isArray(metaResult?.data) ? metaResult.data.length : 0,
