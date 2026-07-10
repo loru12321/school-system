@@ -1300,7 +1300,10 @@ function tryAutoRestoreWorkspaceExam(options = {}) {
 
     db.currentExamId = autoExamId;
     window.COHORT_DB = db;
-    if (!CohortDB.applyExamToWorkspace(autoExamId, { renderTables: false })) return false;
+    if (!CohortDB.applyExamToWorkspace(autoExamId, {
+        renderTables: false,
+        recalculate: false
+    })) return false;
     if (!persistWorkspaceExamIdentity(autoExamId, db, { cohortId: normalizedCohortId })) return false;
 
     ensureWorkspaceDefaultSchool();

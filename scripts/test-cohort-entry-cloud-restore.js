@@ -126,6 +126,13 @@ assert.ok(
 );
 
 assert.ok(
+    cloudSource.includes('nextExam.schools = shrinkSchoolMapForStorage(nextExam.schools);')
+        && cloudSource.includes('next.SCHOOLS = shrinkSchoolMapForStorage(next.SCHOOLS);')
+        && /function shrinkSchoolMapForStorage\(schoolMap\) \{[\s\S]*if \(key === 'students'\) return;/.test(cloudSource),
+    'cloud snapshots should preserve calculated school metrics without duplicating student rows'
+);
+
+assert.ok(
     dataCloudSource.includes("parsed.startsWith('LZB64|')") && dataCloudSource.includes('root.LZString.compressToBase64'),
     'data cloud runtime should read and write the smaller LZB64 payload format'
 );
@@ -155,6 +162,19 @@ assert.ok(
 assert.ok(
     snapshotSystemSource.includes('DataManager.syncSchoolAliasSettingsFromGateway().catch'),
     'school aliases should refresh through the lightweight gateway path after snapshot apply'
+);
+
+assert.ok(
+    /CohortDB\.applyExamToWorkspace\(COHORT_DB\.currentExamId, \{\s*renderTables: false,\s*recalculate: false\s*\}\)/.test(appSource),
+    'cold cohort restore should reuse persisted processed metrics and only recalculate when the metric guard finds them unusable'
+);
+assert.ok(
+    /CohortDB\.applyExamToWorkspace\(autoExamId, \{\s*renderTables: false,\s*recalculate: false\s*\}\)/.test(cohortExamMetaSource),
+    'automatic exam fallback should reuse persisted processed metrics instead of blocking the post-login main thread'
+);
+assert.ok(
+    /CohortDB\.applyExamToWorkspace\(window\.COHORT_DB\.currentExamId, \{\s*renderTables: false,\s*recalculate: false\s*\}\)/.test(snapshotSystemSource),
+    'snapshot apply should avoid a duplicate full recompute when its processed metrics are already usable'
 );
 
 assert.ok(

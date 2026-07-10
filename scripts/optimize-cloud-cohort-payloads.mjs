@@ -241,12 +241,27 @@ function inflatePayload(payload) {
   return next;
 }
 
+function shrinkSchoolMapForStorage(schoolMap) {
+  if (!schoolMap || typeof schoolMap !== 'object') return {};
+  const compact = {};
+  Object.entries(schoolMap).forEach(([schoolName, schoolValue]) => {
+    if (!schoolValue || typeof schoolValue !== 'object') return;
+    const nextSchool = {};
+    Object.keys(schoolValue).forEach((key) => {
+      if (key !== 'students') nextSchool[key] = clone(schoolValue[key]);
+    });
+    if (!nextSchool.name) nextSchool.name = text(schoolName);
+    compact[text(schoolName)] = nextSchool;
+  });
+  return compact;
+}
+
 function compactExamPayloadForStorage(examPayload) {
   if (!examPayload || typeof examPayload !== 'object') return examPayload;
   const nextExam = clone(examPayload);
   const subjectHint = Array.isArray(nextExam.subjects) ? nextExam.subjects : [];
   if (Array.isArray(nextExam.data) && nextExam.data.length) nextExam.data = compactStudentRows(nextExam.data, subjectHint);
-  delete nextExam.schools;
+  nextExam.schools = shrinkSchoolMapForStorage(nextExam.schools);
   return nextExam;
 }
 
@@ -260,7 +275,7 @@ function compactPayloadForStorage(payload) {
   delete next.TEACHER_STATS;
   if (Array.isArray(next.RAW_DATA) && next.RAW_DATA.length) next.RAW_DATA = compactStudentRows(next.RAW_DATA, topLevelSubjects);
   if (Array.isArray(next.PREV_DATA) && next.PREV_DATA.length) next.PREV_DATA = compactStudentRows(next.PREV_DATA, topLevelSubjects);
-  delete next.SCHOOLS;
+  next.SCHOOLS = shrinkSchoolMapForStorage(next.SCHOOLS);
   if (next.COHORT_DB?.exams && typeof next.COHORT_DB.exams === 'object') {
     const compactExams = {};
     Object.entries(next.COHORT_DB.exams).forEach(([examId, examPayload]) => {

@@ -469,7 +469,12 @@ function applySnapshotPayload(db, options = {}) {
     syncRuntimeStateToWindow();
 
     if (window.COHORT_DB && window.COHORT_DB.currentExamId) {
-        try { CohortDB.applyExamToWorkspace(window.COHORT_DB.currentExamId, { renderTables: false }); } catch (e) { }
+        try {
+            CohortDB.applyExamToWorkspace(window.COHORT_DB.currentExamId, {
+                renderTables: false,
+                recalculate: false
+            });
+        } catch (e) { }
     }
 
     if (options.deferRender === true) scheduleSnapshotPostApplyRender();

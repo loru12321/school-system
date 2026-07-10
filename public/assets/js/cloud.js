@@ -900,7 +900,10 @@
         if (Array.isArray(nextExam.data) && nextExam.data.length) {
             nextExam.data = compactStudentRows(nextExam.data, subjectHint);
         }
-        delete nextExam.schools;
+        // Keep calculated school metrics/rankings, but never duplicate student
+        // rows inside the school map. Cold restore can then reuse the exact
+        // persisted results instead of blocking the UI with a full recompute.
+        nextExam.schools = shrinkSchoolMapForStorage(nextExam.schools);
         return nextExam;
     }
 
@@ -932,7 +935,7 @@
         if (Array.isArray(next.PREV_DATA) && next.PREV_DATA.length) {
             next.PREV_DATA = compactStudentRows(next.PREV_DATA, topLevelSubjects);
         }
-        delete next.SCHOOLS;
+        next.SCHOOLS = shrinkSchoolMapForStorage(next.SCHOOLS);
 
         if (next.COHORT_DB && typeof next.COHORT_DB === 'object') {
             const exams = next.COHORT_DB.exams && typeof next.COHORT_DB.exams === 'object'

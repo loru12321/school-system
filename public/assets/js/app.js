@@ -1934,7 +1934,10 @@ async function switchCohort(cohortId, options = {}) {
         }) || '';
         syncRuntimeStateToWindow();
 
-        if (COHORT_DB && COHORT_DB.currentExamId && CohortDB.applyExamToWorkspace(COHORT_DB.currentExamId, { renderTables: false })) {
+        if (COHORT_DB && COHORT_DB.currentExamId && CohortDB.applyExamToWorkspace(COHORT_DB.currentExamId, {
+            renderTables: false,
+            recalculate: false
+        })) {
         } else {
             syncDataRuntimeState({
                 rawData: data.RAW_DATA || [],
