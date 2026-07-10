@@ -1911,7 +1911,18 @@ async function switchCohort(cohortId, options = {}) {
         });
     }
 
+    // Always-on phase timing so the login→entry wall-clock is verifiable
+    // instead of guessed. Prints e.g. "[perf] switchCohort DB.get(2022级) took
+    // 31200ms (remote)"; a large value here isolates the delay to the network
+    // blob pull rather than JS/calc. Preloaded data is a synchronous handoff.
+    const __dbGetStartedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     const data=options.preloadedData||await DB.get(cohortKey,{localOnly:options.fastEnter===true});
+    try {
+        const __dbGetNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        const __dbGetMs = Math.round(__dbGetNow - __dbGetStartedAt);
+        const __dbGetSource = options.preloadedData ? 'preloaded' : (options.fastEnter === true ? 'local' : 'remote-or-cache');
+        console.info(`[perf] switchCohort DB.get(${cohortKey}) took ${__dbGetMs}ms (${__dbGetSource}), hasData=${!!data}`);
+    } catch (_) { /* timing is best-effort */ }
 
     if (data) {
         COHORT_DB = data.COHORT_DB || null;
@@ -1988,8 +1999,15 @@ async function switchCohort(cohortId, options = {}) {
 
         CohortDB.renderExamList();
 
+        // Defer the background history top-up off the entry-critical window so
+        // it stops competing with the processData that applyExamToWorkspace just
+        // scheduled. background:true routes it through the coalescing scheduler
+        // (same as the exam-archive restore path). Pure task timing — the exams
+        // pulled and how they are computed are unchanged.
         CohortExamHydrationScheduler.schedule(cohortId, {
-            delay: 0,
+            delay: 1200,
+            background: true,
+            minCount: 2,
             warnPrefix: '[switchCohort] 云端历史考试拉取失败:'
         });
 

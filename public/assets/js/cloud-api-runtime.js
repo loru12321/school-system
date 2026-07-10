@@ -258,6 +258,30 @@
         return typeof root.fetch === 'function' ? root.fetch.bind(root) : null;
     }
 
+    // Guard against a stalled cloud connection hanging the login-critical read
+    // (dbSyncFromCloud awaits this with no ceiling of its own). Without an
+    // AbortController a hung socket blocks for the browser default (~300s).
+    // The ceiling MUST sit safely above the worst real cold-path pull: a first
+    // login with an empty cache does a full remote workspace-blob fetch that,
+    // against a cold backend, can legitimately take ~45-60s. A tighter ceiling
+    // would abort that slow-but-working login and make it FAIL instead of
+    // slowly succeed. 90s still converts the pathological ~300s hang into a
+    // surfaced error without truncating a genuine slow pull. Runtimes without
+    // AbortController (older test stubs) fall through to a plain fetch.
+    const SYSTEM_DATA_FETCH_TIMEOUT_MS = 90000;
+    async function fetchWithTimeout(fetchImpl, requestUrl, init = {}) {
+        if (typeof root.AbortController !== 'function') {
+            return fetchImpl(requestUrl, init);
+        }
+        const controller = new root.AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), SYSTEM_DATA_FETCH_TIMEOUT_MS);
+        try {
+            return await fetchImpl(requestUrl, Object.assign({}, init, { signal: controller.signal }));
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
     function getSessionValue(storageKey) {
         const storage = getStorage('sessionStorage');
         if (!storage) return '';
@@ -490,7 +514,7 @@
         }
 
         try {
-            const response = await fetchImpl(requestUrl, {
+            const response = await fetchWithTimeout(fetchImpl, requestUrl, {
                 method: 'GET',
                 headers: buildApiHeaders(headers)
             });

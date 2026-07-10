@@ -957,7 +957,34 @@ var Auth = {
             dataBtn.title = "打开云端教务数据管理";
 
             dataBtn.onclick = () => {
-                DataManager.openCloudManager();
+                // Guard: the header button is created during applyRoleView, which
+                // can run before data-manager-core-runtime.js has finished loading
+                // (or while the post-login cloud hydration burst still owns the
+                // main thread). An unguarded call would throw a silent
+                // ReferenceError/TypeError and the button would feel "dead".
+                const openNow = () => {
+                    if (typeof DataManager === 'undefined'
+                        || !DataManager
+                        || typeof DataManager.openCloudManager !== 'function') {
+                        if (window.UI && typeof UI.toast === 'function') {
+                            UI.toast('云端数据模块正在加载，请稍候…', 'info');
+                        }
+                        return false;
+                    }
+                    DataManager.openCloudManager();
+                    return true;
+                };
+                // Yield once before opening so a click queued behind a hydration
+                // burst still lands as soon as the thread frees, and retry a few
+                // times if the module is not ready yet.
+                if (openNow()) return;
+                let retries = 0;
+                const retry = () => {
+                    if (openNow() || retries >= 20) return;
+                    retries += 1;
+                    window.setTimeout(retry, 150);
+                };
+                window.setTimeout(retry, 0);
             };
 
             toolbar.insertBefore(dataBtn, toolbar.firstChild);

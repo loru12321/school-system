@@ -147,13 +147,30 @@ const DataManager = {
         if (user.role !== 'admin' && user.role !== 'director') {
             return alert("⛔ 权限不足：只有管理员或教务主任可操作云端数据。");
         }
+        // Show the modal FIRST, before any step that could throw (mount/render).
+        // A silent early-return here used to leave the click with no visible
+        // effect ("云端数据 点击无反应"); now the dialog always appears and any
+        // failure downstream is surfaced inside it instead of swallowed.
         const modal = this.ensureCloudManagerModal();
         modal.style.display = 'flex';
         this.currentTab = 'cloud';
         this.cloudPanelView = 'list';
-        if (!this.mountCloudAreaInCloudManager()) return;
+        const mounted = this.mountCloudAreaInCloudManager();
+        if (!mounted) {
+            const body = document.getElementById('cloud-manager-body');
+            if (body) {
+                body.innerHTML = '<div style="padding:24px; text-align:center; color:#64748b;">'
+                    + '云端数据面板正在初始化，请关闭后重试。</div>';
+            }
+            return;
+        }
+        // Defer the (network-bound) list render off the click stack so the modal
+        // paints immediately and the button stays actionable.
         window.setTimeout(() => {
-            this.renderCloudBackups();
+            if (this.currentTab !== 'cloud') return;
+            Promise.resolve()
+                .then(() => this.renderCloudBackups())
+                .catch((err) => console.warn('[CloudManager] renderCloudBackups failed:', err));
         }, 0);
     },
 

@@ -204,14 +204,32 @@ const CohortDB = {
         applyModeByGrade(effectiveGrade || exam.meta?.grade);
 
         if (shouldRecalculate && RAW_DATA.length > 0 && typeof processData === 'function') {
-            setTimeout(() => {
-                processData()
-                    .then(() => {
-                        if (shouldRenderTables && typeof renderTables === 'function') renderTables();
-                        if (typeof updateStatusPanel === 'function') updateStatusPanel();
-                    })
-                    .catch(err => console.warn('历史考试重算失败:', err));
-            }, 0);
+            // Coalesce back-to-back recomputes queued within the same tick. The
+            // cold login-restore path applies the exam twice synchronously
+            // (switchCohort ~app.js:1926, then tryAutoRestoreWorkspaceExam ~cohort-
+            // exam-meta:1283 because school metrics are not yet ready), and each
+            // would otherwise schedule a full processData over every row. Both
+            // callbacks run against the identical final RAW_DATA, so the first is
+            // pure waste. Merge them into one trailing recompute and OR the render
+            // flag so no requested renderTables is dropped. A recompute that has
+            // already STARTED (flag cleared below) does not absorb a later apply,
+            // so a genuine subsequent re-run is preserved. No口径 change — the
+            // surviving processData reads the same state and computes identically.
+            this.__pendingRecalcRender = (this.__pendingRecalcRender === true) || shouldRenderTables;
+            if (!this.__pendingRecalc) {
+                this.__pendingRecalc = true;
+                setTimeout(() => {
+                    const renderAfter = this.__pendingRecalcRender === true;
+                    this.__pendingRecalc = false;
+                    this.__pendingRecalcRender = false;
+                    processData()
+                        .then(() => {
+                            if (renderAfter && typeof renderTables === 'function') renderTables();
+                            if (typeof updateStatusPanel === 'function') updateStatusPanel();
+                        })
+                        .catch(err => console.warn('历史考试重算失败:', err));
+                }, 0);
+            }
         } else if (typeof updateStatusPanel === 'function') {
             setTimeout(() => updateStatusPanel(), 0);
         }

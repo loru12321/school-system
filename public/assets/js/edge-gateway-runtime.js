@@ -174,7 +174,14 @@ var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
             const url = urls[i];
             edgeGatewayDebug(`[EdgeGateway] Attempt ${i + 1}/${urls.length}: ${url}`);
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 18000);
+            // Non-final candidates get a short timeout so a dead/hung endpoint
+            // fails over quickly instead of stacking 18s per URL (the main cause
+            // of the ~1min login when an early gateway candidate is unreachable).
+            // The LAST candidate keeps the full patient timeout so a genuinely
+            // slow-but-working endpoint is never truncated.
+            const isLastCandidate = i === urls.length - 1;
+            const attemptTimeoutMs = isLastCandidate ? 18000 : 6000;
+            const timeoutId = setTimeout(() => controller.abort(), attemptTimeoutMs);
             try {
                 const response = await fetch(url, {
                     method: 'POST',
