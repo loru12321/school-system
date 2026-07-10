@@ -156,11 +156,19 @@
         if (CorrelationAnalysisPerfCache.studentLists.has(cacheKey)) {
             return CorrelationAnalysisPerfCache.studentLists.get(cacheKey);
         }
+        const rawRows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
         const baseStudents = normalizedScope === 'ALL'
             ? ((typeof window.filterRowsToTownshipSchools === 'function')
-                ? window.filterRowsToTownshipSchools(RAW_DATA || [])
-                : (Array.isArray(RAW_DATA) ? RAW_DATA : []))
-            : (SCHOOLS?.[normalizedScope]?.students || []);
+                ? window.filterRowsToTownshipSchools(rawRows)
+                : rawRows)
+            : ((typeof window.filterRowsByAppSchool === 'function')
+                ? window.filterRowsByAppSchool(rawRows, normalizedScope)
+                : rawRows.filter((student) => {
+                    if (typeof window.sameAppSchoolName === 'function') {
+                        return window.sameAppSchoolName(student?.school, normalizedScope);
+                    }
+                    return String(student?.school || '').trim() === String(normalizedScope || '').trim();
+                }));
         const result = (!normalizedClass || normalizedClass.toLowerCase() === 'all')
             ? baseStudents
             : baseStudents.filter(student => normalizeCorrelationClass(student?.class || '') === normalizedClass);
@@ -196,6 +204,57 @@
             getCorrelationStudentSignaturePart(students[students.length - 1]),
             totalChecksum.toFixed(3)
         ].join('::');
+    }
+
+    function buildTownshipRankFallback(subjects) {
+        const rawRows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
+        const townshipRows = typeof window.filterRowsToTownshipSchools === 'function'
+            ? window.filterRowsToTownshipSchools(rawRows)
+            : rawRows;
+        const ranks = new WeakMap();
+        const ensureRank = (student) => {
+            let rank = ranks.get(student);
+            if (!rank) {
+                rank = { total: 0, subjects: {} };
+                ranks.set(student, rank);
+            }
+            return rank;
+        };
+        const rankRows = (rows, readScore, writeRank, equalScore) => {
+            rows.sort((left, right) => readScore(right) - readScore(left));
+            rows.forEach((student, index) => {
+                const previous = index > 0 ? rows[index - 1] : null;
+                const rank = previous && equalScore(readScore(student), readScore(previous))
+                    ? writeRank(previous)
+                    : index + 1;
+                writeRank(student, rank);
+            });
+        };
+        const totalRows = townshipRows.filter((student) => toFiniteNumber(student?.total) !== null);
+        rankRows(
+            totalRows,
+            (student) => Number(student.total),
+            (student, value) => {
+                const rank = ensureRank(student);
+                if (value !== undefined) rank.total = value;
+                return rank.total;
+            },
+            (left, right) => Math.abs(left - right) < 0.0001
+        );
+        subjects.forEach((subject) => {
+            const subjectRows = townshipRows.filter((student) => toFiniteNumber(student?.scores?.[subject]) !== null);
+            rankRows(
+                subjectRows,
+                (student) => Number(student.scores[subject]),
+                (student, value) => {
+                    const rank = ensureRank(student);
+                    if (value !== undefined) rank.subjects[subject] = value;
+                    return rank.subjects[subject] || 0;
+                },
+                (left, right) => left === right
+            );
+        });
+        return ranks;
     }
 
     function buildCorrelationAnalysisHtml(students, subjects) {
@@ -240,6 +299,7 @@
             })
             .join('');
 
+        const rankFallback = buildTownshipRankFallback(subjects);
         let liftDragHtml = '';
         subjects.forEach((subject) => {
             let lift = 0;
@@ -247,8 +307,15 @@
             let balance = 0;
             let validCount = 0;
             students.forEach((student) => {
-                const totalRank = toFiniteNumber(typeof safeGet === 'function' ? safeGet(student, 'ranks.total.township', 0) : 0);
-                const subjectRank = toFiniteNumber(typeof safeGet === 'function' ? safeGet(student, `ranks.${subject}.township`, 0) : 0);
+                const fallbackRank = rankFallback.get(student);
+                const totalRank = toFiniteNumber(
+                    (typeof safeGet === 'function' ? safeGet(student, 'ranks.total.township', 0) : 0)
+                    || fallbackRank?.total
+                );
+                const subjectRank = toFiniteNumber(
+                    (typeof safeGet === 'function' ? safeGet(student, `ranks.${subject}.township`, 0) : 0)
+                    || fallbackRank?.subjects?.[subject]
+                );
                 if (!totalRank || !subjectRank) return;
                 validCount += 1;
                 const threshold = students.length * 0.1;

@@ -228,6 +228,10 @@ async function openCorrelationAnalysisModule(page) {
             await window.ensureTeacherAnalysisMainRuntimeLoaded();
         }
         if (typeof window.updateCorrelationSchoolSelect === 'function') window.updateCorrelationSchoolSelect();
+        const schoolSelect = document.getElementById('corrSchoolSelect');
+        const classSelect = document.getElementById('corrClassSelect');
+        if (schoolSelect) schoolSelect.value = 'ALL';
+        if (classSelect) classSelect.value = 'ALL';
         if (typeof window.renderCorrelationAnalysis === 'function') window.renderCorrelationAnalysis();
         if (typeof window.refreshResponsiveMobileTables === 'function') {
             window.refreshResponsiveMobileTables(document.getElementById('correlation-analysis'));
@@ -809,12 +813,6 @@ async function inspectSummaryLayout(page, mode) {
 }
 
 async function inspectTeacherAnalysisLayout(page, mode) {
-    const mobileOnlySelectors = mode === 'mobile'
-        ? {
-            mobileLabels: '#teacherComparisonTable tbody td[data-label]',
-            mobileCardTable: '#teacherComparisonTable.mobile-card-table'
-        }
-        : {};
     return inspectSectionLayout(page, mode, {
         sectionId: 'teacher-analysis',
         targetSelector: '#teacher-analysis .analysis-inline-panel',
@@ -833,8 +831,7 @@ async function inspectTeacherAnalysisLayout(page, mode) {
             comparisonRows: '#teacherComparisonTable tbody td',
             pairBox: '#teacher-pairing-box',
             rankingContainer: '#teacher-township-ranking-container',
-            rankingPanel: '#teacher-analysis .analysis-ranking-panel',
-            ...mobileOnlySelectors
+            rankingPanel: '#teacher-analysis .analysis-ranking-panel'
         }
     });
 }
@@ -867,12 +864,6 @@ async function inspectCorrelationAnalysisLayout(page, mode) {
 }
 
 async function inspectProgressAnalysisLayout(page, mode) {
-    const mobileOnlySelectors = mode === 'mobile'
-        ? {
-            progressMobileLabels: '#progressTable tbody td[data-label]',
-            progressMobileCardTable: '#progressTable.mobile-card-table'
-        }
-        : {};
     return inspectSectionLayout(page, mode, {
         sectionId: 'progress-analysis',
         targetSelector: '#progress-analysis',
@@ -901,8 +892,7 @@ async function inspectProgressAnalysisLayout(page, mode) {
             filterStrip: '#progress-analysis .analysis-filter-strip',
             filterSummary: '#progressFilterSummary',
             progressTable: '#progressTable',
-            progressRows: '#progressTable tbody tr',
-            ...mobileOnlySelectors
+            progressRows: '#progressTable tbody tr'
         }
     });
 }

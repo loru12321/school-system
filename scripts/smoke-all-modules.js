@@ -2803,14 +2803,50 @@ async function runModuleDeepCheck(page, id) {
                 const value = String(path).split('.').reduce((current, key) => (current && current[key] !== undefined ? current[key] : undefined), source);
                 return value === undefined ? fallback : value;
             };
+            const fallbackRanks = new WeakMap();
+            const ensureFallbackRank = (student) => {
+                let rank = fallbackRanks.get(student);
+                if (!rank) {
+                    rank = { total: 0, subjects: {} };
+                    fallbackRanks.set(student, rank);
+                }
+                return rank;
+            };
+            const rankFallbackRows = (rows, readScore, writeRank, equalScore) => {
+                rows.sort((left, right) => readScore(right) - readScore(left));
+                rows.forEach((student, index) => {
+                    const previous = index > 0 ? rows[index - 1] : null;
+                    const rank = previous && equalScore(readScore(student), readScore(previous))
+                        ? writeRank(previous)
+                        : index + 1;
+                    writeRank(student, rank);
+                });
+            };
+            const buildFallbackRanks = (students, subjects) => {
+                const totalRows = students.filter((student) => toFiniteNumber(student?.total) !== null);
+                rankFallbackRows(totalRows, (student) => Number(student.total), (student, value) => {
+                    const rank = ensureFallbackRank(student);
+                    if (value !== undefined) rank.total = value;
+                    return rank.total;
+                }, (left, right) => Math.abs(left - right) < 0.0001);
+                subjects.forEach((subject) => {
+                    const rows = students.filter((student) => toFiniteNumber(student?.scores?.[subject]) !== null);
+                    rankFallbackRows(rows, (student) => Number(student.scores[subject]), (student, value) => {
+                        const rank = ensureFallbackRank(student);
+                        if (value !== undefined) rank.subjects[subject] = value;
+                        return rank.subjects[subject] || 0;
+                    }, (left, right) => left === right);
+                });
+            };
             const expectedLiftRow = (students, subject) => {
                 let lift = 0;
                 let drag = 0;
                 let balance = 0;
                 let validCount = 0;
                 students.forEach((student) => {
-                    const totalRank = toFiniteNumber(getPath(student, 'ranks.total.township', 0));
-                    const subjectRank = toFiniteNumber(getPath(student, `ranks.${subject}.township`, 0));
+                    const fallbackRank = fallbackRanks.get(student);
+                    const totalRank = toFiniteNumber(getPath(student, 'ranks.total.township', 0) || fallbackRank?.total);
+                    const subjectRank = toFiniteNumber(getPath(student, `ranks.${subject}.township`, 0) || fallbackRank?.subjects?.[subject]);
                     if (!totalRank || !subjectRank) return;
                     validCount += 1;
                     const threshold = students.length * 0.1;
@@ -2828,11 +2864,12 @@ async function runModuleDeepCheck(page, id) {
                 window.updateCorrelationSchoolSelect();
             }
             const select = document.getElementById('corrSchoolSelect');
-            if (select && !select.value) select.value = 'ALL';
+            if (select) select.value = 'ALL';
             const classSelect = document.getElementById('corrClassSelect');
             if (classSelect) classSelect.value = 'ALL';
 
             const alerts = [];
+            let renderWaitError = '';
             const originalAlert = window.alert;
             window.alert = (message) => alerts.push(String(message || ''));
             try {
@@ -2841,9 +2878,13 @@ async function runModuleDeepCheck(page, id) {
                 } else if (typeof window.renderCorrelationAnalysis === 'function') {
                     await Promise.resolve(window.renderCorrelationAnalysis());
                 }
-                await waitUntil(() => document.querySelectorAll('#corrMatrixTable .heatmap-cell').length > 0
-                    && document.querySelectorAll('#contributionChartContainer .contribution-bar').length > 0
-                    && document.querySelectorAll('#liftDragTable tbody tr').length > 0);
+                try {
+                    await waitUntil(() => document.querySelectorAll('#corrMatrixTable .heatmap-cell').length > 0
+                        && document.querySelectorAll('#contributionChartContainer .contribution-bar').length > 0
+                        && document.querySelectorAll('#liftDragTable tbody tr').length > 0);
+                } catch (error) {
+                    renderWaitError = error?.message || String(error);
+                }
             } finally {
                 window.alert = originalAlert;
             }
@@ -2852,6 +2893,7 @@ async function runModuleDeepCheck(page, id) {
             const scope = document.getElementById('corrSchoolSelect')?.value || 'ALL';
             const className = document.getElementById('corrClassSelect')?.value || 'ALL';
             const students = getSelectedStudents(scope, className);
+            buildFallbackRanks(students, subjects);
             const matrixTable = document.getElementById('corrMatrixTable');
             const matrixRows = Array.from(matrixTable?.querySelectorAll('tbody tr') || []);
             const matrixValues = Array.from(document.querySelectorAll('#corrMatrixTable .heatmap-cell'))
@@ -2963,7 +3005,8 @@ async function runModuleDeepCheck(page, id) {
                 contributionMismatches,
                 expectedFirstLift,
                 renderedFirstLift,
-                alerts
+                alerts,
+                renderWaitError
             };
         });
     }

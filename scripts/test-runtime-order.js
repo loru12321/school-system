@@ -197,6 +197,7 @@ const teachingManagementVersionRuntime = fs.readFileSync(teachingManagementVersi
 const studentOverviewRuntime = fs.readFileSync(studentOverviewRuntimePath, 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
 const teacherAnalysisUiRuntime = fs.readFileSync(teacherAnalysisUiRuntimePath, 'utf8');
+const teacherAnalysisBridgeRuntime = fs.readFileSync(teacherAnalysisBridgeRuntimePath, 'utf8');
 const countyAnalysisRuntime = fs.readFileSync(countyAnalysisRuntimePath, 'utf8');
 const mobileAppRuntime = fs.readFileSync(mobileAppRuntimePath, 'utf8');
 const supportMetricsRuntime = fs.readFileSync(supportMetricsRuntimePath, 'utf8');
@@ -809,6 +810,10 @@ assert.ok(bootRuntime.includes("'teacher-correlation':"), 'runtime skill manifes
 assert.ok(bootRuntime.includes("'teacher-correlation': bootSkill('demand', 'demand', ['correlation-analysis', 'renderCorrelationAnalysis', 'updateCorrelationSchoolSelect'], [\n        bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js'))\n    ])"), 'correlation analysis should load only the lightweight bridge runtime');
 assert.ok(bootRuntime.includes("case 'teacher-analysis-bridge':"), 'boot-runtime.js should detect an already-loaded teacher-analysis bridge runtime');
 assert.ok(bootRuntime.includes("window.ensureTeacherCorrelationRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureTeacherCorrelationRuntimeLoaded');
+assert.ok(
+    teacherAnalysisBridgeRuntime.includes("window.filterRowsByAppSchool(rawRows, normalizedScope)"),
+    'correlation analysis should derive scoped students from RAW_DATA when compact cloud shards omit SCHOOLS students'
+);
 assert.ok(!bootRuntime.includes("'teacher-analysis', 'cohort-growth', 'correlation-analysis'"), 'correlation analysis should not pull the full teacher-analysis skill');
 assert.ok(bootRuntime.includes("'crypto-vendor':"), 'runtime skill manifest should include crypto-vendor');
 assert.ok(bootRuntime.includes("'shell-enhancements':"), 'runtime skill manifest should include shell-enhancements');
