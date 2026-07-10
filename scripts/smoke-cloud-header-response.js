@@ -42,11 +42,36 @@ const pass = process.env.SMOKE_PASS || 'admin123';
             };
         });
         if (!result.modalVisible) throw new Error('cloud manager modal did not become visible in the click task');
+        await page.waitForFunction(() => {
+            const shell = document.getElementById('dm-cloud-table-shell');
+            const rows = document.querySelectorAll('#dm-cloud-table tbody .dm-cloud-select').length;
+            return shell?.dataset?.cloudState === 'ready' && rows > 0;
+        }, null, { timeout: 90000 });
+        const cloudList = await page.evaluate(() => {
+            const keys = Array.from(document.querySelectorAll('#dm-cloud-table tbody .dm-cloud-select'))
+                .map((input) => String(input.dataset.key || '').trim())
+                .filter(Boolean);
+            const sizeKb = Array.from(document.querySelectorAll('#dm-cloud-table tbody tr'))
+                .map((row) => Number.parseFloat(String(row.cells?.[3]?.textContent || '0')) || 0);
+            return {
+                filterCurrent: document.getElementById('cloud-filter-current')?.checked === true,
+                filterSnapshotsOnly: document.getElementById('cloud-filter-snapshots')?.checked !== false,
+                rowCount: keys.length,
+                internalHistoryRows: keys.filter((key) => key.startsWith('STUDENT_HISTORY_V1_')).length,
+                positiveSizeRows: sizeKb.filter((size) => size > 0).length,
+                summary: String(document.getElementById('dm-cloud-summary')?.textContent || '').replace(/\s+/g, ' ').trim()
+            };
+        });
+        if (cloudList.filterCurrent) throw new Error('cloud list unexpectedly defaults to current-project-only filtering');
+        if (!cloudList.filterSnapshotsOnly) throw new Error('cloud list should default to snapshot records');
+        if (cloudList.internalHistoryRows > 0) throw new Error('internal student history records leaked into the cloud list');
+        if (cloudList.positiveSizeRows < 1) throw new Error('cloud list did not expose stored snapshot sizes');
         console.log(JSON.stringify({
             ok: true,
             buttonVisibleMs,
             clickResponseMs: Date.now() - clickStartedAt,
-            ...result
+            ...result,
+            cloudList
         }, null, 2));
     } finally {
         await browser.close();
