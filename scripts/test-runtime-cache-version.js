@@ -32,8 +32,9 @@ assert.ok(!srcIndex.includes('runtimeRefresh'), 'HTML should not depend on runti
 assert.ok(!srcIndex.includes('SCHOOL_RUNTIME_REFRESH_VERSION'), 'HTML should not depend on local runtime version stamps');
 assert.ok(srcIndex.includes('entrance-sound-runtime.js') && !srcIndex.includes('entrance-sound-runtime.js?v='), 'entrance sound runtime should not depend on query-versioned caching');
 assert.ok(srcIndex.includes('runtime-loader-runtime.js') && !srcIndex.includes('runtime-loader-runtime.js?v='), 'runtime loader should not depend on query-versioned caching');
-assert.ok(srcIndex.includes('boot-runtime.js') && !srcIndex.includes('boot-runtime.js?v='), 'boot runtime should not depend on query-versioned caching');
-assert.ok(srcIndex.includes('service-worker-runtime.js') && !srcIndex.includes('service-worker-runtime.js?v='), 'service worker runtime loader should not depend on query-versioned caching');
+assert.ok(srcIndex.includes(`boot-runtime-${serviceWorkerVersion}.js`), 'boot runtime should use a content-versioned pathname that bypasses stale CDN objects');
+assert.ok(srcIndex.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 'service worker runtime loader should use a content-versioned pathname');
+assert.ok(serviceWorkerRuntime.includes(`const SERVICE_WORKER_PATH = './sw-${serviceWorkerVersion}.js';`), 'service worker registration should use a content-versioned script pathname');
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(srcIndex), 'HTML should not query-version any runtime JS entry');
 assert.ok(packageJson.scripts['build:pre'] && packageJson.scripts['build:pre'].includes('scripts/build/update-runtime-cache-version.mjs'), 'build:pre should update runtime versions before bundling');
 assert.ok(buildScript.includes('normalizeVersionTokens'), 'version generator should normalize existing version tokens before hashing');

@@ -566,6 +566,18 @@ async function main() {
             window.renderTeacherTownshipRanking?.();
         }
         snapshotStep('render:teacher-township-ranking');
+        await boundedSwitchTab('county-teacher-portrait');
+        await window.CountyAnalysisRuntime?.ensureTeacherContextForCountyAnalysis?.(true);
+        window.renderCountyAnalysis?.('county-teacher-portrait');
+        const countyTeacherDeadline = Date.now() + 10000;
+        while (
+            Date.now() < countyTeacherDeadline
+            && (getTeacherRoot()?.querySelectorAll('.county-teacher-rank-table tbody tr').length || 0) < 80
+        ) {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            window.renderCountyAnalysis?.('county-teacher-portrait');
+        }
+        snapshotStep('render:county-teacher-with-teacher-map');
         await window.ensureTeacherCompareRuntimeLoaded?.().catch(() => {});
         await loadRuntimeSkill('progress-analysis');
         await loadRuntimeSkill('town-submodule-compare');

@@ -67,8 +67,15 @@ assert.ok(exists('dist/sitemap.xml'), 'dist/sitemap.xml must be emitted for craw
 assert.ok(exists('dist/site.webmanifest'), 'dist/site.webmanifest must be emitted for PWA metadata');
 assert.ok(exists('dist/icon.svg'), 'dist/icon.svg must be emitted for app icons and sharing');
 assert.ok(exists('dist/sw.js'), 'dist/sw.js must exist before release');
+assert.ok(
+  fs.readdirSync(path.join(root, 'dist')).some((name) => /^sw-runtime-[0-9a-f]{12}\.js$/.test(name)),
+  'content-versioned dist service worker must exist before release'
+);
 assert.ok(exists('dist/favicon.ico'), 'dist/favicon.ico must exist before release');
-assert.ok(exists('dist/assets/js/boot-runtime.js'), 'dist boot runtime must exist before release');
+assert.ok(
+  fs.readdirSync(path.join(root, 'dist/assets/js')).some((name) => /^boot-runtime-runtime-[0-9a-f]{12}\.js$/.test(name)),
+  'content-versioned dist boot runtime must exist before release'
+);
 assert.ok(exists('dist/assets/js/app.js'), 'dist app runtime must exist before release');
 const entranceManifest = parseJson('dist/assets/audio/entrance/manifest.json');
 assert.strictEqual(entranceManifest.tracks.length, 1, 'release should include only the selected built-in entrance track');
@@ -104,7 +111,11 @@ assert.ok(runLocalSmoke.includes('SMOKE_URL'), 'local smoke wrapper should prese
 assert.ok(smokeModules.includes('SWITCH_MODULE_IDS'), 'module smoke script must keep explicit module coverage');
 assert.ok(distIndex.includes('id="app"'), 'dist HTML must contain the application root');
 assert.ok(distIndex.includes('id="login-overlay"'), 'dist HTML must contain the login overlay');
-assert.ok(distIndex.includes('./assets/js/boot-runtime.js'), 'dist HTML must load boot-runtime.js');
+assert.match(
+  distIndex,
+  /\.\/assets\/js\/boot-runtime-runtime-[0-9a-f]{12}\.js/,
+  'dist HTML must load a content-versioned boot runtime'
+);
 assert.ok(distIndex.includes('./assets/js/runtime-registry-runtime.js'), 'dist HTML must load runtime registry');
 assert.ok(distIndex.includes('./assets/vendor/tabler-icons/tabler-icons.min.css'), 'dist HTML must load local Tabler icons CSS');
 assert.strictEqual(

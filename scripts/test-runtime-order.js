@@ -311,7 +311,8 @@ const holographicRef = './assets/js/holographic-student-3d.js';
 const predictiveRef = './assets/js/predictive-simulation-lab.js';
 const metaverseRef = './assets/js/metaverse-collab-space.js';
 const emotionalRef = './assets/js/emotional-ai-monitor.js';
-const bootRuntimeRef = './assets/js/boot-runtime.js';
+const bootRuntimeMatch = indexHtml.match(/\.\/assets\/js\/boot-runtime-runtime-[0-9a-f]{12}\.js/);
+const bootRuntimeRef = bootRuntimeMatch ? bootRuntimeMatch[0] : '';
 const runtimeLoaderRuntimeRef = './assets/js/runtime-loader-runtime.js';
 const tablerIconsRef = '/assets/vendor/tabler-icons/tabler-icons.min.css';
 const supabaseVendorRef = './assets/vendor/supabase/supabase.min.js';
@@ -1159,7 +1160,7 @@ assert.ok(!bootRuntime.includes('./assets/js/mobile-experience-runtime.js'), 'mo
 });
 
 const bootScriptTag = findScriptTag(indexHtml, bootRuntimeRef);
-assert.ok(bootScriptTag, 'index.html should contain a script tag for boot-runtime.js');
+assert.ok(bootScriptTag, 'index.html should contain a content-versioned boot runtime script tag');
 assert.ok(/\sdefer(\s|>|=)/i.test(bootScriptTag), 'boot-runtime.js should load with defer');
 const runtimeLoaderScriptTag = findScriptTag(indexHtml, runtimeLoaderRuntimeRef);
 assert.ok(runtimeLoaderScriptTag, 'index.html should contain a script tag for runtime-loader-runtime.js');
@@ -1300,11 +1301,13 @@ assert.ok(
 );
 assert.ok(
     cloudWorkspaceRuntime.includes('function compactExamShardRows')
+        && cloudWorkspaceRuntime.includes('function compactSchoolMetricsForShard')
         && cloudWorkspaceRuntime.includes('RAW_DATA: compactRows,')
-        && cloudWorkspaceRuntime.includes('SCHOOLS: {},')
+        && cloudWorkspaceRuntime.includes('SCHOOLS: processedSchools,')
+        && cloudWorkspaceRuntime.includes("if (field === 'students') return;")
         && cloudWorkspaceRuntime.includes('TEACHER_MAP: {},')
         && cloudWorkspaceRuntime.includes('TARGETS: {},'),
-    'exam cloud shards should store compact score rows and recalculate bulky derived data after restore'
+    'exam cloud shards should store compact score rows and school metrics without duplicating bulky student arrays'
 );
 assert.ok(
     cloudWorkspaceRuntime.includes('this.flushWorkspaceSyncQueue({ targetKey: key, forceUpload: opts.forceUpload === true })')

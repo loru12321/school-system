@@ -138,8 +138,13 @@ const renderCloudBackupsEnd = dataCloudRuntime.indexOf('function toggleCloudSele
 const renderCloudBackupsSource = renderCloudBackupsStart >= 0 && renderCloudBackupsEnd > renderCloudBackupsStart
     ? dataCloudRuntime.slice(renderCloudBackupsStart, renderCloudBackupsEnd)
     : '';
-assert.ok(renderCloudBackupsSource.includes("select: 'key, created_at, updated_at'"), 'cloud backup list should use key/time metadata only');
-assert.ok(!renderCloudBackupsSource.includes("select: 'key, created_at, updated_at, size_bytes'"), 'cloud backup list should not request size_bytes because proxy paths may hydrate content to compute it');
+assert.ok(dataCloudRuntime.includes("const select = 'key, created_at, updated_at, size_bytes';"), 'cloud backup list should request stored metadata without hydrating snapshot content');
+assert.ok(!dataCloudRuntime.includes("const select = 'key, content, created_at, updated_at, size_bytes';"), 'cloud backup list should not request snapshot content');
+assert.ok(
+    dataCloudRuntime.includes("kind: 'exam', limit: 1000")
+        && dataCloudRuntime.includes("kind: 'workspace', limit: 1000"),
+    'all-project snapshot view should query exam and workspace records separately so internal index records stay hidden'
+);
 assert.ok(dataCloudRuntime.includes('function getCloudBackupListQueryOptions(filterCurrent)'), 'cloud backup list should build bounded query options');
 assert.ok(dataCloudRuntime.includes('options.keyIn = Array.from(keys);'), 'cloud backup list should query exact current workspace keys');
 assert.ok(!dataCloudRuntime.includes('options.keyLike = `%${cohortId}%`;'), 'current cloud backup list should not use wildcard cohort scans');

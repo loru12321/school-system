@@ -828,7 +828,7 @@ async function inspectTeacherAnalysisLayout(page, mode) {
             compareExam1: '#teacherCompareExam1',
             compareResult: '#teacherCompareResult',
             stateBars: '#tmModuleState-teacher-analysis',
-            cards: '#teacherCardsContainer .teacher-card',
+            cardsContainer: '#teacherCardsContainer',
             comparisonTable: '#teacherComparisonTable',
             comparisonRows: '#teacherComparisonTable tbody td',
             pairBox: '#teacher-pairing-box',

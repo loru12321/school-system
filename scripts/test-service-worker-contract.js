@@ -42,6 +42,7 @@ const scripts = packageJson.scripts || {};
 const publicAppShellAssets = parseAppShellAssets(publicSw);
 const distAppShellAssets = parseAppShellAssets(distSw);
 const serviceWorkerVersion = extractSingleQuotedConst(serviceWorkerRuntime, 'SERVICE_WORKER_VERSION');
+const distVersionedSw = read(`dist/sw-${serviceWorkerVersion}.js`);
 const cacheVersion = extractSingleQuotedConst(publicSw, 'CACHE_VERSION');
 
 assert.deepStrictEqual(distSw, publicSw, 'dist service worker should match public service worker after build');
@@ -91,11 +92,12 @@ assertHeaderRule(publicHeaders, '/assets/js/*', 'no-store, max-age=0, must-reval
 assertHeaderRule(publicHeaders, '/assets/css/*', 'public, max-age=31536000, immutable', 'versioned CSS runtime assets should use immutable cache headers');
 assertHeaderRule(publicHeaders, '/sw.js', 'no-store, max-age=0, must-revalidate', 'service worker script should bypass browser and CDN storage');
 assertIncludes(serviceWorkerRuntime, `const SERVICE_WORKER_VERSION = '${serviceWorkerVersion}';`, 'service worker runtime should version registration updates');
-assertIncludes(serviceWorkerRuntime, "const SERVICE_WORKER_PATH = './sw.js';", 'service worker runtime should not depend on a query-versioned sw.js URL');
+assertIncludes(serviceWorkerRuntime, `const SERVICE_WORKER_PATH = './sw-${serviceWorkerVersion}.js';`, 'service worker runtime should use a content-versioned service worker pathname');
+assert.strictEqual(distVersionedSw, distSw, 'content-versioned dist service worker should match the canonical service worker');
 assert.ok(srcIndex.includes('entrance-sound-runtime.js') && !srcIndex.includes('entrance-sound-runtime.js?v='), 'HTML should not cache-bust the entrance sound runtime with query versions');
-assert.ok(srcIndex.includes('service-worker-runtime.js') && !srcIndex.includes('service-worker-runtime.js?v='), 'HTML should not cache-bust the service worker runtime loader with query versions');
+assert.ok(srcIndex.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 'HTML should content-version the service worker runtime loader pathname');
 assert.ok(srcIndex.includes('runtime-loader-runtime.js') && !srcIndex.includes('runtime-loader-runtime.js?v='), 'HTML should not cache-bust the split runtime loader with query versions');
-assert.ok(srcIndex.includes('boot-runtime.js') && !srcIndex.includes('boot-runtime.js?v='), 'HTML should not cache-bust the boot runtime loader with query versions');
+assert.ok(srcIndex.includes(`boot-runtime-${serviceWorkerVersion}.js`), 'HTML should content-version the boot runtime loader pathname');
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(srcIndex), 'HTML should not query-version any runtime JS entry');
 assert.ok(!srcIndex.includes('runtimeRefresh') && !srcIndex.includes('SCHOOL_RUNTIME_REFRESH_VERSION'), 'HTML should not depend on runtime version refresh stamps');
 assertIncludes(serviceWorkerRuntime, "root.location.reload();", 'service worker runtime should refresh controlled pages after an update claims them');

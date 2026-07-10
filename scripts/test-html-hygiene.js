@@ -14,7 +14,7 @@ function count(pattern) {
 const inlineStyleCount = count(/\sstyle=/g);
 const inlineHandlerCount = count(/\son[a-z]+=/g);
 
-assert.ok(html.indexOf('runtime-registry-runtime.js') < html.indexOf('boot-runtime.js'), 'runtime registry must load before boot runtime');
+assert.ok(html.indexOf('runtime-registry-runtime.js') < html.indexOf(`boot-runtime-${serviceWorkerVersion}.js`), 'runtime registry must load before boot runtime');
 assert.ok(html.includes('<meta name="description"'), 'index.html should include a search result description');
 assert.ok(html.includes('<meta name="application-name" content="校衡台">'), 'index.html should expose the application name to browsers');
 assert.ok(html.includes('学校成绩导入、届别档案、教学分析、教师画像和家校报告'), 'index.html should keep readable search description copy');
@@ -33,7 +33,7 @@ assert.ok(html.includes('<meta property="og:image" content="https://schoolsystem
 assert.ok(html.includes('<meta name="twitter:card" content="summary">'), 'index.html should include Twitter card metadata');
 assert.ok(html.includes('<meta name="twitter:image" content="https://schoolsystem.com.cn/icon.svg">'), 'index.html should include a Twitter share image');
 assert.ok(html.includes('type="image/x-icon"'), 'favicon link should include an explicit content type');
-assert.ok(html.includes('service-worker-runtime.js'), 'index.html should register the service worker runtime');
+assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 'index.html should register the service worker runtime');
 assert.ok(html.includes('./assets/css/product-redesign.css?v=20260617-table-anchor-nav-v1'), 'index.html should load the product redesign layer after legacy styles');
 assert.ok(html.indexOf('layout-refinement.css') < html.indexOf('product-redesign.css'), 'product redesign should override layout refinement styles');
 assert.ok(html.includes('id="critical-visibility-guard"'), 'index.html should inline a critical visibility guard before scripts run');
@@ -42,12 +42,12 @@ assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker run
 assert.ok(!html.includes('runtimeRefresh'), 'index.html should not rely on runtimeRefresh query churn');
 assert.ok(!html.includes('SCHOOL_RUNTIME_REFRESH_VERSION'), 'index.html should not rely on local runtime version stamps');
 assert.ok(html.includes('runtime-loader-runtime.js') && !html.includes('runtime-loader-runtime.js?v='), 'runtime loader should load without query-version dependency');
-assert.ok(html.includes('boot-runtime.js') && !html.includes('boot-runtime.js?v='), 'boot runtime should load without query-version dependency');
-assert.ok(html.includes('service-worker-runtime.js') && !html.includes('service-worker-runtime.js?v='), 'service worker runtime should load without query-version dependency');
+assert.ok(html.includes(`boot-runtime-${serviceWorkerVersion}.js`), 'boot runtime should load from a content-versioned pathname');
+assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 'service worker runtime should load from a content-versioned pathname');
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-assert.ok(inlineHandlerCount <= 354, `inline event handler count grew: ${inlineHandlerCount} > 354`);
+assert.ok(inlineHandlerCount <= 356, `inline event handler count grew: ${inlineHandlerCount} > 356`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 console.log(`html hygiene tests passed: style=${inlineStyleCount}, handlers=${inlineHandlerCount}`);

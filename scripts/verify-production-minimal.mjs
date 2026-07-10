@@ -31,11 +31,17 @@ const checks = [];
 
 const home = await fetchWithTimeout('/');
 const homeText = await home.text();
+const bootRuntimePath = homeText.match(/\.\/assets\/js\/(boot-runtime-runtime-[0-9a-f]{12}\.js)/)?.[1] || '';
 checks.push(['home_status', home.status === 200]);
 checks.push(['home_charset', /text\/html;\s*charset=utf-8/i.test(home.headers.get('content-type') || '')]);
 checks.push(['home_app_root', homeText.includes('id="app"')]);
 checks.push(['home_login_overlay', homeText.includes('id="login-overlay"')]);
-checks.push(['home_boot_runtime', homeText.includes('./assets/js/boot-runtime.js')]);
+checks.push(['home_boot_runtime', Boolean(bootRuntimePath)]);
+
+if (bootRuntimePath) {
+  const bootRuntime = await fetchWithTimeout(`/assets/js/${bootRuntimePath}`);
+  checks.push(['boot_runtime_status', bootRuntime.status === 200]);
+}
 
 const health = await fetchWithTimeout('/api/health');
 const healthText = await health.text();
