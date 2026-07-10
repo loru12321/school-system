@@ -2010,7 +2010,8 @@ async function switchCohort(cohortId, options = {}) {
         CohortExamHydrationScheduler.schedule(cohortId, {
             delay: 1200,
             background: true,
-            minCount: 2,
+            latestOnly: true,
+            minCount: 1,
             warnPrefix: '[switchCohort] 云端历史考试拉取失败:'
         });
 
@@ -2050,7 +2051,8 @@ async function switchCohort(cohortId, options = {}) {
                     CohortExamHydrationScheduler.schedule(cohortId, {
                         delay: 1200,
                         background: true,
-                        minCount: 2,
+                        latestOnly: true,
+                        minCount: 1,
                         warnPrefix: '[switchCohort] 后台历史考试补全失败:'
                     });
                     UI.toast(`已从云端考试快照恢复 [${cohortKey}] 数据`, "success");
@@ -2506,6 +2508,9 @@ window.addEventListener('load', async () => {
 
                 CohortExamHydrationScheduler.schedule(CURRENT_COHORT_ID || readWorkspaceCohortId(), {
                     delay: 700,
+                    background: true,
+                    latestOnly: true,
+                    minCount: 1,
                     warnPrefix: '[Init] 云端历史考试拉取失败:'
                 });
             }, "正在加载数据...");
@@ -2532,6 +2537,9 @@ window.addEventListener('load', async () => {
 
     CohortExamHydrationScheduler.schedule(CURRENT_COHORT_ID || readWorkspaceCohortId(), {
         delay: 1200,
+        background: true,
+        latestOnly: true,
+        minCount: 1,
         warnPrefix: '[Startup] fetch cohort exams failed:'
     });
 });

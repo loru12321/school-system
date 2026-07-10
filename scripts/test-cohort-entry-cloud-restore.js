@@ -183,6 +183,12 @@ assert.ok(
 );
 
 assert.ok(
+    (cloudWorkspaceSource.match(/fetchCohortExamsToLocal\(cohortId, \{ background: true, latestOnly: true, minCount: 1 \}\)/g) || []).length >= 3
+        && (appSource.match(/latestOnly: true,\s*minCount: 1,/g) || []).length >= 4,
+    'automatic startup hydration should keep only the current exam hot; history remains an on-demand module fetch'
+);
+
+assert.ok(
     /if \(!appliedCached\) \{[\s\S]*const row = await fetchWorkspaceSnapshotRow\(key\);[\s\S]*return true;[\s\S]*\}\s*const remoteMeta = await fetchWorkspaceSnapshotMeta\(key\);/.test(cloudWorkspaceSource),
     'cold workspace restore should skip the separate updated_at preflight and fetch the small split metadata row directly'
 );

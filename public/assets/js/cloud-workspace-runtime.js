@@ -1609,7 +1609,7 @@
 
         scheduleCompareSelectorsRefresh();
         if (cohortId && typeof manager.fetchCohortExamsToLocal === 'function') {
-            manager.fetchCohortExamsToLocal(cohortId, { background: true }).catch((syncError) => {
+            manager.fetchCohortExamsToLocal(cohortId, { background: true, latestOnly: true, minCount: 1 }).catch((syncError) => {
                 console.warn('[CloudExams] background sync failed:', syncError);
             });
         }
@@ -1743,7 +1743,7 @@
                 const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || getCurrentCohortId());
                 scheduleCompareSelectorsRefresh();
                 if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
-                    this.fetchCohortExamsToLocal(cohortId, { background: true }).catch((syncError) => {
+                    this.fetchCohortExamsToLocal(cohortId, { background: true, latestOnly: true, minCount: 1 }).catch((syncError) => {
                         console.warn('[CloudExams] background sync failed:', syncError);
                     });
                 }
@@ -2456,7 +2456,7 @@
             if (appliedCached && !remoteIsNewer) {
                 const cohortId = normalizeCohortId(cachedPayload?.CURRENT_COHORT_ID || getCurrentCohortId());
                 if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
-                    this.fetchCohortExamsToLocal(cohortId, { background: true }).catch((syncError) => {
+                    this.fetchCohortExamsToLocal(cohortId, { background: true, latestOnly: true, minCount: 1 }).catch((syncError) => {
                         console.warn('[CloudExams] background sync failed:', syncError);
                     });
                 }
