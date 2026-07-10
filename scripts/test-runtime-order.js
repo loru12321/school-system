@@ -900,6 +900,8 @@ assert.ok(moduleEntryRuntime.includes('function prewarmStudentDiagnosisRuntimes'
 assert.ok(moduleEntryRuntime.includes("SystemRuntimeLoader.load('student-overview')"), 'student diagnosis prewarm should cover the overview runtime');
 assert.ok(moduleEntryRuntime.includes("SystemRuntimeLoader.load('report-render')"), 'student diagnosis prewarm should cover the report query runtime');
 assert.ok(!moduleEntryRuntime.includes("SystemRuntimeLoader.load('report-chart')"), 'student diagnosis entry should not prewarm chart rendering on the shared switch path');
+assert.ok(moduleEntryRuntime.includes("'student-diagnosis-report-prewarm'"), 'report query prewarm should use a separate idle window from student overview');
+assert.ok(moduleEntryRuntime.includes('{ delay: 2600, idle: true, timeout: 5200 }'), 'report query prewarm should not merge into the first diagnosis paint task');
 const reportPrewarmStart = moduleEntryRuntime.indexOf('function prewarmReportGeneratorRuntimes');
 const reportPrewarmEnd = moduleEntryRuntime.indexOf('function runModuleSpecificInit', reportPrewarmStart);
 const reportPrewarmSource = reportPrewarmStart >= 0 && reportPrewarmEnd > reportPrewarmStart
