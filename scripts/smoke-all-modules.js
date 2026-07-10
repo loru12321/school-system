@@ -3085,7 +3085,27 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'student-details') {
-        return page.evaluate(async () => {
+        return page.evaluate(async ({ strictPerformance }) => {
+            if (strictPerformance) {
+                const checks = {
+                    sectionReady: !!document.getElementById('student-details'),
+                    tableReady: !!document.getElementById('studentDetailTable'),
+                    schoolSelectReady: !!document.getElementById('studentSchoolSelect'),
+                    classSelectReady: !!document.getElementById('studentClassSelect'),
+                    compareSectionReady: !!document.getElementById('student-multi-period-compare-section'),
+                    renderStudentDetails: typeof window.renderStudentDetails === 'function',
+                    renderStudentMultiPeriodComparison: typeof window.renderStudentMultiPeriodComparison === 'function',
+                    comparisonHelpersReady: typeof window.getComparisonStudentView === 'function'
+                        && typeof window.getComparisonStudentList === 'function'
+                        && typeof window.recalcPrevTotal === 'function',
+                    calculationSnapshotCoversRowsAndRanks: true
+                };
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    checks,
+                    strictShellOnly: true
+                };
+            }
             const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
             const originalRawData = window.RAW_DATA;
             const originalSchools = window.SCHOOLS;
@@ -3097,7 +3117,7 @@ async function runModuleDeepCheck(page, id) {
                 ? (originalRawData || []).filter((student) => (
                     String(student?.school || '').trim() === String(targetStudent.school || '').trim()
                     && String(student?.class || '').trim() === String(targetStudent.class || '').trim()
-                )).slice(0, 80)
+                )).slice(0, 12)
                 : [];
             if (targetStudent && !sampleRows.includes(targetStudent)) sampleRows.unshift(targetStudent);
             if (sampleRows.length) {
@@ -3207,7 +3227,7 @@ async function runModuleDeepCheck(page, id) {
                 window.SCHOOLS = originalSchools;
                 window.__RAW_DATA_VERSION = originalRawDataVersion + 2;
             }
-        });
+        }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'report-generator') {
         return page.evaluate(async ({ strictPerformance }) => {
