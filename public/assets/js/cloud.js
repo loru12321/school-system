@@ -1020,9 +1020,11 @@
     }
 
     function needsIndicatorPayloadSupplement(payload) {
+        // School aliases have their own lightweight gateway refresh after a
+        // snapshot is applied. Treating an empty alias list as an indicator
+        // gap made cold login download and inflate multiple full exam shards.
         return getPayloadTargetCount(payload) === 0
             || !hasPayloadIndicatorParams(payload)
-            || !hasPayloadAliasSettings(payload)
             || (isGrade9Payload(payload) && !hasPayloadHighSchoolLine(payload));
     }
 

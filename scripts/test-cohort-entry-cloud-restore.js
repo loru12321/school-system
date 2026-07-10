@@ -146,6 +146,17 @@ assert.ok(
     'cloud workspace split restore should reuse fresh local exam shards before downloading large cloud content'
 );
 
+const supplementPolicyMatch = cloudSource.match(/function needsIndicatorPayloadSupplement\(payload\) \{([\s\S]*?)\n    \}/);
+assert.ok(supplementPolicyMatch, 'cloud runtime should expose the workspace supplement policy');
+assert.ok(
+    !supplementPolicyMatch[1].includes('hasPayloadAliasSettings'),
+    'missing school aliases alone must not download and inflate historical exam snapshots during cold login'
+);
+assert.ok(
+    snapshotSystemSource.includes('DataManager.syncSchoolAliasSettingsFromGateway().catch'),
+    'school aliases should refresh through the lightweight gateway path after snapshot apply'
+);
+
 assert.ok(
     /const payload = parsePayload\(row\.content\);[\s\S]*writeCachedWorkspaceSnapshot\(row\.key, payload, \{ updatedAt: row\.updated_at \}\)/.test(cloudWorkspaceSource),
     'cohort exam background sync should persist downloaded exam shards into the shared local cache'
