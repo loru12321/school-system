@@ -155,19 +155,24 @@ const DataManager = {
         modal.style.display = 'flex';
         this.currentTab = 'cloud';
         this.cloudPanelView = 'list';
-        const mounted = this.mountCloudAreaInCloudManager();
-        if (!mounted) {
-            const body = document.getElementById('cloud-manager-body');
-            if (body) {
-                body.innerHTML = '<div style="padding:24px; text-align:center; color:#64748b;">'
-                    + '云端数据面板正在初始化，请关闭后重试。</div>';
-            }
-            return;
+        const body = document.getElementById('cloud-manager-body');
+        if (body) {
+            body.innerHTML = '<div style="padding:24px; text-align:center; color:#64748b;">正在打开云端数据面板…</div>';
         }
-        // Defer the (network-bound) list render off the click stack so the modal
-        // paints immediately and the button stays actionable.
+        // Moving the large dm-cloud-area subtree can trigger framework DOM scans.
+        // Keep both that mount and the network-bound list render off the click
+        // stack so the modal shell paints before any expensive follow-up work.
         window.setTimeout(() => {
-            if (this.currentTab !== 'cloud') return;
+            if (this.currentTab !== 'cloud' || modal.style.display === 'none') return;
+            const mounted = this.mountCloudAreaInCloudManager();
+            if (!mounted) {
+                const currentBody = document.getElementById('cloud-manager-body');
+                if (currentBody) {
+                    currentBody.innerHTML = '<div style="padding:24px; text-align:center; color:#64748b;">'
+                        + '云端数据面板正在初始化，请关闭后重试。</div>';
+                }
+                return;
+            }
             Promise.resolve()
                 .then(() => this.renderCloudBackups())
                 .catch((err) => console.warn('[CloudManager] renderCloudBackups failed:', err));

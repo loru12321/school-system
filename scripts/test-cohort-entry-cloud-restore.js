@@ -173,6 +173,11 @@ assert.ok(
 );
 
 assert.ok(
+    /modal\.style\.display = 'flex';[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*this\.mountCloudAreaInCloudManager\(\);/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
+    'the cloud manager should paint its modal shell before mounting the large cloud data subtree'
+);
+
+assert.ok(
     /CohortDB\.applyExamToWorkspace\(COHORT_DB\.currentExamId, \{\s*renderTables: false,\s*recalculate: false\s*\}\)/.test(appSource),
     'cold cohort restore should reuse persisted processed metrics and only recalculate when the metric guard finds them unusable'
 );
