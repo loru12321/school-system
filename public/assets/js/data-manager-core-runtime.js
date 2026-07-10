@@ -97,12 +97,16 @@ const DataManager = {
 
     ensureCloudManagerModal: function () {
         let modal = document.getElementById('cloud-manager-modal');
-        if (modal) return modal;
+        if (modal) {
+            modal.setAttribute('aria-hidden', modal.classList.contains('is-open') ? 'false' : 'true');
+            return modal;
+        }
         modal = document.createElement('div');
         modal.id = 'cloud-manager-modal';
         modal.className = 'modal';
         modal.setAttribute('x-ignore', '');
         modal.setAttribute('data-mojibake-skip', 'true');
+        modal.setAttribute('aria-hidden', 'true');
         modal.style.display = 'none';
         modal.innerHTML = `
             <div class="modal-content" data-mojibake-skip="true" style="width:min(1120px,96vw); height:min(86vh,820px); padding:18px; border-radius:18px; display:flex; flex-direction:column; overflow:hidden;">
@@ -153,16 +157,17 @@ const DataManager = {
         // effect ("云端数据 点击无反应"); now the dialog always appears and any
         // failure downstream is surfaced inside it instead of swallowed.
         const modal = this.ensureCloudManagerModal();
-        if (window.location.hash !== '#cloud-manager-modal') {
-            window.location.hash = 'cloud-manager-modal';
-        }
+        if (typeof window.closeWorkspaceDrawer === 'function') window.closeWorkspaceDrawer();
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body?.classList.add('cloud-manager-open');
         this.currentTab = 'cloud';
         this.cloudPanelView = 'list';
         // Moving the large dm-cloud-area subtree can trigger framework DOM scans.
         // Keep both that mount and the network-bound list render off the click
         // stack so the modal shell paints before any expensive follow-up work.
         window.setTimeout(() => {
-            if (this.currentTab !== 'cloud' || window.location.hash !== '#cloud-manager-modal') return;
+            if (this.currentTab !== 'cloud' || !modal.classList.contains('is-open')) return;
             const mounted = this.mountCloudAreaInCloudManager();
             if (!mounted) {
                 const currentBody = document.getElementById('cloud-manager-body');
@@ -180,6 +185,11 @@ const DataManager = {
 
     closeCloudManager: function () {
         const modal = document.getElementById('cloud-manager-modal');
+        if (modal) {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        document.body?.classList.remove('cloud-manager-open');
         if (window.location.hash === '#cloud-manager-modal') {
             history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
         }
@@ -190,6 +200,10 @@ const DataManager = {
             cloudArea.style.padding = '15px';
         }
         if (this.currentTab === 'cloud') this.currentTab = 'student';
+    },
+
+    setCloudRecordCategory: function (category) {
+        return requireDataCloudRuntime().setCloudRecordCategory(this, category);
     },
 
     ensureCloudPanelSwitch: function () {

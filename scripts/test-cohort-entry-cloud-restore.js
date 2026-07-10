@@ -168,7 +168,8 @@ assert.ok(
 assert.ok(
     indexSource.includes('id="cloud-manager-modal" class="modal" x-ignore')
         && indexSource.includes('id="cloud-manager-body"')
-        && indexSource.includes('#cloud-manager-modal:target { display: flex !important; }')
+        && indexSource.includes('#cloud-manager-modal.is-open { display: flex !important; }')
+        && indexSource.includes('class="dm-cloud-category-tabs"')
         && indexSource.includes('DataManager.closeCloudManager()'),
     'the lightweight cloud manager modal should be present in the static DOM before the first header click'
 );
@@ -185,17 +186,21 @@ assert.ok(
 );
 assert.ok(
     fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8')
-        .includes("kind: 'exam', limit: 1000")
+        .includes("{ kind: 'exam' }")
         && fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8')
-            .includes("kind: 'workspace', limit: 1000")
+            .includes("{ kind: 'workspace' }")
         && fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')
             .includes("if (/^STUDENT_HISTORY_V1_/i.test(text)) return 'student-history';"),
     'the default cloud list should query user-visible snapshots without exposing internal student history index rows'
 );
 
 assert.ok(
-    /window\.location\.hash = 'cloud-manager-modal';[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*this\.mountCloudAreaInCloudManager\(\);/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
+    /modal\.classList\.add\('is-open'\);[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*this\.mountCloudAreaInCloudManager\(\);/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
     'the cloud manager should paint its modal shell before mounting the large cloud data subtree'
+);
+assert.ok(
+    /closeCloudManager: function \(\) \{[\s\S]*modal\.classList\.remove\('is-open'\);[\s\S]*modal\.setAttribute\('aria-hidden', 'true'\)/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
+    'cloud manager close should explicitly hide the modal instead of relying on URL target state'
 );
 
 assert.ok(

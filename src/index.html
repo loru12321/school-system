@@ -100,8 +100,8 @@
     <script defer src="./assets/js/cohort-sync-status-runtime.js"></script>
     <script defer src="./assets/js/entrance-sound-runtime.js"></script>
     <script defer src="./assets/js/runtime-loader-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-f2001ef653d9.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-f2001ef653d9.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-2b96e4223c59.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-2b96e4223c59.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -3813,10 +3813,10 @@
 
     <style id="cloud-manager-target-style">
         #cloud-manager-modal { display: none !important; }
-        #cloud-manager-modal:target { display: flex !important; }
+        #cloud-manager-modal.is-open { display: flex !important; }
     </style>
     <!-- 云端数据轻量弹窗预置在静态 DOM 中，避免首次点击时动态插入节点触发框架全树扫描。 -->
-    <div id="cloud-manager-modal" class="modal" x-ignore data-mojibake-skip="true" style="display:none;"
+    <div id="cloud-manager-modal" class="modal" x-ignore data-mojibake-skip="true" aria-hidden="true" style="display:none;"
         onclick="if(event.target===this) DataManager.closeCloudManager()">
         <div class="modal-content" data-mojibake-skip="true"
             style="width:min(1120px,96vw); height:min(86vh,820px); padding:18px; border-radius:18px; display:flex; flex-direction:column; overflow:hidden;">
@@ -4293,12 +4293,32 @@
                         style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:10px; font-size:12px; color:#475569; margin:10px 0;">
                         📌 云端摘要将在此显示
                     </div>
+                    <div class="dm-cloud-category-tabs" id="dm-cloud-category-tabs" role="group" aria-label="云端数据分类">
+                        <button type="button" class="dm-cloud-category-tab is-active" data-cloud-category="score"
+                            aria-pressed="true">
+                            <i class="ti ti-chart-bar"></i><span>成绩快照</span><b data-cloud-category-count>0</b>
+                        </button>
+                        <button type="button" class="dm-cloud-category-tab" data-cloud-category="workspace"
+                            aria-pressed="false">
+                            <i class="ti ti-target-arrow"></i><span>指标参数 / 工作区</span><b data-cloud-category-count>0</b>
+                        </button>
+                        <button type="button" class="dm-cloud-category-tab" data-cloud-category="teacher"
+                            aria-pressed="false">
+                            <i class="ti ti-users"></i><span>教师任课</span><b data-cloud-category-count>0</b>
+                        </button>
+                        <button type="button" class="dm-cloud-category-tab" data-cloud-category="compare"
+                            aria-pressed="false">
+                            <i class="ti ti-arrows-diff"></i><span>对比存档</span><b data-cloud-category-count>0</b>
+                        </button>
+                        <button type="button" class="dm-cloud-category-tab" data-cloud-category="backup"
+                            aria-pressed="false">
+                            <i class="ti ti-archive"></i><span>历史备份</span><b data-cloud-category-count>0</b>
+                        </button>
+                    </div>
                     <div
                         style="display:flex; gap:12px; align-items:center; font-size:12px; color:#475569; margin-bottom:8px;">
                         <label><input type="checkbox" id="cloud-filter-current"
                                 onchange="DataManager.renderCloudBackups()"> 仅当前项目</label>
-                        <label><input type="checkbox" id="cloud-filter-snapshots"
-                                onchange="DataManager.renderCloudBackups()"> 仅显示工作区/考试快照</label>
                     </div>
                     <div
                         style="display:flex; gap:8px; align-items:center; font-size:12px; color:#475569; margin-bottom:8px;">
@@ -4324,7 +4344,7 @@
                                                 id="dm-cloud-select-all"
                                                 onchange="DataManager.toggleCloudSelectAll(this.checked)" title="全选/取消全选">
                                         </th>
-                                        <th>存档 Key (项目名)</th>
+                                        <th>数据项目</th>
                                         <th>上传时间</th>
                                         <th>数据大小</th>
                                         <th>操作</th>

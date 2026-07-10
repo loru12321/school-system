@@ -168,7 +168,7 @@ async function run() {
             }
         }
     });
-    await listRuntime.renderCloudBackups({
+    const listManager = {
         cloudSelection: new Set(),
         getCloudRecordKind(key) {
             if (key.startsWith('TEACHERS_')) return 'teacher';
@@ -178,9 +178,18 @@ async function run() {
         },
         isCloudRecordInCurrentWorkspace() { return true; },
         isCloudWorkspaceSnapshotKey(key) { return !key.startsWith('TEACHERS_') && !key.startsWith('BACKUP_'); }
-    });
+    };
+    await listRuntime.renderCloudBackups(listManager);
+    assert.match(listBody.innerHTML, /2022级/);
+    assert.doesNotMatch(listBody.innerHTML, /教师任课表/);
+
+    await listRuntime.setCloudRecordCategory(listManager, 'teacher');
     assert.match(listBody.innerHTML, /教师任课表/);
+
+    await listRuntime.setCloudRecordCategory(listManager, 'workspace');
     assert.match(listBody.innerHTML, /含指标参数、教师配置/);
+
+    await listRuntime.setCloudRecordCategory(listManager, 'backup');
     assert.match(listBody.innerHTML, /拆分前历史备份/);
 
     console.log('cloud archive visibility tests passed');

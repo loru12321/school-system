@@ -8951,11 +8951,9 @@ function openCloudRollback() {
     if (typeof DataManager !== 'undefined' && typeof DataManager.openCloudManager === 'function') {
         DataManager.openCloudManager();
         setTimeout(() => {
-            const chkSnap = document.getElementById('cloud-filter-snapshots');
             const chkCur = document.getElementById('cloud-filter-current');
-            if (chkSnap) chkSnap.checked = true;
             if (chkCur) chkCur.checked = true;
-            DataManager.renderCloudBackups();
+            DataManager.setCloudRecordCategory('backup');
         }, 100);
     }
 }

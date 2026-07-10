@@ -224,11 +224,12 @@
         return options;
     }
 
-    function getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly) {
+    function getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly, category = '') {
         const options = getCloudBackupListQueryOptions(filterCurrent);
         return JSON.stringify({
             filterCurrent: !!filterCurrent,
             filterSnapshotsOnly: !!filterSnapshotsOnly,
+            category: normalizeText(category),
             workspaceKey: getWorkspaceProjectKey(),
             currentExamKey: getCurrentExamKey(),
             cohortId: getCurrentCloudCohortId(),
@@ -244,40 +245,33 @@
 
     async function fetchCloudBackupMetadata(selectSystemDataRecords, listQueryOptions, filterCurrent, filterSnapshotsOnly, force) {
         const select = 'key, created_at, updated_at, size_bytes';
-        if (!filterCurrent) {
-            const baseOptions = { ...listQueryOptions };
-            delete baseOptions.keyIn;
-            const queries = [
-                { kind: 'exam' },
-                { kind: 'workspace' }
-            ];
-            if (!filterSnapshotsOnly) {
-                queries.push(
-                    { kind: 'teacher_map' },
-                    { kind: 'compare' },
-                    { kind: 'backup' },
-                    // One pre-split backup predates the metadata classifier and is
-                    // still marked generic in D1. Query by key as a compatibility
-                    // path without scanning thousands of internal history rows.
-                    { keyLike: 'BACKUP_%' }
-                );
-            }
-            const results = await Promise.all(queries.map((query) => (
-                selectSystemDataRecords({ select, ...baseOptions, ...query, limit: 1000 }, { force })
-            )));
-            const error = results.find((result) => result?.error)?.error || null;
-            const rowsByKey = new Map();
-            results.forEach((result) => {
-                (Array.isArray(result?.data) ? result.data : []).forEach((row) => {
-                    const key = normalizeText(row?.key);
-                    if (key) rowsByKey.set(key, row);
-                });
+        const baseOptions = { ...listQueryOptions };
+        delete baseOptions.keyIn;
+        const queries = [
+            { kind: 'exam' },
+            { kind: 'workspace' },
+            { kind: 'teacher_map' },
+            { kind: 'compare' },
+            { kind: 'backup' },
+            // One pre-split backup predates the metadata classifier and is
+            // still marked generic in D1. Query by key as a compatibility
+            // path without scanning thousands of internal history rows.
+            { keyLike: 'BACKUP_%' }
+        ];
+        const results = await Promise.all(queries.map((query) => (
+            selectSystemDataRecords({ select, ...baseOptions, ...query, limit: 1000 }, { force })
+        )));
+        const error = results.find((result) => result?.error)?.error || null;
+        const rowsByKey = new Map();
+        results.forEach((result) => {
+            (Array.isArray(result?.data) ? result.data : []).forEach((row) => {
+                const key = normalizeText(row?.key);
+                if (key) rowsByKey.set(key, row);
             });
-            const data = Array.from(rowsByKey.values())
-                .sort((left, right) => new Date(right?.updated_at || 0) - new Date(left?.updated_at || 0));
-            return { data, error };
-        }
-        return selectSystemDataRecords({ select, ...listQueryOptions }, { force });
+        });
+        const data = Array.from(rowsByKey.values())
+            .sort((left, right) => new Date(right?.updated_at || 0) - new Date(left?.updated_at || 0));
+        return { data, error };
     }
 
     function getCloudRecordKind(manager, key) {
@@ -324,6 +318,66 @@
             };
         }
         return null;
+    }
+
+    const CLOUD_RECORD_CATEGORIES = {
+        score: { label: '成绩快照', kinds: new Set(['snapshot']) },
+        workspace: { label: '指标参数 / 工作区', kinds: new Set(['cohort']) },
+        teacher: { label: '教师任课', kinds: new Set(['teacher']) },
+        compare: { label: '对比存档', kinds: new Set(['compare']) },
+        backup: { label: '历史备份', kinds: new Set(['backup']) }
+    };
+
+    function normalizeCloudRecordCategory(category) {
+        const normalized = normalizeText(category).toLowerCase();
+        return Object.prototype.hasOwnProperty.call(CLOUD_RECORD_CATEGORIES, normalized) ? normalized : 'score';
+    }
+
+    function cloudRecordMatchesCategory(manager, item, category) {
+        const config = CLOUD_RECORD_CATEGORIES[normalizeCloudRecordCategory(category)];
+        return config.kinds.has(getCloudRecordKind(manager, item?.key));
+    }
+
+    function updateCloudCategoryControls(manager, rows) {
+        const doc = getDocument();
+        if (!doc) return;
+        const activeCategory = normalizeCloudRecordCategory(manager?.cloudRecordCategory);
+        const counts = {};
+        Object.keys(CLOUD_RECORD_CATEGORIES).forEach((category) => { counts[category] = 0; });
+        (Array.isArray(rows) ? rows : []).forEach((item) => {
+            Object.keys(CLOUD_RECORD_CATEGORIES).forEach((category) => {
+                if (cloudRecordMatchesCategory(manager, item, category)) counts[category] += 1;
+            });
+        });
+        doc.querySelectorAll('[data-cloud-category]').forEach((button) => {
+            const category = normalizeCloudRecordCategory(button.dataset?.cloudCategory);
+            const isActive = category === activeCategory;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            const count = button.querySelector('[data-cloud-category-count]');
+            if (count) count.textContent = String(counts[category] || 0);
+        });
+    }
+
+    function setCloudRecordCategory(manager, category) {
+        if (!manager || typeof manager !== 'object') return false;
+        manager.cloudRecordCategory = normalizeCloudRecordCategory(category);
+        manager.cloudSelection = ensureSelection(manager.cloudSelection);
+        manager.cloudSelection.clear();
+        return api.renderCloudBackups(manager);
+    }
+
+    function bindCloudCategoryControls(manager) {
+        const doc = getDocument();
+        const container = doc ? doc.getElementById('dm-cloud-category-tabs') : null;
+        if (!container || typeof container.addEventListener !== 'function' || container.dataset.cloudCategoryBound === 'true') return;
+        container.dataset.cloudCategoryBound = 'true';
+        container.addEventListener('click', (event) => {
+            const target = event?.target;
+            const button = target && typeof target.closest === 'function' ? target.closest('[data-cloud-category]') : null;
+            const category = normalizeText(button?.dataset?.cloudCategory);
+            if (category) api.setCloudRecordCategory(manager, category);
+        });
     }
 
     function getCachedCloudBackupList(manager, cacheKey) {
@@ -991,7 +1045,10 @@
         const summaryEl = doc ? doc.getElementById('dm-cloud-summary') : null;
         const filterCurrent = doc ? doc.getElementById('cloud-filter-current')?.checked !== false : true;
         const filterSnapshotsOnly = doc ? doc.getElementById('cloud-filter-snapshots')?.checked === true : false;
+        manager.cloudRecordCategory = normalizeCloudRecordCategory(manager.cloudRecordCategory);
+        const recordCategory = manager.cloudRecordCategory;
         bindCloudTableRetry(manager, shell);
+        bindCloudCategoryControls(manager);
 
         // 检测演示模式 (Demo Mode)
         const isDemoMode = (root.sessionStorage?.getItem('EDGE_GATEWAY_TOKEN_V1') === 'DEMO_TOKEN') ||
@@ -1024,7 +1081,7 @@
             if (!selectSystemDataRecords) throw new Error('selectSystemDataRecords unavailable');
 
             const listQueryOptions = getCloudBackupListQueryOptions(filterCurrent);
-            const cacheKey = getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly);
+            const cacheKey = getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly, recordCategory);
             const cachedList = !options.force ? getCachedCloudBackupList(manager, cacheKey) : null;
             let allRows = null;
             let visibleRows = null;
@@ -1071,6 +1128,7 @@
                 manager.cloudSelection = ensureSelection(manager.cloudSelection);
 
                 visibleRows = allRows.filter((item) => {
+                    if (!cloudRecordMatchesCategory(manager, item, recordCategory)) return false;
                     if (filterSnapshotsOnly && typeof manager.isCloudWorkspaceSnapshotKey === 'function' && !manager.isCloudWorkspaceSnapshotKey(item.key)) return false;
                     if (filterCurrent && typeof manager.isCloudRecordInCurrentWorkspace === 'function' && !manager.isCloudRecordInCurrentWorkspace(item.key)) return false;
                     return true;
@@ -1086,6 +1144,7 @@
 
             manager.cloudBackupRows = new Map(allRows.map((item) => [normalizeText(item.key), item]));
             manager.cloudSelection = ensureSelection(manager.cloudSelection);
+            updateCloudCategoryControls(manager, allRows);
 
             if (!allRows.length) {
                 manager.cloudSelection.clear();
@@ -1105,6 +1164,7 @@
                 renderCloudTableState(tbody, shell, 'filtered-empty');
                 if (summaryEl) {
                     const filterText = [
+                        CLOUD_RECORD_CATEGORIES[recordCategory].label,
                         filterCurrent ? '当前届别/工作区' : '',
                         filterSnapshotsOnly ? '工作区快照' : ''
                     ].filter(Boolean).join(' + ') || '全部记录';
@@ -1131,7 +1191,7 @@
                     : '<span style="font-size:11px; color:#94a3b8;">当前显示全部匹配记录</span>';
                 summaryEl.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>📌 当前云端清单 <b>${visibleRows.length}</b> 条 | 占用约 <b>${totalSizeMB} MB</b></span>
+                        <span>📌 ${escapeHtml(CLOUD_RECORD_CATEGORIES[recordCategory].label)} <b>${visibleRows.length}</b> 条 | 占用约 <b>${totalSizeMB} MB</b></span>
                         ${suffix}
                     </div>
                     ${buildCurrentExamCloudActions(manager)}
@@ -2136,7 +2196,8 @@
         getTeacherStatusSnapshot,
         rememberDataManagerSyncSnapshot,
         getDataManagerStatusModel,
-        renderDataManagerStatus
+        renderDataManagerStatus,
+        setCloudRecordCategory
     };
 
     return api;
