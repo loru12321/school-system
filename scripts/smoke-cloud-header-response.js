@@ -58,13 +58,17 @@ const pass = process.env.SMOKE_PASS || 'admin123';
                 filterSnapshotsOnly: document.getElementById('cloud-filter-snapshots')?.checked !== false,
                 rowCount: keys.length,
                 internalHistoryRows: keys.filter((key) => key.startsWith('STUDENT_HISTORY_V1_')).length,
+                teacherRows: keys.filter((key) => key.startsWith('TEACHERS_')).length,
+                backupRows: keys.filter((key) => key.startsWith('BACKUP_')).length,
                 positiveSizeRows: sizeKb.filter((size) => size > 0).length,
                 summary: String(document.getElementById('dm-cloud-summary')?.textContent || '').replace(/\s+/g, ' ').trim()
             };
         });
         if (cloudList.filterCurrent) throw new Error('cloud list unexpectedly defaults to current-project-only filtering');
-        if (!cloudList.filterSnapshotsOnly) throw new Error('cloud list should default to snapshot records');
+        if (cloudList.filterSnapshotsOnly) throw new Error('cloud list should default to all user-visible records');
         if (cloudList.internalHistoryRows > 0) throw new Error('internal student history records leaked into the cloud list');
+        if (cloudList.teacherRows < 1) throw new Error('teacher timetable records are missing from the cloud list');
+        if (cloudList.backupRows < 1) throw new Error('pre-split backup records are missing from the cloud list');
         if (cloudList.positiveSizeRows < 1) throw new Error('cloud list did not expose stored snapshot sizes');
         console.log(JSON.stringify({
             ok: true,

@@ -1599,6 +1599,7 @@
 
         loadTeachers: async function (options = {}) {
             const opts = options && typeof options === 'object' ? { ...options } : {};
+            const exactKey = String(opts.exactKey || '').trim();
             const background = Boolean(opts.background);
             const showBlocking = !background && opts.blocking !== false;
             const showToast = opts.toast === false ? false : !background;
@@ -1607,7 +1608,7 @@
             if (!(await this.ensureClientReady())) return false;
 
             const requestKey = [
-                requestedSchool ? this.getTeacherKey({ schoolName: requestedSchool }) : this.getTeacherKey(),
+                exactKey || (requestedSchool ? this.getTeacherKey({ schoolName: requestedSchool }) : this.getTeacherKey()),
                 getCurrentTeacherTermId(),
                 getCurrentTermId(),
                 getCurrentCohortId(),
@@ -1626,7 +1627,7 @@
                 setCloudStatus('syncing', background ? '检查任课' : '拉取任课');
                 if (showBlocking) safeLoading(true, '正在从云端拉取任课表...');
                 try {
-                    let key = requestedSchool ? this.getTeacherKey({ schoolName: requestedSchool }) : this.getTeacherKey();
+                    let key = exactKey || (requestedSchool ? this.getTeacherKey({ schoolName: requestedSchool }) : this.getTeacherKey());
                     let metaRow = null;
                     let row = null;
                     const cohortId = getCurrentCohortId();
@@ -1668,7 +1669,7 @@
                         metaRow = data || null;
                     }
 
-                    if (!metaRow) {
+                    if (!metaRow && !exactKey) {
                         const scopedKeyPrefix = requestedSchool
                             ? `${KEY_PREFIX_TEACHERS}${cohortId || ''}级_${normalizeTeacherSchoolForKey(requestedSchool)}_`
                             : '';
@@ -1726,6 +1727,11 @@
                     }
 
                     const keyTermId = extractTeacherTermIdFromKey(key || metaRow?.key || '', requestedSchool).trim();
+                    if (exactKey && keyTermId) {
+                        desiredTerms.unshift(keyTermId);
+                        primaryDesiredTerms.unshift(keyTermId);
+                        currentApplyTerms.unshift(keyTermId);
+                    }
                     const metaKeyText = String(metaRow?.key || key || '').trim();
                     const metaMatchesDesiredTerm = primaryDesiredTerms.some(term => {
                         const text = String(term || '').trim();
@@ -1743,7 +1749,7 @@
                         ? Date.parse(String(metaRow?.updated_at || ''))
                         : 0;
 
-                    if (localEntry && (!metaRow || (remoteTs && localEntry.savedAt >= (remoteTs - 1000)))) {
+                    if (!exactKey && localEntry && (!metaRow || (remoteTs && localEntry.savedAt >= (remoteTs - 1000)))) {
                         const localPayload = requestedSchool
                             ? filterTeacherPayloadBySchool(localEntry.map, localEntry.schoolMap, requestedSchool)
                             : { map: localEntry.map, schoolMap: localEntry.schoolMap, matched: true, scoped: false };

@@ -139,6 +139,50 @@ async function run() {
     await Promise.resolve();
     assert.strictEqual(delegatedRetries, 1, 'retry button should use one delegated shell listener');
 
+    const listBody = createElement();
+    const listShell = createElement();
+    const listSummary = createElement();
+    const listRuntime = createDataCloudRuntime({
+        console,
+        CloudApi: {},
+        sessionStorage: { getItem() { return null; } },
+        localStorage: { getItem() { return null; } },
+        CloudDataService: {
+            async selectSystemDataRecords(options) {
+                if (options.kind === 'exam') return { data: [{ key: '2022级_9年级_2026_下学期_二模', size_bytes: 100, updated_at: '2026-07-10' }], error: null };
+                if (options.kind === 'workspace') return { data: [{ key: 'cohort::2022', size_bytes: 80, updated_at: '2026-07-10' }], error: null };
+                if (options.kind === 'teacher_map') return { data: [{ key: 'TEACHERS_2022级_2025-2026_上学期_9年级', size_bytes: 60, updated_at: '2026-03-12' }], error: null };
+                if (options.keyLike === 'BACKUP_%') return { data: [{ key: 'BACKUP_cohort::2022_pre_split', size_bytes: 50, updated_at: '2026-06-27' }], error: null };
+                return { data: [], error: null };
+            }
+        },
+        document: {
+            querySelector(selector) { return selector === '#dm-cloud-table tbody' ? listBody : null; },
+            querySelectorAll() { return []; },
+            getElementById(id) {
+                if (id === 'dm-cloud-table-shell') return listShell;
+                if (id === 'dm-cloud-summary') return listSummary;
+                if (id === 'cloud-filter-current') return { checked: false };
+                if (id === 'cloud-filter-snapshots') return { checked: false };
+                return null;
+            }
+        }
+    });
+    await listRuntime.renderCloudBackups({
+        cloudSelection: new Set(),
+        getCloudRecordKind(key) {
+            if (key.startsWith('TEACHERS_')) return 'teacher';
+            if (key.startsWith('BACKUP_')) return 'backup';
+            if (key.startsWith('cohort::')) return 'cohort';
+            return 'snapshot';
+        },
+        isCloudRecordInCurrentWorkspace() { return true; },
+        isCloudWorkspaceSnapshotKey(key) { return !key.startsWith('TEACHERS_') && !key.startsWith('BACKUP_'); }
+    });
+    assert.match(listBody.innerHTML, /教师任课表/);
+    assert.match(listBody.innerHTML, /含指标参数、教师配置/);
+    assert.match(listBody.innerHTML, /拆分前历史备份/);
+
     console.log('cloud archive visibility tests passed');
 }
 

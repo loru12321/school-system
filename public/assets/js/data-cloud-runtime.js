@@ -244,21 +244,86 @@
 
     async function fetchCloudBackupMetadata(selectSystemDataRecords, listQueryOptions, filterCurrent, filterSnapshotsOnly, force) {
         const select = 'key, created_at, updated_at, size_bytes';
-        if (!filterCurrent && filterSnapshotsOnly) {
+        if (!filterCurrent) {
             const baseOptions = { ...listQueryOptions };
             delete baseOptions.keyIn;
-            const [examResult, workspaceResult] = await Promise.all([
-                selectSystemDataRecords({ select, ...baseOptions, kind: 'exam', limit: 1000 }, { force }),
-                selectSystemDataRecords({ select, ...baseOptions, kind: 'workspace', limit: 1000 }, { force })
-            ]);
-            const error = examResult?.error || workspaceResult?.error || null;
-            const data = [
-                ...(Array.isArray(examResult?.data) ? examResult.data : []),
-                ...(Array.isArray(workspaceResult?.data) ? workspaceResult.data : [])
-            ].sort((left, right) => new Date(right?.updated_at || 0) - new Date(left?.updated_at || 0));
+            const queries = [
+                { kind: 'exam' },
+                { kind: 'workspace' }
+            ];
+            if (!filterSnapshotsOnly) {
+                queries.push(
+                    { kind: 'teacher_map' },
+                    { kind: 'compare' },
+                    { kind: 'backup' },
+                    // One pre-split backup predates the metadata classifier and is
+                    // still marked generic in D1. Query by key as a compatibility
+                    // path without scanning thousands of internal history rows.
+                    { keyLike: 'BACKUP_%' }
+                );
+            }
+            const results = await Promise.all(queries.map((query) => (
+                selectSystemDataRecords({ select, ...baseOptions, ...query, limit: 1000 }, { force })
+            )));
+            const error = results.find((result) => result?.error)?.error || null;
+            const rowsByKey = new Map();
+            results.forEach((result) => {
+                (Array.isArray(result?.data) ? result.data : []).forEach((row) => {
+                    const key = normalizeText(row?.key);
+                    if (key) rowsByKey.set(key, row);
+                });
+            });
+            const data = Array.from(rowsByKey.values())
+                .sort((left, right) => new Date(right?.updated_at || 0) - new Date(left?.updated_at || 0));
             return { data, error };
         }
         return selectSystemDataRecords({ select, ...listQueryOptions }, { force });
+    }
+
+    function getCloudRecordKind(manager, key) {
+        if (manager && typeof manager.getCloudRecordKind === 'function') {
+            const kind = normalizeText(manager.getCloudRecordKind(key));
+            if (kind) return kind;
+        }
+        const text = normalizeText(key);
+        if (/^cohort::\d{4}::exam::/i.test(text)) return 'snapshot';
+        if (/^cohort::/i.test(text)) return 'cohort';
+        if (/^TEACHERS_/i.test(text)) return 'teacher';
+        if (/^BACKUP_/i.test(text)) return 'backup';
+        if (/^(STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/i.test(text)) return 'compare';
+        if (/^\d{4}级_/i.test(text)) return 'snapshot';
+        return 'other';
+    }
+
+    function getCloudRecordPresentation(manager, key) {
+        const text = normalizeText(key);
+        const kind = getCloudRecordKind(manager, text);
+        if (kind === 'teacher') {
+            const detail = text.replace(/^TEACHERS_/i, '').replace(/_/g, ' ');
+            return {
+                name: `<b>教师任课表</b><br><span style="color:#64748b; font-size:11px;">${escapeHtml(detail)}</span>`,
+                tag: '<span class="badge" style="background:#7c3aed; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">教师导入</span>'
+            };
+        }
+        if (kind === 'cohort') {
+            return {
+                name: `<b>届别工作区</b><br><span style="color:#64748b; font-size:11px;">${escapeHtml(text)} · 含指标参数、教师配置</span>`,
+                tag: '<span class="badge" style="background:#0f766e; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">工作区</span>'
+            };
+        }
+        if (kind === 'backup') {
+            return {
+                name: `<b>拆分前历史备份</b><br><span style="color:#64748b; font-size:11px;">${escapeHtml(text)}</span>`,
+                tag: '<span class="badge" style="background:#92400e; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">只读保留</span>'
+            };
+        }
+        if (kind === 'compare') {
+            return {
+                name: `<b>对比分析存档</b><br><span style="color:#64748b; font-size:11px;">${escapeHtml(text)}</span>`,
+                tag: '<span class="badge" style="background:#475569; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">对比</span>'
+            };
+        }
+        return null;
     }
 
     function getCachedCloudBackupList(manager, cacheKey) {
@@ -925,7 +990,7 @@
         const shell = doc ? doc.getElementById('dm-cloud-table-shell') : null;
         const summaryEl = doc ? doc.getElementById('dm-cloud-summary') : null;
         const filterCurrent = doc ? doc.getElementById('cloud-filter-current')?.checked !== false : true;
-        const filterSnapshotsOnly = doc ? doc.getElementById('cloud-filter-snapshots')?.checked !== false : true;
+        const filterSnapshotsOnly = doc ? doc.getElementById('cloud-filter-snapshots')?.checked === true : false;
         bindCloudTableRetry(manager, shell);
 
         // 检测演示模式 (Demo Mode)
@@ -1083,8 +1148,12 @@
                 let displayName = safeKey;
                 let tags = '';
                 const parts = String(item.key || '').split('_');
+                const presentation = getCloudRecordPresentation(manager, item.key);
 
-                if (parts.length >= 5) {
+                if (presentation) {
+                    displayName = presentation.name;
+                    tags = presentation.tag;
+                } else if (parts.length >= 5) {
                     const safeParts = parts.map(escapeHtml);
                     displayName = `<b>${safeParts[0]} ${safeParts[1]}</b><br><span style="color:#64748b; font-size:11px;">${safeParts[2]} ${safeParts[3]} ${safeParts[5] || ''}</span>`;
                     tags = `<span class="badge" style="background:${parts[4] === '期末' ? '#ef4444' : '#3b82f6'}; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">${safeParts[4]}</span>`;
@@ -1375,6 +1444,25 @@
     }
 
     async function loadCloudBackup(manager, key) {
+        const kind = getCloudRecordKind(manager, key);
+        if (kind === 'teacher') {
+            if (typeof manager.isCloudRecordInCurrentWorkspace === 'function' && !manager.isCloudRecordInCurrentWorkspace(key)) {
+                safeAlert('该任课表属于其他届别。请先切换到对应届别，再恢复这份教师任课表。');
+                return;
+            }
+            if (!root.CloudManager || typeof root.CloudManager.loadTeachers !== 'function') {
+                safeAlert('教师任课恢复模块尚未就绪，请稍后重试。');
+                return;
+            }
+            if (!safeConfirm(`确定恢复教师任课表 [${key}] 吗？\n这只会更新当前届别/学期的任课数据，不会改动考试成绩和计算口径。`)) return;
+            await root.CloudManager.loadTeachers({ exactKey: key, force: true });
+            await api.renderCloudBackups(manager, { force: true });
+            return;
+        }
+        if (kind === 'backup') {
+            safeAlert('这是拆分前保留的完整历史备份。为避免覆盖当前工作区，请先“下载存档”留存；系统不会直接将它误载入当前项目。');
+            return;
+        }
         if (typeof manager.isCloudWorkspaceSnapshotKey === 'function' && !manager.isCloudWorkspaceSnapshotKey(key)) {
             safeAlert('该记录不是工作区快照。教师任课和各类对比请在对应模块中查看。');
             return;

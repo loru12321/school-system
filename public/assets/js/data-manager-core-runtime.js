@@ -590,9 +590,11 @@ const DataManager = {
     getCloudRecordKind: function (key) {
         const text = String(key || '').trim();
         if (!text) return 'other';
+        if (/^cohort::\d{4}::exam::/i.test(text)) return 'snapshot';
         if (/^cohort::/i.test(text)) return 'cohort';
         if (isLegacyWorkspaceShadowExamId(text)) return 'shadow';
         if (/^TEACHERS_/i.test(text)) return 'teacher';
+        if (/^BACKUP_/i.test(text)) return 'backup';
         if (/^STUDENT_HISTORY_V1_/i.test(text)) return 'student-history';
         if (/^(STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(text)) return 'compare';
         if (normalizeCompareCohortId(text)) return 'snapshot';

@@ -141,9 +141,12 @@ const renderCloudBackupsSource = renderCloudBackupsStart >= 0 && renderCloudBack
 assert.ok(dataCloudRuntime.includes("const select = 'key, created_at, updated_at, size_bytes';"), 'cloud backup list should request stored metadata without hydrating snapshot content');
 assert.ok(!dataCloudRuntime.includes("const select = 'key, content, created_at, updated_at, size_bytes';"), 'cloud backup list should not request snapshot content');
 assert.ok(
-    dataCloudRuntime.includes("kind: 'exam', limit: 1000")
-        && dataCloudRuntime.includes("kind: 'workspace', limit: 1000"),
-    'all-project snapshot view should query exam and workspace records separately so internal index records stay hidden'
+    dataCloudRuntime.includes("{ kind: 'exam' }")
+        && dataCloudRuntime.includes("{ kind: 'workspace' }")
+        && dataCloudRuntime.includes("{ kind: 'teacher_map' }")
+        && dataCloudRuntime.includes("{ kind: 'backup' }")
+        && dataCloudRuntime.includes("{ keyLike: 'BACKUP_%' }"),
+    'all-project cloud view should query user-visible record types separately so internal index records stay hidden'
 );
 assert.ok(dataCloudRuntime.includes('function getCloudBackupListQueryOptions(filterCurrent)'), 'cloud backup list should build bounded query options');
 assert.ok(dataCloudRuntime.includes('options.keyIn = Array.from(keys);'), 'cloud backup list should query exact current workspace keys');
