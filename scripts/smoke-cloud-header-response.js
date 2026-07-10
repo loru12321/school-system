@@ -24,9 +24,13 @@ const pass = process.env.SMOKE_PASS || 'admin123';
 
         const button = page.locator('#header-data-mgr-btn');
         await button.waitFor({ state: 'visible', timeout: 90000 });
+        await page.waitForFunction(() => Array.isArray(window.RAW_DATA)
+            && window.RAW_DATA.length > 0
+            && typeof window.hasUsableProcessedSchoolMetrics === 'function'
+            && window.hasUsableProcessedSchoolMetrics(window.SCHOOLS), null, { timeout: 90000 });
         const buttonVisibleMs = Date.now() - startedAt;
         const clickStartedAt = Date.now();
-        await button.click({ force: true, timeout: 60000 });
+        await button.click({ force: true, timeout: 10000 });
         await page.waitForFunction(() => {
             const modal = document.getElementById('cloud-manager-modal');
             return !!modal && getComputedStyle(modal).display !== 'none';

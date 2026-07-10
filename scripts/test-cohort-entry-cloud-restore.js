@@ -204,6 +204,13 @@ assert.ok(
 );
 
 assert.ok(
+    /function compactSchoolMetricsForShard\(schoolMap\) \{[\s\S]*if \(field === 'students'\) return;/.test(cloudWorkspaceSource)
+        && cloudWorkspaceSource.includes('SCHOOLS: processedSchools,')
+        && cloudWorkspaceSource.includes('compactExam.schools = clonePayloadFragment(processedSchools);'),
+    'exam shards should retain calculated school metrics without duplicating student arrays'
+);
+
+assert.ok(
     /function compactExamMetadata\(examId, examPayload = \{\}\) \{[\s\S]*if \(field === 'data' \|\| field === 'schools' \|\| field === 'teacherMap'\) return;[\s\S]*if \(rowCount\) next\.rowCount = rowCount;/.test(cloudWorkspaceSource),
     'future exam shard metadata should preserve row counts without duplicating student rows'
 );

@@ -380,6 +380,10 @@ function buildExamShardPayload(payload, examId, examPayload) {
     config: exam.config || payload?.CONFIG || {},
     fingerprint: text(exam.fingerprint || payload?.FINGERPRINT)
   });
+  const processedSchools = shrinkSchoolMapForStorage(
+    exam.schools && Object.keys(exam.schools).length ? exam.schools : payload?.SCHOOLS
+  );
+  compactExam.schools = clone(processedSchools);
   return {
     CURRENT_PROJECT_KEY: payload?.CURRENT_PROJECT_KEY || '',
     CURRENT_COHORT_ID: payload?.CURRENT_COHORT_ID || payload?.COHORT_DB?.cohortId || normalizeCohortId(exactExamId),
@@ -391,7 +395,7 @@ function buildExamShardPayload(payload, examId, examPayload) {
     ARCHIVE_LOCKED: payload?.ARCHIVE_LOCKED || '',
     ARCHIVE_LOCKED_KEY: payload?.ARCHIVE_LOCKED_KEY || '',
     RAW_DATA: clone(rows),
-    SCHOOLS: clone(exam.schools || payload?.SCHOOLS || {}),
+    SCHOOLS: processedSchools,
     SUBJECTS: clone(exam.subjects || payload?.SUBJECTS || []),
     THRESHOLDS: clone(exam.thresholds || payload?.THRESHOLDS || {}),
     TEACHER_MAP: clone(exam.teacherMap || payload?.TEACHER_MAP || {}),

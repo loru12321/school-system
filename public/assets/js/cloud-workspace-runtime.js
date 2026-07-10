@@ -714,6 +714,22 @@
         return source;
     }
 
+    function compactSchoolMetricsForShard(schoolMap) {
+        if (!schoolMap || typeof schoolMap !== 'object') return {};
+        const compact = {};
+        Object.entries(schoolMap).forEach(([schoolName, schoolValue]) => {
+            if (!schoolValue || typeof schoolValue !== 'object') return;
+            const nextSchool = {};
+            Object.keys(schoolValue).forEach((field) => {
+                if (field === 'students') return;
+                nextSchool[field] = clonePayloadFragment(schoolValue[field]);
+            });
+            if (!nextSchool.name) nextSchool.name = String(schoolName || '').trim();
+            compact[String(schoolName || '').trim()] = nextSchool;
+        });
+        return compact;
+    }
+
     function buildExamShardPayload(payload, examId, examPayload) {
         const exactExamId = String(examId || '').trim();
         if (!exactExamId || isIgnoredExamKey(exactExamId)) return null;
@@ -724,6 +740,9 @@
         if (!rows.length) return null;
 
         const compactRows = compactExamShardRows(rows);
+        const processedSchools = compactSchoolMetricsForShard(
+            exam.schools && Object.keys(exam.schools).length ? exam.schools : payload?.SCHOOLS
+        );
         const shard = {
             CURRENT_PROJECT_KEY: payload?.CURRENT_PROJECT_KEY || '',
             CURRENT_COHORT_ID: payload?.CURRENT_COHORT_ID || '',
@@ -735,7 +754,7 @@
             ARCHIVE_LOCKED: payload?.ARCHIVE_LOCKED || '',
             ARCHIVE_LOCKED_KEY: payload?.ARCHIVE_LOCKED_KEY || '',
             RAW_DATA: compactRows,
-            SCHOOLS: {},
+            SCHOOLS: processedSchools,
             SUBJECTS: clonePayloadFragment(exam.subjects || payload?.SUBJECTS || []),
             THRESHOLDS: clonePayloadFragment(exam.thresholds || payload?.THRESHOLDS || {}),
             TEACHER_MAP: {},
@@ -767,6 +786,7 @@
             config: exam.config || payload?.CONFIG || {},
             fingerprint: String(exam.fingerprint || payload?.FINGERPRINT || '').trim()
         });
+        compactExam.schools = clonePayloadFragment(processedSchools);
         shard.COHORT_DB.exams = { [exactExamId]: compactExam };
         return shard;
     }
