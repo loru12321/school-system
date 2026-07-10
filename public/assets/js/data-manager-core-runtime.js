@@ -159,6 +159,7 @@ const DataManager = {
         const modal = this.ensureCloudManagerModal();
         if (typeof window.closeWorkspaceDrawer === 'function') window.closeWorkspaceDrawer();
         modal.classList.add('is-open');
+        modal.style.display = 'flex';
         modal.setAttribute('aria-hidden', 'false');
         document.body?.classList.add('cloud-manager-open');
         this.currentTab = 'cloud';
@@ -188,18 +189,22 @@ const DataManager = {
         if (modal) {
             modal.classList.remove('is-open');
             modal.setAttribute('aria-hidden', 'true');
+            modal.style.display = 'none';
         }
         document.body?.classList.remove('cloud-manager-open');
         if (window.location.hash === '#cloud-manager-modal') {
             history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
         }
-        const cloudArea = document.getElementById('dm-cloud-area');
-        if (cloudArea && this.cloudAreaHome && this.cloudAreaHome.parentNode && cloudArea.parentElement !== this.cloudAreaHome.parentNode) {
-            this.cloudAreaHome.parentNode.insertBefore(cloudArea, this.cloudAreaHome.nextSibling);
-            cloudArea.style.display = 'none';
-            cloudArea.style.padding = '15px';
-        }
         if (this.currentTab === 'cloud') this.currentTab = 'student';
+        // 先让弹窗立即消失，再把大型云端表格移回数据管理页，避免关闭按钮被 DOM 搬运阻塞。
+        window.setTimeout(() => {
+            const cloudArea = document.getElementById('dm-cloud-area');
+            if (cloudArea && this.cloudAreaHome && this.cloudAreaHome.parentNode && cloudArea.parentElement !== this.cloudAreaHome.parentNode) {
+                this.cloudAreaHome.parentNode.insertBefore(cloudArea, this.cloudAreaHome.nextSibling);
+                cloudArea.style.display = 'none';
+                cloudArea.style.padding = '15px';
+            }
+        }, 0);
     },
 
     setCloudRecordCategory: function (category) {

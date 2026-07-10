@@ -15,6 +15,20 @@
         'teacher-township-ranking',
         'cohort-growth'
     ]);
+    const STUDENT_DIAGNOSIS_MODULE_IDS = new Set([
+        'zhongkao-countdown',
+        'student-overview',
+        'student-details',
+        'blank-score-audit',
+        'subject-balance',
+        'marginal-push',
+        'progress-analysis',
+        'cohort-growth',
+        'potential-analysis',
+        'segment-analysis',
+        'correlation-analysis',
+        'report-generator'
+    ]);
     const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;
     const TEACHER_ANALYSIS_PRELOAD_DELAY_MS = 700;
     const TEACHER_ANALYSIS_ENTRY_LABELS = [
@@ -999,11 +1013,33 @@
         }, { delay: 40, idle: true, timeout: 1800 });
     }
 
+    function prewarmStudentDiagnosisRuntimes(activeModuleId) {
+        if (!STUDENT_DIAGNOSIS_MODULE_IDS.has(activeModuleId)) return;
+        scheduleModuleTask('student-diagnosis-runtime-prewarm', () => {
+            if (!window.SystemRuntimeLoader || typeof window.SystemRuntimeLoader.load !== 'function') return;
+            ['student-overview', 'report-render', 'report-chart'].forEach((runtimeId) => {
+                Promise.resolve(window.SystemRuntimeLoader.load(runtimeId))
+                    .catch((error) => console.warn(`[student-diagnosis] ${runtimeId} prewarm failed:`, error));
+            });
+        }, { delay: 500, idle: true, timeout: 2400 });
+    }
+
+    function initSummaryEntry() {
+        scheduleActiveModuleTask('summary', 'summary-tables', () => {
+            if (typeof window.renderTables === 'function') window.renderTables();
+        }, { delay: 20, frame: true });
+        scheduleActiveModuleTask('summary', 'summary-auto-calculate', () => {
+            if (typeof window.calcSummary !== 'function') return;
+            Promise.resolve(window.calcSummary(true))
+                .catch((error) => console.warn('[summary] automatic calculation failed:', error));
+        }, { delay: 80, idle: true, timeout: 1200 });
+        return Promise.resolve(true);
+    }
+
     function runModuleSpecificInit(id) {
+        prewarmStudentDiagnosisRuntimes(id);
         if (id === 'student-details') return initStudentDetailsEntry();
-        if (id === 'summary') {
-            scheduleMacroTablesRender('summary', 'summary-tables');
-        }
+        if (id === 'summary') return initSummaryEntry();
         if (id === 'analysis') {
             scheduleActiveModuleTask('analysis', 'analysis-entry-selects', () => {
                 if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();

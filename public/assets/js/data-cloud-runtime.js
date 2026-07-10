@@ -289,6 +289,48 @@
         return 'other';
     }
 
+    function getCohortWorkspaceGrade(key) {
+        const cohortMatch = normalizeText(key).match(/cohort::(\d{4})/i);
+        const cohortYear = cohortMatch ? cohortMatch[1] : '';
+        if (!cohortYear) return '';
+        try {
+            const examMeta = typeof root.getExamMetaFromUI === 'function' ? root.getExamMetaFromUI() : {};
+            if (typeof root.computeCohortGrade === 'function') {
+                return String(root.computeCohortGrade({ id: cohortYear, year: cohortYear, startGrade: 6 }, examMeta) || '');
+            }
+            const academicYear = Number(String(examMeta?.year || '').split('-')[0])
+                || (new Date().getMonth() + 1 >= 9 ? new Date().getFullYear() : new Date().getFullYear() - 1);
+            const grade = 6 + academicYear - Number(cohortYear);
+            return grade >= 1 && grade <= 12 ? String(grade) : '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function buildTeacherPreview(payload) {
+        const map = payload?.map && typeof payload.map === 'object' ? payload.map : {};
+        const subjectTeachers = new Map();
+        const uniqueTeachers = new Set();
+        Object.entries(map).forEach(([key, teacherValue]) => {
+            const teacher = normalizeText(teacherValue);
+            if (!teacher) return;
+            const separator = String(key || '').lastIndexOf('_');
+            const subject = normalizeText(separator >= 0 ? String(key).slice(separator + 1) : '') || '未标学科';
+            if (!subjectTeachers.has(subject)) subjectTeachers.set(subject, new Set());
+            subjectTeachers.get(subject).add(teacher);
+            uniqueTeachers.add(teacher);
+        });
+        const subjects = Array.from(subjectTeachers.entries())
+            .sort(([left], [right]) => left.localeCompare(right, 'zh-CN'))
+            .map(([subject, teachers]) => `${subject}：${Array.from(teachers).slice(0, 4).join('、')}${teachers.size > 4 ? '等' : ''}`);
+        return {
+            recordCount: Object.keys(map).length,
+            teacherCount: uniqueTeachers.size,
+            subjectCount: subjectTeachers.size,
+            text: subjects.slice(0, 5).join(' · ') + (subjects.length > 5 ? ` · 另${subjects.length - 5}科` : '')
+        };
+    }
+
     function getCloudRecordPresentation(manager, key) {
         const text = normalizeText(key);
         const kind = getCloudRecordKind(manager, text);
@@ -300,8 +342,12 @@
             };
         }
         if (kind === 'cohort') {
+            const grade = getCohortWorkspaceGrade(text);
+            const scope = grade === '9'
+                ? '当前九年级 · 含指标生参数、教师配置'
+                : `${grade ? `当前${grade}年级 · ` : ''}含届别配置、教师配置`;
             return {
-                name: `<b>届别工作区</b><br><span style="color:#64748b; font-size:11px;">${escapeHtml(text)} · 含指标参数、教师配置</span>`,
+                name: `<b>届别工作区</b><br><span style="color:#64748b; font-size:11px;">${escapeHtml(text)} · ${escapeHtml(scope)}</span>`,
                 tag: '<span class="badge" style="background:#0f766e; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">工作区</span>'
             };
         }
@@ -322,7 +368,7 @@
 
     const CLOUD_RECORD_CATEGORIES = {
         score: { label: '成绩快照', kinds: new Set(['snapshot']) },
-        workspace: { label: '指标参数 / 工作区', kinds: new Set(['cohort']) },
+        workspace: { label: '届别工作区', kinds: new Set(['cohort']) },
         teacher: { label: '教师任课', kinds: new Set(['teacher']) },
         compare: { label: '对比存档', kinds: new Set(['compare']) },
         backup: { label: '历史备份', kinds: new Set(['backup']) }
@@ -1205,6 +1251,7 @@
                 const sizeKB = ((Number(item.size_bytes) || 0) / 1024).toFixed(1);
                 const time = escapeHtml(new Date(item.updated_at || item.created_at).toLocaleString());
                 const safeKey = escapeHtml(item.key);
+                const kind = getCloudRecordKind(manager, item.key);
                 let displayName = safeKey;
                 let tags = '';
                 const parts = String(item.key || '').split('_');
@@ -1218,6 +1265,11 @@
                     displayName = `<b>${safeParts[0]} ${safeParts[1]}</b><br><span style="color:#64748b; font-size:11px;">${safeParts[2]} ${safeParts[3]} ${safeParts[5] || ''}</span>`;
                     tags = `<span class="badge" style="background:${parts[4] === '期末' ? '#ef4444' : '#3b82f6'}; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">${safeParts[4]}</span>`;
                 }
+                if (kind === 'teacher') {
+                    displayName += `<div data-cloud-teacher-preview="${safeKey}" style="margin-top:6px; color:#475569; font-size:11px; line-height:1.65;">正在读取学科与教师姓名…</div>`;
+                }
+                const loadLabel = kind === 'teacher' ? '加载并编辑' : '读取';
+                const loadTitle = kind === 'teacher' ? '加载此任课表并进入可编辑的教师任课页' : '读取此存档';
 
                 rows += `
                     <tr style="${isCurrent ? 'background:#f0fdf4;' : ''}">
@@ -1235,8 +1287,8 @@
                         <td style="font-size:12px;">${sizeKB} KB</td>
                         <td>
                             <div style="display:flex; gap:6px;">
-                                <button class="btn btn-sm btn-primary" type="button" data-cloud-backup-action="load" data-key="${safeKey}" title="读取此存档">
-                                    <i class="ti ti-download"></i> 读取
+                                <button class="btn btn-sm btn-primary" type="button" data-cloud-backup-action="load" data-key="${safeKey}" title="${loadTitle}">
+                                    <i class="ti ti-download"></i> ${loadLabel}
                                 </button>
                                 <button class="btn btn-sm btn-green" type="button" data-cloud-backup-action="download" data-key="${safeKey}" title="下载此存档文档">
                                     <i class="ti ti-file-download"></i> 下载存档
@@ -1254,6 +1306,10 @@
                 renderCloudTableState(tbody, shell, 'ready');
                 tbody.innerHTML = rows;
                 bindCloudBackupRowActions(manager, tbody);
+                if (recordCategory === 'teacher') {
+                    Promise.resolve(api.hydrateTeacherPreviews(manager, displayRows, tbody))
+                        .catch((error) => root.console?.warn?.('[DataCloud] teacher previews failed:', error));
+                }
             }
             api.updateCloudSelectionUI(manager);
             rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.total', renderStartedAt, {
@@ -1373,6 +1429,30 @@
             : data;
         manager.cloudBackupRows.set(normalizedKey, merged);
         return merged;
+    }
+
+    async function hydrateTeacherPreviews(manager, items, tbody) {
+        const teacherItems = (Array.isArray(items) ? items : [])
+            .filter((item) => getCloudRecordKind(manager, item?.key) === 'teacher')
+            .slice(0, 8);
+        if (!teacherItems.length || !tbody || typeof tbody.querySelectorAll !== 'function') return;
+        await Promise.all(teacherItems.map(async (item) => {
+            let preview = null;
+            try {
+                const row = await api.getCloudBackupRow(manager, item.key);
+                preview = buildTeacherPreview(parseCloudPayload(row.content) || {});
+            } catch (error) {
+                root.console?.warn?.('[DataCloud] teacher preview failed:', item.key, error);
+            }
+            const slots = Array.from(tbody.querySelectorAll('[data-cloud-teacher-preview]'));
+            const slot = slots.find((element) => normalizeText(element.dataset?.cloudTeacherPreview) === normalizeText(item.key));
+            if (!slot) return;
+            if (!preview || !preview.recordCount) {
+                slot.textContent = '未读取到任课明细；可点击“加载并编辑”核对。';
+                return;
+            }
+            slot.innerHTML = `<strong>${preview.subjectCount} 科 · ${preview.teacherCount} 位教师 · ${preview.recordCount} 条映射</strong><br>${escapeHtml(preview.text)}`;
+        }));
     }
 
     function buildCloudArchiveExportPayload(item) {
@@ -1515,8 +1595,10 @@
                 return;
             }
             if (!safeConfirm(`确定恢复教师任课表 [${key}] 吗？\n这只会更新当前届别/学期的任课数据，不会改动考试成绩和计算口径。`)) return;
-            await root.CloudManager.loadTeachers({ exactKey: key, force: true });
-            await api.renderCloudBackups(manager, { force: true });
+            const loaded = await root.CloudManager.loadTeachers({ exactKey: key, force: true });
+            if (!loaded) return;
+            if (typeof manager.closeCloudManager === 'function') manager.closeCloudManager();
+            if (typeof manager.open === 'function') manager.open('teacher');
             return;
         }
         if (kind === 'backup') {
@@ -2176,6 +2258,8 @@
         parseCloudArchiveImportRecords,
         handleCloudArchiveUpload,
         loadCloudBackup,
+        buildTeacherPreview,
+        hydrateTeacherPreviews,
         deleteCloudBackup,
         deleteCurrentExamCloudBackup,
         loadCloudSnapshots,

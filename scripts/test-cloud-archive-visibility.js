@@ -154,8 +154,18 @@ async function run() {
                 if (options.kind === 'teacher_map') return { data: [{ key: 'TEACHERS_2022级_2025-2026_上学期_9年级', size_bytes: 60, updated_at: '2026-03-12' }], error: null };
                 if (options.keyLike === 'BACKUP_%') return { data: [{ key: 'BACKUP_cohort::2022_pre_split', size_bytes: 50, updated_at: '2026-06-27' }], error: null };
                 return { data: [], error: null };
+            },
+            async readSystemDataRecord(key) {
+                return {
+                    data: {
+                        key,
+                        content: JSON.stringify({ map: { '9.1_语文': '张老师', '9.1_数学': '王老师' } })
+                    },
+                    error: null
+                };
             }
         },
+        getExamMetaFromUI() { return { year: '2025-2026', grade: '9' }; },
         document: {
             querySelector(selector) { return selector === '#dm-cloud-table tbody' ? listBody : null; },
             querySelectorAll() { return []; },
@@ -185,9 +195,25 @@ async function run() {
 
     await listRuntime.setCloudRecordCategory(listManager, 'teacher');
     assert.match(listBody.innerHTML, /教师任课表/);
+    assert.match(listBody.innerHTML, /加载并编辑/);
+
+    const teacherPreview = listRuntime.buildTeacherPreview({
+        map: {
+            '9.1_语文': '张老师',
+            '9.2_语文': '李老师',
+            '9.1_数学': '王老师'
+        }
+    });
+    assert.strictEqual(teacherPreview.subjectCount, 2);
+    assert.strictEqual(teacherPreview.teacherCount, 3);
+    assert.strictEqual(teacherPreview.recordCount, 3);
+    assert.match(teacherPreview.text, /语文：张老师、李老师|语文：李老师、张老师/);
+    assert.match(teacherPreview.text, /数学：王老师/);
 
     await listRuntime.setCloudRecordCategory(listManager, 'workspace');
-    assert.match(listBody.innerHTML, /含指标参数、教师配置/);
+    assert.match(listBody.innerHTML, /届别工作区/);
+    assert.match(listBody.innerHTML, /当前九年级 · 含指标生参数、教师配置/);
+    assert.doesNotMatch(listBody.innerHTML, /含指标参数、教师配置/);
 
     await listRuntime.setCloudRecordCategory(listManager, 'backup');
     assert.match(listBody.innerHTML, /拆分前历史备份/);

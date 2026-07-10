@@ -84,6 +84,16 @@ async function installProfiler(page) {
       'ensureHistoryCompareRuntimeLoaded',
       'doQuery',
       'renderSingleReportCardHTML',
+      'buildStudentInsightModel',
+      'renderStudentInsightOverview',
+      'renderStudentActionPlan',
+      'renderStudentSubjectBoard',
+      'renderStudentRealityNote',
+      'hasStudentTownshipRankData',
+      'hasStudentCountyRankData',
+      'isCountyDirectStudentForRank',
+      'getComparisonTotalValue',
+      'isExamKeyEquivalentForCompare',
       'getComparisonStudentView',
       'getComparisonStudentList',
       'getStudentExamHistory',
@@ -233,6 +243,9 @@ async function profileCorrelation(page) {
 
 async function profileReport(page) {
   await page.evaluate(async () => {
+    await Promise.resolve(window.ensureReportRenderRuntimeLoaded?.()).catch(() => null);
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    window.__installProdProfileWraps?.();
     window.updateSchoolSelect?.();
     window.updateReportCompareExamSelects?.();
     const schoolSelect = document.getElementById('sel-school');

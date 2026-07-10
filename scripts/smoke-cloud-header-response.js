@@ -60,7 +60,12 @@ const pass = process.env.SMOKE_PASS || 'admin123';
                 teacherRows: keys.filter((key) => key.startsWith('TEACHERS_')).length,
                 backupRows: keys.filter((key) => key.startsWith('BACKUP_')).length,
                 positiveSizeRows: sizeKb.filter((size) => size > 0).length,
-                summary: String(document.getElementById('dm-cloud-summary')?.textContent || '').replace(/\s+/g, ' ').trim()
+                summary: String(document.getElementById('dm-cloud-summary')?.textContent || '').replace(/\s+/g, ' ').trim(),
+                teacherPreview: Array.from(document.querySelectorAll('[data-cloud-teacher-preview]'))
+                    .map((node) => String(node.textContent || '').replace(/\s+/g, ' ').trim())
+                    .filter(Boolean),
+                loadButtonLabels: Array.from(document.querySelectorAll('[data-cloud-backup-action="load"]'))
+                    .map((button) => String(button.textContent || '').replace(/\s+/g, ' ').trim())
             };
         });
         const scoreList = await readCloudList();
@@ -73,6 +78,8 @@ const pass = process.env.SMOKE_PASS || 'admin123';
         await page.locator('[data-cloud-category="teacher"]').click();
         await page.waitForFunction(() => document.querySelector('[data-cloud-category="teacher"]')?.classList.contains('is-active')
             && document.querySelectorAll('#dm-cloud-table tbody .dm-cloud-select').length > 0, null, { timeout: 30000 });
+        await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-cloud-teacher-preview]'))
+            .some((node) => !String(node.textContent || '').includes('正在读取')), null, { timeout: 30000 });
         const teacherList = await readCloudList();
         await page.locator('[data-cloud-category="workspace"]').click();
         await page.waitForFunction(() => document.querySelector('[data-cloud-category="workspace"]')?.classList.contains('is-active')
@@ -86,6 +93,8 @@ const pass = process.env.SMOKE_PASS || 'admin123';
         if (scoreList.filterCurrent) throw new Error('cloud list unexpectedly defaults to current-project-only filtering');
         if (scoreList.activeCategory !== 'score' || scoreList.teacherRows || scoreList.backupRows) throw new Error('score category mixed unrelated cloud records');
         if (teacherList.activeCategory !== 'teacher' || teacherList.teacherRows < 1) throw new Error('teacher category did not isolate timetable records');
+        if (!teacherList.loadButtonLabels.some((label) => label.includes('加载并编辑'))) throw new Error('teacher records do not expose the editable entry');
+        if (!teacherList.teacherPreview.some((text) => /\d+\s*科/.test(text) && text.includes('位教师'))) throw new Error('teacher subject/name preview did not hydrate');
         if (workspaceList.activeCategory !== 'workspace' || workspaceList.rowCount < 1) throw new Error('workspace/indicator category is empty');
         if (backupList.activeCategory !== 'backup' || backupList.backupRows < 1) throw new Error('backup category did not isolate historical backups');
         if ([scoreList, teacherList, workspaceList, backupList].some((item) => item.internalHistoryRows > 0)) throw new Error('internal student history records leaked into a cloud category');

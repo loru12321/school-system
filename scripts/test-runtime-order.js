@@ -894,6 +894,10 @@ assert.ok(moduleEntryRuntime.includes('function prewarmReportGeneratorRuntimes')
 assert.ok(moduleEntryRuntime.includes("'report-generator-runtime-prewarm'"), 'report generator runtime prewarm should be scheduled off the switch frame');
 assert.ok(moduleEntryRuntime.includes("{ delay: 40, idle: true, timeout: 1800 }"), 'report generator render runtime should prewarm immediately after entry paint');
 assert.ok(moduleEntryRuntime.includes('ensureReportRenderRuntimeLoaded'), 'report generator prewarm should include report rendering runtime');
+assert.ok(moduleEntryRuntime.includes('function initSummaryEntry()'), 'summary module should have a dedicated automatic entry initializer');
+assert.ok(moduleEntryRuntime.includes('window.calcSummary(true)'), 'summary module entry should automatically calculate the overview table');
+assert.ok(moduleEntryRuntime.includes('function prewarmStudentDiagnosisRuntimes'), 'student diagnosis should prewarm shared runtimes after the active module paints');
+assert.ok(moduleEntryRuntime.includes("['student-overview', 'report-render', 'report-chart']"), 'student diagnosis prewarm should cover overview and report shared runtimes');
 const reportPrewarmStart = moduleEntryRuntime.indexOf('function prewarmReportGeneratorRuntimes');
 const reportPrewarmEnd = moduleEntryRuntime.indexOf('function runModuleSpecificInit', reportPrewarmStart);
 const reportPrewarmSource = reportPrewarmStart >= 0 && reportPrewarmEnd > reportPrewarmStart
