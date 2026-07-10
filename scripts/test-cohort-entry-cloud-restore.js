@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
+const indexSource = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
 const authLoginSource = fs.readFileSync(path.join(root, 'public/assets/js/auth-login-runtime.js'), 'utf8');
 const cohortDbSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-db-core-runtime.js'), 'utf8');
@@ -162,6 +163,13 @@ assert.ok(
 assert.ok(
     snapshotSystemSource.includes('DataManager.syncSchoolAliasSettingsFromGateway().catch'),
     'school aliases should refresh through the lightweight gateway path after snapshot apply'
+);
+
+assert.ok(
+    indexSource.includes('id="cloud-manager-modal"')
+        && indexSource.includes('id="cloud-manager-body"')
+        && indexSource.includes('DataManager.closeCloudManager()'),
+    'the lightweight cloud manager modal should be present in the static DOM before the first header click'
 );
 
 assert.ok(
