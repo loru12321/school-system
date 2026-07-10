@@ -731,6 +731,21 @@
         const selected = rows[0] || rows.find(row => normalizeText(row && row.key) === examKey) || null;
         if (!selected || !selected.key) return null;
 
+        // Pay-once-per-device: the metadata pick above already carries the
+        // winner's updated_at, so we can check the local shard's freshness with
+        // ZERO extra round-trips (same isLocalCacheFresh test the truthy-examKey
+        // fast path uses). If the local copy is at least as new as the remote
+        // row, reuse it and skip the ~188KB trans-Pacific shard download. Stale
+        // or missing cache falls through to the network fetch (self-healing) —
+        // and this only changes the content SOURCE, never which row is selected.
+        const selectedLocalMeta = await readLocalCacheMeta(selected.key).catch(() => null);
+        if (selectedLocalMeta && isLocalCacheFresh(selectedLocalMeta, selected.updated_at)) {
+            const selectedLocalPayload = await readLocalCache(selected.key).catch(() => null);
+            if (selectedLocalPayload) {
+                return { key: selected.key, payload: selectedLocalPayload, cached: true };
+            }
+        }
+
         const { data: contentData, error: contentError } = await selectSystemDataRecords({
             select: 'key,content,updated_at',
             keyIn: [selected.key]
