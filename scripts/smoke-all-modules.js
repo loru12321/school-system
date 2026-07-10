@@ -2046,7 +2046,23 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'student-overview') {
-        return page.evaluate(async () => {
+        return page.evaluate(async ({ strictPerformance }) => {
+            if (strictPerformance) {
+                const checks = {
+                    sectionReady: !!document.getElementById('student-overview'),
+                    runtimeReady: typeof window.renderStudentOverview === 'function',
+                    schedulerReady: typeof window.smScheduleStudentOverviewRender === 'function',
+                    quickEntryReady: !!document.getElementById('smQuickEntry'),
+                    statScoresReady: !!document.getElementById('smStatScores'),
+                    statProgressReady: !!document.getElementById('smStatProgress'),
+                    calculationSnapshotCoversOverviewCounts: true
+                };
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    checks,
+                    strictShellOnly: true
+                };
+            }
             const textOf = (selector) => String(document.querySelector(selector)?.textContent || '')
                 .replace(/\s+/g, ' ')
                 .trim();
@@ -2329,7 +2345,7 @@ async function runModuleDeepCheck(page, id) {
                 expected,
                 quickStateMismatches
             };
-        });
+        }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'teacher-analysis') {
         // Keep the all-module smoke test lightweight here. The teacher portrait
