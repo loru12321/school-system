@@ -30,16 +30,20 @@ const pass = process.env.SMOKE_PASS || 'admin123';
             && window.hasUsableProcessedSchoolMetrics(window.SCHOOLS), null, { timeout: 90000 });
         const buttonVisibleMs = Date.now() - startedAt;
         const clickStartedAt = Date.now();
-        const result = await page.evaluate(() => {
-            document.getElementById('header-data-mgr-btn')?.click();
-            const modal = document.getElementById('cloud-manager-modal');
-            return {
-                modalVisible: !!modal && modal.classList.contains('is-open') && getComputedStyle(modal).display !== 'none',
-                heading: String(document.querySelector('#cloud-manager-modal h3')?.textContent || '').trim(),
-                currentTab: window.DataManager?.currentTab || '',
-                scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
-            };
-        });
+        const result = await Promise.race([
+            page.evaluate(() => {
+                document.getElementById('header-data-mgr-btn')?.click();
+                const modal = document.getElementById('data-manager-modal');
+                return {
+                    modalVisible: !!modal && getComputedStyle(modal).display !== 'none',
+                    heading: String(document.querySelector('#data-manager-modal h3')?.textContent || '').trim(),
+                    currentTab: window.DataManager?.currentTab || '',
+                    scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
+                };
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('cloud header click blocked the browser main thread for over 10 seconds')), 10000))
+        ]);
+        const clickResponseMs = Date.now() - clickStartedAt;
         if (!result.modalVisible) throw new Error('cloud manager modal did not become visible in the click task');
         await page.waitForFunction(() => {
             const shell = document.getElementById('dm-cloud-table-shell');
@@ -99,16 +103,16 @@ const pass = process.env.SMOKE_PASS || 'admin123';
         if (backupList.activeCategory !== 'backup' || backupList.backupRows < 1) throw new Error('backup category did not isolate historical backups');
         if ([scoreList, teacherList, workspaceList, backupList].some((item) => item.internalHistoryRows > 0)) throw new Error('internal student history records leaked into a cloud category');
         if (Object.values(categoryCounts).reduce((sum, count) => sum + count, 0) < 26) throw new Error('cloud category counts are incomplete');
-        await page.locator('#cloud-manager-modal button[title="关闭"]').click();
+        await page.locator('#data-manager-modal .modal-close-btn').click();
         await page.waitForFunction(() => {
-            const modal = document.getElementById('cloud-manager-modal');
-            return !!modal && !modal.classList.contains('is-open') && getComputedStyle(modal).display === 'none';
+            const modal = document.getElementById('data-manager-modal');
+            return !!modal && getComputedStyle(modal).display === 'none';
         }, null, { timeout: 10000 });
         const modalClosed = true;
         console.log(JSON.stringify({
             ok: true,
             buttonVisibleMs,
-            clickResponseMs: Date.now() - clickStartedAt,
+            clickResponseMs,
             ...result,
             modalClosed,
             cloudList

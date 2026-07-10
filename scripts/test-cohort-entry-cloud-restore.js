@@ -166,12 +166,11 @@ assert.ok(
 );
 
 assert.ok(
-    indexSource.includes('id="cloud-manager-modal" class="modal" x-ignore')
-        && indexSource.includes('id="cloud-manager-body"')
-        && indexSource.includes('#cloud-manager-modal.is-open { display: flex !important; }')
+    !indexSource.includes('id="cloud-manager-modal"')
+        && indexSource.includes('id="data-manager-modal"')
         && indexSource.includes('class="dm-cloud-category-tabs"')
-        && indexSource.includes('DataManager.closeCloudManager()'),
-    'the lightweight cloud manager modal should be present in the static DOM before the first header click'
+        && indexSource.includes('onclick="DataManager.closeCloudManager()"'),
+    'the cloud header entry should reuse the existing tabbed data manager instead of a duplicate modal shell'
 );
 
 assert.ok(
@@ -195,12 +194,14 @@ assert.ok(
 );
 
 assert.ok(
-    /modal\.classList\.add\('is-open'\);[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*this\.mountCloudAreaInCloudManager\(\);/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
-    'the cloud manager should paint its modal shell before mounting the large cloud data subtree'
+    /openCloudManager: function \(\) \{[\s\S]*this\.open\('cloud'\);/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8'))
+        && !fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8').includes('mountCloudAreaInCloudManager')
+        && !fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8').includes('body.appendChild(cloudArea)'),
+    'the cloud manager should keep the large cloud table in its original tab and never move its DOM subtree'
 );
 assert.ok(
-    /closeCloudManager: function \(\) \{[\s\S]*modal\.classList\.remove\('is-open'\);[\s\S]*modal\.setAttribute\('aria-hidden', 'true'\)/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
-    'cloud manager close should explicitly hide the modal instead of relying on URL target state'
+    /closeCloudManager: function \(\) \{[\s\S]*dataManagerModal\.style\.display = 'none'/.test(fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8')),
+    'cloud manager close should explicitly hide the shared data manager modal'
 );
 
 assert.ok(

@@ -764,19 +764,21 @@ assert.ok(
 );
 assert.ok(
     dataManagerCoreRuntime.includes('openCloudManager: function ()'),
-    'DataManager should expose a lightweight standalone cloud manager entry'
+    'DataManager should expose a cloud manager entry'
 );
 assert.ok(
     authLoginRuntime.includes('DataManager.openCloudManager();'),
-    'header cloud data button should open the standalone cloud manager'
+    'header cloud data button should open the cloud manager'
 );
 assert.ok(
-    !authLoginRuntime.includes("DataManager.open('cloud');"),
-    'header cloud data button must not open the full DataManager shell'
+    dataManagerCoreRuntime.includes("this.open('cloud');")
+        && !dataManagerCoreRuntime.includes('mountCloudAreaInCloudManager')
+        && !dataManagerCoreRuntime.includes('body.appendChild(cloudArea)'),
+    'header cloud data should reuse the existing cloud tab without moving its large DOM subtree'
 );
 assert.ok(
     appSource.includes("function openCloudRollback()") && appSource.includes('DataManager.openCloudManager();'),
-    'cloud rollback entry should also open the standalone cloud manager'
+    'cloud rollback entry should also open the shared cloud manager'
 );
 assert.ok(
     !authLoginRuntime.includes("DataManager.open();\n                setTimeout(() =>"),

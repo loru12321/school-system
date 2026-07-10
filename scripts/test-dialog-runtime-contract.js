@@ -38,6 +38,11 @@ const freshmanExam = read('public/assets/js/freshman-exam-runtime.js');
 assert.ok(bootRuntime.includes("'dialog-runtime.js'"), 'dialog runtime should load before app.js');
 assert.ok(bootRuntime.indexOf("'dialog-runtime.js'") < bootRuntime.indexOf("'app.js'"), 'dialog runtime should precede app.js in the boot module list');
 assert.ok(dialogRuntime.includes('SchoolDialogRuntime'), 'dialog runtime should expose a named contract');
+assert.ok(
+  dialogRuntime.includes('if (assignedZIndex > 0 && currentZIndex === assignedZIndex) return assignedZIndex;')
+    && dialogRuntime.includes('delete node.dataset.schoolTopLayer;'),
+  'top-layer modal observer should be idempotent and clear its marker while hidden instead of looping on its own style mutation'
+);
 assert.ok(dialogRuntime.includes('UI.alert = async function'), 'shared UI should expose async alert from dialog runtime');
 assert.ok(dialogRuntime.includes('UI.confirm = async function'), 'shared UI should expose async confirm from dialog runtime');
 assert.ok(dialogRuntime.includes('UI.prompt = async function'), 'shared UI should expose async prompt from dialog runtime');

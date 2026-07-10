@@ -100,8 +100,8 @@
     <script defer src="./assets/js/cohort-sync-status-runtime.js"></script>
     <script defer src="./assets/js/entrance-sound-runtime.js"></script>
     <script defer src="./assets/js/runtime-loader-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-a556b4a448b1.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-a556b4a448b1.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-5f8d5e97babd.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-5f8d5e97babd.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -3811,31 +3811,9 @@
         </div>
     </div>
 
-    <style id="cloud-manager-target-style">
-        #cloud-manager-modal { display: none !important; }
-        #cloud-manager-modal.is-open { display: flex !important; }
-    </style>
-    <!-- 云端数据轻量弹窗预置在静态 DOM 中，避免首次点击时动态插入节点触发框架全树扫描。 -->
-    <div id="cloud-manager-modal" class="modal" x-ignore data-mojibake-skip="true" aria-hidden="true" style="display:none;"
-        onclick="if(event.target===this) DataManager.closeCloudManager()">
-        <div class="modal-content" data-mojibake-skip="true"
-            style="width:min(1120px,96vw); height:min(86vh,820px); padding:18px; border-radius:18px; display:flex; flex-direction:column; overflow:hidden;">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
-                <div>
-                    <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i class="ti ti-cloud-data-connection"></i> 云端数据</h3>
-                    <div style="margin-top:4px; font-size:12px; color:#64748b;">只加载云端存档清单，不进入底层数据管理页。</div>
-                </div>
-                <button type="button" class="btn btn-sm btn-gray" onclick="DataManager.closeCloudManager()" title="关闭">
-                    <i class="ti ti-x"></i>
-                </button>
-            </div>
-            <div id="cloud-manager-body" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
-        </div>
-    </div>
-
     <!-- 5. 数据综合管理后台 (成绩/教师/档案) -->
-    <div id="data-manager-modal" class="modal" style="display: none; z-index: 79000;">
-        <div class="modal-content"
+    <div id="data-manager-modal" class="modal" x-ignore data-mojibake-skip="true" style="display: none; z-index: 79000;">
+        <div class="modal-content" data-mojibake-skip="true"
             style="width:min(1480px,96vw); max-width:1480px; height:min(92vh,960px); display:flex; flex-direction:column; min-height:0; overflow:hidden; padding:22px 24px 18px; border-radius:22px;">
 
             <div
@@ -3847,7 +3825,7 @@
                         <i class="ti ti-cloud-upload"></i> 保存修改并同步云端
                     </button>
                     <button type="button" class="modal-close-btn" aria-label="关闭数据管理弹窗"
-                        onclick="document.getElementById('data-manager-modal').style.display='none'">&times;</button>
+                        onclick="DataManager.closeCloudManager()">&times;</button>
                 </div>
             </div>
 

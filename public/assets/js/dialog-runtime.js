@@ -39,7 +39,17 @@
     }
 
     function bringSchoolModalToFront(node) {
-        if (!isTopLayerCandidate(node) || !isDisplayed(node)) return 0;
+        if (!isTopLayerCandidate(node)) return 0;
+        if (!isDisplayed(node)) {
+            delete node.dataset.schoolTopLayer;
+            return 0;
+        }
+        const assignedZIndex = Number(node.dataset.schoolTopLayer || 0);
+        const currentZIndex = Number(node.style.zIndex || 0);
+        // The observer watches style changes. Rewriting z-index for the style
+        // mutation caused by this function would otherwise schedule itself
+        // forever and pin the browser renderer at 100% CPU.
+        if (assignedZIndex > 0 && currentZIndex === assignedZIndex) return assignedZIndex;
         topModalZIndex += 10;
         node.style.zIndex = String(topModalZIndex);
         node.dataset.schoolTopLayer = String(topModalZIndex);

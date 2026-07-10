@@ -86,7 +86,6 @@ const DataManager = {
         }
 
         document.getElementById('data-manager-modal').style.display = 'flex';
-        this.decorateLayout();
         this.switchTab(initialTab || 'student');
         if ((initialTab || 'student') !== 'cloud' && typeof this.syncSchoolAliasSettingsFromGateway === 'function') {
             this.syncSchoolAliasSettingsFromGateway().catch(err => {
@@ -95,93 +94,25 @@ const DataManager = {
         }
     },
 
-    ensureCloudManagerModal: function () {
-        let modal = document.getElementById('cloud-manager-modal');
-        if (modal) {
-            modal.setAttribute('aria-hidden', modal.classList.contains('is-open') ? 'false' : 'true');
-            return modal;
-        }
-        modal = document.createElement('div');
-        modal.id = 'cloud-manager-modal';
-        modal.className = 'modal';
-        modal.setAttribute('x-ignore', '');
-        modal.setAttribute('data-mojibake-skip', 'true');
-        modal.setAttribute('aria-hidden', 'true');
-        modal.style.display = 'none';
-        modal.innerHTML = `
-            <div class="modal-content" data-mojibake-skip="true" style="width:min(1120px,96vw); height:min(86vh,820px); padding:18px; border-radius:18px; display:flex; flex-direction:column; overflow:hidden;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
-                    <div>
-                        <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i class="ti ti-cloud-data-connection"></i> 云端数据</h3>
-                        <div style="margin-top:4px; font-size:12px; color:#64748b;">只加载云端存档清单，不进入底层数据管理页。</div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-gray" onclick="DataManager.closeCloudManager()" title="关闭">
-                        <i class="ti ti-x"></i>
-                    </button>
-                </div>
-                <div id="cloud-manager-body" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) this.closeCloudManager();
-        });
-        return modal;
-    },
-
-    mountCloudAreaInCloudManager: function () {
-        const cloudArea = document.getElementById('dm-cloud-area');
-        const body = document.getElementById('cloud-manager-body');
-        if (!cloudArea || !body) return false;
-        if (!this.cloudAreaHome) {
-            const placeholder = document.createComment('dm-cloud-area-home');
-            cloudArea.parentNode?.insertBefore(placeholder, cloudArea);
-            this.cloudAreaHome = placeholder;
-        }
-        if (cloudArea.parentElement !== body) body.appendChild(cloudArea);
-        cloudArea.style.display = 'flex';
-        cloudArea.style.padding = '0';
-        cloudArea.style.height = '100%';
-        cloudArea.setAttribute('data-mojibake-skip', 'true');
-        return true;
-    },
-
     openCloudManager: function () {
         const user = Auth.currentUser;
         if (!user) return alert("请先登录");
         if (user.role !== 'admin' && user.role !== 'director') {
             return alert("⛔ 权限不足：只有管理员或教务主任可操作云端数据。");
         }
-        // Show the modal FIRST, before any step that could throw (mount/render).
-        // A silent early-return here used to leave the click with no visible
-        // effect ("云端数据 点击无反应"); now the dialog always appears and any
-        // failure downstream is surfaced inside it instead of swallowed.
-        const modal = this.ensureCloudManagerModal();
         if (typeof window.closeWorkspaceDrawer === 'function') window.closeWorkspaceDrawer();
-        modal.classList.add('is-open');
-        modal.style.display = 'flex';
-        modal.setAttribute('aria-hidden', 'false');
+        const legacyModal = document.getElementById('cloud-manager-modal');
+        if (legacyModal) {
+            legacyModal.classList.remove('is-open');
+            legacyModal.style.display = 'none';
+            legacyModal.setAttribute('aria-hidden', 'true');
+        }
         document.body?.classList.add('cloud-manager-open');
-        this.currentTab = 'cloud';
         this.cloudPanelView = 'list';
-        // Moving the large dm-cloud-area subtree can trigger framework DOM scans.
-        // Keep both that mount and the network-bound list render off the click
-        // stack so the modal shell paints before any expensive follow-up work.
-        window.setTimeout(() => {
-            if (this.currentTab !== 'cloud' || !modal.classList.contains('is-open')) return;
-            const mounted = this.mountCloudAreaInCloudManager();
-            if (!mounted) {
-                const currentBody = document.getElementById('cloud-manager-body');
-                if (currentBody) {
-                    currentBody.innerHTML = '<div style="padding:24px; text-align:center; color:#64748b;">'
-                        + '云端数据面板正在初始化，请关闭后重试。</div>';
-                }
-                return;
-            }
-            Promise.resolve()
-                .then(() => this.renderCloudBackups())
-                .catch((err) => console.warn('[CloudManager] renderCloudBackups failed:', err));
-        }, 0);
+        // Keep the cloud panel in its original DataManager DOM position. Moving
+        // this large subtree makes Alpine/MutationObserver rescan every row and
+        // can synchronously freeze Chrome's main thread.
+        this.open('cloud');
     },
 
     closeCloudManager: function () {
@@ -191,20 +122,13 @@ const DataManager = {
             modal.setAttribute('aria-hidden', 'true');
             modal.style.display = 'none';
         }
+        const dataManagerModal = document.getElementById('data-manager-modal');
+        if (dataManagerModal) dataManagerModal.style.display = 'none';
         document.body?.classList.remove('cloud-manager-open');
         if (window.location.hash === '#cloud-manager-modal') {
             history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
         }
         if (this.currentTab === 'cloud') this.currentTab = 'student';
-        // 先让弹窗立即消失，再把大型云端表格移回数据管理页，避免关闭按钮被 DOM 搬运阻塞。
-        window.setTimeout(() => {
-            const cloudArea = document.getElementById('dm-cloud-area');
-            if (cloudArea && this.cloudAreaHome && this.cloudAreaHome.parentNode && cloudArea.parentElement !== this.cloudAreaHome.parentNode) {
-                this.cloudAreaHome.parentNode.insertBefore(cloudArea, this.cloudAreaHome.nextSibling);
-                cloudArea.style.display = 'none';
-                cloudArea.style.padding = '15px';
-            }
-        }, 0);
     },
 
     setCloudRecordCategory: function (category) {
@@ -355,8 +279,7 @@ const DataManager = {
         const statusOverview = document.getElementById('dm-status-overview');
         const searchBar = document.getElementById('dm-search-bar');
         const saveBtn = content.querySelector('button[onclick="DataManager.saveAndSync()"]');
-        const closeBtn = Array.from(content.querySelectorAll('button'))
-            .find(btn => String(btn.getAttribute('onclick') || '').includes('data-manager-modal'));
+        const closeBtn = content.querySelector('.modal-close-btn');
         const legacyHeader = saveBtn?.parentElement?.parentElement;
 
         if (tabContainer) {
