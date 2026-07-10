@@ -166,7 +166,7 @@ assert.ok(
 );
 
 assert.ok(
-    indexSource.includes('id="cloud-manager-modal"')
+    indexSource.includes('id="cloud-manager-modal" class="modal" x-ignore')
         && indexSource.includes('id="cloud-manager-body"')
         && indexSource.includes('DataManager.closeCloudManager()'),
     'the lightweight cloud manager modal should be present in the static DOM before the first header click'

@@ -3812,7 +3812,7 @@
     </div>
 
     <!-- 云端数据轻量弹窗预置在静态 DOM 中，避免首次点击时动态插入节点触发框架全树扫描。 -->
-    <div id="cloud-manager-modal" class="modal" data-mojibake-skip="true" style="display:none;"
+    <div id="cloud-manager-modal" class="modal" x-ignore data-mojibake-skip="true" style="display:none;"
         onclick="if(event.target===this) DataManager.closeCloudManager()">
         <div class="modal-content" data-mojibake-skip="true"
             style="width:min(1120px,96vw); height:min(86vh,820px); padding:18px; border-radius:18px; display:flex; flex-direction:column; overflow:hidden;">

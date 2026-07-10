@@ -30,18 +30,17 @@ const pass = process.env.SMOKE_PASS || 'admin123';
             && window.hasUsableProcessedSchoolMetrics(window.SCHOOLS), null, { timeout: 90000 });
         const buttonVisibleMs = Date.now() - startedAt;
         const clickStartedAt = Date.now();
-        await page.evaluate(() => document.getElementById('header-data-mgr-btn')?.click());
-        await page.waitForFunction(() => {
+        const result = await page.evaluate(() => {
+            document.getElementById('header-data-mgr-btn')?.click();
             const modal = document.getElementById('cloud-manager-modal');
-            return !!modal && getComputedStyle(modal).display !== 'none';
-        }, null, { timeout: 10000 });
-
-        const result = await page.evaluate(() => ({
-            heading: String(document.querySelector('#cloud-manager-modal h3')?.textContent || '').trim(),
-            currentTab: window.DataManager?.currentTab || '',
-            scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
-            longTasks: window.SystemPerformance?.getSnapshot?.().longTasks || []
-        }));
+            return {
+                modalVisible: !!modal && getComputedStyle(modal).display !== 'none',
+                heading: String(document.querySelector('#cloud-manager-modal h3')?.textContent || '').trim(),
+                currentTab: window.DataManager?.currentTab || '',
+                scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
+            };
+        });
+        if (!result.modalVisible) throw new Error('cloud manager modal did not become visible in the click task');
         console.log(JSON.stringify({
             ok: true,
             buttonVisibleMs,

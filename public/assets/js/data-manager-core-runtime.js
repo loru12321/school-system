@@ -101,6 +101,7 @@ const DataManager = {
         modal = document.createElement('div');
         modal.id = 'cloud-manager-modal';
         modal.className = 'modal';
+        modal.setAttribute('x-ignore', '');
         modal.setAttribute('data-mojibake-skip', 'true');
         modal.style.display = 'none';
         modal.innerHTML = `
