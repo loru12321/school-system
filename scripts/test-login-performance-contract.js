@@ -137,6 +137,16 @@ assert.match(
   /function shouldPrefetchLoginModules\(\)/,
   'login page module prefetch should have a connection and viewport gate'
 );
+assert.match(
+  bootRuntimeJs,
+  /var APP_MODULE_MAX_BATCH_SIZE = 6;/,
+  'authenticated session recovery must cap boot script bursts so Chrome can keep painting'
+);
+assert.match(
+  bootRuntimeJs,
+  /Math\.min\(APP_MODULE_MAX_BATCH_SIZE, Math\.max\(1, Math\.floor\(stored\)\)\)/,
+  'legacy local boot tuning must not bypass the authenticated recovery responsiveness cap'
+);
 assert.doesNotMatch(
   bootRuntimeJs,
   /APP_MODULES\.slice\(0,\s*18\)|APP_MODULES\.slice\(18,\s*36\)/,

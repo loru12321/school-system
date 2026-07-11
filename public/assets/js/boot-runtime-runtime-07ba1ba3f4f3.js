@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-89ac61a8f2bb';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-07ba1ba3f4f3';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -227,8 +227,9 @@ var APP_MODULE_PRELOAD_LIMIT = 36;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 4;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 34;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
-var APP_MODULE_DESKTOP_BATCH_SIZE = 18;
-var APP_MODULE_MOBILE_BATCH_SIZE = 18;
+var APP_MODULE_DESKTOP_BATCH_SIZE = 6;
+var APP_MODULE_MOBILE_BATCH_SIZE = 4;
+var APP_MODULE_MAX_BATCH_SIZE = 6;
 var LOGIN_MODULE_PREFETCH_LIMIT = 8;
 var LOGIN_MODULE_PREFETCH_DELAY_MS = 2200;
 
@@ -513,14 +514,16 @@ return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 15000 
 function getBootScriptBatchSize() {
 try {
     const stored = Number(localStorage.getItem('SYSTEM_BOOT_BATCH_SIZE') || 0);
-    if (Number.isFinite(stored) && stored > 0) return Math.max(1, Math.floor(stored));
+    if (Number.isFinite(stored) && stored > 0) {
+        return Math.min(APP_MODULE_MAX_BATCH_SIZE, Math.max(1, Math.floor(stored)));
+    }
 } catch (_) {}
 try {
     if (getRuntimeLoadProfile() === 'lazy') return 4;
     if (isRuntimeMobileViewport()) return APP_MODULE_MOBILE_BATCH_SIZE;
     const lowCpu = Number(navigator.hardwareConcurrency || 0) > 0
         && Number(navigator.hardwareConcurrency || 0) <= 4;
-    if (lowCpu) return 8;
+    if (lowCpu) return 4;
 } catch (_) {}
 return APP_MODULE_DESKTOP_BATCH_SIZE;
 }
