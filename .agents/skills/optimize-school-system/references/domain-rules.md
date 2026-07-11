@@ -35,6 +35,13 @@ For Worker changes:
 - Use request IDs so an older response cannot overwrite a newer selection.
 - Preserve the current Cloudflare, Supabase, database schema, and cloud payload contracts unless the user explicitly authorizes a migration.
 
+## Login layering
+
+- While `body.login-overlay-active` is present, keep `#app`, the mobile query shell, and parent workspaces hidden; the login card must remain the top interactive layer.
+- Scope mobile rules that force `#app.app-layout` to display to `body:not(.login-overlay-active)` so they cannot expose the workbench before authentication.
+- Keep `responsive-login-final.css` as the last stylesheet in `src/index.html`. When its output changes, update the stylesheet cache key and rebuild the runtime/service-worker cache version.
+- Preserve layout coverage at desktop, tablet, phone, short-phone, and safe-area viewports. Assert both geometry and actual top-layer ownership with `elementFromPoint`.
+
 ## Performance targets
 
 - Visible interaction feedback: at most 100 ms.

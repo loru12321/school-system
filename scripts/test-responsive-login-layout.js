@@ -26,6 +26,7 @@ async function inspectLayout(page, viewport) {
         const shell = document.querySelector('.login-clean-shell');
         const submit = document.querySelector('#login-submit-button');
         const styleboard = document.querySelector('.login-styleboard');
+        const app = document.querySelector('#app');
         const rect = node => {
             const value = node.getBoundingClientRect();
             return { left: value.left, right: value.right, top: value.top, bottom: value.bottom, width: value.width, height: value.height };
@@ -52,6 +53,15 @@ async function inspectLayout(page, viewport) {
                 visibility: getComputedStyle(styleboard).visibility,
                 opacity: getComputedStyle(styleboard).opacity
             } : null,
+            appDisplay: app ? getComputedStyle(app).display : null,
+            cardOwnsTopLayer: (() => {
+                const cardRect = card.getBoundingClientRect();
+                const topNode = document.elementFromPoint(
+                    Math.min(window.innerWidth - 1, Math.max(0, cardRect.left + cardRect.width / 2)),
+                    Math.min(window.innerHeight - 1, Math.max(0, cardRect.top + Math.min(cardRect.height / 2, 120)))
+                );
+                return Boolean(topNode && overlay.contains(topNode));
+            })(),
             viewportWidth: window.innerWidth,
             viewportHeight: window.innerHeight,
             documentScrollOverflow: document.documentElement.scrollHeight - window.innerHeight,
@@ -97,6 +107,8 @@ async function main() {
             assert.ok(state.shell.right <= state.viewportWidth + 1, `${label}: login shell must stay inside viewport`);
             assert.ok(state.card.left >= state.shell.left - 1, `${label}: login card must stay inside shell`);
             assert.ok(state.card.right <= state.shell.right + 1, `${label}: login card must not overflow shell`);
+            assert.strictEqual(state.appDisplay, 'none', `${label}: logged-out workbench must stay hidden behind the login overlay`);
+            assert.ok(state.cardOwnsTopLayer, `${label}: login card must remain the top interactive layer`);
 
             if (viewport.mode !== 'desktop') {
                 if (state.styleboardStyle) {
