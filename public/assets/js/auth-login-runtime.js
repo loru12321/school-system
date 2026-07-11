@@ -477,17 +477,21 @@ var Auth = {
                 } else {
                     const preferredSessionCohort = String(
                         (typeof getExplicitCohortSelection === 'function' && getExplicitCohortSelection())
+                        || document.getElementById('login-cohort-select')?.value
                         || restoredCohortId
                         || ''
                     ).trim();
-                    if (preferredSessionCohort && typeof enterCohortFromMask === 'function') {
+                    const enterSessionCohort = typeof enterCohortFromMask === 'function'
+                        ? enterCohortFromMask
+                        : window.enterCohortFromMask;
+                    if (preferredSessionCohort && typeof enterSessionCohort === 'function') {
                         const yearInput = document.getElementById('entry-cohort-year');
                         if (yearInput) yearInput.value = preferredSessionCohort;
                         lockRuntimeCohortId(preferredSessionCohort);
                         setManualCohortSelectionGate(false);
                         sessionCohortRestoreScheduled = true;
                         Promise.resolve()
-                            .then(() => enterCohortFromMask({ fastEnter: false, requireCloudData: true }))
+                            .then(() => enterSessionCohort({ fastEnter: false, requireCloudData: true }))
                             .then(() => {
                                 tryAutoRestoreWorkspaceExam({
                                     preferredExamId: CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '',

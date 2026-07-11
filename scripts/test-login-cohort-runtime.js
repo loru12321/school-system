@@ -136,7 +136,8 @@ assert.ok(htmlSource.includes('<option value="2022" selected>2022届</option>'),
 assert.ok(htmlSource.includes('id="login-graduate-cohort-panel"'), 'login page should expose a dedicated graduate cohort panel');
 assert.ok(
     authLoginSource.includes('let sessionCohortRestoreScheduled = false')
-        && authLoginSource.includes("enterCohortFromMask({ fastEnter: false, requireCloudData: true })")
+        && authLoginSource.includes("document.getElementById('login-cohort-select')?.value")
+        && authLoginSource.includes("enterSessionCohort({ fastEnter: false, requireCloudData: true })")
         && authLoginSource.includes('!sessionCohortRestoreScheduled && !this.currentUser.local_only'),
     'an existing authenticated session with an empty workspace identity must re-enter the selected cohort instead of loading an unscoped cloud workspace'
 );
