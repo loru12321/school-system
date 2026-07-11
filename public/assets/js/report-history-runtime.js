@@ -171,16 +171,16 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
     };
     if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
         window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task, {
-            delay: 4800,
+            delay: 350,
             idle: true,
-            timeout: 9000
+            timeout: 4500
         });
     } else if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
         window.setTimeout(() => {
             window.SystemPerformance.scheduleIdle(task, { timeout: 9000 });
-        }, 4800);
+        }, 350);
     } else {
-        window.setTimeout(task, 4800);
+        window.setTimeout(task, 350);
     }
 }
 

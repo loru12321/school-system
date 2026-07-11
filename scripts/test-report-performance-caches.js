@@ -25,6 +25,7 @@ const reportChart = read(reportChartFile);
 const reportHistory = read(reportHistoryFile);
 const studentDetails = read(studentDetailsFile);
 const comparisonRender = read(comparisonRenderFile);
+const compareSelectors = read('public/assets/js/compare-selectors-runtime.js');
 const cloud = read(cloudFile);
 const county = read(countyFile);
 const app = read('public/assets/js/app.js');
@@ -49,7 +50,6 @@ const pkg = JSON.parse(read(packageFile));
     'getCachedStudentExamHistory',
     'examHistoryByKey',
     'getCachedRankScope',
-    'getCachedCountyScopeMap',
     'getCachedSchoolCandidates',
     'student?.id || student?.examNo',
     'getPreviousHistoryEntryForReport',
@@ -58,13 +58,20 @@ const pkg = JSON.parse(read(packageFile));
     'function renderSingleReportCardHTML(stu, mode, options = {})',
     'Array.isArray(options.reportExamHistory)',
     'ReportRenderPerfCache.html.set',
-    "safeGet(reportStu, `ranks.${sub}.class`, '-')",
-    '上次 ${prevSubScore}',
-    "rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-'",
+    "resolveCurrentRank(sub, 'class')",
+    'renderMetricComparison',
+    "renderResponsiveTableCell('班排对比'",
+    'hasCountyRankScopeForDisplay()',
     'readHistoricalRankValue',
     'if (showCountyRank) thHtml += `<th>县排</th>`;',
+    "showClassRank ? renderResponsiveTableCell('班级排名', classRank",
     "showCountyRank ? renderResponsiveTableCell('全县排名', cRank"
 ].forEach((token) => assertContains(reportRender, token, reportRenderFile));
+
+assertContains(compareSelectors, 'refreshSelectors: true', 'public/assets/js/compare-selectors-runtime.js');
+if ((compareSelectors.match(/refreshSelectors: true/g) || []).length < 2) {
+    fail('both shared and fallback exam sync paths must refresh comparison selectors');
+}
 
 [
     'getReportDomCache',
@@ -163,7 +170,12 @@ if (!app.includes('const dataSignature = getCurrentReportDataVersionSignature();
 [
     'return read(state.history, key, { clone: false });',
     'return write(state.history, key, value, HISTORY_TTL_MS, { clone: false });',
-    "if (typeof value !== 'object') return value;"
+    "if (typeof value !== 'object') return value;",
+    'rankIndexes: new Map()',
+    'function getHistoryRenderSignature(history)',
+    'function getRankIndex(rows, subjects, cacheKey, totalSubjects = subjects)',
+    'townSchoolThreshold: 14',
+    'countySchoolThreshold: 24'
 ].forEach((token) => assertContains(read('public/assets/js/report-performance-runtime.js'), token, 'public/assets/js/report-performance-runtime.js'));
 
 const historyStart = comparisonRender.indexOf('function getStudentExamHistory(student)');
@@ -237,7 +249,7 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'const isCurrentExam = (examId) => currentExamId && isExamEquivalent(examId, currentExamId);',
     'const findStudentInRows = (list, scopedToTargetSchool = false) => {',
     'const directSchool = schools[targetSchool];',
-    "const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');",
+    "const rankCounty = subjectRanks.total.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');",
     'getCountyRankFallback',
     'countyRankFallbackCache',
     '_studentHistoryPayloadCache',
@@ -250,7 +262,12 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'Array.from(scoreCounts.keys()).sort((a, b) => b - a).forEach(value => {',
     'subjectCache.set(subjectKey, rankByScore);',
     'const subjectRanks = { ...(match.ranks || {}) };',
-    'const ranks = { ...(subjectRanks[subject] || {}) };',
+    'historyRankIndexFallbackCache',
+    'getHistoryRankFallback',
+    'fillMissingHistoryRanks',
+    'hasCompleteHistoryRankComparison',
+    'if (existingIndex >= 0) history.splice(existingIndex, 1);',
+    'const ranks = fillMissingHistoryRanks(payload, match, subject, subjectRanks[subject]);',
     'const readExamSortTime = (exam) => {',
     'normalizedCohort: normalizeCohortId(exam?.cohort || exam?.meta?.cohort || examId)',
     'const localHistoryExamKeys = localHistory',

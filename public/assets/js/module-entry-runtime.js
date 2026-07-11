@@ -1212,6 +1212,7 @@
                 scheduleActiveModuleTask('report-generator', 'report-generator-selects', () => {
                     if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
                     if (typeof updateClassSelect === 'function') updateClassSelect();
+                    if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
                 }, { delay: 60, frame: true });
                 prewarmReportGeneratorRuntimes();
                 return true;

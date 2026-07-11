@@ -1947,6 +1947,7 @@
                 return payload;
             };
             const countyRankFallbackCache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+            const historyRankIndexFallbackCache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
             const getCountyRankFallback = (payload, match, subject = 'total') => {
                 const rows = payload?.RAW_DATA || payload?.data || [];
                 if (!Array.isArray(rows) || !rows.length || !match) return undefined;
@@ -1985,6 +1986,32 @@
                 if (subjectCache) subjectCache.set(subjectKey, rankByScore);
                 return rankByScore.get(targetValue);
             };
+            const getHistoryRankFallback = (payload, match, subject = 'total', scope = 'school') => {
+                const rows = payload?.RAW_DATA || payload?.data || [];
+                const service = window.RankingDataService;
+                if (!Array.isArray(rows) || !rows.length || !match || !service || typeof service.buildStudentRankIndex !== 'function') {
+                    return scope === 'county' ? getCountyRankFallback(payload, match, subject) : undefined;
+                }
+                let index = historyRankIndexFallbackCache?.get(payload);
+                if (!index) {
+                    const subjects = Array.from(new Set(rows.flatMap(row => Object.keys(row?.scores || {}))));
+                    index = service.buildStudentRankIndex(rows, subjects, {
+                        townSchoolThreshold: 14,
+                        countySchoolThreshold: 24
+                    });
+                    historyRankIndexFallbackCache?.set(payload, index);
+                }
+                return index.getRank(match, subject, scope, undefined);
+            };
+            const fillMissingHistoryRanks = (payload, match, subject, rankLike) => {
+                const ranks = { ...(rankLike || {}) };
+                ['class', 'school', 'township', 'county'].forEach((scope) => {
+                    if (ranks[scope] !== undefined && ranks[scope] !== null && ranks[scope] !== '' && ranks[scope] !== '-') return;
+                    const fallback = getHistoryRankFallback(payload, match, subject, scope);
+                    if (fallback !== undefined && fallback !== null && fallback !== '' && fallback !== '-') ranks[scope] = fallback;
+                });
+                return ranks;
+            };
             const buildHistoryEntry = (examId, payload, updatedAt) => {
                 const match = findHistoryMatch(payload);
                 if (!match) return null;
@@ -1992,14 +2019,15 @@
                 const examLabel = payload?.examLabel || (keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId);
                 const subjectRanks = { ...(match.ranks || {}) };
                 Object.keys(match.scores || {}).forEach((subject) => {
-                    const ranks = { ...(subjectRanks[subject] || {}) };
+                    const ranks = fillMissingHistoryRanks(payload, match, subject, subjectRanks[subject]);
                     if (ranks.county === undefined || ranks.county === null || ranks.county === '') {
                         const fallback = getCountyRankFallback(payload, match, subject);
                         if (fallback !== undefined) ranks.county = fallback;
                     }
                     subjectRanks[subject] = ranks;
                 });
-                const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');
+                subjectRanks.total = fillMissingHistoryRanks(payload, match, 'total', subjectRanks.total);
+                const rankCounty = subjectRanks.total.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');
                 return {
                     // Use full key as canonical ID to avoid "same exam" false positives.
                     examId,
@@ -2007,9 +2035,9 @@
                     examLabel: examLabel || examId,
                     fingerprint: getHistoryPayloadFingerprint(examId, payload, updatedAt),
                     total: match.total,
-                    rankClass: match.ranks?.total?.class,
-                    rankSchool: match.ranks?.total?.school,
-                    rankTown: match.ranks?.total?.township,
+                    rankClass: subjectRanks.total.class ?? match.ranks?.total?.class,
+                    rankSchool: subjectRanks.total.school ?? match.ranks?.total?.school,
+                    rankTown: subjectRanks.total.township ?? match.ranks?.total?.township,
                     rankCounty,
                     subjectRanks,
                     scores: match.scores,
@@ -2072,14 +2100,15 @@
                 const examLabel = payload?.examLabel || (keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId);
                 const subjectRanks = { ...(match.ranks || {}) };
                 Object.keys(match.scores || {}).forEach((subject) => {
-                    const ranks = { ...(subjectRanks[subject] || {}) };
+                    const ranks = fillMissingHistoryRanks(payload, match, subject, subjectRanks[subject]);
                     if (ranks.county === undefined || ranks.county === null || ranks.county === '') {
                         const fallback = getCountyRankFallback(payload, match, subject);
                         if (fallback !== undefined) ranks.county = fallback;
                     }
                     subjectRanks[subject] = ranks;
                 });
-                const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');
+                subjectRanks.total = fillMissingHistoryRanks(payload, match, 'total', subjectRanks.total);
+                const rankCounty = subjectRanks.total.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');
                 const studentLikeRow = {
                     school: match.school || '',
                     class: match.class || '',
@@ -2103,9 +2132,9 @@
                             examLabel: examLabel || examId,
                             fingerprint: getHistoryPayloadFingerprint(examId, payload, updatedAt),
                             total: match.total,
-                            rankClass: match.ranks?.total?.class,
-                            rankSchool: match.ranks?.total?.school,
-                            rankTown: match.ranks?.total?.township,
+                            rankClass: subjectRanks.total.class ?? match.ranks?.total?.class,
+                            rankSchool: subjectRanks.total.school ?? match.ranks?.total?.school,
+                            rankTown: subjectRanks.total.township ?? match.ranks?.total?.township,
                             rankCounty,
                             subjectRanks,
                             scores: match.scores,
@@ -2138,6 +2167,27 @@
                     };
                     pushChunk();
                 }, 1400);
+            };
+            const currentSchoolCount = new Set((window.RAW_DATA || [])
+                .map(row => String(row?.school || '').trim())
+                .filter(Boolean)).size;
+            const requiredHistoryRankScopes = [
+                'class',
+                'school',
+                ...(currentSchoolCount >= 14 ? ['township'] : []),
+                ...(currentSchoolCount >= 24 ? ['county'] : [])
+            ];
+            const hasCompleteHistoryRankComparison = (entry) => {
+                const scoreSubjects = Object.keys(entry?.scores || {});
+                if (!scoreSubjects.length) return false;
+                return ['total', ...scoreSubjects].every((subject) => requiredHistoryRankScopes.every((scope) => {
+                    const ranks = entry?.subjectRanks?.[subject] || {};
+                    const totalFallback = subject === 'total'
+                        ? ({ class: entry?.rankClass, school: entry?.rankSchool, township: entry?.rankTown, county: entry?.rankCounty })[scope]
+                        : undefined;
+                    const value = ranks[scope] ?? totalFallback;
+                    return value !== undefined && value !== null && value !== '' && value !== '-';
+                }));
             };
             const readIndexedHistory = async () => {
                 const targetLikeRow = {
@@ -2184,7 +2234,9 @@
                         const entry = buildIndexedHistoryEntry(row);
                         if (!entry) return;
                         history.push(entry);
-                        coveredKeys.add(String(entry.examFullKey || entry.examId || '').trim());
+                        if (hasCompleteHistoryRankComparison(entry)) {
+                            coveredKeys.add(String(entry.examFullKey || entry.examId || '').trim());
+                        }
                     } catch (indexError) {
                         console.warn('[CloudHistory] parse index row failed:', indexError);
                     }
@@ -2298,6 +2350,11 @@
                         const payload = parseHistoryPayloadRow(row);
                         const entry = buildHistoryEntry(row.key, payload, row.updated_at);
                         if (entry) {
+                            const existingIndex = history.findIndex(item => isExamEquivalent(
+                                item?.examFullKey || item?.examId,
+                                entry?.examFullKey || entry?.examId
+                            ));
+                            if (existingIndex >= 0) history.splice(existingIndex, 1);
                             history.push(entry);
                             const indexRow = buildStudentHistoryIndexRowFromEntry(entry, row.updated_at);
                             if (indexRow) historyIndexBackfillRows.push(indexRow);

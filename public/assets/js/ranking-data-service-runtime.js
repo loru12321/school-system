@@ -286,6 +286,8 @@
             return normalized;
         };
         const schoolOf = (row) => normalizeSchool(row && row.school);
+        const classOf = (row) => normalizeClassValue(row && row.class);
+        const schoolClassOf = (row) => `${schoolOf(row)}::${classOf(row)}`;
         const studentKeyCache = new WeakMap();
         const keyOf = (row) => {
             if (!row || typeof row !== 'object') return '';
@@ -300,7 +302,9 @@
         const townRankVisible = schools.size >= townSchoolThreshold;
         const countyRankVisible = schools.size >= countySchoolThreshold;
         const rowsBySchool = groupBy(list, schoolOf);
+        const rowsByClass = groupBy(list, schoolClassOf);
         const rankMaps = {
+            class: new Map(),
             school: new Map(),
             township: new Map(),
             county: new Map()
@@ -317,6 +321,10 @@
         }
 
         const readScore = (row, subject) => {
+            if (typeof options.getScore === 'function') {
+                const customValue = Number(options.getScore(row, subject));
+                if (Number.isFinite(customValue)) return customValue;
+            }
             if (subject === 'total') return Number(row && row.total);
             if (!row || !row.scores || row.scores[subject] === undefined) return Number.NaN;
             return Number(row.scores[subject]);
@@ -334,6 +342,13 @@
         const getScopeMap = (scope, subject, student) => {
             const normalizedScope = scope === 'town' ? 'township' : scope;
             const normalizedSubject = normalizeText(subject) || 'total';
+            if (normalizedScope === 'class') {
+                const cacheKey = `${schoolClassOf(student)}::${normalizedSubject}`;
+                if (!rankMaps.class.has(cacheKey)) {
+                    rankMaps.class.set(cacheKey, buildMap(rowsByClass.get(schoolClassOf(student)) || [], normalizedSubject));
+                }
+                return rankMaps.class.get(cacheKey);
+            }
             if (normalizedScope === 'school') {
                 const school = schoolOf(student);
                 const cacheKey = `${school}::${normalizedSubject}`;

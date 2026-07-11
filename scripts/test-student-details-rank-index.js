@@ -46,7 +46,9 @@ assert.strictEqual(fourteenIndex.schoolCount, 14);
 assert.strictEqual(fourteenIndex.townRankVisible, true);
 assert.strictEqual(fourteenIndex.countyRankVisible, false);
 assert.strictEqual(fourteenIndex.getRank(fourteenRows[0], 'total', 'school'), 1);
+assert.strictEqual(fourteenIndex.getRank(fourteenRows[0], 'total', 'class'), 1);
 assert.strictEqual(fourteenIndex.getRank(fourteenRows[0], '语文', 'school'), 1);
+assert.strictEqual(fourteenIndex.getRank(fourteenRows[0], '语文', 'class'), 1);
 assert.strictEqual(fourteenIndex.getRank(fourteenRows[0], 'total', 'township'), 1);
 assert.strictEqual(fourteenIndex.getRank(fourteenRows[0], 'total', 'county'), '-');
 assert.strictEqual(fourteenIndex.getRank(fourteenRows[0], '语文', 'county'), '-');
@@ -59,6 +61,16 @@ assert.strictEqual(twentyFourIndex.countyRankVisible, true);
 assert.strictEqual(twentyFourIndex.getRank(twentyFourRows[0], 'total', 'township'), 1);
 assert.strictEqual(twentyFourIndex.getRank(twentyFourRows[0], 'total', 'county'), 1);
 assert.strictEqual(twentyFourIndex.getRank(twentyFourRows[0], '数学', 'county'), 1);
+
+const customTotalRows = buildRows(14);
+customTotalRows.forEach((row, index) => { row.reportTotal = index + 1; });
+const customTotalIndex = service.buildStudentRankIndex(customTotalRows, ['语文'], {
+    getScore(row, subject) {
+        return subject === 'total' ? row.reportTotal : row.scores?.[subject];
+    }
+});
+assert.strictEqual(customTotalIndex.getRank(customTotalRows[0], 'total', 'class'), 2);
+assert.strictEqual(customTotalIndex.getRank(customTotalRows[0], 'total', 'township'), customTotalRows.length);
 const countyDirectStudent = twentyFourRows.find((row) => row.school === '学校24');
 assert.strictEqual(twentyFourIndex.getRank(countyDirectStudent, 'total', 'township'), '-');
 assert.ok(Number.isInteger(twentyFourIndex.getRank(countyDirectStudent, 'total', 'county')));
@@ -69,6 +81,7 @@ const performanceIndex = service.buildStudentRankIndex(performanceRows, ['语文
 performanceRows.slice(0, 40).forEach((student) => {
     ['total', '语文', '数学'].forEach((subject) => {
         assert.notStrictEqual(performanceIndex.getRank(student, subject, 'school'), '-');
+        assert.notStrictEqual(performanceIndex.getRank(student, subject, 'class'), '-');
         assert.notStrictEqual(performanceIndex.getRank(student, subject, 'county'), '-');
     });
 });

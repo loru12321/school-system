@@ -42,8 +42,6 @@ const ReportRenderPerfCache = {
     examHistory: new WeakMap(),
     examHistoryByKey: new Map(),
     im: new Map(),
-    scopeMapRaw: '',
-    scopeMap: {},
     schoolCandidatesSignature: '',
     schoolCandidates: [],
     townshipRank: new Map(),
@@ -209,16 +207,6 @@ function getCachedRankScope(kind, subjects) {
     return value;
 }
 
-function getCachedCountyScopeMap() {
-    let raw = '';
-    try { raw = localStorage.getItem('COUNTY_ANALYSIS_SCOPE_V1') || ''; } catch (_) { raw = ''; }
-    if (ReportRenderPerfCache.scopeMapRaw !== raw) {
-        ReportRenderPerfCache.scopeMapRaw = raw;
-        try { ReportRenderPerfCache.scopeMap = raw ? JSON.parse(raw) : {}; } catch (_) { ReportRenderPerfCache.scopeMap = {}; }
-    }
-    return ReportRenderPerfCache.scopeMap;
-}
-
 function getCachedSchoolCandidates() {
     const signature = getReportRenderSignature();
     if (ReportRenderPerfCache.schoolCandidatesSignature === signature) return ReportRenderPerfCache.schoolCandidates;
@@ -262,8 +250,13 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
     const isFullScreenReport = mode === 'FULL';
     const forceFullLayout = mode === 'A4' || mode === 'PC' || isFullScreenReport;
     const cacheableReportHtml = forceFullLayout;
+    const reportHistoryForRender = Array.isArray(options.reportExamHistory)
+        ? options.reportExamHistory
+        : (cacheableReportHtml ? getCachedStudentExamHistory(stu) : []);
+    const reportPerformance = window.StudentReportPerformance;
+    const passedHistorySignature = reportPerformance?.getHistoryRenderSignature?.(reportHistoryForRender) || `history:${reportHistoryForRender.length}`;
     const htmlCacheKey = cacheableReportHtml
-        ? `${getReportRenderSignature()}::${getReportStudentCacheKey(stu)}::${mode || ''}::${new Date().toLocaleDateString()}`
+        ? `${getReportRenderSignature()}::${getReportStudentCacheKey(stu)}::${mode || ''}::${passedHistorySignature}::${new Date().toLocaleDateString()}`
         : '';
     if (cacheableReportHtml && ReportRenderPerfCache.html.has(htmlCacheKey)) {
         return ReportRenderPerfCache.html.get(htmlCacheKey);
@@ -285,15 +278,12 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
     }
 
     // --- 否则：渲染原有的 PC 端 Fluent Design 风格 (A4打印版) ---
-    const totalStudentsCount = RAW_DATA.length;
     const genDate = new Date().toLocaleDateString();
     const reportStu = getCachedComparisonStudentView(stu);
 
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
     const cloudHint = getCachedCloudCompareHint(reportStu);
-    const reportExamHistory = Array.isArray(options.reportExamHistory)
-        ? options.reportExamHistory
-        : getCachedStudentExamHistory(reportStu);
+    const reportExamHistory = reportHistoryForRender;
     const currentExamId = getEffectiveCurrentExamId();
     const prevHistoryEntry = getPreviousHistoryEntryForReport(reportExamHistory, currentExamId);
     const prevHistoryStu = prevHistoryEntry ? (prevHistoryEntry.student || prevHistoryEntry) : null;
@@ -326,29 +316,6 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         if (value !== undefined && value !== null && value !== '') return value;
         return scope === 'county' && subject === 'total' ? (s?.rankCounty ?? s?.countyRank ?? h?.rankCounty ?? h?.countyRank ?? '-') : '-';
     };
-    const getCountyScopeForHistoryEntry = (historyEntry, studentLike = null) => {
-        const historyKey = String(
-            historyEntry?.examFullKey
-            || historyEntry?.examId
-            || studentLike?._sourceExam
-            || studentLike?.examFullKey
-            || studentLike?.examId
-            || ''
-        ).trim();
-        if (!historyKey) return null;
-        const map = getCachedCountyScopeMap();
-        return map?.[historyKey] || null;
-    };
-    const hasHistoricalCountyRank = (studentLike, subject = 'total', historyEntry = null) => {
-        if (!studentLike || typeof studentLike !== 'object') return false;
-        const rankValue = subject === 'total'
-            ? (studentLike?.ranks?.total?.county ?? studentLike?.rankCounty ?? studentLike?.countyRank)
-            : (studentLike?.ranks?.[subject]?.county ?? studentLike?.subjectRanks?.[subject]?.county);
-        if (rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-') return true;
-        const scope = getCountyScopeForHistoryEntry(historyEntry, studentLike);
-        if (!scope || scope.includesCounty !== true) return false;
-        return rankValue !== undefined && rankValue !== null && rankValue !== '';
-    };
     const hasClassRankScope = (studentLike) => {
         const rawClass = String(studentLike?.class ?? '').trim();
         const normalizedClass = typeof normalizeClass === 'function' ? normalizeClass(rawClass) : rawClass;
@@ -378,100 +345,110 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         if (!shouldShow) return '-';
         return value == null || value === '' ? '-' : value;
     };
+    const renderMetricComparison = (...args) => window.ReportInsightRuntime.renderMetricComparison(...args);
 
     // 数据容错（云端简版对象可能缺少scores）
     const stuScores = (reportStu && typeof reportStu === 'object' && reportStu.scores && typeof reportStu.scores === 'object') ? reportStu.scores : {};
 
     const reportSubjectsForRank = [...new Set(SUBJECTS)];
-    const hasTownshipRankData = getCachedRankScope('township', reportSubjectsForRank);
-    const cachedCountyRankData = getCachedRankScope('county', reportSubjectsForRank);
+    const comparisonTotalSubjects = getComparisonTotalSubjects();
+    const currentRankIndex = reportPerformance?.getRankIndex?.(
+        RAW_DATA,
+        reportSubjectsForRank,
+        `current:${getReportRenderSignature()}`,
+        comparisonTotalSubjects
+    );
+    const hasTownshipRankData = currentRankIndex
+        ? currentRankIndex.townRankVisible
+        : getCachedRankScope('township', reportSubjectsForRank);
+    const cachedCountyRankData = currentRankIndex
+        ? currentRankIndex.countyRankVisible
+        : getCachedRankScope('county', reportSubjectsForRank);
     const hasCountyRankData = cachedCountyRankData === null
         ? getStudentCountyRankValue(reportStu, 'total') !== '-'
         : cachedCountyRankData;
     const showClassRank = hasClassRankScope(reportStu);
     const showTownRank = hasTownshipRankData && !isCountyDirectStudent(reportStu);
-    const showCountyRank = hasCountyRankData;
-    const curTownRank = displayRankValue(safeGet(reportStu, 'ranks.total.township', '-'), showTownRank);
-    const prevTownRank = displayRankValue(compareTotalRanks.township ?? prevStu?.townRank ?? '-', showTownRank);
-    const curClassRank = displayRankValue(safeGet(reportStu, 'ranks.total.class', '-'), showClassRank);
-    const prevClassRank = displayRankValue(compareTotalRanks.class ?? prevStu?.classRank ?? '-', showClassRank);
-    const curSchoolRank = safeGet(reportStu, 'ranks.total.school', '-');
-    const prevSchoolRank = compareTotalRanks.school ?? prevStu?.schoolRank ?? '-';
-    const curCountyRank = getStudentCountyRankValue(reportStu, 'total');
-    const prevCountyRank = hasHistoricalCountyRank(compareStu, 'total', prevHistoryEntry)
-        ? readHistoricalRankValue(prevHistoryEntry, compareStu, 'total', 'county')
+    const showCountyRank = hasCountyRankData && (
+        typeof hasCountyRankScopeForDisplay !== 'function'
+        || hasCountyRankScopeForDisplay()
+    );
+    const resolveCurrentRank = (subject, scope, fallback = '-') => {
+        const stored = scope === 'county'
+            ? getStudentCountyRankValue(reportStu, subject)
+            : safeGet(reportStu, `ranks.${subject}.${scope}`, fallback);
+        return currentRankIndex?.getRank(reportStu, subject, scope, stored) ?? stored;
+    };
+    const historyRankIndexes = new Map();
+    const getHistoryRankIndex = (historyEntry) => {
+        const rows = historyEntry?.allStudents;
+        if (!Array.isArray(rows) || !rows.length) return null;
+        const historyKey = String(historyEntry?.examFullKey || historyEntry?.examId || historyEntry?.fingerprint || rows.length);
+        if (!historyRankIndexes.has(historyKey)) {
+            historyRankIndexes.set(historyKey, reportPerformance?.getRankIndex?.(
+                rows,
+                reportSubjectsForRank,
+                `history:${historyKey}:${historyEntry?.fingerprint || ''}`,
+                comparisonTotalSubjects
+            ));
+        }
+        return historyRankIndexes.get(historyKey);
+    };
+    const resolveHistoricalRank = (historyEntry, studentLike, subject, scope, fallback = '-') => {
+        const stored = readHistoricalRankValue(historyEntry, studentLike, subject, scope);
+        const index = getHistoryRankIndex(historyEntry);
+        return index?.getRank(studentLike, subject, scope, stored === '-' ? fallback : stored) ?? stored;
+    };
+    const curTownRank = displayRankValue(resolveCurrentRank('total', 'township'), showTownRank);
+    const prevTownRank = displayRankValue(resolveHistoricalRank(prevHistoryEntry, compareStu, 'total', 'township', compareTotalRanks.township ?? prevStu?.townRank ?? '-'), showTownRank);
+    const curClassRank = displayRankValue(resolveCurrentRank('total', 'class'), showClassRank);
+    const prevClassRank = displayRankValue(resolveHistoricalRank(prevHistoryEntry, compareStu, 'total', 'class', compareTotalRanks.class ?? prevStu?.classRank ?? '-'), showClassRank);
+    const curSchoolRank = resolveCurrentRank('total', 'school');
+    const prevSchoolRank = resolveHistoricalRank(prevHistoryEntry, compareStu, 'total', 'school', compareTotalRanks.school ?? prevStu?.schoolRank ?? '-');
+    const curCountyRank = resolveCurrentRank('total', 'county');
+    const prevCountyRank = showCountyRank
+        ? resolveHistoricalRank(prevHistoryEntry, compareStu, 'total', 'county')
         : '-';
 
     // 单校判断
-    const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
-    const townColStyle = hasTownshipRankData ? '' : 'display:none !important;';
+    const townColStyle = showTownRank ? '' : 'display:none !important;';
     const countyColStyle = showCountyRank ? '' : 'display:none !important;';
 
     let tableRows = '';
 
-    if (CONFIG.name === '9年级') {
-        let fiveTotal = 0, count = 0;
-        ['语文', '数学', '英语', '物理', '化学'].forEach(sub => {
-            if (stuScores[sub] !== undefined) { fiveTotal += stuScores[sub]; count++; }
-        });
-        if (count > 0) {
-            tableRows += `<tr style="background:rgba(248,250,252,0.5);">
-                    ${renderResponsiveTableCell('科目', '🏁 核心五科', 'font-weight:bold; color:#475569;')}
-                    ${renderResponsiveTableCell('成绩（对比）', fiveTotal.toFixed(1), 'font-weight:bold; color:#2563eb;')}
-                    ${renderResponsiveTableCell('班级排名', '-')}
-                    ${renderResponsiveTableCell('校级排名', '-')}
-                    ${renderResponsiveTableCell('全镇排名', '-', townColStyle)}
-                    ${renderResponsiveTableCell('全县排名', '-', countyColStyle)}
-                </tr>`;
-        }
-    }
-
-        const comparisonTotalSubjects = getComparisonTotalSubjects();
-        const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
-        const totalLabel = (CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label;
-        const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
-        const trendTotal = getTrendBadge(currentTotal, prevTotal, 'score');
-    const trendClass = showClassRank ? getTrendBadge(curClassRank, prevClassRank, 'rank') : '';
-    const trendSchool = getTrendBadge(curSchoolRank, prevSchoolRank, 'rank');
-    const trendTown = showTownRank ? getTrendBadge(curTownRank, prevTownRank, 'rank') : '';
-    const trendCounty = showCountyRank ? getTrendBadge(curCountyRank, prevCountyRank, 'rank') : '';
+    const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
+    const totalLabel = (CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label;
+    const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
 
     tableRows += `<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
             ${renderResponsiveTableCell('科目', `🏆 ${totalLabel}`, 'font-weight:bold; color:#1e3a8a;')}
-            ${renderResponsiveTableCell('成绩（对比）', `${Number.isFinite(currentTotal) ? currentTotal.toFixed(2) : '-'} ${trendTotal}`, 'font-weight:800; font-size:16px; color:#1e40af;')}
-            ${renderResponsiveTableCell('班级排名', `${curClassRank} ${trendClass}`, 'font-weight:bold; color:#334155;')}
-            ${renderResponsiveTableCell('校级排名', `${curSchoolRank} ${trendSchool}`, 'font-weight:bold; color:#334155;')}
-            ${renderResponsiveTableCell('全镇排名', `${curTownRank} ${trendTown}`, `${townColStyle} font-weight:bold; color:#334155;`)}
-            ${renderResponsiveTableCell('全县排名', `${showCountyRank ? curCountyRank : '-'} ${trendCounty}`, `${countyColStyle} font-weight:bold; color:#334155;`)}
+            ${renderResponsiveTableCell('成绩对比', renderMetricComparison(currentTotal, prevTotal, 'score', 2), 'font-weight:800; color:#1e40af;')}
+            ${renderResponsiveTableCell('班排对比', renderMetricComparison(curClassRank, prevClassRank, 'rank'), 'font-weight:bold; color:#334155;')}
+            ${renderResponsiveTableCell('校排对比', renderMetricComparison(curSchoolRank, prevSchoolRank, 'rank'), 'font-weight:bold; color:#334155;')}
+            ${renderResponsiveTableCell('镇排对比', renderMetricComparison(curTownRank, prevTownRank, 'rank'), `${townColStyle} font-weight:bold; color:#334155;`)}
+            ${renderResponsiveTableCell('县排对比', renderMetricComparison(curCountyRank, prevCountyRank, 'rank'), `${countyColStyle} font-weight:bold; color:#334155;`)}
         </tr>`;
 
     const uniqueSubjects = [...new Set(SUBJECTS)];
     uniqueSubjects.forEach(sub => {
         if (stuScores[sub] !== undefined) {
             const prevSubScore = compareStu && compareStu.scores ? readScoreValue(compareStu.scores[sub]) : '-';
-            const subTrend = getTrendBadge(stuScores[sub], prevSubScore, 'score');
-
-            let prevRanks = normalizeRankInfo(compareStu && compareStu.ranks ? compareStu.ranks[sub] : null);
-            if (prevRanks.class === '-' && prevRanks.school === '-' && prevRanks.township === '-' && prevStu && prevStu.ranks && prevStu.ranks[sub]) {
-                prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
-            }
-
-            const curClassR = displayRankValue(safeGet(reportStu, `ranks.${sub}.class`, '-'), showClassRank), tClass = showClassRank ? getTrendBadge(curClassR, prevRanks.class || '-', 'rank') : '';
-            const curSR = safeGet(reportStu, `ranks.${sub}.school`, '-');
-            const tS = getTrendBadge(curSR, prevRanks.school || '-', 'rank');
-            const curTR = displayRankValue(safeGet(reportStu, `ranks.${sub}.township`, '-'), showTownRank);
-            const tT = showTownRank ? getTrendBadge(curTR, prevRanks.township || '-', 'rank') : '';
-            const curCountyR = getStudentCountyRankValue(reportStu, sub);
-            const prevCountyR = readHistoricalRankValue(prevHistoryEntry, compareStu, sub, 'county');
-            const tCounty = showCountyRank && hasHistoricalCountyRank(compareStu, sub, prevHistoryEntry) ? getTrendBadge(curCountyR, prevCountyR || '-', 'rank') : '';
+            const prevClassR = resolveHistoricalRank(prevHistoryEntry, compareStu, sub, 'class');
+            const prevSchoolR = resolveHistoricalRank(prevHistoryEntry, compareStu, sub, 'school');
+            const prevTownR = resolveHistoricalRank(prevHistoryEntry, compareStu, sub, 'township');
+            const prevCountyR = resolveHistoricalRank(prevHistoryEntry, compareStu, sub, 'county');
+            const curClassR = displayRankValue(resolveCurrentRank(sub, 'class'), showClassRank);
+            const curSR = resolveCurrentRank(sub, 'school');
+            const curTR = displayRankValue(resolveCurrentRank(sub, 'township'), showTownRank);
+            const curCountyR = displayRankValue(resolveCurrentRank(sub, 'county'), showCountyRank);
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}
-                    ${renderResponsiveTableCell('成绩（对比）', `${stuScores[sub]}（上次 ${prevSubScore}）${subTrend}`, 'font-weight:bold;color:#334155;')}
-                    ${renderResponsiveTableCell('班级排名', `${curClassR} ${tClass}`, 'color:#64748b;')}
-                    ${renderResponsiveTableCell('校级排名', `${curSR} <span style="font-size:0.9em;">${tS}</span>`, 'color:#64748b;')}
-                    ${renderResponsiveTableCell('全镇排名', `${curTR} <span style="font-size:0.9em;">${tT}</span>`, `color:#64748b; ${townColStyle}`)}
-                    ${renderResponsiveTableCell('全县排名', `${showCountyRank ? curCountyR : '-'} <span style="font-size:0.9em;">${tCounty}</span>`, `color:#64748b; ${countyColStyle}`)}
+                    ${renderResponsiveTableCell('成绩对比', renderMetricComparison(stuScores[sub], prevSubScore, 'score'), 'font-weight:bold;color:#334155;')}
+                    ${renderResponsiveTableCell('班排对比', renderMetricComparison(curClassR, prevClassR, 'rank'), 'color:#64748b;')}
+                    ${renderResponsiveTableCell('校排对比', renderMetricComparison(curSR, prevSchoolR, 'rank'), 'color:#64748b;')}
+                    ${renderResponsiveTableCell('镇排对比', renderMetricComparison(curTR, prevTownR, 'rank'), `color:#64748b; ${townColStyle}`)}
+                    ${renderResponsiveTableCell('县排对比', renderMetricComparison(curCountyR, prevCountyR, 'rank'), `color:#64748b; ${countyColStyle}`)}
                 </tr>`;
         }
     });
@@ -486,6 +463,14 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 .fluent-table th { text-align: center; padding: 10px 5px; color: #64748b; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; background: rgba(248, 250, 252, 0.5); }
                 .fluent-table td { text-align: center; padding: 12px 5px; border-bottom: 1px solid rgba(0,0,0,0.03); font-size: 14px; }
                 .fluent-table tr:last-child td { border-bottom: none; }
+                .report-metric-compare { display:grid; gap:3px; min-width:78px; text-align:left; line-height:1.35; }
+                .report-metric-compare > div { display:flex; align-items:center; justify-content:space-between; gap:6px; white-space:nowrap; }
+                .report-metric-compare > div > span:first-child { color:#94a3b8; font-size:10px; font-weight:600; }
+                .report-metric-current strong { color:#1e293b; font-size:14px; }
+                .report-metric-previous > span:last-child { color:#64748b; font-size:12px; }
+                .report-metric-change { min-height:18px; }
+                .report-metric-change > span:last-child { margin-left:0 !important; }
+                .report-metric-empty { color:#cbd5e1 !important; font-size:10px !important; font-weight:500 !important; }
                 .report-insight-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin:16px 0 12px; }
                 .report-insight-card { border-radius:18px; padding:16px 18px; border:1px solid #e2e8f0; background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); box-shadow:0 10px 26px rgba(15, 23, 42, 0.04); }
                 .report-insight-card.tone-score { border-color:#bfdbfe; background:linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); }
@@ -700,7 +685,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         </div>
         <div class="fluent-card student-report-table-card" style="padding:0; overflow:hidden;">
             <table class="fluent-table" id="tb-query">
-                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>总分班排</th><th>校排</th><th style="${townColStyle}">全镇排名</th><th style="${countyColStyle}">全县排名</th></tr></thead>
+                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩对比</th><th>班排对比</th><th>校排对比</th><th style="${townColStyle}">镇排对比</th><th style="${countyColStyle}">县排对比</th></tr></thead>
                 <tbody>${tableRows}</tbody>
             </table>
         </div>
@@ -711,8 +696,10 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
     let historyHtml = '';
     if (examHistory.length > 1) {
         let historyRows = '';
-        let thHtml = `<th style="text-align:left; padding-left:20px;">考试名称</th><th>${totalLabel}</th><th>校排</th>`;
-        if (hasTownshipRankData) thHtml += `<th>镇排</th>`;
+        let thHtml = `<th style="text-align:left; padding-left:20px;">考试名称</th><th>${totalLabel}</th>`;
+        if (showClassRank) thHtml += `<th>班排</th>`;
+        thHtml += `<th>校排</th>`;
+        if (showTownRank) thHtml += `<th>镇排</th>`;
         if (showCountyRank) thHtml += `<th>县排</th>`;
 
         for (let i = examHistory.length - 1; i >= 0; i--) {
@@ -727,15 +714,17 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
             const normalizedDisplayTotal = getComparisonTotalValue(stuObj, comparisonTotalSubjects);
             const displayTotal = Number.isFinite(normalizedDisplayTotal) ? normalizedDisplayTotal.toFixed(1) : '-';
             const tScore = displayTotal;
-            const sRank = safeGet(stuObj, 'ranks.total.school', h.rankSchool || '-');
-            const tRank = safeGet(stuObj, 'ranks.total.township', h.rankTown || '-');
-            const cRank = readHistoricalRankValue(h, stuObj, 'total', 'county');
+            const classRank = resolveHistoricalRank(h, stuObj, 'total', 'class', h.rankClass || '-');
+            const sRank = resolveHistoricalRank(h, stuObj, 'total', 'school', h.rankSchool || '-');
+            const tRank = resolveHistoricalRank(h, stuObj, 'total', 'township', h.rankTown || '-');
+            const cRank = resolveHistoricalRank(h, stuObj, 'total', 'county', h.rankCounty || '-');
 
             historyRows += `<tr style="${bgStyle}">
                 ${renderResponsiveTableCell('考试名称', `${isCurrent ? '⭐ ' : ''}${h.examLabel || h.examId || h.examFullKey || '-'}`, 'text-align:left; padding-left:20px; color:#475569;')}
                 ${renderResponsiveTableCell(totalLabel, tScore, 'color:#2563eb;')}
+                ${showClassRank ? renderResponsiveTableCell('班级排名', classRank, 'color:#64748b;') : ''}
                 ${renderResponsiveTableCell('校级排名', sRank, 'color:#64748b;')}
-                ${hasTownshipRankData ? renderResponsiveTableCell('全镇排名', tRank, 'color:#64748b;') : ''}
+                ${showTownRank ? renderResponsiveTableCell('全镇排名', tRank, 'color:#64748b;') : ''}
                 ${showCountyRank ? renderResponsiveTableCell('全县排名', cRank, 'color:#64748b;') : ''}
             </tr>`;
         }

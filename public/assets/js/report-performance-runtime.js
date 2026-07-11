@@ -6,7 +6,8 @@
     const MAX_ENTRIES = 80;
     const state = {
         history: new Map(),
-        html: new Map()
+        html: new Map(),
+        rankIndexes: new Map()
     };
 
     function clone(value) {
@@ -56,6 +57,55 @@
         };
         clearMap(state.history);
         clearMap(state.html);
+        if (!text) state.rankIndexes.clear();
+    }
+
+    function getHistoryRenderSignature(history) {
+        if (!Array.isArray(history) || !history.length) return 'history:0';
+        return history.map((entry) => {
+            const student = entry?.student || entry || {};
+            const totalRanks = student?.ranks?.total || {};
+            const scores = student?.scores || {};
+            return [
+                entry?.examFullKey || entry?.examId || '',
+                entry?.fingerprint || '',
+                entry?.updatedAt || entry?.createdAt || '',
+                student?.total ?? entry?.total ?? '',
+                totalRanks.class ?? entry?.rankClass ?? '',
+                totalRanks.school ?? entry?.rankSchool ?? '',
+                totalRanks.township ?? entry?.rankTown ?? '',
+                totalRanks.county ?? entry?.rankCounty ?? '',
+                Object.keys(scores).sort().map(key => `${key}:${scores[key]}`).join(',')
+            ].join(':');
+        }).join('|');
+    }
+
+    function getRankIndex(rows, subjects, cacheKey, totalSubjects = subjects) {
+        const list = Array.isArray(rows) ? rows : [];
+        const service = window.RankingDataService;
+        if (!list.length || !service || typeof service.buildStudentRankIndex !== 'function') return null;
+        const subjectList = Array.from(new Set((subjects || []).filter(Boolean)));
+        const key = `${String(cacheKey || '').trim()}::${list.length}::${subjectList.join('|')}`;
+        if (state.rankIndexes.has(key)) {
+            const cached = state.rankIndexes.get(key);
+            state.rankIndexes.delete(key);
+            state.rankIndexes.set(key, cached);
+            return cached;
+        }
+        const totalList = Array.isArray(totalSubjects) ? totalSubjects : [];
+        const index = service.buildStudentRankIndex(list, subjectList, {
+            townSchoolThreshold: 14,
+            countySchoolThreshold: 24,
+            getScore(row, subject) {
+                if (subject === 'total' && typeof getComparisonTotalValue === 'function') {
+                    return getComparisonTotalValue(row, totalList);
+                }
+                return row?.scores?.[subject];
+            }
+        });
+        state.rankIndexes.set(key, index);
+        while (state.rankIndexes.size > 8) state.rankIndexes.delete(state.rankIndexes.keys().next().value);
+        return index;
     }
 
     window.StudentReportPerformance = {
@@ -71,6 +121,8 @@
         setReportHtml(key, value) {
             return write(state.html, key, value, HTML_TTL_MS);
         },
+        getHistoryRenderSignature,
+        getRankIndex,
         clear,
         getStats() {
             return {

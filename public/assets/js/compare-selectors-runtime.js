@@ -65,7 +65,7 @@
                     background: true,
                     minCount: 2,
                     maxFetch: 4,
-                    refreshSelectors: false
+                    refreshSelectors: true
                 }
             });
         }
@@ -84,7 +84,7 @@
                 background: true,
                 minCount: 2,
                 maxFetch: 4,
-                refreshSelectors: false
+                refreshSelectors: true
             }))
                 .catch(err => {
                     console.warn('[compare-sync] fetchCohortExamsToLocal failed:', err);

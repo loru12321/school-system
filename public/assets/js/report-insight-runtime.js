@@ -187,6 +187,21 @@ function renderStudentRealityNote(model) {
     return `<div class="report-reality-note"><div class="report-reality-title">真实成绩说明</div><ul class="report-reality-list">${model.realityNotes.map(note => `<li>${note}</li>`).join('')}</ul></div>`;
 }
 
+function renderMetricComparison(current, previous, type = 'score', digits = null) {
+    const formatValue = (value) => {
+        if (value === undefined || value === null || value === '' || value === '-') return '-';
+        const numeric = Number(value);
+        if (digits !== null && Number.isFinite(numeric)) return numeric.toFixed(digits);
+        return String(value);
+    };
+    const trend = getTrendBadge(current, previous, type);
+    return `<div class="report-metric-compare">
+        <div class="report-metric-current"><span>本次</span><strong>${formatValue(current)}</strong></div>
+        <div class="report-metric-previous"><span>上次</span><span>${formatValue(previous)}</span></div>
+        <div class="report-metric-change"><span>变化</span>${trend || '<span class="report-metric-empty">暂无对比</span>'}</div>
+    </div>`;
+}
+
 
 function getTrendBadge(current, previous, type = 'score') {
     if (previous === undefined || previous === null || previous === '-' || previous === '') return '';
@@ -227,6 +242,7 @@ function getTrendBadge(current, previous, type = 'score') {
         renderStudentActionPlan,
         renderStudentSubjectBoard,
         renderStudentRealityNote,
+        renderMetricComparison,
         getTrendBadge
     };
 })();

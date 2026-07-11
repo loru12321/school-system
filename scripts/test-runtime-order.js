@@ -1545,7 +1545,8 @@ assert.ok(schoolNormalizationRuntime.includes('const IndicatorSchoolBucketPerfCa
 assert.ok(schoolNormalizationRuntime.includes('function getIndicatorSchoolBucketSignature'), 'indicator bucket cache should use an explicit dependency signature');
 assert.ok(schoolNormalizationRuntime.includes('scoreNameMap'), 'indicator score sync should cache repeated school-name matching');
 assert.ok(moduleEntryRuntime.includes("node.dataset.released === 'true'"), 'teacher heavy DOM release should not rewrite already released placeholders on later module switches');
-assert.ok(reportHistoryRuntime.includes('background: true') && reportHistoryRuntime.includes('delay: 4800'), 'student report cloud-history hydration should stay delayed and low priority');
+assert.ok(reportHistoryRuntime.includes('background: true') && reportHistoryRuntime.includes('delay: 350'), 'student report cloud-history hydration should start shortly after the first report frame without blocking it');
+assert.ok(moduleEntryRuntime.includes("if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();"), 'report generator entry should initialize cloud comparison exam selectors');
 const countyRankFallbackStart = cloudRuntime.indexOf('const getCountyRankFallback = (payload, match, subject =');
 const countyRankFallbackEnd = cloudRuntime.indexOf('const buildHistoryEntry =', countyRankFallbackStart);
 const countyRankFallbackSource = countyRankFallbackStart >= 0 && countyRankFallbackEnd > countyRankFallbackStart
