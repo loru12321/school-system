@@ -234,6 +234,114 @@
         return groups;
     }
 
+    function buildStudentRankIndex(rows = [], subjects = [], options = {}) {
+        const list = Array.isArray(rows) ? rows.filter(Boolean) : [];
+        const subjectList = Array.from(new Set((Array.isArray(subjects) ? subjects : [])
+            .map(normalizeText)
+            .filter(Boolean)));
+        const normalizedSchoolCache = new Map();
+        const normalizeSchool = (value) => {
+            const raw = normalizeText(value);
+            if (!raw) return '';
+            if (normalizedSchoolCache.has(raw)) return normalizedSchoolCache.get(raw);
+            let normalized = raw;
+            if (typeof options.normalizeSchool === 'function') normalized = normalizeText(options.normalizeSchool(raw)) || raw;
+            if (root && typeof root.getCanonicalSchoolName === 'function') {
+                normalized = normalizeText(root.getCanonicalSchoolName(raw)) || normalized;
+            }
+            normalizedSchoolCache.set(raw, normalized);
+            return normalized;
+        };
+        const schoolOf = (row) => normalizeSchool(row && row.school);
+        const studentKeyCache = new WeakMap();
+        const keyOf = (row) => {
+            if (!row || typeof row !== 'object') return '';
+            if (studentKeyCache.has(row)) return studentKeyCache.get(row);
+            const key = makeStudentKey(row);
+            studentKeyCache.set(row, key);
+            return key;
+        };
+        const schools = new Set(list.map(schoolOf).filter(Boolean));
+        const townSchoolThreshold = Number(options.townSchoolThreshold) || 14;
+        const countySchoolThreshold = Number(options.countySchoolThreshold) || 24;
+        const townRankVisible = schools.size >= townSchoolThreshold;
+        const countyRankVisible = schools.size >= countySchoolThreshold;
+        const rowsBySchool = groupBy(list, schoolOf);
+        const rankMaps = {
+            school: new Map(),
+            township: new Map(),
+            county: new Map()
+        };
+
+        let townshipRows = [];
+        if (townRankVisible) {
+            if (typeof options.getTownshipRows === 'function') {
+                townshipRows = options.getTownshipRows(list) || [];
+            } else if (root && typeof root.filterRowsToTownshipSchools === 'function') {
+                townshipRows = root.filterRowsToTownshipSchools(list) || [];
+            }
+            if (!Array.isArray(townshipRows) || !townshipRows.length) townshipRows = list;
+        }
+
+        const readScore = (row, subject) => {
+            if (subject === 'total') return Number(row && row.total);
+            if (!row || !row.scores || row.scores[subject] === undefined) return Number.NaN;
+            return Number(row.scores[subject]);
+        };
+        const buildMap = (sourceRows, subject) => {
+            const rankedRows = (Array.isArray(sourceRows) ? sourceRows : [])
+                .filter((row) => Number.isFinite(readScore(row, subject)));
+            const map = new Map();
+            assignCompetitionRanks(rankedRows, (row) => readScore(row, subject), (row, rank) => {
+                const key = keyOf(row);
+                if (key) map.set(key, rank);
+            });
+            return map;
+        };
+        const getScopeMap = (scope, subject, student) => {
+            const normalizedScope = scope === 'town' ? 'township' : scope;
+            const normalizedSubject = normalizeText(subject) || 'total';
+            if (normalizedScope === 'school') {
+                const school = schoolOf(student);
+                const cacheKey = `${school}::${normalizedSubject}`;
+                if (!rankMaps.school.has(cacheKey)) {
+                    rankMaps.school.set(cacheKey, buildMap(rowsBySchool.get(school) || [], normalizedSubject));
+                }
+                return rankMaps.school.get(cacheKey);
+            }
+            if (normalizedScope === 'township') {
+                if (!townRankVisible) return null;
+                if (!rankMaps.township.has(normalizedSubject)) {
+                    rankMaps.township.set(normalizedSubject, buildMap(townshipRows, normalizedSubject));
+                }
+                return rankMaps.township.get(normalizedSubject);
+            }
+            if (normalizedScope === 'county') {
+                if (!countyRankVisible) return null;
+                if (!rankMaps.county.has(normalizedSubject)) {
+                    rankMaps.county.set(normalizedSubject, buildMap(list, normalizedSubject));
+                }
+                return rankMaps.county.get(normalizedSubject);
+            }
+            return null;
+        };
+
+        return {
+            rowCount: list.length,
+            schoolCount: schools.size,
+            subjects: subjectList,
+            townRankVisible,
+            countyRankVisible,
+            getRank(student, subject = 'total', scope = 'school', fallback = '-') {
+                if (!student || typeof student !== 'object') return fallback;
+                const map = getScopeMap(scope, subject, student);
+                if (!map) return fallback;
+                const rank = map.get(keyOf(student));
+                return rank == null || rank === '' ? fallback : rank;
+            }
+        };
+    }
+
     function buildScopeMetadata(rows, options = {}) {
         const list = Array.isArray(rows) ? rows : [];
         const schoolSet = new Set();
@@ -499,6 +607,7 @@
         assignCompetitionRanks,
         assignRankScope,
         assignGroupedRankScope,
+        buildStudentRankIndex,
         buildScopeMetadata,
         canShowRank,
         canShowRankComparison,

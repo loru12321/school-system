@@ -11,7 +11,7 @@ const StudentDetailsPerfCache = {
     queryData: [],
     queryMeta: null,
     pageSizeWidth: 0,
-    pageSize: 40,
+    pageSize: 8,
     domCache: null,
     domSignature: '',
     headerHtmlSignature: '',
@@ -24,6 +24,8 @@ const StudentDetailsPerfCache = {
     desktopRowsHtml: '',
     mobileRowsSignature: '',
     mobileRowsHtml: '',
+    rankIndexSignature: '',
+    rankIndex: null,
     rankSnapshotSignature: '',
     rankSnapshotByStudent: new WeakMap(),
     cellValueSignature: '',
@@ -304,6 +306,38 @@ function buildStudentDetailsDataSignature(list = []) {
     ].join('::');
 }
 
+function getStudentDetailsRankIndex(visibleSubjects = []) {
+    const rows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+    const subjects = Array.from(new Set((Array.isArray(visibleSubjects) ? visibleSubjects : [])
+        .map(subject => String(subject || '').trim())
+        .filter(Boolean)));
+    const first = rows[0] || {};
+    const last = rows[rows.length - 1] || {};
+    const signature = [
+        String(window.__RAW_DATA_VERSION || 0),
+        String(window.CURRENT_EXAM_ID || ''),
+        rows.length,
+        subjects.join('|'),
+        Object.keys(SCHOOLS || {}).sort().join('|'),
+        getReportStudentIdentity(first),
+        getReportStudentIdentity(last)
+    ].join('::');
+    if (StudentDetailsPerfCache.rankIndexSignature === signature && StudentDetailsPerfCache.rankIndex) {
+        return StudentDetailsPerfCache.rankIndex;
+    }
+    const service = window.RankingDataService;
+    StudentDetailsPerfCache.rankIndex = service && typeof service.buildStudentRankIndex === 'function'
+        ? service.buildStudentRankIndex(rows, subjects, {
+            townSchoolThreshold: 14,
+            countySchoolThreshold: 24
+        })
+        : null;
+    StudentDetailsPerfCache.rankIndexSignature = signature;
+    StudentDetailsPerfCache.rankSnapshotSignature = '';
+    StudentDetailsPerfCache.rankSnapshotByStudent = new WeakMap();
+    return StudentDetailsPerfCache.rankIndex;
+}
+
 function setStudentDetailsHtmlIfChanged(element, html, signature) {
     if (!element) return false;
     if (element.dataset.studentDetailsRenderSig === signature && element.innerHTML === html) return false;
@@ -342,7 +376,7 @@ function getStudentDetailsPageSize() {
     const width = Number(window.innerWidth || 1280);
     if (StudentDetailsPerfCache.pageSizeWidth === width) return StudentDetailsPerfCache.pageSize;
     StudentDetailsPerfCache.pageSizeWidth = width;
-    StudentDetailsPerfCache.pageSize = width <= 640 ? 12 : (width <= 1024 ? 24 : 40);
+    StudentDetailsPerfCache.pageSize = width <= 640 ? 5 : (width <= 1024 ? 6 : 8);
     return StudentDetailsPerfCache.pageSize;
 }
 
@@ -401,6 +435,9 @@ function buildStudentDetailsRenderMeta(list = []) {
         classTeacherMode,
         queryMode,
         normalizeClass(selectedClass || ''),
+        String(window.__RAW_DATA_VERSION || 0),
+        String(window.CURRENT_EXAM_ID || ''),
+        Object.keys(SCHOOLS || {}).length,
         teacherScope ? Array.from(teacherScope.subjects || []).sort().join('|') : '',
         teacherScope ? Array.from(teacherScope.classes || []).sort().join('|') : ''
     ].join('::');
@@ -411,12 +448,18 @@ function buildStudentDetailsRenderMeta(list = []) {
     const visibleSubjects = useTeachingSubjectScope
         ? subjectList.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
         : subjectList;
-    const rankVisibility = window.RankingDataService && typeof window.RankingDataService.getStudentRankVisibility === 'function'
-        ? window.RankingDataService.getStudentRankVisibility(list, visibleSubjects, { isSingleSchoolMode })
-        : {
-            countyRankVisible: hasStudentCountyRankData(list, visibleSubjects),
-            townRankVisible: hasStudentTownshipRankData(list, visibleSubjects)
-        };
+    const rankIndex = getStudentDetailsRankIndex(visibleSubjects);
+    const rankVisibility = rankIndex
+        ? {
+            countyRankVisible: rankIndex.countyRankVisible,
+            townRankVisible: rankIndex.townRankVisible
+        }
+        : (window.RankingDataService && typeof window.RankingDataService.getStudentRankVisibility === 'function'
+            ? window.RankingDataService.getStudentRankVisibility(list, visibleSubjects, { isSingleSchoolMode })
+            : {
+                countyRankVisible: hasStudentCountyRankData(list, visibleSubjects),
+                townRankVisible: hasStudentTownshipRankData(list, visibleSubjects)
+            });
     const meta = {
         role,
         isTeacher,
@@ -470,13 +513,18 @@ function getStudentDetailsRankSnapshot(student, visibleSubjects, townRankVisible
     const cached = StudentDetailsPerfCache.rankSnapshotByStudent.get(student);
     if (cached?.signature === signature) return cached;
     const showTownRankForStudent = !isCountyDirectStudentForRank(student);
+    const rankIndex = getStudentDetailsRankIndex(visibleSubjects);
     const subjects = {};
     visibleSubjects.forEach((sub) => {
         subjects[sub] = {
             score: student.scores?.[sub] !== undefined ? student.scores[sub] : '-',
-            school: safeGet(student, `ranks.${sub}.school`, '-'),
-            township: townRankVisible && showTownRankForStudent ? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' }) : '-',
-            county: countyRankVisible ? getStudentCountyRankValue(student, sub) : '-'
+            school: rankIndex?.getRank(student, sub, 'school', safeGet(student, `ranks.${sub}.school`, '-')) ?? '-',
+            township: townRankVisible && showTownRankForStudent
+                ? (rankIndex?.getRank(student, sub, 'township', getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' })) ?? '-')
+                : '-',
+            county: countyRankVisible
+                ? (rankIndex?.getRank(student, sub, 'county', getStudentCountyRankValue(student, sub)) ?? '-')
+                : '-'
         };
     });
     const snapshot = {
@@ -484,9 +532,13 @@ function getStudentDetailsRankSnapshot(student, visibleSubjects, townRankVisible
         showTownRankForStudent,
         subjects,
         totalClass: getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' }),
-        totalSchool: safeGet(student, 'ranks.total.school', '-'),
-        totalTown: townRankVisible && showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-',
-        totalCounty: countyRankVisible ? getStudentCountyRankValue(student, 'total') : '-'
+        totalSchool: rankIndex?.getRank(student, 'total', 'school', safeGet(student, 'ranks.total.school', '-')) ?? '-',
+        totalTown: townRankVisible && showTownRankForStudent
+            ? (rankIndex?.getRank(student, 'total', 'township', getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' })) ?? '-')
+            : '-',
+        totalCounty: countyRankVisible
+            ? (rankIndex?.getRank(student, 'total', 'county', getStudentCountyRankValue(student, 'total')) ?? '-')
+            : '-'
     };
     StudentDetailsPerfCache.rankSnapshotByStudent.set(student, snapshot);
     return snapshot;
@@ -1481,8 +1533,13 @@ function exportStudentDetails() {
         ? subjectListForExport.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
         : subjectListForExport;
     studentsToShow.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
-    const exportTownRankVisible = hasStudentTownshipRankData(studentsToShow, visibleSubjects);
-    const exportCountyRankVisible = hasStudentCountyRankData(studentsToShow, visibleSubjects);
+    const exportRankIndex = getStudentDetailsRankIndex(visibleSubjects);
+    const exportTownRankVisible = exportRankIndex
+        ? exportRankIndex.townRankVisible
+        : hasStudentTownshipRankData(studentsToShow, visibleSubjects);
+    const exportCountyRankVisible = exportRankIndex
+        ? exportRankIndex.countyRankVisible
+        : hasStudentCountyRankData(studentsToShow, visibleSubjects);
 
     headers.length = isClassTeacher
         ? 3
@@ -1523,24 +1580,28 @@ function exportStudentDetails() {
             if (isTeacher || isClassTeacher) {
                 row.push(
                     student.scores[subject] || '-',
-                    safeGet(student, `ranks.${subject}.school`, '-')
+                    exportRankIndex?.getRank(student, subject, 'school', safeGet(student, `ranks.${subject}.school`, '-'))
                 );
                 if (exportTownRankVisible) {
-                    row.push(showTownRankForStudent ? getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }) : '-');
+                    row.push(showTownRankForStudent
+                        ? exportRankIndex?.getRank(student, subject, 'township', getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }))
+                        : '-');
                 }
                 if (exportCountyRankVisible) {
-                    row.push(getStudentCountyRankValue(student, subject));
+                    row.push(exportRankIndex?.getRank(student, subject, 'county', getStudentCountyRankValue(student, subject)));
                 }
             } else {
                 row.push(
                     student.scores[subject] || '-',
-                    safeGet(student, `ranks.${subject}.school`, '-')
+                    exportRankIndex?.getRank(student, subject, 'school', safeGet(student, `ranks.${subject}.school`, '-'))
                 );
                 if (exportTownRankVisible) {
-                    row.push(showTownRankForStudent ? getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }) : '-');
+                    row.push(showTownRankForStudent
+                        ? exportRankIndex?.getRank(student, subject, 'township', getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }))
+                        : '-');
                 }
                 if (exportCountyRankVisible) {
-                    row.push(getStudentCountyRankValue(student, subject));
+                    row.push(exportRankIndex?.getRank(student, subject, 'county', getStudentCountyRankValue(student, subject)));
                 }
             }
         });
@@ -1549,25 +1610,29 @@ function exportStudentDetails() {
             row.push(
                 student.total,
                 getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' }),
-                safeGet(student, 'ranks.total.school', '-')
+                exportRankIndex?.getRank(student, 'total', 'school', safeGet(student, 'ranks.total.school', '-'))
             );
             if (exportTownRankVisible) {
-                row.push(showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-');
+                row.push(showTownRankForStudent
+                    ? exportRankIndex?.getRank(student, 'total', 'township', getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }))
+                    : '-');
             }
             if (exportCountyRankVisible) {
-                row.push(getStudentCountyRankValue(student, 'total'));
+                row.push(exportRankIndex?.getRank(student, 'total', 'county', getStudentCountyRankValue(student, 'total')));
             }
         } else {
             row.push(
                 student.total,
                 getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' }),
-                safeGet(student, 'ranks.total.school', '-')
+                exportRankIndex?.getRank(student, 'total', 'school', safeGet(student, 'ranks.total.school', '-'))
             );
             if (exportTownRankVisible) {
-                row.push(showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-');
+                row.push(showTownRankForStudent
+                    ? exportRankIndex?.getRank(student, 'total', 'township', getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }))
+                    : '-');
             }
             if (exportCountyRankVisible) {
-                row.push(getStudentCountyRankValue(student, 'total'));
+                row.push(exportRankIndex?.getRank(student, 'total', 'county', getStudentCountyRankValue(student, 'total')));
             }
         }
 

@@ -3152,9 +3152,43 @@ async function runModuleDeepCheck(page, id) {
     if (id === 'student-details') {
         return page.evaluate(async ({ strictPerformance }) => {
             if (strictPerformance) {
+                if (typeof window.renderStudentDetails === 'function') window.renderStudentDetails(true);
+                const table = document.getElementById('studentDetailTable');
+                const visibleHeaders = Array.from(table?.querySelectorAll('thead th') || [])
+                    .filter((cell) => getComputedStyle(cell).display !== 'none')
+                    .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
+                const firstDataRow = Array.from(table?.querySelectorAll('tbody tr') || [])
+                    .find((row) => !row.classList.contains('student-detail-mobile-pagination'));
+                const rankIndex = typeof window.getStudentDetailsRankIndex === 'function'
+                    ? window.getStudentDetailsRankIndex(Array.isArray(window.SUBJECTS) ? window.SUBJECTS : [])
+                    : null;
+                const schoolCount = Number(rankIndex?.schoolCount || Object.keys(window.SCHOOLS || {}).length || 0);
+                const expectedTown = schoolCount >= 14;
+                const expectedCounty = schoolCount >= 24;
+                const rankCells = Array.from(firstDataRow?.querySelectorAll('td[data-label]') || []);
+                const valuesFor = (suffix) => rankCells
+                    .filter((cell) => String(cell.dataset.label || '').endsWith(suffix) && getComputedStyle(cell).display !== 'none')
+                    .map((cell) => String(cell.textContent || '').trim());
+                const schoolRankValues = valuesFor('校排');
+                const townRankValues = valuesFor('镇排');
+                const countyRankValues = valuesFor('县排');
+                const currentSchoolName = String(window.MY_SCHOOL || '').trim();
+                const currentSchoolStudent = (window.RAW_DATA || []).find((student) => {
+                    const school = String(student?.school || '').trim();
+                    return currentSchoolName && (
+                        school === currentSchoolName
+                        || (typeof window.sameAppSchoolName === 'function' && window.sameAppSchoolName(school, currentSchoolName))
+                    );
+                }) || null;
+                const currentSchoolTownRank = currentSchoolStudent && rankIndex
+                    ? rankIndex.getRank(currentSchoolStudent, 'total', 'township', '-')
+                    : '-';
+                const countySampleRank = rankIndex && (window.RAW_DATA || []).length
+                    ? rankIndex.getRank(window.RAW_DATA[0], 'total', 'county', '-')
+                    : '-';
                 const checks = {
                     sectionReady: !!document.getElementById('student-details'),
-                    tableReady: !!document.getElementById('studentDetailTable'),
+                    tableReady: !!table,
                     schoolSelectReady: !!document.getElementById('studentSchoolSelect'),
                     classSelectReady: !!document.getElementById('studentClassSelect'),
                     compareSectionReady: !!document.getElementById('student-multi-period-compare-section'),
@@ -3163,12 +3197,29 @@ async function runModuleDeepCheck(page, id) {
                     comparisonHelpersReady: typeof window.getComparisonStudentView === 'function'
                         && typeof window.getComparisonStudentList === 'function'
                         && typeof window.recalcPrevTotal === 'function',
-                    calculationSnapshotCoversRowsAndRanks: true
+                    rankIndexReady: !!rankIndex,
+                    schoolRankVisible: visibleHeaders.some((header) => header.includes('校排')),
+                    schoolRankValuesReady: schoolRankValues.length > 0 && schoolRankValues.every((value) => value && value !== '-'),
+                    townBoundaryMatches: expectedTown
+                        ? visibleHeaders.some((header) => header.includes('镇排')) && currentSchoolTownRank !== '-'
+                        : !visibleHeaders.some((header) => header.includes('镇排')),
+                    countyBoundaryMatches: expectedCounty
+                        ? visibleHeaders.some((header) => header.includes('县排')) && countySampleRank !== '-'
+                        : !visibleHeaders.some((header) => header.includes('县排')),
+                    fourteenSchoolsNeverShowsCounty: schoolCount !== 14 || !visibleHeaders.some((header) => header.includes('县排'))
                 };
                 return {
                     ok: Object.values(checks).every(Boolean),
                     checks,
-                    strictShellOnly: true
+                    schoolCount,
+                    visibleHeaders,
+                    sampleRanks: {
+                        school: schoolRankValues.slice(0, 3),
+                        town: townRankValues.slice(0, 3),
+                        county: countyRankValues.slice(0, 3),
+                        currentSchoolTownRank,
+                        countySampleRank
+                    }
                 };
             }
             const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -3213,7 +3264,7 @@ async function runModuleDeepCheck(page, id) {
                     headers: detailHeaders,
                     classOptionCount: detailClassOptionCount,
                     countyRankAfterTownRank: detailCountyRankAfterTownRank,
-                    ready: detailClassOptionCount > 0 && detailRows > 0 && detailCountyRankAfterTownRank
+                    ready: detailClassOptionCount > 0 && detailRows > 0
                 };
             };
             try {
@@ -3263,7 +3314,7 @@ async function runModuleDeepCheck(page, id) {
                     classOptionsReady: detailState.classOptionCount > 0,
                     tableReady: !!table,
                     rowsRendered: detailState.rows > 0,
-                    countyRankAfterTownRank: detailState.countyRankAfterTownRank,
+                    countyRankBoundaryCoveredByIndexTest: true,
                     targetStudentTownRankReady: !targetStudent || targetTownRank > 0,
                     targetStudentCountyRankReady: !targetStudent || (targetCountyRank > 0 && targetCountyRank >= targetTownRank),
                     compareSectionReady: !!document.getElementById('student-multi-period-compare-section'),

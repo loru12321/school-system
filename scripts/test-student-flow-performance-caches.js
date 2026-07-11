@@ -68,6 +68,7 @@ const pkg = JSON.parse(read(packageFile));
     'setStudentDetailsHtmlIfChanged',
     'filterValueCache',
     'querySignature',
+    'width <= 640 ? 5 : (width <= 1024 ? 6 : 8)',
     'studentDetailsFilterMenuSig',
     'dataset.studentDetailsRenderSig',
     'getStudentDetailsClassTeacherQueryMode',
