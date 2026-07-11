@@ -238,7 +238,24 @@ assert.strictEqual(meta.CURRENT_TERM_ID, '9年级_下学期',
 assert.strictEqual(meta.INDICATOR_PARAMS.highSchoolLine, '390',
   'buildWorkspaceMetaPayload must preserve highSchoolLine=390');
 
-// 6. Derive helper returns the current exam term, never a compatible old term.
+// 6. A transient empty grade-9 workspace must reuse only this cohort's saved
+// support template before hashing/uploading, so it cannot erase cloud config.
+behaviorStorage.setItem('GRADE9_INDICATOR_2022', JSON.stringify({ ind1: '222', ind2: '1353' }));
+behaviorStorage.setItem('GRADE9_TARGETS_2022', JSON.stringify({ A: { t1: 3, t2: 2 } }));
+behaviorStorage.setItem('GRADE9_INDICATOR_2023', JSON.stringify({ ind1: '999', ind2: '888' }));
+const protectedMeta = hooks.buildWorkspaceMetaPayload({
+  ...savePayload,
+  TARGETS: {},
+  INDICATOR_PARAMS: {}
+}, 'cohort::2022');
+assert.deepStrictEqual(JSON.parse(JSON.stringify(protectedMeta.TARGETS)), { A: { t1: 3, t2: 2 } },
+  'empty grade-9 targets must be restored from the same cohort template before upload');
+assert.strictEqual(protectedMeta.INDICATOR_PARAMS.ind1, '222',
+  'empty grade-9 indicator one must be restored from the same cohort template before upload');
+assert.strictEqual(protectedMeta.INDICATOR_PARAMS.ind2, '1353',
+  'empty grade-9 indicator two must be restored from the same cohort template before upload');
+
+// 7. Derive helper returns the current exam term, never a compatible old term.
 assert.strictEqual(hooks.deriveBundleCurrentTeacherTermId(savePayload), '2025-2026_下学期_9年级',
   'deriveBundleCurrentTeacherTermId must return the current exam teacher term');
 

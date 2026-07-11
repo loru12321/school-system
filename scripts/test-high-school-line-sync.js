@@ -290,6 +290,12 @@ assert.ok(
     'cloud-workspace-runtime: pending local flush must compare remote/local timestamps before skipping foreground refresh'
 );
 assert.ok(
+    workspaceSource.includes('const wouldEraseTargets = hasWorkspaceTargetConfig(remotePayload)')
+        && workspaceSource.includes('const wouldEraseIndicator = hasWorkspaceIndicatorParams(remotePayload)')
+        && workspaceSource.includes('已阻止云端覆盖：本地九年级指标配置为空'),
+    'cloud-workspace-runtime must refuse to replace non-empty remote grade-9 support settings with an empty local payload'
+);
+assert.ok(
     !/function mergeWorkspaceSplitPayload[\s\S]*\[\s*[\s\S]*'TARGETS'[\s\S]*'INDICATOR_PARAMS'[\s\S]*'SCHOOL_ALIAS_SETTINGS'[\s\S]*\]\.forEach/.test(workspaceSource),
     'cloud-workspace-runtime: split exam shard merge must not let old exam config overwrite workspace TARGETS/INDICATOR_PARAMS/SCHOOL_ALIAS_SETTINGS'
 );
@@ -333,8 +339,10 @@ assert.ok(
 assert.ok(
     cloudSource.includes('window.loadIndicatorSupportFromCloud = () =>')
         && cloudSource.includes('loadSnapshotPayloadByKey(`cohort::${cohortId}`)')
+        && cloudSource.includes('BACKUP_cohort::${cohortId}_pre_split_%')
+        && cloudSource.includes('payload = mergeIndicatorPayloadFields(payload, backupPayload)')
         && !/function ensureIndicatorWorkspaceFromCloud[\s\S]*loadCloudData\(\{ refresh: true \}\)/.test(appSource),
-    'indicator support restore must use lightweight cohort metadata instead of reapplying the full score snapshot'
+    'indicator support restore must use lightweight cohort metadata and the bounded pre-split backup instead of reapplying score snapshots'
 );
 assert.ok(
     cloudSource.includes('const preferredTeacherMap = preferredCurrentExamPayload.teacherMap')

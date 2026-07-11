@@ -678,8 +678,48 @@
         return nextHistory;
     }
 
-    function buildWorkspaceMetaPayload(payload, workspaceKey) {
+    function readGrade9SupportTemplate(cohortId, type) {
+        const exactCohortId = String(cohortId || '').trim();
+        if (!exactCohortId || !window.localStorage) return null;
+        try {
+            const raw = window.localStorage.getItem(`GRADE9_${type}_${exactCohortId}`);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function protectGrade9SupportBeforeUpload(payload, workspaceKey) {
         const source = clonePayloadFragment(payload || {});
+        if (!isGrade9WorkspacePayload(source)) return source;
+        const cohortId = String(source.CURRENT_COHORT_ID || extractCohortIdFromKey(workspaceKey) || '').trim();
+        if (!cohortId) return source;
+
+        if (!hasWorkspaceTargetConfig(source)) {
+            const savedTargets = readGrade9SupportTemplate(cohortId, 'TARGETS');
+            if (savedTargets && Object.keys(savedTargets).length > 0) source.TARGETS = clonePayloadFragment(savedTargets);
+        }
+
+        const savedIndicator = readGrade9SupportTemplate(cohortId, 'INDICATOR');
+        if (savedIndicator) {
+            const current = source.INDICATOR_PARAMS && typeof source.INDICATOR_PARAMS === 'object'
+                ? source.INDICATOR_PARAMS
+                : {};
+            const merged = { ...current };
+            ['ind1', 'ind2', 'highSchoolLine'].forEach((field) => {
+                if (!String(merged[field] || '').trim() && String(savedIndicator[field] || '').trim()) {
+                    merged[field] = savedIndicator[field];
+                }
+            });
+            source.INDICATOR_PARAMS = merged;
+        }
+        return source;
+    }
+
+    function buildWorkspaceMetaPayload(payload, workspaceKey) {
+        const source = protectGrade9SupportBeforeUpload(payload, workspaceKey);
         Object.keys(source).forEach((field) => {
             if (WORKSPACE_META_ONLY_FIELDS.has(field)) delete source[field];
         });
@@ -1045,6 +1085,15 @@
                 console.warn('[CloudSync] remote workspace guard skipped:', error?.message || error);
             }
             if (remotePayload) {
+                if (isGrade9WorkspacePayload(remotePayload)) {
+                    const wouldEraseTargets = hasWorkspaceTargetConfig(remotePayload)
+                        && !hasWorkspaceTargetConfig(bundle.metaPayload);
+                    const wouldEraseIndicator = hasWorkspaceIndicatorParams(remotePayload)
+                        && !hasWorkspaceIndicatorParams(bundle.metaPayload);
+                    if (wouldEraseTargets || wouldEraseIndicator) {
+                        throw new Error('已阻止云端覆盖：本地九年级指标配置为空，请先完成当前届别恢复');
+                    }
+                }
                 rejectIfRemoteIsNewer(getPayloadCurrentExamSummary({
                     ...remotePayload,
                     updated_at: remoteWorkspaceRow.updated_at || ''
@@ -2592,6 +2641,7 @@
     if (shouldExposeCloudWorkspaceTestHooks()) {
         window.__CloudWorkspaceRuntimeTestHooks = {
             buildWorkspaceMetaPayload,
+            protectGrade9SupportBeforeUpload,
             bundleCompatibleTeachingHistory,
             deriveBundleCurrentTeacherTermId,
             extractBundleTermYearGrade

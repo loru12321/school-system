@@ -2389,8 +2389,28 @@
             if (!(await CloudManager.ensureClientReady())) return false;
             const cohortId = normalizeCohortId(getCurrentCohortId());
             if (!cohortId) return false;
-            const payload = await loadSnapshotPayloadByKey(`cohort::${cohortId}`);
-            if (!payload || typeof payload !== 'object') return false;
+            let payload = await loadSnapshotPayloadByKey(`cohort::${cohortId}`);
+            if (!payload || typeof payload !== 'object') payload = {};
+
+            // 旧版本曾把空的 TARGETS / INDICATOR_PARAMS 写回当前工作区。
+            // 当前元数据为空时，只查询本届 pre-split 备份，不扫描考试分片或
+            // STUDENT_HISTORY 索引。这样既能找回历史配置，也不会重新下载成绩。
+            if (needsIndicatorPayloadSupplement(payload)) {
+                const { data: backupRows, error: backupError } = await selectSystemData({
+                    select: 'key,updated_at',
+                    keyLike: `BACKUP_cohort::${cohortId}_pre_split_%`,
+                    order: 'updated_at',
+                    limit: 8,
+                    cache: false
+                });
+                if (backupError) throw backupError;
+                for (const row of (backupRows || [])) {
+                    const backupPayload = await loadSnapshotPayloadByKey(row?.key);
+                    if (!backupPayload || typeof backupPayload !== 'object') continue;
+                    payload = mergeIndicatorPayloadFields(payload, backupPayload);
+                    if (!needsIndicatorPayloadSupplement(payload)) break;
+                }
+            }
 
             const targets = payload.TARGETS && typeof payload.TARGETS === 'object' ? payload.TARGETS : {};
             const indicator = normalizeIndicatorParams(payload.INDICATOR_PARAMS);
@@ -2406,6 +2426,12 @@
             if (changed) {
                 if (typeof window.syncRuntimeStateToWindow === 'function') window.syncRuntimeStateToWindow();
                 if (typeof window.updateIndicatorUIState === 'function') window.updateIndicatorUIState();
+                if (window.DataManager && typeof window.DataManager.persistGrade9IndicatorTemplate === 'function') {
+                    window.DataManager.persistGrade9IndicatorTemplate();
+                }
+                if (window.DataManager && typeof window.DataManager.persistGrade9TargetsTemplate === 'function') {
+                    window.DataManager.persistGrade9TargetsTemplate();
+                }
             }
             return changed;
         })().catch((error) => {

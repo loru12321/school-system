@@ -119,10 +119,9 @@
         const storage = root.localStorage;
         if (!storage || typeof storage.removeItem !== 'function' || typeof storage.setItem !== 'function') return;
 
-        if (!Object.keys(targets).length) {
-            storage.removeItem(key);
-            return;
-        }
+        // 空工作区可能只是云端恢复尚未完成。不能因此删除最后一份有效模板，
+        // 否则一次临时空状态会把用户已经设置过的目标人数永久抹掉。
+        if (!Object.keys(targets).length) return;
         storage.setItem(key, JSON.stringify(targets));
     }
 

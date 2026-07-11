@@ -85,7 +85,7 @@ async function run() {
 
     targetsState = {};
     runtime.persistGrade9TargetsTemplate({});
-    assert.strictEqual(storage.getItem('GRADE9_TARGETS_2026'), null);
+    assert.deepStrictEqual(JSON.parse(storage.getItem('GRADE9_TARGETS_2026')), { A: { t1: 1, t2: 2 } });
 
     root.CURRENT_COHORT_ID = '';
     root.CONFIG = { name: '非九年级模板' };
