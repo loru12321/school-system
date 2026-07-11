@@ -6,6 +6,7 @@ const vm = require('vm');
 const root = path.resolve(__dirname, '..');
 const runtimeSource = fs.readFileSync(path.join(root, 'public/assets/js/login-entry-runtime.js'), 'utf8');
 const bootSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
+const authLoginSource = fs.readFileSync(path.join(root, 'public/assets/js/auth-login-runtime.js'), 'utf8');
 const htmlSource = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 
 function createFixedDate(isoDate) {
@@ -133,5 +134,11 @@ assert.ok(bootSource.includes('getBootSelectedLoginCohortYear'), 'app and boot l
 assert.ok(bootSource.includes("select.dataset.cohortInitialized = '1'"), 'boot login path should preserve manual selection after initialization');
 assert.ok(htmlSource.includes('<option value="2022" selected>2022届</option>'), 'static login fallback should default to the current grade 9 cohort for this release');
 assert.ok(htmlSource.includes('id="login-graduate-cohort-panel"'), 'login page should expose a dedicated graduate cohort panel');
+assert.ok(
+    authLoginSource.includes('let sessionCohortRestoreScheduled = false')
+        && authLoginSource.includes("enterCohortFromMask({ fastEnter: false, requireCloudData: true })")
+        && authLoginSource.includes('!sessionCohortRestoreScheduled && !this.currentUser.local_only'),
+    'an existing authenticated session with an empty workspace identity must re-enter the selected cohort instead of loading an unscoped cloud workspace'
+);
 
 console.log('login cohort runtime tests passed');

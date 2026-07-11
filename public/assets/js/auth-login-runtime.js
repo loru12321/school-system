@@ -470,13 +470,41 @@ var Auth = {
                     && !!restoredExamId
                     && Array.isArray(RAW_DATA)
                     && RAW_DATA.length > 0;
+                let sessionCohortRestoreScheduled = false;
                 if (hasReadyWorkspace) {
                     tryAutoRestoreWorkspaceExam({ preferredExamId: restoredExamId, cohortId: restoredCohortId });
                     tryAutoEnterReadyCohortWorkspace();
                 } else {
-                    if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
+                    const preferredSessionCohort = String(
+                        (typeof getExplicitCohortSelection === 'function' && getExplicitCohortSelection())
+                        || restoredCohortId
+                        || ''
+                    ).trim();
+                    if (preferredSessionCohort && typeof enterCohortFromMask === 'function') {
+                        const yearInput = document.getElementById('entry-cohort-year');
+                        if (yearInput) yearInput.value = preferredSessionCohort;
+                        lockRuntimeCohortId(preferredSessionCohort);
+                        setManualCohortSelectionGate(false);
+                        sessionCohortRestoreScheduled = true;
+                        Promise.resolve()
+                            .then(() => enterCohortFromMask({ fastEnter: false, requireCloudData: true }))
+                            .then(() => {
+                                tryAutoRestoreWorkspaceExam({
+                                    preferredExamId: CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '',
+                                    cohortId: preferredSessionCohort
+                                });
+                                tryAutoEnterReadyCohortWorkspace();
+                            })
+                            .catch((error) => {
+                                console.warn('[Auth.init] saved session cohort restore failed:', error?.message || error);
+                                setManualCohortSelectionGate(true);
+                                if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
+                            });
+                    } else if (typeof window.showCohortPicker === 'function') {
+                        window.showCohortPicker();
+                    }
                 }
-                if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
+                if (!sessionCohortRestoreScheduled && !this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
                     scheduleStartupCloudTask(() => {
                         withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
                             .then(() => {
