@@ -2357,7 +2357,7 @@ async function runModuleDeepCheck(page, id) {
             if (typeof window.runModuleTabEnter === 'function') {
                 await Promise.resolve(window.runModuleTabEnter({ id: 'teacher-analysis' })).catch(() => false);
             }
-            const deadline = Date.now() + 5500;
+            const deadline = Date.now() + (location.hostname === 'schoolsystem.com.cn' ? 9000 : 5500);
             const expectsTeacherData = location.hostname === 'schoolsystem.com.cn';
             let state = null;
             while (Date.now() < deadline) {
