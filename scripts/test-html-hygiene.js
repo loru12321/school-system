@@ -41,7 +41,7 @@ assert.ok(/\.hidden,\s*\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/.tes
 assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker runtime version should be generated from runtime content');
 assert.ok(!html.includes('runtimeRefresh'), 'index.html should not rely on runtimeRefresh query churn');
 assert.ok(!html.includes('SCHOOL_RUNTIME_REFRESH_VERSION'), 'index.html should not rely on local runtime version stamps');
-assert.ok(html.includes('runtime-loader-runtime.js') && !html.includes('runtime-loader-runtime.js?v='), 'runtime loader should load without query-version dependency');
+assert.match(html, /runtime-loader-runtime-runtime-[0-9a-f]{12}\.js/, 'runtime loader should use a content-versioned filename');
 assert.ok(html.includes(`boot-runtime-${serviceWorkerVersion}.js`), 'boot runtime should load from a content-versioned pathname');
 assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 'service worker runtime should load from a content-versioned pathname');
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');

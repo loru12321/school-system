@@ -487,6 +487,8 @@ async function main() {
         snapshotStep('render:county-teacher');
         await loadRuntimeSkill('student-compare');
         snapshotStep('runtime:student-compare');
+        await loadRuntimeSkill('student-details-core');
+        snapshotStep('runtime:student-details-core');
         await boundedSwitchTab('student-details');
         window.renderStudentDetails?.();
         const studentDeadline = Date.now() + 10000;
@@ -581,6 +583,9 @@ async function main() {
         await window.ensureTeacherCompareRuntimeLoaded?.().catch(() => {});
         await loadRuntimeSkill('progress-analysis');
         await loadRuntimeSkill('town-submodule-compare');
+        if (typeof window.loadOptionalRuntime === 'function') {
+            await window.loadOptionalRuntime('compare-selectors-snapshot', './assets/js/compare-selectors-runtime.js').catch(() => {});
+        }
         snapshotStep('runtime:progress-analysis/town-submodule-compare');
         const toNumber = (value, fallback = 0) => {
             const number = Number(value);
@@ -750,6 +755,7 @@ async function main() {
         });
         const townshipAverageMismatches = townshipAverageChecks.filter((item) => !item.countMatches || !item.avgMatches);
         snapshotStep('check:teacher-township-averages');
+        await loadRuntimeSkill('marginal-push-core');
         await boundedSwitchTab('marginal-push');
         if (typeof window.updateMpSchoolSelect === 'function') window.updateMpSchoolSelect();
         const marginalResult = (() => {
@@ -779,6 +785,7 @@ async function main() {
             : (Array.isArray(window.MP_DATA_CACHE) ? window.MP_DATA_CACHE : []);
         const marginalValues = marginalRows.flatMap((row) => [row.score, row.target, row.diff]);
         snapshotStep('check:marginal-push');
+        await loadRuntimeSkill('seat-adjustment-core');
         await boundedSwitchTab('seat-adjustment');
         if (typeof window.updateSeatAdjSelects === 'function') window.updateSeatAdjSelects();
         const seatAdjustmentResult = (() => {

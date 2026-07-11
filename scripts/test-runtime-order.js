@@ -315,7 +315,8 @@ const metaverseRef = './assets/js/metaverse-collab-space.js';
 const emotionalRef = './assets/js/emotional-ai-monitor.js';
 const bootRuntimeMatch = indexHtml.match(/\.\/assets\/js\/boot-runtime-runtime-[0-9a-f]{12}\.js/);
 const bootRuntimeRef = bootRuntimeMatch ? bootRuntimeMatch[0] : '';
-const runtimeLoaderRuntimeRef = './assets/js/runtime-loader-runtime.js';
+const runtimeLoaderRuntimeMatch = indexHtml.match(/\.\/assets\/js\/runtime-loader-runtime-runtime-[0-9a-f]{12}\.js/);
+const runtimeLoaderRuntimeRef = runtimeLoaderRuntimeMatch ? runtimeLoaderRuntimeMatch[0] : '';
 const tablerIconsRef = '/assets/vendor/tabler-icons/tabler-icons.min.css';
 const supabaseVendorRef = './assets/vendor/supabase/supabase.min.js';
 const lzStringVendorRef = './assets/vendor/lz-string/lz-string.min.js';
@@ -353,6 +354,19 @@ assert.ok(
     normalizedModuleManifest.indexOf(schoolNormalizationRef) < normalizedModuleManifest.indexOf('./assets/js/app.js'),
     'school-normalization-runtime.js should load before app.js so township-scoped analysis cannot fall back to all schools'
 );
+const demandModuleMatch = bootRuntime.match(/var DEMAND_APP_MODULES = \[[\s\S]*?\]\.map\(bootJs\);/);
+assert.ok(demandModuleMatch, 'boot-runtime.js should declare demand-only feature modules');
+const demandModuleManifest = demandModuleMatch[0];
+[
+    'student-details-render-runtime.js',
+    'comparison-render-runtime.js',
+    'report-history-runtime.js',
+    'teaching-management-modules-runtime.js',
+    'data-quality-runtime.js'
+].forEach((runtimeName) => {
+    assert.ok(!moduleManifest.includes(`'${runtimeName}'`), `${runtimeName} must not block authenticated core readiness`);
+    assert.ok(demandModuleManifest.includes(`'${runtimeName}'`), `${runtimeName} must remain discoverable as a demand module`);
+});
 const bootVendorMatch = bootRuntime.match(/var BOOT_VENDOR_MODULES = \[[\s\S]*?\];/);
 assert.ok(bootVendorMatch, 'boot-runtime.js should declare BOOT_VENDOR_MODULES');
 const bootVendorManifest = bootVendorMatch[0];
@@ -643,7 +657,7 @@ assert.ok(bootRuntime.includes('SYSTEM_APP_LATE_PREFETCH_LIMIT'), 'boot-runtime.
 assert.ok(bootRuntime.includes('scheduleLateAppCorePrefetch(APP_MODULES.slice(preloadCount));'), 'boot-runtime.js should defer late app-core prefetches on mobile or lazy profiles');
 assert.ok(bootRuntime.includes('if (window.__APP_MODULES_LOADED__ === true) return;'), 'late app-core prefetch should stop once core modules are already loaded');
 assert.ok(bootRuntime.includes('function getRuntimeWarmupSkillIds'), 'boot-runtime.js should compute runtime warmup targets before scheduling idle work');
-assert.ok(bootRuntime.includes('!DEFERRED_APP_MODULES.length && !getRuntimeWarmupSkillIds(getRuntimeLoadProfile()).length'), 'boot-runtime.js should skip idle warmup when there are no runtime targets');
+assert.ok(!bootRuntimeSource.includes('loadDeferredAppModules().catch'), 'authenticated startup must not execute every deferred feature after first paint');
 assert.ok(bootRuntime.includes('function scheduleGatewayPreflight()'), 'boot-runtime.js should run gateway pre-flight through a dedicated scheduler');
 assert.ok(bootRuntime.includes('window.__GATEWAY_PREFLIGHT_PROMISE__'), 'boot-runtime.js should expose gateway pre-flight state for diagnostics');
 assert.ok(bootRuntime.includes('scheduleGatewayPreflight();\n\n    const total = BOOT_VENDOR_MODULES.length + APP_MODULES.length;'), 'gateway pre-flight should not block core module loading');
@@ -654,16 +668,23 @@ assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js sho
     'cohort-exam-meta-runtime.js',
     'auth-login-runtime.js',
     'data-manager-core-runtime.js',
-    'student-details-render-runtime.js',
-    'comparison-render-runtime.js',
-    'snapshot-system-runtime.js',
-    'report-history-runtime.js'
+    'snapshot-system-runtime.js'
 ].forEach((runtimeName) => {
     assert.ok(
         bootRuntime.indexOf(`'${runtimeName}'`) >= 0 && bootRuntime.indexOf(`'${runtimeName}'`) < bootRuntime.indexOf("'app.js'"),
         `${runtimeName} should load before app.js`
     );
 });
+assert.ok(runtimeLoaderRuntime.includes("'student-details-core': bootSkill('demand', 'demand'"), 'student detail runtime should have a demand bundle');
+assert.ok(
+    runtimeLoaderRuntime.indexOf("bootEntry('comparison-render-core'") < runtimeLoaderRuntime.indexOf("bootEntry('student-details-render-core'"),
+    'student detail demand bundle must load comparison rank helpers before rendering rows'
+);
+assert.ok(runtimeLoaderRuntime.includes("'student-report-core': bootSkill('demand', 'demand'"), 'student report runtime should have a demand bundle');
+assert.ok(runtimeLoaderRuntime.includes("'teacher-ui-core': bootSkill('demand', 'demand'"), 'teacher UI runtime should have a demand bundle');
+assert.ok(moduleEntryRuntime.includes('ensureStudentDetailsCoreRuntimeLoaded'), 'student detail entry should load its runtime before rendering');
+assert.ok(moduleEntryRuntime.includes('ensureStudentReportCoreRuntimeLoaded'), 'student report entry should load its runtime before rendering');
+assert.ok(moduleEntryRuntime.includes('ensureTeacherUiCoreRuntimeLoaded'), 'teacher entry should load its UI runtime before rendering');
 assert.ok(
     bootRuntime.indexOf("'cohort-exam-meta-runtime.js'") < bootRuntime.indexOf("'auth-login-runtime.js'")
         && bootRuntime.indexOf("'cohort-exam-meta-runtime.js'") < bootRuntime.indexOf("'snapshot-system-runtime.js'"),
@@ -843,13 +864,9 @@ const summaryEntrySource = summaryEntryStart >= 0 && summaryEntryEnd > summaryEn
     : '';
 assert.ok(summaryEntrySource, 'summary entry source should be present');
 assert.ok(!summaryEntrySource.includes('ensureSchoolProfileRuntimeLoaded'), 'summary entry should not parse school profile runtime before a profile click');
-assert.ok(bootRuntime.includes('window.setTimeout(preload, 240);'), 'desktop hotspot prefetch should begin before runtime hydration work');
-assert.ok(bootRuntime.includes('const prioritySteps = ['), 'desktop hotspot warmup should declare an interactive priority batch');
-assert.ok(bootRuntime.includes('SCHOOL_RUNTIME_HOTSPOT_HYDRATE'), 'desktop hotspot runtime hydration should require an explicit local switch');
-assert.ok(bootRuntime.includes('runStepsSequentially(prioritySteps'), 'interactive runtime warmup should avoid concurrent hot bundle parsing during user interaction');
-assert.ok(bootRuntime.includes("const HOTSPOT_RUNTIME_HYDRATE_DELAY_MS = 2200"), 'desktop hotspot runtime hydration should start soon after app-ready instead of waiting through early navigation');
-assert.ok(bootRuntime.includes("scheduleWarmup('hotspot-runtime:priority', runPrioritySteps)"), 'interactive runtime warmup should retain idle scheduling for boot responsiveness');
-assert.ok(bootRuntime.indexOf("{ label: 'town-submodule-compare'") < bootRuntime.indexOf('const deferredSteps = ['), 'summary interaction runtimes should remain in the priority batch');
+assert.ok(bootRuntime.includes('function scheduleHotspotRuntimeWarmup()'), 'hotspot scheduler compatibility entry should remain present');
+assert.ok(!bootRuntime.includes('runStepsSequentially(prioritySteps'), 'post-login hotspot work must not execute feature bundles');
+assert.ok(!bootRuntime.includes("scheduleWarmup('hotspot-runtime:priority'"), 'post-login hotspot work must not schedule feature execution');
 assert.ok(!bootRuntime.includes("{ label: 'teacher-analysis', loader: () => window.ensureTeacherAnalysisMainRuntimeLoaded?.() }"), 'teacher analysis runtime should not execute from generic hotspot warmup after login');
 const teachingFastWarmupStart = bootRuntime.indexOf('function scheduleTeachingManagementFastWarmup()');
 const teachingFastWarmupEnd = bootRuntime.indexOf('function installHistoryDoQueryWrapper()', teachingFastWarmupStart);
@@ -858,9 +875,8 @@ const teachingFastWarmupSource = teachingFastWarmupStart >= 0 && teachingFastWar
     : '';
 assert.ok(teachingFastWarmupSource, 'teaching fast warmup source should be present');
 assert.ok(!teachingFastWarmupSource.includes('ensureTeachingManagementRuntimeLoaded'), 'teaching management legacy bundle should stay demand-loaded outside legacy module entry');
-assert.ok(teachingFastWarmupSource.includes('teaching-management-fast-prefetch'), 'teaching management runtime files should be prefetched after app entry');
-assert.ok(teachingFastWarmupSource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher analysis runtime should remain fast-warmed for teacher insight modules');
-assert.ok(teachingFastWarmupSource.includes('delay: 12000'), 'teacher analysis fast warmup should wait until after the login-critical window');
+assert.ok(!teachingFastWarmupSource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher analysis runtime must execute only after the user enters a teacher insight module');
+assert.ok(teachingFastWarmupSource.includes('return false'), 'teaching warmup must not compete with user-triggered feature requests');
 assert.ok(teachingManagementVersionRuntime.includes('TM_VERSION_INFLIGHT'), 'teaching version center should coalesce duplicate cloud reads');
 assert.ok(teachingManagementVersionRuntime.includes('schoolSystemTeachingVersionCacheV1'), 'teaching version center should keep a short session snapshot');
 assert.ok(bootRuntime.includes('runAfterAppModulesReady(function () {\n    retryInstallLateHook(installHistoryDoQueryWrapper'), 'late workspace hooks should not retry on the unauthenticated login screen');
@@ -901,12 +917,8 @@ assert.ok(moduleEntryRuntime.includes("{ delay: 40, idle: true, timeout: 1800 }"
 assert.ok(moduleEntryRuntime.includes('ensureReportRenderRuntimeLoaded'), 'report generator prewarm should include report rendering runtime');
 assert.ok(moduleEntryRuntime.includes('function initSummaryEntry()'), 'summary module should have a dedicated automatic entry initializer');
 assert.ok(moduleEntryRuntime.includes('window.calcSummary(true)'), 'summary module entry should automatically calculate the overview table');
-assert.ok(moduleEntryRuntime.includes('function prewarmStudentDiagnosisRuntimes'), 'student diagnosis should prewarm shared runtimes after the active module paints');
-assert.ok(moduleEntryRuntime.includes("SystemRuntimeLoader.load('student-overview')"), 'student diagnosis prewarm should cover the overview runtime');
-assert.ok(moduleEntryRuntime.includes("SystemRuntimeLoader.load('report-render')"), 'student diagnosis prewarm should cover the report query runtime');
+assert.ok(!moduleEntryRuntime.includes('function prewarmStudentDiagnosisRuntimes'), 'student modules must not execute unrelated feature runtimes after navigation');
 assert.ok(!moduleEntryRuntime.includes("SystemRuntimeLoader.load('report-chart')"), 'student diagnosis entry should not prewarm chart rendering on the shared switch path');
-assert.ok(moduleEntryRuntime.includes("'student-diagnosis-report-prewarm'"), 'report query prewarm should use a separate idle window from student overview');
-assert.ok(moduleEntryRuntime.includes('{ delay: 2600, idle: true, timeout: 5200 }'), 'report query prewarm should not merge into the first diagnosis paint task');
 const reportPrewarmStart = moduleEntryRuntime.indexOf('function prewarmReportGeneratorRuntimes');
 const reportPrewarmEnd = moduleEntryRuntime.indexOf('function runModuleSpecificInit', reportPrewarmStart);
 const reportPrewarmSource = reportPrewarmStart >= 0 && reportPrewarmEnd > reportPrewarmStart
@@ -981,7 +993,8 @@ const teacherEntryStart = moduleEntryRuntime.indexOf('function initTeacherAnalys
 const teacherEntryEnd = moduleEntryRuntime.indexOf('function releaseTeacherAnalysisHeavyDom()', teacherEntryStart);
 const teacherEntrySource = moduleEntryRuntime.slice(teacherEntryStart, teacherEntryEnd);
 assert.ok(teacherEntrySource.includes("'teacher-analysis-auto-render'"), 'teacher-analysis entry should auto-generate the portrait after the switch frame');
-assert.ok(teacherEntrySource.includes('scheduleTeacherCompareAutoRender(16);'), 'teacher-analysis entry should initialize teacher compare selectors immediately after the switch frame');
+assert.ok(teacherEntrySource.includes('scheduleTeacherCompareAutoRender(900);'), 'teacher-analysis entry should defer comparison selectors until the page has painted');
+assert.ok(teacherEntrySource.includes("{ delay: 420, idle: true, timeout: 1800 }"), 'teacher-analysis entry should move the heavy first render out of the click task');
 assert.ok(
     teacherEntrySource.includes('renderTeacherAnalysisAfterRuntimeReady()')
         && moduleEntryRuntime.includes('window.ensureTeacherAnalysisMainRuntimeLoaded()'),
@@ -1497,9 +1510,9 @@ assert.ok(rankingDataServiceIndex < appIndex, 'ranking-data-service-runtime.js m
 assert.ok(compareSharedIndex >= 0, 'compare-shared-runtime.js should load with core app modules');
 assert.ok(rankingDataServiceIndex < compareSharedIndex, 'ranking-data-service-runtime.js must load before compare-shared-runtime.js');
 assert.ok(compareSharedIndex < appIndex, 'compare-shared-runtime.js must load before app.js');
-assert.ok(studentJumpIndex >= 0, 'index.html should load student-jump-runtime.js');
+assert.ok(studentJumpIndex >= 0, 'student-jump-runtime.js should provide shared app render helpers during core startup');
 assert.ok(rankingDataServiceIndex < studentJumpIndex, 'ranking-data-service-runtime.js must load before student-jump-runtime.js');
-assert.ok(studentJumpIndex < appIndex, 'student-jump-runtime.js must load before app.js');
+assert.ok(studentJumpIndex < appIndex, 'student-jump-runtime.js must load before app.js consumers');
 assert.ok(appIndex < supportMetricsIndex, 'support-metrics-runtime.js must load after app.js');
 assert.ok(popperVendorIndex < tippyVendorIndex, 'popper.min.js must load before tippy.umd.min.js');
 assert.ok(indexHtml.includes('id="btn-summary-generate"'), 'summary should expose a stable generate button id for stale-data reminders');

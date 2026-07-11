@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-07ba1ba3f4f3';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-8a4122770695';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -48,6 +48,7 @@ if (!version) return cleanSrc;
 const separator = cleanSrc.includes('?') ? '&' : '?';
 return `${cleanSrc}${separator}v=${encodeURIComponent(version)}`;
 }
+window.getVersionedAssetPath = window.getVersionedAssetPath || getVersionedAssetPath;
 
 function clearAuthReadySafetyTimeout() {
 if (window.__AUTH_READY_TIMEOUT_ID__) {
@@ -70,8 +71,11 @@ if (typeof window.resolveAuthReady === 'function') {
 function markAppModulesReady() {
 if (window.__APP_MODULES_LOADED__ === true) return;
 window.__APP_MODULES_LOADED__ = true;
+window.__APP_CORE_MODULES_LOADED__ = true;
 if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
-window.dispatchEvent(new CustomEvent('school:app-modules-ready'));
+window.dispatchEvent(new CustomEvent('school:app-modules-ready', {
+    detail: { phase: 'core' }
+}));
 }
 
 function armAuthReadySafetyTimeout(timeoutMs = 15000) {
@@ -140,6 +144,21 @@ var DEFERRED_APP_MODULES = [
 'town-submodule-compare-state-runtime.js'
 ].map(bootJs);
 
+// Feature-only runtimes are deliberately excluded from authenticated startup.
+// Their ordered bundles live in runtime-loader-runtime.js and are requested by
+// module-entry-runtime.js only after the destination section is already visible.
+var DEMAND_APP_MODULES = [
+'student-details-guard-runtime.js',
+'student-details-render-runtime.js',
+'comparison-panel-collapse-runtime.js',
+'comparison-render-runtime.js',
+'report-history-runtime.js',
+'teacher-card-store-runtime.js',
+'teaching-management-modules-runtime.js',
+'data-quality-runtime.js'
+].map(bootJs);
+window.__DEMAND_APP_MODULES__ = DEMAND_APP_MODULES.slice();
+
 function bootJs(name) { return BOOT_JS_BASE + name; }
 var APP_MODULES = [
 'dialog-runtime.js',
@@ -183,22 +202,17 @@ var APP_MODULES = [
 'data-manager-history-runtime.js',
 'data-manager-tab-runtime.js',
 'config-transfer-runtime.js',
-'data-quality-runtime.js',
 'shell-runtime.js',
 'workflow-insight-runtime.js',
 'workspace-rail-runtime.js',
 'virtual-table-runtime.js',
 'module-entry-runtime.js',
-'comparison-panel-collapse-runtime.js',
 'ranking-data-service-runtime.js',
 'compare-shared-runtime.js',
 'analytics-kernel-runtime.js',
 'student-jump-runtime.js',
-'student-details-guard-runtime.js',
-'teaching-management-modules-runtime.js',
 'app-foundation-runtime.js',
 'permission-policy-runtime.js',
-'teacher-card-store-runtime.js',
 'ui-actions-runtime.js',
 'runtime-accessors-runtime.js',
 'teacher-visibility-runtime.js',
@@ -210,10 +224,7 @@ var APP_MODULES = [
 'cohort-exam-meta-runtime.js',
 'auth-login-runtime.js',
 'data-manager-core-runtime.js',
-'student-details-render-runtime.js',
-'comparison-render-runtime.js',
 'snapshot-system-runtime.js',
-'report-history-runtime.js',
 'data-processing-orchestrator-runtime.js',
 'exam-selector-refresh-runtime.js',
 'startup-hydration-runtime.js',
@@ -442,24 +453,14 @@ function warmAppModuleCache() {
 if (window.__APP_MODULE_WARMUP_STARTED__) return;
 window.__APP_MODULE_WARMUP_STARTED__ = true;
 if (isRuntimeMobileViewport()) return;
-prefetchAppModuleList(DEFERRED_APP_MODULES, 'app-deferred');
 }
 
 function scheduleAppModuleWarmup() {
 if (window.__APP_MODULES_LOADED__ !== true) return;
 if (window.__APP_MODULE_WARMUP_SCHEDULED__) return;
-if (getRuntimeLoadProfile() === 'lazy') return;
-if (!DEFERRED_APP_MODULES.length && !getRuntimeWarmupSkillIds(getRuntimeLoadProfile()).length) return;
 window.__APP_MODULE_WARMUP_SCHEDULED__ = true;
 const runWarmup = () => {
     warmAppModuleCache();
-    window.setTimeout(() => {
-        if (typeof loadDeferredAppModules === 'function') {
-            loadDeferredAppModules().catch((error) => {
-                console.warn('[boot-runtime] hydration failed:', error);
-            });
-        }
-    }, 1200);
 };
 if (typeof window.requestIdleCallback === 'function') {
     window.requestIdleCallback(runWarmup, { timeout: 1800 });
@@ -728,7 +729,7 @@ if (APP_MODULES.length) {
 }
 markAppModulesReady();
 if (loaderText) loaderText.textContent = '核心组件就绪，正在同步状态...';
-bootDebugLog('[boot-runtime] All modules loaded');
+bootDebugLog('[boot-runtime] Core modules loaded; feature runtimes remain on demand');
 scheduleAppModuleWarmup();
 
 hideGlobalLoader(500);

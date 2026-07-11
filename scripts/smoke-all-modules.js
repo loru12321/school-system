@@ -1879,7 +1879,10 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'seat-adjustment') {
-        return page.evaluate(() => {
+        return page.evaluate(async () => {
+            if (!window.SeatAdjustmentRuntime && typeof window.ensureSeatAdjustmentCoreRuntimeLoaded === 'function') {
+                await window.ensureSeatAdjustmentCoreRuntimeLoaded();
+            }
             const checks = {
                 sectionReady: !!document.querySelector('#seat-adjustment.analysis-workspace-student'),
                 heroReady: !!document.querySelector('#seat-adjustment .analysis-hero, #seat-adjustment .analysis-shell-head'),
@@ -3347,6 +3350,10 @@ async function runModuleDeepCheck(page, id) {
     }
     if (id === 'report-generator') {
         return page.evaluate(async ({ strictPerformance }) => {
+            if (typeof window.getStudentExamHistory !== 'function'
+                && typeof window.ensureStudentReportCoreRuntimeLoaded === 'function') {
+                await window.ensureStudentReportCoreRuntimeLoaded();
+            }
             const schoolSelect = document.getElementById('sel-school');
             const classSelect = document.getElementById('sel-class');
             const nameInput = document.getElementById('inp-name');

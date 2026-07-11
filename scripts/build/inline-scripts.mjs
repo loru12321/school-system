@@ -71,7 +71,10 @@ function readLocalScriptContent(projectRoot, src) {
     const publicPath = resolvePublicScriptPath(projectRoot, src);
 
     // Runtime manifests are patched in public before dist is rebuilt.
-    const isRuntimeManifest = MANIFEST_RUNTIME_PATHS.some((manifestPath) => src.includes(path.basename(manifestPath)));
+    const isRuntimeManifest = MANIFEST_RUNTIME_PATHS.some((manifestPath) => {
+        const baseName = path.basename(manifestPath, '.js');
+        return src.includes(`${baseName}.js`) || src.includes(`${baseName}-runtime-`);
+    });
     const sourcePath = (isRuntimeManifest && fs.existsSync(publicPath)) ? publicPath : (fs.existsSync(builtPath) ? builtPath : publicPath);
 
     if (!fs.existsSync(sourcePath)) {

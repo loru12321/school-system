@@ -152,4 +152,40 @@ assert.doesNotMatch(
   /APP_MODULES\.slice\(0,\s*18\)|APP_MODULES\.slice\(18,\s*36\)/,
   'login page must not prefetch dozens of app modules before sign-in'
 );
+const coreManifest = bootRuntimeJs.match(/var APP_MODULES = \[[\s\S]*?\]\.map\(bootJs\);/)?.[0] || '';
+assert.ok(coreManifest, 'authenticated startup must expose a bounded core manifest');
+[
+  'student-details-render-runtime.js',
+  'comparison-render-runtime.js',
+  'report-history-runtime.js',
+  'teaching-management-modules-runtime.js',
+  'data-quality-runtime.js'
+].forEach((runtimeName) => {
+  assert.ok(!coreManifest.includes(runtimeName), `${runtimeName} must load on feature entry, not during login`);
+});
+assert.match(
+  bootRuntimeJs,
+  /detail:\s*\{\s*phase:\s*'core'\s*\}/,
+  'app readiness must explicitly mean core readiness rather than every feature runtime'
+);
+assert.doesNotMatch(
+  bootRuntimeJs,
+  /function scheduleAppModuleWarmup\(\)[\s\S]*?loadDeferredAppModules\(\)\.catch/,
+  'post-login idle work must not execute the complete deferred feature bundle'
+);
+assert.doesNotMatch(
+  bootRuntimeJs,
+  /prefetchAppModuleList\(DEMAND_APP_MODULES, 'app-demand'\)/,
+  'post-login work must not flood the network with every demand feature script'
+);
+assert.doesNotMatch(
+  bootRuntimeJs,
+  /loadMany\(\[\s*'student-details-core',\s*'student-report-core',\s*'seat-adjustment-core'/,
+  'post-login warmup must not execute high-frequency feature runtimes while the workspace is restoring'
+);
+assert.doesNotMatch(
+  bootRuntimeJs,
+  /loadMany\(\[[\s\S]*?'teacher-analysis'[\s\S]*?'county-analysis'/,
+  'priority warmup must not restore the previous all-analysis startup burst'
+);
 console.log('Login performance contract passed');

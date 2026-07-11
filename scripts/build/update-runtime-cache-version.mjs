@@ -28,7 +28,7 @@ function listJsFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isFile()
       && entry.name.endsWith('.js')
-      && !/^(boot-runtime|service-worker-runtime)-runtime-[0-9a-f]{12}\.js$/.test(entry.name))
+      && !/^(boot-runtime|runtime-loader-runtime|service-worker-runtime)-runtime-[0-9a-f]{12}\.js$/.test(entry.name))
     .map((entry) => path.join(dir, entry.name))
     .sort((left, right) => left.localeCompare(right));
 }
@@ -39,6 +39,7 @@ function normalizeVersionTokens(filePath, content) {
   if (relative === 'src/index.html') {
     normalized = normalized
       .replace(/\.\/assets\/js\/boot-runtime-runtime-[0-9a-f]{12}\.js/g, './assets/js/boot-runtime.js')
+      .replace(/\.\/assets\/js\/runtime-loader-runtime-runtime-[0-9a-f]{12}\.js/g, './assets/js/runtime-loader-runtime.js')
       .replace(/\.\/assets\/js\/service-worker-runtime-runtime-[0-9a-f]{12}\.js/g, './assets/js/service-worker-runtime.js');
     normalized = normalized.replace(/(\.\/assets\/js\/[^"']+\.js)\?v=[^"']+/g, '$1');
   }
@@ -72,6 +73,7 @@ function updateRuntimeVersions(version) {
       update(content) {
         return content
           .replace(/\.\/assets\/js\/boot-runtime(?:-runtime-[0-9a-f]{12})?\.js(?:\?v=[^"']+)?/g, `./assets/js/boot-runtime-${version}.js`)
+          .replace(/\.\/assets\/js\/runtime-loader-runtime(?:-runtime-[0-9a-f]{12})?\.js(?:\?v=[^"']+)?/g, `./assets/js/runtime-loader-runtime-${version}.js`)
           .replace(/\.\/assets\/js\/service-worker-runtime(?:-runtime-[0-9a-f]{12})?\.js(?:\?v=[^"']+)?/g, `./assets/js/service-worker-runtime-${version}.js`)
           .replace(/(\.\/assets\/js\/(?!boot-runtime-|service-worker-runtime-)[^"']+\.js)\?v=[^"']+/g, '$1');
       }
@@ -109,6 +111,12 @@ function updateRuntimeVersions(version) {
       pattern: /^boot-runtime-runtime-[0-9a-f]{12}\.js$/,
       file: path.join(publicJsDir, `boot-runtime-${version}.js`),
       source: path.join(publicJsDir, 'boot-runtime.js')
+    },
+    {
+      dir: publicJsDir,
+      pattern: /^runtime-loader-runtime-runtime-[0-9a-f]{12}\.js$/,
+      file: path.join(publicJsDir, `runtime-loader-runtime-${version}.js`),
+      source: path.join(publicJsDir, 'runtime-loader-runtime.js')
     },
     {
       dir: publicJsDir,

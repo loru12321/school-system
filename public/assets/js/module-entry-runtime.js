@@ -540,6 +540,18 @@
     }
 
     function initStudentDetailsEntry() {
+        if (typeof window.updateStudentSchoolSelect !== 'function'
+            && typeof window.ensureStudentDetailsCoreRuntimeLoaded === 'function') {
+            return window.ensureStudentDetailsCoreRuntimeLoaded()
+                .then(() => {
+                    if (!document.getElementById('student-details')?.classList.contains('active')) return false;
+                    return initStudentDetailsEntry();
+                })
+                .catch((error) => {
+                    console.warn('[student-details] core runtime load failed:', error);
+                    return false;
+                });
+        }
         updateStudentSchoolSelect();
         const user = getCurrentUser();
         const role = user?.role || 'guest';
@@ -646,22 +658,20 @@
         };
 
         const loadRuntime = () => {
+            const uiCorePromise = typeof window.ensureTeacherUiCoreRuntimeLoaded === 'function'
+                ? window.ensureTeacherUiCoreRuntimeLoaded()
+                : Promise.resolve();
             if (window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__ || typeof window.renderTeachingOverview === 'function') {
-                return Promise.resolve();
+                return uiCorePromise;
             }
             if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function') {
-                return window.ensureTeachingManagementRuntimeLoaded();
+                return uiCorePromise.then(() => window.ensureTeachingManagementRuntimeLoaded());
             }
             if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
-                return window.SystemRuntimeLoader.load('teaching-management');
+                return uiCorePromise.then(() => window.SystemRuntimeLoader.load('teaching-management'));
             }
             return Promise.reject(new Error('teaching management runtime loader unavailable'));
         };
-
-        if (window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__ || typeof window.renderTeachingOverview === 'function') {
-            scheduleRender();
-            return Promise.resolve();
-        }
 
         return loadRuntime()
             .then(() => {
@@ -793,7 +803,7 @@
 
     function initTeacherAnalysisEntry() {
         clearTeacherAnalysisDeferredRender();
-        ensureTeacherAnalysisSectionLoaded();
+        const teacherSection = ensureTeacherAnalysisSectionLoaded();
         if (typeof window.TeachingManagementModulesRuntime?.ensureTeacherTownshipRankingSlotReady === 'function') {
             window.TeachingManagementModulesRuntime.ensureTeacherTownshipRankingSlotReady();
         } else if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') {
@@ -816,8 +826,11 @@
         if (townshipContainer) townshipContainer.style.display = 'block';
 
         applyTeacherRoleVisibility();
+        if (teacherSection?.dataset.teacherEntryReady === 'true') {
+            return Promise.resolve(true);
+        }
         showTeacherAnalysisPendingState();
-        scheduleTeacherCompareAutoRender(16);
+        scheduleTeacherCompareAutoRender(900);
         scheduleModuleTask('teacher-analysis-auto-render', () => {
             if (!isTeacherAnalysisActive()) return;
             applyTeacherRoleVisibility();
@@ -826,6 +839,7 @@
                 waitForTeacherMapReady({ timeoutMs: 5000 }).then((ready) => {
                     if (!isTeacherAnalysisActive()) return;
                     if (ready) {
+                        if (teacherSection) teacherSection.dataset.teacherEntryReady = 'true';
                         renderTeacherAnalysisAfterRuntimeReady();
                     } else {
                         renderTeacherAnalysisEmptyState();
@@ -834,9 +848,10 @@
                 });
                 return;
             }
+            if (teacherSection) teacherSection.dataset.teacherEntryReady = 'true';
             renderTeacherAnalysisAfterRuntimeReady();
             scheduleModuleTask('teacher-analysis-role-visibility', applyTeacherRoleVisibility, { delay: 160, idle: true, timeout: 700 });
-        }, { delay: 32, idle: false, timeout: 700 });
+        }, { delay: 420, idle: true, timeout: 1800 });
         return Promise.resolve();
     }
 
@@ -1086,20 +1101,6 @@
         }, { delay: 40, idle: true, timeout: 1800 });
     }
 
-    function prewarmStudentDiagnosisRuntimes(activeModuleId) {
-        if (!STUDENT_DIAGNOSIS_MODULE_IDS.has(activeModuleId)) return;
-        scheduleModuleTask('student-diagnosis-runtime-prewarm', () => {
-            if (!window.SystemRuntimeLoader || typeof window.SystemRuntimeLoader.load !== 'function') return;
-            Promise.resolve(window.SystemRuntimeLoader.load('student-overview'))
-                .catch((error) => console.warn('[student-diagnosis] student-overview prewarm failed:', error));
-        }, { delay: 500, idle: true, timeout: 2400 });
-        scheduleModuleTask('student-diagnosis-report-prewarm', () => {
-            if (!window.SystemRuntimeLoader || typeof window.SystemRuntimeLoader.load !== 'function') return;
-            Promise.resolve(window.SystemRuntimeLoader.load('report-render'))
-                .catch((error) => console.warn('[student-diagnosis] report-render prewarm failed:', error));
-        }, { delay: 2600, idle: true, timeout: 5200 });
-    }
-
     function initSummaryEntry() {
         scheduleActiveModuleTask('summary', 'summary-tables', () => {
             if (typeof window.renderTables === 'function') window.renderTables();
@@ -1113,15 +1114,21 @@
     }
 
     function runModuleSpecificInit(id) {
-        prewarmStudentDiagnosisRuntimes(id);
         if (id === 'student-details') return initStudentDetailsEntry();
         if (id === 'summary') return initSummaryEntry();
         if (id === 'analysis') {
-            scheduleActiveModuleTask('analysis', 'analysis-entry-selects', () => {
-                if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-                renderSingleSchoolAnalysisHint();
-            }, { delay: 40, frame: true });
-            scheduleMacroTablesRender('analysis', 'analysis-tables');
+            const loadMacroAnalysis = typeof window.ensureMacroAnalysisCoreRuntimeLoaded === 'function'
+                ? window.ensureMacroAnalysisCoreRuntimeLoaded()
+                : Promise.resolve();
+            return loadMacroAnalysis.then(() => {
+                if (!document.getElementById('analysis')?.classList.contains('active')) return false;
+                scheduleActiveModuleTask('analysis', 'analysis-entry-selects', () => {
+                    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                    renderSingleSchoolAnalysisHint();
+                }, { delay: 40, frame: true });
+                scheduleMacroTablesRender('analysis', 'analysis-tables');
+                return true;
+            });
         }
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
         if (id === 'bottom3') scheduleMacroTablesRender('bottom3', 'bottom3-tables');
@@ -1185,37 +1192,75 @@
         if (id === 'teacher-analysis'
             || id === 'teacher-detail-comparison'
             || id === 'teacher-pairing'
-            || id === 'teacher-township-ranking') return initTeacherAnalysisEntry();
+            || id === 'teacher-township-ranking') {
+            const loadTeacherUi = typeof window.ensureTeacherUiCoreRuntimeLoaded === 'function'
+                ? window.ensureTeacherUiCoreRuntimeLoaded()
+                : Promise.resolve();
+            return loadTeacherUi.then(() => {
+                if (!document.getElementById(id)?.classList.contains('active')) return false;
+                return initTeacherAnalysisEntry();
+            });
+        }
         if (id === 'freshman-simulator' || id === 'exam-arranger') return initFreshmanExamEntry(id);
         if (id === 'grade-scheduler') return initGradeSchedulerEntry();
         if (id === 'report-generator') {
-            scheduleActiveModuleTask('report-generator', 'report-generator-selects', () => {
-                if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
-                if (typeof updateClassSelect === 'function') updateClassSelect();
-            }, { delay: 60, frame: true });
-            prewarmReportGeneratorRuntimes();
+            const loadReportCore = typeof window.ensureStudentReportCoreRuntimeLoaded === 'function'
+                ? window.ensureStudentReportCoreRuntimeLoaded()
+                : Promise.resolve();
+            return loadReportCore.then(() => {
+                if (!document.getElementById('report-generator')?.classList.contains('active')) return false;
+                scheduleActiveModuleTask('report-generator', 'report-generator-selects', () => {
+                    if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
+                    if (typeof updateClassSelect === 'function') updateClassSelect();
+                }, { delay: 60, frame: true });
+                prewarmReportGeneratorRuntimes();
+                return true;
+            });
         }
         if (id === 'data-quality') {
-            if (window.DataQualityRuntime && typeof window.DataQualityRuntime.init === 'function') {
-                return Promise.resolve(window.DataQualityRuntime.init());
-            }
-            return Promise.resolve(false);
+            const loadDataQuality = typeof window.ensureDataQualityCoreRuntimeLoaded === 'function'
+                ? window.ensureDataQualityCoreRuntimeLoaded()
+                : Promise.resolve();
+            return loadDataQuality.then(() => {
+                if (!document.getElementById('data-quality')?.classList.contains('active')) return false;
+                return window.DataQualityRuntime && typeof window.DataQualityRuntime.init === 'function'
+                    ? window.DataQualityRuntime.init()
+                    : false;
+            });
         }
         if (id === 'segment-analysis') updateSegmentSelects();
         if (id === 'potential-analysis') updatePotentialSchoolSelect();
         if (id === 'correlation-analysis') return initCorrelationAnalysisEntry();
         if (id === 'cohort-growth') return initCohortGrowthEntry();
-        if (id === 'seat-adjustment') updateSeatAdjSelects();
+        if (id === 'seat-adjustment') {
+            const loadSeatAdjustment = typeof window.ensureSeatAdjustmentCoreRuntimeLoaded === 'function'
+                ? window.ensureSeatAdjustmentCoreRuntimeLoaded()
+                : Promise.resolve();
+            return loadSeatAdjustment.then(() => {
+                if (!document.getElementById('seat-adjustment')?.classList.contains('active')) return false;
+                if (typeof window.updateSeatAdjSelects === 'function') window.updateSeatAdjSelects();
+                return true;
+            });
+        }
         if (id === 'subject-balance') updateSubjectBalanceSelects();
         if (id === 'progress-analysis') return initProgressAnalysisEntry();
-        if (id === 'mutual-aid') updateMutualAidSelects();
+        if (id === 'mutual-aid') {
+            const loadComparisonUi = typeof window.ensureComparisonUiCoreRuntimeLoaded === 'function'
+                ? window.ensureComparisonUiCoreRuntimeLoaded()
+                : Promise.resolve();
+            return loadComparisonUi.then(() => {
+                if (!document.getElementById('mutual-aid')?.classList.contains('active')) return false;
+                if (typeof window.updateMutualAidSelects === 'function') window.updateMutualAidSelects();
+                return true;
+            });
+        }
         if (id === 'marginal-push') {
             if (typeof updateMpSchoolSelect === 'function') {
                 updateMpSchoolSelect();
                 return Promise.resolve(true);
             }
-            if (typeof window.loadDeferredAppModules === 'function') {
-                return Promise.resolve(window.loadDeferredAppModules()).then(() => {
+            if (typeof window.ensureMarginalPushCoreRuntimeLoaded === 'function') {
+                return Promise.resolve(window.ensureMarginalPushCoreRuntimeLoaded()).then(() => {
                     if (typeof updateMpSchoolSelect === 'function') updateMpSchoolSelect();
                     return typeof updateMpSchoolSelect === 'function';
                 });
