@@ -1849,6 +1849,7 @@ function getAppCohortKey(cohortId) {
 
 async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
+    const previousCohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || readWorkspaceCohortId() || '');
     lockRuntimeCohortId(cohortId);
     const cohortKey = getAppCohortKey(cohortId);
     const current = readWorkspaceProjectKey() || '';
@@ -1856,6 +1857,9 @@ async function switchCohort(cohortId, options = {}) {
     const hasReadyData = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
     const currentExamCohortId = normalizeCompareCohortId(currentExamId);
     const targetCohortId = normalizeCompareCohortId(cohortId);
+    const preserveTeacherState = !!previousCohortId && previousCohortId === targetCohortId;
+    const preservedTeacherMap = preserveTeacherState ? { ...(readTeacherMap() || {}) } : {};
+    const preservedTeacherSchoolMap = preserveTeacherState ? { ...(readTeacherSchoolMap() || {}) } : {};
     const readyDataMatchesTarget = !!targetCohortId && !!currentExamCohortId && currentExamCohortId === targetCohortId;
     if (current === cohortKey && currentExamId && hasReadyData && readyDataMatchesTarget) {
         tryAutoEnterReadyCohortWorkspace();
@@ -1892,8 +1896,10 @@ async function switchCohort(cohortId, options = {}) {
     if (examCohortLabel) examCohortLabel.innerText = label;
 
     clearDataRuntimeState();
-    setTeacherMap({});
-    setTeacherSchoolMap({});
+    if (!preserveTeacherState) {
+        setTeacherMap({});
+        setTeacherSchoolMap({});
+    }
 
     if (options.fastEnter === true) {
         DB.get(cohortKey).then((cloudData) => {
@@ -1925,6 +1931,12 @@ async function switchCohort(cohortId, options = {}) {
     } catch (_) { /* timing is best-effort */ }
 
     if (data) {
+        const liveTeacherMap = preserveTeacherState ? { ...(readTeacherMap() || {}) } : {};
+        const liveTeacherSchoolMap = preserveTeacherState ? { ...(readTeacherSchoolMap() || {}) } : {};
+        const fallbackTeacherMap = Object.keys(liveTeacherMap).length > 0 ? liveTeacherMap : preservedTeacherMap;
+        const fallbackTeacherSchoolMap = Object.keys(liveTeacherSchoolMap).length > 0
+            ? liveTeacherSchoolMap
+            : preservedTeacherSchoolMap;
         COHORT_DB = data.COHORT_DB || null;
         CURRENT_COHORT_ID = data.CURRENT_COHORT_ID || cohortId;
         CURRENT_COHORT_META = data.CURRENT_COHORT_META || CURRENT_COHORT_META;
@@ -1946,8 +1958,18 @@ async function switchCohort(cohortId, options = {}) {
                 thresholds: data.THRESHOLDS || {},
                 config: data.CONFIG || {}
             });
-            setTeacherMap(data.TEACHER_MAP || {});
-            setTeacherSchoolMap(data.TEACHER_SCHOOL_MAP || {});
+            const restoredTeacherMap = data.TEACHER_MAP && Object.keys(data.TEACHER_MAP).length
+                ? data.TEACHER_MAP
+                : fallbackTeacherMap;
+            const restoredTeacherSchoolMap = data.TEACHER_SCHOOL_MAP && Object.keys(data.TEACHER_SCHOOL_MAP).length
+                ? data.TEACHER_SCHOOL_MAP
+                : fallbackTeacherSchoolMap;
+            setTeacherMap(restoredTeacherMap || {});
+            setTeacherSchoolMap(restoredTeacherSchoolMap || {});
+        }
+        if (preserveTeacherState && Object.keys(readTeacherMap() || {}).length === 0 && Object.keys(fallbackTeacherMap).length > 0) {
+            setTeacherMap(fallbackTeacherMap);
+            setTeacherSchoolMap(fallbackTeacherSchoolMap);
         }
         tryAutoRestoreWorkspaceExam({
             preferredExamId: data.CURRENT_EXAM_ID || COHORT_DB?.currentExamId || '',
@@ -2131,6 +2153,18 @@ async function switchCohort(cohortId, options = {}) {
 
     UI.loading(false);
     window.__COHORT_SWITCH_IN_PROGRESS__ = false;
+    if (preserveTeacherState) {
+        window.setTimeout(() => {
+            if (Object.keys(readTeacherMap() || {}).length > 0) return;
+            if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
+                CloudManager.loadTeachers({ background: true, force: true, toast: false, blocking: false })
+                    .then(() => {
+                        if (typeof updateStatusPanel === 'function') updateStatusPanel();
+                    })
+                    .catch((error) => console.warn('[switchCohort] delayed teacher restore failed:', error));
+            }
+        }, 500);
+    }
     return true;
 }
 
@@ -6594,6 +6628,19 @@ function getCurrentReportDataFingerprint() {
     return fingerprint;
 }
 
+function getCurrentReportDataVersionSignature() {
+    const rows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+    const first = rows[0] || {};
+    const last = rows[rows.length - 1] || {};
+    return [
+        String(window.CURRENT_EXAM_ID || ''),
+        String(window.__RAW_DATA_VERSION || 0),
+        String(rows.length),
+        getReportStudentIdentity(first),
+        getReportStudentIdentity(last)
+    ].join('::');
+}
+
 function getReportExamFingerprint(exam, examData = null) {
     const rows = Array.isArray(examData) ? examData : (Array.isArray(exam?.data) ? exam.data : []);
     const stored = String(exam?.fingerprint || '').trim();
@@ -6740,12 +6787,12 @@ function getStudentReportSelectedExamIds() {
 function buildStudentReportCacheKey(student, mode = 'FULL', selectedExamIds = null, effectiveCurrentExamId = '') {
     const selected = Array.isArray(selectedExamIds) ? selectedExamIds : getStudentReportSelectedExamIds();
     const examId = String(effectiveCurrentExamId || (typeof getEffectiveCurrentExamId === 'function' ? getEffectiveCurrentExamId() : '') || '').trim();
-    const fingerprint = getCurrentReportDataFingerprint();
+    const dataSignature = getCurrentReportDataVersionSignature();
     return [
         getReportStudentIdentity(student),
         String(mode || 'FULL').trim(),
         examId,
-        fingerprint,
+        dataSignature,
         selected.map(String).sort().join(',')
     ].join('::');
 }

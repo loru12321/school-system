@@ -603,7 +603,11 @@ function getStudentExamHistory(student) {
     const targetClass = normClass(student.class);
     const targetSchool = student.school;
     const currentExamId = getEffectiveCurrentExamId();
-    const currentFingerprint = getCurrentReportDataFingerprint();
+    let currentFingerprint = '';
+    const getCurrentFingerprint = () => {
+        if (!currentFingerprint) currentFingerprint = getCurrentReportDataFingerprint();
+        return currentFingerprint;
+    };
     const isTargetStudent = (row) => {
         const sObj = row?.student || row || {};
         if (sObj.school && targetSchool && !areSchoolNamesEquivalent(sObj.school, targetSchool)) return false;
@@ -665,12 +669,14 @@ function getStudentExamHistory(student) {
         for (const [examId, exam] of examEntries) {
             const examData = exam.data || [];
             if (examData.length === 0) continue;
-            const examFingerprint = getReportExamFingerprint(exam, examData);
-            if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint && !examKeyEq(examId, currentExamId)) {
+
+            if (manualExams.length > 0 && !manualExams.some(id => examKeyEq(examId, id)) && !examKeyEq(examId, currentExamId)) {
                 continue;
             }
 
-            if (manualExams.length > 0 && !manualExams.some(id => examKeyEq(examId, id)) && !examKeyEq(examId, currentExamId)) {
+            const examFingerprint = getReportExamFingerprint(exam, examData);
+            const activeFingerprint = getCurrentFingerprint();
+            if (activeFingerprint && examFingerprint && examFingerprint === activeFingerprint && !examKeyEq(examId, currentExamId)) {
                 continue;
             }
 
@@ -701,7 +707,8 @@ function getStudentExamHistory(student) {
         window.PREV_DATA.forEach(h => {
             if (!isTargetStudent(h)) return;
             const matchKey = getHistoryKey(h);
-            if (currentFingerprint && h?.fingerprint && String(h.fingerprint) === currentFingerprint && !examKeyEq(matchKey, currentExamId)) {
+            const activeFingerprint = h?.fingerprint ? getCurrentFingerprint() : '';
+            if (activeFingerprint && String(h.fingerprint) === activeFingerprint && !examKeyEq(matchKey, currentExamId)) {
                 return;
             }
             if (manualExams.length > 0 && !manualExams.some(id => examKeyEq(matchKey, id)) && !examKeyEq(matchKey, currentExamId)) {
@@ -771,5 +778,4 @@ function getStudentExamHistory(student) {
 }
 
 // 🟢 [新增]：生成进退步胶囊标签 (Windows 风格)
-
 

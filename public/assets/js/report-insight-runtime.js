@@ -6,7 +6,7 @@ const reportInsightStatsCache = new Map();
 
 function getReportInsightRowsSignature(rows) {
     if (!Array.isArray(rows) || !rows.length) return '0';
-    const version = String(window.__RAW_DATA_VERSION__ || window.RAW_DATA_VERSION || '').trim();
+    const version = String(window.__RAW_DATA_VERSION || window.RAW_DATA_VERSION || '').trim();
     const first = rows[0] || {};
     const last = rows[rows.length - 1] || {};
     return [

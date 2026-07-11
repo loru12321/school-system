@@ -210,12 +210,11 @@
         }
 
         activeTermId = exactTermId;
-        if (typeof root.setTeacherMap === 'function') root.setTeacherMap({});
-        if (typeof root.setTeacherSchoolMap === 'function') root.setTeacherSchoolMap({});
+        const hasCurrentTeacherMap = !!(root.TEACHER_MAP && Object.keys(root.TEACHER_MAP).length > 0);
         callManagerMethod(manager, 'renderTeachers');
         callManagerMethod(manager, 'renderTeacherContextStatus');
 
-        console.log(`⚠️ 本地无学期 ${baseTermId || exactTermId} 的任课数据，尝试从云端同步...`);
+        console.log(`⚠️ 本地无学期 ${baseTermId || exactTermId} 的任课数据，${hasCurrentTeacherMap ? '保留当前任课表并' : ''}尝试从云端同步...`);
         if (root.CloudManager && typeof root.CloudManager.loadTeachers === 'function') {
             safeToast('📧 正在从云端加载该学期任课表...', 'info');
             root.CloudManager.loadTeachers({ background: true }).then((ok) => {

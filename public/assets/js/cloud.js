@@ -1618,8 +1618,11 @@
             this._teacherLoadCache = this._teacherLoadCache || {};
             const cached = this._teacherLoadCache[requestKey];
             if (!forceRefresh && cached && Date.now() - cached.at < TEACHER_LOAD_CACHE_TTL_MS) {
-                setCloudStatus(cached.result ? 'success' : 'connected', cached.result ? '任课已就绪' : '暂无任课');
-                return cached.result;
+                const teacherMapStillReady = Object.keys(getTeacherMap() || {}).length > 0;
+                if (!cached.result || teacherMapStillReady) {
+                    setCloudStatus(cached.result ? 'success' : 'connected', cached.result ? '任课已就绪' : '暂无任课');
+                    return cached.result;
+                }
             }
             if (this._teacherLoadTasks[requestKey]) return this._teacherLoadTasks[requestKey];
 

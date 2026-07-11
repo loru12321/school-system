@@ -70,6 +70,7 @@ const pkg = JSON.parse(read(packageFile));
     'getReportDomCache',
     'getCachedStudentReportHistory',
     'getCurrentReportDataFingerprint',
+    'getCurrentReportDataVersionSignature',
     'currentFingerprintRows',
     'examFingerprintByExam',
     'getReportExamFingerprint',
@@ -83,7 +84,8 @@ const pkg = JSON.parse(read(packageFile));
     'getReportHistoryForQuery',
     "renderSingleReportCardHTML(stu, 'FULL', {",
     'reportExamHistory: getReportHistoryForQuery()',
-    'getMissingReportHistoryExamIds'
+    'getMissingReportHistoryExamIds',
+    'requestAnimationFrame(() => resolve())'
 ].forEach((token) => {
     const reportHistoryToken = [
         'getCachedStudentReportHistory',
@@ -92,7 +94,8 @@ const pkg = JSON.parse(read(packageFile));
         'getReportHistoryForQuery',
         "renderSingleReportCardHTML(stu, 'FULL', {",
         'reportExamHistory: getReportHistoryForQuery()',
-        'getMissingReportHistoryExamIds'
+        'getMissingReportHistoryExamIds',
+        'requestAnimationFrame(() => resolve())'
     ].includes(token);
     assertContains(reportHistoryToken ? reportHistory : app, token, reportHistoryToken ? reportHistoryFile : 'public/assets/js/app.js');
 });
@@ -124,6 +127,22 @@ if (!refreshReportSource || refreshReportSource.includes('container.innerHTML !=
 }
 if (!doQuerySource || doQuerySource.includes('container.innerHTML !== nextReportHtml')) {
     fail('doQuery should trust reportHtmlCacheKey instead of serializing report innerHTML');
+}
+if (doQuerySource.indexOf('renderStudentReportSkeleton(container, stu)') > doQuerySource.indexOf('requestAnimationFrame(() => resolve())')) {
+    fail('doQuery should paint the report skeleton before yielding the first frame');
+}
+
+const studentHistoryFunctionStart = comparisonRender.indexOf('function getStudentExamHistory(student)');
+const historyLoopStart = comparisonRender.indexOf('for (const [examId, exam] of examEntries)', studentHistoryFunctionStart);
+const historyLoopEnd = comparisonRender.indexOf('if (window.PREV_DATA', historyLoopStart);
+const historyLoopSource = historyLoopStart >= 0 && historyLoopEnd > historyLoopStart
+    ? comparisonRender.slice(historyLoopStart, historyLoopEnd)
+    : '';
+if (!historyLoopSource || historyLoopSource.indexOf('manualExams.length > 0') > historyLoopSource.indexOf('getReportExamFingerprint(exam, examData)')) {
+    fail('report history should filter unselected exams before computing full fingerprints');
+}
+if (!app.includes('const dataSignature = getCurrentReportDataVersionSignature();')) {
+    fail('report HTML cache keys should use the fast current-data version signature');
 }
 
 [

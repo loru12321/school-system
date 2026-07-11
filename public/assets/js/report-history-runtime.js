@@ -60,7 +60,7 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
 function getCachedStudentReportHistory(stu, selectedExamIds = null, effectiveCurrentExamId = '') {
     const key = [
         getReportStudentIdentity(stu),
-        getCurrentReportDataFingerprint(),
+        getCurrentReportDataVersionSignature(),
         buildStudentReportSelectionSignature(selectedExamIds, effectiveCurrentExamId)
     ].join('::');
     if (ReportHistoryPerfCache.historyByStudent.has(key)) {
@@ -285,6 +285,15 @@ async function doQuery(targetStudent = null) {
                 }
                 let reportHtml = reportCache?.getReportHtml?.(reportCacheKey);
                 if (!reportHtml) {
+                    renderStudentReportSkeleton(container, stu);
+                    await new Promise(resolve => {
+                        if (typeof requestAnimationFrame === 'function') {
+                            requestAnimationFrame(() => resolve());
+                        } else {
+                            setTimeout(resolve, 0);
+                        }
+                    });
+                    if (queryToken !== __reportQueryToken) return;
                     if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
                         try {
                             await window.ensureReportRenderRuntimeLoaded();
@@ -292,7 +301,6 @@ async function doQuery(targetStudent = null) {
                             console.warn('Failed to load report render runtime before query:', error);
                         }
                     }
-                    renderStudentReportSkeleton(container, stu);
                     reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL', {
                         reportExamHistory: getReportHistoryForQuery()
                     }));

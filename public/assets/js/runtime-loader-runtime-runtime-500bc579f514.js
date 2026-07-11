@@ -54,6 +54,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('student-details-render-core', bootJs('student-details-render-runtime.js')),
     bootEntry('comparison-render-core', bootJs('comparison-render-runtime.js')),
     bootEntry('compare-selectors-core', bootJs('compare-selectors-runtime.js')),
+    bootEntry('compare-cloud-context-core', bootJs('compare-cloud-context-runtime.js')),
     bootEntry('report-history-core', bootJs('report-history-runtime.js')),
     bootEntry('report-compare-core', bootJs('report-compare-runtime.js'))
 ]),
@@ -290,10 +291,16 @@ return Array.from(new Set(candidates.filter(Boolean)));
 }
 
 function getOptionalRuntimeCandidates(src) {
-return getOptionalAssetCandidates(src, ['./assets/js/', './assets/vendor/']).map((candidate) => {
-    if (!candidate || /[?&]v=/.test(candidate) || typeof window.getVersionedAssetPath !== 'function') return candidate;
-    return window.getVersionedAssetPath(candidate);
+const candidates = [];
+getOptionalAssetCandidates(src, ['./assets/js/', './assets/vendor/']).forEach((candidate) => {
+    if (!candidate) return;
+    const versioned = /[?&]v=/.test(candidate) || typeof window.getVersionedAssetPath !== 'function'
+        ? candidate
+        : window.getVersionedAssetPath(candidate);
+    candidates.push(versioned);
+    if (versioned !== candidate) candidates.push(candidate);
 });
+return Array.from(new Set(candidates.filter(Boolean)));
 }
 
 function getOptionalStylesheetCandidates(href) {

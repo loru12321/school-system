@@ -681,6 +681,7 @@ assert.ok(
     'student detail demand bundle must load comparison rank helpers before rendering rows'
 );
 assert.ok(runtimeLoaderRuntime.includes("'student-report-core': bootSkill('demand', 'demand'"), 'student report runtime should have a demand bundle');
+assert.ok(runtimeLoaderRuntime.includes('if (versioned !== candidate) candidates.push(candidate);'), 'optional runtimes should retry the unversioned asset after a versioned edge miss');
 assert.ok(runtimeLoaderRuntime.includes("'teacher-ui-core': bootSkill('demand', 'demand'"), 'teacher UI runtime should have a demand bundle');
 assert.ok(moduleEntryRuntime.includes('ensureStudentDetailsCoreRuntimeLoaded'), 'student detail entry should load its runtime before rendering');
 assert.ok(moduleEntryRuntime.includes('ensureStudentReportCoreRuntimeLoaded'), 'student report entry should load its runtime before rendering');
@@ -1466,6 +1467,11 @@ assert.ok(compareSessionStateIndex < compareResultStateIndex, 'compare-session-s
 assert.ok(compareResultStateIndex < compareSummaryStateIndex, 'compare-result-state-runtime.js must load before compare-summary-state-runtime.js');
 assert.ok(compareExamSyncIndex < compareSelectorsIndex, 'compare-exam-sync-runtime.js must load before compare-selectors-runtime.js');
 assert.ok(compareSummaryStateIndex < townSubmoduleCompareStateIndex, 'compare-summary-state-runtime.js must load before town-submodule-compare-state-runtime.js');
+assert.ok(
+    runtimeLoaderRuntime.includes("bootEntry('compare-cloud-context-core', bootJs('compare-cloud-context-runtime.js'))")
+        && runtimeLoaderRuntime.indexOf("bootEntry('compare-cloud-context-core'") < runtimeLoaderRuntime.indexOf("bootEntry('report-compare-core'"),
+    'student report core must load cloud comparison context before report comparison helpers'
+);
 assert.ok(progressStateIndex < cloudIndex, 'progress-state-runtime.js must load before cloud.js');
 assert.ok(progressStateIndex < cloudWorkspaceIndex, 'progress-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(progressStateIndex < appIndex, 'progress-state-runtime.js must load before app.js');

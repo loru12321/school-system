@@ -60,6 +60,19 @@ assert.ok(
 );
 
 assert.ok(
+    appSource.includes('const preserveTeacherState = !!previousCohortId && previousCohortId === targetCohortId;')
+        && appSource.includes('if (!preserveTeacherState) {')
+        && appSource.includes('const restoredTeacherMap = data.TEACHER_MAP && Object.keys(data.TEACHER_MAP).length')
+        && appSource.includes(': preservedTeacherMap;')
+        && appSource.includes('const liveTeacherMap = preserveTeacherState ? { ...(readTeacherMap() || {}) } : {};')
+        && appSource.includes('const fallbackTeacherMap = Object.keys(liveTeacherMap).length > 0 ? liveTeacherMap : preservedTeacherMap;')
+        && appSource.includes('Object.keys(readTeacherMap() || {}).length === 0')
+        && appSource.includes('setTeacherMap(fallbackTeacherMap);')
+        && appSource.includes("CloudManager.loadTeachers({ background: true, force: true, toast: false, blocking: false })"),
+    'same-cohort background restore must not erase an already loaded teacher assignment map when the cloud snapshot omits it'
+);
+
+assert.ok(
     authLoginSource.includes('const hasSessionUser = !!(window.AuthState')
         && authLoginSource.includes('const shouldShowLogin = !!visible || !hasSessionUser;')
         && authLoginSource.includes("document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';"),

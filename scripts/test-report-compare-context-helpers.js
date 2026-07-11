@@ -33,8 +33,6 @@ function run() {
         document: {
             activeElement: null
         },
-        isCloudContextMatchStudent: (student) => String(student?.name || '').trim() === 'Alice',
-        isCloudContextLikelyCurrentTarget: (student) => String(student?.name || '').trim() === 'Alicia',
         doQuery: () => {},
         getComparisonTotalSubjects: () => [],
         getComparisonStudentView: (student) => student,
@@ -59,6 +57,8 @@ function run() {
 
     context.globalThis = context.window;
     context.window.document = context.document;
+    context.window.isCloudContextMatchStudent = (student) => String(student?.name || '').trim() === 'Alice';
+    context.window.isCloudContextLikelyCurrentTarget = (student) => String(student?.name || '').trim() === 'Alicia';
 
     vm.runInNewContext(runtimeCode, context, { filename: runtimePath });
 
@@ -77,6 +77,10 @@ function run() {
     assert.strictEqual(context.window.getCloudPreviousRecord(nonMatchStudent), null);
     assert.deepStrictEqual(context.window.getCloudPreviousSubjectScores('Math', student), [96, 92, 88]);
     assert.strictEqual(context.window.getCloudPreviousSubjectScores('Math', nonMatchStudent), null);
+
+    delete context.window.isCloudContextMatchStudent;
+    delete context.window.isCloudContextLikelyCurrentTarget;
+    assert.strictEqual(context.window.getCloudCompareHint(student), null);
 
     console.log('report-compare context helper tests passed');
 }

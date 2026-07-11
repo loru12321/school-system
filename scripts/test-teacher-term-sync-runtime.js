@@ -11,9 +11,21 @@ function read(relativePath) {
 const cohortExamMeta = read('public/assets/js/cohort-exam-meta-runtime.js');
 const cloud = read('public/assets/js/cloud.js');
 const dataManagerCore = read('public/assets/js/data-manager-core-runtime.js');
+const dataManagerTeacher = read('public/assets/js/data-manager-teacher-runtime.js');
 const teacherSync = read('public/assets/js/teacher-sync-runtime.js');
 const smokeAllModules = read('scripts/smoke-all-modules.js');
 const smokeLayout = read('scripts/smoke-layout-regression.js');
+
+assert.ok(
+  dataManagerTeacher.includes('const hasCurrentTeacherMap = !!(root.TEACHER_MAP && Object.keys(root.TEACHER_MAP).length > 0);')
+    && !/activeTermId = exactTermId;[\s\S]{0,180}setTeacherMap\(\{\}\)/.test(dataManagerTeacher),
+  'missing target-term history must keep the current teacher map visible while cloud fallback runs'
+);
+assert.ok(
+  cloud.includes('const teacherMapStillReady = Object.keys(getTeacherMap() || {}).length > 0;')
+    && cloud.includes('if (!cached.result || teacherMapStillReady) {'),
+  'a successful teacher-load cache entry must not skip reapplying assignments after another restore cleared runtime state'
+);
 
 assert.ok(
   cohortExamMeta.includes('function isTeacherTermSelectActive(selectEl)')

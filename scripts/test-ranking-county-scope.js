@@ -95,4 +95,48 @@ assert.strictEqual(
   'county ranks should remain visible for real county-scope datasets'
 );
 
-console.log('ranking county scope tests passed');
+let townshipScopeCalls = 0;
+let countyScopeCalls = 0;
+const performanceSchools = Array.from({ length: 14 }, (_, index) => `school-${index + 1}`);
+const performanceRows = Array.from({ length: 7790 }, (_, index) => ({
+  school: performanceSchools[index % performanceSchools.length],
+  class: `9.${(index % 6) + 1}`,
+  name: `student-${index + 1}`,
+  ranks: { total: { school: index + 1, township: index + 1 } }
+}));
+const performanceRanking = createRankingService({
+  __RAW_DATA_VERSION: 1,
+  RAW_DATA: performanceRows,
+  SCHOOLS: Object.fromEntries(performanceSchools.map((name) => [name, {}])),
+  getTownshipManagedSchoolNames(names) {
+    townshipScopeCalls += 1;
+    return names;
+  },
+  getCountyDirectSchoolNames() {
+    countyScopeCalls += 1;
+    return [];
+  }
+});
+const performanceStartedAt = Date.now();
+assert.strictEqual(
+  performanceRanking.hasStudentRankData(
+    performanceRows,
+    ['subject-1', 'subject-2', 'subject-3', 'subject-4', 'subject-5', 'subject-6', 'subject-7'],
+    'county',
+    { rows: performanceRows }
+  ),
+  false,
+  '14-school township data must not expose county ranks'
+);
+const performanceElapsedMs = Date.now() - performanceStartedAt;
+assert.strictEqual(townshipScopeCalls, 1, 'township scope should be resolved once per data version');
+assert.strictEqual(countyScopeCalls, 1, 'county scope should be resolved once per data version');
+assert.ok(performanceElapsedMs < 500, `county visibility should stay interactive for 7,790 rows, got ${performanceElapsedMs}ms`);
+
+console.log(JSON.stringify({
+  ok: true,
+  performanceRows: performanceRows.length,
+  performanceElapsedMs,
+  townshipScopeCalls,
+  countyScopeCalls
+}, null, 2));

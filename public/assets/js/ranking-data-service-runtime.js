@@ -17,6 +17,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createRankingDataService(root) {
     const EPSILON = 0.0001;
     const rankValueCache = new WeakMap();
+    const schoolScopeContextByRows = new WeakMap();
+    const countyScopeCache = new Map();
 
     function normalizeText(value) {
         return String(value == null ? '' : value).trim();
@@ -83,6 +85,29 @@
             .filter(Boolean)));
     }
 
+    function getSchoolScopeContext(rows) {
+        const list = Array.isArray(rows) ? rows : (Array.isArray(root.RAW_DATA) ? root.RAW_DATA : []);
+        const version = Number(root.__RAW_DATA_VERSION || 0);
+        const schoolsRef = root.SCHOOLS && typeof root.SCHOOLS === 'object' ? root.SCHOOLS : null;
+        const cached = schoolScopeContextByRows.get(list);
+        if (cached
+            && cached.version === version
+            && cached.length === list.length
+            && cached.schoolsRef === schoolsRef) {
+            return cached;
+        }
+        const candidateNames = getCandidateSchoolNames(list);
+        const context = {
+            version,
+            length: list.length,
+            schoolsRef,
+            candidateNames,
+            baseKey: candidateNames.slice().sort().join('||')
+        };
+        schoolScopeContextByRows.set(list, context);
+        return context;
+    }
+
     const countyDirectCache = new Map();
 
     function isCountyDirectStudent(studentLike, options = {}) {
@@ -93,8 +118,9 @@
             return false;
         }
 
-        const candidateNames = getCandidateSchoolNames(options.rows);
-        const baseKey = candidateNames.slice().sort().join('||');
+        const scopeContext = getSchoolScopeContext(options.rows);
+        const candidateNames = scopeContext.candidateNames;
+        const baseKey = scopeContext.baseKey;
         if (!countyDirectCache.has(baseKey)) {
             const townshipNames = root.getTownshipManagedSchoolNames(candidateNames);
             const directNames = townshipNames && townshipNames.length
@@ -129,11 +155,16 @@
         if (!root || typeof root.getCountyDirectSchoolNames !== 'function' || typeof root.getTownshipManagedSchoolNames !== 'function') {
             return false;
         }
-        const candidateNames = getCandidateSchoolNames(rows);
+        const scopeContext = getSchoolScopeContext(rows);
+        const candidateNames = scopeContext.candidateNames;
         if (!candidateNames.length) return false;
+        if (countyScopeCache.has(scopeContext.baseKey)) return countyScopeCache.get(scopeContext.baseKey);
         const townshipNames = root.getTownshipManagedSchoolNames(candidateNames);
-        if (!townshipNames || !townshipNames.length) return false;
-        return root.getCountyDirectSchoolNames(candidateNames).length > 0;
+        const hasScope = !!(townshipNames
+            && townshipNames.length
+            && root.getCountyDirectSchoolNames(candidateNames).length > 0);
+        countyScopeCache.set(scopeContext.baseKey, hasScope);
+        return hasScope;
     }
 
     function getStudentRankValue(studentLike, subject = 'total', scope = 'school', options = {}) {
@@ -166,6 +197,8 @@
     function hasStudentRankData(rows = [], subjects = [], scope = 'school', options = {}) {
         const list = Array.isArray(rows) ? rows : [];
         const subjectList = Array.isArray(subjects) && subjects.length ? subjects : ['total'];
+        const normalizedScope = normalizeText(scope);
+        if (normalizedScope === 'county' && !hasCountyScope(options.rows || list, options)) return false;
         return list.some((student) => {
             if (hasRankValue(getStudentRankValue(student, 'total', scope, options))) return true;
             return subjectList.some((subject) => hasRankValue(getStudentRankValue(student, subject, scope, options)));

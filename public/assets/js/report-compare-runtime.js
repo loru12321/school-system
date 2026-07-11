@@ -12,7 +12,11 @@ const readCloudStudentCompareContextSessionState = typeof window.readCloudStuden
     });
 
 function getCloudCompareHint(student) {
-    if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;
+    const matchesStudent = typeof window.isCloudContextMatchStudent === 'function'
+        && window.isCloudContextMatchStudent(student);
+    const matchesTarget = typeof window.isCloudContextLikelyCurrentTarget === 'function'
+        && window.isCloudContextLikelyCurrentTarget(student);
+    if (!matchesStudent && !matchesTarget) return null;
     return readCloudStudentCompareContextSessionState() || null;
 }
 
