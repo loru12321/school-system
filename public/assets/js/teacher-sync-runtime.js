@@ -113,7 +113,13 @@ function shouldAutoLoadTeacherData() {
     const dataManagerModal = document.getElementById('data-manager-modal');
     const dataManagerVisible = !!dataManagerModal
         && (!window.getComputedStyle || getComputedStyle(dataManagerModal).display !== 'none');
-    return !!(dataManagerVisible && window.DataManager && DataManager.currentTab === 'teacher');
+    if (dataManagerVisible && window.DataManager && DataManager.currentTab === 'teacher') return true;
+
+    // 成绩已恢复而任课表为空时，在后台补齐任课数据。此前只有进入教师页面
+    // 才触发同步，导致首页一直显示“未导入”，教师分析也误判为无数据。
+    const hasScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
+    const hasTeachers = !!(window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0);
+    return hasScores && !hasTeachers;
 }
 
 function syncTeacherAnalysisSchoolContext(preferredSchool = '') {
@@ -193,47 +199,10 @@ function promptTeacherSyncIfNeeded() {
     if (sessionStorage.getItem('TEACHER_SYNC_PROMPT_SHOWN') === '1') return;
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
 
-    const opts = getTeacherTermOptions();
-    if (!opts.length) return false;
-
-    const current = readCurrentTermId();
-    const defaultValue = current || opts[0].value;
-
-    const doSync = (termId) => {
-        if (!termId) return;
-        writeCurrentTermId(termId);
-        const termSel = document.getElementById('dm-teacher-term-select');
-        if (termSel) termSel.value = termId;
-        if (window.CloudManager && CloudManager.loadTeachers) CloudManager.loadTeachers();
-    };
-
-    if (typeof Swal === 'undefined') {
-        const list = opts.map(o => o.value).join('\n');
-        promptTeacherTermId(list, defaultValue).then((picked) => {
-            if (picked) doSync(picked);
-        });
-        sessionStorage.setItem('TEACHER_SYNC_PROMPT_SHOWN', '1');
-        return true;
-    }
-
-    Swal.fire({
-        title: '☁️ 检测到任课表可同步',
-        html: `请选择学期后同步任课表到本地：<br><small style="color:#94a3b8;">本次仅同步任课表，不影响成绩数据</small>`,
-        input: 'select',
-        inputOptions: opts.reduce((acc, o) => (acc[o.value] = o.label, acc), {}),
-        inputValue: defaultValue,
-        showCancelButton: true,
-        confirmButtonText: '同步到本地',
-        cancelButtonText: '暂不同步',
-        showDenyButton: true,
-        denyButtonText: '不再提示',
-        confirmButtonColor: '#0ea5e9'
-    }).then((res) => {
-        if (res.isConfirmed) doSync(res.value);
-        if (res.isDenied) localStorage.setItem('SUPPRESS_TEACHER_SYNC_PROMPT', '1');
-    });
+    // 不再弹出阻断式学期选择框。云端后台自动尝试精确学期及同届同年级
+    // 兼容任课表；若仍无数据，教师页面保留“去同步任课表”内联入口。
     sessionStorage.setItem('TEACHER_SYNC_PROMPT_SHOWN', '1');
-    return true;
+    return false;
 }
 
 async function tryAutoRestoreTeacherMap() {

@@ -39,6 +39,14 @@ function detectSchoolMode() {
     return mode === 'single' ? '单校模式' : `多校模式(${count})`;
 }
 
+function formatStoredSyncTime(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '未同步';
+    const numeric = /^\d{10,16}$/.test(raw) ? Number(raw) : NaN;
+    const date = new Date(Number.isFinite(numeric) ? numeric : raw);
+    return Number.isNaN(date.getTime()) ? '时间待校准' : date.toLocaleString('zh-CN');
+}
+
 function updateSchoolMode() {
     const schools = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
     const count = schools.length;
@@ -242,7 +250,7 @@ function updateUploadWorkbenchStatus() {
                 <h4><i class="ti ti-cloud-check"></i> 云端与任课同步</h4>
                 ${cloudBadge}
                 ${teacherBadge}
-                <p>全量云端同步：${syncCloud ? new Date(syncCloud).toLocaleString('zh-CN') : '尚未同步'}<br>任课同步：${syncTeacher ? new Date(syncTeacher).toLocaleString('zh-CN') : '尚未同步'}</p>
+                <p>全量云端同步：${syncCloud ? formatStoredSyncTime(syncCloud) : '尚未同步'}<br>任课同步：${syncTeacher ? formatStoredSyncTime(syncTeacher) : '尚未同步'}</p>
             </div>
             <div class="upload-feedback-card">
                 <h4><i class="ti ti-lock-access"></i> 当前考试状态</h4>
@@ -284,8 +292,8 @@ function updateStatusPanel() {
     const teacherCount = window.TEACHER_MAP ? Object.keys(window.TEACHER_MAP).length : 0;
     const syncCloud = localStorage.getItem('CLOUD_SYNC_AT');
     const syncTeacher = localStorage.getItem('TEACHER_SYNC_AT');
-    const syncCloudText = syncCloud ? new Date(syncCloud).toLocaleString() : '未同步';
-    const syncTeacherText = syncTeacher ? new Date(syncTeacher).toLocaleString() : '未同步';
+    const syncCloudText = formatStoredSyncTime(syncCloud);
+    const syncTeacherText = formatStoredSyncTime(syncTeacher);
     const schoolMode = detectSchoolMode();
 
     const badge = (ok) => ok ? '<span class="status-badge badge-ok">已完成</span>' : '<span class="status-badge badge-warn">未完成</span>';

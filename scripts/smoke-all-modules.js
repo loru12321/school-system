@@ -4080,8 +4080,9 @@ async function smokeDataManagerTab(page, id) {
 }
 
 (async () => {
+    const browserChannel = String(process.env.SMOKE_BROWSER_CHANNEL || 'chrome').trim() || 'chrome';
     const browser = await chromium.launch({
-        channel: 'chrome',
+        channel: browserChannel,
         headless: true,
         args: getChromeLaunchArgs()
     });

@@ -7516,9 +7516,25 @@ function analyzeTargetGap(schoolName, type, lineScore) {
     document.getElementById('drill-modal').style.display = 'flex';
 }
 
+const SummaryIndicatorHydrationState = { key: '', pending: false };
+
 async function calcSummary(isSilent = false) {
     const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
     let indicatorRowsForSummary = [];
+
+    if (isGrade9 && !hasIndicatorCalcInputs() && typeof ensureIndicatorWorkspaceFromCloud === 'function') {
+        const hydrationKey = getIndicatorWorkspaceKey();
+        if (!SummaryIndicatorHydrationState.pending && SummaryIndicatorHydrationState.key !== hydrationKey) {
+            SummaryIndicatorHydrationState.key = hydrationKey;
+            SummaryIndicatorHydrationState.pending = true;
+            Promise.resolve(ensureIndicatorWorkspaceFromCloud('summary-background', 7000))
+                .then((ready) => {
+                    if (ready) calcSummary(true);
+                })
+                .catch((error) => console.warn('[calcSummary] 指标配置后台恢复失败:', error))
+                .finally(() => { SummaryIndicatorHydrationState.pending = false; });
+        }
+    }
 
     if (isGrade9 && typeof refreshIndicatorResults === 'function') {
         try {
@@ -7611,7 +7627,12 @@ async function calcSummary(isSilent = false) {
         const safeName = escapeAppHtml(d.name);
         const safeSchoolArg = jsStringLiteral(d.name);
         let indicatorCell = '';
-        if (isGrade9) indicatorCell = `<td data-label="指标生得分">${d.s3.toFixed(2)}</td>`;
+        if (isGrade9) {
+            const indicatorReady = hasIndicatorCalcInputs() && indicatorRowsForSummary.length > 0;
+            indicatorCell = indicatorReady
+                ? `<td data-label="指标生得分">${d.s3.toFixed(2)}</td>`
+                : '<td data-label="指标生得分" title="本届指标参数或目标人数尚未配置" style="color:#b45309;font-weight:600;">待配置</td>';
+        }
         let highScoreCell = '';
         if (isGrade9) highScoreCell = `<td data-label="高分段赋分" style="color:#b45309; background:#fff7ed; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighClick(${safeSchoolArg})" title="点击查看高分段学生名单">${d.s4.toFixed(2)}</button></td>`;
         let highSchoolAdmissionCell = '';

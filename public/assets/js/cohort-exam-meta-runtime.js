@@ -464,6 +464,36 @@ function getTeacherTermCandidates(termId) {
         if (bases.includes(keyBase)) pushUnique(text);
     });
 
+    // 当前学期没有任课表时，允许同一届、同一学年、同一年级的最近学期
+    // 作为兼容来源。这里只扩展“读取候选”，不会改写当前考试/学期身份，
+    // 因而不会把上一届或其他年级的教师污染到当前工作区。
+    const parseContext = (value) => {
+        const text = String(value || '').trim();
+        const year = (text.match(/(?:^|_)(\d{4}-\d{4})(?:_|$)/) || [])[1] || '';
+        const grade = (text.match(/(?:^|_)(\d{1,2})年级(?:_|$)/) || [])[1] || '';
+        const term = (text.match(/(?:^|_)(上学期|下学期)(?:_|$)/) || [])[1] || '';
+        return { text, year, grade, term };
+    };
+    const target = parseContext(preferred || uiTeacherTermId || savedTeacherTermId);
+    if (target.year && target.grade) {
+        Object.keys(history)
+            .map((key) => ({ key, ...parseContext(key), entry: history[key] }))
+            .filter((item) => item.year === target.year && item.grade === target.grade)
+            .filter((item) => {
+                const map = item.entry?.map && typeof item.entry.map === 'object' ? item.entry.map : (item.entry || {});
+                return Object.keys(map).length > 0;
+            })
+            .sort((left, right) => {
+                const leftTs = Date.parse(String(left.entry?.savedAt || left.entry?.updated_at || left.entry?.updatedAt || '')) || 0;
+                const rightTs = Date.parse(String(right.entry?.savedAt || right.entry?.updated_at || right.entry?.updatedAt || '')) || 0;
+                if (leftTs !== rightTs) return rightTs - leftTs;
+                if (left.term === target.term) return -1;
+                if (right.term === target.term) return 1;
+                return right.key.localeCompare(left.key, 'zh-CN');
+            })
+            .forEach((item) => pushUnique(item.key));
+    }
+
     return candidates;
 }
 

@@ -12,12 +12,20 @@ const cohortExamMeta = read('public/assets/js/cohort-exam-meta-runtime.js');
 const cloud = read('public/assets/js/cloud.js');
 const dataManagerCore = read('public/assets/js/data-manager-core-runtime.js');
 const teacherSync = read('public/assets/js/teacher-sync-runtime.js');
+const smokeAllModules = read('scripts/smoke-all-modules.js');
+const smokeLayout = read('scripts/smoke-layout-regression.js');
 
 assert.ok(
   cohortExamMeta.includes('function isTeacherTermSelectActive(selectEl)')
     && cohortExamMeta.includes("teacherArea.style.display === 'none'")
     && cohortExamMeta.includes('teacherArea.getClientRects().length === 0'),
   'teacher term preference should ignore hidden DataManager teacher term select values'
+);
+
+assert.ok(
+  smokeAllModules.includes("process.env.SMOKE_BROWSER_CHANNEL || 'chrome'")
+    && smokeLayout.includes("process.env.SMOKE_BROWSER_CHANNEL || 'chrome'"),
+  'browser regression scripts should support both local Chrome and Edge channels'
 );
 
 assert.ok(
@@ -49,6 +57,20 @@ assert.ok(
 assert.ok(
   /\[\s*preferred,\s*uiTeacherTermId,\s*savedTeacherTermId,\s*getTeacherTermBase\(preferred\),\s*getTeacherTermBase\(uiTeacherTermId\),\s*getTeacherTermBase\(savedTeacherTermId\),\s*savedBaseTerm\s*\]\.forEach\(pushUnique\)/.test(cohortExamMeta),
   'teacher term candidates should prefer the current exam-derived term before saved stale terms'
+);
+
+assert.ok(
+  cohortExamMeta.includes("item.year === target.year && item.grade === target.grade")
+    && cohortExamMeta.includes(".forEach((item) => pushUnique(item.key))"),
+  'teacher history resolution should fall back only within the same academic year and grade'
+);
+
+assert.ok(
+  teacherSync.includes('const hasScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0')
+    && teacherSync.includes('return hasScores && !hasTeachers')
+    && teacherSync.includes('不再弹出阻断式学期选择框')
+    && !teacherSync.includes("title: '☁️ 检测到任课表可同步'"),
+  'teacher restore should run silently after score restore and use the inline sync entry instead of a blocking dialog'
 );
 
 assert.ok(

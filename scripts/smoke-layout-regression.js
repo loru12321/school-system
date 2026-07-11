@@ -27,7 +27,8 @@ function getChromeLaunchOptions() {
     if (executablePath) {
         return { executablePath, headless: true, args: Array.from(new Set([...args, '--no-sandbox'])) };
     }
-    return { channel: 'chrome', headless: true, args };
+    const browserChannel = String(process.env.SMOKE_BROWSER_CHANNEL || 'chrome').trim() || 'chrome';
+    return { channel: browserChannel, headless: true, args };
 }
 
 function isIgnorableMessage(text) {
