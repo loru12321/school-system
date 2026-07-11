@@ -3868,15 +3868,13 @@ function closeBlockingModalsBeforeModuleSwitch() {
     modalIds.forEach((modalId) => {
         const modal = document.getElementById(modalId);
         if (!modal) return;
-        const display = window.getComputedStyle ? getComputedStyle(modal).display : modal.style.display;
-        if (display !== 'none') {
-            modal.style.display = 'none';
-        }
+        // Reading computed styles here forced a full layout for every modal on
+        // every module switch. Closing an already hidden modal is idempotent.
+        modal.style.display = 'none';
         if (modal.hasAttribute('aria-hidden')) modal.setAttribute('aria-hidden', 'true');
     });
     document.querySelectorAll('.modal').forEach((modal) => {
-        const display = window.getComputedStyle ? getComputedStyle(modal).display : modal.style.display;
-        if (display !== 'none') modal.style.display = 'none';
+        modal.style.display = 'none';
     });
     const releaseHistoryDrawer = document.getElementById('app-release-history-drawer');
     if (releaseHistoryDrawer) releaseHistoryDrawer.hidden = true;
@@ -3914,11 +3912,10 @@ function switchTab(id) {
     if (typeof window.ensureLazySectionLoaded === 'function') {
         const before = getModuleSectionById(id);
         const loaded = window.ensureLazySectionLoaded(id);
-        if (loaded) removeModuleIntroPanels(document);
+        if (loaded) removeModuleIntroPanels(loaded);
         if (loaded && loaded !== before) getModuleSectionsCached(true);
     }
     ensureCountySubmoduleSectionForSwitch(id);
-    removeModuleIntroPanels(document);
 
     forceHideAllSectionsExcept(id);
     const teacherInsightModuleIds = ['teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking'];
@@ -3974,7 +3971,6 @@ function switchTab(id) {
         return true;
     };
     scheduleAfterPaint(() => {
-        removeModuleIntroPanels(document);
         if (dispatchModuleEnter()) return;
         window.setTimeout(dispatchModuleEnter, 180);
         window.setTimeout(dispatchModuleEnter, 700);
