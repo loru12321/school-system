@@ -214,7 +214,6 @@ function warmStudentCompareRuntimeForReport(stu) {
 
 
 async function doQuery(targetStudent = null) {
-    const queryToken = ++__reportQueryToken;
     const name = String(document.getElementById('inp-name')?.value || targetStudent?.name || '').trim();
     const sch = String(document.getElementById('sel-school')?.value || targetStudent?.school || '').trim();
     const cls = String(document.getElementById('sel-class')?.value || targetStudent?.class || '').trim();
@@ -262,6 +261,8 @@ async function doQuery(targetStudent = null) {
         && ReportHistoryPerfCache.inflightReportQueryPromise) {
         return ReportHistoryPerfCache.inflightReportQueryPromise;
     }
+
+    const queryToken = ++__reportQueryToken;
 
     const executeReportQuery = async () => {
         const { resultEl, container } = getReportDomCache();

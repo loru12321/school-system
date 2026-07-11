@@ -128,6 +128,9 @@ if (!refreshReportSource || refreshReportSource.includes('container.innerHTML !=
 if (!doQuerySource || doQuerySource.includes('container.innerHTML !== nextReportHtml')) {
     fail('doQuery should trust reportHtmlCacheKey instead of serializing report innerHTML');
 }
+if (doQuerySource.indexOf('const queryToken = ++__reportQueryToken;') < doQuerySource.indexOf('ReportHistoryPerfCache.inflightReportQueryPromise')) {
+    fail('deduplicated report queries must not invalidate the in-flight query token');
+}
 if (doQuerySource.indexOf('renderStudentReportSkeleton(container, stu)') > doQuerySource.indexOf('requestAnimationFrame(() => resolve())')) {
     fail('doQuery should paint the report skeleton before yielding the first frame');
 }
