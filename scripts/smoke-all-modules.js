@@ -86,10 +86,10 @@ const MODULE_SWITCH_SETTLE_MS = {
 const PERFORMANCE_BUDGETS = {
     loginMs: 30000,
     appReadyMs: 15000,
-    moduleSwitchMs: 6000,
-    moduleDeepCheckMs: 12000,
-    dataManagerTabMs: 5000,
-    longTaskMs: 800
+    moduleSwitchMs: 1000,
+    moduleDeepCheckMs: 3000,
+    dataManagerTabMs: 2000,
+    longTaskMs: 500
 };
 const STRICT_PERFORMANCE_BUDGETS = process.env.SMOKE_PERF_STRICT === 'true';
 const STRICT_SHELL_SWITCH_MODULE_IDS = new Set([

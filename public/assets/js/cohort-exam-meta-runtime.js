@@ -557,6 +557,15 @@ function rememberUserCohort(cohortId) {
     localStorage.setItem(key, cohortId);
 }
 
+function getRememberedUserCohort() {
+    const key = getUserCohortPrefKey();
+    if (!key) return '';
+    const saved = String(localStorage.getItem(key) || '').trim();
+    return /^\d{4}$/.test(saved) ? saved : '';
+}
+
+window.getRememberedUserCohort = getRememberedUserCohort;
+
 function getExplicitCohortSelection() {
     const selected = String(
         window.BootCohortLifecycle?.getSelectedLoginCohortYear?.()
@@ -628,7 +637,7 @@ function restoreActiveCohortUI(cohortId) {
 function applyUserCohortPreference() {
     const key = getUserCohortPrefKey();
     if (!key) return;
-    const saved = String(localStorage.getItem(key) || '').trim();
+    const saved = getRememberedUserCohort();
     const current = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
     const explicitSelection = getExplicitCohortSelection();
     const knownIds = (window.__COHORT_MANAGER_READY__ && Array.isArray(CohortManager.list))
@@ -644,7 +653,8 @@ function applyUserCohortPreference() {
         if (explicitSelection && saved !== explicitSelection) {
             localStorage.removeItem(key);
         } else
-        if (knownIds.includes(saved) && saved !== current) {
+        if (saved !== current) {
+            ensureCohortRegistered(saved);
             CohortManager.switchTo(saved);
             rememberUserCohort(saved);
             return;
@@ -653,7 +663,7 @@ function applyUserCohortPreference() {
             rememberUserCohort(saved);
             return;
         }
-        localStorage.removeItem(key);
+        if (knownIds.length) localStorage.removeItem(key);
     }
 
     if (current && restoreActiveCohortUI(current)) {

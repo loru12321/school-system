@@ -871,7 +871,7 @@ assert.ok(shellPolishRuntime.includes("getRuntimeLoadProfile() === 'lazy'"), 'sh
 assert.ok(shellPolishRuntime.includes('if (isMobileViewport()) return false;'), 'shell-polish-runtime.js should skip desktop shell enhancements on mobile');
 assert.ok(indexHtml.includes('shell-overview-context-row'), 'shell overview should move workspace context into the top right row');
 assert.ok(indexHtml.includes('shell-overview-pills--dock'), 'shell overview should dock cohort and mode chips in the context row');
-assert.ok(indexHtml.includes('<span>Workspace</span>'), 'shell overview workspace launcher should use compact English copy');
+assert.ok(indexHtml.includes('<span>全部功能</span>'), 'shell overview launcher should use the centralized Chinese command copy');
 assert.ok(!indexHtml.includes('id="shell-active-module"'), 'shell overview should remove the current-focus card from the top hero');
 assert.ok(!indexHtml.includes('id="shell-active-hint"'), 'shell overview should remove the next-step card from the top hero');
 assert.ok(!indexHtml.includes('shell-pulse-grid shell-pulse-grid--dock'), 'shell overview should not render the docked pulse grid');

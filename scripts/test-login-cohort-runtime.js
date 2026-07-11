@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..');
 const runtimeSource = fs.readFileSync(path.join(root, 'public/assets/js/login-entry-runtime.js'), 'utf8');
 const bootSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
 const authLoginSource = fs.readFileSync(path.join(root, 'public/assets/js/auth-login-runtime.js'), 'utf8');
+const cohortMetaSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-exam-meta-runtime.js'), 'utf8');
 const htmlSource = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 
 function createFixedDate(isoDate) {
@@ -140,6 +141,16 @@ assert.ok(
         && authLoginSource.includes("enterSessionCohort({ fastEnter: false, requireCloudData: true })")
         && authLoginSource.includes('!sessionCohortRestoreScheduled && !this.currentUser.local_only'),
     'an existing authenticated session with an empty workspace identity must re-enter the selected cohort instead of loading an unscoped cloud workspace'
+);
+assert.ok(
+    authLoginSource.includes("typeof getRememberedUserCohort === 'function' && getRememberedUserCohort()"),
+    'an authenticated session should restore the last user cohort when runtime cohort state is empty'
+);
+assert.ok(
+    cohortMetaSource.includes('function getRememberedUserCohort()')
+        && cohortMetaSource.includes('window.getRememberedUserCohort = getRememberedUserCohort;')
+        && /if \(saved !== current\) \{\s*ensureCohortRegistered\(saved\);\s*CohortManager\.switchTo\(saved\);/.test(cohortMetaSource),
+    'a saved cohort should remain restorable before the local cohort registry has loaded'
 );
 assert.ok(
     authLoginSource.includes("data.display_name || data.teacher_name || user || '用户'")

@@ -88,7 +88,25 @@
         }
     };
 
-    const ROLE_LABELS = {
+    const language = window.SystemLanguage || null;
+    if (language) {
+        Object.entries(NAV_STRUCTURE).forEach(([categoryId, category]) => {
+            const domainCopy = language.getDomain(categoryId);
+            if (domainCopy) {
+                category.title = domainCopy.title;
+                category.eyebrow = domainCopy.title;
+                category.summary = domainCopy.summary;
+            }
+            category.items.forEach((item) => {
+                const moduleCopy = language.getModule(item.id);
+                if (!moduleCopy) return;
+                item.text = moduleCopy.title;
+                item.hint = moduleCopy.hint;
+            });
+        });
+    }
+
+    const ROLE_LABELS = language?.roles || {
         admin: '系统管理员',
         director: '教务主任',
         grade_director: '年级主任',
@@ -169,6 +187,7 @@
     }
 
     function formatOverviewCohortText(value) {
+        if (language) return language.formatCohort(value);
         const text = String(value || '').trim();
         if (!text) return '未选择届别';
         const yearMatch = text.match(/(\d{4})/);
@@ -176,6 +195,7 @@
     }
 
     function formatOverviewModeText(value) {
+        if (language) return language.formatGrade(value);
         const text = String(value || '').trim();
         if (!text) return '未识别年级';
         const gradeMatch = text.match(/(\d+)\s*年级/);
@@ -858,7 +878,7 @@
         const modeChip = document.getElementById('shell-mode-chip');
         if (modeChip) {
             const modeText = resolveShellModeText();
-            const shellModeText = modeText ? `${modeText} 模式` : '模式待加载';
+            const shellModeText = modeText || language?.states?.modeLoading || '年级待加载';
             setTextAndTooltip(modeChip, formatOverviewModeText(shellModeText), `当前模式：${shellModeText}`);
         }
 

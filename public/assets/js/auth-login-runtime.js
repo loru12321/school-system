@@ -479,6 +479,7 @@ var Auth = {
                         (typeof getExplicitCohortSelection === 'function' && getExplicitCohortSelection())
                         || document.getElementById('login-cohort-select')?.value
                         || restoredCohortId
+                        || (typeof getRememberedUserCohort === 'function' && getRememberedUserCohort())
                         || ''
                     ).trim();
                     const enterSessionCohort = typeof enterCohortFromMask === 'function'
