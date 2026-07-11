@@ -158,7 +158,7 @@
         };
     }
 
-    function switchTeacherTerm(manager, termId) {
+    function switchTeacherTerm(manager, termId, options = {}) {
         if (!termId) return;
         const exactTermId = String(termId || '').trim();
         const storedTermId = typeof root.readCurrentTeacherTermId === 'function'
@@ -203,15 +203,15 @@
             if (typeof root.setTeacherSchoolMap === 'function') {
                 root.setTeacherSchoolMap(asPlainMap(resolved.schoolMap));
             }
-            callManagerMethod(manager, 'renderTeachers');
+            if (options.render !== false) callManagerMethod(manager, 'renderTeachers');
             callManagerMethod(manager, 'renderTeacherContextStatus');
-            callManagerMethod(manager, 'refreshTeacherAnalysis');
+            if (options.refreshAnalysis !== false) callManagerMethod(manager, 'refreshTeacherAnalysis');
             return true;
         }
 
         activeTermId = exactTermId;
         const hasCurrentTeacherMap = !!(root.TEACHER_MAP && Object.keys(root.TEACHER_MAP).length > 0);
-        callManagerMethod(manager, 'renderTeachers');
+        if (options.render !== false) callManagerMethod(manager, 'renderTeachers');
         callManagerMethod(manager, 'renderTeacherContextStatus');
 
         console.log(`⚠️ 本地无学期 ${baseTermId || exactTermId} 的任课数据，${hasCurrentTeacherMap ? '保留当前任课表并' : ''}尝试从云端同步...`);

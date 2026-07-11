@@ -12,8 +12,10 @@ const paramsSource = fs.readFileSync(
 );
 
 assert.ok(
-    source.includes('this.renderCurrentTab();\n        if (tab !== \'params\') {\n            this.scheduleDataManagerStatusRender();\n        }'),
-    'params tab should avoid duplicate status scheduling because renderParams already schedules it'
+    source.includes("window.SystemPerformance.scheduleTask('data-manager-tab-render'")
+        && source.includes("if (tab === 'cloud') manager.renderCloudBackups();")
+        && source.includes("DataManager.switchTeacherTerm(termId, { render: false, refreshAnalysis: false });"),
+    'data manager tabs should paint first, render once, and keep cloud work asynchronous'
 );
 assert.ok(
     !paramsSource.includes('scheduleDataManagerStatusRender'),

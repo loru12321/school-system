@@ -1,6 +1,11 @@
 (() => {
     if (typeof window === 'undefined' || window.__MOBILE_APP_RUNTIME_PATCHED__) return;
 
+    if (typeof window.ensureOptionalStylesheetLoaded === 'function') {
+        window.ensureOptionalStylesheetLoaded('apk-mobile-shell', './assets/css/apk-mobile-shell.css')
+            .catch((error) => console.warn('[mobile] shell stylesheet load failed:', error));
+    }
+
     const MOBILE_BREAKPOINT = 960;
     const REFRESH_DELAYS = [80, 260, 900];
     const MODULE_FOCUS_DELAYS = [140, 420, 980, 1600];

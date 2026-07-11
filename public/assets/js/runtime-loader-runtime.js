@@ -9,6 +9,9 @@ function bootEntry(key, src) { return { key, src }; }
 function bootSkill(mode, warmup, triggers, entries) { return { mode, warmup, triggers, entries }; }
 
 var SYSTEM_RUNTIME_SKILLS = {
+    'support-metrics': bootSkill('demand', 'demand', ['indicator', 'bottom3'], [
+        bootEntry('support-metrics', bootJs('support-metrics-runtime.js'))
+    ]),
 'crypto-vendor': bootSkill('demand', 'demand', ['CryptoJS', 'freshman-simulator', 'inquiry-package'], [
     bootEntry('crypto-vendor', bootVend('crypto-js/crypto-js.min.js'))
 ]),
@@ -429,7 +432,7 @@ switch (String(key || '').trim()) {
     case 'teacher-analysis-bridge':
         return window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__ ? true : null;
     case 'cohort-growth':
-        return window.CohortGrowth || null;
+        return window.CohortGrowth && window.CohortGrowth.__runtimeStub !== true ? window.CohortGrowth : null;
     case 'chart-vendor':
         return window.Chart || null;
     case 'sweetalert-vendor':
@@ -733,6 +736,10 @@ window.ensureMacroAnalysisCoreRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('macro-analysis-core');
 };
 
+window.ensureSupportMetricsRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('support-metrics');
+};
+
 window.ensureOptionalStylesheetLoaded = function (key, href) {
 return loadOptionalStylesheet(key, href);
 };
@@ -756,6 +763,25 @@ return window.SystemRuntimeLoader.load('teacher-analysis');
 window.ensureCohortGrowthRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('cohort-growth');
 };
+
+if (!window.CohortGrowth) {
+const cohortGrowthStub = {
+    __runtimeStub: true,
+    cache: { volatility: [], growth: [] },
+    cacheSignature: '',
+    render(...args) {
+        const growthBody = document.querySelector('#cohort-growth-table tbody');
+        const volatilityBody = document.querySelector('#cohort-volatility-table tbody');
+        if (growthBody) growthBody.innerHTML = '<tr><td colspan="5" class="analysis-empty-cell">正在加载成长分析组件…</td></tr>';
+        if (volatilityBody) volatilityBody.innerHTML = '<tr><td colspan="4" class="analysis-empty-cell">正在加载成长分析组件…</td></tr>';
+        return window.ensureCohortGrowthRuntimeLoaded().then(() => window.CohortGrowth.render(...args));
+    },
+    exportVolatility(...args) {
+        return window.ensureCohortGrowthRuntimeLoaded().then(() => window.CohortGrowth.exportVolatility(...args));
+    }
+};
+window.CohortGrowth = cohortGrowthStub;
+}
 
 window.ensureTeacherCorrelationRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('teacher-correlation');

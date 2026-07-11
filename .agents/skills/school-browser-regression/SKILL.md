@@ -20,7 +20,7 @@ Read these files first when the task is about browser behavior or live verificat
 1. Build current artifacts when source changed: `cmd /c npm run validate` or at least `cmd /c npm run build`.
 2. Verify local `dist/` with `cmd /c npm run smoke:modules:local`.
 3. Verify `lt.html` when single-file delivery matters:
-   - `$env:SMOKE_URL='file:///C:/Users/loru/Desktop/system/lt.html'`
+   - `$env:SMOKE_URL = ([System.Uri](Resolve-Path './lt.html')).AbsoluteUri`
    - `node scripts/smoke-all-modules.js`
 4. Verify production after push:
    - `$env:SMOKE_URL='https://schoolsystem.com.cn/'`

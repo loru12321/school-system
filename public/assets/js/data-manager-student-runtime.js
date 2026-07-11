@@ -51,10 +51,18 @@
         if (!manager || !Array.isArray(rawData)) return;
 
         const normalizedKeyword = String(keyword || '').trim().toLowerCase();
-        const list = [];
-        for (let index = 0; index < rawData.length; index += 1) {
-            const student = rawData[index] || {};
-            if (normalizedKeyword) {
+        let list = null;
+        if (normalizedKeyword) {
+            const filterSignature = `${Number(root.__RAW_DATA_VERSION || 0)}::${rawData.length}::${normalizedKeyword}`;
+            const cachedFilter = manager.studentFilterCache && manager.studentFilterCache.signature === filterSignature
+                ? manager.studentFilterCache.list
+                : null;
+            if (cachedFilter) {
+                list = cachedFilter;
+            } else {
+                list = [];
+                for (let index = 0; index < rawData.length; index += 1) {
+                    const student = rawData[index] || {};
                 const name = String(student.name != null ? student.name : '').toLowerCase();
                 const examId = String(student.id != null ? student.id : '');
                 const klass = String(student.class != null ? student.class : '').toLowerCase();
@@ -65,8 +73,10 @@
                     && !school.includes(normalizedKeyword)) {
                     continue;
                 }
+                    list.push({ student, _originalIndex: index });
+                }
+                manager.studentFilterCache = { signature: filterSignature, list };
             }
-            list.push({ student, _originalIndex: index });
         }
 
         manager.pagination = manager.pagination || { page: 1, size: 20, total: 0 };
@@ -77,17 +87,26 @@
             manager.pagination.page = 1;
         }
 
-        manager.pagination.total = list.length;
+        manager.pagination.total = list ? list.length : rawData.length;
         const totalPages = Math.ceil(manager.pagination.total / manager.pagination.size) || 1;
         if (manager.pagination.page > totalPages) manager.pagination.page = totalPages;
         if (manager.pagination.page < 1) manager.pagination.page = 1;
 
         const start = (manager.pagination.page - 1) * manager.pagination.size;
-        const pageData = list.slice(start, start + manager.pagination.size);
-        const validIndexSet = new Set(list.map((item) => item._originalIndex));
+        const pageData = list
+            ? list.slice(start, start + manager.pagination.size)
+            : rawData.slice(start, start + manager.pagination.size).map((student, offset) => ({
+                student,
+                _originalIndex: start + offset
+            }));
+        const validIndexSet = list ? new Set(list.map((item) => item._originalIndex)) : null;
         const selection = ensureStudentSelection(manager);
         selection.forEach((idx) => {
-            if (!validIndexSet.has(idx)) selection.delete(idx);
+            if (validIndexSet) {
+                if (!validIndexSet.has(idx)) selection.delete(idx);
+            } else if (idx < 0 || idx >= rawData.length) {
+                selection.delete(idx);
+            }
         });
 
         const tbody = queryStudentTableBody();
@@ -113,7 +132,7 @@
                     <td>${examId}</td>
                     <td>${total}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button> 
+                        <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button>
                         <button class="btn btn-sm btn-danger" onclick="DataManager.deleteStudent(${originalIndex})" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
                     </td>
                 </tr>`;

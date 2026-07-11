@@ -11,6 +11,12 @@ const sourceDir = path.join(DEFAULT_PROJECT_ROOT, 'public', 'assets', 'js');
 const targetDir = path.join(DEFAULT_PROJECT_ROOT, 'dist', 'assets', 'js');
 const sourceIndexPath = path.join(DEFAULT_PROJECT_ROOT, 'src', 'index.html');
 const rootPublicFiles = ['favicon.ico', '_headers', 'sw.js', 'robots.txt', 'sitemap.xml', 'site.webmanifest', 'icon.svg'];
+const optionalCssFiles = [
+  'apk-mobile-shell.css',
+  'cloud-archive-visibility.css',
+  'drill-modal.css',
+  'vendor-polish.css'
+];
 const releaseAssetsDir = 'releases';
 
 export function collectReferencedJsAssets(html) {
@@ -114,6 +120,17 @@ export function syncReferencedAssets({
     const targetPath = path.join(projectRoot, 'dist', fileName);
     fs.copyFileSync(sourcePath, targetPath);
     console.log(`Synced root asset: ${sourcePath} -> ${targetPath}`);
+  }
+
+  const optionalCssSourceDir = path.join(projectRoot, 'src', 'assets', 'css');
+  const optionalCssTargetDir = path.join(projectRoot, 'dist', 'assets', 'css');
+  fs.mkdirSync(optionalCssTargetDir, { recursive: true });
+  for (const fileName of optionalCssFiles) {
+    const sourcePath = path.join(optionalCssSourceDir, fileName);
+    if (!fs.existsSync(sourcePath)) continue;
+    const targetPath = path.join(optionalCssTargetDir, fileName);
+    fs.copyFileSync(sourcePath, targetPath);
+    console.log(`Synced optional stylesheet: ${sourcePath} -> ${targetPath}`);
   }
 
   const sourceReleasePath = path.join(projectRoot, 'public', releaseAssetsDir);

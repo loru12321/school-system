@@ -40,7 +40,7 @@ cmd /c npm run smoke:modules:local
 For `lt.html`:
 
 ```powershell
-$env:SMOKE_URL='file:///C:/Users/loru/Desktop/system/lt.html'
+$env:SMOKE_URL = ([System.Uri](Resolve-Path './lt.html')).AbsoluteUri
 node scripts/smoke-all-modules.js
 ```
 

@@ -112,7 +112,7 @@ assert.ok(!appRuntime.includes("onclick=\"showSchoolProfile('${s.name}')\""), 's
 assert.ok(appRuntime.includes('const safeSchoolName = escapeAppHtml(s.name)'), 'summary table should escape dynamic school names before rendering');
 assert.ok(appRuntime.includes('data-school-profile-name="${safeSchoolName}"'), 'summary table should bind school profile actions through a safe data attribute');
 assert.ok(reportHistoryRuntime.includes('window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task'), 'report history hydration should be delayed as a scheduled background task');
-assert.ok(reportHistoryRuntime.includes('delay: 4800'), 'report history hydration should stay well after the first report paint');
+assert.ok(reportHistoryRuntime.includes('delay: 350') && reportHistoryRuntime.includes('idle: true'), 'report history hydration should yield to interaction-priority work');
 assert.ok(appRuntime.includes('function buildSummaryDependencySignature'), 'summary stale prompt should compare dependency signatures');
 assert.ok(appRuntime.includes('markSummaryDataChangedIfDependencyChanged('), 'summary stale prompt should not be triggered unconditionally by prerequisite renders');
 assert.ok(appRuntime.includes("buildSummaryDependencySignature('twoRateBottom', townshipSchools)"), 'two-rate/bottom3 refresh should use a stable dependency signature');

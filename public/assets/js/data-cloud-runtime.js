@@ -173,6 +173,10 @@
             : Date.now();
     }
 
+    function isCloudViewActive(manager) {
+        return !manager || !normalizeText(manager.currentTab) || manager.currentTab === 'cloud';
+    }
+
     function shouldLogPerf(durationMs) {
         if (durationMs >= 250) return true;
         try {
@@ -1114,6 +1118,10 @@
         const filterSnapshotsOnly = doc ? doc.getElementById('cloud-filter-snapshots')?.checked === true : false;
         manager.cloudRecordCategory = normalizeCloudRecordCategory(manager.cloudRecordCategory);
         const recordCategory = manager.cloudRecordCategory;
+        const renderEpoch = Number(manager.cloudBackupRenderEpoch || 0) + 1;
+        manager.cloudBackupRenderEpoch = renderEpoch;
+        const previewCacheKey = getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly, recordCategory);
+        const cachedPreview = !options.force ? getCachedCloudBackupList(manager, previewCacheKey) : null;
         bindCloudTableRetry(manager, shell);
         bindCloudCategoryControls(manager);
 
@@ -1135,8 +1143,8 @@
             return;
         }
 
-        renderCloudTableState(tbody, shell, 'loading');
-        if (summaryEl) {
+        if (!cachedPreview && !options.preserve) renderCloudTableState(tbody, shell, 'loading');
+        if (summaryEl && !cachedPreview && !options.preserve) {
             summaryEl.style.display = 'block';
             summaryEl.innerHTML = '⏳ 正在分析数据...';
         }
@@ -1148,8 +1156,8 @@
             if (!selectSystemDataRecords) throw new Error('selectSystemDataRecords unavailable');
 
             const listQueryOptions = getCloudBackupListQueryOptions(filterCurrent);
-            const cacheKey = getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly, recordCategory);
-            const cachedList = !options.force ? getCachedCloudBackupList(manager, cacheKey) : null;
+            const cacheKey = previewCacheKey;
+            const cachedList = cachedPreview;
             let allRows = null;
             let visibleRows = null;
 
@@ -1177,6 +1185,7 @@
                     filterSnapshotsOnly,
                     !!options.force
                 );
+                if (manager.cloudBackupRenderEpoch !== renderEpoch || !isCloudViewActive(manager)) return;
                 rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.fetchMetadata', fetchStartedAt, {
                     cache: options.force ? 'force' : 'miss',
                     rows: Array.isArray(metaResult?.data) ? metaResult.data.length : 0,
@@ -1343,7 +1352,25 @@
                 renderedRows: displayRows.length,
                 cache: cachedList ? 'hit' : options.force ? 'force' : 'miss'
             });
+            if (cachedList && !options.force && !options.revalidate) {
+                const refresh = () => {
+                    if (!isCloudViewActive(manager)) return;
+                    api.renderCloudBackups(manager, { force: true, preserve: true, revalidate: true });
+                };
+                if (root.SystemPerformance && typeof root.SystemPerformance.scheduleTask === 'function') {
+                    root.SystemPerformance.scheduleTask('data-cloud-background-refresh', refresh, {
+                        delay: 120,
+                        idle: true,
+                        lane: 'background',
+                        timeout: 1000
+                    });
+                } else {
+                    const schedule = typeof root.setTimeout === 'function' ? root.setTimeout.bind(root) : setTimeout;
+                    schedule(refresh, 120);
+                }
+            }
         } catch (error) {
+            if (manager.cloudBackupRenderEpoch !== renderEpoch || !isCloudViewActive(manager)) return;
             root.console?.error?.(error);
             manager.cloudBackupRows = new Map();
             renderCloudTableState(tbody, shell, 'error', {

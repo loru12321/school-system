@@ -281,8 +281,56 @@ function setUploadMessage(message, tone = 'neutral') {
     msgBox.textContent = String(message || '').trim();
 }
 
+const StarterStatusPerfState = {
+    signature: '',
+    deferredSignature: ''
+};
+
+function buildStarterStatusSignature() {
+    return [
+        String(window.__RAW_DATA_VERSION || 0),
+        Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+        TEACHER_MAP ? Object.keys(TEACHER_MAP).length : 0,
+        TEACHER_STATS ? Object.keys(TEACHER_STATS).length : 0,
+        CURRENT_COHORT_ID || readWorkspaceCohortId() || '',
+        CURRENT_EXAM_ID || readWorkspaceExamId() || '',
+        readCurrentSchool() || '',
+        localStorage.getItem('CLOUD_SYNC_AT') || '',
+        localStorage.getItem('TEACHER_SYNC_AT') || ''
+    ].join('::');
+}
+
+function scheduleStarterStatusDeferred(signature) {
+    if (StarterStatusPerfState.deferredSignature === signature) return;
+    const run = () => {
+        if (StarterStatusPerfState.signature !== signature) return;
+        StarterStatusPerfState.deferredSignature = signature;
+        renderActionLogs();
+        scanDataIssues();
+        updateRoleHint();
+        updateUploadWorkbenchStatus();
+    };
+    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
+        window.SystemPerformance.scheduleTask('starter-status-deferred', run, {
+            delay: 32,
+            idle: true,
+            lane: 'background',
+            timeout: 600
+        });
+        return;
+    }
+    window.setTimeout(run, 32);
+}
+
 function updateStatusPanel() {
     if (!document.getElementById('starter-status-panel')) return;
+    const signature = buildStarterStatusSignature();
+    if (StarterStatusPerfState.signature === signature) {
+        scheduleStarterStatusDeferred(signature);
+        return;
+    }
+    StarterStatusPerfState.signature = signature;
+    StarterStatusPerfState.deferredSignature = '';
     const panel = document.getElementById('starter-status-panel');
     const termId = readCurrentTermId() || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
     const examId = CURRENT_EXAM_ID || readWorkspaceExamId() || '未选择';
@@ -320,9 +368,6 @@ function updateStatusPanel() {
         if (key === 'analysis') done = TEACHER_STATS && Object.keys(TEACHER_STATS).length > 0;
         item.classList.toggle('done', done);
     });
-    renderActionLogs();
-    scanDataIssues();
-    updateRoleHint();
-    updateUploadWorkbenchStatus();
+    scheduleStarterStatusDeferred(signature);
 }
 window.updateStatusPanel = updateStatusPanel;

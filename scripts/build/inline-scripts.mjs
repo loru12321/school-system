@@ -46,6 +46,20 @@ const MANIFEST_RUNTIME_PATHS = [
     './assets/js/runtime-loader-runtime.js',
     './assets/js/boot-runtime.js'
 ];
+const EXTERNAL_LAZY_RUNTIME_SOURCES = new Set([
+    './assets/js/teaching-assessment-sync-runtime.js',
+    './assets/js/teaching-management-cloud-runtime.js',
+    './assets/js/teaching-management-overview-runtime.js',
+    './assets/js/teaching-management-version-runtime.js',
+    './assets/js/teacher-analysis-core-runtime.js',
+    './assets/js/teacher-analysis-ui-runtime.js',
+    './assets/js/teacher-analysis-bridge-runtime.js',
+    './assets/js/report-render-runtime.js',
+    './assets/js/report-chart-runtime.js',
+    './assets/js/progress-analysis-runtime.js',
+    './assets/js/student-compare-result-runtime.js',
+    './assets/js/student-compare-cloud-runtime.js'
+]);
 
 // Keep original script semantics intact; only normalize newlines.
 function normalizeScript(content) {
@@ -196,7 +210,8 @@ function collectRuntimeManifestSources(manifestSource) {
 }
 
 function shouldInlineRuntimeSource(src) {
-    return /^\.\/assets\/js\//.test(String(src || ''));
+    const normalized = String(src || '');
+    return /^\.\/assets\/js\//.test(normalized) && !EXTERNAL_LAZY_RUNTIME_SOURCES.has(normalized);
 }
 
 function getBootRuntimeSkillSources(projectRoot) {

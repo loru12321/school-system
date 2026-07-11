@@ -30,7 +30,10 @@
     const CohortGrowthPerfCache = {
         results: new Map(),
         maxResults: 8,
-        studentKeys: new WeakMap()
+        studentKeys: new WeakMap(),
+        worker: null,
+        requestId: 0,
+        pendingReject: null
     };
 
     function getRawCohortExams() {
@@ -237,6 +240,25 @@
         return `<td data-label="${escapeHtml(label)}"${classAttr}>${value}</td>`;
     }
 
+    function createAbortError() {
+        const error = new Error('cohort-growth-request-replaced');
+        error.name = 'AbortError';
+        return error;
+    }
+
+    function cancelPendingWorker() {
+        CohortGrowthPerfCache.requestId += 1;
+        if (CohortGrowthPerfCache.worker) {
+            CohortGrowthPerfCache.worker.terminate();
+            CohortGrowthPerfCache.worker = null;
+        }
+        if (typeof CohortGrowthPerfCache.pendingReject === 'function') {
+            CohortGrowthPerfCache.pendingReject(createAbortError());
+            CohortGrowthPerfCache.pendingReject = null;
+        }
+        return CohortGrowthPerfCache.requestId;
+    }
+
     const CohortGrowthRuntime = {
         cache: { volatility: [], growth: [] },
         cacheSignature: '',
@@ -254,22 +276,112 @@
         render() {
             updateScopeControls();
             if (!getCohortExams().length) {
-                return root.alert ? root.alert('当前届别暂无历史考试数据') : undefined;
+                if (root.alert) root.alert('当前届别暂无历史考试数据');
+                return Promise.resolve(null);
             }
             const scope = getSelectedScope();
             const signature = this.getRenderSignature(scope);
-            const result = this.cacheSignature === signature
+            const cached = this.cacheSignature === signature
                 ? this.cache
-                : (CohortGrowthPerfCache.results.get(signature) || this.compute(scope));
-            this.cache = result;
+                : CohortGrowthPerfCache.results.get(signature);
+            if (cached) {
+                this.applyResult(cached, signature);
+                return Promise.resolve(cached);
+            }
+
+            renderEmptyRow(root.document?.querySelector('#cohort-volatility-table tbody'), 4, '正在后台计算波动率，请稍候…');
+            renderEmptyRow(root.document?.querySelector('#cohort-growth-table tbody'), 5, '正在后台生成成长档案，请稍候…');
+            const requestId = cancelPendingWorker();
+            return this.computeAsync(scope, signature, requestId)
+                .then((result) => {
+                    if (requestId !== CohortGrowthPerfCache.requestId) throw createAbortError();
+                    setBoundedCache(CohortGrowthPerfCache.results, signature, result, CohortGrowthPerfCache.maxResults);
+                    this.applyResult(result, signature);
+                    return result;
+                })
+                .catch((error) => {
+                    if (error && error.name === 'AbortError') return null;
+                    renderEmptyRow(root.document?.querySelector('#cohort-growth-table tbody'), 5, '成长档案生成失败，请重试');
+                    throw error;
+                });
+        },
+
+        applyResult(result, signature) {
+            this.cache = result || { volatility: [], growth: [] };
             this.cacheSignature = signature;
-            setBoundedCache(CohortGrowthPerfCache.results, signature, result, CohortGrowthPerfCache.maxResults);
-            this.renderVolatility(result.volatility);
-            this.renderGrowth(result.growth);
+            this.renderVolatility(this.cache.volatility);
+            this.renderGrowth(this.cache.growth);
             if (typeof root.refreshResponsiveMobileTables === 'function') {
                 root.refreshResponsiveMobileTables(root.document?.getElementById('cohort-growth') || root.document);
             }
-            return result;
+        },
+
+        async buildWorkerExams(scope, requestId) {
+            const exams = [];
+            const yieldToMain = root.SystemPerformance && typeof root.SystemPerformance.yieldToMain === 'function'
+                ? () => root.SystemPerformance.yieldToMain()
+                : () => new Promise((resolve) => root.setTimeout(resolve, 0));
+            for (const exam of getCohortExams()) {
+                if (requestId !== CohortGrowthPerfCache.requestId) throw createAbortError();
+                const rows = Array.isArray(exam?.data)
+                    ? filterRowsByScope(exam.data, scope)
+                        .map((student, index) => ({
+                            key: this.getStudentKey(student),
+                            name: student?.name,
+                            class: student?.class,
+                            total: toFiniteNumber(student?.total),
+                            index
+                        }))
+                        .filter((row) => row.key && row.total !== null)
+                    : [];
+                exams.push({ rows });
+                await yieldToMain();
+            }
+            return exams;
+        },
+
+        async computeAsync(scope, signature, requestId) {
+            const exams = await this.buildWorkerExams(scope, requestId);
+            if (requestId !== CohortGrowthPerfCache.requestId) throw createAbortError();
+            if (typeof root.Worker !== 'function') return this.compute(scope);
+
+            return new Promise((resolve, reject) => {
+                let worker;
+                try {
+                    worker = new root.Worker('./assets/js/cohort-growth-worker.js');
+                } catch (_) {
+                    resolve(this.compute(scope));
+                    return;
+                }
+                CohortGrowthPerfCache.worker = worker;
+                CohortGrowthPerfCache.pendingReject = reject;
+                const cleanup = () => {
+                    if (CohortGrowthPerfCache.worker === worker) CohortGrowthPerfCache.worker = null;
+                    if (CohortGrowthPerfCache.pendingReject === reject) CohortGrowthPerfCache.pendingReject = null;
+                    worker.terminate();
+                };
+                worker.onmessage = (event) => {
+                    const message = event && event.data ? event.data : {};
+                    if (message.requestId !== requestId || message.signature !== signature) return;
+                    cleanup();
+                    if (message.status === 'ok') resolve(message.result);
+                    else reject(new Error(message.message || 'cohort-growth-worker-error'));
+                };
+                worker.onerror = (event) => {
+                    cleanup();
+                    reject(new Error(event && event.message ? event.message : 'cohort-growth-worker-error'));
+                };
+                worker.postMessage({
+                    cmd: 'COMPUTE_COHORT_GROWTH',
+                    requestId,
+                    signature,
+                    scope,
+                    exams
+                });
+            }).catch((error) => {
+                if (error && error.name === 'AbortError') throw error;
+                return this.compute(scope);
+            });
         },
 
         compute(scope = getSelectedScope()) {
@@ -400,6 +512,7 @@
         releaseHeavyDom() {
             const section = root.document?.getElementById('cohort-growth');
             if (!section || section.classList.contains('active')) return false;
+            cancelPendingWorker();
             ['#cohort-volatility-table tbody', '#cohort-growth-table tbody'].forEach((selector) => {
                 const tbody = root.document?.querySelector(selector);
                 if (tbody) {

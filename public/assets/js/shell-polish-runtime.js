@@ -1,4 +1,7 @@
 (function () {
+    if (typeof window.ensureOptionalStylesheetLoaded === 'function') {
+        window.ensureOptionalStylesheetLoaded('vendor-polish', './assets/css/vendor-polish.css').catch(() => {});
+    }
     const SIMPLEBAR_TARGETS = [
         { selector: '#sidebar-nav', options: { autoHide: false } },
         { selector: '#spotlight-results', options: { autoHide: false } }

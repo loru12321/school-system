@@ -784,7 +784,8 @@ assert.ok(
     'DataManager.open should switch directly to the requested initial tab'
 );
 assert.ok(
-    dataManagerCoreRuntime.includes("window.setTimeout(() => {\n                if (manager.currentTab === 'cloud') manager.renderCloudBackups();\n            }, 0);"),
+    dataManagerCoreRuntime.includes("window.SystemPerformance.scheduleTask('data-manager-tab-render'")
+        && dataManagerCoreRuntime.includes("if (tab === 'cloud') manager.renderCloudBackups();"),
     'cloud backup rendering should run after the click stack so the cloud button remains actionable'
 );
 assert.ok(

@@ -1131,15 +1131,35 @@
             });
         }
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
-        if (id === 'bottom3') scheduleMacroTablesRender('bottom3', 'bottom3-tables');
-        if (id === 'indicator' && typeof refreshIndicatorResults === 'function') {
-            scheduleActiveModuleTask('indicator', 'indicator-results', () => refreshIndicatorResults(true, {
-                waitForInputs: true,
-                timeoutMs: 8000
-            }), {
-                delay: 80,
-                idle: true,
-                timeout: 9000
+        if (id === 'bottom3') {
+            const loaders = [
+                typeof window.ensureMacroAnalysisCoreRuntimeLoaded === 'function' ? window.ensureMacroAnalysisCoreRuntimeLoaded() : Promise.resolve(),
+                typeof window.ensureSupportMetricsRuntimeLoaded === 'function' ? window.ensureSupportMetricsRuntimeLoaded() : Promise.resolve()
+            ];
+            return Promise.all(loaders).then(() => {
+                if (!document.getElementById('bottom3')?.classList.contains('active')) return false;
+                scheduleMacroTablesRender('bottom3', 'bottom3-tables');
+                return true;
+            });
+        }
+        if (id === 'indicator') {
+            const loaders = [
+                typeof window.ensureMacroAnalysisCoreRuntimeLoaded === 'function' ? window.ensureMacroAnalysisCoreRuntimeLoaded() : Promise.resolve(),
+                typeof window.ensureSupportMetricsRuntimeLoaded === 'function' ? window.ensureSupportMetricsRuntimeLoaded() : Promise.resolve()
+            ];
+            return Promise.all(loaders).then(() => {
+                if (!document.getElementById('indicator')?.classList.contains('active')) return false;
+                if (typeof refreshIndicatorResults === 'function') {
+                    scheduleActiveModuleTask('indicator', 'indicator-results', () => refreshIndicatorResults(true, {
+                        waitForInputs: true,
+                        timeoutMs: 8000
+                    }), {
+                        delay: 80,
+                        idle: true,
+                        timeout: 9000
+                    });
+                }
+                return true;
             });
         }
         if (id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal') {
@@ -1181,13 +1201,27 @@
                     window.ZhongkaoCountdownModule.ensureInitialized();
                 }
             };
+            const section = document.getElementById('zhongkao-countdown');
+            if (section && !section.querySelector('.zkc-shell') && !section.querySelector('.analysis-loading-state')) {
+                section.innerHTML = '<div class="analysis-loading-state">正在准备中考倒计时，页面可以继续操作…</div>';
+            }
+            const scheduleCountdownInit = () => {
+                scheduleActiveModuleTask('zhongkao-countdown', 'zhongkao-countdown-init', initCountdown, {
+                    delay: 240,
+                    idle: true,
+                    timeout: 1200
+                });
+                return true;
+            };
             if (typeof window.ensureZhongkaoCountdownRuntimeLoaded === 'function'
                 && !window.ZhongkaoCountdownModule) {
-                return window.ensureZhongkaoCountdownRuntimeLoaded()
-                    .then(initCountdown)
+                window.ensureZhongkaoCountdownRuntimeLoaded()
+                    .then(scheduleCountdownInit)
                     .catch((error) => console.warn(error));
+                return Promise.resolve(true);
             }
-            initCountdown();
+            scheduleCountdownInit();
+            return Promise.resolve(true);
         }
         if (id === 'teacher-analysis'
             || id === 'teacher-detail-comparison'
@@ -1291,7 +1325,11 @@
                 if (entryEpoch !== moduleEntryEpoch || !section?.classList.contains('active')) return false;
                 const runInit = () => runModuleSpecificInit(id);
                 const result = id === 'student-details'
-                    ? scheduleModuleTaskPromise('student-details-enter-init', runInit, { delay: 40, frame: true })
+                    ? scheduleModuleTaskPromise('student-details-enter-init', runInit, {
+                        delay: 240,
+                        idle: true,
+                        timeout: 1200
+                    })
                     : runInit();
                 return result;
             })

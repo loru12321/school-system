@@ -1,0 +1,4 @@
+interface:
+  display_name: "学校系统优化工作流"
+  short_description: "在不改变计算结果的前提下执行学校系统性能优化、排名校验与发布验收"
+  default_prompt: "Use $optimize-school-system to optimize and verify this school system without changing calculation results."

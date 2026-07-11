@@ -3813,6 +3813,16 @@ function tmApplySelectValue(selectId, preferredValue = '', preferredText = '') {
 
 
 function forceHideAllSectionsExcept(targetId = '') {
+    if (targetId && ModuleSwitchPerfCache.activeSection) {
+        const activeSection = ModuleSwitchPerfCache.activeSection;
+        if (activeSection.id !== targetId) {
+            activeSection.classList.remove('active');
+            activeSection.style.display = 'none';
+        }
+        ModuleSwitchPerfCache.activeId = targetId;
+        ModuleSwitchPerfCache.activeSection = getModuleSectionById(targetId);
+        return;
+    }
     const sections = getModuleSectionsCached(false);
     sections.forEach(el => {
         if (targetId && el.id === targetId) return;
@@ -3958,6 +3968,24 @@ function switchTab(id) {
     }
     if (!__guardBypass && !guardBeforeSwitch(id)) return;
     if (__guardBypass) __guardBypass = false;
+    if ((id === 'analysis' || id === 'indicator' || id === 'bottom3')
+        && typeof window.ensureMacroAnalysisCoreRuntimeLoaded === 'function') {
+        window.ensureMacroAnalysisCoreRuntimeLoaded().catch(() => {});
+    }
+    if ((id === 'indicator' || id === 'bottom3')
+        && typeof window.ensureSupportMetricsRuntimeLoaded === 'function') {
+        window.ensureSupportMetricsRuntimeLoaded().catch(() => {});
+    }
+    if (id === 'marginal-push' && typeof window.ensureMarginalPushCoreRuntimeLoaded === 'function') {
+        window.ensureMarginalPushCoreRuntimeLoaded().catch(() => {});
+    }
+    if (id === 'zhongkao-countdown' && typeof window.ensureZhongkaoCountdownRuntimeLoaded === 'function') {
+        window.ensureZhongkaoCountdownRuntimeLoaded().catch(() => {});
+    }
+    const endModuleInteraction = window.SystemPerformance && typeof window.SystemPerformance.beginInteraction === 'function'
+        ? window.SystemPerformance.beginInteraction(`module:${id}`)
+        : () => {};
+    scheduleAfterPaint(endModuleInteraction);
     closeBlockingModalsBeforeModuleSwitch();
     if (typeof window.ensureLazySectionLoaded === 'function') {
         const before = getModuleSectionById(id);
@@ -4038,6 +4066,9 @@ function switchTab(id) {
 }
 
 function ensureDrillModalDom() {
+    if (typeof window.ensureOptionalStylesheetLoaded === 'function') {
+        window.ensureOptionalStylesheetLoaded('drill-modal', './assets/css/drill-modal.css').catch(() => {});
+    }
     if (typeof window.ensureLazySectionLoaded === 'function') {
         window.ensureLazySectionLoaded('drill-modal');
     }
@@ -9758,8 +9789,8 @@ if (typeof DataManager !== 'undefined') {
         return requireDataManagerArchiveRuntime().renameHistoryExam(this, oldName);
     };
 
-    DataManager.switchTeacherTerm = function (termId) {
-        return requireDataManagerTeacherRuntime().switchTeacherTerm(this, termId);
+    DataManager.switchTeacherTerm = function (termId, options = {}) {
+        return requireDataManagerTeacherRuntime().switchTeacherTerm(this, termId, options);
     };
 
     DataManager.syncTeacherHistory = function (opts = {}) {

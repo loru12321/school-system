@@ -14,7 +14,10 @@
         patchAttempts: 0,
         patchedStableTicks: 0,
         longTasks: [],
-        phaseStack: []
+        phaseStack: [],
+        interactionDepth: 0,
+        interactionEpoch: 0,
+        interactionLabel: ''
     };
 
     function now() {
@@ -156,11 +159,16 @@
             timerId: 0,
             frameId: 0,
             idleId: 0,
-            cancelled: false
+            cancelled: false,
+            background: options.lane === 'background' || options.idle === true
         };
 
         const run = () => {
             if (item.cancelled) return;
+            if (item.background && state.interactionDepth > 0) {
+                item.timerId = window.setTimeout(arm, 48);
+                return;
+            }
             state.scheduled.delete(key);
             try {
                 task();
@@ -334,6 +342,23 @@
         return stack.length ? stack[stack.length - 1].label : '';
     }
 
+    function beginInteraction(label = 'interaction') {
+        state.interactionDepth += 1;
+        state.interactionEpoch += 1;
+        state.interactionLabel = String(label || 'interaction').trim() || 'interaction';
+        const epoch = state.interactionEpoch;
+        let ended = false;
+        return function endInteraction() {
+            if (ended) return epoch;
+            ended = true;
+            state.interactionDepth = Math.max(0, state.interactionDepth - 1);
+            if (state.interactionDepth === 0) {
+                state.interactionLabel = '';
+            }
+            return epoch;
+        };
+    }
+
     function beginPhase(label) {
         const name = String(label || '').trim();
         if (!name) return () => {};
@@ -416,6 +441,9 @@
             inflight: state.inflight.size,
             scheduled: state.scheduled.size,
             cached: state.cache.size,
+            interactionDepth: state.interactionDepth,
+            interactionEpoch: state.interactionEpoch,
+            interactionLabel: state.interactionLabel,
             cloudPatched: patchCloudManager(),
             longTasks: state.longTasks.slice()
         };
@@ -431,6 +459,7 @@
         getSnapshot,
         beginPhase,
         currentPhase,
+        beginInteraction,
         yieldToMain,
         runChunked
     };

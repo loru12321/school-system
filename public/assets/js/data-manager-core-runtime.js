@@ -85,6 +85,9 @@ const DataManager = {
             return alert("⛔ 权限不足：只有管理员或教务主任可操作底层数据。");
         }
 
+        if ((initialTab || 'student') === 'cloud' && typeof window.ensureOptionalStylesheetLoaded === 'function') {
+            window.ensureOptionalStylesheetLoaded('cloud-archive-visibility', './assets/css/cloud-archive-visibility.css').catch(() => {});
+        }
         document.getElementById('data-manager-modal').style.display = 'flex';
         this.switchTab(initialTab || 'student');
         if ((initialTab || 'student') !== 'cloud' && typeof this.syncSchoolAliasSettingsFromGateway === 'function') {
@@ -421,8 +424,21 @@ const DataManager = {
 
     switchTab: function (tab) {
         if (tab === 'history') tab = 'student';
+        if (tab === 'cloud' && typeof window.ensureOptionalStylesheetLoaded === 'function') {
+            window.ensureOptionalStylesheetLoaded('cloud-archive-visibility', './assets/css/cloud-archive-visibility.css').catch(() => {});
+        }
         this.currentTab = tab;
         this.pagination.page = 1;
+        const endTabInteraction = window.SystemPerformance && typeof window.SystemPerformance.beginInteraction === 'function'
+            ? window.SystemPerformance.beginInteraction(`data-manager:${tab}`)
+            : () => {};
+        const finishInteraction = () => {
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(() => window.requestAnimationFrame(endTabInteraction));
+            } else {
+                window.setTimeout(endTabInteraction, 32);
+            }
+        };
         this.decorateLayout();
         const searchInput = document.getElementById('dm-search-input');
         if (searchInput) searchInput.value = '';
@@ -469,12 +485,6 @@ const DataManager = {
         if (cloudArea) cloudArea.style.display = tab === 'cloud' ? 'flex' : 'none';
 
 
-        if (tab === 'cloud') {
-            const manager = this;
-            window.setTimeout(() => {
-                if (manager.currentTab === 'cloud') manager.renderCloudBackups();
-            }, 0);
-        }
         if (tab === 'sql') {
             if (typeof this.renderSQLHistory === 'function') {
                 this.renderSQLHistory();
@@ -508,25 +518,45 @@ const DataManager = {
             this.updateTeacherSchoolSelect();
             this.renderTeacherTermSelect();
 
-            setTimeout(() => {
+            const renderTeacherTab = () => {
+                if (this.currentTab !== 'teacher') return;
                 const termId = getPreferredTeacherTermId() || buildTeacherTermId(getExamMetaFromUI());
                 if (termId) {
                     const sel = document.getElementById('dm-teacher-term-select');
                     if (sel) sel.value = termId;
-                    DataManager.switchTeacherTerm(termId);
+                    DataManager.switchTeacherTerm(termId, { render: false, refreshAnalysis: false });
                 }
-            }, 50);
+                if (this.currentTab === 'teacher') this.renderTeachers();
+            };
+            if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
+                window.SystemPerformance.scheduleTask('data-manager-tab-render', renderTeacherTab, { frame: true });
+            } else {
+                window.setTimeout(renderTeacherTab, 0);
+            }
         }
 
         if (tab === 'exams') {
             this.ensureExamBatchesHydrated();
         }
 
-        this.renderCurrentTab();
+        if (tab !== 'teacher') {
+            const manager = this;
+            const renderRequestedTab = () => {
+                if (manager.currentTab !== tab) return;
+                if (tab === 'cloud') manager.renderCloudBackups();
+                else manager.renderCurrentTab();
+            };
+            if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
+                window.SystemPerformance.scheduleTask('data-manager-tab-render', renderRequestedTab, { frame: true });
+            } else {
+                window.setTimeout(renderRequestedTab, 0);
+            }
+        }
         if (tab !== 'params') {
             this.scheduleDataManagerStatusRender();
         }
         this.updateCloudPanelView();
+        finishInteraction();
     },
 
     getCloudRecordKind: function (key) {
@@ -1748,7 +1778,6 @@ const DataManager = {
     renderTeachers: function () {
         const tbody = document.querySelector('#dm-teacher-table tbody');
         if (!tbody) return;
-        tbody.innerHTML = '';
 
         const sel = document.getElementById('dm-teacher-school-select');
         const selectedSchool = sel ? sel.value : "";
@@ -1763,6 +1792,14 @@ const DataManager = {
         this.renderTeacherContextStatus();
 
         const inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
+        const teacherRenderSignature = [
+            termSel ? termSel.value : '',
+            selectedSchool,
+            inferredSchool,
+            Object.entries(TEACHER_MAP || {}).map(([key, value]) => `${key}:${value}`).join('|'),
+            Object.entries(window.TEACHER_SCHOOL_MAP || {}).map(([key, value]) => `${key}:${value}`).join('|')
+        ].join('::');
+        if (tbody.dataset.teacherRenderSignature === teacherRenderSignature) return;
         // 任课表仅维护本校教师。已有显式学校或本校上下文时，不再扫描 7790 条
         // 成绩去反推每个班级所属学校；仅在两者都缺失时才构建班级映射。
         const needsClassSchoolFallback = !inferredSchool && Object.keys(window.TEACHER_SCHOOL_MAP || {}).length === 0;
@@ -1866,6 +1903,7 @@ const DataManager = {
             }
             tbody.innerHTML = teacherRowsHtml.join('');
         }
+        tbody.dataset.teacherRenderSignature = teacherRenderSignature;
     },
 
 

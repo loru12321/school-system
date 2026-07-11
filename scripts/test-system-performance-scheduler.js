@@ -63,6 +63,7 @@ async function wait(ms) {
   const scheduler = fakeWindow.SystemPerformance;
   assert.strictEqual(typeof scheduler.scheduleTask, 'function');
   assert.strictEqual(typeof scheduler.clearScheduledTask, 'function');
+  assert.strictEqual(typeof scheduler.beginInteraction, 'function');
 
   const replaceRuns = [];
   scheduler.scheduleTask('replace-me', () => replaceRuns.push('first'), { delay: 30 });
@@ -86,6 +87,22 @@ async function wait(ms) {
   scheduler.scheduleTask('idle-task', () => idleRuns.push('idle'), { idle: true, timeout: 20 });
   await wait(30);
   assert.deepStrictEqual(idleRuns, ['idle']);
+
+  const interactionRuns = [];
+  const endInteraction = scheduler.beginInteraction('test-click');
+  scheduler.scheduleTask('interaction-background', () => interactionRuns.push('background'), {
+    idle: true,
+    lane: 'background',
+    timeout: 20
+  });
+  scheduler.scheduleTask('interaction-visible', () => interactionRuns.push('visible'), { frame: true });
+  await wait(30);
+  assert.deepStrictEqual(interactionRuns, ['visible']);
+  assert.strictEqual(scheduler.getSnapshot().interactionDepth, 1);
+  endInteraction();
+  await wait(80);
+  assert.deepStrictEqual(interactionRuns, ['visible', 'background']);
+  assert.strictEqual(scheduler.getSnapshot().interactionDepth, 0);
 
   let cohortFetches = 0;
   fakeWindow.CloudManager.fetchCohortExamsToLocal = () => new Promise((resolve) => {
