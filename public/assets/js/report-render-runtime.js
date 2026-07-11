@@ -407,10 +407,8 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
     const townColStyle = hasTownshipRankData ? '' : 'display:none !important;';
     const countyColStyle = showCountyRank ? '' : 'display:none !important;';
 
-    // 构建表格行
     let tableRows = '';
 
-    // A. 9年级五科总分行 (逻辑保持不变)
     if (CONFIG.name === '9年级') {
         let fiveTotal = 0, count = 0;
         ['语文', '数学', '英语', '物理', '化学'].forEach(sub => {
@@ -428,7 +426,6 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         }
     }
 
-        // B. 总分行 — 用统一的联动科目集展示总分，避免把政治混入9年级总分口径
         const comparisonTotalSubjects = getComparisonTotalSubjects();
         const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
         const totalLabel = (CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label;
@@ -459,8 +456,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
             }
 
-            const curClassR = displayRankValue(safeGet(reportStu, `ranks.${sub}.class`, '-'), showClassRank);
-            const tClass = showClassRank ? getTrendBadge(curClassR, prevRanks.class || '-', 'rank') : '';
+            const curClassR = displayRankValue(safeGet(reportStu, `ranks.${sub}.class`, '-'), showClassRank), tClass = showClassRank ? getTrendBadge(curClassR, prevRanks.class || '-', 'rank') : '';
             const curSR = safeGet(reportStu, `ranks.${sub}.school`, '-');
             const tS = getTrendBadge(curSR, prevRanks.school || '-', 'rank');
             const curTR = displayRankValue(safeGet(reportStu, `ranks.${sub}.township`, '-'), showTownRank);
@@ -471,8 +467,8 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}
-                    ${renderResponsiveTableCell('成绩（对比）', `${stuScores[sub]} <span style="font-size:11px; color:#94a3b8;">上次 ${prevSubScore}</span> ${subTrend}`, 'font-weight:bold; color:#334155;')}
-                    ${renderResponsiveTableCell('班级排名', `${curClassR} <span style="font-size:0.9em;">${tClass}</span>`, 'color:#64748b;')}
+                    ${renderResponsiveTableCell('成绩（对比）', `${stuScores[sub]}（上次 ${prevSubScore}）${subTrend}`, 'font-weight:bold;color:#334155;')}
+                    ${renderResponsiveTableCell('班级排名', `${curClassR} ${tClass}`, 'color:#64748b;')}
                     ${renderResponsiveTableCell('校级排名', `${curSR} <span style="font-size:0.9em;">${tS}</span>`, 'color:#64748b;')}
                     ${renderResponsiveTableCell('全镇排名', `${curTR} <span style="font-size:0.9em;">${tT}</span>`, `color:#64748b; ${townColStyle}`)}
                     ${renderResponsiveTableCell('全县排名', `${showCountyRank ? curCountyR : '-'} <span style="font-size:0.9em;">${tCounty}</span>`, `color:#64748b; ${countyColStyle}`)}

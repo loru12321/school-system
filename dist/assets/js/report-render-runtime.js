@@ -14,8 +14,8 @@
             ${d("全县排名",`${j?Q:"-"} ${oe}`,`${lt} font-weight:bold; color:#334155;`)}
         </tr>`,[...new Set(SUBJECTS)].forEach(t=>{if(K[t]!==void 0){const n=x&&x.scores?kt(x.scores[t]):"-",l=S(K[t],n,"score");let i=Y(x&&x.ranks?x.ranks[t]:null);i.class==="-"&&i.school==="-"&&i.township==="-"&&m&&m.ranks&&m.ranks[t]&&(i=Y(m.ranks[t]));const y=A(safeGet(c,`ranks.${t}.class`,"-"),O),f=O?S(y,i.class||"-","rank"):"",w=safeGet(c,`ranks.${t}.school`,"-"),v=S(w,i.school||"-","rank"),b=A(safeGet(c,`ranks.${t}.township`,"-"),R),$=R?S(b,i.township||"-","rank"):"",E=getStudentCountyRankValue(c,t),N=Z(k,x,t,"county"),I=j&&tt(x,t,k)?S(E,N||"-","rank"):"";ct+=`<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${d("科目",t,"font-weight:600; color:#475569;")}
-                    ${d("成绩（对比）",`${K[t]} <span style="font-size:11px; color:#94a3b8;">上次 ${n}</span> ${l}`,"font-weight:bold; color:#334155;")}
-                    ${d("班级排名",`${y} <span style="font-size:0.9em;">${f}</span>`,"color:#64748b;")}
+                    ${d("成绩（对比）",`${K[t]}（上次 ${n}）${l}`,"font-weight:bold;color:#334155;")}
+                    ${d("班级排名",`${y} ${f}`,"color:#64748b;")}
                     ${d("校级排名",`${w} <span style="font-size:0.9em;">${v}</span>`,"color:#64748b;")}
                     ${d("全镇排名",`${b} <span style="font-size:0.9em;">${$}</span>`,`color:#64748b; ${G}`)}
                     ${d("全县排名",`${j?E:"-"} <span style="font-size:0.9em;">${I}</span>`,`color:#64748b; ${lt}`)}
