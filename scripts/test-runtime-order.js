@@ -1056,6 +1056,8 @@ assert.ok(
 assert.ok(
     moduleEntryRuntime.includes('function restoreTeacherMapFromLocalHistory()')
         && moduleEntryRuntime.includes('window.DataManager.ensureTeacherMap(false);')
+        && moduleEntryRuntime.includes('function ensureTeacherAnalysisSectionLoaded()')
+        && moduleEntryRuntime.includes("section.dataset.lazySectionPlaceholder !== '1'")
         && moduleEntryRuntime.includes('function renderTeacherAnalysisAfterRuntimeReady()')
         && moduleEntryRuntime.includes('if (ready && isTeacherAnalysisActive()) renderTeacherAnalysisAfterRuntimeReady();'),
     'teaching management entry should restore local teacher history before cloud access and rerender after late runtime/data readiness'

@@ -441,8 +441,38 @@
         return !!(window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0);
     }
 
+    function ensureTeacherAnalysisSectionLoaded() {
+        let section = document.getElementById('teacher-analysis');
+        if (!section) return null;
+        if (section.dataset.lazySectionPlaceholder !== '1') return section;
+
+        const wasActive = section.classList.contains('active');
+        if (typeof window.ensureLazySectionLoaded === 'function') {
+            const loaded = window.ensureLazySectionLoaded('teacher-analysis');
+            section = loaded || document.getElementById('teacher-analysis');
+        }
+        if (!section || section.dataset.lazySectionPlaceholder !== '1') {
+            if (wasActive && section) section.classList.add('active');
+            return section;
+        }
+
+        const templateId = String(section.dataset.lazySectionTemplate || 'lazy-section-template-teacher-analysis').trim();
+        const templateNode = document.getElementById(templateId);
+        const html = String(templateNode?.textContent || '').trim();
+        if (!html) return section;
+        const parser = document.createElement('template');
+        parser.innerHTML = html;
+        const replacement = parser.content.firstElementChild;
+        if (!replacement || replacement.id !== 'teacher-analysis') return section;
+        if (wasActive) replacement.classList.add('active');
+        section.replaceWith(replacement);
+        templateNode.remove();
+        return replacement;
+    }
+
     function renderTeacherAnalysisAfterRuntimeReady() {
         const render = () => {
+            ensureTeacherAnalysisSectionLoaded();
             if (!isTeacherAnalysisActive()) return false;
             if (typeof window.analyzeTeachers !== 'function') {
                 renderTeacherAnalysisEmptyState();
@@ -761,9 +791,7 @@
 
     function initTeacherAnalysisEntry() {
         clearTeacherAnalysisDeferredRender();
-        if (typeof window.ensureLazySectionLoaded === 'function') {
-            window.ensureLazySectionLoaded('teacher-analysis');
-        }
+        ensureTeacherAnalysisSectionLoaded();
         if (typeof window.TeachingManagementModulesRuntime?.ensureTeacherTownshipRankingSlotReady === 'function') {
             window.TeachingManagementModulesRuntime.ensureTeacherTownshipRankingSlotReady();
         } else if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') {

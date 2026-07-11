@@ -2354,16 +2354,24 @@ async function runModuleDeepCheck(page, id) {
         // block the same browser thread this smoke test is trying to measure.
         return page.evaluate(async () => {
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            if (typeof window.runModuleTabEnter === 'function') {
+                await Promise.resolve(window.runModuleTabEnter({ id: 'teacher-analysis' })).catch(() => false);
+            }
             const deadline = Date.now() + 5500;
             const expectsTeacherData = location.hostname === 'schoolsystem.com.cn';
             let state = null;
             while (Date.now() < deadline) {
                 const section = document.getElementById('teacher-analysis');
                 const teacherMapCount = Object.keys(window.TEACHER_MAP || {}).length;
+                const comparisonTable = document.getElementById('teacherComparisonTable');
                 state = {
                     sectionReady: !!section,
                     sectionActive: !!section?.classList.contains('active'),
-                    comparisonTableReady: !!document.getElementById('teacherComparisonTable'),
+                    sectionLazyPlaceholder: section?.dataset?.lazySectionPlaceholder === '1',
+                    sectionHtmlLength: Number(section?.innerHTML?.length || 0),
+                    comparisonTableReady: !!comparisonTable,
+                    comparisonTableParentId: String(comparisonTable?.parentElement?.id || ''),
+                    teacherDetailSlotReady: !!document.getElementById('teacher-detail-comparison-slot'),
                     teacherMapReady: teacherMapCount > 0,
                     teacherMapCount,
                     analysisRuntimeReady: typeof window.analyzeTeachers === 'function',
