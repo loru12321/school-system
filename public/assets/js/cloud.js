@@ -2382,6 +2382,41 @@
         return cloudLoadPromise;
     };
 
+    let indicatorSupportLoadPromise = null;
+    window.loadIndicatorSupportFromCloud = () => {
+        if (indicatorSupportLoadPromise) return indicatorSupportLoadPromise;
+        indicatorSupportLoadPromise = (async () => {
+            if (!(await CloudManager.ensureClientReady())) return false;
+            const cohortId = normalizeCohortId(getCurrentCohortId());
+            if (!cohortId) return false;
+            const payload = await loadSnapshotPayloadByKey(`cohort::${cohortId}`);
+            if (!payload || typeof payload !== 'object') return false;
+
+            const targets = payload.TARGETS && typeof payload.TARGETS === 'object' ? payload.TARGETS : {};
+            const indicator = normalizeIndicatorParams(payload.INDICATOR_PARAMS);
+            let changed = false;
+            if (Object.keys(targets).length > 0 && typeof window.setTargetsState === 'function') {
+                window.setTargetsState(clonePayloadFragment(targets));
+                changed = true;
+            }
+            if ((indicator.ind1 || indicator.ind2 || indicator.highSchoolLine) && typeof window.setIndicatorState === 'function') {
+                window.setIndicatorState(indicator);
+                changed = true;
+            }
+            if (changed) {
+                if (typeof window.syncRuntimeStateToWindow === 'function') window.syncRuntimeStateToWindow();
+                if (typeof window.updateIndicatorUIState === 'function') window.updateIndicatorUIState();
+            }
+            return changed;
+        })().catch((error) => {
+            console.warn('[Indicator] lightweight support restore failed:', error);
+            return false;
+        }).finally(() => {
+            indicatorSupportLoadPromise = null;
+        });
+        return indicatorSupportLoadPromise;
+    };
+
     window.getUniqueExamKey = () => CloudManager.getKey();
     window.saveCloudSnapshot = (options = {}) => CloudManager.save(options);
 

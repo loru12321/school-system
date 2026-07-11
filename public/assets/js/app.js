@@ -6865,7 +6865,7 @@ function setIndicatorSyncTip(text = '') {
 
 async function ensureIndicatorWorkspaceFromCloud(reason = 'indicator-refresh', timeoutMs = 12000) {
     if (hasIndicatorCalcInputs() && isIndicatorCalcAllowed()) return true;
-    if (!isIndicatorPromptAllowed() || typeof loadCloudData !== 'function') return false;
+    if (!isIndicatorPromptAllowed() || typeof window.loadIndicatorSupportFromCloud !== 'function') return false;
     const currentUser = (window.Auth && window.Auth.currentUser) || null;
     if (currentUser?.local_only) return false;
 
@@ -6877,7 +6877,7 @@ async function ensureIndicatorWorkspaceFromCloud(reason = 'indicator-refresh', t
     setIndicatorSyncTip('正在从云端同步指标生参数和目标人数...');
     IndicatorCloudInputState.key = key;
     IndicatorCloudInputState.promise = Promise.race([
-        Promise.resolve(loadCloudData({ refresh: true })),
+        Promise.resolve(window.loadIndicatorSupportFromCloud()),
         new Promise((resolve) => setTimeout(() => resolve(false), Math.max(3000, Number(timeoutMs) || 12000)))
     ])
         .then(() => {

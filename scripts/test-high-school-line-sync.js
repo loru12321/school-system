@@ -331,6 +331,12 @@ assert.ok(
     'cloud.js: workspace-level TEACHER_MAP must seed empty current exam teacherMap and teachingHistory during restore'
 );
 assert.ok(
+    cloudSource.includes('window.loadIndicatorSupportFromCloud = () =>')
+        && cloudSource.includes('loadSnapshotPayloadByKey(`cohort::${cohortId}`)')
+        && !/function ensureIndicatorWorkspaceFromCloud[\s\S]*loadCloudData\(\{ refresh: true \}\)/.test(appSource),
+    'indicator support restore must use lightweight cohort metadata instead of reapplying the full score snapshot'
+);
+assert.ok(
     cloudSource.includes('const preferredTeacherMap = preferredCurrentExamPayload.teacherMap')
         && cloudSource.includes('Object.keys(preferredTeacherMap).length > 0'),
     'cloud.js: empty compact exam teacherMap must not overwrite workspace-level TEACHER_MAP'
