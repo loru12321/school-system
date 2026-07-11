@@ -480,6 +480,7 @@ var Auth = {
                         || document.getElementById('login-cohort-select')?.value
                         || restoredCohortId
                         || (typeof getRememberedUserCohort === 'function' && getRememberedUserCohort())
+                        || window.BootCohortLifecycle?.getLoginCohortYears?.()?.[0]
                         || ''
                     ).trim();
                     const enterSessionCohort = typeof enterCohortFromMask === 'function'

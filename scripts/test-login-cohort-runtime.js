@@ -147,6 +147,10 @@ assert.ok(
     'an authenticated session should restore the last user cohort when runtime cohort state is empty'
 );
 assert.ok(
+    authLoginSource.includes("window.BootCohortLifecycle?.getLoginCohortYears?.()?.[0]"),
+    'a session without a saved preference should enter the current grade 9 cohort'
+);
+assert.ok(
     cohortMetaSource.includes('function getRememberedUserCohort()')
         && cohortMetaSource.includes('window.getRememberedUserCohort = getRememberedUserCohort;')
         && /if \(saved !== current\) \{\s*ensureCohortRegistered\(saved\);\s*CohortManager\.switchTo\(saved\);/.test(cohortMetaSource),
