@@ -2,6 +2,15 @@ const assert = require('assert');
 const path = require('path');
 
 const createDataManagerTeacherRuntime = require(path.resolve(__dirname, '../public/assets/js/data-manager-teacher-runtime.js'));
+const fs = require('fs');
+const coreSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/data-manager-core-runtime.js'), 'utf8');
+
+assert.ok(
+    coreSource.includes('const needsClassSchoolFallback = !inferredSchool')
+        && coreSource.includes("} else if (inferredSchool) {")
+        && coreSource.includes('? getClassSchoolMapForAllData()'),
+    'teacher table should use the known local school before scanning all score rows for class ownership'
+);
 
 async function run() {
     let cohortIdSet = '';

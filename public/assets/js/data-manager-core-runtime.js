@@ -1762,8 +1762,13 @@ const DataManager = {
         }
         this.renderTeacherContextStatus();
 
-        const classSchoolMap = (typeof getClassSchoolMapForAllData === 'function') ? getClassSchoolMapForAllData() : {};
         const inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
+        // 任课表仅维护本校教师。已有显式学校或本校上下文时，不再扫描 7790 条
+        // 成绩去反推每个班级所属学校；仅在两者都缺失时才构建班级映射。
+        const needsClassSchoolFallback = !inferredSchool && Object.keys(window.TEACHER_SCHOOL_MAP || {}).length === 0;
+        const classSchoolMap = needsClassSchoolFallback && typeof getClassSchoolMapForAllData === 'function'
+            ? getClassSchoolMapForAllData()
+            : {};
 
         let list = Object.entries(TEACHER_MAP).map(([key, name]) => {
             const parts = key.split('_');
@@ -1775,6 +1780,8 @@ const DataManager = {
             const normalizedClass = normalizeClass(clsName);
             if (explicitSchool) {
                 schoolName = explicitSchool;
+            } else if (inferredSchool) {
+                schoolName = inferredSchool;
             } else if (normalizedClass && classSchoolMap[normalizedClass]) {
                 schoolName = classSchoolMap[normalizedClass];
             } else if (typeof SCHOOLS !== 'undefined') {
@@ -1784,9 +1791,6 @@ const DataManager = {
                         break;
                     }
                 }
-            }
-            if ((schoolName === '未知/未上传') && inferredSchool) {
-                schoolName = inferredSchool;
             }
             return { key, class: clsName, subject, name, school: schoolName };
         });
