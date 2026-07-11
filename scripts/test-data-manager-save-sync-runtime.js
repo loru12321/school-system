@@ -104,6 +104,12 @@ async function run() {
     await runtime.saveAndSync(manager);
     assert.strictEqual(alerts.some((msg) => msg.includes('保存失败')), true);
 
+    root.SAVE_SYNC_TIMEOUT_MS = 100;
+    root.saveCloudData = () => new Promise(() => {});
+    await runtime.saveAndSync(manager);
+    assert.strictEqual(alerts.some((msg) => msg.includes('云端同步超时')), true);
+    assert.strictEqual(loadingCalls[loadingCalls.length - 1].show, false);
+
     console.log('data-manager-save-sync-runtime tests passed');
 }
 

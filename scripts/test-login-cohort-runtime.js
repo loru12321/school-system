@@ -141,5 +141,11 @@ assert.ok(
         && authLoginSource.includes('!sessionCohortRestoreScheduled && !this.currentUser.local_only'),
     'an existing authenticated session with an empty workspace identity must re-enter the selected cohort instead of loading an unscoped cloud workspace'
 );
+assert.ok(
+    authLoginSource.includes("data.display_name || data.teacher_name || user || '用户'")
+        && authLoginSource.includes("const accountDisplayName = String(")
+        && authLoginSource.includes('title="退出登录 (${accountDisplayName})"'),
+    'login and account actions must never render an undefined user display name'
+);
 
 console.log('login cohort runtime tests passed');

@@ -16,6 +16,15 @@
         if (typeof root.alert === 'function') root.alert(String(text || ''));
     }
 
+    function withSaveTimeout(promise) {
+        const timeoutMs = Math.max(100, Number(root.SAVE_SYNC_TIMEOUT_MS) || 30000);
+        const schedule = typeof root.setTimeout === 'function' ? root.setTimeout.bind(root) : setTimeout;
+        return Promise.race([
+            Promise.resolve(promise),
+            new Promise((_, reject) => schedule(() => reject(new Error('云端同步超时，修改已保存在本地并进入重试队列')), timeoutMs))
+        ]);
+    }
+
     async function saveAndSync(manager) {
         if (!manager) return;
 
@@ -58,7 +67,9 @@
             if (typeof root.saveCloudData !== 'function') {
                 throw new Error('saveCloudData unavailable');
             }
-            const ok = await root.saveCloudData({ background: false, forceUpload: true, sourceLabel: 'save-and-sync' });
+            const ok = await withSaveTimeout(
+                root.saveCloudData({ background: false, forceUpload: true, sourceLabel: 'save-and-sync' })
+            );
             if (!ok) throw new Error('云端同步失败');
 
             if (root.UI && typeof root.UI === 'object' && typeof root.UI.loading === 'function') {

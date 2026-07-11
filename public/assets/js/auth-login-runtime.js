@@ -617,7 +617,8 @@ var Auth = {
 
             const matchedUser = {
                 session_id: data.session_id || '',
-                name: data.username || data.name,
+                name: data.username || data.name || data.display_name || data.teacher_name || user || '用户',
+                username: data.username || data.name || user || '',
                 role: data.role, // 主角色（兼容）
                 roles: data.roles || [data.role], // 🆕 支持多角色数组
                 school: data.school,
@@ -938,13 +939,19 @@ var Auth = {
 
         if (accountActionsContainer) {
             accountActionsContainer.innerHTML = ''; // 清空重新渲染
+            const accountDisplayName = String(
+                this.currentUser?.name
+                || this.currentUser?.username
+                || this.currentUser?.teacher_name
+                || '用户'
+            ).trim() || '用户';
 
             accountActionsContainer.innerHTML = `
                 <button class="btn" onclick="openUserPasswordModal()" style="background:transparent; border:none; color:var(--text-color); font-size: 22px; padding: 8px; border-radius: 50%; display:flex; align-items:center; justify-content:center; width:40px; height:40px;" title="修改密码">
                     <i class="ti ti-key"></i>
                 </button>
-                <div onclick="Auth.logout()" style="cursor:pointer; background:var(--primary); color:white; font-size: 16px; font-weight:bold; border-radius: 50%; display:flex; align-items:center; justify-content:center; width:36px; height:36px; margin-left:8px;" title="退出登录 (${this.currentUser.name})">
-                    ${this.currentUser.name ? this.currentUser.name.charAt(0).toUpperCase() : 'U'}
+                <div onclick="Auth.logout()" style="cursor:pointer; background:var(--primary); color:white; font-size: 16px; font-weight:bold; border-radius: 50%; display:flex; align-items:center; justify-content:center; width:36px; height:36px; margin-left:8px;" title="退出登录 (${accountDisplayName})">
+                    ${accountDisplayName.charAt(0).toUpperCase()}
                 </div>
             `;
         }
