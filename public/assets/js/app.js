@@ -9490,11 +9490,21 @@ async function openTeacherSync() {
     const user = getCurrentUser();
     const role = user?.role || 'guest';
     const preferredTerm = getPreferredTeacherTermId() || pickAutoTeacherTerm();
+    const canManageTeachers = role !== 'teacher' && role !== 'class_teacher';
+    const openTeacherManager = () => {
+        if (!canManageTeachers) return false;
+        if (window.DataManager && typeof DataManager.open === 'function') {
+            DataManager.open('teacher');
+            return true;
+        }
+        return false;
+    };
 
     try {
         if (preferredTerm && applyTeacherTermWithoutPrompt(preferredTerm)) {
             if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
             if (window.UI) UI.toast(`已恢复 ${preferredTerm} 的任课表`, 'success');
+            openTeacherManager();
             return;
         }
 
@@ -9504,11 +9514,13 @@ async function openTeacherSync() {
             if (preferredTerm && applyTeacherTermWithoutPrompt(preferredTerm)) {
                 if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
                 if (window.UI) UI.toast(`已从云端恢复 ${preferredTerm} 的任课表`, 'success');
+                openTeacherManager();
                 return;
             }
             if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
                 if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
                 if (window.UI) UI.toast('任课表已同步到当前页面', 'success');
+                openTeacherManager();
                 return;
             }
         }
@@ -9518,9 +9530,7 @@ async function openTeacherSync() {
             return;
         }
 
-        if (window.DataManager && typeof DataManager.open === 'function') {
-            DataManager.open('teacher');
-        } else {
+        if (!openTeacherManager()) {
             switchTab('upload');
         }
     } catch (err) {

@@ -1044,6 +1044,12 @@ assert.ok(
     'teacher maintenance should show the active cohort/term, confirm imports, and expose an explicit teacher replacement flow'
 );
 assert.ok(
+    appSource.includes("const openTeacherManager = () => {")
+        && appSource.includes("DataManager.open('teacher');")
+        && appSource.includes('openTeacherManager();'),
+    'starter teacher shortcut should open the editable teacher manager after restoring or syncing assignments'
+);
+assert.ok(
     dataCloudRuntime.includes('<strong>当前参数归属：</strong>')
         && dataCloudRuntime.includes('参数按届别单独保存；切换到另一届后，会读取另一届自己的指标参数。'),
     'indicator parameter status should identify the active cohort, school year, term, and grade'
