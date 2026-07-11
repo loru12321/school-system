@@ -675,6 +675,18 @@
         state.renderCache.clear();
     }
 
+    function releaseCountyAnalysisHeavyDom() {
+        ['county-teacher-portrait', 'county-school-horizontal'].forEach((id) => {
+            const section = document.getElementById(id);
+            if (!section || section.classList.contains('active')) return;
+            const root = getCountyRootForSubmodule(id);
+            if (!root || !String(root.innerHTML || '').trim()) return;
+            root.replaceChildren();
+            delete root.dataset.countyRenderFastSignature;
+            clearCountyRenderCache(id);
+        });
+    }
+
     function getScopedTeacherAssignmentsForCounty() {
         const teacherMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
         const schoolMap = window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
@@ -2386,9 +2398,11 @@
         buildCountyTeacherStats,
         exportCountyAnalysisSection,
         setCountyAnalysisSchoolNameFromInput,
-        generateCountySchoolHorizontalTable
+        generateCountySchoolHorizontalTable,
+        releaseCountyAnalysisHeavyDom
     };
     window.renderCountyAnalysis = renderCountyAnalysis;
+    window.releaseCountyAnalysisHeavyDom = releaseCountyAnalysisHeavyDom;
     window.exportCountyAnalysisSection = exportCountyAnalysisSection;
     window.setCountyAnalysisSchoolNameFromInput = setCountyAnalysisSchoolNameFromInput;
     window.generateCountySchoolHorizontalTable = generateCountySchoolHorizontalTable;

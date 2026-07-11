@@ -3884,6 +3884,7 @@ function closeBlockingModalsBeforeModuleSwitch() {
 }
 
 function switchTab(id) {
+    const previousModuleId = ModuleSwitchPerfCache.activeId;
     if (id === 'school-internal-grades') {
         console.warn('school-internal-grades has been removed; redirecting to exam-arranger');
         id = 'exam-arranger';
@@ -3921,6 +3922,15 @@ function switchTab(id) {
     const teacherInsightModuleIds = ['teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking'];
     if (!teacherInsightModuleIds.includes(id) && typeof window.releaseTeacherAnalysisHeavyDom === 'function') {
         window.setTimeout(() => window.releaseTeacherAnalysisHeavyDom(), 0);
+    }
+    if (previousModuleId && previousModuleId !== id
+        && !['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'].includes(id)
+        && typeof window.releaseCountyAnalysisHeavyDom === 'function') {
+        window.setTimeout(() => window.releaseCountyAnalysisHeavyDom(), 0);
+    }
+    if (previousModuleId === 'cohort-growth' && id !== 'cohort-growth'
+        && typeof window.CohortGrowth?.releaseHeavyDom === 'function') {
+        window.setTimeout(() => window.CohortGrowth.releaseHeavyDom(), 0);
     }
     const targetSection = getModuleSectionById(id);
     if (!targetSection) {

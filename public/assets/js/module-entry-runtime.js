@@ -49,6 +49,8 @@
     const TEACHER_ANALYSIS_PHASE_LABELS = TEACHER_ANALYSIS_ENTRY_LABELS.concat(TEACHER_ANALYSIS_RENDER_LABELS);
     const fallbackScheduledTasks = new Map();
     let teacherAnalysisRenderToken = 0;
+    let moduleEntryEpoch = 0;
+    let lastModuleEntry = { id: '', at: 0, promise: null };
 
     function getModuleTaskKey(label) {
         return `module-entry:${String(label || 'task').trim()}`;
@@ -895,6 +897,10 @@
             if (!document.getElementById('cohort-growth')?.classList.contains('active')) return false;
             if (window.CohortGrowth && typeof window.CohortGrowth.updateScopeControls === 'function') {
                 window.CohortGrowth.updateScopeControls();
+                if (window.CohortGrowth.cacheSignature) {
+                    window.CohortGrowth.renderVolatility(window.CohortGrowth.cache.volatility);
+                    window.CohortGrowth.renderGrowth(window.CohortGrowth.cache.growth);
+                }
             }
             return true;
         };
@@ -1224,11 +1230,19 @@
         const id = String(context.id || '').trim();
         if (!id) return Promise.resolve(false);
 
+        const now = Date.now();
+        if (lastModuleEntry.id === id && lastModuleEntry.promise && now - lastModuleEntry.at < 250) {
+            return lastModuleEntry.promise;
+        }
+        const entryEpoch = ++moduleEntryEpoch;
+
         syncModuleEnterChrome(context);
 
-        return Promise.resolve()
+        const entryPromise = Promise.resolve()
             .then(() => ensureModuleStylesFor(id))
             .then(() => {
+                const section = document.getElementById(id);
+                if (entryEpoch !== moduleEntryEpoch || !section?.classList.contains('active')) return false;
                 const runInit = () => runModuleSpecificInit(id);
                 const result = id === 'student-details'
                     ? scheduleModuleTaskPromise('student-details-enter-init', runInit, { delay: 40, frame: true })
@@ -1239,6 +1253,8 @@
                 console.error('runModuleTabEnter failed:', error);
                 return Promise.reject(error);
             });
+        lastModuleEntry = { id, at: now, promise: entryPromise };
+        return entryPromise;
     };
 
     window.activateTeachingManagementModule = activateTeachingManagementModule;

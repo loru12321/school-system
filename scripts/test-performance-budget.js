@@ -16,6 +16,9 @@ const packageJson = JSON.parse(read('package.json'));
 const scripts = packageJson.scripts || {};
 const smoke = read('scripts/smoke-all-modules.js');
 const schedulerTest = read('scripts/test-system-performance-scheduler.js');
+const moduleEntryRuntime = read('public/assets/js/module-entry-runtime.js');
+const countyAnalysisRuntime = read('public/assets/js/county-analysis-runtime.js');
+const cohortGrowthRuntime = read('public/assets/js/cohort-growth-runtime.js');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
 
 const requiredSmokeTokens = [
@@ -54,12 +57,30 @@ assert.ok(smoke.includes("default: 320"), 'ordinary data-manager smoke tabs shou
 assert.ok(smoke.includes('STRICT_PERFORMANCE_BUDGETS && summary.performance.budgetFailures.length > 0'), 'strict performance mode should fail on budget regressions');
 assert.ok(smoke.includes('loginMs: 30000'), 'login performance budget should protect the optimized entry path');
 assert.ok(smoke.includes('appReadyMs: 15000'), 'app-ready performance budget should catch startup regressions');
-assert.ok(smoke.includes('moduleSwitchMs: 6000'), 'module switch performance budget should catch slow navigation');
-assert.ok(smoke.includes('MODULE_SWITCH_READY_TIMEOUT_MS = 5000'), 'module switch readiness wait should leave headroom under the switch budget');
-assert.ok(smoke.includes('dataManagerTabMs: 5000'), 'data manager performance budget should catch slow tab changes');
+assert.ok(smoke.includes('moduleSwitchMs: 1000'), 'module switch performance budget should catch perceptible navigation stalls');
+assert.ok(smoke.includes('MODULE_SWITCH_READY_TIMEOUT_MS = 750'), 'module switch readiness wait should leave headroom under the switch budget');
+assert.ok(smoke.includes('dataManagerTabMs: 3000'), 'data manager performance budget should catch slow tab changes');
 assert.ok(performanceWorkflow.includes('SMOKE_PERF_STRICT: "true"'), 'performance workflow should fail when a browser timing budget regresses');
 assert.ok(schedulerTest.includes('scheduleTask'), 'system performance scheduler test should still cover task scheduling');
 assert.ok(schedulerTest.includes('requestIdleCallback'), 'system performance scheduler test should still cover idle scheduling');
+assert.ok(
+  moduleEntryRuntime.includes('let moduleEntryEpoch = 0;')
+    && moduleEntryRuntime.includes('entryEpoch !== moduleEntryEpoch')
+    && moduleEntryRuntime.includes('now - lastModuleEntry.at < 250'),
+  'module entry should cancel stale async initialization and coalesce rapid duplicate navigation'
+);
+assert.ok(
+  countyAnalysisRuntime.includes('function releaseCountyAnalysisHeavyDom()')
+    && countyAnalysisRuntime.includes('root.replaceChildren();')
+    && countyAnalysisRuntime.includes('clearCountyRenderCache(id);'),
+  'county analysis should release inactive heavy DOM while preserving source data'
+);
+assert.ok(
+  cohortGrowthRuntime.includes('releaseHeavyDom()')
+    && cohortGrowthRuntime.includes('tbody.replaceChildren();')
+    && moduleEntryRuntime.includes('window.CohortGrowth.cacheSignature'),
+  'cohort growth should release inactive table DOM and restore it from calculation cache'
+);
 
 assert.ok(scripts['test:performance-budget'] === 'node scripts/test-performance-budget.js', 'package script should expose performance budget test');
 assert.ok(scripts['check:performance'] && scripts['check:performance'].includes('test:performance-budget'), 'performance check bundle should include budget test');

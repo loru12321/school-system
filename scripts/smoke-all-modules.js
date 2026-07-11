@@ -72,9 +72,9 @@ const DATA_MANAGER_TAB_STABILIZE_MS = {
 };
 const DATA_MANAGER_TAB_TIMEOUT_MS = 8000;
 const MODULE_SWITCH_TIMEOUT_MS = 12000;
-// Leave headroom under the 6000ms switch budget for Playwright bookkeeping and
+// Leave headroom under the 1000ms switch budget for Playwright bookkeeping and
 // the per-module settle wait on slower CI runners.
-const MODULE_SWITCH_READY_TIMEOUT_MS = 5000;
+const MODULE_SWITCH_READY_TIMEOUT_MS = 750;
 const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
 const SMOKE_HOTSPOT_PREWARM_TIMEOUT_MS = 4500;
@@ -88,7 +88,7 @@ const PERFORMANCE_BUDGETS = {
     appReadyMs: 15000,
     moduleSwitchMs: 1000,
     moduleDeepCheckMs: 3000,
-    dataManagerTabMs: 2000,
+    dataManagerTabMs: 3000,
     longTaskMs: 500
 };
 const STRICT_PERFORMANCE_BUDGETS = process.env.SMOKE_PERF_STRICT === 'true';

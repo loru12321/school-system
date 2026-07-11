@@ -353,6 +353,16 @@
             }).join('');
         },
 
+        releaseHeavyDom() {
+            const section = root.document?.getElementById('cohort-growth');
+            if (!section || section.classList.contains('active')) return false;
+            ['#cohort-volatility-table tbody', '#cohort-growth-table tbody'].forEach((selector) => {
+                const tbody = root.document?.querySelector(selector);
+                if (tbody) tbody.replaceChildren();
+            });
+            return true;
+        },
+
         exportVolatility() {
             if (!this.cache.volatility || !this.cache.volatility.length) {
                 return root.alert ? root.alert('暂无可导出数据') : undefined;
