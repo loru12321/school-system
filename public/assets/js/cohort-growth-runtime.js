@@ -22,7 +22,15 @@
         schoolListSignature: '',
         schoolList: [],
         allRowsSignature: '',
-        allRows: []
+        allRows: [],
+        schoolRows: new Map(),
+        classOptions: new Map()
+    };
+
+    const CohortGrowthPerfCache = {
+        results: new Map(),
+        maxResults: 8,
+        studentKeys: new WeakMap()
     };
 
     function getRawCohortExams() {
@@ -52,6 +60,9 @@
             .sort((a, b) => Number(a?.createdAt || 0) - Number(b?.createdAt || 0));
         ScopeOptionCache.schoolListSignature = '';
         ScopeOptionCache.allRowsSignature = '';
+        ScopeOptionCache.schoolRows.clear();
+        ScopeOptionCache.classOptions.clear();
+        CohortGrowthPerfCache.results.clear();
         return ScopeOptionCache.exams;
     }
 
@@ -127,7 +138,22 @@
     function getRowsForSchool(school) {
         const rows = getAllCohortRows();
         if (isAllSchool(school)) return rows;
-        return rows.filter((row) => sameSchool(row?.school, school));
+        const normalizedSchool = normalizeText(school);
+        const cacheKey = `${ScopeOptionCache.allRowsSignature}::${normalizedSchool}`;
+        if (ScopeOptionCache.schoolRows.has(cacheKey)) return ScopeOptionCache.schoolRows.get(cacheKey);
+        const schoolRows = rows.filter((row) => sameSchool(row?.school, normalizedSchool));
+        ScopeOptionCache.schoolRows.set(cacheKey, schoolRows);
+        while (ScopeOptionCache.schoolRows.size > 32) {
+            ScopeOptionCache.schoolRows.delete(ScopeOptionCache.schoolRows.keys().next().value);
+        }
+        return schoolRows;
+    }
+
+    function setBoundedCache(cache, key, value, maxSize) {
+        if (cache.has(key)) cache.delete(key);
+        cache.set(key, value);
+        while (cache.size > maxSize) cache.delete(cache.keys().next().value);
+        return value;
     }
 
     function fillSelect(select, options, allLabel, oldValue) {
@@ -153,10 +179,19 @@
         const classSelect = root.document?.getElementById('cgClassSelect');
         if (!classSelect) return;
         const oldClass = classSelect.value;
-        const classes = getRowsForSchool(schoolValue)
-            .map((row) => row?.class)
-            .filter(Boolean)
-            .sort((left, right) => normalizeClassName(left).localeCompare(normalizeClassName(right), 'zh-Hans-CN', { numeric: true }));
+        const cacheKey = `${ScopeOptionCache.allRowsSignature || getCohortExamsSignature()}::${normalizeText(schoolValue || 'ALL')}`;
+        let classes = ScopeOptionCache.classOptions.get(cacheKey);
+        if (!classes) {
+            classes = Array.from(new Set(
+                getRowsForSchool(schoolValue)
+                    .map((row) => row?.class)
+                    .filter(Boolean)
+            )).sort((left, right) => normalizeClassName(left).localeCompare(normalizeClassName(right), 'zh-Hans-CN', { numeric: true }));
+            ScopeOptionCache.classOptions.set(cacheKey, classes);
+            while (ScopeOptionCache.classOptions.size > 32) {
+                ScopeOptionCache.classOptions.delete(ScopeOptionCache.classOptions.keys().next().value);
+            }
+        }
         fillSelect(classSelect, classes, '全部班级', oldClass);
     }
 
@@ -182,9 +217,12 @@
 
     function filterRowsByScope(rows, scope) {
         const selectedClass = normalizeClassName(scope?.className || '');
+        const allSchools = isAllSchool(scope?.school);
+        const allClasses = !selectedClass || selectedClass.toLowerCase() === 'all';
+        if (allSchools && allClasses) return Array.isArray(rows) ? rows : [];
         return (Array.isArray(rows) ? rows : []).filter((row) => {
-            if (!isAllSchool(scope?.school) && !sameSchool(row?.school, scope.school)) return false;
-            if (selectedClass && selectedClass.toLowerCase() !== 'all' && normalizeClassName(row?.class || '') !== selectedClass) return false;
+            if (!allSchools && !sameSchool(row?.school, scope.school)) return false;
+            if (!allClasses && normalizeClassName(row?.class || '') !== selectedClass) return false;
             return true;
         });
     }
@@ -202,6 +240,7 @@
     const CohortGrowthRuntime = {
         cache: { volatility: [], growth: [] },
         cacheSignature: '',
+        resultCache: CohortGrowthPerfCache.results,
         updateScopeControls,
         updateClassSelectForSchool,
         getRenderSignature(scope = getSelectedScope()) {
@@ -219,14 +258,12 @@
             }
             const scope = getSelectedScope();
             const signature = this.getRenderSignature(scope);
-            let result = this.cache;
-            if (this.cacheSignature === signature) {
-                result = this.cache;
-            } else {
-                result = this.compute(scope);
-            }
+            const result = this.cacheSignature === signature
+                ? this.cache
+                : (CohortGrowthPerfCache.results.get(signature) || this.compute(scope));
             this.cache = result;
             this.cacheSignature = signature;
+            setBoundedCache(CohortGrowthPerfCache.results, signature, result, CohortGrowthPerfCache.maxResults);
             this.renderVolatility(result.volatility);
             this.renderGrowth(result.growth);
             if (typeof root.refreshResponsiveMobileTables === 'function') {
@@ -250,7 +287,6 @@
                 const mean = totals.reduce((sum, total) => sum + total, 0) / totals.length;
                 const variance = totals.reduce((sum, total) => sum + Math.pow(total - mean, 2), 0) / totals.length;
                 const std = Math.sqrt(variance) || 1;
-
                 const sorted = validRows.slice().sort((a, b) => {
                     const scoreDiff = b.total - a.total;
                     return scoreDiff || a.index - b.index;
@@ -321,7 +357,7 @@
                 renderEmptyRow(tbody, 4, '暂无足够数据');
                 return;
             }
-            tbody.innerHTML = list.map((student) => `
+            const html = list.map((student) => `
                 <tr>
                     ${renderCell('姓名', escapeHtml(student.name))}
                     ${renderCell('班级', escapeHtml(student.class || '-'))}
@@ -329,6 +365,10 @@
                     ${renderCell('波动率(σ)', escapeHtml(Number(student.sigma).toFixed(2)), 'cohort-growth-metric cohort-growth-metric-volatility')}
                 </tr>
             `).join('');
+            if (tbody.__cgRenderHtml !== html) {
+                tbody.innerHTML = html;
+                tbody.__cgRenderHtml = html;
+            }
         },
 
         renderGrowth(list) {
@@ -338,7 +378,7 @@
                 renderEmptyRow(tbody, 5, '暂无足够数据');
                 return;
             }
-            tbody.innerHTML = list.map((student) => {
+            const html = list.map((student) => {
                 const delta = Number(student.delta) || 0;
                 const trendClass = delta >= 0 ? 'is-up' : 'is-down';
                 return `
@@ -351,6 +391,10 @@
                     </tr>
                 `;
             }).join('');
+            if (tbody.__cgRenderHtml !== html) {
+                tbody.innerHTML = html;
+                tbody.__cgRenderHtml = html;
+            }
         },
 
         releaseHeavyDom() {
@@ -358,7 +402,10 @@
             if (!section || section.classList.contains('active')) return false;
             ['#cohort-volatility-table tbody', '#cohort-growth-table tbody'].forEach((selector) => {
                 const tbody = root.document?.querySelector(selector);
-                if (tbody) tbody.replaceChildren();
+                if (tbody) {
+                    tbody.replaceChildren();
+                    delete tbody.__cgRenderHtml;
+                }
             });
             return true;
         },
@@ -391,7 +438,12 @@
 
         getStudentKey(student) {
             if (!student) return '';
-            return student.uuid || `${student.name || ''}|${student.class || ''}|${student.school || ''}`;
+            if (typeof student === 'object' && CohortGrowthPerfCache.studentKeys.has(student)) {
+                return CohortGrowthPerfCache.studentKeys.get(student);
+            }
+            const key = student.uuid || `${student.name || ''}|${student.class || ''}|${student.school || ''}`;
+            if (typeof student === 'object') CohortGrowthPerfCache.studentKeys.set(student, key);
+            return key;
         }
     };
 

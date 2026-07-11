@@ -98,8 +98,17 @@ const pkg = JSON.parse(read(packageFile));
 [
     'cacheSignature',
     'getRenderSignature',
-    'if (this.cacheSignature === signature)',
-    'this.cacheSignature = signature'
+    'this.cacheSignature === signature',
+    'this.cacheSignature = signature',
+    'schoolRows: new Map()',
+    'classOptions: new Map()',
+    'classes = Array.from(new Set(',
+    'results: new Map()',
+    'studentKeys: new WeakMap()',
+    'if (allSchools && allClasses) return Array.isArray(rows) ? rows : [];',
+    'CohortGrowthPerfCache.results.get(signature)',
+    'setBoundedCache(CohortGrowthPerfCache.results',
+    'tbody.__cgRenderHtml'
 ].forEach((token) => assertContains(cohortGrowth, token, cohortGrowthFile));
 
 [
@@ -132,9 +141,13 @@ if (boot.includes("'updateProgressMultiExamSelects',")) {
 [
     'studentLists: new Map()',
     'classOptions: new Map()',
+    'townshipRankFallbacks: new Map()',
     'function buildCorrelationDataSignature(scope)',
+    'function calculateStudentPearson(students, readLeft, readRight)',
+    'function setCorrelationHtmlIfChanged(element, html, signature)',
     'CorrelationAnalysisPerfCache.classOptions.set(cacheKey, optionsHtml)',
-    'CorrelationAnalysisPerfCache.studentLists.set(cacheKey, result)'
+    'CorrelationAnalysisPerfCache.studentLists.set(cacheKey, result)',
+    'CorrelationAnalysisPerfCache.townshipRankFallbacks.set(cacheKey, ranks)'
 ].forEach((token) => assertContains(teacherBridge, token, teacherBridgeFile));
 
 const marginalStart = overview.indexOf('function smBuildMarginalSummary()');

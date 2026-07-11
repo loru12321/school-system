@@ -330,6 +330,24 @@ async function profileStudentOverview(page) {
   });
 }
 
+async function profileCohortGrowth(page) {
+  await page.evaluate(async () => {
+    await window.ensureCohortGrowthRuntimeLoaded?.();
+    const scopeStarted = performance.now();
+    window.CohortGrowth?.updateScopeControls?.();
+    const renderStarted = performance.now();
+    await Promise.resolve(window.CohortGrowth?.render?.());
+    window.__PROD_PROFILE?.events?.push({
+      name: 'cohort-growth-action',
+      scopeMs: Number((renderStarted - scopeStarted).toFixed(2)),
+      renderMs: Number((performance.now() - renderStarted).toFixed(2)),
+      signature: String(window.CohortGrowth?.cacheSignature || ''),
+      resultCacheSize: Number(window.CohortGrowth?.resultCache?.size || 0)
+    });
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  });
+}
+
 async function profileMarginalPush(page) {
   await page.evaluate(async () => {
     if (typeof window.updateMpSchoolSelect === 'function') window.updateMpSchoolSelect();
@@ -392,6 +410,7 @@ async function run() {
     'report-generator': profileReport,
     'freshman-simulator': profileFreshman,
     'student-overview': profileStudentOverview,
+    'cohort-growth': profileCohortGrowth,
     'marginal-push': profileMarginalPush,
     'seat-adjustment': profileSeatAdjustment
   };
@@ -421,7 +440,8 @@ async function run() {
       .sort((a, b) => b.totalMs - a.totalMs);
     return {
       calls,
-      longTasks: window.__PROD_PROFILE.longTasks.slice(-40)
+      longTasks: window.__PROD_PROFILE.longTasks.slice(-40),
+      events: window.__PROD_PROFILE.events.slice(-20)
     };
   });
   await browser.close();

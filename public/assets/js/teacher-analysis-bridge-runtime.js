@@ -7,7 +7,8 @@
         chartHtml: '',
         liftDragHtml: '',
         studentLists: new Map(),
-        classOptions: new Map()
+        classOptions: new Map(),
+        townshipRankFallbacks: new Map()
     };
 
     function buildCorrelationDataSignature(scope) {
@@ -116,6 +117,30 @@
         return denominator === 0 ? 0 : numerator / denominator;
     }
 
+    function calculateStudentPearson(students, readLeft, readRight) {
+        let pairCount = 0;
+        let sumX = 0;
+        let sumY = 0;
+        let sumXY = 0;
+        let sumX2 = 0;
+        let sumY2 = 0;
+        students.forEach((student) => {
+            const left = toFiniteNumber(readLeft(student));
+            const right = toFiniteNumber(readRight(student));
+            if (left === null || right === null) return;
+            pairCount += 1;
+            sumX += left;
+            sumY += right;
+            sumXY += left * right;
+            sumX2 += left * left;
+            sumY2 += right * right;
+        });
+        if (pairCount < 2) return 0;
+        const numerator = (pairCount * sumXY) - (sumX * sumY);
+        const denominator = Math.sqrt((pairCount * sumX2 - sumX * sumX) * (pairCount * sumY2 - sumY * sumY));
+        return denominator === 0 ? 0 : numerator / denominator;
+    }
+
     function getPairedScores(students, leftSubject, rightSubject) {
         const leftScores = [];
         const rightScores = [];
@@ -207,6 +232,10 @@
     }
 
     function buildTownshipRankFallback(subjects) {
+        const cacheKey = `${buildCorrelationDataSignature('ALL')}::${subjects.join('|')}`;
+        if (CorrelationAnalysisPerfCache.townshipRankFallbacks.has(cacheKey)) {
+            return CorrelationAnalysisPerfCache.townshipRankFallbacks.get(cacheKey);
+        }
         const rawRows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
         const townshipRows = typeof window.filterRowsToTownshipSchools === 'function'
             ? window.filterRowsToTownshipSchools(rawRows)
@@ -254,6 +283,12 @@
                 (left, right) => left === right
             );
         });
+        CorrelationAnalysisPerfCache.townshipRankFallbacks.set(cacheKey, ranks);
+        while (CorrelationAnalysisPerfCache.townshipRankFallbacks.size > 2) {
+            CorrelationAnalysisPerfCache.townshipRankFallbacks.delete(
+                CorrelationAnalysisPerfCache.townshipRankFallbacks.keys().next().value
+            );
+        }
         return ranks;
     }
 
@@ -271,8 +306,11 @@
                     matrixHtml += '<td style="background:#eee;">-</td>';
                     return;
                 }
-                const { leftScores, rightScores } = getPairedScores(students, rowSubject, colSubject);
-                const pearson = calculatePearson(leftScores, rightScores);
+                const pearson = calculateStudentPearson(
+                    students,
+                    (student) => student?.scores?.[rowSubject],
+                    (student) => student?.scores?.[colSubject]
+                );
                 const bg = pearson > 0
                     ? `rgba(220, 38, 38, ${Math.abs(pearson) * 0.8})`
                     : `rgba(37, 99, 235, ${Math.abs(pearson) * 0.8})`;
@@ -284,10 +322,13 @@
 
         const chartHtml = subjects
             .map((subject) => {
-                const { subjectScores, totalScores } = getSubjectTotalPairs(students, subject);
                 return {
                     subject,
-                    value: calculatePearson(subjectScores, totalScores)
+                    value: calculateStudentPearson(
+                        students,
+                        (student) => student?.scores?.[subject],
+                        (student) => student?.total
+                    )
                 };
             })
             .sort((left, right) => right.value - left.value)
@@ -331,6 +372,13 @@
         return { matrixHtml, chartHtml, liftDragHtml };
     }
 
+    function setCorrelationHtmlIfChanged(element, html, signature) {
+        if (!element || element.__correlationRenderSignature === signature) return false;
+        element.innerHTML = html;
+        element.__correlationRenderSignature = signature;
+        return true;
+    }
+
     function renderCorrelationAnalysis() {
         const schoolSelect = document.getElementById('corrSchoolSelect');
         const classSelect = document.getElementById('corrClassSelect');
@@ -356,19 +404,25 @@
         }
 
         const matrixBody = document.querySelector('#corrMatrixTable tbody');
-        if (matrixBody) {
-            matrixBody.innerHTML = CorrelationAnalysisPerfCache.matrixHtml;
-        }
+        setCorrelationHtmlIfChanged(
+            matrixBody,
+            CorrelationAnalysisPerfCache.matrixHtml,
+            `${signature}::matrix`
+        );
 
         const chartContainer = document.getElementById('contributionChartContainer');
-        if (chartContainer) {
-            chartContainer.innerHTML = CorrelationAnalysisPerfCache.chartHtml;
-        }
+        setCorrelationHtmlIfChanged(
+            chartContainer,
+            CorrelationAnalysisPerfCache.chartHtml,
+            `${signature}::chart`
+        );
 
         const liftDragBody = document.querySelector('#liftDragTable tbody');
-        if (liftDragBody) {
-            liftDragBody.innerHTML = CorrelationAnalysisPerfCache.liftDragHtml;
-        }
+        setCorrelationHtmlIfChanged(
+            liftDragBody,
+            CorrelationAnalysisPerfCache.liftDragHtml,
+            `${signature}::lift-drag`
+        );
     }
 
     function buildSafeSheetName(base, suffix = '') {
