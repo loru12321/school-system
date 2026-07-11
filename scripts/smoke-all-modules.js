@@ -967,6 +967,12 @@ async function smokeSwitchModule(page, id) {
 
     if (STRICT_PERFORMANCE_BUDGETS && STRICT_SHELL_SWITCH_MODULE_IDS.has(id)) {
         await page.evaluate((moduleId) => {
+            if (typeof window.ensureLazySectionLoaded === 'function') {
+                window.ensureLazySectionLoaded(moduleId);
+            }
+            if (typeof window.TeachingManagementModulesRuntime?.ensureTeachingManagementSections === 'function') {
+                window.TeachingManagementModulesRuntime.ensureTeachingManagementSections();
+            }
             document.querySelectorAll('.section.active').forEach((section) => section.classList.remove('active'));
             const target = document.getElementById(moduleId);
             if (target) {
