@@ -15510,9 +15510,11 @@ function getPreferredTeacherTermId() {
     const uiTeacherTermId = buildTeacherTermId(uiMeta);
     const termSel = document.getElementById('dm-teacher-term-select');
     return String(
-        termSel?.value
+        // The restored exam is the source of truth at login.  A saved selector
+        // or teacher term can belong to the previous semester.
+        uiTeacherTermId
+        || termSel?.value
         || readCurrentTeacherTermId()
-        || uiTeacherTermId
         || readCurrentTermId()
         || ''
     ).trim();

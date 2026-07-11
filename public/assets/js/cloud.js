@@ -1445,6 +1445,7 @@
             const showBlocking = !background && opts.blocking !== false;
             const showToast = opts.toast === false ? false : !background;
             const forceRefresh = opts.force === true || opts.refresh === true;
+            const preferCurrentTerm = opts.preferCurrentTerm === true;
             const requestedSchool = String(opts.schoolName || opts.scopeSchool || '').trim();
             if (!(await this.ensureClientReady())) return false;
 
@@ -1477,12 +1478,17 @@
                     const exactUiTeacherTerm = meta.year && meta.term
                         ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
                         : '';
-                    const desiredTerms = [
+                    const desiredTerms = (preferCurrentTerm ? [
+                        exactUiTeacherTerm,
+                        getCurrentTeacherTermId(),
+                        getCurrentTermId(),
+                        termSel?.value
+                    ] : [
                         termSel?.value,
                         getCurrentTeacherTermId(),
                         exactUiTeacherTerm,
                         getCurrentTermId()
-                    ].map(v => String(v || '').trim()).filter(Boolean);
+                    ]).map(v => String(v || '').trim()).filter((term, index, all) => term && all.indexOf(term) === index);
 
                     if (key) {
                         const { data, error } = await selectSystemData({
@@ -1511,14 +1517,17 @@
                         if (scopedError) throw scopedError;
                         if (fallbackError) throw fallbackError;
                         const rows = (scopedRows && scopedRows.length) ? scopedRows : (fallbackRows || []);
+                        const findMatchingTerm = (matches) => desiredTerms
+                            .map(term => (rows || []).find(item => matches(String(item?.key || ''), term)))
+                            .find(Boolean) || null;
                         metaRow = (requestedSchool && scopedKeyPrefix
-                            ? (rows || []).find(item => String(item?.key || '').startsWith(scopedKeyPrefix)
-                                && desiredTerms.some(term => String(item?.key || '').endsWith(`_${term}`)))
+                            ? findMatchingTerm((keyText, term) => keyText.startsWith(scopedKeyPrefix)
+                                && keyText.endsWith(`_${term}`))
                             : null)
-                            || (rows || []).find(item => desiredTerms.some(term => {
-                            const keyText = String(item?.key || '');
-                            return keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`);
-                        })) || rows?.[0] || null;
+                            || findMatchingTerm((keyText, term) => (
+                                keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`)
+                            ))
+                            || rows?.[0] || null;
                         key = metaRow?.key || key;
                     }
 

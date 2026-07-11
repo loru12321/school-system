@@ -230,9 +230,11 @@ function promptTeacherSyncIfNeeded() {
     return true;
 }
 
-async function tryAutoRestoreTeacherMap() {
+async function tryAutoRestoreTeacherMap(options = {}) {
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return true;
-    if (!shouldAutoLoadTeacherData()) return false;
+    // Startup is allowed to restore the current term in the background even
+    // when the user has not opened the teacher module yet.
+    if (!options.startup && !shouldAutoLoadTeacherData()) return false;
     if (!(window.CloudManager && typeof CloudManager.loadTeachers === 'function')) return false;
 
     const preferredTerm = getPreferredTeacherTermId() || pickAutoTeacherTerm();
@@ -241,7 +243,12 @@ async function tryAutoRestoreTeacherMap() {
     }
 
     try {
-        const ok = await CloudManager.loadTeachers({ background: true, toast: false, blocking: false });
+        const ok = await CloudManager.loadTeachers({
+            background: true,
+            toast: false,
+            blocking: false,
+            preferCurrentTerm: options.startup === true
+        });
         if (ok) {
             if (typeof updateStatusPanel === 'function') updateStatusPanel();
             if (typeof renderTeachingOverview === 'function') renderTeachingOverview();
@@ -253,7 +260,8 @@ async function tryAutoRestoreTeacherMap() {
     return false;
 }
 
-function scheduleTeacherSyncPrompt() {
+function scheduleTeacherSyncPrompt(options = {}) {
+    const startup = options.startup !== false;
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
         if (!localStorage.getItem('TEACHER_SYNC_AT')) {
             localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
@@ -261,18 +269,20 @@ function scheduleTeacherSyncPrompt() {
         }
         return;
     }
-    if (!shouldAutoLoadTeacherData()) return;
+    if (!startup && !shouldAutoLoadTeacherData()) return;
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
-        Promise.resolve(tryAutoRestoreTeacherMap()).then((autoLoaded) => {
-            const done = autoLoaded || promptTeacherSyncIfNeeded();
+        Promise.resolve(tryAutoRestoreTeacherMap({ startup })).then((autoLoaded) => {
+            // Login restoration is deliberately silent.  The old prompt is
+            // retained for an explicitly opened teacher workflow only.
+            const done = autoLoaded || (!startup && promptTeacherSyncIfNeeded());
             if (done || tries >= 10) {
                 clearInterval(timer);
             }
         }).catch((error) => {
             console.warn('[TeacherSync] schedule auto restore failed:', error);
-            const done = promptTeacherSyncIfNeeded();
+            const done = !startup && promptTeacherSyncIfNeeded();
             if (done || tries >= 10) {
                 clearInterval(timer);
             }

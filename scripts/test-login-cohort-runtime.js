@@ -7,6 +7,9 @@ const root = path.resolve(__dirname, '..');
 const runtimeSource = fs.readFileSync(path.join(root, 'public/assets/js/login-entry-runtime.js'), 'utf8');
 const bootSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
 const htmlSource = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
+const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const cloudSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud.js'), 'utf8');
+const teacherSyncSource = fs.readFileSync(path.join(root, 'public/assets/js/teacher-sync-runtime.js'), 'utf8');
 
 function createFixedDate(isoDate) {
     return class FixedDate extends Date {
@@ -133,5 +136,24 @@ assert.ok(bootSource.includes('getBootSelectedLoginCohortYear'), 'app and boot l
 assert.ok(bootSource.includes("select.dataset.cohortInitialized = '1'"), 'boot login path should preserve manual selection after initialization');
 assert.ok(htmlSource.includes('<option value="2022" selected>2022届</option>'), 'static login fallback should default to the current grade 9 cohort for this release');
 assert.ok(htmlSource.includes('id="login-graduate-cohort-panel"'), 'login page should expose a dedicated graduate cohort panel');
+
+assert.ok(
+    /const uiTeacherTermId = buildTeacherTermId\(uiMeta\);[\s\S]*uiTeacherTermId[\s\S]*\|\| termSel\?\.value[\s\S]*\|\| readCurrentTeacherTermId\(\)/.test(appSource),
+    'login restoration should prefer the restored exam term over a stale teacher-term selection'
+);
+
+assert.ok(
+    teacherSyncSource.includes('const startup = options.startup !== false;')
+        && teacherSyncSource.includes('tryAutoRestoreTeacherMap({ startup })')
+        && teacherSyncSource.includes('preferCurrentTerm: options.startup === true'),
+    'login startup should silently restore the current term teacher map even before the teacher module is open'
+);
+
+assert.ok(
+    cloudSource.includes('const preferCurrentTerm = opts.preferCurrentTerm === true;')
+        && cloudSource.includes('const findMatchingTerm = (matches) => desiredTerms')
+        && cloudSource.includes('exactUiTeacherTerm,'),
+    'teacher cloud load should select the current exam term before a saved historical teacher term'
+);
 
 console.log('login cohort runtime tests passed');
