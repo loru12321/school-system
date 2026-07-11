@@ -4,12 +4,12 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `c1fc371ab953`
-- Recorded at: 2026-07-11T06:32:29.307Z
-- Total smoke time: 25647 ms (-389 ms vs previous)
-- Login: 5155 ms
-- App ready: 45 ms
-- Long tasks: 0, max 0 ms
+- Commit: `107ee3ff6da0`
+- Recorded at: 2026-07-11T07:18:31.248Z
+- Total smoke time: 26449 ms (+802 ms vs previous)
+- Login: 6550 ms
+- App ready: 14 ms
+- Long tasks: 1, max 1097 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `cohort-growth` | 237 ms | 2191 ms | 2428 ms |
-| `starter-hub` | 337 ms | 1067 ms | 1404 ms |
-| `progress-analysis` | 657 ms | 360 ms | 1017 ms |
-| `summary` | 688 ms | 30 ms | 718 ms |
-| `county-teacher-portrait` | 216 ms | 351 ms | 567 ms |
-| `indicator` | 210 ms | 286 ms | 496 ms |
-| `seat-adjustment` | 340 ms | 146 ms | 486 ms |
-| `correlation-analysis` | 226 ms | 254 ms | 480 ms |
+| `cohort-growth` | 269 ms | 2200 ms | 2469 ms |
+| `starter-hub` | 1249 ms | 53 ms | 1302 ms |
+| `analysis` | 194 ms | 527 ms | 721 ms |
+| `correlation-analysis` | 239 ms | 336 ms | 575 ms |
+| `indicator` | 222 ms | 338 ms | 560 ms |
+| `marginal-push` | 482 ms | 24 ms | 506 ms |
+| `progress-analysis` | 269 ms | 237 ms | 506 ms |
+| `subject-balance` | 289 ms | 189 ms | 478 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `107ee3ff6da0` | 26449 ms | 6550 ms | 14 ms | 1 | 0 | 0 |
 | `c1fc371ab953` | 25647 ms | 5155 ms | 45 ms | 0 | 0 | 0 |
 | `f7025bb9f5bd` | 26036 ms | 6246 ms | 33 ms | 0 | 0 | 0 |
 | `9313725e8f4e` | 21237 ms | 4704 ms | 14 ms | 1 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `1f6300b4d03f` | 26404 ms | 6880 ms | 207 ms | 1 | 0 | 0 |
 | `9f20dd64cf21` | 25469 ms | 6095 ms | 5 ms | 1 | 0 | 0 |
 | `5116409a2114` | 24782 ms | 4760 ms | 15 ms | 1 | 0 | 0 |
-| `7ad5bc0bb135` | 26315 ms | 6380 ms | 43 ms | 1 | 0 | 0 |
 
 ## Data Files
 
