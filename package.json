@@ -138,6 +138,8 @@
     "smoke:modules:prod": "node scripts/run-prod-smoke.js",
     "smoke:modules:local": "node scripts/run-local-smoke.js",
     "smoke:modules:lt": "node scripts/smoke-all-modules.js",
+    "smoke:assessment-system": "node scripts/smoke-assessment-system.js",
+    "smoke:assessment-system:local": "node scripts/run-assessment-smoke-local.js",
     "smoke:role-visibility": "node scripts/smoke-role-visibility.js",
     "smoke:role-visibility:local": "node -e \"process.env.SMOKE_SCRIPT='./smoke-role-visibility.js'; require('./scripts/run-local-smoke.js')\"",
     "smoke:role-visibility:prod": "node scripts/smoke-role-visibility.js",

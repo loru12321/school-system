@@ -169,8 +169,11 @@ function buildAssessmentSyncChangeNote(item) {
 
 function findAssessmentTeacherMatch(yearPeople, item) {
   const teacherName = normalizeAssessmentName(item.teacher_name);
-  const candidates = yearPeople
-    .filter((person) => normalizeAssessmentName(person.full_name) === teacherName)
+  const sameNamePeople = yearPeople
+    .filter((person) => normalizeAssessmentName(person.full_name) === teacherName);
+  const candidates = sameNamePeople
+    .filter((person) => !item.grade || normalizeAssessmentGrade(person.grade) === item.grade)
+    .filter((person) => !item.subject || normalizeAssessmentSubject(person.subject) === item.subject)
     .map((person) => {
       let weight = 10;
       if (item.grade && normalizeAssessmentGrade(person.grade) === item.grade) weight += 4;
@@ -180,7 +183,12 @@ function findAssessmentTeacherMatch(yearPeople, item) {
     })
     .sort((left, right) => right.weight - left.weight);
   if (!candidates.length) {
-    return { teacher: null, ambiguous: false, candidateCount: 0 };
+    return {
+      teacher: null,
+      ambiguous: false,
+      metadataMismatch: sameNamePeople.length > 0,
+      candidateCount: sameNamePeople.length
+    };
   }
   const topWeight = candidates[0].weight;
   const topCandidates = candidates.filter((candidate) => candidate.weight === topWeight);
@@ -291,10 +299,9 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
   ]);
 
   const now = new Date().toISOString();
-  const rows = [];
+  const rowByKey = new Map();
+  const conflictingRowKeys = new Set();
   const skipped = [];
-  const projectCounts = {};
-  const matchedTeacherIds = new Set();
 
   items.forEach((item) => {
     const match = findAssessmentTeacherMatch(teachers, item);
@@ -304,7 +311,15 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
     }
     const teacher = match.teacher;
     if (!teacher) {
-      skipped.push({ teacher_name: item.teacher_name, grade: item.grade, subject: item.subject, project_id: item.project_id, reason: '目标考核系统教师名单未匹配' });
+      skipped.push({
+        teacher_name: item.teacher_name,
+        grade: item.grade,
+        subject: item.subject,
+        project_id: item.project_id,
+        reason: match.metadataMismatch
+          ? '目标考核系统存在同名教师，但年级或学科不一致'
+          : '目标考核系统教师名单未匹配'
+      });
       return;
     }
     const existing = existingScores.get(`${teacher.user_id}::${item.project_id}`);
@@ -312,7 +327,23 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
       skipped.push({ teacher_name: item.teacher_name, grade: item.grade, subject: item.subject, project_id: item.project_id, reason: '已有人工分数，未勾选覆盖' });
       return;
     }
-    rows.push({
+    const rowKey = `${teacher.user_id}::${item.project_id}`;
+    if (conflictingRowKeys.has(rowKey)) {
+      skipped.push({ teacher_name: item.teacher_name, grade: item.grade, subject: item.subject, project_id: item.project_id, reason: '同一批次存在重复且冲突的教师项目分值，已全部跳过' });
+      return;
+    }
+    const pending = rowByKey.get(rowKey);
+    if (pending) {
+      if (Number(pending.score) === Number(item.score)) {
+        skipped.push({ teacher_name: item.teacher_name, grade: item.grade, subject: item.subject, project_id: item.project_id, reason: '同一批次重复同步项已合并' });
+        return;
+      }
+      rowByKey.delete(rowKey);
+      conflictingRowKeys.add(rowKey);
+      skipped.push({ teacher_name: item.teacher_name, grade: item.grade, subject: item.subject, project_id: item.project_id, reason: '同一批次存在重复且冲突的教师项目分值，已全部跳过' });
+      return;
+    }
+    rowByKey.set(rowKey, {
       academic_year: academicYear,
       teacher_id: teacher.user_id,
       project_id: item.project_id,
@@ -327,9 +358,14 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
       change_tag: 'system_sync',
       change_note: buildAssessmentSyncChangeNote(item)
     });
-    matchedTeacherIds.add(teacher.user_id);
-    projectCounts[item.project_id] = (projectCounts[item.project_id] || 0) + 1;
   });
+
+  const rows = Array.from(rowByKey.values());
+  const matchedTeacherIds = new Set(rows.map((row) => row.teacher_id));
+  const projectCounts = rows.reduce((counts, row) => {
+    counts[row.project_id] = (counts[row.project_id] || 0) + 1;
+    return counts;
+  }, {});
 
   if (rows.length && !dryRun) {
     await assessmentRestFetch(env, '/rest/v1/assessment_scores?on_conflict=academic_year,teacher_id,project_id', {

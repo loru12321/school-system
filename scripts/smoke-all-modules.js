@@ -2352,9 +2352,9 @@ async function runModuleDeepCheck(page, id) {
         // calculations are intentionally covered by test-calculation-snapshot.js
         // because forcing a full in-page evaluate during module switching can
         // block the same browser thread this smoke test is trying to measure.
-        return page.evaluate(async () => {
+        return page.evaluate(async ({ strictPerformance }) => {
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-            if (typeof window.runModuleTabEnter === 'function') {
+            if (!strictPerformance && typeof window.runModuleTabEnter === 'function') {
                 await Promise.resolve(window.runModuleTabEnter({ id: 'teacher-analysis' })).catch(() => false);
             }
             const deadline = Date.now() + (location.hostname === 'schoolsystem.com.cn' ? 9000 : 5500);
@@ -2402,7 +2402,7 @@ async function runModuleDeepCheck(page, id) {
                     && checks.calculationSnapshotCoversTeacherRuntime,
                 checks
             };
-        });
+        }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'teacher-detail-comparison') {
         return page.evaluate(async () => {
