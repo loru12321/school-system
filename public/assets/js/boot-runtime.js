@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-8a4122770695';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-15c2d971b979';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -78,7 +78,7 @@ window.dispatchEvent(new CustomEvent('school:app-modules-ready', {
 }));
 }
 
-function armAuthReadySafetyTimeout(timeoutMs = 15000) {
+function armAuthReadySafetyTimeout(timeoutMs = 30000) {
 if (window.__AUTH_READY__ || window.__AUTH_READY_TIMEOUT_ID__) return;
 window.__AUTH_READY_TIMEOUT_ID__ = window.setTimeout(() => {
     if (window.__AUTH_READY__) return;
@@ -93,7 +93,7 @@ window.resolveAuthReady = resolve;
 });
 window.markAuthReadyResolved = markAuthReadyResolved;
 window.armAuthReadySafetyTimeout = armAuthReadySafetyTimeout;
-window.waitForAuthReady = function waitForAuthReady(timeoutMs = 15000) {
+window.waitForAuthReady = function waitForAuthReady(timeoutMs = 30000) {
 armAuthReadySafetyTimeout(timeoutMs);
 return window.AuthReady;
 };
@@ -234,14 +234,14 @@ var APP_MODULES = [
 'cohort-db-core-runtime.js',
 ].map(bootJs);
 
-var APP_MODULE_PRELOAD_LIMIT = 36;
+var APP_MODULE_PRELOAD_LIMIT = 6;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 4;
-var APP_MODULE_LATE_PREFETCH_LIMIT = 34;
+var APP_MODULE_LATE_PREFETCH_LIMIT = 0;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
-var APP_MODULE_DESKTOP_BATCH_SIZE = 6;
+var APP_MODULE_DESKTOP_BATCH_SIZE = 12;
 var APP_MODULE_MOBILE_BATCH_SIZE = 4;
-var APP_MODULE_MAX_BATCH_SIZE = 6;
-var LOGIN_MODULE_PREFETCH_LIMIT = 8;
+var APP_MODULE_MAX_BATCH_SIZE = 12;
+var LOGIN_MODULE_PREFETCH_LIMIT = 0;
 var LOGIN_MODULE_PREFETCH_DELAY_MS = 2200;
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
@@ -627,43 +627,8 @@ if (window.__GATEWAY_PREFLIGHT_STARTED__) {
     return window.__GATEWAY_PREFLIGHT_PROMISE__ || Promise.resolve(window.__GATEWAY_PREFLIGHT_STATUS__ || 'started');
 }
 window.__GATEWAY_PREFLIGHT_STARTED__ = true;
-
-if (isLocalFileRuntime() || isLocalSupabaseHost(window.location && window.location.hostname)) {
-    window.__GATEWAY_PREFLIGHT_STATUS__ = 'skipped';
-    bootDebugLog('[boot-runtime] Skipping gateway pre-flight in local mode');
-    window.__GATEWAY_PREFLIGHT_PROMISE__ = Promise.resolve('skipped');
-    return window.__GATEWAY_PREFLIGHT_PROMISE__;
-}
-
-const run = async () => {
-    let controller = null;
-    let timeoutId = null;
-    try {
-        controller = typeof AbortController === 'function' ? new AbortController() : null;
-        timeoutId = window.setTimeout(() => {
-            if (controller) controller.abort();
-        }, 1500);
-
-        await fetch(DIRECT_PROXY_ORIGIN + '/api/health', {
-            method: 'GET',
-            mode: 'no-cors',
-            signal: controller ? controller.signal : undefined
-        });
-        window.__GATEWAY_PREFLIGHT_STATUS__ = 'ok';
-        bootDebugLog('[boot-runtime] Gateway pre-flight successful');
-        return 'ok';
-    } catch (fetchErr) {
-        window.__GATEWAY_PREFLIGHT_STATUS__ = 'fallback';
-        console.warn('[boot-runtime] gateway fallback:', fetchErr);
-        window.__API_FALLBACK_ACTIVE__ = true;
-        return 'fallback';
-    } finally {
-        if (timeoutId) window.clearTimeout(timeoutId);
-    }
-};
-
-window.__GATEWAY_PREFLIGHT_STATUS__ = 'running';
-window.__GATEWAY_PREFLIGHT_PROMISE__ = run();
+window.__GATEWAY_PREFLIGHT_STATUS__ = 'same-origin';
+window.__GATEWAY_PREFLIGHT_PROMISE__ = Promise.resolve('same-origin');
 return window.__GATEWAY_PREFLIGHT_PROMISE__;
 }
 

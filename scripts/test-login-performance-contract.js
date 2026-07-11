@@ -14,6 +14,14 @@ const entranceSoundJs = fs.readFileSync(entranceSoundPath, 'utf8');
 const bootRuntimePath = path.join(root, 'public', 'assets', 'js', 'boot-runtime.js');
 const bootRuntimeJs = fs.readFileSync(bootRuntimePath, 'utf8');
 
+assert.ok(
+  appJs.includes('async function initializeApplicationAfterLoad()')
+    && appJs.includes('window.__APP_LOAD_INITIALIZATION_PROMISE__')
+    && appJs.includes("if (document.readyState === 'complete')")
+    && appJs.includes("window.addEventListener('load', initializeApplicationAfterLoad, { once: true })"),
+  'dynamically loaded app runtime must initialize immediately after a completed page load and only once'
+);
+
 function assertParentPathUsesDeferredCloudLoad(marker, legacyGuard) {
   const loginSource = authLoginJs;
   const rawMarkerIndex = loginSource.indexOf(marker);
@@ -124,8 +132,8 @@ assert.match(
 );
 assert.match(
   bootRuntimeJs,
-  /var LOGIN_MODULE_PREFETCH_LIMIT = 8;/,
-  'login page should only prefetch a small number of core modules by default'
+  /var LOGIN_MODULE_PREFETCH_LIMIT = 0;/,
+  'login page must not compete with authentication by prefetching core modules'
 );
 assert.match(
   bootRuntimeJs,
@@ -139,8 +147,8 @@ assert.match(
 );
 assert.match(
   bootRuntimeJs,
-  /var APP_MODULE_MAX_BATCH_SIZE = 6;/,
-  'authenticated session recovery must cap boot script bursts so Chrome can keep painting'
+  /var APP_MODULE_MAX_BATCH_SIZE = 12;/,
+  'desktop session recovery should cap concurrency while avoiding cross-region serial waterfalls'
 );
 assert.match(
   bootRuntimeJs,

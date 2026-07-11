@@ -39,6 +39,8 @@ function isStaticAssetPath(pathname) {
 
 function isVersionedStaticAsset(url) {
   const pathname = String(url.pathname || '');
+  const runtimeVersion = String(url.searchParams?.get('v') || '').trim();
+  if (/^runtime-[A-Za-z0-9_-]{6,}$/.test(runtimeVersion)) return true;
   if (/\/assets\/vendor\//.test(pathname)) return true;
   if (/\.(?:woff2?|ttf|eot)$/i.test(pathname)) return true;
   return /-[A-Za-z0-9_-]{6,}\.(?:js|css|png|jpg|jpeg|gif|svg|webp|avif)$/i.test(pathname);
@@ -50,7 +52,9 @@ function getStaticAssetCacheControl(url) {
     return getHtmlShellCacheControl();
   }
   if (pathname.startsWith('/assets/js/')) {
-    return getHtmlShellCacheControl();
+    return isVersionedStaticAsset(url)
+      ? 'public, max-age=31536000, immutable'
+      : 'public, max-age=3600, stale-while-revalidate=86400';
   }
   if (!isStaticAssetPath(pathname)) return '';
   if (isVersionedStaticAsset(url)) {

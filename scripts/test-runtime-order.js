@@ -642,9 +642,9 @@ assert.ok(!bootRuntime.includes("window.ensurePresentationVendorsLoaded = functi
 assert.ok(bootRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-runtime.js should declare a runtime skill manifest');
 assert.ok(bootRuntime.includes('window.SystemRuntimeLoader'), 'boot-runtime.js should expose the runtime skill loader');
 assert.ok(bootRuntime.includes('function getBootScriptBatchSize()'), 'boot-runtime.js should batch boot script insertion on constrained devices');
-assert.ok(bootRuntime.includes('var APP_MODULE_DESKTOP_BATCH_SIZE = 6;'), 'desktop boot scripts should use responsive bounded batches during login recovery');
+assert.ok(bootRuntime.includes('var APP_MODULE_DESKTOP_BATCH_SIZE = 12;'), 'desktop boot scripts should avoid cross-region serial waterfalls with bounded parallel batches');
 assert.ok(bootRuntime.includes('var APP_MODULE_MOBILE_BATCH_SIZE = 4;'), 'mobile boot scripts should use smaller batches during login recovery');
-assert.ok(bootRuntime.includes('var APP_MODULE_MAX_BATCH_SIZE = 6;'), 'stored boot batch overrides must have a responsiveness cap');
+assert.ok(bootRuntime.includes('var APP_MODULE_MAX_BATCH_SIZE = 12;'), 'stored boot batch overrides must retain a bounded desktop concurrency cap');
 assert.ok(bootRuntime.includes('Math.min(APP_MODULE_MAX_BATCH_SIZE, Math.max(1, Math.floor(stored)))'), 'legacy boot batch overrides must not restore page-freezing batches');
 assert.ok(bootRuntime.includes('if (isRuntimeMobileViewport()) return APP_MODULE_MOBILE_BATCH_SIZE;'), 'mobile boot script loading should use the dedicated mobile batch size');
 assert.ok(bootRuntime.includes('return APP_MODULE_DESKTOP_BATCH_SIZE;'), 'desktop boot script loading should yield between bounded batches');

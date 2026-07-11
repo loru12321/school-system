@@ -2335,7 +2335,12 @@ const CohortExamHydrationScheduler = window.CohortExamHydrationScheduler;
 const getLegacyDbSaveOptionsForKey=k=>/^cohort::/i.test(k||'')?{cloud:!1}:{deferCloud:!0,deferMs:9e3};
 
 
-window.addEventListener('load', async () => {
+async function initializeApplicationAfterLoad() {
+    if (window.__APP_LOAD_INITIALIZATION_PROMISE__) {
+        return window.__APP_LOAD_INITIALIZATION_PROMISE__;
+    }
+
+    window.__APP_LOAD_INITIALIZATION_PROMISE__ = (async () => {
     try { CloudSyncIndicator.start(); } catch (e) { console.warn('CloudSyncIndicator start failed:', e); }
 
     if (typeof CohortManager !== 'undefined') {
@@ -2542,7 +2547,17 @@ window.addEventListener('load', async () => {
         minCount: 1,
         warnPrefix: '[Startup] fetch cohort exams failed:'
     });
-});
+    })();
+
+    return window.__APP_LOAD_INITIALIZATION_PROMISE__;
+}
+
+window.initializeApplicationAfterLoad = initializeApplicationAfterLoad;
+if (document.readyState === 'complete') {
+    window.setTimeout(() => initializeApplicationAfterLoad(), 0);
+} else {
+    window.addEventListener('load', initializeApplicationAfterLoad, { once: true });
+}
 
 
 const Perf = {

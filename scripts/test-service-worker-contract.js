@@ -65,10 +65,9 @@ assertIncludes(publicSw, "event.waitUntil(clearApiCacheAfterMutation(url));", 's
 assertIncludes(publicSw, "if (url.protocol === 'chrome-extension:') return;", 'service worker should ignore browser extension requests');
 assertIncludes(publicSw, "request.mode === 'navigate' || acceptsHtml(request)", 'HTML navigation should use network-first handling');
 assertIncludes(publicSw, 'event.respondWith(networkFirstApi(request, url));', 'API requests should use network-first handling');
-assertIncludes(publicSw, 'event.respondWith(networkFirstRuntimeAsset(request));', 'runtime JS/CSS assets should always use network-first handling');
+assertIncludes(publicSw, 'isVersionedRuntimeAsset(url)', 'runtime JS/CSS should branch on immutable version markers');
 assertIncludes(publicSw, "fetch(new Request(request, { cache: 'reload' }))", 'runtime JS/CSS and HTML should bypass stale browser caches');
-assert.ok(!publicSw.includes('isVersionedRuntimeAsset'), 'service worker should not branch on query-versioned runtime assets');
-assert.ok(!publicSw.includes('cacheFirstRuntimeAsset'), 'service worker should not cache-first runtime assets by version marker');
+assertIncludes(publicSw, 'cacheFirstRuntimeAsset(request)', 'versioned runtime assets should use cache-first handling');
 assertIncludes(publicSw, 'event.respondWith(cacheFirstStatic(request));', 'non-runtime static assets should keep cache-first handling');
 assertIncludes(publicSw, 'function isRuntimeAsset(pathname)', 'runtime asset routing should be centralized');
 assertIncludes(publicSw, 'function isApiCacheEligible(url)', 'API cache eligibility should be centralized');
@@ -88,7 +87,7 @@ assertIncludes(publicSw, "if (event.tag === 'sync-data')", 'background sync tag 
 assert.ok(!publicSw.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 assert.ok(!/\/\/[^\n]*const\s+APP_SHELL_ASSETS/.test(publicSw), 'APP_SHELL_ASSETS declaration should not be hidden inside a comment');
 assert.ok(scripts['build:pre'] && scripts['build:pre'].includes('scripts/build/update-runtime-cache-version.mjs'), 'build:pre should update runtime cache versions before Vite runs');
-assertHeaderRule(publicHeaders, '/assets/js/*', 'no-store, max-age=0, must-revalidate', 'runtime JS assets should bypass browser and CDN storage');
+assertHeaderRule(publicHeaders, '/assets/js/*', 'public, max-age=3600, stale-while-revalidate=86400', 'unversioned runtime JS assets should use bounded browser caching');
 assertHeaderRule(publicHeaders, '/assets/css/*', 'public, max-age=31536000, immutable', 'versioned CSS runtime assets should use immutable cache headers');
 assertHeaderRule(publicHeaders, '/sw.js', 'no-store, max-age=0, must-revalidate', 'service worker script should bypass browser and CDN storage');
 assertIncludes(serviceWorkerRuntime, `const SERVICE_WORKER_VERSION = '${serviceWorkerVersion}';`, 'service worker runtime should version registration updates');
