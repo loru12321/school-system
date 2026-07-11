@@ -69,6 +69,7 @@
     <link rel="stylesheet" href="./assets/css/cloud-archive-visibility.css?v=20260621-cloud-archive-v1">
     <link rel="stylesheet" href="./assets/css/mature-system-shell.css?v=20260704-mature-shell-v2">
     <link rel="stylesheet" href="./assets/css/responsive-login-final.css?v=20260705-responsive-login-blue-v2">
+    <link rel="stylesheet" href="./assets/css/operational-system.css?v=20260711-operational-v1">
     <style id="critical-visibility-guard">
         .hidden,
         [hidden] {
@@ -100,8 +101,8 @@
     <script defer src="./assets/js/cohort-sync-status-runtime.js"></script>
     <script defer src="./assets/js/entrance-sound-runtime.js"></script>
     <script defer src="./assets/js/runtime-loader-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-12891b4d5fd9.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-12891b4d5fd9.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-838a22fb51bb.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-838a22fb51bb.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -568,7 +569,7 @@
                         <i class="ti ti-chevrons-right" data-sidebar-toggle-icon="true"></i>
                     </button>
                     <div class="shell-toolbar-state-store" aria-hidden="true">
-                        <span id="app-subtitle">数据管理 / 新手入口与诊断</span>
+                        <span id="app-subtitle">数据管理 / 准备状态</span>
                         <span id="mode-badge" class="badge shell-mode-badge"></span>
                         <span id="shell-current-title">统一工作台</span>
                         <span id="shell-role-pill">Admin</span>
@@ -594,7 +595,7 @@
                     <button class="btn shell-launcher-button" id="shell-launcher-btn" data-workspace-toggle="true"
                         onclick="window.toggleWorkspaceDrawer()">
                         <i class="ti ti-layout-grid"></i>
-                        <span>工作区</span>
+                            <span>全部功能</span>
                     </button>
 
                     <select id="cohort-selector" onchange="CohortManager.switchTo(this.value)"
@@ -637,10 +638,10 @@
                 data-shell-module-rail-shell="floating" aria-label="滚动快捷切换" aria-hidden="true">
                 <div class="shell-module-rail-meta">
                     <div class="shell-module-rail-copy">
-                        <span class="shell-module-rail-label">Quick Switch</span>
-                        <strong data-shell-module-rail-title>当前分类模块快切</strong>
+                            <span class="shell-module-rail-label">模块导航</span>
+                            <strong data-shell-module-rail-title>当前业务模块</strong>
                     </div>
-                    <span class="shell-module-rail-status" data-shell-module-rail-status>点击下方标签快速切换模块</span>
+                        <span class="shell-module-rail-status" data-shell-module-rail-status>选择要处理的业务</span>
                 </div>
                 <div class="shell-module-rail" data-shell-module-rail></div>
             </div>
@@ -650,7 +651,7 @@
                 <article class="shell-overview-card shell-overview-card--focus shell-overview-card--dock">
                     <div class="shell-overview-dock-main">
                         <div class="shell-overview-copy">
-                            <span class="shell-overview-kicker" id="shell-category-kicker">Today Focus</span>
+                            <span class="shell-overview-kicker" id="shell-category-kicker">当前工作区</span>
                             <div class="shell-overview-heading">
                                 <h2 id="shell-category-title">数据管理</h2>
                                 <span id="shell-module-count">2 个模块</span>
@@ -673,7 +674,7 @@
                         <button type="button" class="shell-overview-launcher" data-workspace-toggle="true"
                             onclick="window.toggleWorkspaceDrawer(true)">
                             <i class="ti ti-layout-grid"></i>
-                            <span>Workspace</span>
+                            <span>全部功能</span>
                         </button>
                     </div>
                 </article>
@@ -681,11 +682,11 @@
                     data-shell-module-rail-shell="primary" aria-label="当前分类快捷切换">
                     <div class="shell-module-rail-meta">
                         <div class="shell-module-rail-copy">
-                            <span class="shell-module-rail-label">Quick Switch</span>
-                            <strong id="shell-module-rail-title" data-shell-module-rail-title>当前分类模块快切</strong>
+                            <span class="shell-module-rail-label">模块导航</span>
+                            <strong id="shell-module-rail-title" data-shell-module-rail-title>当前业务模块</strong>
                         </div>
                         <span id="shell-module-rail-status" class="shell-module-rail-status"
-                            data-shell-module-rail-status>点击下方标签快速切换模块</span>
+                            data-shell-module-rail-status>选择要处理的业务</span>
                     </div>
                     <div id="shell-module-rail" class="shell-module-rail" data-shell-module-rail></div>
                 </div>
@@ -697,7 +698,7 @@
                 <div class="workspace-drawer-panel" role="dialog" aria-modal="true" aria-label="工作区面板">
                     <div class="workspace-drawer-header">
                         <div class="workspace-drawer-copy">
-                            <span class="workspace-drawer-kicker">Workspace Launcher</span>
+                            <span class="workspace-drawer-kicker">全部功能</span>
                             <h2 id="workspace-drawer-category">数据管理</h2>
                             <p id="workspace-drawer-copy">先把届别、数据和权限校准，再进入分析与执行链路。</p>
                             <div id="workspace-drawer-workflow" class="workflow-path workflow-path--drawer" aria-label="工作流导航"></div>
@@ -710,7 +711,7 @@
                     <div class="workspace-drawer-meta">
                         <div class="workspace-drawer-stat">
                             <span>当前模块</span>
-                            <strong id="workspace-drawer-active">新手入口与诊断</strong>
+                            <strong id="workspace-drawer-active">准备状态</strong>
                         </div>
                         <div class="workspace-drawer-stat">
                             <span>工作模式</span>
@@ -732,12 +733,11 @@
                 <div class="nav-sub-items" id="navSubItems"></div>
             </div>
 
-            <!-- 0. 新教师上手入口 -->
+            <!-- 数据准备状态 -->
             <div id="starter-hub" class="section active card-box">
                 <div class="module-desc-bar" style="border-color: var(--color-data)">
-                    <h3><i class="ti ti-rocket"></i> 00 新教师上手入口 <span class="badge"
-                            style="background:#0ea5e9;">新手必看</span>
-                        <span class="module-help-btn" onclick="showModuleHelp('starter-hub')">📘 模型说明</span>
+                    <h3><i class="ti ti-clipboard-check"></i> 数据准备状态
+                        <span class="module-help-btn" onclick="showModuleHelp('starter-hub')">口径说明</span>
                     </h3>
                     <p><strong>一句话目的：</strong>用最短路径完成“选学期 → 导入数据 → 任课表 → 教师画像”的闭环。</p>
                     <p><strong>推荐顺序：</strong>引导向导 → 导入成绩 → 任课同步 → 教师画像。</p>
@@ -771,13 +771,13 @@
                         </div>
                     </div>
                     <div class="starter-card starter-card--entry">
-                        <h4><i class="ti ti-link"></i> 统一入口</h4>
+                        <h4><i class="ti ti-link"></i> 常用操作</h4>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button class="btn btn-purple" onclick="switchTab('upload')"><i
                                     class="ti ti-file-upload"></i>
                                 数据导入</button>
                             <button class="btn btn-orange" onclick="openTeacherSync()"><i class="ti ti-users"></i>
-                                教师任课</button>
+                                任课表</button>
                             <button class="btn btn-green" onclick="switchTab('teacher-analysis')"><i
                                     class="ti ti-school"></i> 教师画像</button>
                             <button class="btn btn-blue" onclick="switchTab('zhongkao-countdown')"><i

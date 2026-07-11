@@ -4,35 +4,35 @@
             title: '数据管理',
             color: '#334155',
             icon: 'ti-database',
-            eyebrow: 'Setup Flow',
-            summary: '先把届别、数据、权限和参数校准，再进入分析与执行链路。',
+            eyebrow: '数据准备',
+            summary: '维护考试数据、任课关系与基础设置，确认数据可用于分析。',
             items: [
-                { id: 'starter-hub', icon: 'ti-rocket', text: '新手入口与诊断', hint: '完成初始化检查，快速确认系统已经进入可分析状态。' },
-                { id: 'audio-debug', icon: 'ti-music-plus', text: '系统音效调试', hint: '集中导入、试听和切换进入系统时的授权音效。' },
-                { id: 'upload', icon: 'ti-database-import', text: '数据上传与设置', hint: '管理数据导入、映射、科目与基础配置。' },
-                { id: 'data-quality', icon: 'ti-stethoscope', text: '数据质量体检', hint: '检查缺字段、重复身份、异常分数和科目缺失。' }
+                { id: 'starter-hub', icon: 'ti-clipboard-check', text: '准备状态', hint: '检查当前届别、考试、成绩和任课表是否齐全。' },
+                { id: 'upload', icon: 'ti-database-import', text: '导入与设置', hint: '导入成绩，维护科目、学校映射和基础参数。' },
+                { id: 'data-quality', icon: 'ti-stethoscope', text: '数据检查', hint: '检查缺失字段、重复身份、异常分数和科目缺失。' },
+                { id: 'audio-debug', icon: 'ti-volume', text: '提示音设置', hint: '管理系统提示音和进入系统时的播放授权。' }
             ]
         },
         town: {
             title: '联考分析',
             color: '#b45309',
             icon: 'ti-trophy',
-            eyebrow: 'Insight Deck',
-            summary: '先看总览、关键位次，再拆细到指标与群体。',
+            eyebrow: '联考评价',
+            summary: '从整体表现、关键位次和重点群体判断学校当前站位。',
             items: [
                 { id: 'summary', icon: 'ti-report', text: '综合评价总览', hint: '先看全局排名、梯队分布和学校站位。' },
-                { id: 'analysis', icon: 'ti-chart-pie', text: '两率一分(横向)', hint: '从横向口径查看重点率、及格率和均分变化。' },
-                { id: 'high-score', icon: 'ti-trophy', text: '高分段/尖子生', hint: '追踪尖子层和高分段的规模与稳定度。' },
+                { id: 'analysis', icon: 'ti-chart-pie', text: '两率一分对比', hint: '横向比较重点率、及格率和平均分。' },
+                { id: 'high-score', icon: 'ti-trophy', text: '高分学生分析', hint: '追踪高分群体的规模、分布和稳定度。' },
                 { id: 'indicator', icon: 'ti-target', text: '指标生达标核算', hint: '快速核对指标生口径、边缘人数和达标压力。' },
-                { id: 'bottom3', icon: 'ti-arrow-bar-to-down', text: '低分群体/后1/3', hint: '定位底部群体波动，提前准备补弱动作。' }
+                { id: 'bottom3', icon: 'ti-arrow-bar-to-down', text: '后段学生分析', hint: '定位后段群体变化，安排补弱任务。' }
             ]
         },
         county: {
             title: '县域分析',
             color: '#0f766e',
             icon: 'ti-map-2',
-            eyebrow: 'County Scope',
-            summary: '县域分析只保留教师县域画像和学校横向分析两个子模块；其他母模块继续保持原口径。',
+            eyebrow: '县域对标',
+            summary: '把学校和教师放到县域统一口径中比较，识别相对优势与差距。',
             items: [
                 { id: 'county-teacher-portrait', icon: 'ti-school', text: '县域教师画像', hint: '模仿教师教学质量画像，把本校教师放到县域所有学校同学科口径中排名。' },
                 { id: 'county-school-horizontal', icon: 'ti-chart-bar', text: '县域学校横向分析', hint: '模仿两率一分横向分析，输出五科总和各学科明细的全县学校排名与横向对比表。' }
@@ -42,12 +42,12 @@
             title: '教学管理',
             color: '#dc2626',
             icon: 'ti-school',
-            eyebrow: 'Studio Ops',
-            summary: '把教师画像、明细对比、结对子建议和乡镇排名拆成独立入口，减少一个页面里来回滑动。',
+            eyebrow: '教学改进',
+            summary: '查看教师表现、明细差异与协作建议，形成可执行的改进安排。',
             items: [
-                { id: 'teacher-analysis', icon: 'ti-school', text: '本校教师教学分析', hint: '从教师概况卡片查看贡献、波动和结构性问题。' },
-                { id: 'teacher-detail-comparison', icon: 'ti-table', text: '教师教学详细数据对比表', hint: '独立查看教师明细指标、校内排序和导出结果。' },
-                { id: 'teacher-pairing', icon: 'ti-users-group', text: '校内教师结对子建议', hint: '基于数据分析生成同校教师互助建议。' },
+                { id: 'teacher-analysis', icon: 'ti-school', text: '教师表现总览', hint: '查看教师贡献、波动和结构性问题。' },
+                { id: 'teacher-detail-comparison', icon: 'ti-table', text: '教师指标明细', hint: '查看教师明细指标、校内排序并导出结果。' },
+                { id: 'teacher-pairing', icon: 'ti-users-group', text: '教师协作建议', hint: '根据数据差异生成校内教师互助建议。' },
                 { id: 'teacher-township-ranking', icon: 'ti-trophy', text: '教师乡镇排名', hint: '查看本校教师在镇域同学科中的相对站位。' },
             ]
         },
@@ -55,16 +55,16 @@
             title: '学情诊断',
             color: '#059669',
             icon: 'ti-user-scan',
-            eyebrow: 'Learner Feed',
-            summary: '连续查看学生画像、成长轨迹和临界干预点，像刷内容流一样快速切换视角。',
+            eyebrow: '学生发展',
+            summary: '查看学生现状、成长变化和干预重点，为班级教学安排提供依据。',
             items: [
                 { id: 'zhongkao-countdown', icon: 'ti-calendar-event', text: '中考倒计时', hint: '用时间视角拉齐当前冲刺阶段和节奏。' },
                 { id: 'student-overview', icon: 'ti-layout-dashboard', text: '学情总览', hint: '先看整体学情结构、风险分层和关键信号。' },
                 { id: 'student-details', icon: 'ti-list-details', text: '学生档案查询', hint: '按学生查看成绩、班级和画像细节。' },
                 { id: 'blank-score-audit', icon: 'ti-alert-circle', text: '空分/0分核对', hint: '单独核对空白学科和 0 分记录，确认它们按 0 分参与排名。' },
-                { id: 'subject-balance', icon: 'ti-scale', text: '优势劣势学科透视', hint: '识别学生的拉分学科和短板学科。' },
-                { id: 'marginal-push', icon: 'ti-target-arrow', text: '临界生精准干预', hint: '锁定边缘学生，安排最值得的干预资源。' },
-                { id: 'progress-analysis', icon: 'ti-trending-up', text: '进退步/增值评价', hint: '判断学生是在稳定上行、停滞还是回落。' },
+                { id: 'subject-balance', icon: 'ti-scale', text: '学科优势与短板', hint: '识别学生的优势学科和薄弱学科。' },
+                { id: 'marginal-push', icon: 'ti-target-arrow', text: '临界学生干预', hint: '锁定临界学生，安排重点干预资源。' },
+                { id: 'progress-analysis', icon: 'ti-trending-up', text: '进步与增值评价', hint: '判断学生处于上升、停滞还是回落状态。' },
                 { id: 'cohort-growth', icon: 'ti-timeline', text: '纵向成长档案', hint: '把多次考试串成个人成长轨迹。' },
                 { id: 'potential-analysis', icon: 'ti-bulb', text: '偏科潜力挖掘', hint: '抓住潜力学科和被掩盖的提升空间。' },
                 { id: 'segment-analysis', icon: 'ti-chart-histogram', text: '分数段统计', hint: '看不同分段的人数密度和迁移趋势。' },
@@ -76,8 +76,8 @@
             title: '考务工具',
             color: '#7c3aed',
             icon: 'ti-briefcase',
-            eyebrow: 'Ops Toolkit',
-            summary: '把排考、分班、排课和协作工具收进一套执行工具箱。',
+            eyebrow: '考务执行',
+            summary: '集中完成考场编排、分班、排课和学生协作安排。',
             items: [
                 { id: 'exam-arranger', icon: 'ti-id-badge-2', text: '智能考场编排', hint: '生成更稳妥的考场、监考与座位安排。' },
                 { id: 'freshman-simulator', icon: 'ti-arrows-split', text: '新生均衡分班', hint: '快速模拟均衡分班方案并比较结果。' },
@@ -89,13 +89,13 @@
     };
 
     const ROLE_LABELS = {
-        admin: 'Admin',
-        director: 'Director',
-        grade_director: 'Grade Director',
-        class_teacher: 'Homeroom',
-        teacher: 'Teacher',
-        parent: 'Parent',
-        guest: 'Guest'
+        admin: '系统管理员',
+        director: '教务主任',
+        grade_director: '年级主任',
+        class_teacher: '班主任',
+        teacher: '任课教师',
+        parent: '家长',
+        guest: '访客'
     };
 
     let currentCategory = 'data';
@@ -170,16 +170,16 @@
 
     function formatOverviewCohortText(value) {
         const text = String(value || '').trim();
-        if (!text) return 'Cohort';
+        if (!text) return '未选择届别';
         const yearMatch = text.match(/(\d{4})/);
-        return yearMatch ? `Cohort ${yearMatch[1]}` : text;
+        return yearMatch ? `${yearMatch[1]}级` : text;
     }
 
     function formatOverviewModeText(value) {
         const text = String(value || '').trim();
-        if (!text) return 'Mode';
+        if (!text) return '未识别年级';
         const gradeMatch = text.match(/(\d+)\s*年级/);
-        return gradeMatch ? `Grade ${gradeMatch[1]}` : text.replace(/\s*模式$/, ' Mode');
+        return gradeMatch ? `${gradeMatch[1]}年级` : text.replace(/\s*模式$/, '');
     }
 
     function resolveShellModeText() {
