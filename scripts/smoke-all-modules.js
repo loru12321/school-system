@@ -2352,14 +2352,44 @@ async function runModuleDeepCheck(page, id) {
         // calculations are intentionally covered by test-calculation-snapshot.js
         // because forcing a full in-page evaluate during module switching can
         // block the same browser thread this smoke test is trying to measure.
-        return {
-            ok: true,
-            checks: {
-                sectionReady: true,
-                comparisonTableReady: true,
-                calculationSnapshotCoversTeacherRuntime: true
+        return page.evaluate(async () => {
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const deadline = Date.now() + 5500;
+            let state = null;
+            while (Date.now() < deadline) {
+                const section = document.getElementById('teacher-analysis');
+                const teacherMapCount = Object.keys(window.TEACHER_MAP || {}).length;
+                state = {
+                    sectionReady: !!section,
+                    sectionActive: !!section?.classList.contains('active'),
+                    comparisonTableReady: !!document.getElementById('teacherComparisonTable'),
+                    teacherMapReady: teacherMapCount > 0,
+                    teacherMapCount,
+                    analysisRuntimeReady: typeof window.analyzeTeachers === 'function',
+                    calculationSnapshotCoversTeacherRuntime: true
+                };
+                if (state.sectionActive && state.teacherMapReady && state.analysisRuntimeReady) break;
+                await wait(120);
             }
-        };
+            const checks = state || {
+                sectionReady: false,
+                sectionActive: false,
+                comparisonTableReady: false,
+                teacherMapReady: false,
+                teacherMapCount: 0,
+                analysisRuntimeReady: false,
+                calculationSnapshotCoversTeacherRuntime: true
+            };
+            return {
+                ok: checks.sectionReady
+                    && checks.sectionActive
+                    && checks.comparisonTableReady
+                    && checks.teacherMapReady
+                    && checks.analysisRuntimeReady
+                    && checks.calculationSnapshotCoversTeacherRuntime,
+                checks
+            };
+        });
     }
     if (id === 'teacher-detail-comparison') {
         return page.evaluate(async () => {

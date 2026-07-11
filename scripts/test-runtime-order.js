@@ -980,7 +980,11 @@ const teacherEntryEnd = moduleEntryRuntime.indexOf('function releaseTeacherAnaly
 const teacherEntrySource = moduleEntryRuntime.slice(teacherEntryStart, teacherEntryEnd);
 assert.ok(teacherEntrySource.includes("'teacher-analysis-auto-render'"), 'teacher-analysis entry should auto-generate the portrait after the switch frame');
 assert.ok(teacherEntrySource.includes('scheduleTeacherCompareAutoRender(16);'), 'teacher-analysis entry should initialize teacher compare selectors immediately after the switch frame');
-assert.ok(teacherEntrySource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher-analysis entry should load the analysis runtime from the fast auto-render task');
+assert.ok(
+    teacherEntrySource.includes('renderTeacherAnalysisAfterRuntimeReady()')
+        && moduleEntryRuntime.includes('window.ensureTeacherAnalysisMainRuntimeLoaded()'),
+    'teacher-analysis entry should load the analysis runtime before rendering locally or asynchronously restored teacher data'
+);
 assert.ok(!teacherEntrySource.includes('ensureTeacherMap(true)'), 'teacher-analysis entry should not auto-load teacher maps on switch');
 assert.ok(!teacherEntrySource.includes('updateTeacherCompareExamSelects'), 'teacher-analysis entry should not scan compare exam selectors on switch');
 assert.ok(!teacherEntrySource.includes('inferTeacherSchoolIfNeeded'), 'teacher-analysis entry should not infer teacher school on switch');
@@ -1048,6 +1052,13 @@ assert.ok(
         && appSource.includes("DataManager.open('teacher');")
         && appSource.includes('openTeacherManager();'),
     'starter teacher shortcut should open the editable teacher manager after restoring or syncing assignments'
+);
+assert.ok(
+    moduleEntryRuntime.includes('function restoreTeacherMapFromLocalHistory()')
+        && moduleEntryRuntime.includes('window.DataManager.ensureTeacherMap(false);')
+        && moduleEntryRuntime.includes('function renderTeacherAnalysisAfterRuntimeReady()')
+        && moduleEntryRuntime.includes('if (ready && isTeacherAnalysisActive()) renderTeacherAnalysisAfterRuntimeReady();'),
+    'teaching management entry should restore local teacher history before cloud access and rerender after late runtime/data readiness'
 );
 assert.ok(
     dataCloudRuntime.includes('<strong>当前参数归属：</strong>')

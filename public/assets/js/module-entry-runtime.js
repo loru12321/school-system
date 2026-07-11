@@ -416,8 +416,56 @@
         }, { delay, idle: false, timeout: 700 });
     }
 
+    function restoreTeacherMapFromLocalHistory() {
+        if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return true;
+
+        try {
+            if (window.DataManager && typeof window.DataManager.ensureTeacherMap === 'function') {
+                window.DataManager.ensureTeacherMap(false);
+            }
+        } catch (error) {
+            console.warn('[teacher-analysis] local teacher history restore failed:', error);
+        }
+        if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return true;
+
+        try {
+            const preferredTerm = typeof window.getPreferredTeacherTermId === 'function'
+                ? window.getPreferredTeacherTermId()
+                : (typeof window.pickAutoTeacherTerm === 'function' ? window.pickAutoTeacherTerm() : '');
+            if (preferredTerm && typeof window.applyTeacherTermWithoutPrompt === 'function') {
+                window.applyTeacherTermWithoutPrompt(preferredTerm);
+            }
+        } catch (error) {
+            console.warn('[teacher-analysis] preferred local teacher term restore failed:', error);
+        }
+        return !!(window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0);
+    }
+
+    function renderTeacherAnalysisAfterRuntimeReady() {
+        const render = () => {
+            if (!isTeacherAnalysisActive()) return false;
+            if (typeof window.analyzeTeachers !== 'function') {
+                renderTeacherAnalysisEmptyState();
+                return false;
+            }
+            scheduleTeacherAnalysisRenderWork(0);
+            return true;
+        };
+        if (typeof window.analyzeTeachers === 'function') return Promise.resolve(render());
+        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
+            return Promise.resolve(window.ensureTeacherAnalysisMainRuntimeLoaded())
+                .then(render)
+                .catch((error) => {
+                    console.warn('[teacher-analysis] runtime load failed:', error);
+                    if (isTeacherAnalysisActive()) renderTeacherAnalysisEmptyState();
+                    return false;
+                });
+        }
+        return Promise.resolve(render());
+    }
+
     function waitForTeacherMapReady(options = {}) {
-        if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
+        if (restoreTeacherMapFromLocalHistory()) {
             return Promise.resolve(true);
         }
         if (!window.CloudManager || typeof window.CloudManager.loadTeachers !== 'function') {
@@ -425,9 +473,14 @@
         }
         const timeoutMs = Number(options.timeoutMs || 3500);
         const loadTask = window.CloudManager.loadTeachers({ background: true, toast: false });
+        const settledLoadTask = Promise.resolve(loadTask).then(() => {
+            const ready = restoreTeacherMapFromLocalHistory();
+            if (ready && isTeacherAnalysisActive()) renderTeacherAnalysisAfterRuntimeReady();
+            return ready;
+        });
         const timeoutTask = new Promise((resolve) => window.setTimeout(() => resolve(false), timeoutMs));
-        return Promise.race([Promise.resolve(loadTask), timeoutTask]).then(() => (
-            !!(window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0)
+        return Promise.race([settledLoadTask, timeoutTask]).then((ready) => (
+            !!ready || restoreTeacherMapFromLocalHistory()
         )).catch((error) => {
             console.warn('[teacher-analysis] teacher map async load failed:', error);
             return false;
@@ -743,7 +796,7 @@
                 waitForTeacherMapReady({ timeoutMs: 5000 }).then((ready) => {
                     if (!isTeacherAnalysisActive()) return;
                     if (ready) {
-                        scheduleTeacherAnalysisRenderWork(0);
+                        renderTeacherAnalysisAfterRuntimeReady();
                     } else {
                         renderTeacherAnalysisEmptyState();
                     }
@@ -751,21 +804,7 @@
                 });
                 return;
             }
-            const run = () => scheduleTeacherAnalysisRenderWork(0);
-            if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
-                && !window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) {
-                window.ensureTeacherAnalysisMainRuntimeLoaded()
-                    .then(() => {
-                        if (isTeacherAnalysisActive()) {
-                            applyTeacherRoleVisibility();
-                            run();
-                            scheduleModuleTask('teacher-analysis-role-visibility', applyTeacherRoleVisibility, { delay: 160, idle: true, timeout: 700 });
-                        }
-                    })
-                    .catch((error) => console.warn('[teacher-analysis] runtime load failed:', error));
-                return;
-            }
-            run();
+            renderTeacherAnalysisAfterRuntimeReady();
             scheduleModuleTask('teacher-analysis-role-visibility', applyTeacherRoleVisibility, { delay: 160, idle: true, timeout: 700 });
         }, { delay: 32, idle: false, timeout: 700 });
         return Promise.resolve();
