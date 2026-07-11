@@ -459,6 +459,8 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
             }
 
+            const curClassR = displayRankValue(safeGet(reportStu, `ranks.${sub}.class`, '-'), showClassRank);
+            const tClass = showClassRank ? getTrendBadge(curClassR, prevRanks.class || '-', 'rank') : '';
             const curSR = safeGet(reportStu, `ranks.${sub}.school`, '-');
             const tS = getTrendBadge(curSR, prevRanks.school || '-', 'rank');
             const curTR = displayRankValue(safeGet(reportStu, `ranks.${sub}.township`, '-'), showTownRank);
@@ -469,8 +471,8 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}
-                    ${renderResponsiveTableCell('成绩（对比）', `${stuScores[sub]} ${subTrend}`, 'font-weight:bold; color:#334155;')}
-                    ${renderResponsiveTableCell('班级排名', '-', 'color:#cbd5e1;')}
+                    ${renderResponsiveTableCell('成绩（对比）', `${stuScores[sub]} <span style="font-size:11px; color:#94a3b8;">上次 ${prevSubScore}</span> ${subTrend}`, 'font-weight:bold; color:#334155;')}
+                    ${renderResponsiveTableCell('班级排名', `${curClassR} <span style="font-size:0.9em;">${tClass}</span>`, 'color:#64748b;')}
                     ${renderResponsiveTableCell('校级排名', `${curSR} <span style="font-size:0.9em;">${tS}</span>`, 'color:#64748b;')}
                     ${renderResponsiveTableCell('全镇排名', `${curTR} <span style="font-size:0.9em;">${tT}</span>`, `color:#64748b; ${townColStyle}`)}
                     ${renderResponsiveTableCell('全县排名', `${showCountyRank ? curCountyR : '-'} <span style="font-size:0.9em;">${tCounty}</span>`, `color:#64748b; ${countyColStyle}`)}

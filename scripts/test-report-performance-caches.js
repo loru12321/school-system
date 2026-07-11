@@ -58,6 +58,8 @@ const pkg = JSON.parse(read(packageFile));
     'function renderSingleReportCardHTML(stu, mode, options = {})',
     'Array.isArray(options.reportExamHistory)',
     'ReportRenderPerfCache.html.set',
+    "safeGet(reportStu, `ranks.${sub}.class`, '-')",
+    '上次 ${prevSubScore}',
     "rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-'",
     'readHistoricalRankValue',
     'if (showCountyRank) thHtml += `<th>县排</th>`;',

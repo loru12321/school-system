@@ -224,12 +224,11 @@
         return options;
     }
 
-    function getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly, category = '') {
+    function getCloudBackupListCacheKey(filterCurrent, filterSnapshotsOnly, _category = '') {
         const options = getCloudBackupListQueryOptions(filterCurrent);
         return JSON.stringify({
             filterCurrent: !!filterCurrent,
             filterSnapshotsOnly: !!filterSnapshotsOnly,
-            category: normalizeText(category),
             workspaceKey: getWorkspaceProjectKey(),
             currentExamKey: getCurrentExamKey(),
             cohortId: getCurrentCloudCohortId(),
@@ -329,6 +328,28 @@
             subjectCount: subjectTeachers.size,
             text: subjects.slice(0, 5).join(' · ') + (subjects.length > 5 ? ` · 另${subjects.length - 5}科` : '')
         };
+    }
+
+    function getTeacherPreviewCacheKey(item) {
+        return `school-system:teacher-preview:${normalizeText(item?.key)}:${normalizeText(item?.updated_at)}`;
+    }
+
+    function readTeacherPreviewCache(item) {
+        try {
+            const raw = root.sessionStorage?.getItem(getTeacherPreviewCacheKey(item));
+            if (!raw) return null;
+            const preview = JSON.parse(raw);
+            return preview && Number(preview.recordCount) > 0 ? preview : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function writeTeacherPreviewCache(item, preview) {
+        if (!preview || Number(preview.recordCount) <= 0) return;
+        try {
+            root.sessionStorage?.setItem(getTeacherPreviewCacheKey(item), JSON.stringify(preview));
+        } catch (_) {}
     }
 
     function getCloudRecordPresentation(manager, key) {
@@ -1134,7 +1155,12 @@
 
             if (cachedList) {
                 allRows = cachedList.allRows;
-                visibleRows = cachedList.visibleRows;
+                visibleRows = allRows.filter((item) => {
+                    if (!cloudRecordMatchesCategory(manager, item, recordCategory)) return false;
+                    if (filterSnapshotsOnly && typeof manager.isCloudWorkspaceSnapshotKey === 'function' && !manager.isCloudWorkspaceSnapshotKey(item.key)) return false;
+                    if (filterCurrent && typeof manager.isCloudRecordInCurrentWorkspace === 'function' && !manager.isCloudRecordInCurrentWorkspace(item.key)) return false;
+                    return true;
+                });
                 rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.fetchMetadata', renderStartedAt, {
                     cache: 'hit',
                     rows: Array.isArray(allRows) ? allRows.length : 0,
@@ -1179,7 +1205,7 @@
                     if (filterCurrent && typeof manager.isCloudRecordInCurrentWorkspace === 'function' && !manager.isCloudRecordInCurrentWorkspace(item.key)) return false;
                     return true;
                 });
-                setCachedCloudBackupList(manager, cacheKey, { allRows, visibleRows });
+                setCachedCloudBackupList(manager, cacheKey, { allRows });
                 rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.computeVisibleRows', computeStartedAt, {
                     rows: allRows.length,
                     visibleRows: visibleRows.length,
@@ -1437,12 +1463,15 @@
             .slice(0, 8);
         if (!teacherItems.length || !tbody || typeof tbody.querySelectorAll !== 'function') return;
         await Promise.all(teacherItems.map(async (item) => {
-            let preview = null;
-            try {
-                const row = await api.getCloudBackupRow(manager, item.key);
-                preview = buildTeacherPreview(parseCloudPayload(row.content) || {});
-            } catch (error) {
-                root.console?.warn?.('[DataCloud] teacher preview failed:', item.key, error);
+            let preview = readTeacherPreviewCache(item);
+            if (!preview) {
+                try {
+                    const row = await api.getCloudBackupRow(manager, item.key);
+                    preview = buildTeacherPreview(parseCloudPayload(row.content) || {});
+                    writeTeacherPreviewCache(item, preview);
+                } catch (error) {
+                    root.console?.warn?.('[DataCloud] teacher preview failed:', item.key, error);
+                }
             }
             const slots = Array.from(tbody.querySelectorAll('[data-cloud-teacher-preview]'));
             const slot = slots.find((element) => normalizeText(element.dataset?.cloudTeacherPreview) === normalizeText(item.key));

@@ -1067,6 +1067,9 @@ assert.ok(
         && dataCloudRuntime.includes('参数按届别单独保存；切换到另一届后，会读取另一届自己的指标参数。'),
     'indicator parameter status should identify the active cohort, school year, term, and grade'
 );
+assert.ok(!dataCloudRuntime.includes('category: normalizeText(category)'), 'cloud archive metadata cache should be shared across category tabs');
+assert.ok(dataCloudRuntime.includes('school-system:teacher-preview:'), 'teacher preview summaries should be cached for the browser session');
+assert.ok(dataCloudRuntime.includes('readTeacherPreviewCache(item)'), 'teacher preview hydration should reuse cached summaries before downloading full maps');
 assert.ok(appSource.includes('const teacherInputFragment = document.createDocumentFragment();'), 'teacher input generation should collect controls in a fragment');
 assert.ok(appSource.includes('container.appendChild(teacherInputFragment);'), 'teacher input generation should attach controls with one fragment append');
 assert.ok(!appSource.includes('container.appendChild(inputDiv);'), 'teacher input generation should avoid per-control container appends');
