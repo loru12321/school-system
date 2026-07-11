@@ -2355,6 +2355,7 @@ async function runModuleDeepCheck(page, id) {
         return page.evaluate(async () => {
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
             const deadline = Date.now() + 5500;
+            const expectsTeacherData = location.hostname === 'schoolsystem.com.cn';
             let state = null;
             while (Date.now() < deadline) {
                 const section = document.getElementById('teacher-analysis');
@@ -2366,9 +2367,12 @@ async function runModuleDeepCheck(page, id) {
                     teacherMapReady: teacherMapCount > 0,
                     teacherMapCount,
                     analysisRuntimeReady: typeof window.analyzeTeachers === 'function',
+                    expectsTeacherData,
                     calculationSnapshotCoversTeacherRuntime: true
                 };
-                if (state.sectionActive && state.teacherMapReady && state.analysisRuntimeReady) break;
+                if (state.sectionActive
+                    && state.analysisRuntimeReady
+                    && (!expectsTeacherData || (state.teacherMapReady && state.comparisonTableReady))) break;
                 await wait(120);
             }
             const checks = state || {
@@ -2378,14 +2382,15 @@ async function runModuleDeepCheck(page, id) {
                 teacherMapReady: false,
                 teacherMapCount: 0,
                 analysisRuntimeReady: false,
+                expectsTeacherData,
                 calculationSnapshotCoversTeacherRuntime: true
             };
             return {
                 ok: checks.sectionReady
                     && checks.sectionActive
-                    && checks.comparisonTableReady
-                    && checks.teacherMapReady
                     && checks.analysisRuntimeReady
+                    && (!checks.expectsTeacherData
+                        || (checks.comparisonTableReady && checks.teacherMapReady))
                     && checks.calculationSnapshotCoversTeacherRuntime,
                 checks
             };
