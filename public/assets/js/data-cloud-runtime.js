@@ -1462,7 +1462,8 @@
             .filter((item) => getCloudRecordKind(manager, item?.key) === 'teacher')
             .slice(0, 8);
         if (!teacherItems.length || !tbody || typeof tbody.querySelectorAll !== 'function') return;
-        await Promise.all(teacherItems.map(async (item) => {
+        for (const item of teacherItems) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
             let preview = readTeacherPreviewCache(item);
             if (!preview) {
                 try {
@@ -1475,13 +1476,13 @@
             }
             const slots = Array.from(tbody.querySelectorAll('[data-cloud-teacher-preview]'));
             const slot = slots.find((element) => normalizeText(element.dataset?.cloudTeacherPreview) === normalizeText(item.key));
-            if (!slot) return;
+            if (!slot) continue;
             if (!preview || !preview.recordCount) {
                 slot.textContent = '未读取到任课明细；可点击“加载并编辑”核对。';
-                return;
+                continue;
             }
             slot.innerHTML = `<strong>${preview.subjectCount} 科 · ${preview.teacherCount} 位教师 · ${preview.recordCount} 条映射</strong><br>${escapeHtml(preview.text)}`;
-        }));
+        }
     }
 
     function buildCloudArchiveExportPayload(item) {
