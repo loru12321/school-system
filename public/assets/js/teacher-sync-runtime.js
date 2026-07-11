@@ -205,9 +205,11 @@ function promptTeacherSyncIfNeeded() {
     return false;
 }
 
-async function tryAutoRestoreTeacherMap() {
+async function tryAutoRestoreTeacherMap(options = {}) {
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return true;
-    if (!shouldAutoLoadTeacherData()) return false;
+    // Login and cohort restoration run before the teacher area is visible.
+    // Allow that startup path to hydrate the current-term assignments silently.
+    if (!options.startup && !shouldAutoLoadTeacherData()) return false;
     if (!(window.CloudManager && typeof CloudManager.loadTeachers === 'function')) return false;
 
     const preferredTerm = getPreferredTeacherTermId() || '';
@@ -228,7 +230,8 @@ async function tryAutoRestoreTeacherMap() {
     return false;
 }
 
-function scheduleTeacherSyncPrompt() {
+function scheduleTeacherSyncPrompt(options = {}) {
+    const startup = options.startup !== false;
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
         if (!localStorage.getItem('TEACHER_SYNC_AT')) {
             localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
@@ -236,18 +239,18 @@ function scheduleTeacherSyncPrompt() {
         }
         return;
     }
-    if (!shouldAutoLoadTeacherData()) return;
+    if (!startup && !shouldAutoLoadTeacherData()) return;
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
-        Promise.resolve(tryAutoRestoreTeacherMap()).then((autoLoaded) => {
-            const done = autoLoaded || promptTeacherSyncIfNeeded();
+        Promise.resolve(tryAutoRestoreTeacherMap({ startup })).then((autoLoaded) => {
+            const done = autoLoaded || (!startup && promptTeacherSyncIfNeeded());
             if (done || tries >= 10) {
                 clearInterval(timer);
             }
         }).catch((error) => {
             console.warn('[TeacherSync] schedule auto restore failed:', error);
-            const done = promptTeacherSyncIfNeeded();
+            const done = !startup && promptTeacherSyncIfNeeded();
             if (done || tries >= 10) {
                 clearInterval(timer);
             }

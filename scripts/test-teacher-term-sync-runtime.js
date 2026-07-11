@@ -37,8 +37,13 @@ assert.ok(
 
 assert.ok(
   /function promptTeacherSyncIfNeeded\(\)[\s\S]*if \(!shouldAutoLoadTeacherData\(\)\) return false;[\s\S]*applyTeacherTermWithoutPrompt\(pickAutoTeacherTerm\(\)\)/.test(teacherSync)
-    && /async function tryAutoRestoreTeacherMap\(\)[\s\S]*const preferredTerm = getPreferredTeacherTermId\(\) \|\| '';/.test(teacherSync),
-  'teacher auto-restore must not apply an old history term before confirming the active module should load teachers'
+    && /async function tryAutoRestoreTeacherMap\(options = \{\}\)[\s\S]*if \(!options\.startup && !shouldAutoLoadTeacherData\(\)\) return false;[\s\S]*const preferredTerm = getPreferredTeacherTermId\(\) \|\| '';/.test(teacherSync),
+  'teacher auto-restore should allow login startup while preserving the visible-module guard for interactive restores'
+);
+
+assert.ok(
+  /function scheduleTeacherSyncPrompt\(options = \{\}\)[\s\S]*const startup = options\.startup !== false;[\s\S]*tryAutoRestoreTeacherMap\(\{ startup \}\)[\s\S]*!startup && promptTeacherSyncIfNeeded\(\)/.test(teacherSync),
+  'login startup should silently load the current-term teacher map without opening a sync prompt'
 );
 
 assert.ok(
