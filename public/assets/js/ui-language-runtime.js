@@ -2,7 +2,7 @@
     if (!root || root.SystemLanguage) return;
 
     const language = {
-        version: '2026.07',
+        version: '2026.07.2',
         domains: {
             data: { title: '数据准备', summary: '维护届别、考试、成绩、任课关系和基础设置。' },
             town: { title: '联考评价', summary: '比较学校整体表现、关键位次和重点学生群体。' },

@@ -1070,9 +1070,10 @@ window.ensureModuleHelpButton = function (sectionId) {
     if (!section) return;
     const titleEl = section.querySelector('.sec-head h2') || section.querySelector('.module-desc-bar h3');
     if (!titleEl || titleEl.querySelector('.module-help-btn')) return;
-    const btn = document.createElement('span');
+    const btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = 'module-help-btn';
-    btn.textContent = '📘 模型说明';
+    btn.innerHTML = '<i class="ti ti-info-circle"></i><span>口径说明</span>';
     btn.onclick = () => window.showModuleHelp(sectionId);
     titleEl.appendChild(btn);
 };
