@@ -1292,7 +1292,10 @@
                     tags = `<span class="badge" style="background:${parts[4] === '期末' ? '#ef4444' : '#3b82f6'}; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">${safeParts[4]}</span>`;
                 }
                 if (kind === 'teacher') {
-                    displayName += `<div data-cloud-teacher-preview="${safeKey}" style="margin-top:6px; color:#475569; font-size:11px; line-height:1.65;">正在读取学科与教师姓名…</div>`;
+                    const preview = readTeacherPreviewCache(item);
+                    displayName += preview
+                        ? `<div style="margin-top:6px;color:#475569;font-size:11px;line-height:1.65;"><strong>${preview.subjectCount} 科 · ${preview.teacherCount} 位教师 · ${preview.recordCount} 条映射</strong><br>${escapeHtml(preview.text)}</div>`
+                        : '<div style="margin-top:6px;color:#64748b;font-size:11px;">点击“加载并编辑”后查看学科、班级和教师姓名；列表不再后台下载整份任课表。</div>';
                 }
                 const loadLabel = kind === 'teacher' ? '加载并编辑' : '读取';
                 const loadTitle = kind === 'teacher' ? '加载此任课表并进入可编辑的教师任课页' : '读取此存档';
@@ -1332,10 +1335,6 @@
                 renderCloudTableState(tbody, shell, 'ready');
                 tbody.innerHTML = rows;
                 bindCloudBackupRowActions(manager, tbody);
-                if (recordCategory === 'teacher') {
-                    Promise.resolve(api.hydrateTeacherPreviews(manager, displayRows, tbody))
-                        .catch((error) => root.console?.warn?.('[DataCloud] teacher previews failed:', error));
-                }
             }
             api.updateCloudSelectionUI(manager);
             rememberDataCloudPerf(manager, 'DataCloud.renderCloudBackups.total', renderStartedAt, {
