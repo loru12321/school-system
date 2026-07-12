@@ -53,6 +53,7 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
         ReportHistoryPerfCache.historyByStudent.clear();
         ReportHistoryPerfCache.lastChartScheduleKey = '';
         clearStudentReportCache(stu);
+        window.__REPORT_HISTORY_VERSION = (window.__REPORT_HISTORY_VERSION || 0) + 1;
     }
     return historyRes.data.length;
 }
@@ -73,10 +74,6 @@ function getCachedStudentReportHistory(stu, selectedExamIds = null, effectiveCur
         ReportHistoryPerfCache.historyByStudent.delete(firstKey);
     }
     return history;
-}
-
-function hasCachedReportHistoryForSelectedExams(stu, selectedReportExamIds = [], effectiveCurrentExamId = '') {
-    return getMissingReportHistoryExamIds(stu, selectedReportExamIds, effectiveCurrentExamId).length === 0;
 }
 
 function hasUsableHistoricalRankValue(value) {
@@ -119,59 +116,48 @@ function getHistoricalReportExamIds(selectedReportExamIds = [], effectiveCurrent
         .filter(id => !effectiveCurrentExamId || !examKeyEq(id, effectiveCurrentExamId));
 }
 
-async function refreshRenderedStudentReportAfterHistory(stu, token) {
-    if (token !== __reportQueryToken) return;
-    const currentStudent = typeof readCurrentReportStudentState === 'function' ? readCurrentReportStudentState() : null;
-    if (getReportStudentIdentity(currentStudent || {}) !== getReportStudentIdentity(stu)) return;
-
-    const container = document.getElementById('report-card-capture-area');
-    if (!container || typeof renderSingleReportCardHTML !== 'function') return;
-    try {
-        container.classList.add('student-report-canvas-full');
-        const reportCache = getStudentReportPerformanceRuntime();
-        const selectedIds = getStudentReportSelectedExamIds();
-        const reportKey = buildStudentReportCacheKey(stu, 'FULL', selectedIds, selectedIds[selectedIds.length - 1] || getEffectiveCurrentExamId());
-        const history = getCachedStudentReportHistory(stu, selectedIds, selectedIds[selectedIds.length - 1] || getEffectiveCurrentExamId());
-        let reportHtml = reportCache?.getReportHtml?.(reportKey);
-        if (!reportHtml) {
-            reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL', { reportExamHistory: history }));
-            reportCache?.setReportHtml?.(reportKey, reportHtml);
-        }
-        if (token !== __reportQueryToken) return;
-        const nextReportHtml = typeof reportHtml === 'string' ? reportHtml : '';
-        if (container.dataset.reportHtmlCacheKey !== reportKey) {
-            container.innerHTML = nextReportHtml;
-            container.dataset.reportHtmlCacheKey = reportKey;
-            container.dataset.reportChartCacheKey = '';
-            enhanceStudentReportMetrics(container);
-        }
-        window.setTimeout(() => {
-            if (token !== __reportQueryToken) return;
-            scheduleStudentReportCharts(stu, history);
-        }, 80);
-    } catch (error) {
-        console.warn('[doQuery] 云端历史补齐后刷新报告失败:', error);
-    }
-}
-
 function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, token) {
     if (!stu || !window.CloudManager || typeof window.CloudManager.fetchStudentExamHistory !== 'function') return;
     const historicalExamIds = getHistoricalReportExamIds(selectedReportExamIds, effectiveCurrentExamId);
-    if (!historicalExamIds.length) return;
-    const missingHistoricalExamIds = getMissingReportHistoryExamIds(stu, historicalExamIds, effectiveCurrentExamId);
-    if (!missingHistoricalExamIds.length) return;
-    const hydrateKey = `${getReportStudentIdentity(stu)}::${missingHistoricalExamIds.join('|')}::${effectiveCurrentExamId || ''}`;
+    const cachedHistory = getCachedStudentReportHistory(stu, selectedReportExamIds, effectiveCurrentExamId);
+    // A report may be opened before the local comparison selector has a prior
+    // exam option. In that case, a score-only PREV_DATA row used to suppress
+    // the cloud request and mask the complete subject ranks already in cloud.
+    // Do not let a current-exam snapshot (or a stale, unrelated local record)
+    // count as prior history. The cloud request is small and is the source of
+    // truth for the subject ranks shown in the comparison columns.
+    const hasCompletePriorHistory = cachedHistory.some((entry) => {
+        const entryExamId = String(entry?.examFullKey || entry?.examId || '').trim();
+        return hasCompleteSubjectRankComparisonHistory(entry)
+            && (!effectiveCurrentExamId || !entryExamId || !examKeyEq(entryExamId, effectiveCurrentExamId));
+    });
+    const shouldDiscoverCloudHistory = !hasCompletePriorHistory;
+    const missingHistoricalExamIds = historicalExamIds.length
+        ? getMissingReportHistoryExamIds(stu, historicalExamIds, effectiveCurrentExamId)
+        : [];
+    if (!shouldDiscoverCloudHistory && !missingHistoricalExamIds.length) return;
+    const hydrateKey = `${getReportStudentIdentity(stu)}::${missingHistoricalExamIds.join('|') || 'discover'}::${effectiveCurrentExamId || ''}`;
     if (ReportHistoryPerfCache.hydratingKeys.has(hydrateKey)) return;
     ReportHistoryPerfCache.hydratingKeys.add(hydrateKey);
     const task = async () => {
         try {
-            const still = () => document.getElementById('report-generator')?.classList.contains('active') && token === __reportQueryToken;
+            // The report may be generated by a direct student entry before the
+            // lazy module shell applies its `active` class.  The visible report
+            // and the current student identity are the reliable ownership
+            // checks; relying on the shell class drops a valid cloud hydrate.
+            const still = () => {
+                if (token !== __reportQueryToken) return false;
+                const currentStudent = typeof readCurrentReportStudentState === 'function'
+                    ? readCurrentReportStudentState()
+                    : window.CURRENT_REPORT_STUDENT;
+                if (getReportStudentIdentity(currentStudent || {}) !== getReportStudentIdentity(stu)) return false;
+                const reportResult = document.getElementById('single-report-result');
+                return document.getElementById('report-generator')?.classList.contains('active')
+                    || !!(reportResult && !reportResult.classList.contains('hidden'));
+            };
             if (!still()) return;
-            const ready = (
-                (typeof window.CloudManager.ensureClientReady === 'function' && await window.CloudManager.ensureClientReady({ silent: true })) ||
-                (typeof window.CloudManager.check === 'function' && window.CloudManager.check(true))
-            );
-            if (!ready || token !== __reportQueryToken) return;
+            // The history endpoint performs the authoritative client/auth
+            // validation. Its bootstrap probe may remain pending after login.
             if (window.UI) UI.toast('正在后台同步历史成绩...', 'info');
             const historyRes = await window.CloudManager.fetchStudentExamHistory(stu, {
                 examIds: missingHistoricalExamIds,
@@ -183,26 +169,18 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
             if (!loadedCount || token !== __reportQueryToken) return;
             if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
             if (window.UI) UI.toast(`已后台匹配 ${loadedCount} 次历史成绩`, 'success');
-            await refreshRenderedStudentReportAfterHistory(stu, token);
+            await doQuery(stu);
         } catch (e) {
             console.warn('[doQuery] 云端历史后台获取失败:', e);
         } finally {
             ReportHistoryPerfCache.hydratingKeys.delete(hydrateKey);
         }
     };
-    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
-        window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task, {
-            delay: 400,
-            idle: true,
-            timeout: 3000
-        });
-    } else if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-        window.setTimeout(() => {
-            window.SystemPerformance.scheduleIdle(task, { timeout: 9000 });
-        }, 400);
-    } else {
-        window.setTimeout(task, 400);
-    }
+    window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task, {
+        delay: 400,
+        idle: true,
+        timeout: 3000
+    });
 }
 
 function syncReportCompareTargetForQuery(stu) {
@@ -232,40 +210,6 @@ function syncReportCompareTargetForQuery(stu) {
 function warmStudentCompareRuntimeForReport(stu) {
     if (typeof setCloudCompareTarget === 'function') setCloudCompareTarget(stu);
 }
-
-function scheduleReportComparisonRetry(stu, token) {
-    if (!stu || !ReportHistoryPerfCache) return;
-    const retryKey = `${getReportStudentIdentity(stu)}::${token}`;
-    if (ReportHistoryPerfCache.reportComparisonRetryKey === retryKey) return;
-    ReportHistoryPerfCache.reportComparisonRetryKey = retryKey;
-    let attempts = 0;
-    const retry = () => {
-        const activeStudent = typeof readCurrentReportStudentState === 'function'
-            ? readCurrentReportStudentState()
-            : window.CURRENT_REPORT_STUDENT;
-        if (token !== __reportQueryToken
-            || !document.getElementById('report-generator')?.classList.contains('active')
-            || getReportStudentIdentity(activeStudent || {}) !== getReportStudentIdentity(stu)) {
-            return;
-        }
-        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-        const selectedIds = getSelectedReportCompareExamIds();
-        const currentExamId = selectedIds[selectedIds.length - 1] || getEffectiveCurrentExamId();
-        if (getHistoricalReportExamIds(selectedIds, currentExamId).length) {
-            ReportHistoryPerfCache.reportComparisonRetryKey = '';
-            void doQuery(stu);
-            return;
-        }
-        attempts += 1;
-        if (attempts >= 8) {
-            ReportHistoryPerfCache.reportComparisonRetryKey = '';
-            return;
-        }
-        ReportHistoryPerfCache.reportComparisonRetryTimer = window.setTimeout(retry, 700);
-    };
-    retry();
-}
-
 
 async function doQuery(targetStudent = null) {
     const queryToken = ++__reportQueryToken;
@@ -371,9 +315,6 @@ async function doQuery(targetStudent = null) {
         scheduleStudentReportCharts(stu, history);
 
         hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, queryToken);
-        if (!getHistoricalReportExamIds(selectedReportExamIds, effectiveCurrentExamId).length) {
-            scheduleReportComparisonRetry(stu, queryToken);
-        }
 
         const strengthKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}`;
         scheduleStudentReportStrengthAnalysis(stu, strengthKey);

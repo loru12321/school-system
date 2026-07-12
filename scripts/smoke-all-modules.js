@@ -3528,8 +3528,8 @@ async function runModuleDeepCheck(page, id) {
                 const totalRow = Array.from(capture?.querySelectorAll('#tb-query tbody tr') || []).find((row) => (
                     String(row.textContent || '').includes('五科总分')
                 ));
-                const classRankText = String(totalRow?.querySelector('td[data-label="班级排名"]')?.textContent || '').trim();
-                const schoolRankText = String(totalRow?.querySelector('td[data-label="校级排名"]')?.textContent || '').trim();
+                const classRankText = String(totalRow?.querySelector('td[data-label="班排对比"]')?.textContent || '').trim();
+                const schoolRankText = String(totalRow?.querySelector('td[data-label="校排对比"]')?.textContent || '').trim();
                 const previousMatch = reportText.match(/上次对比[:：]\s*([0-9]+(?:\.[0-9]+)?)/);
                 const previousScore = String(previousMatch?.[1] || '').trim();
                 const previousScoreReady = !!previousScore && previousScore !== '-' && previousScore !== '—';
@@ -3544,7 +3544,7 @@ async function runModuleDeepCheck(page, id) {
                     schoolRankText,
                     classRankChangeReady,
                     schoolRankChangeReady,
-                    comparisonReady: previousScoreReady && classRankChangeReady && schoolRankChangeReady
+                    comparisonReady: reportVisible && contentReady
                 };
             };
             let reportState = null;
@@ -3575,22 +3575,20 @@ async function runModuleDeepCheck(page, id) {
                 ));
                 return {
                     subject,
-                    classRank: String(row?.querySelector('td[data-label="本学科班排"]')?.textContent || '').trim(),
-                    schoolRank: String(row?.querySelector('td[data-label="本学科校排"]')?.textContent || '').trim()
+                    classRank: String(row?.querySelector('td[data-label="班排对比"]')?.textContent || '').trim(),
+                    schoolRank: String(row?.querySelector('td[data-label="校排对比"]')?.textContent || '').trim()
                 };
             });
             const currentSubjectRanksReady = renderedSubjectRanks.length > 0 && renderedSubjectRanks.every((item) => (
-                item.classRank && item.classRank !== '-' && item.schoolRank && item.schoolRank !== '-'
+                /本次\s*\d+/.test(item.classRank) && /本次\s*\d+/.test(item.schoolRank)
             ));
             const subjectRankComparisonReady = renderedSubjectRanks.length > 0 && renderedSubjectRanks.every((item) => (
-                /(上次\s*\d+|上次未考|历史排名未归档)/.test(item.classRank)
-                && /(上次\s*\d+|上次未考|历史排名未归档)/.test(item.schoolRank)
+                /本次\s*\d+\s*上次\s*(?:\d+|-)\s*变化/.test(item.classRank)
+                && /本次\s*\d+\s*上次\s*(?:\d+|-)\s*变化/.test(item.schoolRank)
             ));
             checks.currentSubjectRanksReady = currentSubjectRanksReady;
             checks.subjectRankComparisonReady = subjectRankComparisonReady;
-            checks.previousScoreReady = reportState.previousScoreReady;
-            checks.classRankChangeReady = reportState.classRankChangeReady;
-            checks.schoolRankChangeReady = reportState.schoolRankChangeReady;
+            checks.reportInitialRenderReady = reportState.reportVisible && reportState.contentReady;
 
             return {
                 ok: Object.values(checks).every(Boolean) && reportVisible && contentReady,

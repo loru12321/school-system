@@ -41,28 +41,36 @@ async function enterWorkspace(page) {
             ));
             if (!student) return { ok: false, reason: 'target student unavailable' };
 
+            // This is the verified cloud snapshot for the target record. Keep
+            // the smoke independent of manual history fetching so it exercises
+            // the report's own background synchronization path.
+            const expectedPrevious = {
+                examId: '2022级-9年级-2025-2026-下学期-一模-2026-04-16',
+                subjectRanks: {
+                    '语文': { class: 4, school: 8 },
+                    '数学': { class: 1, school: 10 },
+                    '英语': { class: 2, school: 2 },
+                    '物理': { class: 1, school: 5 },
+                    '化学': { class: 1, school: 3 }
+                }
+            };
             if (typeof window.switchTab === 'function') window.switchTab('report-generator');
             await new Promise(resolve => window.setTimeout(resolve, 500));
-            const historyResponse = await window.CloudManager?.fetchStudentExamHistory?.(student);
-            if (historyResponse?.success && typeof window.applyCloudStudentHistoryToPrevData === 'function') {
-                window.applyCloudStudentHistoryToPrevData(student, historyResponse, [], window.getEffectiveCurrentExamId?.() || '');
-            }
-            if (typeof window.updateReportCompareExamSelects === 'function') window.updateReportCompareExamSelects();
             await window.doQuery(student);
 
             const readRows = () => Array.from(document.querySelectorAll('#report-card-capture-area #tb-query tbody tr'))
                 .map((row) => ({
                     subject: String(row.querySelector('td[data-label="科目"]')?.textContent || '').trim(),
-                    classRank: String(row.querySelector('td[data-label="本学科班排"]')?.textContent || '').replace(/\s+/g, ' ').trim(),
-                    schoolRank: String(row.querySelector('td[data-label="本学科校排"]')?.textContent || '').replace(/\s+/g, ' ').trim()
+                    classRank: String(row.querySelector('td[data-label="班排对比"]')?.textContent || '').replace(/\s+/g, ' ').trim(),
+                    schoolRank: String(row.querySelector('td[data-label="校排对比"]')?.textContent || '').replace(/\s+/g, ' ').trim()
                 }));
             const startedAt = Date.now();
             let rows = readRows();
             while (Date.now() - startedAt < 12000) {
                 const coreRows = rows.filter((row) => row.subject && !row.subject.includes('总分'));
                 const ready = coreRows.length >= 5 && coreRows.every((row) => (
-                    /(上次\s*\d+|上次未考|历史排名未归档)/.test(row.classRank)
-                    && /(上次\s*\d+|上次未考|历史排名未归档)/.test(row.schoolRank)
+                    /本次\s*\d+\s*上次\s*\d+\s*变化/.test(row.classRank)
+                    && /本次\s*\d+\s*上次\s*\d+\s*变化/.test(row.schoolRank)
                 ));
                 if (ready) break;
                 await new Promise(resolve => window.setTimeout(resolve, 300));
@@ -70,26 +78,43 @@ async function enterWorkspace(page) {
             }
             const subjects = rows.filter((row) => row.subject && !row.subject.includes('总分'));
             const comparedSubjects = subjects.filter((row) => (
-                /上次\s*\d+/.test(row.classRank) && /上次\s*\d+/.test(row.schoolRank)
+                /本次\s*\d+\s*上次\s*\d+\s*变化/.test(row.classRank)
+                && /本次\s*\d+\s*上次\s*\d+\s*变化/.test(row.schoolRank)
             ));
-            const reportCapture = document.getElementById('report-card-capture-area');
-            const reportResult = document.getElementById('single-report-result');
+            const expectedSubjectRanks = expectedPrevious?.subjectRanks || {};
+            const expectedSubjects = Object.entries(expectedSubjectRanks)
+                .filter(([subject]) => subject !== 'total')
+                .filter(([, ranks]) => ranks?.class != null && ranks?.school != null);
+            const matchesCloudRanks = expectedSubjects.every(([subject, ranks]) => {
+                const row = subjects.find((item) => item.subject === subject);
+                return !!row
+                    && new RegExp(`上次\\s*${ranks.class}(?:\\D|$)`).test(row.classRank)
+                    && new RegExp(`上次\\s*${ranks.school}(?:\\D|$)`).test(row.schoolRank);
+            });
+            const selectedExamIds = typeof window.getSelectedReportCompareExamIds === 'function'
+                ? window.getSelectedReportCompareExamIds()
+                : [];
+            const currentExamId = typeof window.getEffectiveCurrentExamId === 'function'
+                ? window.getEffectiveCurrentExamId()
+                : '';
+            const cachedHistory = typeof window.getCachedStudentReportHistory === 'function'
+                ? window.getCachedStudentReportHistory(student, selectedExamIds, currentExamId)
+                : [];
             return {
                 ok: subjects.length >= 5
                     && comparedSubjects.length >= 5
+                    && !!expectedPrevious
+                    && matchesCloudRanks
                     && subjects.every((row) => (
-                        /(上次\s*\d+|上次未考)/.test(row.classRank)
-                        && /(上次\s*\d+|上次未考)/.test(row.schoolRank)
+                        /本次\s*\d+\s*上次\s*(?:\d+|-)\s*变化/.test(row.classRank)
+                        && /本次\s*\d+\s*上次\s*(?:\d+|-)\s*变化/.test(row.schoolRank)
                     )),
-                historyCount: Array.isArray(historyResponse?.data) ? historyResponse.data.length : 0,
-                historySubjectRanks: historyResponse?.data?.[0]?.subjectRanks || null,
-                reportDiagnostics: {
-                    active: document.getElementById('report-generator')?.classList.contains('active') || false,
-                    visible: !!reportResult && !reportResult.classList.contains('hidden'),
-                    captureLength: String(reportCapture?.innerHTML || '').length,
-                    capturePreview: String(reportCapture?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 360),
-                    renderRuntimeReady: typeof window.renderSingleReportCardHTML === 'function'
-                },
+                historyCount: Array.isArray(cachedHistory) ? cachedHistory.length : 0,
+                expectedPrevious: expectedPrevious ? {
+                    examId: expectedPrevious.examFullKey || expectedPrevious.examId || '',
+                    subjectRanks: expectedSubjectRanks
+                } : null,
+                matchesCloudRanks,
                 subjects,
                 comparedSubjects
             };

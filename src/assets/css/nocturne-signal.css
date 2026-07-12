@@ -35,16 +35,14 @@ html body:not(.dark-mode).shell-sidebar-collapsed #app > #app-sidebar.sidebar-sp
 html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious.is-collapsed {
     position: relative;
     overflow: hidden;
-    border-right-color: rgba(117, 154, 235, 0.26) !important;
-    background:
-        radial-gradient(circle at 0 100%, rgba(66, 217, 255, 0.18), transparent 14rem),
-        linear-gradient(180deg, #101832 0%, #0a1022 100%) !important;
-    box-shadow: 12px 0 36px rgba(11, 16, 32, 0.10) !important;
+    border-right-color: #d9e1eb !important;
+    background: #f7f9fc !important;
+    box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #app-sidebar :is(.sidebar-brand, .sidebar-logo, .sidebar-head, .sidebar-title),
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item {
-    color: rgba(238, 246, 255, 0.78) !important;
+    color: #526174 !important;
 }
 
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item {
@@ -53,23 +51,17 @@ html body:not(.dark-mode) #app-sidebar .sidebar-menu-item {
     border-radius: 10px !important;
 }
 
-html body:not(.dark-mode) #app-sidebar .sidebar-menu-item:hover {
-    border-color: rgba(115, 163, 255, 0.24) !important;
-    background: rgba(123, 163, 255, 0.12) !important;
-    color: #ffffff !important;
-}
-
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active,
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] {
-    border-color: rgba(91, 196, 255, 0.48) !important;
-    background: linear-gradient(90deg, rgba(47, 125, 255, 0.32), rgba(66, 217, 255, 0.14)) !important;
-    color: #ffffff !important;
-    box-shadow: inset 3px 0 0 var(--nocturne-cyan), 0 8px 18px rgba(10, 19, 48, 0.25) !important;
+    border-color: #c9daf2 !important;
+    background: #eaf2ff !important;
+    color: #1858a8 !important;
+    box-shadow: inset 3px 0 0 #2f6fed !important;
 }
 
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active .sidebar-menu-item__icon,
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] .sidebar-menu-item__icon {
-    color: var(--nocturne-cyan) !important;
+    color: #1858a8 !important;
 }
 
 html body:not(.dark-mode) #main-header.shell-toolbar {
@@ -185,8 +177,8 @@ html body.dark-mode #app .app-main {
 }
 
 html body.dark-mode #app > #app-sidebar.sidebar-spacious {
-    border-right-color: rgba(113, 148, 224, 0.22) !important;
-    background: #080d1c !important;
+    border-right-color: #d9e1eb !important;
+    background: #f3f6fa !important;
 }
 
 html body.dark-mode #main-header.shell-toolbar,
@@ -224,20 +216,10 @@ html body.dark-mode #app table tbody tr:hover td {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active,
-    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] {
-        animation: nocturneActivePulse 4s ease-in-out infinite;
-    }
-
     html body:not(.dark-mode) #app .analysis-workspace .analysis-shell-head,
     html body:not(.dark-mode) #app .analysis-workspace .sec-head.analysis-shell-head {
         animation: nocturnePanelIn 360ms ease both;
     }
-}
-
-@keyframes nocturneActivePulse {
-    0%, 100% { box-shadow: inset 3px 0 0 var(--nocturne-cyan), 0 8px 18px rgba(10, 19, 48, 0.25); }
-    50% { box-shadow: inset 3px 0 0 var(--nocturne-cyan), 0 10px 24px rgba(47, 125, 255, 0.28); }
 }
 
 @keyframes nocturnePanelIn {

@@ -66,7 +66,7 @@ const pkg = JSON.parse(read(packageFile));
     "readCurrentRank(sub, 'class')",
     "readCurrentRank(sub, 'school')",
     "readCurrentRank(sub, 'county')",
-    '上次 ${prevSubScore}',
+    "renderMetricComparison(stuScores[sub], prevSubScore, 'score')",
     "rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-'",
     'readHistoricalRankValue',
     'if (showCountyRank) thHtml += `<th>县排</th>`;',
@@ -105,9 +105,11 @@ const pkg = JSON.parse(read(packageFile));
 });
 
 [
-    'function scheduleReportComparisonRetry(stu, token)',
-    'void doQuery(stu);',
-    'scheduleReportComparisonRetry(stu, queryToken);'
+    'hasCompleteSubjectRankComparisonHistory',
+    'shouldDiscoverCloudHistory',
+    'window.__REPORT_HISTORY_VERSION',
+    'await doQuery(stu);',
+    'report-history-hydrate:'
 ].forEach((token) => assertContains(reportHistory, token, reportHistoryFile));
 
 [
@@ -122,19 +124,11 @@ const pkg = JSON.parse(read(packageFile));
     "const chartNarrativeHtml = typeof buildChartNarrative === 'function' ? buildChartNarrative(reportStu) : '';"
 ].forEach((token) => assertContains(reportRender, token, reportRenderFile));
 
-const refreshReportStart = reportHistory.indexOf('async function refreshRenderedStudentReportAfterHistory');
-const refreshReportEnd = reportHistory.indexOf('function hydrateStudentReportHistoryInBackground', refreshReportStart);
-const refreshReportSource = refreshReportStart >= 0 && refreshReportEnd > refreshReportStart
-    ? reportHistory.slice(refreshReportStart, refreshReportEnd)
-    : '';
 const doQueryStart = reportHistory.indexOf('async function doQuery');
 const doQueryEnd = reportHistory.length;
 const doQuerySource = doQueryStart >= 0 && doQueryEnd > doQueryStart
     ? reportHistory.slice(doQueryStart, doQueryEnd)
     : '';
-if (!refreshReportSource || refreshReportSource.includes('container.innerHTML !== nextReportHtml')) {
-    fail('refreshRenderedStudentReportAfterHistory should trust reportHtmlCacheKey instead of serializing report innerHTML');
-}
 if (!doQuerySource || doQuerySource.includes('container.innerHTML !== nextReportHtml')) {
     fail('doQuery should trust reportHtmlCacheKey instead of serializing report innerHTML');
 }
@@ -202,7 +196,8 @@ if (!historySource || historySource.includes('computeExamDataFingerprint(examDat
 [
     'county: h.rankCounty || h.subjectRanks?.total?.county ||',
     'examIds: missingHistoricalExamIds',
-    'if (!missingHistoricalExamIds.length) return;'
+    'shouldDiscoverCloudHistory',
+    'window.SystemPerformance.scheduleTask'
 ].forEach((token) => assertContains(reportHistory, token, reportHistoryFile));
 
 const cloudHistoryStart = cloud.indexOf('fetchStudentExamHistory: async function');

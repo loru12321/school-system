@@ -6568,9 +6568,7 @@ const ReportHistoryPerfCache = {
     lastRenderedReportQueryKey: '',
     lastChartScheduleKey: '',
     lastStrengthKey: '',
-    lastCompareHiddenKey: '',
-    reportComparisonRetryKey: '',
-    reportComparisonRetryTimer: null
+    lastCompareHiddenKey: ''
 };
 
 function getCurrentReportDataFingerprint() {

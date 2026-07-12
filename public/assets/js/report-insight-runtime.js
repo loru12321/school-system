@@ -187,6 +187,20 @@ function renderStudentRealityNote(model) {
     return `<div class="report-reality-note"><div class="report-reality-title">真实成绩说明</div><ul class="report-reality-list">${model.realityNotes.map(note => `<li>${note}</li>`).join('')}</ul></div>`;
 }
 
+function renderMetricComparison(current, previous, type = 'score', digits = null) {
+    const formatValue = (value) => {
+        if (value === undefined || value === null || value === '' || value === '-') return '-';
+        const numeric = Number(value);
+        if (digits !== null && Number.isFinite(numeric)) return numeric.toFixed(digits);
+        return String(value);
+    };
+    const trend = getTrendBadge(current, previous, type);
+    return `<div class="report-metric-compare">
+        <div class="report-metric-current"><span>本次</span><strong>${formatValue(current)}</strong></div>
+        <div class="report-metric-previous"><span>上次</span><span>${formatValue(previous)}</span></div>
+        <div class="report-metric-change"><span>变化</span>${trend || '<span class="report-metric-empty">暂无对比</span>'}</div>
+    </div>`;
+}
 
 function getTrendBadge(current, previous, type = 'score') {
     if (previous === undefined || previous === null || previous === '-' || previous === '') return '';
@@ -220,27 +234,13 @@ function getTrendBadge(current, previous, type = 'score') {
         </span>`;
 }
 
-function renderSubjectRankComparison(currentRank, previousRank, options = {}) {
-    const valid = (value) => !/^(?:|[-—]|undefined|null)$/i.test(String(value ?? '').trim());
-    const current = valid(currentRank) ? currentRank : '-';
-    if (options.enabled === false) return '<span class="report-rank-current">-</span>';
-    if (options.historyScoreAvailable !== true) {
-        return `<span class="report-rank-current">${current}</span><span class="report-rank-history report-rank-history--missing">上次未考</span>`;
-    }
-    if (!valid(previousRank)) {
-        return `<span class="report-rank-current">${current}</span><span class="report-rank-history report-rank-history--missing">历史排名未归档</span>`;
-    }
-    return `<span class="report-rank-current">${current}</span><span class="report-rank-history">上次 ${previousRank}</span>${getTrendBadge(current, previousRank, 'rank')}`;
-}
-
-
     window.ReportInsightRuntime = {
         buildStudentInsightModel,
         renderStudentInsightOverview,
         renderStudentActionPlan,
         renderStudentSubjectBoard,
         renderStudentRealityNote,
-        getTrendBadge,
-        renderSubjectRankComparison
+        renderMetricComparison,
+        getTrendBadge
     };
 })();
