@@ -104,23 +104,23 @@ assert.match(
 );
 assert.match(
   entranceSoundJs,
-  /const DEFAULT_MODE = 'off';/,
-  'entrance audio must default to off so login does not fetch media'
+  /const DEFAULT_MODE = 'custom';\s*\n\s*const DEFAULT_AUTOPLAY = true;/,
+  'the project-selected entrance sequence must be enabled after the login gesture'
 );
 assert.match(
   entranceSoundJs,
-  /function prewarmCustomAudio\(\)\s*\{[\s\S]*?!isAutoplayEnabled\(\)/,
-  'entrance audio prewarm must not run unless autoplay was explicitly enabled'
+  /function prewarmCustomAudio\(\)\s*\{[\s\S]*?!audioUnlocked\s*\|\|\s*!isAutoplayEnabled\(\)/,
+  'entrance audio must not fetch while the login screen is painting before a user gesture'
 );
 assert.match(
   entranceSoundJs,
   /function unlockCustomAudio\(\)\s*\{[\s\S]*?!isAutoplayEnabled\(\)/,
-  'login gestures must not unlock or fetch entrance audio unless autoplay was explicitly enabled'
+  'login gestures must only unlock the selected entrance audio when it is enabled'
 );
 assert.match(
   entranceSoundJs,
   /lastOverlayVisible && !visible && !playedForSession && isAutoplayEnabled\(\)/,
-  'login overlay exit must not play entrance audio unless autoplay was explicitly enabled'
+  'the post-login transition must start the selected entrance sequence when enabled'
 );
 assert.match(
   bootRuntimeJs,

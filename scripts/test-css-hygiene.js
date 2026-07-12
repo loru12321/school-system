@@ -98,8 +98,8 @@ if (audioFiles.length !== 0) {
 if (!Array.isArray(entranceManifest.tracks)) {
   throw new Error('Entrance manifest should expose a tracks array');
 }
-if (entranceManifest.tracks.length !== 1) {
-  throw new Error(`Entrance manifest should expose only the selected built-in track, found ${entranceManifest.tracks.length}`);
+if (entranceManifest.tracks.length !== 2) {
+  throw new Error(`Entrance manifest should expose the authorized intro and loop tracks, found ${entranceManifest.tracks.length}`);
 }
 if (!entranceManifest.note.includes('authorizedForEmbedding')) {
   throw new Error('Entrance manifest should document that bundled tracks require embedding authorization');
@@ -115,6 +115,11 @@ for (const track of entranceManifest.tracks) {
   if (fs.statSync(trackPath).size > 4 * 1024 * 1024) {
     throw new Error(`Bundled entrance track exceeds the 4 MB web budget: ${track.src}`);
   }
+}
+const introTrack = entranceManifest.tracks.find((track) => track.playAsIntro === true);
+const loopTrack = entranceManifest.tracks.find((track) => track.loopAfterIntro === true);
+if (!introTrack || !loopTrack || introTrack.id === loopTrack.id) {
+  throw new Error('Entrance manifest must declare one distinct intro track and one looping follow-up track');
 }
 if (!entranceSound.includes("activeAudio.preload = 'metadata'")) {
   throw new Error('Entrance audio should preload metadata only so it does not compete with application modules');

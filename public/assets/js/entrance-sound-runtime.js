@@ -271,7 +271,9 @@
     }
 
     function prewarmCustomAudio() {
-        if (!isAutoplayEnabled() || readMode() === 'off') return;
+        // Do not fetch the playlist while the login screen is painting. The
+        // successful login gesture unlocks and warms the selected sequence.
+        if (!audioUnlocked || !isAutoplayEnabled() || readMode() === 'off') return;
         getPlaylist().catch(() => {});
     }
 
@@ -297,6 +299,7 @@
                 probe.currentTime = 0;
                 if (isObjectUrl) URL.revokeObjectURL(url);
                 audioUnlocked = true;
+                prewarmCustomAudio();
             }).catch(() => {
                 if (isObjectUrl) URL.revokeObjectURL(url);
             });
