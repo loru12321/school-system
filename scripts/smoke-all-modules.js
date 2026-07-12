@@ -3552,8 +3552,14 @@ async function runModuleDeepCheck(page, id) {
             const schoolOptions = Array.from(document.getElementById('cgSchoolSelect')?.options || [])
                 .map(option => option.textContent.trim())
                 .filter(Boolean);
-            const volatilityRows = document.querySelectorAll('#cohort-volatility-table tbody tr').length;
-            const growthRows = document.querySelectorAll('#cohort-growth-table tbody tr').length;
+            let volatilityRows = document.querySelectorAll('#cohort-volatility-table tbody tr').length;
+            let growthRows = document.querySelectorAll('#cohort-growth-table tbody tr').length;
+            if (examCount > 0 && volatilityRows === 0 && growthRows === 0) {
+                await growthApi.render();
+                await new Promise(resolve => setTimeout(resolve, 300));
+                volatilityRows = document.querySelectorAll('#cohort-volatility-table tbody tr').length;
+                growthRows = document.querySelectorAll('#cohort-growth-table tbody tr').length;
+            }
 
             return {
                 ok: Object.values(checks).every(Boolean)
