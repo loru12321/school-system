@@ -234,7 +234,7 @@ function resolveCloudCompareHint(student) {
     if (typeof getCloudCompareHint === 'function') {
         return getCloudCompareHint(student);
     }
-    return (isCloudContextMatchStudent(student) || isCloudContextLikelyCurrentTarget(student))
+    return (window.isCloudContextMatchStudent?.(student) || window.isCloudContextLikelyCurrentTarget?.(student))
         ? readCloudStudentCompareContextSessionState()
         : null;
 }

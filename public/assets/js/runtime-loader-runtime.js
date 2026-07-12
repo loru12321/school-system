@@ -33,6 +33,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('html2canvas-vendor', bootVend('html2canvas/html2canvas.min.js'))
 ]),
 'report-render': bootSkill('demand', 'demand', ['report-generator', 'renderSingleReportCardHTML'], [
+    bootEntry('compare-cloud-context', bootJs('compare-cloud-context-runtime.js')),
     bootEntry('report-insight', bootJs('report-insight-runtime.js')),
     bootEntry('report-render', bootJs('report-render-runtime.js'))
 ]),
@@ -285,8 +286,7 @@ return new Promise((resolve, reject) => {
     if (inlineSource) {
         try {
             const inlineScript = document.createElement('script');
-            inlineScript.defer = true;
-            inlineScript.async = true;
+                inlineScript.async = true;
             inlineScript.dataset.runtime = key;
             inlineScript.dataset.runtimeCandidate = src;
             if (typeof Blob === 'function' && window.URL && typeof window.URL.createObjectURL === 'function') {
@@ -320,7 +320,6 @@ return new Promise((resolve, reject) => {
 
     const script = document.createElement('script');
     script.src = src;
-    script.defer = true;
     script.async = true;
     script.dataset.runtime = key;
     script.dataset.runtimeCandidate = src;
@@ -587,56 +586,34 @@ window.ensureAlasqlVendorLoaded = function () {
 return loadOptionalRuntime('alasql-vendor', './assets/vendor/alasql/alasql.min.js');
 };
 
-window.ensureCryptoJsVendorLoaded = function () {
-if (window.CryptoJS) return Promise.resolve(window.CryptoJS);
-return loadOptionalRuntime('crypto-vendor', './assets/vendor/crypto-js/crypto-js.min.js').then(() => {
-    if (!window.CryptoJS) {
-        throw new Error('CryptoJS runtime unavailable');
-    }
-    return window.CryptoJS;
+function ensureOptionalGlobalRuntime(readValue, key, src, label) {
+const current = readValue();
+if (current) return Promise.resolve(current);
+return loadOptionalRuntime(key, src).then(() => {
+    const loaded = readValue();
+    if (!loaded) throw new Error(`${label} runtime unavailable`);
+    return loaded;
 });
+}
+
+window.ensureCryptoJsVendorLoaded = function () {
+return ensureOptionalGlobalRuntime(() => window.CryptoJS, 'crypto-vendor', './assets/vendor/crypto-js/crypto-js.min.js', 'CryptoJS');
 };
 
 window.ensureSweetAlertVendorLoaded = function () {
-const loaded = getLoadedSweetAlertVendor();
-if (loaded) return Promise.resolve(loaded);
-return loadOptionalRuntime('sweetalert-vendor', './assets/vendor/sweetalert2/sweetalert2.all.min.js').then(() => {
-    const swal = getLoadedSweetAlertVendor();
-    if (!swal) {
-        throw new Error('SweetAlert2 runtime unavailable');
-    }
-    return swal;
-});
+return ensureOptionalGlobalRuntime(getLoadedSweetAlertVendor, 'sweetalert-vendor', './assets/vendor/sweetalert2/sweetalert2.all.min.js', 'SweetAlert2');
 };
 
 window.ensureGsapVendorLoaded = function () {
-if (window.gsap) return Promise.resolve(window.gsap);
-return loadOptionalRuntime('gsap-vendor', './assets/vendor/gsap/gsap.min.js').then(() => {
-    if (!window.gsap) {
-        throw new Error('GSAP runtime unavailable');
-    }
-    return window.gsap;
-});
+return ensureOptionalGlobalRuntime(() => window.gsap, 'gsap-vendor', './assets/vendor/gsap/gsap.min.js', 'GSAP');
 };
 
 window.ensureChartVendorLoaded = function () {
-if (window.Chart) return Promise.resolve(window.Chart);
-return loadOptionalRuntime('chart-vendor', './assets/vendor/chart.js/chart.umd.min.js').then(() => {
-    if (!window.Chart) {
-        throw new Error('Chart runtime unavailable');
-    }
-    return window.Chart;
-});
+return ensureOptionalGlobalRuntime(() => window.Chart, 'chart-vendor', './assets/vendor/chart.js/chart.umd.min.js', 'Chart');
 };
 
 window.ensureXlsxVendorLoaded = function () {
-if (window.XLSX && window.XLSX.utils) return Promise.resolve(window.XLSX);
-return loadOptionalRuntime('xlsx-vendor', './assets/vendor/xlsx/xlsx.full.min.js').then(() => {
-    if (!window.XLSX || !window.XLSX.utils) {
-        throw new Error('XLSX runtime unavailable');
-    }
-    return window.XLSX;
-});
+return ensureOptionalGlobalRuntime(() => window.XLSX && window.XLSX.utils && window.XLSX, 'xlsx-vendor', './assets/vendor/xlsx/xlsx.full.min.js', 'XLSX');
 };
 
 window.ensurePdfExportVendorsLoaded = function () {

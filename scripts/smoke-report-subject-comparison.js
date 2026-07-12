@@ -72,6 +72,8 @@ async function enterWorkspace(page) {
             const comparedSubjects = subjects.filter((row) => (
                 /上次\s*\d+/.test(row.classRank) && /上次\s*\d+/.test(row.schoolRank)
             ));
+            const reportCapture = document.getElementById('report-card-capture-area');
+            const reportResult = document.getElementById('single-report-result');
             return {
                 ok: subjects.length >= 5
                     && comparedSubjects.length >= 5
@@ -81,6 +83,13 @@ async function enterWorkspace(page) {
                     )),
                 historyCount: Array.isArray(historyResponse?.data) ? historyResponse.data.length : 0,
                 historySubjectRanks: historyResponse?.data?.[0]?.subjectRanks || null,
+                reportDiagnostics: {
+                    active: document.getElementById('report-generator')?.classList.contains('active') || false,
+                    visible: !!reportResult && !reportResult.classList.contains('hidden'),
+                    captureLength: String(reportCapture?.innerHTML || '').length,
+                    capturePreview: String(reportCapture?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 360),
+                    renderRuntimeReady: typeof window.renderSingleReportCardHTML === 'function'
+                },
                 subjects,
                 comparedSubjects
             };
