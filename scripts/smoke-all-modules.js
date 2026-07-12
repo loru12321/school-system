@@ -2514,7 +2514,7 @@ async function runModuleDeepCheck(page, id) {
         }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'teacher-township-ranking') {
-        return page.evaluate(async () => {
+        return page.evaluate(async ({ strictPerformance }) => {
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
             const expectsTeacherData = location.hostname === 'schoolsystem.com.cn';
             const deadline = Date.now() + 8000;
@@ -2529,12 +2529,19 @@ async function runModuleDeepCheck(page, id) {
                     sectionActive: !!section?.classList.contains('active'),
                     containerReady: !!container,
                     runtimeReady: typeof window.renderTeacherTownshipRanking === 'function',
+                    renderScheduled: section?.dataset?.teacherSubmoduleScheduled === '1',
                     contentReady: !!text && !/^正在生成|^正在加载/.test(text),
                     hasRankingRows: !!container?.querySelector('tbody tr, .teacher-township-quick-card'),
                     hasExplicitEmptyState: /暂无教师乡镇排名数据|未导入任课表/.test(text),
                     teacherMapCount,
                     expectsTeacherData
                 };
+                if (strictPerformance
+                    && state.sectionReady
+                    && state.sectionActive
+                    && state.containerReady
+                    && state.runtimeReady
+                    && state.renderScheduled) break;
                 if (state.sectionActive
                     && state.contentReady
                     && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))) break;
@@ -2546,14 +2553,16 @@ async function runModuleDeepCheck(page, id) {
                     && state.sectionActive
                     && state.containerReady
                     && state.runtimeReady
-                    && state.contentReady
-                    && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))
+                    && state.renderScheduled
+                    && (strictPerformance || (state.contentReady
+                        && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))))
                     && (!expectsTeacherData || state.teacherMapCount > 0)),
                 checks: state || {
                     sectionReady: false,
                     sectionActive: false,
                     containerReady: false,
                     runtimeReady: false,
+                    renderScheduled: false,
                     contentReady: false,
                     hasRankingRows: false,
                     hasExplicitEmptyState: false,
@@ -2561,7 +2570,7 @@ async function runModuleDeepCheck(page, id) {
                     expectsTeacherData
                 }
             };
-        });
+        }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'county-analysis' || id === 'county-teacher-portrait') {
         return page.evaluate(async () => {

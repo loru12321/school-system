@@ -265,6 +265,8 @@
             return;
         }
         const render = () => renderTeachingManagementSubmodule(moduleId);
+        const section = document.getElementById(moduleId);
+        if (section) section.dataset.teacherSubmoduleScheduled = '1';
         window.setTimeout(render, 80);
         window.setTimeout(render, 650);
         const loadTask = typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
