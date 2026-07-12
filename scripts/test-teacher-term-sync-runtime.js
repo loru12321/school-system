@@ -78,6 +78,7 @@ assert.ok(
     && /const render = \(\) => renderTeachingManagementSubmodule\(moduleId\);[\s\S]*window\.setTimeout\(render, 80\);[\s\S]*window\.setTimeout\(render, 650\)/.test(teachingManagementModules)
     && /function install\(attempt = 0\)[\s\S]*if \(typeof originalSwitchTab !== 'function'\)[\s\S]*install\(attempt \+ 1\)[\s\S]*window\.__TEACHING_MANAGEMENT_MODULES_INSTALLED__ = true;/.test(teachingManagementModules)
     && app.includes('window.TeachingManagementModulesRuntime.install();')
+    && smokeAllModules.includes("'ensureTeacherAnalysisMainRuntimeLoaded'")
     && smokeAllModules.includes("if (id === 'teacher-township-ranking')")
     && smokeAllModules.includes('hasExplicitEmptyState'),
   'teacher submodules must rerender after their runtime is ready and smoke must verify rendered or explicit empty content'

@@ -318,6 +318,7 @@ async function prewarmSmokeHotspots(page) {
             'ensureDataManagerSqlRuntimeLoaded',
             'ensureStudentCompareRuntimeLoaded',
             'ensureCountyAnalysisRuntimeLoaded',
+            'ensureTeacherAnalysisMainRuntimeLoaded',
             'ensureStudentOverviewRuntimeLoaded'
         ];
         const entries = [];
@@ -2465,7 +2466,11 @@ async function runModuleDeepCheck(page, id) {
                     calculationSnapshotCoversTeacherRuntime: true
                 };
                 return {
-                    ok: Object.values(checks).every(Boolean),
+                    ok: checks.sectionReady
+                        && checks.containerReady
+                        && checks.runtimeReady
+                        && checks.contentReady
+                        && checks.calculationSnapshotCoversTeacherRuntime,
                     checks
                 };
             }
