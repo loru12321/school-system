@@ -1661,7 +1661,10 @@
 
                     if (key) {
                         const { data, error } = await selectSystemData({
-                            select: 'key,updated_at',
+                            // The exact current-term key is the common path. Fetch its small
+                            // payload with the metadata so opening teacher analysis does not
+                            // pay for a second gateway round trip before it can render.
+                            select: 'key,content,updated_at',
                             keyEq: key,
                             maybeSingle: true
                         });
@@ -1770,13 +1773,17 @@
                     }
 
                     setCloudStatus('syncing', '拉取任课');
-                    const { data, error } = await selectSystemData({
-                        select: 'key,content,updated_at',
-                        keyEq: metaRow.key,
-                        maybeSingle: true
-                    });
-                    if (error) throw error;
-                    row = data || null;
+                    if (metaRow.content) {
+                        row = metaRow;
+                    } else {
+                        const { data, error } = await selectSystemData({
+                            select: 'key,content,updated_at',
+                            keyEq: metaRow.key,
+                            maybeSingle: true
+                        });
+                        if (error) throw error;
+                        row = data || null;
+                    }
 
                     if (!row || !row.content) {
                         if (showToast) safeToast('未找到可用任课表', 'warning');

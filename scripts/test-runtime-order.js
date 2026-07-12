@@ -784,6 +784,11 @@ assert.ok(
     'cloud rollback entry should also open the shared cloud manager'
 );
 assert.ok(
+    cloudRuntime.includes("select: 'key,content,updated_at'")
+        && cloudRuntime.includes('if (metaRow.content) {\n                        row = metaRow;'),
+    'teacher assignment hydration should reuse the exact-key payload instead of paying for a second gateway round trip'
+);
+assert.ok(
     !authLoginRuntime.includes("DataManager.open();\n                setTimeout(() =>"),
     'header cloud data button should not render the student tab before switching to cloud'
 );
