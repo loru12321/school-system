@@ -225,6 +225,30 @@
         return true;
     }
 
+    function renderTeachingManagementSubmodule(moduleId) {
+        const section = document.getElementById(moduleId);
+        if (!section?.classList.contains('active')) return false;
+        if (moduleId === 'teacher-township-ranking') {
+            ensureTeacherTownshipRankingSlotReady();
+        } else {
+            relocateTeacherBlocks();
+        }
+
+        const renderers = {
+            'teacher-detail-comparison': window.renderTeacherComparisonTable,
+            'teacher-pairing': window.generateTeacherPairing,
+            'teacher-township-ranking': window.renderTeacherTownshipRanking
+        };
+        const renderer = renderers[moduleId];
+        if (typeof renderer !== 'function') return false;
+        renderer();
+        section.dataset.teacherSubmoduleRendered = '1';
+        if (typeof window.applyRoleAllowVisibility === 'function') {
+            window.applyRoleAllowVisibility(section);
+        }
+        return true;
+    }
+
     function refreshTeachingManagementAfterSwitch(moduleId) {
         markActiveGroup(moduleId);
         ensureTeacherAnalysisLoaded();
@@ -232,47 +256,46 @@
             window.tmRenderTeachingModuleStateBars(moduleId === 'teacher-analysis' ? 'teacher-analysis' : '');
         }
         if (moduleId === 'teacher-analysis') {
+            if (typeof window.runModuleTabEnter === 'function') {
+                window.setTimeout(relocateTeacherBlocks, 80);
+                return;
+            }
             window.setTimeout(refreshTeacherAnalysisPortrait, 80);
             window.setTimeout(refreshTeacherAnalysisPortrait, 260);
             return;
         }
-        const renderers = {
-            'teacher-detail-comparison': window.renderTeacherComparisonTable,
-            'teacher-pairing': window.generateTeacherPairing,
-            'teacher-township-ranking': window.renderTeacherTownshipRanking
-        };
-        const renderer = renderers[moduleId];
-        if (typeof renderer === 'function') {
-            window.setTimeout(() => {
-                if (moduleId === 'teacher-township-ranking') {
-                    ensureTeacherTownshipRankingSlotReady();
-                } else {
-                    relocateTeacherBlocks();
-                }
-                renderer();
-            }, 80);
-        }
+        const render = () => renderTeachingManagementSubmodule(moduleId);
+        window.setTimeout(render, 80);
+        window.setTimeout(render, 650);
+        const loadTask = typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
+            ? window.ensureTeacherAnalysisMainRuntimeLoaded()
+            : Promise.resolve(true);
+        Promise.resolve(loadTask).then(() => {
+            window.setTimeout(render, 0);
+        }).catch((error) => {
+            console.warn('[teaching-management] teacher submodule runtime load failed:', error);
+            window.setTimeout(render, 0);
+        });
     }
 
-    function install() {
+    function install(attempt = 0) {
         ensureTeachingManagementSections();
         if (window.__TEACHING_MANAGEMENT_MODULES_INSTALLED__) return;
-        window.__TEACHING_MANAGEMENT_MODULES_INSTALLED__ = true;
         const originalSwitchTab = window.switchTab;
-        if (typeof originalSwitchTab === 'function') {
-            window.switchTab = function patchedTeachingSwitchTab(id, ...rest) {
-                const moduleId = String(id || '').trim();
-                ensureTeachingManagementSections();
-                if (MODULE_META[moduleId]) {
-                    ensureTeacherAnalysisLoaded();
-                }
-                const result = originalSwitchTab.call(this, id, ...rest);
-                if (moduleId === 'teacher-analysis' || MODULE_META[moduleId]) {
-                    refreshTeachingManagementAfterSwitch(moduleId);
-                }
-                return result;
-            };
+        if (typeof originalSwitchTab !== 'function') {
+            if (attempt < 40) window.setTimeout(() => install(attempt + 1), 100);
+            return;
         }
+        window.__TEACHING_MANAGEMENT_MODULES_INSTALLED__ = true;
+        window.switchTab = function patchedTeachingSwitchTab(id, ...rest) {
+            const moduleId = String(id || '').trim();
+            ensureTeachingManagementSections();
+            const result = originalSwitchTab.call(this, id, ...rest);
+            if (moduleId === 'teacher-analysis' || MODULE_META[moduleId]) {
+                refreshTeachingManagementAfterSwitch(moduleId);
+            }
+            return result;
+        };
         document.addEventListener('lazy-section-loaded', relocateTeacherBlocks);
         window.setTimeout(relocateTeacherBlocks, 300);
     }
@@ -285,6 +308,7 @@
         relocateTeacherBlocks,
         ensureTeacherTownshipRankingSlotReady,
         refreshTeacherAnalysisPortrait,
+        renderTeachingManagementSubmodule,
         install
     };
 

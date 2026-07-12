@@ -218,7 +218,12 @@ async function tryAutoRestoreTeacherMap(options = {}) {
     }
 
     try {
-        const ok = await CloudManager.loadTeachers({ background: true, toast: false, blocking: false });
+        const ok = await CloudManager.loadTeachers({
+            background: true,
+            toast: false,
+            blocking: false,
+            force: options.force === true
+        });
         if (ok) {
             if (typeof updateStatusPanel === 'function') updateStatusPanel();
             if (typeof renderTeachingOverview === 'function') renderTeachingOverview();
@@ -240,34 +245,40 @@ function scheduleTeacherSyncPrompt(options = {}) {
         return;
     }
     if (!startup && !shouldAutoLoadTeacherData()) return;
+    if (window.__TEACHER_SYNC_RETRY_ACTIVE__ === true) return;
+    window.__TEACHER_SYNC_RETRY_ACTIVE__ = true;
     let tries = 0;
     let timer = null;
     let stopped = false;
     const stop = () => {
         stopped = true;
-        if (timer) clearInterval(timer);
+        window.__TEACHER_SYNC_RETRY_ACTIVE__ = false;
+        if (timer) clearTimeout(timer);
+    };
+    const scheduleNext = () => {
+        if (!stopped) timer = setTimeout(attempt, 700);
     };
     const attempt = () => {
         if (stopped) return;
         tries += 1;
-        Promise.resolve(tryAutoRestoreTeacherMap({ startup })).then((autoLoaded) => {
+        Promise.resolve(tryAutoRestoreTeacherMap({ startup, force: tries > 1 })).then((autoLoaded) => {
             const done = autoLoaded || (!startup && promptTeacherSyncIfNeeded());
             if (done || tries >= 10) {
                 stop();
+            } else {
+                scheduleNext();
             }
         }).catch((error) => {
             console.warn('[TeacherSync] schedule auto restore failed:', error);
             const done = !startup && promptTeacherSyncIfNeeded();
             if (done || tries >= 10) {
                 stop();
+            } else {
+                scheduleNext();
             }
         });
-        if (tries >= 10) {
-            stop();
-        }
     };
     attempt();
-    if (!stopped) timer = setInterval(attempt, 400);
 }
 
 function renderTeacherAnalysisState() {

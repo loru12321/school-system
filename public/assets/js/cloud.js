@@ -1643,9 +1643,9 @@
             this._teacherLoadTasks = this._teacherLoadTasks || {};
             this._teacherLoadCache = this._teacherLoadCache || {};
             const cached = this._teacherLoadCache[requestKey];
-            if (!forceRefresh && cached && Date.now() - cached.at < TEACHER_LOAD_CACHE_TTL_MS) {
-                setCloudStatus(cached.result ? 'success' : 'connected', cached.result ? '任课已就绪' : '暂无任课');
-                return cached.result;
+            if (!forceRefresh && cached?.result === true && Date.now() - cached.at < TEACHER_LOAD_CACHE_TTL_MS) {
+                setCloudStatus('success', '任课已就绪');
+                return true;
             }
             if (this._teacherLoadTasks[requestKey]) return this._teacherLoadTasks[requestKey];
 
@@ -1860,7 +1860,11 @@
                     if (showBlocking) safeLoading(false);
                 }
             })().then((result) => {
-                this._teacherLoadCache[requestKey] = { at: Date.now(), result };
+                if (result === true) {
+                    this._teacherLoadCache[requestKey] = { at: Date.now(), result: true };
+                } else {
+                    delete this._teacherLoadCache[requestKey];
+                }
                 return result;
             }).finally(() => {
                 delete this._teacherLoadTasks[requestKey];

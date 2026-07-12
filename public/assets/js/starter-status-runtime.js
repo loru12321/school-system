@@ -183,6 +183,7 @@ function updateUploadWorkbenchStatus() {
     const teacherCount = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? Object.keys(window.TEACHER_MAP).length : 0;
     const syncCloud = localStorage.getItem('CLOUD_SYNC_AT');
     const syncTeacher = localStorage.getItem('TEACHER_SYNC_AT');
+    const teacherSynced = teacherCount > 0 && !!syncTeacher;
     const manualBackupAt = localStorage.getItem('MANUAL_BACKUP_AT');
     const locked = isArchiveLocked();
 
@@ -235,9 +236,9 @@ function updateUploadWorkbenchStatus() {
         const cloudBadge = syncCloud
             ? '<span class="status-badge badge-ok">云端已同步</span>'
             : '<span class="status-badge badge-warn">待同步</span>';
-        const teacherBadge = syncTeacher
+        const teacherBadge = teacherSynced
             ? '<span class="status-badge badge-ok">任课已同步</span>'
-            : '<span class="status-badge badge-warn">待同步</span>';
+            : '<span class="status-badge badge-warn">任课未就绪</span>';
         const archiveBadge = locked
             ? '<span class="status-badge badge-err">只读模式</span>'
             : '<span class="status-badge badge-ok">可编辑</span>';
@@ -250,7 +251,7 @@ function updateUploadWorkbenchStatus() {
                 <h4><i class="ti ti-cloud-check"></i> 云端与任课同步</h4>
                 ${cloudBadge}
                 ${teacherBadge}
-                <p>全量云端同步：${syncCloud ? formatStoredSyncTime(syncCloud) : '尚未同步'}<br>任课同步：${syncTeacher ? formatStoredSyncTime(syncTeacher) : '尚未同步'}</p>
+                <p>全量云端同步：${syncCloud ? formatStoredSyncTime(syncCloud) : '尚未同步'}<br>任课同步：${teacherSynced ? formatStoredSyncTime(syncTeacher) : (syncTeacher ? `任课表未加载（上次 ${formatStoredSyncTime(syncTeacher)}）` : '尚未同步')}</p>
             </div>
             <div class="upload-feedback-card">
                 <h4><i class="ti ti-lock-access"></i> 当前考试状态</h4>
@@ -294,6 +295,7 @@ function updateStatusPanel() {
     const syncTeacher = localStorage.getItem('TEACHER_SYNC_AT');
     const syncCloudText = formatStoredSyncTime(syncCloud);
     const syncTeacherText = formatStoredSyncTime(syncTeacher);
+    const teacherSynced = teacherCount > 0 && !!syncTeacher;
     const schoolMode = detectSchoolMode();
 
     const badge = (ok) => ok ? '<span class="status-badge badge-ok">已完成</span>' : '<span class="status-badge badge-warn">未完成</span>';
@@ -305,7 +307,7 @@ function updateStatusPanel() {
             <div class="status-item"><strong>成绩数据</strong>${hasScores ? RAW_DATA.length + ' 条' : '未导入'} ${badge(hasScores)}</div>
             <div class="status-item"><strong>任课表</strong>${teacherCount ? teacherCount + ' 条' : '未导入'} ${badge(teacherCount > 0)}</div>
             <div class="status-item"><strong>全量云端同步</strong>${syncCloudText} ${syncCloud ? '<span class="status-badge badge-ok">已完成</span>' : '<span class="status-badge badge-err">未完成</span>'}</div>
-            <div class="status-item"><strong>任课同步</strong>${syncTeacherText} ${syncTeacher ? '<span class="status-badge badge-ok">已完成</span>' : '<span class="status-badge badge-err">未完成</span>'}</div>
+            <div class="status-item"><strong>任课同步</strong>${teacherSynced ? syncTeacherText : (syncTeacher ? `未加载（上次 ${syncTeacherText}）` : syncTeacherText)} ${teacherSynced ? '<span class="status-badge badge-ok">已完成</span>' : '<span class="status-badge badge-err">未完成</span>'}</div>
             <div class="status-item"><strong>届别 / 考试</strong>${cohortId} / ${examId}</div>
         `;
 

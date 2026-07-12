@@ -95,12 +95,6 @@ const PERFORMANCE_BUDGETS = {
     longTaskMs: 500
 };
 const STRICT_PERFORMANCE_BUDGETS = process.env.SMOKE_PERF_STRICT === 'true';
-const STRICT_SHELL_SWITCH_MODULE_IDS = new Set([
-    'teacher-analysis',
-    'teacher-detail-comparison',
-    'teacher-pairing',
-    'teacher-township-ranking'
-]);
 
 function getModuleSwitchSettleMs(id) {
     const configured = Object.prototype.hasOwnProperty.call(MODULE_SWITCH_SETTLE_MS, id)
@@ -968,24 +962,6 @@ async function smokeSwitchModule(page, id) {
         };
     }, id);
 
-    if (STRICT_PERFORMANCE_BUDGETS && STRICT_SHELL_SWITCH_MODULE_IDS.has(id)) {
-        await page.evaluate((moduleId) => {
-            if (typeof window.ensureLazySectionLoaded === 'function') {
-                window.ensureLazySectionLoaded(moduleId);
-            }
-            if (typeof window.TeachingManagementModulesRuntime?.ensureTeachingManagementSections === 'function') {
-                window.TeachingManagementModulesRuntime.ensureTeachingManagementSections();
-            }
-            document.querySelectorAll('.section.active').forEach((section) => section.classList.remove('active'));
-            const target = document.getElementById(moduleId);
-            if (target) {
-                target.classList.add('active');
-                target.style.display = 'block';
-            }
-        }, id);
-        return collectState();
-    }
-
     try {
         if (id === 'bottom3') {
             await page.evaluate(() => {
@@ -1118,7 +1094,7 @@ async function smokeSwitchModule(page, id) {
 
 async function runModuleDeepCheck(page, id) {
     if (id === 'summary') {
-        return page.evaluate(async () => {
+        return page.evaluate(async ({ strictPerformance }) => {
             const smokeTimeout = (task, timeoutMs = 5000) => Promise.race([
                 Promise.resolve(task),
                 new Promise(resolve => setTimeout(() => resolve(null), timeoutMs))
@@ -1141,7 +1117,7 @@ async function runModuleDeepCheck(page, id) {
                 });
             };
             captureState('start');
-            if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
+            if (strictPerformance) {
                 const headers = Array.from(document.querySelectorAll('#tb-summary thead th'))
                     .map((th) => String(th?.innerText || th?.textContent || '').trim());
                 const summaryRows = Array.from(document.querySelectorAll('#tb-summary tbody tr'));
@@ -1380,7 +1356,7 @@ async function runModuleDeepCheck(page, id) {
                 staleTexts,
                 stateTrace
             };
-        });
+        }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'upload') {
         await page.waitForFunction(() => {
@@ -2056,22 +2032,6 @@ async function runModuleDeepCheck(page, id) {
     }
     if (id === 'student-overview') {
         return page.evaluate(async ({ strictPerformance }) => {
-            if (strictPerformance) {
-                const checks = {
-                    sectionReady: !!document.getElementById('student-overview'),
-                    runtimeReady: typeof window.renderStudentOverview === 'function',
-                    schedulerReady: typeof window.smScheduleStudentOverviewRender === 'function',
-                    quickEntryReady: !!document.getElementById('smQuickEntry'),
-                    statScoresReady: !!document.getElementById('smStatScores'),
-                    statProgressReady: !!document.getElementById('smStatProgress'),
-                    calculationSnapshotCoversOverviewCounts: true
-                };
-                return {
-                    ok: Object.values(checks).every(Boolean),
-                    checks,
-                    strictShellOnly: true
-                };
-            }
             const textOf = (selector) => String(document.querySelector(selector)?.textContent || '')
                 .replace(/\s+/g, ' ')
                 .trim();
@@ -2414,19 +2374,20 @@ async function runModuleDeepCheck(page, id) {
         }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'teacher-detail-comparison') {
-        return page.evaluate(async () => {
+        return page.evaluate(async ({ strictPerformance }) => {
             if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
                 const table = document.getElementById('teacherComparisonTable');
                 const text = String(table?.textContent || '');
                 const rows = table ? table.querySelectorAll('tbody tr').length : 0;
                 const checks = {
                     sectionReady: !!document.getElementById('teacher-detail-comparison'),
+                    sectionActive: !!document.getElementById('teacher-detail-comparison')?.classList.contains('active'),
                     renderReady: typeof window.renderTeacherComparisonTable === 'function',
                     tableReady: !!table,
                     stateRenderable: /正在整理教师对比表|暂无教师统计数据|联考赋分|教学质量分/.test(text) || rows > 0
                 };
                 return {
-                    ok: checks.sectionReady && checks.renderReady,
+                    ok: Object.values(checks).every(Boolean),
                     checks: {
                         ...checks,
                         rows,
@@ -2437,44 +2398,75 @@ async function runModuleDeepCheck(page, id) {
             }
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
             const deadline = Date.now() + 8000;
+            const expectsTeacherData = location.hostname === 'schoolsystem.com.cn';
             let state = null;
             while (Date.now() < deadline) {
                 const table = document.getElementById('teacherComparisonTable');
                 const text = String(table?.textContent || '');
                 const rows = table ? table.querySelectorAll('tbody tr').length : 0;
+                const teacherMapCount = Object.keys(window.TEACHER_MAP || {}).length;
+                const requiresTeacherRows = expectsTeacherData || teacherMapCount > 0;
                 state = {
                     tableReady: !!table,
+                    renderInvoked: document.getElementById('teacher-detail-comparison')?.dataset?.teacherSubmoduleRendered === '1',
                     rows,
                     pendingCleared: !/正在整理教师对比表/.test(text),
-                    hasTeacherRows: rows > 1 && /联考赋分|教学质量分/.test(text)
+                    hasPendingState: /正在整理教师对比表/.test(text),
+                    hasTeacherRows: rows > 1 && /联考赋分|教学质量分/.test(text),
+                    hasExplicitEmptyState: /暂无教师统计数据|暂时无法自动识别本校|未导入任课表/.test(text),
+                    teacherMapCount,
+                    requiresTeacherRows,
+                    expectsTeacherData
                 };
-                if (state.tableReady && state.pendingCleared && state.hasTeacherRows) break;
+                const contentReady = state.hasTeacherRows
+                    || (state.hasExplicitEmptyState && (!requiresTeacherRows || strictPerformance))
+                    || (strictPerformance && state.hasPendingState);
+                if (state.tableReady
+                    && state.renderInvoked
+                    && (strictPerformance || state.pendingCleared)
+                    && contentReady) break;
                 await wait(150);
             }
+            const contentReady = state?.hasTeacherRows
+                || (state?.hasExplicitEmptyState && (!state?.requiresTeacherRows || strictPerformance))
+                || (strictPerformance && state?.hasPendingState);
             return {
-                ok: !!(state?.tableReady && state?.pendingCleared && state?.hasTeacherRows),
+                ok: !!(state?.tableReady
+                    && state?.renderInvoked
+                    && (strictPerformance || state?.pendingCleared)
+                    && contentReady
+                    && (!expectsTeacherData || state?.teacherMapCount > 0)),
                 checks: state || {
                     tableReady: false,
+                    renderInvoked: false,
                     rows: 0,
                     pendingCleared: false,
-                    hasTeacherRows: false
+                    hasPendingState: false,
+                    hasTeacherRows: false,
+                    hasExplicitEmptyState: false,
+                    teacherMapCount: 0,
+                    requiresTeacherRows: expectsTeacherData,
+                    expectsTeacherData
                 }
             };
-        });
+        }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }
     if (id === 'teacher-pairing') {
         return page.evaluate(async ({ strictPerformance }) => {
             if (strictPerformance) {
+                const container = document.getElementById('teacher-pairing-suggestions');
+                const text = String(container?.textContent || '').replace(/\s+/g, ' ').trim();
                 const checks = {
                     sectionReady: !!document.getElementById('teacher-pairing'),
-                    containerReady: !!document.getElementById('teacher-pairing-suggestions'),
+                    sectionActive: !!document.getElementById('teacher-pairing')?.classList.contains('active'),
+                    containerReady: !!container,
                     runtimeReady: typeof window.generateTeacherPairing === 'function',
+                    contentReady: !!text && !/^正在加载/.test(text),
                     calculationSnapshotCoversTeacherRuntime: true
                 };
                 return {
-                    ok: checks.sectionReady && checks.runtimeReady && checks.calculationSnapshotCoversTeacherRuntime,
-                    checks,
-                    strictShellOnly: true
+                    ok: Object.values(checks).every(Boolean),
+                    checks
                 };
             }
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -2515,6 +2507,56 @@ async function runModuleDeepCheck(page, id) {
                 }
             };
         }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
+    }
+    if (id === 'teacher-township-ranking') {
+        return page.evaluate(async () => {
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const expectsTeacherData = location.hostname === 'schoolsystem.com.cn';
+            const deadline = Date.now() + 8000;
+            let state = null;
+            while (Date.now() < deadline) {
+                const section = document.getElementById('teacher-township-ranking');
+                const container = document.getElementById('teacher-township-ranking-container');
+                const text = String(container?.textContent || '').replace(/\s+/g, ' ').trim();
+                const teacherMapCount = Object.keys(window.TEACHER_MAP || {}).length;
+                state = {
+                    sectionReady: !!section,
+                    sectionActive: !!section?.classList.contains('active'),
+                    containerReady: !!container,
+                    runtimeReady: typeof window.renderTeacherTownshipRanking === 'function',
+                    contentReady: !!text && !/^正在生成|^正在加载/.test(text),
+                    hasRankingRows: !!container?.querySelector('tbody tr, .teacher-township-quick-card'),
+                    hasExplicitEmptyState: /暂无教师乡镇排名数据|未导入任课表/.test(text),
+                    teacherMapCount,
+                    expectsTeacherData
+                };
+                if (state.sectionActive
+                    && state.contentReady
+                    && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))) break;
+                await wait(150);
+            }
+            return {
+                ok: !!(state
+                    && state.sectionReady
+                    && state.sectionActive
+                    && state.containerReady
+                    && state.runtimeReady
+                    && state.contentReady
+                    && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))
+                    && (!expectsTeacherData || state.teacherMapCount > 0)),
+                checks: state || {
+                    sectionReady: false,
+                    sectionActive: false,
+                    containerReady: false,
+                    runtimeReady: false,
+                    contentReady: false,
+                    hasRankingRows: false,
+                    hasExplicitEmptyState: false,
+                    teacherMapCount: 0,
+                    expectsTeacherData
+                }
+            };
+        });
     }
     if (id === 'county-analysis' || id === 'county-teacher-portrait') {
         return page.evaluate(async () => {
@@ -3366,23 +3408,6 @@ async function runModuleDeepCheck(page, id) {
             if (!Object.values(checks).every(Boolean)) {
                 return { ok: false, checks };
             }
-            if (strictPerformance) {
-                const shellChecks = {
-                    ...checks,
-                    sectionReady: !!document.getElementById('report-generator'),
-                    schoolSelectReady: !!schoolSelect,
-                    classSelectReady: !!classSelect,
-                    nameInputReady: !!nameInput,
-                    resultContainerReady: !!document.getElementById('single-report-result'),
-                    captureAreaReady: !!document.getElementById('report-card-capture-area')
-                };
-                return {
-                    ok: Object.values(shellChecks).every(Boolean),
-                    checks: shellChecks,
-                    strictShellOnly: true
-                };
-            }
-
             if (typeof window.updateSchoolSelect === 'function') window.updateSchoolSelect();
             if (typeof window.updateReportCompareExamSelects === 'function') window.updateReportCompareExamSelects();
 
@@ -4143,9 +4168,6 @@ async function smokeDataManagerTab(page, id) {
 
     const page = await browser.newPage({
         viewport: { width: 1440, height: 1800 }
-    });
-    await page.addInitScript(() => {
-        window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__ = true;
     });
     await page.addInitScript(`${resolveSmokeRuntimeExamId.toString()}
 ${resolveSmokeRuntimeTermId.toString()}

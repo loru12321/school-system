@@ -3988,6 +3988,11 @@ function switchTab(id) {
     scheduleModuleDockRefresh();
 }
 
+if (window.TeachingManagementModulesRuntime
+    && typeof window.TeachingManagementModulesRuntime.install === 'function') {
+    window.TeachingManagementModulesRuntime.install();
+}
+
 function ensureDrillModalDom() {
     if (typeof window.ensureLazySectionLoaded === 'function') {
         window.ensureLazySectionLoaded('drill-modal');

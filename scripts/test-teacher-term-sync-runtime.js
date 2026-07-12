@@ -9,9 +9,11 @@ function read(relativePath) {
 }
 
 const cohortExamMeta = read('public/assets/js/cohort-exam-meta-runtime.js');
+const app = read('public/assets/js/app.js');
 const cloud = read('public/assets/js/cloud.js');
 const dataManagerCore = read('public/assets/js/data-manager-core-runtime.js');
 const teacherSync = read('public/assets/js/teacher-sync-runtime.js');
+const teachingManagementModules = read('public/assets/js/teaching-management-modules-runtime.js');
 const smokeAllModules = read('scripts/smoke-all-modules.js');
 const smokeLayout = read('scripts/smoke-layout-regression.js');
 
@@ -42,12 +44,43 @@ assert.ok(
 );
 
 assert.ok(
-  /function scheduleTeacherSyncPrompt\(options = \{\}\)[\s\S]*const startup = options\.startup !== false;[\s\S]*tryAutoRestoreTeacherMap\(\{ startup \}\)[\s\S]*!startup && promptTeacherSyncIfNeeded\(\)/.test(teacherSync),
+  /function scheduleTeacherSyncPrompt\(options = \{\}\)[\s\S]*const startup = options\.startup !== false;[\s\S]*tryAutoRestoreTeacherMap\(\{ startup, force: tries > 1 \}\)[\s\S]*!startup && promptTeacherSyncIfNeeded\(\)/.test(teacherSync),
   'login startup should silently load the current-term teacher map without opening a sync prompt'
 );
 assert.ok(
-  /const attempt = \(\) => \{[\s\S]*attempt\(\);[\s\S]*setInterval\(attempt, 400\)/.test(teacherSync),
-  'teacher sync scheduling should attempt immediately before installing bounded retries'
+  /const scheduleNext = \(\) => \{[\s\S]*setTimeout\(attempt, 700\)[\s\S]*const attempt = \(\) => \{[\s\S]*scheduleNext\(\)[\s\S]*attempt\(\);/.test(teacherSync),
+  'teacher sync scheduling should wait for each attempt before installing a bounded forced retry'
+);
+
+assert.ok(
+  cloud.includes('cached?.result === true')
+    && cloud.includes('if (result === true)')
+    && cloud.includes('delete this._teacherLoadCache[requestKey]'),
+  'failed or empty teacher loads must not be cached because startup retries need to query the cloud again'
+);
+
+const starterStatus = read('public/assets/js/starter-status-runtime.js');
+assert.ok(
+  starterStatus.match(/const teacherSynced = teacherCount > 0 && !!syncTeacher;/g)?.length >= 2
+    && starterStatus.includes('任课表未加载（上次'),
+  'teacher sync status must require loaded teacher rows instead of trusting a stale timestamp'
+);
+
+assert.ok(
+  !smokeAllModules.includes('STRICT_SHELL_SWITCH_MODULE_IDS')
+    && !smokeAllModules.includes('strictShellOnly: true'),
+  'strict module smoke must use real module entry paths and must not accept active shell sections'
+);
+
+assert.ok(
+  teachingManagementModules.includes('function renderTeachingManagementSubmodule(moduleId)')
+    && /if \(moduleId === 'teacher-analysis'\)[\s\S]*typeof window\.runModuleTabEnter === 'function'[\s\S]*window\.setTimeout\(relocateTeacherBlocks, 80\)/.test(teachingManagementModules)
+    && /const render = \(\) => renderTeachingManagementSubmodule\(moduleId\);[\s\S]*window\.setTimeout\(render, 80\);[\s\S]*window\.setTimeout\(render, 650\)/.test(teachingManagementModules)
+    && /function install\(attempt = 0\)[\s\S]*if \(typeof originalSwitchTab !== 'function'\)[\s\S]*install\(attempt \+ 1\)[\s\S]*window\.__TEACHING_MANAGEMENT_MODULES_INSTALLED__ = true;/.test(teachingManagementModules)
+    && app.includes('window.TeachingManagementModulesRuntime.install();')
+    && smokeAllModules.includes("if (id === 'teacher-township-ranking')")
+    && smokeAllModules.includes('hasExplicitEmptyState'),
+  'teacher submodules must rerender after their runtime is ready and smoke must verify rendered or explicit empty content'
 );
 
 assert.ok(
