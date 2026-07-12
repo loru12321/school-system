@@ -1,90 +1,5 @@
 [
   {
-    "recordedAt": "2026-06-29T09:13:44.340Z",
-    "commit": "8855664a28f9",
-    "branch": "main",
-    "runId": "28361187828",
-    "runAttempt": "1",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 3878,
-    "appReadyMs": 2322,
-    "totalMs": 39667,
-    "moduleCount": 31,
-    "slowestModules": [
-      {
-        "id": "cohort-growth",
-        "switchMs": 601,
-        "deepCheckMs": 1619,
-        "totalMs": 2220
-      },
-      {
-        "id": "county-analysis",
-        "switchMs": 506,
-        "deepCheckMs": 747,
-        "totalMs": 1253
-      },
-      {
-        "id": "report-generator",
-        "switchMs": 517,
-        "deepCheckMs": 650,
-        "totalMs": 1167
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 564,
-        "deepCheckMs": 515,
-        "totalMs": 1079
-      },
-      {
-        "id": "summary",
-        "switchMs": 558,
-        "deepCheckMs": 509,
-        "totalMs": 1067
-      },
-      {
-        "id": "grade-scheduler",
-        "switchMs": 530,
-        "deepCheckMs": 375,
-        "totalMs": 905
-      },
-      {
-        "id": "freshman-simulator",
-        "switchMs": 533,
-        "deepCheckMs": 359,
-        "totalMs": 892
-      },
-      {
-        "id": "exam-arranger",
-        "switchMs": 522,
-        "deepCheckMs": 338,
-        "totalMs": 860
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "cloud",
-        "durationMs": 1128
-      },
-      {
-        "id": "teacher",
-        "durationMs": 1094
-      },
-      {
-        "id": "targets",
-        "durationMs": 645
-      },
-      {
-        "id": "student",
-        "durationMs": 644
-      }
-    ],
-    "longTaskCount": 2,
-    "maxLongTaskMs": 884,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-07-05T15:51:35.078Z",
     "commit": "43959e6993a3",
     "branch": "main",
@@ -6787,6 +6702,91 @@
       },
       {
         "id": "student",
+        "durationMs": 641
+      },
+      {
+        "id": "targets",
+        "durationMs": 633
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-12T09:37:54.470Z",
+    "commit": "89895f0948b8",
+    "branch": "main",
+    "runId": "29187754007",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 7089,
+    "appReadyMs": 9,
+    "totalMs": 25460,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "teacher-analysis",
+        "switchMs": 49.40000000000873,
+        "deepCheckMs": 734,
+        "totalMs": 783.4000000000087
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 28.30000000000291,
+        "deepCheckMs": 665,
+        "totalMs": 693.3000000000029
+      },
+      {
+        "id": "subject-balance",
+        "switchMs": 37.40000000000873,
+        "deepCheckMs": 645,
+        "totalMs": 682.4000000000087
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 43.39999999999418,
+        "deepCheckMs": 633,
+        "totalMs": 676.3999999999942
+      },
+      {
+        "id": "freshman-simulator",
+        "switchMs": 48.60000000000582,
+        "deepCheckMs": 574,
+        "totalMs": 622.6000000000058
+      },
+      {
+        "id": "analysis",
+        "switchMs": 6.80000000000291,
+        "deepCheckMs": 598,
+        "totalMs": 604.8000000000029
+      },
+      {
+        "id": "teacher-township-ranking",
+        "switchMs": 5.099999999991269,
+        "deepCheckMs": 568,
+        "totalMs": 573.0999999999913
+      },
+      {
+        "id": "indicator",
+        "switchMs": 26.19999999999709,
+        "deepCheckMs": 523,
+        "totalMs": 549.1999999999971
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1128
+      },
+      {
+        "id": "student",
+        "durationMs": 676
+      },
+      {
+        "id": "teacher",
         "durationMs": 641
       },
       {
