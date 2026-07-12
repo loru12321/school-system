@@ -78,10 +78,15 @@ assert.ok(
 );
 assert.ok(exists('dist/assets/js/app.js'), 'dist app runtime must exist before release');
 const entranceManifest = parseJson('dist/assets/audio/entrance/manifest.json');
-assert.strictEqual(entranceManifest.tracks.length, 1, 'release should include only the selected built-in entrance track');
+assert.strictEqual(entranceManifest.tracks.length, 2, 'release should include the authorized AI intro and its looping background track');
 entranceManifest.tracks.forEach((track) => {
   assert.ok(exists(`dist/assets/audio/entrance/${track.src}`), `release should include built-in entrance track ${track.src}`);
 });
+const introTrack = entranceManifest.tracks.find((track) => track.playAsIntro === true);
+const loopTrack = entranceManifest.tracks.find((track) => track.loopAfterIntro === true);
+assert.ok(introTrack, 'release entrance playlist should declare an intro track');
+assert.ok(loopTrack, 'release entrance playlist should declare a looping background track');
+assert.notStrictEqual(introTrack.id, loopTrack.id, 'entrance intro and loop track must remain distinct');
 assert.ok(exists('src/worker-dummy.js'), 'Cloudflare Worker entry must exist');
 assert.strictEqual(wrangler.main, 'src/worker-dummy.js', 'Cloudflare Worker entry should stay on the static asset worker');
 assert.strictEqual(wrangler.assets && wrangler.assets.directory, './dist', 'Cloudflare assets directory should deploy ./dist');

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-12T19:10:00.000Z",
+  "generatedAt": "2026-07-12T19:42:00.000Z",
   "note": "Bundled entrance audio/video is supported only when each track is explicitly marked authorizedForEmbedding. Downloaded third-party favorite-video music must not be listed here unless the user has rights to redistribute it inside this system.",
   "trackSchema": {
     "id": "stable-track-id",
@@ -7,7 +7,9 @@
     "src": "file name under public/assets/audio/entrance or a same-origin URL",
     "type": "audio/mpeg, audio/mp4, video/mp4, video/webm, etc.",
     "authorizedForEmbedding": true,
-    "license": "rights note or source permission"
+    "license": "rights note or source permission",
+    "playAsIntro": "optional: play this track once at the start of the ordered entrance sequence",
+    "loopAfterIntro": "optional: loop this track after the intro finishes"
   },
   "tracks": [
     {
@@ -17,7 +19,18 @@
       "type": "audio/mp4",
       "authorizedForEmbedding": true,
       "license": "Project-owner supplied AI music; embedding and website playback explicitly authorized on 2026-07-12.",
-      "sourceRef": "project-owner supplied AI source; web-ready 3:55 entrance excerpt"
+      "sourceRef": "project-owner supplied AI source; web-ready 3:55 entrance excerpt",
+      "playAsIntro": true
+    },
+    {
+      "id": "renran-waipoqiao",
+      "name": "任然 - 外婆桥",
+      "src": "renran-waipoqiao-96k.mp3",
+      "type": "audio/mpeg",
+      "authorizedForEmbedding": true,
+      "license": "User-selected project audio; embedding explicitly authorized by the project owner on 2026-06-18.",
+      "sourceRef": "approved entrance music source (web 96 kbps)",
+      "loopAfterIntro": true
     }
   ]
 }

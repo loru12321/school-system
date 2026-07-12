@@ -599,6 +599,18 @@ function getStudentExamHistory(student) {
         const asDate = new Date(raw).getTime();
         return Number.isFinite(asDate) ? asDate : 0;
     };
+    const getSubjectRankCoverage = (row) => {
+        const studentLike = row?.student || row || {};
+        const scores = studentLike?.scores || row?.scores || {};
+        const ranks = studentLike?.ranks || studentLike?.subjectRanks || row?.subjectRanks || {};
+        return Object.keys(scores).reduce((count, subject) => {
+            const subjectRanks = ranks?.[subject] || {};
+            const classRank = subjectRanks?.class ?? subjectRanks?.rankClass;
+            const schoolRank = subjectRanks?.school ?? subjectRanks?.rankSchool;
+            const valid = (value) => value !== undefined && value !== null && value !== '' && value !== '-' && value !== '—';
+            return count + (valid(classRank) && valid(schoolRank) ? 1 : 0);
+        }, 0);
+    };
     const targetName = cleanStr(student.name);
     const targetClass = normClass(student.class);
     const targetSchool = student.school;
@@ -720,7 +732,10 @@ function getStudentExamHistory(student) {
             const existsIdx = results.findIndex(r => examKeyEq(getHistoryKey(r), matchKey));
             if (existsIdx === -1) {
                 results.push(normalized);
-            } else if (getHistoryTime(normalized) > getHistoryTime(results[existsIdx])) {
+            } else if (
+                getSubjectRankCoverage(normalized) > getSubjectRankCoverage(results[existsIdx])
+                || getHistoryTime(normalized) > getHistoryTime(results[existsIdx])
+            ) {
                 results[existsIdx] = normalized;
             }
         });
@@ -772,4 +787,3 @@ function getStudentExamHistory(student) {
 }
 
 // 🟢 [新增]：生成进退步胶囊标签 (Windows 风格)
-

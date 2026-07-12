@@ -4398,7 +4398,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
                 && !document.querySelector('[onclick*="school-internal-grades"]'),
             scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
             entrancePlaylistStatus,
-            entrancePlaylistReady: /已导入\s*1\s*首|播放：抽离喧嚣城市 · AI 夜航版/.test(entrancePlaylistStatus),
+            entrancePlaylistReady: /已导入\s*2\s*首|播放：(抽离喧嚣城市 · AI 夜航版|任然 - 外婆桥)/.test(entrancePlaylistStatus),
             teacherMapCountBeforePrewarm: Object.keys(window.TEACHER_MAP || {}).length,
             teacherAutoRestoreReady: Object.keys(window.TEACHER_MAP || {}).length > 0
         });

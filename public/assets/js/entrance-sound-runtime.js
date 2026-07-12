@@ -10,12 +10,13 @@
     const BUNDLED_ASSET_ORIGIN = window.location && window.location.protocol === 'file:' ? 'https://schoolsystem.com.cn/' : './';
     const BUNDLED_AUDIO_PATH = ['assets', 'audio', 'entrance'].join('/');
     const BUNDLED_PLAYLIST_MANIFEST = window.location && window.location.protocol === 'file:'
-        ? 'https://schoolsystem.com.cn/api/entrance-audio-manifest?v=20260712-nocturne-ai-v1'
-        : `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/manifest.json?v=20260712-nocturne-ai-v1`;
+        ? 'https://schoolsystem.com.cn/api/entrance-audio-manifest?v=20260712-nocturne-ai-v2'
+        : `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/manifest.json?v=20260712-nocturne-ai-v2`;
     const BUNDLED_AUDIO_BASE = `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/`;
     const AUTOPLAY_KEY = 'SCHOOL_ENTRANCE_SOUND_AUTOPLAY_V1';
-    // The project owner selected an authorized AI entrance track. Browsers still
-    // require the successful login click as the playback activation gesture.
+    // The project owner selected this authorized sequence: play the AI entrance
+    // track once, then continue with the selected background track on a loop.
+    // Browsers still require the successful login click as the playback gesture.
     const DEFAULT_MODE = 'custom';
     const DEFAULT_AUTOPLAY = true;
 
@@ -154,7 +155,9 @@
                 src: normalizeBundledSrc(track.src || track.file),
                 source: 'bundled',
                 authorizedForEmbedding: track.authorizedForEmbedding === true,
-                license: track.license || ''
+                license: track.license || '',
+                playAsIntro: track.playAsIntro === true,
+                loopAfterIntro: track.loopAfterIntro === true
             })).filter((track) => track.src && track.authorizedForEmbedding);
         }).catch(() => []);
     }
@@ -208,10 +211,15 @@
         return picked;
     }
 
-    function pickSequentialIndex(tracks) {
-        if (!tracks.length) return -1;
-        activeTrackIndex = activeTrackIndex < 0 ? 0 : (activeTrackIndex + 1) % tracks.length;
-        return activeTrackIndex;
+    function pickIntroIndex(tracks) {
+        const introIndex = tracks.findIndex((track) => track && track.playAsIntro);
+        return introIndex >= 0 ? introIndex : 0;
+    }
+
+    function pickLoopAfterIntroIndex(tracks, completedIndex) {
+        const loopIndex = tracks.findIndex((track) => track && track.loopAfterIntro);
+        if (loopIndex >= 0) return loopIndex;
+        return tracks.length > 1 ? (completedIndex + 1) % tracks.length : completedIndex;
     }
 
     function playTrackAt(index, mode) {
@@ -224,10 +232,16 @@
         activeAudio = new Audio(activeAudioUrl);
         activeAudio.preload = 'metadata';
         activeAudio.volume = 0.22;
+        activeAudio.loop = mode === 'custom' && track.loopAfterIntro === true;
         activeAudio.onended = () => {
             const currentMode = readMode();
             if (currentMode === 'off') return;
-            autoAdvanceTimer = window.setTimeout(() => playEntranceSound(currentMode === 'random' ? 'random' : 'custom'), 420);
+            if (currentMode === 'random') {
+                autoAdvanceTimer = window.setTimeout(() => playEntranceSound('random'), 420);
+                return;
+            }
+            const nextIndex = pickLoopAfterIntroIndex(playlist, index);
+            autoAdvanceTimer = window.setTimeout(() => playTrackAt(nextIndex, 'custom'), 420);
         };
         activeAudio.play().catch(() => {
             toast('浏览器暂未允许自动播放，请点一次试听或登录按钮', 'warning');
@@ -248,7 +262,7 @@
                 updatePlaylistStatus();
                 return;
             }
-            const index = selectedMode === 'random' ? pickRandomIndex(tracks) : pickSequentialIndex(tracks);
+            const index = selectedMode === 'random' ? pickRandomIndex(tracks) : pickIntroIndex(tracks);
             playTrackAt(index, selectedMode);
         }).catch(() => {
             stopActiveAudio();
@@ -311,7 +325,7 @@
             group.dataset.builtInRendered = '1';
             group.innerHTML = [
                 '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="random"><strong>流动</strong><small>授权歌单随机</small></button>',
-                '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="custom"><strong>夜航</strong><small>AI 入场音乐</small></button>',
+                '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="custom"><strong>夜航</strong><small>AI 入场后循环外婆桥</small></button>',
                 '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="off"><strong>静音</strong><small>off</small></button>'
             ].join('');
         });

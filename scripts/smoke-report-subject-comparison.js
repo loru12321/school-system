@@ -73,10 +73,12 @@ async function enterWorkspace(page) {
                 /上次\s*\d+/.test(row.classRank) && /上次\s*\d+/.test(row.schoolRank)
             ));
             return {
-                ok: subjects.length >= 5 && comparedSubjects.length >= 1 && subjects.every((row) => (
-                    /(上次\s*\d+|上次未考|历史排名未归档)/.test(row.classRank)
-                    && /(上次\s*\d+|上次未考|历史排名未归档)/.test(row.schoolRank)
-                )),
+                ok: subjects.length >= 5
+                    && comparedSubjects.length >= 5
+                    && subjects.every((row) => (
+                        /(上次\s*\d+|上次未考)/.test(row.classRank)
+                        && /(上次\s*\d+|上次未考)/.test(row.schoolRank)
+                    )),
                 historyCount: Array.isArray(historyResponse?.data) ? historyResponse.data.length : 0,
                 historySubjectRanks: historyResponse?.data?.[0]?.subjectRanks || null,
                 subjects,
