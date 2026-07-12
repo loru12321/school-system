@@ -241,24 +241,33 @@ function scheduleTeacherSyncPrompt(options = {}) {
     }
     if (!startup && !shouldAutoLoadTeacherData()) return;
     let tries = 0;
-    const timer = setInterval(() => {
+    let timer = null;
+    let stopped = false;
+    const stop = () => {
+        stopped = true;
+        if (timer) clearInterval(timer);
+    };
+    const attempt = () => {
+        if (stopped) return;
         tries += 1;
         Promise.resolve(tryAutoRestoreTeacherMap({ startup })).then((autoLoaded) => {
             const done = autoLoaded || (!startup && promptTeacherSyncIfNeeded());
             if (done || tries >= 10) {
-                clearInterval(timer);
+                stop();
             }
         }).catch((error) => {
             console.warn('[TeacherSync] schedule auto restore failed:', error);
             const done = !startup && promptTeacherSyncIfNeeded();
             if (done || tries >= 10) {
-                clearInterval(timer);
+                stop();
             }
         });
         if (tries >= 10) {
-            clearInterval(timer);
+            stop();
         }
-    }, 400);
+    };
+    attempt();
+    if (!stopped) timer = setInterval(attempt, 400);
 }
 
 function renderTeacherAnalysisState() {

@@ -45,6 +45,10 @@ assert.ok(
   /function scheduleTeacherSyncPrompt\(options = \{\}\)[\s\S]*const startup = options\.startup !== false;[\s\S]*tryAutoRestoreTeacherMap\(\{ startup \}\)[\s\S]*!startup && promptTeacherSyncIfNeeded\(\)/.test(teacherSync),
   'login startup should silently load the current-term teacher map without opening a sync prompt'
 );
+assert.ok(
+  /const attempt = \(\) => \{[\s\S]*attempt\(\);[\s\S]*setInterval\(attempt, 400\)/.test(teacherSync),
+  'teacher sync scheduling should attempt immediately before installing bounded retries'
+);
 
 assert.ok(
   cohortExamMeta.includes('function readArchiveExamMetaForTeacherTerm()')
