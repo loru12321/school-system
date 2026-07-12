@@ -1203,7 +1203,7 @@
             if (runtime && typeof runtime.render === 'function') {
                 scheduleActiveModuleTask('data-quality', 'data-quality-render', () => {
                     runtime.render();
-                }, { delay: 240, frame: true });
+                }, { delay: 1200, idle: true, timeout: 2000 });
                 return Promise.resolve(true);
             }
             return Promise.resolve(false);

@@ -59,6 +59,13 @@ assert.ok(smoke.includes('loginMs: 30000'), 'login performance budget should pro
 assert.ok(smoke.includes('appReadyMs: 15000'), 'app-ready performance budget should catch startup regressions');
 assert.ok(smoke.includes('moduleSwitchMs: 1000'), 'module switch performance budget should catch perceptible navigation stalls');
 assert.ok(smoke.includes('MODULE_SWITCH_READY_TIMEOUT_MS = 750'), 'module switch readiness wait should leave headroom under the switch budget');
+assert.ok(
+  smoke.includes("'starter-hub': 0")
+    && smoke.includes("'audio-debug': 0")
+    && smoke.includes("'data-quality': 0"),
+  'lightweight and deferred-render shells should not include the complex-module settle delay in switch timing'
+);
+assert.ok(smoke.includes('default: 0'), 'module switch timing should measure activation only; deep checks own content readiness');
 assert.ok(smoke.includes('dataManagerTabMs: 3000'), 'data manager performance budget should catch slow tab changes');
 assert.ok(performanceWorkflow.includes('SMOKE_PERF_STRICT: "true"'), 'performance workflow should fail when a browser timing budget regresses');
 assert.ok(schedulerTest.includes('scheduleTask'), 'system performance scheduler test should still cover task scheduling');
@@ -71,7 +78,7 @@ assert.ok(
 );
 assert.ok(
   moduleEntryRuntime.includes("scheduleActiveModuleTask('data-quality', 'data-quality-render'")
-    && moduleEntryRuntime.includes('{ delay: 240, frame: true }'),
+    && moduleEntryRuntime.includes('{ delay: 1200, idle: true, timeout: 2000 }'),
   'data-quality analysis should run after the navigation shell is ready and cancel when the user leaves'
 );
 assert.ok(

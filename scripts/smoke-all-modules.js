@@ -79,9 +79,12 @@ const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
 const SMOKE_HOTSPOT_PREWARM_TIMEOUT_MS = 4500;
 const MODULE_SWITCH_SETTLE_MS = {
+    'starter-hub': 0,
+    'audio-debug': 0,
+    'data-quality': 0,
     'student-details': 0,
     'mutual-aid': 0,
-    default: 180
+    default: 0
 };
 const PERFORMANCE_BUDGETS = {
     loginMs: 30000,
