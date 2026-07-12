@@ -403,7 +403,8 @@
             DataManager.syncTeacherHistory({
                 termId: keyTermId || getCurrentTeacherTermId() || getCurrentTermId() || '',
                 source: 'cloud',
-                timestamp: updatedAt || ''
+                timestamp: updatedAt || '',
+                deferAnalysis: options.deferAnalysis === true
             });
         }
         if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {

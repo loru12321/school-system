@@ -114,6 +114,7 @@ assert.ok(
 assert.ok(
   cloud.includes('function refreshLoadedTeacherAnalysis(options = {})')
     && cloud.includes("section.classList.contains('active')")
+    && cloud.includes('deferAnalysis: options.deferAnalysis === true')
     && cloud.includes('{ deferAnalysis: background }'),
   'background teacher restore should defer and cancel stale teacher-analysis refresh work'
 );

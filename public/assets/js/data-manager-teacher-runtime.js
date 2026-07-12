@@ -259,7 +259,9 @@
             source: opts.source || 'local'
         };
 
-        callManagerMethod(manager, 'refreshTeacherAnalysis');
+        if (opts.deferAnalysis !== true) {
+            callManagerMethod(manager, 'refreshTeacherAnalysis');
+        }
     }
 
     function ensureTeacherMap(_manager, triggerCloud) {

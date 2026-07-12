@@ -131,6 +131,15 @@ async function run() {
     runtime.syncTeacherHistory(manager, { termId: '2025-2026_上学期_9年级', timestamp: 123, source: 'local' });
     assert.ok(root.CohortDB._db.teachingHistory);
     assert.deepStrictEqual(root.CohortDB._db.teachingHistory['2025-2026_上学期_9年级'].map, { '901_语文': '老师A' });
+    const refreshCountBeforeDeferredHistory = refreshCount;
+    runtime.syncTeacherHistory(manager, {
+        termId: '2025-2026_下学期_9年级',
+        timestamp: 456,
+        source: 'cloud',
+        deferAnalysis: true
+    });
+    assert.strictEqual(refreshCount, refreshCountBeforeDeferredHistory);
+    assert.deepStrictEqual(root.CohortDB._db.teachingHistory['2025-2026_下学期_9年级'].map, { '901_语文': '老师A' });
 
     root.TEACHER_MAP = {};
     root.resolveTeacherHistoryEntry = () => ({
