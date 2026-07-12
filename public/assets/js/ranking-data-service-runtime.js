@@ -253,6 +253,7 @@
             return normalized;
         };
         const schoolOf = (row) => normalizeSchool(row && row.school);
+        const classOf = (row) => normalizeClassValue(row && row.class);
         const studentKeyCache = new WeakMap();
         const keyOf = (row) => {
             if (!row || typeof row !== 'object') return '';
@@ -267,7 +268,9 @@
         const townRankVisible = schools.size >= townSchoolThreshold;
         const countyRankVisible = schools.size >= countySchoolThreshold;
         const rowsBySchool = groupBy(list, schoolOf);
+        const rowsByClass = groupBy(list, (row) => `${schoolOf(row)}::${classOf(row)}`);
         const rankMaps = {
+            class: new Map(),
             school: new Map(),
             township: new Map(),
             county: new Map()
@@ -301,6 +304,16 @@
         const getScopeMap = (scope, subject, student) => {
             const normalizedScope = scope === 'town' ? 'township' : scope;
             const normalizedSubject = normalizeText(subject) || 'total';
+            if (normalizedScope === 'class') {
+                const school = schoolOf(student);
+                const className = classOf(student);
+                if (!school || !className) return null;
+                const cacheKey = `${school}::${className}::${normalizedSubject}`;
+                if (!rankMaps.class.has(cacheKey)) {
+                    rankMaps.class.set(cacheKey, buildMap(rowsByClass.get(`${school}::${className}`) || [], normalizedSubject));
+                }
+                return rankMaps.class.get(cacheKey);
+            }
             if (normalizedScope === 'school') {
                 const school = schoolOf(student);
                 const cacheKey = `${school}::${normalizedSubject}`;

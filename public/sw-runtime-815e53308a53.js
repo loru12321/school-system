@@ -4,7 +4,7 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-runtime-ea9b9968106c';
+const CACHE_VERSION = 'school-system-runtime-815e53308a53';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;

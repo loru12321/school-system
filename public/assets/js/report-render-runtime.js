@@ -48,7 +48,8 @@ const ReportRenderPerfCache = {
     schoolCandidates: [],
     townshipRank: new Map(),
     countyRank: new Map(),
-    countyDirect: new WeakMap()
+    countyDirect: new WeakMap(),
+    rankIndex: null
 };
 
 function getReportRenderSignature() {
@@ -73,6 +74,7 @@ function getReportRenderSignature() {
         ReportRenderPerfCache.townshipRank.clear();
         ReportRenderPerfCache.countyRank.clear();
         ReportRenderPerfCache.countyDirect = new WeakMap();
+        ReportRenderPerfCache.rankIndex = null;
     }
     return signature;
 }
@@ -383,6 +385,15 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
     const stuScores = (reportStu && typeof reportStu === 'object' && reportStu.scores && typeof reportStu.scores === 'object') ? reportStu.scores : {};
 
     const reportSubjectsForRank = [...new Set(SUBJECTS)];
+    const reportRankIndex = ReportRenderPerfCache.rankIndex || (ReportRenderPerfCache.rankIndex = (
+        window.RankingDataService?.buildStudentRankIndex(RAW_DATA, reportSubjectsForRank) || null
+    ));
+    const readCurrentRank = (subject, scope) => {
+        const stored = safeGet(reportStu, `ranks.${subject}.${scope}`, '-');
+        return stored != null && stored !== '' && stored !== '-' && stored !== '—'
+            ? stored
+            : (reportRankIndex?.getRank(reportStu, subject, scope, '-') ?? '-');
+    };
     const hasTownshipRankData = getCachedRankScope('township', reportSubjectsForRank);
     const cachedCountyRankData = getCachedRankScope('county', reportSubjectsForRank);
     const hasCountyRankData = cachedCountyRankData === null
@@ -391,52 +402,32 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
     const showClassRank = hasClassRankScope(reportStu);
     const showTownRank = hasTownshipRankData && !isCountyDirectStudent(reportStu);
     const showCountyRank = hasCountyRankData;
-    const curTownRank = displayRankValue(safeGet(reportStu, 'ranks.total.township', '-'), showTownRank);
+    const curTownRank = displayRankValue(readCurrentRank('total', 'township'), showTownRank);
     const prevTownRank = displayRankValue(compareTotalRanks.township ?? prevStu?.townRank ?? '-', showTownRank);
-    const curClassRank = displayRankValue(safeGet(reportStu, 'ranks.total.class', '-'), showClassRank);
+    const curClassRank = displayRankValue(readCurrentRank('total', 'class'), showClassRank);
     const prevClassRank = displayRankValue(compareTotalRanks.class ?? prevStu?.classRank ?? '-', showClassRank);
-    const curSchoolRank = safeGet(reportStu, 'ranks.total.school', '-');
+    const curSchoolRank = readCurrentRank('total', 'school');
     const prevSchoolRank = compareTotalRanks.school ?? prevStu?.schoolRank ?? '-';
-    const curCountyRank = getStudentCountyRankValue(reportStu, 'total');
+    const curCountyRank = displayRankValue(readCurrentRank('total', 'county'), showCountyRank);
     const prevCountyRank = hasHistoricalCountyRank(compareStu, 'total', prevHistoryEntry)
         ? readHistoricalRankValue(prevHistoryEntry, compareStu, 'total', 'county')
         : '-';
 
     // 单校判断
-    const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
     const townColStyle = hasTownshipRankData ? '' : 'display:none !important;';
     const countyColStyle = showCountyRank ? '' : 'display:none !important;';
 
-    let tableRows = '';
-
-    if (CONFIG.name === '9年级') {
-        let fiveTotal = 0, count = 0;
-        ['语文', '数学', '英语', '物理', '化学'].forEach(sub => {
-            if (stuScores[sub] !== undefined) { fiveTotal += stuScores[sub]; count++; }
-        });
-        if (count > 0) {
-            tableRows += `<tr style="background:rgba(248,250,252,0.5);">
-                    ${renderResponsiveTableCell('科目', '🏁 核心五科', 'font-weight:bold; color:#475569;')}
-                    ${renderResponsiveTableCell('成绩（对比）', fiveTotal.toFixed(1), 'font-weight:bold; color:#2563eb;')}
-                    ${renderResponsiveTableCell('班级排名', '-')}
-                    ${renderResponsiveTableCell('校级排名', '-')}
-                    ${renderResponsiveTableCell('全镇排名', '-', townColStyle)}
-                    ${renderResponsiveTableCell('全县排名', '-', countyColStyle)}
-                </tr>`;
-        }
-    }
-
-        const comparisonTotalSubjects = getComparisonTotalSubjects();
-        const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
-        const totalLabel = (CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label;
-        const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
-        const trendTotal = getTrendBadge(currentTotal, prevTotal, 'score');
+    const comparisonTotalSubjects = getComparisonTotalSubjects();
+    const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
+    const totalLabel = (CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label;
+    const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
+    const trendTotal = getTrendBadge(currentTotal, prevTotal, 'score');
     const trendClass = showClassRank ? getTrendBadge(curClassRank, prevClassRank, 'rank') : '';
     const trendSchool = getTrendBadge(curSchoolRank, prevSchoolRank, 'rank');
     const trendTown = showTownRank ? getTrendBadge(curTownRank, prevTownRank, 'rank') : '';
     const trendCounty = showCountyRank ? getTrendBadge(curCountyRank, prevCountyRank, 'rank') : '';
 
-    tableRows += `<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
+    let tableRows = `<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
             ${renderResponsiveTableCell('科目', `🏆 ${totalLabel}`, 'font-weight:bold; color:#1e3a8a;')}
             ${renderResponsiveTableCell('成绩（对比）', `${Number.isFinite(currentTotal) ? currentTotal.toFixed(2) : '-'} ${trendTotal}`, 'font-weight:800; font-size:16px; color:#1e40af;')}
             ${renderResponsiveTableCell('班级排名', `${curClassRank} ${trendClass}`, 'font-weight:bold; color:#334155;')}
@@ -456,12 +447,12 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
             }
 
-            const curClassR = displayRankValue(safeGet(reportStu, `ranks.${sub}.class`, '-'), showClassRank), tClass = showClassRank ? getTrendBadge(curClassR, prevRanks.class || '-', 'rank') : '';
-            const curSR = safeGet(reportStu, `ranks.${sub}.school`, '-');
+            const curClassR = displayRankValue(readCurrentRank(sub, 'class'), showClassRank), tClass = showClassRank ? getTrendBadge(curClassR, prevRanks.class || '-', 'rank') : '';
+            const curSR = readCurrentRank(sub, 'school');
             const tS = getTrendBadge(curSR, prevRanks.school || '-', 'rank');
-            const curTR = displayRankValue(safeGet(reportStu, `ranks.${sub}.township`, '-'), showTownRank);
+            const curTR = displayRankValue(readCurrentRank(sub, 'township'), showTownRank);
             const tT = showTownRank ? getTrendBadge(curTR, prevRanks.township || '-', 'rank') : '';
-            const curCountyR = getStudentCountyRankValue(reportStu, sub);
+            const curCountyR = displayRankValue(readCurrentRank(sub, 'county'), showCountyRank);
             const prevCountyR = readHistoricalRankValue(prevHistoryEntry, compareStu, sub, 'county');
             const tCounty = showCountyRank && hasHistoricalCountyRank(compareStu, sub, prevHistoryEntry) ? getTrendBadge(curCountyR, prevCountyR || '-', 'rank') : '';
 

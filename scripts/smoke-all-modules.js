@@ -3508,6 +3508,21 @@ async function runModuleDeepCheck(page, id) {
             const capture = document.getElementById('report-card-capture-area');
             const reportVisible = !!reportWrap && !reportWrap.classList.contains('hidden');
             const contentReady = !!capture && String(capture.innerHTML || '').trim().length > 0;
+            const scoreSubjects = (window.SUBJECTS || []).filter((subject) => student.scores?.[subject] !== undefined);
+            const renderedSubjectRanks = scoreSubjects.map((subject) => {
+                const row = Array.from(capture?.querySelectorAll('#tb-query tbody tr') || []).find((candidate) => (
+                    String(candidate.querySelector('td[data-label="科目"]')?.textContent || '').trim() === subject
+                ));
+                return {
+                    subject,
+                    classRank: String(row?.querySelector('td[data-label="班级排名"]')?.textContent || '').trim(),
+                    schoolRank: String(row?.querySelector('td[data-label="校级排名"]')?.textContent || '').trim()
+                };
+            });
+            const currentSubjectRanksReady = renderedSubjectRanks.length > 0 && renderedSubjectRanks.every((item) => (
+                item.classRank && item.classRank !== '-' && item.schoolRank && item.schoolRank !== '-'
+            ));
+            checks.currentSubjectRanksReady = currentSubjectRanksReady;
 
             return {
                 ok: Object.values(checks).every(Boolean) && reportVisible && contentReady,
@@ -3519,6 +3534,7 @@ async function runModuleDeepCheck(page, id) {
                     className: student.class || '',
                     name: student.name || ''
                 },
+                renderedSubjectRanks,
                 contentLength: capture ? String(capture.innerHTML || '').trim().length : 0
             };
         }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });

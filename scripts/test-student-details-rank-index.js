@@ -59,6 +59,9 @@ assert.strictEqual(twentyFourIndex.countyRankVisible, true);
 assert.strictEqual(twentyFourIndex.getRank(twentyFourRows[0], 'total', 'township'), 1);
 assert.strictEqual(twentyFourIndex.getRank(twentyFourRows[0], 'total', 'county'), 1);
 assert.strictEqual(twentyFourIndex.getRank(twentyFourRows[0], '数学', 'county'), 1);
+assert.strictEqual(twentyFourIndex.getRank(twentyFourRows[0], '语文', 'class'), 1);
+assert.strictEqual(twentyFourIndex.getRank(twentyFourRows[1], '语文', 'class'), 2);
+assert.strictEqual(twentyFourIndex.getRank(twentyFourRows[2], '语文', 'class'), 1, 'class ranks must stay scoped to the school');
 const countyDirectStudent = twentyFourRows.find((row) => row.school === '学校24');
 assert.strictEqual(twentyFourIndex.getRank(countyDirectStudent, 'total', 'township'), '-');
 assert.ok(Number.isInteger(twentyFourIndex.getRank(countyDirectStudent, 'total', 'county')));
@@ -68,6 +71,7 @@ const startedAt = Date.now();
 const performanceIndex = service.buildStudentRankIndex(performanceRows, ['语文', '数学']);
 performanceRows.slice(0, 40).forEach((student) => {
     ['total', '语文', '数学'].forEach((subject) => {
+        assert.notStrictEqual(performanceIndex.getRank(student, subject, 'class'), '-');
         assert.notStrictEqual(performanceIndex.getRank(student, subject, 'school'), '-');
         assert.notStrictEqual(performanceIndex.getRank(student, subject, 'county'), '-');
     });
