@@ -1677,10 +1677,14 @@
                             ? `${KEY_PREFIX_TEACHERS}${cohortId || ''}级_${normalizeTeacherSchoolForKey(requestedSchool)}_`
                             : '';
                         const scopedQuery = (requestedSchool && scopedKeyPrefix)
-                            ? selectSystemData({ select: 'key,updated_at', keyLike: scopedKeyPrefix, order: 'updated_at', limit: 80 })
+                            ? selectSystemData({ select: 'key,content,updated_at', keyLike: scopedKeyPrefix, order: 'updated_at', limit: 80 })
                             : Promise.resolve({ data: [], error: null });
                         const fallbackQuery = selectSystemData({
-                            select: 'key,updated_at',
+                            // A cross-semester teacher assignment is the normal fallback for
+                            // exams whose current-term key has not been uploaded. Carry the
+                            // compact payload in this candidate query so the chosen row is
+                            // immediately usable without another network request.
+                            select: 'key,content,updated_at',
                             keyLike: cohortId ? `${KEY_PREFIX_TEACHERS}${cohortId}%` : `${KEY_PREFIX_TEACHERS}%`,
                             order: 'updated_at',
                             limit: requestedSchool ? 120 : 50

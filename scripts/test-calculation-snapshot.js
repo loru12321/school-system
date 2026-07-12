@@ -829,6 +829,21 @@ async function main() {
             .filter(Boolean);
         snapshotStep('check:teacher-township-rerender');
 
+        // The performance runtime may release inactive county DOM while the
+        // snapshot exercises later modules. Re-enter and render immediately
+        // before reading the county rows so this assertion measures the live
+        // calculation result instead of a legitimately reclaimed subtree.
+        await boundedSwitchTab('county-teacher-portrait');
+        await window.CountyAnalysisRuntime?.ensureTeacherContextForCountyAnalysis?.(true);
+        window.renderCountyAnalysis?.('county-teacher-portrait');
+        const finalCountyTeacherDeadline = Date.now() + 10000;
+        while (
+            Date.now() < finalCountyTeacherDeadline
+            && (getTeacherRoot()?.querySelectorAll('.county-teacher-rank-table tbody tr').length || 0) < 80
+        ) {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            window.renderCountyAnalysis?.('county-teacher-portrait');
+        }
         const teacherRoot = getTeacherRoot();
         const studentSection = document.getElementById('student-details');
         const teacherRankSection = document.getElementById('teacher-township-ranking-container');

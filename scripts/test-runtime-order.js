@@ -784,9 +784,9 @@ assert.ok(
     'cloud rollback entry should also open the shared cloud manager'
 );
 assert.ok(
-    cloudRuntime.includes("select: 'key,content,updated_at'")
+    (cloudRuntime.match(/select: 'key,content,updated_at'/g) || []).length >= 4
         && cloudRuntime.includes('if (metaRow.content) {\n                        row = metaRow;'),
-    'teacher assignment hydration should reuse the exact-key payload instead of paying for a second gateway round trip'
+    'teacher assignment hydration should reuse exact and fallback payloads instead of paying for a second gateway round trip'
 );
 assert.ok(
     !authLoginRuntime.includes("DataManager.open();\n                setTimeout(() =>"),
