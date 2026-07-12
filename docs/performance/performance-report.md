@@ -4,11 +4,11 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `91faa33502e8`
-- Recorded at: 2026-07-12T05:59:51.348Z
-- Total smoke time: 26166 ms (+677 ms vs previous)
-- Login: 5985 ms
-- App ready: 200 ms
+- Commit: `865e7190a673`
+- Recorded at: 2026-07-12T06:28:29.574Z
+- Total smoke time: 26468 ms (+302 ms vs previous)
+- Login: 6799 ms
+- App ready: 8 ms
 - Long tasks: 0, max 0 ms
 - Budget failures: 0
 - Errors: 0
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `report-generator` | 70 ms | 1905 ms | 1975 ms |
-| `starter-hub` | 250 ms | 1057 ms | 1307 ms |
-| `student-details` | 23 ms | 1185 ms | 1208 ms |
-| `indicator` | 31 ms | 1164 ms | 1195 ms |
-| `cohort-growth` | 581 ms | 361 ms | 942 ms |
-| `student-overview` | 52 ms | 691 ms | 743 ms |
-| `analysis` | 19 ms | 584 ms | 603 ms |
-| `freshman-simulator` | 65 ms | 537 ms | 602 ms |
+| `report-generator` | 34 ms | 1754 ms | 1788 ms |
+| `student-details` | 30 ms | 1243 ms | 1273 ms |
+| `starter-hub` | 126 ms | 1061 ms | 1187 ms |
+| `progress-analysis` | 80 ms | 680 ms | 760 ms |
+| `subject-balance` | 62 ms | 641 ms | 703 ms |
+| `student-overview` | 26 ms | 656 ms | 682 ms |
+| `analysis` | 10 ms | 610 ms | 620 ms |
+| `freshman-simulator` | 62 ms | 555 ms | 617 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `865e7190a673` | 26468 ms | 6799 ms | 8 ms | 0 | 0 | 0 |
 | `91faa33502e8` | 26166 ms | 5985 ms | 200 ms | 0 | 0 | 0 |
 | `8fe831ccbb9b` | 25489 ms | 5961 ms | 239 ms | 0 | 0 | 0 |
 | `75f91f62d601` | 15003 ms | 3744 ms | 221 ms | 0 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `95f4f0f5d0a5` | 26633 ms | 6376 ms | 89 ms | 1 | 0 | 0 |
 | `14bb7216e56e` | 26628 ms | 6504 ms | 12 ms | 1 | 0 | 0 |
 | `6befd25fea14` | 25208 ms | 5929 ms | 36 ms | 1 | 0 | 0 |
-| `ca9e7cccc2ab` | 28754 ms | 8715 ms | 37 ms | 1 | 0 | 0 |
 
 ## Data Files
 
