@@ -378,6 +378,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         if (!shouldShow) return '-';
         return value == null || value === '' ? '-' : value;
     };
+    const renderSubjectRankComparison = window.ReportInsightRuntime.renderSubjectRankComparison;
 
     // 数据容错（云端简版对象可能缺少scores）
     const stuScores = (reportStu && typeof reportStu === 'object' && reportStu.scores && typeof reportStu.scores === 'object') ? reportStu.scores : {};
@@ -437,28 +438,30 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         if (stuScores[sub] !== undefined) {
             const prevSubScore = compareStu && compareStu.scores ? readScoreValue(compareStu.scores[sub]) : '-';
             const subTrend = getTrendBadge(stuScores[sub], prevSubScore, 'score');
+            const hasPreviousSubjectScore = prevSubScore !== '-';
 
             let prevRanks = normalizeRankInfo(compareStu && compareStu.ranks ? compareStu.ranks[sub] : null);
             if (prevRanks.class === '-' && prevRanks.school === '-' && prevRanks.township === '-' && prevStu && prevStu.ranks && prevStu.ranks[sub]) {
                 prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
             }
 
-            const curClassR = displayRankValue(readCurrentRank(sub, 'class'), showClassRank), tClass = showClassRank ? getTrendBadge(curClassR, prevRanks.class || '-', 'rank') : '';
+            const curClassR = displayRankValue(readCurrentRank(sub, 'class'), showClassRank);
             const curSR = readCurrentRank(sub, 'school');
-            const tS = getTrendBadge(curSR, prevRanks.school || '-', 'rank');
             const curTR = displayRankValue(readCurrentRank(sub, 'township'), showTownRank);
-            const tT = showTownRank ? getTrendBadge(curTR, prevRanks.township || '-', 'rank') : '';
             const curCountyR = displayRankValue(readCurrentRank(sub, 'county'), showCountyRank);
             const prevCountyR = readHistoricalRankValue(prevHistoryEntry, compareStu, sub, 'county');
-            const tCounty = showCountyRank && hasHistoricalCountyRank(compareStu, sub, prevHistoryEntry) ? getTrendBadge(curCountyR, prevCountyR || '-', 'rank') : '';
+            const previousClassRank = prevRanks.class || '-';
+            const previousSchoolRank = prevRanks.school || '-';
+            const previousTownRank = prevRanks.township || '-';
+            const previousCountyRank = hasHistoricalCountyRank(compareStu, sub, prevHistoryEntry) ? prevCountyR : '-';
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}
                     ${renderResponsiveTableCell('成绩（对比）', `${stuScores[sub]}（上次 ${prevSubScore}）${subTrend}`, 'font-weight:bold;color:#334155;')}
-                    ${renderResponsiveTableCell('班级排名', `${curClassR} ${tClass}`, 'color:#64748b;')}
-                    ${renderResponsiveTableCell('校级排名', `${curSR} <span style="font-size:0.9em;">${tS}</span>`, 'color:#64748b;')}
-                    ${renderResponsiveTableCell('全镇排名', `${curTR} <span style="font-size:0.9em;">${tT}</span>`, `color:#64748b; ${townColStyle}`)}
-                    ${renderResponsiveTableCell('全县排名', `${showCountyRank ? curCountyR : '-'} <span style="font-size:0.9em;">${tCounty}</span>`, `color:#64748b; ${countyColStyle}`)}
+                    ${renderResponsiveTableCell('本学科班排', renderSubjectRankComparison(curClassR, previousClassRank, { enabled: showClassRank, historyScoreAvailable: hasPreviousSubjectScore }), 'color:#64748b;')}
+                    ${renderResponsiveTableCell('本学科校排', renderSubjectRankComparison(curSR, previousSchoolRank, { historyScoreAvailable: hasPreviousSubjectScore }), 'color:#64748b;')}
+                    ${renderResponsiveTableCell('本学科镇排', renderSubjectRankComparison(curTR, previousTownRank, { enabled: showTownRank, historyScoreAvailable: hasPreviousSubjectScore }), `color:#64748b; ${townColStyle}`)}
+                    ${renderResponsiveTableCell('本学科县排', renderSubjectRankComparison(curCountyR, previousCountyRank, { enabled: showCountyRank, historyScoreAvailable: hasPreviousSubjectScore }), `color:#64748b; ${countyColStyle}`)}
                 </tr>`;
         }
     });
@@ -687,7 +690,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         </div>
         <div class="fluent-card student-report-table-card" style="padding:0; overflow:hidden;">
             <table class="fluent-table" id="tb-query">
-                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>总分班排</th><th>校排</th><th style="${townColStyle}">全镇排名</th><th style="${countyColStyle}">全县排名</th></tr></thead>
+                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>本学科班排</th><th>本学科校排</th><th style="${townColStyle}">本学科镇排</th><th style="${countyColStyle}">本学科县排</th></tr></thead>
                 <tbody>${tableRows}</tbody>
             </table>
         </div>

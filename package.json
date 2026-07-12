@@ -146,6 +146,7 @@
     "smoke:role-visibility:local": "node -e \"process.env.SMOKE_SCRIPT='./smoke-role-visibility.js'; require('./scripts/run-local-smoke.js')\"",
     "smoke:role-visibility:prod": "node scripts/smoke-role-visibility.js",
     "smoke:report-compare": "node scripts/smoke-report-compare.js",
+    "smoke:report-subject-comparison": "node scripts/smoke-report-subject-comparison.js",
     "smoke:mobile": "node scripts/smoke-mobile-shell.js",
     "smoke:mobile:local": "node -e \"process.env.SMOKE_SCRIPT='./smoke-mobile-shell.js'; require('./scripts/run-local-smoke.js')\"",
     "smoke:layout": "node scripts/smoke-layout-regression.js",

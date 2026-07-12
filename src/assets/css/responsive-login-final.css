@@ -566,6 +566,91 @@ html body #login-overlay[data-login-skin="clean"]::after {
     }
 }
 
+/* Midnight Signal login: take the calm neon-night reference into the entry
+   experience without sacrificing contrast or the school-facing form flow. */
+html body #login-overlay[data-login-skin="clean"] {
+    background: #080d1c !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
+    background: #080d1c !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
+    overflow: hidden !important;
+    border-color: rgba(118, 155, 244, 0.26) !important;
+    background:
+        radial-gradient(circle at 16% 20%, rgba(64, 210, 255, 0.22), transparent 24rem),
+        radial-gradient(circle at 76% 82%, rgba(135, 105, 255, 0.22), transparent 26rem),
+        linear-gradient(135deg, #111d42 0%, #0a1022 64%, #0b1630 100%) !important;
+    box-shadow: inset -1px 0 0 rgba(127, 171, 255, 0.16) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    border-color: rgba(116, 177, 255, 0.25) !important;
+    background:
+        linear-gradient(90deg, transparent 0 29%, rgba(66, 217, 255, 0.16) 29% 29.25%, transparent 29.25%),
+        linear-gradient(180deg, transparent 0 72%, rgba(139, 124, 255, 0.17) 72% 72.3%, transparent 72.3%) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 48px rgba(0, 0, 0, 0.22) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    color: rgba(225, 241, 255, 0.74) !important;
+    border-color: rgba(124, 173, 255, 0.25) !important;
+    background: rgba(10, 18, 42, 0.46) !important;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] :is(.login-clean-brand strong, .login-clean-copy h1) {
+    color: #f5f9ff !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] :is(.login-clean-brand small, .login-clean-copy span, .login-clean-copy p) {
+    color: rgba(212, 228, 255, 0.70) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-mark {
+    background: linear-gradient(135deg, #2f7dff, #42d9ff) !important;
+    color: #071226 !important;
+    box-shadow: 0 10px 24px rgba(47, 125, 255, 0.30) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-card {
+    background: rgba(250, 252, 255, 0.96) !important;
+    box-shadow: -18px 0 48px rgba(0, 0, 0, 0.18) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-portal-badge {
+    border-color: rgba(47, 125, 255, 0.22) !important;
+    background: rgba(47, 125, 255, 0.09) !important;
+    color: #215cc1 !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .role-btn.active {
+    color: #1757c4 !important;
+    box-shadow: 0 4px 12px rgba(42, 96, 191, 0.12) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-entry-field:focus-within {
+    border-color: rgba(47, 125, 255, 0.80) !important;
+    box-shadow: 0 0 0 3px rgba(47, 125, 255, 0.12) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-submit {
+    background: linear-gradient(135deg, #2167df, #358cf4) !important;
+    box-shadow: 0 10px 20px rgba(33, 103, 223, 0.24) !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
+    background: linear-gradient(135deg, #174fae, #2f7dff) !important;
+}
+
+@media (max-width: 1024px) {
+    html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        border-bottom-color: rgba(126, 165, 242, 0.24) !important;
+    }
+}
+
 @media (max-height: 760px) and (min-width: 1025px) {
     html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
         gap: 20px !important;

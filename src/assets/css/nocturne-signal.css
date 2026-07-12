@@ -1,0 +1,246 @@
+
+/* Midnight Signal — a quiet, night-city visual language for the whole workspace.
+   It keeps the dense operational layout, while making navigation, focus and state
+   easier to read at a glance. */
+:root {
+    --nocturne-ink: #0b1020;
+    --nocturne-deep: #111936;
+    --nocturne-blue: #2f7dff;
+    --nocturne-cyan: #42d9ff;
+    --nocturne-violet: #8b7cff;
+    --nocturne-surface: #ffffff;
+    --nocturne-mist: #eff4ff;
+    --nocturne-line: #d6e2fb;
+    --nocturne-shadow: 0 14px 34px rgba(17, 29, 59, 0.10);
+}
+
+.report-rank-current { display:inline-block; min-width:1.35em; color:#334155; font-weight:800; }
+.report-rank-history { display:inline-block; margin-left:5px; color:#64748b; font-size:11px; white-space:nowrap; }
+.report-rank-history--missing { color:#94a3b8; font-style:normal; }
+
+html body:not(.dark-mode) {
+    background:
+        radial-gradient(circle at 86% -8%, rgba(66, 217, 255, 0.10), transparent 26rem),
+        radial-gradient(circle at 12% 100%, rgba(139, 124, 255, 0.08), transparent 30rem),
+        #f4f7fc !important;
+}
+
+html body:not(.dark-mode) #app.app-layout,
+html body:not(.dark-mode) #app .app-main {
+    background: transparent !important;
+}
+
+html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious,
+html body:not(.dark-mode).shell-sidebar-collapsed #app > #app-sidebar.sidebar-spacious,
+html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious.is-collapsed {
+    position: relative;
+    overflow: hidden;
+    border-right-color: rgba(117, 154, 235, 0.26) !important;
+    background:
+        radial-gradient(circle at 0 100%, rgba(66, 217, 255, 0.18), transparent 14rem),
+        linear-gradient(180deg, #101832 0%, #0a1022 100%) !important;
+    box-shadow: 12px 0 36px rgba(11, 16, 32, 0.10) !important;
+}
+
+html body:not(.dark-mode) #app-sidebar :is(.sidebar-brand, .sidebar-logo, .sidebar-head, .sidebar-title),
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item {
+    color: rgba(238, 246, 255, 0.78) !important;
+}
+
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item {
+    margin: 2px 0;
+    border-color: transparent !important;
+    border-radius: 10px !important;
+}
+
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item:hover {
+    border-color: rgba(115, 163, 255, 0.24) !important;
+    background: rgba(123, 163, 255, 0.12) !important;
+    color: #ffffff !important;
+}
+
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active,
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] {
+    border-color: rgba(91, 196, 255, 0.48) !important;
+    background: linear-gradient(90deg, rgba(47, 125, 255, 0.32), rgba(66, 217, 255, 0.14)) !important;
+    color: #ffffff !important;
+    box-shadow: inset 3px 0 0 var(--nocturne-cyan), 0 8px 18px rgba(10, 19, 48, 0.25) !important;
+}
+
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active .sidebar-menu-item__icon,
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] .sidebar-menu-item__icon {
+    color: var(--nocturne-cyan) !important;
+}
+
+html body:not(.dark-mode) #main-header.shell-toolbar {
+    margin-top: 12px !important;
+    border: 1px solid rgba(214, 226, 251, 0.92) !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.80) !important;
+    box-shadow: 0 10px 28px rgba(23, 44, 93, 0.08) !important;
+    backdrop-filter: blur(16px) saturate(130%) !important;
+}
+
+html body:not(.dark-mode) #main-header #global-search-container,
+html body:not(.dark-mode) #app .analysis-workspace :is(input, select, textarea, .form-control) {
+    border-color: var(--nocturne-line) !important;
+    background: rgba(249, 251, 255, 0.94) !important;
+}
+
+html body:not(.dark-mode) #main-header #global-search-container:focus-within,
+html body:not(.dark-mode) #app .analysis-workspace :is(input, select, textarea, .form-control):focus {
+    border-color: rgba(47, 125, 255, 0.82) !important;
+    box-shadow: 0 0 0 3px rgba(47, 125, 255, 0.13), 0 8px 18px rgba(47, 125, 255, 0.08) !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-card--dock,
+html body:not(.dark-mode) #app .shell-module-rail-shell,
+html body:not(.dark-mode) #app .analysis-shell-head,
+html body:not(.dark-mode) #app .sec-head.analysis-shell-head,
+html body:not(.dark-mode) #app .analysis-workspace :is(.control-panel, .analysis-inline-panel, .analysis-anchor-panel, .table-wrap) {
+    border-color: rgba(205, 220, 249, 0.92) !important;
+    border-radius: 13px !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    box-shadow: var(--nocturne-shadow) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-card--dock,
+html body:not(.dark-mode) #app .analysis-shell-head,
+html body:not(.dark-mode) #app .sec-head.analysis-shell-head {
+    border-left: 3px solid var(--nocturne-cyan) !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace {
+    --analysis-accent: var(--nocturne-blue) !important;
+    --analysis-surface: #eef5ff !important;
+    --analysis-surface-strong: #dcecff !important;
+    --analysis-border: #cddcf9 !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace .module-desc-bar.analysis-hero {
+    border-color: rgba(103, 145, 240, 0.42) !important;
+    background:
+        linear-gradient(120deg, rgba(231, 240, 255, 0.92), rgba(255, 255, 255, 0.90) 54%, rgba(235, 249, 255, 0.92)) !important;
+    box-shadow: var(--nocturne-shadow) !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace .analysis-scan-item {
+    border-color: rgba(174, 201, 249, 0.65) !important;
+    background: rgba(255, 255, 255, 0.66) !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]),
+html body:not(.dark-mode) #app .workflow-path__step.is-active {
+    border-color: rgba(47, 125, 255, 0.38) !important;
+    background: rgba(47, 125, 255, 0.10) !important;
+    color: #1554c0 !important;
+    box-shadow: inset 0 -2px 0 var(--nocturne-cyan) !important;
+}
+
+html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-purple, .btn.btn-blue) {
+    border-color: #266de4 !important;
+    background: linear-gradient(135deg, #2267de, #398bf4) !important;
+    box-shadow: 0 9px 17px rgba(38, 109, 228, 0.22) !important;
+}
+
+html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-purple, .btn.btn-blue):hover {
+    border-color: #1b56bf !important;
+    background: linear-gradient(135deg, #1b56bf, #2f7dff) !important;
+    box-shadow: 0 12px 22px rgba(38, 109, 228, 0.28) !important;
+    transform: translateY(-1px) !important;
+}
+
+html body:not(.dark-mode) #app :is(.btn-success, .btn.btn-green) {
+    border-color: #167d76 !important;
+    background: linear-gradient(135deg, #117b75, #239f98) !important;
+    box-shadow: 0 9px 17px rgba(17, 123, 117, 0.18) !important;
+}
+
+html body:not(.dark-mode) #app table thead th {
+    background: #edf3ff !important;
+    color: #1a2d56 !important;
+    border-bottom-color: #cbdcf9 !important;
+}
+
+html body:not(.dark-mode) #app table tbody tr:hover td {
+    background: rgba(232, 243, 255, 0.78) !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace .table-wrap {
+    overflow: hidden auto;
+}
+
+html body.dark-mode {
+    background:
+        radial-gradient(circle at 86% -10%, rgba(47, 125, 255, 0.20), transparent 28rem),
+        radial-gradient(circle at 6% 100%, rgba(139, 124, 255, 0.16), transparent 28rem),
+        #080d1c !important;
+    color: #e6efff !important;
+}
+
+html body.dark-mode #app.app-layout,
+html body.dark-mode #app .app-main {
+    background: transparent !important;
+}
+
+html body.dark-mode #app > #app-sidebar.sidebar-spacious {
+    border-right-color: rgba(113, 148, 224, 0.22) !important;
+    background: #080d1c !important;
+}
+
+html body.dark-mode #main-header.shell-toolbar,
+html body.dark-mode #app .shell-overview-card--dock,
+html body.dark-mode #app .shell-module-rail-shell,
+html body.dark-mode #app .analysis-shell-head,
+html body.dark-mode #app .sec-head.analysis-shell-head,
+html body.dark-mode #app .analysis-workspace :is(.control-panel, .analysis-inline-panel, .analysis-anchor-panel, .table-wrap) {
+    border-color: rgba(101, 137, 221, 0.26) !important;
+    background: rgba(15, 25, 52, 0.88) !important;
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24) !important;
+    color: #e6efff !important;
+}
+
+html body.dark-mode #app .analysis-workspace .module-desc-bar.analysis-hero {
+    border-color: rgba(76, 130, 240, 0.46) !important;
+    background: linear-gradient(120deg, rgba(22, 40, 84, 0.92), rgba(15, 25, 52, 0.92)) !important;
+    color: #e6efff !important;
+}
+
+html body.dark-mode #app :is(input, select, textarea, .form-control) {
+    border-color: rgba(101, 137, 221, 0.34) !important;
+    background: rgba(8, 16, 37, 0.94) !important;
+    color: #edf5ff !important;
+}
+
+html body.dark-mode #app table thead th {
+    background: rgba(28, 47, 91, 0.94) !important;
+    color: #edf5ff !important;
+    border-bottom-color: rgba(111, 151, 234, 0.30) !important;
+}
+
+html body.dark-mode #app table tbody tr:hover td {
+    background: rgba(38, 75, 143, 0.28) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active,
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] {
+        animation: nocturneActivePulse 4s ease-in-out infinite;
+    }
+
+    html body:not(.dark-mode) #app .analysis-workspace .analysis-shell-head,
+    html body:not(.dark-mode) #app .analysis-workspace .sec-head.analysis-shell-head {
+        animation: nocturnePanelIn 360ms ease both;
+    }
+}
+
+@keyframes nocturneActivePulse {
+    0%, 100% { box-shadow: inset 3px 0 0 var(--nocturne-cyan), 0 8px 18px rgba(10, 19, 48, 0.25); }
+    50% { box-shadow: inset 3px 0 0 var(--nocturne-cyan), 0 10px 24px rgba(47, 125, 255, 0.28); }
+}
+
+@keyframes nocturnePanelIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}

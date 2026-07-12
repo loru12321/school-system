@@ -3575,14 +3575,19 @@ async function runModuleDeepCheck(page, id) {
                 ));
                 return {
                     subject,
-                    classRank: String(row?.querySelector('td[data-label="班级排名"]')?.textContent || '').trim(),
-                    schoolRank: String(row?.querySelector('td[data-label="校级排名"]')?.textContent || '').trim()
+                    classRank: String(row?.querySelector('td[data-label="本学科班排"]')?.textContent || '').trim(),
+                    schoolRank: String(row?.querySelector('td[data-label="本学科校排"]')?.textContent || '').trim()
                 };
             });
             const currentSubjectRanksReady = renderedSubjectRanks.length > 0 && renderedSubjectRanks.every((item) => (
                 item.classRank && item.classRank !== '-' && item.schoolRank && item.schoolRank !== '-'
             ));
+            const subjectRankComparisonReady = renderedSubjectRanks.length > 0 && renderedSubjectRanks.every((item) => (
+                /(上次\s*\d+|上次未考|历史排名未归档)/.test(item.classRank)
+                && /(上次\s*\d+|上次未考|历史排名未归档)/.test(item.schoolRank)
+            ));
             checks.currentSubjectRanksReady = currentSubjectRanksReady;
+            checks.subjectRankComparisonReady = subjectRankComparisonReady;
             checks.previousScoreReady = reportState.previousScoreReady;
             checks.classRankChangeReady = reportState.classRankChangeReady;
             checks.schoolRankChangeReady = reportState.schoolRankChangeReady;
@@ -4393,7 +4398,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
                 && !document.querySelector('[onclick*="school-internal-grades"]'),
             scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
             entrancePlaylistStatus,
-            entrancePlaylistReady: /已导入\s*1\s*首|播放：任然 - 外婆桥/.test(entrancePlaylistStatus),
+            entrancePlaylistReady: /已导入\s*1\s*首|播放：抽离喧嚣城市 · AI 夜航版/.test(entrancePlaylistStatus),
             teacherMapCountBeforePrewarm: Object.keys(window.TEACHER_MAP || {}).length,
             teacherAutoRestoreReady: Object.keys(window.TEACHER_MAP || {}).length > 0
         });

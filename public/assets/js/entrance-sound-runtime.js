@@ -10,11 +10,14 @@
     const BUNDLED_ASSET_ORIGIN = window.location && window.location.protocol === 'file:' ? 'https://schoolsystem.com.cn/' : './';
     const BUNDLED_AUDIO_PATH = ['assets', 'audio', 'entrance'].join('/');
     const BUNDLED_PLAYLIST_MANIFEST = window.location && window.location.protocol === 'file:'
-        ? 'https://schoolsystem.com.cn/api/entrance-audio-manifest?v=20260618-waipoqiao-lite-v1'
-        : `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/manifest.json?v=20260618-waipoqiao-lite-v1`;
+        ? 'https://schoolsystem.com.cn/api/entrance-audio-manifest?v=20260712-nocturne-ai-v1'
+        : `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/manifest.json?v=20260712-nocturne-ai-v1`;
     const BUNDLED_AUDIO_BASE = `${BUNDLED_ASSET_ORIGIN}${BUNDLED_AUDIO_PATH}/`;
     const AUTOPLAY_KEY = 'SCHOOL_ENTRANCE_SOUND_AUTOPLAY_V1';
-    const DEFAULT_MODE = 'off';
+    // The project owner selected an authorized AI entrance track. Browsers still
+    // require the successful login click as the playback activation gesture.
+    const DEFAULT_MODE = 'custom';
+    const DEFAULT_AUTOPLAY = true;
 
     let lastOverlayVisible = true;
     let playedForSession = false;
@@ -60,9 +63,10 @@
 
     function isAutoplayEnabled() {
         try {
-            return localStorage.getItem(AUTOPLAY_KEY) === 'true';
+            const saved = localStorage.getItem(AUTOPLAY_KEY);
+            return saved === null ? DEFAULT_AUTOPLAY : saved === 'true';
         } catch (_) {
-            return false;
+            return DEFAULT_AUTOPLAY;
         }
     }
 
@@ -219,7 +223,7 @@
         activeAudioUrlIsObject = !!track.blob;
         activeAudio = new Audio(activeAudioUrl);
         activeAudio.preload = 'metadata';
-        activeAudio.volume = 0.32;
+        activeAudio.volume = 0.22;
         activeAudio.onended = () => {
             const currentMode = readMode();
             if (currentMode === 'off') return;
@@ -307,7 +311,7 @@
             group.dataset.builtInRendered = '1';
             group.innerHTML = [
                 '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="random"><strong>流动</strong><small>授权歌单随机</small></button>',
-                '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="custom"><strong>私藏</strong><small>顺序播放</small></button>',
+                '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="custom"><strong>夜航</strong><small>AI 入场音乐</small></button>',
                 '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="off"><strong>静音</strong><small>off</small></button>'
             ].join('');
         });

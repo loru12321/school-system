@@ -79,6 +79,25 @@ function hasCachedReportHistoryForSelectedExams(stu, selectedReportExamIds = [],
     return getMissingReportHistoryExamIds(stu, selectedReportExamIds, effectiveCurrentExamId).length === 0;
 }
 
+function hasUsableHistoricalRankValue(value) {
+    const text = String(value ?? '').trim();
+    return text !== '' && text !== '-' && text !== '—' && text.toLowerCase() !== 'undefined' && text.toLowerCase() !== 'null';
+}
+
+function hasCompleteSubjectRankComparisonHistory(historyEntry) {
+    const student = historyEntry?.student || historyEntry || {};
+    const scores = student?.scores || historyEntry?.scores || {};
+    const subjectRanks = student?.ranks || historyEntry?.subjectRanks || {};
+    const subjects = Object.keys(scores || {});
+    if (!subjects.length) return false;
+
+    return subjects.every((subject) => {
+        const ranks = subjectRanks?.[subject] || historyEntry?.subjectRanks?.[subject] || {};
+        return hasUsableHistoricalRankValue(ranks?.class ?? ranks?.rankClass)
+            && hasUsableHistoricalRankValue(ranks?.school ?? ranks?.rankSchool);
+    });
+}
+
 function getMissingReportHistoryExamIds(stu, selectedReportExamIds = [], effectiveCurrentExamId = '') {
     const selectedIds = getHistoricalReportExamIds(selectedReportExamIds, effectiveCurrentExamId);
     if (!selectedIds.length) return [];
@@ -87,7 +106,9 @@ function getMissingReportHistoryExamIds(stu, selectedReportExamIds = [], effecti
     if (!Array.isArray(history) || !history.length) return selectedIds;
     return selectedIds.filter(selectedId => !history.some(item => {
         const examKey = String(item?.examFullKey || item?.examId || '').trim();
-        return examKey && examKeyEq(examKey, selectedId);
+        return examKey
+            && examKeyEq(examKey, selectedId)
+            && hasCompleteSubjectRankComparisonHistory(item);
     }));
 }
 

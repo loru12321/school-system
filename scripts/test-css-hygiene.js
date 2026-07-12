@@ -122,8 +122,11 @@ if (!entranceSound.includes("activeAudio.preload = 'metadata'")) {
 if (!entranceSound.includes("const AUTOPLAY_KEY = 'SCHOOL_ENTRANCE_SOUND_AUTOPLAY_V1'")) {
   throw new Error('Entrance sound should use an explicit autoplay opt-in flag');
 }
-if (!entranceSound.includes("const DEFAULT_MODE = 'off'")) {
-  throw new Error('Entrance sound should default off so media does not compete with login modules');
+if (!entranceSound.includes("const DEFAULT_MODE = 'custom'") || !entranceSound.includes('const DEFAULT_AUTOPLAY = true')) {
+  throw new Error('Owner-authorized entrance music should default to the AI track after the login gesture');
+}
+if (!entranceSound.includes("return saved === null ? DEFAULT_AUTOPLAY : saved === 'true'")) {
+  throw new Error('Entrance audio should retain an explicit per-browser autoplay preference');
 }
 if (entranceSound.includes('BUILTIN_TRACKS') || entranceSound.includes('playToneSequence') || entranceSound.includes('getAudioContext')) {
   throw new Error('Entrance sound runtime should not include built-in tracks or generated fallback tones');

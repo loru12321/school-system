@@ -220,6 +220,19 @@ function getTrendBadge(current, previous, type = 'score') {
         </span>`;
 }
 
+function renderSubjectRankComparison(currentRank, previousRank, options = {}) {
+    const valid = (value) => !/^(?:|[-—]|undefined|null)$/i.test(String(value ?? '').trim());
+    const current = valid(currentRank) ? currentRank : '-';
+    if (options.enabled === false) return '<span class="report-rank-current">-</span>';
+    if (options.historyScoreAvailable !== true) {
+        return `<span class="report-rank-current">${current}</span><span class="report-rank-history report-rank-history--missing">上次未考</span>`;
+    }
+    if (!valid(previousRank)) {
+        return `<span class="report-rank-current">${current}</span><span class="report-rank-history report-rank-history--missing">历史排名未归档</span>`;
+    }
+    return `<span class="report-rank-current">${current}</span><span class="report-rank-history">上次 ${previousRank}</span>${getTrendBadge(current, previousRank, 'rank')}`;
+}
+
 
     window.ReportInsightRuntime = {
         buildStudentInsightModel,
@@ -227,6 +240,7 @@ function getTrendBadge(current, previous, type = 'score') {
         renderStudentActionPlan,
         renderStudentSubjectBoard,
         renderStudentRealityNote,
-        getTrendBadge
+        getTrendBadge,
+        renderSubjectRankComparison
     };
 })();
