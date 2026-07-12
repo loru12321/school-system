@@ -319,6 +319,11 @@ assert.ok(
 );
 
 assert.ok(
+    /if \(restoredFromExamArchive\) \{[\s\S]*CohortDB\.renderExamList\(\);[\s\S]*scheduleTeacherSyncPrompt\(\{ startup: true, force: true \}\);[\s\S]*CohortExamHydrationScheduler\.schedule/.test(appSource),
+    'cloud exam-shard restores should retry teacher assignments after the restored cohort clears the prior term map'
+);
+
+assert.ok(
     appSource.includes('function persistWorkspaceExamIdentity(examId, db = COHORT_DB, options = {})')
         && appSource.includes('window.persistWorkspaceExamIdentity = window.persistWorkspaceExamIdentity || persistWorkspaceExamIdentity;')
         && cohortExamMetaSource.includes('if (!persistWorkspaceExamIdentity(preferredExamId, db, { cohortId: normalizedCohortId })) return false;')

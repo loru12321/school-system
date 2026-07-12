@@ -2048,6 +2048,13 @@ async function switchCohort(cohortId, options = {}) {
                     document.getElementById('app').classList.remove('hidden');
                     scheduleWorkspaceUiRefresh('switch-cohort-exam-archive', { delay: 120, idle: true, timeout: 1800, renderTables: false });
                     CohortDB.renderExamList();
+                    // switchCohort clears the previous term's assignments before the
+                    // cloud exam shard is restored. Re-run the non-blocking teacher
+                    // restore only after this cohort's exam is active, otherwise an
+                    // earlier startup request can finish first and then be cleared.
+                    if (typeof scheduleTeacherSyncPrompt === 'function') {
+                        scheduleTeacherSyncPrompt({ startup: true, force: true });
+                    }
                     CohortExamHydrationScheduler.schedule(cohortId, {
                         delay: 1200,
                         background: true,
