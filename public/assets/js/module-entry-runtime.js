@@ -225,7 +225,11 @@
     function syncModuleEnterChrome(context) {
         const { id, currentCategory, currentCategoryMeta } = context;
         const reportResult = document.getElementById('single-report-result');
-        if (reportResult) reportResult.classList.add('hidden');
+        // Entering another module should clear the old report surface. Do not hide
+        // it while entering the report module itself: its lazy entry work can run
+        // after doQuery() has rendered, which otherwise creates a visible-content
+        // race on slower devices.
+        if (reportResult && id !== 'report-generator') reportResult.classList.add('hidden');
         const compareSection = document.getElementById('student-multi-period-compare-section');
         if (compareSection) compareSection.style.display = 'none';
         syncModuleDescBar(id, currentCategoryMeta);
