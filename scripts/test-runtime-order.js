@@ -893,7 +893,9 @@ assert.ok(shellRuntime.includes('function syncModuleRailActiveState'), 'module r
 assert.ok(shellRuntime.includes('dataset.moduleRailSignature'), 'module rail should store a render signature on the rail element');
 assert.ok(shellRuntime.includes('dataset.moduleRailDelegated'), 'module rail should use delegated clicks instead of rebinding each chip');
 assert.ok(!shellRuntime.includes("rail.querySelectorAll('.shell-module-rail-chip').forEach((button) => {\n            button.addEventListener('click'"), 'module rail should avoid per-render chip click listeners');
-assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 1100;'), 'teacher analysis should wait for a stable module visit before starting full calculations');
+assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;'), 'teacher analysis should render real content on the first frame after activation');
+assert.ok(moduleEntryRuntime.includes('function canReuseTeacherAnalysisStats()'), 'teacher submodules should reuse the current teacher analysis instead of rescanning all students on every switch');
+assert.ok(moduleEntryRuntime.includes("const renderDelay = moduleId === 'teacher-analysis' ? TEACHER_ANALYSIS_RENDER_DELAY_MS : 80;"), 'teacher submodules should yield one paint before any required recalculation');
 assert.ok(moduleEntryRuntime.includes('ensureTeacherAnalysisMainRuntimeLoaded()'), 'teacher portrait entry should load its runtime automatically');
 assert.ok(moduleEntryRuntime.includes('function scheduleTeacherCompareAutoRender'), 'teacher multi-period compare should auto-render from default selectors');
 assert.ok(moduleEntryRuntime.includes('function scheduleActiveModuleTask'), 'module entry should defer non-critical active-module work');
@@ -1122,6 +1124,8 @@ assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls()
 assert.ok(moduleEntryRuntime.includes('teacherCompareManualReady'), 'teacher-analysis entry should prepare manual compare state instead of auto-rendering compare results');
 assert.ok(teacherSyncRuntime.includes('rawPreferred'), 'teacher sync should honor preferred school candidates');
 assert.ok(teacherSyncRuntime.includes('teacherClasses'), 'teacher sync should infer the active school from teacher assignment classes');
+assert.ok(teacherSyncRuntime.includes("window.addEventListener('cloud-load-state'"), 'teacher sync should retry automatically after cloud workspace hydration');
+assert.ok(teacherSyncRuntime.includes("scheduleTeacherSyncPrompt({ startup: true, force: true })"), 'cloud workspace hydration should force a silent teacher assignment retry');
 assert.ok(progressAnalysisRuntime.includes('function filterProgressCompareRowsToTownshipScope'), 'progress comparison should have a township-scope filter for town ranks');
 assert.ok(progressAnalysisRuntime.includes('const townshipRows = filterProgressCompareRowsToTownshipScope(allRows);'), 'progress comparison should derive town ranks from township-scoped rows');
 assert.ok(progressAnalysisRuntime.includes('const rankTownMap = buildCompetitionRankMap(townshipRows'), 'progress comparison town ranks should not be built from full county rows');
@@ -1538,7 +1542,13 @@ assert.ok(schoolNormalizationRuntime.includes('const IndicatorSchoolBucketPerfCa
 assert.ok(schoolNormalizationRuntime.includes('function getIndicatorSchoolBucketSignature'), 'indicator bucket cache should use an explicit dependency signature');
 assert.ok(schoolNormalizationRuntime.includes('scoreNameMap'), 'indicator score sync should cache repeated school-name matching');
 assert.ok(moduleEntryRuntime.includes("node.dataset.released === 'true'"), 'teacher heavy DOM release should not rewrite already released placeholders on later module switches');
-assert.ok(reportHistoryRuntime.includes('background: true') && reportHistoryRuntime.includes('delay: 4800'), 'student report cloud-history hydration should stay delayed and low priority');
+assert.ok(reportHistoryRuntime.includes('background: true') && reportHistoryRuntime.includes('delay: 400'), 'student report history should hydrate promptly without blocking first paint');
+assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;'), 'teacher analysis should not leave an activated shell empty for over a second');
+assert.ok(smokeAllModules.includes('waitForTeacherAutoRestore(page)'), 'module smoke should observe startup teacher auto restore before prewarming');
+assert.ok(!smokeAllModules.includes("name: 'restoreTeacherMap'"), 'module smoke must not repair teacher assignments during prewarm');
+assert.ok(smokeAllModules.includes('teacherCardsRendered'), 'teacher analysis smoke should require real teacher cards instead of accepting the shell');
+assert.ok(smokeAllModules.includes("String(item?.name || '').trim() === '解洪旭'"), 'report smoke should prefer the known production student');
+assert.ok(smokeAllModules.includes('classRankChangeReady') && smokeAllModules.includes('schoolRankChangeReady'), 'report smoke should verify rank-change content');
 const countyRankFallbackStart = cloudRuntime.indexOf('const getCountyRankFallback = (payload, match, subject =');
 const countyRankFallbackEnd = cloudRuntime.indexOf('const buildHistoryEntry =', countyRankFallbackStart);
 const countyRankFallbackSource = countyRankFallbackStart >= 0 && countyRankFallbackEnd > countyRankFallbackStart

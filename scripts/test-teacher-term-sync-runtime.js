@@ -44,7 +44,7 @@ assert.ok(
 );
 
 assert.ok(
-  /function scheduleTeacherSyncPrompt\(options = \{\}\)[\s\S]*const startup = options\.startup !== false;[\s\S]*tryAutoRestoreTeacherMap\(\{ startup, force: tries > 1 \}\)[\s\S]*!startup && promptTeacherSyncIfNeeded\(\)/.test(teacherSync),
+  /function scheduleTeacherSyncPrompt\(options = \{\}\)[\s\S]*const startup = options\.startup !== false;[\s\S]*tryAutoRestoreTeacherMap\(\{ startup, force: options\.force === true \|\| tries > 1 \}\)[\s\S]*!startup && promptTeacherSyncIfNeeded\(\)/.test(teacherSync),
   'login startup should silently load the current-term teacher map without opening a sync prompt'
 );
 assert.ok(
@@ -81,7 +81,7 @@ assert.ok(
   teachingManagementModules.includes('function renderTeachingManagementSubmodule(moduleId)')
     && /if \(moduleId === 'teacher-analysis'\)[\s\S]*typeof window\.runModuleTabEnter === 'function'[\s\S]*window\.setTimeout\(relocateTeacherBlocks, 80\)/.test(teachingManagementModules)
     && /const render = \(\) => renderTeachingManagementSubmodule\(moduleId\);[\s\S]*window\.setTimeout\(render, 80\);[\s\S]*window\.setTimeout\(render, 650\)/.test(teachingManagementModules)
-    && /if \(moduleId === 'teacher-township-ranking'\)[\s\S]*const renderOnce = \(\) => \{[\s\S]*window\.setTimeout\(renderOnce, 1100\);[\s\S]*return;/.test(teachingManagementModules)
+    && /if \(moduleId === 'teacher-township-ranking'\)[\s\S]*const renderOnce = \(\) => \{[\s\S]*window\.setTimeout\(renderOnce, 16\);[\s\S]*return;/.test(teachingManagementModules)
     && /if \(moduleId === 'teacher-detail-comparison'\)[\s\S]*tryAutoRestoreTeacherMap\(\{ startup: true, force: true \}\)[\s\S]*window\.analyzeTeachers\(\{ render: false, township: false, historyLimit: 0 \}\)[\s\S]*render\(\);/.test(teachingManagementModules)
     && teachingManagementModules.includes("section.dataset.teacherSubmoduleScheduled = '1'")
     && /function install\(attempt = 0\)[\s\S]*if \(typeof originalSwitchTab !== 'function'\)[\s\S]*install\(attempt \+ 1\)[\s\S]*window\.__TEACHING_MANAGEMENT_MODULES_INSTALLED__ = true;/.test(teachingManagementModules)

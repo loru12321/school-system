@@ -171,16 +171,16 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
     };
     if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
         window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task, {
-            delay: 4800,
+            delay: 400,
             idle: true,
-            timeout: 9000
+            timeout: 3000
         });
     } else if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
         window.setTimeout(() => {
             window.SystemPerformance.scheduleIdle(task, { timeout: 9000 });
-        }, 4800);
+        }, 400);
     } else {
-        window.setTimeout(task, 4800);
+        window.setTimeout(task, 400);
     }
 }
 
@@ -210,6 +210,39 @@ function syncReportCompareTargetForQuery(stu) {
 
 function warmStudentCompareRuntimeForReport(stu) {
     if (typeof setCloudCompareTarget === 'function') setCloudCompareTarget(stu);
+}
+
+function scheduleReportComparisonRetry(stu, token) {
+    if (!stu || !ReportHistoryPerfCache) return;
+    const retryKey = `${getReportStudentIdentity(stu)}::${token}`;
+    if (ReportHistoryPerfCache.reportComparisonRetryKey === retryKey) return;
+    ReportHistoryPerfCache.reportComparisonRetryKey = retryKey;
+    let attempts = 0;
+    const retry = () => {
+        const activeStudent = typeof readCurrentReportStudentState === 'function'
+            ? readCurrentReportStudentState()
+            : window.CURRENT_REPORT_STUDENT;
+        if (token !== __reportQueryToken
+            || !document.getElementById('report-generator')?.classList.contains('active')
+            || getReportStudentIdentity(activeStudent || {}) !== getReportStudentIdentity(stu)) {
+            return;
+        }
+        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+        const selectedIds = getSelectedReportCompareExamIds();
+        const currentExamId = selectedIds[selectedIds.length - 1] || getEffectiveCurrentExamId();
+        if (getHistoricalReportExamIds(selectedIds, currentExamId).length) {
+            ReportHistoryPerfCache.reportComparisonRetryKey = '';
+            void doQuery(stu);
+            return;
+        }
+        attempts += 1;
+        if (attempts >= 8) {
+            ReportHistoryPerfCache.reportComparisonRetryKey = '';
+            return;
+        }
+        ReportHistoryPerfCache.reportComparisonRetryTimer = window.setTimeout(retry, 700);
+    };
+    retry();
 }
 
 
@@ -317,6 +350,9 @@ async function doQuery(targetStudent = null) {
         scheduleStudentReportCharts(stu, history);
 
         hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, queryToken);
+        if (!getHistoricalReportExamIds(selectedReportExamIds, effectiveCurrentExamId).length) {
+            scheduleReportComparisonRetry(stu, queryToken);
+        }
 
         const strengthKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}`;
         scheduleStudentReportStrengthAnalysis(stu, strengthKey);

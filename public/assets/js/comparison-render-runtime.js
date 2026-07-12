@@ -663,14 +663,15 @@ function getStudentExamHistory(student) {
         };
 
         for (const [examId, exam] of examEntries) {
+            if (manualExams.length > 0
+                && !manualExams.some(id => examKeyEq(examId, id))
+                && !examKeyEq(examId, currentExamId)) {
+                continue;
+            }
             const examData = exam.data || [];
             if (examData.length === 0) continue;
             const examFingerprint = getReportExamFingerprint(exam, examData);
             if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint && !examKeyEq(examId, currentExamId)) {
-                continue;
-            }
-
-            if (manualExams.length > 0 && !manualExams.some(id => examKeyEq(examId, id)) && !examKeyEq(examId, currentExamId)) {
                 continue;
             }
 
@@ -771,5 +772,4 @@ function getStudentExamHistory(student) {
 }
 
 // 🟢 [新增]：生成进退步胶囊标签 (Windows 风格)
-
 

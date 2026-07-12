@@ -126,10 +126,23 @@
         )) || null;
     }
 
+    function teacherBlocksAreRelocated() {
+        const detail = document.getElementById('anchor-detail');
+        const pairing = document.getElementById('anchor-pair');
+        const rankingContainer = document.getElementById('teacher-township-ranking-container');
+        return !!detail
+            && detail.parentElement?.id === 'teacher-detail-comparison-slot'
+            && !!pairing
+            && pairing.parentElement?.id === 'teacher-pairing-slot'
+            && !!rankingContainer
+            && !!rankingContainer.closest('#teacher-township-ranking-slot');
+    }
+
     function relocateTeacherBlocks() {
         ensureTeachingManagementSections();
         const teacherSection = document.getElementById('teacher-analysis');
         if (!teacherSection || teacherSection.dataset.lazySectionPlaceholder === '1') return false;
+        if (teacherSection.dataset.teacherSubmodulesCleaned === '1' && teacherBlocksAreRelocated()) return true;
 
         removeTeacherAnalysisOldNavigation();
         const contentArea = teacherSection.querySelector('.analysis-content-stack');
@@ -147,15 +160,26 @@
         if (typeof window.refreshResponsiveMobileTables === 'function') {
             SUBMODULE_IDS.forEach((id) => window.refreshResponsiveMobileTables(document.getElementById(id)));
         }
-        if (typeof window.applyRoleAllowVisibility === 'function') window.applyRoleAllowVisibility(document);
+        if (typeof window.applyRoleAllowVisibility === 'function') {
+            window.applyRoleAllowVisibility(teacherSection);
+            SUBMODULE_IDS.forEach((id) => window.applyRoleAllowVisibility(document.getElementById(id) || teacherSection));
+        }
         return true;
     }
 
     function ensureTeacherTownshipRankingSlotReady(attempt = 0) {
+        let slot = document.getElementById('teacher-township-ranking-slot');
+        let panel = slot?.querySelector('.analysis-ranking-panel');
+        let container = panel?.querySelector('#teacher-township-ranking-container');
+        if (panel && container && !panel.classList.contains('teacher-split-placeholder')) {
+            container.hidden = false;
+            container.style.display = 'block';
+            return true;
+        }
         const relocated = relocateTeacherBlocks();
-        const slot = document.getElementById('teacher-township-ranking-slot');
-        const panel = slot?.querySelector('.analysis-ranking-panel');
-        const container = panel?.querySelector('#teacher-township-ranking-container');
+        slot = document.getElementById('teacher-township-ranking-slot');
+        panel = slot?.querySelector('.analysis-ranking-panel');
+        container = panel?.querySelector('#teacher-township-ranking-container');
         if (relocated && panel && container && !panel.classList.contains('teacher-split-placeholder')) {
             container.hidden = false;
             container.style.display = 'block';
@@ -184,12 +208,14 @@
     }
 
     function ensureTeacherAnalysisLoaded() {
+        const before = document.getElementById('teacher-analysis');
         let loaded = null;
-        if (typeof window.ensureLazySectionLoaded === 'function') {
+        if (before?.dataset.lazySectionPlaceholder === '1' && typeof window.ensureLazySectionLoaded === 'function') {
             loaded = window.ensureLazySectionLoaded('teacher-analysis');
         }
-        relocateTeacherBlocks();
-        return loaded || document.getElementById('teacher-analysis') || null;
+        const section = loaded || document.getElementById('teacher-analysis') || null;
+        if (!teacherBlocksAreRelocated()) relocateTeacherBlocks();
+        return section;
     }
 
     function refreshTeacherAnalysisPortrait() {
@@ -277,12 +303,12 @@
             const loadTask = typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
                 ? window.ensureTeacherAnalysisMainRuntimeLoaded()
                 : Promise.resolve(true);
-            window.setTimeout(renderOnce, 1100);
+            window.setTimeout(renderOnce, 16);
             Promise.resolve(loadTask).then(() => {
-                window.setTimeout(renderOnce, 1100);
+                window.setTimeout(renderOnce, 16);
             }).catch((error) => {
                 console.warn('[teaching-management] teacher township runtime load failed:', error);
-                window.setTimeout(renderOnce, 1100);
+                window.setTimeout(renderOnce, 16);
             });
             return;
         }

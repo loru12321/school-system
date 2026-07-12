@@ -81,6 +81,16 @@ assert.ok(elapsedMs < 1500, `rank index should stay interactive for 7,790 rows, 
 
 assert.ok(performanceRows.every((row) => row.ranks === undefined), 'rank index must not mutate calculation rows');
 
+const snapshotStartedAt = Date.now();
+const sparseTarget = { ...twentyFourRows[1], ranks: undefined };
+const rankSnapshot = service.buildStudentRankSnapshot(twentyFourRows, sparseTarget, ['语文', '数学']);
+assert.strictEqual(rankSnapshot.getRank(sparseTarget, '语文', 'class'), 2);
+assert.strictEqual(rankSnapshot.getRank(sparseTarget, '语文', 'school'), 2);
+assert.strictEqual(rankSnapshot.getRank(sparseTarget, '语文', 'township'), 2);
+assert.strictEqual(rankSnapshot.getRank(sparseTarget, '语文', 'county'), 2);
+assert.ok(Date.now() - snapshotStartedAt < 200, 'single-student rank snapshot should stay off the long-task threshold');
+assert.ok(twentyFourRows.every((row) => row.ranks === undefined), 'rank snapshot must not mutate calculation rows');
+
 console.log(JSON.stringify({
     ok: true,
     boundaries: {

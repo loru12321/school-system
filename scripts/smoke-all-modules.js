@@ -326,29 +326,6 @@ async function prewarmSmokeHotspots(page) {
             entries.push(await loadWithTimeout(loaderName));
             await yieldToBrowser();
         }
-        if (Object.keys(window.TEACHER_MAP || {}).length === 0) {
-            const restoreStartedAt = Date.now();
-            const restoreDeadline = restoreStartedAt + 12000;
-            let attempts = 0;
-            while (Date.now() < restoreDeadline && Object.keys(window.TEACHER_MAP || {}).length === 0) {
-                attempts += 1;
-                if (typeof window.tryAutoRestoreTeacherMap === 'function') {
-                    await Promise.race([
-                        Promise.resolve(window.tryAutoRestoreTeacherMap({ startup: true, force: true })),
-                        wait(Math.min(5000, Math.max(1, restoreDeadline - Date.now())))
-                    ]);
-                }
-                if (Object.keys(window.TEACHER_MAP || {}).length === 0) await wait(400);
-            }
-            const teacherMapCount = Object.keys(window.TEACHER_MAP || {}).length;
-            entries.push({
-                name: 'restoreTeacherMap',
-                status: teacherMapCount > 0 ? 'loaded' : 'empty',
-                teacherMapCount,
-                attempts,
-                durationMs: Date.now() - restoreStartedAt
-            });
-        }
         return {
             ok: entries.every((entry) => entry.status === 'loaded' || entry.status === 'missing'),
             entries
@@ -361,6 +338,21 @@ async function prewarmSmokeHotspots(page) {
     return {
         ...result,
         durationMs: Date.now() - started
+    };
+}
+
+async function waitForTeacherAutoRestore(page, timeoutMs = 8000) {
+    const startedAt = Date.now();
+    let teacherMapCount = 0;
+    while (Date.now() - startedAt < timeoutMs) {
+        teacherMapCount = await page.evaluate(() => Object.keys(window.TEACHER_MAP || {}).length);
+        if (teacherMapCount > 0) break;
+        await page.waitForTimeout(200);
+    }
+    return {
+        teacherMapCount,
+        ready: teacherMapCount > 0,
+        durationMs: Date.now() - startedAt
     };
 }
 
@@ -2351,18 +2343,26 @@ async function runModuleDeepCheck(page, id) {
                 await Promise.resolve(window.runModuleTabEnter({ id: 'teacher-analysis' })).catch(() => false);
             }
             const deadline = Date.now() + (location.hostname === 'schoolsystem.com.cn' ? 9000 : 5500);
-            const expectsTeacherData = location.hostname === 'schoolsystem.com.cn';
+            const expectsTeacherData = location.hostname === 'schoolsystem.com.cn'
+                || Object.keys(window.TEACHER_MAP || {}).length > 0;
             let state = null;
             while (Date.now() < deadline) {
                 const section = document.getElementById('teacher-analysis');
                 const teacherMapCount = Object.keys(window.TEACHER_MAP || {}).length;
                 const comparisonTable = document.getElementById('teacherComparisonTable');
+                const teacherCardsContainer = document.getElementById('teacherCardsContainer');
+                const teacherCardCount = teacherCardsContainer?.querySelectorAll('.teacher-card')?.length || 0;
+                const teacherCardsText = String(teacherCardsContainer?.textContent || '').trim();
                 state = {
                     sectionReady: !!section,
                     sectionActive: !!section?.classList.contains('active'),
                     sectionLazyPlaceholder: section?.dataset?.lazySectionPlaceholder === '1',
                     sectionHtmlLength: Number(section?.innerHTML?.length || 0),
                     comparisonTableReady: !!comparisonTable,
+                    teacherCardsContainerReady: !!teacherCardsContainer,
+                    teacherCardCount,
+                    teacherCardsRendered: teacherCardCount > 0
+                        && !/正在后台生成教师画像|暂无教师数据|未导入任课表/.test(teacherCardsText),
                     comparisonTableParentId: String(comparisonTable?.parentElement?.id || ''),
                     teacherDetailSlotReady: !!document.getElementById('teacher-detail-comparison-slot'),
                     teacherMapReady: teacherMapCount > 0,
@@ -2373,13 +2373,20 @@ async function runModuleDeepCheck(page, id) {
                 };
                 if (state.sectionActive
                     && state.analysisRuntimeReady
-                    && (!expectsTeacherData || (state.teacherMapReady && state.comparisonTableReady))) break;
+                    && (!expectsTeacherData || (
+                        state.teacherMapReady
+                        && state.comparisonTableReady
+                        && state.teacherCardsRendered
+                    ))) break;
                 await wait(120);
             }
             const checks = state || {
                 sectionReady: false,
                 sectionActive: false,
                 comparisonTableReady: false,
+                teacherCardsContainerReady: false,
+                teacherCardCount: 0,
+                teacherCardsRendered: false,
                 teacherMapReady: false,
                 teacherMapCount: 0,
                 analysisRuntimeReady: false,
@@ -2391,7 +2398,11 @@ async function runModuleDeepCheck(page, id) {
                     && checks.sectionActive
                     && checks.analysisRuntimeReady
                     && (!checks.expectsTeacherData
-                        || (checks.comparisonTableReady && checks.teacherMapReady))
+                        || (
+                            checks.comparisonTableReady
+                            && checks.teacherMapReady
+                            && checks.teacherCardsRendered
+                        ))
                     && checks.calculationSnapshotCoversTeacherRuntime,
                 checks
             };
@@ -2422,7 +2433,8 @@ async function runModuleDeepCheck(page, id) {
             }
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
             const deadline = Date.now() + 8000;
-            const expectsTeacherData = location.hostname === 'schoolsystem.com.cn';
+            const expectsTeacherData = location.hostname === 'schoolsystem.com.cn'
+                || Object.keys(window.TEACHER_MAP || {}).length > 0;
             let state = null;
             while (Date.now() < deadline) {
                 const table = document.getElementById('teacherComparisonTable');
@@ -2452,22 +2464,22 @@ async function runModuleDeepCheck(page, id) {
                     requiresTeacherRows,
                     expectsTeacherData
                 };
-                const contentReady = state.hasTeacherRows
-                    || (state.hasExplicitEmptyState && (!requiresTeacherRows || strictPerformance))
-                    || (strictPerformance && state.hasPendingState);
+                const contentReady = requiresTeacherRows
+                    ? state.hasTeacherRows
+                    : state.hasExplicitEmptyState;
                 if (state.tableReady
                     && state.renderInvoked
-                    && (strictPerformance || state.pendingCleared)
+                    && state.pendingCleared
                     && contentReady) break;
                 await wait(150);
             }
-            const contentReady = state?.hasTeacherRows
-                || (state?.hasExplicitEmptyState && (!state?.requiresTeacherRows || strictPerformance))
-                || (strictPerformance && state?.hasPendingState);
+            const contentReady = state?.requiresTeacherRows
+                ? state?.hasTeacherRows
+                : state?.hasExplicitEmptyState;
             return {
                 ok: !!(state?.tableReady
                     && state?.renderInvoked
-                    && (strictPerformance || state?.pendingCleared)
+                    && state?.pendingCleared
                     && contentReady
                     && (!expectsTeacherData || state?.teacherMapCount > 0)),
                 checks: state || {
@@ -2549,7 +2561,8 @@ async function runModuleDeepCheck(page, id) {
     if (id === 'teacher-township-ranking') {
         return page.evaluate(async ({ strictPerformance }) => {
             const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-            const expectsTeacherData = location.hostname === 'schoolsystem.com.cn';
+            const expectsTeacherData = location.hostname === 'schoolsystem.com.cn'
+                || Object.keys(window.TEACHER_MAP || {}).length > 0;
             const deadline = Date.now() + 8000;
             let state = null;
             while (Date.now() < deadline) {
@@ -2569,12 +2582,6 @@ async function runModuleDeepCheck(page, id) {
                     teacherMapCount,
                     expectsTeacherData
                 };
-                if (strictPerformance
-                    && state.sectionReady
-                    && state.sectionActive
-                    && state.containerReady
-                    && state.runtimeReady
-                    && state.renderScheduled) break;
                 if (state.sectionActive
                     && state.contentReady
                     && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))) break;
@@ -2587,8 +2594,8 @@ async function runModuleDeepCheck(page, id) {
                     && state.containerReady
                     && state.runtimeReady
                     && state.renderScheduled
-                    && (strictPerformance || (state.contentReady
-                        && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))))
+                    && state.contentReady
+                    && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))
                     && (!expectsTeacherData || state.teacherMapCount > 0)),
                 checks: state || {
                     sectionReady: false,
@@ -3462,14 +3469,26 @@ async function runModuleDeepCheck(page, id) {
                 .map(option => String(option.value || '').trim())
                 .filter(Boolean);
             let school = '';
-            let student = null;
-            for (const optionSchool of schoolOptions) {
-                const candidate = (window.SCHOOLS?.[optionSchool]?.students || [])
-                    .find(item => item && String(item.name || '').trim());
-                if (candidate) {
-                    school = optionSchool;
-                    student = candidate;
-                    break;
+            const sameSchool = (left, right) => typeof window.sameAppSchoolName === 'function'
+                ? window.sameAppSchoolName(left, right)
+                : String(left || '').trim() === String(right || '').trim();
+            let student = (window.RAW_DATA || []).find((item) => (
+                String(item?.name || '').trim() === '解洪旭'
+                && sameSchool(item?.school, '银山实验学校')
+                && String(item?.class || '').trim() === '9.4'
+            )) || null;
+            if (student) {
+                school = schoolOptions.find(optionSchool => sameSchool(optionSchool, student.school)) || '';
+            }
+            if (!school || !student) {
+                for (const optionSchool of schoolOptions) {
+                    const candidate = (window.SCHOOLS?.[optionSchool]?.students || [])
+                        .find(item => item && String(item.name || '').trim());
+                    if (candidate) {
+                        school = optionSchool;
+                        student = candidate;
+                        break;
+                    }
                 }
             }
             if (!school || !student || !schoolSelect || !classSelect || !nameInput) {
@@ -3488,14 +3507,42 @@ async function runModuleDeepCheck(page, id) {
             nameInput.value = student.name || '';
 
             await window.doQuery();
+            const readReportState = () => {
+                const reportWrap = document.getElementById('single-report-result');
+                const capture = document.getElementById('report-card-capture-area');
+                const reportVisible = !!reportWrap && !reportWrap.classList.contains('hidden');
+                const contentReady = !!capture && String(capture.innerHTML || '').trim().length > 0;
+                const reportText = String(capture?.textContent || '').replace(/\s+/g, ' ').trim();
+                const totalRow = Array.from(capture?.querySelectorAll('#tb-query tbody tr') || []).find((row) => (
+                    String(row.textContent || '').includes('五科总分')
+                ));
+                const classRankText = String(totalRow?.querySelector('td[data-label="班级排名"]')?.textContent || '').trim();
+                const schoolRankText = String(totalRow?.querySelector('td[data-label="校级排名"]')?.textContent || '').trim();
+                const previousMatch = reportText.match(/上次对比[:：]\s*([0-9]+(?:\.[0-9]+)?)/);
+                const previousScore = String(previousMatch?.[1] || '').trim();
+                const previousScoreReady = !!previousScore && previousScore !== '-' && previousScore !== '—';
+                const classRankChangeReady = /▲|▼|持平/.test(classRankText);
+                const schoolRankChangeReady = /▲|▼|持平/.test(schoolRankText);
+                return {
+                    reportVisible,
+                    contentReady,
+                    previousScore,
+                    previousScoreReady,
+                    classRankText,
+                    schoolRankText,
+                    classRankChangeReady,
+                    schoolRankChangeReady,
+                    comparisonReady: previousScoreReady && classRankChangeReady && schoolRankChangeReady
+                };
+            };
+            let reportState = null;
             await new Promise(resolve => {
                 const startedAt = Date.now();
                 const checkReady = () => {
-                    const reportWrap = document.getElementById('single-report-result');
-                    const capture = document.getElementById('report-card-capture-area');
-                    const reportVisible = !!reportWrap && !reportWrap.classList.contains('hidden');
-                    const contentReady = !!capture && String(capture.innerHTML || '').trim().length > 0;
-                    if ((reportVisible && contentReady) || Date.now() - startedAt > 1200) {
+                    reportState = readReportState();
+                    const timeoutMs = strictPerformance ? 2400 : 7000;
+                    if ((reportState.reportVisible && reportState.contentReady && reportState.comparisonReady)
+                        || Date.now() - startedAt > timeoutMs) {
                         resolve();
                         return;
                     }
@@ -3508,6 +3555,7 @@ async function runModuleDeepCheck(page, id) {
             const capture = document.getElementById('report-card-capture-area');
             const reportVisible = !!reportWrap && !reportWrap.classList.contains('hidden');
             const contentReady = !!capture && String(capture.innerHTML || '').trim().length > 0;
+            reportState = readReportState();
             const scoreSubjects = (window.SUBJECTS || []).filter((subject) => student.scores?.[subject] !== undefined);
             const renderedSubjectRanks = scoreSubjects.map((subject) => {
                 const row = Array.from(capture?.querySelectorAll('#tb-query tbody tr') || []).find((candidate) => (
@@ -3523,6 +3571,9 @@ async function runModuleDeepCheck(page, id) {
                 item.classRank && item.classRank !== '-' && item.schoolRank && item.schoolRank !== '-'
             ));
             checks.currentSubjectRanksReady = currentSubjectRanksReady;
+            checks.previousScoreReady = reportState.previousScoreReady;
+            checks.classRankChangeReady = reportState.classRankChangeReady;
+            checks.schoolRankChangeReady = reportState.schoolRankChangeReady;
 
             return {
                 ok: Object.values(checks).every(Boolean) && reportVisible && contentReady,
@@ -3535,6 +3586,7 @@ async function runModuleDeepCheck(page, id) {
                     name: student.name || ''
                 },
                 renderedSubjectRanks,
+                reportComparison: reportState,
                 contentLength: capture ? String(capture.innerHTML || '').trim().length : 0
             };
         }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
@@ -4306,6 +4358,8 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     trace('login:done', { durationMs: loginMeasurement.durationMs });
     const appReadyMeasurement = await measureAsync('app-ready', () => waitForAppReady(page));
     trace('app-ready:done', { durationMs: appReadyMeasurement.durationMs });
+    const teacherAutoRestore = await waitForTeacherAutoRestore(page);
+    trace('teacher-auto-restore:done', teacherAutoRestore);
 
     const summary = {
         login: await page.evaluate(() => {
@@ -4327,7 +4381,9 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
                 && !document.querySelector('[onclick*="school-internal-grades"]'),
             scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
             entrancePlaylistStatus,
-            entrancePlaylistReady: /已导入\s*1\s*首|播放：任然 - 外婆桥/.test(entrancePlaylistStatus)
+            entrancePlaylistReady: /已导入\s*1\s*首|播放：任然 - 外婆桥/.test(entrancePlaylistStatus),
+            teacherMapCountBeforePrewarm: Object.keys(window.TEACHER_MAP || {}).length,
+            teacherAutoRestoreReady: Object.keys(window.TEACHER_MAP || {}).length > 0
         });
         }),
         switchModules: [],
@@ -4337,6 +4393,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
             strict: STRICT_PERFORMANCE_BUDGETS,
             loginMs: loginMeasurement.durationMs,
             appReadyMs: appReadyMeasurement.durationMs,
+            teacherAutoRestoreMs: teacherAutoRestore.durationMs,
             moduleTimings: [],
             dataManagerTimings: [],
             budgetStatus: [
@@ -4348,6 +4405,9 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         errors
     };
 
+    if (!summary.login.teacherAutoRestoreReady) {
+        errors.push({ scope: 'startup', message: 'teacher assignments did not auto-restore before smoke prewarm' });
+    }
     currentScope = 'hotspot-prewarm';
     trace('hotspot-prewarm:start');
     summary.performance.hotspotPrewarm = await prewarmSmokeHotspots(page);

@@ -29,7 +29,7 @@
         'correlation-analysis',
         'report-generator'
     ]);
-    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 1100;
+    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;
     const TEACHER_ANALYSIS_PRELOAD_DELAY_MS = 700;
     const TEACHER_ANALYSIS_ENTRY_LABELS = [
         'teacher-analysis-auto-render',
@@ -52,6 +52,41 @@
     let teacherAnalysisRenderToken = 0;
     let moduleEntryEpoch = 0;
     let lastModuleEntry = { id: '', at: 0, promise: null };
+    let teacherAnalysisReuseState = null;
+
+    function readTeacherAnalysisReuseState() {
+        const user = typeof window.getCurrentUser === 'function'
+            ? window.getCurrentUser()
+            : window.Auth?.currentUser;
+        return {
+            rawData: window.RAW_DATA,
+            rawDataVersion: Number(window.__RAW_DATA_VERSION || 0),
+            teacherMap: window.TEACHER_MAP,
+            teacherSchoolMap: window.TEACHER_SCHOOL_MAP,
+            examId: String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || ''),
+            school: String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || ''),
+            user: String(user?.username || user?.name || user?.role || '')
+        };
+    }
+
+    function canReuseTeacherAnalysisStats() {
+        if (!teacherAnalysisReuseState || !window.TEACHER_STATS
+            || Object.keys(window.TEACHER_STATS).length === 0) return false;
+        const current = readTeacherAnalysisReuseState();
+        return current.rawData === teacherAnalysisReuseState.rawData
+            && current.rawDataVersion === teacherAnalysisReuseState.rawDataVersion
+            && current.teacherMap === teacherAnalysisReuseState.teacherMap
+            && current.teacherSchoolMap === teacherAnalysisReuseState.teacherSchoolMap
+            && current.examId === teacherAnalysisReuseState.examId
+            && current.school === teacherAnalysisReuseState.school
+            && current.user === teacherAnalysisReuseState.user;
+    }
+
+    function markTeacherAnalysisStatsReusable() {
+        if (window.TEACHER_STATS && Object.keys(window.TEACHER_STATS).length > 0) {
+            teacherAnalysisReuseState = readTeacherAnalysisReuseState();
+        }
+    }
 
     function getModuleTaskKey(label) {
         return `module-entry:${String(label || 'task').trim()}`;
@@ -403,7 +438,10 @@
                     return;
                 }
 
-                window.analyzeTeachers({ render: false, township: false, historyLimit: 0 });
+                if (!canReuseTeacherAnalysisStats()) {
+                    window.analyzeTeachers({ render: false, township: false, historyLimit: 0 });
+                    markTeacherAnalysisStatsReusable();
+                }
                 ['teacherCardsContainer', 'teacherComparisonTable', 'teacher-township-ranking-container'].forEach((id) => {
                     const node = document.getElementById(id);
                     if (node) delete node.dataset.released;
@@ -837,6 +875,7 @@
         applyTeacherRoleVisibility();
         showTeacherAnalysisPendingState(moduleId);
         if (moduleId === 'teacher-analysis') scheduleTeacherCompareAutoRender(16);
+        const renderDelay = moduleId === 'teacher-analysis' ? TEACHER_ANALYSIS_RENDER_DELAY_MS : 80;
         scheduleModuleTask('teacher-analysis-auto-render', () => {
             if (!isTeacherAnalysisActive()) return;
             applyTeacherRoleVisibility();
@@ -855,7 +894,7 @@
             }
             renderTeacherAnalysisAfterRuntimeReady(moduleId);
             scheduleModuleTask('teacher-analysis-role-visibility', applyTeacherRoleVisibility, { delay: 160, idle: true, timeout: 700 });
-        }, { delay: TEACHER_ANALYSIS_RENDER_DELAY_MS, idle: false, timeout: 1800 });
+        }, { delay: renderDelay, idle: false, timeout: 1800 });
         return Promise.resolve();
     }
 

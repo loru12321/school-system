@@ -2035,21 +2035,79 @@
                 if (subjectCache) subjectCache.set(subjectKey, rankByScore);
                 return rankByScore.get(targetValue);
             };
+            const hasHistoryRankValue = (value) => (
+                value !== undefined
+                && value !== null
+                && String(value).trim() !== ''
+                && String(value).trim() !== '-'
+                && String(value).trim() !== '—'
+            );
+            const getHistoryRows = (payload) => {
+                const directRows = payload?.RAW_DATA || payload?.data || payload?.students || [];
+                if (Array.isArray(directRows) && directRows.length) return directRows;
+                const schools = payload?.SCHOOLS || payload?.schools || {};
+                return Object.values(schools && typeof schools === 'object' ? schools : {})
+                    .flatMap(school => Array.isArray(school?.students) ? school.students : []);
+            };
+            const buildHistoryRankSnapshot = (payload, match) => {
+                const rows = getHistoryRows(payload);
+                if (!rows.length || !match || !window.RankingDataService
+                    || typeof window.RankingDataService.buildStudentRankSnapshot !== 'function') return null;
+                return window.RankingDataService.buildStudentRankSnapshot(
+                    rows,
+                    match,
+                    Object.keys(match.scores || {})
+                );
+            };
+            const fillHistoryRanks = (payload, match) => {
+                const rankSnapshot = buildHistoryRankSnapshot(payload, match);
+                const subjectRanks = { ...(match.ranks || {}) };
+                const scopes = ['class', 'school', 'township', 'county'];
+                const directTotalRanks = {
+                    class: match.rankClass ?? match.classRank,
+                    school: match.rankSchool ?? match.schoolRank,
+                    township: match.rankTown ?? match.townRank ?? match.townshipRank,
+                    county: match.rankCounty ?? match.countyRank
+                };
+                const fillSubject = (subject) => {
+                    const ranks = { ...(subjectRanks[subject] || {}) };
+                    scopes.forEach((scope) => {
+                        if (hasHistoryRankValue(ranks[scope])) return;
+                        if (subject === 'total' && hasHistoryRankValue(directTotalRanks[scope])) {
+                            ranks[scope] = directTotalRanks[scope];
+                            return;
+                        }
+                        const computed = rankSnapshot?.getRank(match, subject, scope, undefined);
+                        if (hasHistoryRankValue(computed)) ranks[scope] = computed;
+                    });
+                    if (subject !== 'total' && !hasHistoryRankValue(ranks.county)) {
+                        const fallback = getCountyRankFallback(payload, match, subject);
+                        if (hasHistoryRankValue(fallback)) ranks.county = fallback;
+                    }
+                    subjectRanks[subject] = ranks;
+                    return ranks;
+                };
+                const totalRanks = fillSubject('total');
+                Object.keys(match.scores || {}).forEach(fillSubject);
+                if (!hasHistoryRankValue(totalRanks.county)) {
+                    const fallback = getCountyRankFallback(payload, match, 'total');
+                    if (hasHistoryRankValue(fallback)) totalRanks.county = fallback;
+                }
+                return { subjectRanks, totalRanks };
+            };
+            const hasCompleteHistoryComparisonRanks = (entry) => {
+                if (!entry || !hasHistoryRankValue(entry.rankClass) || !hasHistoryRankValue(entry.rankSchool)) return false;
+                return Object.keys(entry.scores || {}).every((subject) => {
+                    const ranks = entry.subjectRanks?.[subject] || {};
+                    return hasHistoryRankValue(ranks.class) && hasHistoryRankValue(ranks.school);
+                });
+            };
             const buildHistoryEntry = (examId, payload, updatedAt) => {
                 const match = findHistoryMatch(payload);
                 if (!match) return null;
                 const keyParts = String(examId || '').split('_');
                 const examLabel = payload?.examLabel || (keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId);
-                const subjectRanks = { ...(match.ranks || {}) };
-                Object.keys(match.scores || {}).forEach((subject) => {
-                    const ranks = { ...(subjectRanks[subject] || {}) };
-                    if (ranks.county === undefined || ranks.county === null || ranks.county === '') {
-                        const fallback = getCountyRankFallback(payload, match, subject);
-                        if (fallback !== undefined) ranks.county = fallback;
-                    }
-                    subjectRanks[subject] = ranks;
-                });
-                const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');
+                const { subjectRanks, totalRanks } = fillHistoryRanks(payload, match);
                 return {
                     // Use full key as canonical ID to avoid "same exam" false positives.
                     examId,
@@ -2057,10 +2115,10 @@
                     examLabel: examLabel || examId,
                     fingerprint: getHistoryPayloadFingerprint(examId, payload, updatedAt),
                     total: match.total,
-                    rankClass: match.ranks?.total?.class,
-                    rankSchool: match.ranks?.total?.school,
-                    rankTown: match.ranks?.total?.township,
-                    rankCounty,
+                    rankClass: totalRanks.class,
+                    rankSchool: totalRanks.school,
+                    rankTown: totalRanks.township,
+                    rankCounty: totalRanks.county,
                     subjectRanks,
                     scores: match.scores,
                     updatedAt
@@ -2116,79 +2174,6 @@
                     updated_at: updatedAt || new Date().toISOString()
                 };
             };
-            const buildStudentHistoryIndexRowForStudent = (examId, payload, match, updatedAt = '') => {
-                if (!match || !examId || isCurrentExam(examId) || !shouldUseHistoryEntry(examId)) return null;
-                const keyParts = String(examId || '').split('_');
-                const examLabel = payload?.examLabel || (keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId);
-                const subjectRanks = { ...(match.ranks || {}) };
-                Object.keys(match.scores || {}).forEach((subject) => {
-                    const ranks = { ...(subjectRanks[subject] || {}) };
-                    if (ranks.county === undefined || ranks.county === null || ranks.county === '') {
-                        const fallback = getCountyRankFallback(payload, match, subject);
-                        if (fallback !== undefined) ranks.county = fallback;
-                    }
-                    subjectRanks[subject] = ranks;
-                });
-                const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');
-                const studentLikeRow = {
-                    school: match.school || '',
-                    class: match.class || '',
-                    id: match.id || match.examNo || match.uuid || '',
-                    name: match.name || ''
-                };
-                const identity = getStudentHistoryIdentity(studentLikeRow);
-                const key = getStudentHistoryIndexKey(cohortId, examId, studentLikeRow);
-                if (!identity.replace(/\|/g, '') || !key) return null;
-                return {
-                    key,
-                    content: packPayload({
-                        __STUDENT_HISTORY_INDEX_VERSION: 1,
-                        cohortId,
-                        examId,
-                        identity,
-                        student: studentLikeRow,
-                        entry: {
-                            examId,
-                            examFullKey: examId,
-                            examLabel: examLabel || examId,
-                            fingerprint: getHistoryPayloadFingerprint(examId, payload, updatedAt),
-                            total: match.total,
-                            rankClass: match.ranks?.total?.class,
-                            rankSchool: match.ranks?.total?.school,
-                            rankTown: match.ranks?.total?.township,
-                            rankCounty,
-                            subjectRanks,
-                            scores: match.scores,
-                            updatedAt
-                        }
-                    }),
-                    updated_at: updatedAt || new Date().toISOString()
-                };
-            };
-            const queueExamHistoryIndexBackfill = (examId, payload, updatedAt = '') => {
-                const rows = Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : (Array.isArray(payload?.data) ? payload.data : []);
-                if (!rows.length) return;
-                scheduleIdleTask(() => {
-                    const seen = new Set();
-                    const indexRows = [];
-                    rows.forEach((studentRow) => {
-                        const indexRow = buildStudentHistoryIndexRowForStudent(examId, payload, studentRow, updatedAt);
-                        if (!indexRow || seen.has(indexRow.key)) return;
-                        seen.add(indexRow.key);
-                        indexRows.push(indexRow);
-                    });
-                    const pushChunk = (offset = 0) => {
-                        const chunk = indexRows.slice(offset, offset + 400);
-                        if (!chunk.length) return;
-                        upsertSystemData(chunk)
-                            .catch((backfillError) => console.warn('[CloudHistory] exam index backfill failed:', backfillError))
-                            .finally(() => {
-                                if (offset + 400 < indexRows.length) scheduleIdleTask(() => pushChunk(offset + 400), 1200);
-                            });
-                    };
-                    pushChunk();
-                }, 1400);
-            };
             const readIndexedHistory = async () => {
                 const targetLikeRow = {
                     school: targetSchool,
@@ -2229,12 +2214,18 @@
 
                 const history = [];
                 const coveredKeys = new Set();
+                const incompleteKeys = new Set();
                 (data || []).forEach((row) => {
                     try {
                         const entry = buildIndexedHistoryEntry(row);
                         if (!entry) return;
+                        const entryKey = String(entry.examFullKey || entry.examId || '').trim();
+                        if (!hasCompleteHistoryComparisonRanks(entry)) {
+                            if (entryKey) incompleteKeys.add(entryKey);
+                            return;
+                        }
                         history.push(entry);
-                        coveredKeys.add(String(entry.examFullKey || entry.examId || '').trim());
+                        coveredKeys.add(entryKey);
                     } catch (indexError) {
                         console.warn('[CloudHistory] parse index row failed:', indexError);
                     }
@@ -2245,7 +2236,7 @@
                     if (timeA !== timeB) return timeA - timeB;
                     return String(left?.examFullKey || left?.examId || '').localeCompare(String(right?.examFullKey || right?.examId || ''), 'zh-CN');
                 });
-                return { history, coveredKeys, attempted: true };
+                return { history, coveredKeys, incompleteKeys, attempted: true };
             };
             const shouldUseHistoryEntry = (examId) => {
                 return isRequestedExam(examId);
@@ -2302,6 +2293,7 @@
                 const indexedResult = await readIndexedHistory();
                 const indexedHistory = indexedResult.history || [];
                 const indexedCoveredKeys = indexedResult.coveredKeys || new Set();
+                const indexedIncompleteKeys = indexedResult.incompleteKeys || new Set();
                 const missingRequestedExamIds = requestedExamIds
                     .filter(examId => !isCurrentExam(examId))
                     .filter(examId => !Array.from(indexedCoveredKeys).some(historyId => isExamEquivalent(historyId, examId)));
@@ -2309,7 +2301,7 @@
                     setCloudStatus('success', `历史${indexedHistory.length}条`);
                     return { success: true, data: indexedHistory, source: 'student-history-index' };
                 }
-                if (!requestedExamIds.length && indexedHistory.length) {
+                if (!requestedExamIds.length && indexedHistory.length && indexedIncompleteKeys.size === 0) {
                     setCloudStatus('success', `历史${indexedHistory.length}条`);
                     return { success: true, data: indexedHistory, source: 'student-history-index' };
                 }
@@ -2338,7 +2330,10 @@
 
                 const rows = (data || []).filter(row => {
                     const rowKey = String(row?.key || '').trim();
-                    return rowKey && !isIgnoredExamKey(rowKey) && shouldUseHistoryEntry(rowKey);
+                    return rowKey
+                        && !isIgnoredExamKey(rowKey)
+                        && shouldUseHistoryEntry(rowKey)
+                        && !Array.from(indexedCoveredKeys).some(historyId => isExamEquivalent(historyId, rowKey));
                 });
                 const history = indexedHistory.slice();
                 const historyIndexBackfillRows = [];
@@ -2351,7 +2346,6 @@
                             history.push(entry);
                             const indexRow = buildStudentHistoryIndexRowFromEntry(entry, row.updated_at);
                             if (indexRow) historyIndexBackfillRows.push(indexRow);
-                            queueExamHistoryIndexBackfill(row.key, payload, row.updated_at);
                         }
                     } catch (rowErr) {
                         console.warn('[CloudHistory] parse row failed:', rowErr);
@@ -2363,8 +2357,17 @@
                     });
                 }
 
-                setCloudStatus('success', `历史${history.length}条`);
-                return { success: true, data: history };
+                const dedupedHistory = Array.from(history.reduce((map, entry) => {
+                    const entryKey = String(entry?.examFullKey || entry?.examId || '').trim();
+                    if (entryKey) map.set(entryKey, entry);
+                    return map;
+                }, new Map()).values()).sort((left, right) => {
+                    const timeA = new Date(left?.updatedAt || 0).getTime() || 0;
+                    const timeB = new Date(right?.updatedAt || 0).getTime() || 0;
+                    return timeA - timeB;
+                });
+                setCloudStatus('success', `历史${dedupedHistory.length}条`);
+                return { success: true, data: dedupedHistory };
             })();
             try {
                 const result = await this._studentHistoryTasks[historyKey];

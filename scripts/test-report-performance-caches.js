@@ -18,6 +18,7 @@ const studentDetailsFile = 'public/assets/js/student-details-render-runtime.js';
 const comparisonRenderFile = 'public/assets/js/comparison-render-runtime.js';
 const cloudFile = 'public/assets/js/cloud.js';
 const countyFile = 'public/assets/js/county-analysis-runtime.js';
+const rankingDataServiceFile = 'public/assets/js/ranking-data-service-runtime.js';
 const packageFile = 'package.json';
 
 const reportRender = read(reportRenderFile);
@@ -27,6 +28,7 @@ const studentDetails = read(studentDetailsFile);
 const comparisonRender = read(comparisonRenderFile);
 const cloud = read(cloudFile);
 const county = read(countyFile);
+const rankingDataService = read(rankingDataServiceFile);
 const app = read('public/assets/js/app.js');
 const compareShared = read('public/assets/js/compare-shared-runtime.js');
 const pkg = JSON.parse(read(packageFile));
@@ -58,6 +60,7 @@ const pkg = JSON.parse(read(packageFile));
     'function renderSingleReportCardHTML(stu, mode, options = {})',
     'Array.isArray(options.reportExamHistory)',
     'ReportRenderPerfCache.html.set',
+    'buildStudentRankSnapshot',
     'reportRankIndex',
     'readCurrentRank',
     "readCurrentRank(sub, 'class')",
@@ -100,6 +103,12 @@ const pkg = JSON.parse(read(packageFile));
     ].includes(token);
     assertContains(reportHistoryToken ? reportHistory : app, token, reportHistoryToken ? reportHistoryFile : 'public/assets/js/app.js');
 });
+
+[
+    'function scheduleReportComparisonRetry(stu, token)',
+    'void doQuery(stu);',
+    'scheduleReportComparisonRetry(stu, queryToken);'
+].forEach((token) => assertContains(reportHistory, token, reportHistoryFile));
 
 [
     'function scheduleStudentReportCharts(student, history)',
@@ -153,6 +162,11 @@ const historyEnd = comparisonRender.indexOf('// 🟢 [新增]：生成进退步�
 const historySource = historyStart >= 0 && historyEnd > historyStart ? comparisonRender.slice(historyStart, historyEnd) : '';
 if (!historySource || historySource.includes('getReportSubjectSortedScores(')) {
     fail('student exam history should not precompute subject percentile score arrays');
+}
+const historyManualFilter = historySource.indexOf('if (manualExams.length > 0');
+const historyFingerprintRead = historySource.indexOf('const examFingerprint = getReportExamFingerprint(exam, examData);');
+if (historyManualFilter < 0 || historyFingerprintRead < 0 || historyManualFilter > historyFingerprintRead) {
+    fail('student exam history must filter unselected exams before computing full-data fingerprints');
 }
 [
     'hasUsableStoredHistoryRanks',
@@ -219,7 +233,10 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'const isCurrentExam = (examId) => currentExamId && isExamEquivalent(examId, currentExamId);',
     'const findStudentInRows = (list, scopedToTargetSchool = false) => {',
     'const directSchool = schools[targetSchool];',
-    "const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');",
+    'const buildHistoryRankSnapshot = (payload, match) => {',
+    'window.RankingDataService.buildStudentRankSnapshot(',
+    'const fillHistoryRanks = (payload, match) => {',
+    'const hasCompleteHistoryComparisonRanks = (entry) => {',
     'getCountyRankFallback',
     'countyRankFallbackCache',
     '_studentHistoryPayloadCache',
@@ -236,10 +253,15 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'const readExamSortTime = (exam) => {',
     'normalizedCohort: normalizeCohortId(exam?.cohort || exam?.meta?.cohort || examId)',
     'const localHistoryExamKeys = localHistory',
-    'rowKey && !isIgnoredExamKey(rowKey) && shouldUseHistoryEntry(rowKey)',
+    'const indexedIncompleteKeys = indexedResult.incompleteKeys || new Set();',
+    'indexedIncompleteKeys.size === 0',
+    '!Array.from(indexedCoveredKeys).some(historyId => isExamEquivalent(historyId, rowKey))',
     "return { success: true, data: indexedHistory, source: 'student-history-index' };",
-    'rankCounty,'
+    'const dedupedHistory = Array.from(history.reduce((map, entry) => {'
 ].forEach((token) => assertContains(cloudHistorySource, token, cloudFile));
+if (cloudHistorySource.includes('queueExamHistoryIndexBackfill')) {
+    fail('single-student report hydration must not queue a full-exam student index backfill');
+}
 
 [
     'STUDENT_HISTORY_INDEX_PREFIX',
@@ -278,6 +300,14 @@ if (read('public/assets/js/cloud-workspace-runtime.js').includes("currentExamId 
     'getScoreStatsForRows',
     'getPercentileFromStats'
 ].forEach((token) => assertContains(reportChart, token, reportChartFile));
+
+[
+    'const countyScopeCache = new Map();',
+    'if (countyScopeCache.has(cacheKey)) return countyScopeCache.get(cacheKey);',
+    'countyScopeCache.set(cacheKey, result);',
+    'if (!hasCountyScope(scopeRows, options)) return false;',
+    'scopedOptions = { ...options, forceCounty: true };'
+].forEach((token) => assertContains(rankingDataService, token, rankingDataServiceFile));
 
 [
     'renderCache: new Map()',

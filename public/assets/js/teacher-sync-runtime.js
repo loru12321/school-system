@@ -213,6 +213,11 @@ async function tryAutoRestoreTeacherMap(options = {}) {
     if (!options.startup && !shouldAutoLoadTeacherData()) return false;
     if (!(window.CloudManager && typeof CloudManager.loadTeachers === 'function')) return false;
 
+    const cohortId = typeof getCurrentCohortId === 'function'
+        ? String(getCurrentCohortId() || '').trim()
+        : String(window.CURRENT_COHORT_ID || '').trim();
+    if (options.startup && !cohortId) return false;
+
     const preferredTerm = getPreferredTeacherTermId() || '';
     if (preferredTerm) {
         syncTeacherTermStorage(preferredTerm);
@@ -246,7 +251,13 @@ function scheduleTeacherSyncPrompt(options = {}) {
         return;
     }
     if (!startup && !shouldAutoLoadTeacherData()) return;
-    if (window.__TEACHER_SYNC_RETRY_ACTIVE__ === true) return;
+    if (window.__TEACHER_SYNC_RETRY_ACTIVE__ === true) {
+        if (options.force === true) {
+            Promise.resolve(tryAutoRestoreTeacherMap({ startup, force: true }))
+                .catch((error) => console.warn('[TeacherSync] forced auto restore failed:', error));
+        }
+        return;
+    }
     window.__TEACHER_SYNC_RETRY_ACTIVE__ = true;
     let tries = 0;
     let timer = null;
@@ -262,7 +273,7 @@ function scheduleTeacherSyncPrompt(options = {}) {
     const attempt = () => {
         if (stopped) return;
         tries += 1;
-        Promise.resolve(tryAutoRestoreTeacherMap({ startup, force: tries > 1 })).then((autoLoaded) => {
+        Promise.resolve(tryAutoRestoreTeacherMap({ startup, force: options.force === true || tries > 1 })).then((autoLoaded) => {
             const done = autoLoaded || (!startup && promptTeacherSyncIfNeeded());
             if (done || tries >= 10) {
                 stop();
@@ -281,6 +292,18 @@ function scheduleTeacherSyncPrompt(options = {}) {
     };
     attempt();
 }
+
+window.addEventListener('cloud-load-state', (event) => {
+    const stage = String(event?.detail?.stage || '').trim();
+    if (stage !== 'loaded' && stage !== 'cached') return;
+    if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
+    scheduleTeacherSyncPrompt({ startup: true, force: true });
+});
+
+window.addEventListener('school:app-modules-ready', () => {
+    if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
+    scheduleTeacherSyncPrompt({ startup: true });
+});
 
 function renderTeacherAnalysisState() {
     if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {

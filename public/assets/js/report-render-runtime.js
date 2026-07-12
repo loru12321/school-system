@@ -48,8 +48,7 @@ const ReportRenderPerfCache = {
     schoolCandidates: [],
     townshipRank: new Map(),
     countyRank: new Map(),
-    countyDirect: new WeakMap(),
-    rankIndex: null
+    countyDirect: new WeakMap()
 };
 
 function getReportRenderSignature() {
@@ -74,7 +73,6 @@ function getReportRenderSignature() {
         ReportRenderPerfCache.townshipRank.clear();
         ReportRenderPerfCache.countyRank.clear();
         ReportRenderPerfCache.countyDirect = new WeakMap();
-        ReportRenderPerfCache.rankIndex = null;
     }
     return signature;
 }
@@ -385,9 +383,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
     const stuScores = (reportStu && typeof reportStu === 'object' && reportStu.scores && typeof reportStu.scores === 'object') ? reportStu.scores : {};
 
     const reportSubjectsForRank = [...new Set(SUBJECTS)];
-    const reportRankIndex = ReportRenderPerfCache.rankIndex || (ReportRenderPerfCache.rankIndex = (
-        window.RankingDataService?.buildStudentRankIndex(RAW_DATA, reportSubjectsForRank) || null
-    ));
+    const reportRankIndex = window.RankingDataService?.buildStudentRankSnapshot(RAW_DATA, reportStu, reportSubjectsForRank) || null;
     const readCurrentRank = (subject, scope) => {
         const stored = safeGet(reportStu, `ranks.${subject}.${scope}`, '-');
         return stored != null && stored !== '' && stored !== '-' && stored !== '—'
