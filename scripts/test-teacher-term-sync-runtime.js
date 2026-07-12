@@ -51,6 +51,11 @@ assert.ok(
   /const scheduleNext = \(\) => \{[\s\S]*setTimeout\(attempt, 700\)[\s\S]*const attempt = \(\) => \{[\s\S]*scheduleNext\(\)[\s\S]*attempt\(\);/.test(teacherSync),
   'teacher sync scheduling should wait for each attempt before installing a bounded forced retry'
 );
+assert.ok(
+  /function applyTeacherTermWithoutPrompt\(termId\)[\s\S]*localStorage\.setItem\('TEACHER_SYNC_AT'[\s\S]*updateStatusPanel\(\);[\s\S]*return true;/.test(teacherSync)
+    && /function scheduleTeacherSyncPrompt\(options = \{\}\)[\s\S]*Object\.keys\(window\.TEACHER_MAP\)\.length > 0[\s\S]*updateStatusPanel\(\);[\s\S]*return;/.test(teacherSync),
+  'local teacher restores and already-loaded startup paths must refresh the preparation status panel'
+);
 
 assert.ok(
   cloud.includes('cached?.result === true')
@@ -76,6 +81,8 @@ assert.ok(
   teachingManagementModules.includes('function renderTeachingManagementSubmodule(moduleId)')
     && /if \(moduleId === 'teacher-analysis'\)[\s\S]*typeof window\.runModuleTabEnter === 'function'[\s\S]*window\.setTimeout\(relocateTeacherBlocks, 80\)/.test(teachingManagementModules)
     && /const render = \(\) => renderTeachingManagementSubmodule\(moduleId\);[\s\S]*window\.setTimeout\(render, 80\);[\s\S]*window\.setTimeout\(render, 650\)/.test(teachingManagementModules)
+    && /if \(moduleId === 'teacher-township-ranking'\)[\s\S]*const renderOnce = \(\) => \{[\s\S]*window\.setTimeout\(renderOnce, 1100\);[\s\S]*return;/.test(teachingManagementModules)
+    && /if \(moduleId === 'teacher-detail-comparison'\)[\s\S]*tryAutoRestoreTeacherMap\(\{ startup: true, force: true \}\)[\s\S]*window\.analyzeTeachers\(\{ render: false, township: false, historyLimit: 0 \}\)[\s\S]*render\(\);/.test(teachingManagementModules)
     && teachingManagementModules.includes("section.dataset.teacherSubmoduleScheduled = '1'")
     && /function install\(attempt = 0\)[\s\S]*if \(typeof originalSwitchTab !== 'function'\)[\s\S]*install\(attempt \+ 1\)[\s\S]*window\.__TEACHING_MANAGEMENT_MODULES_INSTALLED__ = true;/.test(teachingManagementModules)
     && app.includes('window.TeachingManagementModulesRuntime.install();')

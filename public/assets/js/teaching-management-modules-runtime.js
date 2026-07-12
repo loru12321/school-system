@@ -267,6 +267,44 @@
         const render = () => renderTeachingManagementSubmodule(moduleId);
         const section = document.getElementById(moduleId);
         if (section) section.dataset.teacherSubmoduleScheduled = '1';
+        if (moduleId === 'teacher-township-ranking') {
+            let rendered = false;
+            const renderOnce = () => {
+                if (rendered) return true;
+                rendered = render();
+                return rendered;
+            };
+            const loadTask = typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
+                ? window.ensureTeacherAnalysisMainRuntimeLoaded()
+                : Promise.resolve(true);
+            window.setTimeout(renderOnce, 1100);
+            Promise.resolve(loadTask).then(() => {
+                window.setTimeout(renderOnce, 1100);
+            }).catch((error) => {
+                console.warn('[teaching-management] teacher township runtime load failed:', error);
+                window.setTimeout(renderOnce, 1100);
+            });
+            return;
+        }
+        if (moduleId === 'teacher-detail-comparison') {
+            window.setTimeout(async () => {
+                if (!document.getElementById(moduleId)?.classList.contains('active')) return;
+                if (Object.keys(window.TEACHER_MAP || {}).length === 0
+                    && typeof window.tryAutoRestoreTeacherMap === 'function') {
+                    try {
+                        await window.tryAutoRestoreTeacherMap({ startup: true, force: true });
+                    } catch (error) {
+                        console.warn('[teaching-management] teacher detail map restore failed:', error);
+                    }
+                }
+                if (!document.getElementById(moduleId)?.classList.contains('active')) return;
+                if (Object.keys(window.TEACHER_MAP || {}).length > 0
+                    && typeof window.analyzeTeachers === 'function') {
+                    window.analyzeTeachers({ render: false, township: false, historyLimit: 0 });
+                }
+                render();
+            }, 1100);
+        }
         window.setTimeout(render, 80);
         window.setTimeout(render, 650);
         const loadTask = typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'

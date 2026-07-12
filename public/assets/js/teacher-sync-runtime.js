@@ -100,6 +100,7 @@ function applyTeacherTermWithoutPrompt(termId) {
         localStorage.setItem('TEACHER_SYNC_AT', new Date(resolved.savedAt || Date.now()).toISOString());
         if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
         if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
+        if (typeof updateStatusPanel === 'function') updateStatusPanel();
         return true;
     }
 
@@ -240,8 +241,8 @@ function scheduleTeacherSyncPrompt(options = {}) {
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
         if (!localStorage.getItem('TEACHER_SYNC_AT')) {
             localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
-            if (typeof updateStatusPanel === 'function') updateStatusPanel();
         }
+        if (typeof updateStatusPanel === 'function') updateStatusPanel();
         return;
     }
     if (!startup && !shouldAutoLoadTeacherData()) return;

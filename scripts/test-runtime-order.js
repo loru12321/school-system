@@ -893,7 +893,7 @@ assert.ok(shellRuntime.includes('function syncModuleRailActiveState'), 'module r
 assert.ok(shellRuntime.includes('dataset.moduleRailSignature'), 'module rail should store a render signature on the rail element');
 assert.ok(shellRuntime.includes('dataset.moduleRailDelegated'), 'module rail should use delegated clicks instead of rebinding each chip');
 assert.ok(!shellRuntime.includes("rail.querySelectorAll('.shell-module-rail-chip').forEach((button) => {\n            button.addEventListener('click'"), 'module rail should avoid per-render chip click listeners');
-assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;'), 'teacher portrait should auto-render on the next frame after entering the module');
+assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 1100;'), 'teacher analysis should wait for a stable module visit before starting full calculations');
 assert.ok(moduleEntryRuntime.includes('ensureTeacherAnalysisMainRuntimeLoaded()'), 'teacher portrait entry should load its runtime automatically');
 assert.ok(moduleEntryRuntime.includes('function scheduleTeacherCompareAutoRender'), 'teacher multi-period compare should auto-render from default selectors');
 assert.ok(moduleEntryRuntime.includes('function scheduleActiveModuleTask'), 'module entry should defer non-critical active-module work');
@@ -982,13 +982,14 @@ assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n  
 assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis'];"), 'teaching management state bars should only cover retained modules');
 assert.ok(moduleEntryRuntime.includes("if (id === 'single-school-eval') return false;"), 'module entry runtime should not initialize the removed performance fairness module');
 assert.ok(indexHtml.includes('onclick="renderTeacherAnalysisNow()">刷新教师画像'), 'teacher portrait should expose an explicit refresh action');
-const teacherEntryStart = moduleEntryRuntime.indexOf('function initTeacherAnalysisEntry()');
+const teacherEntryStart = moduleEntryRuntime.indexOf("function initTeacherAnalysisEntry(moduleId = 'teacher-analysis')");
 const teacherEntryEnd = moduleEntryRuntime.indexOf('function releaseTeacherAnalysisHeavyDom()', teacherEntryStart);
 const teacherEntrySource = moduleEntryRuntime.slice(teacherEntryStart, teacherEntryEnd);
 assert.ok(teacherEntrySource.includes("'teacher-analysis-auto-render'"), 'teacher-analysis entry should auto-generate the portrait after the switch frame');
+assert.ok(moduleEntryRuntime.includes("const TEACHER_ANALYSIS_ENTRY_LABELS = [\n        'teacher-analysis-auto-render'"), 'teacher analysis auto-render should be cancelled when navigating between teacher submodules');
 assert.ok(teacherEntrySource.includes('scheduleTeacherCompareAutoRender(16);'), 'teacher-analysis entry should initialize teacher compare selectors immediately after the switch frame');
 assert.ok(
-    teacherEntrySource.includes('renderTeacherAnalysisAfterRuntimeReady()')
+    teacherEntrySource.includes('renderTeacherAnalysisAfterRuntimeReady(moduleId)')
         && moduleEntryRuntime.includes('window.ensureTeacherAnalysisMainRuntimeLoaded()'),
     'teacher-analysis entry should load the analysis runtime before rendering locally or asynchronously restored teacher data'
 );
@@ -997,6 +998,11 @@ assert.ok(!teacherEntrySource.includes('updateTeacherCompareExamSelects'), 'teac
 assert.ok(!teacherEntrySource.includes('inferTeacherSchoolIfNeeded'), 'teacher-analysis entry should not infer teacher school on switch');
 assert.ok(moduleEntryRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'module entry should schedule teaching overview refreshes after teacher analysis phases');
 assert.ok(moduleEntryRuntime.includes('historyLimit: 0'), 'teacher-analysis entry should use a fast no-history first render');
+assert.ok(moduleEntryRuntime.includes("function scheduleTeacherAnalysisRenderWork(delay = TEACHER_ANALYSIS_RENDER_DELAY_MS, moduleId = 'teacher-analysis')"), 'teacher analysis rendering should be scoped to the active teacher module');
+assert.ok(moduleEntryRuntime.includes("if (targetModuleId === 'teacher-detail-comparison') {"), 'teacher detail entry should render only its own computed table');
+assert.ok(moduleEntryRuntime.includes("function showTeacherAnalysisPendingState(moduleId = 'teacher-analysis')"), 'teacher pending states should be scoped to the active teacher module');
+assert.ok(moduleEntryRuntime.includes("function releaseTeacherAnalysisHeavyDom() {\n        const section = document.getElementById('teacher-analysis');\n        if (!section || isTeacherAnalysisActive()) return;\n        clearTeacherAnalysisDeferredRender();"), 'teacher DOM cleanup must not cancel work while a teacher submodule remains active');
+assert.ok(moduleEntryRuntime.includes("section?.dataset.teacherSubmoduleRendered === '1'"), 'township entry should reuse a completed dedicated render instead of recalculating it');
 assert.ok(moduleEntryRuntime.includes('window.smScheduleStudentOverviewRender()'), 'module entry should schedule student overview first renders');
 assert.ok(teacherStateRuntime.includes('function peekTeacherStats()'), 'teacher-state-runtime.js should expose a non-cloning stats read path for hot overview renders');
 assert.ok(appSource.includes('TeacherStateRuntime.peekTeacherStats'), 'app.js readTeacherStats should avoid deep cloning teacher stats on hot paths');
@@ -1065,9 +1071,10 @@ assert.ok(
         && moduleEntryRuntime.includes('window.DataManager.ensureTeacherMap(false);')
         && moduleEntryRuntime.includes('function ensureTeacherAnalysisSectionLoaded()')
         && moduleEntryRuntime.includes("section.dataset.lazySectionPlaceholder !== '1'")
-        && moduleEntryRuntime.includes('function renderTeacherAnalysisAfterRuntimeReady()')
-        && moduleEntryRuntime.includes('if (ready && isTeacherAnalysisActive()) renderTeacherAnalysisAfterRuntimeReady();'),
-    'teaching management entry should restore local teacher history before cloud access and rerender after late runtime/data readiness'
+        && moduleEntryRuntime.includes("function renderTeacherAnalysisAfterRuntimeReady(moduleId = 'teacher-analysis')")
+        && moduleEntryRuntime.includes('const settledLoadTask = Promise.resolve(loadTask).then(() => restoreTeacherMapFromLocalHistory());')
+        && !moduleEntryRuntime.includes('if (ready && isTeacherAnalysisActive()) renderTeacherAnalysisAfterRuntimeReady();'),
+    'teaching management entry should restore local teacher history before cloud access without triggering a duplicate render'
 );
 assert.ok(
     dataCloudRuntime.includes('<strong>当前参数归属：</strong>')

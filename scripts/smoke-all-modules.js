@@ -326,6 +326,29 @@ async function prewarmSmokeHotspots(page) {
             entries.push(await loadWithTimeout(loaderName));
             await yieldToBrowser();
         }
+        if (Object.keys(window.TEACHER_MAP || {}).length === 0) {
+            const restoreStartedAt = Date.now();
+            const restoreDeadline = restoreStartedAt + 12000;
+            let attempts = 0;
+            while (Date.now() < restoreDeadline && Object.keys(window.TEACHER_MAP || {}).length === 0) {
+                attempts += 1;
+                if (typeof window.tryAutoRestoreTeacherMap === 'function') {
+                    await Promise.race([
+                        Promise.resolve(window.tryAutoRestoreTeacherMap({ startup: true, force: true })),
+                        wait(Math.min(5000, Math.max(1, restoreDeadline - Date.now())))
+                    ]);
+                }
+                if (Object.keys(window.TEACHER_MAP || {}).length === 0) await wait(400);
+            }
+            const teacherMapCount = Object.keys(window.TEACHER_MAP || {}).length;
+            entries.push({
+                name: 'restoreTeacherMap',
+                status: teacherMapCount > 0 ? 'loaded' : 'empty',
+                teacherMapCount,
+                attempts,
+                durationMs: Date.now() - restoreStartedAt
+            });
+        }
         return {
             ok: entries.every((entry) => entry.status === 'loaded' || entry.status === 'missing'),
             entries
@@ -2406,6 +2429,13 @@ async function runModuleDeepCheck(page, id) {
                 const text = String(table?.textContent || '');
                 const rows = table ? table.querySelectorAll('tbody tr').length : 0;
                 const teacherMapCount = Object.keys(window.TEACHER_MAP || {}).length;
+                const teacherStatsCount = Object.keys(window.TEACHER_STATS || {}).length;
+                const visibleTeacherStatsCount = typeof window.getVisibleTeacherStats === 'function'
+                    ? Object.keys(window.getVisibleTeacherStats() || {}).length
+                    : teacherStatsCount;
+                const currentUser = typeof window.getCurrentUser === 'function'
+                    ? window.getCurrentUser()
+                    : window.Auth?.currentUser;
                 const requiresTeacherRows = expectsTeacherData || teacherMapCount > 0;
                 state = {
                     tableReady: !!table,
@@ -2416,6 +2446,9 @@ async function runModuleDeepCheck(page, id) {
                     hasTeacherRows: rows > 1 && /联考赋分|教学质量分/.test(text),
                     hasExplicitEmptyState: /暂无教师统计数据|暂时无法自动识别本校|未导入任课表/.test(text),
                     teacherMapCount,
+                    teacherStatsCount,
+                    visibleTeacherStatsCount,
+                    currentUserRole: String(currentUser?.role || ''),
                     requiresTeacherRows,
                     expectsTeacherData
                 };
