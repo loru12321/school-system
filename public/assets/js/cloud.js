@@ -12,9 +12,11 @@
     const AUTO_COHORT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
     const TEACHER_LOAD_CACHE_TTL_MS = 90 * 1000;
     const STUDENT_HISTORY_CACHE_TTL_MS = 2 * 60 * 1000;
+    const BACKGROUND_TEACHER_ANALYSIS_REFRESH_DELAY_MS = 240;
     const WorkspaceState = window.WorkspaceState || null;
     const ExamState = window.ExamState || null;
     const TeacherState = window.TeacherState || null;
+    let pendingTeacherAnalysisRefreshTimer = null;
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -369,7 +371,30 @@
         return null;
     }
 
-    function applyLoadedTeacherPayload(map, schoolMap, keyTermId, updatedAt) {
+    function refreshLoadedTeacherAnalysis(options = {}) {
+        const run = () => {
+            pendingTeacherAnalysisRefreshTimer = null;
+            const section = document.getElementById('teacher-analysis');
+            if (!section || !section.classList.contains('active')) return;
+            if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') {
+                DataManager.refreshTeacherAnalysis();
+            }
+        };
+        if (options.deferAnalysis !== true) {
+            if (pendingTeacherAnalysisRefreshTimer) {
+                window.clearTimeout(pendingTeacherAnalysisRefreshTimer);
+                pendingTeacherAnalysisRefreshTimer = null;
+            }
+            run();
+            return;
+        }
+        if (pendingTeacherAnalysisRefreshTimer) {
+            window.clearTimeout(pendingTeacherAnalysisRefreshTimer);
+        }
+        pendingTeacherAnalysisRefreshTimer = window.setTimeout(run, BACKGROUND_TEACHER_ANALYSIS_REFRESH_DELAY_MS);
+    }
+
+    function applyLoadedTeacherPayload(map, schoolMap, keyTermId, updatedAt, options = {}) {
         if (keyTermId) syncTeacherTermState(keyTermId);
         applyTeacherState(map, schoolMap);
         const syncStamp = String(updatedAt || '').trim() || new Date().toISOString();
@@ -385,7 +410,7 @@
             DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-load');
         }
         if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
-        if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
+        refreshLoadedTeacherAnalysis(options);
         if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
         if (typeof updateStatusPanel === 'function') updateStatusPanel();
     }
@@ -1762,7 +1787,13 @@
                             : { map: localEntry.map, schoolMap: localEntry.schoolMap, matched: true, scoped: false };
                         if (!requestedSchool || localPayload.matched || !localPayload.scoped) {
                             const localApplyTermId = applyTermId || localEntry.key || keyTermId;
-                            applyLoadedTeacherPayload(localPayload.map, localPayload.schoolMap, localApplyTermId, metaRow?.updated_at || localEntry.savedAt || '');
+                            applyLoadedTeacherPayload(
+                                localPayload.map,
+                                localPayload.schoolMap,
+                                localApplyTermId,
+                                metaRow?.updated_at || localEntry.savedAt || '',
+                                { deferAnalysis: background }
+                            );
                             if (showToast && !metaRow) safeToast(`已使用本地任课缓存（${Object.keys(localPayload.map).length} 条）`, 'success');
                             if (typeof logAction === 'function') logAction('任课同步', `任课表使用缓存：${localEntry.key || keyTermId || 'local'}`);
                             setCloudStatus('success', '任课已就绪');
@@ -1806,7 +1837,13 @@
                         setCloudStatus('success', '暂无本校任课');
                         return false;
                     }
-                    applyLoadedTeacherPayload(payload.map, payload.schoolMap, applyTermId || keyTermId, row?.updated_at || '');
+                    applyLoadedTeacherPayload(
+                        payload.map,
+                        payload.schoolMap,
+                        applyTermId || keyTermId,
+                        row?.updated_at || '',
+                        { deferAnalysis: background }
+                    );
 
                     if (showToast) safeToast(`已加载任课表（${Object.keys(payload.map).length} 条）`, 'success');
                     if (typeof logAction === 'function') logAction('任课同步', `任课表已加载：${metaRow.key || key || 'latest'}`);

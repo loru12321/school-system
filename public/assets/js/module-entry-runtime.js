@@ -1196,8 +1196,15 @@
             prewarmReportGeneratorRuntimes();
         }
         if (id === 'data-quality') {
-            if (window.DataQualityRuntime && typeof window.DataQualityRuntime.init === 'function') {
-                return Promise.resolve(window.DataQualityRuntime.init());
+            const runtime = window.DataQualityRuntime;
+            if (runtime && typeof runtime.bind === 'function') {
+                runtime.bind();
+            }
+            if (runtime && typeof runtime.render === 'function') {
+                scheduleActiveModuleTask('data-quality', 'data-quality-render', () => {
+                    runtime.render();
+                }, { delay: 240, frame: true });
+                return Promise.resolve(true);
             }
             return Promise.resolve(false);
         }

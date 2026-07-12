@@ -107,8 +107,15 @@ assert.ok(
     && cloud.includes('const applyTermId = metaMatchesCurrentTerm')
     && cloud.includes(': (currentApplyTerms[0] || primaryDesiredTerms[0] || desiredTerms[0] || keyTermId)')
     && cloud.includes('const localApplyTermId = applyTermId || localEntry.key || keyTermId')
-    && cloud.includes('applyLoadedTeacherPayload(payload.map, payload.schoolMap, applyTermId || keyTermId'),
+    && /applyLoadedTeacherPayload\(\s*payload\.map,\s*payload\.schoolMap,\s*applyTermId \|\| keyTermId/.test(cloud),
   'CloudManager.loadTeachers may reuse fallback teacher payloads but must keep the current desired teacher term'
+);
+
+assert.ok(
+  cloud.includes('function refreshLoadedTeacherAnalysis(options = {})')
+    && cloud.includes("section.classList.contains('active')")
+    && cloud.includes('{ deferAnalysis: background }'),
+  'background teacher restore should defer and cancel stale teacher-analysis refresh work'
 );
 
 assert.ok(

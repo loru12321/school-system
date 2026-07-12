@@ -70,6 +70,11 @@ assert.ok(
   'module entry should cancel stale async initialization and coalesce rapid duplicate navigation'
 );
 assert.ok(
+  moduleEntryRuntime.includes("scheduleActiveModuleTask('data-quality', 'data-quality-render'")
+    && moduleEntryRuntime.includes('{ delay: 240, frame: true }'),
+  'data-quality analysis should run after the navigation shell is ready and cancel when the user leaves'
+);
+assert.ok(
   countyAnalysisRuntime.includes('function releaseCountyAnalysisHeavyDom()')
     && countyAnalysisRuntime.includes('root.replaceChildren();')
     && countyAnalysisRuntime.includes('clearCountyRenderCache(id);'),
