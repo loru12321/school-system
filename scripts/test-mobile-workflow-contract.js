@@ -9,6 +9,7 @@ function read(relativePath) {
 }
 
 const runtime = read('public/assets/js/mobile-app-runtime.js');
+const workbenchCss = read('src/assets/css/workbench-design-language.css');
 const packageJson = JSON.parse(read('package.json'));
 const scripts = packageJson.scripts || {};
 
@@ -40,5 +41,10 @@ assert.ok(scripts['test:mobile-workflow'] === 'node scripts/test-mobile-workflow
 assert.ok(scripts['validate:build']?.includes('test:mobile-workflow'), 'validate:build should include mobile workflow contract');
 assert.ok(scripts['check:release-fast']?.includes('test:mobile-workflow'), 'release fast check should include mobile workflow contract');
 assert.ok(scripts['check:performance']?.includes('test:performance-thresholds'), 'performance check should include trend threshold guard');
+assert.match(
+  workbenchCss,
+  /@media \(max-width: 820px\)[\s\S]*?#app\.app-layout\.hidden\s*\{\s*display:\s*none\s*!important;/,
+  'mobile workbench CSS must keep the hidden app from intercepting login interactions'
+);
 
 console.log('mobile workflow contract passed');

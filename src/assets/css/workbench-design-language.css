@@ -431,6 +431,102 @@ html body:not(.dark-mode) #app .shell-workspace-drawer {
     box-shadow: 0 18px 50px rgba(23, 32, 51, 0.18) !important;
 }
 
+/* Keep data preparation as one operational surface instead of a card mosaic. */
+html body:not(.dark-mode) #app #starter-hub {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .starter-grid {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid var(--workbench-border) !important;
+    border-radius: var(--workbench-radius) !important;
+    background: #ffffff !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .starter-card {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 15px 17px !important;
+    border: 0 !important;
+    border-right: 1px solid var(--workbench-border-soft) !important;
+    border-bottom: 1px solid var(--workbench-border-soft) !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .starter-card::before,
+html body:not(.dark-mode) #app #starter-hub .starter-card::after { display: none !important; }
+html body:not(.dark-mode) #app #starter-hub .starter-card--status { grid-column: 1 / -1 !important; border-right: 0 !important; }
+html body:not(.dark-mode) #app #starter-hub .starter-card--tasks,
+html body:not(.dark-mode) #app #starter-hub .starter-card--entry { grid-column: span 6 !important; }
+html body:not(.dark-mode) #app #starter-hub .starter-card--entry { border-right: 0 !important; }
+html body:not(.dark-mode) #app #starter-hub .starter-card--diagnose,
+html body:not(.dark-mode) #app #starter-hub .starter-card--issues,
+html body:not(.dark-mode) #app #starter-hub .starter-card--logs,
+html body:not(.dark-mode) #app #starter-hub .starter-card--backup { grid-column: span 3 !important; }
+html body:not(.dark-mode) #app #starter-hub .starter-card--backup { border-right: 0 !important; }
+html body:not(.dark-mode) #app #starter-hub .starter-card--templates {
+    grid-column: 1 / -1 !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .starter-card h4 {
+    margin: 0 0 11px !important;
+    color: var(--workbench-ink) !important;
+    font-size: 13px !important;
+    font-weight: 720 !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .starter-card h4 i { color: var(--workbench-positive) !important; }
+html body:not(.dark-mode) #app #starter-hub .status-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0 16px !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .status-item {
+    min-height: 52px !important;
+    padding: 9px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--workbench-border-soft) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub :is(.task-list, .issue-list, .log-list) { gap: 0 !important; }
+html body:not(.dark-mode) #app #starter-hub :is(.task-item, .issue-item, .log-item) {
+    min-height: 33px !important;
+    padding: 7px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--workbench-border-soft) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .starter-card--entry > div,
+html body:not(.dark-mode) #app #starter-hub .starter-card--templates > div {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub :is(.starter-card--entry, .starter-card--templates) .btn {
+    min-width: 0 !important;
+    min-height: 35px !important;
+    padding: 0 9px !important;
+    justify-content: center !important;
+    box-shadow: none !important;
+}
+
 @media (max-width: 1180px) {
     :root { --workbench-sidebar: 68px; }
 
@@ -448,11 +544,20 @@ html body:not(.dark-mode) #app .shell-workspace-drawer {
     html body:not(.dark-mode).shell-sidebar-collapsed #app-sidebar .sidebar-menu-item__text {
         display: none !important;
     }
+
+    html body:not(.dark-mode) #app #starter-hub .starter-card--diagnose,
+    html body:not(.dark-mode) #app #starter-hub .starter-card--issues,
+    html body:not(.dark-mode) #app #starter-hub .starter-card--logs,
+    html body:not(.dark-mode) #app #starter-hub .starter-card--backup { grid-column: span 6 !important; }
 }
 
 @media (max-width: 820px) {
     html body:not(.dark-mode) #app.app-layout {
         display: block !important;
+    }
+
+    html body:not(.dark-mode) #app.app-layout.hidden {
+        display: none !important;
     }
 
     html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious,
@@ -521,4 +626,9 @@ html body:not(.dark-mode) #app .shell-workspace-drawer {
     html body:not(.dark-mode) #app .analysis-actions .btn {
         flex: 1 1 140px !important;
     }
+
+    html body:not(.dark-mode) #app #starter-hub .starter-card { grid-column: 1 / -1 !important; border-right: 0 !important; }
+    html body:not(.dark-mode) #app #starter-hub .status-grid { grid-template-columns: 1fr !important; }
+    html body:not(.dark-mode) #app #starter-hub .starter-card--entry > div,
+    html body:not(.dark-mode) #app #starter-hub .starter-card--templates > div { grid-template-columns: 1fr !important; }
 }

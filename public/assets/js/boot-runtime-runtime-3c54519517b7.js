@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-07ba1ba3f4f3';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-3c54519517b7';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -544,8 +544,7 @@ if (!list.length) return;
 
 let settledCount = 0;
 const onProgress = typeof options.onProgress === 'function' ? options.onProgress : function () { };
-const configuredBatchSize = getBootScriptBatchSize();
-const batchSize = configuredBatchSize > 0 ? Math.min(configuredBatchSize, list.length) : list.length;
+const batchSize = Math.min(getBootScriptBatchSize(), list.length);
 
 for (let index = 0; index < list.length; index += batchSize) {
     const batch = list.slice(index, index + batchSize);

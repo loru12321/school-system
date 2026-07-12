@@ -224,7 +224,7 @@ cohort-db-core-runtime.js         ← 同上
 ```
 路径基准：`BOOT_JS_BASE = './public/assets/js/'`
 
-**CSS `<link>` 顺序（src/index.html，末尾几层）：** …→ product-redesign → designer-studio-workspace → editorial-control-system → cloud-archive-visibility → **mature-system-shell → responsive-login-final（最后）**。
+**CSS `<link>` 顺序（src/index.html，末尾几层）：** …→ product-redesign → designer-studio-workspace → cloud-archive-visibility → mature-system-shell → responsive-login-final → **workbench-design-language（最后）**。旧 `editorial-control-system` / `operational-system` 层已删除，数据准备控制台的必要规则已收口到最终工作台层。
 
 ---
 

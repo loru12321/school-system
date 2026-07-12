@@ -7,11 +7,11 @@ const productRedesignPath = path.join(root, 'src', 'assets', 'css', 'product-red
 const activeThemeLayers = [
   ['product-redesign.css', 104_000, 900],
   ['designer-studio-workspace.css', 115_000, 1_500],
-  ['editorial-control-system.css', 33_000, 540],
   // 2026-07-05: allow the final mature shell layer to carry the
   // production workspace/table/modal polish while the global dist CSS cap
   // remains fixed in test-build-size-budget.js.
   ['mature-system-shell.css', 28_000, 280],
+  ['workbench-design-language.css', 24_000, 340],
 ];
 const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
 const entranceAudioPath = path.join(root, 'public', 'assets', 'audio', 'entrance');
