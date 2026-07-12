@@ -59,6 +59,8 @@ assert.ok(smoke.includes('loginMs: 30000'), 'login performance budget should pro
 assert.ok(smoke.includes('appReadyMs: 15000'), 'app-ready performance budget should catch startup regressions');
 assert.ok(smoke.includes('moduleSwitchMs: 1000'), 'module switch performance budget should catch perceptible navigation stalls');
 assert.ok(smoke.includes('MODULE_SWITCH_READY_TIMEOUT_MS = 750'), 'module switch readiness wait should leave headroom under the switch budget');
+assert.ok(smoke.includes('activationMs: activationTiming.durationMs'), 'switch timing should use the in-page activation measurement when the target activates synchronously');
+assert.ok(smoke.includes('const switchMs = Number.isFinite(switchResult?.activationMs)'), 'strict performance budgets should use the real module activation time instead of Playwright RPC delay');
 assert.ok(
   smoke.includes("'starter-hub': 0")
     && smoke.includes("'audio-debug': 0")

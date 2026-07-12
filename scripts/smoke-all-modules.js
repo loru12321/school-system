@@ -961,6 +961,11 @@ async function attemptSmokeDataRecovery(page) {
 }
 
 async function smokeSwitchModule(page, id) {
+    let activationTiming = null;
+    const withActivationTiming = (result) => {
+        if (!activationTiming?.immediateReady || !Number.isFinite(activationTiming.durationMs)) return result;
+        return { ...result, activationMs: activationTiming.durationMs };
+    };
     const collectState = async () => page.evaluate((moduleId) => {
         const section = document.getElementById(moduleId);
         if (!section) return { ok: false, id: moduleId, error: 'target section not found' };
@@ -1009,18 +1014,25 @@ async function smokeSwitchModule(page, id) {
                 wrap('releaseTeacherAnalysisHeavyDom');
             });
         }
-        await page.evaluate((moduleId) => {
+        activationTiming = await page.evaluate((moduleId) => {
             if (typeof window.switchTab !== 'function') {
                 throw new Error('switchTab is not available');
             }
+            const startedAt = performance.now();
             window.switchTab(moduleId);
+            const section = document.getElementById(moduleId);
+            const style = section ? getComputedStyle(section) : null;
+            return {
+                durationMs: performance.now() - startedAt,
+                immediateReady: !!section && section.classList.contains('active') && style?.display !== 'none'
+            };
         }, id);
 
         const immediateState = await collectState();
         if (immediateState.ok) {
             const settleMs = getModuleSwitchSettleMs(id);
             if (settleMs > 0) await page.waitForTimeout(settleMs);
-            return immediateState;
+            return withActivationTiming(immediateState);
         }
 
         if (id === 'student-details') {
@@ -1046,13 +1058,13 @@ async function smokeSwitchModule(page, id) {
                 };
             });
             if (earlyState.active || earlyState.visible || earlyState.ok || shellState.shellReady) {
-                return {
+                return withActivationTiming({
                     ...earlyState,
                     ok: earlyState.ok || shellState.shellReady,
                     active: earlyState.active || shellState.active,
                     visible: earlyState.visible || shellState.visible,
                     recoveredByShell: !earlyState.ok && shellState.shellReady
-                };
+                });
             }
         }
 
@@ -1083,14 +1095,14 @@ async function smokeSwitchModule(page, id) {
         if (fallback.ok) {
             const settleMs = getModuleSwitchSettleMs(id);
             if (settleMs > 0) await page.waitForTimeout(settleMs);
-            return fallback;
+            return withActivationTiming(fallback);
         }
-        return {
+        return withActivationTiming({
             ...fallback,
             ok: false,
             id,
             error: error?.message || String(error)
-        };
+        });
     }
 
     let result = await collectState();
@@ -1105,7 +1117,7 @@ async function smokeSwitchModule(page, id) {
     }
     const settleMs = getModuleSwitchSettleMs(id);
     if (settleMs > 0) await page.waitForTimeout(settleMs);
-    return result;
+    return withActivationTiming(result);
 }
 
 async function runModuleDeepCheck(page, id) {
@@ -4456,11 +4468,14 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
             )
             : { result: { ok: false, skipped: true }, durationMs: 0, label: `deep:${id}` };
         const deepCheck = deepMeasurement.result;
+        const switchMs = Number.isFinite(switchResult?.activationMs)
+            ? switchResult.activationMs
+            : switchMeasurement.durationMs;
         const moduleTiming = {
             id,
-            switchMs: switchMeasurement.durationMs,
+            switchMs,
             deepCheckMs: deepMeasurement.durationMs,
-            totalMs: switchMeasurement.durationMs + deepMeasurement.durationMs
+            totalMs: switchMs + deepMeasurement.durationMs
         };
         summary.performance.moduleTimings.push(moduleTiming);
         summary.performance.budgetStatus.push(
