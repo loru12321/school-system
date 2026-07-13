@@ -427,6 +427,42 @@ function setProgressBaselineStatus(message, tone = 'info') {
     statusEl.style.fontWeight = style.weight;
 }
 
+function scheduleProgressArchiveExamSync(cohortId) {
+    const cid = String(cohortId || '').trim();
+    if (!cid || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') return;
+    if (!window.__PROGRESS_ARCHIVE_SYNC_STATE) window.__PROGRESS_ARCHIVE_SYNC_STATE = {};
+    const state = window.__PROGRESS_ARCHIVE_SYNC_STATE[cid] || { pending: false };
+    window.__PROGRESS_ARCHIVE_SYNC_STATE[cid] = state;
+    if (state.pending) return;
+    state.pending = true;
+
+    const task = async () => {
+        try {
+            await window.CloudManager.fetchCohortExamsToLocal(cid, {
+                latestOnly: false,
+                maxFetch: 0,
+                minCount: 4,
+                background: true
+            });
+            if (typeof updateProgressBaselineSelect === 'function') updateProgressBaselineSelect();
+            if (typeof refreshCompareExamSelectors === 'function') refreshCompareExamSelectors();
+        } catch (err) {
+            console.warn('[progress-sync] background archive fetch failed:', err);
+        } finally {
+            state.pending = false;
+        }
+    };
+    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
+        window.SystemPerformance.scheduleTask(`progress-history-archive:${cid}`, task, {
+            delay: 900,
+            idle: true,
+            timeout: 6000
+        });
+        return;
+    }
+    window.setTimeout(task, 900);
+}
+
 function syncProgressBaselineExamOptions() {
     const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
     if (!cohortId || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') {
@@ -440,14 +476,11 @@ function syncProgressBaselineExamOptions() {
 
     state.pending = true;
     state.lastAttempt = Date.now();
-    // This is invoked after the user opens a historical-growth workspace, so
-    // load the complete same-cohort archive instead of the login-time latest
-    // snapshot. The cloud runtime yields between exam payloads, keeping the
-    // interface responsive while making a real previous exam available.
-    state.promise = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { latestOnly: false, maxFetch: 0, minCount: 4, background: false }))
+    state.promise = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { latestOnly: false, maxFetch: 2, minCount: 2, background: false }))
         .then(() => {
             if (typeof updateProgressBaselineSelect === 'function') updateProgressBaselineSelect();
             if (typeof refreshCompareExamSelectors === 'function') refreshCompareExamSelectors();
+            scheduleProgressArchiveExamSync(cohortId);
             return true;
         })
         .catch((err) => {
@@ -463,10 +496,6 @@ function syncProgressBaselineExamOptions() {
 
 function ensureProgressBaselineData(options = {}) {
     const pending = window.__PROGRESS_BASELINE_LOADING_PROMISE;
-    // The module entry point starts a background restore.  A user click (or a
-    // smoke check) can arrive while that request is pending; returning the
-    // current PREV_DATA at that point used to expose an empty baseline and a
-    // shell with no value-added result.  Share the in-flight restore instead.
     if (pending && typeof pending.then === 'function') return pending;
 
     const task = resolveProgressBaselineData(options);
