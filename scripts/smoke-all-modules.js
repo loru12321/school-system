@@ -1968,6 +1968,7 @@ async function runModuleDeepCheck(page, id) {
             let townRankScopeChecked = false;
             let townRankMismatch = null;
             let baselineReady = false;
+            let baselineSource = 'missing';
             let matchedStudentsReady = false;
             let progressBaselineId = '';
             try {
@@ -1988,7 +1989,18 @@ async function runModuleDeepCheck(page, id) {
                 const sameAsCurrent = typeof window.isExamKeyEquivalentForCompare === 'function'
                     ? window.isExamKeyEquivalentForCompare(progressBaselineId, currentExamId)
                     : progressBaselineId === currentExamId;
-                baselineReady = !!baselineExam && !!baselineExam.data?.length && !!progressBaselineId && !sameAsCurrent;
+                const loadedBaselineRows = Array.isArray(window.PREV_DATA)
+                    ? window.PREV_DATA
+                    : (Array.isArray(window.__PROGRESS_BASELINE_ROWS__) ? window.__PROGRESS_BASELINE_ROWS__ : []);
+                const archivedBaselineReady = !!baselineExam
+                    && !!baselineExam.data?.length
+                    && !!progressBaselineId
+                    && !sameAsCurrent;
+                const loadedBaselineReady = loadedBaselineRows.length > 0;
+                baselineReady = archivedBaselineReady || loadedBaselineReady;
+                baselineSource = archivedBaselineReady
+                    ? 'exam-archive'
+                    : (loadedBaselineReady ? 'loaded-history' : 'missing');
                 const fullProgressRows = typeof window.readProgressCacheFullState === 'function'
                     ? window.readProgressCacheFullState()
                     : (Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL : []);
@@ -2081,6 +2093,7 @@ async function runModuleDeepCheck(page, id) {
                 renderCallResult: !!renderCallResult,
                 renderCallError,
                 progressBaselineId,
+                baselineSource,
                 townRankScopeChecked,
                 townRankMismatch
             };
