@@ -1973,9 +1973,13 @@ async function runModuleDeepCheck(page, id) {
             let progressBaselineId = '';
             try {
                 const baselineSelect = document.getElementById('progressBaselineSelect');
+                const hasLoadedBaseline = (Array.isArray(window.PREV_DATA) && window.PREV_DATA.length > 0)
+                    || (Array.isArray(window.__PROGRESS_BASELINE_ROWS__) && window.__PROGRESS_BASELINE_ROWS__.length > 0);
                 if (typeof window.ensureProgressBaselineData === 'function') {
                     await window.ensureProgressBaselineData({
-                        allowCloudSync: true,
+                        // PREV_DATA is a valid hydrated history source. Avoid issuing a
+                        // duplicate remote archive request while timing the module.
+                        allowCloudSync: !hasLoadedBaseline,
                         rerenderReport: true,
                         rerenderAnalysis: true
                     });
