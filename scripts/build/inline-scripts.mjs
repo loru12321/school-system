@@ -12,7 +12,6 @@ const outPath = path.join(DEFAULT_PROJECT_ROOT, 'lt.html');
 const brotliOutPath = `${outPath}.br`;
 const OPTIONAL_INLINE_RUNTIME_PATHS = [
     './assets/js/account-admin-runtime.js',
-    './assets/js/history-compare-runtime.js',
     './assets/js/perf-mobile-runtime.js',
     './assets/js/mobile-app-runtime.js',
     './assets/js/data-manager-sql.js',
@@ -46,6 +45,11 @@ const MANIFEST_RUNTIME_PATHS = [
     './assets/js/runtime-loader-runtime.js',
     './assets/js/boot-runtime.js'
 ];
+const NON_INLINE_RUNTIME_PATHS = new Set([
+    // Replaced by the report-history runtime; retaining this legacy doQuery
+    // patch inside the single-file bundle only adds duplicate behavior.
+    './assets/js/history-compare-runtime.js'
+]);
 
 // Keep original script semantics intact; only normalize newlines.
 function normalizeScript(content) {
@@ -213,7 +217,9 @@ export function collectInlineRuntimePaths(projectRoot = DEFAULT_PROJECT_ROOT) {
         ...OPTIONAL_INLINE_RUNTIME_PATHS,
         ...getBootRuntimeSkillSources(projectRoot)
     ]);
-    return Array.from(merged).filter(shouldInlineRuntimeSource).sort();
+    return Array.from(merged)
+        .filter((src) => shouldInlineRuntimeSource(src) && !NON_INLINE_RUNTIME_PATHS.has(src))
+        .sort();
 }
 
 function injectInlineRuntimeSourceMap(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {

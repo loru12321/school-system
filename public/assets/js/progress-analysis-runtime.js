@@ -243,13 +243,22 @@ function getProgressBaselineExamList() {
     return list;
 }
 
+function isProgressBaselineCandidate(exam) {
+    const examId = String(exam?.examFullKey || exam?.examId || exam?.id || '').trim();
+    if (!examId || (CURRENT_EXAM_ID && isExamKeyEquivalentForCompare(examId, CURRENT_EXAM_ID))) return false;
+    const gradeName = String(CONFIG?.name || '').trim();
+    return !gradeName || examId.includes(gradeName);
+}
+
 function pickDefaultProgressBaselineExamId(examList) {
     const list = Array.isArray(examList) ? examList : [];
-    const historicalList = list.filter((exam) => !CURRENT_EXAM_ID || !isExamKeyEquivalentForCompare(exam.id, CURRENT_EXAM_ID));
+    const historicalList = list.filter(isProgressBaselineCandidate);
     if (!historicalList.length) return '';
     if (CURRENT_EXAM_ID) {
         const currentIndex = list.findIndex((exam) => isExamKeyEquivalentForCompare(exam.id, CURRENT_EXAM_ID));
-        if (currentIndex > 0) return list[currentIndex - 1].id;
+        for (let index = currentIndex - 1; index >= 0; index -= 1) {
+            if (isProgressBaselineCandidate(list[index])) return list[index].id;
+        }
     }
     return historicalList[historicalList.length - 1].id;
 }
@@ -307,7 +316,7 @@ function updateProgressBaselineSelect() {
     if (!sel) return;
     const currentValue = sel.value || '';
     const examList = getProgressBaselineExamList();
-    const baselineList = examList.filter((exam) => !CURRENT_EXAM_ID || !isExamKeyEquivalentForCompare(exam.id, CURRENT_EXAM_ID));
+    const baselineList = examList.filter(isProgressBaselineCandidate);
 
     const optionsHtml = '<option value="">--请选择历史考试--</option>'
         + baselineList.map((exam) => {
@@ -431,7 +440,11 @@ function syncProgressBaselineExamOptions() {
 
     state.pending = true;
     state.lastAttempt = Date.now();
-    state.promise = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { latestOnly: false, maxFetch: 2, minCount: 2, background: true }))
+    // This is invoked after the user opens a historical-growth workspace, so
+    // load the complete same-cohort archive instead of the login-time latest
+    // snapshot. The cloud runtime yields between exam payloads, keeping the
+    // interface responsive while making a real previous exam available.
+    state.promise = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { latestOnly: false, maxFetch: 0, minCount: 4, background: false }))
         .then(() => {
             if (typeof updateProgressBaselineSelect === 'function') updateProgressBaselineSelect();
             if (typeof refreshCompareExamSelectors === 'function') refreshCompareExamSelectors();
@@ -462,6 +475,15 @@ async function ensureProgressBaselineData(options = {}) {
     const baselineSel = document.getElementById('progressBaselineSelect');
     const progressSchoolSel = document.getElementById('progressSchoolSelect');
     let baselineId = baselineSel?.value || '';
+    const hasHistoricalBaseline = getProgressBaselineExamList().some(isProgressBaselineCandidate);
+    if (allowCloudSync && !hasHistoricalBaseline) {
+        setProgressBaselineStatus('⏳ 正在补齐本届历史考试...', 'loading');
+        const synced = await syncProgressBaselineExamOptions();
+        if (synced) {
+            updateProgressBaselineSelect();
+            baselineId = baselineSel?.value || pickDefaultProgressBaselineExamId(getProgressBaselineExamList());
+        }
+    }
     if (!baselineId) {
         const examList = getProgressBaselineExamList();
         baselineId = pickDefaultProgressBaselineExamId(examList);
@@ -1331,6 +1353,7 @@ function performProgressCalculation(options = {}) {
 
     const currentStudents = getProgressCurrentStudentsForSchool(schoolName);
     const baselineRows = getProgressBaselineRowsForSchool(schoolName);
+    const currentRankIndex = window.RankingDataService?.buildStudentRankIndex(RAW_DATA, []) || null;
 
     window.__PROGRESS_CALCULATING = true;
     syncLocalProgressState({
@@ -1361,7 +1384,10 @@ function performProgressCalculation(options = {}) {
     let ignoredCount = 0;
 
     currentStudents.forEach(student => {
-        const currRank = Number(safeGet(student, 'ranks.total.school', 0));
+        const storedCurrentRank = Number(safeGet(student, 'ranks.total.school', 0));
+        const currRank = Number.isFinite(storedCurrentRank) && storedCurrentRank > 0
+            ? storedCurrentRank
+            : Number(currentRankIndex?.getRank(student, 'total', 'school', 0));
         if (!Number.isFinite(currRank) || currRank <= 0) return;
 
         const match = resolveProgressBaselineMatch(student, indexes);

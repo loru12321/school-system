@@ -49,13 +49,31 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
         percentiles: h.percentiles || {}
     }));
     if (rows.length > 0) {
-        setPrevDataState(rows);
+        // Student-report history is intentionally separate from PREV_DATA.
+        // PREV_DATA belongs to the cohort-wide progress baseline; replacing it
+        // with one student's report rows makes the value-added module lose its
+        // full previous-exam cohort and renders every match unavailable.
+        const studentHistoryCache = ReportHistoryPerfCache.cloudHistoryByStudent
+            || (ReportHistoryPerfCache.cloudHistoryByStudent = new Map());
+        const studentKey = getReportStudentIdentity(stu);
+        const existingRows = studentHistoryCache.get(studentKey) || [];
+        const mergedRows = existingRows.slice();
+        rows.forEach((row) => {
+            const rowKey = String(row.examFullKey || row.examId || '').trim();
+            const existingIndex = mergedRows.findIndex((item) => examKeyEq(item?.examFullKey || item?.examId, rowKey));
+            if (existingIndex >= 0) mergedRows[existingIndex] = row;
+            else mergedRows.push(row);
+        });
+        studentHistoryCache.set(studentKey, mergedRows);
+        if (studentHistoryCache.size > 60) {
+            studentHistoryCache.delete(studentHistoryCache.keys().next().value);
+        }
         ReportHistoryPerfCache.historyByStudent.clear();
         ReportHistoryPerfCache.lastChartScheduleKey = '';
         clearStudentReportCache(stu);
         window.__REPORT_HISTORY_VERSION = (window.__REPORT_HISTORY_VERSION || 0) + 1;
     }
-    return historyRes.data.length;
+    return rows.length;
 }
 
 function getCachedStudentReportHistory(stu, selectedExamIds = null, effectiveCurrentExamId = '') {
@@ -74,6 +92,21 @@ function getCachedStudentReportHistory(stu, selectedExamIds = null, effectiveCur
         ReportHistoryPerfCache.historyByStudent.delete(firstKey);
     }
     return history;
+}
+
+function refreshHydratedStudentReport(stu, selectedExamIds = [], effectiveCurrentExamId = '') {
+    const { container } = getReportDomCache();
+    if (!stu || !container) return;
+    const history = getCachedStudentReportHistory(stu, selectedExamIds, effectiveCurrentExamId);
+    const reportCacheKey = buildStudentReportCacheKey(stu, 'FULL', selectedExamIds, effectiveCurrentExamId);
+    const reportHtml = renderSingleReportCardHTML(stu, 'FULL', { reportExamHistory: history });
+    if (typeof reportHtml !== 'string') return;
+    getStudentReportPerformanceRuntime()?.setReportHtml?.(reportCacheKey, reportHtml);
+    container.innerHTML = reportHtml;
+    container.dataset.reportHtmlCacheKey = reportCacheKey;
+    container.dataset.reportChartCacheKey = '';
+    enhanceStudentReportMetrics(container);
+    scheduleStudentReportCharts(stu, history);
 }
 
 function hasUsableHistoricalRankValue(value) {
@@ -169,7 +202,7 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
             if (!loadedCount || token !== __reportQueryToken) return;
             if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
             if (window.UI) UI.toast(`已后台匹配 ${loadedCount} 次历史成绩`, 'success');
-            await doQuery(stu);
+            await refreshHydratedStudentReport(stu, selectedReportExamIds, effectiveCurrentExamId);
         } catch (e) {
             console.warn('[doQuery] 云端历史后台获取失败:', e);
         } finally {
@@ -177,8 +210,8 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
         }
     };
     window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task, {
-        delay: 400,
-        idle: true,
+        delay: 120,
+        idle: false,
         timeout: 3000
     });
 }
@@ -283,7 +316,13 @@ async function doQuery(targetStudent = null) {
                 }
                 let reportHtml = reportCache?.getReportHtml?.(reportCacheKey);
                 if (!reportHtml) {
-                    if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
+                    // A cloud-history refresh immediately follows the first
+                    // render.  The report renderer is already present then;
+                    // asking the lazy loader to resolve it again can leave a
+                    // competing refresh on the loading skeleton.  Reuse the
+                    // loaded runtime and only wait when it is genuinely absent.
+                    if (!window.__REPORT_RENDER_RUNTIME_PATCHED__
+                        && typeof window.ensureReportRenderRuntimeLoaded === 'function') {
                         try {
                             await window.ensureReportRenderRuntimeLoaded();
                         } catch (error) {

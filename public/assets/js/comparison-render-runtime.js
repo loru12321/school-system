@@ -710,8 +710,12 @@ function getStudentExamHistory(student) {
         console.warn('[多期对比] 获取学生本地考试历史异常:', e);
     }
 
-    if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
-        window.PREV_DATA.forEach(h => {
+    const reportCloudHistory = typeof ReportHistoryPerfCache !== 'undefined'
+        && ReportHistoryPerfCache.cloudHistoryByStudent instanceof Map
+        ? (ReportHistoryPerfCache.cloudHistoryByStudent.get(getReportStudentIdentity(student)) || [])
+        : [];
+    [reportCloudHistory, Array.isArray(window.PREV_DATA) ? window.PREV_DATA : []].forEach(historyRows => {
+        historyRows.forEach(h => {
             if (!isTargetStudent(h)) return;
             const matchKey = getHistoryKey(h);
             if (currentFingerprint && h?.fingerprint && String(h.fingerprint) === currentFingerprint && !examKeyEq(matchKey, currentExamId)) {
@@ -739,7 +743,7 @@ function getStudentExamHistory(student) {
                 results[existsIdx] = normalized;
             }
         });
-    }
+    });
 
     const dedupedResults = [];
     const getHistoryIdentity = (entry) => getCompareExamIdentity({

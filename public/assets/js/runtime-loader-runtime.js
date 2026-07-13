@@ -1203,11 +1203,11 @@ const wrapped = async function (...args) {
     } else {
         window.setTimeout(syncCompareTargetIfReady, 80);
     }
-    const next = window.doQuery !== wrapped ? window.doQuery : base;
-    if (window.doQuery !== wrapped) {
-        window.doQuery = wrapped;
-    }
-    return next.apply(this, args);
+    // Keep this lightweight hook stable.  The previous self-reassignment
+    // could select the wrapper itself on a later call, recurse until the
+    // report stayed on its loading skeleton, and hide an otherwise completed
+    // cloud-history render.
+    return base.apply(this, args);
 };
 window.doQuery = wrapped;
 window.__historyDoQueryWrapped = true;

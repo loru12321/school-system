@@ -1542,7 +1542,13 @@ assert.ok(schoolNormalizationRuntime.includes('const IndicatorSchoolBucketPerfCa
 assert.ok(schoolNormalizationRuntime.includes('function getIndicatorSchoolBucketSignature'), 'indicator bucket cache should use an explicit dependency signature');
 assert.ok(schoolNormalizationRuntime.includes('scoreNameMap'), 'indicator score sync should cache repeated school-name matching');
 assert.ok(moduleEntryRuntime.includes("node.dataset.released === 'true'"), 'teacher heavy DOM release should not rewrite already released placeholders on later module switches');
-assert.ok(reportHistoryRuntime.includes('background: true') && reportHistoryRuntime.includes('delay: 400'), 'student report history should hydrate promptly without blocking first paint');
+assert.ok(
+    reportHistoryRuntime.includes('background: true')
+        && reportHistoryRuntime.includes('delay: 120')
+        && reportHistoryRuntime.includes('idle: false'),
+    'student report history should hydrate promptly without blocking first paint'
+);
+assert.ok(reportHistoryRuntime.includes('cloudHistoryByStudent') && reportHistoryRuntime.includes('refreshHydratedStudentReport'), 'student report cloud history should refresh its own report without replacing cohort progress data');
 assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;'), 'teacher analysis should not leave an activated shell empty for over a second');
 assert.ok(smokeAllModules.includes('waitForTeacherAutoRestore(page)'), 'module smoke should observe startup teacher auto restore before prewarming');
 assert.ok(!smokeAllModules.includes("name: 'restoreTeacherMap'"), 'module smoke must not repair teacher assignments during prewarm');

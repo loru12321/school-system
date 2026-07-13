@@ -108,7 +108,8 @@ const pkg = JSON.parse(read(packageFile));
     'hasCompleteSubjectRankComparisonHistory',
     'shouldDiscoverCloudHistory',
     'window.__REPORT_HISTORY_VERSION',
-    'await doQuery(stu);',
+    'function refreshHydratedStudentReport(stu, selectedExamIds = [], effectiveCurrentExamId = \'\')',
+    'await refreshHydratedStudentReport(stu, selectedReportExamIds, effectiveCurrentExamId);',
     'report-history-hydrate:'
 ].forEach((token) => assertContains(reportHistory, token, reportHistoryFile));
 

@@ -23,13 +23,25 @@ async function enterWorkspace(page) {
     await page.waitForFunction(() => Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0, {
         timeout: 45000
     });
+    await page.waitForFunction(() => {
+        const school = String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim();
+        const term = String(localStorage.getItem('CURRENT_TERM_ID') || window.CURRENT_TERM_ID || '').trim();
+        return typeof window.switchTab === 'function' && !!school && !!term;
+    }, { timeout: 15000 });
 }
 
 (async () => {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({
+        channel: String(process.env.SMOKE_BROWSER_CHANNEL || 'chrome').trim() || 'chrome',
+        headless: true
+    });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
         await enterWorkspace(page);
+        // Login restoration can still finish a final workspace task after raw
+        // score rows appear.  Start the report flow only after that task has
+        // settled, otherwise it can supersede the requested module switch.
+        await page.waitForTimeout(2200);
         const result = await page.evaluate(async () => {
             const sameSchool = (left, right) => typeof window.sameAppSchoolName === 'function'
                 ? window.sameAppSchoolName(left, right)
@@ -55,8 +67,31 @@ async function enterWorkspace(page) {
                 }
             };
             if (typeof window.switchTab === 'function') window.switchTab('report-generator');
-            await new Promise(resolve => window.setTimeout(resolve, 500));
-            await window.doQuery(student);
+            const moduleStartedAt = Date.now();
+            while (!document.getElementById('report-generator')?.classList.contains('active') && Date.now() - moduleStartedAt < 5000) {
+                await new Promise(resolve => window.setTimeout(resolve, 100));
+            }
+            if (typeof window.updateSchoolSelect === 'function') window.updateSchoolSelect();
+            const schoolSelect = document.getElementById('sel-school');
+            const classSelect = document.getElementById('sel-class');
+            const nameInput = document.getElementById('inp-name');
+            const selectedSchool = Array.from(schoolSelect?.options || [])
+                .map(option => String(option.value || '').trim())
+                .find(optionSchool => sameSchool(optionSchool, student.school));
+            if (!schoolSelect || !classSelect || !nameInput || !selectedSchool) {
+                return { ok: false, reason: 'report form or target school option unavailable' };
+            }
+            schoolSelect.value = selectedSchool;
+            if (typeof window.updateClassSelect === 'function') window.updateClassSelect();
+            if (typeof window.updateReportCompareExamSelects === 'function') window.updateReportCompareExamSelects();
+            await new Promise(resolve => window.setTimeout(resolve, 100));
+            classSelect.value = student.class || '';
+            nameInput.value = student.name || '';
+            if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
+                await window.ensureReportRenderRuntimeLoaded();
+            }
+            await new Promise(resolve => window.setTimeout(resolve, 120));
+            await window.doQuery();
 
             const readRows = () => Array.from(document.querySelectorAll('#report-card-capture-area #tb-query tbody tr'))
                 .map((row) => ({
@@ -110,6 +145,8 @@ async function enterWorkspace(page) {
                         && /本次\s*\d+\s*上次\s*(?:\d+|-)\s*变化/.test(row.schoolRank)
                     )),
                 historyCount: Array.isArray(cachedHistory) ? cachedHistory.length : 0,
+                selectedExamIds,
+                currentExamId,
                 expectedPrevious: expectedPrevious ? {
                     examId: expectedPrevious.examFullKey || expectedPrevious.examId || '',
                     subjectRanks: expectedSubjectRanks

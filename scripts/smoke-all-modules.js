@@ -1960,14 +1960,39 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'progress-analysis') {
-        return page.evaluate(() => {
+        return page.evaluate(async () => {
             let renderCallSafe = true;
             let renderCallResult = null;
             let renderCallError = '';
             let townRankScopeOk = true;
             let townRankScopeChecked = false;
             let townRankMismatch = null;
+            let baselineReady = false;
+            let matchedStudentsReady = false;
+            let progressBaselineId = '';
             try {
+                const baselineSelect = document.getElementById('progressBaselineSelect');
+                if (typeof window.ensureProgressBaselineData === 'function') {
+                    await window.ensureProgressBaselineData({
+                        allowCloudSync: true,
+                        rerenderReport: true,
+                        rerenderAnalysis: true
+                    });
+                }
+                progressBaselineId = String(baselineSelect?.value || '').trim();
+                const currentExamId = String(window.CURRENT_EXAM_ID || '').trim();
+                const baselineExams = typeof window.getProgressBaselineExamList === 'function'
+                    ? window.getProgressBaselineExamList()
+                    : [];
+                const baselineExam = baselineExams.find((exam) => String(exam?.id || '').trim() === progressBaselineId);
+                const sameAsCurrent = typeof window.isExamKeyEquivalentForCompare === 'function'
+                    ? window.isExamKeyEquivalentForCompare(progressBaselineId, currentExamId)
+                    : progressBaselineId === currentExamId;
+                baselineReady = !!baselineExam && !!baselineExam.data?.length && !!progressBaselineId && !sameAsCurrent;
+                const fullProgressRows = typeof window.readProgressCacheFullState === 'function'
+                    ? window.readProgressCacheFullState()
+                    : (Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL : []);
+                matchedStudentsReady = Array.isArray(fullProgressRows) && fullProgressRows.length > 0;
                 const schoolSel = document.getElementById('progressCompareSchool');
                 const exam1Sel = document.getElementById('progressCompareExam1');
                 const exam2Sel = document.getElementById('progressCompareExam2');
@@ -2046,6 +2071,8 @@ async function runModuleDeepCheck(page, id) {
                     && !!document.getElementById('progressCompareExam3'),
                 resultSlotReady: !!document.getElementById('multiPeriodCompareResult'),
                 renderCallSafe,
+                baselineReady,
+                matchedStudentsReady,
                 townRankScopeOk
             };
             return {
@@ -2053,8 +2080,67 @@ async function runModuleDeepCheck(page, id) {
                 checks,
                 renderCallResult: !!renderCallResult,
                 renderCallError,
+                progressBaselineId,
                 townRankScopeChecked,
                 townRankMismatch
+            };
+        });
+    }
+    if (id === 'potential-analysis') {
+        return page.evaluate(() => {
+            const schoolSelect = document.getElementById('potSchoolSelect');
+            const classSelect = document.getElementById('potClassSelect');
+            const topSelect = document.getElementById('potTopSelect');
+            if (typeof window.updatePotentialSchoolSelect === 'function') window.updatePotentialSchoolSelect();
+
+            const targetOption = Array.from(schoolSelect?.options || []).find((option) => (
+                String(option.value || '').trim() === '沙河站中学'
+            ));
+            if (targetOption) schoolSelect.value = targetOption.value;
+            if (typeof window.updatePotentialClassSelect === 'function') window.updatePotentialClassSelect();
+            if (classSelect) classSelect.value = 'ALL';
+            if (topSelect && Array.from(topSelect.options || []).some((option) => Number(option.value) === 0.2)) {
+                topSelect.value = '0.2';
+            }
+
+            let renderError = '';
+            try {
+                window.renderPotentialAnalysis();
+            } catch (error) {
+                renderError = error?.message || String(error);
+            }
+
+            const selectedSchool = String(schoolSelect?.value || '').trim();
+            const scopeRows = (Array.isArray(window.RAW_DATA) ? window.RAW_DATA : []).filter((row) => {
+                if (!selectedSchool || selectedSchool === 'ALL') return true;
+                if (String(row?.school || '').trim() === selectedSchool) return true;
+                return typeof window.areSchoolNamesEquivalent === 'function'
+                    && window.areSchoolNamesEquivalent(row?.school || '', selectedSchool);
+            });
+            const sample = scopeRows.find((row) => Number.isFinite(Number(row?.total)));
+            const rankIndex = window.RankingDataService?.buildStudentRankIndex(
+                Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [],
+                Array.isArray(window.SUBJECTS) ? window.SUBJECTS : []
+            );
+            const dynamicRank = Number(rankIndex?.getRank(sample, 'total', selectedSchool === 'ALL' ? 'township' : 'school', 0));
+            const candidateRows = Array.from(document.querySelectorAll('#potential-results tbody tr'))
+                .filter((row) => row.querySelectorAll('td').length === 8).length;
+            const checks = {
+                sectionReady: !!document.getElementById('potential-analysis'),
+                controlsReady: !!schoolSelect && !!classSelect && !!topSelect,
+                renderPotentialAnalysis: typeof window.renderPotentialAnalysis === 'function',
+                renderCallSafe: !renderError,
+                dynamicRankReady: !!sample && Number.isFinite(dynamicRank) && dynamicRank > 0,
+                targetSchoolCandidates: !targetOption || candidateRows > 0
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks,
+                selectedSchool,
+                scopeRows: scopeRows.length,
+                dynamicRank,
+                candidateRows,
+                renderError
             };
         });
     }

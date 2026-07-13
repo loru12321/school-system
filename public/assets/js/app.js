@@ -8242,18 +8242,38 @@ function renderPotentialAnalysis() {
         scopeStudents = scopeStudents.filter(s => normalizeClass(s.class || '') === normalizedSelectedClass);
     }
 
-    const totalCount = townshipRows.length || RAW_DATA.length;
-    const topRankThreshold = Math.floor(totalCount * topRatio);
+    if (!scopeStudents.length) {
+        document.getElementById('potential-results').innerHTML = '<div class="info-bar">当前学校/班级范围没有可分析的学生成绩。</div>';
+        POTENTIAL_STUDENTS_CACHE = [];
+        return;
+    }
+
+    // The raw cloud rows may omit pre-computed ranks.  Build an in-memory
+    // index for this view only so analysis remains available without changing
+    // scores, stored ranks, or any published evaluation formula.
+    const rankIndex = window.RankingDataService?.buildStudentRankIndex(RAW_DATA, SUBJECTS) || null;
+    const rankScope = normalizedSelectedClass && normalizedSelectedClass.toLowerCase() !== 'all'
+        ? 'class'
+        : (scope === 'ALL' ? 'township' : 'school');
+    const rankScopeLabel = rankScope === 'class' ? '班级' : (rankScope === 'school' ? '学校' : '全镇');
+    const totalCount = scopeStudents.length;
+    const topRankThreshold = Math.max(1, Math.ceil(totalCount * topRatio));
+    const rankGapThreshold = Math.max(5, Math.ceil(totalCount * 0.15));
+    const readRank = (student, subject) => {
+        const stored = Number(safeGet(student, `ranks.${subject}.${rankScope}`, 0));
+        if (Number.isFinite(stored) && stored > 0) return stored;
+        const computed = Number(rankIndex?.getRank(student, subject, rankScope, 0));
+        return Number.isFinite(computed) && computed > 0 ? computed : 0;
+    };
 
     scopeStudents.forEach(stu => {
-        const tRank = safeGet(stu, 'ranks.total.township', 99999);
-        if (tRank === '-' || tRank > topRankThreshold) return;
-
+        const tRank = readRank(stu, 'total');
+        if (!tRank || tRank > topRankThreshold) return;
 
         const useAdvancedMetrics = (stu.tScores && stu.totalTScore);
 
         SUBJECTS.forEach(sub => {
-            const subRank = safeGet(stu, `ranks.${sub}.township`, 0);
+            const subRank = readRank(stu, sub);
             if (!subRank) return;
 
             let isPotential = false;
@@ -8272,7 +8292,7 @@ function renderPotentialAnalysis() {
                 }
             } else {
                 const gap = subRank - tRank;
-                if (gap > (totalCount * 0.3)) {
+                if (gap >= rankGapThreshold) {
                     isPotential = true;
                     gapVal = gap;
                     gapLabel = `名次落差 ${gap}`;
@@ -8282,7 +8302,7 @@ function renderPotentialAnalysis() {
             if (isPotential) {
                 candidates.push({
                     school: stu.school, class: stu.class, name: stu.name,
-                    totalScore: stu.total, totalRank: tRank,
+                    totalScore: stu.total, totalRank: tRank, rankScope,
                     subject: sub, subScore: stu.scores[sub], subRank: subRank,
                     gap: gapLabel, // 显示文本
                     sortVal: parseFloat(gapVal) // 用于排序
@@ -8297,12 +8317,12 @@ function renderPotentialAnalysis() {
     let html = `<div class="info-bar">
             <strong>💡 分析模型升级：</strong>
             系统已自动启用 <b>${candidates.length > 0 && candidates[0].gap.includes('相对偏离') ? '相对偏离模型' : '名次落差模型'}</b>。
-            <br>筛选范围：总分前 ${(topRatio * 100).toFixed(0)}% 的学生中，单科显著“拖后腿”的潜力股。
+            <br>筛选范围：当前${rankScopeLabel}总分前 ${(topRatio * 100).toFixed(0)}%（前 ${topRankThreshold} 名）的学生；名次模型的学科落差阈值为 ${rankGapThreshold} 名。
         </div>
-        <div class="table-wrap"><table><thead><tr><th>学校</th><th>班级</th><th>姓名</th><th>总分排名</th><th>跛脚学科</th><th>学科分数</th><th>学科排名</th><th>偏科指数</th></tr></thead><tbody>`;
+        <div class="table-wrap"><table><thead><tr><th>学校</th><th>班级</th><th>姓名</th><th>总分${rankScopeLabel}排名</th><th>跛脚学科</th><th>学科分数</th><th>学科${rankScopeLabel}排名</th><th>偏科指数</th></tr></thead><tbody>`;
 
     if (candidates.length === 0) {
-        html += `<tr><td colspan="8" style="padding:30px; text-align:center;">🎉 恭喜！在前 ${(topRatio * 100)}% 学生中未发现严重偏科现象。</td></tr>`;
+        html += `<tr><td colspan="8" style="padding:30px; text-align:center;">当前${rankScopeLabel}范围前 ${(topRatio * 100).toFixed(0)}%（前 ${topRankThreshold} 名）学生中，未命中偏科筛选阈值。</td></tr>`;
     } else {
         candidates.forEach(c => {
             html += `<tr>
@@ -8322,8 +8342,8 @@ function renderPotentialAnalysis() {
 
 function exportPotentialAnalysis() {
     if (!POTENTIAL_STUDENTS_CACHE.length) { alert('请先生成数据或结果为空'); return; }
-    const wb = XLSX.utils.book_new(); const data = [['学校', '班级', '姓名', '总分', '总分全镇排名', '跛脚学科', '学科分数', '学科全镇排名', '名次落差']];
-    POTENTIAL_STUDENTS_CACHE.forEach(c => data.push([c.school, c.class, c.name, c.totalScore, c.totalRank, c.subject, c.subScore, c.subRank, c.gap]));
+    const wb = XLSX.utils.book_new(); const data = [['学校', '班级', '姓名', '总分', '总分排名', '排名口径', '跛脚学科', '学科分数', '学科排名', '名次落差']];
+    POTENTIAL_STUDENTS_CACHE.forEach(c => data.push([c.school, c.class, c.name, c.totalScore, c.totalRank, c.rankScope === 'class' ? '班级' : (c.rankScope === 'school' ? '学校' : '全镇'), c.subject, c.subScore, c.subRank, c.gap]));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "偏科生名单"); XLSX.writeFile(wb, "偏科潜力生挖掘名单.xlsx");
 }
 
