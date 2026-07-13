@@ -1,90 +1,5 @@
 [
   {
-    "recordedAt": "2026-07-06T14:34:35.559Z",
-    "commit": "8ef50e018fac",
-    "branch": "main",
-    "runId": "28799260296",
-    "runAttempt": "1",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 7127,
-    "appReadyMs": 112,
-    "totalMs": 40300,
-    "moduleCount": 31,
-    "slowestModules": [
-      {
-        "id": "cohort-growth",
-        "switchMs": 250,
-        "deepCheckMs": 2203,
-        "totalMs": 2453
-      },
-      {
-        "id": "summary",
-        "switchMs": 234,
-        "deepCheckMs": 1764,
-        "totalMs": 1998
-      },
-      {
-        "id": "teacher-detail-comparison",
-        "switchMs": 1146,
-        "deepCheckMs": 463,
-        "totalMs": 1609
-      },
-      {
-        "id": "report-generator",
-        "switchMs": 290,
-        "deepCheckMs": 1055,
-        "totalMs": 1345
-      },
-      {
-        "id": "progress-analysis",
-        "switchMs": 254,
-        "deepCheckMs": 760,
-        "totalMs": 1014
-      },
-      {
-        "id": "seat-adjustment",
-        "switchMs": 242,
-        "deepCheckMs": 673,
-        "totalMs": 915
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 208,
-        "deepCheckMs": 587,
-        "totalMs": 795
-      },
-      {
-        "id": "student-details",
-        "switchMs": 248,
-        "deepCheckMs": 523,
-        "totalMs": 771
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "cloud",
-        "durationMs": 1109
-      },
-      {
-        "id": "teacher",
-        "durationMs": 733
-      },
-      {
-        "id": "targets",
-        "durationMs": 675
-      },
-      {
-        "id": "student",
-        "durationMs": 643
-      }
-    ],
-    "longTaskCount": 2,
-    "maxLongTaskMs": 1123,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-07-06T15:43:16.877Z",
     "commit": "a84ca19c7209",
     "branch": "main",
@@ -6792,6 +6707,91 @@
       {
         "id": "targets",
         "durationMs": 631
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-13T04:06:05.425Z",
+    "commit": "c720ac6986d4",
+    "branch": "main",
+    "runId": "29223062304",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 5326,
+    "appReadyMs": 39,
+    "totalMs": 24866,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "report-generator",
+        "switchMs": 31.60000000000582,
+        "deepCheckMs": 1057,
+        "totalMs": 1088.6000000000058
+      },
+      {
+        "id": "teacher-analysis",
+        "switchMs": 52,
+        "deepCheckMs": 965,
+        "totalMs": 1017
+      },
+      {
+        "id": "analysis",
+        "switchMs": 13.299999999988358,
+        "deepCheckMs": 834,
+        "totalMs": 847.2999999999884
+      },
+      {
+        "id": "teacher-township-ranking",
+        "switchMs": 2.3000000000029104,
+        "deepCheckMs": 814,
+        "totalMs": 816.3000000000029
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 32.09999999999127,
+        "deepCheckMs": 777,
+        "totalMs": 809.0999999999913
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 21.80000000000291,
+        "deepCheckMs": 602,
+        "totalMs": 623.8000000000029
+      },
+      {
+        "id": "indicator",
+        "switchMs": 18.90000000000873,
+        "deepCheckMs": 589,
+        "totalMs": 607.9000000000087
+      },
+      {
+        "id": "grade-scheduler",
+        "switchMs": 23.10000000000582,
+        "deepCheckMs": 511,
+        "totalMs": 534.1000000000058
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1108
+      },
+      {
+        "id": "student",
+        "durationMs": 680
+      },
+      {
+        "id": "teacher",
+        "durationMs": 637
+      },
+      {
+        "id": "targets",
+        "durationMs": 630
       }
     ],
     "longTaskCount": 0,
