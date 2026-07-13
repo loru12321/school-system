@@ -1,4 +1,5 @@
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 
 const createProgressStateRuntime = require(path.resolve(__dirname, '../public/assets/js/progress-state-runtime.js'));
@@ -56,6 +57,15 @@ function run() {
     assert.strictEqual(isolatedRoot.readProgressCacheState, isolatedRuntime.getProgressCache);
     assert.strictEqual(isolatedRoot.setProgressCacheState, isolatedRuntime.setProgressCache);
     assert.strictEqual(isolatedRoot.clearProgressRuntimeState, isolatedRuntime.clearProgressState);
+
+    const progressAnalysisSource = fs.readFileSync(
+        path.resolve(__dirname, '../public/assets/js/progress-analysis-runtime.js'),
+        'utf8'
+    );
+    assert.ok(progressAnalysisSource.includes('const pending = window.__PROGRESS_BASELINE_LOADING_PROMISE;'));
+    assert.ok(progressAnalysisSource.includes("if (pending && typeof pending.then === 'function') return pending;"));
+    assert.ok(progressAnalysisSource.includes('const task = resolveProgressBaselineData(options);'));
+    assert.ok(progressAnalysisSource.includes('window.__PROGRESS_BASELINE_LOADING_PROMISE = trackedTask;'));
 
     console.log('progress-state-runtime tests passed');
 }

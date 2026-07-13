@@ -6,6 +6,23 @@ function examKeyEq(a, b) {
     return v(a).some(key => v(b).includes(key));
 }
 
+function getReportExamDateKey(value) {
+    const matches = Array.from(String(value || '').matchAll(/(20\d{2})[^\d]{1,3}(\d{1,2})[^\d]{1,3}(\d{1,2})(?!\d)/g));
+    const match = matches[matches.length - 1];
+    if (!match) return '';
+    return `${match[1]}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')}`;
+}
+
+function isReportCurrentExamEntry(examId, currentExamId) {
+    if (examKeyEq(examId, currentExamId)) return true;
+    // Older cloud rows can use a cohort::... alias for the current snapshot.
+    // It is not an earlier exam merely because its storage key differs.
+    const alias = String(examId || '').trim();
+    return /^cohort::/i.test(alias)
+        && !!getReportExamDateKey(alias)
+        && getReportExamDateKey(alias) === getReportExamDateKey(currentExamId);
+}
+
 function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamIds = [], effectiveCurrentExamId = '') {
     if (!historyRes || !historyRes.success || !Array.isArray(historyRes.data) || historyRes.data.length === 0) return 0;
     const selectedForCompare = Array.isArray(selectedReportExamIds) ? selectedReportExamIds : [];
@@ -16,7 +33,7 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
             const inSelected = selectedForCompare.some(id => examKeyEq(hid, id));
             if (!inSelected) return false;
         }
-        return !effectiveCurrentExamId || !examKeyEq(hid, effectiveCurrentExamId);
+        return !effectiveCurrentExamId || !isReportCurrentExamEntry(hid, effectiveCurrentExamId);
     }).map(h => ({
         examId: h.examId,
         examFullKey: h.examFullKey,
@@ -75,6 +92,19 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
     }
     return rows.length;
 }
+
+function getCloudReportHistoryExamEntries(stu, currentExamId = '') {
+    const cache = ReportHistoryPerfCache.cloudHistoryByStudent;
+    const rows = cache instanceof Map ? (cache.get(getReportStudentIdentity(stu)) || []) : [];
+    return rows.map((row) => ({
+        id: String(row?.examFullKey || row?.examId || '').trim(),
+        label: String(row?.examLabel || row?.examFullKey || row?.examId || '').trim(),
+        createdAt: row?.updatedAt || row?.student?.updatedAt || 0,
+        source: 'report-history'
+    })).filter((entry) => entry.id && !isReportCurrentExamEntry(entry.id, currentExamId));
+}
+
+window.getCloudReportHistoryExamEntries = getCloudReportHistoryExamEntries;
 
 function getCachedStudentReportHistory(stu, selectedExamIds = null, effectiveCurrentExamId = '') {
     const key = [
@@ -162,7 +192,7 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
     const hasCompletePriorHistory = cachedHistory.some((entry) => {
         const entryExamId = String(entry?.examFullKey || entry?.examId || '').trim();
         return hasCompleteSubjectRankComparisonHistory(entry)
-            && (!effectiveCurrentExamId || !entryExamId || !examKeyEq(entryExamId, effectiveCurrentExamId));
+            && (!effectiveCurrentExamId || !entryExamId || !isReportCurrentExamEntry(entryExamId, effectiveCurrentExamId));
     });
     const shouldDiscoverCloudHistory = !hasCompletePriorHistory;
     const missingHistoricalExamIds = historicalExamIds.length
@@ -202,7 +232,10 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
             if (!loadedCount || token !== __reportQueryToken) return;
             if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
             if (window.UI) UI.toast(`已后台匹配 ${loadedCount} 次历史成绩`, 'success');
-            await refreshHydratedStudentReport(stu, selectedReportExamIds, effectiveCurrentExamId);
+            const refreshedSelectedExamIds = typeof getSelectedReportCompareExamIds === 'function'
+                ? getSelectedReportCompareExamIds()
+                : selectedReportExamIds;
+            await refreshHydratedStudentReport(stu, refreshedSelectedExamIds, effectiveCurrentExamId);
         } catch (e) {
             console.warn('[doQuery] 云端历史后台获取失败:', e);
         } finally {

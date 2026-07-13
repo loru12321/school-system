@@ -109,7 +109,9 @@ const pkg = JSON.parse(read(packageFile));
     'shouldDiscoverCloudHistory',
     'window.__REPORT_HISTORY_VERSION',
     'function refreshHydratedStudentReport(stu, selectedExamIds = [], effectiveCurrentExamId = \'\')',
-    'await refreshHydratedStudentReport(stu, selectedReportExamIds, effectiveCurrentExamId);',
+    'function getCloudReportHistoryExamEntries(stu, currentExamId = \'\')',
+    'const refreshedSelectedExamIds = typeof getSelectedReportCompareExamIds === \'function\'',
+    'await refreshHydratedStudentReport(stu, refreshedSelectedExamIds, effectiveCurrentExamId);',
     'report-history-hydrate:'
 ].forEach((token) => assertContains(reportHistory, token, reportHistoryFile));
 

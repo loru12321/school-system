@@ -461,15 +461,31 @@ function syncProgressBaselineExamOptions() {
     return state.promise;
 }
 
-async function ensureProgressBaselineData(options = {}) {
+function ensureProgressBaselineData(options = {}) {
+    const pending = window.__PROGRESS_BASELINE_LOADING_PROMISE;
+    // The module entry point starts a background restore.  A user click (or a
+    // smoke check) can arrive while that request is pending; returning the
+    // current PREV_DATA at that point used to expose an empty baseline and a
+    // shell with no value-added result.  Share the in-flight restore instead.
+    if (pending && typeof pending.then === 'function') return pending;
+
+    const task = resolveProgressBaselineData(options);
+    const trackedTask = task.finally(() => {
+        if (window.__PROGRESS_BASELINE_LOADING_PROMISE === trackedTask) {
+            window.__PROGRESS_BASELINE_LOADING_PROMISE = null;
+        }
+        window.__PROGRESS_BASELINE_LOADING = false;
+    });
+    window.__PROGRESS_BASELINE_LOADING_PROMISE = trackedTask;
+    return trackedTask;
+}
+
+async function resolveProgressBaselineData(options = {}) {
     const {
         allowCloudSync = false,
         rerenderReport = true,
         rerenderAnalysis = true
     } = options;
-    if (window.__PROGRESS_BASELINE_LOADING) {
-        return Array.isArray(PREV_DATA) ? PREV_DATA : [];
-    }
     window.__PROGRESS_BASELINE_LOADING = true;
 
     const baselineSel = document.getElementById('progressBaselineSelect');
@@ -518,7 +534,6 @@ async function ensureProgressBaselineData(options = {}) {
 
     if (!baselineData.length) {
         setProgressBaselineStatus('❌ 未找到可用上次考试数据，请先同步当前届别考试或导入历史成绩', 'error');
-        window.__PROGRESS_BASELINE_LOADING = false;
         return [];
     }
 
@@ -538,8 +553,6 @@ async function ensureProgressBaselineData(options = {}) {
     } catch (renderErr) {
         console.warn('[progress] baseline loaded but rerender failed:', renderErr);
         setProgressBaselineStatus(`⚠️ 已加载上次考试数据（${baselineData.length} 条），但页面刷新失败，请稍后重试`, 'error');
-    } finally {
-        window.__PROGRESS_BASELINE_LOADING = false;
     }
     return baselineData;
 }

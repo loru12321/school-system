@@ -219,6 +219,40 @@
         ].join('::');
     }
 
+    function getReportScopedExamList(examList) {
+        const localList = Array.isArray(examList) ? examList.slice() : [];
+        const historyList = typeof window.getCloudReportHistoryExamEntries === 'function'
+            ? window.getCloudReportHistoryExamEntries(window.CURRENT_REPORT_STUDENT, getEffectiveCurrentExamId())
+            : [];
+        if (!historyList.length) return localList;
+
+        historyList.forEach((entry) => {
+            if (!entry?.id) return;
+            const identity = typeof getCompareExamIdentity === 'function'
+                ? getCompareExamIdentity(entry)
+                : String(entry.id || '').trim();
+            const exists = localList.some((candidate) => {
+                if (isExamKeyEquivalentForCompare(candidate?.id, entry.id)) return true;
+                const candidateIdentity = typeof getCompareExamIdentity === 'function'
+                    ? getCompareExamIdentity(candidate)
+                    : String(candidate?.id || '').trim();
+                return !!identity && identity === candidateIdentity;
+            });
+            if (!exists) localList.push(entry);
+        });
+
+        return localList.sort((a, b) => {
+            const timeA = typeof getExamSortTimestamp === 'function'
+                ? getExamSortTimestamp(a?.id, a?.createdAt || 0)
+                : Number(a?.createdAt || 0);
+            const timeB = typeof getExamSortTimestamp === 'function'
+                ? getExamSortTimestamp(b?.id, b?.createdAt || 0)
+                : Number(b?.createdAt || 0);
+            if (timeA !== timeB) return timeA - timeB;
+            return String(a?.id || '').localeCompare(String(b?.id || ''), 'zh-CN');
+        });
+    }
+
     function updateProgressMultiExamSelects() {
         const schoolSel = document.getElementById('progressCompareSchool');
         const exam1Sel = document.getElementById('progressCompareExam1');
@@ -321,9 +355,9 @@
         const v1 = exam1Sel.value;
         const v2 = exam2Sel.value;
         const v3 = exam3Sel.value;
-        const examList = typeof listAvailableExamsForCompare === 'function'
+        const examList = getReportScopedExamList(typeof listAvailableExamsForCompare === 'function'
             ? listAvailableExamsForCompare()
-            : [];
+            : []);
         const defaultOption = '<option value="">--未选择(自动)--</option>';
         if (examList.length < 2) {
             const syncing = trySyncCompareExamOptions();

@@ -7,6 +7,7 @@ try {
 }
 
 const { chromium } = require('playwright');
+const FORCE_CURRENT_EXAM_ONLY = String(process.env.SMOKE_REPORT_FORCE_CURRENT_EXAM_ONLY || '').trim().toLowerCase() === 'true';
 
 async function enterWorkspace(page) {
     await page.goto(process.env.SMOKE_URL || 'https://schoolsystem.com.cn/', {
@@ -42,7 +43,7 @@ async function enterWorkspace(page) {
         // score rows appear.  Start the report flow only after that task has
         // settled, otherwise it can supersede the requested module switch.
         await page.waitForTimeout(2200);
-        const result = await page.evaluate(async () => {
+        const result = await page.evaluate(async ({ forceCurrentExamOnly }) => {
             const sameSchool = (left, right) => typeof window.sameAppSchoolName === 'function'
                 ? window.sameAppSchoolName(left, right)
                 : String(left || '').trim() === String(right || '').trim();
@@ -66,6 +67,24 @@ async function enterWorkspace(page) {
                     '化学': { class: 1, school: 3 }
                 }
             };
+            if (forceCurrentExamOnly) {
+                const currentExamId = typeof window.getEffectiveCurrentExamId === 'function'
+                    ? window.getEffectiveCurrentExamId()
+                    : String(window.CURRENT_EXAM_ID || '').trim();
+                const db = window.CohortDB?.ensure?.();
+                Object.keys(db?.exams || {}).forEach((examId) => {
+                    const sameExam = typeof window.isExamKeyEquivalentForCompare === 'function'
+                        ? window.isExamKeyEquivalentForCompare(examId, currentExamId)
+                        : examId === currentExamId;
+                    if (!sameExam) delete db.exams[examId];
+                });
+                if (db) db.currentExamId = currentExamId;
+                window.PREV_DATA = [];
+                try { PREV_DATA = []; } catch (_) {}
+                if (window.CloudManager) window.CloudManager.fetchCohortExamsToLocal = async () => false;
+                window.__RAW_DATA_VERSION = Number(window.__RAW_DATA_VERSION || 0) + 1;
+                if (typeof window.updateReportCompareExamSelects === 'function') window.updateReportCompareExamSelects();
+            }
             if (typeof window.switchTab === 'function') window.switchTab('report-generator');
             const moduleStartedAt = Date.now();
             while (!document.getElementById('report-generator')?.classList.contains('active') && Date.now() - moduleStartedAt < 5000) {
@@ -135,6 +154,22 @@ async function enterWorkspace(page) {
             const cachedHistory = typeof window.getCachedStudentReportHistory === 'function'
                 ? window.getCachedStudentReportHistory(student, selectedExamIds, currentExamId)
                 : [];
+            const selectorDiagnostics = ['reportCompareExam1', 'reportCompareExam2', 'reportCompareExam3'].map((id) => {
+                const select = document.getElementById(id);
+                return {
+                    id,
+                    value: String(select?.value || '').trim(),
+                    options: Array.from(select?.options || []).map((option) => String(option.value || '').trim()).filter(Boolean)
+                };
+            });
+            const historyDiagnostics = (Array.isArray(cachedHistory) ? cachedHistory : []).map((entry) => {
+                const record = entry?.student || entry || {};
+                return {
+                    examId: String(entry?.examFullKey || entry?.examId || '').trim(),
+                    chineseClassRank: record?.ranks?.['语文']?.class ?? '',
+                    chineseSchoolRank: record?.ranks?.['语文']?.school ?? ''
+                };
+            });
             return {
                 ok: subjects.length >= 5
                     && comparedSubjects.length >= 5
@@ -146,6 +181,17 @@ async function enterWorkspace(page) {
                     )),
                 historyCount: Array.isArray(cachedHistory) ? cachedHistory.length : 0,
                 selectedExamIds,
+                selectorDiagnostics,
+                historyDiagnostics,
+                compareRuntimeDiagnostics: {
+                    selectorsRuntimeReady: !!window.__COMPARE_SELECTORS_RUNTIME_PATCHED__,
+                    updateReportCompareExamSelects: typeof window.updateReportCompareExamSelects,
+                    listAvailableExamsForCompare: typeof window.listAvailableExamsForCompare,
+                    availableExamIds: typeof window.listAvailableExamsForCompare === 'function'
+                        ? window.listAvailableExamsForCompare().map((exam) => String(exam?.id || '').trim()).filter(Boolean)
+                        : [],
+                    cohortExamCount: Object.keys(window.COHORT_DB?.exams || {}).length
+                },
                 currentExamId,
                 expectedPrevious: expectedPrevious ? {
                     examId: expectedPrevious.examFullKey || expectedPrevious.examId || '',
@@ -155,7 +201,7 @@ async function enterWorkspace(page) {
                 subjects,
                 comparedSubjects
             };
-        });
+        }, { forceCurrentExamOnly: FORCE_CURRENT_EXAM_ONLY });
         assert.ok(result.ok, `subject rank comparison is incomplete: ${JSON.stringify(result)}`);
         console.log(JSON.stringify(result, null, 2));
     } finally {
