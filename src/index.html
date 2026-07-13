@@ -102,8 +102,8 @@
     <script defer src="./assets/js/cohort-sync-status-runtime.js"></script>
     <script defer src="./assets/js/entrance-sound-runtime.js"></script>
     <script defer src="./assets/js/runtime-loader-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-6d917e904bb4.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-6d917e904bb4.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-fd172edb9f62.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-fd172edb9f62.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -3845,6 +3845,10 @@
                     <i class="ti ti-id"></i> 教师任课
                 </div>
 
+                <div class="login-tab" id="tab-data-assessment-roster" onclick="DataManager.switchTab('assessment-roster')">
+                    <i class="ti ti-users-group"></i> 考核名册
+                </div>
+
                 <div class="login-tab" id="tab-data-params" onclick="DataManager.switchTab('params')">
                     <i class="ti ti-settings"></i> 年级指标参数
                 </div>
@@ -4059,6 +4063,8 @@
                         </table>
                     </div>
                 </div>
+
+                <div id="dm-assessment-roster-area" style="display:none; padding:12px 10px;"></div>
 
                 <!-- 档案管理区域 -->
                 <!-- D. 年级指标参数设置区域 (保持不变，仅为了定位) -->

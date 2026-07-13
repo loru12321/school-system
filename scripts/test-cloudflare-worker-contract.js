@@ -217,6 +217,9 @@ assert.ok(gatewayContractSource.includes('assessment_sync_settings'), 'gateway s
 assert.ok(gatewayContractSource.includes('ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY'), 'assessment sync service role key must be read from Worker env only');
 assert.ok(gatewayContractSource.includes("change_tag: 'system_sync'"), 'assessment sync writes should mark rows as system_sync');
 assert.ok(gatewayContractSource.includes('dry_run: dryRun') && gatewayContractSource.includes('rows.length && !dryRun'), 'assessment sync should support a no-write dry-run match check');
+assert.ok(gatewayAssessment.includes('calculation_version') && gatewayAssessment.includes('threshold_source') && gatewayAssessment.includes('roster_summary'), 'assessment sync must preserve calculation version, threshold source, and roster audit metadata');
+assert.ok(gatewayAssessment.includes('cross_grade_mode') && gatewayAssessment.includes('跨级合并'), 'assessment sync must preserve cross-grade calculation audit metadata');
+assert.ok(gatewayAssessment.includes('protected_manual_count') && gatewayAssessment.includes('changed_count') && gatewayAssessment.includes('differences'), 'assessment dry-run must expose manual protection and old/new differences');
 assert.ok(gatewayContractSource.includes('findAssessmentTeacherMatch') && gatewayContractSource.includes('目标考核系统教师匹配不唯一'), 'assessment sync should skip ambiguous teacher matches instead of writing to a guessed account');
 assert.ok(gatewayAssessment.includes('metadataMismatch') && gatewayAssessment.includes('年级或学科不一致'), 'assessment sync must reject same-name teachers whose grade or subject metadata does not match');
 assert.ok(gatewayAssessment.includes('conflictingRowKeys') && gatewayAssessment.includes('重复且冲突的教师项目分值'), 'assessment sync must reject conflicting duplicate teacher-project scores instead of relying on upsert order');

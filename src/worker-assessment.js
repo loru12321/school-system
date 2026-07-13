@@ -140,7 +140,14 @@ function normalizeAssessmentScoreItem(input) {
     second_mock_source: input?.second_mock_source === true,
     second_mock_subjects: Array.isArray(input?.second_mock_subjects)
       ? input.second_mock_subjects.map(normalizeAssessmentSubject).filter(Boolean).slice(0, 8)
-      : []
+      : [],
+    calculation_version: normalizeText(input?.calculation_version).slice(0, 80),
+    threshold_source: normalizeText(input?.threshold_source).slice(0, 180),
+    threshold_snapshot: normalizeText(input?.threshold_snapshot).slice(0, 500),
+    roster_summary: normalizeText(input?.roster_summary).slice(0, 240),
+    roster_zero_fill: Math.max(0, Number(input?.roster_zero_fill || 0) || 0),
+    cross_grade_mode: normalizeText(input?.cross_grade_mode).slice(0, 40),
+    cross_grade_rank_difference: Math.max(0, Number(input?.cross_grade_rank_difference || 0) || 0)
   };
 }
 
@@ -159,6 +166,13 @@ function buildAssessmentSyncChangeNote(item) {
     if (item.second_mock_subjects?.length) parts.push(`二模科目：${item.second_mock_subjects.join('、')}`);
   }
   if (item.composite_missing_count) parts.push(`补科缺失：${item.composite_missing_count}条，相关教师已跳过`);
+  if (item.calculation_version) parts.push(`计算版本：${item.calculation_version}`);
+  if (item.threshold_source) parts.push(`分数线：${item.threshold_source}`);
+  if (item.roster_summary) parts.push(item.roster_summary);
+  if (item.roster_zero_fill) parts.push(`95%名册补零：${item.roster_zero_fill}人`);
+  if (item.cross_grade_mode) {
+    parts.push(`跨级合并：${item.cross_grade_mode === 'higher_rank_grade' ? '采用排名靠前年级' : '两年级逐项平均'}${item.cross_grade_rank_difference ? `，名次差${item.cross_grade_rank_difference}` : ''}`);
+  }
   if (!parts.length) parts.push(`来源：${item.source || 'schoolsystem'}`);
   return parts.join('；').slice(0, 500);
 }
@@ -302,6 +316,8 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
   const rowByKey = new Map();
   const conflictingRowKeys = new Set();
   const skipped = [];
+  const differences = [];
+  let protectedManualCount = 0;
 
   items.forEach((item) => {
     const match = findAssessmentTeacherMatch(teachers, item);
@@ -324,6 +340,7 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
     }
     const existing = existingScores.get(`${teacher.user_id}::${item.project_id}`);
     if (existing && normalizeText(existing.change_tag) !== 'system_sync' && !overwriteManual) {
+      protectedManualCount += 1;
       skipped.push({ teacher_name: item.teacher_name, grade: item.grade, subject: item.subject, project_id: item.project_id, reason: '已有人工分数，未勾选覆盖' });
       return;
     }
@@ -343,6 +360,16 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
       skipped.push({ teacher_name: item.teacher_name, grade: item.grade, subject: item.subject, project_id: item.project_id, reason: '同一批次存在重复且冲突的教师项目分值，已全部跳过' });
       return;
     }
+    const changed = !existing || Number(existing.score) !== Number(item.score);
+    differences.push({
+      teacher_name: item.teacher_name,
+      grade: item.grade,
+      subject: item.subject,
+      project_id: item.project_id,
+      previous_score: existing?.score ?? null,
+      proposed_score: item.score,
+      changed
+    });
     rowByKey.set(rowKey, {
       academic_year: academicYear,
       teacher_id: teacher.user_id,
@@ -384,6 +411,9 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
     written: dryRun ? 0 : rows.length,
     would_write: rows.length,
     matched_teachers: matchedTeacherIds.size,
+    protected_manual_count: protectedManualCount,
+    changed_count: differences.filter((item) => item.changed).length,
+    differences: differences.slice(0, 500),
     skipped,
     project_counts: projectCounts
   }, request);

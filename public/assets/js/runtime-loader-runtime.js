@@ -98,6 +98,10 @@ var SYSTEM_RUNTIME_SKILLS = {
 'data-manager-sql': bootSkill('demand', 'full', ['data-manager-sql', 'talkToData'], [
     bootEntry('data-manager-sql', bootJs('data-manager-sql.js'))
 ]),
+'assessment-roster': bootSkill('demand', 'full', ['assessment-roster', 'AssessmentRoster'], [
+    bootEntry('teaching-assessment-sync', bootJs('teaching-assessment-sync-runtime.js')),
+    bootEntry('assessment-roster', bootJs('assessment-roster-runtime.js'))
+]),
 'mobile-manager': bootSkill('conditional', 'mobile', ['mobile-layout'], [
     bootEntry('mobile-manager', bootJs('mobile-app-runtime.js'))
 ]),

@@ -48,7 +48,10 @@ const MANIFEST_RUNTIME_PATHS = [
 const NON_INLINE_RUNTIME_PATHS = new Set([
     // Replaced by the report-history runtime; retaining this legacy doQuery
     // patch inside the single-file bundle only adds duplicate behavior.
-    './assets/js/history-compare-runtime.js'
+    './assets/js/history-compare-runtime.js',
+    // Teacher-assessment automation requires the authenticated Worker bridge;
+    // keep this specialist runtime out of the legacy offline single-file bundle.
+    './assets/js/teaching-assessment-sync-runtime.js'
 ]);
 
 // Keep original script semantics intact; only normalize newlines.

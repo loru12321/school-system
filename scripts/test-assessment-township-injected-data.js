@@ -53,6 +53,12 @@ function createContext({ examId, rows, teacherMap, exams = {}, syncSettings = { 
       TEACHER_MAP: teacherMap,
       TEACHER_SCHOOL_MAP: {},
       TEACHER_STATS: {},
+      THRESHOLDS: {
+        total: { exc: 250, pass: 180 },
+        语文: { exc: 85, pass: 60 }, 数学: { exc: 85, pass: 60 }, 英语: { exc: 85, pass: 60 },
+        物理: { exc: 70, pass: 45 }, 化学: { exc: 45, pass: 30 }, 政治: { exc: 40, pass: 25 },
+        历史: { exc: 80, pass: 60 }, 地理: { exc: 80, pass: 60 }, 生物: { exc: 80, pass: 60 }
+      },
       normalizeClass,
       normalizeSchoolName: (value) => String(value || '').replace(/学校$/, '').trim(),
       getCanonicalSchoolName: (value) => {
@@ -70,8 +76,8 @@ function createContext({ examId, rows, teacherMap, exams = {}, syncSettings = { 
   context.window.console = console;
   context.window.setTimeout = context.setTimeout;
   context.window.analyzeTeachersV2 = () => buildTeacherStatsFromRows(context.window);
-  context.window.CohortDB = {
-    ensure: () => ({
+  const db = {
+    assessmentRosters: {},
       currentExamId: examId,
       exams: {
         [examId]: {
@@ -82,10 +88,14 @@ function createContext({ examId, rows, teacherMap, exams = {}, syncSettings = { 
         },
         ...exams
       }
-    })
   };
+  context.window.CohortDB = { ensure: () => db };
   vm.createContext(context);
   vm.runInContext(source, context);
+  // Lock the current own-school classes in the test fixture so formal automatic scores
+  // exercise the same 95% roster gate used in production.
+  context.window.AssessmentRosterCore.lockCurrentRoster();
+  context.window.__assessmentTestDb = db;
   return context.window;
 }
 
@@ -286,6 +296,90 @@ function checkAssessmentAppGradeNormalizer() {
   assert.ok(html.includes('只有一次可比成绩的学生按规则忽略'), '考核管理系统应说明单次成绩学生在增幅中忽略并提示');
 }
 
+async function checkThresholdRosterAndTownNormalization() {
+  const examId = '2023级-6年级-2025-2026-暑假-7月质量监测-2026-07-12';
+  const rows = [
+    { name: '本校甲', school: '银山实验学校', class: '6.1', total: 210, scores: { 语文: 70, 数学: 70, 英语: 70 } },
+    { name: '本校乙', school: '银山实验学校', class: '6.1', total: 180, scores: { 语文: 60, 数学: 60, 英语: 60 } },
+    { name: '外校甲', school: '兄弟学校', class: '6.1', total: 300, scores: { 语文: 100, 数学: 100, 英语: 100 } },
+    { name: '外校乙', school: '兄弟学校', class: '6.1', total: 285, scores: { 语文: 95, 数学: 95, 英语: 95 } }
+  ];
+  const win = createContext({ examId, rows, teacherMap: { '6.1_语文': '本校语文' } });
+  const payload = await win.tmBuildTeacherAssessmentSyncPayload();
+  const classItem = payload.items.find((item) => item.project_id === 'teacher_class_collaboration');
+  const subjectItem = payload.items.find((item) => item.project_id === 'teacher_subject_collaboration');
+  assert.ok(classItem && classItem.score < 10, '班级协调必须按全镇班级最高原始成绩折算，不能让本校唯一教师直接满分');
+  assert.ok(subjectItem && subjectItem.score < 10, '学科协同必须按全镇同学科最高原始成绩折算，不能按100分或本校最高归一化');
+  assert.match(classItem.note, /全镇班级最高原始成绩/, '班级协调批注应记录全镇原始分母');
+  assert.match(subjectItem.note, /全镇同学科最高原始成绩/, '学科协同批注应记录全镇原始分母');
+
+  const snapshot = Object.values(win.__assessmentTestDb.assessmentRosters)[0];
+  snapshot.initial_count = 20;
+  snapshot.target_count = 19;
+  const rosterPayload = await win.tmBuildTeacherAssessmentSyncPayload();
+  const rosterBottom = rosterPayload.items.find((item) => item.project_id === 'teacher_bottom_third');
+  assert.ok(/95%名册补零 17 人/.test(rosterBottom.note), '95%目标高于有效实考人数时，后1/3计算必须补零并留下批注');
+
+  const thresholdWin = createContext({ examId, rows, teacherMap: { '6.1_语文': '本校语文' } });
+  delete thresholdWin.THRESHOLDS.语文;
+  const missingThreshold = await thresholdWin.tmBuildTeacherAssessmentSyncPayload();
+  assert.strictEqual(missingThreshold.items.length, 0, '缺少联考分析已确认的学科分数线时不得写入正式自动分');
+  assert.ok(missingThreshold.skipped.some((reason) => /缺少已确认的语文优秀线\/及格线/.test(reason)), '对账应明确指出缺失的联考分析分数线');
+}
+
+async function checkNonGradTop150SubjectTotal() {
+  const examId = '2023级-6年级-2025-2026-暑假-7月质量监测-2026-07-12';
+  const rows = [
+    { name: '语数外优先', school: '银山实验学校', class: '6.1', total: 1, scores: { 语文: 100, 数学: 100, 英语: 100, 历史: 0 } },
+    ...Array.from({ length: 150 }, (_, index) => ({
+      name: `总分干扰${index + 1}`,
+      school: '银山实验学校',
+      class: '6.2',
+      total: 999,
+      scores: { 语文: 90, 数学: 90, 英语: 90, 历史: 100 }
+    }))
+  ];
+  const win = createContext({ examId, rows, teacherMap: { '6.1_语文': '前150语文' } });
+  const payload = await win.tmBuildTeacherAssessmentSyncPayload();
+  const item = payload.items.find((entry) => entry.project_id === 'teacher_excellent_contribution' && entry.teacher_name === '前150语文');
+  assert.ok(item, '6年级前150名必须按语数外合成总分选出本应入围的学生');
+  assert.match(item.note, /贡献值 1/, 'Excel其它科目总分字段不得挤出语数外合成总分更高的学生');
+  assert.match(item.note, /固定为语文、数学、英语之和/, '批注应公开前150名总分的固定科目口径');
+}
+
+function makeCrossGradeItems(teacherName, grade, subject, score) {
+  return [
+    'teacher_two_rates_one_score', 'teacher_class_collaboration', 'teacher_subject_collaboration', 'teacher_bottom_third', 'teacher_excellent_contribution'
+  ].map((project_id) => ({ teacher_name: teacherName, grade, subject, project_id, score, max_score: project_id === 'teacher_two_rates_one_score' ? 60 : 10 }));
+}
+
+function checkCrossGradeRules() {
+  const win = createContext({
+    examId: '2023级-6年级-2025-2026-暑假-7月质量监测-2026-07-12',
+    rows: nonGradRows(6),
+    teacherMap: { '6.1_语文': '占位教师' }
+  });
+  const averaged = win.tmApplyCrossGradeAssessmentRule([
+    ...makeCrossGradeItems('跨级语文', '6', '语文', 10),
+    ...makeCrossGradeItems('跨级语文', '7', '语文', 6),
+    ...makeCrossGradeItems('六年级第二', '6', '数学', 9),
+    ...makeCrossGradeItems('七年级第一', '7', '数学', 10),
+    ...makeCrossGradeItems('七年级第二', '7', '英语', 9),
+    ...makeCrossGradeItems('七年级第三', '7', '物理', 8)
+  ], []);
+  const mergedItems = averaged.items.filter((item) => item.teacher_name === '跨级语文');
+  assert.strictEqual(mergedItems.length, 5, '同名同学科跨两个年级应合并为一套教师项目');
+  assert.ok(mergedItems.every((item) => item.cross_grade_mode === 'project_average' && item.score === 8), '名次差超过2时必须按项目算术平均并归属名次靠前年级');
+  assert.strictEqual(averaged.summary.merged[0].rank_difference, 3, '跨级审计应记录两年级教师个人总分名次差');
+
+  const manual = win.tmApplyCrossGradeAssessmentRule([
+    ...makeCrossGradeItems('跨级不同学科', '6', '语文', 9),
+    ...makeCrossGradeItems('跨级不同学科', '7', '数学', 9)
+  ], []);
+  assert.strictEqual(manual.items.length, 0, '同名跨级但学科不同不得自动写入任何项目');
+  assert.strictEqual(manual.summary.manual_review.length, 1, '跨级不同学科必须进入管理员人工复核');
+}
+
 (async () => {
   const grade6Growth = await checkGrade6GrowthStudentRemap();
   const grade7Growth = await checkGrade7GrowthPreviousJulyStudentRemap();
@@ -293,6 +387,9 @@ function checkAssessmentAppGradeNormalizer() {
   const grade7 = await checkNonGrad(7);
   const grade8 = await checkGrade8Makeup();
   const grade9 = await checkGrade9();
+  await checkThresholdRosterAndTownNormalization();
+  await checkNonGradTop150SubjectTotal();
+  checkCrossGradeRules();
   checkAssessmentAppGradeNormalizer();
   console.log(JSON.stringify({
     ok: true,

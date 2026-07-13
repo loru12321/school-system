@@ -3,7 +3,7 @@ const DataManager = {
     init: function () {
         window.DataManager = this;
     },
-    currentTab: 'student', // student | teacher | archive | params | targets
+    currentTab: 'student', // student | teacher | assessment-roster | archive | params | targets
     cloudPanelView: 'list',
     pagination: { page: 1, size: 50, total: 0 },
     cloudSelection: new Set(),
@@ -432,6 +432,7 @@ const DataManager = {
         let tabId = 'tab-data-stu';
         if (tab === 'exams') tabId = 'tab-data-exams';
         if (tab === 'teacher') tabId = 'tab-data-tea';
+        if (tab === 'assessment-roster') tabId = 'tab-data-assessment-roster';
         if (tab === 'archive') tabId = 'tab-data-arch';
         if (tab === 'params') tabId = 'tab-data-params';
         if (tab === 'targets') tabId = 'tab-data-targets';
@@ -449,6 +450,9 @@ const DataManager = {
 
         const teaArea = document.getElementById('dm-teacher-area');
         if (teaArea) teaArea.style.display = tab === 'teacher' ? 'block' : 'none';
+
+        const assessmentRosterArea = document.getElementById('dm-assessment-roster-area');
+        if (assessmentRosterArea) assessmentRosterArea.style.display = tab === 'assessment-roster' ? 'block' : 'none';
 
         const oldTeaTable = document.getElementById('dm-teacher-table');
         if (oldTeaTable && !teaArea) oldTeaTable.style.display = tab === 'teacher' ? 'table' : 'none';
@@ -484,6 +488,16 @@ const DataManager = {
                         if (typeof this.renderSQLHistory === 'function') this.renderSQLHistory();
                     })
                     .catch(err => console.warn('[DataManager] sql runtime load failed:', err?.message || err));
+            }
+        }
+        if (tab === 'assessment-roster') {
+            const renderRoster = () => window.AssessmentRoster?.renderDataManagerPanel?.();
+            if (window.AssessmentRoster?.renderDataManagerPanel) {
+                window.setTimeout(renderRoster, 0);
+            } else if (window.SystemRuntimeLoader?.load) {
+                window.SystemRuntimeLoader.load('teaching-assessment-sync')
+                    .then(() => window.setTimeout(renderRoster, 0))
+                    .catch((error) => console.warn('[DataManager] assessment roster runtime load failed:', error?.message || error));
             }
         }
 

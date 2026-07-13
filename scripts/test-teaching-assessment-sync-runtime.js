@@ -7,8 +7,11 @@ const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'public/assets/js/teaching-assessment-sync-runtime.js'), 'utf8');
 const teachingRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/teaching-management-runtime.js'), 'utf8');
 const runtimeLoaderSource = fs.readFileSync(path.join(root, 'public/assets/js/runtime-loader-runtime.js'), 'utf8');
+const dataManagerRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/data-manager-core-runtime.js'), 'utf8');
+const rosterRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/assessment-roster-runtime.js'), 'utf8');
 const bootRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
 const teachingCss = fs.readFileSync(path.join(root, 'public/assets/css/teaching-management-module.css'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 
 function buildTeacherStatsFromRows(win) {
   const stats = {};
@@ -69,6 +72,12 @@ const context = {
         }
       }
     },
+    THRESHOLDS: {
+      total: { exc: 250, pass: 180 },
+      语文: { exc: 85, pass: 60 }, 数学: { exc: 85, pass: 60 }, 英语: { exc: 85, pass: 60 },
+      物理: { exc: 70, pass: 45 }, 化学: { exc: 45, pass: 30 }, 政治: { exc: 40, pass: 25 },
+      历史: { exc: 80, pass: 60 }, 地理: { exc: 80, pass: 60 }, 生物: { exc: 80, pass: 60 }
+    },
     normalizeClass: (value) => String(value || '').trim(),
     normalizeSchoolName: (value) => String(value || '').replace(/学校$/, '').trim(),
     readIndicatorState: () => ({ ind1: '2', ind2: '5', highSchoolLine: '600' })
@@ -79,6 +88,8 @@ context.window.document = context.document;
 context.window.console = console;
 context.window.setTimeout = context.setTimeout;
 context.window.analyzeTeachersV2 = () => buildTeacherStatsFromRows(context.window);
+const initialRosterDb = { assessmentRosters: {}, exams: {} };
+context.window.CohortDB = { ensure: () => initialRosterDb };
 
 vm.createContext(context);
 vm.runInContext(source, context);
@@ -92,8 +103,11 @@ assert.ok(
 );
 assert.ok(source.includes('tmRunAutomaticAssessmentSync'), 'assessment sync should expose an automatic background sync runner');
 assert.ok(source.includes('tmBuildTeacherAssessmentSyncAudit'), 'assessment sync should expose a reconciliation audit builder');
+assert.ok(source.includes('AssessmentRosterCore') && source.includes('getAssessmentRosterPanelState'), 'assessment sync should expose a core 95% roster API without coupling it to the UI renderer');
+assert.ok(indexHtml.includes('tab-data-assessment-roster'), 'data manager should expose a dedicated assessment roster tab');
+assert.ok(dataManagerRuntimeSource.includes("tab === 'assessment-roster'") && runtimeLoaderSource.includes("'assessment-roster'"), 'assessment roster tab should lazy-load its dedicated renderer');
+assert.ok(rosterRuntimeSource.includes('根据当前成绩锁定名册') && rosterRuntimeSource.includes('95%目标'), 'assessment roster renderer should show lock controls and 95% target counts');
 assert.ok(bootRuntimeSource.includes("'teaching-assessment-sync-runtime.js'"), 'assessment sync runtime should load with the workbench, not only after entering teacher analysis');
-const indexHtml = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 assert.ok(indexHtml.includes('考核同步对账'), 'teaching management page should show a fixed assessment sync reconciliation entry');
 assert.ok(indexHtml.includes('联考分析的“两率一分”同步也在这里看'), 'fixed sync entry should explain where two-rates-one-score sync is checked');
 assert.ok(source.includes('collapseAssessmentResult'), 'assessment sync preview button should collapse the result on second click');
@@ -123,7 +137,7 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
     assert.ok(Number(item.score) >= 0, `score should be non-negative for ${item.project_id}`);
   });
   context.window.CURRENT_EXAM_ID = '2025级-6年级-2025-2026-暑假-7月质量监测-2026-07-12';
-  return context.window.tmBuildTeacherAssessmentSyncPayload().then((julyPayload) => {
+  return context.window.AssessmentRosterCore.lockCurrentRoster().then(() => context.window.tmBuildTeacherAssessmentSyncPayload()).then((julyPayload) => {
     const julyProjectIds = new Set(julyPayload.items.map((item) => item.project_id));
     assert.ok(julyProjectIds.has('teacher_two_rates_one_score'), 'July payload should include two-rates-one-score');
     assert.ok(julyProjectIds.has('teacher_class_collaboration'), 'July payload should include class collaboration');
@@ -150,8 +164,9 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
     ];
     context.window.TEACHER_MAP = { '8.1_历史': '史老师' };
     context.window.TEACHER_STATS = {};
-    context.window.CohortDB = {
-      ensure: () => ({
+    context.window.CohortDB = (() => {
+      const db = {
+        assessmentRosters: {},
         currentExamId: context.window.CURRENT_EXAM_ID,
         exams: {
           [context.window.CURRENT_EXAM_ID]: {
@@ -171,9 +186,10 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
             createdAt: Date.parse('2026-05-27')
           }
         }
-      })
-    };
-    return context.window.tmBuildTeacherAssessmentSyncPayload().then((grade8Payload) => {
+      };
+      return { ensure: () => db };
+    })();
+    return context.window.AssessmentRosterCore.lockCurrentRoster().then(() => context.window.tmBuildTeacherAssessmentSyncPayload()).then((grade8Payload) => {
       const historyItems = grade8Payload.items.filter((item) => item.subject === '历史');
       assert.ok(historyItems.length > 0, '8th grade history teacher should sync from second mock rows only');
       assert.strictEqual(grade8Payload.composite_mode, 'july_plain_with_second_mock_teacher_source');
@@ -199,8 +215,9 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
       ];
       context.window.TEACHER_MAP = { '9.1_政治': '政一', '9.2_政治': '政二', '9.1_语文': '语一', '9.2_语文': '语二', '9.1_体育': '体一', '9.2_体育': '体二' };
       context.window.TEACHER_STATS = {};
-      context.window.CohortDB = {
-        ensure: () => ({
+      context.window.CohortDB = (() => {
+        const db = {
+          assessmentRosters: {},
           currentExamId: context.window.CURRENT_EXAM_ID,
           exams: {
             [context.window.CURRENT_EXAM_ID]: {
@@ -222,9 +239,10 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
               createdAt: Date.parse('2026-05-27')
             }
           }
-        })
-      };
-      return context.window.tmBuildTeacherAssessmentSyncPayload().then((grade9Payload) => {
+        };
+        return { ensure: () => db };
+      })();
+      return context.window.AssessmentRosterCore.lockCurrentRoster().then(() => context.window.tmBuildTeacherAssessmentSyncPayload()).then((grade9Payload) => {
         assert.ok(grade9Payload.items.some((item) => item.subject === '政治' && item.second_mock_source === true), '9th grade politics teacher should sync from second mock source rows');
         assert.deepStrictEqual(Array.from(grade9Payload.makeup_subjects), [], 'second mock source rows should not be reported as July makeup subjects');
         const grade9ExcellentItems = grade9Payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution');
@@ -266,8 +284,9 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         ];
         context.window.TEACHER_MAP = { '8.1_历史': '史老师' };
         context.window.TEACHER_STATS = {};
-        context.window.CohortDB = {
-          ensure: () => ({
+        context.window.CohortDB = (() => {
+          const db = {
+            assessmentRosters: {},
             currentExamId: context.window.CURRENT_EXAM_ID,
             exams: {
               [context.window.CURRENT_EXAM_ID]: {
@@ -276,9 +295,10 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
                 meta: { cohortId: '2023', year: '2025-2026', type: '期末', date: '2026-07-12', grade: '8年级' }
               }
             }
-          })
-        };
-        return context.window.tmBuildTeacherAssessmentSyncPayload().then((missingPayload) => {
+          };
+          return { ensure: () => db };
+        })();
+        return context.window.AssessmentRosterCore.lockCurrentRoster().then(() => context.window.tmBuildTeacherAssessmentSyncPayload()).then((missingPayload) => {
           assert.ok(!missingPayload.items.some((item) => item.subject === '历史'), 'missing second mock data should not write pseudo history scores');
           assert.ok(missingPayload.skipped.some((item) => /8年级历史、地理、生物教师考核需从同届同学年度二模读取/.test(item)), 'missing second mock should be visible in audit skipped reasons');
           console.log(JSON.stringify({ ok: true, items: payload.items.length, projects: Array.from(projectIds).sort(), julyItems: julyPayload.items.length, grade8Items: grade8Payload.items.length, grade9Items: grade9Payload.items.length, auditProjects: Object.keys(audit.projects).length }, null, 2));
