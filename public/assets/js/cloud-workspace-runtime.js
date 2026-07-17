@@ -178,7 +178,7 @@
         window.setTimeout(run, Math.max(0, Number(delay) || 0));
     }
 
-    const BACKGROUND_COHORT_HISTORY_DELAY_MS = 8000;
+    const BACKGROUND_COHORT_HISTORY_DELAY_MS = 15000;
     const scheduledBackgroundCohortHistory = new Set();
 
     function scheduleBackgroundCohortHistory(manager, cohortId) {

@@ -243,9 +243,9 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
         }
     };
     window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task, {
-        delay: 120,
-        idle: false,
-        timeout: 3000
+        delay: 3000,
+        idle: true,
+        timeout: 6000
     });
 }
 

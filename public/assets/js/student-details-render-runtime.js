@@ -912,11 +912,13 @@ function scheduleStudentReportCharts(student, history) {
         try { if (typeof renderVarianceChart === 'function') renderVarianceChart(student, history); } catch (e) { console.error(e); }
         if (currentContainer) currentContainer.dataset.reportChartCacheKey = chartKey;
     };
-    if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(render, { timeout: 1200 });
-    } else {
-        setTimeout(render, 160);
-    }
+    window.setTimeout(() => {
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(render, { timeout: 1200 });
+        } else {
+            setTimeout(render, 160);
+        }
+    }, 3000);
 }
 
 function scheduleStudentReportStrengthAnalysis(student, strengthKey) {
@@ -932,13 +934,15 @@ function scheduleStudentReportStrengthAnalysis(student, strengthKey) {
             console.error(e);
         }
     };
-    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-        window.SystemPerformance.scheduleIdle(run, { label: 'report-strength-analysis', delay: 260, timeout: 2500 });
-    } else if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(run, { timeout: 2500 });
-    } else {
-        setTimeout(run, 260);
-    }
+    window.setTimeout(() => {
+        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+            window.SystemPerformance.scheduleIdle(run, { label: 'report-strength-analysis', delay: 260, timeout: 2500 });
+        } else if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(run, { timeout: 2500 });
+        } else {
+            setTimeout(run, 260);
+        }
+    }, 3000);
 }
 
 function renderStudentDetails(reset = true) {
