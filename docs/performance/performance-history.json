@@ -1,90 +1,5 @@
 [
   {
-    "recordedAt": "2026-07-06T15:43:16.877Z",
-    "commit": "a84ca19c7209",
-    "branch": "main",
-    "runId": "28803803046",
-    "runAttempt": "1",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 5378,
-    "appReadyMs": 88,
-    "totalMs": 39350,
-    "moduleCount": 31,
-    "slowestModules": [
-      {
-        "id": "cohort-growth",
-        "switchMs": 342,
-        "deepCheckMs": 2155,
-        "totalMs": 2497
-      },
-      {
-        "id": "summary",
-        "switchMs": 232,
-        "deepCheckMs": 1678,
-        "totalMs": 1910
-      },
-      {
-        "id": "report-generator",
-        "switchMs": 290,
-        "deepCheckMs": 939,
-        "totalMs": 1229
-      },
-      {
-        "id": "progress-analysis",
-        "switchMs": 241,
-        "deepCheckMs": 834,
-        "totalMs": 1075
-      },
-      {
-        "id": "seat-adjustment",
-        "switchMs": 326,
-        "deepCheckMs": 646,
-        "totalMs": 972
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 222,
-        "deepCheckMs": 596,
-        "totalMs": 818
-      },
-      {
-        "id": "teacher-detail-comparison",
-        "switchMs": 241,
-        "deepCheckMs": 509,
-        "totalMs": 750
-      },
-      {
-        "id": "grade-scheduler",
-        "switchMs": 208,
-        "deepCheckMs": 416,
-        "totalMs": 624
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "teacher",
-        "durationMs": 1787
-      },
-      {
-        "id": "cloud",
-        "durationMs": 1116
-      },
-      {
-        "id": "student",
-        "durationMs": 692
-      },
-      {
-        "id": "targets",
-        "durationMs": 633
-      }
-    ],
-    "longTaskCount": 3,
-    "maxLongTaskMs": 1150,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-07-06T16:27:44.284Z",
     "commit": "ccf3f665a827",
     "branch": "main",
@@ -6792,6 +6707,91 @@
       {
         "id": "targets",
         "durationMs": 630
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-17T05:08:53.690Z",
+    "commit": "d201c4ad754e",
+    "branch": "main",
+    "runId": "29556501392",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 5988,
+    "appReadyMs": 12,
+    "totalMs": 28897,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "teacher-analysis",
+        "switchMs": 58.29999999998836,
+        "deepCheckMs": 1118,
+        "totalMs": 1176.2999999999884
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 23.69999999999709,
+        "deepCheckMs": 1053,
+        "totalMs": 1076.699999999997
+      },
+      {
+        "id": "analysis",
+        "switchMs": 29.10000000000582,
+        "deepCheckMs": 885,
+        "totalMs": 914.1000000000058
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 22.59999999999127,
+        "deepCheckMs": 806,
+        "totalMs": 828.5999999999913
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 42.69999999999709,
+        "deepCheckMs": 571,
+        "totalMs": 613.6999999999971
+      },
+      {
+        "id": "teacher-township-ranking",
+        "switchMs": 3.6000000000058208,
+        "deepCheckMs": 600,
+        "totalMs": 603.6000000000058
+      },
+      {
+        "id": "subject-balance",
+        "switchMs": 24.80000000000291,
+        "deepCheckMs": 557,
+        "totalMs": 581.8000000000029
+      },
+      {
+        "id": "county-teacher-portrait",
+        "switchMs": 53.69999999999709,
+        "deepCheckMs": 508,
+        "totalMs": 561.6999999999971
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1108
+      },
+      {
+        "id": "student",
+        "durationMs": 642
+      },
+      {
+        "id": "teacher",
+        "durationMs": 636
+      },
+      {
+        "id": "targets",
+        "durationMs": 631
       }
     ],
     "longTaskCount": 0,
