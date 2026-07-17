@@ -178,6 +178,19 @@
         window.setTimeout(run, Math.max(0, Number(delay) || 0));
     }
 
+    function scheduleBackgroundCohortHistory(manager, cohortId) {
+        const cid = normalizeCohortId(cohortId);
+        if (!cid || !manager || typeof manager.fetchCohortExamsToLocal !== 'function') return;
+        const scheduler = window.CohortExamHydrationScheduler;
+        const options = { background: true, minCount: 2 };
+        const task = scheduler && typeof scheduler.schedule === 'function'
+            ? scheduler.schedule(cid, options)
+            : manager.fetchCohortExamsToLocal(cid, options);
+        Promise.resolve(task).catch((syncError) => {
+            console.warn('[CloudExams] background history sync failed:', syncError);
+        });
+    }
+
     async function selectSystemData(options = {}) {
         if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
             return window.CloudDataService.selectSystemData(options);
@@ -1657,11 +1670,7 @@
         }));
 
         scheduleCompareSelectorsRefresh();
-        if (cohortId && typeof manager.fetchCohortExamsToLocal === 'function') {
-            manager.fetchCohortExamsToLocal(cohortId, { background: true, latestOnly: true, minCount: 1 }).catch((syncError) => {
-                console.warn('[CloudExams] background sync failed:', syncError);
-            });
-        }
+        scheduleBackgroundCohortHistory(manager, cohortId);
         return true;
     }
 
@@ -1791,11 +1800,7 @@
                 }
                 const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || getCurrentCohortId());
                 scheduleCompareSelectorsRefresh();
-                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
-                    this.fetchCohortExamsToLocal(cohortId, { background: true, latestOnly: true, minCount: 1 }).catch((syncError) => {
-                        console.warn('[CloudExams] background sync failed:', syncError);
-                    });
-                }
+                scheduleBackgroundCohortHistory(this, cohortId);
                 if (typeof logAction === 'function') logAction('云端加载', `已加载全量数据：${key}`);
                 safeToast('数据已同步到本地', 'success');
                 setCloudStatus('success', '已拉取');
@@ -2504,11 +2509,7 @@
 
             if (appliedCached && !remoteIsNewer) {
                 const cohortId = normalizeCohortId(cachedPayload?.CURRENT_COHORT_ID || getCurrentCohortId());
-                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
-                    this.fetchCohortExamsToLocal(cohortId, { background: true, latestOnly: true, minCount: 1 }).catch((syncError) => {
-                        console.warn('[CloudExams] background sync failed:', syncError);
-                    });
-                }
+                scheduleBackgroundCohortHistory(this, cohortId);
                 setCloudStatus('success', '已最新');
                 return true;
             }

@@ -36,6 +36,11 @@ async function run() {
         'background cloud hydration should only fetch enough exam payloads for its minCount requirement'
     );
     assert.ok(
+        cloudWorkspaceSource.includes('function scheduleBackgroundCohortHistory(manager, cohortId)')
+            && cloudWorkspaceSource.includes('const options = { background: true, minCount: 2 };'),
+        'workspace restore should prefetch two current-cohort exams before history-dependent modules open'
+    );
+    assert.ok(
         snapshotSource.includes("Object.prototype.hasOwnProperty.call(db, 'TARGETS')"),
         'snapshot restore must preserve existing targets when an exam snapshot omits TARGETS'
     );
