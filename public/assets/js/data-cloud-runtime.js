@@ -819,6 +819,29 @@
         return match ? match[1] : '';
     }
 
+    function getWorkspacePayloadCohortId(payload) {
+        if (!payload || typeof payload !== 'object') return '';
+        const candidates = [
+            payload.CURRENT_COHORT_ID,
+            payload.COHORT_DB?.cohortId,
+            payload.CURRENT_PROJECT_KEY,
+            payload.CURRENT_EXAM_ID,
+            payload.COHORT_DB?.currentExamId,
+            payload.__CURRENT_EXAM_KEY
+        ];
+        for (const candidate of candidates) {
+            const cohortId = extractSplitCohortId('', { CURRENT_COHORT_ID: candidate });
+            if (cohortId) return cohortId;
+        }
+        return '';
+    }
+
+    function workspacePayloadMatchesKey(key, payload) {
+        const keyCohortId = extractSplitCohortId(key, null);
+        const payloadCohortId = getWorkspacePayloadCohortId(payload);
+        return !keyCohortId || !payloadCohortId || keyCohortId === payloadCohortId;
+    }
+
     function mergeSplitWorkspacePayload(metaPayload, examPayload, fallbackExamKey) {
         const merged = deepClone(metaPayload || {});
         delete merged.__CLOUD_WORKSPACE_SPLIT_VERSION;
@@ -1844,7 +1867,24 @@
             const { data, error } = await readSystemDataRecord(normalizedKey, 'content,updated_at');
             if (error) throw error;
             if (data && data.content) {
-                const db = await hydrateSplitWorkspacePayload(normalizedKey, parseCloudPayload(data.content));
+                const payload = parseCloudPayload(data.content);
+                if (!workspacePayloadMatchesKey(normalizedKey, payload)) {
+                    console.warn('[DataCloud] blocked cross-cohort workspace cache', {
+                        key: normalizedKey,
+                        keyCohortId: extractSplitCohortId(normalizedKey, null),
+                        payloadCohortId: getWorkspacePayloadCohortId(payload)
+                    });
+                    return null;
+                }
+                const db = await hydrateSplitWorkspacePayload(normalizedKey, payload);
+                if (!workspacePayloadMatchesKey(normalizedKey, db)) {
+                    console.warn('[DataCloud] blocked cross-cohort hydrated workspace cache', {
+                        key: normalizedKey,
+                        keyCohortId: extractSplitCohortId(normalizedKey, null),
+                        payloadCohortId: getWorkspacePayloadCohortId(db)
+                    });
+                    return null;
+                }
                 await writeLocalCache(normalizedKey, db, { updatedAt: data.updated_at });
                 return db;
             }

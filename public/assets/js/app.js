@@ -1893,6 +1893,22 @@ function scheduleCohortWorkspaceMetadataRefresh(cohortKey, cohortId) {
     window.setTimeout(refresh, 1800);
 }
 
+function getWorkspacePayloadCohortId(payload) {
+    if (!payload || typeof payload !== 'object') return '';
+    if (typeof getSnapshotPayloadCohortId === 'function') {
+        const resolved = normalizeCompareCohortId(getSnapshotPayloadCohortId(payload));
+        if (resolved) return resolved;
+    }
+    const candidates = [
+        payload.CURRENT_COHORT_ID,
+        payload.COHORT_DB?.cohortId,
+        payload.CURRENT_PROJECT_KEY,
+        payload.CURRENT_EXAM_ID,
+        payload.COHORT_DB?.currentExamId
+    ];
+    return normalizeCompareCohortId(candidates.find(Boolean) || '');
+}
+
 async function ensureCohortDbForSwitch(cohortId) {
     if (window.CohortDB && typeof window.CohortDB.ensure === 'function') return window.CohortDB;
     if (typeof window.ensureCohortDbRuntime !== 'function') return null;
@@ -1964,7 +1980,18 @@ async function switchCohort(cohortId, options = {}) {
     // The entry path reads cache only. On a cache miss the latest exam shard is
     // restored below, avoiding a login-blocking full workspace request.
     const __dbGetStartedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-    const data = options.preloadedData || await DB.get(cohortKey, { localOnly: true });
+    const cachedData = options.preloadedData || await DB.get(cohortKey, { localOnly: true });
+    const cachedPayloadCohortId = getWorkspacePayloadCohortId(cachedData);
+    const cachedPayloadMatchesTarget = !cachedPayloadCohortId || cachedPayloadCohortId === targetCohortId;
+    if (cachedData && !cachedPayloadMatchesTarget) {
+        console.warn('[switchCohort] blocked mismatched workspace cache', {
+            targetCohortId,
+            cachedPayloadCohortId,
+            cohortKey
+        });
+        setCohortSyncStatus('syncing', { cohortId, detail: '检测到错配缓存，正在恢复当前届别最新云端考试' });
+    }
+    const data = cachedPayloadMatchesTarget ? cachedData : null;
     try {
         const __dbGetNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         const __dbGetMs = Math.round(__dbGetNow - __dbGetStartedAt);
