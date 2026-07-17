@@ -60,6 +60,32 @@ assert.ok(
 );
 
 assert.ok(
+    appSource.includes("await DB.get(cohortKey, { localOnly: true })")
+        && appSource.includes('if (data && Array.isArray(data.RAW_DATA) && data.RAW_DATA.length > 0)')
+        && appSource.includes('async function ensureCohortDbForSwitch(cohortId)')
+        && appSource.includes('scheduleCohortWorkspaceMetadataRefresh(cohortKey, cohortId)'),
+    'cohort entry must avoid a blocking full-workspace pull and must not open an empty cached workspace as score data'
+);
+
+assert.ok(
+    /fetchCohortExamsToLocal\(cohortId, \{[\s\S]*force: true,[\s\S]*latestOnly: true,[\s\S]*minCount: 1,/.test(appSource),
+    'cold cohort recovery should verify and restore the latest remote exam snapshot'
+);
+
+assert.ok(
+    cloudWorkspaceSource.includes('const transientFailure = firstResult?.success === false')
+        && cloudWorkspaceSource.includes('nextOptions.retryAttempt === true')
+        && cloudWorkspaceSource.includes('retryAttempt: true'),
+    'transient cohort exam failures should receive one bounded retry without retry loops'
+);
+
+assert.ok(
+    fs.readFileSync(path.join(root, 'public/assets/js/runtime-loader-runtime.js'), 'utf8').includes('window.ensureCohortDbRuntime')
+        && fs.readFileSync(path.join(root, 'public/assets/js/runtime-loader-runtime.js'), 'utf8').includes('getRuntimeRetryCandidate(candidate)'),
+    'a failed critical runtime should retry once and be recoverable by the cohort entry path'
+);
+
+assert.ok(
     authLoginSource.includes('const hasSessionUser = !!(window.AuthState')
         && authLoginSource.includes('const shouldShowLogin = !!visible || !hasSessionUser;')
         && authLoginSource.includes("document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';"),
@@ -205,7 +231,7 @@ assert.ok(
 );
 
 assert.ok(
-    /CohortDB\.applyExamToWorkspace\(COHORT_DB\.currentExamId, \{\s*renderTables: false,\s*recalculate: false\s*\}\)/.test(appSource),
+    /cohortDbRuntime\.applyExamToWorkspace\(COHORT_DB\.currentExamId, \{\s*renderTables: false,\s*recalculate: false\s*\}\)/.test(appSource),
     'cold cohort restore should reuse persisted processed metrics and only recalculate when the metric guard finds them unusable'
 );
 assert.ok(
@@ -319,7 +345,7 @@ assert.ok(
 );
 
 assert.ok(
-    /if \(restoredFromExamArchive\) \{[\s\S]*CohortDB\.renderExamList\(\);[\s\S]*scheduleTeacherSyncPrompt\(\{ startup: true, force: true \}\);[\s\S]*CohortExamHydrationScheduler\.schedule/.test(appSource),
+    /if \(restoredFromExamArchive\) \{[\s\S]*cohortDbRuntime\.renderExamList\(\);[\s\S]*scheduleTeacherSyncPrompt\(\{ startup: true, force: true \}\);[\s\S]*CohortExamHydrationScheduler\.schedule/.test(appSource),
     'cloud exam-shard restores should retry teacher assignments after the restored cohort clears the prior term map'
 );
 

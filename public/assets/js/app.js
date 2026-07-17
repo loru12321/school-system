@@ -1771,9 +1771,41 @@ function setCohortSyncStatus(state = 'idle', options = {}) {
 
 async function retryCurrentCohortSync() {
     const cohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+    const restoreLatestExam = async () => {
+        if (!cohortId || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') {
+            return { available: false, restored: false };
+        }
+        const syncRes = await window.CloudManager.fetchCohortExamsToLocal(cohortId, {
+            background: false,
+            force: true,
+            latestOnly: true,
+            minCount: 1,
+            refreshSelectors: false
+        });
+        if (!syncRes?.success) {
+            throw new Error(syncRes?.message || '云端最新考试快照恢复失败');
+        }
+        const restored = tryAutoRestoreWorkspaceExam({ cohortId });
+        return {
+            available: true,
+            restored: restored && Array.isArray(RAW_DATA) && RAW_DATA.length > 0
+        };
+    };
     return window.CohortSyncStatusRuntime?.retry({
         cohortId,
-        load: () => loadCloudData({ refresh: true }),
+        load: async () => {
+            const latestExam = await restoreLatestExam();
+            if (latestExam.restored) return true;
+            if (!latestExam.available) {
+                throw new Error('当前届别的云端考试恢复模块未就绪');
+            }
+            const loaded = await loadCloudData({ refresh: true });
+            tryAutoRestoreWorkspaceExam({ cohortId });
+            if (!loaded || !Array.isArray(RAW_DATA) || RAW_DATA.length === 0) {
+                throw new Error('云端未找到当前届别可恢复的成绩数据');
+            }
+            return true;
+        },
         restore: () => tryAutoRestoreWorkspaceExam({ cohortId }),
         hasData: () => Array.isArray(RAW_DATA) && RAW_DATA.length > 0,
         toast: (...args) => window.UI?.toast(...args)
@@ -1847,6 +1879,34 @@ function getAppCohortKey(cohortId) {
     return `cohort::${cohortId}`;
 }
 
+function scheduleCohortWorkspaceMetadataRefresh(cohortKey, cohortId) {
+    const refresh = () => {
+        if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId || '')) return;
+        DB.syncFromCloud(cohortKey).catch((error) => {
+            console.warn('[switchCohort] background workspace metadata refresh failed:', error);
+        });
+    };
+    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+        window.SystemPerformance.scheduleIdle(refresh, { timeout: 8000 });
+        return;
+    }
+    window.setTimeout(refresh, 1800);
+}
+
+async function ensureCohortDbForSwitch(cohortId) {
+    if (window.CohortDB && typeof window.CohortDB.ensure === 'function') return window.CohortDB;
+    if (typeof window.ensureCohortDbRuntime !== 'function') return null;
+    try {
+        return await window.ensureCohortDbRuntime();
+    } catch (error) {
+        setCohortSyncStatus('error', {
+            cohortId,
+            detail: String(error?.message || '届别数据模块加载失败，请重试')
+        });
+        return null;
+    }
+}
+
 async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
     lockRuntimeCohortId(cohortId);
@@ -1875,6 +1935,12 @@ async function switchCohort(cohortId, options = {}) {
         window.__STARTUP_CLOUD_HYDRATION_TIMER__ = null;
     }
     UI.loading(true, "正在从云端拉取 [" + cohortKey + "] 的数据...");
+    const cohortDbRuntime = await ensureCohortDbForSwitch(cohortId);
+    if (!cohortDbRuntime) {
+        UI.loading(false);
+        window.__COHORT_SWITCH_IN_PROGRESS__ = false;
+        return false;
+    }
 
     CURRENT_EXAM_ID = '';
     COHORT_DB = null;
@@ -1895,36 +1961,18 @@ async function switchCohort(cohortId, options = {}) {
     setTeacherMap({});
     setTeacherSchoolMap({});
 
-    if (options.fastEnter === true) {
-        DB.get(cohortKey).then((cloudData) => {
-            if (!cloudData) return;
-            if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId)) return;
-            const stillEmpty = !(Array.isArray(RAW_DATA) && RAW_DATA.length > 0);
-            if (stillEmpty) {
-                switchCohort(cohortId,{skipConfirm:true,fastEnter:false,preloadedData:cloudData}).catch(error=>console.warn('[switchCohort] background project hydrate failed:',error));
-            } else {
-                setCohortSyncStatus('synced', { cohortId });
-            }
-        }).catch((error) => {
-            console.warn('[switchCohort] background project fetch failed:', error);
-            setCohortSyncStatus('error', { cohortId, detail: String(error?.message || '云端项目数据拉取失败') });
-        });
-    }
-
-    // Always-on phase timing so the login→entry wall-clock is verifiable
-    // instead of guessed. Prints e.g. "[perf] switchCohort DB.get(2022级) took
-    // 31200ms (remote)"; a large value here isolates the delay to the network
-    // blob pull rather than JS/calc. Preloaded data is a synchronous handoff.
+    // The entry path reads cache only. On a cache miss the latest exam shard is
+    // restored below, avoiding a login-blocking full workspace request.
     const __dbGetStartedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-    const data=options.preloadedData||await DB.get(cohortKey,{localOnly:options.fastEnter===true});
+    const data = options.preloadedData || await DB.get(cohortKey, { localOnly: true });
     try {
         const __dbGetNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         const __dbGetMs = Math.round(__dbGetNow - __dbGetStartedAt);
-        const __dbGetSource = options.preloadedData ? 'preloaded' : (options.fastEnter === true ? 'local' : 'remote-or-cache');
+        const __dbGetSource = options.preloadedData ? 'preloaded' : 'local-cache';
         console.info(`[perf] switchCohort DB.get(${cohortKey}) took ${__dbGetMs}ms (${__dbGetSource}), hasData=${!!data}`);
     } catch (_) { /* timing is best-effort */ }
 
-    if (data) {
+    if (data && Array.isArray(data.RAW_DATA) && data.RAW_DATA.length > 0) {
         COHORT_DB = data.COHORT_DB || null;
         CURRENT_COHORT_ID = data.CURRENT_COHORT_ID || cohortId;
         CURRENT_COHORT_META = data.CURRENT_COHORT_META || CURRENT_COHORT_META;
@@ -1934,7 +1982,7 @@ async function switchCohort(cohortId, options = {}) {
         }) || '';
         syncRuntimeStateToWindow();
 
-        if (COHORT_DB && COHORT_DB.currentExamId && CohortDB.applyExamToWorkspace(COHORT_DB.currentExamId, {
+        if (COHORT_DB && COHORT_DB.currentExamId && cohortDbRuntime.applyExamToWorkspace(COHORT_DB.currentExamId, {
             renderTables: false,
             recalculate: false
         })) {
@@ -2000,7 +2048,7 @@ async function switchCohort(cohortId, options = {}) {
         document.getElementById('app').classList.remove('hidden');
         scheduleWorkspaceUiRefresh('switch-cohort-restored', { delay: 120, idle: true, timeout: 1800, renderTables: false });
 
-        CohortDB.renderExamList();
+        cohortDbRuntime.renderExamList();
 
         // Defer the background history top-up off the entry-critical window so
         // it stops competing with the processData that applyExamToWorkspace just
@@ -2010,10 +2058,12 @@ async function switchCohort(cohortId, options = {}) {
         CohortExamHydrationScheduler.schedule(cohortId, {
             delay: 1200,
             background: true,
+            force: true,
             latestOnly: true,
             minCount: 1,
             warnPrefix: '[switchCohort] 云端历史考试拉取失败:'
         });
+        scheduleCohortWorkspaceMetadataRefresh(cohortKey, cohortId);
 
         UI.toast(`✅ 已切换到 [${cohortKey}]，数据加载完毕`, "success");
         logAction('届别切换', `已切换到 ${cohortKey}`);
@@ -2021,7 +2071,8 @@ async function switchCohort(cohortId, options = {}) {
     } else {
         if (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
             const hydrateFromExamArchive = () => window.CloudManager.fetchCohortExamsToLocal(cohortId, {
-                background: true,
+                background: options.fastEnter === true,
+                force: true,
                 latestOnly: true,
                 minCount: 1,
                 refreshSelectors: false
@@ -2047,7 +2098,7 @@ async function switchCohort(cohortId, options = {}) {
                     hideCohortPicker();
                     document.getElementById('app').classList.remove('hidden');
                     scheduleWorkspaceUiRefresh('switch-cohort-exam-archive', { delay: 120, idle: true, timeout: 1800, renderTables: false });
-                    CohortDB.renderExamList();
+                    cohortDbRuntime.renderExamList();
                     // switchCohort clears the previous term's assignments before the
                     // cloud exam shard is restored. Re-run the non-blocking teacher
                     // restore only after this cohort's exam is active, otherwise an
@@ -2058,10 +2109,12 @@ async function switchCohort(cohortId, options = {}) {
                     CohortExamHydrationScheduler.schedule(cohortId, {
                         delay: 1200,
                         background: true,
+                        force: true,
                         latestOnly: true,
                         minCount: 1,
                         warnPrefix: '[switchCohort] 后台历史考试补全失败:'
                     });
+                    scheduleCohortWorkspaceMetadataRefresh(cohortKey, cohortId);
                     UI.toast(`已从云端考试快照恢复 [${cohortKey}] 数据`, "success");
                     logAction('届别切换', `已从云端考试快照恢复 ${cohortKey}`);
                     updateStatusPanel();
@@ -2123,7 +2176,7 @@ async function switchCohort(cohortId, options = {}) {
         document.getElementById('app').classList.remove('hidden');
         scheduleWorkspaceUiRefresh('switch-cohort-empty', { delay: 160, idle: true, timeout: 1800, renderTables: false });
 
-        CohortDB.renderExamList();
+        cohortDbRuntime.renderExamList();
 
         UI.toast(`✨ 已切换到 [${cohortKey}] (新存档)，请开始上传数据`, "info");
         logAction('届别切换', `新建并切换到 ${cohortKey}`);

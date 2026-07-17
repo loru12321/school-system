@@ -65,10 +65,27 @@
         return time ? `${source} · ${cohort} · ${exam} · ${time}` : `${source} · ${cohort} · ${exam}`;
     }
 
+    function hasCurrentCohortScores(meta) {
+        const expectedCohortId = String(meta?.cohortId || '').trim();
+        const currentCohortId = String(global.CURRENT_COHORT_ID || readStorage('CURRENT_COHORT_ID') || '').trim();
+        const currentExamId = String(global.CURRENT_EXAM_ID || readStorage('CURRENT_EXAM_ID') || '').trim();
+        const rows = Array.isArray(global.RAW_DATA) ? global.RAW_DATA : [];
+        const db = global.COHORT_DB && typeof global.COHORT_DB === 'object' ? global.COHORT_DB : null;
+        if (!rows.length || !currentExamId) return false;
+        if (expectedCohortId && currentCohortId && expectedCohortId !== currentCohortId) return false;
+        if (db?.cohortId && expectedCohortId && String(db.cohortId) !== expectedCohortId) return false;
+        if (db?.exams && Object.keys(db.exams).length && !db.exams[currentExamId]) return false;
+        return true;
+    }
+
     function setStatus(state = 'idle', options = {}) {
-        const normalizedState = VALID_STATES.has(state) ? state : 'idle';
+        let normalizedState = VALID_STATES.has(state) ? state : 'idle';
         const chip = document.getElementById('shell-sync-chip');
         const meta = resolveSyncMeta(normalizedState, options);
+        if (normalizedState === 'synced' && !hasCurrentCohortScores(meta)) {
+            normalizedState = 'error';
+            options = { ...options, detail: options.detail || '当前届别没有可用成绩数据，点击重试云端恢复' };
+        }
         let syncedAt = Number(options.syncedAt || meta.updatedAt || 0);
 
         if (normalizedState === 'synced') {

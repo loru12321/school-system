@@ -2557,9 +2557,21 @@
     async function runCohortExamSync(manager, cohortId, options = {}) {
         const nextOptions = options && typeof options === 'object' ? { ...options } : {};
         const background = Boolean(nextOptions.background);
-        if (!background) {
-            return originalFetchCohortExamsToLocal.call(manager, cohortId, nextOptions);
-        }
+        const run = async () => {
+            const firstResult = await originalFetchCohortExamsToLocal.call(manager, cohortId, nextOptions);
+            const message = String(firstResult?.message || '').toLowerCase();
+            const transientFailure = firstResult?.success === false
+                && /failed to fetch|network|timeout|abort|connection/.test(message);
+            if (!transientFailure || nextOptions.retryAttempt === true) return firstResult;
+
+            await new Promise(resolve => window.setTimeout(resolve, 400));
+            return originalFetchCohortExamsToLocal.call(manager, cohortId, {
+                ...nextOptions,
+                force: true,
+                retryAttempt: true
+            });
+        };
+        if (!background) return run();
 
         const previousToast = window.UI && typeof window.UI.toast === 'function'
             ? window.UI.toast
@@ -2576,7 +2588,7 @@
         }
 
         try {
-            return await originalFetchCohortExamsToLocal.call(manager, cohortId, nextOptions);
+            return await run();
         } finally {
             if (window.UI && previousToast) {
                 window.UI.toast = previousToast;

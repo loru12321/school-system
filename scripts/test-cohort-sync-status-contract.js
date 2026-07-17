@@ -23,6 +23,8 @@ const scripts = packageJson.scripts || {};
 [
     'function resolveSyncMeta',
     'function formatSyncDetail',
+    'function hasCurrentCohortScores',
+    "normalizedState === 'synced' && !hasCurrentCohortScores(meta)",
     'dataSyncSource',
     'dataSyncExam',
     'dataSyncUpdated',

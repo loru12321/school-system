@@ -264,6 +264,11 @@ function getOptionalRuntimeCandidates(src) {
 return getOptionalAssetCandidates(src, ['./assets/js/', './assets/vendor/']);
 }
 
+function getRuntimeRetryCandidate(src) {
+const value = String(src || '');
+return `${value}${value.includes('?') ? '&' : '?'}runtime_retry=${Date.now()}`;
+}
+
 function getOptionalStylesheetCandidates(href) {
 return getOptionalAssetCandidates(href, ['./assets/css/', './assets/vendor/']);
 }
@@ -363,6 +368,12 @@ window.__optionalRuntimeLoaders[key] = (async () => {
             return;
         } catch (error) {
             lastError = error;
+            try {
+                await injectOptionalRuntimeScript(key, getRuntimeRetryCandidate(candidate));
+                return;
+            } catch (retryError) {
+                lastError = retryError;
+            }
         }
     }
     throw lastError || new Error(`Failed to load runtime: ${src}`);
@@ -599,6 +610,10 @@ return loadOptionalRuntime(key, src).then(() => {
     return loaded;
 });
 }
+
+window.ensureCohortDbRuntime = function () {
+return ensureOptionalGlobalRuntime(() => window.CohortDB, 'cohort-db-core', './assets/js/cohort-db-core-runtime.js', 'CohortDB');
+};
 
 window.ensureCryptoJsVendorLoaded = function () {
 return ensureOptionalGlobalRuntime(() => window.CryptoJS, 'crypto-vendor', './assets/vendor/crypto-js/crypto-js.min.js', 'CryptoJS');
