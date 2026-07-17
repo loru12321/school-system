@@ -1,90 +1,5 @@
 [
   {
-    "recordedAt": "2026-07-07T09:47:55.762Z",
-    "commit": "bac5cb4c65cc",
-    "branch": "main",
-    "runId": "28856953089",
-    "runAttempt": "1",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 6669,
-    "appReadyMs": 1355,
-    "totalMs": 35065,
-    "moduleCount": 31,
-    "slowestModules": [
-      {
-        "id": "cohort-growth",
-        "switchMs": 371,
-        "deepCheckMs": 1708,
-        "totalMs": 2079
-      },
-      {
-        "id": "summary",
-        "switchMs": 268,
-        "deepCheckMs": 1588,
-        "totalMs": 1856
-      },
-      {
-        "id": "report-generator",
-        "switchMs": 222,
-        "deepCheckMs": 982,
-        "totalMs": 1204
-      },
-      {
-        "id": "progress-analysis",
-        "switchMs": 240,
-        "deepCheckMs": 742,
-        "totalMs": 982
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 251,
-        "deepCheckMs": 573,
-        "totalMs": 824
-      },
-      {
-        "id": "teacher-detail-comparison",
-        "switchMs": 272,
-        "deepCheckMs": 455,
-        "totalMs": 727
-      },
-      {
-        "id": "county-teacher-portrait",
-        "switchMs": 216,
-        "deepCheckMs": 425,
-        "totalMs": 641
-      },
-      {
-        "id": "grade-scheduler",
-        "switchMs": 257,
-        "deepCheckMs": 376,
-        "totalMs": 633
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "teacher",
-        "durationMs": 1616
-      },
-      {
-        "id": "cloud",
-        "durationMs": 1108
-      },
-      {
-        "id": "student",
-        "durationMs": 641
-      },
-      {
-        "id": "targets",
-        "durationMs": 629
-      }
-    ],
-    "longTaskCount": 2,
-    "maxLongTaskMs": 991,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-07-07T10:54:01.373Z",
     "commit": "d282b8a3aada",
     "branch": "main",
@@ -6792,6 +6707,91 @@
       {
         "id": "targets",
         "durationMs": 631
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-17T10:38:14.482Z",
+    "commit": "532a3b830020",
+    "branch": "main",
+    "runId": "29574043339",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 7057,
+    "appReadyMs": 10,
+    "totalMs": 34301,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "teacher-analysis",
+        "switchMs": 85.5,
+        "deepCheckMs": 2537,
+        "totalMs": 2622.5
+      },
+      {
+        "id": "teacher-township-ranking",
+        "switchMs": 3.6000000000058208,
+        "deepCheckMs": 2034,
+        "totalMs": 2037.6000000000058
+      },
+      {
+        "id": "teacher-detail-comparison",
+        "switchMs": 15.80000000000291,
+        "deepCheckMs": 1627,
+        "totalMs": 1642.800000000003
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 28.69999999999709,
+        "deepCheckMs": 1241,
+        "totalMs": 1269.699999999997
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 96.40000000000873,
+        "deepCheckMs": 1112,
+        "totalMs": 1208.4000000000087
+      },
+      {
+        "id": "seat-adjustment",
+        "switchMs": 67.90000000000873,
+        "deepCheckMs": 964,
+        "totalMs": 1031.9000000000087
+      },
+      {
+        "id": "subject-balance",
+        "switchMs": 39.19999999999709,
+        "deepCheckMs": 671,
+        "totalMs": 710.1999999999971
+      },
+      {
+        "id": "indicator",
+        "switchMs": 21.5,
+        "deepCheckMs": 676,
+        "totalMs": 697.5
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1120
+      },
+      {
+        "id": "student",
+        "durationMs": 646
+      },
+      {
+        "id": "targets",
+        "durationMs": 637
+      },
+      {
+        "id": "teacher",
+        "durationMs": 633
       }
     ],
     "longTaskCount": 0,
