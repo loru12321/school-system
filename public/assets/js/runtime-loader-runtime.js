@@ -1161,7 +1161,11 @@ const deferredSteps = [];
 const preload = () => {
 prioritySteps.concat(deferredSteps).forEach((step) => {
 const skill = SYSTEM_RUNTIME_SKILLS[step.label];
-if (skill && Array.isArray(skill.entries)) prefetchAppModuleList(skill.entries.map((entry) => entry.src), `hotspot-runtime-${step.label}`);
+if (skill && Array.isArray(skill.entries)) {
+const modules = skill.entries.map((entry) => entry.src);
+if (step.label === 'report-render') preloadAppModuleList(modules, `hotspot-runtime-${step.label}`);
+else prefetchAppModuleList(modules, `hotspot-runtime-${step.label}`);
+}
 });
 };
 const warmStep = (step) => Promise.resolve(step.loader()).catch(() => {});

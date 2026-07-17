@@ -20,6 +20,7 @@ const historyCompareFile = 'public/assets/js/history-compare-runtime.js';
 const cloudFile = 'public/assets/js/cloud.js';
 const countyFile = 'public/assets/js/county-analysis-runtime.js';
 const rankingDataServiceFile = 'public/assets/js/ranking-data-service-runtime.js';
+const runtimeLoaderFile = 'public/assets/js/runtime-loader-runtime.js';
 const packageFile = 'package.json';
 
 const reportRender = read(reportRenderFile);
@@ -31,6 +32,7 @@ const historyCompare = read(historyCompareFile);
 const cloud = read(cloudFile);
 const county = read(countyFile);
 const rankingDataService = read(rankingDataServiceFile);
+const runtimeLoader = read(runtimeLoaderFile);
 const app = read('public/assets/js/app.js');
 const compareShared = read('public/assets/js/compare-shared-runtime.js');
 const pkg = JSON.parse(read(packageFile));
@@ -192,6 +194,11 @@ if (!previousRecordSource || previousRecordSource.includes('computeExamDataFinge
 if (!historySource || historySource.includes('computeExamDataFingerprint(examData)')) {
     fail('student exam history should use cached historical exam fingerprints');
 }
+
+[
+    "if (step.label === 'report-render') preloadAppModuleList(modules, `hotspot-runtime-${step.label}`);",
+    'else prefetchAppModuleList(modules, `hotspot-runtime-${step.label}`);'
+].forEach((token) => assertContains(runtimeLoader, token, runtimeLoaderFile));
 
 [
     'function getLocalHistoryComparisonEntries(student)',

@@ -1544,9 +1544,9 @@ assert.ok(schoolNormalizationRuntime.includes('scoreNameMap'), 'indicator score 
 assert.ok(moduleEntryRuntime.includes("node.dataset.released === 'true'"), 'teacher heavy DOM release should not rewrite already released placeholders on later module switches');
 assert.ok(
     reportHistoryRuntime.includes('background: true')
-        && reportHistoryRuntime.includes('delay: 120')
-        && reportHistoryRuntime.includes('idle: false'),
-    'student report history should hydrate promptly without blocking first paint'
+        && reportHistoryRuntime.includes('delay: 3000')
+        && reportHistoryRuntime.includes('idle: true'),
+    'student report history should hydrate after the initial report paint'
 );
 assert.ok(reportHistoryRuntime.includes('cloudHistoryByStudent') && reportHistoryRuntime.includes('refreshHydratedStudentReport'), 'student report cloud history should refresh its own report without replacing cohort progress data');
 assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;'), 'teacher analysis should not leave an activated shell empty for over a second');
