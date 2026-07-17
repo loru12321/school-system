@@ -615,10 +615,13 @@
         const wb = window.XLSX.utils.book_new();
         const schools = options.schools || (scope === 'county' ? Object.values(window.SCHOOLS || {}) : getTownshipSchools());
         const subjects = options.subjects || getSubjectList(getAllRows());
+        const totalLabel = typeof window.getTotalSubjectLabel === 'function'
+            ? window.getTotalSubjectLabel({ subjects })
+            : '总分';
         if (scope !== 'county') addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope));
         addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects, scope));
         if (scope !== 'county' && isGrade9Exam()) addWorksheet(wb, '9年级专项核算对照表', buildSupportMetricComparisonRows(schools));
-        addWorksheet(wb, '五科总 - 综合分析表', schoolRankRows(schools, 'total', scope));
+        addWorksheet(wb, `${totalLabel} - 综合分析表`, schoolRankRows(schools, 'total', scope));
         subjects.forEach((subject) => addWorksheet(wb, `${subject} 学科明细`, schoolRankRows(schools, subject, scope)));
         if (scope !== 'county') {
             addWorksheetIfUseful(wb, '高分段赋分详情', buildHighScoreRows(schools));

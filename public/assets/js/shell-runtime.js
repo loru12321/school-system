@@ -35,7 +35,7 @@
             summary: '把学校和教师放到县域统一口径中比较，识别相对优势与差距。',
             items: [
                 { id: 'county-teacher-portrait', icon: 'ti-school', text: '县域教师画像', hint: '模仿教师教学质量画像，把本校教师放到县域所有学校同学科口径中排名。' },
-                { id: 'county-school-horizontal', icon: 'ti-chart-bar', text: '县域学校横向分析', hint: '模仿两率一分横向分析，输出五科总和各学科明细的全县学校排名与横向对比表。' }
+                { id: 'county-school-horizontal', icon: 'ti-chart-bar', text: '县域学校横向分析', hint: '模仿两率一分横向分析，输出总分和各学科明细的全县学校排名与横向对比表。' }
             ]
         },
         class: {

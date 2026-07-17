@@ -147,6 +147,11 @@ assert.ok(
     'an authenticated session should restore the last user cohort when runtime cohort state is empty'
 );
 assert.ok(
+    authLoginSource.includes('const requestedLoginCohort = String(')
+        && authLoginSource.includes('requestedLoginCohort\n                || window.BootCohortLifecycle?.getSelectedLoginCohortYear?.()'),
+    'the cohort selected when login starts must survive asynchronous credential validation'
+);
+assert.ok(
     authLoginSource.includes("window.BootCohortLifecycle?.getLoginCohortYears?.()?.[0]"),
     'a session without a saved preference should enter the current grade 9 cohort'
 );

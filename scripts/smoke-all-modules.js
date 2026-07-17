@@ -559,6 +559,17 @@ async function login(page, user, pass) {
         };
 
         await ensureLoginWindowVisible();
+        const requestedCohortYear = String(process.env.SMOKE_COHORT_YEAR || '').trim();
+        if (/^\d{4}$/.test(requestedCohortYear)) {
+            const cohortSelect = page.locator('#login-cohort-select');
+            if (await cohortSelect.count()) {
+                await cohortSelect.selectOption(requestedCohortYear);
+                await page.waitForFunction((expectedCohortId) => {
+                    const select = document.getElementById('login-cohort-select');
+                    return String(select?.value || '').trim() === expectedCohortId;
+                }, requestedCohortYear, { timeout: 10000 });
+            }
+        }
         await page.fill('#login-user', user);
         await page.fill('#login-pass', pass);
         await page.click('#login-submit-button');
@@ -4482,6 +4493,16 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     const summary = {
         login: await page.evaluate(() => {
             const entrancePlaylistStatus = String(document.querySelector('[data-sound-status]')?.textContent || '').trim();
+            const totalSubjects = typeof window.getTotalSubjectsForLabel === 'function'
+                ? window.getTotalSubjectsForLabel()
+                : [];
+            const totalSubjectLabel = typeof window.getTotalSubjectLabel === 'function'
+                ? String(window.getTotalSubjectLabel() || '').trim()
+                : '';
+            const numerals = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+            const expectedTotalSubjectLabel = totalSubjects.length
+                ? `${numerals[totalSubjects.length] || String(totalSubjects.length)}科总`
+                : '';
             return ({
             legacySchoolInternalSectionPresent: !!document.getElementById('school-internal-grades'),
             legacyRemovedSigPanelPresent: !!document.getElementById('removed-sig-panel'),
@@ -4498,6 +4519,9 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
                 && !document.getElementById('removed-sig-panel')
                 && !document.querySelector('[onclick*="school-internal-grades"]'),
             scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            totalSubjectCount: totalSubjects.length,
+            totalSubjectLabel,
+            totalSubjectPresentationReady: !!expectedTotalSubjectLabel && totalSubjectLabel === expectedTotalSubjectLabel,
             entrancePlaylistStatus,
             entrancePlaylistReady: /已导入\s*2\s*首|播放：(抽离喧嚣城市 · AI 夜航版|任然 - 外婆桥)/.test(entrancePlaylistStatus),
             teacherMapCountBeforePrewarm: Object.keys(window.TEACHER_MAP || {}).length,
@@ -4525,6 +4549,9 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
 
     if (!summary.login.teacherAutoRestoreReady) {
         errors.push({ scope: 'startup', message: 'teacher assignments did not auto-restore before smoke prewarm' });
+    }
+    if (!summary.login.totalSubjectPresentationReady) {
+        errors.push({ scope: 'startup', message: `total subject label mismatch: ${summary.login.totalSubjectLabel || 'missing'}` });
     }
     currentScope = 'hotspot-prewarm';
     trace('hotspot-prewarm:start');

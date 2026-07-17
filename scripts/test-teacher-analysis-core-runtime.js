@@ -5,8 +5,15 @@ const vm = require('vm');
 
 const runtimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-core-runtime.js');
 const pairingRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-pairing-runtime.js');
+const teacherUiRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-ui-runtime.js');
 const source = fs.readFileSync(runtimePath, 'utf8');
 const pairingSource = fs.readFileSync(pairingRuntimePath, 'utf8');
+const teacherUiSource = fs.readFileSync(teacherUiRuntimePath, 'utf8');
+
+assert.ok(
+    teacherUiSource.includes("container.dataset.teacherCardsSignature !== signature || !container.querySelector('.teacher-card')"),
+    'teacher portrait cache must repaint when the card DOM was released by a module switch'
+);
 
 function normalizeAliasSchool(value) {
     return String(value || '').trim().replace(/别名/g, '');

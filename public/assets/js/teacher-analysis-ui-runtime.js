@@ -193,7 +193,10 @@
             Object.keys(rankings || {}).sort().join('|')
         ].join('|'));
         if (teacherUiRenderCache.cardsSignature === signature && teacherUiRenderCache.cardsHtml) {
-            if (container.dataset.teacherCardsSignature !== signature) {
+            // A module switch can release the card DOM while keeping its signature.
+            // Repaint when the cached cards are no longer present instead of leaving
+            // the transient "generating" placeholder on screen.
+            if (container.dataset.teacherCardsSignature !== signature || !container.querySelector('.teacher-card')) {
                 container.innerHTML = teacherUiRenderCache.cardsHtml;
                 container.dataset.teacherCardsSignature = signature;
             }

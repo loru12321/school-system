@@ -1069,15 +1069,18 @@ function syncDataRuntimeState(patch = {}) {
         window.SUBJECTS = SUBJECTS;
         window.THRESHOLDS = THRESHOLDS;
         window.CONFIG = CONFIG;
+        if (typeof refreshTotalSubjectPresentation === 'function') refreshTotalSubjectPresentation();
         return snapshot;
     }
-    return {
+    const snapshot = {
         rawData: setRawData(patch.rawData ?? patch.RAW_DATA ?? readRawData()),
         schools: setSchools(patch.schools ?? patch.SCHOOLS ?? readSchools()),
         subjects: setSubjects(patch.subjects ?? patch.SUBJECTS ?? readSubjects()),
         thresholds: setThresholds(patch.thresholds ?? patch.THRESHOLDS ?? readThresholds()),
         config: setConfigState(patch.config ?? patch.CONFIG ?? readConfigState())
     };
+    if (typeof refreshTotalSubjectPresentation === 'function') refreshTotalSubjectPresentation();
+    return snapshot;
 }
 
 function clearDataRuntimeState(options = {}) {
@@ -1982,7 +1985,12 @@ async function switchCohort(cohortId, options = {}) {
     const __dbGetStartedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     const cachedData = options.preloadedData || await DB.get(cohortKey, { localOnly: true });
     const cachedPayloadCohortId = getWorkspacePayloadCohortId(cachedData);
-    const cachedPayloadMatchesTarget = !cachedPayloadCohortId || cachedPayloadCohortId === targetCohortId;
+    // A login-selected cohort must never enter through an unscoped legacy cache.
+    // It will restore the latest matching exam shard from cloud instead.
+    const requiresExactCachedCohort = options.requireCloudData === true && !!targetCohortId;
+    const cachedPayloadMatchesTarget = cachedPayloadCohortId
+        ? cachedPayloadCohortId === targetCohortId
+        : !requiresExactCachedCohort;
     if (cachedData && !cachedPayloadMatchesTarget) {
         console.warn('[switchCohort] blocked mismatched workspace cache', {
             targetCohortId,
@@ -2001,7 +2009,8 @@ async function switchCohort(cohortId, options = {}) {
 
     if (data && Array.isArray(data.RAW_DATA) && data.RAW_DATA.length > 0) {
         COHORT_DB = data.COHORT_DB || null;
-        CURRENT_COHORT_ID = data.CURRENT_COHORT_ID || cohortId;
+        // The requested target is authoritative after the cache identity check.
+        CURRENT_COHORT_ID = targetCohortId || cohortId;
         CURRENT_COHORT_META = data.CURRENT_COHORT_META || CURRENT_COHORT_META;
         CURRENT_EXAM_ID = persistWorkspaceExamIdentity(data.CURRENT_EXAM_ID || COHORT_DB?.currentExamId || '', COHORT_DB, {
             cohortId: CURRENT_COHORT_ID || cohortId,
@@ -2699,6 +2708,35 @@ function getConfiguredDisplaySubjects(config = CONFIG, options = {}) {
     return displaySubjects;
 }
 
+function getTotalSubjectsForLabel(config = CONFIG, subjects = SUBJECTS) {
+    const configured = config?.totalSubs === 'auto'
+        ? (Array.isArray(subjects) ? subjects : [])
+        : (Array.isArray(config?.totalSubs) ? config.totalSubs : []);
+    return [...new Set(configured.map(subject => String(subject || '').trim()).filter(Boolean))];
+}
+
+function getTotalSubjectLabel(options = {}) {
+    const config = options.config || CONFIG || {};
+    const subjects = options.subjects || SUBJECTS || [];
+    const count = getTotalSubjectsForLabel(config, subjects).length;
+    const numerals = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+    const base = count > 0 ? `${numerals[count] || String(count)}科总` : (config.label || '全科总');
+    return options.withScoreUnit === true && /总$/.test(base) ? `${base}分` : base;
+}
+
+function refreshTotalSubjectPresentation() {
+    if (typeof CONFIG === 'undefined' || !CONFIG || typeof CONFIG !== 'object') return '';
+    const label = getTotalSubjectLabel({ config: CONFIG, subjects: SUBJECTS });
+    CONFIG.label = label;
+    window.CONFIG = CONFIG;
+    document.querySelectorAll('.label-total').forEach(element => { element.innerText = label; });
+    return label;
+}
+
+window.getTotalSubjectsForLabel = getTotalSubjectsForLabel;
+window.getTotalSubjectLabel = getTotalSubjectLabel;
+window.refreshTotalSubjectPresentation = refreshTotalSubjectPresentation;
+
 function getConfiguredExtraDisplaySubjects(config = CONFIG) {
     return Array.isArray(config.extraDisplaySubs) ? config.extraDisplaySubs.filter(Boolean) : [];
 }
@@ -2977,7 +3015,7 @@ function ensureCountySubmoduleSectionForSwitch(id) {
         ? {
             title: '县域学校横向分析',
             badge: '全县横向对比',
-            desc: '对照“两率一分(横向)”，生成五科总综合分析表和各学科明细表，按县域所有学校统一排名。'
+            desc: '对照“两率一分(横向)”，生成总分综合分析表和各学科明细表，按县域所有学校统一排名。'
         }
         : {
             title: '县域教师画像',
@@ -3419,6 +3457,7 @@ function initSystem(type) {
     document.getElementById('app').classList.remove('hidden');
     if (type === '6-8') setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', extraDisplaySubs: [], showQuery: true });
     else setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], extraDisplaySubs: ['政治'], showQuery: true });
+    refreshTotalSubjectPresentation();
     const modeBadge = document.getElementById('mode-badge');
     const modeInfo = document.getElementById('mode-info');
     if (modeBadge) modeBadge.innerText = CONFIG.name;
@@ -4923,6 +4962,7 @@ function parseRows(rows, defaultSchool) {
     if (analysisSubjects && analysisSubjects !== 'auto') {
         setSubjects(SUBJECTS.filter(s => analysisSubjects.includes(s)));
     }
+    refreshTotalSubjectPresentation();
     const subsForTotal = CONFIG.totalSubs === 'auto' ? SUBJECTS : CONFIG.totalSubs;
 
     const toHalfWidth = (str) => {

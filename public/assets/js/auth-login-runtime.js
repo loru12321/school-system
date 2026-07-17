@@ -539,6 +539,13 @@ var Auth = {
         const user = document.getElementById('login-user').value.trim();
         const pass = document.getElementById('login-pass').value.trim();
         const loginPortal = this.getLoginPortal();
+        // Capture the target before the asynchronous credential request. Runtime
+        // initialization may rebuild the login selector while that request waits.
+        const requestedLoginCohort = String(
+            window.BootCohortLifecycle?.getSelectedLoginCohortYear?.()
+            || document.getElementById('login-cohort-select')?.value
+            || ''
+        ).trim();
         const classInputEl = document.getElementById('login-class');
         const inputClass = classInputEl ? classInputEl.value.trim() : '';
         if (loginPortal === 'parent' && user && pass && !inputClass) return UI.toast('家长端请输入学生班级', 'error');
@@ -635,7 +642,8 @@ var Auth = {
             this.currentUser = AuthState.setCurrentUser(matchedUser) || matchedUser;
             this.setLoginPortal(isParentLikeUser(this.currentUser) ? 'parent' : 'school');
             const selectedLoginCohort = String(
-                window.BootCohortLifecycle?.getSelectedLoginCohortYear?.()
+                requestedLoginCohort
+                || window.BootCohortLifecycle?.getSelectedLoginCohortYear?.()
                 || document.getElementById('login-cohort-select')?.value
                 || ''
             ).trim();

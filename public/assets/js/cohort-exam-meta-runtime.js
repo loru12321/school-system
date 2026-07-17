@@ -789,6 +789,7 @@ function applyModeByGrade(grade) {
     } else {
         setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', extraDisplaySubs: [], showQuery: true, mode: CONFIG.mode || 'multi' });
     }
+    if (typeof refreshTotalSubjectPresentation === 'function') refreshTotalSubjectPresentation();
     const badge = document.getElementById('mode-badge');
     if (badge) badge.innerText = CONFIG.name;
     const info = document.getElementById('mode-info');

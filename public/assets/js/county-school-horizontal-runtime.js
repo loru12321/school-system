@@ -91,9 +91,9 @@
         }).filter(Boolean).join('');
     }
 
-    function renderAnchorJumpbar(ctx, subjects) {
+    function renderAnchorJumpbar(ctx, subjects, totalLabel) {
         const items = [
-            { label: '五科总', anchorId: 'county-total-anchor' },
+            { label: totalLabel, anchorId: 'county-total-anchor' },
             ...subjects.map(subject => ({ label: subject, anchorId: `county-subject-anchor-${subject}` }))
         ];
         return `
@@ -118,6 +118,9 @@
         if (!totalRows.length) return '<div class="county-empty">暂无学校成绩数据，请先导入本次县级成绩。</div>';
         const subjects = ctx.sortCountySubjects(window.SUBJECTS || []);
         const currentSchoolName = ctx.resolveCurrentCountySchoolName();
+        const totalLabel = typeof window.getTotalSubjectLabel === 'function'
+            ? window.getTotalSubjectLabel()
+            : '总分';
         const subjectTables = renderSubjectTables(ctx, subjects, currentSchoolName);
 
         return `
@@ -136,12 +139,12 @@
                 <div><span>学校样本</span><strong>${totalRows.length}</strong><em>县域所有学校</em></div>
                 <div><span>学科明细</span><strong>${subjects.length}</strong><em>按两率一分统一折算</em></div>
                 <div><span>学生样本</span><strong>${(window.RAW_DATA || []).length}</strong><em>${ctx.escapeHtml(ctx.getExamKey())}</em></div>
-                <div><span>输出</span><strong>横向表</strong><em>五科总 + 单科明细</em></div>
+                <div><span>输出</span><strong>横向表</strong><em>${ctx.escapeHtml(totalLabel)} + 单科明细</em></div>
             </div>
-            ${renderAnchorJumpbar(ctx, subjects)}
+            ${renderAnchorJumpbar(ctx, subjects, totalLabel)}
             <div id="county-total-anchor" class="analysis-anchor-panel anchor-target">
                 <div class="county-section-head">
-                    <div class="sub-header analysis-section-head">五科总 - 综合分析表</div>
+                    <div class="sub-header analysis-section-head">${ctx.escapeHtml(totalLabel)} - 综合分析表</div>
                     <div class="county-section-actions">
                         <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('school')">下载Excel</button>
                     </div>

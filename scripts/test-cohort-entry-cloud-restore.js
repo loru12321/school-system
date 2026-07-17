@@ -70,10 +70,16 @@ assert.ok(
 assert.ok(
     appSource.includes('function getWorkspacePayloadCohortId(payload)')
         && appSource.includes('const cachedPayloadCohortId = getWorkspacePayloadCohortId(cachedData);')
+        && appSource.includes('const requiresExactCachedCohort = options.requireCloudData === true && !!targetCohortId;')
         && appSource.includes('const data = cachedPayloadMatchesTarget ? cachedData : null;')
         && dataCloudSource.includes('function workspacePayloadMatchesKey(key, payload)')
         && dataCloudSource.includes('[DataCloud] blocked cross-cohort workspace cache'),
     'mismatched cohort workspace caches must be rejected before they can apply another cohort\'s scores'
+);
+
+assert.ok(
+    appSource.includes('CURRENT_COHORT_ID = targetCohortId || cohortId;'),
+    'a verified cohort restore must keep the user-requested cohort as the active identity'
 );
 
 assert.ok(

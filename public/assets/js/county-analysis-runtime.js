@@ -39,7 +39,7 @@
         'county-school-horizontal': {
             title: '县域学校横向分析',
             badge: '全县横向对比',
-            description: '对照“两率一分(横向)”，生成五科总综合分析表和各学科明细表，按县域所有学校统一排名。'
+            description: '对照“两率一分(横向)”，生成总分综合分析表和各学科明细表，按县域所有学校统一排名。'
         }
     };
     const COUNTY_SUBJECT_ORDER_GRADE9 = ['语文', '数学', '英语', '物理', '化学', '政治'];
@@ -1325,8 +1325,11 @@
     }
 
     function buildCountySchoolHorizontalSheets() {
+        const totalLabel = typeof window.getTotalSubjectLabel === 'function'
+            ? window.getTotalSubjectLabel()
+            : '总分';
         return [
-            { name: '五科总-综合分析表', rows: buildCountyRankExportRows() },
+            { name: `${totalLabel}-综合分析表`, rows: buildCountyRankExportRows() },
             ...sortCountySubjects(window.SUBJECTS || []).map((subject) => ({
                 name: `${subject}学科明细`,
                 rows: buildCountySubjectExportRows(subject)
@@ -2188,7 +2191,9 @@
             if (countyRankVisible) headers.push(`${subject} 县排`);
         });
 
-        const totalLabel = isCountyGrade9Context() ? '五科总分' : '总分';
+        const totalLabel = typeof window.getTotalSubjectLabel === 'function'
+            ? window.getTotalSubjectLabel({ withScoreUnit: true })
+            : (isCountyGrade9Context() ? '五科总分' : '总分');
         if (isTeacher || isClassTeacher) {
             headers.push(totalLabel, '总分班排', '总分级排');
         } else {

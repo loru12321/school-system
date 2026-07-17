@@ -417,7 +417,9 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
 
     const comparisonTotalSubjects = getComparisonTotalSubjects();
     const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
-    const totalLabel = (CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label;
+    const totalLabel = typeof window.getTotalSubjectLabel === 'function'
+        ? window.getTotalSubjectLabel({ subjects: comparisonTotalSubjects, withScoreUnit: true })
+        : ((CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label);
     const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
 
     let tableRows = `<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">

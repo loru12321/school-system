@@ -157,13 +157,27 @@ function runCompareSelectorsAliasDefaultTest() {
 function runProgressAliasDefaultTest() {
     const { context } = createBaseContext();
     context.__PROGRESS_ANALYSIS_RUNTIME_PATCHED__ = false;
+    context.CURRENT_COHORT_ID = '2023';
+    context.CURRENT_EXAM_ID = '2023级-8年级-2025-2026-下学期-期末-2026-07-02';
+    context.CONFIG = { name: '6-8年级' };
     context.requestAnimationFrame = (callback) => {
         if (typeof callback === 'function') callback();
         return 0;
     };
     context.CohortDB = {
         ensure() {
-            return { exams: {} };
+            return {
+                exams: {
+                    '2023级-7年级-2024-2025-下学期-期末-2025-07-03': {
+                        examId: '2023级-7年级-2024-2025-下学期-期末-2025-07-03',
+                        data: [{ name: '甲同学', total: 520 }]
+                    },
+                    '2023级-8年级-2025-2026-下学期-期末-2026-07-02': {
+                        examId: '2023级-8年级-2025-2026-下学期-期末-2026-07-02',
+                        data: [{ name: '甲同学', total: 560 }]
+                    }
+                }
+            };
         }
     };
     context.PermissionPolicy = {
@@ -182,6 +196,11 @@ function runProgressAliasDefaultTest() {
     vm.runInNewContext(source, context, { filename: 'progress-analysis-runtime.js' });
 
     assert.strictEqual(context.progressResolveSchoolOption(['甲校', '乙校'], '甲校别名'), '甲校');
+    const historicalExamId = '2023级-7年级-2024-2025-下学期-期末-2025-07-03';
+    assert.strictEqual(
+        context.pickDefaultProgressBaselineExamId(context.getProgressBaselineExamList()),
+        historicalExamId
+    );
 }
 
 function runTownSubmoduleAliasDefaultTest() {

@@ -246,8 +246,10 @@ function getProgressBaselineExamList() {
 function isProgressBaselineCandidate(exam) {
     const examId = String(exam?.examFullKey || exam?.examId || exam?.id || '').trim();
     if (!examId || (CURRENT_EXAM_ID && isExamKeyEquivalentForCompare(examId, CURRENT_EXAM_ID))) return false;
-    const gradeName = String(CONFIG?.name || '').trim();
-    return !gradeName || examId.includes(gradeName);
+    // CohortDB is already scoped to the active cohort. In 6-8 mode the mode
+    // name is not part of a real exam key, so filtering by it hides valid
+    // prior-grade exams and leaves value-added analysis without a baseline.
+    return true;
 }
 
 function pickDefaultProgressBaselineExamId(examList) {
