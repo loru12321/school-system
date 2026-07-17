@@ -671,7 +671,7 @@
                 .map((student) => subject === 'total' ? Number(student.total) : Number(student.scores?.[subject]))
                 .filter(Number.isFinite)
                 .sort((left, right) => right - left);
-            thresholds[subject] = values.length ? { exc: pick(values, 0.2), pass: pick(values, 0.5) } : { exc: 0, pass: 0 };
+            thresholds[subject] = values.length ? { exc: pick(values, 0.15), pass: pick(values, 0.5) } : { exc: 0, pass: 0 };
         });
         return thresholds;
     }

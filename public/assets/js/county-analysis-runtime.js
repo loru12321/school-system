@@ -770,7 +770,7 @@
         const sorted = (scores || []).map(Number).filter(Number.isFinite).sort((a, b) => b - a);
         if (!sorted.length) return kind === 'excellent' ? 0 : 60;
         if (kind === 'excellent') {
-            return sorted[Math.max(0, Math.floor(sorted.length * 0.25) - 1)] || 0;
+            return sorted[Math.max(0, Math.ceil(sorted.length * 0.15) - 1)] || 0;
         }
         return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.8))] || 60;
     }

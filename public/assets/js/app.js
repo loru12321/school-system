@@ -5201,7 +5201,7 @@ async function processDataInner() {
                     };
                     appDebug(`[单校模式] 总分划线锁定: 优=${THRESHOLDS[k].exc} (Top${input1}), 良=${THRESHOLDS[k].pass} (Top${input2})`);
                 } else {
-                    const excRatio = (CONFIG.name && CONFIG.name.includes('9')) ? 0.15 : 0.2;
+                    const excRatio = 0.15;
                     const pickPercentileLine = (ratio) => {
                         const index = Math.max(0, Math.ceil(vals.length * ratio) - 1);
                         return vals[index] || 0;
