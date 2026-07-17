@@ -178,17 +178,28 @@
         window.setTimeout(run, Math.max(0, Number(delay) || 0));
     }
 
+    const BACKGROUND_COHORT_HISTORY_DELAY_MS = 8000;
+    const scheduledBackgroundCohortHistory = new Set();
+
     function scheduleBackgroundCohortHistory(manager, cohortId) {
         const cid = normalizeCohortId(cohortId);
         if (!cid || !manager || typeof manager.fetchCohortExamsToLocal !== 'function') return;
-        const scheduler = window.CohortExamHydrationScheduler;
-        const options = { background: true, minCount: 2 };
-        const task = scheduler && typeof scheduler.schedule === 'function'
-            ? scheduler.schedule(cid, options)
-            : manager.fetchCohortExamsToLocal(cid, options);
-        Promise.resolve(task).catch((syncError) => {
-            console.warn('[CloudExams] background history sync failed:', syncError);
-        });
+        if (scheduledBackgroundCohortHistory.has(cid)) return;
+        scheduledBackgroundCohortHistory.add(cid);
+
+        const run = () => {
+            scheduledBackgroundCohortHistory.delete(cid);
+            const scheduler = window.CohortExamHydrationScheduler;
+            const options = { background: true, minCount: 2 };
+            const task = scheduler && typeof scheduler.schedule === 'function'
+                ? scheduler.schedule(cid, options)
+                : manager.fetchCohortExamsToLocal(cid, options);
+            Promise.resolve(task).catch((syncError) => {
+                console.warn('[CloudExams] background history sync failed:', syncError);
+            });
+        };
+
+        scheduleBackgroundCloudTask(run, BACKGROUND_COHORT_HISTORY_DELAY_MS, 12000);
     }
 
     async function selectSystemData(options = {}) {

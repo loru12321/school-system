@@ -37,7 +37,9 @@ async function run() {
     );
     assert.ok(
         cloudWorkspaceSource.includes('function scheduleBackgroundCohortHistory(manager, cohortId)')
-            && cloudWorkspaceSource.includes('const options = { background: true, minCount: 2 };'),
+            && cloudWorkspaceSource.includes('const options = { background: true, minCount: 2 };')
+            && cloudWorkspaceSource.includes('const BACKGROUND_COHORT_HISTORY_DELAY_MS = 8000;')
+            && cloudWorkspaceSource.includes('scheduleBackgroundCloudTask(run, BACKGROUND_COHORT_HISTORY_DELAY_MS, 12000);'),
         'workspace restore should prefetch two current-cohort exams before history-dependent modules open'
     );
     assert.ok(
