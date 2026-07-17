@@ -41,6 +41,115 @@ function isClassEquivalent(cls1, cls2) {
     return c1 === c2 || c1.replace(/0/g, '') === c2.replace(/0/g, '');
 }
 
+function getHistoryCompareCurrentExamId() {
+    if (typeof getEffectiveCurrentExamId === 'function') return String(getEffectiveCurrentExamId() || '').trim();
+    return String(window.CURRENT_EXAM_ID || '').trim();
+}
+
+function isHistoryCompareCurrentExam(entry) {
+    const currentExamId = getHistoryCompareCurrentExamId();
+    const entryExamId = String(entry?.examFullKey || entry?.examId || entry?._sourceExam || '').trim();
+    if (!currentExamId || !entryExamId) return false;
+    if (typeof examKeyEq === 'function') return examKeyEq(entryExamId, currentExamId);
+    return entryExamId === currentExamId;
+}
+
+function getHistoryCompareTimestamp(entry) {
+    const value = entry?.updatedAt || entry?.createdAt || entry?.student?.updatedAt || 0;
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 0) return numeric;
+    const date = new Date(value).getTime();
+    return Number.isFinite(date) ? date : 0;
+}
+
+function getLocalHistoryComparisonEntries(student) {
+    if (!student || typeof getStudentExamHistory !== 'function') return [];
+    try {
+        return getStudentExamHistory(student)
+            // CohortDB entries carry a nested student.  Do not treat a stale
+            // PREV_DATA row as local cohort history.
+            .filter(entry => entry?.student && !isHistoryCompareCurrentExam(entry))
+            .map(entry => {
+                const historyStudent = entry.student || {};
+                const ranks = historyStudent.ranks || {};
+                return {
+                    examId: entry.examLabel || entry.examFullKey || entry.examId || '历史考试',
+                    total: Number(historyStudent.total) || 0,
+                    rankClass: ranks.total?.class ?? historyStudent.rankClass ?? '-',
+                    rankSchool: ranks.total?.school ?? historyStudent.rankSchool ?? '-',
+                    rankTown: ranks.total?.township ?? historyStudent.rankTown ?? '-',
+                    subjects: historyStudent.scores || {},
+                    updatedAt: getHistoryCompareTimestamp(entry),
+                    source: 'cohort-db'
+                };
+            })
+            .filter(entry => entry.examId && (entry.total || Object.keys(entry.subjects).length > 0))
+            .sort((left, right) => getHistoryCompareTimestamp(left) - getHistoryCompareTimestamp(right));
+    } catch (error) {
+        console.warn('[history-compare] local cohort history lookup failed:', error);
+        return [];
+    }
+}
+
+function mapCloudHistoryToPreviousData(student, historyRows = []) {
+    return (Array.isArray(historyRows) ? historyRows : []).map(history => ({
+        name: student.name,
+        class: student.class,
+        school: student.school || '',
+        total: Number(history.total) || 0,
+        classRank: history.rankClass || '-',
+        schoolRank: history.rankSchool || '-',
+        townRank: history.rankTown || '-',
+        scores: history.scores || {},
+        ranks: {
+            total: {
+                class: history.rankClass || '-',
+                school: history.rankSchool || '-',
+                township: history.rankTown || '-'
+            }
+        },
+        _sourceExam: history.examFullKey || history.examId || '',
+        updatedAt: history.updatedAt || history.createdAt || 0
+    }));
+}
+
+function mapCloudHistoryComparisonEntries(historyRows = []) {
+    return (Array.isArray(historyRows) ? historyRows : [])
+        .filter(entry => !isHistoryCompareCurrentExam(entry))
+        .map(entry => ({
+            examId: entry.examLabel || entry.examFullKey || entry.examId || '历史考试',
+            total: Number(entry.total) || 0,
+            rankClass: entry.rankClass ?? entry.ranks?.total?.class ?? '-',
+            rankSchool: entry.rankSchool ?? entry.ranks?.total?.school ?? '-',
+            rankTown: entry.rankTown ?? entry.ranks?.total?.township ?? '-',
+            subjects: entry.scores || {},
+            updatedAt: getHistoryCompareTimestamp(entry),
+            source: 'cloud-history'
+        }))
+        .filter(entry => entry.examId && (entry.total || Object.keys(entry.subjects).length > 0))
+        .sort((left, right) => getHistoryCompareTimestamp(left) - getHistoryCompareTimestamp(right));
+}
+
+function buildHistoryComparisonResult(student, historyEntries = []) {
+    const history = Array.isArray(historyEntries) ? historyEntries.slice() : [];
+    if (student) {
+        history.push({
+            examId: '本次考试',
+            total: Number(student.total) || 0,
+            rankClass: student.ranks?.total?.class ?? student.rankClass ?? '-',
+            rankSchool: student.ranks?.total?.school ?? student.rankSchool ?? '-',
+            rankTown: student.ranks?.total?.township ?? student.rankTown ?? '-',
+            subjects: student.scores || {},
+            updatedAt: Date.now(),
+            isCurrent: true
+        });
+    }
+    history.sort((left, right) => getHistoryCompareTimestamp(left) - getHistoryCompareTimestamp(right));
+    return history.length > 0
+        ? { success: true, data: history }
+        : { success: false, message: '暂无历史成绩数据' };
+}
+
 async function getHistoryComparisonData(studentName, className, schoolName) {
     const history = [];
 
@@ -353,32 +462,24 @@ function initHistoryComparePatch() {
         let stu = SCHOOLS[sch]?.students.find(function (s) { return s.name === name && (cls === '--请先选择学校--' || s.class === cls); });
         if (!stu) return window.UI.alert('未找到该学生');
 
-        if (window.CloudManager && window.CloudManager.check()) {
+        const localHistory = getLocalHistoryComparisonEntries(stu);
+        let historyResult = localHistory.length > 0
+            ? buildHistoryComparisonResult(stu, localHistory)
+            : null;
+
+        if (!historyResult && window.CloudManager && window.CloudManager.check()) {
             if (window.UI) UI.toast('🔍 正在同步云端历史数据...', 'info');
             try {
                 const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
                 if (historyRes.success && historyRes.data.length > 0) {
-                    window.PREV_DATA = historyRes.data.map(h => ({
-                        name: stu.name,
-                        class: stu.class,
-                        school: stu.school || '',
-                        total: Number(h.total) || 0,
-                        classRank: h.rankClass || '-',
-                        schoolRank: h.rankSchool || '-',
-                        townRank: h.rankTown || '-',
-                        scores: h.scores || {},
-                        ranks: {
-                            total: {
-                                class: h.rankClass || '-',
-                                school: h.rankSchool || '-',
-                                township: h.rankTown || '-'
-                            }
-                        },
-                        _sourceExam: h.examId
-                    }));
-                    const prevRecords = window.PREV_DATA.filter(h => h._sourceExam !== (window.CURRENT_EXAM_ID || ''));
+                    const prevRecords = mapCloudHistoryToPreviousData(stu, historyRes.data)
+                        .filter(entry => !isHistoryCompareCurrentExam(entry));
                     if (prevRecords.length > 0) window.PREV_DATA = prevRecords;
-                    if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, 'success');
+                    const cloudHistory = mapCloudHistoryComparisonEntries(historyRes.data);
+                    if (cloudHistory.length > 0) {
+                        historyResult = buildHistoryComparisonResult(stu, cloudHistory);
+                        if (window.UI) UI.toast(`✅ 已自动匹配 ${cloudHistory.length} 次历史成绩`, 'success');
+                    }
                 }
             } catch (e) {
                 console.warn('[doQuery] 云端历史获取失败:', e);
@@ -421,7 +522,9 @@ function initHistoryComparePatch() {
         }, 200);
 
         debugHistoryCompare('获取历史成绩数据');
-        const historyResult = await getHistoryComparisonData(stu.name, stu.class, stu.school);
+        if (!historyResult) {
+            historyResult = await getHistoryComparisonData(stu.name, stu.class, stu.school);
+        }
         debugHistoryCompare('历史成绩结果:', historyResult);
         renderHistoryCharts(historyResult.data, stu);
     };

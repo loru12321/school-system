@@ -16,6 +16,7 @@ const reportChartFile = 'public/assets/js/report-chart-runtime.js';
 const reportHistoryFile = 'public/assets/js/report-history-runtime.js';
 const studentDetailsFile = 'public/assets/js/student-details-render-runtime.js';
 const comparisonRenderFile = 'public/assets/js/comparison-render-runtime.js';
+const historyCompareFile = 'public/assets/js/history-compare-runtime.js';
 const cloudFile = 'public/assets/js/cloud.js';
 const countyFile = 'public/assets/js/county-analysis-runtime.js';
 const rankingDataServiceFile = 'public/assets/js/ranking-data-service-runtime.js';
@@ -26,6 +27,7 @@ const reportChart = read(reportChartFile);
 const reportHistory = read(reportHistoryFile);
 const studentDetails = read(studentDetailsFile);
 const comparisonRender = read(comparisonRenderFile);
+const historyCompare = read(historyCompareFile);
 const cloud = read(cloudFile);
 const county = read(countyFile);
 const rankingDataService = read(rankingDataServiceFile);
@@ -189,6 +191,24 @@ if (!previousRecordSource || previousRecordSource.includes('computeExamDataFinge
 }
 if (!historySource || historySource.includes('computeExamDataFingerprint(examData)')) {
     fail('student exam history should use cached historical exam fingerprints');
+}
+
+[
+    'function getLocalHistoryComparisonEntries(student)',
+    'function mapCloudHistoryToPreviousData(student, historyRows = [])',
+    'function mapCloudHistoryComparisonEntries(historyRows = [])',
+    'function buildHistoryComparisonResult(student, historyEntries = [])',
+    'const localHistory = getLocalHistoryComparisonEntries(stu);',
+    '? buildHistoryComparisonResult(stu, localHistory)',
+    'if (!historyResult && window.CloudManager && window.CloudManager.check())',
+    'const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);',
+    'if (!historyResult) {\n            historyResult = await getHistoryComparisonData(stu.name, stu.class, stu.school);'
+].forEach((token) => assertContains(historyCompare, token, historyCompareFile));
+const historyComparePatchStart = historyCompare.indexOf('const patchDoQuery = async function ()');
+const localHistoryRead = historyCompare.indexOf('const localHistory = getLocalHistoryComparisonEntries(stu);', historyComparePatchStart);
+const cloudHistoryFetch = historyCompare.indexOf('const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);', historyComparePatchStart);
+if (historyComparePatchStart < 0 || localHistoryRead < 0 || cloudHistoryFetch < 0 || localHistoryRead > cloudHistoryFetch) {
+    fail('history compare must use local cohort history before requesting the cloud fallback');
 }
 
 [
