@@ -35,12 +35,16 @@ async function run() {
             && cloudWorkspaceSource.includes('const maxKeysToFetch = maxFetch > 0 ? maxFetch : (latestOnly ? 1 : backgroundContentLimit);'),
         'background cloud hydration should only fetch enough exam payloads for its minCount requirement'
     );
+    const backgroundHistoryDelayMatch = cloudWorkspaceSource.match(
+        /const BACKGROUND_COHORT_HISTORY_DELAY_MS = (\d+);/
+    );
     assert.ok(
         cloudWorkspaceSource.includes('function scheduleBackgroundCohortHistory(manager, cohortId)')
             && cloudWorkspaceSource.includes('const options = { background: true, minCount: 2 };')
-            && cloudWorkspaceSource.includes('const BACKGROUND_COHORT_HISTORY_DELAY_MS = 15000;')
+            && backgroundHistoryDelayMatch
+            && Number(backgroundHistoryDelayMatch[1]) <= 3000
             && cloudWorkspaceSource.includes('scheduleBackgroundCloudTask(run, BACKGROUND_COHORT_HISTORY_DELAY_MS, 12000);'),
-        'workspace restore should prefetch two current-cohort exams before history-dependent modules open'
+        'workspace restore should prefetch two current-cohort exams shortly after the first paint'
     );
     assert.ok(
         snapshotSource.includes("Object.prototype.hasOwnProperty.call(db, 'TARGETS')"),

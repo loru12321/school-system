@@ -178,7 +178,10 @@
         window.setTimeout(run, Math.max(0, Number(delay) || 0));
     }
 
-    const BACKGROUND_COHORT_HISTORY_DELAY_MS = 15000;
+    // The current exam is already available when this runs. Warm one historical
+    // exam shortly after the first paint so comparison modules do not have to
+    // queue a second cloud round trip on their first visit.
+    const BACKGROUND_COHORT_HISTORY_DELAY_MS = 3000;
     const scheduledBackgroundCohortHistory = new Set();
 
     function scheduleBackgroundCohortHistory(manager, cohortId) {
