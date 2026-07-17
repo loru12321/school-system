@@ -38,12 +38,17 @@ async function run() {
     const backgroundHistoryDelayMatch = cloudWorkspaceSource.match(
         /const BACKGROUND_COHORT_HISTORY_DELAY_MS = (\d+);/
     );
+    const backgroundHistoryIdleTimeoutMatch = cloudWorkspaceSource.match(
+        /const BACKGROUND_COHORT_HISTORY_IDLE_TIMEOUT_MS = (\d+);/
+    );
     assert.ok(
         cloudWorkspaceSource.includes('function scheduleBackgroundCohortHistory(manager, cohortId)')
             && cloudWorkspaceSource.includes('const options = { background: true, minCount: 2 };')
             && backgroundHistoryDelayMatch
             && Number(backgroundHistoryDelayMatch[1]) <= 3000
-            && cloudWorkspaceSource.includes('scheduleBackgroundCloudTask(run, BACKGROUND_COHORT_HISTORY_DELAY_MS, 12000);'),
+            && backgroundHistoryIdleTimeoutMatch
+            && Number(backgroundHistoryIdleTimeoutMatch[1]) <= 3000
+            && cloudWorkspaceSource.includes('scheduleBackgroundCloudTask(run, BACKGROUND_COHORT_HISTORY_DELAY_MS, BACKGROUND_COHORT_HISTORY_IDLE_TIMEOUT_MS);'),
         'workspace restore should prefetch two current-cohort exams shortly after the first paint'
     );
     assert.ok(

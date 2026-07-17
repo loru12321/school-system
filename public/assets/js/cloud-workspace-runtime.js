@@ -182,6 +182,7 @@
     // exam shortly after the first paint so comparison modules do not have to
     // queue a second cloud round trip on their first visit.
     const BACKGROUND_COHORT_HISTORY_DELAY_MS = 3000;
+    const BACKGROUND_COHORT_HISTORY_IDLE_TIMEOUT_MS = 3000;
     const scheduledBackgroundCohortHistory = new Set();
 
     function scheduleBackgroundCohortHistory(manager, cohortId) {
@@ -202,7 +203,7 @@
             });
         };
 
-        scheduleBackgroundCloudTask(run, BACKGROUND_COHORT_HISTORY_DELAY_MS, 12000);
+        scheduleBackgroundCloudTask(run, BACKGROUND_COHORT_HISTORY_DELAY_MS, BACKGROUND_COHORT_HISTORY_IDLE_TIMEOUT_MS);
     }
 
     async function selectSystemData(options = {}) {
