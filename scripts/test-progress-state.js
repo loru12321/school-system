@@ -66,6 +66,8 @@ function run() {
     assert.ok(progressAnalysisSource.includes("if (pending && typeof pending.then === 'function') return pending;"));
     assert.ok(progressAnalysisSource.includes('const task = resolveProgressBaselineData(options);'));
     assert.ok(progressAnalysisSource.includes('window.__PROGRESS_BASELINE_LOADING_PROMISE = trackedTask;'));
+    assert.ok(progressAnalysisSource.includes('const schoolRowsByKey = new Map();'));
+    assert.ok(progressAnalysisSource.includes('const row = schoolRowsByKey.get(key) || null;'));
 
     console.log('progress-state-runtime tests passed');
 }

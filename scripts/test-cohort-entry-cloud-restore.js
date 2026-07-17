@@ -258,9 +258,8 @@ assert.ok(
 );
 
 assert.ok(
-    (cloudWorkspaceSource.match(/fetchCohortExamsToLocal\(cohortId, \{ background: true, latestOnly: true, minCount: 1 \}\)/g) || []).length >= 3
-        && (appSource.match(/latestOnly: true,\s*minCount: 1,/g) || []).length >= 4,
-    'automatic startup hydration should keep only the current exam hot; history remains an on-demand module fetch'
+    (appSource.match(/CohortExamHydrationScheduler\.schedule\([\s\S]{0,260}?minCount: 2,/g) || []).length >= 4,
+    'background cohort hydration should warm the current and prior exam before comparison modules open'
 );
 
 assert.ok(

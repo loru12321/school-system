@@ -805,9 +805,15 @@ function buildProgressMultiPeriodRows(config) {
         if (!schoolRows.length) {
             throw new Error(`在「${examId}」中找不到「${config.school}」的可对比学生数据`);
         }
+        const schoolRowsByKey = new Map();
+        schoolRows.forEach((row) => {
+            const key = cleanName(row?.name);
+            // Preserve first-row behavior for duplicate normalized names.
+            if (key && !schoolRowsByKey.has(key)) schoolRowsByKey.set(key, row);
+        });
         const rankTownMap = buildCompetitionRankMap(townshipRows, row => cleanName(row?.name), totalOf);
         const rankSchoolMap = buildCompetitionRankMap(schoolRows, row => cleanName(row?.name), totalOf);
-        return { examId, allRows, townshipRows, schoolRows, rankTownMap, rankSchoolMap };
+        return { examId, allRows, townshipRows, schoolRows, schoolRowsByKey, rankTownMap, rankSchoolMap };
     });
 
     const studentKeys = new Set();
@@ -821,8 +827,8 @@ function buildProgressMultiPeriodRows(config) {
     const rows = Array.from(studentKeys).map((key) => {
         let displayName = key;
         let displayClass = '';
-        const periods = examDataList.map(({ examId, schoolRows, rankTownMap, rankSchoolMap }) => {
-            const row = schoolRows.find(item => cleanName(item?.name) === key) || null;
+        const periods = examDataList.map(({ examId, schoolRowsByKey, rankTownMap, rankSchoolMap }) => {
+            const row = schoolRowsByKey.get(key) || null;
             if (row) {
                 displayName = row.name || displayName;
                 displayClass = row.class || displayClass;

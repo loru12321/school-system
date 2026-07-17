@@ -2077,17 +2077,14 @@ async function switchCohort(cohortId, options = {}) {
 
         cohortDbRuntime.renderExamList();
 
-        // Defer the background history top-up off the entry-critical window so
-        // it stops competing with the processData that applyExamToWorkspace just
-        // scheduled. background:true routes it through the coalescing scheduler
-        // (same as the exam-archive restore path). Pure task timing — the exams
-        // pulled and how they are computed are unchanged.
+        // The current workspace is already visible. Warm the prior exam through
+        // the background scheduler so comparison modules have a local baseline
+        // without delaying the cohort entry path.
         CohortExamHydrationScheduler.schedule(cohortId, {
             delay: 1200,
             background: true,
             force: true,
-            latestOnly: true,
-            minCount: 1,
+            minCount: 2,
             warnPrefix: '[switchCohort] 云端历史考试拉取失败:'
         });
         scheduleCohortWorkspaceMetadataRefresh(cohortKey, cohortId);
@@ -2137,8 +2134,7 @@ async function switchCohort(cohortId, options = {}) {
                         delay: 1200,
                         background: true,
                         force: true,
-                        latestOnly: true,
-                        minCount: 1,
+                        minCount: 2,
                         warnPrefix: '[switchCohort] 后台历史考试补全失败:'
                     });
                     scheduleCohortWorkspaceMetadataRefresh(cohortKey, cohortId);
@@ -2596,8 +2592,7 @@ window.addEventListener('load', async () => {
                 CohortExamHydrationScheduler.schedule(CURRENT_COHORT_ID || readWorkspaceCohortId(), {
                     delay: 700,
                     background: true,
-                    latestOnly: true,
-                    minCount: 1,
+                    minCount: 2,
                     warnPrefix: '[Init] 云端历史考试拉取失败:'
                 });
             }, "正在加载数据...");
@@ -2625,8 +2620,7 @@ window.addEventListener('load', async () => {
     CohortExamHydrationScheduler.schedule(CURRENT_COHORT_ID || readWorkspaceCohortId(), {
         delay: 1200,
         background: true,
-        latestOnly: true,
-        minCount: 1,
+        minCount: 2,
         warnPrefix: '[Startup] fetch cohort exams failed:'
     });
 });
