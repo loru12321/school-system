@@ -566,19 +566,28 @@ async function resolveProgressBaselineData(options = {}) {
         return [];
     }
 
-    const baselineChanged = String(window.__PROGRESS_BASELINE_ACTIVE_ID || '') !== String(baselineId || '');
+    const baselineKey = `${baselineId}:${baselineData.length}:${window.__RAW_DATA_VERSION || 0}`;
+    const baselineChanged = String(window.__PROGRESS_BASELINE_ACTIVE_KEY || '') !== baselineKey;
     if (baselineChanged) syncLocalProgressState({ progressCache: [], progressCacheFull: [], lastVaData: [] });
     window.__PROGRESS_BASELINE_ACTIVE_ID = baselineId || '';
+    window.__PROGRESS_BASELINE_ACTIVE_KEY = baselineKey;
     PREV_DATA = baselineData;
     window.PREV_DATA = baselineData;
     setProgressBaselineStatus(`✅ 已自动加载上次考试数据（${baselineData.length} 条）${baselineId ? `：${baselineId}` : ''}`, 'success');
 
+    const cacheReady = readProgressCacheFullState().length > 0;
+    if (!baselineChanged && cacheReady) return baselineData;
+
     try {
-        if ((readProgressCacheState().length === 0) && typeof performSilentMatching === 'function') {
-            performSilentMatching();
+        const shouldRenderAnalysis = rerenderAnalysis
+            && !!progressSchoolSel?.value
+            && typeof renderProgressAnalysis === 'function';
+        if (shouldRenderAnalysis) {
+            renderProgressAnalysis();
+        } else {
+            if (!cacheReady && typeof performSilentMatching === 'function') performSilentMatching();
+            if (rerenderReport && typeof renderValueAddedReport === 'function') renderValueAddedReport(true);
         }
-        if (rerenderReport && typeof renderValueAddedReport === 'function') renderValueAddedReport(true);
-        if (rerenderAnalysis && progressSchoolSel?.value && typeof renderProgressAnalysis === 'function') renderProgressAnalysis();
     } catch (renderErr) {
         console.warn('[progress] baseline loaded but rerender failed:', renderErr);
         setProgressBaselineStatus(`⚠️ 已加载上次考试数据（${baselineData.length} 条），但页面刷新失败，请稍后重试`, 'error');
@@ -1072,8 +1081,6 @@ function showMappingModal(cases) {
     const rows = (cases || []).map((item) => {
         const curr = item.curr;
         let optionsHtml = `<option value="">-- 请选择对应的上次记录 --</option>`;
-        // 默认选项：如果只有一个候选人，为了方便，默认选中它？还是强制让用户选？
-        // 建议：强制选，或者提供一个"不匹配(视为新生)"选项
         (item.candidates || []).forEach(cand => {
             const safeClass = progressEscapeHtml(cand.class);
             const safeRank = progressEscapeHtml(cand.rank);
@@ -1100,7 +1107,6 @@ function showMappingModal(cases) {
     modal.style.display = 'flex';
 }
 
-// 3. 用户点击确认后
 function confirmMappingsAndRun() {
     const rows = document.querySelectorAll('#mappingModal tbody tr');
     let allSelected = true;
@@ -1112,12 +1118,11 @@ function confirmMappingsAndRun() {
             allSelected = false;
             select.style.border = "2px solid red";
         } else {
-            // 保存映射关系
             const s = row.dataset.school;
             const c = row.dataset.class;
             const n = row.dataset.name;
-            const key = `${s}_${c}_${n}`; // 唯一键
-            MANUAL_ID_MAPPINGS[key] = val; // value 是上次的班级名，或者 __IGNORE__
+            const key = `${s}_${c}_${n}`;
+            MANUAL_ID_MAPPINGS[key] = val;
         }
     });
 
@@ -1125,28 +1130,23 @@ function confirmMappingsAndRun() {
 
     syncLocalProgressState({ manualIdMappings: MANUAL_ID_MAPPINGS });
     document.getElementById('mappingModal').style.display = 'none';
-    performProgressCalculation(); // 继续计算
+    performProgressCalculation();
 }
 
 function switchValueAddedView(mode, btn) {
     VA_VIEW_MODE = String(mode || '').trim() === 'class' ? 'class' : 'school';
     syncLocalProgressState({ vaViewMode: VA_VIEW_MODE });
 
-    // 1. 切换按钮自身的激活状态 (视觉反馈)
-    // 找到同一组的所有按钮 (它们都在同一个父容器里)
     const siblings = btn.parentNode.querySelectorAll('.btn');
     siblings.forEach(b => {
         b.classList.remove('active');
-        // 恢复默认样式 (白底灰字)
         b.style.backgroundColor = 'white';
         b.style.color = '#64748b';
     });
 
-    // 设置当前按钮为激活样式 (蓝底白字)
     btn.classList.add('active');
     btn.style.backgroundColor = '#e0f2fe';
     btn.style.color = '#0369a1';
-    // 重新渲染表格
     renderValueAddedReport(true);
 }
 
@@ -1161,7 +1161,6 @@ function exportValueAddedExcel() {
         data.push([d.name, d.count, d.entryAvg.toFixed(2), d.exitAvg.toFixed(2), d.valueAdded.toFixed(2), d.rank]);
     });
 
-    // 列宽设置
     const ws = XLSX.utils.aoa_to_sheet(data);
     ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }];
 
@@ -1169,7 +1168,6 @@ function exportValueAddedExcel() {
     XLSX.writeFile(wb, `增值性评价报表_${VA_VIEW_MODE === 'school' ? '学校' : '班级'}.xlsx`);
 }
 
-// Progress analysis override: use a simplified "previous school rank vs current school rank" model.
 function getProgressCleanName(name) {
     return String(name || '')
         .replace(/\s+/g, '')
