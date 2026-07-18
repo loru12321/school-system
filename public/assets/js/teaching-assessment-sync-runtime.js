@@ -2058,6 +2058,15 @@
                 console.warn('[assessment-sync] load teacher-analysis failed:', error);
             }
         }
+        if (root.CloudManager && typeof root.CloudManager.loadTeachers === 'function') {
+            try {
+                // Cohort switches hydrate scores before their term-specific roster. Wait
+                // for that roster so a background sync never mistakes it for no teachers.
+                await root.CloudManager.loadTeachers({ background: true, toast: false });
+            } catch (error) {
+                console.warn('[assessment-sync] load teacher assignments failed:', error);
+            }
+        }
         const rows = getCurrentRows();
         const teachers = groupAssignmentsByTeacher(readTeacherAssignments());
         const skipped = [];

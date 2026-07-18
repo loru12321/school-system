@@ -103,6 +103,7 @@ assert.ok(
 );
 assert.ok(source.includes('tmRunAutomaticAssessmentSync'), 'assessment sync should expose an automatic background sync runner');
 assert.ok(source.includes('tmBuildTeacherAssessmentSyncAudit'), 'assessment sync should expose a reconciliation audit builder');
+assert.ok(source.includes("await root.CloudManager.loadTeachers({ background: true, toast: false })"), 'assessment sync should wait for the active cohort teacher roster before calculating');
 assert.ok(source.includes('AssessmentRosterCore') && source.includes('getAssessmentRosterPanelState'), 'assessment sync should expose a core 95% roster API without coupling it to the UI renderer');
 assert.ok(indexHtml.includes('tab-data-assessment-roster'), 'data manager should expose a dedicated assessment roster tab');
 assert.ok(dataManagerRuntimeSource.includes("tab === 'assessment-roster'") && runtimeLoaderSource.includes("'assessment-roster'"), 'assessment roster tab should lazy-load its dedicated renderer');
