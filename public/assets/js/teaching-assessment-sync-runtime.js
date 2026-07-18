@@ -290,6 +290,13 @@
     }
 
     async function persistAssessmentRosters(sourceLabel) {
+        // The cloud snapshot reads WorkspaceState, not just the mutable CohortDB
+        // reference. Publish the roster mutation before saving it.
+        try {
+            root.syncRuntimeStateToWindow?.();
+        } catch (error) {
+            console.warn('[assessment-sync] publish roster state failed:', error);
+        }
         if (typeof root.saveCloudData !== 'function') return false;
         return root.saveCloudData({ mode: 'workspace', forceUpload: true, sourceLabel });
     }
