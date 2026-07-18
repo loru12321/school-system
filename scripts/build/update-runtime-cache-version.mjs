@@ -24,18 +24,22 @@ function writeIfChanged(filePath, content) {
   return true;
 }
 
+function comparePaths(left, right) {
+  return left < right ? -1 : (left > right ? 1 : 0);
+}
+
 function listJsFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isFile()
       && entry.name.endsWith('.js')
       && !/^(boot-runtime|service-worker-runtime)-runtime-[0-9a-f]{12}\.js$/.test(entry.name))
     .map((entry) => path.join(dir, entry.name))
-    .sort((left, right) => left.localeCompare(right));
+    .sort(comparePaths);
 }
 
 function normalizeVersionTokens(filePath, content) {
   const relative = path.relative(root, filePath).replace(/\\/g, '/');
-  let normalized = String(content || '');
+  let normalized = String(content || '').replace(/\r\n?/g, '\n');
   if (relative === 'src/index.html') {
     normalized = normalized
       .replace(/\.\/assets\/js\/boot-runtime-runtime-[0-9a-f]{12}\.js/g, './assets/js/boot-runtime.js')
@@ -57,7 +61,7 @@ function normalizeVersionTokens(filePath, content) {
 
 function buildRuntimeVersion() {
   const hash = crypto.createHash('sha256');
-  for (const filePath of [...filesToHash, ...listJsFiles(publicJsDir)].sort((left, right) => left.localeCompare(right))) {
+  for (const filePath of [...filesToHash, ...listJsFiles(publicJsDir)].sort(comparePaths)) {
     const relative = path.relative(root, filePath).replace(/\\/g, '/');
     hash.update(`\n--- ${relative} ---\n`);
     hash.update(normalizeVersionTokens(filePath, read(filePath)));

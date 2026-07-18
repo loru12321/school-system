@@ -38,6 +38,8 @@ assert.ok(serviceWorkerRuntime.includes(`const SERVICE_WORKER_PATH = './sw-${ser
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(srcIndex), 'HTML should not query-version any runtime JS entry');
 assert.ok(packageJson.scripts['build:pre'] && packageJson.scripts['build:pre'].includes('scripts/build/update-runtime-cache-version.mjs'), 'build:pre should update runtime versions before bundling');
 assert.ok(buildScript.includes('normalizeVersionTokens'), 'version generator should normalize existing version tokens before hashing');
+assert.ok(buildScript.includes("replace(/\\r\\n?/g, '\\n')"), 'version generator should normalize line endings before hashing');
+assert.ok(buildScript.includes('function comparePaths(left, right)') && buildScript.includes('.sort(comparePaths)'), 'version generator should use a locale-independent file order');
 assert.ok(buildScript.includes("public', 'assets', 'js'"), 'version generator should hash public runtime JS sources');
 
 console.log(JSON.stringify({ ok: true, runtimeVersion: serviceWorkerVersion }, null, 2));
