@@ -305,7 +305,9 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
   const items = rawItems.map(normalizeAssessmentScoreItem).filter(Boolean);
   if (!items.length) return badRequest(request, 'no valid score items');
 
-  const overwriteManual = payload?.overwrite_manual === true;
+  // Automated eligible score refreshes are authoritative. Manual operator runs
+  // remain opt-in so the existing checkbox still controls their overwrite scope.
+  const overwriteManual = payload?.automatic === true || payload?.overwrite_manual === true;
   const dryRun = payload?.dry_run === true;
   const [teachers, existingScores] = await Promise.all([
     fetchAssessmentTeachersForYear(env, academicYear),
@@ -411,6 +413,7 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
     written: dryRun ? 0 : rows.length,
     would_write: rows.length,
     matched_teachers: matchedTeacherIds.size,
+    overwrite_manual: overwriteManual,
     protected_manual_count: protectedManualCount,
     changed_count: differences.filter((item) => item.changed).length,
     differences: differences.slice(0, 500),

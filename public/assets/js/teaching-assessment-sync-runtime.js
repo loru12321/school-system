@@ -183,7 +183,7 @@
         9: ['政治']
     };
     const GRADE8_SECOND_MOCK_ASSESSMENT_SUBJECTS = new Set(['历史', '地理', '生物']);
-    const ASSESSMENT_CALCULATION_VERSION = 'teacher-personal-v2.2026-07';
+    const ASSESSMENT_CALCULATION_VERSION = 'teacher-personal-v3.2026-07';
     const ASSESSMENT_ROSTER_INCLUDED_STATUSES = new Set(['active', 'transfer_in', 'leave', 'dropout']);
     const ASSESSMENT_ROSTER_EXCLUDED_STATUSES = new Set(['transfer_out', 'not_enrolled']);
     const NON_GRAD_TOP_SUBJECTS = {
@@ -2203,6 +2203,40 @@
         };
     }
 
+    function getAssessmentSyncItemDigest(items) {
+        const rows = (items || []).map((item) => [
+            text(item.teacher_name),
+            normalizeGrade(item.grade),
+            normalizeSubject(item.subject),
+            (item.classes || []).map(text).filter(Boolean).sort().join(','),
+            text(item.project_id),
+            Number(item.score || 0).toFixed(3),
+            text(item.source_exam_id),
+            text(item.source_exam_date),
+            text(item.makeup_exam_id),
+            text(item.makeup_exam_date),
+            (item.makeup_subjects || []).map(normalizeSubject).filter(Boolean).sort().join(','),
+            item.second_mock_source === true ? 'second-mock' : '',
+            (item.second_mock_subjects || []).map(normalizeSubject).filter(Boolean).sort().join(','),
+            text(item.calculation_version),
+            text(item.threshold_snapshot),
+            text(item.roster_summary),
+            Number(item.roster_zero_fill || 0),
+            text(item.cross_grade_mode),
+            Number(item.cross_grade_rank_difference || 0),
+            text(item.note)
+        ].join('\u001f')).sort();
+        const source = rows.join('\u001e');
+        let primary = 2166136261;
+        let secondary = 5381;
+        for (let index = 0; index < source.length; index += 1) {
+            const code = source.charCodeAt(index);
+            primary = Math.imul(primary ^ code, 16777619);
+            secondary = ((secondary << 5) + secondary) ^ code;
+        }
+        return `${rows.length}:${(primary >>> 0).toString(36)}:${(secondary >>> 0).toString(36)}`;
+    }
+
     function getAutomaticSyncSignature(payload) {
         const context = getCurrentExamContext();
         const rows = getCurrentRows();
@@ -2236,7 +2270,8 @@
             `hs:${highSchoolLine || 0}`,
             rows.length,
             teachers.length,
-            Object.keys(counts).sort().map((key) => `${key}:${counts[key]}`).join(',')
+            Object.keys(counts).sort().map((key) => `${key}:${counts[key]}`).join(','),
+            `items:${getAssessmentSyncItemDigest(payload.items)}`
         ].join('|');
     }
 
@@ -2278,7 +2313,7 @@
             }
             const result = await root.EdgeGateway.syncAssessmentScores({
                 academic_year: payload.academic_year,
-                overwrite_manual: false,
+                overwrite_manual: true,
                 automatic: true,
                 items: payload.items
             });
@@ -2714,7 +2749,7 @@
         panel.innerHTML = `
             <div class="tm-assessment-sync-copy">
                 <div class="tm-next-title"><i class="ti ti-cloud-upload"></i> 同步到教师教学质量考核系统</div>
-                <div class="tm-next-desc"><strong>位置：教学管理首页。</strong>从当前联考成绩和教学管理任课表生成教师个人考核分值。缺成绩、缺任课表或目标系统未匹配到教师时不会写入，仍由考核组长手动填写。</div>
+                <div class="tm-next-desc"><strong>位置：教学管理首页。</strong>从当前联考成绩和教学管理任课表生成教师个人考核分值。合规的新计算结果会覆盖考核系统中同一教师、同一项目的旧分；缺成绩、缺任课表或目标系统未匹配到教师时不会写入。</div>
                 <div class="tm-assessment-sync-note is-soft">班级考核项目当前只做公式审计预览，不写入考核系统；6-9年级缺少对应7月成绩时不会生成真实同步分。</div>
                 <div class="tm-next-meta">
                     <span class="status-chip info">两率一分</span>

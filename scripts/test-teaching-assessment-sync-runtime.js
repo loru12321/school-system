@@ -116,6 +116,9 @@ assert.ok(source.includes('fetchAssessmentSyncSettings'), 'assessment sync shoul
 assert.ok(source.includes('findGrade6GrowthBaselineExam'), 'assessment sync should find the confirmed grade 6 growth baseline exam');
 assert.ok(source.includes('buildStudentGrowthContext'), 'assessment sync should calculate student-remapped excellent-rate growth context');
 assert.ok(source.includes('growth_baseline_exam_id'), 'automatic sync signature should include the selected growth baseline exam');
+assert.ok(source.includes('getAssessmentSyncItemDigest'), 'automatic sync signature should include a deterministic item digest');
+assert.ok(source.includes('`items:${getAssessmentSyncItemDigest(payload.items)}`'), 'automatic sync should rerun when an eligible item value changes');
+assert.ok(source.includes('overwrite_manual: true'), 'automatic sync should replace an existing assessment score with the new calculation');
 assert.ok(source.includes('优秀率增幅'), 'two-rates-one-score notes should expose excellent-rate growth scoring');
 assert.ok(source.includes('tm-assessment-score-warning'), 'assessment sync should show warnings for ignored unmatched growth students');
 assert.ok(teachingCss.includes('min-width: 1180px'), 'assessment sync table should keep a wide scrollable layout');
