@@ -1926,18 +1926,44 @@ async function ensureCohortDbForSwitch(cohortId) {
     }
 }
 
+function beginCohortSwitchGuard(cohortId) {
+    const normalizedCohortId = normalizeCompareCohortId(cohortId);
+    const token = Number(window.__COHORT_SWITCH_REQUEST_TOKEN__ || 0) + 1;
+    const guard = { token, cohortId: normalizedCohortId };
+    window.__COHORT_SWITCH_REQUEST_TOKEN__ = token;
+    window.__ACTIVE_COHORT_SWITCH_GUARD__ = guard;
+    return guard;
+}
+
+function isCurrentCohortSwitch(guard) {
+    const active = window.__ACTIVE_COHORT_SWITCH_GUARD__;
+    return !!guard
+        && !!active
+        && Number(active.token) === Number(guard.token)
+        && String(active.cohortId || '') === String(guard.cohortId || '');
+}
+
+function completeCohortSwitch(guard) {
+    if (!isCurrentCohortSwitch(guard)) return false;
+    UI.loading(false);
+    window.__COHORT_SWITCH_IN_PROGRESS__ = false;
+    return true;
+}
+
 async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
-    lockRuntimeCohortId(cohortId);
+    const targetCohortId = normalizeCompareCohortId(cohortId);
     const cohortKey = getAppCohortKey(cohortId);
     const current = readWorkspaceProjectKey() || '';
     const currentExamId = CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '';
     const hasReadyData = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
     const currentExamCohortId = normalizeCompareCohortId(currentExamId);
-    const targetCohortId = normalizeCompareCohortId(cohortId);
     const readyDataMatchesTarget = !!targetCohortId && !!currentExamCohortId && currentExamCohortId === targetCohortId;
     if (current === cohortKey && currentExamId && hasReadyData && readyDataMatchesTarget) {
+        const readyGuard = beginCohortSwitchGuard(targetCohortId || cohortId);
+        lockRuntimeCohortId(cohortId);
         tryAutoEnterReadyCohortWorkspace();
+        completeCohortSwitch(readyGuard);
         return true;
     }
 
@@ -1947,6 +1973,9 @@ async function switchCohort(cohortId, options = {}) {
         return false;
     }
 
+    const switchGuard = beginCohortSwitchGuard(targetCohortId || cohortId);
+    const isCurrentSwitch = () => isCurrentCohortSwitch(switchGuard);
+    lockRuntimeCohortId(cohortId);
     window.__COHORT_SWITCH_IN_PROGRESS__ = true;
     setCohortSyncStatus('syncing', { cohortId, detail: `正在同步 ${cohortKey}` });
     if (window.__STARTUP_CLOUD_HYDRATION_TIMER__) {
@@ -1955,9 +1984,9 @@ async function switchCohort(cohortId, options = {}) {
     }
     UI.loading(true, "正在从云端拉取 [" + cohortKey + "] 的数据...");
     const cohortDbRuntime = await ensureCohortDbForSwitch(cohortId);
+    if (!isCurrentSwitch()) return false;
     if (!cohortDbRuntime) {
-        UI.loading(false);
-        window.__COHORT_SWITCH_IN_PROGRESS__ = false;
+        completeCohortSwitch(switchGuard);
         return false;
     }
 
@@ -1984,6 +2013,7 @@ async function switchCohort(cohortId, options = {}) {
     // restored below, avoiding a login-blocking full workspace request.
     const __dbGetStartedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     const cachedData = options.preloadedData || await DB.get(cohortKey, { localOnly: true });
+    if (!isCurrentSwitch()) return false;
     const cachedPayloadCohortId = getWorkspacePayloadCohortId(cachedData);
     // A login-selected cohort must never enter through an unscoped legacy cache.
     // It will restore the latest matching exam shard from cloud instead.
@@ -2111,6 +2141,7 @@ async function switchCohort(cohortId, options = {}) {
                 refreshSelectors: false
             })
                 .then((syncRes) => {
+                    if (!isCurrentSwitch()) return false;
                     if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId)) return false;
                 const restoredFromExamArchive = syncRes && syncRes.success && tryAutoRestoreWorkspaceExam({ cohortId });
                 const restoredExamId = restoredFromExamArchive
@@ -2156,7 +2187,8 @@ async function switchCohort(cohortId, options = {}) {
                     return false;
                 })
                 .catch((e) => {
-                console.warn('[switchCohort] cloud exam snapshot restore failed:', e);
+                    if (!isCurrentSwitch()) return false;
+                    console.warn('[switchCohort] cloud exam snapshot restore failed:', e);
                     setCohortSyncStatus('error', { cohortId, detail: String(e?.message || '云端考试快照恢复失败') });
                     return false;
                 });
@@ -2167,19 +2199,19 @@ async function switchCohort(cohortId, options = {}) {
                 void hydrateFromExamArchive();
             } else {
                 const restored = await hydrateFromExamArchive();
+                if (!isCurrentSwitch()) return false;
                 if (restored) {
-                    UI.loading(false);
-                    window.__COHORT_SWITCH_IN_PROGRESS__ = false;
+                    completeCohortSwitch(switchGuard);
                     return true;
                 }
             }
         }
+        if (!isCurrentSwitch()) return false;
         if (options.requireCloudData === true) {
             setManualCohortSelectionGate(true);
             setCohortSyncStatus('error', { cohortId, detail: '未能从云端恢复该届别数据' });
             UI.toast(`未能从云端恢复 [${cohortKey}] 数据，请稍后重试同步`, 'error');
-            UI.loading(false);
-            window.__COHORT_SWITCH_IN_PROGRESS__ = false;
+            completeCohortSwitch(switchGuard);
             return false;
         }
         clearDataRuntimeState();
@@ -2215,14 +2247,14 @@ async function switchCohort(cohortId, options = {}) {
         updateStatusPanel();
     }
 
+    if (!isCurrentSwitch()) return false;
     if (options.fastEnter !== true && Array.isArray(RAW_DATA) && RAW_DATA.length > 0) {
         setCohortSyncStatus('synced', { cohortId });
     } else if (options.fastEnter === true) {
         setCohortSyncStatus('local', { cohortId, detail: '已使用本地数据进入，云端继续在后台同步' });
     }
 
-    UI.loading(false);
-    window.__COHORT_SWITCH_IN_PROGRESS__ = false;
+    completeCohortSwitch(switchGuard);
     return true;
 }
 

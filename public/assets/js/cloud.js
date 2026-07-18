@@ -1631,7 +1631,12 @@
             const showToast = opts.toast === false ? false : !background;
             const forceRefresh = opts.force === true || opts.refresh === true;
             const requestedSchool = String(opts.schoolName || opts.scopeSchool || '').trim();
+            const requestedCohortId = getCurrentCohortId();
+            const isCurrentTeacherLoad = () => (
+                !requestedCohortId || getCurrentCohortId() === requestedCohortId
+            );
             if (!(await this.ensureClientReady())) return false;
+            if (!isCurrentTeacherLoad()) return false;
 
             const requestKey = [
                 exactKey || (requestedSchool ? this.getTeacherKey({ schoolName: requestedSchool }) : this.getTeacherKey()),
@@ -1697,6 +1702,7 @@
                         if (error) throw error;
                         metaRow = data || null;
                     }
+                    if (!isCurrentTeacherLoad()) return false;
 
                     if (!metaRow && !exactKey) {
                         const scopedKeyPrefix = requestedSchool
@@ -1718,6 +1724,7 @@
                         const [{ data: scopedRows, error: scopedError }, { data: fallbackRows, error: fallbackError }] = await Promise.all([scopedQuery, fallbackQuery]);
                         if (scopedError) throw scopedError;
                         if (fallbackError) throw fallbackError;
+                        if (!isCurrentTeacherLoad()) return false;
                         const rows = (scopedRows && scopedRows.length) ? scopedRows : (fallbackRows || []);
 
                         // Extract year+grade from the primary desired terms to find compatible keys
@@ -1787,6 +1794,7 @@
                             ? filterTeacherPayloadBySchool(localEntry.map, localEntry.schoolMap, requestedSchool)
                             : { map: localEntry.map, schoolMap: localEntry.schoolMap, matched: true, scoped: false };
                         if (!requestedSchool || localPayload.matched || !localPayload.scoped) {
+                            if (!isCurrentTeacherLoad()) return false;
                             const localApplyTermId = applyTermId || localEntry.key || keyTermId;
                             applyLoadedTeacherPayload(
                                 localPayload.map,
@@ -1820,6 +1828,7 @@
                         if (error) throw error;
                         row = data || null;
                     }
+                    if (!isCurrentTeacherLoad()) return false;
 
                     if (!row || !row.content) {
                         if (showToast) safeToast('未找到可用任课表', 'warning');
@@ -1838,6 +1847,7 @@
                         setCloudStatus('success', '暂无本校任课');
                         return false;
                     }
+                    if (!isCurrentTeacherLoad()) return false;
                     applyLoadedTeacherPayload(
                         payload.map,
                         payload.schoolMap,
@@ -1851,13 +1861,14 @@
                     setCloudStatus('success', '任课已拉取');
                     return true;
                 } catch (e) {
+                    if (!isCurrentTeacherLoad()) return false;
                     const log = background || !showToast ? console.warn : console.error;
                     log('Teacher load error:', e);
                     if (showToast) safeToast('任课表加载失败', 'error');
                     setCloudStatus('error', '任课拉取失败');
                     return false;
                 } finally {
-                    if (showBlocking) safeLoading(false);
+                    if (showBlocking && isCurrentTeacherLoad()) safeLoading(false);
                 }
             })().then((result) => {
                 if (result === true) {

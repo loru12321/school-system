@@ -196,8 +196,8 @@ if (!historySource || historySource.includes('computeExamDataFingerprint(examDat
 }
 
 [
-    "if (step.label === 'report-render') preloadAppModuleList(modules, `hotspot-runtime-${step.label}`);",
-    'else prefetchAppModuleList(modules, `hotspot-runtime-${step.label}`);'
+    'prefetchAppModuleList(modules, `hotspot-runtime-${step.label}`);',
+    'Report runtimes are demand-loaded.'
 ].forEach((token) => assertContains(runtimeLoader, token, runtimeLoaderFile));
 
 [

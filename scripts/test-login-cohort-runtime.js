@@ -8,6 +8,7 @@ const runtimeSource = fs.readFileSync(path.join(root, 'public/assets/js/login-en
 const bootSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
 const authLoginSource = fs.readFileSync(path.join(root, 'public/assets/js/auth-login-runtime.js'), 'utf8');
 const cohortMetaSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-exam-meta-runtime.js'), 'utf8');
+const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
 const htmlSource = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 
 function createFixedDate(isoDate) {
@@ -166,6 +167,33 @@ assert.ok(
         && authLoginSource.includes("const accountDisplayName = String(")
         && authLoginSource.includes('title="退出登录 (${accountDisplayName})"'),
     'login and account actions must never render an undefined user display name'
+);
+
+const guardStart = appSource.indexOf('function beginCohortSwitchGuard(');
+const guardEnd = appSource.indexOf('async function switchCohort(', guardStart);
+assert.ok(guardStart >= 0 && guardEnd > guardStart, 'cohort switch request guard helpers should be present');
+const guardContext = {
+    window: {},
+    Number,
+    String,
+    normalizeCompareCohortId(value) {
+        return String(value || '').trim();
+    }
+};
+vm.runInNewContext(appSource.slice(guardStart, guardEnd), guardContext, { filename: 'cohort-switch-guard.js' });
+const firstSwitch = guardContext.beginCohortSwitchGuard('2022');
+const secondSwitch = guardContext.beginCohortSwitchGuard('2023');
+assert.strictEqual(guardContext.isCurrentCohortSwitch(firstSwitch), false,
+    'a late result from an earlier cohort switch must be rejected');
+assert.strictEqual(guardContext.isCurrentCohortSwitch(secondSwitch), true,
+    'only the latest requested cohort switch may update workspace state');
+assert.ok(
+    /const readyGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*completeCohortSwitch\(readyGuard\);[\s\S]*if \(!options\.skipConfirm && !confirm[\s\S]*const switchGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*const isCurrentSwitch = \(\) => isCurrentCohortSwitch\(switchGuard\);[\s\S]*const cohortDbRuntime = await ensureCohortDbForSwitch\(cohortId\);\s*if \(!isCurrentSwitch\(\)\) return false;[\s\S]*const cachedData = options\.preloadedData \|\| await DB\.get\(cohortKey, \{ localOnly: true \}\);\s*if \(!isCurrentSwitch\(\)\) return false;/.test(appSource),
+    'cohort switching must reject stale async runtime and cache responses before they mutate workspace state'
+);
+assert.ok(
+    /\.then\(\(syncRes\) => \{\s*if \(!isCurrentSwitch\(\)\) return false;[\s\S]*const restored = await hydrateFromExamArchive\(\);\s*if \(!isCurrentSwitch\(\)\) return false;/.test(appSource),
+    'cloud archive responses must not restore an older cohort after a newer selection'
 );
 
 console.log('login cohort runtime tests passed');

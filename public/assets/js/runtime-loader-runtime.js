@@ -1163,8 +1163,9 @@ prioritySteps.concat(deferredSteps).forEach((step) => {
 const skill = SYSTEM_RUNTIME_SKILLS[step.label];
 if (skill && Array.isArray(skill.entries)) {
 const modules = skill.entries.map((entry) => entry.src);
-if (step.label === 'report-render') preloadAppModuleList(modules, `hotspot-runtime-${step.label}`);
-else prefetchAppModuleList(modules, `hotspot-runtime-${step.label}`);
+// Report runtimes are demand-loaded. Keep this as a low-priority network hint
+// so login and current-cohort restoration retain the available bandwidth.
+prefetchAppModuleList(modules, `hotspot-runtime-${step.label}`);
 }
 });
 };

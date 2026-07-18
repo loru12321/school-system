@@ -64,6 +64,13 @@ assert.ok(
   'failed or empty teacher loads must not be cached because startup retries need to query the cloud again'
 );
 
+assert.ok(
+  /const requestedCohortId = getCurrentCohortId\(\);[\s\S]*const isCurrentTeacherLoad = \(\) => \([\s\S]*getCurrentCohortId\(\) === requestedCohortId[\s\S]*await this\.ensureClientReady\(\)[\s\S]*if \(!isCurrentTeacherLoad\(\)\) return false;/.test(cloud)
+    && (cloud.match(/if \(!isCurrentTeacherLoad\(\)\) return false;/g) || []).length >= 5
+    && cloud.includes('if (showBlocking && isCurrentTeacherLoad()) safeLoading(false);'),
+  'teacher cloud restores must ignore stale cohort responses and must not close a newer cohort loading state'
+);
+
 const starterStatus = read('public/assets/js/starter-status-runtime.js');
 assert.ok(
   starterStatus.match(/const teacherSynced = teacherCount > 0 && !!syncTeacher;/g)?.length >= 2
