@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-f8bff10e00ef';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-c5ff81572aa5';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -1630,7 +1630,10 @@ function syncBootLoginOverlayState(visible) {
     document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';
 
     if (overlay) {
-        overlay.style.display = shouldShowLogin ? 'flex' : 'none';
+        // Login skins may use an equally-specific display:flex!important rule.
+        // Keep the authenticated shell truly out of layout instead of merely
+        // transparent and non-interactive beneath that skin rule.
+        overlay.style.setProperty('display', shouldShowLogin ? 'flex' : 'none', 'important');
         overlay.style.visibility = shouldShowLogin ? 'visible' : 'hidden';
         overlay.style.opacity = shouldShowLogin ? '1' : '0';
         overlay.style.pointerEvents = shouldShowLogin ? 'auto' : 'none';

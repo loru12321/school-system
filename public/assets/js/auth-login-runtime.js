@@ -343,7 +343,10 @@ var Auth = {
             if (!shouldShowLogin && overlay.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
                 document.activeElement.blur();
             }
-            overlay.style.display = shouldShowLogin ? 'flex' : 'none';
+            // A skin can set display:flex!important on the same node. Match
+            // that priority so an authenticated page removes the overlay from
+            // layout rather than leaving a transparent flex container behind.
+            overlay.style.setProperty('display', shouldShowLogin ? 'flex' : 'none', 'important');
             overlay.style.visibility = shouldShowLogin ? 'visible' : 'hidden';
             overlay.style.opacity = shouldShowLogin ? '1' : '0';
             overlay.style.pointerEvents = shouldShowLogin ? 'auto' : 'none';
