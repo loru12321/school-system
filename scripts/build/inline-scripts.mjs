@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import { fileURLToPath } from 'url';
+import { writeFileWithRetry } from './file-write-retry.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -257,7 +258,7 @@ export function buildLtHtml(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
     return processed;
 }
 
-function main() {
+async function main() {
     try {
         if (!fs.existsSync(htmlPath)) {
             console.error('dist/index.html not found!');
@@ -266,13 +267,13 @@ function main() {
 
         const html = fs.readFileSync(htmlPath, 'utf-8');
         const output = buildLtHtml(html, { projectRoot: DEFAULT_PROJECT_ROOT });
-        fs.writeFileSync(outPath, output, 'utf-8');
+        await writeFileWithRetry(outPath, output, 'utf-8');
         const brotliOutput = zlib.brotliCompressSync(Buffer.from(output, 'utf8'), {
             params: {
                 [zlib.constants.BROTLI_PARAM_QUALITY]: 11
             }
         });
-        fs.writeFileSync(brotliOutPath, brotliOutput);
+        await writeFileWithRetry(brotliOutPath, brotliOutput);
         console.log('Successfully generated lt.html with inlined local scripts.');
         console.log(`Generated lt.html.br (${brotliOutput.length} bytes).`);
     } catch (err) {

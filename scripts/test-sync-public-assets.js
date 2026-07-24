@@ -90,7 +90,7 @@ var DEFERRED_APP_MODULES = ['support-metrics-runtime.js'].map(bootJs);
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), 'ico', 'utf8');
   fs.writeFileSync(path.join(targetJsDir, 'stale.js'), 'window.stale = true;', 'utf8');
 
-  syncReferencedAssets({
+  await syncReferencedAssets({
     sourceJsDir,
     targetJsDir,
     indexHtmlPath: path.join(srcDir, 'index.html'),

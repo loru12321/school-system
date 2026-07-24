@@ -5,7 +5,8 @@ import { signLocalSession } from './worker-crypto.js';
 import {
   jsonResponse, badRequest,
   buildSessionPayload, ensureLoginSessionsTable,
-  resolveSession, performGatewayLogin
+  resolveSession, performGatewayLogin,
+  buildSessionCookie, clearSessionCookie
 } from './worker-auth.js';
 import {
   handleAccountSearch, handleLoginSessionList,
@@ -250,6 +251,9 @@ async function routeGatewayAction(request, env, body, ctx) {
   const payload = body?.payload && typeof body.payload === 'object' ? body.payload : {};
   if (!action) return badRequest(request, 'action is required');
   if (action === 'login') return performGatewayLogin(request, env, body, ctx);
+  if (action === 'session.logout') {
+    return jsonResponse(200, { ok: true }, request, { 'Set-Cookie': clearSessionCookie() });
+  }
   const resolved = await resolveSession(request, env);
   if (resolved.error) return resolved.error;
   const session = resolved.session;
@@ -262,7 +266,7 @@ async function routeGatewayAction(request, env, body, ctx) {
         .run()
         .catch((error) => console.error('[gateway] login session heartbeat failed:', error));
     }
-    return jsonResponse(200, { ok: true, session, token }, request);
+    return jsonResponse(200, { ok: true, session, token }, request, { 'Set-Cookie': buildSessionCookie(token) });
   }
   switch (action) {
     case 'alias.list': return handleAliasList(request, db, session, payload);

@@ -110,6 +110,7 @@ async function run() {
     const now = Math.floor(Date.now() / 1000);
     const adminToken = await signLocalSession(env, { username: 'admin', roles: ['admin'], exp: now + 3600 });
     const directorToken = await signLocalSession(env, { username: 'director', roles: ['director'], school: 'A校', exp: now + 3600 });
+    const gradeDirectorToken = await signLocalSession(env, { username: 'grade-director', roles: ['grade_director'], school: 'A校', exp: now + 3600 });
     const teacherToken = await signLocalSession(env, { username: 'teacher', roles: ['teacher'], school: 'A校', exp: now + 3600 });
     const expiredToken = await signLocalSession(env, { username: 'old', roles: ['admin'], exp: now - 1 });
     const baseUrl = 'https://schoolsystem.com.cn/sb/rest/v1/system_data';
@@ -132,8 +133,15 @@ async function run() {
     assert.strictEqual(response.status, 401, 'expired app session should be rejected');
 
     response = await handleSystemDataProxy(makeRequest('GET', baseUrl, directorToken, undefined), env, new URL(baseUrl));
-    assert.strictEqual(response.status, 200, 'authenticated GET should read system_data');
-    assert.deepStrictEqual(await json(response), [], 'Phase 2 authenticates reads but does not school-filter packed cohort blobs');
+    assert.strictEqual(response.status, 200, 'director GET should retain the leadership analytics read path');
+    assert.deepStrictEqual(await json(response), [], 'leadership read should keep the existing packed archive response shape');
+
+    response = await handleSystemDataProxy(makeRequest('GET', baseUrl, gradeDirectorToken, undefined), env, new URL(baseUrl));
+    assert.strictEqual(response.status, 200, 'grade director GET should retain the scoped analytics read path');
+
+    response = await handleSystemDataProxy(makeRequest('GET', baseUrl, teacherToken, undefined), env, new URL(baseUrl));
+    assert.strictEqual(response.status, 403, 'teacher GET must not expose packed cohort archives');
+    assert.strictEqual((await json(response)).error, 'INSUFFICIENT_ROLE');
 
     response = await handleSystemDataProxy(
       makeRequest('POST', baseUrl, teacherToken, { key: 'cohort::2022', content: '{}' }),
@@ -149,14 +157,15 @@ async function run() {
       new URL(baseUrl)
     );
     assert.strictEqual(response.status, 403, 'non-admin generic/global writes should be blocked');
-    assert.strictEqual((await json(response)).error, 'OUT_OF_SCOPE');
+    assert.strictEqual((await json(response)).error, 'INSUFFICIENT_ROLE');
 
     response = await handleSystemDataProxy(
       makeRequest('POST', baseUrl, directorToken, { key: 'cohort::2022', content: '{"ok":true}' }),
       env,
       new URL(baseUrl)
     );
-    assert.strictEqual(response.status, 201, 'director cohort-scoped write should remain allowed');
+    assert.strictEqual(response.status, 403, 'director writes must not mutate packed cohort archives');
+    assert.strictEqual((await json(response)).error, 'INSUFFICIENT_ROLE');
 
     response = await handleSystemDataProxy(
       makeRequest('POST', baseUrl, adminToken, { key: 'GLOBAL_CONFIG', content: '{}' }),
@@ -179,21 +188,22 @@ async function run() {
       new URL(`${baseUrl}?key=eq.GLOBAL_CONFIG`)
     );
     assert.strictEqual(response.status, 403, 'director global delete should be blocked');
-    assert.strictEqual((await json(response)).error, 'OUT_OF_SCOPE');
+    assert.strictEqual((await json(response)).error, 'INSUFFICIENT_ROLE');
 
     response = await handleSystemDataProxy(
       makeRequest('DELETE', `${baseUrl}?key=eq.cohort::2022`, directorToken, undefined),
       env,
       new URL(`${baseUrl}?key=eq.cohort::2022`)
     );
-    assert.strictEqual(response.status, 200, 'director cohort delete should remain allowed');
+    assert.strictEqual(response.status, 403, 'director deletes must not mutate packed cohort archives');
+    assert.strictEqual((await json(response)).error, 'INSUFFICIENT_ROLE');
 
     response = await handleSystemDataProxy(
       makeRequest('DELETE', `${baseUrl}?key=like.cohort%`, directorToken, undefined),
       env,
       new URL(`${baseUrl}?key=like.cohort%`)
     );
-    assert.strictEqual(response.status, 400, 'unsupported delete filters should keep existing 400 semantics');
+    assert.strictEqual(response.status, 400, 'unsupported delete filters should remain invalid before any archive mutation');
     assert.strictEqual((await json(response)).error, 'SYSTEM_DATA_DELETE_FILTER_MISSING');
 
     console.log('worker system_data auth tests passed');

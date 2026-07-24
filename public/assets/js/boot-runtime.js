@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-72798b269328';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-7cdfed2b13ec';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -141,11 +141,16 @@ var DEFERRED_APP_MODULES = [
 ].map(bootJs);
 
 function bootJs(name) { return BOOT_JS_BASE + name; }
+// These scripts execute from index.html before this boot runtime. Keep them out
+// of APP_MODULES so the dynamic loader never recreates stateful session code.
+var EARLY_BOOT_RUNTIME_MODULES = [
+'gateway-session-runtime.js',
+'edge-gateway-runtime.js',
+].map(bootJs);
 var APP_MODULES = [
 'dialog-runtime.js',
 'auth-state-runtime.js',
 'login-entry-runtime.js',
-'edge-gateway-runtime.js',
 'teaching-assessment-sync-runtime.js',
 'workspace-state-runtime.js',
 'exam-state-runtime.js',
@@ -219,6 +224,7 @@ var APP_MODULES = [
 'startup-hydration-runtime.js',
 'workspace-ui-refresh-runtime.js',
 'autosave-runtime.js',
+'workspace-unload-guard-runtime.js',
 'app.js',
 'cohort-db-core-runtime.js',
 ].map(bootJs);
@@ -296,6 +302,15 @@ function hasBootScriptElement(src) {
 const key = normalizeBootModuleKey(src);
 return !!key && (!!getBootScriptState(src) || !!findBootScriptElement(src));
 }
+
+function markEarlyBootRuntimeModulesLoaded() {
+EARLY_BOOT_RUNTIME_MODULES.forEach((src) => {
+    const script = findBootScriptElement(src);
+    if (script) markBootScriptState(src, 'loaded', script);
+});
+}
+
+markEarlyBootRuntimeModulesLoaded();
 
 function prefetchAppModuleList(modules, key) {
 const head = document.head;
@@ -1511,182 +1526,8 @@ const bootPortalConfigs = {
     }
 };
 
-const bootGateway = window.EdgeGateway || {
-    tokenStorageKey: 'EDGE_GATEWAY_TOKEN_V1',
-    userStorageKey: 'EDGE_GATEWAY_USER_V1',
-    resolvedGatewayUrl: '',
-    normalizeGatewayUrl(url) {
-        return String(url || '').trim().replace(/\/$/, '');
-    },
-    getGatewayCandidates() {
-        const candidates = [];
-        const pushCandidate = (value) => {
-            const normalized = this.normalizeGatewayUrl(value);
-            if (!normalized || candidates.includes(normalized)) return;
-            candidates.push(normalized);
-        };
-        if (isLocalFileRuntime()) {
-            pushCandidate(window.DIRECT_CLOUDFLARE_GATEWAY_URL);
-            pushCandidate(DIRECT_EDGE_GATEWAY_URL);
-            return candidates;
-        }
-        pushCandidate(this.resolvedGatewayUrl);
-        pushCandidate(window.DIRECT_CLOUDFLARE_GATEWAY_URL);
-        pushCandidate(DIRECT_EDGE_GATEWAY_URL);
-        pushCandidate(window.EDGE_GATEWAY_URL);
-        return candidates;
-    },
-    isHostedGatewayUrl(url) {
-        try {
-            const parsed = new URL(url, window.location.href);
-            return parsed.origin === window.location.origin || parsed.pathname === '/api/edu-gateway';
-        } catch (_) {
-            return false;
-        }
-    },
-    getGatewayUrl() {
-        return this.getGatewayCandidates()[0] || '';
-    },
-    getPublishableKey() {
-        return String(
-            localStorage.getItem('CLOUD_API_KEY')
-            || localStorage.getItem('SUPABASE_KEY')
-            || window.CLOUD_API_KEY
-            || window.SUPABASE_KEY
-            || ''
-        ).trim();
-    },
-    getToken() {
-        return String(sessionStorage.getItem(this.tokenStorageKey) || '').trim();
-    },
-    setToken(token) {
-        if (!token) return;
-        sessionStorage.setItem(this.tokenStorageKey, String(token).trim());
-    },
-    clearSession() {
-        sessionStorage.removeItem(this.tokenStorageKey);
-        sessionStorage.removeItem(this.userStorageKey);
-    },
-    hasGatewayConfig() {
-        const urls = this.getGatewayCandidates();
-        return !!(urls.length && (this.getPublishableKey() || urls.some((url) => this.isHostedGatewayUrl(url))));
-    },
-    shouldRetryRequest(status, message) {
-        if (status === 404 || status >= 500) return true;
-        const text = String(message || '').trim().toLowerCase();
-        return text.includes('function not found')
-            || text.includes('edge_gateway_http_404')
-            || text.includes('failed to fetch')
-            || text.includes('networkerror');
-    },
-    getClientDeviceInfo() {
-        const nav = typeof navigator !== 'undefined' ? navigator : {};
-        const screenObj = typeof screen !== 'undefined' ? screen : {};
-        const ua = String(nav.userAgent || '');
-        const browser = /Edg\//.test(ua) ? 'Microsoft Edge'
-            : /Chrome\//.test(ua) ? 'Chrome'
-            : /Firefox\//.test(ua) ? 'Firefox'
-            : /Safari\//.test(ua) ? 'Safari'
-            : 'Browser';
-        const os = /Windows/i.test(ua) ? 'Windows'
-            : /Mac OS X/i.test(ua) ? 'macOS'
-            : /Android/i.test(ua) ? 'Android'
-            : /iPhone|iPad|iPod/i.test(ua) ? 'iOS'
-            : String(nav.platform || 'Unknown');
-        const screenText = screenObj.width && screenObj.height ? `${screenObj.width}x${screenObj.height}` : '';
-        return {
-            device_label: `${browser} / ${os}${screenText ? ` / ${screenText}` : ''}`,
-            device_type: /Mobi|Android|iPhone|iPad|iPod/i.test(ua) ? 'mobile' : 'desktop',
-            browser,
-            os,
-            platform: String(nav.platform || ''),
-            language: String(nav.language || ''),
-            timezone: (Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || '',
-            screen: screenText,
-            user_agent: ua
-        };
-    },
-    async request(action, payload = {}, options = {}) {
-        const urls = this.getGatewayCandidates();
-        const apikey = this.getPublishableKey();
-        if (!urls.length || (!apikey && !urls.some((url) => this.isHostedGatewayUrl(url)))) {
-            throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
-        }
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-        if (apikey) headers.apikey = apikey;
-        const token = options.allowAnonymous ? '' : (options.token || this.getToken());
-        if (!options.allowAnonymous) {
-            if (!token) throw new Error('EDGE_GATEWAY_SESSION_MISSING');
-            headers.Authorization = `Bearer ${token}`;
-        }
-        let lastError = null;
-        for (let i = 0; i < urls.length; i += 1) {
-            const url = urls[i];
-            try {
-                const response = await BOOT_GATEWAY_REQUEST(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ action, payload })
-                });
-                let data = null;
-                try {
-                    data = await response.json();
-                } catch (error) { }
-                if (response.ok && data?.ok) {
-                    this.resolvedGatewayUrl = url;
-                    return data;
-                }
-                const message = data?.error || `EDGE_GATEWAY_HTTP_${response.status}`;
-                lastError = new Error(message);
-                if (i < urls.length - 1 && this.shouldRetryRequest(response.status, message)) {
-                    continue;
-                }
-                throw lastError;
-            } catch (error) {
-                lastError = error instanceof Error ? error : new Error(String(error));
-
-                const isNetworkError = lastError.message.toLowerCase().includes('failed to fetch') || lastError.message.toLowerCase().includes('networkerror');
-                if (isNetworkError) {
-                    const origin = window.location ? window.location.origin : 'unknown';
-                    console.warn(`[boot-runtime] net ${url}:`, {
-                        message: lastError.message,
-                        origin: origin,
-                        protocol: window.location ? window.location.protocol : 'unknown',
-                        isLocalFile: origin === 'null' || (window.location && window.location.protocol === 'file:')
-                    });
-
-                    if (origin === 'null' || (window.location && window.location.protocol === 'file:')) {
-                        console.error('[boot-runtime] file:// blocks direct API; use npm run dev.');
-                    }
-                }
-
-                if (i < urls.length - 1 && this.shouldRetryRequest(0, lastError.message)) {
-                    bootDebugLog(`[boot-runtime] Retrying with next candidate due to error: ${lastError.message}`);
-                    continue;
-                }
-                throw lastError;
-            }
-        }
-        throw lastError || new Error('EDGE_GATEWAY_REQUEST_FAILED');
-    },
-    async login(username, password, className = '') {
-        const data = await this.request('login', {
-            username,
-            password,
-            class_name: className || '',
-            device: this.getClientDeviceInfo()
-        }, { allowAnonymous: true });
-        if (data?.token) this.setToken(data.token);
-        if (data?.user) sessionStorage.setItem(this.userStorageKey, JSON.stringify(data.user));
-        return data;
-    }
-};
-
-if (!window.EdgeGateway) {
-    window.EdgeGateway = bootGateway;
-}
+const bootGateway = window.EdgeGateway;
+if (!bootGateway) throw new Error('EDGE_GATEWAY_RUNTIME_MISSING');
 
 function readBootSessionUser() {
     try {
@@ -1699,11 +1540,7 @@ function readBootSessionUser() {
 
 function readBootSessionToken() {
     try {
-        return String(
-            sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1')
-            || sessionStorage.getItem('edu:session:token')
-            || ''
-        ).trim();
+        return String(bootGateway.getToken?.() || '').trim();
     } catch (error) {
         return '';
     }
@@ -1720,6 +1557,7 @@ function clearStaleBootSession() {
         sessionStorage.removeItem('CURRENT_USER');
         sessionStorage.removeItem('CURRENT_ROLE');
         sessionStorage.removeItem('CURRENT_ROLES');
+        sessionStorage.removeItem('EDGE_GATEWAY_TOKEN_V1');
     } catch (error) { }
     if (window.Auth && window.Auth.currentUser) {
         try { window.Auth.currentUser = null; } catch (error) { }
@@ -1732,6 +1570,16 @@ function writeBootSessionUser(user) {
     sessionStorage.setItem('CURRENT_USER', JSON.stringify(user));
     sessionStorage.setItem('CURRENT_ROLE', String(user.role || 'guest').trim() || 'guest');
     sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(Array.isArray(user.roles) ? user.roles : [user.role].filter(Boolean)));
+}
+
+let bootSessionRestorePromise;
+function restoreBootGatewaySession() {
+    if (bootSessionRestorePromise) return bootSessionRestorePromise;
+    if (typeof bootGateway.verify !== 'function') return Promise.resolve(false);
+    return bootSessionRestorePromise = bootGateway.verify().then((data) => {
+        if (data?.session) writeBootSessionUser(data.session);
+        return !!data?.session;
+    }).catch(() => false);
 }
 
 function getPortalConfig(portal) {
@@ -2058,6 +1906,11 @@ function initBootAuthOnce() {
     window.__BOOT_AUTH_INIT_DONE__ = true;
     bindBootLoginActions();
     bootAuth.init();
+    restoreBootGatewaySession().then((restored) => {
+        if (!restored) return;
+        bootAuth.syncLoginOverlayState(false);
+        loadAppModules();
+    });
     if (!hasBootAuthenticatedSession()) {
         [500, 1500].forEach((delay) => setTimeout(() => {
             if (!hasBootAuthenticatedSession()) {

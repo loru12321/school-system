@@ -44,6 +44,120 @@ export function forbidden(request, message = 'Forbidden') {
 // ---------------------------------------------------------------------------
 
 export const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 8;
+export const SESSION_COOKIE_NAME = '__Host-school-session';
+const LOGIN_MAX_FAILURES = 5;
+const LOGIN_FAILURE_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_LOCK_MS = 15 * 60 * 1000;
+
+const ensuredLoginRateLimitDbs = new WeakSet();
+
+function readCookieValue(request, name) {
+  const target = `${String(name || '').trim()}=`;
+  const pairs = String(request?.headers?.get('Cookie') || '').split(';');
+  const pair = pairs.map((item) => item.trim()).find((item) => item.startsWith(target));
+  if (!pair) return '';
+  try {
+    return decodeURIComponent(pair.slice(target.length));
+  } catch (_) {
+    return '';
+  }
+}
+
+export function readSessionToken(request) {
+  return getBearerToken(request) || readCookieValue(request, SESSION_COOKIE_NAME);
+}
+
+export function buildSessionCookie(token) {
+  const value = encodeURIComponent(normalizeText(token));
+  return `${SESSION_COOKIE_NAME}=${value}; Path=/; Max-Age=${LOCAL_SESSION_TTL_SECONDS}; Secure; HttpOnly; SameSite=Strict`;
+}
+
+export function clearSessionCookie() {
+  return `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Strict`;
+}
+
+function getLoginRateLimitKeys(request, username) {
+  const normalizedUsername = normalizeText(username).toLowerCase();
+  const ip = readRequestIp(request);
+  const keys = normalizedUsername ? [`user:${normalizedUsername}`] : [];
+  if (ip) keys.push(`ip:${ip}`);
+  return Array.from(new Set(keys));
+}
+
+export async function ensureLoginRateLimitTable(db) {
+  if (!db || typeof db !== 'object' || ensuredLoginRateLimitDbs.has(db)) return;
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS login_rate_limits (
+      scope_key TEXT PRIMARY KEY,
+      failed_count INTEGER NOT NULL DEFAULT 0,
+      first_failed_at TEXT NOT NULL,
+      last_failed_at TEXT NOT NULL,
+      locked_until TEXT
+    )
+  `).run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_login_rate_limits_locked_until ON login_rate_limits(locked_until)').run();
+  ensuredLoginRateLimitDbs.add(db);
+}
+
+export async function getLoginRateLimit(request, db, username) {
+  await ensureLoginRateLimitTable(db);
+  const keys = getLoginRateLimitKeys(request, username);
+  if (!keys.length) return { locked: false, retryAfterSeconds: 0 };
+  const placeholders = keys.map(() => '?').join(', ');
+  const rows = await db.prepare(`SELECT scope_key, locked_until FROM login_rate_limits WHERE scope_key IN (${placeholders})`)
+    .bind(...keys)
+    .all();
+  const now = Date.now();
+  const lockedUntil = (Array.isArray(rows?.results) ? rows.results : [])
+    .map((row) => Date.parse(String(row?.locked_until || '')))
+    .filter((value) => Number.isFinite(value) && value > now)
+    .sort((left, right) => right - left)[0] || 0;
+  return {
+    locked: lockedUntil > now,
+    retryAfterSeconds: lockedUntil > now ? Math.max(1, Math.ceil((lockedUntil - now) / 1000)) : 0
+  };
+}
+
+export async function recordFailedLogin(request, db, username) {
+  await ensureLoginRateLimitTable(db);
+  const keys = getLoginRateLimitKeys(request, username);
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const rows = await Promise.all(keys.map(async (scopeKey) => {
+    const existing = await db.prepare('SELECT failed_count, first_failed_at FROM login_rate_limits WHERE scope_key = ? LIMIT 1')
+      .bind(scopeKey)
+      .first();
+    const firstFailedAt = Date.parse(String(existing?.first_failed_at || ''));
+    const inWindow = Number.isFinite(firstFailedAt) && now - firstFailedAt < LOGIN_FAILURE_WINDOW_MS;
+    const failedCount = (inWindow ? Number(existing?.failed_count || 0) : 0) + 1;
+    const lockedUntil = failedCount >= LOGIN_MAX_FAILURES ? new Date(now + LOGIN_LOCK_MS).toISOString() : null;
+    await db.prepare(`
+      INSERT INTO login_rate_limits (scope_key, failed_count, first_failed_at, last_failed_at, locked_until)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(scope_key) DO UPDATE SET
+        failed_count = excluded.failed_count,
+        first_failed_at = excluded.first_failed_at,
+        last_failed_at = excluded.last_failed_at,
+        locked_until = excluded.locked_until
+    `).bind(scopeKey, failedCount, inWindow ? existing.first_failed_at : nowIso, nowIso, lockedUntil).run();
+    return { failedCount, lockedUntil };
+  }));
+  const lockedUntil = rows.map((row) => Date.parse(String(row.lockedUntil || '')))
+    .filter(Number.isFinite)
+    .sort((left, right) => right - left)[0] || 0;
+  return {
+    locked: lockedUntil > now,
+    retryAfterSeconds: lockedUntil > now ? Math.max(1, Math.ceil((lockedUntil - now) / 1000)) : 0
+  };
+}
+
+export async function clearLoginRateLimit(request, db, username) {
+  await ensureLoginRateLimitTable(db);
+  const keys = getLoginRateLimitKeys(request, username);
+  if (!keys.length) return;
+  const placeholders = keys.map(() => '?').join(', ');
+  await db.prepare(`DELETE FROM login_rate_limits WHERE scope_key IN (${placeholders})`).bind(...keys).run();
+}
 
 // ---------------------------------------------------------------------------
 // Login audit scheduling
@@ -535,7 +649,7 @@ export async function upsertSystemUser(db, row) {
 // ---------------------------------------------------------------------------
 
 export async function resolveSession(request, env) {
-  const token = getBearerToken(request);
+  const token = readSessionToken(request);
   if (!token) return { error: unauthorized(request, 'Missing bearer token') };
 
   const localSession = await verifyLocalSession(env, token);
@@ -563,19 +677,31 @@ export async function performGatewayLogin(request, env, body, ctx) {
     return null;
   }
 
+  const rateLimit = await getLoginRateLimit(request, db, username);
+  if (rateLimit.locked) {
+    return jsonResponse(429, {
+      ok: false,
+      error: 'LOGIN_TEMPORARILY_LOCKED',
+      retry_after_seconds: rateLimit.retryAfterSeconds
+    }, request, { 'Retry-After': String(rateLimit.retryAfterSeconds) });
+  }
+
   const existing = await getSystemUserRow(db, username, { includeInactive: true });
   if (existing && !existing.is_active) {
     return forbidden(request, 'Account disabled');
   }
 
   if (!existing?.password_hash) {
+    await recordFailedLogin(request, db, username);
     return jsonResponse(401, { ok: false, error: 'Invalid username or password' }, request);
   }
 
   const localMatch = await verifyAccountPasswordHash(existing.password_hash, password);
   if (!localMatch) {
+    await recordFailedLogin(request, db, username);
     return jsonResponse(401, { ok: false, error: 'Invalid username or password' }, request);
   }
+  await clearLoginRateLimit(request, db, username);
   const session = buildSessionPayload(existing);
   const token = await signLocalSession(env, session);
   const auditWrite = Promise.all([
@@ -607,7 +733,7 @@ export async function performGatewayLogin(request, env, body, ctx) {
       expires_at: session.exp,
       must_change_password: shouldForceManagedPasswordChange(existing)
     }
-  }, request);
+  }, request, { 'Set-Cookie': buildSessionCookie(token) });
 }
 
 // ---------------------------------------------------------------------------

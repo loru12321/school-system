@@ -1822,7 +1822,7 @@ function hasAuthenticatedAppSession() {
     const user = !!(window.AuthState && typeof AuthState.getCurrentUser === 'function' && AuthState.getCurrentUser());
     let token = '';
     try {
-        token = String(sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1') || sessionStorage.getItem('edu:session:token') || '').trim();
+        token = String(window.EdgeGateway?.getToken?.() || sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1') || sessionStorage.getItem('edu:session:token') || '').trim();
     } catch (_) { }
     return !!(user && token);
 }
@@ -9037,15 +9037,6 @@ function resetSystem() {
         }
     });
 }
-
-window.addEventListener('beforeunload', (e) => {
-    if (RAW_DATA.length > 0) {
-        const msg = "系统检测到您有正在处理的成绩数据，刷新或关闭页面将导致配置（如教师名单）丢失。确定离开吗？";
-        e.preventDefault();
-        e.returnValue = msg; // 现代浏览器大多数会展示其默认的提示语，但必须设置这个值
-        return msg;
-    }
-});
 
 function bindModalInteractionGuards() {
     const modalIds = [

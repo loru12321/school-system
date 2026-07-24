@@ -242,6 +242,32 @@ async function run() {
     assert.strictEqual(gatewayFetchLog[0].method, 'POST');
     assert.strictEqual(gatewayFetchLog[0].headers.Authorization, 'Bearer edge-session-token');
 
+    let anonymousSessionClears = 0;
+    const anonymousRuntime = createCloudApiRuntime({
+        location: apiRoot.location,
+        SUPABASE_KEY: 'sb_publishable_example',
+        sessionStorage: createMockStorage(),
+        EdgeGateway: { clearSession: () => { anonymousSessionClears += 1; } },
+        fetch: async () => createJsonResponse(401, { error: 'Missing bearer token' })
+    });
+    const anonymousResult = await anonymousRuntime.selectSystemData({ select: 'key', noCache: true });
+    assert.strictEqual(anonymousResult.error.status, 401);
+    assert.strictEqual(anonymousSessionClears, 0, 'unauthenticated startup requests must not invalidate a later login session');
+
+    let authenticatedSessionClears = 0;
+    const authenticatedRuntime = createCloudApiRuntime({
+        location: apiRoot.location,
+        SUPABASE_KEY: 'sb_publishable_example',
+        sessionStorage: createMockStorage({ EDGE_GATEWAY_TOKEN_V1: 'expired-session-token' }),
+        EdgeGateway: {
+            getToken: () => 'expired-session-token',
+            clearSession: () => { authenticatedSessionClears += 1; }
+        },
+        fetch: async () => createJsonResponse(401, { error: 'Session expired' })
+    });
+    await authenticatedRuntime.selectSystemData({ select: 'key', noCache: true });
+    assert.strictEqual(authenticatedSessionClears, 1, 'a 401 for an authenticated request must still invalidate the expired session');
+
     const compatLog = [];
     const localRoot = {
         location: {

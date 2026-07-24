@@ -13,6 +13,30 @@
             window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
             return nextCache;
         });
+
+    function teacherCloudEscapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+    }
+
+    function sanitizeLegacyTeacherCompareHtml(value) {
+        const template = document.createElement('template');
+        template.innerHTML = String(value || '');
+        template.content.querySelectorAll('script,iframe,object,embed,base,meta,link,form').forEach((node) => node.remove());
+        template.content.querySelectorAll('*').forEach((node) => {
+            Array.from(node.attributes || []).forEach((attribute) => {
+                const name = String(attribute.name || '').toLowerCase();
+                const rawValue = String(attribute.value || '');
+                if (name.startsWith('on') || ['src', 'srcset', 'href', 'xlink:href', 'action', 'formaction'].includes(name)) {
+                    node.removeAttribute(attribute.name);
+                } else if (name === 'style' && /(?:url\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding)/i.test(rawValue)) {
+                    node.removeAttribute(attribute.name);
+                }
+            });
+        });
+        return template.innerHTML;
+    }
     const readAllTeachersDiffCacheState = typeof window.readAllTeachersDiffCacheState === 'function'
         ? window.readAllTeachersDiffCacheState
         : (() => (window.ALL_TEACHERS_DIFF_CACHE && typeof window.ALL_TEACHERS_DIFF_CACHE === 'object'
@@ -220,20 +244,20 @@
                 const subject = keyParts[2] || '全科/未知';
                 const displayDate = new Date(item.updated_at).toLocaleString('zh-CN');
                 const isBatch = item.key.includes('_BATCH_');
-                return `<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTeacherCompare('${item.key}')">
+                return `<button type="button" data-teacher-compare-key="${teacherCloudEscapeHtml(item.key)}" style="width:100%; border:0; padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:#fff; text-align:left;">
                         <div style="flex:1;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                                <span style="background:#faf5ff; color:#7c3aed; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
+                                <span style="background:#faf5ff; color:#7c3aed; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${teacherCloudEscapeHtml(cohort)}</span>
                                 <span style="background:#fff7ed; color:#ea580c; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${isBatch ? '全校' : '个人'}</span>
-                                <span style="font-weight:600; color:#334155;">${name} (${subject})</span>
+                                <span style="font-weight:600; color:#334155;">${teacherCloudEscapeHtml(name)} (${teacherCloudEscapeHtml(subject)})</span>
                             </div>
-                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
+                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${teacherCloudEscapeHtml(item.key)}</div>
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:12px; color:#64748b;">${displayDate}</div>
                             <div style="font-size:11px; color:#3b82f6; margin-top:2px;">详情 &gt;</div>
                         </div>
-                    </div>`;
+                    </button>`;
             }).join('');
 
             if (typeof Swal !== 'undefined') {
@@ -242,7 +266,12 @@
                     html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${listHtml}</div>`,
                     width: 600,
                     showCloseButton: true,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    didOpen: (popup) => {
+                        popup.querySelectorAll('[data-teacher-compare-key]').forEach((button) => {
+                            button.addEventListener('click', () => loadCloudTeacherCompare(String(button.dataset.teacherCompareKey || '')));
+                        });
+                    }
                 });
             } else if (window.UI) {
                 UI.toast('请在支持Swal的环境下使用', 'warning');
@@ -290,26 +319,32 @@
         const hintEl = document.getElementById('teacherCompareHint');
         if (!resultEl) return;
 
-        const { school, examIds, delta, metricRows, title, createdAt, createdBy, isBatchMode, thsHtml, batchResults } = payload;
+        const { school, examIds, delta, metricRows, title, createdAt, createdBy, isBatchMode, thsHtml, batchResults } = payload || {};
+        const safeSchool = teacherCloudEscapeHtml(school || '');
+        const safeTitle = teacherCloudEscapeHtml(title || '教师对比');
+        const safeCreatedBy = teacherCloudEscapeHtml(createdBy || '未知');
+        const safeMetricRows = sanitizeLegacyTeacherCompareHtml(metricRows);
+        const safeThsHtml = sanitizeLegacyTeacherCompareHtml(thsHtml);
+        const safeExamIds = (Array.isArray(examIds) ? examIds : []).map((item) => teacherCloudEscapeHtml(item));
 
         if (isBatchMode) {
             if (batchResults) {
                 setAllTeachersDiffCacheState({ results: batchResults, school, examIds, periodCount: payload.periodCount });
             }
             resultEl.innerHTML = `
-                    <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>
+                    <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${safeTitle}</div>
                     <div class="table-wrap" style="max-height:600px; overflow-y:auto;">
                         <table class="common-table" style="font-size:13px;">
-                            <thead style="position:sticky; top:0; z-index:10;"><tr>${thsHtml}</tr></thead>
-                            <tbody>${metricRows}</tbody>
+                            <thead style="position:sticky; top:0; z-index:10;"><tr>${safeThsHtml}</tr></thead>
+                            <tbody>${safeMetricRows}</tbody>
                         </table>
                     </div>
                     <div style="margin-top:10px; display:flex; gap:10px;">
-                        <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${school}', '${examIds.join('_')}')">📤 导出Excel</button>
+                        <button type="button" class="btn btn-sm teacher-cloud-compare-export">📤 导出Excel</button>
                         ${payload.delta === undefined ? '<span style="font-size:12px;color:#64748b;">(表格可左右滑动查看)</span>' : ''}
                     </div>
                     <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
-                        存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy || '未知'}
+                        存档时间: ${teacherCloudEscapeHtml(new Date(createdAt).toLocaleString())} | 创建人: ${safeCreatedBy}
                     </div>
                 `;
         } else {
@@ -317,22 +352,22 @@
             const deltaExc = (typeof delta?.townshipExc === 'number') ? delta.townshipExc : null;
             const deltaPass = (typeof delta?.townshipPass === 'number') ? delta.townshipPass : null;
             resultEl.innerHTML = `
-                    <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>
-                    <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>均分镇排</th><th>优秀率镇排</th><th>及格率镇排</th></tr></thead><tbody>${metricRows}</tbody></table></div>
+                    <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${safeTitle}</div>
+                    <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>均分镇排</th><th>优秀率镇排</th><th>及格率镇排</th></tr></thead><tbody>${safeMetricRows}</tbody></table></div>
                     <div style="margin-top:8px; font-size:12px; color:#475569;">
-                        首末期变化（${examIds[0]} → ${examIds[examIds.length - 1]}）：
+                        首末期变化（${safeExamIds[0] || '-'} → ${safeExamIds[safeExamIds.length - 1] || '-'}）：
                         均分镇排 ${deltaAvg === null ? '-' : (deltaAvg >= 0 ? '+' : '') + deltaAvg}，
                         优秀率镇排 ${deltaExc === null ? '-' : (deltaExc >= 0 ? '+' : '') + deltaExc}，
                         及格率镇排 ${deltaPass === null ? '-' : (deltaPass >= 0 ? '+' : '') + deltaPass}
                     </div>
                     <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
-                        存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy || '未知'}
+                        存档时间: ${teacherCloudEscapeHtml(new Date(createdAt).toLocaleString())} | 创建人: ${safeCreatedBy}
                     </div>
                 `;
         }
 
         if (hintEl) {
-            hintEl.innerHTML = `✅ 已加载云端存档：${title}`;
+            hintEl.textContent = `✅ 已加载云端存档：${title || '教师对比'}`;
             hintEl.style.color = '#7c3aed';
         }
         setTeacherCompareCacheState({
@@ -343,10 +378,17 @@
             periodCount: payload.periodCount,
             examStats: payload.examStats || [],
             delta,
-            metricRows,
+            metricRows: safeMetricRows,
             isBatchMode: !!isBatchMode,
             batchResults: batchResults || null,
-            thsHtml: thsHtml || null
+            thsHtml: safeThsHtml || null
+        });
+        resultEl.querySelectorAll('.teacher-cloud-compare-export').forEach((button) => {
+            button.addEventListener('click', () => {
+                if (typeof exportAllTeachersMultiPeriodDiff === 'function') {
+                    exportAllTeachersMultiPeriodDiff(String(school || ''), (Array.isArray(examIds) ? examIds : []).join('_'));
+                }
+            });
         });
     }
 

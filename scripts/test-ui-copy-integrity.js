@@ -417,6 +417,10 @@ async function readAppReadyState(page) {
             cohortId: String(localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
             termId: String(localStorage.getItem('CURRENT_TERM_ID') || '').trim(),
             examId: String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
+            authState: String(document.body?.dataset?.authState || '').trim(),
+            authUser: window.AuthState?.getCurrentUser?.()?.username || '',
+            edgeToken: !!window.EdgeGateway?.getToken?.(),
+            sessionUser: !!sessionStorage.getItem('CURRENT_USER'),
             school
         };
     });
@@ -549,6 +553,10 @@ async function login(page) {
             } else {
                 sessionStorage.setItem('CURRENT_USER', JSON.stringify(user));
                 window.CURRENT_USER = user;
+            }
+            if (window.EdgeGateway && typeof window.EdgeGateway.setToken === 'function') {
+                window.EdgeGateway.setToken('ui-copy-integrity-session');
+                window.EdgeGateway.verify = async () => ({ ok: true, token: 'ui-copy-integrity-session' });
             }
             if (window.Auth) {
                 window.Auth.currentUser = window.AuthState?.getCurrentUser?.() || user;

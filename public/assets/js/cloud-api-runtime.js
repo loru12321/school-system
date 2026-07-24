@@ -301,12 +301,16 @@
         );
     }
 
-    function getAccessToken() {
+    function getSessionAccessToken() {
         return normalizeText(
             getSessionValue('edu:session:token')
             || (root.EdgeGateway && typeof root.EdgeGateway.getToken === 'function' ? root.EdgeGateway.getToken() : '')
             || getSessionValue('EDGE_GATEWAY_TOKEN_V1')
         );
+    }
+
+    function getAccessToken() {
+        return getSessionAccessToken() || getPublishableKey();
     }
 
     function buildApiHeaders(extraHeaders) {
@@ -472,9 +476,9 @@
 
     let cloudAuthExpiredHandled = false;
 
-    function handleCloudSessionExpired(error) {
+    function handleCloudSessionExpired(error, { requestHadSession = false } = {}) {
         const status = Number(error && error.status);
-        if (status !== 401) return false;
+        if (status !== 401 || !requestHadSession) return false;
         if (cloudAuthExpiredHandled) return true;
         cloudAuthExpiredHandled = true;
         try {
@@ -500,6 +504,7 @@
     async function selectViaApi(options) {
         const fetchImpl = getFetch();
         const requestUrl = buildSystemDataUrl(options || {});
+        const requestHadSession = !!getSessionAccessToken();
         if (!fetchImpl || !requestUrl) {
             return {
                 data: options && options.maybeSingle ? null : [],
@@ -524,7 +529,7 @@
                     return { data: null, error: null, source: 'api' };
                 }
                 const error = buildApiError(response, body);
-                handleCloudSessionExpired(error);
+                handleCloudSessionExpired(error, { requestHadSession });
                 return {
                     data: options && options.maybeSingle ? null : [],
                     error,

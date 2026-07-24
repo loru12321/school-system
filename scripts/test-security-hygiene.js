@@ -31,6 +31,7 @@ const workerAssetProtection = read('src/worker-asset-protection.js');
 const workerContractSource = [worker, workerHelpers, workerSystemData, workerAssetProtection].join('\n');
 const boot = read('public/assets/js/boot-runtime.js');
 const edgeGateway = read('public/assets/js/edge-gateway-runtime.js');
+const gatewaySession = read('public/assets/js/gateway-session-runtime.js');
 const runtimeLoader = read('public/assets/js/runtime-loader-runtime.js');
 const app = read('public/assets/js/app.js');
 const authState = read('public/assets/js/auth-state-runtime.js');
@@ -99,7 +100,7 @@ assert.ok(
     edgeGateway.includes("urls.length && (this.getPublishableKey() || urls.some(url => this.isHostedGatewayUrl(url)))"),
     'EdgeGateway runtime should allow same-origin hosted gateway calls without a browser-side publishable key'
 );
-assert.ok(edgeGateway.includes('if (apikey) headers.apikey = apikey;'), 'EdgeGateway runtime should omit empty apikey headers for hosted gateway calls');
+assert.ok(gatewaySession.includes('if (apikey) headers.apikey = apikey;'), 'gateway session runtime should omit empty apikey headers for hosted gateway calls');
 assert.ok(!edgeGateway.includes("localStorage.getItem('EDGE_GATEWAY_URL')"), 'EdgeGateway runtime should not accept gateway endpoints from localStorage');
 assert.ok(serviceWorker.includes('isApiCacheEligible'), 'service worker should gate API caching');
 assert.ok(!serviceWorker.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');

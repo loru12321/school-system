@@ -1,22 +1,11 @@
+(function installEdgeGatewayRuntime(root) {
 function isLocalFileRuntimeForEdgeGateway() {
     if (typeof isLocalFileRuntimeForApp === 'function') return isLocalFileRuntimeForApp();
     return window.__IS_LOCAL_FILE_RUNTIME__ === true
         || (window.location && String(window.location.protocol || '').trim().toLowerCase() === 'file:');
 }
 
-function edgeGatewayDebug(...args) {
-    if (typeof appDebug === 'function') {
-        appDebug(...args);
-        return;
-    }
-    try {
-        if (window.APP_DEBUG === true || localStorage.getItem('APP_DEBUG') === '1') {
-            console.debug(...args);
-        }
-    } catch (_) {}
-}
-
-var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
+const edgeGateway = Object.assign(root.EdgeGateway || {}, {
     tokenStorageKey: 'EDGE_GATEWAY_TOKEN_V1',
     userStorageKey: 'EDGE_GATEWAY_USER_V1',
     resolvedGatewayUrl: '',
@@ -44,14 +33,14 @@ var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
             return candidates;
         }
 
+        pushCandidate(this.resolvedGatewayUrl);
+        pushCandidate(window.EDGE_GATEWAY_URL);
+
         if (typeof window.DIRECT_CLOUDFLARE_GATEWAY_URL !== 'undefined') {
             pushCandidate(window.DIRECT_CLOUDFLARE_GATEWAY_URL);
         } else if (typeof DIRECT_CLOUDFLARE_GATEWAY_URL !== 'undefined') {
             pushCandidate(DIRECT_CLOUDFLARE_GATEWAY_URL);
         }
-
-        pushCandidate(this.resolvedGatewayUrl);
-        pushCandidate(window.EDGE_GATEWAY_URL);
 
         if (typeof DIRECT_EDGE_GATEWAY_URL !== 'undefined') {
             pushCandidate(DIRECT_EDGE_GATEWAY_URL);
@@ -63,12 +52,7 @@ var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
         return this.getGatewayCandidates()[0] || '';
     },
     isHostedGatewayUrl: function (url) {
-        try {
-            const parsed = new URL(url, window.location.href);
-            return parsed.origin === window.location.origin || parsed.pathname === '/api/edu-gateway';
-        } catch (e) {
-            return false;
-        }
+        return window.GatewaySessionRuntime.sameOrigin(url);
     },
     getPublishableKey: function () {
         return String(
@@ -80,28 +64,29 @@ var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
         ).trim();
     },
     getToken: function () {
-        return String(sessionStorage.getItem(this.tokenStorageKey) || '').trim();
+        return window.GatewaySessionRuntime.getToken();
     },
     setToken: function (token) {
-        if (!token) return;
-        sessionStorage.setItem(this.tokenStorageKey, String(token).trim());
+        return window.GatewaySessionRuntime.setToken(token);
     },
     clearSession: function () {
-        sessionStorage.removeItem(this.tokenStorageKey);
-        sessionStorage.removeItem(this.userStorageKey);
+        return window.GatewaySessionRuntime.clearSession(this);
     },
     hasGatewayConfig: function () {
         const urls = this.getGatewayCandidates();
         return !!(urls.length && (this.getPublishableKey() || urls.some(url => this.isHostedGatewayUrl(url))));
     },
     canUseAuthorizedRequests: function () {
-        return this.hasGatewayConfig() && !!this.getToken();
+        return this.hasGatewayConfig() && !!(
+            this.getToken() || window.GatewaySessionRuntime.hasCookieRoute(this.getGatewayCandidates())
+        );
     },
     shouldRetryRequest: function (status, message) {
         if (status === 404 || status >= 500) return true;
         const text = String(message || '').trim().toLowerCase();
         return text.includes('function not found')
             || text.includes('edge_gateway_http_404')
+            || text.includes('edge_gateway_invalid_response')
             || text.includes('failed to fetch')
             || text.includes('abort')
             || text.includes('timeout')
@@ -148,74 +133,8 @@ var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
         return text.includes('class_name mismatch')
             || text.includes('invalid username or password');
     },
-    request: async function (action, payload = {}, options = {}) {
-        const urls = this.getGatewayCandidates();
-        const apikey = this.getPublishableKey();
-        if (!urls.length || (!apikey && !urls.some(url => this.isHostedGatewayUrl(url)))) {
-            throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
-        }
-        const protocol = window.location.protocol;
-        const origin = window.location.origin;
-        edgeGatewayDebug(`[EdgeGateway] Requesting ${action}, Protocol: ${protocol}, Origin: ${origin}`);
-        if (protocol === 'file:') {
-            console.warn('[EdgeGateway] Running from file:// may trigger CORS blocks (Origin: null). Recommended: Use local web server.');
-        }
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-        if (apikey) headers.apikey = apikey;
-        const token = options.allowAnonymous ? '' : (options.token || this.getToken());
-        if (!options.allowAnonymous) {
-            if (!token) throw new Error('EDGE_GATEWAY_SESSION_MISSING');
-            headers.Authorization = `Bearer ${token}`;
-        }
-        let lastError = null;
-        for (let i = 0; i < urls.length; i += 1) {
-            const url = urls[i];
-            edgeGatewayDebug(`[EdgeGateway] Attempt ${i + 1}/${urls.length}: ${url}`);
-            const controller = new AbortController();
-            // Non-final candidates get a short timeout so a dead/hung endpoint
-            // fails over quickly instead of stacking 18s per URL (the main cause
-            // of the ~1min login when an early gateway candidate is unreachable).
-            // The LAST candidate keeps the full patient timeout so a genuinely
-            // slow-but-working endpoint is never truncated.
-            const isLastCandidate = i === urls.length - 1;
-            const attemptTimeoutMs = isLastCandidate ? 18000 : 6000;
-            const timeoutId = setTimeout(() => controller.abort(), attemptTimeoutMs);
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ action, payload }),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                let data = null;
-                try {
-                    data = await response.json();
-                } catch (e) { }
-                if (response.ok && data?.ok) {
-                    this.resolvedGatewayUrl = url;
-                    return data;
-                }
-                const message = data?.error || `EDGE_GATEWAY_HTTP_${response.status}`;
-                lastError = new Error(message);
-                if (i < urls.length - 1 && this.shouldRetryRequest(response.status, message)) {
-                    console.warn(`[EdgeGateway] ${url} unavailable, retrying fallback endpoint`, message);
-                    continue;
-                }
-                throw lastError;
-            } catch (error) {
-                clearTimeout(timeoutId);
-                lastError = error instanceof Error ? error : new Error(String(error));
-                if (i < urls.length - 1 && this.shouldRetryRequest(0, lastError.message)) {
-                    console.warn(`[EdgeGateway] ${url} request failed, retrying fallback endpoint`, lastError.message);
-                    continue;
-                }
-                throw lastError;
-            }
-        }
-        throw lastError || new Error('EDGE_GATEWAY_REQUEST_FAILED');
+    request: function (action, payload = {}, options = {}) {
+        return window.GatewaySessionRuntime.request(this, action, payload, options);
     },
     getClientDeviceInfo: function () {
         const nav = typeof navigator !== 'undefined' ? navigator : {};
@@ -363,4 +282,5 @@ var EdgeGateway = Object.assign(window.EdgeGateway || {}, {
     }
 });
 
-window.EdgeGateway = EdgeGateway;
+root.EdgeGateway = edgeGateway;
+}(window));

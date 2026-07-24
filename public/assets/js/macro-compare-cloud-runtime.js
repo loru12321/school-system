@@ -14,6 +14,30 @@
             return nextCache;
         });
 
+    function macroEscapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+    }
+
+    function sanitizeLegacyMacroCompareHtml(value) {
+        const template = document.createElement('template');
+        template.innerHTML = String(value || '');
+        template.content.querySelectorAll('script,iframe,object,embed,base,meta,link,form').forEach((node) => node.remove());
+        template.content.querySelectorAll('*').forEach((node) => {
+            Array.from(node.attributes || []).forEach((attribute) => {
+                const name = String(attribute.name || '').toLowerCase();
+                const rawValue = String(attribute.value || '');
+                if (name.startsWith('on') || ['src', 'srcset', 'href', 'xlink:href', 'action', 'formaction'].includes(name)) {
+                    node.removeAttribute(attribute.name);
+                } else if (name === 'style' && /(?:url\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding)/i.test(rawValue)) {
+                    node.removeAttribute(attribute.name);
+                }
+            });
+        });
+        return template.innerHTML;
+    }
+
     async function selectCloudMacroCompareRows(options = {}) {
         if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
             return window.CloudDataService.selectSystemData(options);
@@ -126,19 +150,19 @@
                 const cohort = keyParts[1] || '未知届别';
                 const school = keyParts[2] || '未知学校';
                 return `
-                    <div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudMacroCompare('${item.key}')">
+                    <button type="button" data-macro-compare-key="${macroEscapeHtml(item.key)}" style="width:100%; border:0; padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:#fff; text-align:left;">
                         <div style="flex:1;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                                <span style="background:#eff6ff; color:#2563eb; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
-                                <span style="font-weight:600; color:#334155;">${school}</span>
+                                <span style="background:#eff6ff; color:#2563eb; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${macroEscapeHtml(cohort)}</span>
+                                <span style="font-weight:600; color:#334155;">${macroEscapeHtml(school)}</span>
                             </div>
-                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
+                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${macroEscapeHtml(item.key)}</div>
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:12px; color:#64748b;">${new Date(item.updated_at).toLocaleString('zh-CN')}</div>
                             <div style="font-size:11px; color:#3b82f6; margin-top:2px;">详情 &gt;</div>
                         </div>
-                    </div>
+                    </button>
                 `;
             }).join('');
 
@@ -148,7 +172,12 @@
                     html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${html}</div>`,
                     width: 640,
                     showCloseButton: true,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    didOpen: (popup) => {
+                        popup.querySelectorAll('[data-macro-compare-key]').forEach((button) => {
+                            button.addEventListener('click', () => loadCloudMacroCompare(String(button.dataset.macroCompareKey || '')));
+                        });
+                    }
                 });
             }
         } catch (e) {
@@ -178,9 +207,10 @@
 
             const hintEl = document.getElementById('macroCompareHint');
             const resultEl = document.getElementById('macroCompareResult');
-            if (resultEl) resultEl.innerHTML = payload.html || '<div style="color:#94a3b8;">云端记录缺少展示内容</div>';
+            const safeHtml = sanitizeLegacyMacroCompareHtml(payload?.html);
+            if (resultEl) resultEl.innerHTML = safeHtml || '<div style="color:#94a3b8;">云端记录缺少展示内容</div>';
             if (hintEl) {
-                hintEl.innerHTML = `✅ 已加载云端校际对比：${payload.title || key}`;
+                hintEl.textContent = `✅ 已加载云端校际对比：${payload?.title || key}`;
                 hintEl.style.color = '#7c3aed';
             }
 
@@ -191,7 +221,7 @@
                 summaryByExam: payload.summaryByExam,
                 allSchoolsChange: payload.allSchoolsChange,
                 moduleSeries: payload.moduleSeries,
-                html: payload.html
+                html: safeHtml
             };
             setMacroCompareCacheState(window.MACRO_MULTI_PERIOD_COMPARE_CACHE);
         } catch (e) {

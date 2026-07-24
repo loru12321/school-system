@@ -17,6 +17,12 @@
             return nextCache;
         });
 
+    function studentCloudEscapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+    }
+
     async function selectCloudStudentCompareRows(options = {}) {
         if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
             return window.CloudDataService.selectSystemData(options);
@@ -606,7 +612,7 @@
     function renderCloudCompareResultHint(payload, displayCount) {
         const hintEl = document.getElementById('studentCompareHint');
         if (!hintEl) return;
-        hintEl.innerHTML = `☁️ 已加载云端对比：${payload.title} (共${displayCount}人，保存于${new Date(payload.createdAt).toLocaleString('zh-CN')})`;
+        hintEl.textContent = `☁️ 已加载云端对比：${payload.title} (共${displayCount}人，保存于${new Date(payload.createdAt).toLocaleString('zh-CN')})`;
         hintEl.style.color = '#16a34a';
     }
 
@@ -729,25 +735,24 @@
 
             if (selfOnly && data.length === 1) return loadCloudStudentCompareForCurrentStudent(data[0].key);
 
-            const loadFn = selfOnly ? 'loadCloudStudentCompareForCurrentStudent' : 'loadCloudStudentCompare';
             const listHtml = data.map(item => {
                 const keyParts = item.key.split('_');
                 const cohort = keyParts[1] || '未知届别';
                 const school = keyParts[2] || '未知学校';
                 const date = new Date(item.updated_at).toLocaleString('zh-CN');
-                return `<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="${loadFn}('${item.key}')">
+                return `<button type="button" data-student-compare-key="${studentCloudEscapeHtml(item.key)}" style="width:100%; border:0; padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:#fff; text-align:left;">
                         <div style="flex:1;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                                <span style="background:#f0fdf4; color:#16a34a; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
-                                <span style="font-weight:600; color:#334155;">${school}</span>
+                                <span style="background:#f0fdf4; color:#16a34a; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${studentCloudEscapeHtml(cohort)}</span>
+                                <span style="font-weight:600; color:#334155;">${studentCloudEscapeHtml(school)}</span>
                             </div>
-                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
+                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${studentCloudEscapeHtml(item.key)}</div>
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:12px; color:#64748b;">${date}</div>
                             <div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击解析 &gt;</div>
                         </div>
-                    </div>`;
+                    </button>`;
             }).join('');
 
             if (typeof Swal !== 'undefined') {
@@ -758,7 +763,16 @@
                     width: 800,
                     showCloseButton: true,
                     showConfirmButton: false,
-                    returnFocus: false
+                    returnFocus: false,
+                    didOpen: (popup) => {
+                        popup.querySelectorAll('[data-student-compare-key]').forEach((button) => {
+                            button.addEventListener('click', () => {
+                                const key = String(button.dataset.studentCompareKey || '');
+                                if (selfOnly) loadCloudStudentCompareForCurrentStudent(key);
+                                else loadCloudStudentCompare(key);
+                            });
+                        });
+                    }
                 });
             }
         } catch (e) {

@@ -72,9 +72,10 @@ const DATA_MANAGER_TAB_STABILIZE_MS = {
 };
 const DATA_MANAGER_TAB_TIMEOUT_MS = 8000;
 const MODULE_SWITCH_TIMEOUT_MS = 12000;
-// Leave headroom under the 1000ms switch budget for Playwright bookkeeping and
-// the per-module settle wait on slower CI runners.
-const MODULE_SWITCH_READY_TIMEOUT_MS = 750;
+// This guards asynchronous module readiness, not the user-visible activation
+// metric. Keep the proven 5s cap so slower browsers do not produce false
+// negatives; strict performance still budgets activation separately at 1s.
+const MODULE_SWITCH_READY_TIMEOUT_MS = 5000;
 const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
 const SMOKE_HOTSPOT_PREWARM_TIMEOUT_MS = 4500;
@@ -126,6 +127,25 @@ function hasRecentCloudflareBeaconFailure(entries, windowMs = 15000) {
     return entries.some((entry) => Number(entry?.time || 0) >= cutoff && isCloudflareBeaconFailure(entry));
 }
 
+function isExpectedAnonymousSessionVerify(response) {
+    if (!response || response.status() !== 401) return false;
+    try {
+        const request = response.request();
+        if (request.method() !== 'POST') return false;
+        if (String(request.headers().authorization || '').trim()) return false;
+        const payload = JSON.parse(request.postData() || '{}');
+        return payload?.action === 'session.verify';
+    } catch (_) {
+        return false;
+    }
+}
+
+function hasRecentAnonymousSessionVerify(entries, windowMs = 1000) {
+    if (!Array.isArray(entries) || !entries.length) return false;
+    const cutoff = Date.now() - windowMs;
+    return entries.some((entry) => Number(entry?.time || 0) >= cutoff);
+}
+
 function shouldIgnoreConsoleMessage(msg, context = {}) {
     const text = String(msg || '');
     if (text.includes('favicon.ico')
@@ -136,6 +156,12 @@ function shouldIgnoreConsoleMessage(msg, context = {}) {
     }
 
     if (/cloudflareinsights|data-cf-beacon|beacon\.min\.js/i.test(text)) {
+        return true;
+    }
+
+    if (context.scope === 'boot'
+        && text.includes('Failed to load resource: the server responded with a status of 401')
+        && hasRecentAnonymousSessionVerify(context.recentAnonymousSessionVerifies)) {
         return true;
     }
 
@@ -4428,6 +4454,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     const pass = process.env.SMOKE_PASS || 'admin123';
     const errors = [];
     const recentFailedRequests = [];
+    const recentAnonymousSessionVerifies = [];
     let currentScope = 'boot';
 
     page.on('pageerror', error => {
@@ -4462,31 +4489,83 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
 
     page.on('response', response => {
         const status = response.status();
+        if (process.env.SMOKE_TRACE && /\/api\/edu-gateway(?:$|[?#])/.test(response.url())) {
+            trace('gateway-response', { scope: currentScope, status, url: response.url() });
+        }
         if (status < 400) return;
+        if (isExpectedAnonymousSessionVerify(response)) {
+            recentAnonymousSessionVerifies.push({ time: Date.now() });
+            if (recentAnonymousSessionVerifies.length > 4) recentAnonymousSessionVerifies.shift();
+            return;
+        }
         const message = `${status} ${response.url()}`;
         if (shouldIgnoreConsoleMessage(message, {
             smokeUrl: process.env.SMOKE_URL || 'https://schoolsystem.com.cn/',
-            recentFailedRequests
+            recentFailedRequests,
+            recentAnonymousSessionVerifies,
+            scope: currentScope
         })) return;
         errors.push({ scope: currentScope, type: 'response', message });
     });
 
     page.on('console', msg => {
+        if (process.env.SMOKE_TRACE && msg.type() === 'warning') {
+            trace('console-warning', { scope: currentScope, message: msg.text().slice(0, 800) });
+        }
         if (msg.type() !== 'error') return;
         const text = msg.text();
         if (shouldIgnoreConsoleMessage(text, {
             smokeUrl: process.env.SMOKE_URL || 'https://schoolsystem.com.cn/',
-            recentFailedRequests
+            recentFailedRequests,
+            recentAnonymousSessionVerifies,
+            scope: currentScope
         })) return;
         errors.push({ scope: currentScope, type: 'console', message: text });
     });
 
+    page.on('request', request => {
+        if (!process.env.SMOKE_TRACE || !/\/api\/edu-gateway(?:$|[?#])/.test(request.url())) return;
+        const payload = String(request.postData() || '');
+        trace('gateway-request', { scope: currentScope, method: request.method(), payload: payload.slice(0, 280) });
+    });
+
     const smokeStartedAt = Date.now();
     trace('login:start');
-    const loginMeasurement = await measureAsync('login', () => login(page, user, pass));
+    let loginMeasurement;
+    try {
+        loginMeasurement = await measureAsync('login', () => login(page, user, pass));
+    } catch (error) {
+        const state = await page.evaluate(() => ({
+            authState: document.body?.dataset?.authState || '',
+            currentUser: window.AuthState?.getCurrentUser?.()?.username || '',
+            edgeToken: !!window.EdgeGateway?.getToken?.(),
+            overlayDisplay: getComputedStyle(document.getElementById('login-overlay')).display,
+            appDisplay: getComputedStyle(document.getElementById('app')).display,
+            helper: document.getElementById('login-portal-helper')?.textContent?.trim() || ''
+        })).catch(() => null);
+        console.error('[smoke] login failure state', JSON.stringify(state));
+        throw error;
+    }
     trace('login:done', { durationMs: loginMeasurement.durationMs });
     const appReadyMeasurement = await measureAsync('app-ready', () => waitForAppReady(page));
     trace('app-ready:done', { durationMs: appReadyMeasurement.durationMs });
+    let cookieSessionReload = { requested: false, ok: true };
+    if (String(process.env.SMOKE_SESSION_RELOAD || '').trim().toLowerCase() === 'true') {
+        currentScope = 'cookie-session-reload';
+        trace('cookie-session-reload:start');
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await waitForAppReady(page);
+        cookieSessionReload = await page.evaluate(() => ({
+            requested: true,
+            ok: getComputedStyle(document.getElementById('login-overlay')).display === 'none'
+                && !!window.EdgeGateway?.getToken?.()
+                && !!window.AuthState?.getCurrentUser?.()
+        }));
+        trace('cookie-session-reload:done', cookieSessionReload);
+        if (!cookieSessionReload.ok) {
+            errors.push({ scope: currentScope, message: 'same-origin cookie session did not restore after reload' });
+        }
+    }
     const teacherAutoRestore = await waitForTeacherAutoRestore(page);
     trace('teacher-auto-restore:done', teacherAutoRestore);
 
@@ -4528,6 +4607,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
             teacherAutoRestoreReady: Object.keys(window.TEACHER_MAP || {}).length > 0
         });
         }),
+        cookieSessionReload,
         switchModules: [],
         dataManagerTabs: [],
         performance: {

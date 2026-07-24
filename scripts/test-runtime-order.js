@@ -209,6 +209,7 @@ const snapshotSystemRuntime = fs.readFileSync(snapshotSystemRuntimePath, 'utf8')
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
+const edgeGatewaySource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/edge-gateway-runtime.js'), 'utf8');
 const appFoundationRuntime = fs.readFileSync(appFoundationRuntimePath, 'utf8');
 const reportHistoryRuntime = fs.readFileSync(reportHistoryRuntimePath, 'utf8');
 const townSubmoduleCompareRuntime = fs.readFileSync(townSubmoduleCompareRuntimePath, 'utf8');
@@ -220,8 +221,11 @@ const supabaseKeyAssignments = bootRuntime.match(/window\.SUPABASE_KEY\s*=/g) ||
 const gatewayUrlAssignments = bootRuntime.match(/window\.EDGE_GATEWAY_URL\s*=/g) || [];
 const switchTabDefinitions = appSource.match(/function\s+switchTab\s*\(/g) || [];
 const switchTabOverrides = appSource.match(/switchTab\s*=\s*function\s*\(/g) || [];
-const bootDirectGatewayCandidateIndex = bootRuntime.indexOf('pushCandidate(DIRECT_EDGE_GATEWAY_URL);', bootRuntime.indexOf('installBootLoginShell'));
-const bootSameOriginGatewayCandidateIndex = bootRuntime.indexOf('pushCandidate(window.EDGE_GATEWAY_URL);', bootRuntime.indexOf('installBootLoginShell'));
+const gatewaySessionSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/gateway-session-runtime.js'), 'utf8');
+const hostedGatewayCandidatesIndex = edgeGatewaySource.indexOf('pushCandidate(this.resolvedGatewayUrl);');
+const edgeSameOriginGatewayCandidateIndex = edgeGatewaySource.indexOf('pushCandidate(window.EDGE_GATEWAY_URL);', hostedGatewayCandidatesIndex);
+const edgeDirectGatewayCandidateIndex = edgeGatewaySource.indexOf('pushCandidate(DIRECT_EDGE_GATEWAY_URL);', hostedGatewayCandidatesIndex);
+const gatewaySessionRef = './assets/js/gateway-session-runtime.js';
 const grade9TotalSubjectContract = /totalSubs:\s*\['语文',\s*'数学',\s*'英语',\s*'物理',\s*'化学'\]/;
 const grade9PoliticsDisplayContract = /extraDisplaySubs:\s*\['政治'\]/;
 const authStateRef = './assets/js/auth-state-runtime.js';
@@ -348,6 +352,13 @@ const moduleManifest = appModulesMatch[0];
 const normalizedModuleManifest = moduleManifest.includes('.map(bootJs)')
     ? moduleManifest.replace(/'([^']+\.js)'/g, "'./assets/js/$1'")
     : moduleManifest;
+const earlyBootRuntimeModulesMatch = bootRuntime.match(/var EARLY_BOOT_RUNTIME_MODULES = \[[\s\S]*?\]\.map\(bootJs\);/)
+    || bootRuntime.match(/var EARLY_BOOT_RUNTIME_MODULES = \[[\s\S]*?\];/);
+assert.ok(earlyBootRuntimeModulesMatch, 'boot-runtime.js should declare early boot runtime modules');
+const earlyBootRuntimeManifest = earlyBootRuntimeModulesMatch[0];
+const normalizedEarlyBootRuntimeManifest = earlyBootRuntimeManifest.includes('.map(bootJs)')
+    ? earlyBootRuntimeManifest.replace(/'([^']+\.js)'/g, "'./assets/js/$1'")
+    : earlyBootRuntimeManifest;
 assert.ok(normalizedModuleManifest.includes(schoolNormalizationRef), 'school-normalization-runtime.js should load with core app modules');
 assert.ok(
     normalizedModuleManifest.indexOf(schoolNormalizationRef) < normalizedModuleManifest.indexOf('./assets/js/app.js'),
@@ -364,7 +375,11 @@ const normalizedDeferredManifest = deferredVendorManifest.includes('.map(bootJs)
     ? deferredVendorManifest.replace(/'([^']+\.js)'/g, "'./assets/js/$1'")
     : deferredVendorManifest;
 assert.ok(!normalizedDeferredManifest.includes(schoolNormalizationRef), 'school-normalization-runtime.js must not be deferred past first analysis render');
-const moduleOrderManifest = `${normalizedModuleManifest}\n${normalizedDeferredManifest}`;
+assert.ok(normalizedEarlyBootRuntimeManifest.includes(gatewaySessionRef), 'gateway session runtime should be registered as an early boot dependency');
+assert.ok(normalizedEarlyBootRuntimeManifest.includes(edgeGatewayRef), 'edge gateway runtime should be registered as an early boot dependency');
+assert.ok(!normalizedModuleManifest.includes(gatewaySessionRef), 'stateful gateway session runtime must not be loaded again with core app modules');
+assert.ok(!normalizedModuleManifest.includes(edgeGatewayRef), 'edge gateway runtime must not be loaded again with core app modules');
+const moduleOrderManifest = `${normalizedEarlyBootRuntimeManifest}\n${normalizedModuleManifest}\n${normalizedDeferredManifest}`;
 const bootRuntimeReferences = (ref) => bootRuntime.includes(ref) || bootRuntime.includes(ref.split('/').pop());
 const bootRuntimeReferenceIndex = (ref) => {
     const fullIndex = bootRuntime.indexOf(ref);
@@ -460,6 +475,7 @@ const studentJumpIndex = moduleOrderManifest.indexOf(studentJumpRef);
 const appIndex = moduleOrderManifest.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
 const runtimeLoaderRuntimeIndex = indexHtml.indexOf(runtimeLoaderRuntimeRef);
+const edgeGatewayHtmlIndex = indexHtml.indexOf(edgeGatewayRef);
 const popperVendorIndex = bootRuntimeReferenceIndex(popperVendorRef);
 const tippyVendorIndex = bootRuntimeReferenceIndex(tippyVendorRef);
 const accountAdminIndex = indexHtml.indexOf(accountAdminRef);
@@ -467,7 +483,9 @@ const historyCompareIndex = indexHtml.indexOf(historyCompareRef);
 const perfMobileIndex = indexHtml.indexOf(perfMobileRef);
 
 assert.ok(authStateIndex >= 0, 'index.html should load auth-state-runtime.js');
-assert.ok(edgeGatewayIndex >= 0, 'index.html should load edge-gateway-runtime.js');
+assert.ok(edgeGatewayIndex >= 0, 'boot manifest should register edge-gateway-runtime.js before app modules');
+const gatewaySessionIndex = indexHtml.indexOf(gatewaySessionRef);
+assert.ok(gatewaySessionIndex >= 0, 'index.html should load gateway-session-runtime.js');
 assert.ok(bootRuntimeIndex >= 0, 'index.html should load boot-runtime.js');
 assert.ok(runtimeLoaderRuntimeIndex >= 0, 'index.html should load runtime-loader-runtime.js');
 assert.ok(runtimeLoaderRuntimeIndex < bootRuntimeIndex, 'runtime-loader-runtime.js should load before boot-runtime.js');
@@ -526,10 +544,16 @@ assert.ok(loginSessionIndex < appIndex, 'login-session-runtime.js should load be
 assert.ok(indexHtml.includes('id="login-session-btn"'), 'login status button should be present in the toolbar');
 assert.ok(indexHtml.includes('id="login-session-modal"'), 'login status modal should be present');
 assert.ok(
-    fs.readFileSync(path.resolve(__dirname, '../public/assets/js/edge-gateway-runtime.js'), 'utf8').includes('var EdgeGateway = Object.assign(window.EdgeGateway || {}, {'),
-    'edge gateway runtime should merge full methods into any placeholder object'
+    edgeGatewaySource.includes('const edgeGateway = Object.assign(root.EdgeGateway || {}, {')
+        && edgeGatewaySource.includes('root.EdgeGateway = edgeGateway;')
+        && !edgeGatewaySource.includes('var EdgeGateway'),
+    'edge gateway runtime should install its API through window without creating a conflicting global declaration'
 );
-assert.ok(bootRuntimeSource.includes('device: this.getClientDeviceInfo()'), 'boot gateway login should persist device metadata for session audit records');
+assert.ok(
+    fs.readFileSync(path.resolve(__dirname, '../public/assets/js/edge-gateway-runtime.js'), 'utf8').includes('device: this.getClientDeviceInfo()'),
+    'gateway login should persist device metadata for session audit records'
+);
+assert.ok(gatewaySessionIndex < edgeGatewayHtmlIndex, 'gateway-session-runtime.js should load before edge-gateway-runtime.js');
 assert.ok(edgeGatewayIndex < accountManagerIndex, 'edge-gateway-runtime.js should load before account-manager-runtime.js');
 assert.ok(edgeGatewayIndex < appIndex, 'edge-gateway-runtime.js should load before app.js');
 assert.ok(managementFacadesIndex < appIndex, 'management-facades-runtime.js should load before app.js');
@@ -1281,8 +1305,14 @@ assert.strictEqual(
     'report-insight runtime should lazy-load after login instead of blocking the login page'
 );
 assert.ok(
-    bootDirectGatewayCandidateIndex >= 0 && bootSameOriginGatewayCandidateIndex >= 0 && bootDirectGatewayCandidateIndex < bootSameOriginGatewayCandidateIndex,
-    'boot login should try the direct Cloudflare gateway before the same-origin proxy fallback'
+    edgeSameOriginGatewayCandidateIndex >= 0
+        && edgeDirectGatewayCandidateIndex >= 0
+        && edgeSameOriginGatewayCandidateIndex < edgeDirectGatewayCandidateIndex,
+    'gateway should prefer the same-origin route so HttpOnly cookie sessions restore without cross-origin fallback latency'
+);
+assert.ok(
+    gatewaySessionSource.includes("credentials: cookieRoute ? 'include' : 'omit'"),
+    'same-origin gateway calls should include the HttpOnly session cookie'
 );
 assert.ok(grade9TotalSubjectContract.test(appSource), 'grade 9 total score must remain limited to Chinese, Math, English, Physics, Chemistry');
 assert.ok(grade9PoliticsDisplayContract.test(appSource), 'grade 9 politics should be configured as display-only subject');

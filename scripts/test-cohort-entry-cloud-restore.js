@@ -117,12 +117,17 @@ assert.ok(
 );
 
 const bootSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
+const gatewaySessionSource = fs.readFileSync(path.join(root, 'public/assets/js/gateway-session-runtime.js'), 'utf8');
 assert.ok(
     bootSource.includes('function hasBootAuthenticatedSession()')
-        && bootSource.includes("sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1')")
+        && bootSource.includes('return !!(user && readBootSessionToken());')
         && bootSource.includes('const shouldShowLogin = !!visible || !hasBootAuthenticatedSession();')
-        && bootSource.includes('clearStaleBootSession();'),
-    'boot login shell must require a real token and fail closed instead of exposing stale admin sessions'
+        && bootSource.includes('clearStaleBootSession();')
+        && bootSource.includes('function restoreBootGatewaySession()')
+        && bootSource.includes('bootGateway.verify()')
+        && gatewaySessionSource.includes('let memoryToken = \'\';')
+        && gatewaySessionSource.includes('root.sessionStorage.removeItem(TOKEN_STORAGE_KEY);'),
+    'boot login shell must require a verified in-memory token, restore only through the HttpOnly cookie, and fail closed for stale sessions'
 );
 
 assert.ok(
@@ -339,12 +344,12 @@ assert.ok(
 );
 
 assert.ok(
-    /const currentExamCohortId = normalizeCompareCohortId\(currentExamId\);[\s\S]*const targetCohortId = normalizeCompareCohortId\(cohortId\);[\s\S]*const readyDataMatchesTarget = !!targetCohortId && !!currentExamCohortId && currentExamCohortId === targetCohortId;[\s\S]*if \(current === cohortKey && currentExamId && hasReadyData && readyDataMatchesTarget\)/.test(appSource),
+    /const targetCohortId = normalizeCompareCohortId\(cohortId\);[\s\S]*const currentExamCohortId = normalizeCompareCohortId\(currentExamId\);[\s\S]*const readyDataMatchesTarget = !!targetCohortId && !!currentExamCohortId && currentExamCohortId === targetCohortId;[\s\S]*if \(current === cohortKey && currentExamId && hasReadyData && readyDataMatchesTarget\)/.test(appSource),
     'cohort switching should not early-return when the loaded exam still belongs to another cohort'
 );
 
 assert.ok(
-    /async function switchCohort\(cohortId, options = \{\}\) \{[\s\S]*if \(!cohortId\) return;[\s\S]*lockRuntimeCohortId\(cohortId\);[\s\S]*const cohortKey = getAppCohortKey\(cohortId\);/.test(appSource),
+    /async function switchCohort\(cohortId, options = \{\}\) \{[\s\S]*if \(!cohortId\) return;[\s\S]*const cohortKey = getAppCohortKey\(cohortId\);[\s\S]*lockRuntimeCohortId\(cohortId\);[\s\S]*ensureCohortDbForSwitch\(cohortId\)/.test(appSource),
     'direct cohort switches should refresh the runtime cohort guard before restoring target cloud data'
 );
 

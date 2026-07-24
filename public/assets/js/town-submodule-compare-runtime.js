@@ -74,7 +74,7 @@ async function upsertCloudTownSubmoduleCompareRow(row) {
     return window.sbClient.from('system_data').upsert(row, { onConflict: 'key' });
 }
 
-const TOWN_SUBMODULE_META = {
+    const TOWN_SUBMODULE_META = {
     summary: '综合评价总榜',
     analysis: '两率一分(横向)',
     'high-score': '高分段/尖子生',
@@ -277,6 +277,48 @@ function getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, scho
         return { avg, lowRate, lowCount, totalN };
     };
 
+    function townEscapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+    }
+
+    function sanitizeLegacyTownCompareHtml(value) {
+        const template = document.createElement('template');
+        template.innerHTML = String(value || '');
+        template.content.querySelectorAll('script,iframe,object,embed,base,meta,link,form').forEach((node) => node.remove());
+        template.content.querySelectorAll('*').forEach((node) => {
+            Array.from(node.attributes || []).forEach((attribute) => {
+                const name = String(attribute.name || '').toLowerCase();
+                const rawValue = String(attribute.value || '');
+                if (name.startsWith('on') || ['src', 'srcset', 'href', 'xlink:href', 'action', 'formaction'].includes(name)) {
+                    node.removeAttribute(attribute.name);
+                    return;
+                }
+                if (name === 'style' && /(?:url\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding)/i.test(rawValue)) {
+                    node.removeAttribute(attribute.name);
+                }
+            });
+        });
+        return template.innerHTML;
+    }
+
+    function renderTownSubmoduleComparePayload(resultEl, payload) {
+        const headers = Array.isArray(payload?.headers) ? payload.headers : [];
+        const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+        if (headers.length) {
+            const title = townEscapeHtml(payload?.title || '多期对比');
+            const school = townEscapeHtml(payload?.school || '');
+            const headerHtml = headers.map((header) => `<th>${townEscapeHtml(header)}</th>`).join('');
+            const rowsHtml = rows.map((row) => `<tr>${(Array.isArray(row) ? row : []).map((cell) => `<td>${townEscapeHtml(cell)}</td>`).join('')}</tr>`).join('');
+            const emptyHtml = `<tr><td colspan="${headers.length}" style="text-align:center;color:#94a3b8;">暂无数据</td></tr>`;
+            resultEl.innerHTML = `<div class="sub-header">📊 ${title}${school ? `（${school}）` : ''}</div><div class="table-wrap"><table class="mobile-card-table"><thead><tr>${headerHtml}</tr></thead><tbody>${rowsHtml || emptyHtml}</tbody></table></div><div style="margin-top:6px; font-size:12px; color:#64748b;">${townEscapeHtml(payload?.note || '')}</div>`;
+            return;
+        }
+        resultEl.innerHTML = sanitizeLegacyTownCompareHtml(payload?.html)
+            || '<div style="color:#94a3b8;">云端记录缺少可安全呈现的结构化内容</div>';
+    }
+
     const calcHighScore = (rows) => {
         const totals = (rows || []).map(r => Number(r.total)).filter(v => Number.isFinite(v));
         const count = totals.length;
@@ -441,9 +483,9 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
     const renderCacheKey = `${getTownSubmoduleCompareDataSignature()}::render::${submoduleId}::${townNormalizeSchoolName(school)}::${(examIds || []).join('|')}::${periodCount}`;
     const cachedRender = TownSubmoduleComparePerfCache.renderedHtml.get(renderCacheKey);
     if (cachedRender && resultEl.dataset.townSubmoduleCompareRenderSig === renderCacheKey) {
-        hintEl.innerHTML = cachedRender.hint;
+        hintEl.textContent = cachedRender.hint;
         hintEl.style.color = cachedRender.hintColor;
-        if (resultEl.innerHTML !== cachedRender.html) resultEl.innerHTML = cachedRender.html;
+        if (resultEl.innerHTML !== cachedRender.html) renderTownSubmoduleComparePayload(resultEl, cachedRender.entry || {});
         setTownSubmoduleCompareEntryState(submoduleId, cachedRender.entry);
         return;
     }
@@ -466,20 +508,7 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
     }
 
     const data = getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, school);
-    const th = data.headers.map(h => `<th>${h}</th>`).join('');
-    const tr = data.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
     const title = TOWN_SUBMODULE_META[submoduleId] || submoduleId;
-
-    const html = `
-            <div class="sub-header">📊 ${title} 多期对比（${school}）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr>${th}</tr></thead><tbody>${tr || `<tr><td colspan="${data.headers.length}" style="text-align:center;color:#94a3b8;">暂无数据</td></tr>`}</tbody></table></div>
-            <div style="margin-top:6px; font-size:12px; color:#64748b;">${data.note || ''}</div>
-        `;
-
-    resultEl.innerHTML = html;
-    hintEl.innerHTML = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
-    hintEl.style.color = '#16a34a';
-    resultEl.dataset.townSubmoduleCompareRenderSig = renderCacheKey;
 
     const entry = {
         submoduleId,
@@ -489,12 +518,15 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
         periodCount,
         headers: data.headers,
         rows: data.rows,
-        note: data.note,
-        html
+        note: data.note
     };
+    renderTownSubmoduleComparePayload(resultEl, entry);
+    hintEl.textContent = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
+    hintEl.style.color = '#16a34a';
+    resultEl.dataset.townSubmoduleCompareRenderSig = renderCacheKey;
     TownSubmoduleComparePerfCache.renderedHtml.set(renderCacheKey, {
-        html,
-        hint: hintEl.innerHTML,
+        html: resultEl.innerHTML,
+        hint: hintEl.textContent,
         hintColor: hintEl.style.color,
         entry
     });
@@ -523,8 +555,9 @@ async function saveTownSubmoduleCompareToCloud(submoduleId) {
     const safeSchool = String(cache.school || '').replace(/[^\w\u4e00-\u9fa5]/g, '');
     const key = `TOWN_SUB_COMPARE_${submoduleId}_${cohortId}级_${safeSchool}_${stamp}_${rand}`;
 
+    const { html, ...structuredCache } = cache;
     const payload = {
-        ...cache,
+        ...structuredCache,
         createdAt: new Date().toISOString(),
         createdBy: Auth?.currentUser?.username || Auth?.currentUser?.name || Auth?.currentUser?.email || 'unknown'
     };
@@ -566,24 +599,24 @@ async function viewCloudTownSubmoduleCompares(submoduleId) {
         if (window.UI) UI.loading(false);
         if (!data || data.length === 0) return window.UI.alert('☁️ 云端暂无记录');
 
-        const html = data.map((item, idx) => {
+        const html = data.map((item) => {
             const keyParts = item.key.replace(`TOWN_SUB_COMPARE_${submoduleId}_`, '').split('_');
             const cohort = keyParts[0] || '未知届别';
             const school = keyParts[1] || '未知学校';
             return `
-                <div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTownSubmoduleCompare('${submoduleId}', '${item.key}')">
+                <button type="button" data-town-submodule-compare-key="${townEscapeHtml(item.key)}" style="width:100%; border:0; padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:#fff; text-align:left;">
                     <div style="flex:1;">
                         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
-                            <span style="font-weight:600; color:#334155;">${school}</span>
+                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${townEscapeHtml(cohort)}</span>
+                            <span style="font-weight:600; color:#334155;">${townEscapeHtml(school)}</span>
                         </div>
-                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
+                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${townEscapeHtml(item.key)}</div>
                     </div>
                     <div style="text-align:right;">
                         <div style="font-size:12px; color:#64748b;">${new Date(item.updated_at).toLocaleString('zh-CN')}</div>
                         <div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击加载 &gt;</div>
                     </div>
-                </div>
+                </button>
             `;
         }).join('');
 
@@ -593,7 +626,14 @@ async function viewCloudTownSubmoduleCompares(submoduleId) {
                 html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${html}</div>`,
                 width: 650,
                 showCloseButton: true,
-                showConfirmButton: false
+                showConfirmButton: false,
+                didOpen: (popup) => {
+                    popup.querySelectorAll('[data-town-submodule-compare-key]').forEach((button) => {
+                        button.addEventListener('click', () => {
+                            loadCloudTownSubmoduleCompare(submoduleId, String(button.dataset.townSubmoduleCompareKey || ''));
+                        });
+                    });
+                }
             });
         }
     } catch (e) {
@@ -623,8 +663,8 @@ async function loadCloudTownSubmoduleCompare(submoduleId, key) {
             content = LZString.decompressFromUTF16(content.substring(3));
         }
         const payload = typeof content === 'string' ? JSON.parse(content) : content;
-        resultEl.innerHTML = payload.html || '<div style="color:#94a3b8;">云端记录缺少展示内容</div>';
-        hintEl.innerHTML = `✅ 已加载云端记录：${payload.title || key}`;
+        renderTownSubmoduleComparePayload(resultEl, payload || {});
+        hintEl.textContent = `✅ 已加载云端记录：${payload?.title || key}`;
         hintEl.style.color = '#7c3aed';
         setTownSubmoduleCompareEntryState(submoduleId, payload);
     } catch (e) {

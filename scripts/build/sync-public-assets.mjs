@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { transformSync } from 'esbuild';
+import { writeFileWithRetry } from './file-write-retry.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,7 +13,6 @@ const targetDir = path.join(DEFAULT_PROJECT_ROOT, 'dist', 'assets', 'js');
 const sourceIndexPath = path.join(DEFAULT_PROJECT_ROOT, 'src', 'index.html');
 const rootPublicFiles = ['favicon.ico', '_headers', 'sw.js', 'robots.txt', 'sitemap.xml', 'site.webmanifest', 'icon.svg'];
 const releaseAssetsDir = 'releases';
-
 export function collectReferencedJsAssets(html) {
   const refs = new Set();
   const scriptRegex = /<script[^>]*src="([^"]+)"[^>]*><\/script>/gi;
@@ -44,7 +44,7 @@ export function collectLazyLoadedJsAssets(sourceCode) {
   return refs;
 }
 
-export function syncReferencedAssets({
+export async function syncReferencedAssets({
   sourceJsDir = sourceDir,
   targetJsDir = targetDir,
   indexHtmlPath = sourceIndexPath,
@@ -104,7 +104,7 @@ export function syncReferencedAssets({
       charset: 'utf8',
       target: 'es2018'
     });
-    fs.writeFileSync(targetPath, minified.code, 'utf8');
+    await writeFileWithRetry(targetPath, minified.code, 'utf8');
     console.log(`Synced asset: ${sourcePath} -> ${targetPath} (${sourceCode.length}B -> ${minified.code.length}B)`);
   }
 
@@ -125,9 +125,9 @@ export function syncReferencedAssets({
   }
 }
 
-function main() {
+async function main() {
   try {
-    syncReferencedAssets();
+    await syncReferencedAssets();
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);

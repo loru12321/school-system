@@ -101,13 +101,26 @@ async function requireSystemDataSession(request, env) {
 }
 
 function canWriteSystemData(session) {
-  return hasAnyRole(session, ['admin', 'director', 'grade_director']);
+  // system_data contains packed score archives. Only the account holder that
+  // owns the archive lifecycle may mutate it; directors use the dedicated
+  // managed gateway actions for scoped operational records.
+  return isAdmin(session);
 }
 
 function canWriteSystemDataKey(session, key) {
-  if (isAdmin(session)) return true;
-  const meta = inferSystemDataMeta(key);
-  return !!meta.cohortId;
+  return isAdmin(session) && !!normalizeText(key);
+}
+
+function canReadSystemData(session) {
+  // Teachers, parents, and students must never receive an entire packed
+  // cohort through the generic REST surface. Leadership roles retain the
+  // existing analytics read path until the per-school shard migration lands.
+  return hasAnyRole(session, ['admin', 'director', 'grade_director']);
+}
+
+function authorizeSystemDataRead(request, session) {
+  if (canReadSystemData(session)) return null;
+  return jsonResponse(403, { ok: false, error: 'INSUFFICIENT_ROLE' }, request);
 }
 
 function authorizeSystemDataMutationKeys(request, session, keys) {
@@ -755,6 +768,11 @@ export async function handleSystemDataProxy(request, env, url) {
   const auth = await requireSystemDataSession(request, env);
   if (auth.error) return auth.error;
   const session = auth.session;
+
+  if (method === 'GET' || method === 'HEAD') {
+    const authorizationError = authorizeSystemDataRead(request, session);
+    if (authorizationError) return authorizationError;
+  }
 
   if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
     const authorizationError = await authorizeSystemDataWriteRequest(request.clone(), session);
