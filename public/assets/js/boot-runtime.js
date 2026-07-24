@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-c5ff81572aa5';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-fbdead615bd2';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -451,6 +451,15 @@ scheduleIdleBootTask(() => {
         prefetchAppModuleList(APP_MODULES.slice(firstBatchLimit, limit), 'lh2');
     }, LOGIN_MODULE_PREFETCH_DELAY_MS);
 }, LOGIN_MODULE_PREFETCH_DELAY_MS);
+}
+
+function prewarmLoginTransitionModules() {
+if (window.__LOGIN_TRANSITION_PREFETCH_STARTED__) return;
+if (!shouldPrefetchLoginModules()) return;
+const limit = Math.min(getAppModulePreloadLimit(), APP_MODULES.length);
+if (limit <= 0) return;
+window.__LOGIN_TRANSITION_PREFETCH_STARTED__ = true;
+prefetchAppModuleList(APP_MODULES.slice(0, limit), 'login-transition');
 }
 
 function warmAppModuleCache() {
@@ -1629,16 +1638,7 @@ function syncBootLoginOverlayState(visible) {
     document.body.classList.toggle('login-overlay-active', shouldShowLogin);
     document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';
 
-    if (overlay) {
-        // Login skins may use an equally-specific display:flex!important rule.
-        // Keep the authenticated shell truly out of layout instead of merely
-        // transparent and non-interactive beneath that skin rule.
-        overlay.style.setProperty('display', shouldShowLogin ? 'flex' : 'none', 'important');
-        overlay.style.visibility = shouldShowLogin ? 'visible' : 'hidden';
-        overlay.style.opacity = shouldShowLogin ? '1' : '0';
-        overlay.style.pointerEvents = shouldShowLogin ? 'auto' : 'none';
-        overlay.setAttribute('aria-hidden', shouldShowLogin ? 'false' : 'true');
-    }
+    if (overlay) setBootLoginOverlayVisibility(overlay, shouldShowLogin);
     if (loader && !shouldShowLogin) {
         loader.classList.add('hidden');
         setTimeout(() => { if (loader.classList.contains('hidden')) loader.style.display = 'none'; }, 300);
@@ -1654,8 +1654,6 @@ function finalizeBootLoginUi(portal = 'school') {
     else syncBootLoginOverlayState(false);
     setBootSubmitState({ busy: false, text: getPortalConfig(portal).submit });
     repairAuthenticatedShellVisibility();
-    [250,1000,3000,1e4,3e4].forEach((delay) => window.setTimeout(repairAuthenticatedShellVisibility, delay));
-    startAuthenticatedShellRepairWindow();
     window.setTimeout(() => {
         try { window.ensureMobileManagerRuntimeLoaded?.(); } catch (_) {}
         try { window.MobileQueryUI?.refresh?.(); } catch (_) {}
@@ -1668,34 +1666,25 @@ function repairAuthenticatedShellVisibility() {
         syncBootLoginOverlayState(true);
         return false;
     }
-    const overlay = document.getElementById('login-overlay');
-    const app = document.getElementById('app');
-    document.body.classList.remove('login-overlay-active');
-    document.body.dataset.authState = 'logged_in';
-    if (overlay) {
-        overlay.style.setProperty('display', 'none', 'important');
-        overlay.setAttribute('aria-hidden', 'true');
-    }
-    if (app) {
-        app.classList.remove('hidden');
-        app.style.setProperty('display', 'flex', 'important');
-        app.setAttribute('aria-hidden', 'false');
-    }
+    syncBootLoginOverlayState(false);
     return true;
 }
 
-function startAuthenticatedShellRepairWindow() {
-    if (window.__AUTH_SHELL_REPAIR_INTERVAL__) return;
-    const startedAt = Date.now();
-    window.__AUTH_SHELL_REPAIR_INTERVAL__ = window.setInterval(() => {
-        if (Date.now() - startedAt > 120000) {
-            window.clearInterval(window.__AUTH_SHELL_REPAIR_INTERVAL__);
-            window.__AUTH_SHELL_REPAIR_INTERVAL__ = 0;
-            return;
-        }
-        repairAuthenticatedShellVisibility();
-    }, 1000);
+function setBootLoginOverlayVisibility(overlay, visible, options = {}) {
+    const setVisibility = window.setLoginOverlayVisibility;
+    if (typeof setVisibility === 'function') return setVisibility(overlay, visible, options);
+    // The early shell runtime is bundled with the entry document. This fallback
+    // keeps authentication usable if an old cached document omits that asset.
+    const shouldShow = !!visible;
+    overlay.style.setProperty('display', shouldShow ? 'flex' : 'none', 'important');
+    overlay.style.visibility = shouldShow ? 'visible' : 'hidden';
+    overlay.style.opacity = shouldShow ? '1' : '0';
+    overlay.style.pointerEvents = shouldShow ? 'auto' : 'none';
+    overlay.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+    return true;
 }
+
+window.setLoginOverlayVisibility = window.setLoginOverlayVisibility || setBootLoginOverlayVisibility;
 
 const bootAuth = window.Auth || {
     __bootLoginShell: true,
@@ -1797,7 +1786,9 @@ const bootAuth = window.Auth || {
         });
 
         try {
-            const result = await bootGateway.login(user, pass, className);
+            const loginRequest = bootGateway.login(user, pass, className);
+            prewarmLoginTransitionModules();
+            const result = await loginRequest;
 
             if (result && result.user) {
                 const matchedUser = result.user;
@@ -1920,7 +1911,7 @@ function initBootAuthOnce() {
             if (!hasBootAuthenticatedSession()) {
                 bootAuth.syncLoginOverlayState(true);
                 const overlay = document.getElementById('login-overlay');
-                if (overlay) overlay.style.cssText += ';display:flex!important;visibility:visible!important;opacity:1!important';
+                if (overlay) setBootLoginOverlayVisibility(overlay, true);
             }
         }, delay));
     }

@@ -343,18 +343,10 @@ var Auth = {
             if (!shouldShowLogin && overlay.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
                 document.activeElement.blur();
             }
-            // A skin can set display:flex!important on the same node. Match
-            // that priority so an authenticated page removes the overlay from
-            // layout rather than leaving a transparent flex container behind.
-            overlay.style.setProperty('display', shouldShowLogin ? 'flex' : 'none', 'important');
-            overlay.style.visibility = shouldShowLogin ? 'visible' : 'hidden';
-            overlay.style.opacity = shouldShowLogin ? '1' : '0';
-            overlay.style.pointerEvents = shouldShowLogin ? 'auto' : 'none';
-            overlay.setAttribute('aria-hidden', shouldShowLogin ? 'false' : 'true');
-            try { overlay.inert = !shouldShowLogin; } catch (_) { /* inert is best-effort */ }
-            overlay.dataset.loginState = shouldShowLogin ? 'active' : 'hidden';
-            if (shouldShowLogin) overlay.dataset.loginModal = 'inline';
-            if (!shouldShowLogin) overlay.dataset.loginModal = 'hidden';
+            window.setLoginOverlayVisibility?.(overlay, shouldShowLogin, {
+                loginState: shouldShowLogin ? 'active' : 'hidden',
+                loginModal: shouldShowLogin ? 'inline' : 'hidden'
+            });
         }
         if (app) {
             app.classList.toggle('hidden', shouldShowLogin);
@@ -536,8 +528,6 @@ var Auth = {
         }
     },
 
-    /* 👇👇👇 ✋ 🟢 [此处开始替换] 重写 login 函数 (登录后立即刷新主界面) 🟢 ✋ 👇👇👇 */
-
     login: async function () {
         window.__BOOT_LOGIN_CLICKED__ = false;
         const user = document.getElementById('login-user').value.trim();
@@ -608,7 +598,6 @@ var Auth = {
                 return alert("❌ 登录失败！\n\n可能原因：\n1. 账号或密码错误\n2. 管理员尚未将账号【同步到云端】");
             }
 
-            /* 👇👇👇 🟢 新增代码：家长角色强制校验班级 🟢 👇👇👇 */
             if (isParentLikeRole(data.role) || data.role === 'class_teacher') {
                 if (!inputClass) {
                     if (isParentLikeRole(data.role)) {
@@ -626,8 +615,6 @@ var Auth = {
                     return alert(`❌ 班级不匹配！\n\n您输入的班级：${inputClass}\n系统记录的班级：${data.class_name || '未录入'}\n\n请核对后重试。`);
                 }
             }
-            /* 👆👆👆 🟢 结束 🟢 👆👆👆 */
-
             const matchedUser = {
                 session_id: data.session_id || '',
                 name: data.username || data.name || data.display_name || data.teacher_name || user || '用户',
@@ -895,8 +882,6 @@ var Auth = {
                     if (msgBtn) msgBtn.style.display = 'block'; // 显示铃铛
 
                 }
-                /* 👆👆👆 🟢 结束 🟢 👆👆👆 */
-
                 startBackgroundCloudHydration("正在后台恢复成绩数据...");
             }
 

@@ -9,6 +9,7 @@ const edgeGatewayRuntime = fs.readFileSync(path.join(root, 'public/assets/js/edg
 const gatewaySessionRuntime = fs.readFileSync(path.join(root, 'public/assets/js/gateway-session-runtime.js'), 'utf8');
 const bootRuntime = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
 const authLoginRuntime = fs.readFileSync(path.join(root, 'public/assets/js/auth-login-runtime.js'), 'utf8');
+const loginShellStateRuntime = fs.readFileSync(path.join(root, 'public/assets/js/login-shell-state-runtime.js'), 'utf8');
 const sourceIndex = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 
 function prepareEsmWorkerModules() {
@@ -74,11 +75,13 @@ async function run() {
   assert.ok(gatewaySessionRuntime.includes("action === 'session.verify' && data.token"), 'cookie session verification should repopulate only the in-memory token');
   assert.ok(bootRuntime.includes('restoreBootGatewaySession'), 'boot runtime should restore a same-origin cookie session before deciding the shell state');
   assert.ok(bootRuntime.includes("document.documentElement.dataset.bootAuth = shouldShowLogin ? 'logged_out' : 'logged_in';"), 'boot session restoration must update the first-paint auth CSS state');
-  assert.ok(bootRuntime.includes("overlay.style.setProperty('display', shouldShowLogin ? 'flex' : 'none', 'important');"), 'boot session restoration must remove the login shell from layout despite skin-level !important rules');
+  assert.ok(bootRuntime.includes('setBootLoginOverlayVisibility(overlay, shouldShowLogin)'), 'boot session restoration must delegate login shell visibility to the shared early runtime');
   assert.ok(authLoginRuntime.includes("document.documentElement.dataset.bootAuth = shouldShowLogin ? 'logged_out' : 'logged_in';"), 'full authentication runtime must keep the first-paint auth CSS state in sync');
-  assert.ok(authLoginRuntime.includes("overlay.style.setProperty('display', shouldShowLogin ? 'flex' : 'none', 'important');"), 'full authentication runtime must preserve the authenticated shell layout state');
+  assert.ok(authLoginRuntime.includes('window.setLoginOverlayVisibility?.(overlay, shouldShowLogin'), 'full authentication runtime must preserve the shared authenticated shell layout state');
+  assert.ok(loginShellStateRuntime.includes("overlay.style.setProperty('display', shouldShow ? 'flex' : 'none', 'important');"), 'the shared login shell runtime must enforce the skin-safe display priority');
   assert.ok(sourceIndex.indexOf('gateway-session-runtime.js') < sourceIndex.indexOf('edge-gateway-runtime.js'), 'session runtime must load before business gateway methods');
   assert.ok(sourceIndex.indexOf('edge-gateway-runtime.js') < sourceIndex.indexOf('boot-runtime-runtime-'), 'secure gateway runtime must load before the boot login shell');
+  assert.ok(sourceIndex.indexOf('login-shell-state-runtime.js') < sourceIndex.indexOf('boot-runtime-runtime-'), 'shared login shell state must load before the boot login shell');
 
   const tempDir = prepareEsmWorkerModules();
   try {
