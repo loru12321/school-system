@@ -769,8 +769,24 @@ var Auth = {
                 if (!shouldHydrateCloudInBackground) return;
                 const needsManualCohort = typeof requiresManualCohortSelection === 'function' && requiresManualCohortSelection();
                 if (needsManualCohort) return;
+                const MAX_BACKGROUND_HYDRATION_SWITCH_RETRIES = 10;
+                let cohortSwitchRetryCount = 0;
+                const scheduleHydrationAfterCohortSwitch = () => {
+                    if (cohortSwitchRetryCount >= MAX_BACKGROUND_HYDRATION_SWITCH_RETRIES) {
+                        console.warn('[Auth.login] background cloud hydration stopped waiting for cohort switch');
+                        return;
+                    }
+                    cohortSwitchRetryCount += 1;
+                    window.__STARTUP_CLOUD_HYDRATION_TIMER__ = scheduleStartupCloudTask(runHydration, {
+                        delay: 450,
+                        timeout: 1200
+                    });
+                };
                 const runHydration = () => {
-                    if (window.__COHORT_SWITCH_IN_PROGRESS__) return;
+                    if (window.__COHORT_SWITCH_IN_PROGRESS__) {
+                        scheduleHydrationAfterCohortSwitch();
+                        return;
+                    }
                     if (Array.isArray(RAW_DATA) && RAW_DATA.length > 0) return;
                     withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
                     .then(() => {

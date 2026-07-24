@@ -320,6 +320,20 @@ assert.ok(
 );
 
 assert.ok(
+    /function syncSnapshotCohortShell\(cohortId\) \{[\s\S]*ensureCohortRegistered\(id\)[\s\S]*selector\.value = id;/.test(snapshotSystemSource)
+        && snapshotSystemSource.includes('syncSnapshotCohortShell(CURRENT_COHORT_ID);'),
+    'cloud snapshot restores should repopulate and select the active cohort without bypassing the entry gate'
+);
+
+assert.ok(
+    authLoginSource.includes('const MAX_BACKGROUND_HYDRATION_SWITCH_RETRIES = 10;')
+        && authLoginSource.includes('const scheduleHydrationAfterCohortSwitch = () =>')
+        && authLoginSource.includes('if (window.__COHORT_SWITCH_IN_PROGRESS__) {')
+        && authLoginSource.includes('scheduleHydrationAfterCohortSwitch();'),
+    'background cloud hydration should retry after a bounded cohort-switch overlap instead of silently stopping'
+);
+
+assert.ok(
     /applyExamToWorkspace: function \(examId, options = \{\}\) \{[\s\S]*const examCohortId = inferCohortIdFromValue\(examId\)[\s\S]*blocked cross-cohort exam apply[\s\S]*return false;/.test(cohortDbSource),
     'applying an exam batch to the workspace should reject exam IDs from another cohort'
 );

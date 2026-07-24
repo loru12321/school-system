@@ -361,6 +361,30 @@ function scheduleSnapshotPostApplyRender() {
     setTimeout(runSnapshotPostApplyLightRender, 0);
 }
 
+// Applying a cloud snapshot updates the runtime state directly, so it does not
+// pass through CohortManager.switchTo(). Keep the navigation shell in sync
+// without changing the current screen or bypassing the cohort-entry gate.
+function syncSnapshotCohortShell(cohortId) {
+    const id = String(cohortId || CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+    if (!id || !window.__COHORT_MANAGER_READY__ || typeof ensureCohortRegistered !== 'function') return false;
+
+    const meta = ensureCohortRegistered(id);
+    if (!meta) return false;
+
+    const label = typeof formatCohortLabel === 'function'
+        ? formatCohortLabel(meta)
+        : `${meta.year || id}级`;
+    const currentLabel = document.getElementById('cohort-current-label');
+    if (currentLabel) currentLabel.innerText = label;
+
+    const examCohortLabel = document.getElementById('exam-cohort-label');
+    if (examCohortLabel) examCohortLabel.innerText = label;
+
+    const selector = document.getElementById('cohort-selector');
+    if (selector) selector.value = id;
+    return true;
+}
+
 function applySnapshotPayload(db, options = {}) {
     window.applySnapshotPayload = applySnapshotPayload;
     const incomingCohortId = getSnapshotPayloadCohortId(db);
@@ -476,6 +500,8 @@ function applySnapshotPayload(db, options = {}) {
             });
         } catch (e) { }
     }
+
+    syncSnapshotCohortShell(CURRENT_COHORT_ID);
 
     if (options.deferRender === true) scheduleSnapshotPostApplyRender();
     else runSnapshotPostApplyRender();
