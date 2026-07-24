@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '..');
 const edgeGatewayRuntime = fs.readFileSync(path.join(root, 'public/assets/js/edge-gateway-runtime.js'), 'utf8');
 const gatewaySessionRuntime = fs.readFileSync(path.join(root, 'public/assets/js/gateway-session-runtime.js'), 'utf8');
 const bootRuntime = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
+const authLoginRuntime = fs.readFileSync(path.join(root, 'public/assets/js/auth-login-runtime.js'), 'utf8');
 const sourceIndex = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 
 function prepareEsmWorkerModules() {
@@ -72,6 +73,8 @@ async function run() {
   assert.ok(edgeGatewayRuntime.includes('GatewaySessionRuntime.request'), 'business gateway methods should delegate session transport to the focused session runtime');
   assert.ok(gatewaySessionRuntime.includes("action === 'session.verify' && data.token"), 'cookie session verification should repopulate only the in-memory token');
   assert.ok(bootRuntime.includes('restoreBootGatewaySession'), 'boot runtime should restore a same-origin cookie session before deciding the shell state');
+  assert.ok(bootRuntime.includes("document.documentElement.dataset.bootAuth = shouldShowLogin ? 'logged_out' : 'logged_in';"), 'boot session restoration must update the first-paint auth CSS state');
+  assert.ok(authLoginRuntime.includes("document.documentElement.dataset.bootAuth = shouldShowLogin ? 'logged_out' : 'logged_in';"), 'full authentication runtime must keep the first-paint auth CSS state in sync');
   assert.ok(sourceIndex.indexOf('gateway-session-runtime.js') < sourceIndex.indexOf('edge-gateway-runtime.js'), 'session runtime must load before business gateway methods');
   assert.ok(sourceIndex.indexOf('edge-gateway-runtime.js') < sourceIndex.indexOf('boot-runtime-runtime-'), 'secure gateway runtime must load before the boot login shell');
 

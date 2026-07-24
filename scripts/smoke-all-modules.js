@@ -146,6 +146,24 @@ function hasRecentAnonymousSessionVerify(entries, windowMs = 1000) {
     return entries.some((entry) => Number(entry?.time || 0) >= cutoff);
 }
 
+function getSmokeApiTraceDetail(request) {
+    const url = new URL(request.url());
+    const headers = request.headers();
+    return {
+        method: request.method(),
+        path: `${url.pathname}${url.search}`,
+        hasAuthorization: !!String(headers.authorization || '').trim()
+    };
+}
+
+function isSmokeApiRequest(request) {
+    try {
+        return /^\/api\/(?:edu-gateway|system-data)(?:$|\/|[?#])/.test(new URL(request.url()).pathname);
+    } catch (_) {
+        return false;
+    }
+}
+
 function shouldIgnoreConsoleMessage(msg, context = {}) {
     const text = String(msg || '');
     if (text.includes('favicon.ico')
@@ -4485,12 +4503,23 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         if (recentFailedRequests.length > 20) {
             recentFailedRequests.splice(0, recentFailedRequests.length - 20);
         }
+        if (process.env.SMOKE_TRACE && isSmokeApiRequest(request)) {
+            trace('api-request-failed', {
+                scope: currentScope,
+                ...getSmokeApiTraceDetail(request),
+                error: request.failure()?.errorText || ''
+            });
+        }
     });
 
     page.on('response', response => {
         const status = response.status();
-        if (process.env.SMOKE_TRACE && /\/api\/edu-gateway(?:$|[?#])/.test(response.url())) {
-            trace('gateway-response', { scope: currentScope, status, url: response.url() });
+        if (process.env.SMOKE_TRACE && isSmokeApiRequest(response.request())) {
+            trace('api-response', {
+                scope: currentScope,
+                status,
+                ...getSmokeApiTraceDetail(response.request())
+            });
         }
         if (status < 400) return;
         if (isExpectedAnonymousSessionVerify(response)) {
@@ -4524,9 +4553,14 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     });
 
     page.on('request', request => {
-        if (!process.env.SMOKE_TRACE || !/\/api\/edu-gateway(?:$|[?#])/.test(request.url())) return;
-        const payload = String(request.postData() || '');
-        trace('gateway-request', { scope: currentScope, method: request.method(), payload: payload.slice(0, 280) });
+        if (!process.env.SMOKE_TRACE || !isSmokeApiRequest(request)) return;
+        const detail = getSmokeApiTraceDetail(request);
+        if (new URL(request.url()).pathname === '/api/edu-gateway') {
+            const payload = String(request.postData() || '');
+            trace('gateway-request', { scope: currentScope, ...detail, payload: payload.slice(0, 280) });
+            return;
+        }
+        trace('api-request', { scope: currentScope, ...detail });
     });
 
     const smokeStartedAt = Date.now();
@@ -4555,12 +4589,31 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         trace('cookie-session-reload:start');
         await page.reload({ waitUntil: 'domcontentloaded' });
         await waitForAppReady(page);
-        cookieSessionReload = await page.evaluate(() => ({
-            requested: true,
-            ok: getComputedStyle(document.getElementById('login-overlay')).display === 'none'
-                && !!window.EdgeGateway?.getToken?.()
-                && !!window.AuthState?.getCurrentUser?.()
-        }));
+        cookieSessionReload = await page.evaluate(() => {
+            const overlay = document.getElementById('login-overlay');
+            const app = document.getElementById('app');
+            const computedOverlay = overlay ? getComputedStyle(overlay) : null;
+            const computedApp = app ? getComputedStyle(app) : null;
+            const hasToken = !!window.EdgeGateway?.getToken?.();
+            const hasSessionUser = !!window.AuthState?.getCurrentUser?.();
+            const bootAuth = document.documentElement?.dataset?.bootAuth || '';
+            return {
+                requested: true,
+                ok: computedOverlay?.display === 'none'
+                    && bootAuth === 'logged_in'
+                    && hasToken
+                    && hasSessionUser,
+                overlayDisplay: computedOverlay?.display || '',
+                overlayVisibility: computedOverlay?.visibility || '',
+                overlayInlineDisplay: overlay?.style?.display || '',
+                overlayAriaHidden: overlay?.getAttribute('aria-hidden') || '',
+                appDisplay: computedApp?.display || '',
+                authState: document.body?.dataset?.authState || '',
+                bootAuth,
+                hasToken,
+                hasSessionUser
+            };
+        });
         trace('cookie-session-reload:done', cookieSessionReload);
         if (!cookieSessionReload.ok) {
             errors.push({ scope: currentScope, message: 'same-origin cookie session did not restore after reload' });

@@ -1831,6 +1831,7 @@ function enforceLoggedOutShellGate() {
     if (hasAuthenticatedAppSession()) return false;
     const overlay = document.getElementById('login-overlay');
     const app = document.getElementById('app');
+    document.documentElement.dataset.bootAuth = 'logged_out';
     document.body.classList.add('login-overlay-active', 'role-guest');
     document.body.dataset.authState = 'logged_out';
     document.body.dataset.role = 'guest';

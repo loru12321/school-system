@@ -331,6 +331,7 @@ var Auth = {
                 this._parentRenderTimer = null;
             }
         }
+        document.documentElement.dataset.bootAuth = shouldShowLogin ? 'logged_out' : 'logged_in';
         document.body.classList.toggle('login-overlay-active', shouldShowLogin);
         document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';
         if (shouldShowLogin) {

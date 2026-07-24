@@ -12,6 +12,13 @@
     if (!root || root.DataCloudRuntime) return;
     root.DataCloudRuntime = runtime;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createDataCloudRuntime(root) {
+    let pageIsUnloading = false;
+    if (typeof root.addEventListener === 'function') {
+        root.addEventListener('pagehide', () => {
+            pageIsUnloading = true;
+        }, { once: true });
+    }
+
     function normalizeText(value) {
         return String(value || '').trim();
     }
@@ -1895,6 +1902,11 @@
         try {
             return await task;
         } catch (e) {
+            // Browser navigation cancels background reads from the old document.
+            // The replacement document starts its own authenticated restore, so
+            // surfacing that cancellation as a cloud failure is both noisy and
+            // misleading to users.
+            if (pageIsUnloading) return null;
             if (options.background) console.warn('云端同步失败:', e);
             else console.error('云端同步失败:', e);
             return null;

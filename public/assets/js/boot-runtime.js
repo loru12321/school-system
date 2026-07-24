@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-7cdfed2b13ec';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-f8bff10e00ef';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -1625,6 +1625,7 @@ function syncBootLoginOverlayState(visible) {
     const shouldShowLogin = !!visible || !hasBootAuthenticatedSession();
     if (shouldShowLogin) clearStaleBootSession();
 
+    document.documentElement.dataset.bootAuth = shouldShowLogin ? 'logged_out' : 'logged_in';
     document.body.classList.toggle('login-overlay-active', shouldShowLogin);
     document.body.dataset.authState = shouldShowLogin ? 'logged_out' : 'logged_in';
 
