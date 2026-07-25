@@ -1,0 +1,362 @@
+/*
+ * 新中式工作台
+ *
+ * This is the final visual owner for the signed-in workspace.  It deliberately
+ * leaves login and dark mode to their dedicated final styles, and keeps the
+ * operational DOM, calculations and semantic state classes unchanged.
+ */
+
+:root {
+    --zh-paper: #f5f1e8;
+    --zh-surface: #fffdfa;
+    --zh-surface-muted: #f9f6ef;
+    --zh-ink: #23374c;
+    --zh-ink-strong: #19324b;
+    --zh-muted: #667486;
+    --zh-rule: #d9d1c3;
+    --zh-rule-soft: #e9e3d8;
+    --zh-navy: #315b78;
+    --zh-navy-soft: #e7eff1;
+    --zh-vermilion: #ae4e3a;
+    --zh-vermilion-soft: #f8e9e3;
+    --zh-ochre: #9a763d;
+    --zh-positive: #3f7166;
+    --zh-radius: 8px;
+}
+
+html body:not(.dark-mode) {
+    background: var(--zh-paper) !important;
+    color: var(--zh-ink) !important;
+    font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif !important;
+}
+
+html body:not(.dark-mode)::before {
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app.app-layout,
+html body:not(.dark-mode) #app .app-main {
+    background: transparent !important;
+}
+
+/* Navigation reads like a slim catalogue margin rather than a dark app rail. */
+html body:not(.dark-mode) #app.app-layout {
+    grid-template-columns: 212px minmax(0, 1fr) !important;
+}
+
+html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious,
+html body:not(.dark-mode).shell-sidebar-collapsed #app > #app-sidebar.sidebar-spacious,
+html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious.is-collapsed {
+    width: 212px !important;
+    min-width: 212px !important;
+    max-width: 212px !important;
+    padding: 18px 12px !important;
+    border: 0 !important;
+    border-right: 1px solid var(--zh-rule) !important;
+    border-radius: 0 !important;
+    background: #f0ece3 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+html body:not(.dark-mode) #app-sidebar::before,
+html body:not(.dark-mode) #app-sidebar::after {
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app-sidebar .sidebar-nav-container {
+    gap: 3px !important;
+}
+
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item,
+html body:not(.dark-mode).shell-sidebar-collapsed #app-sidebar .sidebar-menu-item {
+    min-height: 42px !important;
+    margin: 0 !important;
+    padding: 6px 9px !important;
+    border: 0 !important;
+    border-left: 2px solid transparent !important;
+    border-radius: 0 var(--zh-radius) var(--zh-radius) 0 !important;
+    background: transparent !important;
+    color: #526375 !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item:hover {
+    background: rgba(255, 253, 248, 0.64) !important;
+    color: var(--zh-ink-strong) !important;
+}
+
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active,
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] {
+    border-color: var(--zh-vermilion) !important;
+    background: var(--zh-surface) !important;
+    color: var(--zh-ink-strong) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app-sidebar :is(.sidebar-menu-item__icon, .sidebar-menu-item__text) {
+    color: inherit !important;
+}
+
+html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__text {
+    font-size: 13px !important;
+    font-weight: 650 !important;
+}
+
+/* A quiet, editorial masthead.  Controls remain compact for daily operations. */
+html body:not(.dark-mode) #app .app-main {
+    padding: 0 24px 42px !important;
+}
+
+html body:not(.dark-mode) #main-header.shell-toolbar {
+    min-height: 62px !important;
+    margin: 0 -24px 18px !important;
+    padding: 10px 24px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--zh-rule) !important;
+    border-radius: 0 !important;
+    background: rgba(245, 241, 232, 0.96) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+html body:not(.dark-mode) #main-header :is(button, .btn, select),
+html body:not(.dark-mode) #app .shell-overview-launcher,
+html body:not(.dark-mode) #app .shell-sync-chip {
+    min-height: 34px !important;
+    border: 1px solid var(--zh-rule) !important;
+    border-radius: 5px !important;
+    background: var(--zh-surface) !important;
+    color: var(--zh-ink) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+html body:not(.dark-mode) #main-header :is(button, .btn):hover,
+html body:not(.dark-mode) #app .shell-overview-launcher:hover,
+html body:not(.dark-mode) #app .shell-sync-chip:hover {
+    border-color: #bcae99 !important;
+    background: var(--zh-surface-muted) !important;
+    color: var(--zh-ink-strong) !important;
+}
+
+html body:not(.dark-mode) #main-header #global-search-container {
+    border-color: var(--zh-rule) !important;
+    border-radius: 5px !important;
+    background: rgba(255, 253, 248, 0.72) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #main-header #global-search-container:focus-within {
+    border-color: var(--zh-navy) !important;
+    background: var(--zh-surface) !important;
+    box-shadow: 0 0 0 2px rgba(49, 91, 120, 0.12) !important;
+}
+
+/* Workspace orientation: paper panels, a single vermilion active indicator. */
+html body:not(.dark-mode) #app .shell-overview-card--dock,
+html body:not(.dark-mode) #app .shell-module-rail-shell {
+    border: 1px solid var(--zh-rule) !important;
+    border-radius: var(--zh-radius) !important;
+    background: var(--zh-surface) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-card--dock {
+    border-left: 3px solid var(--zh-vermilion) !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-kicker,
+html body:not(.dark-mode) #app .shell-module-rail-label,
+html body:not(.dark-mode) #app .workspace-drawer-kicker {
+    color: var(--zh-ochre) !important;
+    font-family: "Noto Serif SC", "Songti SC", STSong, serif !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-heading h2,
+html body:not(.dark-mode) #app .workspace-drawer-copy h2 {
+    color: var(--zh-ink-strong) !important;
+    font-family: "Noto Serif SC", "Songti SC", STSong, serif !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+}
+
+html body:not(.dark-mode) #app :is(#shell-category-desc, .shell-overview-copy p, .shell-module-rail-status, .workflow-path__step) {
+    color: var(--zh-muted) !important;
+}
+
+html body:not(.dark-mode) #app .workflow-path {
+    border-bottom-color: var(--zh-rule-soft) !important;
+}
+
+html body:not(.dark-mode) #app .workflow-path__step.is-active {
+    border-bottom-color: var(--zh-vermilion) !important;
+    color: var(--zh-ink-strong) !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip {
+    border: 0 !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--zh-muted) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:hover {
+    background: var(--zh-surface-muted) !important;
+    color: var(--zh-ink) !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) {
+    border-color: var(--zh-vermilion) !important;
+    background: transparent !important;
+    color: var(--zh-ink-strong) !important;
+    box-shadow: none !important;
+}
+
+/* Analysis modules become a readable data folio instead of stacked glossy cards. */
+html body:not(.dark-mode) #app .section.card-box,
+html body:not(.dark-mode) #app .section.card-box.analysis-workspace {
+    padding: 18px !important;
+    border: 1px solid var(--zh-rule) !important;
+    border-top: 3px solid var(--zh-navy) !important;
+    border-radius: var(--zh-radius) !important;
+    background: var(--zh-surface) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace {
+    --analysis-accent: var(--zh-navy) !important;
+    --analysis-surface: var(--zh-navy-soft) !important;
+    --analysis-surface-strong: #d9e5e1 !important;
+    --analysis-border: #cbd9d5 !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace .module-desc-bar.analysis-hero,
+html body:not(.dark-mode) #app .module-desc-bar {
+    border: 0 !important;
+    border-left: 3px solid var(--zh-vermilion) !important;
+    border-radius: 0 !important;
+    background: var(--zh-surface-muted) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace .module-desc-bar h3,
+html body:not(.dark-mode) #app .module-desc-bar h3 {
+    color: var(--zh-ink-strong) !important;
+    font-family: "Noto Serif SC", "Songti SC", STSong, serif !important;
+    letter-spacing: 0.02em !important;
+}
+
+html body:not(.dark-mode) #app :is(.analysis-shell-head, .sec-head.analysis-shell-head) {
+    border: 1px solid var(--zh-rule) !important;
+    border-left: 3px solid var(--zh-navy) !important;
+    border-radius: 0 !important;
+    background: var(--zh-surface) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app :is(.control-panel, .analysis-inline-panel, .analysis-anchor-panel, .table-wrap, .analysis-table-wrap) {
+    border-color: var(--zh-rule) !important;
+    border-radius: 5px !important;
+    background: var(--zh-surface) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+html body:not(.dark-mode) #app :is(input, select, textarea, .form-control) {
+    border-color: var(--zh-rule) !important;
+    border-radius: 5px !important;
+    background: #fffefa !important;
+    color: var(--zh-ink) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app :is(input, select, textarea, .form-control):focus {
+    border-color: var(--zh-navy) !important;
+    box-shadow: 0 0 0 2px rgba(49, 91, 120, 0.12) !important;
+}
+
+html body:not(.dark-mode) #app .btn-primary,
+html body:not(.dark-mode) #app .btn.btn-primary {
+    border-color: var(--zh-navy) !important;
+    background: var(--zh-navy) !important;
+    color: #ffffff !important;
+}
+
+html body:not(.dark-mode) #app .btn-primary:hover,
+html body:not(.dark-mode) #app .btn.btn-primary:hover {
+    border-color: var(--zh-ink-strong) !important;
+    background: var(--zh-ink-strong) !important;
+}
+
+html body:not(.dark-mode) #app table {
+    border-color: var(--zh-rule-soft) !important;
+}
+
+html body:not(.dark-mode) #app table thead th {
+    border-color: var(--zh-rule) !important;
+    background: #e9eee9 !important;
+    color: var(--zh-ink-strong) !important;
+    font-weight: 700 !important;
+}
+
+html body:not(.dark-mode) #app table :is(td, th) {
+    border-color: var(--zh-rule-soft) !important;
+}
+
+html body:not(.dark-mode) #app table tbody tr:hover {
+    background: #f7f2e9 !important;
+}
+
+html body:not(.dark-mode) #app :is(.modal-content, .workspace-drawer-panel, .spotlight-box) {
+    border-color: var(--zh-rule) !important;
+    border-radius: var(--zh-radius) !important;
+    background: var(--zh-surface) !important;
+    box-shadow: 0 18px 42px rgba(50, 45, 37, 0.14) !important;
+    backdrop-filter: none !important;
+}
+
+html body:not(.dark-mode) #app .workspace-drawer-panel {
+    border-left: 3px solid var(--zh-vermilion) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    html body:not(.dark-mode) #app .section.active {
+        animation: zhongshi-module-in 160ms ease-out both;
+    }
+
+    html body:not(.dark-mode) #app :is(.sidebar-menu-item, .shell-module-rail-chip, .btn, .shell-overview-launcher, .shell-sync-chip) {
+        transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease !important;
+    }
+}
+
+@keyframes zhongshi-module-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+    html body:not(.dark-mode) #app.app-layout {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    html body:not(.dark-mode) #app .app-main {
+        padding: 0 14px 30px !important;
+    }
+
+    html body:not(.dark-mode) #main-header.shell-toolbar {
+        margin: 0 -14px 12px !important;
+        padding: 8px 14px !important;
+        background: var(--zh-paper) !important;
+    }
+
+    html body:not(.dark-mode) #app .section.card-box,
+    html body:not(.dark-mode) #app .section.card-box.analysis-workspace {
+        padding: 13px !important;
+    }
+}

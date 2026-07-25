@@ -69,6 +69,7 @@
     <link rel="stylesheet" href="./assets/css/mature-system-shell.css?v=20260704-mature-shell-v2">
     <link rel="stylesheet" href="./assets/css/workbench-design-language.css?v=20260712-nocturne-v1">
     <link rel="stylesheet" href="./assets/css/nocturne-signal.css?v=20260712-nocturne-v1">
+    <link rel="stylesheet" href="./assets/css/zhongshi-workbench.css?v=20260725-zhongshi-v1">
     <link rel="stylesheet" href="./assets/css/responsive-login-final.css?v=20260712-nocturne-v1">
     <style id="critical-visibility-guard">
         .hidden,
@@ -105,8 +106,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-d1d27e612815.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-d1d27e612815.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-16c0585474cd.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-16c0585474cd.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -396,8 +397,11 @@
                         </div>
                         <div class="login-graduate-cohort-row">
                             <div class="login-entry-field login-entry-field--select" data-login-field="graduate-cohort">
-                                <span class="login-entry-prefix">档案</span>
-                                <select id="login-graduate-cohort-select" data-login-graduate-cohort-select="1"></select>
+                                <span class="login-entry-prefix">毕业届别</span>
+                                <!-- Keep a visible, usable fallback while the lightweight boot runtime loads archive years. -->
+                                <select id="login-graduate-cohort-select" data-login-graduate-cohort-select="1">
+                                    <option value="2021">2021届 · 已毕业</option>
+                                </select>
                             </div>
                             <button id="login-graduate-cohort-button" type="button">查询</button>
                         </div>
