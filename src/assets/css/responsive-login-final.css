@@ -790,6 +790,17 @@ html body #login-overlay[data-login-skin="clean"] .login-clean-mark {
     box-shadow: 0 10px 24px rgba(189, 93, 112, 0.17) !important;
 }
 
+/* The brand glyph now lives as a real text node in the markup
+ * (index.html: <span class="login-clean-mark">校</span>). A legacy
+ * compatibility sheet still injects the same character through
+ * `.login-clean-mark::before { content: "校" }`, which doubled the glyph
+ * once this final skin restored a non-zero font-size on the mark. Drop the
+ * generated content so only the single HTML text node renders. */
+html body #login-overlay[data-login-skin="clean"] .login-clean-mark::before,
+html body #login-overlay[data-login-skin="clean"] .login-clean-mark::after {
+    content: none !important;
+}
+
 html body #login-overlay[data-login-skin="clean"] .login-clean-brand strong,
 html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1,
 html body #login-overlay[data-login-skin="clean"] .login-form-header h2 {

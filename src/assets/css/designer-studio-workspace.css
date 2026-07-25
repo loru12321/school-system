@@ -1636,8 +1636,8 @@ body.dark-mode .table-wrap {
 #app .voice-fab,
 .voice-fab,
 #voice-control-btn {
-    background: var(--ds-blue) !important;
-    box-shadow: 0 16px 28px rgba(31, 94, 255, 0.24) !important;
+    background: #d97887 !important;
+    box-shadow: 0 16px 28px rgba(189, 93, 112, 0.24) !important;
 }
 
 #login-overlay[data-login-skin="clean"],

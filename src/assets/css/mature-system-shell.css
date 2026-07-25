@@ -455,16 +455,10 @@ body:not(.dark-mode) .btn.btn-purple {
     background: #1d4ed8 !important;
 }
 
-html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-primary, .btn.btn-purple, .btn.btn-blue, .primary-btn, .analysis-action-btn.primary, button.primary, .advanced-submit.login-clean-submit),
 html body:not(.dark-mode) #login-overlay[data-login-skin="clean"] :is(.login-clean-submit, .btn-primary, .btn.btn-primary, .advanced-submit) {
     background: #1d4ed8 !important;
     border-color: rgba(29, 78, 216, 0.34) !important;
     color: #ffffff !important;
-}
-
-html body:not(.dark-mode) #app :is(#app .btn-primary, #app .btn.btn-primary, #app .btn.btn-purple) {
-    background: #1d4ed8 !important;
-    border-color: rgba(29, 78, 216, 0.34) !important;
 }
 
 html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-primary, .btn.btn-purple, .btn.btn-blue, .primary-btn, .analysis-action-btn.primary, button.primary, .advanced-submit.login-clean-submit):hover,

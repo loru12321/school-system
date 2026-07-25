@@ -525,8 +525,8 @@ label,
     --pd-interaction-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     --pd-interaction-fast: 140ms;
     --pd-interaction-medium: 220ms;
-    --pd-scrollbar-track: rgba(226, 232, 240, 0.58);
-    --pd-scrollbar-thumb: rgba(49, 92, 246, 0.42);
+    --pd-scrollbar-track: rgba(235, 227, 225, 0.58);
+    --pd-scrollbar-thumb: rgba(196, 178, 180, 0.55);
 }
 
 html {
@@ -553,7 +553,7 @@ html {
 }
 
 *::-webkit-scrollbar-thumb:hover {
-    background: rgba(254, 44, 85, 0.48);
+    background: rgba(189, 93, 112, 0.52);
     background-clip: padding-box;
 }
 
