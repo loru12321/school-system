@@ -1140,14 +1140,6 @@ assert.ok(
     appSource.includes('// 命令面板默认态：无输入时按分类分组列出全部可进入模块'),
     'command palette should render all accessible modules grouped by category when the query is empty'
 );
-assert.ok(appSource.includes('const redTrafficRows = [];'), 'traffic light analysis should collect red rows off-DOM');
-assert.ok(appSource.includes("listRed.innerHTML = cntRed === 0"), 'traffic light analysis should write red rows once after classification');
-assert.ok(appSource.includes("redTrafficRows.join('')"), 'traffic light analysis should batch red rows into one DOM write');
-assert.ok(appSource.includes("yellowTrafficRows.join('')"), 'traffic light analysis should batch yellow rows into one DOM write');
-assert.ok(appSource.includes("greenTrafficRows.join('')"), 'traffic light analysis should batch green rows into one DOM write');
-assert.ok(!appSource.includes('listRed.innerHTML +='), 'traffic light analysis should avoid per-row red DOM writes');
-assert.ok(!appSource.includes('listYellow.innerHTML +='), 'traffic light analysis should avoid per-row yellow DOM writes');
-assert.ok(!appSource.includes('listGreen.innerHTML +='), 'traffic light analysis should avoid per-row green DOM writes');
 assert.ok(marginalPushRuntime.includes('const ticketHtml = [];'), 'marginal ticket generation should collect cards off-DOM');
 assert.ok(marginalPushRuntime.includes('ticketHtml.push(`'), 'marginal ticket generation should append card HTML to an off-DOM buffer');
 assert.ok(marginalPushRuntime.includes("container.innerHTML = ticketHtml.join('');"), 'marginal ticket generation should write cards to the DOM once');

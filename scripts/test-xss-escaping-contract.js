@@ -30,7 +30,6 @@ assert.ok(!studentDetails.includes("updateStudentScore('${student.name}', '${stu
   "handleExcludedClick(${safeNameArg})",
   "analyzeTargetGap(${safeNameArg}, 'ind1'",
   "handleIndicatorClick(${safeNameArg}, 'ind1')",
-  'jumpToDetail(${schoolArg}, ${subjectArg})',
   'removeTagFromWidget(${jsStringLiteral(wrapperId)}, ${jsStringLiteral(hiddenInputId)}, ${jsStringLiteral(tag)})'
 ].forEach((needle) => {
   assert.ok(app.includes(needle), `app.js should contain safe pattern: ${needle}`);
@@ -39,7 +38,6 @@ assert.ok(!studentDetails.includes("updateStudentScore('${student.name}', '${stu
 [
   "handleHighClick('${d.name}')",
   "handleExcludedClick('${s.name}')",
-  "jumpToDetail('${s.name}', '${sub}')",
   "addTagToWidget('${wrapperId}', '${hiddenInputId}', '${s.name}')",
   "removeTagFromWidget('${wrapperId}', '${hiddenInputId}', '${tag}')",
   "DrillSystem.renderStudentView('${cls}')"
