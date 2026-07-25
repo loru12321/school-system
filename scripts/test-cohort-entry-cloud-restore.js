@@ -507,4 +507,17 @@ assert.ok(
     'cohort exam history sync should skip stale cross-cohort background tasks before they mutate the active workspace'
 );
 
+// 届别云端发现：下拉应能列出云端有数据的届别，让用户直达切换而非“先新建再切”。
+assert.ok(
+    /discoverCloudCohorts: async function \(\)/.test(cohortExamMetaSource)
+        && cohortExamMetaSource.includes("keyLike: 'cohort::%'")
+        && /\^cohort::\(\\d\{4\}\)\$/.test(cohortExamMetaSource),
+    'CohortManager should discover cloud cohorts via key like cohort::%, matching only top-level cohort workspace keys'
+);
+
+assert.ok(
+    /Promise\.resolve\(\)\.then\(\(\) => this\.discoverCloudCohorts\(\)\);/.test(cohortExamMetaSource),
+    'CohortManager.init should trigger cloud cohort discovery asynchronously without blocking init'
+);
+
 console.log('cohort entry cloud restore tests passed');

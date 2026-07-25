@@ -830,6 +830,52 @@ const CohortManager = {
         localStorage.setItem(COHORT_STORAGE_KEY, JSON.stringify(this.list));
     },
 
+    // 从云端枚举“已保存工作区”的届别（key like 'cohort::%'），把本地列表缺失的届别补进下拉。
+    // 这样管理员/教务主任可直接点击有数据的届别进入，无需先“新建”一遍再切换。
+    // 纯增量发现：只补 list + 重渲下拉，不触碰 switchTo / 同步 / 计算口径；失败静默降级。
+    discoverCloudCohorts: async function () {
+        try {
+            const service = (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function')
+                ? window.CloudDataService
+                : null;
+            if (!service) return [];
+            const { data, error } = await service.selectSystemData({
+                keyLike: 'cohort::%',
+                select: 'key,cohort_id,updated_at'
+            });
+            if (error || !Array.isArray(data)) return [];
+
+            const discovered = new Set();
+            data.forEach((row) => {
+                // 仅收顶层届别工作区键 cohort::YYYY，排除 cohort::YYYY::exam:: 等分片键。
+                const key = String(row && row.key || '').trim();
+                const match = key.match(/^cohort::(\d{4})$/i);
+                const year = match ? match[1] : String(row && row.cohort_id || '').trim();
+                if (/^\d{4}$/.test(year)) discovered.add(year);
+            });
+            if (discovered.size === 0) return [];
+
+            this.list = Array.isArray(this.list) ? this.list : [];
+            const known = new Set(this.list.map(c => String(c && c.id || '').trim()));
+            let added = 0;
+            discovered.forEach((year) => {
+                if (known.has(year)) return;
+                this.list.push({ id: year, year: parseInt(year, 10), startGrade: 6, createdAt: Date.now(), fromCloud: true });
+                added += 1;
+            });
+            if (added > 0) {
+                // 按年份倒序，最新届别在前，和手动新建时的 unshift 语义一致。
+                this.list.sort((a, b) => parseInt(b.id, 10) - parseInt(a.id, 10));
+                this.save();
+                this.renderSelector();
+            }
+            return Array.from(discovered);
+        } catch (discoverError) {
+            console.warn('[CohortManager] cloud cohort discovery failed:', discoverError);
+            return [];
+        }
+    },
+
     renderSelector: function () {
         const sel = document.getElementById('cohort-selector');
         if (!sel) return;
@@ -924,6 +970,9 @@ const CohortManager = {
             const examCohortLabel = document.getElementById('exam-cohort-label');
             if (examCohortLabel) examCohortLabel.innerText = formatCohortLabel(CURRENT_COHORT_META);
         }
+        // 登录后云端可用时，异步补齐“云端有数据但本地未记录”的届别到下拉。
+        // 不阻塞 init；失败静默降级，保持原有本地行为。
+        Promise.resolve().then(() => this.discoverCloudCohorts());
     }
 };
 
