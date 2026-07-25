@@ -9437,27 +9437,55 @@ function doSpotlightSearch() {
     const val = document.getElementById('spotlight-input').value.trim();
     const resDiv = document.getElementById('spotlight-results');
     resDiv.innerHTML = '';
-    if (!val) return;
     const spotlightRowsHtml = [];
 
-    const modules = [
-        { name: "新生分班", id: "freshman-simulator" },
-        { name: "考场编排", id: "exam-arranger" },
-        { name: "座位微调", id: "seat-adjustment" },
-        { name: "教师分析", id: "teacher-analysis" },
-        { name: "进退步追踪", id: "progress-analysis" },
-        { name: "两率一分(宏观)", id: "analysis" },
-        { name: "临界生任务单", id: "marginal-push" },
-        { name: "学生成绩单", id: "report-generator" }
-    ];
+    // 从 NAV_STRUCTURE（模块唯一真源）读取全部模块，避免硬编码列表漏掉入口。
+    const spotlightNav = (typeof NAV_STRUCTURE !== 'undefined' && NAV_STRUCTURE) || window.NAV_STRUCTURE || {};
+    const needle = val.toLowerCase();
 
+    // 命令面板默认态：无输入时按分类分组列出全部可进入模块，用户无需先猜分类。
+    if (!needle) {
+        Object.keys(spotlightNav).forEach((catKey) => {
+            const category = spotlightNav[catKey];
+            const items = Array.isArray(category && category.items) ? category.items : [];
+            const accessible = items.filter(item => typeof canAccessModule !== 'function' || canAccessModule(item.id));
+            if (accessible.length === 0) return;
+            spotlightRowsHtml.push(`<div class="spotlight-group-label">${escapeAppHtml((category && category.title) || '')}</div>`);
+            accessible.forEach((item) => {
+                spotlightRowsHtml.push(`
+                    <div class="spotlight-item" onclick="switchTab('${item.id}');closeSpotlight()">
+                        <span>🛠️ ${escapeAppHtml(item.text || item.id)}<small style="color:#94a3b8;margin-left:6px;">${escapeAppHtml(item.hint || '')}</small></span>
+                        <span style="font-size:10px;color:#999">进入</span>
+                    </div>`);
+            });
+        });
+        resDiv.innerHTML = spotlightRowsHtml.join('');
+        return;
+    }
+
+    const modules = Object.keys(spotlightNav).flatMap((catKey) => {
+        const category = spotlightNav[catKey];
+        const items = Array.isArray(category && category.items) ? category.items : [];
+        return items.map((item) => ({
+            name: item.text || item.id,
+            id: item.id,
+            categoryTitle: (category && category.title) || '',
+            searchText: [item.text, item.hint, item.id, category && category.title, category && category.eyebrow]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase()
+        }));
+    });
+
+    let moduleMatchCount = 0;
     modules
         .filter(m => typeof canAccessModule !== 'function' || canAccessModule(m.id))
         .forEach(m => {
-        if (m.name.includes(val)) {
+        if (m.searchText.includes(needle)) {
+            moduleMatchCount++;
             spotlightRowsHtml.push(`
                     <div class="spotlight-item" onclick="switchTab('${m.id}');closeSpotlight()">
-                        <span>🛠️ 功能：${m.name}</span>
+                        <span>🛠️ 功能：${escapeAppHtml(m.name)}<small style="color:#94a3b8;margin-left:6px;">${escapeAppHtml(m.categoryTitle)}</small></span>
                         <span style="font-size:10px;color:#999">跳转</span>
                     </div>`);
         }
@@ -9483,7 +9511,10 @@ function doSpotlightSearch() {
     }
 
     if (matches.length === 0) {
-        spotlightRowsHtml.push(`<div style="padding:10px; text-align:center; color:#999;">无匹配结果</div>`);
+        // 仅当功能与学生都无结果时才提示，避免模块命中时误报“无匹配”。
+        if (moduleMatchCount === 0) {
+            spotlightRowsHtml.push(`<div style="padding:10px; text-align:center; color:#999;">无匹配结果</div>`);
+        }
     } else {
         matches.forEach(s => {
             spotlightRowsHtml.push(`

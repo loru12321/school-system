@@ -48,8 +48,15 @@ function toggleDarkMode() {
 }
 
 function openSpotlight() {
-    document.getElementById('spotlight-mask').style.display = 'flex';
-    document.getElementById('spotlight-input').focus();
+    const mask = document.getElementById('spotlight-mask');
+    const input = document.getElementById('spotlight-input');
+    if (mask) mask.style.display = 'flex';
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+    // 命令面板：打开即列出全部模块分组（空查询默认态），无需先输入。
+    if (typeof window.doSpotlightSearch === 'function') window.doSpotlightSearch();
 }
 
 function closeSpotlight() {

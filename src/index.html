@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-954ca10f6452.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-954ca10f6452.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-b384e7c64002.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-b384e7c64002.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -599,8 +599,8 @@
 
                 <!-- 右侧工具栏: 图标按钮区 -->
                 <div class="toolbar-right shell-toolbar-panel shell-toolbar-panel--actions" style="display:flex; gap:16px; align-items:center; justify-content: flex-end;">
-                    <button class="btn shell-launcher-button" id="shell-launcher-btn" data-workspace-toggle="true"
-                        onclick="window.toggleWorkspaceDrawer()">
+                    <button class="btn shell-launcher-button" id="shell-launcher-btn"
+                        onclick="window.openSpotlight()">
                         <i class="ti ti-layout-grid"></i>
                             <span>全部功能</span>
                     </button>
@@ -678,8 +678,8 @@
                                 <span data-sync-meta>本地 · 未选择考试</span>
                             </button>
                         </div>
-                        <button type="button" class="shell-overview-launcher" data-workspace-toggle="true"
-                            onclick="window.toggleWorkspaceDrawer(true)">
+                        <button type="button" class="shell-overview-launcher"
+                            onclick="window.openSpotlight()">
                             <i class="ti ti-layout-grid"></i>
                             <span>全部功能</span>
                         </button>
@@ -3017,11 +3017,11 @@
         <div class="spotlight-box" onclick="event.stopPropagation()">
             <div class="spotlight-input-wrap">
                 <i class="ti ti-search" style="font-size:24px; color:var(--primary); margin-right:10px;"></i>
-                <input type="text" id="spotlight-input" class="spotlight-input" placeholder="输入姓名、学校或班级..."
+                <input type="text" id="spotlight-input" class="spotlight-input" placeholder="搜索功能模块或学生姓名、学校、班级..."
                     oninput="doSpotlightSearch()">
             </div>
             <div id="spotlight-results" class="spotlight-results"></div>
-            <div class="spotlight-hint">输入关键字搜索，点击结果可直接跳转至该生分析报告</div>
+            <div class="spotlight-hint">↑↓ 选择 · 回车进入 · Esc 关闭　|　输入即筛选功能与学生</div>
         </div>
     </div>
         <!-- ??????? -->

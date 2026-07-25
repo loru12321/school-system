@@ -1121,6 +1121,15 @@ assert.ok(appSource.includes("tbody.innerHTML = targetRowsHtml.join('');"), 'tar
 assert.ok(appSource.includes('const spotlightRowsHtml = [];'), 'spotlight search should collect result rows before writing to the result container');
 assert.ok(appSource.includes("resDiv.innerHTML = spotlightRowsHtml.join('');"), 'spotlight search should write results to the DOM once per query');
 assert.ok(!appSource.includes('resDiv.innerHTML +='), 'spotlight search should avoid per-result DOM writes');
+// 命令面板契约：模块入口必须从 NAV_STRUCTURE（唯一真源）读取，不得回退到硬编码模块列表。
+assert.ok(
+    /const spotlightNav = \(typeof NAV_STRUCTURE/.test(appSource),
+    'command palette should enumerate modules from NAV_STRUCTURE, not a hardcoded list'
+);
+assert.ok(
+    appSource.includes('// 命令面板默认态：无输入时按分类分组列出全部可进入模块'),
+    'command palette should render all accessible modules grouped by category when the query is empty'
+);
 assert.ok(appSource.includes('const redTrafficRows = [];'), 'traffic light analysis should collect red rows off-DOM');
 assert.ok(appSource.includes("listRed.innerHTML = cntRed === 0"), 'traffic light analysis should write red rows once after classification');
 assert.ok(appSource.includes("redTrafficRows.join('')"), 'traffic light analysis should batch red rows into one DOM write');

@@ -205,8 +205,23 @@ body {
 }
 
 .spotlight-results {
-    max-height: 400px;
+    max-height: min(60vh, 460px);
     overflow-y: auto;
+}
+
+/* 命令面板分类分组标签：区隔各分类模块，不参与键盘选择 */
+.spotlight-group-label {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 8px 20px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
 }
 
 .spotlight-item {
@@ -218,7 +233,8 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
-.spotlight-item:hover {
+.spotlight-item:hover,
+.spotlight-item.active {
     background: var(--primary-light);
     color: var(--primary);
 }
@@ -9682,8 +9698,23 @@ body[data-mobile-query="true"] .shell-module-rail-shell--floating {
 }
 
 .spotlight-results {
-    max-height: 400px;
+    max-height: min(60vh, 460px);
     overflow-y: auto;
+}
+
+/* 命令面板分类分组标签：区隔各分类模块，不参与键盘选择 */
+.spotlight-group-label {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 8px 20px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
 }
 
 .spotlight-item {
@@ -9695,7 +9726,8 @@ body[data-mobile-query="true"] .shell-module-rail-shell--floating {
     border-bottom: 1px solid var(--border);
 }
 
-.spotlight-item:hover {
+.spotlight-item:hover,
+.spotlight-item.active {
     background: var(--primary-light);
     color: var(--primary);
 }
