@@ -47,6 +47,15 @@ assert.ok(
 );
 
 assert.ok(
+    authLoginSource.includes('const entered = await enterSessionCohort({ fastEnter: false, requireCloudData: true });')
+        && authLoginSource.includes('if (entered === false || !Array.isArray(RAW_DATA) || RAW_DATA.length === 0) {')
+        && authLoginSource.includes("await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');")
+        && authLoginSource.includes("throw new Error('云端未恢复当前届别的成绩数据');")
+        && authLoginSource.includes('setManualCohortSelectionGate(false);'),
+    'an auto-restored session must use the cloud fallback when cohort entry reports failure instead of opening an empty workspace'
+);
+
+assert.ok(
     /function requestCohortSwitchRuntime\(cohortId, switchOptions\) \{[\s\S]*typeof window\.switchCohort === 'function'[\s\S]*__PENDING_COHORT_SWITCH_QUEUE__[\s\S]*return requestCohortSwitchRuntime\(cohortId, switchOptions\);/.test(cohortExamMetaSource)
         && appSource.includes('window.switchCohort = switchCohort;')
         && appSource.includes('function flushPendingCohortSwitches()')

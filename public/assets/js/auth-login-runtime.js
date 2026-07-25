@@ -489,13 +489,22 @@ var Auth = {
                         setManualCohortSelectionGate(false);
                         sessionCohortRestoreScheduled = true;
                         Promise.resolve()
-                            .then(() => enterSessionCohort({ fastEnter: false, requireCloudData: true }))
-                            .then(() => {
+                            .then(async () => {
+                                const entered = await enterSessionCohort({ fastEnter: false, requireCloudData: true });
+                                if (entered === false || !Array.isArray(RAW_DATA) || RAW_DATA.length === 0) {
+                                    await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');
+                                }
                                 tryAutoRestoreWorkspaceExam({
                                     preferredExamId: CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '',
                                     cohortId: preferredSessionCohort
                                 });
+                                const restored = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
+                                if (!restored) throw new Error('云端未恢复当前届别的成绩数据');
+                                setManualCohortSelectionGate(false);
                                 tryAutoEnterReadyCohortWorkspace();
+                                if (typeof scheduleTeacherSyncPrompt === 'function') {
+                                    setTimeout(() => scheduleTeacherSyncPrompt(), 200);
+                                }
                             })
                             .catch((error) => {
                                 console.warn('[Auth.init] saved session cohort restore failed:', error?.message || error);
