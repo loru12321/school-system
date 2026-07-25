@@ -59,9 +59,14 @@ assert.ok(
     authLoginSource.includes('window.__SESSION_COHORT_RESTORE_PENDING__ = true;')
         && authLoginSource.includes('if (sessionCohortRestoreTask) await sessionCohortRestoreTask;')
         && appSource.includes('await Auth.init();')
+        && appSource.includes('async function initializeAppStartup()')
+        && appSource.includes('function scheduleAppStartupAfterRuntimeLoad()')
+        && appSource.includes('const runtimeLoad = window.__APP_MODULES_LOAD_PROMISE__;')
+        && appSource.includes("if (document.readyState === 'complete')")
+        && appSource.includes("window.addEventListener('load', initializeAppStartup, { once: true });")
         && appSource.includes('const isCloudSession = !!(sessionUser && !sessionUser.local_only);')
         && appSource.includes('const backup = isCloudSession ? null : await DB.get(currentKey, { localOnly: !hasSessionUser });'),
-    'an authenticated cloud startup must wait for cloud restoration and must not restore a browser workspace over it'
+    'an authenticated cloud startup must run after lazy runtime loading, wait for cloud restoration, and not restore a browser workspace over it'
 );
 
 assert.ok(

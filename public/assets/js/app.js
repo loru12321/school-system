@@ -2460,7 +2460,9 @@ const CohortExamHydrationScheduler = window.CohortExamHydrationScheduler;
 const getLegacyDbSaveOptionsForKey=k=>/^cohort::/i.test(k||'')?{cloud:!1}:{deferCloud:!0,deferMs:9e3};
 
 
-window.addEventListener('load', async () => {
+async function initializeAppStartup() {
+    if (window.__APP_STARTUP_INITIALIZED__) return;
+    window.__APP_STARTUP_INITIALIZED__ = true;
     try { CloudSyncIndicator.start(); } catch (e) { console.warn('CloudSyncIndicator start failed:', e); }
 
     if (typeof CohortManager !== 'undefined') {
@@ -2685,7 +2687,30 @@ window.addEventListener('load', async () => {
         minCount: 2,
         warnPrefix: '[Startup] fetch cohort exams failed:'
     });
-});
+}
+
+// Authenticated sessions load the main runtime after the lightweight login
+// shell.  In that path the browser `load` event may already have fired before
+// app.js arrives, so a load-only listener leaves the whole workspace as a
+// static shell.  app.js itself can arrive before the last dynamically loaded
+// runtime, therefore wait for the boot batch before reading cohort state.
+function scheduleAppStartupAfterRuntimeLoad() {
+    const start = () => window.setTimeout(() => initializeAppStartup(), 0);
+    const runtimeLoad = window.__APP_MODULES_LOAD_PROMISE__;
+    if (runtimeLoad && window.__APP_MODULES_LOADED__ !== true) {
+        Promise.resolve(runtimeLoad)
+            .catch((error) => console.warn('[Startup] runtime batch completed with an error:', error?.message || error))
+            .finally(start);
+        return;
+    }
+    start();
+}
+
+if (document.readyState === 'complete') {
+    scheduleAppStartupAfterRuntimeLoad();
+} else {
+    window.addEventListener('load', initializeAppStartup, { once: true });
+}
 
 
 const Perf = {
