@@ -8182,63 +8182,6 @@ function updateConstraintWidgetsContext(type) {
 
 // Moved to table-heatmap-runtime.js (window.toggleTableHeatmap / TableHeatmapRuntime)
 
-let COL_FILTER_STATE = {}; // 存储选中状态
-
-function toggleColFilterMenu() {
-    const popover = document.getElementById('col-filter-popover');
-    if (popover.style.display === 'grid') {
-        popover.style.display = 'none';
-    } else {
-        initColFilterUI();
-        popover.style.display = 'grid';
-    }
-}
-
-function initColFilterUI() {
-    const popover = document.getElementById('col-filter-popover');
-    if (popover.children.length > 0 && SUBJECTS.length === popover.children.length) return; // 已初始化
-
-    popover.innerHTML = '';
-    SUBJECTS.forEach(sub => {
-        if (COL_FILTER_STATE[sub] === undefined) COL_FILTER_STATE[sub] = true;
-
-        const label = document.createElement('label');
-        label.className = 'filter-check-label';
-        label.innerHTML = `<input type="checkbox" value="${escapeAppHtml(sub)}" ${COL_FILTER_STATE[sub] ? 'checked' : ''} onchange="applyColFilter(this)"> ${escapeAppHtml(sub)}`;
-        popover.appendChild(label);
-    });
-
-    document.addEventListener('click', function closeMenu(e) {
-        if (!e.target.closest('#col-filter-popover') && !e.target.closest('#btn-col-filter')) {
-            document.getElementById('col-filter-popover').style.display = 'none';
-            document.removeEventListener('click', closeMenu);
-        }
-    });
-}
-
-function applyColFilter(checkbox) {
-    const sub = checkbox.value;
-    const isChecked = checkbox.checked;
-    COL_FILTER_STATE[sub] = isChecked;
-
-    const container = document.getElementById('class-comp-results');
-    const tables = container.querySelectorAll('table');
-
-
-
-    SUBJECTS.forEach(s => {
-        const anchorDiv = document.getElementById(`anchor-class-${s}`);
-        if (anchorDiv) {
-            if (COL_FILTER_STATE[s]) {
-                anchorDiv.classList.remove('hidden');
-            } else {
-                anchorDiv.classList.add('hidden');
-            }
-        }
-    });
-
-}
-
 function resetSystem() {
     if (isArchiveLocked()) {
         return alert("⛔ 当前考试已封存，仅支持只读查看");
