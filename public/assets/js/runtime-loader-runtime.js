@@ -612,6 +612,28 @@ return loadOptionalRuntime(key, src).then(() => {
 }
 
 window.ensureCohortDbRuntime = function () {
+const existing = window.CohortDB;
+if (existing && typeof existing.ensure === 'function') return Promise.resolve(existing);
+
+// CohortDB is the final core boot module. A cohort switch can be requested
+// immediately after login while that ordered boot queue is still finishing.
+// Waiting for that queue avoids injecting the same classic script a second
+// time (which redeclares its top-level `const CohortDB` and blocks the first
+// potential-analysis render).
+const bootPromise = window.__APP_MODULES_LOAD_PROMISE__;
+if (bootPromise && window.__APP_MODULES_LOADED__ === 'loading') {
+    return Promise.resolve(bootPromise).catch(() => null).then(() => {
+        const loaded = window.CohortDB;
+        if (loaded && typeof loaded.ensure === 'function') return loaded;
+        return ensureOptionalGlobalRuntime(
+            () => window.CohortDB,
+            'cohort-db-core',
+            './assets/js/cohort-db-core-runtime.js',
+            'CohortDB'
+        );
+    });
+}
+
 return ensureOptionalGlobalRuntime(() => window.CohortDB, 'cohort-db-core', './assets/js/cohort-db-core-runtime.js', 'CohortDB');
 };
 
