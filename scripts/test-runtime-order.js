@@ -245,6 +245,7 @@ const subjectBalanceRef = './assets/js/subject-balance-runtime.js';
 const segmentAnalysisRef = './assets/js/segment-analysis-runtime.js';
 const starterGuideRef = './assets/js/starter-guide-runtime.js';
 const potentialAnalysisRef = './assets/js/potential-analysis-runtime.js';
+const tableHeatmapRef = './assets/js/table-heatmap-runtime.js';
 const cohortGrowthRef = './assets/js/cohort-growth-runtime.js';
 const macroAnalysisCompatRef = './assets/js/macro-analysis-compat-runtime.js';
 const schoolNormalizationRef = './assets/js/school-normalization-runtime.js';
@@ -415,6 +416,7 @@ const postAppDeferredRefs = [
     segmentAnalysisRef,
     starterGuideRef,
     potentialAnalysisRef,
+    tableHeatmapRef,
     cohortGrowthRef,
     macroAnalysisCompatRef,
     compareCloudContextRef,
