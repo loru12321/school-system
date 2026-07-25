@@ -16,8 +16,8 @@ const examAnalysisPackageSource = fs.readFileSync(path.join(root, 'public/assets
 const smokeSource = fs.readFileSync(path.join(root, 'scripts/smoke-all-modules.js'), 'utf8');
 
 assert.ok(
-    /function showCohortPicker\(\)[\s\S]*CohortManager\.addCohort\(\{ year, startGrade: 6 \}, \{\s*skipConfirm: true,\s*fastEnter: true,\s*requireCloudData: false\s*\}\)/.test(cohortExamMetaSource),
-    'automatic cohort picker entry should fast-enter from local data and hydrate cloud data in the background'
+    /function showCohortPicker\(options = \{\}\)[\s\S]*const autoEnter = options\.autoEnter !== false;[\s\S]*if \(!autoEnter\) return;[\s\S]*CohortManager\.addCohort\(\{ year, startGrade: 6 \}, \{\s*skipConfirm: true,\s*fastEnter: true,\s*requireCloudData: false\s*\}\)/.test(cohortExamMetaSource),
+    'automatic cohort picker entry should remain available only when the caller explicitly permits it'
 );
 
 assert.ok(
@@ -53,6 +53,29 @@ assert.ok(
         && authLoginSource.includes("throw new Error('云端未恢复当前届别的成绩数据');")
         && authLoginSource.includes('setManualCohortSelectionGate(false);'),
     'an auto-restored session must use the cloud fallback when cohort entry reports failure instead of opening an empty workspace'
+);
+
+assert.ok(
+    authLoginSource.includes('window.__SESSION_COHORT_RESTORE_PENDING__ = true;')
+        && authLoginSource.includes('if (sessionCohortRestoreTask) await sessionCohortRestoreTask;')
+        && appSource.includes('await Auth.init();')
+        && appSource.includes('const isCloudSession = !!(sessionUser && !sessionUser.local_only);')
+        && appSource.includes('const backup = isCloudSession ? null : await DB.get(currentKey, { localOnly: !hasSessionUser });'),
+    'an authenticated cloud startup must wait for cloud restoration and must not restore a browser workspace over it'
+);
+
+assert.ok(
+    authLoginSource.includes("[Auth.login] selected cohort cloud fallback failed:")
+        && authLoginSource.includes('let cloudRecovered = false;')
+        && authLoginSource.includes("window.showCohortPicker({ autoEnter: false });"),
+    'a fresh login must retry the selected cloud cohort before showing a manual, non-destructive picker'
+);
+
+assert.ok(
+    cohortExamMetaSource.includes('function showCohortPicker(options = {})')
+        && cohortExamMetaSource.includes('const autoEnter = options.autoEnter !== false;')
+        && cohortExamMetaSource.includes('if (!autoEnter) return;'),
+    'a manual cohort picker must not auto-create an empty workspace after cloud recovery fails'
 );
 
 assert.ok(

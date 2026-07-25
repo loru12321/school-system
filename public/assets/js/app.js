@@ -2470,7 +2470,9 @@ window.addEventListener('load', async () => {
     if (selector) selector.value = readWorkspaceCohortId() || '';
 
     if (typeof Auth !== 'undefined') {
-        Auth.init();
+        // Auth.init waits for an authenticated cloud cohort restore.  Do not let
+        // the generic startup restore race it with an old browser snapshot.
+        await Auth.init();
     }
 
     if (typeof HelpSystem !== 'undefined') {
@@ -2534,8 +2536,12 @@ window.addEventListener('load', async () => {
         }
 
         const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
+        const sessionUser = AuthState.getCurrentUser();
         const hasSessionUser = AuthState.hasActiveSession(window.Auth && Auth.currentUser);
-        const backup = await DB.get(currentKey, { localOnly: !hasSessionUser });
+        const isCloudSession = !!(sessionUser && !sessionUser.local_only);
+        // Cloud sessions must never resurrect scoreless or stale browser data.
+        // Their selected cohort is restored through CloudManager during Auth.init.
+        const backup = isCloudSession ? null : await DB.get(currentKey, { localOnly: !hasSessionUser });
         const isForceRestore = localStorage.getItem('SYS_FORCE_RESTORE');
 
         const performRestore = async () => {
@@ -2640,7 +2646,21 @@ window.addEventListener('load', async () => {
             }, "正在加载数据...");
         };
 
-        if (isForceRestore === 'true' && backup) {
+        const hasReadyRuntimeScores = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
+        if (isCloudSession) {
+            if (hasReadyRuntimeScores) {
+                tryAutoRestoreWorkspaceExam({
+                    preferredExamId: CURRENT_EXAM_ID || COHORT_DB?.currentExamId || '',
+                    cohortId: CURRENT_COHORT_ID || readWorkspaceCohortId()
+                });
+                tryAutoEnterReadyCohortWorkspace();
+            } else if (typeof window.showCohortPicker === 'function') {
+                // Auth.init has already attempted the selected cloud cohort.  Keep
+                // a non-destructive selector available if that recovery failed.
+                window.showCohortPicker({ autoEnter: false });
+            }
+        }
+        else if (isForceRestore === 'true' && backup) {
             localStorage.removeItem('SYS_FORCE_RESTORE');
             await performRestore();
         }
@@ -2650,7 +2670,7 @@ window.addEventListener('load', async () => {
                 (backup.RAW_DATA && backup.RAW_DATA.length > 0) ||
                 (backup.COHORT_DB && backup.COHORT_DB.exams && Object.keys(backup.COHORT_DB.exams).length > 0)
             ) &&
-            RAW_DATA.length === 0
+            !hasReadyRuntimeScores
         ) {
             await performRestore();
         }

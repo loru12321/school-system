@@ -467,6 +467,7 @@ var Auth = {
                     && Array.isArray(RAW_DATA)
                     && RAW_DATA.length > 0;
                 let sessionCohortRestoreScheduled = false;
+                let sessionCohortRestoreTask = null;
                 if (hasReadyWorkspace) {
                     tryAutoRestoreWorkspaceExam({ preferredExamId: restoredExamId, cohortId: restoredCohortId });
                     tryAutoEnterReadyCohortWorkspace();
@@ -488,7 +489,8 @@ var Auth = {
                         lockRuntimeCohortId(preferredSessionCohort);
                         setManualCohortSelectionGate(false);
                         sessionCohortRestoreScheduled = true;
-                        Promise.resolve()
+                        window.__SESSION_COHORT_RESTORE_PENDING__ = true;
+                        sessionCohortRestoreTask = Promise.resolve()
                             .then(async () => {
                                 const entered = await enterSessionCohort({ fastEnter: false, requireCloudData: true });
                                 if (entered === false || !Array.isArray(RAW_DATA) || RAW_DATA.length === 0) {
@@ -509,10 +511,16 @@ var Auth = {
                             .catch((error) => {
                                 console.warn('[Auth.init] saved session cohort restore failed:', error?.message || error);
                                 setManualCohortSelectionGate(true);
-                                if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
+                                if (typeof window.showCohortPicker === 'function') {
+                                    window.showCohortPicker({ autoEnter: false });
+                                }
+                                return false;
+                            })
+                            .finally(() => {
+                                window.__SESSION_COHORT_RESTORE_PENDING__ = false;
                             });
                     } else if (typeof window.showCohortPicker === 'function') {
-                        window.showCohortPicker();
+                        window.showCohortPicker({ autoEnter: false });
                     }
                 }
                 if (!sessionCohortRestoreScheduled && !this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
@@ -533,6 +541,10 @@ var Auth = {
                 } else if (typeof scheduleTeacherSyncPrompt === 'function') {
                     setTimeout(() => scheduleTeacherSyncPrompt(), 200);
                 }
+                // The page bootstrap must not restore an old browser workspace over
+                // this promise.  Waiting here makes the authenticated cloud session
+                // the single source of truth before startup considers any fallback.
+                if (sessionCohortRestoreTask) await sessionCohortRestoreTask;
             }
         }
     },
@@ -863,12 +875,33 @@ var Auth = {
                     if (selectedCohortReady) {
                         tryResumeReadyWorkspace();
                     } else {
-                        setManualCohortSelectionGate(true);
-                        if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
+                        // A fast cohort entry can legitimately miss the browser
+                        // cache.  The selected cloud cohort is still authoritative;
+                        // restore it before exposing an empty shell to the user.
+                        let cloudRecovered = false;
+                        if (shouldHydrateCloudInBackground) {
+                            try {
+                                await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');
+                                cloudRecovered = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
+                            } catch (cloudError) {
+                                console.warn('[Auth.login] selected cohort cloud fallback failed:', cloudError?.message || cloudError);
+                            }
+                        }
+                        if (cloudRecovered) {
+                            setManualCohortSelectionGate(false);
+                            tryResumeReadyWorkspace();
+                        } else {
+                            setManualCohortSelectionGate(true);
+                            if (typeof window.showCohortPicker === 'function') {
+                                window.showCohortPicker({ autoEnter: false });
+                            }
+                        }
                     }
                 } else {
                     setManualCohortSelectionGate(!hasReadyWorkspace);
-                    if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
+                    if (typeof window.showCohortPicker === 'function') {
+                        window.showCohortPicker({ autoEnter: false });
+                    }
                 }
                 if (!pendingLoginCohortEntry && hasReadyWorkspace) {
                     tryResumeReadyWorkspace();

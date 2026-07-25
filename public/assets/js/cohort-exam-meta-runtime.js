@@ -724,15 +724,24 @@ function hideCohortPicker() {
     if (app) app.classList.remove('hidden');
 }
 
-function showCohortPicker() {
+function showCohortPicker(options = {}) {
     const mask = document.getElementById('mode-mask');
     const app = document.getElementById('app');
     if (mask) mask.remove();
     if (app) app.classList.remove('hidden');
-    setManualCohortSelectionGate(false);
+    const autoEnter = options.autoEnter !== false;
+    setManualCohortSelectionGate(!autoEnter);
 
     const year = parseInt(resolveMaskCohortYear(), 10);
     if (year && year >= 2000 && window.__COHORT_MANAGER_READY__) {
+        // Keep the selected cohort visible even when score recovery fails, but do
+        // not turn a scoreless browser cache into an empty active workspace.
+        if (!CohortManager.list.some(cohort => cohort.id === String(year))) {
+            CohortManager.list.unshift({ id: String(year), year, startGrade: 6, createdAt: Date.now() });
+            CohortManager.save();
+            CohortManager.renderSelector();
+        }
+        if (!autoEnter) return;
         window.setTimeout(async () => {
             try {
                 await CohortManager.addCohort({ year, startGrade: 6 }, {

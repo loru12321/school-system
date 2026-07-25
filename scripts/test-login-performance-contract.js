@@ -93,8 +93,8 @@ assert.match(
 );
 assert.match(
   schoolBranch,
-  /else\s*\{[\s\S]*?window\.showCohortPicker\(\)/,
-  'school login must only show the cohort picker when no selected cohort entry is pending'
+  /else\s*\{[\s\S]*?setManualCohortSelectionGate\(!hasReadyWorkspace\);[\s\S]*?window\.showCohortPicker\(\{ autoEnter: false \}\)/,
+  'school login must show a non-destructive cohort picker only when no selected cohort entry is pending'
 );
 
 assert.match(
