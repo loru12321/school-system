@@ -582,6 +582,31 @@ async function main() {
         await loadRuntimeSkill('progress-analysis');
         await loadRuntimeSkill('town-submodule-compare');
         snapshotStep('runtime:progress-analysis/town-submodule-compare');
+        // Wait until the compare-selectors probe functions are actually on window before
+        // sampling compareSchoolAliasDefaultPolicy. resolveCompareSchoolOption ships in the
+        // DEFERRED_APP_MODULES bundle (compare-selectors-runtime.js), which auto-loads at boot
+        // and fires `school:deferred-vendors-ready` when done; progressResolveSchoolOption /
+        // resolveTownSubmoduleDefaultSchool come from the demand skills loaded just above — the
+        // skill-load promise can resolve before the injected <script> executes and registers the
+        // globals. Poll (re-triggering the demand loads) until all three exist, so the probe never
+        // races the loads. Prevents the flaky `available:false` assertion.
+        const compareSelectorProbeReady = () => (
+            typeof window.resolveCompareSchoolOption === 'function'
+            && typeof window.progressResolveSchoolOption === 'function'
+            && typeof window.resolveTownSubmoduleDefaultSchool === 'function'
+        );
+        const compareSelectorDeadline = Date.now() + 15000;
+        while (Date.now() < compareSelectorDeadline && !compareSelectorProbeReady()) {
+            // resolveCompareSchoolOption rides the deferred app-module bundle (auto-loading at
+            // boot) — just wait for it below. Re-trigger the two demand skills in case their
+            // first load resolved before the script executed.
+            if (typeof window.progressResolveSchoolOption !== 'function') await loadRuntimeSkill('progress-analysis');
+            if (typeof window.resolveTownSubmoduleDefaultSchool !== 'function') await loadRuntimeSkill('town-submodule-compare');
+            if (compareSelectorProbeReady()) break;
+            await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        snapshotStep(`compare-selector-probe-ready:${compareSelectorProbeReady()}`);
+
         const toNumber = (value, fallback = 0) => {
             const number = Number(value);
             return Number.isFinite(number) ? number : fallback;
