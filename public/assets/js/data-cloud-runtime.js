@@ -236,9 +236,7 @@
                 outcome: e.outcome || '',
                 bg: e.background === true ? 'background' : (e.background === false ? 'blocking' : ''),
                 rawLen: (e.rawLen === 0 || e.rawLen) ? e.rawLen : '',
-                cohorts: e.wroteCohortId || e.readbackCohortId
-                    ? `${e.wroteCohortId || '?'}→${e.readbackCohortId || '?'}`
-                    : '',
+                cohort: e.wroteCohortId || '',
                 at: e.at
             }))
             .sort((a, b) => b.ms - a.ms);
@@ -2088,29 +2086,23 @@
 
         if (!hydrated || !workspacePayloadMatchesKey(key, hydrated)) return bail('hydrated-mismatch');
 
-        // Prime the workspace local cache so switchCohort's DB.get(localOnly:true)
-        // hits immediately and the whole network restore branch is skipped — the
-        // cold device now behaves like a warm repeat login (instant + background
-        // refresh), collapsing 4-6 serial round-trips into the single bundle fetch.
+        // Best-effort local-cache prime (helps once idb-keyval is ready). NOT
+        // relied upon this login: idb-keyval can be unavailable this early — the
+        // real-device capture showed a write-then-readback returning null
+        // (rawLen:-1). So the hydrated payload is RETURNED to switchCohort and fed
+        // in as preloadedData, bypassing the local-cache round-trip entirely.
         await writeLocalCache(key, hydrated, { updatedAt: workspaceRow.updated_at }).catch(() => false);
-        // Self-check: read the value back through the SAME path switchCohort uses
-        // (readLocalCache → DB.get localOnly) and record what a consumer would see,
-        // so we can tell a write/key-prefix miss from a downstream cohort-guard
-        // rejection. hasData=false at the call site with rawLen>0 here ⇒ guard
-        // rejected it; rawLen=0/readback null here ⇒ the write itself isn't visible.
-        let readback = null;
-        try { readback = await readLocalCache(key); } catch (_) { readback = null; }
-        const rawLen = readback && Array.isArray(readback.RAW_DATA) ? readback.RAW_DATA.length : -1;
-        const readbackCohortId = readback ? getWorkspacePayloadCohortId(readback) : '';
+        const rawLen = hydrated && Array.isArray(hydrated.RAW_DATA) ? hydrated.RAW_DATA.length : -1;
         rememberDataCloudPerf(null, 'warmColdLoginCaches', startedAt, {
-            outcome: 'primed',
+            outcome: rawLen > 0 ? 'primed' : 'primed-empty',
             split: isSplitWorkspacePayload(payload),
             key,
             rawLen,
-            readbackCohortId,
             wroteCohortId: getWorkspacePayloadCohortId(hydrated)
         });
-        return true;
+        // Return the hydrated payload so switchCohort consumes it directly as
+        // preloadedData (idb-independent). Falls back to `true` if somehow empty.
+        return rawLen > 0 ? hydrated : true;
     }
 
     async function dbClear(key) {

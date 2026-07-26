@@ -94,8 +94,13 @@ assert.ok(
   'warmColdLoginCaches must keep the cross-cohort cache guard'
 );
 assert.ok(
-  /warmColdLoginCaches[\s\S]*writeLocalCache\(key, hydrated/.test(dataCloud),
-  'warmColdLoginCaches must seed the workspace local cache so DB.get(localOnly) hits'
+  /warmColdLoginCaches[\s\S]*return rawLen > 0 \? hydrated : true/.test(dataCloud),
+  'warmColdLoginCaches must RETURN the hydrated payload (idb-independent) so switchCohort can consume it directly — idb-keyval may not be ready this early in login'
+);
+assert.ok(
+  /bootstrapPreloaded[\s\S]*warmResult\.RAW_DATA[\s\S]*bootstrapPreloaded = warmResult/.test(appJs)
+    && /options\.preloadedData \|\| bootstrapPreloaded \|\| await DB\.get/.test(appJs),
+  'switchCohort must consume the warm-up payload directly as preloadedData, bypassing the local-cache round-trip'
 );
 
 // --- app.js: cold-path trigger + guarded fallback -----------------------------

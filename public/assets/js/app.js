@@ -2027,18 +2027,26 @@ async function switchCohort(cohortId, options = {}) {
     // metadata → shard). Prime those reads from ONE batched request first so the
     // restore below resolves from warm caches. Fully guarded: on any miss it
     // returns false and the normal cold path runs unchanged.
+    let bootstrapPreloaded = null;
     if (!options.preloadedData
         && options.requireCloudData === true
         && targetCohortId
         && typeof DB.warmColdLoginCaches === 'function') {
         try {
-            await DB.warmColdLoginCaches(cohortKey);
+            // Returns the hydrated workspace payload directly so we can feed it in
+            // as preloadedData below — this bypasses the local-cache round-trip
+            // entirely (idb-keyval may not be ready this early in login, which made
+            // the write-then-DB.get approach read back empty).
+            const warmResult = await DB.warmColdLoginCaches(cohortKey);
+            if (warmResult && Array.isArray(warmResult.RAW_DATA) && warmResult.RAW_DATA.length > 0) {
+                bootstrapPreloaded = warmResult;
+            }
         } catch (_) { /* best-effort warm-up; normal path recovers */ }
         if (!isCurrentSwitch()) return false;
     }
 
     const __dbGetStartedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-    const cachedData = options.preloadedData || await DB.get(cohortKey, { localOnly: true });
+    const cachedData = options.preloadedData || bootstrapPreloaded || await DB.get(cohortKey, { localOnly: true });
     if (!isCurrentSwitch()) return false;
     const cachedPayloadCohortId = getWorkspacePayloadCohortId(cachedData);
     // A login-selected cohort must never enter through an unscoped legacy cache.
