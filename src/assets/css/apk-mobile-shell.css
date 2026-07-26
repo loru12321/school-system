@@ -1,21 +1,30 @@
+/* IG-style monochrome shell: pure white, near-black text, hairline greys, no
+   colored plates or heavy shadows. Accent is near-black (IG's active state is a
+   solid dark icon, not a color). */
 body[data-mobile-architecture="apk-v2"] {
-    --apk-shell-bg: #eef3f8;
-    --apk-shell-card: rgba(255, 255, 255, 0.98);
+    --apk-shell-bg: #fafafa;
+    --apk-shell-card: #ffffff;
     --apk-shell-card-strong: #ffffff;
-    --apk-shell-border: rgba(214, 224, 236, 0.96);
-    --apk-shell-text: #0f172a;
-    --apk-shell-muted: #64748b;
-    --apk-shell-shadow: 0 16px 34px rgba(15, 23, 42, 0.1);
+    --apk-shell-border: #dbdbdb;
+    --apk-shell-text: #262626;
+    --apk-shell-muted: #8e8e8e;
+    --apk-shell-shadow: none;
+    --apk-accent: #262626;
+    --apk-fab-bg: #262626;
+    --apk-fab-fg: #ffffff;
 }
 
 body.dark-mode[data-mobile-architecture="apk-v2"] {
-    --apk-shell-bg: #040b16;
-    --apk-shell-card: #0b1523;
-    --apk-shell-card-strong: #101b2c;
-    --apk-shell-border: rgba(71, 85, 105, 0.72);
-    --apk-shell-text: #e2e8f0;
-    --apk-shell-muted: #94a3b8;
-    --apk-shell-shadow: 0 22px 42px rgba(2, 6, 23, 0.46);
+    --apk-shell-bg: #000000;
+    --apk-shell-card: #000000;
+    --apk-shell-card-strong: #121212;
+    --apk-shell-border: #363636;
+    --apk-shell-text: #f5f5f5;
+    --apk-shell-muted: #a8a8a8;
+    --apk-shell-shadow: none;
+    --apk-accent: #f5f5f5;
+    --apk-fab-bg: #f5f5f5;
+    --apk-fab-fg: #000000;
 }
 
 @media screen and (max-width: 960px) {
@@ -705,40 +714,85 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
         font-size: 12px;
     }
 
+    /* IG bottom bar: full-width white strip pinned to the bottom edge, separated
+       by a single hairline — no floating rounded plate, no shadow. */
     #apk-mobile-shell .apk-shell-tabs {
         position: absolute;
-        left: 12px;
-        right: 12px;
-        bottom: calc(var(--app-safe-bottom) + 10px);
+        left: 0;
+        right: 0;
+        bottom: 0;
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 8px;
-        padding: 10px;
-        border-radius: 24px;
-        pointer-events: auto;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0;
+        padding: 6px 4px calc(var(--app-safe-bottom) + 6px);
+        border-radius: 0;
+        border: none;
+        border-top: 1px solid var(--apk-shell-border);
+        background: var(--apk-shell-card);
+        box-shadow: none;
     }
 
     #apk-mobile-shell .apk-shell-tab {
-        min-height: 56px;
+        position: relative;
+        min-height: 50px;
         border: none;
-        border-radius: 18px;
+        border-radius: 0;
         background: transparent;
         color: var(--apk-shell-muted);
         display: grid;
         justify-items: center;
         align-content: center;
-        gap: 4px;
-        font-size: 11px;
-        font-weight: 700;
+        gap: 3px;
+        font-size: 10px;
+        font-weight: 600;
+        outline: none;
+        -webkit-tap-highlight-color: transparent;
+        transition: color 0.15s ease;
+    }
+
+    #apk-mobile-shell .apk-shell-tab:focus,
+    #apk-mobile-shell .apk-shell-tab:focus-visible,
+    #apk-mobile-shell .apk-shell-tab:active {
+        outline: none;
+        background: transparent;
+        box-shadow: none;
     }
 
     #apk-mobile-shell .apk-shell-tab i {
-        font-size: 20px;
+        font-size: 24px;
+        transition: transform 0.15s ease;
     }
 
+    /* Active view tab: near-black icon + label, bolder weight — no plate. */
     #apk-mobile-shell .apk-shell-tab.is-active {
-        color: var(--apk-accent, #2563eb);
-        background: var(--apk-shell-card-strong);
+        color: var(--apk-shell-text);
+        background: transparent;
+        font-weight: 700;
+    }
+
+    /* Center FAB (IG ⊕ slot): solid dark circle with a white plus, no text. */
+    #apk-mobile-shell .apk-shell-tab-create {
+        min-height: 50px;
+    }
+
+    #apk-mobile-shell .apk-shell-fab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: var(--apk-fab-bg, #262626);
+        color: var(--apk-fab-fg, #fff);
+        transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    #apk-mobile-shell .apk-shell-fab i {
+        font-size: 24px;
+    }
+
+    #apk-mobile-shell .apk-shell-tab-create:active .apk-shell-fab {
+        transform: scale(0.94);
     }
 }
 
@@ -763,4 +817,212 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
     #apk-mobile-shell .apk-shell-sheet {
         bottom: calc(var(--app-safe-bottom) + 78px);
     }
+}
+
+/* =========================================================================
+   IG override — neutralize legacy colored active states on the shell.
+   layout-refinement.css (blue --ui-accent) and product-redesign.css (pink
+   --pd-primary) both load AFTER this file and force .is-active backgrounds
+   with !important. These higher-specificity rules (extra ancestor class +
+   !important) reclaim the IG monochrome look. Scoped to the shell only, so the
+   legacy files still style everything else.
+   ========================================================================= */
+/* Reclaim the shell palette. layout-refinement.css:1806 and product-redesign.css:1674
+   both redefine the whole --apk-shell-* set on `body[data-mobile-architecture]`
+   (same specificity, but they load later so they win). An extra `html` ancestor
+   raises specificity so the IG monochrome vars take regardless of load order. */
+html body[data-mobile-architecture="apk-v2"] {
+    --apk-shell-bg: #fafafa;
+    --apk-shell-card: #ffffff;
+    --apk-shell-card-strong: #ffffff;
+    --apk-shell-border: #dbdbdb;
+    --apk-shell-text: #262626;
+    --apk-shell-muted: #8e8e8e;
+    --apk-shell-shadow: none;
+    --apk-accent: #262626;
+    --apk-fab-bg: #262626;
+    --apk-fab-fg: #ffffff;
+}
+
+html body.dark-mode[data-mobile-architecture="apk-v2"] {
+    --apk-shell-bg: #000000;
+    --apk-shell-card: #000000;
+    --apk-shell-card-strong: #121212;
+    --apk-shell-border: #363636;
+    --apk-shell-text: #f5f5f5;
+    --apk-shell-muted: #a8a8a8;
+    --apk-shell-shadow: none;
+    --apk-accent: #f5f5f5;
+    --apk-fab-bg: #f5f5f5;
+    --apk-fab-fg: #000000;
+}
+
+/* Bottom bar: full-width white strip with a top hairline (override the legacy
+   floating rounded plate from layout-refinement.css:2079/1839/1822). */
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-tabs {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    gap: 0 !important;
+    padding: 6px 4px calc(var(--app-safe-bottom) + 6px) !important;
+    border-radius: 0 !important;
+    border-top: 1px solid var(--apk-shell-border) !important;
+    background: var(--apk-shell-card) !important;
+    box-shadow: none !important;
+}
+
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-tabs .apk-shell-tab {
+    min-height: 50px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--apk-shell-muted) !important;
+}
+
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-tabs .apk-shell-tab.is-active {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    color: var(--apk-shell-text) !important;
+}
+
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-tabs .apk-shell-tab-create .apk-shell-fab {
+    background: var(--apk-fab-bg, #262626) !important;
+    color: var(--apk-fab-fg, #ffffff) !important;
+    border: none !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+}
+
+/* ---- Top bar: IG flat white header with a bottom hairline (override the
+   rounded plate + colored shadow from layout-refinement:1822/2005 and
+   product-redesign:1683). ---- */
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-topbar {
+    border-radius: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid var(--apk-shell-border) !important;
+    background: var(--apk-shell-card) !important;
+    box-shadow: none !important;
+}
+
+/* Title block left-aligned, near-black, tighter — IG headers don't center. */
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-title {
+    color: var(--apk-shell-text) !important;
+    font-weight: 700 !important;
+}
+
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-kicker {
+    color: var(--apk-shell-muted) !important;
+}
+
+/* Header icon buttons: borderless, transparent — just the glyph, IG style. */
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-icon {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--apk-shell-text) !important;
+}
+
+/* cohort / mode pills: white with a hairline, neutral text (no pink fill). */
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-pill {
+    background: var(--apk-shell-card) !important;
+    border: 1px solid var(--apk-shell-border) !important;
+    color: var(--apk-shell-text) !important;
+    box-shadow: none !important;
+}
+
+/* rail chips: hairline pill; active = near-black ring + text (no blue/pink). */
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-rail-chip {
+    background: var(--apk-shell-card) !important;
+    border: 1px solid var(--apk-shell-border) !important;
+    color: var(--apk-shell-muted) !important;
+    box-shadow: none !important;
+}
+
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-rail .apk-rail-chip.is-active {
+    background: var(--apk-shell-card) !important;
+    border-color: var(--apk-shell-text) !important;
+    color: var(--apk-shell-text) !important;
+    box-shadow: none !important;
+}
+
+/* ---- Sheet cards / tiles: flat white with a hairline + tight radius; active =
+   near-black ring (no pink/blue fill). Overrides layout-refinement:1848 and
+   product-redesign:1336. ---- */
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-sheet-card,
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-account-card,
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-library-mini,
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-switch-row {
+    background: var(--apk-shell-card) !important;
+    border: 1px solid var(--apk-shell-border) !important;
+    box-shadow: none !important;
+}
+
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-sheet-card.is-active,
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-library-mini.is-active,
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-switch-row.is-active {
+    background: var(--apk-shell-card) !important;
+    border-color: var(--apk-shell-text) !important;
+    color: var(--apk-shell-text) !important;
+    box-shadow: none !important;
+}
+
+/* Sheet + library surfaces: flat white, softer radius, no colored shadow. */
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-sheet-panel,
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-library-panel {
+    background: var(--apk-shell-card) !important;
+    border: 1px solid var(--apk-shell-border) !important;
+    box-shadow: none !important;
+}
+
+/* Sheet-card icon: IG uses monochrome glyphs, not a colored accent. */
+html body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-sheet-card i {
+    color: var(--apk-shell-text) !important;
+}
+
+/* =========================================================================
+   Parent / student mobile view (#parent-view-container). This role does NOT
+   get the apk-v2 shell (data-mobile-architecture is removed for parent-likes),
+   so it needs its own IG scope keyed off data-mobile-query="true". Same
+   black/white/grey language, but we only theme the WRAPPER + footer actions —
+   the shared A4 report card (renderSingleReportCardHTML) is left intact so the
+   printable report layout is never disturbed.
+   ========================================================================= */
+body[data-mobile-query="true"] #parent-view-container {
+    background: #fafafa !important;
+    color: #262626;
+    /* Center the report like an IG feed column on wide phones. */
+    max-width: 640px;
+    margin: 0 auto;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    -webkit-font-smoothing: antialiased;
+}
+
+body.dark-mode[data-mobile-query="true"] #parent-view-container {
+    background: #000000 !important;
+    color: #f5f5f5;
+}
+
+/* Footer actions: replace the hardcoded orange "申请成绩核查" and the underlined
+   logout with IG monochrome (near-black primary button, grey ghost logout). The
+   inline styles are set on the elements, so !important is required. */
+body[data-mobile-query="true"] #parent-view-container > div:last-child > button.btn {
+    background: #262626 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+}
+
+body.dark-mode[data-mobile-query="true"] #parent-view-container > div:last-child > button.btn {
+    background: #f5f5f5 !important;
+    color: #000000 !important;
+}
+
+body[data-mobile-query="true"] #parent-view-container > div:last-child > button.btn i {
+    color: inherit !important;
+}
+
+body[data-mobile-query="true"] #parent-view-container > div:last-child {
+    border-top: 1px solid #dbdbdb !important;
 }
