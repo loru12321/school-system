@@ -100,6 +100,237 @@
     }
 
 // ================== 新生分班 & 座位编排 ==================
+// ==========================================================================
+// 云端多次成绩分班装配层（阶段1）
+// 只读 COHORT_DB.exams 的内存副本，按目标年级口径算「分班分」，绝不写云端/全局。
+// 仅在用户进入本子模块并主动点击时运行。
+// ==========================================================================
+
+// 分班分科目口径：新7/新8 用各自年级常规总分；新9 只用语数英物化(物×0.9化×0.6，不含政治)。
+// 直接复用 AnalyticsKernel 的年级满分规则作为权重来源，与云端口径一致。
+const FB_GRADE9_SUBJECTS = Object.freeze(['语文', '数学', '英语', '物理', '化学']); // 明确排除政治/史/地/生
+const FB_GRADE9_WEIGHT = Object.freeze({ '语文': 1, '数学': 1, '英语': 1, '物理': 0.9, '化学': 0.6 });
+
+function fbNormalizeName(v) {
+    return String(v == null ? '' : v).replace(/\s+/g, '').trim();
+}
+function fbNormalizeId(v) {
+    return String(v == null ? '' : v).replace(/\s+/g, '').trim();
+}
+// 学生跨考试/名单匹配键：考号优先，退回 归一化姓名。
+function fbStudentKey(row) {
+    const id = fbNormalizeId(row && (row.id || row.examNo || row.studentId));
+    if (id && id !== '-' && id !== '0') return 'id:' + id;
+    return 'name:' + fbNormalizeName(row && row.name);
+}
+
+// 取本届别最近 N 次考试的内存副本（按 meta 日期倒序），只读。
+function fbGetRecentExams(limit = 3) {
+    const db = (typeof window.COHORT_DB === 'object' && window.COHORT_DB) ? window.COHORT_DB : null;
+    const exams = db && db.exams && typeof db.exams === 'object' ? db.exams : null;
+    if (!exams) return [];
+    const list = Object.keys(exams).map((examId) => {
+        const ex = exams[examId] || {};
+        const meta = ex.meta || {};
+        const dateStr = String(meta.date || meta.examDate || '').trim();
+        const ts = Date.parse(dateStr) || Number(ex.updatedAt) || Number(ex.createdAt) || 0;
+        return {
+            examId,
+            meta,
+            data: Array.isArray(ex.data) ? ex.data : [],
+            subjects: Array.isArray(ex.subjects) ? ex.subjects : [],
+            ts,
+            dateStr,
+            label: String(meta.type || meta.examName || examId)
+        };
+    }).filter((e) => e.data.length > 0);
+    list.sort((a, b) => b.ts - a.ts);
+    return list.slice(0, Math.max(1, Math.min(limit, 3)));
+}
+
+// 单场考试内、按目标年级口径算某学生该场的分班分。
+function fbExamAssignmentScore(studentRow, targetGrade) {
+    const scores = (studentRow && studentRow.scores && typeof studentRow.scores === 'object') ? studentRow.scores : {};
+    if (String(targetGrade) === '9') {
+        // 新9：仅语数英物化，物×0.9化×0.6，排除政治/史/地/生。
+        let sum = 0, got = 0;
+        FB_GRADE9_SUBJECTS.forEach((sub) => {
+            const raw = Number(scores[sub]);
+            if (Number.isFinite(raw)) { sum += raw * FB_GRADE9_WEIGHT[sub]; got += 1; }
+        });
+        return got > 0 ? { score: sum, subjectsGot: got } : null;
+    }
+    // 新7/新8：常规总分（优先 row.total，否则可得科目求和）。
+    const total = Number(studentRow && studentRow.total);
+    if (Number.isFinite(total) && total > 0) return { score: total, subjectsGot: -1 };
+    const vals = Object.values(scores).map(Number).filter(Number.isFinite);
+    return vals.length ? { score: vals.reduce((a, b) => a + b, 0), subjectsGot: vals.length } : null;
+}
+
+// 用户上传的性别名单 / 违纪名单（子模块内存，按 key 索引）。
+let FB_GENDER_MAP = {};      // key -> 'M' | 'F'
+let FB_VIOLATION_SET = {};   // key -> true
+let FB_GENDER_NAMES = [];    // 原始姓名（用于重名检测展示）
+let FB_VIOLATION_NAMES = [];
+let FB_LAST_ASSEMBLY = null; // { targetGrade, examCount, dupGroups, matched, ... } 供结果页横幅用
+
+// 聚合最近 N 次云端成绩 → FB_STUDENTS（含分班分 + 性别 + 违纪 + 重名检测）。
+// weights: 最近→次近→再次 的权重（默认最近2次 6:4）。
+function FB_assembleFromCloud(options = {}) {
+    const targetGrade = String(options.targetGrade || document.getElementById('fb_target_grade')?.value || '7').trim();
+    const examLimit = Math.max(1, Math.min(Number(options.examLimit || document.getElementById('fb_exam_count')?.value || 2), 3));
+    const exams = fbGetRecentExams(examLimit);
+    if (!exams.length) {
+        window.UI.alert('未找到本届别的云端考试数据，请先在「数据准备」上传并同步成绩。');
+        return null;
+    }
+    // 默认权重：最近一次最高。2次=[0.6,0.4]，3次=[0.5,0.3,0.2]，主要依据最后2次。
+    const defaultWeights = exams.length >= 3 ? [0.5, 0.3, 0.2] : (exams.length === 2 ? [0.6, 0.4] : [1]);
+    const weights = Array.isArray(options.weights) && options.weights.length === exams.length ? options.weights : defaultWeights;
+
+    // 按学生 key 聚合。
+    const byKey = new Map();          // key -> { name, id, class, wSum, scoreSum, examsGot }
+    const nameCount = new Map();      // 归一化姓名 -> Set(考号)  用于重名检测
+    exams.forEach((ex, ei) => {
+        const w = weights[ei] || 0;
+        ex.data.forEach((row) => {
+            const key = fbStudentKey(row);
+            const nm = fbNormalizeName(row.name);
+            if (nm) {
+                if (!nameCount.has(nm)) nameCount.set(nm, new Set());
+                nameCount.get(nm).add(fbNormalizeId(row.id || row.examNo || row.studentId) || '(无考号)');
+            }
+            const s = fbExamAssignmentScore(row, targetGrade);
+            if (!s) return;
+            if (!byKey.has(key)) {
+                byKey.set(key, { name: row.name || '未知', id: fbNormalizeId(row.id || row.examNo || row.studentId), class: row.class || '', wSum: 0, scoreSum: 0, examsGot: 0 });
+            }
+            const agg = byKey.get(key);
+            agg.wSum += w;
+            agg.scoreSum += s.score * w;
+            agg.examsGot += 1;
+        });
+    });
+
+    // 重名组（同名但多考号 / 或同名仅姓名匹配）。
+    const dupGroups = [];
+    nameCount.forEach((ids, nm) => {
+        const realIds = [...ids].filter((x) => x && x !== '(无考号)');
+        if (ids.size > 1 || (realIds.length === 0 && [...byKey.values()].filter((s) => fbNormalizeName(s.name) === nm).length > 1)) {
+            dupGroups.push({ name: nm, ids: [...ids] });
+        }
+    });
+
+    // 组装 FB_STUDENTS（沿用既有 shape：score/gender/isDiff/constraints/...）。
+    let idx = 0, missingGender = 0, missingScore = 0;
+    const students = [];
+    byKey.forEach((agg, key) => {
+        const score = agg.wSum > 0 ? (agg.scoreSum / agg.wSum) : 0;
+        if (agg.wSum <= 0) missingScore += 1;
+        let gender = FB_GENDER_MAP[key];
+        if (!gender) gender = FB_GENDER_MAP['name:' + fbNormalizeName(agg.name)]; // 姓名兜底
+        if (!gender) { gender = 'F'; missingGender += 1; }
+        const isViol = !!(FB_VIOLATION_SET[key] || FB_VIOLATION_SET['name:' + fbNormalizeName(agg.name)]);
+        students.push({
+            _id: idx++, key, name: agg.name, id: agg.id, srcClass: agg.class,
+            gender, score: parseFloat(score.toFixed(2)),
+            examsGot: agg.examsGot, examsTotal: exams.length,
+            height: 160, vision: 5.0,
+            isDiff: isViol, isViolation: isViol,
+            remarks: '', constraints: { same: [], diff: [] }, classIdx: -1
+        });
+    });
+
+    FB_STUDENTS = students;
+    FB_LAST_ASSEMBLY = {
+        targetGrade, examCount: exams.length,
+        examLabels: exams.map((e) => `${e.label}${e.dateStr ? '(' + e.dateStr + ')' : ''}`),
+        weights, matched: students.length, dupGroups,
+        missingGender, missingScore,
+        violationTotal: students.filter((s) => s.isViolation).length,
+        genderUploaded: Object.keys(FB_GENDER_MAP).length > 0,
+        violationUploaded: Object.keys(FB_VIOLATION_SET).length > 0
+    };
+    return FB_LAST_ASSEMBLY;
+}
+
+// 性别名单上传（独立表）：姓名 + 性别 [+ 考号]。
+function FB_loadGenderList(input) {
+    const file = input.files[0]; if (!file) return; const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+            FB_GENDER_MAP = {}; FB_GENDER_NAMES = [];
+            const seen = new Map();
+            json.forEach((r) => {
+                const nm = fbNormalizeName(r['姓名'] || r['名字'] || r['Name']);
+                if (!nm) return;
+                const g = (String(r['性别'] || r['Gender'] || '').trim() === '男' || String(r['性别'] || r['Gender'] || '').toUpperCase() === 'M') ? 'M' : 'F';
+                const rawId = fbNormalizeId(r['考号'] || r['学号'] || r['准考证号'] || '');
+                const key = rawId ? 'id:' + rawId : 'name:' + nm;
+                FB_GENDER_MAP[key] = g;
+                if (!rawId) FB_GENDER_MAP['name:' + nm] = g;
+                FB_GENDER_NAMES.push(nm);
+                seen.set(nm, (seen.get(nm) || 0) + 1);
+            });
+            const dups = [...seen.entries()].filter(([, c]) => c > 1).map(([n]) => n);
+            let msg = `✅ 性别名单导入 ${FB_GENDER_NAMES.length} 人。`;
+            if (dups.length) msg += `\n⚠️ 检测到 ${dups.length} 个重名：${dups.slice(0, 8).join('、')}${dups.length > 8 ? '…' : ''}\n重名建议在名单中补「考号」列以精确匹配。`;
+            window.UI.alert(msg);
+            FB_updateAssemblyStatus();
+        } catch (err) { window.UI.alert('性别名单读取失败：' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// 违纪名单上传（独立表）：姓名 [+ 考号]。
+function FB_loadViolationList(input) {
+    const file = input.files[0]; if (!file) return; const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+            FB_VIOLATION_SET = {}; FB_VIOLATION_NAMES = [];
+            const seen = new Map();
+            json.forEach((r) => {
+                const nm = fbNormalizeName(r['姓名'] || r['名字'] || r['Name']);
+                if (!nm) return;
+                const rawId = fbNormalizeId(r['考号'] || r['学号'] || r['准考证号'] || '');
+                const key = rawId ? 'id:' + rawId : 'name:' + nm;
+                FB_VIOLATION_SET[key] = true;
+                if (!rawId) FB_VIOLATION_SET['name:' + nm] = true;
+                FB_VIOLATION_NAMES.push(nm);
+                seen.set(nm, (seen.get(nm) || 0) + 1);
+            });
+            const dups = [...seen.entries()].filter(([, c]) => c > 1).map(([n]) => n);
+            let msg = `✅ 违纪名单导入 ${FB_VIOLATION_NAMES.length} 人。`;
+            if (dups.length) msg += `\n⚠️ 检测到 ${dups.length} 个重名：${dups.slice(0, 8).join('、')}${dups.length > 8 ? '…' : ''}\n重名建议补「考号」列。`;
+            window.UI.alert(msg);
+            FB_updateAssemblyStatus();
+        } catch (err) { window.UI.alert('违纪名单读取失败：' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// 切换成绩来源：cloud 隐藏手动 Excel 上传，manual 显示。
+function FB_toggleDataSource() {
+    const src = document.getElementById('fb_data_source')?.value || 'cloud';
+    const manualRow = document.getElementById('fb_manual_upload_row');
+    const cloudStatus = document.getElementById('fb_assembly_status');
+    if (manualRow) manualRow.style.display = (src === 'manual') ? 'flex' : 'none';
+    if (cloudStatus) cloudStatus.style.display = (src === 'manual') ? 'none' : 'block';
+}
+
+// 数据体检状态条（显示匹配/缺项/违纪/重名概况）。
+function FB_updateAssemblyStatus() {
+    const el = document.getElementById('fb_assembly_status');
+    if (!el) return;
+    const genderN = Object.keys(FB_GENDER_MAP).length;
+    const violN = FB_VIOLATION_NAMES.length;
+    el.innerHTML = `已载入性别名单 <strong>${FB_GENDER_NAMES.length}</strong> 人 · 违纪名单 <strong>${violN}</strong> 人。点击「生成分班方案」将读取本届别最近考试成绩并聚合。`;
+}
+
 function FB_loadData(input) {
     const file = input.files[0]; if (!file) return; const reader = new FileReader();
     reader.onload = function (e) {
@@ -123,7 +354,28 @@ function calculateSD(data) { const n = data.length; if (n === 0) return 0; const
 
 // 1. 主入口：运行分班
 function FB_runDivision() {
-    if (!FB_STUDENTS.length) return window.UI.alert("请先导入数据");
+    // 数据源模式：cloud = 读云端最近N次成绩聚合（新默认）；manual = 沿用单次 Excel 导入。
+    const sourceEl = document.getElementById('fb_data_source');
+    const source = sourceEl ? sourceEl.value : 'cloud';
+    if (source === 'cloud') {
+        const assembly = FB_assembleFromCloud();
+        if (!assembly) return; // 无云端数据，已弹提示
+        // 重名弹窗：装配阶段发现重名 → 明确提示人工核对（阻断前先确认）。
+        if (assembly.dupGroups && assembly.dupGroups.length) {
+            const list = assembly.dupGroups.slice(0, 12).map((g) => `· ${g.name}（${g.ids.length} 人）`).join('\n');
+            const more = assembly.dupGroups.length > 12 ? `\n…共 ${assembly.dupGroups.length} 组` : '';
+            const proceed = window.confirm(
+                `⚠️ 检测到 ${assembly.dupGroups.length} 组重名学生，成绩/性别/违纪可能匹配错乱：\n${list}${more}\n\n`
+                + `建议在性别/违纪名单中补「考号」列以精确匹配。\n是否仍按当前匹配继续分班？`
+            );
+            if (!proceed) return;
+        }
+        if (assembly.missingGender > 0) {
+            // 缺性别不阻断，但提示（默认按女生处理会影响男女均衡）。
+            window.UI && window.UI.toast && window.UI.toast(`⚠️ ${assembly.missingGender} 人未匹配到性别，已暂按女生计入，建议补全性别名单`, 'warning');
+        }
+    }
+    if (!FB_STUDENTS.length) return window.UI.alert(source === 'cloud' ? "云端未聚合到学生成绩，请检查考试数据与名单。" : "请先导入数据");
 
     // 获取参数
     const k = parseInt(document.getElementById('fb_cls_num').value) || 6;
@@ -184,6 +436,9 @@ function FB_runDivision() {
 
 // 2. 核心算法：生成单次方案 (提取出来的纯逻辑)
 function FB_generateSingleScheme(k, algo) {
+    // 供 cost 函数读取的班数 + 分段阈值（档次分布均衡用）。
+    window.__FB_K = k;
+    FB_computeTiers();
     // 初始化空班级
     let classes = Array.from({ length: k }, (_, i) => ({ id: i, name: (i + 1) + "班", students: [], stats: {} }));
     let pool = JSON.parse(JSON.stringify(FB_STUDENTS)); // 深拷贝，防止污染
@@ -329,11 +584,50 @@ function FB_applyScheme(id) {
     }
 }
 
+// 分段阈值（高/中/低）：全局前 27% 为高分段、后 27% 为低分段，中间为中段。
+// 用于「档次分布均衡」——不只均分相等，还让每班高/中/低段人数接近。
+let FB_TIER = null; // { high, low }  score 阈值，由 FB_computeTiers 设置
+function FB_computeTiers() {
+    const scores = FB_STUDENTS.map(s => s.score).filter(Number.isFinite).sort((a, b) => b - a);
+    if (!scores.length) { FB_TIER = null; return; }
+    const hi = scores[Math.floor(scores.length * 0.27)] ?? scores[0];
+    const lo = scores[Math.floor(scores.length * 0.73)] ?? scores[scores.length - 1];
+    FB_TIER = { high: hi, low: lo };
+}
+function fbTierOf(score) {
+    if (!FB_TIER) return 'mid';
+    if (score >= FB_TIER.high) return 'high';
+    if (score <= FB_TIER.low) return 'low';
+    return 'mid';
+}
+
 function FB_calcClassCost(cls, gAvg) {
-    const n = cls.students.length; if (n === 0) return 10000; const avg = cls.students.reduce((a, b) => a + b.score, 0) / n; const male = cls.students.filter(s => s.gender === 'M').length;
-    const diff = cls.students.filter(s => (s.isDiff || s._isDiff)).length;
-    let cost = Math.pow(avg - gAvg, 2) * 100; cost += Math.pow((male / n) - 0.5, 2) * 5000;
-    if (document.getElementById('fb_rule_diff').value === 'spread') { cost += Math.pow(diff, 2) * 500; } return cost;
+    const n = cls.students.length; if (n === 0) return 10000;
+    const avg = cls.students.reduce((a, b) => a + b.score, 0) / n;
+    const male = cls.students.filter(s => s.gender === 'M').length;
+    // 违纪生（分班装配里 isViolation，兼容旧的 isDiff/_isDiff 备注难管）。
+    const viol = cls.students.filter(s => (s.isViolation || s.isDiff || s._isDiff)).length;
+
+    let cost = Math.pow(avg - gAvg, 2) * 100;         // 均分均衡
+    cost += Math.pow((male / n) - 0.5, 2) * 5000;      // 男女均衡
+
+    // 违纪「分散 + 均衡」：软惩罚。同班违纪越多惩罚越重（二次），鼓励打散；
+    // 目标不是绝对不同班，而是每班违纪数尽量少且接近。
+    const diffRule = document.getElementById('fb_rule_diff')?.value || 'spread';
+    if (diffRule === 'spread') { cost += Math.pow(viol, 2) * 600; }
+    else if (diffRule === 'gather') { cost -= viol * 100; } // 集中管理：轻微鼓励聚集
+
+    // 档次分布均衡：每班高/中/低段人数接近理想值（总数/班数）。可选开关。
+    const tierRule = document.getElementById('fb_rule_tier')?.value || 'on';
+    if (tierRule === 'on' && FB_TIER && FB_STUDENTS.length) {
+        const k = (typeof window.__FB_K === 'number' && window.__FB_K > 0) ? window.__FB_K : 1;
+        const idealHigh = FB_STUDENTS.filter(s => fbTierOf(s.score) === 'high').length / k;
+        const idealLow = FB_STUDENTS.filter(s => fbTierOf(s.score) === 'low').length / k;
+        const hi = cls.students.filter(s => fbTierOf(s.score) === 'high').length;
+        const lo = cls.students.filter(s => fbTierOf(s.score) === 'low').length;
+        cost += (Math.pow(hi - idealHigh, 2) + Math.pow(lo - idealLow, 2)) * 300;
+    }
+    return cost;
 }
 
 function FB_checkConflict(stu, targetArr) {
@@ -342,8 +636,42 @@ function FB_checkConflict(stu, targetArr) {
     return false;
 }
 
+// 结果页顶部常驻横幅：重名提示 + 数据来源摘要（新9口径/参考考试/违纪缺项）。
+function FB_renderAssemblyBanner() {
+    const area = document.getElementById('fb-results-area');
+    if (!area) return;
+    let banner = document.getElementById('fb_assembly_banner');
+    const a = FB_LAST_ASSEMBLY;
+    if (!a) { if (banner) banner.remove(); return; }
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'fb_assembly_banner';
+        area.insertBefore(banner, area.firstChild);
+    }
+    const gradeLabel = a.targetGrade === '9' ? '新9年级（语数英物化，物×0.9 化×0.6，不含政治）'
+        : (a.targetGrade === '8' ? '新8年级' : '新7年级');
+    const parts = [];
+    parts.push(`口径：${gradeLabel}`);
+    parts.push(`参考考试：${a.examLabels.join(' + ') || a.examCount + ' 次'}`);
+    parts.push(`匹配学生：${a.matched} 人`);
+    if (a.violationUploaded) parts.push(`违纪：${a.violationTotal} 人`);
+    if (a.missingGender > 0) parts.push(`⚠️ 缺性别 ${a.missingGender} 人`);
+    const dupWarn = (a.dupGroups && a.dupGroups.length)
+        ? `<div style="margin-top:8px; color:#b91c1c; font-weight:600;">
+             ⚠️ 存在 ${a.dupGroups.length} 组重名学生（${a.dupGroups.slice(0, 10).map(g => g.name).join('、')}${a.dupGroups.length > 10 ? '…' : ''}），
+             成绩/性别/违纪匹配可能有误，请务必人工核对；建议名单补「考号」列以精确匹配。
+           </div>` : '';
+    const bg = (a.dupGroups && a.dupGroups.length) ? '#fef2f2' : '#f0f9ff';
+    const bd = (a.dupGroups && a.dupGroups.length) ? '#fecaca' : '#bae6fd';
+    banner.style.cssText = `background:${bg}; border:1px solid ${bd}; border-radius:8px; padding:12px 14px; margin-bottom:15px; font-size:13px; color:#334155;`;
+    banner.innerHTML = `<div><i class="ti ti-info-circle"></i> <strong>分班数据摘要</strong>（仅本次分班使用，不影响云端成绩）</div>
+        <div style="margin-top:6px;">${parts.join(' · ')}</div>${dupWarn}`;
+}
+
 function FB_renderDashboard() {
-    document.getElementById('fb-results-area').classList.remove('hidden'); const container = document.getElementById('fb_class_container');
+    document.getElementById('fb-results-area').classList.remove('hidden');
+    FB_renderAssemblyBanner();
+    const container = document.getElementById('fb_class_container');
     const dashboardSignature = fbClassSignature(FB_CLASSES);
     if (container?.dataset.freshmanDashboardSig === dashboardSignature && FreshmanExamPerfCache.dashboardSignature === dashboardSignature) {
         FB_renderBalanceChart();
@@ -355,7 +683,11 @@ function FB_renderDashboard() {
         const n = stats.count; const avg = stats.avg; const male = stats.male;
         const diffCnt = stats.diff;
         allAvgs.push(avg); tMale += male; tFemale += stats.female; totalDiffCnt += diffCnt; c.stats = stats; const isWarn = diffCnt > 3;
-        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span class="fb-tag fb-tag-red" style="${diffCnt > 0 ? '' : 'display:none'}">难管: ${diffCnt}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">点击进入座位编排 →</div></div></div>`;
+        // 档次分布（高/低段人数），供均衡核对。
+        const hiCnt = c.students.filter(s => fbTierOf(s.score) === 'high').length;
+        const loCnt = c.students.filter(s => fbTierOf(s.score) === 'low').length;
+        const violLabel = (FB_LAST_ASSEMBLY && FB_LAST_ASSEMBLY.violationUploaded) ? '违纪' : '难管';
+        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span class="fb-tag fb-tag-red" style="${diffCnt > 0 ? '' : 'display:none'}">${violLabel}: ${diffCnt}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div>高分段: ${hiCnt}</div><div>低分段: ${loCnt}</div><div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">点击进入座位编排 →</div></div></div>`;
     }).join('');
     if (container && container.innerHTML !== classCardsHtml) {
         container.innerHTML = classCardsHtml;
@@ -1803,6 +2135,11 @@ function EXAM_exportResult() {
     };
 
     if (typeof FB_loadData === 'function') window.FB_loadData = FB_loadData;
+    if (typeof FB_loadGenderList === 'function') window.FB_loadGenderList = FB_loadGenderList;
+    if (typeof FB_loadViolationList === 'function') window.FB_loadViolationList = FB_loadViolationList;
+    if (typeof FB_assembleFromCloud === 'function') window.FB_assembleFromCloud = FB_assembleFromCloud;
+    if (typeof FB_updateAssemblyStatus === 'function') window.FB_updateAssemblyStatus = FB_updateAssemblyStatus;
+    if (typeof FB_toggleDataSource === 'function') window.FB_toggleDataSource = FB_toggleDataSource;
     if (typeof FB_runDivision === 'function') window.FB_runDivision = FB_runDivision;
     if (typeof FB_generateSingleScheme === 'function') window.FB_generateSingleScheme = FB_generateSingleScheme;
     if (typeof FB_renderSchemeSelector === 'function') window.FB_renderSchemeSelector = FB_renderSchemeSelector;
@@ -1810,6 +2147,7 @@ function EXAM_exportResult() {
     if (typeof FB_calcClassCost === 'function') window.FB_calcClassCost = FB_calcClassCost;
     if (typeof FB_checkConflict === 'function') window.FB_checkConflict = FB_checkConflict;
     if (typeof FB_renderDashboard === 'function') window.FB_renderDashboard = FB_renderDashboard;
+    if (typeof FB_renderAssemblyBanner === 'function') window.FB_renderAssemblyBanner = FB_renderAssemblyBanner;
     if (typeof FB_renderBalanceChart === 'function') window.FB_renderBalanceChart = FB_renderBalanceChart;
     if (typeof FB_openSeatMap === 'function') window.FB_openSeatMap = FB_openSeatMap;
     if (typeof FB_autoSeatAlgo === 'function') window.FB_autoSeatAlgo = FB_autoSeatAlgo;

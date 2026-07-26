@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-7d4d59b839fc.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-7d4d59b839fc.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-741929c4e172.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-741929c4e172.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -2272,8 +2272,44 @@
                     </div>
                 </details>
                 <div class="control-panel" style="flex-direction: column; align-items: stretch;">
-                    <div
-                        style="display:flex; gap:20px; flex-wrap:wrap; border-bottom:1px dashed #cbd5e1; padding-bottom:15px; margin-bottom:15px;">
+                    <!-- 云端成绩分班装配（新）：读本届别最近 2-3 次成绩 + 性别/违纪名单 -->
+                    <div style="border:1px solid #e2e8f0; border-radius:10px; padding:15px; margin-bottom:15px; background:#f8fafc;">
+                        <div style="display:flex; flex-wrap:wrap; gap:15px; align-items:end;">
+                            <div style="min-width:170px;"><label class="stat-label">成绩来源</label>
+                                <select id="fb_data_source" style="width:100%;" onchange="FB_toggleDataSource && FB_toggleDataSource()">
+                                    <option value="cloud" selected>云端最近成绩（推荐）</option>
+                                    <option value="manual">手动导入 Excel</option>
+                                </select></div>
+                            <div style="min-width:170px;"><label class="stat-label">目标年级（口径）</label>
+                                <select id="fb_target_grade" style="width:100%;">
+                                    <option value="7">新 7 年级</option>
+                                    <option value="8">新 8 年级</option>
+                                    <option value="9">新 9 年级（语数英物化，物×0.9 化×0.6，不含政治）</option>
+                                </select></div>
+                            <div style="min-width:150px;"><label class="stat-label">参考考试次数</label>
+                                <select id="fb_exam_count" style="width:100%;">
+                                    <option value="2" selected>最近 2 次（推荐）</option>
+                                    <option value="3">最近 3 次</option>
+                                </select></div>
+                            <div class="upload-box" style="flex:1; min-width:190px; padding:12px;"
+                                onclick="document.getElementById('fbGenderInput').click()">
+                                <div style="font-weight:bold; font-size:13px;"><i class="ti ti-friends"></i> 上传性别名单</div>
+                                <div style="font-size:11px; color:#64748b;">列：姓名, 性别 [, 考号]</div>
+                                <input type="file" id="fbGenderInput" accept=".xlsx,.xls" hidden onchange="FB_loadGenderList(this)">
+                            </div>
+                            <div class="upload-box" style="flex:1; min-width:190px; padding:12px;"
+                                onclick="document.getElementById('fbViolationInput').click()">
+                                <div style="font-weight:bold; font-size:13px;"><i class="ti ti-alert-triangle"></i> 上传违纪名单</div>
+                                <div style="font-size:11px; color:#64748b;">列：姓名 [, 考号]</div>
+                                <input type="file" id="fbViolationInput" accept=".xlsx,.xls" hidden onchange="FB_loadViolationList(this)">
+                            </div>
+                        </div>
+                        <div id="fb_assembly_status" style="margin-top:10px; font-size:12px; color:#475569; background:#fff; border:1px dashed #cbd5e1; border-radius:6px; padding:8px 10px;">
+                            分班时机：新学年 8 / 9 月上学期初。系统将读取本届别最近考试成绩聚合分班分（不写云端、不改成绩口径）。请上传性别名单；如有级部违纪学生请上传违纪名单。
+                        </div>
+                    </div>
+                    <div id="fb_manual_upload_row"
+                        style="display:none; gap:20px; flex-wrap:wrap; border-bottom:1px dashed #cbd5e1; padding-bottom:15px; margin-bottom:15px;">
                         <div class="upload-box" style="flex:1; padding:20px; min-width:250px;"
                             onclick="document.getElementById('fbFileInput').click()">
                             <div class="upload-icon"><i class="ti ti-file-import"></i></div>
@@ -2281,8 +2317,10 @@
                             <div style="font-size:12px; color:#64748b;">必需: 姓名,性别,总分 | 可选: 身高,视力,备注(关系)</div>
                             <input type="file" id="fbFileInput" accept=".xlsx,.xls" hidden onchange="FB_loadData(this)">
                         </div>
+                    </div>
+                    <div style="border-bottom:1px dashed #cbd5e1; padding-bottom:15px; margin-bottom:15px;">
                         <div
-                            style="flex:2; display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:15px;">
+                            style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:15px;">
                             <div><label class="stat-label">拟分班级数</label><input type="number" id="fb_cls_num" value="6"
                                     min="1" max="30" style="width:100%;"></div>
                             <div><label class="stat-label">班额微调</label><select id="fb_cls_size" style="width:100%;">
@@ -2293,9 +2331,13 @@
                                     <option value="strict">严格均衡</option>
                                     <option value="loose">允许差异</option>
                                 </select></div>
-                            <div><label class="stat-label">难管学生</label><select id="fb_rule_diff" style="width:100%;">
-                                    <option value="spread">均匀分散 (推荐)</option>
+                            <div><label class="stat-label">违纪学生</label><select id="fb_rule_diff" style="width:100%;">
+                                    <option value="spread">分散+均衡 (推荐)</option>
                                     <option value="gather">集中管理</option>
+                                </select></div>
+                            <div><label class="stat-label">档次分布</label><select id="fb_rule_tier" style="width:100%;">
+                                    <option value="on" selected>高中低段均衡</option>
+                                    <option value="off">仅看均分</option>
                                 </select></div>
                             <div><label class="stat-label">核心算法</label><select id="fb_algorithm" style="width:100%;">
                                     <option value="complex" selected>综合智能优化</option>
