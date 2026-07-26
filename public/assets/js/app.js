@@ -1757,6 +1757,12 @@ const DB = {
         return requireDataCloudRuntime().dbSyncFromCloud(key);
     },
 
+    warmColdLoginCaches: async (key, options = {}) => {
+        const runtime = requireDataCloudRuntime();
+        if (!runtime || typeof runtime.warmColdLoginCaches !== 'function') return false;
+        return runtime.warmColdLoginCaches(key, options);
+    },
+
     clear: async (key) => {
         return requireDataCloudRuntime().dbClear(key);
     }
@@ -2021,13 +2027,13 @@ async function switchCohort(cohortId, options = {}) {
     if (!options.preloadedData
         && options.requireCloudData === true
         && targetCohortId
-        && window.DB
-        && typeof window.DB.warmColdLoginCaches === 'function') {
+        && typeof DB.warmColdLoginCaches === 'function') {
         try {
-            await window.DB.warmColdLoginCaches(cohortKey);
+            await DB.warmColdLoginCaches(cohortKey);
         } catch (_) { /* best-effort warm-up; normal path recovers */ }
         if (!isCurrentSwitch()) return false;
     }
+
     const __dbGetStartedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     const cachedData = options.preloadedData || await DB.get(cohortKey, { localOnly: true });
     if (!isCurrentSwitch()) return false;

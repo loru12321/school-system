@@ -108,9 +108,16 @@ assert.ok(
   /options\.requireCloudData === true[\s\S]*warmColdLoginCaches\(cohortKey\)/.test(appJs),
   'cold-login warm-up must only run for a cloud-required (login-selected) entry'
 );
-const warmIdx = appJs.indexOf('warmColdLoginCaches(cohortKey)');
+const warmIdx = appJs.indexOf('DB.warmColdLoginCaches(cohortKey)');
 const dbGetIdx = appJs.indexOf("DB.get(cohortKey, { localOnly: true })");
 assert.ok(warmIdx >= 0 && dbGetIdx >= 0 && warmIdx < dbGetIdx,
   'warm-up must run BEFORE the local-cache DB.get so the primed cache is read');
+// The DB wrapper is a hand-written delegate object, not an auto-proxy — it must
+// explicitly forward warmColdLoginCaches to the runtime, or the trigger silently
+// no-ops (typeof DB.warmColdLoginCaches === 'undefined').
+assert.ok(
+  /warmColdLoginCaches:\s*async[\s\S]*requireDataCloudRuntime\(\)[\s\S]*warmColdLoginCaches/.test(appJs),
+  'app.js DB wrapper must delegate warmColdLoginCaches to the data-cloud runtime'
+);
 
 console.log('cold-login bundle contract tests passed');
