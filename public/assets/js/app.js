@@ -4475,56 +4475,7 @@ function renderHighScoreTable() {
     appDebug(`已渲染 ${list.length} 所学校的高分数据`);
 }
 
-function exportHighScoreExcel() {
-    const hasHighScoreScopeHelper = typeof getTownshipManagedSchoolNames === 'function';
-    const townshipSchoolNames = hasHighScoreScopeHelper ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {})) : Object.keys(SCHOOLS || {});
-    const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
-    const townshipSchools = Object.values(SCHOOLS).filter((school) => {
-        if (!hasHighScoreScopeHelper) return true;
-        const name = String(school?.name || '').trim();
-        return typeof isTownshipManagedSchool === 'function'
-            ? isTownshipManagedSchool(name, Object.keys(SCHOOLS || {}))
-            : townshipSchoolSet.has(name);
-    });
-    if (!townshipSchools.length) return alert("无数据");
-    if (!CONFIG.name.includes('9')) return alert("非9年级模式无此数据");
-
-    const wb = XLSX.utils.book_new();
-    const headers = ["学校名称", "实考人数", "高分人数(≥490)", "高分率", "高分赋分(50)", "排名"];
-    const wsData = [headers];
-
-    const baseList = townshipSchools.map(s => {
-        const students = getEquivalentSchoolStudents(s.name);
-        const count = students.length || (s.metrics.total ? s.metrics.total.count : 0);
-        const hsCount = students.filter(stu => Number(stu.total) >= 490).length;
-        const hsRatio = count ? hsCount / count : 0;
-        return {
-            name: s.name,
-            count,
-            hsCount,
-            hsRatio
-        };
-    });
-    const maxHighRatio = Math.max(...baseList.map(d => d.hsRatio), 0);
-    const list = baseList.map(d => ({
-        ...d,
-        score: maxHighRatio ? d.hsRatio / maxHighRatio * 50 : 0
-    })).sort((a, b) => b.score - a.score);
-
-    list.forEach((d, i) => {
-        wsData.push([
-            d.name,
-            d.count,
-            d.hsCount,
-            getExcelPercent(d.hsRatio),
-            getExcelNum(d.score),
-            i + 1
-        ]);
-    });
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wsData), "高分段核算");
-    XLSX.writeFile(wb, `高分段核算_${CONFIG.name}.xlsx`);
-}
+// Moved to high-score-export-runtime.js (window.exportHighScoreExcel — 高分段核算导出)
 
 async function prepareSameExamOverwrite(currentExamId, existingExam = null) {
     const examId = String(currentExamId || '').trim();

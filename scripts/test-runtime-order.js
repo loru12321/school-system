@@ -253,6 +253,7 @@ const autoDiagnosisRef = './assets/js/auto-diagnosis-runtime.js';
 const indicatorBottom3ExportRef = './assets/js/indicator-bottom3-export-runtime.js';
 const summaryTableExportRef = './assets/js/summary-table-export-runtime.js';
 const templateDownloadRef = './assets/js/template-download-runtime.js';
+const highScoreExportRef = './assets/js/high-score-export-runtime.js';
 const cohortGrowthRef = './assets/js/cohort-growth-runtime.js';
 const macroAnalysisCompatRef = './assets/js/macro-analysis-compat-runtime.js';
 const schoolNormalizationRef = './assets/js/school-normalization-runtime.js';
@@ -431,6 +432,7 @@ const postAppDeferredRefs = [
     indicatorBottom3ExportRef,
     summaryTableExportRef,
     templateDownloadRef,
+    highScoreExportRef,
     cohortGrowthRef,
     macroAnalysisCompatRef,
     compareCloudContextRef,
