@@ -1630,6 +1630,10 @@
             const showBlocking = !background && opts.blocking !== false;
             const showToast = opts.toast === false ? false : !background;
             const forceRefresh = opts.force === true || opts.refresh === true;
+            // Explicit refreshes (manual sync and post-login hydration) must prove
+            // the newest cloud roster first.  A locally re-homed compatible roster
+            // is useful offline, but it must never mask a newer remote assignment.
+            const preferRemote = opts.preferRemote === true;
             const requestedSchool = String(opts.schoolName || opts.scopeSchool || '').trim();
             const requestedCohortId = getCurrentCohortId();
             const isCurrentTeacherLoad = () => (
@@ -1789,7 +1793,7 @@
                         ? Date.parse(String(metaRow?.updated_at || ''))
                         : 0;
 
-                    if (!exactKey && localEntry && (!metaRow || (remoteTs && localEntry.savedAt >= (remoteTs - 1000)))) {
+                    if (!preferRemote && !exactKey && localEntry && (!metaRow || (remoteTs && localEntry.savedAt >= (remoteTs - 1000)))) {
                         const localPayload = requestedSchool
                             ? filterTeacherPayloadBySchool(localEntry.map, localEntry.schoolMap, requestedSchool)
                             : { map: localEntry.map, schoolMap: localEntry.schoolMap, matched: true, scoped: false };

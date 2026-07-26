@@ -65,6 +65,17 @@ assert.ok(
 );
 
 assert.ok(
+  cloud.includes('const preferRemote = opts.preferRemote === true')
+    && cloud.includes('if (!preferRemote && !exactKey && localEntry'),
+  'an explicit cloud refresh must not be short-circuited by a locally restored teacher roster'
+);
+
+assert.ok(
+  teacherSync.includes('preferRemote: options.startup === true'),
+  'login teacher recovery must check the remote roster before using local history'
+);
+
+assert.ok(
   /const requestedCohortId = getCurrentCohortId\(\);[\s\S]*const isCurrentTeacherLoad = \(\) => \([\s\S]*getCurrentCohortId\(\) === requestedCohortId[\s\S]*await this\.ensureClientReady\(\)[\s\S]*if \(!isCurrentTeacherLoad\(\)\) return false;/.test(cloud)
     && (cloud.match(/if \(!isCurrentTeacherLoad\(\)\) return false;/g) || []).length >= 5
     && cloud.includes('if (showBlocking && isCurrentTeacherLoad()) safeLoading(false);'),

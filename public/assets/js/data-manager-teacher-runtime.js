@@ -218,7 +218,7 @@
         console.log(`⚠️ 本地无学期 ${baseTermId || exactTermId} 的任课数据，尝试从云端同步...`);
         if (root.CloudManager && typeof root.CloudManager.loadTeachers === 'function') {
             safeToast('📧 正在从云端加载该学期任课表...', 'info');
-            root.CloudManager.loadTeachers({ background: true }).then((ok) => {
+            root.CloudManager.loadTeachers({ background: true, force: true, preferRemote: true }).then((ok) => {
                 if (!ok) safeToast('☁️ 云端暂无该学期任课数据', 'warning');
             }).catch((error) => {
                 console.warn('云端加载失败:', error);
@@ -283,7 +283,7 @@
         }
 
         if (triggerCloud && root.CloudManager && typeof root.CloudManager.loadTeachers === 'function') {
-            root.CloudManager.loadTeachers({ background: true });
+            root.CloudManager.loadTeachers({ background: true, force: true, preferRemote: true });
         }
         return false;
     }

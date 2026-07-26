@@ -228,7 +228,10 @@ async function tryAutoRestoreTeacherMap(options = {}) {
             background: true,
             toast: false,
             blocking: false,
-            force: options.force === true
+            force: options.force === true,
+            // Login recovery is a cloud restore, not a local-file restore.  Keep
+            // the local history only as the offline fallback after remote lookup.
+            preferRemote: options.startup === true
         });
         if (ok) {
             if (typeof updateStatusPanel === 'function') updateStatusPanel();
