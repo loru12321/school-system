@@ -1753,8 +1753,8 @@ const DB = {
         return requireDataCloudRuntime().dbGet(key, options);
     },
 
-    syncFromCloud: async (key) => {
-        return requireDataCloudRuntime().dbSyncFromCloud(key);
+    syncFromCloud: async (key, options = {}) => {
+        return requireDataCloudRuntime().dbSyncFromCloud(key, options);
     },
 
     warmColdLoginCaches: async (key, options = {}) => {
@@ -1892,7 +1892,10 @@ function getAppCohortKey(cohortId) {
 function scheduleCohortWorkspaceMetadataRefresh(cohortKey, cohortId) {
     const refresh = () => {
         if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId || '')) return;
-        DB.syncFromCloud(cohortKey).catch((error) => {
+        // Deferred/idle top-up — mark it background so it is never conflated with a
+        // login-blocking read (both in the perf diagnostics and in dbSyncFromCloud's
+        // own error-logging path).
+        DB.syncFromCloud(cohortKey, { background: true }).catch((error) => {
             console.warn('[switchCohort] background workspace metadata refresh failed:', error);
         });
     };
