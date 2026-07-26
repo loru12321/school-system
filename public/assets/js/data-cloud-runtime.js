@@ -180,6 +180,12 @@
             : Date.now();
     }
 
+    // Diagnostic marker: whether the in-flight dbSyncFromCloud (and the
+    // readSplitExamPayload it drives) is a background top-up vs a blocking
+    // login-critical read. Read by the readSplitExamPayload perf timers so
+    // dumpColdLoginPerf can show which shard fetches actually blocked the user.
+    let currentSyncIsBackground = null;
+
     function shouldLogPerf(durationMs) {
         if (durationMs >= 250) return true;
         try {
@@ -228,6 +234,7 @@
                 path: e.path || '',
                 cache: e.cache || (e.hasContent === false ? 'empty' : ''),
                 outcome: e.outcome || '',
+                bg: e.background === true ? 'background' : (e.background === false ? 'blocking' : ''),
                 at: e.at
             }))
             .sort((a, b) => b.ms - a.ms);
@@ -965,6 +972,7 @@
                 rememberDataCloudPerf(null, 'readSplitExamPayload.shardContent', directStartedAt, {
                     key: examKey,
                     path: 'direct',
+                    background: currentSyncIsBackground,
                     contentBytes: typeof direct.data.content === 'string' ? direct.data.content.length : 0
                 });
                 const payload = parseCloudPayload(direct.data.content);
@@ -995,6 +1003,7 @@
         });
         rememberDataCloudPerf(null, 'readSplitExamPayload.metaPick', metaPickStartedAt, {
             cohortId,
+            background: currentSyncIsBackground,
             rows: Array.isArray(data) ? data.length : 0
         });
         if (error) throw error;
@@ -1028,6 +1037,7 @@
         rememberDataCloudPerf(null, 'readSplitExamPayload.shardContent', shardStartedAt, {
             key: selected.key,
             path: 'fallback',
+            background: currentSyncIsBackground,
             contentBytes: contentRows[0] && typeof contentRows[0].content === 'string' ? contentRows[0].content.length : 0
         });
         const contentRow = contentRows.find(row => normalizeText(row && row.key) === normalizeText(selected.key)) || contentRows[0] || null;
@@ -1942,7 +1952,13 @@
                 // from the workspace-row read tells us how the cold-login cost
                 // splits between the two serial trans-Pacific fetches.
                 const hydrateStartedAt = nowMs();
-                const db = await hydrateSplitWorkspacePayload(normalizedKey, payload);
+                currentSyncIsBackground = !!options.background;
+                let db;
+                try {
+                    db = await hydrateSplitWorkspacePayload(normalizedKey, payload);
+                } finally {
+                    currentSyncIsBackground = null;
+                }
                 rememberDataCloudPerf(null, 'dbSyncFromCloud.hydrateSplitPayload', hydrateStartedAt, {
                     key: normalizedKey,
                     background: !!options.background
