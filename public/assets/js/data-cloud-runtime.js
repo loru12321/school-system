@@ -235,6 +235,10 @@
                 cache: e.cache || (e.hasContent === false ? 'empty' : ''),
                 outcome: e.outcome || '',
                 bg: e.background === true ? 'background' : (e.background === false ? 'blocking' : ''),
+                rawLen: (e.rawLen === 0 || e.rawLen) ? e.rawLen : '',
+                cohorts: e.wroteCohortId || e.readbackCohortId
+                    ? `${e.wroteCohortId || '?'}→${e.readbackCohortId || '?'}`
+                    : '',
                 at: e.at
             }))
             .sort((a, b) => b.ms - a.ms);
@@ -2089,7 +2093,23 @@
         // cold device now behaves like a warm repeat login (instant + background
         // refresh), collapsing 4-6 serial round-trips into the single bundle fetch.
         await writeLocalCache(key, hydrated, { updatedAt: workspaceRow.updated_at }).catch(() => false);
-        rememberDataCloudPerf(null, 'warmColdLoginCaches', startedAt, { outcome: 'primed', split: isSplitWorkspacePayload(payload) });
+        // Self-check: read the value back through the SAME path switchCohort uses
+        // (readLocalCache → DB.get localOnly) and record what a consumer would see,
+        // so we can tell a write/key-prefix miss from a downstream cohort-guard
+        // rejection. hasData=false at the call site with rawLen>0 here ⇒ guard
+        // rejected it; rawLen=0/readback null here ⇒ the write itself isn't visible.
+        let readback = null;
+        try { readback = await readLocalCache(key); } catch (_) { readback = null; }
+        const rawLen = readback && Array.isArray(readback.RAW_DATA) ? readback.RAW_DATA.length : -1;
+        const readbackCohortId = readback ? getWorkspacePayloadCohortId(readback) : '';
+        rememberDataCloudPerf(null, 'warmColdLoginCaches', startedAt, {
+            outcome: 'primed',
+            split: isSplitWorkspacePayload(payload),
+            key,
+            rawLen,
+            readbackCohortId,
+            wroteCohortId: getWorkspacePayloadCohortId(hydrated)
+        });
         return true;
     }
 
