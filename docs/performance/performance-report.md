@@ -4,10 +4,10 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `9c6715d4a475`
-- Recorded at: 2026-07-26T02:06:16.178Z
-- Total smoke time: 32206 ms (+1597 ms vs previous)
-- Login: 7369 ms
+- Commit: `8f533534eb80`
+- Recorded at: 2026-07-26T02:26:32.437Z
+- Total smoke time: 30217 ms (-1989 ms vs previous)
+- Login: 7436 ms
 - App ready: 5 ms
 - Long tasks: 0, max 0 ms
 - Budget failures: 0
@@ -17,19 +17,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `teacher-analysis` | 47.40000000000873 ms | 2123 ms | 2170.4000000000087 ms |
-| `county-teacher-portrait` | 17 ms | 2054 ms | 2071 ms |
-| `teacher-township-ranking` | 2.7999999999883585 ms | 2068 ms | 2070.7999999999884 ms |
-| `seat-adjustment` | 65.80000000000291 ms | 914 ms | 979.8000000000029 ms |
-| `report-generator` | 13 ms | 762 ms | 775 ms |
-| `analysis` | 11.69999999999709 ms | 627 ms | 638.6999999999971 ms |
-| `student-overview` | 24.80000000000291 ms | 568 ms | 592.8000000000029 ms |
-| `progress-analysis` | 37.09999999999127 ms | 513 ms | 550.0999999999913 ms |
+| `indicator` | 19.10000000000582 ms | 2244 ms | 2263.100000000006 ms |
+| `starter-hub` | 3 ms | 1685 ms | 1688 ms |
+| `teacher-analysis` | 47.89999999999418 ms | 1490 ms | 1537.8999999999942 ms |
+| `report-generator` | 13.60000000000582 ms | 796 ms | 809.6000000000058 ms |
+| `teacher-township-ranking` | 4.100000000005821 ms | 735 ms | 739.1000000000058 ms |
+| `progress-analysis` | 64.90000000000873 ms | 577 ms | 641.9000000000087 ms |
+| `analysis` | 6.399999999994179 ms | 596 ms | 602.3999999999942 ms |
+| `student-overview` | 24.30000000000291 ms | 550 ms | 574.3000000000029 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Long tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- |
+| `8f533534eb80` | 30217 ms | 7436 ms | 5 ms | 0 | 0 | 0 |
 | `9c6715d4a475` | 32206 ms | 7369 ms | 5 ms | 0 | 0 | 0 |
 | `4f463a542e02` | 30609 ms | 8174 ms | 70 ms | 0 | 0 | 0 |
 | `960fb517b18f` | 31355 ms | 7124 ms | 9 ms | 0 | 0 | 0 |
@@ -44,7 +45,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `b88dd598e863` | 31763 ms | 9080 ms | 9 ms | 0 | 0 | 0 |
 | `914e63a8fa20` | 23405 ms | 5016 ms | 11 ms | 0 | 0 | 0 |
 | `6a6f74597c41` | 30458 ms | 7685 ms | 5 ms | 0 | 0 | 0 |
-| `9c7dbbf5a641` | 31630 ms | 7574 ms | 5 ms | 0 | 0 | 0 |
 
 ## Data Files
 
