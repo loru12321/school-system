@@ -3362,98 +3362,6 @@ function decorateExcelSheet(ws, headers = []) {
 }
 
 
-async function togglePrivacyMode() {
-    const btn = document.getElementById('btn-privacy-toggle');
-    const indicator = document.getElementById('privacy-indicator');
-
-    if (!IS_PRIVACY_ON) {
-        if (RAW_DATA.length === 0) return alert("请先上传数据后再开启演示模式。");
-
-        if (!confirm("🛡️ 即将进入【隐私演示模式】：\n\n1. 所有学生姓名将变为代码 (如 S-001)\n2. 所有教师姓名将变为代码 (如 T-01)\n3. 适合投屏汇报或截图分享\n\n点击确定继续。")) return;
-
-        DATA_BACKUP_PRIVACY = {
-            RAW_DATA: JSON.parse(JSON.stringify(RAW_DATA)),
-            TEACHER_MAP: JSON.parse(JSON.stringify(TEACHER_MAP)),
-            PREV_DATA: JSON.parse(JSON.stringify(PREV_DATA))
-        };
-
-        const stuMap = new Map();
-        let stuCounter = 1;
-
-        RAW_DATA.forEach(s => {
-            const key = s.name; // 简单按姓名映射，如果有重名会映射成同一个代码，符合演示逻辑
-            if (!stuMap.has(key)) {
-                stuMap.set(key, `S-${String(stuCounter++).padStart(3, '0')}`);
-            }
-            s.name = stuMap.get(key);
-        });
-
-        if (PREV_DATA.length > 0) {
-            PREV_DATA.forEach(p => {
-                const key = p.name;
-                if (!stuMap.has(key)) {
-                    stuMap.set(key, `S-${String(stuCounter++).padStart(3, '0')}`);
-                }
-                p.name = stuMap.get(key);
-            });
-        }
-
-        const teacherMap = new Map();
-        let teaCounter = 1;
-        Object.keys(TEACHER_MAP).forEach(k => {
-            const realName = TEACHER_MAP[k];
-            if (!teacherMap.has(realName)) {
-                teacherMap.set(realName, `T-${String(teaCounter++).padStart(2, '0')}`);
-            }
-            TEACHER_MAP[k] = teacherMap.get(realName);
-        });
-
-        IS_PRIVACY_ON = true;
-        btn.innerHTML = '<i class="ti ti-eye"></i> 退出隐私模式';
-        btn.style.background = "#dc2626"; // 红色按钮提示退出
-        indicator.style.display = "block";
-        document.body.classList.add('privacy-mode-active'); // 可用于CSS扩展
-
-    } else {
-        if (DATA_BACKUP_PRIVACY) {
-            setRawData(DATA_BACKUP_PRIVACY.RAW_DATA);
-            setTeacherMap(DATA_BACKUP_PRIVACY.TEACHER_MAP);
-            setPrevDataState(DATA_BACKUP_PRIVACY.PREV_DATA);
-            DATA_BACKUP_PRIVACY = null;
-        }
-
-        IS_PRIVACY_ON = false;
-        btn.innerHTML = '<i class="ti ti-eye-off"></i> 开启隐私模式';
-        btn.style.background = "rgba(255,255,255,0.2)";
-        indicator.style.display = "none";
-        document.body.classList.remove('privacy-mode-active');
-    }
-
-    setSchools({});
-    setTeacherStats({});
-    TEACHER_TOWNSHIP_RANKINGS = {};
-
-    await processData();
-    calculateRankings();
-
-    if (Object.keys(TEACHER_MAP).length > 0 && MY_SCHOOL) {
-        analyzeTeachers();
-    }
-
-    renderTables();
-
-    if (document.getElementById('teacherCardsContainer')) {
-        renderTeacherCards();
-        renderTeacherComparisonTable();
-        renderTeacherTownshipRanking();
-    }
-    if (document.getElementById('progress-analysis').classList.contains('active')) {
-        if (PREV_DATA.length > 0) renderProgressAnalysis();
-    }
-
-    alert(IS_PRIVACY_ON ? "✅ 隐私模式已开启：姓名已脱敏，可进行汇报演示。" : "✅ 隐私模式已退出：数据已还原。");
-}
-
 window.IS_GUEST_MODE = false; // 全局标记
 
 function toggleGuestMode() {
@@ -3529,27 +3437,6 @@ saveProjectSnapshot = function () {
     }
     originalSaveSnapshot();
 };
-
-function initSystem(type) {
-    hideCohortPicker();
-    document.getElementById('app').classList.remove('hidden');
-    if (type === '6-8') setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', extraDisplaySubs: [], showQuery: true });
-    else setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], extraDisplaySubs: ['政治'], showQuery: true });
-    refreshTotalSubjectPresentation();
-    const modeBadge = document.getElementById('mode-badge');
-    const modeInfo = document.getElementById('mode-info');
-    if (modeBadge) modeBadge.innerText = CONFIG.name;
-    if (modeInfo) {
-        const displayOnlyText = Array.isArray(CONFIG.extraDisplaySubs) && CONFIG.extraDisplaySubs.length
-            ? `，单科展示: ${CONFIG.extraDisplaySubs.join('、')}`
-            : '';
-        modeInfo.innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}${displayOnlyText}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
-    }
-    document.querySelectorAll('.label-total').forEach(e => e.innerText = CONFIG.label);
-    const labelExc = document.getElementById('label-exc');
-    if (labelExc) labelExc.innerText = (CONFIG.excRate * 100) + '%';
-    renderNavigation();
-}
 
 let __guardBypass = false;
 let __guardResumeModuleId = '';
@@ -7908,33 +7795,6 @@ function downloadTemplate(type) {
 // 光荣榜(poster)生成器已在提交 a89f9db9 移除；其 HTML 与入口已删，此处清理遗留的孤儿函数。
 
 // 临界生任务单与座位调整逻辑已拆分到 marginal-push-runtime.js 和 seat-adjustment-runtime.js。
-
-function applyPrintSettings() {
-    const size = document.getElementById('ps-size').value;
-    const orient = document.getElementById('ps-orient').value;
-    const scale = document.getElementById('ps-scale').value;
-    const compact = document.getElementById('ps-compact').checked;
-    const hideHeader = document.getElementById('ps-hide-header').checked;
-    const hideNav = document.getElementById('ps-hide-nav').checked;
-    const hideCharts = document.getElementById('ps-hide-charts').checked;
-    const watermarkText = document.getElementById('ps-watermark-text').value;
-    const watermarkOpacity = document.getElementById('ps-watermark-opacity').value;
-
-    document.documentElement.style.setProperty('--p-size', size);
-    document.documentElement.style.setProperty('--p-orient', orient);
-    document.documentElement.style.setProperty('--p-scale', scale);
-    document.documentElement.style.setProperty('--p-watermark-text', `"${watermarkText}"`);
-    document.documentElement.style.setProperty('--p-watermark-opacity', watermarkOpacity);
-
-    const body = document.body;
-    if (watermarkText.trim()) body.classList.add('print-watermarked'); else body.classList.remove('print-watermarked');
-    if (hideHeader) body.classList.add('p-hide-header'); else body.classList.remove('p-hide-header');
-    if (hideNav) body.classList.add('p-hide-nav'); else body.classList.remove('p-hide-nav');
-    if (hideCharts) body.classList.add('p-hide-charts'); else body.classList.remove('p-hide-charts');
-    if (compact) body.classList.add('p-compact-table'); else body.classList.remove('p-compact-table');
-
-    alert("✅ 打印配置已应用！\n\n请点击“调用打印机”按钮查看预览效果。\n提示：浏览器打印设置中请勾选“背景图形”以显示颜色。");
-}
 
 function initTagWidget(wrapperId, hiddenInputId) {
     const wrapper = document.getElementById(wrapperId); if (!wrapper) return;

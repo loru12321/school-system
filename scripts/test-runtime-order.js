@@ -1328,8 +1328,10 @@ assert.ok(
     gatewaySessionSource.includes("credentials: cookieRoute ? 'include' : 'omit'"),
     'same-origin gateway calls should include the HttpOnly session cookie'
 );
-assert.ok(grade9TotalSubjectContract.test(appSource), 'grade 9 total score must remain limited to Chinese, Math, English, Physics, Chemistry');
-assert.ok(grade9PoliticsDisplayContract.test(appSource), 'grade 9 politics should be configured as display-only subject');
+// The authoritative 9年级 config now lives in cohort-exam-meta-runtime.js (setConfigState);
+// the old initSystem copy in app.js was removed as dead code.
+assert.ok(grade9TotalSubjectContract.test(cohortExamMetaRuntime), 'grade 9 total score must remain limited to Chinese, Math, English, Physics, Chemistry');
+assert.ok(grade9PoliticsDisplayContract.test(cohortExamMetaRuntime), 'grade 9 politics should be configured as display-only subject');
 assert.ok(appSource.includes('function getConfiguredDisplaySubjects'), 'app.js should merge display-only subjects without changing total score subjects');
 assert.ok(
     appSource.includes('getConfiguredDisplaySubjects(CONFIG, { includeExtra: false })'),
