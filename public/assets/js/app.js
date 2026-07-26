@@ -7249,12 +7249,7 @@ function exportTeacherAnalysis() {
 
 // Moved to potential-analysis-runtime.js (window.updatePotentialSchoolSelect / updatePotentialClassSelect / renderPotentialAnalysis / exportPotentialAnalysis / PotentialAnalysisRuntime)
 
-function exportCorrelationExcel() {
-    const matrixTable = document.getElementById('corrMatrixTable'); const liftDragTable = document.getElementById('liftDragTable');
-    if (!matrixTable || matrixTable.rows.length === 0) return alert("请先生成分析结果");
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(matrixTable), "相关性矩阵"); XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(liftDragTable), "提分与拖分分析"); XLSX.writeFile(wb, "学科关联深度分析.xlsx");
-}
+// Moved to teacher-analysis-bridge-runtime.js (window.exportCorrelationExcel — 与 renderCorrelationAnalysis 同簇)
 
 function exportExcel(type) {
     if (!RAW_DATA.length) { alert('请先上传数据'); return; }
