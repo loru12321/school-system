@@ -1,90 +1,5 @@
 [
   {
-    "recordedAt": "2026-07-10T07:49:20.907Z",
-    "commit": "37075c488493",
-    "branch": "main",
-    "runId": "29077747345",
-    "runAttempt": "1",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 5981,
-    "appReadyMs": 426,
-    "totalMs": 36594,
-    "moduleCount": 31,
-    "slowestModules": [
-      {
-        "id": "student-details",
-        "switchMs": 161,
-        "deepCheckMs": 3872,
-        "totalMs": 4033
-      },
-      {
-        "id": "starter-hub",
-        "switchMs": 2968,
-        "deepCheckMs": 564,
-        "totalMs": 3532
-      },
-      {
-        "id": "cohort-growth",
-        "switchMs": 236,
-        "deepCheckMs": 1794,
-        "totalMs": 2030
-      },
-      {
-        "id": "report-generator",
-        "switchMs": 309,
-        "deepCheckMs": 1050,
-        "totalMs": 1359
-      },
-      {
-        "id": "progress-analysis",
-        "switchMs": 774,
-        "deepCheckMs": 469,
-        "totalMs": 1243
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 229,
-        "deepCheckMs": 569,
-        "totalMs": 798
-      },
-      {
-        "id": "county-teacher-portrait",
-        "switchMs": 214,
-        "deepCheckMs": 539,
-        "totalMs": 753
-      },
-      {
-        "id": "marginal-push",
-        "switchMs": 514,
-        "deepCheckMs": 48,
-        "totalMs": 562
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "cloud",
-        "durationMs": 1109
-      },
-      {
-        "id": "teacher",
-        "durationMs": 669
-      },
-      {
-        "id": "student",
-        "durationMs": 661
-      },
-      {
-        "id": "targets",
-        "durationMs": 634
-      }
-    ],
-    "longTaskCount": 0,
-    "maxLongTaskMs": 0,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-07-10T12:17:01.522Z",
     "commit": "d9d2a7184860",
     "branch": "main",
@@ -6792,6 +6707,91 @@
       {
         "id": "teacher",
         "durationMs": 637
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-26T05:28:19.904Z",
+    "commit": "5138f729213a",
+    "branch": "main",
+    "runId": "30189395656",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 6657,
+    "appReadyMs": 7,
+    "totalMs": 29754,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "teacher-analysis",
+        "switchMs": 43.59999999999127,
+        "deepCheckMs": 1945,
+        "totalMs": 1988.5999999999913
+      },
+      {
+        "id": "seat-adjustment",
+        "switchMs": 41.89999999999418,
+        "deepCheckMs": 1130,
+        "totalMs": 1171.8999999999942
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 12.39999999999418,
+        "deepCheckMs": 834,
+        "totalMs": 846.3999999999942
+      },
+      {
+        "id": "teacher-township-ranking",
+        "switchMs": 2.5,
+        "deepCheckMs": 814,
+        "totalMs": 816.5
+      },
+      {
+        "id": "indicator",
+        "switchMs": 36.60000000000582,
+        "deepCheckMs": 565,
+        "totalMs": 601.6000000000058
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 23.69999999999709,
+        "deepCheckMs": 575,
+        "totalMs": 598.6999999999971
+      },
+      {
+        "id": "analysis",
+        "switchMs": 9.39999999999418,
+        "deepCheckMs": 589,
+        "totalMs": 598.3999999999942
+      },
+      {
+        "id": "subject-balance",
+        "switchMs": 38.10000000000582,
+        "deepCheckMs": 492,
+        "totalMs": 530.1000000000058
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1117
+      },
+      {
+        "id": "student",
+        "durationMs": 664
+      },
+      {
+        "id": "targets",
+        "durationMs": 649
+      },
+      {
+        "id": "teacher",
+        "durationMs": 633
       }
     ],
     "longTaskCount": 0,
