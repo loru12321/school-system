@@ -838,7 +838,6 @@
             modules: '模块',
             recent: '最近',
             account: '我的',
-            searchAction: '全局搜索',
             openModule: '打开该模块',
             currentCategoryEmpty: '当前分类暂无可用模块',
             current: '当前',
@@ -1154,7 +1153,7 @@
             <div class="apk-shell-sheet">
                 <div class="apk-shell-sheet-panel apk-shell-surface" data-apk-sheet-panel></div>
             </div>
-            <div class="apk-shell-tabs">
+            <div class="apk-shell-tabs apk-shell-surface">
                 <button type="button" class="apk-shell-tab" data-apk-tab="home">
                     <i class="ti ti-home"></i>
                     <span>${escapeHtml(copy.home)}</span>
@@ -1162,9 +1161,6 @@
                 <button type="button" class="apk-shell-tab" data-apk-tab="modules">
                     <i class="ti ti-layout-grid"></i>
                     <span>${escapeHtml(copy.modules)}</span>
-                </button>
-                <button type="button" class="apk-shell-tab apk-shell-tab-create" data-apk-tab="create" aria-label="${escapeHtml(copy.searchAction || '全局搜索')}">
-                    <span class="apk-shell-fab"><i class="ti ti-search"></i></span>
                 </button>
                 <button type="button" class="apk-shell-tab" data-apk-tab="quick">
                     <i class="ti ti-history"></i>
@@ -1525,13 +1521,6 @@
         }
         if (tabName === 'modules') {
             toggleSheet('modules');
-            return;
-        }
-        if (tabName === 'create') {
-            // Center action button — IG's ⊕ slot. Global search is the one action
-            // every role can use (students/modules/entries), so it never lands on
-            // a permission-gated page the way "upload" would for teachers/parents.
-            openSpotlightSearch();
             return;
         }
         if (tabName === 'quick') {
