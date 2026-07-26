@@ -214,6 +214,28 @@
         return entry;
     }
 
+    // Console helper for cold-login diagnosis: prints the recorded perf ring
+    // (cold-path stage timings from dbSyncFromCloud / readSplitExamPayload plus
+    // the workspace fetches) as a sorted table. Usage on a slow device: open the
+    // console after login and run `dumpColdLoginPerf()`.
+    function dumpColdLoginPerf() {
+        const entries = Array.isArray(root.__SCHOOL_PERF_TIMINGS__) ? root.__SCHOOL_PERF_TIMINGS__.slice() : [];
+        const rows = entries
+            .map((e) => ({
+                stage: e.name,
+                ms: Math.round(Number(e.durationMs) || 0),
+                bytes: Number(e.contentBytes || 0) || '',
+                path: e.path || '',
+                cache: e.cache || (e.hasContent === false ? 'empty' : ''),
+                at: e.at
+            }))
+            .sort((a, b) => b.ms - a.ms);
+        try { root.console?.table?.(rows); } catch (_) { root.console?.log?.(rows); }
+        const total = rows.reduce((sum, r) => sum + (Number(r.ms) || 0), 0);
+        root.console?.info?.(`[cold-login-perf] ${rows.length} stages recorded, sum≈${total}ms (network stages are trans-Pacific round-trips)`);
+        return rows;
+    }
+
     function getCloudBackupListQueryOptions(filterCurrent) {
         const options = {
             order: 'updated_at',
@@ -933,8 +955,17 @@
                 }
             }
 
+            // The ~188KB shard content download — the dominant cold-device cost
+            // when the local cache is empty/stale. Timed so a repro capture shows
+            // exactly how many ms this single trans-Pacific fetch takes.
+            const directStartedAt = nowMs();
             const direct = await readSystemDataRecord(examKey, 'content,updated_at', remoteUpdatedAt ? { cacheVersion: remoteUpdatedAt } : {}).catch(() => null);
             if (direct && !direct.error && direct.data && direct.data.content) {
+                rememberDataCloudPerf(null, 'readSplitExamPayload.shardContent', directStartedAt, {
+                    key: examKey,
+                    path: 'direct',
+                    contentBytes: typeof direct.data.content === 'string' ? direct.data.content.length : 0
+                });
                 const payload = parseCloudPayload(direct.data.content);
                 await writeLocalCache(examKey, payload, { updatedAt: direct.data.updated_at }).catch(() => false);
                 return { key: examKey, payload };
@@ -952,6 +983,7 @@
         // reads content), so listing metadata and then fetching a single shard
         // yields the identical `selected` row while cutting the login transfer
         // ~83%. Same sort, same rows[0]/examKey fallback → byte-identical outcome.
+        const metaPickStartedAt = nowMs();
         const { data, error } = await selectSystemDataRecords({
             select: 'key,updated_at',
             kind: 'exam',
@@ -959,6 +991,10 @@
             order: 'updated_at',
             ascending: false,
             limit: 12
+        });
+        rememberDataCloudPerf(null, 'readSplitExamPayload.metaPick', metaPickStartedAt, {
+            cohortId,
+            rows: Array.isArray(data) ? data.length : 0
         });
         if (error) throw error;
 
@@ -981,12 +1017,18 @@
             }
         }
 
+        const shardStartedAt = nowMs();
         const { data: contentData, error: contentError } = await selectSystemDataRecords({
             select: 'key,content,updated_at',
             keyIn: [selected.key]
         });
         if (contentError) throw contentError;
         const contentRows = Array.isArray(contentData) ? contentData : (contentData ? [contentData] : []);
+        rememberDataCloudPerf(null, 'readSplitExamPayload.shardContent', shardStartedAt, {
+            key: selected.key,
+            path: 'fallback',
+            contentBytes: contentRows[0] && typeof contentRows[0].content === 'string' ? contentRows[0].content.length : 0
+        });
         const contentRow = contentRows.find(row => normalizeText(row && row.key) === normalizeText(selected.key)) || contentRows[0] || null;
         if (!contentRow || !contentRow.content) return null;
         const payload = parseCloudPayload(contentRow.content);
@@ -1871,7 +1913,18 @@
         if (!readSystemDataRecord) return null;
 
         const task = (async () => {
+            // Cold-login stage timing: the workspace-row read is the first
+            // trans-Pacific round-trip on a cold device. Recorded to the shared
+            // perf ring (visible via window.__SCHOOL_PERF_TIMINGS__ and, when
+            // localStorage SCHOOL_SYSTEM_PERF==='true', logged as [school-perf]).
+            const rowReadStartedAt = nowMs();
             const { data, error } = await readSystemDataRecord(normalizedKey, 'content,updated_at');
+            rememberDataCloudPerf(null, 'dbSyncFromCloud.readWorkspaceRow', rowReadStartedAt, {
+                key: normalizedKey,
+                background: !!options.background,
+                hasContent: !!(data && data.content),
+                contentBytes: data && typeof data.content === 'string' ? data.content.length : 0
+            });
             if (error) throw error;
             if (data && data.content) {
                 const payload = parseCloudPayload(data.content);
@@ -1883,7 +1936,16 @@
                     });
                     return null;
                 }
+                // Second cold round-trip: hydrating the split payload pulls the
+                // ~188KB exam shard (readSplitExamPayload). Timing this separately
+                // from the workspace-row read tells us how the cold-login cost
+                // splits between the two serial trans-Pacific fetches.
+                const hydrateStartedAt = nowMs();
                 const db = await hydrateSplitWorkspacePayload(normalizedKey, payload);
+                rememberDataCloudPerf(null, 'dbSyncFromCloud.hydrateSplitPayload', hydrateStartedAt, {
+                    key: normalizedKey,
+                    background: !!options.background
+                });
                 if (!workspacePayloadMatchesKey(normalizedKey, db)) {
                     console.warn('[DataCloud] blocked cross-cohort hydrated workspace cache', {
                         key: normalizedKey,
@@ -2377,6 +2439,7 @@
         dbGet,
         dbSyncFromCloud,
         dbClear,
+        dumpColdLoginPerf,
         getDataManagerSyncStorageKey,
         getDataManagerSyncScope,
         readDataManagerSyncState,
@@ -2391,6 +2454,12 @@
         renderDataManagerStatus,
         setCloudRecordCategory
     };
+
+    // Convenience bare global so the diagnosis command can be run straight from
+    // the console on a slow device: `dumpColdLoginPerf()`.
+    if (root && typeof root.dumpColdLoginPerf !== 'function') {
+        root.dumpColdLoginPerf = dumpColdLoginPerf;
+    }
 
     return api;
 });
