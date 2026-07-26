@@ -86,11 +86,11 @@ assert.ok(
 // The restore-the-latest-exam contract: selection stays client-side and the
 // prefetched shard is only used when the client's own pick matches.
 assert.ok(
-  /warmColdLoginCaches[\s\S]*compareWorkspaceExamRows[\s\S]*shardKey !== normalizeText\(selectedKey\)[\s\S]*return false/.test(dataCloud),
+  /warmColdLoginCaches[\s\S]*compareWorkspaceExamRows[\s\S]*shardKey !== selectedKey[\s\S]*shard-key-mismatch/.test(dataCloud),
   'warmColdLoginCaches must re-run client-side selection and bail when the prefetched shard is not the selected exam'
 );
 assert.ok(
-  /warmColdLoginCaches[\s\S]*workspacePayloadMatchesKey\(key, payload\)[\s\S]*return false/.test(dataCloud),
+  /warmColdLoginCaches[\s\S]*workspacePayloadMatchesKey\(key, payload\)[\s\S]*cohort-mismatch/.test(dataCloud),
   'warmColdLoginCaches must keep the cross-cohort cache guard'
 );
 assert.ok(

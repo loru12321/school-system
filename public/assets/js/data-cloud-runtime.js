@@ -227,6 +227,7 @@
                 bytes: Number(e.contentBytes || 0) || '',
                 path: e.path || '',
                 cache: e.cache || (e.hasContent === false ? 'empty' : ''),
+                outcome: e.outcome || '',
                 at: e.at
             }))
             .sort((a, b) => b.ms - a.ms);
@@ -1987,10 +1988,17 @@
     // is restored. Returns true when the caches were primed, false on any miss so
     // the caller simply proceeds down the normal (cold) path.
     async function warmColdLoginCaches(cohortKey, options = {}) {
+        const startedAt = nowMs();
+        // Records exactly where the warm-up gave up (or succeeded) to the perf
+        // ring, so dumpColdLoginPerf() shows the outcome instead of us guessing.
+        const bail = (reason, detail = {}) => {
+            rememberDataCloudPerf(null, 'warmColdLoginCaches', startedAt, { outcome: reason, ...detail });
+            return false;
+        };
         const key = normalizeText(cohortKey);
-        if (!key) return false;
+        if (!key) return bail('no-key');
         const api = root.CloudApi;
-        if (!api || typeof api.fetchColdLoginBundle !== 'function') return false;
+        if (!api || typeof api.fetchColdLoginBundle !== 'function') return bail('no-api');
 
         const cohortId = extractSplitCohortId(key, null);
         const bundle = await api.fetchColdLoginBundle({
@@ -1998,19 +2006,25 @@
             cohortId,
             latestExamLimit: Number(options.latestExamLimit) || 24
         }).catch(() => null);
-        if (!bundle || bundle.ok !== true) return false;
+        if (!bundle) return bail('bundle-null');
+        if (bundle.ok !== true) return bail('bundle-not-ok');
 
         const workspaceRow = bundle.workspaceRow;
-        if (!workspaceRow || typeof workspaceRow.content !== 'string' || !workspaceRow.content) return false;
+        if (!workspaceRow || typeof workspaceRow.content !== 'string' || !workspaceRow.content) {
+            return bail('no-workspace-row', {
+                examMeta: Array.isArray(bundle.examMeta) ? bundle.examMeta.length : -1,
+                hasShard: !!(bundle.currentShard && bundle.currentShard.content)
+            });
+        }
 
         let payload;
         try {
             payload = parseCloudPayload(workspaceRow.content);
         } catch (error) {
-            return false;
+            return bail('workspace-parse-failed');
         }
         // Cross-cohort cache guard — identical to dbSyncFromCloud's own check.
-        if (!workspacePayloadMatchesKey(key, payload)) return false;
+        if (!workspacePayloadMatchesKey(key, payload)) return bail('cohort-mismatch');
 
         // Reconstruct the hydrated workspace exactly as hydrateSplitWorkspacePayload
         // would, but source the current exam shard from the bundle instead of a
@@ -2028,18 +2042,21 @@
                 : [];
             const sorted = metaRows.slice().sort(compareWorkspaceExamRows);
             const fallbackExamKey = getSplitCurrentExamKey(payload);
-            const selectedKey = (sorted[0] && sorted[0].key) || fallbackExamKey;
+            const selectedKey = normalizeText((sorted[0] && sorted[0].key) || fallbackExamKey);
             const shardKey = normalizeText(shard && shard.key);
-            if (!shard || typeof shard.content !== 'string' || !shardKey || shardKey !== normalizeText(selectedKey)) {
-                // The newest exam wasn't prefetched (or the client would pick a
-                // different one) — let the normal restore fetch the right shard.
-                return false;
+            if (!shard || typeof shard.content !== 'string' || !shardKey) {
+                return bail('no-shard', { selectedKey, metaRows: metaRows.length });
+            }
+            if (shardKey !== selectedKey) {
+                // The client would pick a different exam than the server prefetched
+                // — let the normal restore fetch the right shard (selection safety).
+                return bail('shard-key-mismatch', { selectedKey, shardKey, metaRows: metaRows.length });
             }
             let examPayload;
             try {
                 examPayload = parseCloudPayload(shard.content);
             } catch (error) {
-                return false;
+                return bail('shard-parse-failed');
             }
             hydrated = normalizeWorkspacePayload(mergeSplitWorkspacePayload(payload, examPayload, shardKey));
             // Seed the shard's own local cache too, so a later readSplitExamPayload
@@ -2049,13 +2066,14 @@
             hydrated = normalizeWorkspacePayload(payload);
         }
 
-        if (!hydrated || !workspacePayloadMatchesKey(key, hydrated)) return false;
+        if (!hydrated || !workspacePayloadMatchesKey(key, hydrated)) return bail('hydrated-mismatch');
 
         // Prime the workspace local cache so switchCohort's DB.get(localOnly:true)
         // hits immediately and the whole network restore branch is skipped — the
         // cold device now behaves like a warm repeat login (instant + background
         // refresh), collapsing 4-6 serial round-trips into the single bundle fetch.
         await writeLocalCache(key, hydrated, { updatedAt: workspaceRow.updated_at }).catch(() => false);
+        rememberDataCloudPerf(null, 'warmColdLoginCaches', startedAt, { outcome: 'primed', split: isSplitWorkspacePayload(payload) });
         return true;
     }
 
