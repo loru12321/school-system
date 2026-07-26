@@ -2012,6 +2012,22 @@ async function switchCohort(cohortId, options = {}) {
 
     // The entry path reads cache only. On a cache miss the latest exam shard is
     // restored below, avoiding a login-blocking full workspace request.
+    //
+    // Cold-login fast path: a login-selected cohort with no local cache would
+    // otherwise pay 4-6 serial trans-Pacific round-trips (workspace row → exam
+    // metadata → shard). Prime those reads from ONE batched request first so the
+    // restore below resolves from warm caches. Fully guarded: on any miss it
+    // returns false and the normal cold path runs unchanged.
+    if (!options.preloadedData
+        && options.requireCloudData === true
+        && targetCohortId
+        && window.DB
+        && typeof window.DB.warmColdLoginCaches === 'function') {
+        try {
+            await window.DB.warmColdLoginCaches(cohortKey);
+        } catch (_) { /* best-effort warm-up; normal path recovers */ }
+        if (!isCurrentSwitch()) return false;
+    }
     const __dbGetStartedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     const cachedData = options.preloadedData || await DB.get(cohortKey, { localOnly: true });
     if (!isCurrentSwitch()) return false;

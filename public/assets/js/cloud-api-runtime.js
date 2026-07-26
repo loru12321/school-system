@@ -688,6 +688,48 @@
         });
     }
 
+    // Cold-login bootstrap: fetch the workspace row + latest exam metadata (+ the
+    // newest exam shard) in ONE request. Returns the parsed bundle, or null when
+    // unavailable (compat mode, 501 on supabase-only deployments, network error)
+    // so callers transparently fall back to the legacy multi-request path.
+    async function fetchColdLoginBundle(params = {}) {
+        if (getBackendMode() !== 'api') return null;
+        const apiUrl = getSystemDataApiUrl();
+        const fetchImpl = getFetch();
+        if (!apiUrl || !fetchImpl) return null;
+        const cohortKey = normalizeText(params.cohortKey);
+        if (!cohortKey) return null;
+        const bootstrapUrl = apiUrl.replace(/\/api\/system-data(?:\/+)?$/, '/api/system-data-bootstrap');
+        if (bootstrapUrl === apiUrl) return null;
+        const body = { cohortKey };
+        const cohortId = normalizeText(params.cohortId);
+        if (cohortId) body.cohortId = cohortId;
+        const currentExamKey = normalizeText(params.currentExamKey);
+        if (currentExamKey) body.currentExamKey = currentExamKey;
+        if (Number.isFinite(Number(params.latestExamLimit)) && Number(params.latestExamLimit) > 0) {
+            body.latestExamLimit = Math.floor(Number(params.latestExamLimit));
+        }
+        try {
+            const response = await fetchWithTimeout(fetchImpl, bootstrapUrl, {
+                method: 'POST',
+                headers: buildApiHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    const parsed = await parseJsonResponse(response).catch(() => null);
+                    handleCloudSessionExpired(buildApiError(response, parsed), { requestHadSession: true });
+                }
+                return null;
+            }
+            const parsed = await parseJsonResponse(response).catch(() => null);
+            if (!parsed || parsed.ok !== true) return null;
+            return parsed;
+        } catch (error) {
+            return null;
+        }
+    }
+
     async function upsertSystemData(rows) {
         const normalizedRows = (Array.isArray(rows) ? rows : [rows])
             .map((row) => {
@@ -831,6 +873,7 @@
         getSupabaseClient: getCloudClient,
         selectSystemData,
         readSystemDataRecord,
+        fetchColdLoginBundle,
         upsertSystemData,
         deleteSystemData,
         clearSystemDataCache,

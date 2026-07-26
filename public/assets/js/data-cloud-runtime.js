@@ -1977,6 +1977,88 @@
         }
     }
 
+    // Cold-login fast path: pull the workspace row + latest exam metadata + the
+    // newest exam shard in ONE batched request, then seed the caches that the
+    // normal restore reads consult. After this, dbSyncFromCloud →
+    // hydrateSplitWorkspacePayload runs UNCHANGED but every read it issues is a
+    // local cache hit instead of a serial trans-Pacific round-trip. Selection
+    // (compareWorkspaceExamRows) still runs client-side, so the shard prefetch is
+    // only used when the client's own pick matches — never overriding which exam
+    // is restored. Returns true when the caches were primed, false on any miss so
+    // the caller simply proceeds down the normal (cold) path.
+    async function warmColdLoginCaches(cohortKey, options = {}) {
+        const key = normalizeText(cohortKey);
+        if (!key) return false;
+        const api = root.CloudApi;
+        if (!api || typeof api.fetchColdLoginBundle !== 'function') return false;
+
+        const cohortId = extractSplitCohortId(key, null);
+        const bundle = await api.fetchColdLoginBundle({
+            cohortKey: key,
+            cohortId,
+            latestExamLimit: Number(options.latestExamLimit) || 24
+        }).catch(() => null);
+        if (!bundle || bundle.ok !== true) return false;
+
+        const workspaceRow = bundle.workspaceRow;
+        if (!workspaceRow || typeof workspaceRow.content !== 'string' || !workspaceRow.content) return false;
+
+        let payload;
+        try {
+            payload = parseCloudPayload(workspaceRow.content);
+        } catch (error) {
+            return false;
+        }
+        // Cross-cohort cache guard — identical to dbSyncFromCloud's own check.
+        if (!workspacePayloadMatchesKey(key, payload)) return false;
+
+        // Reconstruct the hydrated workspace exactly as hydrateSplitWorkspacePayload
+        // would, but source the current exam shard from the bundle instead of a
+        // second network fetch. Selection stays client-side: pick the latest exam
+        // via compareWorkspaceExamRows over the bundle's metadata, and only use the
+        // prefetched shard when that pick matches shard.key — otherwise bail to the
+        // normal path so "restore the latest exam" is never altered.
+        let hydrated = null;
+        if (isSplitWorkspacePayload(payload)) {
+            const shard = bundle.currentShard;
+            const metaRows = Array.isArray(bundle.examMeta)
+                ? bundle.examMeta
+                    .map((row) => ({ key: normalizeText(row && row.key), updated_at: normalizeText(row && row.updated_at) }))
+                    .filter((row) => row.key)
+                : [];
+            const sorted = metaRows.slice().sort(compareWorkspaceExamRows);
+            const fallbackExamKey = getSplitCurrentExamKey(payload);
+            const selectedKey = (sorted[0] && sorted[0].key) || fallbackExamKey;
+            const shardKey = normalizeText(shard && shard.key);
+            if (!shard || typeof shard.content !== 'string' || !shardKey || shardKey !== normalizeText(selectedKey)) {
+                // The newest exam wasn't prefetched (or the client would pick a
+                // different one) — let the normal restore fetch the right shard.
+                return false;
+            }
+            let examPayload;
+            try {
+                examPayload = parseCloudPayload(shard.content);
+            } catch (error) {
+                return false;
+            }
+            hydrated = normalizeWorkspacePayload(mergeSplitWorkspacePayload(payload, examPayload, shardKey));
+            // Seed the shard's own local cache too, so a later readSplitExamPayload
+            // (e.g. exam switch) reuses it without a round-trip.
+            await writeLocalCache(shardKey, examPayload, { updatedAt: shard.updated_at }).catch(() => false);
+        } else {
+            hydrated = normalizeWorkspacePayload(payload);
+        }
+
+        if (!hydrated || !workspacePayloadMatchesKey(key, hydrated)) return false;
+
+        // Prime the workspace local cache so switchCohort's DB.get(localOnly:true)
+        // hits immediately and the whole network restore branch is skipped — the
+        // cold device now behaves like a warm repeat login (instant + background
+        // refresh), collapsing 4-6 serial round-trips into the single bundle fetch.
+        await writeLocalCache(key, hydrated, { updatedAt: workspaceRow.updated_at }).catch(() => false);
+        return true;
+    }
+
     async function dbClear(key) {
         if (!ensureCloudAccess()) return;
         const deleteSystemDataRecords = getDeleteSystemDataRecords();
@@ -2438,6 +2520,7 @@
         dbSave,
         dbGet,
         dbSyncFromCloud,
+        warmColdLoginCaches,
         dbClear,
         dumpColdLoginPerf,
         getDataManagerSyncStorageKey,

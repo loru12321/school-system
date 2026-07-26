@@ -7,8 +7,10 @@ import {
 } from './worker-http-helpers.js';
 import {
   SYSTEM_DATA_API_PATH,
+  SYSTEM_DATA_BOOTSTRAP_API_PATH,
   SYSTEM_DATA_PATH,
   handleSystemDataProxy,
+  handleSystemDataBootstrapProxy,
   handleCloudRestProxy,
   getSystemDataHealthInfo
 } from './worker-system-data.js';
@@ -62,6 +64,7 @@ export default {
         url.pathname === '/api/edu-gateway'
         || url.pathname === '/api/gateway'
         || url.pathname === SYSTEM_DATA_API_PATH
+        || url.pathname === SYSTEM_DATA_BOOTSTRAP_API_PATH
         || url.pathname === ENTRANCE_AUDIO_MANIFEST_API_PATH
         || url.pathname.startsWith('/sb/')
       )) {
@@ -85,6 +88,10 @@ export default {
 
       if (url.pathname === SYSTEM_DATA_API_PATH) {
         return await handleSystemDataProxy(request, env, url);
+      }
+
+      if (url.pathname === SYSTEM_DATA_BOOTSTRAP_API_PATH) {
+        return await handleSystemDataBootstrapProxy(request, env);
       }
 
       if (url.pathname === ENTRANCE_AUDIO_MANIFEST_API_PATH) {

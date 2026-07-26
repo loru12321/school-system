@@ -19,6 +19,10 @@ import {
 const DEFAULT_LEGACY_GATEWAY_ORIGIN = '';
 export const SYSTEM_DATA_PATH = '/sb/rest/v1/system_data';
 export const SYSTEM_DATA_API_PATH = '/api/system-data';
+// Cold-login bootstrap: one request that batches the workspace row + latest
+// same-cohort exam metadata + (optionally) the current exam shard so a fresh
+// device pays a single trans-Pacific round-trip instead of 4-6 serial ones.
+export const SYSTEM_DATA_BOOTSTRAP_API_PATH = '/api/system-data-bootstrap';
 const SYSTEM_DATA_TABLE = 'cloud_system_data';
 const SYSTEM_DATA_READ_CACHE_CONTROL = 'public, s-maxage=20, stale-while-revalidate=60';
 const SYSTEM_DATA_COMPARE_PREFIXES = [
@@ -598,6 +602,124 @@ async function handleSystemDataRead(request, env, url) {
   const { rows, selectSet } = await querySystemDataRows(env, request, url);
   if (!rows.length) return null;
   return buildSystemDataJsonResponse(request, env, rows, selectSet);
+}
+
+// ---------------------------------------------------------------------------
+// Cold-login bootstrap (batched read)
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /api/system-data-bootstrap
+ *
+ * Body: { cohortKey, cohortId?, currentExamKey?, latestExamLimit? }
+ *
+ * Runs three reads in a single db.batch() and returns them together so a cold
+ * device restores its workspace in ONE round-trip:
+ *   - workspaceRow: the cohort workspace snapshot row (content + updated_at)
+ *   - examMeta:     latest same-cohort exam rows (key + updated_at), newest first
+ *   - currentShard: the current exam's content, ONLY when currentExamKey both
+ *                   belongs to the cohort and is the newest exam row — otherwise
+ *                   null, so the client keeps its "restore the latest exam"
+ *                   contract and picks the shard itself.
+ *
+ * Read-only: no writes, no cache mutation. Falls back (501) when D1 storage is
+ * absent (e.g. supabase-only deployments) so the client reverts to the legacy
+ * multi-request path.
+ */
+export async function handleSystemDataBootstrapProxy(request, env) {
+  const method = String(request.method || 'POST').toUpperCase();
+  if (method !== 'POST') {
+    return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);
+  }
+  const auth = await requireSystemDataSession(request, env);
+  if (auth.error) return auth.error;
+  // Batched read → read authorization (never mutates), regardless of the POST verb.
+  const authorizationError = authorizeSystemDataRead(request, auth.session);
+  if (authorizationError) return authorizationError;
+  // Supabase-only deployments have no local D1 to batch against → let the client
+  // fall back to the legacy multi-request path.
+  if (shouldProxySystemDataToSupabase(env)) {
+    return jsonResponse(501, { ok: false, error: 'SYSTEM_DATA_BOOTSTRAP_UNAVAILABLE' }, request);
+  }
+  return handleSystemDataBootstrap(request, env);
+}
+
+async function handleSystemDataBootstrap(request, env) {
+  const db = getSystemDataDb(env);
+  if (!db || typeof db.batch !== 'function') {
+    return jsonResponse(501, { ok: false, error: 'SYSTEM_DATA_BOOTSTRAP_UNAVAILABLE' }, request);
+  }
+
+  let payload = null;
+  try {
+    payload = await request.json();
+  } catch (error) {
+    return jsonResponse(400, { ok: false, error: 'INVALID_JSON_BODY' }, request);
+  }
+
+  const cohortKey = normalizeText(payload?.cohortKey);
+  if (!cohortKey) return jsonResponse(400, { ok: false, error: 'SYSTEM_DATA_BOOTSTRAP_KEY_MISSING' }, request);
+  const cohortId = normalizeText(payload?.cohortId) || extractSystemDataCohortId(cohortKey);
+  const rawLimit = Number(payload?.latestExamLimit);
+  const latestExamLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 24) : 12;
+
+  // Phase 1 (one in-region D1 batch): workspace row + latest same-cohort exam
+  // metadata. Selection stays 100% client-side (compareWorkspaceExamRows scoring),
+  // so we only ORDER BY updated_at here to bound the candidate window — never to
+  // decide which exam wins.
+  const statements = [
+    db.prepare(`SELECT key, updated_at, content_text, object_key FROM ${SYSTEM_DATA_TABLE} WHERE key = ?`).bind(cohortKey)
+  ];
+  if (cohortId) {
+    statements.push(
+      db.prepare(`SELECT key, updated_at FROM ${SYSTEM_DATA_TABLE} WHERE cohort_id = ? AND kind = 'exam' ORDER BY updated_at DESC LIMIT ?`).bind(cohortId, latestExamLimit)
+    );
+  }
+
+  let results;
+  try {
+    results = await db.batch(statements);
+  } catch (error) {
+    return jsonResponse(500, { ok: false, error: 'SYSTEM_DATA_BOOTSTRAP_BATCH_FAILED' }, request);
+  }
+  const firstRow = (res) => (res && Array.isArray(res.results) ? res.results[0] : null) || null;
+  const allRows = (res) => (res && Array.isArray(res.results) ? res.results : []);
+
+  const workspaceRaw = firstRow(results[0]);
+  const examMetaRows = allRows(results[1]).map((row) => ({ key: row.key, updated_at: row.updated_at }));
+
+  // Prefetch the newest exam's shard (by updated_at) so the common case — the
+  // client's compareWorkspaceExamRows pick equals the newest row — restores in a
+  // single client round-trip. The client re-runs its own selection and only uses
+  // this shard when its pick matches shard.key; otherwise it discards it and
+  // fetches the correct shard, so this is a hint, never an authority.
+  const newestExamKey = examMetaRows.length ? normalizeText(examMetaRows[0].key) : '';
+  let currentShard = null;
+  if (newestExamKey) {
+    const shardRes = await db
+      .prepare(`SELECT key, updated_at, content_text, object_key FROM ${SYSTEM_DATA_TABLE} WHERE key = ?`)
+      .bind(newestExamKey)
+      .all()
+      .catch(() => null);
+    const shardRaw = firstRow(shardRes);
+    if (shardRaw) {
+      const shardContent = await readStoredSystemDataContent(env, shardRaw);
+      if (shardContent) currentShard = { key: shardRaw.key, updated_at: shardRaw.updated_at, content: shardContent };
+    }
+  }
+
+  const workspaceContent = workspaceRaw ? await readStoredSystemDataContent(env, workspaceRaw) : '';
+  const workspaceRow = workspaceRaw
+    ? { key: workspaceRaw.key, updated_at: workspaceRaw.updated_at, content: workspaceContent }
+    : null;
+
+  return jsonResponse(200, {
+    ok: true,
+    mode: 'batch',
+    workspaceRow,
+    examMeta: examMetaRows,
+    currentShard
+  }, request);
 }
 
 async function handleSystemDataWrite(request, env) {
