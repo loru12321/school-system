@@ -7226,62 +7226,7 @@ function exportTeacherAnalysis() {
 // Moved to teacher-analysis-bridge-runtime.js (window.exportCorrelationExcel — 与 renderCorrelationAnalysis 同簇)
 
 // Moved to indicator-bottom3-export-runtime.js (window.exportExcel — 后1/3 与 指标生 核算结果导出)
-function downloadTemplate(type) {
-    const wb = XLSX.utils.book_new();
-    let headers = [];
-    let sampleData = [];
-    let filename = "模板.xlsx";
-    let sheetName = "成绩表";
-
-    switch (type) {
-        case 'primary':
-            headers = ["学校", "班级", "姓名", "考号", "语文", "数学", "英语"];
-            sampleData = [
-                ["实验小学", "601", "张三", "2024001", 95, 98, 92],
-                ["实验小学", "601", "李四", "2024002", 88, 90, 85]
-            ];
-            filename = "小学期末考试_标准模板.xlsx";
-            break;
-        case 'junior':
-            headers = ["学校", "班级", "姓名", "考号", "语文", "数学", "英语", "物理", "历史", "地理", "生物", "政治"];
-            sampleData = [
-                ["镇中", "801", "王五", "2024101", 105, 110, 108, 85, 90, 88, 92, 80],
-                ["镇中", "801", "赵六", "2024102", 98, 102, 95, 78, 85, 80, 88, 75]
-            ];
-            filename = "初中月考_标准模板.xlsx";
-            break;
-        case 'grade9':
-            headers = ["学校", "班级", "姓名", "考号", "语文", "数学", "英语", "物理", "化学", "政治", "历史", "体育"];
-            sampleData = [
-                ["一中", "901", "孙七", "2024901", 112, 115, 110, 68, 48, 55, 58, 40],
-                ["一中", "901", "周八", "2024902", 105, 108, 102, 60, 42, 50, 52, 38]
-            ];
-            filename = "中考一模_标准模板.xlsx";
-            break;
-        case 'teacher':
-            headers = ["班级", "学科", "教师姓名"];
-            sampleData = [
-                ["701", "语文", "张老师"],
-                ["701", "数学", "李老师"],
-                ["702", "语文", "张老师"],
-                ["702", "数学", "王老师"]
-            ];
-            filename = "教师任课信息_导入模板.xlsx";
-            sheetName = "请改为学校名称";
-            break;
-    }
-
-    const wsData = [headers, ...sampleData];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    ws['!cols'] = headers.map(() => ({ wch: 15 }));
-
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    XLSX.writeFile(wb, filename);
-
-    if (window.UI) UI.toast(`✅ 已下载：${filename}`, "success");
-    logAction('下载模板', filename);
-}
+// Moved to template-download-runtime.js (window.downloadTemplate — 成绩/任课模板下载)
 // 光荣榜(poster)生成器已在提交 a89f9db9 移除；其 HTML 与入口已删，此处清理遗留的孤儿函数。
 
 // 临界生任务单与座位调整逻辑已拆分到 marginal-push-runtime.js 和 seat-adjustment-runtime.js。
