@@ -260,6 +260,7 @@ const cohortGrowthRef = './assets/js/cohort-growth-runtime.js';
 const macroAnalysisCompatRef = './assets/js/macro-analysis-compat-runtime.js';
 const schoolNormalizationRef = './assets/js/school-normalization-runtime.js';
 const indicatorCalcRef = './assets/js/indicator-calc-runtime.js';
+const excelStyleRef = './assets/js/excel-style-runtime.js';
 const compareSharedRef = './assets/js/compare-shared-runtime.js';
 const progressStateRef = './assets/js/progress-state-runtime.js';
 const reportSessionStateRef = './assets/js/report-session-state-runtime.js';
@@ -387,6 +388,11 @@ assert.ok(
     normalizedModuleManifest.indexOf(schoolNormalizationRef) < normalizedModuleManifest.indexOf(indicatorCalcRef)
         && normalizedModuleManifest.indexOf(indicatorCalcRef) < normalizedModuleManifest.indexOf('./assets/js/app.js'),
     'indicator-calc-runtime.js should load after school-normalization (its bucket/target/scoreInd deps) and before app.js so window.calcIndicators is defined before app.js bare callers run'
+);
+assert.ok(normalizedModuleManifest.includes(excelStyleRef), 'excel-style-runtime.js should load with core app modules');
+assert.ok(
+    normalizedModuleManifest.indexOf(excelStyleRef) < normalizedModuleManifest.indexOf('./assets/js/app.js'),
+    'excel-style-runtime.js should load before app.js so window.decorateExcelSheet is defined before the bare caller in student-details-render export runs'
 );
 const bootVendorMatch = bootRuntime.match(/var BOOT_VENDOR_MODULES = \[[\s\S]*?\];/);
 assert.ok(bootVendorMatch, 'boot-runtime.js should declare BOOT_VENDOR_MODULES');
