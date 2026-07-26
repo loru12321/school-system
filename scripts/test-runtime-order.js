@@ -248,6 +248,7 @@ const potentialAnalysisRef = './assets/js/potential-analysis-runtime.js';
 const tableHeatmapRef = './assets/js/table-heatmap-runtime.js';
 const dataDoctorRef = './assets/js/data-doctor-runtime.js';
 const blankScoreAuditRef = './assets/js/blank-score-audit-runtime.js';
+const targetGapAnalysisRef = './assets/js/target-gap-analysis-runtime.js';
 const cohortGrowthRef = './assets/js/cohort-growth-runtime.js';
 const macroAnalysisCompatRef = './assets/js/macro-analysis-compat-runtime.js';
 const schoolNormalizationRef = './assets/js/school-normalization-runtime.js';
@@ -421,6 +422,7 @@ const postAppDeferredRefs = [
     tableHeatmapRef,
     dataDoctorRef,
     blankScoreAuditRef,
+    targetGapAnalysisRef,
     cohortGrowthRef,
     macroAnalysisCompatRef,
     compareCloudContextRef,
