@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..');
 const cloudSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud.js'), 'utf8');
 const workspaceSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud-workspace-runtime.js'), 'utf8');
 const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const parseRowsSource = fs.readFileSync(path.join(root, 'public/assets/js/parse-rows-runtime.js'), 'utf8');
 const cohortExamMetaSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-exam-meta-runtime.js'), 'utf8');
 const cohortDbCoreSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-db-core-runtime.js'), 'utf8');
 
@@ -251,8 +252,8 @@ assert.ok(
     'processData should repair stale cloud totals before thresholds and metrics are calculated'
 );
 assert.ok(
-    appSource.includes('rowHasExplicitScoreEvidence')
-        && appSource.includes('if (!nameStr && !idStr && !rowHasExplicitScoreEvidence) continue;'),
+    parseRowsSource.includes('rowHasExplicitScoreEvidence')
+        && parseRowsSource.includes('if (!nameStr && !idStr && !rowHasExplicitScoreEvidence) continue;'),
     'score import should preserve score-only rows by auto-generating a student name'
 );
 

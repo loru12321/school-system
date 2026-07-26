@@ -9,6 +9,7 @@ const examRuntimePath = path.resolve(__dirname, '../public/assets/js/exam-state-
 const schoolRuntimePath = path.resolve(__dirname, '../public/assets/js/school-state-runtime.js');
 const schoolNormalizationRuntimePath = path.resolve(__dirname, '../public/assets/js/school-normalization-runtime.js');
 const indicatorCalcRuntimePath = path.resolve(__dirname, '../public/assets/js/indicator-calc-runtime.js');
+const parseRowsRuntimePath = path.resolve(__dirname, '../public/assets/js/parse-rows-runtime.js');
 const teacherRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-state-runtime.js');
 const dataRuntimePath = path.resolve(__dirname, '../public/assets/js/data-state-runtime.js');
 const supportRuntimePath = path.resolve(__dirname, '../public/assets/js/support-state-runtime.js');
@@ -188,6 +189,7 @@ const shellRuntime = fs.readFileSync(shellRuntimePath, 'utf8');
 const shellPolishRuntime = fs.readFileSync(shellPolishRuntimePath, 'utf8');
 const schoolNormalizationRuntime = fs.readFileSync(schoolNormalizationRuntimePath, 'utf8');
 const indicatorCalcRuntime = fs.readFileSync(indicatorCalcRuntimePath, 'utf8');
+const parseRowsRuntime = fs.readFileSync(parseRowsRuntimePath, 'utf8');
 const moduleEntryRuntime = fs.readFileSync(moduleEntryRuntimePath, 'utf8');
 const marginalPushRuntime = fs.readFileSync(marginalPushRuntimePath, 'utf8');
 const permissionPolicyRuntime = fs.readFileSync(permissionPolicyRuntimePath, 'utf8');
@@ -261,6 +263,7 @@ const macroAnalysisCompatRef = './assets/js/macro-analysis-compat-runtime.js';
 const schoolNormalizationRef = './assets/js/school-normalization-runtime.js';
 const indicatorCalcRef = './assets/js/indicator-calc-runtime.js';
 const excelStyleRef = './assets/js/excel-style-runtime.js';
+const parseRowsRef = './assets/js/parse-rows-runtime.js';
 const compareSharedRef = './assets/js/compare-shared-runtime.js';
 const progressStateRef = './assets/js/progress-state-runtime.js';
 const reportSessionStateRef = './assets/js/report-session-state-runtime.js';
@@ -393,6 +396,11 @@ assert.ok(normalizedModuleManifest.includes(excelStyleRef), 'excel-style-runtime
 assert.ok(
     normalizedModuleManifest.indexOf(excelStyleRef) < normalizedModuleManifest.indexOf('./assets/js/app.js'),
     'excel-style-runtime.js should load before app.js so window.decorateExcelSheet is defined before the bare caller in student-details-render export runs'
+);
+assert.ok(normalizedModuleManifest.includes(parseRowsRef), 'parse-rows-runtime.js should load with core app modules');
+assert.ok(
+    normalizedModuleManifest.indexOf(parseRowsRef) < normalizedModuleManifest.indexOf('./assets/js/app.js'),
+    'parse-rows-runtime.js should load before app.js so window.parseRows is defined before the bare caller in readExcel runs'
 );
 const bootVendorMatch = bootRuntime.match(/var BOOT_VENDOR_MODULES = \[[\s\S]*?\];/);
 assert.ok(bootVendorMatch, 'boot-runtime.js should declare BOOT_VENDOR_MODULES');
@@ -1365,12 +1373,12 @@ assert.ok(grade9TotalSubjectContract.test(cohortExamMetaRuntime), 'grade 9 total
 assert.ok(grade9PoliticsDisplayContract.test(cohortExamMetaRuntime), 'grade 9 politics should be configured as display-only subject');
 assert.ok(appSource.includes('function getConfiguredDisplaySubjects'), 'app.js should merge display-only subjects without changing total score subjects');
 assert.ok(
-    appSource.includes('getConfiguredDisplaySubjects(CONFIG, { includeExtra: false })'),
+    parseRowsRuntime.includes('getConfiguredDisplaySubjects(root.CONFIG, { includeExtra: false })'),
     'grade 9 display-only politics must not enter the heavy analysis subject list'
 );
 assert.ok(appSource.includes('function getConfiguredExtraDisplaySubjects'), 'app.js should expose display-only subjects for lightweight detail views');
 assert.ok(
-    appSource.includes('detectedSubjects.forEach(sub =>'),
+    parseRowsRuntime.includes('detectedSubjects.forEach(sub =>'),
     'parseRows should store display-only subject scores without adding them to global heavy subjects'
 );
 assert.ok(
@@ -1388,7 +1396,7 @@ assert.ok(
     'workspace default school should prefer 银山实验 aliases and ignore 教育局 as a concrete school'
 );
 assert.ok(
-    appSource.includes('classStr = normalizeImportedClassForGrade(r[idxMap.class], importGrade);'),
+    parseRowsRuntime.includes('classStr = root.normalizeImportedClassForGrade(r[idxMap.class], importGrade);'),
     'parseRows should normalize bare imported class numbers with the current exam grade'
 );
 assert.ok(
