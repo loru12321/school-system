@@ -250,6 +250,7 @@ const dataDoctorRef = './assets/js/data-doctor-runtime.js';
 const blankScoreAuditRef = './assets/js/blank-score-audit-runtime.js';
 const targetGapAnalysisRef = './assets/js/target-gap-analysis-runtime.js';
 const autoDiagnosisRef = './assets/js/auto-diagnosis-runtime.js';
+const indicatorBottom3ExportRef = './assets/js/indicator-bottom3-export-runtime.js';
 const cohortGrowthRef = './assets/js/cohort-growth-runtime.js';
 const macroAnalysisCompatRef = './assets/js/macro-analysis-compat-runtime.js';
 const schoolNormalizationRef = './assets/js/school-normalization-runtime.js';
@@ -425,6 +426,7 @@ const postAppDeferredRefs = [
     blankScoreAuditRef,
     targetGapAnalysisRef,
     autoDiagnosisRef,
+    indicatorBottom3ExportRef,
     cohortGrowthRef,
     macroAnalysisCompatRef,
     compareCloudContextRef,

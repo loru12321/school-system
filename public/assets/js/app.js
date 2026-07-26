@@ -7251,55 +7251,7 @@ function exportTeacherAnalysis() {
 
 // Moved to teacher-analysis-bridge-runtime.js (window.exportCorrelationExcel — 与 renderCorrelationAnalysis 同簇)
 
-function exportExcel(type) {
-    if (!RAW_DATA.length) { alert('请先上传数据'); return; }
-
-    if (type === 'bottom3') {
-        const table = document.getElementById('tb-bottom3');
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.table_to_sheet(table);
-        XLSX.utils.book_append_sheet(wb, ws, "核算结果");
-        XLSX.writeFile(wb, '后1_3核算结果.xlsx');
-        return;
-    }
-
-    if (type === 'indicator') {
-        const table = document.getElementById('tb-indicator');
-        if (table.rows.length < 3) return alert("请先点击【开始计算】");
-
-        const wb = XLSX.utils.book_new();
-
-        const wsData = [];
-        wsData.push(["学校",
-            "指标一目标", "指标一达标", "指标一基础分", "指标一附加分", "指标一小计",
-            "指标二目标", "指标二达标", "指标二基础分", "指标二附加分", "指标二小计",
-            "指标总分", "排名"]);
-
-        const rows = table.querySelectorAll('tbody tr');
-        rows.forEach(tr => {
-            const tds = tr.querySelectorAll('td');
-            const parseTargetReach = (str) => {
-                const parts = str.split('/');
-                return { t: parts[0].trim(), r: parts[1].trim() };
-            };
-
-            const ind1 = parseTargetReach(tds[1].innerText);
-            const ind2 = parseTargetReach(tds[5].innerText);
-
-            wsData.push([
-                tds[0].innerText, // 学校
-                ind1.t, ind1.r, tds[2].innerText, tds[3].innerText, tds[4].innerText, // 指标一
-                ind2.t, ind2.r, tds[6].innerText, tds[7].innerText, tds[8].innerText, // 指标二
-                tds[9].innerText, // 总分
-                tds[10].innerText // 排名
-            ]);
-        });
-
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        XLSX.utils.book_append_sheet(wb, ws, "指标生核算详细");
-        XLSX.writeFile(wb, '指标生核算结果(含附加分).xlsx');
-    }
-}
+// Moved to indicator-bottom3-export-runtime.js (window.exportExcel — 后1/3 与 指标生 核算结果导出)
 function downloadTemplate(type) {
     const wb = XLSX.utils.book_new();
     let headers = [];
