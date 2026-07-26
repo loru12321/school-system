@@ -93,6 +93,7 @@ assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(schoolName)'), 
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(maxSub)'), 'school profile should escape dynamic advantage subject names');
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(minSub)'), 'school profile should escape dynamic weak subject names');
 const appRuntime = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const indicatorCalcRuntime = fs.readFileSync(path.join(root, 'public/assets/js/indicator-calc-runtime.js'), 'utf8');
 const reportHistoryRuntime = fs.readFileSync(path.join(root, 'public/assets/js/report-history-runtime.js'), 'utf8');
 const analyticsKernelRuntime = fs.readFileSync(path.join(root, 'public/assets/js/analytics-kernel-runtime.js'), 'utf8');
 const countyAnalysisRuntime = fs.readFileSync(path.join(root, 'public/assets/js/county-analysis-runtime.js'), 'utf8');
@@ -117,10 +118,10 @@ assert.ok(reportHistoryRuntime.includes('refreshHydratedStudentReport'), 'report
 assert.ok(appRuntime.includes('function buildSummaryDependencySignature'), 'summary stale prompt should compare dependency signatures');
 assert.ok(appRuntime.includes('markSummaryDataChangedIfDependencyChanged('), 'summary stale prompt should not be triggered unconditionally by prerequisite renders');
 assert.ok(appRuntime.includes("buildSummaryDependencySignature('twoRateBottom', townshipSchools)"), 'two-rate/bottom3 refresh should use a stable dependency signature');
-assert.ok(appRuntime.includes("buildSummaryDependencySignature('indicator', calcData)"), 'indicator refresh should use a stable dependency signature');
+assert.ok(indicatorCalcRuntime.includes("buildSummaryDependencySignature('indicator', calcData)"), 'indicator refresh should use a stable dependency signature');
 assert.ok(appRuntime.includes("buildSummaryDependencySignature('highScore', list)"), 'high-score refresh should use a stable dependency signature');
 assert.ok(!appRuntime.includes("markSummaryDataChanged('两率一分或后1/3结果已更新，请重新生成总排名。');"), 'two-rate/bottom3 refresh should not always mark summary stale');
-assert.ok(!appRuntime.includes("markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');"), 'indicator refresh should not always mark summary stale');
+assert.ok(!appRuntime.includes("markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');") && !indicatorCalcRuntime.includes("markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');"), 'indicator refresh should not always mark summary stale');
 assert.ok(!appRuntime.includes("markSummaryDataChanged('高分段赋分已更新，请重新生成总排名。');"), 'high-score refresh should not always mark summary stale');
 assert.ok(smokeAllModulesRuntime.includes('summaryStalePromptAbsent'), 'summary smoke should fail if unchanged data shows a stale regeneration prompt');
 assert.ok(smokeAllModulesRuntime.includes('/数据已变更|请重新生成/'), 'summary smoke should inspect stale prompt text directly');

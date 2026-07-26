@@ -8,6 +8,7 @@ const workspaceRuntimePath = path.resolve(__dirname, '../public/assets/js/worksp
 const examRuntimePath = path.resolve(__dirname, '../public/assets/js/exam-state-runtime.js');
 const schoolRuntimePath = path.resolve(__dirname, '../public/assets/js/school-state-runtime.js');
 const schoolNormalizationRuntimePath = path.resolve(__dirname, '../public/assets/js/school-normalization-runtime.js');
+const indicatorCalcRuntimePath = path.resolve(__dirname, '../public/assets/js/indicator-calc-runtime.js');
 const teacherRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-state-runtime.js');
 const dataRuntimePath = path.resolve(__dirname, '../public/assets/js/data-state-runtime.js');
 const supportRuntimePath = path.resolve(__dirname, '../public/assets/js/support-state-runtime.js');
@@ -186,6 +187,7 @@ const bootRuntime = `${bootRuntimeSource}\n${runtimeLoaderRuntime}`;
 const shellRuntime = fs.readFileSync(shellRuntimePath, 'utf8');
 const shellPolishRuntime = fs.readFileSync(shellPolishRuntimePath, 'utf8');
 const schoolNormalizationRuntime = fs.readFileSync(schoolNormalizationRuntimePath, 'utf8');
+const indicatorCalcRuntime = fs.readFileSync(indicatorCalcRuntimePath, 'utf8');
 const moduleEntryRuntime = fs.readFileSync(moduleEntryRuntimePath, 'utf8');
 const marginalPushRuntime = fs.readFileSync(marginalPushRuntimePath, 'utf8');
 const permissionPolicyRuntime = fs.readFileSync(permissionPolicyRuntimePath, 'utf8');
@@ -257,6 +259,7 @@ const highScoreExportRef = './assets/js/high-score-export-runtime.js';
 const cohortGrowthRef = './assets/js/cohort-growth-runtime.js';
 const macroAnalysisCompatRef = './assets/js/macro-analysis-compat-runtime.js';
 const schoolNormalizationRef = './assets/js/school-normalization-runtime.js';
+const indicatorCalcRef = './assets/js/indicator-calc-runtime.js';
 const compareSharedRef = './assets/js/compare-shared-runtime.js';
 const progressStateRef = './assets/js/progress-state-runtime.js';
 const reportSessionStateRef = './assets/js/report-session-state-runtime.js';
@@ -378,6 +381,12 @@ assert.ok(normalizedModuleManifest.includes(schoolNormalizationRef), 'school-nor
 assert.ok(
     normalizedModuleManifest.indexOf(schoolNormalizationRef) < normalizedModuleManifest.indexOf('./assets/js/app.js'),
     'school-normalization-runtime.js should load before app.js so township-scoped analysis cannot fall back to all schools'
+);
+assert.ok(normalizedModuleManifest.includes(indicatorCalcRef), 'indicator-calc-runtime.js should load with core app modules');
+assert.ok(
+    normalizedModuleManifest.indexOf(schoolNormalizationRef) < normalizedModuleManifest.indexOf(indicatorCalcRef)
+        && normalizedModuleManifest.indexOf(indicatorCalcRef) < normalizedModuleManifest.indexOf('./assets/js/app.js'),
+    'indicator-calc-runtime.js should load after school-normalization (its bucket/target/scoreInd deps) and before app.js so window.calcIndicators is defined before app.js bare callers run'
 );
 const bootVendorMatch = bootRuntime.match(/var BOOT_VENDOR_MODULES = \[[\s\S]*?\];/);
 assert.ok(bootVendorMatch, 'boot-runtime.js should declare BOOT_VENDOR_MODULES');
@@ -851,8 +860,8 @@ assert.ok(
     'data manager modal should opt out of global mojibake subtree scans'
 );
 assert.ok(
-    appSource.includes("DataManager.open('params');")
-        && appSource.includes("DataManager.open('targets');")
+    indicatorCalcRuntime.includes("DataManager.open('params');")
+        && indicatorCalcRuntime.includes("DataManager.open('targets');")
         && appSource.includes("DataManager.open('teacher');"),
     'targeted data manager entries should open their requested tabs directly'
 );
@@ -1595,9 +1604,9 @@ assert.ok(layoutRefinementCss.includes('#data-manager-modal #dm-teacher-table th
 assert.ok(appSource.includes('function renderBottom3TableOnly'), 'bottom3 should expose a lightweight table-only render path');
 assert.ok(moduleEntryRuntime.includes("activeModuleId === 'bottom3'") && moduleEntryRuntime.includes('window.renderBottom3TableOnly()'), 'bottom3 module entry should avoid full macro table rerenders');
 assert.ok(supportMetricsRuntime.includes('root.getSummaryTownshipSchools'), 'support metrics should reuse summary township school cache instead of rematching schools');
-assert.ok(appSource.includes('const IndicatorCalcPerfCache'), 'indicator should cache repeated silent calculations');
-assert.ok(appSource.includes('function buildIndicatorCalcSignature'), 'indicator cache should use an explicit dependency signature');
-assert.ok(appSource.includes('isSilent') && appSource.includes('IndicatorCalcPerfCache.signature === calcSignature'), 'indicator cache should only short-circuit repeated silent calculations');
+assert.ok(indicatorCalcRuntime.includes('const IndicatorCalcPerfCache'), 'indicator should cache repeated silent calculations');
+assert.ok(indicatorCalcRuntime.includes('function buildIndicatorCalcSignature'), 'indicator cache should use an explicit dependency signature');
+assert.ok(indicatorCalcRuntime.includes('isSilent') && indicatorCalcRuntime.includes('IndicatorCalcPerfCache.signature === calcSignature'), 'indicator cache should only short-circuit repeated silent calculations');
 assert.ok(appSource.includes('function scheduleIndicatorAutoScoreAfterDataReady'), 'indicator should keep a deferred auto-score path after data restore');
 assert.ok(appSource.includes("scheduleIndicatorAutoScoreAfterDataReady('processData')"), 'processData should trigger deferred indicator auto-score after restoring school data');
 assert.ok(schoolNormalizationRuntime.includes('const IndicatorSchoolBucketPerfCache'), 'indicator school normalization should cache repeated bucket builds');
