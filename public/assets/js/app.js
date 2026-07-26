@@ -8032,46 +8032,7 @@ function getCurrentUser() {
 
 // Moved to starter-guide-runtime.js (window.openStarterGuide / StarterGuideRuntime)
 
-async function runAutoDiagnosis() {
-    const termId = readCurrentTermId() || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
-    const hasScores = RAW_DATA && RAW_DATA.length > 0;
-    const hasTeachers = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
-    const hasSchool = !!MY_SCHOOL;
-
-    let cloudStatus = { text: '未连接', badge: 'badge-err' };
-    if (window.CloudApi || window.sbClient) {
-        try {
-            const { error } = await selectSystemDataRecords({
-                select: 'key',
-                limit: 1
-            });
-            cloudStatus = error ? { text: '连接成功但可能无权限', badge: 'badge-warn' } : { text: '连接正常', badge: 'badge-ok' };
-        } catch (e) {
-            cloudStatus = { text: '连接异常', badge: 'badge-err' };
-        }
-    }
-
-    const html = `
-            <div style="text-align:left; font-size:13px; color:#475569; line-height:1.8;">
-                <div>学期：${termId || '未选择'} ${termId ? '<span class="status-badge badge-ok">通过</span>' : '<span class="status-badge badge-err">缺失</span>'}</div>
-                <div>本校：${hasSchool ? MY_SCHOOL : '未选择'} ${hasSchool ? '<span class="status-badge badge-ok">通过</span>' : '<span class="status-badge badge-err">缺失</span>'}</div>
-                <div>成绩数据：${hasScores ? RAW_DATA.length + ' 条' : '未导入'} ${hasScores ? '<span class="status-badge badge-ok">通过</span>' : '<span class="status-badge badge-err">缺失</span>'}</div>
-                <div>任课表：${hasTeachers ? Object.keys(TEACHER_MAP).length + ' 条' : '未导入'} ${hasTeachers ? '<span class="status-badge badge-ok">通过</span>' : '<span class="status-badge badge-err">缺失</span>'}</div>
-                <div>云端权限：${cloudStatus.text} <span class="status-badge ${cloudStatus.badge}">诊断</span></div>
-            </div>
-        `;
-
-    const resultEl = document.getElementById('starter-diagnose-result');
-    if (resultEl) resultEl.innerHTML = html;
-
-    Swal.fire({
-        title: '🧪 系统诊断结果',
-        html,
-        width: 620,
-        confirmButtonText: '知道了',
-        confirmButtonColor: '#4f46e5'
-    });
-}
+// Moved to auto-diagnosis-runtime.js (window.runAutoDiagnosis / AutoDiagnosisRuntime)
 
 async function loadDemoData() {
     const demoSchool = DEFAULT_MY_SCHOOL_NAME;

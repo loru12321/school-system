@@ -1,0 +1,9 @@
+(function(e){if(!e)return;async function t(){const s=Array.isArray(e.RAW_DATA)?e.RAW_DATA:[],n=(typeof e.readCurrentTermId=="function"?e.readCurrentTermId():"")||(typeof e.getTermId=="function"?e.getTermId(typeof e.getExamMetaFromUI=="function"?e.getExamMetaFromUI():void 0):""),d=s&&s.length>0,i=e.TEACHER_MAP&&Object.keys(e.TEACHER_MAP).length>0,g=!!e.MY_SCHOOL;let a={text:"未连接",badge:"badge-err"};if(e.CloudApi||e.sbClient)try{const{error:u}=await e.selectSystemDataRecords({select:"key",limit:1});a=u?{text:"连接成功但可能无权限",badge:"badge-warn"}:{text:"连接正常",badge:"badge-ok"}}catch(u){a={text:"连接异常",badge:"badge-err"}}const c=`
+            <div style="text-align:left; font-size:13px; color:#475569; line-height:1.8;">
+                <div>学期：${n||"未选择"} ${n?'<span class="status-badge badge-ok">通过</span>':'<span class="status-badge badge-err">缺失</span>'}</div>
+                <div>本校：${g?e.MY_SCHOOL:"未选择"} ${g?'<span class="status-badge badge-ok">通过</span>':'<span class="status-badge badge-err">缺失</span>'}</div>
+                <div>成绩数据：${d?s.length+" 条":"未导入"} ${d?'<span class="status-badge badge-ok">通过</span>':'<span class="status-badge badge-err">缺失</span>'}</div>
+                <div>任课表：${i?Object.keys(e.TEACHER_MAP).length+" 条":"未导入"} ${i?'<span class="status-badge badge-ok">通过</span>':'<span class="status-badge badge-err">缺失</span>'}</div>
+                <div>云端权限：${a.text} <span class="status-badge ${a.badge}">诊断</span></div>
+            </div>
+        `,l=e.document&&e.document.getElementById("starter-diagnose-result");l&&(l.innerHTML=c),e.Swal&&typeof e.Swal.fire=="function"&&e.Swal.fire({title:"🧪 系统诊断结果",html:c,width:620,confirmButtonText:"知道了",confirmButtonColor:"#4f46e5"})}e.runAutoDiagnosis=t,e.AutoDiagnosisRuntime={runAutoDiagnosis:t}})(typeof window!="undefined"?window:globalThis);
