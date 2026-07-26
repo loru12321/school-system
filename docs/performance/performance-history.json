@@ -1,90 +1,5 @@
 [
   {
-    "recordedAt": "2026-07-11T02:09:28.879Z",
-    "commit": "407dd1e210ef",
-    "branch": "main",
-    "runId": "29135836019",
-    "runAttempt": "1",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 5013,
-    "appReadyMs": 9,
-    "totalMs": 25541,
-    "moduleCount": 31,
-    "slowestModules": [
-      {
-        "id": "cohort-growth",
-        "switchMs": 1077,
-        "deepCheckMs": 1294,
-        "totalMs": 2371
-      },
-      {
-        "id": "segment-analysis",
-        "switchMs": 1352,
-        "deepCheckMs": 163,
-        "totalMs": 1515
-      },
-      {
-        "id": "starter-hub",
-        "switchMs": 243,
-        "deepCheckMs": 1043,
-        "totalMs": 1286
-      },
-      {
-        "id": "correlation-analysis",
-        "switchMs": 269,
-        "deepCheckMs": 392,
-        "totalMs": 661
-      },
-      {
-        "id": "summary",
-        "switchMs": 601,
-        "deepCheckMs": 24,
-        "totalMs": 625
-      },
-      {
-        "id": "indicator",
-        "switchMs": 219,
-        "deepCheckMs": 393,
-        "totalMs": 612
-      },
-      {
-        "id": "blank-score-audit",
-        "switchMs": 375,
-        "deepCheckMs": 190,
-        "totalMs": 565
-      },
-      {
-        "id": "bottom3",
-        "switchMs": 200,
-        "deepCheckMs": 318,
-        "totalMs": 518
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "cloud",
-        "durationMs": 1108
-      },
-      {
-        "id": "teacher",
-        "durationMs": 675
-      },
-      {
-        "id": "student",
-        "durationMs": 659
-      },
-      {
-        "id": "targets",
-        "durationMs": 634
-      }
-    ],
-    "longTaskCount": 1,
-    "maxLongTaskMs": 909,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-07-11T03:06:53.393Z",
     "commit": "ae3789371cce",
     "branch": "main",
@@ -6792,6 +6707,91 @@
       {
         "id": "targets",
         "durationMs": 631
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-26T13:22:46.567Z",
+    "commit": "e6ec2d0e1222",
+    "branch": "main",
+    "runId": "30203867229",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 8583,
+    "appReadyMs": 4,
+    "totalMs": 31549,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "indicator",
+        "switchMs": 24.10000000000582,
+        "deepCheckMs": 2218,
+        "totalMs": 2242.100000000006
+      },
+      {
+        "id": "teacher-analysis",
+        "switchMs": 51.19999999999709,
+        "deepCheckMs": 1775,
+        "totalMs": 1826.199999999997
+      },
+      {
+        "id": "teacher-township-ranking",
+        "switchMs": 5.900000000008731,
+        "deepCheckMs": 885,
+        "totalMs": 890.9000000000087
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 11.60000000000582,
+        "deepCheckMs": 743,
+        "totalMs": 754.6000000000058
+      },
+      {
+        "id": "analysis",
+        "switchMs": 10.89999999999418,
+        "deepCheckMs": 599,
+        "totalMs": 609.8999999999942
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 39.10000000000582,
+        "deepCheckMs": 560,
+        "totalMs": 599.1000000000058
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 24.10000000000582,
+        "deepCheckMs": 557,
+        "totalMs": 581.1000000000058
+      },
+      {
+        "id": "subject-balance",
+        "switchMs": 28.80000000000291,
+        "deepCheckMs": 462,
+        "totalMs": 490.8000000000029
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1120
+      },
+      {
+        "id": "student",
+        "durationMs": 685
+      },
+      {
+        "id": "targets",
+        "durationMs": 648
+      },
+      {
+        "id": "teacher",
+        "durationMs": 637
       }
     ],
     "longTaskCount": 0,
