@@ -7201,33 +7201,7 @@ async function calcSummary(isSilent = false) {
     appDebug(`综合排名已生成，共 ${list.length} 所学校`);
 }
 
-function exportSummaryTable() {
-    if (!RAW_DATA.length || !Object.keys(SCHOOLS || {}).length) {
-        alert('请先上传成绩数据');
-        return;
-    }
-    if (typeof calcSummary === 'function') calcSummary(true);
-    const table = document.getElementById('tb-summary');
-    if (!table || !window.XLSX?.utils?.table_to_sheet) {
-        alert('综合分析表未就绪，无法导出');
-        return;
-    }
-    const rowCount = table.querySelectorAll('tbody tr').length;
-    if (!rowCount) {
-        alert('暂无乡镇学校综合排名数据，请先确认目标人数管理中的乡镇学校名单。');
-        return;
-    }
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.table_to_sheet(table);
-    if (typeof decorateExcelSheet === 'function') {
-        const headers = Array.from(table.querySelectorAll('thead th')).map((th) => th.textContent.trim());
-        decorateExcelSheet(worksheet, headers);
-    }
-    XLSX.utils.book_append_sheet(workbook, worksheet, '综合评价总览');
-    const examLabel = String(CONFIG?.name || '当前考试').replace(/[\\/:*?"<>|]/g, '_');
-    XLSX.writeFile(workbook, `综合评价总览_${examLabel}.xlsx`);
-}
-window.exportSummaryTable = exportSummaryTable;
+// Moved to summary-table-export-runtime.js (window.exportSummaryTable — 综合评价总览导出)
 
 function exportTeacherAnalysis() {
     const user = getCurrentUser();
