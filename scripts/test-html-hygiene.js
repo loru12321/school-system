@@ -131,9 +131,14 @@ assert.ok(
     'the delegated binder must resolve the module-help and scroll-anchor attributes'
 );
 // help 的取值是帮助键而非元素 id，必须在 getElementById 之前分流，否则永远解析不到。
+// 注意两个 indexOf 都要先确认 >= 0：缺失时 indexOf 返回 -1，而 -1 < 任何正数会让
+// 顺序断言假通过（本条最初就是这样的空断言，变异验证时才暴露）。
+const helpBranchIndex = foundationRuntime.indexOf("binding.kind === 'help'");
+const elementLookupIndex = foundationRuntime.indexOf('document.getElementById(binding.id)');
+assert.ok(helpBranchIndex >= 0, 'the delegated binder must keep an explicit module-help branch');
+assert.ok(elementLookupIndex >= 0, 'the delegated binder must still resolve element ids for the other bindings');
 assert.ok(
-    foundationRuntime.indexOf("binding.kind === 'help'")
-        < foundationRuntime.indexOf('document.getElementById(binding.id)'),
+    helpBranchIndex < elementLookupIndex,
     'the module-help branch must run before the element lookup'
 );
 // scrollToAnchor 原本靠 this 做 side-nav 高亮，委托后必须把属性所在元素传回去。
