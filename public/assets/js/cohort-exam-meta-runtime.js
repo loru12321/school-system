@@ -296,9 +296,21 @@ function ensureCurrentCohortIdentity() {
     return inferred;
 }
 
-function formatCohortLabel(meta) {
+function getCohortStageLabel(meta, referenceMeta = {}) {
+    const grade = Number(computeCohortGrade(meta, referenceMeta));
+    if (!Number.isFinite(grade)) return '年级待定';
+    if (grade < 6) return '未入学';
+    if (grade > 9) return '已毕业';
+    return `${grade}年级`;
+}
+
+function formatCohortLabel(meta, referenceMeta = {}) {
     if (!meta || !meta.year) return '未选择';
-    return `${meta.year}级 (六年级入学)`;
+    // Cohort IDs are admission years. Presenting only that fixed origin made
+    // every cohort look like Grade 6 even after it advanced or graduated.
+    // With no explicit exam context, compute against the current academic year
+    // (Sep–Aug), so selector labels stay correct before and after September.
+    return `${meta.year}级 · ${getCohortStageLabel(meta, referenceMeta)}`;
 }
 
 function computeCohortGrade(meta, examMeta) {

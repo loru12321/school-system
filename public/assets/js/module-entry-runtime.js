@@ -243,12 +243,16 @@
         if (typeof window.applyComparisonPanelCollapses === 'function') {
             scheduleModuleTask('comparison-panel-collapse-enter', window.applyComparisonPanelCollapses, { delay: 120, idle: true, timeout: 800 });
         }
-        // 前置条件状态条（只读现有状态、不触发重算）。放进 idle 任务，不占模块切换关键路径；
+        // 前置条件状态条只读现有状态，不触发重算。摘要页随后会调度一次
+        // calcSummary；若仍等到 idle 阶段，重算会先占住主线程，状态条可能在
+        // 首屏校验时缺失。摘要页改在下一帧注入，其他试点模块仍保持 idle。
         // 内部按模块 id 过滤，非试点模块直接返回。
         if (window.PrerequisiteStatus && typeof window.PrerequisiteStatus.refresh === 'function') {
             scheduleModuleTask('prerequisite-status-enter', () => {
                 window.PrerequisiteStatus.refresh(id);
-            }, { delay: 160, idle: true, timeout: 1200 });
+            }, id === 'summary'
+                ? { frame: true }
+                : { delay: 160, idle: true, timeout: 1200 });
         }
     }
 

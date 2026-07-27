@@ -84,6 +84,12 @@ assert.ok(
 );
 
 assert.ok(
+    /function getCohortStageLabel\(meta, referenceMeta = \{\}\) \{[\s\S]*computeCohortGrade\(meta, referenceMeta\)[\s\S]*if \(grade > 9\) return '已毕业';[\s\S]*return `\$\{grade\}年级`;[\s\S]*\}\s*\n\s*function formatCohortLabel\(meta, referenceMeta = \{\}\) \{[\s\S]*return `\$\{meta\.year\}级 · \$\{getCohortStageLabel\(meta, referenceMeta\)\}`;/.test(cohortExamMetaSource)
+        && !cohortExamMetaSource.includes('return `${meta.year}级 (六年级入学)`;'),
+    'cohort selector labels must show the calculated current grade or graduation state rather than a fixed sixth-grade admission label'
+);
+
+assert.ok(
     /function requestCohortSwitchRuntime\(cohortId, switchOptions\) \{[\s\S]*typeof window\.switchCohort === 'function'[\s\S]*__PENDING_COHORT_SWITCH_QUEUE__[\s\S]*return requestCohortSwitchRuntime\(cohortId, switchOptions\);/.test(cohortExamMetaSource)
         && appSource.includes('window.switchCohort = switchCohort;')
         && appSource.includes('function flushPendingCohortSwitches()')
