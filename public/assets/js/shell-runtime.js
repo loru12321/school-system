@@ -1,4 +1,23 @@
 (function () {
+    // 教务主任可见模块有 31 个，但考试后真正每次都要走的只有 6 个，且分散在
+    // 「联考分析 / 教学改进 / 学生发展」三个分类里，每轮汇报都要跨三处点。
+    // 这里把这 6 个聚成一个置顶入口。
+    //
+    // 刻意做成「新增一个入口」而不是「折叠其余模块」：其余 25 个模块的位置完全不动，
+    // 不改变任何既有肌肉记忆，也不影响其他角色。空间成本一个图标，风险最低。
+    // 名单由使用者本人指定，不要自行增删。
+    const CORE_WORKFLOW_MODULE_IDS = [
+        'summary',                     // 综合评价
+        'analysis',                    // 两率一分对比
+        'teacher-analysis',            // 教师表现
+        'teacher-detail-comparison',   // 教师指标明细
+        'teacher-township-ranking',    // 教师乡镇对比
+        'student-details'              // 学生成绩明细
+    ];
+    // 只给这两个角色显示：过载问题压在他们身上；教师/班主任本身只有 11 个模块，
+    // 再给一个「常用」反而是多余的一层。
+    const CORE_WORKFLOW_ROLES = new Set(['admin', 'director']);
+
     const NAV_STRUCTURE = {
         data: {
             title: '数据管理',
@@ -87,6 +106,35 @@
             ]
         }
     };
+
+    // 「本次必看」分类：直接复用上面各分类里的**同一个 item 对象引用**，因此下方
+    // language 覆盖 text/hint 时两处自动同步，不会出现常用入口和原入口文案不一致。
+    (function installCoreWorkflowCategory() {
+        const byId = new Map();
+        Object.values(NAV_STRUCTURE).forEach((category) => {
+            (category.items || []).forEach((item) => byId.set(item.id, item));
+        });
+        const items = CORE_WORKFLOW_MODULE_IDS.map((id) => byId.get(id)).filter(Boolean);
+        // 名单里的 id 若因改名而失效则跳过；全部失效时不插入空分类。
+        if (!items.length) return;
+
+        const core = {
+            title: '本次必看',
+            color: '#4f46e5',
+            icon: 'ti-star',
+            eyebrow: '本次必看',
+            summary: '考试后每次都要走的 6 个模块，按汇报顺序排列。其余模块仍在原分类中。',
+            items,
+            // 供 renderNavigation 判断是否对当前角色显示。
+            roleGate: (roleKey) => CORE_WORKFLOW_ROLES.has(roleKey)
+        };
+
+        // 置顶：重建键顺序，把 core 放在最前，其余分类顺序完全不变。
+        const rest = Object.keys(NAV_STRUCTURE).map((key) => [key, NAV_STRUCTURE[key]]);
+        Object.keys(NAV_STRUCTURE).forEach((key) => { delete NAV_STRUCTURE[key]; });
+        NAV_STRUCTURE.core = core;
+        rest.forEach(([key, value]) => { NAV_STRUCTURE[key] = value; });
+    })();
 
     const language = window.SystemLanguage || null;
     if (language) {
@@ -381,6 +429,11 @@
 
     function resolveVisibleItems(category) {
         if (!category || !Array.isArray(category.items)) return [];
+        // 分类级门禁（目前只有「本次必看」用）：不满足时返回空数组，
+        // renderNavigation 已有「visibleItems 为空则跳过该分类」的逻辑，自动整块隐藏。
+        if (typeof category.roleGate === 'function' && !category.roleGate(resolveUserRoleKey())) {
+            return [];
+        }
         return category.items.filter((item) => {
             if (typeof canAccessModule === 'function' && !canAccessModule(item.id)) {
                 return false;

@@ -4939,6 +4939,20 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
             legacySchoolInternalSectionPresent: !!document.getElementById('school-internal-grades'),
             legacyRemovedSigPanelPresent: !!document.getElementById('removed-sig-panel'),
             legacyInlineTriggerPresent: !!document.querySelector('[onclick*="school-internal-grades"]'),
+            // 「本次必看」置顶分类：admin/director 应能在侧栏第一项看到它，且内含 6 个模块。
+            // 只断言渲染事实，不断言顺序之外的样式。
+            coreWorkflowNav: (() => {
+                const titles = Array.from(document.querySelectorAll('#sidebar-nav .sidebar-menu-item__title'))
+                    .map((el) => String(el.textContent || '').trim());
+                const structure = window.NAV_STRUCTURE || {};
+                const core = structure.core;
+                return {
+                    firstNavTitle: titles[0] || '',
+                    isFirst: titles[0] === '本次必看',
+                    itemCount: core && Array.isArray(core.items) ? core.items.length : -1,
+                    itemIds: core && Array.isArray(core.items) ? core.items.map((item) => item.id) : []
+                };
+            })(),
             overlayHidden: getComputedStyle(document.getElementById('login-overlay')).display === 'none',
             appVisible: getComputedStyle(document.getElementById('app')).display !== 'none',
             roleText: document.body.innerText.includes('Role:'),
