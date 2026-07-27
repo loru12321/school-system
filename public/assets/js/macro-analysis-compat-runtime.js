@@ -24,15 +24,30 @@
     }
 
     function getTownshipMacroSchools() {
+        const allSchools = Object.values(window.SCHOOLS || {});
+        const schoolNames = Object.keys(window.SCHOOLS || {});
         const hasScopeHelper = typeof window.listAvailableSchoolsForCompare === 'function';
         const townshipNames = hasScopeHelper
             ? window.listAvailableSchoolsForCompare()
-            : Object.keys(window.SCHOOLS || {});
-        const normalizedTownshipNames = (townshipNames || [])
+            : schoolNames;
+        let normalizedTownshipNames = (townshipNames || [])
             .map((name) => String(name || '').trim())
             .filter(Boolean);
-        if (hasScopeHelper && !normalizedTownshipNames.length) return [];
-        return Object.values(window.SCHOOLS || {}).filter((school) => (
+
+        // During cloud hydration the compare-list cache can briefly be empty
+        // while SCHOOLS is already available.  Do not turn that transient
+        // cache state into a blank horizontal table; rebuild only the managed
+        // township scope from the recovered school names.  Returning all
+        // schools here would silently change the township ranking口径.
+        if (hasScopeHelper && !normalizedTownshipNames.length) {
+            if (typeof window.isTownshipManagedSchool !== 'function') return [];
+            normalizedTownshipNames = schoolNames.filter((name) => (
+                window.isTownshipManagedSchool(name, schoolNames)
+            ));
+        }
+        if (!normalizedTownshipNames.length) return [];
+
+        return allSchools.filter((school) => (
             isTownshipMacroSchoolName(school?.name, normalizedTownshipNames)
         ));
     }

@@ -92,6 +92,7 @@ const teacherCompareResultRuntimePath = path.resolve(__dirname, '../public/asset
 const teacherCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-compare-cloud-runtime.js');
 const macroCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-result-runtime.js');
 const macroCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-cloud-runtime.js');
+const macroAnalysisCompatRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-analysis-compat-runtime.js');
 const cloudRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud.js');
 const smokeAllModulesPath = path.resolve(__dirname, './smoke-all-modules.js');
 
@@ -219,6 +220,7 @@ const edgeGatewaySource = fs.readFileSync(path.resolve(__dirname, '../public/ass
 const appFoundationRuntime = fs.readFileSync(appFoundationRuntimePath, 'utf8');
 const reportHistoryRuntime = fs.readFileSync(reportHistoryRuntimePath, 'utf8');
 const townSubmoduleCompareRuntime = fs.readFileSync(townSubmoduleCompareRuntimePath, 'utf8');
+const macroAnalysisCompatRuntime = fs.readFileSync(macroAnalysisCompatRuntimePath, 'utf8');
 const cloudRuntime = fs.readFileSync(cloudRuntimePath, 'utf8');
 const smokeAllModules = fs.readFileSync(smokeAllModulesPath, 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
@@ -1641,6 +1643,16 @@ assert.ok(
         && runtimeLoaderRuntime.includes('window.ensureMacroAnalysisCompatRuntimeLoaded = function ()')
         && runtimeLoaderRuntime.includes("window.SystemRuntimeLoader.load('macro-analysis-compat')"),
     'county analysis compatibility actions should have an on-demand runtime loader'
+);
+assert.ok(
+    macroAnalysisCompatRuntime.includes('const allSchools = Object.values(window.SCHOOLS || {});')
+        && macroAnalysisCompatRuntime.includes('const schoolNames = Object.keys(window.SCHOOLS || {});')
+        && macroAnalysisCompatRuntime.includes("if (hasScopeHelper && !normalizedTownshipNames.length)")
+        && macroAnalysisCompatRuntime.includes("typeof window.isTownshipManagedSchool !== 'function') return []")
+        && macroAnalysisCompatRuntime.includes('window.isTownshipManagedSchool(name, schoolNames)')
+        && macroAnalysisCompatRuntime.includes('normalizedTownshipNames = schoolNames.filter')
+        && macroAnalysisCompatRuntime.includes('if (!normalizedTownshipNames.length) return [];'),
+    'macro horizontal table should rebuild only the township scope when the compare-list cache is transiently empty'
 );
 assert.ok(
     moduleEntryRuntime.includes("if (typeof window.ensureMacroAnalysisCompatRuntimeLoaded === 'function'")

@@ -1608,6 +1608,32 @@ async function runModuleDeepCheck(page, id) {
                     const box = document.getElementById('horizontal-box');
                     const table = document.querySelector('#horizontal-table table');
                     horizontalReady = !!box && !box.classList.contains('hidden') && !!table;
+
+                    // Cloud hydration can leave the compare-list cache empty for
+                    // one turn even though SCHOOLS is complete.  Verify the
+                    // horizontal table rebuilds its township scope from those
+                    // recovered schools instead of staying as an empty shell.
+                    checks.horizontalFallbackScopeReady = true;
+                    if (typeof window.listAvailableSchoolsForCompare === 'function') {
+                        const originalScopeHelper = window.listAvailableSchoolsForCompare;
+                        try {
+                            window.listAvailableSchoolsForCompare = () => [];
+                            if (box) box.classList.add('hidden');
+                            const fallbackContainer = document.getElementById('horizontal-table');
+                            if (fallbackContainer) fallbackContainer.innerHTML = '';
+                            window.renderHorizontalTable();
+                            const fallbackTable = document.querySelector('#horizontal-table table');
+                            const fallbackSchoolColumns = Math.max(0, fallbackTable?.querySelectorAll('thead th')?.length - 1 || 0);
+                            const allSchoolCount = Object.keys(window.SCHOOLS || {}).length;
+                            checks.horizontalFallbackScopeReady = !!box
+                                && !box.classList.contains('hidden')
+                                && !!fallbackTable
+                                && fallbackSchoolColumns > 0
+                                && fallbackSchoolColumns < allSchoolCount;
+                        } finally {
+                            window.listAvailableSchoolsForCompare = originalScopeHelper;
+                        }
+                    }
                 }
             } catch (error) {
                 return {
