@@ -45,7 +45,20 @@ assert.ok(
     'major-subject snapshot should rebuild student scores and total from only selected major subjects'
 );
 
-function createRuntimeContext({ grade, subjects }) {
+assert.ok(
+    source.includes('function buildGrade9ZhongkaoPoliticsReferenceWorkbooks()')
+        && source.includes("学校分析（不含政治）")
+        && source.includes("学校分析（含政治·二模参考）"),
+    'grade 9 Zhongkao package should generate separate school-analysis workbooks with and without second-mock politics'
+);
+
+assert.ok(
+    source.includes('不参与')
+        && source.includes('中考五科总分、排名、两率一分、指标生、高分段、高中上线率'),
+    'grade 9 politics reference workbook should explicitly protect official Zhongkao calculations'
+);
+
+function createRuntimeContext({ grade, subjects, zhongkao = false }) {
     const files = [];
     const students = [
         {
@@ -112,7 +125,9 @@ function createRuntimeContext({ grade, subjects }) {
             '州城中学': { name: '州城中学', students: students.slice(1), metrics: {}, rankings: {} }
         },
         CONFIG: { name: `${grade}年级`, label: '总分', excRate: 0.15 },
-        CURRENT_EXAM_ID: `2023级-${grade}年级-2025-2026-下学期-期末-2026-07-01`,
+        CURRENT_EXAM_ID: zhongkao
+            ? `2023级-${grade}年级-2025-2026-暑假-中考-2026-07-12`
+            : `2023级-${grade}年级-2025-2026-下学期-期末-2026-07-01`,
         CURRENT_COHORT_ID: '2023',
         CURRENT_COHORT_META: { id: '2023', year: '2023' },
         COHORT_DB: { exams: {} },
@@ -125,6 +140,19 @@ function createRuntimeContext({ grade, subjects }) {
             return Object.values(context.SCHOOLS);
         }
     };
+    if (zhongkao) {
+        context.COHORT_DB.exams[context.CURRENT_EXAM_ID] = {
+            data: students,
+            meta: { cohortId: '2023', grade: '9', year: '2025-2026', type: '中考', date: '2026-07-12' }
+        };
+        context.COHORT_DB.exams['2023级-9年级-2025-2026-下学期-二模-2026-05-27'] = {
+            data: students.map((student, index) => ({
+                ...student,
+                scores: { 政治: 70 + index }
+            })),
+            meta: { cohortId: '2023', grade: '9', year: '2025-2026', type: '二模', date: '2026-05-27' }
+        };
+    }
     context.window = context;
     vm.runInNewContext(source, context, { filename: 'exam-analysis-package-runtime.js' });
     return { context, files, workbook };
@@ -153,6 +181,18 @@ function createRuntimeContext({ grade, subjects }) {
         assert.ok(
             !files.some((file) => /主科学校分析/.test(file.name)),
             'grade 9 package should not include the non-grade-9 major-subject workbook'
+        );
+    }
+    {
+        const { context, files } = createRuntimeContext({ grade: '9', subjects: ['语文', '数学', '英语', '物理', '化学'], zhongkao: true });
+        await context.downloadExamAnalysisPackage();
+        assert.ok(
+            files.some((file) => /学校\/.*学校分析（不含政治）.*\.xlsx$/.test(file.name)),
+            'grade 9 Zhongkao package should include the official five-subject school workbook'
+        );
+        assert.ok(
+            files.some((file) => /学校\/.*学校分析（含政治·二模参考）.*\.xlsx$/.test(file.name)),
+            'grade 9 Zhongkao package should include the isolated second-mock politics reference workbook'
         );
     }
     console.log('test-exam-analysis-package-major-subjects passed');

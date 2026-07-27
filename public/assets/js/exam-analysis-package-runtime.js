@@ -203,11 +203,20 @@
 
     function getCurrentExamDate() {
         if (!currentExamMatchesActiveCohort()) return DEFAULT_EXAM_DATE;
-        const id = String(window.CURRENT_EXAM_ID || '').trim();
-        const match = id.match(/\d{4}-\d{2}-\d{2}/);
-        if (match) return match[0];
         const meta = getCurrentExamMeta();
-        return String(meta.date || meta.examDate || DEFAULT_EXAM_DATE).trim() || DEFAULT_EXAM_DATE;
+        const candidates = [meta.date, meta.examDate, meta.exam_date, window.CURRENT_EXAM_ID, meta.name, meta.examName];
+        for (const candidate of candidates) {
+            const matches = String(candidate || '').matchAll(/(20\d{2})[-_/年.](\d{1,2})(?:[-_/月.](\d{1,2}))?/g);
+            for (const match of matches) {
+                const month = Number(match[2]);
+                const day = Number(match[3]);
+                if (month < 1 || month > 12 || (match[3] && (day < 1 || day > 31))) continue;
+                return match[3]
+                    ? `${match[1]}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                    : `${match[1]}-${String(month).padStart(2, '0')}`;
+            }
+        }
+        return DEFAULT_EXAM_DATE;
     }
 
     function getExamLabel() {
@@ -622,18 +631,20 @@
         const wb = window.XLSX.utils.book_new();
         const schools = options.schools || (scope === 'county' ? Object.values(window.SCHOOLS || {}) : getTownshipSchools());
         const subjects = options.subjects || getSubjectList(getAllRows());
-        const totalLabel = typeof window.getTotalSubjectLabel === 'function'
+        const totalLabel = options.totalLabel || (typeof window.getTotalSubjectLabel === 'function'
             ? window.getTotalSubjectLabel({ subjects })
-            : '总分';
-        if (scope !== 'county') addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope));
+            : '总分');
+        const includeGrade9Support = options.includeGrade9Support !== false;
+        if (options.referenceNote) addWorksheet(wb, '口径说明', options.referenceNote);
+        if (scope !== 'county') addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope, { includeGrade9Support }));
         addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects, scope));
-        if (scope !== 'county' && isGrade9Exam()) addWorksheet(wb, '9年级专项核算对照表', buildSupportMetricComparisonRows(schools));
+        if (scope !== 'county' && includeGrade9Support && isGrade9Exam()) addWorksheet(wb, '9年级专项核算对照表', buildSupportMetricComparisonRows(schools));
         addWorksheet(wb, `${totalLabel} - 综合分析表`, schoolRankRows(schools, 'total', scope));
         subjects.forEach((subject) => addWorksheet(wb, `${subject} 学科明细`, schoolRankRows(schools, subject, scope)));
         if (scope !== 'county') {
             addWorksheetIfUseful(wb, '高分段赋分详情', buildHighScoreRows(schools));
             addWorksheetIfUseful(wb, '指标生达标核算', buildIndicatorRows());
-            if (isGrade9Exam()) addWorksheetIfUseful(wb, '高中上线率赋分详情', buildHighSchoolAdmissionRows(schools));
+            if (includeGrade9Support && isGrade9Exam()) addWorksheetIfUseful(wb, '高中上线率赋分详情', buildHighSchoolAdmissionRows(schools));
             addWorksheetIfUseful(wb, '后三分之一学生核算', buildBottomRows(schools));
         }
         return wb;
@@ -798,6 +809,163 @@
         return buildSchoolAnalysisWorkbook('township', { schools: snapshot.schools, subjects: snapshot.subjects });
     }
 
+    function getPackageExamMeta(exam = {}) {
+        return exam?.meta && typeof exam.meta === 'object' ? exam.meta : {};
+    }
+
+    function getPackageExamAcademicYear(examId = '', exam = {}) {
+        const meta = getPackageExamMeta(exam);
+        const candidates = [meta.year, meta.academicYear, meta.academic_year, exam.academicYear, exam.academic_year, examId];
+        for (const candidate of candidates) {
+            const match = String(candidate || '').match(/(20\d{2})\s*[-~—至]\s*(20\d{2})/);
+            if (match) return `${match[1]}-${match[2]}`;
+        }
+        return '';
+    }
+
+    function getPackageExamDate(examId = '', exam = {}) {
+        const meta = getPackageExamMeta(exam);
+        const candidates = [meta.date, meta.examDate, meta.exam_date, exam.date, exam.examDate, exam.exam_date, examId, meta.name, exam.name, exam.title];
+        for (const candidate of candidates) {
+            const matches = String(candidate || '').matchAll(/(20\d{2})[-_/年.](\d{1,2})(?:[-_/月.](\d{1,2}))?/g);
+            for (const match of matches) {
+                const month = Number(match[2]);
+                const day = Number(match[3]);
+                if (month < 1 || month > 12 || (match[3] && (day < 1 || day > 31))) continue;
+                return match[3]
+                    ? `${match[1]}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                    : `${match[1]}-${String(month).padStart(2, '0')}`;
+            }
+        }
+        return '';
+    }
+
+    function isGrade9ZhongkaoPackage() {
+        return isGrade9Exam() && getExamTypeLabel() === '中考';
+    }
+
+    function isGrade9SecondMockExamForPackage(examId = '', exam = {}) {
+        const meta = getPackageExamMeta(exam);
+        const source = [examId, meta.type, meta.name, meta.examName, exam.name, exam.title].map((value) => String(value || '')).join(' ');
+        const grade = String(meta.grade || meta.gradeLabel || exam.grade || exam.gradeLabel || '');
+        return /二模/.test(source) && (/9\s*年级|九年级/.test(`${source} ${grade}`) || String(grade).trim() === '9');
+    }
+
+    function findGrade9SecondMockForPackage() {
+        const currentExamId = String(window.CURRENT_EXAM_ID || '').trim();
+        const currentExam = window.COHORT_DB?.exams?.[currentExamId] || {};
+        const currentMeta = getPackageExamMeta(currentExam);
+        const cohortId = getActiveCohortId() || normalizeCohortId(currentMeta.cohortId || currentMeta.cohort_id || currentExamId);
+        const academicYear = getPackageExamAcademicYear(currentExamId, currentExam);
+        const candidates = Object.entries(window.COHORT_DB?.exams || {})
+            .filter(([examId, exam]) => {
+                if (examId === currentExamId || !isGrade9SecondMockExamForPackage(examId, exam)) return false;
+                const meta = getPackageExamMeta(exam);
+                const examCohort = normalizeCohortId(meta.cohortId || meta.cohort_id || examId);
+                const examAcademicYear = getPackageExamAcademicYear(examId, exam);
+                return (!cohortId || !examCohort || cohortId === examCohort)
+                    && (!academicYear || !examAcademicYear || academicYear === examAcademicYear);
+            })
+            .map(([examId, exam]) => ({ examId, exam, date: getPackageExamDate(examId, exam) }))
+            .sort((left, right) => String(right.date).localeCompare(String(left.date)) || String(right.examId).localeCompare(String(left.examId)));
+        return candidates[0] || null;
+    }
+
+    async function ensureGrade9SecondMockForPackage() {
+        if (!isGrade9ZhongkaoPackage() || findGrade9SecondMockForPackage()) return;
+        const cohortId = getActiveCohortId() || getCurrentExamCohortId();
+        if (!cohortId || typeof window.CloudManager?.fetchCohortExamsToLocal !== 'function') return;
+        try {
+            await window.CloudManager.fetchCohortExamsToLocal(cohortId, {
+                background: false,
+                latestOnly: false,
+                minCount: 3,
+                refreshSelectors: false
+            });
+        } catch (error) {
+            console.warn('[exam-analysis-package] failed to load grade 9 second-mock politics source:', error?.message || error);
+        }
+    }
+
+    function normalizedPackageIdentity(value) {
+        return String(value || '').replace(/\s+/g, '').replace(/[\u200b-\u200f\uFEFF]/g, '').trim();
+    }
+
+    function getPackageStudentIdentityKeys(row = {}) {
+        const name = normalizedPackageIdentity(row.name);
+        if (!name) return [];
+        const id = normalizedPackageIdentity(row.id);
+        const className = normalizedPackageIdentity(row.class);
+        const schoolKeys = getSchoolLookupKeys(row.school, [row.originalSchoolName]).map(normalizedPackageIdentity).filter(Boolean);
+        const keys = [];
+        if (id && !/^[-—]+$/.test(id)) keys.push(`id:${id}`);
+        schoolKeys.forEach((school) => {
+            if (className) keys.push(`school-class-name:${school}|${className}|${name}`);
+            keys.push(`school-name:${school}|${name}`);
+        });
+        keys.push(`name:${name}`);
+        return [...new Set(keys)];
+    }
+
+    function getGrade9SecondMockPoliticsRows(rows = getTownshipRows()) {
+        const secondMock = findGrade9SecondMockForPackage();
+        const mockRows = Array.isArray(secondMock?.exam?.data) ? secondMock.exam.data : [];
+        const byIdentity = new Map();
+        mockRows.forEach((row) => {
+            const score = Number(row?.scores?.政治);
+            if (!Number.isFinite(score)) return;
+            getPackageStudentIdentityKeys(row).forEach((key) => {
+                const list = byIdentity.get(key) || [];
+                list.push(score);
+                byIdentity.set(key, list);
+            });
+        });
+        let matched = 0;
+        const mergedRows = (rows || []).map((row) => {
+            const values = getPackageStudentIdentityKeys(row)
+                .map((key) => byIdentity.get(key) || [])
+                .find((list) => list.length === 1) || [];
+            if (!values.length) return { ...row, scores: { ...(row?.scores || {}) } };
+            matched += 1;
+            return { ...row, scores: { ...(row?.scores || {}), 政治: values[0] } };
+        });
+        return { rows: mergedRows, matched, secondMock };
+    }
+
+    function buildGrade9ZhongkaoPoliticsReferenceWorkbooks() {
+        if (!isGrade9ZhongkaoPackage()) return null;
+        const rows = getTownshipRows();
+        const officialSubjects = getSubjectList(rows).filter((subject) => subject !== '政治');
+        if (!officialSubjects.length) return null;
+        const officialSnapshot = calculateMajorSubjectSnapshot(rows, officialSubjects);
+        const withoutPolitics = buildSchoolAnalysisWorkbook('township', {
+            schools: officialSnapshot.schools,
+            subjects: officialSnapshot.subjects,
+            totalLabel: `${officialSubjects.length === 5 ? '五科总' : `${officialSubjects.length}科总`}（不含政治）`
+        });
+        const politics = getGrade9SecondMockPoliticsRows(rows);
+        if (!politics.matched) return { withoutPolitics, withPolitics: null, politics };
+        const withPoliticsSubjects = [...officialSubjects, '政治'];
+        const withPoliticsSnapshot = calculateMajorSubjectSnapshot(politics.rows, withPoliticsSubjects);
+        const sourceLabel = politics.secondMock
+            ? (getPackageExamDate(politics.secondMock.examId, politics.secondMock.exam) || politics.secondMock.examId)
+            : '未找到';
+        const withPolitics = buildSchoolAnalysisWorkbook('township', {
+            schools: withPoliticsSnapshot.schools,
+            subjects: withPoliticsSnapshot.subjects,
+            totalLabel: '六科总（含政治）',
+            includeGrade9Support: false,
+            referenceNote: [
+                ['项目', '说明'],
+                ['用途', '九年级中考政治二模参考展示；不写回中考主分析。'],
+                ['政治来源', `同届同学年度最新二模：${sourceLabel}`],
+                ['匹配人数', `${politics.matched} 人`],
+                ['不参与', '中考五科总分、排名、两率一分、指标生、高分段、高中上线率等任何正式中考计算。']
+            ]
+        });
+        return { withoutPolitics, withPolitics, politics };
+    }
+
     function getIndicatorScoreMap() {
         let indicatorRows = [];
         if (Array.isArray(window.INDICATOR_LAST_RESULT) && window.INDICATOR_LAST_RESULT.length) {
@@ -836,8 +1004,8 @@
         return Number(school?.scoreInd) || indicatorScoreMap.get(name) || indicatorScoreMap.get(normalized) || 0;
     }
 
-    function buildComprehensiveSummaryRows(schools, subjects, scope) {
-        const grade9 = isGrade9Exam();
+    function buildComprehensiveSummaryRows(schools, subjects, scope, options = {}) {
+        const grade9 = isGrade9Exam() && options.includeGrade9Support !== false;
         const indicatorScoreMap = grade9 ? getIndicatorScoreMap() : new Map();
         const highScoreMap = grade9 ? getHighScoreMap(schools) : new Map();
         const highSchoolAdmissionMap = grade9 ? getHighSchoolAdmissionMap(schools) : new Map();
@@ -1421,6 +1589,7 @@
             if (typeof window.renderTables === 'function') window.renderTables();
             if (typeof window.calcSummary === 'function') window.calcSummary(true);
             await ensureSupportMetricsForPackage();
+            await ensureGrade9SecondMockForPackage();
             if (typeof window.calcSummary === 'function') window.calcSummary(true);
 
             const zip = new window.JSZip();
@@ -1431,7 +1600,17 @@
             await ensureTeacherRankings(includeCounty);
 
             await addWorkbook(zip, `${packageStem}成绩${suffix}.xlsx`, buildRawScoreWorkbook(allRows));
-            await addWorkbook(zip, `学校/${packageStem}学校分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('township'));
+            const grade9PoliticsReferences = buildGrade9ZhongkaoPoliticsReferenceWorkbooks();
+            if (grade9PoliticsReferences?.withoutPolitics) {
+                await addWorkbook(zip, `学校/${packageStem}学校分析（不含政治）${suffix}.xlsx`, grade9PoliticsReferences.withoutPolitics);
+                if (grade9PoliticsReferences.withPolitics) {
+                    await addWorkbook(zip, `学校/${packageStem}学校分析（含政治·二模参考）${suffix}.xlsx`, grade9PoliticsReferences.withPolitics);
+                } else {
+                    toast('未匹配到九年级政治二模成绩，已只生成正式五科学校分析。', 'warning');
+                }
+            } else {
+                await addWorkbook(zip, `学校/${packageStem}学校分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('township'));
+            }
             const majorSubjectWorkbook = buildMajorSubjectSchoolAnalysisWorkbook();
             if (majorSubjectWorkbook) await addWorkbook(zip, `学校/${packageStem}主科学校分析${suffix}.xlsx`, majorSubjectWorkbook);
             if (includeCounty) await addWorkbook(zip, `学校/${packageStem}学校县域分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('county'));

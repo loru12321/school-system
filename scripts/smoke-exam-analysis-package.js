@@ -491,7 +491,7 @@ async function login(page) {
             assertNumericColumn(rows, header, nameIndex, ['总分', '五科总'], `${rawScoreName}:${sheet}`, { minimumRows: 1, allowZero: true });
         });
 
-        const { name: schoolAnalysisName, summary: schoolAnalysisSummary } = await readWorkbookFromPackage(outerZip, files, /学校\/.*学校分析0527\.xlsx$/, 'school analysis workbook');
+        const { name: schoolAnalysisName, summary: schoolAnalysisSummary } = await readWorkbookFromPackage(outerZip, files, /学校\/.*学校分析(?:（不含政治）)?0527\.xlsx$/, 'school analysis workbook');
         const schoolFirstSheetRows = schoolAnalysisSummary.rowCounts['xl/worksheets/sheet1.xml'] || 0;
         if (schoolFirstSheetRows < 18) {
             fail(`school comprehensive report is too short: ${JSON.stringify(schoolAnalysisSummary.rowCounts)}`);

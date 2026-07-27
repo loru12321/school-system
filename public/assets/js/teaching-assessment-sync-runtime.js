@@ -603,7 +603,11 @@
 
     function extractExamDate(context = getCurrentExamContext()) {
         const exam = context.exam || {};
+        const meta = getExamMeta(exam);
         const candidates = [
+            meta.date,
+            meta.examDate,
+            meta.exam_date,
             exam.date,
             exam.examDate,
             exam.exam_date,
@@ -2456,6 +2460,11 @@
                 missingCount: payload.makeup_missing_count || 0,
                 missing: payload.makeup_missing || [],
                 fallbackMatches: payload.makeup_fallback_matches || 0,
+                secondMockExamId: payload.second_mock_exam_id || '',
+                secondMockExamLabel: payload.second_mock_exam_label || '',
+                secondMockExamDate: payload.second_mock_exam_date || '',
+                secondMockSubjects: payload.second_mock_subjects || [],
+                secondMockItems: payload.second_mock_items || 0,
                 grade8SecondMockExamId: payload.grade8_second_mock_exam_id || '',
                 grade8SecondMockExamLabel: payload.grade8_second_mock_exam_label || '',
                 grade8SecondMockExamDate: payload.grade8_second_mock_exam_date || '',
@@ -2499,7 +2508,14 @@
         `).join('');
         const composite = audit.composite || {};
         const calculation = audit.calculation || {};
-        const hasGrade8SecondMockSource = !!composite.grade8SecondMockExamId || !!composite.grade8SecondMockItems;
+        const hasSecondMockSource = !!composite.secondMockExamId || !!composite.secondMockItems;
+        const secondMockSubjects = composite.secondMockSubjects || [];
+        const isGrade9PoliticsSecondMock = String(composite.grade) === '9' && secondMockSubjects.includes('政治');
+        const isGrade8HistoryGeoBioSecondMock = String(composite.grade) === '8'
+            && ['历史', '地理', '生物'].some((subject) => secondMockSubjects.includes(subject));
+        const secondMockSourceLabel = isGrade9PoliticsSecondMock
+            ? '九年级政治教师考核取二模'
+            : (isGrade8HistoryGeoBioSecondMock ? '八年级史地生教师考核取二模' : '二模教师考核来源');
         const missingRows = (composite.missing || []).slice(0, 10).map((item) => `
             <tr>
                 <td>${escapeHtml(item.school || '-')}</td>
@@ -2518,8 +2534,8 @@
                     <span class="status-chip info">${escapeHtml(calculation.version || '')}</span>
                     <span class="status-chip ${calculation.rosterLocked ? 'ok' : 'warn'}">${calculation.rosterLocked ? '95%名册已锁定' : '95%名册未锁定'}</span>
                     <span class="status-chip info">补零 ${escapeHtml(calculation.rosterZeroFill || 0)} 人</span>
-                    ${hasGrade8SecondMockSource ? `<span class="status-chip info">8年级史地生考核取二模：${escapeHtml(composite.grade8SecondMockExamDate || composite.grade8SecondMockExamLabel || composite.grade8SecondMockExamId)}</span>` : '<span class="status-chip ok">无8年级史地生二模考核源</span>'}
-                    ${composite.grade8SecondMockSubjects?.length ? `<span class="status-chip info">二模科目：${escapeHtml(composite.grade8SecondMockSubjects.join('、'))}</span>` : ''}
+                    ${hasSecondMockSource ? `<span class="status-chip info">${secondMockSourceLabel}：${escapeHtml(composite.secondMockExamDate || composite.secondMockExamLabel || composite.secondMockExamId)}</span>` : ''}
+                    ${hasSecondMockSource && secondMockSubjects.length ? `<span class="status-chip info">二模科目：${escapeHtml(secondMockSubjects.join('、'))}；已生成 ${escapeHtml(composite.secondMockItems || 0)} 条</span>` : ''}
                     ${composite.missingCount ? `<span class="status-chip warn">补科缺失 ${escapeHtml(composite.missingCount)} 条</span>` : ''}
                     <span class="status-chip info">预计写入 ${escapeHtml(audit.wouldWrite)} 条</span>
                     <span class="status-chip info">只读预览 ${escapeHtml(audit.previewOnly)} 条</span>

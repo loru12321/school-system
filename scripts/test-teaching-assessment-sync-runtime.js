@@ -249,6 +249,7 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
       })();
       return context.window.AssessmentRosterCore.lockCurrentRoster().then(() => context.window.tmBuildTeacherAssessmentSyncPayload()).then((grade9Payload) => {
         assert.ok(grade9Payload.items.some((item) => item.subject === '政治' && item.second_mock_source === true), '9th grade politics teacher should sync from second mock source rows');
+        assert.deepStrictEqual(Array.from(grade9Payload.second_mock_subjects), ['政治'], '9th grade politics assessment should identify the second-mock subject');
         assert.deepStrictEqual(Array.from(grade9Payload.makeup_subjects), [], 'second mock source rows should not be reported as July makeup subjects');
         const grade9ExcellentItems = grade9Payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution');
         assert.ok(grade9ExcellentItems.length > 0, '9th grade excellent contribution should be generated from 550/600 high-score tiers');
@@ -278,6 +279,9 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         assert.ok(highScoreItems.length >= 2, '9th grade high-score contribution should be available as preview rows');
         assert.ok(highScoreItems.every((item) => item.max_score === 15 && /550分以上/.test(item.note)), 'high-score preview should explain the 550-point rule');
         const previewAudit = context.window.tmBuildTeacherAssessmentSyncAudit(grade9Payload, { written: grade9Payload.items.length, skipped: [] });
+        assert.deepStrictEqual(Array.from(previewAudit.composite.secondMockSubjects), ['政治'], 'audit should expose the 9th grade politics second-mock source');
+        assert.strictEqual(previewAudit.composite.secondMockExamDate, '2026-05-27', 'audit should expose the selected second-mock date');
+        assert.ok(source.includes('九年级政治教师考核取二模'), 'audit UI should explicitly label the 9th grade politics second-mock rule');
         assert.strictEqual(previewAudit.projects.class_target_grad.mode, 'preview', 'class target should be represented as preview-only in audit');
         assert.strictEqual(previewAudit.projects.class_target_grad.preview, classTargetItems.length, 'audit should count preview-only class target rows');
         assert.strictEqual(previewAudit.projects.class_high_school_contribution_grad.mode, 'preview', 'high-school contribution should be represented as preview-only in audit');
