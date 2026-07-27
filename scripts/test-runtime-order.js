@@ -1655,6 +1655,11 @@ assert.ok(
     'macro horizontal table should rebuild only the township scope when the compare-list cache is transiently empty'
 );
 assert.ok(
+    smokeAllModules.includes('await Promise.resolve(window.renderHorizontalTable());')
+        && smokeAllModules.includes('first click into a false production failure'),
+    'analysis smoke should await the demand-loaded horizontal-table action before checking its shell'
+);
+assert.ok(
     moduleEntryRuntime.includes("if (typeof window.ensureMacroAnalysisCompatRuntimeLoaded === 'function'")
         && moduleEntryRuntime.includes('return window.ensureMacroAnalysisCompatRuntimeLoaded()')
         && moduleEntryRuntime.includes('macro compatibility runtime failed'),

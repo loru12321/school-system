@@ -1583,7 +1583,7 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'analysis') {
-        return page.evaluate(() => {
+        return page.evaluate(async () => {
             const checks = {
                 renderHorizontalTable: typeof window.renderHorizontalTable === 'function',
                 exportHorizontalExcel: typeof window.exportHorizontalExcel === 'function',
@@ -1604,7 +1604,13 @@ async function runModuleDeepCheck(page, id) {
                 checks.tableAnchorJumpbarReady = !!jumpbar;
                 checks.tableAnchorButtonsReady = jumpButtons.length >= expectedSubjects + 2;
                 if (checks.renderHorizontalTable) {
-                    window.renderHorizontalTable();
+                    // The analysis compatibility runtime is demand-loaded.  Its
+                    // public method deliberately replays the original action
+                    // after loading, so wait for that promise before deciding
+                    // whether the real table rendered.  Checking immediately
+                    // only observes the still-hidden shell and turns a valid
+                    // first click into a false production failure.
+                    await Promise.resolve(window.renderHorizontalTable());
                     const box = document.getElementById('horizontal-box');
                     const table = document.querySelector('#horizontal-table table');
                     horizontalReady = !!box && !box.classList.contains('hidden') && !!table;
@@ -1621,7 +1627,7 @@ async function runModuleDeepCheck(page, id) {
                             if (box) box.classList.add('hidden');
                             const fallbackContainer = document.getElementById('horizontal-table');
                             if (fallbackContainer) fallbackContainer.innerHTML = '';
-                            window.renderHorizontalTable();
+                            await Promise.resolve(window.renderHorizontalTable());
                             const fallbackTable = document.querySelector('#horizontal-table table');
                             const fallbackSchoolColumns = Math.max(0, fallbackTable?.querySelectorAll('thead th')?.length - 1 || 0);
                             const allSchoolCount = Object.keys(window.SCHOOLS || {}).length;
