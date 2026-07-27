@@ -6608,6 +6608,14 @@ async function calcSummary(isSilent = false) {
     document.querySelector('#tb-summary tbody').innerHTML = html;
     markSummaryFresh();
 
+    // 「本次要点」只读上面已算好的结果生成文字提示，不参与任何计算。
+    // 用 guard + try 包裹：它是辅助信息，任何失败都不得影响综合评价主表。
+    try {
+        if (typeof window.renderSummaryHighlights === 'function') window.renderSummaryHighlights();
+    } catch (error) {
+        console.warn('[calcSummary] 本次要点渲染失败（不影响汇总结果）:', error);
+    }
+
     appDebug(`综合排名已生成，共 ${list.length} 所学校`);
 }
 

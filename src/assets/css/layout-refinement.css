@@ -595,6 +595,68 @@
     font-weight: 800;
 }
 
+/* 本次要点：中性信息色，与上方红色「需重新汇总」警示区分开，避免被误读为异常。 */
+.summary-highlights {
+    margin: 14px 0 4px;
+    padding: 12px 14px;
+    border: 1px solid #c7d2fe;
+    border-left: 4px solid #4f46e5;
+    border-radius: 10px;
+    background: #eef2ff;
+}
+
+.summary-highlights[hidden] {
+    display: none;
+}
+
+.summary-highlights-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: #3730a3;
+    font-size: 14px;
+}
+
+.summary-highlights-note {
+    color: #6366f1;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.summary-highlights-list {
+    margin: 0;
+    padding-left: 18px;
+    color: #1e293b;
+    font-size: 13px;
+    line-height: 1.9;
+}
+
+.summary-highlights-src {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #e0e7ff;
+    color: #4338ca;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+@media print {
+    /* 打印综合评价时保留要点，但去掉底色以省墨。 */
+    .summary-highlights {
+        background: transparent;
+        border-color: #94a3b8;
+    }
+
+    .summary-highlights-src {
+        background: transparent;
+        color: #475569;
+    }
+}
+
 @keyframes summaryStalePulse {
     0%,
     100% {

@@ -1486,9 +1486,28 @@ async function runModuleDeepCheck(page, id) {
                 .filter((text) => /数据已变更|请重新生成/.test(text));
             const summaryDirty = !!window.SummaryRefreshState?.dirty;
             checks.summaryStalePromptAbsent = staleTexts.length === 0 && !summaryDirty;
+
+            // 「本次要点」是只读已算好结果生成的辅助提示。这里取回真实渲染文本，
+            // 确认它要么给出有依据的要点、要么整块隐藏，不会出现空壳或半句话。
+            const highlightsEl = document.getElementById('summary-highlights');
+            const highlightItems = highlightsEl
+                ? Array.from(highlightsEl.querySelectorAll('.summary-highlights-list li'))
+                    .map((li) => String(li.innerText || '').trim()).filter(Boolean)
+                : [];
+            const summaryHighlights = {
+                present: !!highlightsEl,
+                hidden: highlightsEl ? highlightsEl.hidden : null,
+                count: highlightItems.length,
+                items: highlightItems.slice(0, 5)
+            };
+            // 可见时必须有条目，隐藏时必须没有——两者错配说明渲染逻辑有问题。
+            checks.summaryHighlightsConsistent = !highlightsEl
+                || (highlightsEl.hidden ? highlightItems.length === 0 : highlightItems.length > 0);
+
             return {
                 ok: Object.values(checks).every(Boolean) && !!panel && schoolProfileCloseWorks && schoolProfileCellClickWorks,
                 checks,
+                summaryHighlights,
                 prerequisiteBarText,
                 panelReady: !!panel,
                 schoolProfileCloseWorks,
