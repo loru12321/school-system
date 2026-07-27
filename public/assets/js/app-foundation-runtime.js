@@ -388,3 +388,57 @@ function installMojibakeNormalizer() {
 }
 
 installMojibakeNormalizer();
+
+// 声明式 DOM 管道绑定：把散在 index.html 里两类纯 DOM 样板内联 onclick 收敛为
+// 属性 + 一个 document 级委托监听：
+//   data-close-modal="<id>" 取代 onclick="document.getElementById('X').style.display='none'"
+//   data-pick-file="<id>"   取代 onclick="document.getElementById('X').click()"
+// 用事件委托而非逐节点绑定,因此对模块按需渲染/重绘出来的节点同样生效,无需重新绑定。
+// 这两类站点原本都不含任何业务逻辑(仅隐藏弹层 / 触发隐藏 file input),行为等价。
+function installDeclarativeDomBindings() {
+    if (window.__DECLARATIVE_DOM_BINDINGS__) return;
+    window.__DECLARATIVE_DOM_BINDINGS__ = true;
+
+    // id 由本仓库自己的静态标记提供,仍做保守校验,避免属性变成任意选择器注入点。
+    const isSafeElementId = (value) => /^[A-Za-z][\w-]*$/.test(value);
+
+    // 按「最近祖先」判定,而不是固定先查某一类属性:file-pick 按钮可能嵌在弹层内部
+    // (如换肤弹层里的上传 logo),固定顺序会让内层点击误命中外层的关闭意图。
+    const resolveBinding = (origin) => {
+        const holder = origin.closest('[data-close-modal], [data-pick-file]');
+        if (!holder) return null;
+        const closeId = String(holder.getAttribute('data-close-modal') || '').trim();
+        if (closeId) return { kind: 'close', id: closeId };
+        const pickId = String(holder.getAttribute('data-pick-file') || '').trim();
+        if (pickId) return { kind: 'pick', id: pickId };
+        return null;
+    };
+
+    // 用捕获阶段:部分弹层的 .modal-content 上带 onclick="event.stopPropagation()"
+    // (用于实现「点遮罩关闭、点内容不关闭」),冒泡阶段的 document 监听会被它掐断,
+    // 而内层的关闭按钮正好在其内部。捕获阶段先于任何 stopPropagation 执行。
+    document.addEventListener('click', (event) => {
+        const origin = event.target instanceof Element ? event.target : null;
+        if (!origin) return;
+
+        const binding = resolveBinding(origin);
+        if (!binding || !isSafeElementId(binding.id)) return;
+        const target = document.getElementById(binding.id);
+        if (!target) return;
+
+        if (binding.kind === 'close') {
+            target.style.display = 'none';
+            return;
+        }
+        // 隐藏的 file input 常常就嵌在 upload-box 内部(如 #fileInput 在
+        // #uploadBoxMain 里)。programmatic .click() 会冒泡回到同一个 upload-box,
+        // 若不拦下就会无限递归。命中目标自身或其后代时直接放行原生行为。
+        if (target === origin || target.contains(origin)) return;
+        // 考试封存时 applyArchiveLockUI() 会 disable 这些 file input;与既有 Enter
+        // 键路径保持一致,封存状态下不打开选择器。
+        if (target.disabled) return;
+        target.click();
+    }, true);
+}
+
+installDeclarativeDomBindings();

@@ -1468,6 +1468,52 @@ async function runModuleDeepCheck(page, id) {
                 intakeReady: !!document.getElementById('fileInput') && !!document.getElementById('uploadBox'),
                 flowReady: document.querySelectorAll('#upload .analysis-flow-step').length >= 3
             };
+
+            // Modal-close / file-pick boilerplate is served by the delegated binder
+            // in app-foundation-runtime.js. Drive real clicks so a broken binder is
+            // caught here, not only by the static markup contract.
+            const pickBox = document.getElementById('uploadBoxMain') || document.getElementById('uploadBox');
+            const pickInput = document.getElementById('fileInput');
+            let pickBindingWorks = false;
+            let pickBindingNoRecursion = false;
+            if (pickBox && pickInput && pickBox.hasAttribute('data-pick-file')) {
+                const originalClick = pickInput.click;
+                let opened = 0;
+                pickInput.click = () => { opened += 1; };
+                const originalPointerEvents = pickBox.style.pointerEvents;
+                pickBox.style.pointerEvents = 'auto';
+                try {
+                    pickBox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                    pickBindingWorks = opened >= 1;
+                    // A click originating on the hidden input itself must not be
+                    // proxied again by its ancestor upload box (infinite recursion).
+                    const before = opened;
+                    pickInput.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                    pickBindingNoRecursion = opened === before;
+                } finally {
+                    pickInput.click = originalClick;
+                    pickBox.style.pointerEvents = originalPointerEvents;
+                }
+            }
+
+            let modalCloseBindingWorks = false;
+            const closeButton = document.querySelector('[data-close-modal]');
+            if (closeButton) {
+                const modalId = closeButton.getAttribute('data-close-modal');
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    const originalDisplay = modal.style.display;
+                    modal.style.display = 'flex';
+                    closeButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                    modalCloseBindingWorks = modal.style.display === 'none';
+                    modal.style.display = originalDisplay;
+                }
+            }
+
+            checks.pickBindingWorks = pickBindingWorks;
+            checks.pickBindingNoRecursion = pickBindingNoRecursion;
+            checks.modalCloseBindingWorks = modalCloseBindingWorks;
+
             return {
                 ok: Object.values(checks).every(Boolean) && Array.isArray(schools),
                 checks,

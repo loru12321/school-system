@@ -47,10 +47,11 @@ assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 's
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-// 352: the freshman module's six upload/data-source handlers moved into
-// freshman-exam-runtime.js as declarative data-fb-pick / data-fb-change
-// bindings. Ratchet only downward from here.
-assert.ok(inlineHandlerCount <= 352, `inline event handler count grew: ${inlineHandlerCount} > 352`);
+// 323: the freshman module's six upload/data-source handlers moved into
+// freshman-exam-runtime.js (data-fb-pick / data-fb-change), and the 17
+// modal-close plus 12 file-pick boilerplate handlers moved into the delegated
+// binder in app-foundation-runtime.js. Ratchet only downward from here.
+assert.ok(inlineHandlerCount <= 323, `inline event handler count grew: ${inlineHandlerCount} > 323`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 // The freshman module's upload/data-source controls are bound declaratively in
@@ -76,6 +77,41 @@ assert.ok(
 assert.ok(
     /\/\^FB_\[A-Za-z0-9_\]\+\$\/\.test\(handlerName\)/.test(freshmanRuntime),
     'the data-fb-change dispatcher must restrict itself to FB_* handlers'
+);
+
+// Modal-close and file-pick boilerplate is served by one delegated listener in
+// app-foundation-runtime.js. Keep the markup free of the old inline idioms and
+// keep the binder's safety guards in place.
+const foundationRuntime = fs.readFileSync(path.join(root, 'public/assets/js/app-foundation-runtime.js'), 'utf8');
+assert.ok(
+    !/onclick="document\.getElementById\('[^']+'\)\.style\.display='none'"/.test(html),
+    'modal close buttons should use data-close-modal instead of an inline display toggle'
+);
+assert.ok(
+    !/onclick="document\.getElementById\('[^']+'\)\.click\(\)"/.test(html),
+    'file pick triggers should use data-pick-file instead of an inline click proxy'
+);
+assert.ok(count(/data-close-modal=/g) >= 17, 'declarative modal close bindings should stay wired in the markup');
+assert.ok(count(/data-pick-file=/g) >= 12, 'declarative file pick bindings should stay wired in the markup');
+assert.ok(
+    /function installDeclarativeDomBindings\(/.test(foundationRuntime)
+        && /installDeclarativeDomBindings\(\);/.test(foundationRuntime)
+        && /\[data-close-modal\], \[data-pick-file\]/.test(foundationRuntime),
+    'app foundation runtime must define and invoke the delegated DOM binder'
+);
+assert.ok(
+    /target === origin \|\| target\.contains\(origin\)/.test(foundationRuntime),
+    'the file pick binder must not recurse when the hidden input sits inside the upload box'
+);
+assert.ok(
+    /if \(target\.disabled\) return;/.test(foundationRuntime),
+    'the file pick binder must respect archive-locked (disabled) file inputs'
+);
+// Some modals stop propagation on .modal-content to implement click-outside-to-close,
+// which would starve a bubble-phase document listener for the close button inside it.
+assert.ok(
+    /\}, true\);/.test(foundationRuntime),
+    'the delegated DOM binder must listen in the capture phase to survive stopPropagation wrappers'
 );
 
 console.log(`html hygiene tests passed: style=${inlineStyleCount}, handlers=${inlineHandlerCount}`);
