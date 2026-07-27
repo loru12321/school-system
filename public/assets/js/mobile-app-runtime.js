@@ -59,7 +59,13 @@
     let allowedCategoriesCache = null;
     let allowedItemCache = new Map();
 
+    // 复用 runtime-registry 的规范实现（与 account-manager / data-manager-* 同一委托模式）；
+    // 本地实现仅作加载顺序兜底，行为与规范版一致。
     function escapeHtml(value) {
+        const shared = window.SchoolRuntime && typeof window.SchoolRuntime.escapeHtml === 'function'
+            ? window.SchoolRuntime.escapeHtml
+            : null;
+        if (shared) return shared(value);
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
             '&': '&amp;',
             '<': '&lt;',

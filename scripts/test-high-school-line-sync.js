@@ -254,7 +254,20 @@ assert.ok(
     'exam-analysis-package-runtime: export-side gate must use typeof window.isHighSchoolAdmissionExamAllowed guard'
 );
 
-console.log('✅ 6. 二模 admission gate intact — passed');
+// The gate must be fail-CLOSED: when the gate function is unavailable the export
+// has to return 0, not fall through to reading highSchoolLine. The old
+// `typeof ... === 'function' && !allowed()` form skipped the gate entirely on a
+// missing dependency, which is the same divergence the comment above warns about.
+assert.ok(
+    /typeof window\.isHighSchoolAdmissionExamAllowed !== 'function'\)\s*\{[\s\S]{0,240}?return 0;/.test(pkgSource),
+    'exam-analysis-package-runtime: a missing admission gate must fail closed (return 0), never skip the gate'
+);
+assert.ok(
+    !/typeof window\.isHighSchoolAdmissionExamAllowed === 'function'\s*\n?\s*&&\s*!window\.isHighSchoolAdmissionExamAllowed\(\)/.test(pkgSource),
+    'exam-analysis-package-runtime: the fail-open guard form must not come back'
+);
+
+console.log('✅ 6. 二模 admission gate intact (fail-closed) — passed');
 
 // ─── 7. cloud-workspace-runtime hasWorkspaceIndicatorParams includes highSchoolLine ─
 

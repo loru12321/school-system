@@ -31,7 +31,16 @@
         } catch (_) {}
     }
 
+    // 复用 runtime-registry 的规范实现（与 account-manager / data-manager-* 同一委托模式）；
+    // 本地实现仅作加载顺序兜底。
+    // 注意：本地兜底沿用原先的 `value || ''`，与规范版的 `value ?? ''` 在 0 / false 上
+    // 语义不同（前者输出空串）。已逐一核对本文件全部 escapeHtml 调用点，传入的都是字符串
+    // 或已带默认值的表达式（如 `key || '未选择'`），0 / false 不会到达这里，故委托安全。
     function escapeHtml(value) {
+        const shared = root.SchoolRuntime && typeof root.SchoolRuntime.escapeHtml === 'function'
+            ? root.SchoolRuntime.escapeHtml
+            : null;
+        if (shared) return shared(value);
         return String(value || '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')

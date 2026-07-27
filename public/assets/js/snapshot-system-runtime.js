@@ -427,7 +427,10 @@ function applySnapshotPayload(db, options = {}) {
             const meta = readArchiveMeta();
             const termId = getTermId(meta || {});
             if (termId) writeCurrentTermId(termId);
-        } catch (e) { }
+        } catch (e) {
+            // 学期 id 写入失败会让后续按学期取任课数据落到错误学期，留痕便于排查。
+            console.warn('[snapshot] 写入当前学期 id 失败，按学期取任课数据可能不准', e);
+        }
     }
     syncDataRuntimeState({
         rawData: db.RAW_DATA || [],
@@ -440,7 +443,12 @@ function applySnapshotPayload(db, options = {}) {
     const incomingTeacherSchoolMap = db.TEACHER_SCHOOL_MAP && typeof db.TEACHER_SCHOOL_MAP === 'object' ? db.TEACHER_SCHOOL_MAP : {};
     const resolvedTeachers = resolveSnapshotTeacherMaps(db, incomingTeacherMap, incomingTeacherSchoolMap);
     if (resolvedTeachers.termId && typeof syncTeacherTermStorage === 'function') {
-        try { syncTeacherTermStorage(resolvedTeachers.termId); } catch (e) { }
+        try {
+            syncTeacherTermStorage(resolvedTeachers.termId);
+        } catch (e) {
+            console.warn('[snapshot] 同步任课学期存储失败，教师任课数据可能与当前学期不一致',
+                { termId: resolvedTeachers.termId, error: e });
+        }
     }
     setTeacherMap(resolvedTeachers.map || {});
     setTeacherSchoolMap(resolvedTeachers.schoolMap || {});
@@ -498,7 +506,13 @@ function applySnapshotPayload(db, options = {}) {
                 renderTables: false,
                 recalculate: false
             });
-        } catch (e) { }
+        } catch (e) {
+            // 不改变控制流（快照其余部分已应用，抛出会让恢复半途而废），但必须留痕：
+            // 这一步失败意味着工作区仍是上一份考试的数据，而界面已按新快照呈现，
+            // 属于「用户可能误判数据」的静默失败，之前完全无迹可查。
+            console.warn('[snapshot] applyExamToWorkspace 失败，工作区可能仍为上一份考试数据',
+                { examId: window.COHORT_DB.currentExamId, error: e });
+        }
     }
 
     syncSnapshotCohortShell(CURRENT_COHORT_ID);

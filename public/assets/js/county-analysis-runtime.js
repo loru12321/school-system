@@ -45,7 +45,13 @@
     const COUNTY_SUBJECT_ORDER_GRADE9 = ['语文', '数学', '英语', '物理', '化学', '政治'];
     const COUNTY_SUBJECT_ORDER_GRADE678 = ['语文', '数学', '英语', '物理', '化学', '历史', '地理', '生物', '政治'];
 
+    // 复用 runtime-registry 的规范实现（与 account-manager / data-manager-* 同一委托模式）；
+    // 本地实现仅作加载顺序兜底，行为与规范版一致（String(value ?? '') + 同一字符映射）。
     function escapeHtml(value) {
+        const shared = window.SchoolRuntime && typeof window.SchoolRuntime.escapeHtml === 'function'
+            ? window.SchoolRuntime.escapeHtml
+            : null;
+        if (shared) return shared(value);
         return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
             '&': '&amp;',
             '<': '&lt;',

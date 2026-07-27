@@ -1664,9 +1664,36 @@ async function runModuleDeepCheck(page, id) {
                 finite,
                 refreshDoesNotMutate: beforeRefresh === afterRefresh
             };
+
+            // 后1/3 赋分自一致性：scoreBottom 必须等于 bottom3.avg / max(bottom3.avg) * 40。
+            // 归一化基准是**乡镇范围内**的学校（data-processing-worker.js:280 先用
+            // townshipSchoolSet 过滤才算 maxBAvg），用全量 SCHOOLS 会让期望值等比偏小。
+            // 复用本 deep-check 上方已按同一乡镇口径筛出的 rows（含 name/avg/score/rank）。
+            //
+            // 作用范围说明（重要）：本 smoke 不触发 processData，scoreBottom 来自云端
+            // 工作区恢复值，因此这里校验的是「渲染值与其自身 bottom3.avg 是否自一致」，
+            // 可捕获恢复/序列化/渲染链路上的漂移；它**不**执行 worker，所以改动
+            // data-processing-worker.js 的系数不会被本断言捕获。worker 侧公式需由
+            // calc-snapshot 或独立单元测试覆盖。
+            const maxBottomAvg = rows.reduce((max, row) => Math.max(max, toNumber(row.avg)), 0);
+            const bottomScoreMismatches = rows.map((row) => ({
+                school: row.name,
+                rendered: toNumber(row.score),
+                expected: maxBottomAvg > 0 ? toNumber(row.avg) / maxBottomAvg * 40 : 0
+            })).filter((row) => Math.abs(row.rendered - row.expected) > 0.02);
+            checks.bottomScoreMatchesFormula = bottomScoreMismatches.length === 0;
+
+            // rankBottom 必须与 scoreBottom 降序一致（严格递增，允许并列时的稠密名次差异）。
+            const rankOrdered = rows.slice().sort((a, b) => toNumber(b.score) - toNumber(a.score));
+            checks.bottomRankMatchesOrder = rankOrdered.every((row, index) => {
+                if (index === 0) return true;
+                return toNumber(row.rank) >= toNumber(rankOrdered[index - 1].rank);
+            });
+
             return {
                 ok: Object.values(checks).every(Boolean),
                 checks,
+                bottomScoreMismatches: bottomScoreMismatches.slice(0, 5),
                 count: rows.length,
                 tableRowCount,
                 averageScore: Number(expectedAverage.toFixed(2)),

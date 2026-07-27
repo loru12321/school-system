@@ -74,4 +74,43 @@ assert.ok(comparisonRender.includes('${comparisonEscapeHtml(value)}'), 'select o
 assert.ok(!/\$\{m\.name\}\s/.test(comparisonRender), 'comparison must not interpolate raw ${m.name}');
 assert.ok(!/\$\{g\.leader\.name\}\s/.test(comparisonRender), 'comparison must not interpolate raw ${g.leader.name}');
 
+// runtime-registry exposes the canonical escapeHtml (String(value ?? '') + the
+// shared character map). Runtimes with a local escapeHtml should delegate to it and
+// keep their own copy only as a load-order fallback, so a fix to the canonical
+// escaper reaches every caller instead of having to be applied file by file.
+// runtime-registry-runtime.js is loaded before boot-runtime (asserted in
+// test-html-hygiene.js), so the delegation always resolves in practice.
+assert.ok(
+    read('public/assets/js/runtime-registry-runtime.js').includes('escapeHtml'),
+    'runtime-registry must expose the canonical escapeHtml on SchoolRuntime'
+);
+[
+    'public/assets/js/account-manager-runtime.js',
+    'public/assets/js/county-analysis-runtime.js',
+    'public/assets/js/data-cloud-runtime.js',
+    'public/assets/js/data-manager-archive-runtime.js',
+    'public/assets/js/data-manager-targets-runtime.js',
+    'public/assets/js/login-session-runtime.js',
+    'public/assets/js/mobile-app-runtime.js',
+    'public/assets/js/teaching-management-modules-runtime.js',
+    'public/assets/js/upload-school-map-runtime.js'
+].forEach((relPath) => {
+    assert.ok(
+        /SchoolRuntime\.escapeHtml/.test(read(relPath)),
+        `${relPath}: local escapeHtml must delegate to SchoolRuntime.escapeHtml`
+    );
+});
+
+// Two runtimes keep different semantics on purpose: data-quality trims before
+// escaping (normalizeText), teaching-assessment-sync delegates to the global
+// tmEscapeHtml. Guard both so nobody "unifies" them and silently changes output.
+assert.ok(
+    read('public/assets/js/data-quality-runtime.js').includes('normalizeText(value).replace'),
+    'data-quality escapeHtml must keep its trimming semantics'
+);
+assert.ok(
+    read('public/assets/js/teaching-assessment-sync-runtime.js').includes('tmEscapeHtml'),
+    'teaching-assessment-sync escapeHtml must keep delegating to tmEscapeHtml'
+);
+
 console.log('xss escaping contract tests passed');

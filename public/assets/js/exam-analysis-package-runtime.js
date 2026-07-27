@@ -286,8 +286,15 @@
         // 二模/非7月数据下网页 calculateHighSchoolAdmissionStatsForSummary 强制 line=0、赋分为0，
         // 导出也必须为0，否则分析包会按 total>=line 算出非零上线率赋分并计入综合总分，与网页背离，
         // 且违反「没有7月中考成绩时高中上线率不能出现正式非零分」。
-        if (typeof window.isHighSchoolAdmissionExamAllowed === 'function'
-            && !window.isHighSchoolAdmissionExamAllowed()) {
+        // fail-closed：门禁函数定义在 app.js（boot CORE）。本运行时是 demand 加载，
+        // 正常情况下它必然已就位；但若因加载顺序异常而缺失，必须按「不允许」处理并返回 0，
+        // 绝不能跳过门禁直接去读分数线 —— 否则二模/非7月又会算出非零上线率赋分并计入
+        // 综合总分，正是上面注释描述的那个背离。
+        if (typeof window.isHighSchoolAdmissionExamAllowed !== 'function') {
+            console.warn('[exam-analysis-package] isHighSchoolAdmissionExamAllowed 不可用，高中上线率按 0 处理（fail-closed）');
+            return 0;
+        }
+        if (!window.isHighSchoolAdmissionExamAllowed()) {
             return 0;
         }
         const indicator = typeof window.readIndicatorState === 'function'
