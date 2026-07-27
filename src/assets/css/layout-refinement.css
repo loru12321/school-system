@@ -595,6 +595,28 @@
     font-weight: 800;
 }
 
+/* 「本次必看」子导航的步骤序号：这一类是有先后关系的流水线，用序号让新任教务
+   知道从哪开始、下一步去哪。其余分类是并列关系，不加序号。 */
+.shell-story-card__step {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 2px;
+    border-radius: 50%;
+    background: #4f46e5;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.shell-story-card.active .shell-story-card__step {
+    background: #312e81;
+}
+
 /* 本次要点：中性信息色，与上方红色「需重新汇总」警示区分开，避免被误读为异常。 */
 .summary-highlights {
     margin: 14px 0 4px;

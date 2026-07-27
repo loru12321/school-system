@@ -4960,7 +4960,11 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
                     itemIds,
                     summaryOwnerCategory: ownerOfSummary,
                     // core 不得成为任何模块的归属分类。
-                    ownerNotCore: ownerOfSummary !== 'core'
+                    ownerNotCore: ownerOfSummary !== 'core',
+                    // 本探针在登录后取值，此时当前分类是默认的 data（非 core），
+                    // 因此步骤序号数应为 0 —— 用于守住「序号不外溢到其他分类」。
+                    // core 自身带序号的验证在下方 coreWorkflowSteps 里做。
+                    stepBadgeCountOnDefaultCategory: document.querySelectorAll('#sub-nav-container .shell-story-card__step').length
                 };
             })(),
             overlayHidden: getComputedStyle(document.getElementById('login-overlay')).display === 'none',
@@ -5011,6 +5015,41 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     if (!summary.login.totalSubjectPresentationReady) {
         errors.push({ scope: 'startup', message: `total subject label mismatch: ${summary.login.totalSubjectLabel || 'missing'}` });
     }
+
+    // 「本次必看」是一条按汇报顺序排的流水线：点进去后必须拿到 6 个带序号的步骤卡片，
+    // 且当前分类要停在 core（曾出现过被 switchTab 改回模块原分类的 bug）。
+    // 静态配置证明不了这些，必须真的点一次。
+    currentScope = 'core-workflow-nav';
+    const coreWorkflowSteps = await (async () => {
+        try {
+            await page.click('#sidebar-nav .sidebar-menu-item:first-child');
+            await page.waitForTimeout(1200);
+            return await page.evaluate(() => {
+                const cards = Array.from(document.querySelectorAll('#sub-nav-container .shell-story-card'));
+                return {
+                    category: typeof window.getCurrentNavCategory === 'function' ? window.getCurrentNavCategory() : '',
+                    highlighted: String(document.querySelector('#sidebar-nav .sidebar-menu-item.active .sidebar-menu-item__title')?.textContent || '').trim(),
+                    steps: cards.map((card) => String(card.querySelector('.shell-story-card__step')?.textContent || '').trim()),
+                    titles: cards.map((card) => String(card.querySelector('.shell-story-card__title')?.textContent || '').trim())
+                };
+            });
+        } catch (error) {
+            return { error: String(error?.message || error).slice(0, 160) };
+        }
+    })();
+    summary.coreWorkflowSteps = coreWorkflowSteps;
+    if (coreWorkflowSteps.error) {
+        errors.push({ scope: 'core-workflow-nav', message: `core workflow nav probe failed: ${coreWorkflowSteps.error}` });
+    } else {
+        if (coreWorkflowSteps.category !== 'core') {
+            errors.push({ scope: 'core-workflow-nav', message: `clicking 本次必看 left category as ${coreWorkflowSteps.category || 'empty'}` });
+        }
+        const expectedSteps = ['1', '2', '3', '4', '5', '6'];
+        if (coreWorkflowSteps.steps.join(',') !== expectedSteps.join(',')) {
+            errors.push({ scope: 'core-workflow-nav', message: `core workflow steps not numbered 1-6: ${coreWorkflowSteps.steps.join('|') || 'none'}` });
+        }
+    }
+
     currentScope = 'hotspot-prewarm';
     trace('hotspot-prewarm:start');
     summary.performance.hotspotPrewarm = await prewarmSmokeHotspots(page);

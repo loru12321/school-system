@@ -18,6 +18,17 @@
     // 再给一个「常用」反而是多余的一层。
     const CORE_WORKFLOW_ROLES = new Set(['admin', 'director']);
 
+    // 「本次必看」里各步的说明。与通用 hint 的区别：通用 hint 说「这个模块是什么」，
+    // 这里说「这一步在汇报流程里解决什么、看完往哪走」——新任教务照着走即可成稿。
+    const CORE_WORKFLOW_STEP_HINTS = {
+        summary: '先定整体站位：本校排第几、和第一名差多少。汇报开头用这个。',
+        analysis: '再拆到学科：哪一科拉分、哪一科拖后腿。',
+        'teacher-analysis': '看人：各位教师所带班级的表现，注意结合生源判断。',
+        'teacher-detail-comparison': '要具体数字时看这里，可直接取数填汇报表。',
+        'teacher-township-ranking': '需要对外比较时用：教师在乡镇同学科中的位置。',
+        'student-details': '最后落到学生个人，为家长会和补弱名单做准备。'
+    };
+
     const NAV_STRUCTURE = {
         data: {
             title: '数据管理',
@@ -1074,13 +1085,24 @@
                 card.classList.add('active');
             }
 
+            // 「本次必看」是按汇报顺序排的一条流水线，给它的卡片加步骤序号与
+            // 「这一步做什么」的说明；其余分类是并列关系，保持原样不加序号。
+            const isCoreWorkflow = currentCategory === 'core';
+            const stepBadge = isCoreWorkflow
+                ? `<span class="shell-story-card__step">${index + 1}</span>`
+                : '';
+            const desc = isCoreWorkflow
+                ? (CORE_WORKFLOW_STEP_HINTS[item.id] || item.hint)
+                : item.hint;
+
             card.innerHTML = `
+                ${stepBadge}
                 <span class="shell-story-card__icon">
                     <i class="ti ${item.icon}"></i>
                 </span>
                 <span class="shell-story-card__body">
                     <span class="shell-story-card__title">${item.text}</span>
-                    <span class="shell-story-card__desc">${item.hint}</span>
+                    <span class="shell-story-card__desc">${desc}</span>
                 </span>
                 <i class="ti ti-chevron-right shell-story-card__chevron"></i>
             `;
