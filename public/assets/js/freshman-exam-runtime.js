@@ -345,6 +345,36 @@ function FB_toggleDataSource() {
     if (cloudStatus) cloudStatus.style.display = (src === 'manual') ? 'none' : 'block';
 }
 
+// 声明式事件绑定：把本模块原先散在 index.html 上的内联 onclick/onchange
+// 收敛为 data-fb-pick（点击代理到隐藏 file input）和 data-fb-change（change
+// 转发到同名 FB_* 函数）。行为与内联属性完全等价——两者都依赖本运行时按需
+// 加载完成后 FB_* 才存在，而本函数就在加载末尾调用。
+// 幂等：每个节点用 dataset 标记，重复调用不会重复绑定。
+function FB_bindDeclarativeHandlers(root = document) {
+    const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+
+    scope.querySelectorAll('[data-fb-pick]').forEach((box) => {
+        if (box.dataset.fbPickBound === '1') return;
+        box.dataset.fbPickBound = '1';
+        box.addEventListener('click', () => {
+            const target = document.getElementById(String(box.dataset.fbPick || '').trim());
+            if (target) target.click();
+        });
+    });
+
+    scope.querySelectorAll('[data-fb-change]').forEach((el) => {
+        if (el.dataset.fbChangeBound === '1') return;
+        el.dataset.fbChangeBound = '1';
+        el.addEventListener('change', () => {
+            const handlerName = String(el.dataset.fbChange || '').trim();
+            // 只允许调用本模块导出的 FB_* 入口,避免 data 属性变成任意函数跳板。
+            if (!/^FB_[A-Za-z0-9_]+$/.test(handlerName)) return;
+            const handler = window[handlerName];
+            if (typeof handler === 'function') handler(el);
+        });
+    });
+}
+
 // 数据体检状态条（显示匹配/缺项/违纪/重名概况）。
 function FB_updateAssemblyStatus() {
     const el = document.getElementById('fb_assembly_status');
@@ -2270,6 +2300,13 @@ function EXAM_exportResult() {
     if (typeof EXAM_initProctorUI === 'function') window.EXAM_initProctorUI = EXAM_initProctorUI;
     if (typeof EXAM_assignProctors === 'function') window.EXAM_assignProctors = EXAM_assignProctors;
     if (typeof EXAM_exportResult === 'function') window.EXAM_exportResult = EXAM_exportResult;
+    if (typeof FB_bindDeclarativeHandlers === 'function') window.FB_bindDeclarativeHandlers = FB_bindDeclarativeHandlers;
+
+    // 绑定必须在上面的 window.FB_* 导出之后:data-fb-change 通过 window[name]
+    // 解析处理器。本运行时是按需加载的,DOM 此时已是静态首屏的一部分。
+    try {
+        FB_bindDeclarativeHandlers(document);
+    } catch (_) { /* 绑定失败不应阻断模块其余功能 */ }
 
     window.__FRESHMAN_EXAM_RUNTIME_PATCHED__ = true;
 })();

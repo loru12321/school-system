@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-c6eb2a2cda88.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-c6eb2a2cda88.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-e64bbbd958a1.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-e64bbbd958a1.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -2276,7 +2276,7 @@
                     <div style="border:1px solid #e2e8f0; border-radius:10px; padding:15px; margin-bottom:15px; background:#f8fafc;">
                         <div style="display:flex; flex-wrap:wrap; gap:15px; align-items:end;">
                             <div style="min-width:170px;"><label class="stat-label">成绩来源</label>
-                                <select id="fb_data_source" style="width:100%;" onchange="FB_toggleDataSource && FB_toggleDataSource()">
+                                <select id="fb_data_source" style="width:100%;" data-fb-change="FB_toggleDataSource">
                                     <option value="cloud" selected>云端最近成绩（推荐）</option>
                                     <option value="manual">手动导入 Excel</option>
                                 </select></div>
@@ -2292,16 +2292,16 @@
                                     <option value="3">最近 3 次</option>
                                 </select></div>
                             <div class="upload-box" style="flex:1; min-width:190px; padding:12px;"
-                                onclick="document.getElementById('fbGenderInput').click()">
+                                data-fb-pick="fbGenderInput">
                                 <div style="font-weight:bold; font-size:13px;"><i class="ti ti-friends"></i> 上传性别名单</div>
                                 <div style="font-size:11px; color:#64748b;">列：姓名, 性别 [, 考号]</div>
-                                <input type="file" id="fbGenderInput" accept=".xlsx,.xls" hidden onchange="FB_loadGenderList(this)">
+                                <input type="file" id="fbGenderInput" accept=".xlsx,.xls" hidden data-fb-change="FB_loadGenderList">
                             </div>
                             <div class="upload-box" style="flex:1; min-width:190px; padding:12px;"
-                                onclick="document.getElementById('fbViolationInput').click()">
+                                data-fb-pick="fbViolationInput">
                                 <div style="font-weight:bold; font-size:13px;"><i class="ti ti-alert-triangle"></i> 上传违纪名单</div>
                                 <div style="font-size:11px; color:#64748b;">列：姓名 [, 考号]</div>
-                                <input type="file" id="fbViolationInput" accept=".xlsx,.xls" hidden onchange="FB_loadViolationList(this)">
+                                <input type="file" id="fbViolationInput" accept=".xlsx,.xls" hidden data-fb-change="FB_loadViolationList">
                             </div>
                         </div>
                         <div id="fb_assembly_status" style="margin-top:10px; font-size:12px; color:#475569; background:#fff; border:1px dashed #cbd5e1; border-radius:6px; padding:8px 10px;">
@@ -2311,11 +2311,11 @@
                     <div id="fb_manual_upload_row"
                         style="display:none; gap:20px; flex-wrap:wrap; border-bottom:1px dashed #cbd5e1; padding-bottom:15px; margin-bottom:15px;">
                         <div class="upload-box" style="flex:1; padding:20px; min-width:250px;"
-                            onclick="document.getElementById('fbFileInput').click()">
+                            data-fb-pick="fbFileInput">
                             <div class="upload-icon"><i class="ti ti-file-import"></i></div>
                             <div style="font-weight:bold;">点击导入新生名单 Excel</div>
                             <div style="font-size:12px; color:#64748b;">必需: 姓名,性别,总分 | 可选: 身高,视力,备注(关系)</div>
-                            <input type="file" id="fbFileInput" accept=".xlsx,.xls" hidden onchange="FB_loadData(this)">
+                            <input type="file" id="fbFileInput" accept=".xlsx,.xls" hidden data-fb-change="FB_loadData">
                         </div>
                     </div>
                     <div style="border-bottom:1px dashed #cbd5e1; padding-bottom:15px; margin-bottom:15px;">

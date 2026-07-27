@@ -47,10 +47,35 @@ assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 's
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-// 359: the freshman balanced-class module added a data-source select plus the
-// gender/violation roster upload boxes, each following the existing hidden
-// file-input pattern. Ratchet only downward from here.
-assert.ok(inlineHandlerCount <= 359, `inline event handler count grew: ${inlineHandlerCount} > 359`);
+// 352: the freshman module's six upload/data-source handlers moved into
+// freshman-exam-runtime.js as declarative data-fb-pick / data-fb-change
+// bindings. Ratchet only downward from here.
+assert.ok(inlineHandlerCount <= 352, `inline event handler count grew: ${inlineHandlerCount} > 352`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
+
+// The freshman module's upload/data-source controls are bound declaratively in
+// freshman-exam-runtime.js. Keep the markup and the binder in sync so neither
+// side can drift back to inline attributes or silently drop the listeners.
+const freshmanRuntime = fs.readFileSync(path.join(root, 'public/assets/js/freshman-exam-runtime.js'), 'utf8');
+const freshmanPickTargets = ['fbGenderInput', 'fbViolationInput', 'fbFileInput'];
+freshmanPickTargets.forEach((id) => {
+    assert.ok(html.includes(`data-fb-pick="${id}"`), `freshman upload box for ${id} should open its file input declaratively`);
+    assert.ok(!new RegExp(`onclick="[^"]*${id}`).test(html), `freshman upload box for ${id} should not use an inline onclick`);
+});
+['FB_loadGenderList', 'FB_loadViolationList', 'FB_loadData', 'FB_toggleDataSource'].forEach((handler) => {
+    assert.ok(html.includes(`data-fb-change="${handler}"`), `${handler} should be wired through data-fb-change`);
+    assert.ok(!new RegExp(`on(?:change|click)="[^"]*${handler}`).test(html), `${handler} should not be wired through an inline attribute`);
+});
+assert.ok(
+    /function FB_bindDeclarativeHandlers\(/.test(freshmanRuntime)
+        && /\[data-fb-pick\]/.test(freshmanRuntime)
+        && /\[data-fb-change\]/.test(freshmanRuntime)
+        && /FB_bindDeclarativeHandlers\(document\)/.test(freshmanRuntime),
+    'freshman runtime must define and invoke the declarative handler binder'
+);
+assert.ok(
+    /\/\^FB_\[A-Za-z0-9_\]\+\$\/\.test\(handlerName\)/.test(freshmanRuntime),
+    'the data-fb-change dispatcher must restrict itself to FB_* handlers'
+);
 
 console.log(`html hygiene tests passed: style=${inlineStyleCount}, handlers=${inlineHandlerCount}`);

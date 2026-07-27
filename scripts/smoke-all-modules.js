@@ -3889,6 +3889,46 @@ async function runModuleDeepCheck(page, id) {
                 };
             });
 
+            // The upload boxes and the data-source select are wired declaratively
+            // (data-fb-pick / data-fb-change) instead of inline attributes. Drive
+            // real DOM events so a missing binder is caught here rather than only
+            // by the static markup contract.
+            const dataSourceSelect = document.getElementById('fb_data_source');
+            const manualRow = document.getElementById('fb_manual_upload_row');
+            let declarativeChangeBound = false;
+            if (dataSourceSelect && manualRow) {
+                const originalSource = dataSourceSelect.value;
+                dataSourceSelect.value = 'manual';
+                dataSourceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                const shownForManual = manualRow.style.display === 'flex';
+                dataSourceSelect.value = 'cloud';
+                dataSourceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                const hiddenForCloud = manualRow.style.display === 'none';
+                declarativeChangeBound = shownForManual && hiddenForCloud;
+                dataSourceSelect.value = originalSource;
+                dataSourceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            let declarativePickBound = false;
+            const pickBox = document.querySelector('[data-fb-pick="fbFileInput"]');
+            const pickTarget = document.getElementById('fbFileInput');
+            if (pickBox && pickTarget) {
+                const originalClick = pickTarget.click;
+                let clicked = 0;
+                pickTarget.click = () => { clicked += 1; };
+                try {
+                    pickBox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                } finally {
+                    pickTarget.click = originalClick;
+                }
+                declarativePickBound = clicked === 1;
+            }
+            checks.declarativeChangeBound = declarativeChangeBound;
+            checks.declarativePickBound = declarativePickBound;
+            if (!declarativeChangeBound || !declarativePickBound) {
+                return { ok: false, checks };
+            }
+
             const alerts = [];
             const originalAlert = window.alert;
             const originalUiAlert = window.UI?.alert;
@@ -3902,7 +3942,15 @@ async function runModuleDeepCheck(page, id) {
                 };
             }
             try {
-                window.FB_loadData({ files: [makeWorkbookFile(sampleRows, 'freshman-smoke.xlsx')], value: '' });
+                // Exercise the real declarative change binding for the manual import
+                // path instead of calling FB_loadData directly.
+                const manualInput = document.getElementById('fbFileInput');
+                manualInput.__smokeFiles = [makeWorkbookFile(sampleRows, 'freshman-smoke.xlsx')];
+                Object.defineProperty(manualInput, 'files', {
+                    configurable: true,
+                    get() { return this.__smokeFiles; }
+                });
+                manualInput.dispatchEvent(new Event('change', { bubbles: true }));
                 await waitUntil(() => runtime.students.length === sampleRows.length);
 
                 const classInput = document.getElementById('fb_cls_num');
