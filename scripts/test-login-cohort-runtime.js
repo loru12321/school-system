@@ -188,8 +188,15 @@ assert.strictEqual(guardContext.isCurrentCohortSwitch(firstSwitch), false,
 assert.strictEqual(guardContext.isCurrentCohortSwitch(secondSwitch), true,
     'only the latest requested cohort switch may update workspace state');
 assert.ok(
-    /const readyGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*completeCohortSwitch\(readyGuard\);[\s\S]*if \(!options\.skipConfirm && !confirm[\s\S]*const switchGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*const isCurrentSwitch = \(\) => isCurrentCohortSwitch\(switchGuard\);[\s\S]*const cohortDbRuntime = await ensureCohortDbForSwitch\(cohortId\);\s*if \(!isCurrentSwitch\(\)\) return false;[\s\S]*const cachedData = options\.preloadedData \|\| await DB\.get\(cohortKey, \{ localOnly: true \}\);\s*if \(!isCurrentSwitch\(\)\) return false;/.test(appSource),
+    /const readyGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*completeCohortSwitch\(readyGuard\);[\s\S]*if \(!options\.skipConfirm && !confirm[\s\S]*const switchGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*const isCurrentSwitch = \(\) => isCurrentCohortSwitch\(switchGuard\);[\s\S]*const cohortDbRuntime = await ensureCohortDbForSwitch\(cohortId\);\s*if \(!isCurrentSwitch\(\)\) return false;[\s\S]*const cachedData = options\.preloadedData \|\|(?: [A-Za-z_$][\w$]* \|\|)* await DB\.get\(cohortKey, \{ localOnly: true \}\);\s*if \(!isCurrentSwitch\(\)\) return false;/.test(appSource),
     'cohort switching must reject stale async runtime and cache responses before they mutate workspace state'
+);
+// The cold-login warm-up awaits a batched cloud read before `cachedData` is
+// resolved, so it needs its own staleness check: without it a slow warm-up for
+// an older cohort could still feed `bootstrapPreloaded` into a newer switch.
+assert.ok(
+    /await DB\.warmColdLoginCaches\(cohortKey\);[\s\S]{0,600}?if \(!isCurrentSwitch\(\)\) return false;\s*\}/.test(appSource),
+    'the cold-login cache warm-up must re-check the switch guard before its payload is used'
 );
 assert.ok(
     /\.then\(\(syncRes\) => \{\s*if \(!isCurrentSwitch\(\)\) return false;[\s\S]*const restored = await hydrateFromExamArchive\(\);\s*if \(!isCurrentSwitch\(\)\) return false;/.test(appSource),
