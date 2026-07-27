@@ -1190,11 +1190,27 @@
         if (id === 'student-details') return initStudentDetailsEntry();
         if (id === 'summary') return initSummaryEntry();
         if (id === 'analysis') {
-            scheduleActiveModuleTask('analysis', 'analysis-entry-selects', () => {
-                if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-                renderSingleSchoolAnalysisHint();
-            }, { delay: 40, frame: true });
-            scheduleMacroTablesRender('analysis', 'analysis-tables');
+            const initializeAnalysis = () => {
+                scheduleActiveModuleTask('analysis', 'analysis-entry-selects', () => {
+                    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                    renderSingleSchoolAnalysisHint();
+                }, { delay: 40, frame: true });
+                scheduleMacroTablesRender('analysis', 'analysis-tables');
+                return true;
+            };
+            // The compatibility runtime used to rely on background hydration.
+            // That leaves the analysis shell interactive but its comparison and
+            // export actions absent on lazy connections. Load it on entry instead.
+            if (typeof window.ensureMacroAnalysisCompatRuntimeLoaded === 'function'
+                && !window.__MACRO_ANALYSIS_COMPAT_RUNTIME_PATCHED__) {
+                return window.ensureMacroAnalysisCompatRuntimeLoaded()
+                    .then(initializeAnalysis)
+                    .catch((error) => {
+                        console.warn('[analysis] macro compatibility runtime failed:', error);
+                        return false;
+                    });
+            }
+            return Promise.resolve(initializeAnalysis());
         }
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
         if (id === 'bottom3') scheduleMacroTablesRender('bottom3', 'bottom3-tables');

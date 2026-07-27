@@ -1635,6 +1635,19 @@ assert.ok(
 );
 assert.ok(reportHistoryRuntime.includes('cloudHistoryByStudent') && reportHistoryRuntime.includes('refreshHydratedStudentReport'), 'student report cloud history should refresh its own report without replacing cohort progress data');
 assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;'), 'teacher analysis should not leave an activated shell empty for over a second');
+assert.ok(
+    runtimeLoaderRuntime.includes("'macro-analysis-compat': bootSkill('demand', 'demand', ['analysis', 'renderHorizontalTable', 'exportHorizontalExcel', 'exportMacroTables']")
+        && runtimeLoaderRuntime.includes("bootEntry('macro-analysis-compat', bootJs('macro-analysis-compat-runtime.js'))")
+        && runtimeLoaderRuntime.includes('window.ensureMacroAnalysisCompatRuntimeLoaded = function ()')
+        && runtimeLoaderRuntime.includes("window.SystemRuntimeLoader.load('macro-analysis-compat')"),
+    'county analysis compatibility actions should have an on-demand runtime loader'
+);
+assert.ok(
+    moduleEntryRuntime.includes("if (typeof window.ensureMacroAnalysisCompatRuntimeLoaded === 'function'")
+        && moduleEntryRuntime.includes('return window.ensureMacroAnalysisCompatRuntimeLoaded()')
+        && moduleEntryRuntime.includes('macro compatibility runtime failed'),
+    'analysis entry should load its compatibility actions before rendering the interactive shell'
+);
 assert.ok(smokeAllModules.includes('waitForTeacherAutoRestore(page)'), 'module smoke should observe startup teacher auto restore before prewarming');
 assert.ok(!smokeAllModules.includes("name: 'restoreTeacherMap'"), 'module smoke must not repair teacher assignments during prewarm');
 assert.ok(smokeAllModules.includes('teacherCardsRendered'), 'teacher analysis smoke should require real teacher cards instead of accepting the shell');

@@ -92,6 +92,9 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('county-school-horizontal', bootJs('county-school-horizontal-runtime.js')),
     bootEntry('county-analysis', bootJs('county-analysis-runtime.js'))
 ]),
+'macro-analysis-compat': bootSkill('demand', 'demand', ['analysis', 'renderHorizontalTable', 'exportHorizontalExcel', 'exportMacroTables'], [
+    bootEntry('macro-analysis-compat', bootJs('macro-analysis-compat-runtime.js'))
+]),
 'progress-analysis': bootSkill('demand', 'full', ['progress-analysis'], [
     bootEntry('progress-analysis', bootJs('progress-analysis-runtime.js'))
 ]),
@@ -705,6 +708,10 @@ window.ensureCountyAnalysisRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('county-analysis');
 };
 
+window.ensureMacroAnalysisCompatRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('macro-analysis-compat');
+};
+
 window.ensureProgressAnalysisRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('progress-analysis');
 };
@@ -943,12 +950,16 @@ installOptionalRuntimeMethod(name, window.ensureSingleSchoolEvalRuntimeLoaded);
 });
 
 [
-'renderCountyAnalysis',
-'exportCountyAnalysisSection',
-'setCountyAnalysisSchoolNameFromInput',
-'generateCountySchoolHorizontalTable'
+    'renderCountyAnalysis',
+    'exportCountyAnalysisSection',
+    'setCountyAnalysisSchoolNameFromInput',
+    'generateCountySchoolHorizontalTable'
 ].forEach((name) => {
 installOptionalRuntimeMethod(name, window.ensureCountyAnalysisRuntimeLoaded);
+});
+
+['renderHorizontalTable', 'exportHorizontalExcel', 'exportMacroTables'].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureMacroAnalysisCompatRuntimeLoaded);
 });
 
 [
