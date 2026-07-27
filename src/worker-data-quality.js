@@ -7,6 +7,13 @@ import {
   queryRows, querySingleRow
 } from './worker-auth.js';
 
+// Maximum number of alias rules per batch. handleAliasSave 把每行展开成一条 D1 语句后
+// 走 db.batch()，不设上限时单个请求可以提交任意条数，既能耗尽 Worker CPU 预算也会让
+// D1 批次无界增长。与 worker-accounts.js 的 ACCOUNT_UPSERT_BATCH_LIMIT(50) 和
+// worker-assessment.js 的 ASSESSMENT_SYNC_BATCH_LIMIT(600) 同一套保护。
+// 取 500：别名规则是纯文本行（无 PBKDF2 之类重计算），远宽于账号批量，但仍为有界值。
+const ALIAS_SAVE_BATCH_LIMIT = 500;
+
 // ---------------------------------------------------------------------------
 // Row normalizers
 // ---------------------------------------------------------------------------
@@ -68,6 +75,11 @@ export async function handleAliasList(request, db, session, payload) {
 export async function handleAliasSave(request, db, session, payload) {
   if (!isAdminLike(session)) return forbidden(request, 'Only admin or director can save alias rules');
   const rows = Array.isArray(payload.rows) ? payload.rows : [payload];
+  // 在做任何写入（含 replace_scope 的 DELETE）之前先拒绝超限批次，避免出现
+  // 「先删掉整个 scope、再因批次过大失败」的半完成状态。
+  if (rows.length > ALIAS_SAVE_BATCH_LIMIT) {
+    return badRequest(request, `单次批量上限为 ${ALIAS_SAVE_BATCH_LIMIT} 条，本次提交 ${rows.length} 条，请分批提交`);
+  }
   const replaceScope = Boolean(payload.replace_scope ?? false);
   const sanitizedRows = rows.map((row) => ({
     id: normalizeText(row?.id) || crypto.randomUUID(),

@@ -1460,8 +1460,19 @@
 
         safeLoading(true, `正在批量删除 ${keys.length} 项...`);
         try {
-            const { error } = await deleteSystemDataRecords({ keyIn: keys });
-            if (error) throw error;
+            // 分批删除：服务端 key=in.(...) 的元素数受 D1 绑定变量上限约束
+            // （worker-system-data.js 的 SYSTEM_DATA_KEY_FILTER_IN_LIMIT=100，超限返回
+            // SYSTEM_DATA_DELETE_FILTER_TOO_LARGE，而不是静默只删前 N 个）。按 50 一批
+            // 顺序删除：既不触上限，失败时已删/未删的边界也清晰。
+            const DELETE_CHUNK_SIZE = 50;
+            for (let i = 0; i < keys.length; i += DELETE_CHUNK_SIZE) {
+                const chunk = keys.slice(i, i + DELETE_CHUNK_SIZE);
+                if (keys.length > DELETE_CHUNK_SIZE) {
+                    safeLoading(true, `正在批量删除 ${Math.min(i + chunk.length, keys.length)}/${keys.length} 项...`);
+                }
+                const { error } = await deleteSystemDataRecords({ keyIn: chunk });
+                if (error) throw error;
+            }
             clearCloudBackupListCache(manager);
             manager.cloudSelection.clear();
             safeToast(`✅ 批量删除成功（${keys.length}项）`, 'success');

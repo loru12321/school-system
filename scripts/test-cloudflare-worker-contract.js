@@ -227,9 +227,47 @@ assert.ok(gatewayContractSource.includes('second_mock_source') && gatewayContrac
 assert.ok(!gatewayContractSource.includes('合成口径：7月基准 + 二模补科'), 'assessment sync change notes must not claim July final data is composited with second mock data');
 assert.ok(gatewayContractSource.includes('teacher_workload') === false, 'assessment sync must not write workload scores without a system data source');
 
+// ─── 批量入口必须有界 ──────────────────────────────────────────────────────────
+// 无上限的批量写入 / IN 过滤既能耗尽 Worker CPU 与时间预算，也会因 D1 绑定变量上限
+// 直接抛库错误。worker-accounts(50) / worker-assessment(600) 已有此保护，这里把其余
+// 三个入口一并锁定，防止回归。
+const dataQualitySource = fs.readFileSync(path.join(root, 'src/worker-data-quality.js'), 'utf8');
+const systemDataSource = fs.readFileSync(path.join(root, 'src/worker-system-data.js'), 'utf8');
+
+assert.ok(
+  /const ALIAS_SAVE_BATCH_LIMIT = \d+;/.test(dataQualitySource)
+    && /rows\.length > ALIAS_SAVE_BATCH_LIMIT/.test(dataQualitySource),
+  'handleAliasSave must cap the alias rule batch size'
+);
+// 上限检查必须在 replace_scope 的 DELETE 之前，否则超限批次会「先清空 scope 再失败」。
+assert.ok(
+  dataQualitySource.indexOf('rows.length > ALIAS_SAVE_BATCH_LIMIT')
+    < dataQualitySource.indexOf('DELETE FROM config_alias_rules'),
+  'the alias batch limit must be enforced before the replace_scope delete'
+);
+assert.ok(
+  /const SYSTEM_DATA_KEY_FILTER_IN_LIMIT = \d+;/.test(systemDataSource),
+  'system-data key=in.(...) filter must declare a bounded element limit'
+);
+assert.ok(
+  /const SYSTEM_DATA_UPSERT_BATCH_LIMIT = \d+;/.test(systemDataSource)
+    && /rows\.length > SYSTEM_DATA_UPSERT_BATCH_LIMIT/.test(systemDataSource),
+  'system-data upsert must cap the row count (each row awaits a serial R2 put)'
+);
+// 删除路径必须 fail-loud：静默截断会造成「只删了前 N 个却回 200」的数据不一致。
+assert.ok(
+  /SYSTEM_DATA_DELETE_FILTER_TOO_LARGE/.test(systemDataSource),
+  'an over-limit delete filter must be rejected instead of silently truncated'
+);
+assert.ok(
+  /overLimit: values\.length > SYSTEM_DATA_KEY_FILTER_IN_LIMIT/.test(systemDataSource),
+  'the key filter parser must flag over-limit IN lists rather than truncating for every caller'
+);
+
 console.log(JSON.stringify({
   ok: true,
   installerDownloadsRemoved: true,
+  batchLimitsGuarded: ['alias_save', 'system_data_upsert', 'system_data_key_in', 'system_data_delete_fail_loud'],
   workerRoutes: [
     '/api/health',
     '/api/edu-gateway',

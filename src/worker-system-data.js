@@ -288,6 +288,14 @@ function wantsSingleSystemDataObject(request) {
   return accept.includes('application/vnd.pgrst.object+json');
 }
 
+// key=in.(...) 过滤器允许的最大元素数。每个元素展开成一个 SQL 绑定占位符，
+// D1 单条语句的绑定变量数有上限，故必须有界。
+const SYSTEM_DATA_KEY_FILTER_IN_LIMIT = 100;
+
+// 单次 upsert 允许的最大行数。每行在 upsertSystemDataRows 里串行 await 一次 R2 put，
+// 行数必须有界。正常写入通常是 1 行（一个工作区或一个考试分片），50 已远超实际用量。
+const SYSTEM_DATA_UPSERT_BATCH_LIMIT = 50;
+
 function parseSystemDataKeyFilter(rawFilter) {
   const raw = String(rawFilter || '');
   if (!raw) return null;
@@ -308,7 +316,11 @@ function parseSystemDataKeyFilter(rawFilter) {
       .map((item) => parseSystemDataFilterValue(item))
       .map((item) => normalizeText(item))
       .filter(Boolean);
-    return { op: 'in', values };
+    // in.(...) 的元素数由调用方 URL 决定，会 1:1 展开成 SQL 占位符。D1 单条语句的绑定
+    // 变量数有上限，不加约束时超长 key 列表会让读/删/鉴权三条路径直接抛库错误。
+    // 这里只**标记**超限、不在解析处截断：截断对读取无害，但对 DELETE 会变成
+    // 「只删了前 N 个却回 200」的静默数据不一致，必须由各调用方自行决定策略。
+    return { op: 'in', values, overLimit: values.length > SYSTEM_DATA_KEY_FILTER_IN_LIMIT };
   }
   return null;
 }
@@ -347,8 +359,11 @@ function appendSystemDataFilterClause(clauses, bindings, filter, column = 'key')
   if (filter.op === 'not_like') { clauses.push(`${column} NOT LIKE ?`); bindings.push(filter.value); return; }
   if (filter.op === 'not_ilike') { clauses.push(`LOWER(${column}) NOT LIKE LOWER(?)`); bindings.push(filter.value); return; }
   if (filter.op === 'in' && Array.isArray(filter.values) && filter.values.length) {
-    clauses.push(`${column} IN (${filter.values.map(() => '?').join(', ')})`);
-    bindings.push(...filter.values);
+    // 读取路径截断是安全的（少读几条不造成数据不一致），故这里有界化而不报错，
+    // 保持既有正常调用不受影响。删除路径另行 fail-loud，见 handleSystemDataDelete。
+    const values = filter.values.slice(0, SYSTEM_DATA_KEY_FILTER_IN_LIMIT);
+    clauses.push(`${column} IN (${values.map(() => '?').join(', ')})`);
+    bindings.push(...values);
   }
 }
 
@@ -738,6 +753,17 @@ async function handleSystemDataWrite(request, env) {
   })).filter((row) => row.key);
 
   if (!rows.length) return jsonResponse(400, { ok: false, error: 'SYSTEM_DATA_ROWS_MISSING' }, request);
+  // upsertSystemDataRows 对每行都串行 await 一次 R2 put（见该函数内循环），行数无界时单个
+  // 请求会退化成 N 次串行往返，既可能打爆 Worker 时间预算，也让写入变成部分完成。
+  // 这里只约束**行数**，不限制单行 content 体积 —— 届别工作区/考试分片本身就是大 payload。
+  if (rows.length > SYSTEM_DATA_UPSERT_BATCH_LIMIT) {
+    return jsonResponse(400, {
+      ok: false,
+      error: 'SYSTEM_DATA_UPSERT_BATCH_TOO_LARGE',
+      limit: SYSTEM_DATA_UPSERT_BATCH_LIMIT,
+      received: rows.length
+    }, request);
+  }
   await upsertSystemDataRows(env, rows);
   return jsonResponse(201, [], request);
 }
@@ -754,6 +780,15 @@ async function handleSystemDataDelete(request, env, url) {
     whereClause = 'key = ?';
     bindings.push(keyFilter.value);
   } else if (keyFilter?.op === 'in' && Array.isArray(keyFilter.values) && keyFilter.values.length) {
+    // 删除路径必须 fail-loud：静默截断会变成「只删了前 N 个却回 200」，调用方以为全删了，
+    // 比直接报错更坏。
+    if (keyFilter.overLimit) {
+      return jsonResponse(400, {
+        ok: false,
+        error: 'SYSTEM_DATA_DELETE_FILTER_TOO_LARGE',
+        limit: SYSTEM_DATA_KEY_FILTER_IN_LIMIT
+      }, request);
+    }
     whereClause = `key IN (${keyFilter.values.map(() => '?').join(', ')})`;
     bindings.push(...keyFilter.values);
   }
