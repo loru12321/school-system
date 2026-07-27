@@ -110,6 +110,12 @@
 // 直接复用 AnalyticsKernel 的年级满分规则作为权重来源，与云端口径一致。
 const FB_GRADE9_SUBJECTS = Object.freeze(['语文', '数学', '英语', '物理', '化学']); // 明确排除政治/史/地/生
 const FB_GRADE9_WEIGHT = Object.freeze({ '语文': 1, '数学': 1, '英语': 1, '物理': 0.9, '化学': 0.6 });
+// 主科：每科每班均衡（均分/优秀率/及格率）只对语数英。副科只计入总分。
+const FB_MAIN_SUBJECTS = Object.freeze(['语文', '数学', '英语']);
+// 主科优秀/及格线（满分×0.85 / ×0.6，语数英满分均 150）。与系统 AnalyticsKernel 口径一致。
+const FB_MAIN_FULL = 150;
+const FB_MAIN_EXC_LINE = FB_MAIN_FULL * 0.85; // 127.5
+const FB_MAIN_PASS_LINE = FB_MAIN_FULL * 0.6; // 90
 
 function fbNormalizeName(v) {
     return String(v == null ? '' : v).replace(/\s+/g, '').trim();
@@ -203,12 +209,22 @@ function FB_assembleFromCloud(options = {}) {
             const s = fbExamAssignmentScore(row, targetGrade);
             if (!s) return;
             if (!byKey.has(key)) {
-                byKey.set(key, { name: row.name || '未知', id: fbNormalizeId(row.id || row.examNo || row.studentId), class: row.class || '', wSum: 0, scoreSum: 0, examsGot: 0 });
+                byKey.set(key, {
+                    name: row.name || '未知', id: fbNormalizeId(row.id || row.examNo || row.studentId), class: row.class || '',
+                    wSum: 0, scoreSum: 0, examsGot: 0,
+                    // 主科（语数英）分别累加加权分，用于每科每班均衡。
+                    subj: { '语文': { s: 0, w: 0 }, '数学': { s: 0, w: 0 }, '英语': { s: 0, w: 0 } }
+                });
             }
             const agg = byKey.get(key);
             agg.wSum += w;
             agg.scoreSum += s.score * w;
             agg.examsGot += 1;
+            const rowScores = (row && row.scores && typeof row.scores === 'object') ? row.scores : {};
+            FB_MAIN_SUBJECTS.forEach((sub) => {
+                const v = Number(rowScores[sub]);
+                if (Number.isFinite(v)) { agg.subj[sub].s += v * w; agg.subj[sub].w += w; }
+            });
         });
     });
 
@@ -231,9 +247,16 @@ function FB_assembleFromCloud(options = {}) {
         if (!gender) gender = FB_GENDER_MAP['name:' + fbNormalizeName(agg.name)]; // 姓名兜底
         if (!gender) { gender = 'F'; missingGender += 1; }
         const isViol = !!(FB_VIOLATION_SET[key] || FB_VIOLATION_SET['name:' + fbNormalizeName(agg.name)]);
+        // 各主科加权平均分（缺该科则为 null，不计入该科均衡）。
+        const subjAvg = {};
+        FB_MAIN_SUBJECTS.forEach((sub) => {
+            const rec = agg.subj && agg.subj[sub];
+            subjAvg[sub] = (rec && rec.w > 0) ? (rec.s / rec.w) : null;
+        });
         students.push({
             _id: idx++, key, name: agg.name, id: agg.id, srcClass: agg.class,
             gender, score: parseFloat(score.toFixed(2)),
+            subjAvg,
             examsGot: agg.examsGot, examsTotal: exams.length,
             height: 160, vision: 5.0,
             isDiff: isViol, isViolation: isViol,
@@ -341,6 +364,9 @@ function FB_loadData(input) {
                 const remarks = String(r['备注'] || r['说明'] || ""); const sameMatch = remarks.match(/(?:和|与|跟)([\u4e00-\u9fa5\w]+)(?:同班|一起|一班)/); const diffMatch = remarks.match(/(?:和|与|跟)([\u4e00-\u9fa5\w]+)(?:分开|不同班|不在一起)/);
                 return { _id: i, name: r['姓名'] || '未知', gender: (r['性别'] === '男' || r['Gender'] === 'M') ? 'M' : 'F', score: parseFloat(r['总分'] || r['语数英'] || 0), height: parseFloat(r['身高'] || 160), vision: parseFloat(r['视力'] || r['左眼'] || 5.0), isDiff: (String(r['难管'] || "").includes('是') || remarks.includes('难管') || remarks.includes('调皮')), remarks: remarks, constraints: { same: sameMatch ? [sameMatch[1]] : [], diff: diffMatch ? [diffMatch[1]] : [] }, classIdx: -1 };
             });
+            // 手动导入 Excel → 切到 manual 模式，使 FB_runDivision 用这批学生而非覆盖为云端聚合。
+            const srcSel = document.getElementById('fb_data_source');
+            if (srcSel) { srcSel.value = 'manual'; if (typeof FB_toggleDataSource === 'function') FB_toggleDataSource(); }
             window.UI.alert(`✅ 导入成功！共 ${FB_STUDENTS.length} 人。`); document.getElementById('fb-results-area').classList.add('hidden');
         } catch (err) { window.UI.alert("读取失败：" + err.message); }
     }; reader.readAsArrayBuffer(file);
@@ -443,8 +469,10 @@ function FB_generateSingleScheme(k, algo) {
     let classes = Array.from({ length: k }, (_, i) => ({ id: i, name: (i + 1) + "班", students: [], stats: {} }));
     let pool = JSON.parse(JSON.stringify(FB_STUDENTS)); // 深拷贝，防止污染
 
-    // 预处理：按分数排序
+    // 预处理：按分数排序，并给每人打「级部总名次」+ 名次区块号（每 k 人一个区块）。
+    // 区块号让「1..k 名各占一个班、k+1..2k 名再各占一个班」的蛇形分布可被 cost 保护。
     pool.sort((a, b) => b.score - a.score);
+    pool.forEach((s, i) => { s.globalRank = i + 1; s.rankBlock = Math.floor(i / k); });
 
     if (algo === 'snake') {
         // --- 蛇形分班 ---
@@ -587,12 +615,24 @@ function FB_applyScheme(id) {
 // 分段阈值（高/中/低）：全局前 27% 为高分段、后 27% 为低分段，中间为中段。
 // 用于「档次分布均衡」——不只均分相等，还让每班高/中/低段人数接近。
 let FB_TIER = null; // { high, low }  score 阈值，由 FB_computeTiers 设置
+// 主科全局目标（每班应接近的均分/优秀率/及格率），由 FB_computeTiers 一并算出。
+let FB_SUBJ_TARGET = null; // { 语文:{avg,exc,pass,n}, ... }
 function FB_computeTiers() {
     const scores = FB_STUDENTS.map(s => s.score).filter(Number.isFinite).sort((a, b) => b - a);
-    if (!scores.length) { FB_TIER = null; return; }
+    if (!scores.length) { FB_TIER = null; FB_SUBJ_TARGET = null; return; }
     const hi = scores[Math.floor(scores.length * 0.27)] ?? scores[0];
     const lo = scores[Math.floor(scores.length * 0.73)] ?? scores[scores.length - 1];
     FB_TIER = { high: hi, low: lo };
+    // 主科全局均分/优秀率/及格率（作为每班目标基准）。
+    FB_SUBJ_TARGET = {};
+    FB_MAIN_SUBJECTS.forEach((sub) => {
+        const vals = FB_STUDENTS.map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
+        if (!vals.length) { FB_SUBJ_TARGET[sub] = null; return; }
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        const exc = vals.filter(v => v >= FB_MAIN_EXC_LINE).length / vals.length;
+        const pass = vals.filter(v => v >= FB_MAIN_PASS_LINE).length / vals.length;
+        FB_SUBJ_TARGET[sub] = { avg, exc, pass, n: vals.length };
+    });
 }
 function fbTierOf(score) {
     if (!FB_TIER) return 'mid';
@@ -626,6 +666,38 @@ function FB_calcClassCost(cls, gAvg) {
         const hi = cls.students.filter(s => fbTierOf(s.score) === 'high').length;
         const lo = cls.students.filter(s => fbTierOf(s.score) === 'low').length;
         cost += (Math.pow(hi - idealHigh, 2) + Math.pow(lo - idealLow, 2)) * 300;
+    }
+
+    // 名次蛇形铺开保护：每班理想是每个「名次区块」各占 1 人（1..k 名分到 k 个班、
+    // k+1..2k 名再各占一个班…）。同班出现同区块的多名学生 → 惩罚，保证 1..k 名散到不同班。
+    const rankRule = document.getElementById('fb_rule_rank')?.value || 'on';
+    if (rankRule === 'on') {
+        const blockCount = {};
+        cls.students.forEach((s) => {
+            if (typeof s.rankBlock === 'number') blockCount[s.rankBlock] = (blockCount[s.rankBlock] || 0) + 1;
+        });
+        let clash = 0;
+        Object.values(blockCount).forEach((cnt) => { if (cnt > 1) clash += (cnt - 1) * (cnt - 1); });
+        cost += clash * 1200; // 高权重：优先保证名次均匀铺开
+    }
+
+    // 主科（语数英）每班均衡：均分 + 优秀率 + 及格率 都向全局目标靠拢。
+    // 只在开启时（fb_rule_subject）且有主科目标时生效。
+    const subjRule = document.getElementById('fb_rule_subject')?.value || 'on';
+    if (subjRule === 'on' && FB_SUBJ_TARGET) {
+        FB_MAIN_SUBJECTS.forEach((sub) => {
+            const tgt = FB_SUBJ_TARGET[sub];
+            if (!tgt) return;
+            const vals = cls.students.map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
+            if (!vals.length) return;
+            const cAvg = vals.reduce((a, b) => a + b, 0) / vals.length;
+            const cExc = vals.filter(v => v >= FB_MAIN_EXC_LINE).length / vals.length;
+            const cPass = vals.filter(v => v >= FB_MAIN_PASS_LINE).length / vals.length;
+            // 均分偏差（分单位）权重较小；优秀/及格率偏差（0~1）放大后惩罚。
+            cost += Math.pow(cAvg - tgt.avg, 2) * 40;
+            cost += Math.pow(cExc - tgt.exc, 2) * 4000;
+            cost += Math.pow(cPass - tgt.pass, 2) * 4000;
+        });
     }
     return cost;
 }
@@ -713,6 +785,32 @@ function FB_renderDashboard() {
     FB_renderBalanceChart();
 }
 
+// 主科（语数英）每班均衡诊断表：均分 / 优秀率 / 及格率，供人工核对是否坐到接近。
+function fbBuildSubjectBalanceTable(labels) {
+    // 仅当聚合了主科数据时展示。
+    const hasSubj = FB_CLASSES.some(c => c.students.some(s => s.subjAvg && FB_MAIN_SUBJECTS.some(sub => Number.isFinite(s.subjAvg[sub]))));
+    if (!hasSubj) return '';
+    const fmtPct = (v) => (v * 100).toFixed(0) + '%';
+    let html = `<div style="margin-top:16px; font-weight:600; color:#334155;">📚 主科每班均衡（语数英 · 均分 / 优秀率≥127.5 / 及格率≥90）</div>`;
+    html += `<table class="comparison-table" style="font-size:12px; margin-top:6px;"><thead><tr><th>班级</th>`;
+    FB_MAIN_SUBJECTS.forEach(sub => { html += `<th>${sub}均分</th><th>${sub}优秀</th><th>${sub}及格</th>`; });
+    html += `</tr></thead><tbody>`;
+    FB_CLASSES.forEach((c, i) => {
+        html += `<tr><td>${labels[i]}</td>`;
+        FB_MAIN_SUBJECTS.forEach(sub => {
+            const vals = c.students.map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
+            if (!vals.length) { html += `<td>-</td><td>-</td><td>-</td>`; return; }
+            const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+            const exc = vals.filter(v => v >= FB_MAIN_EXC_LINE).length / vals.length;
+            const pass = vals.filter(v => v >= FB_MAIN_PASS_LINE).length / vals.length;
+            html += `<td>${avg.toFixed(1)}</td><td>${fmtPct(exc)}</td><td>${fmtPct(pass)}</td>`;
+        });
+        html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+    return html;
+}
+
 function FB_renderBalanceChart() {
     const ctx = document.getElementById('balanceChart'); const tableContainer = document.getElementById('balanceTableContainer'); const labels = FB_CLASSES.map(c => c.name);
     const signature = fbClassSignature(FB_CLASSES);
@@ -724,7 +822,7 @@ function FB_renderBalanceChart() {
     const statsData = FB_CLASSES.map(c => { const scores = c.students.map(s => s.score).sort((a, b) => a - b); const qs = calculateQuartiles(scores); return { min: scores[0], max: scores[scores.length - 1], q1: qs.q1, median: qs.q2, q3: qs.q3, avg: c.stats.avg, sd: calculateSD(scores) }; });
     let tableHtml = `<table class="comparison-table" style="font-size:12px;"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>标准差 (SD)</th><th>极差 (Max-Min)</th><th>前25%线 (Q3)</th><th>后25%线 (Q1)</th></tr></thead><tbody>`;
     statsData.forEach((s, i) => { tableHtml += `<tr><td>${labels[i]}</td><td>${FB_CLASSES[i].students.length}</td><td>${s.avg.toFixed(2)}</td><td>${s.sd.toFixed(2)}</td><td>${(s.max - s.min).toFixed(1)}</td><td>${s.q3}</td><td>${s.q1}</td></tr>`; });
-    const nextTableHtml = tableHtml + `</tbody></table>`;
+    const nextTableHtml = tableHtml + `</tbody></table>` + fbBuildSubjectBalanceTable(labels);
     if (tableContainer && tableContainer.innerHTML !== nextTableHtml) {
         tableContainer.innerHTML = nextTableHtml;
         tableContainer.dataset.freshmanBalanceSig = signature;
