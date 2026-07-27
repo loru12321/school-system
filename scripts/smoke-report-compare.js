@@ -17,7 +17,9 @@ const { chromium } = require('playwright');
     await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 });
     await page.fill('#login-user', user);
     await page.fill('#login-pass', pass);
-    await page.click('button[onclick="window.Auth?.login()"]');
+    // 登录按钮此前靠内联 onclick 定位，内联事件收敛为声明式绑定后该选择器失效
+    // （本脚本不在 CI 工作流里，所以一直没暴露）。改用与其他 smoke 一致的 id 选择器。
+    await page.click('#login-submit-button');
     await page.waitForTimeout(10000);
 
     const result = await page.evaluate(async () => {

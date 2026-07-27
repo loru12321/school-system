@@ -1,6 +1,14 @@
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_RENDER_RUNTIME_PATCHED__) return;
 
+// 家长端是否披露具体排名。默认关闭（多地要求不得向家长公布学生排名）；学校确认当地
+// 政策允许后把 localStorage 的 PARENT_REPORT_SHOW_RANK 置为 '1' 恢复。
+// 仅影响家长成绩卡片，不改变排名计算、校内分析与导出口径。localStorage 不可用时取保守侧。
+function shouldShowParentRank() {
+    try { return localStorage.getItem('PARENT_REPORT_SHOW_RANK') === '1'; } catch (_) { return false; }
+}
+window.shouldShowParentReportRank = shouldShowParentRank;
+
 const CompareSessionStateRuntime = window.CompareSessionState || null;
 const ReportSessionStateRuntime = window.ReportSessionState || null;
 const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
@@ -1009,16 +1017,24 @@ function renderInstagramCard(stu) {
             </div>
         `;
 
+    // 默认以区间替代具体名次与"击败了 x%"，见 shouldShowParentRank 说明。
+    const bandStyle = 'margin-top:10px; font-size:18px; font-weight:bold; background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:20px;';
+    const pctNum = Number(pct);
+    const parentRankBand = !Number.isFinite(pctNum) ? ''
+        : (pctNum >= 90 ? '年级前 10%' : pctNum >= 80 ? '年级前 20%' : pctNum >= 70 ? '年级前 30%'
+            : pctNum >= 50 ? '年级前 50%' : pctNum >= 30 ? '年级中游' : '仍有提升空间');
+    const rankBadgeHtml = shouldShowParentRank()
+        ? `<div style="${bandStyle}">${scopeText}排名: ${safeGet(reportStu, 'ranks.total.school', '-')}</div>
+                    <div style="margin-top:20px; font-size:12px; opacity:0.8;">击败了${scopeText} ${pct}% 的考生</div>`
+        : (parentRankBand ? `<div style="${bandStyle}">${parentRankBand}</div>` : '');
+
     // 模拟图表区域 (使用CSS渐变背景代替 Canvas，确保渲染稳定)
     const visualAreaHtml = `
             <div class="insta-visual-area">
                 <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; background:linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); border-radius:8px; color:white; padding:40px 0;">
                     <div style="font-size:16px; opacity:0.9; text-transform:uppercase; letter-spacing:2px;">Total Score</div>
                     <div style="font-size:64px; font-weight:800; text-shadow:0 4px 10px rgba(0,0,0,0.2);">${Number.isFinite(currentTotal) ? currentTotal.toFixed(1) : '-'}</div>
-                    <div style="margin-top:10px; font-size:18px; font-weight:bold; background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:20px;">
-                        全校排名: ${safeGet(reportStu, 'ranks.total.school', '-')}
-                    </div>
-                    <div style="margin-top:20px; font-size:12px; opacity:0.8;">击败了${scopeText} ${pct}% 的考生</div>
+                    ${rankBadgeHtml}
                 </div>
             </div>
         `;

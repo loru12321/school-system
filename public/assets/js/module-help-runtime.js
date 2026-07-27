@@ -2,6 +2,77 @@
     if (typeof window === 'undefined' || window.__MODULE_HELP_RUNTIME_PATCHED__) return;
 
 const SYSTEM_MANUAL = {
+    'teacher-analysis': {
+        title: '👩‍🏫 教师表现·使用说明',
+        fit: `用于<strong>查看每位教师所教班级的学科表现</strong>，发现结构性强项与短板。`,
+        when: `成绩导入并完成「任课表同步」之后使用。未同步任课表时本页无数据。`,
+        use: `<ul>
+                    <li><strong>前提：</strong>必须先在「导入与设置」上传【班级-学科-教师】对应表并同步，否则系统不知道谁教哪个班。</li>
+                    <li><strong>看什么：</strong>同学科横向比较各教师所带班级的均分与两率，再结合生源差异判断。</li>
+                    <li><strong>注意：</strong>单次考试、单个班级样本有限，名次波动是正常的；建议连续看 2-3 次考试的趋势，不要用一次结果下结论。</li>
+                  </ul>`,
+        calc: `教师指标由其任教班级的学生成绩聚合而来，口径与「两率一分对比」一致。<br>
+                   本页<strong>不做生源校正</strong>——班级生源差异会体现在结果里，解读时需一并考虑。`
+    },
+    'student-details': {
+        title: '🧑‍🎓 学生成绩明细·使用说明',
+        fit: `用于<strong>按单个学生查看各科成绩、班级与排名</strong>，是家长会与个别辅导的主要依据。`,
+        when: `需要了解某个学生的具体情况、或为家长沟通做准备时使用。`,
+        use: `<ul>
+                    <li>支持按姓名搜索定位学生。</li>
+                    <li>成绩与排名均以「本次 / 上次 / 变化」三段呈现，便于直接看出变化方向。</li>
+                    <li>历史数据尚未同步到位时，会显示当前真实排名与「暂无对比」，不会编造对比值。</li>
+                  </ul>`,
+        calc: `排名口径与全系统一致（同分并列）。缺考、空分按系统统一规则处理，详见「数据检查」。`
+    },
+    'marginal-push': {
+        title: '🎯 临界学生·使用说明',
+        fit: `用于<strong>找出差一点就能上线的学生</strong>，把辅导力量集中在提分性价比最高的人身上。`,
+        when: `成绩分析完成后、安排下一阶段补弱辅导时使用。`,
+        use: `<ul>
+                    <li>先选学校，再设「临界分值」（即距目标线多少分以内算临界）。</li>
+                    <li><strong>拟优：</strong>距优秀线还差一点的学生。<strong>拟合格：</strong>距及格线还差一点的学生。可只看其中一类。</li>
+                    <li>可导出「临界生精准辅导任务单」，按班级分发给科任教师。</li>
+                  </ul>`,
+        calc: `<div class="formula-box">临界生判定：目标线 − 设定分值 ≤ 学生分数 &lt; 目标线</div>
+                   目标线即系统中的优秀线 / 及格线。放大「临界分值」会纳入更多学生，缩小则更聚焦。`
+    },
+    'progress-analysis': {
+        title: '📈 进步与增值·使用说明',
+        fit: `用于<strong>看学生相比上次考试是进步还是退步</strong>，而不只看这一次的绝对分数。`,
+        when: `至少有两次考试数据后使用。只有一次考试时本页没有对比结果。`,
+        use: `<ul>
+                    <li>选择学校与对比期数，生成进退步名单。</li>
+                    <li>页面会统计「进步 / 退步 / 稳定」人数，可按班级查看分布。</li>
+                  </ul>`,
+        calc: `<strong>优先按名次变化判定：</strong>名次前进为「进步」，后退为「退步」，不变为「稳定」；<br>
+                   缺少名次数据时才退回按分数差判定。<br>
+                   <strong>为什么分数涨了却显示退步？</strong>因为整体都涨了、该生名次相对后退——这正是用名次而非绝对分的原因，可避免试卷难易变化造成误判。`
+    },
+    'data-quality': {
+        title: '🔍 数据检查·使用说明',
+        fit: `用于<strong>在正式分析之前发现数据问题</strong>，避免用错数据得出错误结论。`,
+        when: `每次导入成绩之后、开始看任何分析结果之前，都建议先过一遍这里。`,
+        use: `<ul>
+                    <li>检查缺失、重复、异常记录。发现问题回到「导入与设置」修正后重新导入。</li>
+                    <li><strong>重名学生</strong>最容易造成串号：同名同姓会导致成绩或历史对比接错人，建议补充考号精确匹配。</li>
+                    <li>空分与零分的区别请配合「空分与零分核对」一并确认——两者对均分的影响完全不同。</li>
+                  </ul>`,
+        calc: `本页只做检查与提示，<strong>不会自动修改任何成绩数据</strong>。`
+    },
+    'report-generator': {
+        title: '📤 成绩反馈·使用说明',
+        fit: `用于<strong>生成发给学生和家长的成绩单</strong>，以及家长自助查询页面。`,
+        when: `成绩核对无误、确认可以对外发布之后使用。`,
+        use: `<ul>
+                    <li>可生成单个学生成绩单，也可批量生成后打印分发。</li>
+                    <li>成绩单包含各科成绩与「本次 / 上次 / 变化」对比，便于家长直观理解孩子的变化。</li>
+                    <li><strong>对外发布前请先自查一遍：</strong>确认本校名称、考试名称、科目齐全，避免错误信息发到家长手中后再回收。</li>
+                  </ul>`,
+        calc: `<strong>家长端排名披露：</strong>考虑到部分地区不允许向家长公布学生具体排名，
+                   家长成绩卡片<strong>默认只显示所处区间</strong>（如「年级前 30%」）而非具体名次。<br>
+                   学校确认当地政策允许后可恢复显示具体排名，请联系系统管理员调整。`
+    },
     'upload': {
         title: '📁 数据上传与设置·使用说明',
         fit: `用于<strong>导入并规范化成绩数据</strong>，为后续所有分析提供可靠数据基础。`,
@@ -83,7 +154,8 @@ const SYSTEM_MANUAL = {
         fit: `用于<strong>个人层面诊断</strong>与精准提分。`,
         when: `期中/期末后需要制定个性化提升方案时使用。`,
         use: `寻找提分点。`,
-        calc: `<strong>1. 临界生</strong>：距优生线/及格线差 5 分以内的学生。<br>
+        calc: `<strong>1. 临界生</strong>：距优秀线/及格线在<strong>设定分值以内</strong>的学生。
+                   该分值由使用者在「临界学生」页自行设置，并非固定 5 分——放大会纳入更多人，缩小则更聚焦。<br>
                    <strong>2. 偏科挖掘</strong>：总分排名靠前，但单科排名严重滞后的学生。<br>
                    <strong>3. 优劣势透视</strong>：基于 Z-Score (标准分) 判断学科强弱。`
     },
@@ -111,7 +183,13 @@ if (SYSTEM_MANUAL.teacher) {
 }
 
 function showModuleHelp(key) {
-    const info = SYSTEM_MANUAL[key];
+    // 'permissions' 的说明写在 PermissionPolicy 里（与权限规则同处维护，避免两份漂移），
+    // 此前 showModuleHelp 只查 SYSTEM_MANUAL，导致「权限说明」按钮落到无信息量的兜底
+    // 文案。这里回退到 PermissionPolicy 中同名条目。
+    const info = SYSTEM_MANUAL[key]
+        || (window.PermissionPolicy && window.PermissionPolicy[key] && window.PermissionPolicy[key].title
+            ? window.PermissionPolicy[key]
+            : null);
     if (!info) {
         Swal.fire({
             title: '📘 模型说明',

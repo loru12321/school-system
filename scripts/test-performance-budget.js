@@ -116,7 +116,11 @@ const budgets = {
   // attacker-influenceable student name/school/class before innerHTML). File was
   // already 13 bytes under the old ceiling; the security fix is at minimum size
   // (bare global tmEscapeHtml, no local helper) so a small bump is unavoidable.
-  publicReportRenderJs: 65_200
+  // 66_400（2026-07-27）：家长端排名披露开关。多地教育主管部门要求不得向家长公布学生
+  // 具体排名，成绩卡片改为默认只显示所处区间（年级前 30% 等），由 shouldShowParentRank()
+  // 控制、学校确认政策后可恢复。该文件在上一次调整后只剩 48 字节余量，属合规必需功能，
+  // 代码已收紧到最小实现（三元链、共用 bandStyle、无冗余常量），故按既有惯例小幅上调。
+  publicReportRenderJs: 66_400
 };
 
 const actual = {
