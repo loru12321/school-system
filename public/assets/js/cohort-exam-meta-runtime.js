@@ -903,9 +903,27 @@ const CohortManager = {
                 setTimeout(() => scheduleTeacherSyncPrompt(), 1200);
             }
         };
+        // Keep every visible cohort label on the same current-school-year
+        // calculation.  This also replaces a label left in the DOM by a
+        // restored page, rather than preserving the old "六年级入学" wording.
+        this.syncStageLabels();
         if (typeof window.syncShellChromeBridge === 'function') {
             window.syncShellChromeBridge();
         }
+    },
+
+    syncStageLabels: function () {
+        const currentId = readWorkspaceCohortId() || '';
+        const currentMeta = this.list.find(item => String(item?.id || '') === String(currentId))
+            || CURRENT_COHORT_META
+            || null;
+        if (!currentMeta) return '';
+        const label = formatCohortLabel(currentMeta);
+        const currentLabel = document.getElementById('cohort-current-label');
+        if (currentLabel) currentLabel.innerText = label;
+        const examCohortLabel = document.getElementById('exam-cohort-label');
+        if (examCohortLabel) examCohortLabel.innerText = label;
+        return label;
     },
 
     addFromUI: function () {
@@ -990,6 +1008,29 @@ const CohortManager = {
 
 window.CohortManager = CohortManager;
 window.__COHORT_MANAGER_READY__ = true;
+
+// A browser may restore a previously rendered app from back/forward cache, or
+// stay open across the September academic-year boundary.  Rebuild the options
+// when it returns so the UI never keeps a historical fixed-entry-grade label.
+let cohortStageRefreshQueued = false;
+function refreshCohortStageLabelsWhenVisible() {
+    if (cohortStageRefreshQueued) return;
+    cohortStageRefreshQueued = true;
+    window.setTimeout(() => {
+        cohortStageRefreshQueued = false;
+        if (window.__COHORT_MANAGER_READY__ && typeof CohortManager.renderSelector === 'function') {
+            CohortManager.renderSelector();
+        }
+    }, 0);
+}
+
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) refreshCohortStageLabelsWhenVisible();
+});
+window.addEventListener('focus', refreshCohortStageLabelsWhenVisible);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshCohortStageLabelsWhenVisible();
+});
 
 async function enterCohortFromMask(options = {}) {
     const year = parseInt(resolveMaskCohortYear(), 10);

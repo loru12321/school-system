@@ -940,6 +940,56 @@ async function waitForAppReady(page) {
     throw new Error(`app not ready for smoke run: ${JSON.stringify({ lastState, lastRecovery })}`);
 }
 
+async function verifyCohortStageLabels(page) {
+    return page.evaluate(() => {
+        const academicStart = (now = new Date()) => (
+            now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1
+        );
+        const expectedStage = (year) => {
+            const grade = 6 + academicStart() - Number(year);
+            if (!Number.isFinite(grade)) return '年级待定';
+            if (grade < 6) return '未入学';
+            if (grade > 9) return '已毕业';
+            return `${grade}年级`;
+        };
+        const years = ['2025', '2024', '2023', '2022', '2021'];
+        const format = typeof window.formatCohortLabel === 'function'
+            ? window.formatCohortLabel
+            : null;
+        const labels = Object.fromEntries(years.map((year) => [
+            year,
+            format ? String(format({ id: year, year: Number(year), startGrade: 6 }) || '').trim() : ''
+        ]));
+        const expected = Object.fromEntries(years.map((year) => [
+            year,
+            `${year}级 · ${expectedStage(year)}`
+        ]));
+        const selectorOptions = Array.from(document.getElementById('cohort-selector')?.options || [])
+            .map((option) => String(option.textContent || '').trim());
+        const legacyEntryLabels = selectorOptions.filter((label) => /六年级入学/.test(label));
+        const currentId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+        const activeOption = Array.from(document.getElementById('cohort-selector')?.options || [])
+            .find((option) => String(option.value || '').trim() === currentId);
+        const expectedActive = expected[currentId] || '';
+        const activeLabel = String(activeOption?.textContent || '').trim();
+        const checks = {
+            formatterReady: !!format,
+            expectedStages: years.every((year) => labels[year] === expected[year]),
+            selectorHasNoLegacyEntryLabel: legacyEntryLabels.length === 0,
+            activeOptionMatchesCurrentStage: !expectedActive || activeLabel === expectedActive
+        };
+        return {
+            ok: Object.values(checks).every(Boolean),
+            checks,
+            labels,
+            expected,
+            currentId,
+            activeLabel,
+            legacyEntryLabels
+        };
+    });
+}
+
 async function attemptSmokeDataRecovery(page) {
     try {
         return await page.evaluate(async () => {
@@ -4753,6 +4803,15 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     }
     const teacherAutoRestore = await waitForTeacherAutoRestore(page);
     trace('teacher-auto-restore:done', teacherAutoRestore);
+    currentScope = 'cohort-stage-labels';
+    const cohortStageLabels = await verifyCohortStageLabels(page);
+    trace('cohort-stage-labels:done', cohortStageLabels);
+    if (!cohortStageLabels.ok) {
+        errors.push({
+            scope: currentScope,
+            message: `cohort stage labels are stale: ${JSON.stringify(cohortStageLabels)}`
+        });
+    }
 
     const summary = {
         login: await page.evaluate(() => {
@@ -4793,6 +4852,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         });
         }),
         cookieSessionReload,
+        cohortStageLabels,
         switchModules: [],
         dataManagerTabs: [],
         performance: {
@@ -5012,6 +5072,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         !summary.login.appVisible
         || !summary.login.schoolInternalRemoved
         || !summary.login.entrancePlaylistReady
+        || !summary.cohortStageLabels.ok
         || failedSwitch
         || failedDm
         || errors.length > 0
