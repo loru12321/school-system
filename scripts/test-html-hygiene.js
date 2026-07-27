@@ -47,11 +47,12 @@ assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 's
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-// 323: the freshman module's six upload/data-source handlers moved into
-// freshman-exam-runtime.js (data-fb-pick / data-fb-change), and the 17
-// modal-close plus 12 file-pick boilerplate handlers moved into the delegated
-// binder in app-foundation-runtime.js. Ratchet only downward from here.
-assert.ok(inlineHandlerCount <= 323, `inline event handler count grew: ${inlineHandlerCount} > 323`);
+// 297: the freshman module's six upload/data-source handlers moved into
+// freshman-exam-runtime.js (data-fb-pick / data-fb-change); the 17 modal-close,
+// 12 file-pick, 15 showModuleHelp and 11 scrollToAnchor boilerplate handlers all
+// moved into the delegated binder in app-foundation-runtime.js.
+// Ratchet only downward from here.
+assert.ok(inlineHandlerCount <= 297, `inline event handler count grew: ${inlineHandlerCount} > 297`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 // The freshman module's upload/data-source controls are bound declaratively in
@@ -112,6 +113,33 @@ assert.ok(
 assert.ok(
     /\}, true\);/.test(foundationRuntime),
     'the delegated DOM binder must listen in the capture phase to survive stopPropagation wrappers'
+);
+
+// showModuleHelp / scrollToAnchor 同样收敛到该委托 binder。
+assert.ok(
+    !/onclick="showModuleHelp\(/.test(html),
+    'module help buttons should use data-module-help instead of an inline onclick'
+);
+assert.ok(
+    !/onclick="scrollToAnchor\(/.test(html),
+    'anchor nav links should use data-scroll-anchor instead of an inline onclick'
+);
+assert.ok(count(/data-module-help=/g) >= 15, 'declarative module-help bindings should stay wired in the markup');
+assert.ok(count(/data-scroll-anchor=/g) >= 11, 'declarative scroll-anchor bindings should stay wired in the markup');
+assert.ok(
+    /\[data-module-help\], \[data-scroll-anchor\]/.test(foundationRuntime),
+    'the delegated binder must resolve the module-help and scroll-anchor attributes'
+);
+// help 的取值是帮助键而非元素 id，必须在 getElementById 之前分流，否则永远解析不到。
+assert.ok(
+    foundationRuntime.indexOf("binding.kind === 'help'")
+        < foundationRuntime.indexOf('document.getElementById(binding.id)'),
+    'the module-help branch must run before the element lookup'
+);
+// scrollToAnchor 原本靠 this 做 side-nav 高亮，委托后必须把属性所在元素传回去。
+assert.ok(
+    /window\.scrollToAnchor\(binding\.id, binding\.holder\)/.test(foundationRuntime),
+    'the scroll-anchor branch must pass the attribute holder so side-nav highlighting still works'
 );
 
 console.log(`html hygiene tests passed: style=${inlineStyleCount}, handlers=${inlineHandlerCount}`);

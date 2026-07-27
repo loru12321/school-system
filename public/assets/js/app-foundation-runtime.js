@@ -405,12 +405,16 @@ function installDeclarativeDomBindings() {
     // 按「最近祖先」判定,而不是固定先查某一类属性:file-pick 按钮可能嵌在弹层内部
     // (如换肤弹层里的上传 logo),固定顺序会让内层点击误命中外层的关闭意图。
     const resolveBinding = (origin) => {
-        const holder = origin.closest('[data-close-modal], [data-pick-file]');
+        const holder = origin.closest('[data-close-modal], [data-pick-file], [data-module-help], [data-scroll-anchor]');
         if (!holder) return null;
         const closeId = String(holder.getAttribute('data-close-modal') || '').trim();
         if (closeId) return { kind: 'close', id: closeId };
         const pickId = String(holder.getAttribute('data-pick-file') || '').trim();
         if (pickId) return { kind: 'pick', id: pickId };
+        const helpKey = String(holder.getAttribute('data-module-help') || '').trim();
+        if (helpKey) return { kind: 'help', id: helpKey };
+        const anchorId = String(holder.getAttribute('data-scroll-anchor') || '').trim();
+        if (anchorId) return { kind: 'anchor', id: anchorId, holder };
         return null;
     };
 
@@ -423,8 +427,24 @@ function installDeclarativeDomBindings() {
 
         const binding = resolveBinding(origin);
         if (!binding || !isSafeElementId(binding.id)) return;
+
+        // help 的取值是模块帮助键(不是元素 id),必须在 getElementById 之前分流。
+        // showModuleHelp 由 app.js 提供,帮助运行时按需加载,函数未就绪时静默跳过
+        // (与原内联 onclick 的行为一致 —— 那时同样会因函数未定义而无效)。
+        if (binding.kind === 'help') {
+            if (typeof window.showModuleHelp === 'function') window.showModuleHelp(binding.id);
+            return;
+        }
+
         const target = document.getElementById(binding.id);
         if (!target) return;
+
+        // 锚点滚动:原内联写法传 this 用于 side-nav 高亮切换,委托时传「带属性的那个
+        // 元素」语义等价(holder 即原来挂 onclick 的节点)。
+        if (binding.kind === 'anchor') {
+            if (typeof window.scrollToAnchor === 'function') window.scrollToAnchor(binding.id, binding.holder);
+            return;
+        }
 
         if (binding.kind === 'close') {
             target.style.display = 'none';

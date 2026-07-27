@@ -1575,6 +1575,44 @@ async function runModuleDeepCheck(page, id) {
             checks.pickBindingNoRecursion = pickBindingNoRecursion;
             checks.modalCloseBindingWorks = modalCloseBindingWorks;
 
+            // showModuleHelp / scrollToAnchor 也走同一个委托 binder。用真实点击验证
+            // 「属性能派发到对应函数」，静态契约只能保证 markup 和 binder 源码存在。
+            let helpBindingWorks = false;
+            const helpTrigger = document.querySelector('#upload [data-module-help], [data-module-help]');
+            if (helpTrigger) {
+                const helpKey = helpTrigger.getAttribute('data-module-help');
+                const originalHelp = window.showModuleHelp;
+                const seen = [];
+                window.showModuleHelp = (key) => { seen.push(key); };
+                try {
+                    helpTrigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                } finally {
+                    window.showModuleHelp = originalHelp;
+                }
+                helpBindingWorks = seen.length === 1 && seen[0] === helpKey;
+            }
+
+            let anchorBindingWorks = false;
+            const anchorTrigger = document.querySelector('[data-scroll-anchor]');
+            if (anchorTrigger) {
+                const anchorId = anchorTrigger.getAttribute('data-scroll-anchor');
+                const originalAnchor = window.scrollToAnchor;
+                const calls = [];
+                window.scrollToAnchor = (id, element) => { calls.push({ id, element }); };
+                try {
+                    anchorTrigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                } finally {
+                    window.scrollToAnchor = originalAnchor;
+                }
+                // 必须把「带属性的那个元素」传回去，否则 side-nav 高亮会失效。
+                anchorBindingWorks = calls.length === 1
+                    && calls[0].id === anchorId
+                    && calls[0].element === anchorTrigger;
+            }
+
+            checks.helpBindingWorks = helpBindingWorks;
+            checks.anchorBindingWorks = anchorBindingWorks;
+
             return {
                 ok: Object.values(checks).every(Boolean) && Array.isArray(schools),
                 checks,

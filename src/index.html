@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-46d5fb2cc4c0.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-46d5fb2cc4c0.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-a8329b0c17f8.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-a8329b0c17f8.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -474,7 +474,7 @@
                 </div>
                 <span>导入数据</span>
             </div>
-            <div class="mob-grid-item" onclick="showModuleHelp('starter-hub')">
+            <div class="mob-grid-item" data-module-help="starter-hub">
                 <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
                     <i class="ti ti-compass"></i>
                 </div>
@@ -744,7 +744,7 @@
             <div id="starter-hub" class="section active card-box">
                 <div class="module-desc-bar" style="border-color: var(--color-data)">
                     <h3><i class="ti ti-clipboard-check"></i> 数据准备状态
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('starter-hub')"><i class="ti ti-info-circle"></i><span>准备说明</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="starter-hub"><i class="ti ti-info-circle"></i><span>准备说明</span></button>
                     </h3>
                     <p><strong>一句话目的：</strong>用最短路径完成“选学期 → 导入数据 → 任课表 → 教师画像”的闭环。</p>
                     <p><strong>推荐顺序：</strong>引导向导 → 导入成绩 → 任课同步 → 教师画像。</p>
@@ -789,7 +789,7 @@
                                     class="ti ti-school"></i> 教师画像</button>
                             <button class="btn btn-blue" onclick="switchTab('zhongkao-countdown')"><i
                                     class="ti ti-calendar-event"></i> 中考倒计时</button>
-                            <button class="btn btn-gray" onclick="showModuleHelp('permissions')"><i
+                            <button class="btn btn-gray" data-module-help="permissions"><i
                                     class="ti ti-shield-lock"></i> 权限说明</button>
                         </div>
                     </div>
@@ -926,7 +926,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-file-upload"></i> 数据文件上传
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('upload')"><i class="ti ti-info-circle"></i><span>导入说明</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="upload"><i class="ti ti-info-circle"></i><span>导入说明</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议按“届别 -> 考试 -> 上传 -> 快照”顺序完成本页操作；每次批量导入前先看顶部摘要和当前模式，更不容易把数据导错届别。</div>
@@ -1142,7 +1142,7 @@
                     </div>
                     <div class="upload-drop-actions">
                         <button class="btn btn-primary" data-pick-file="fileInput">选择成绩文件</button>
-                        <button class="btn btn-gray" onclick="showModuleHelp('upload')">查看上传规范</button>
+                        <button class="btn btn-gray" data-module-help="upload">查看上传规范</button>
                     </div>
                     <div class="upload-drop-action-note">上传后系统会自动写入当前考试批次，并同步刷新届别摘要、分析模块和历史考试状态。</div>
                     </div>
@@ -1262,7 +1262,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-chart-dots"></i> 乡镇学校分析 - 两率一分
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('macro')"><i class="ti ti-info-circle"></i><span>统计口径</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="macro"><i class="ti ti-info-circle"></i><span>统计口径</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">支持横向对比、热力图和全科导出，适合联考复盘前先快速定站位。</div>
@@ -1279,11 +1279,11 @@
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">快速定位</div>
                         <div class="analysis-side-note">先从总览判断站位，再切换到学科明细和横向对比。</div>
-                        <div class="side-nav-link active" onclick="scrollToAnchor('anchor-total', this)">🏆 综合总表</div>
+                        <div class="side-nav-link active" data-scroll-anchor="anchor-total">🏆 综合总表</div>
                         <div class="side-nav-link" onclick="toggleSubNav(this)"><span>📘 各科详情</span><i
                                 class="ti ti-chevron-right nav-caret"></i></div>
                         <div id="side-nav-subjects-container" class="side-nav-sub-container"></div>
-                        <div class="side-nav-link" onclick="scrollToAnchor('horizontal-box', this)">↔️ 横向对比</div>
+                        <div class="side-nav-link" data-scroll-anchor="horizontal-box">↔️ 横向对比</div>
                     </div>
                     <div class="content-area analysis-content-stack">
                         <div class="analysis-flow-banner">
@@ -1357,7 +1357,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-trophy"></i> 高分段赋分详情
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('high-score')"><i class="ti ti-info-circle"></i><span>核算规则</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="high-score"><i class="ti ti-info-circle"></i><span>核算规则</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">适合快速识别尖子生密度和高分学校梯队，导出后可直接做年级汇报附件。</div>
@@ -1423,7 +1423,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-arrow-bar-to-down"></i> 后1/3学生核算
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('bottom3')"><i class="ti ti-info-circle"></i><span>筛选规则</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="bottom3"><i class="ti ti-info-circle"></i><span>筛选规则</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">适合看学校补弱稳定性和底部学生改善幅度，导出后便于跟进帮扶策略。</div>
@@ -1525,7 +1525,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-target"></i> 指标生达标核算
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('indicator')"><i class="ti ti-info-circle"></i><span>计分公式</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="indicator"><i class="ti ti-info-circle"></i><span>计分公式</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先确认目标口径，再计算达标情况；导出结果更适合做指标生专项追踪。</div>
@@ -1643,7 +1643,7 @@
                     <h2>
                         <i class="ti ti-report"></i> 综合分析报告 <span class="badge" style="background:#16a34a;">⭐
                             教务常用</span>
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('summary')"><i class="ti ti-info-circle"></i><span>权重说明</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="summary"><i class="ti ti-info-circle"></i><span>权重说明</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">适合考试后的教务汇总与校长汇报，建议完成前置分析后再统一导出。</div>
@@ -1844,7 +1844,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-trending-up"></i> 学生进退步追踪分析
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('value-added')"><i class="ti ti-info-circle"></i><span>增值口径</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="value-added"><i class="ti ti-info-circle"></i><span>增值口径</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先看集体增值结果，再切到个人变化明细；导出更适合班主任复盘和年级跟踪。</div>
@@ -1878,9 +1878,9 @@
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">功能视图</div>
                         <div class="analysis-side-note">先看集体增值报表，再切到个人进退步明细和多期变化。</div>
-                        <div class="side-nav-link active" onclick="scrollToAnchor('anchor-va-report', this)">📈 增值性评价报表
+                        <div class="side-nav-link active" data-scroll-anchor="anchor-va-report">📈 增值性评价报表
                         </div>
-                        <div class="side-nav-link" onclick="scrollToAnchor('anchor-va-trend', this)">🔍 个人进退步追踪</div>
+                        <div class="side-nav-link" data-scroll-anchor="anchor-va-trend">🔍 个人进退步追踪</div>
                     </div>
                     <div class="content-area analysis-content-stack">
                         <div class="analysis-flow-banner">
@@ -2168,7 +2168,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-bulb"></i> 偏科潜力生挖掘
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('student-diag')"><i class="ti ti-info-circle"></i><span>分析口径</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="student-diag"><i class="ti ti-info-circle"></i><span>分析口径</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">适合识别“总分不错但单科掉队”的学生，导出后便于做培优补短跟进。</div>
@@ -2253,7 +2253,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-arrows-split"></i> 新生均衡分班
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('tools')"><i class="ti ti-info-circle"></i><span>分班规则</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="tools"><i class="ti ti-info-circle"></i><span>分班规则</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先生成分班方案，再保存、导出并继续进入座位编排；多方案时优先看均分极差最小的结果。</div>
@@ -4484,10 +4484,10 @@
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">总览导航</div>
                         <div class="analysis-side-note">先看就绪状态与提示，再决定进入哪个学生分析子模块。</div>
-                        <div class="side-nav-link active" onclick="scrollToAnchor('smReadiness', this)">📋 数据就绪</div>
-                        <div class="side-nav-link" onclick="scrollToAnchor('smInsights', this)">🧭 学情提示</div>
-                        <div class="side-nav-link" onclick="scrollToAnchor('smQuickEntry', this)">⚡ 快捷入口</div>
-                        <div class="side-nav-link" onclick="scrollToAnchor('smSummary', this)">📊 本次摘要</div>
+                        <div class="side-nav-link active" data-scroll-anchor="smReadiness">📋 数据就绪</div>
+                        <div class="side-nav-link" data-scroll-anchor="smInsights">🧭 学情提示</div>
+                        <div class="side-nav-link" data-scroll-anchor="smQuickEntry">⚡ 快捷入口</div>
+                        <div class="side-nav-link" data-scroll-anchor="smSummary">📊 本次摘要</div>
                     </div>
 
                     <div class="content-area analysis-content-stack">
@@ -5027,7 +5027,7 @@
                     <h2>
                         <i class="ti ti-school"></i> 本校教师教学分析 <span class="badge" style="background:#0ea5e9;">📊
                             班主任必看</span>
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('teacher')"><i class="ti ti-info-circle"></i><span>评价模型</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="teacher"><i class="ti ti-info-circle"></i><span>评价模型</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">先查看画像和多期趋势，再导出教师分析与乡镇排名，适合教研组复盘。</div>
@@ -5142,9 +5142,9 @@
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">功能导航</div>
                         <div class="analysis-side-note">先扫教师概况，再看明细对比，最后处理结对子与乡镇排名。</div>
-                        <div class="side-nav-link active" onclick="scrollToAnchor('anchor-cards', this)">📇 教师概况卡片</div>
-                        <div class="side-nav-link" onclick="scrollToAnchor('anchor-detail', this)">📊 详细数据对比</div>
-                        <div class="side-nav-link" onclick="scrollToAnchor('anchor-pair', this)">🤝 结对子建议</div>
+                        <div class="side-nav-link active" data-scroll-anchor="anchor-cards">📇 教师概况卡片</div>
+                        <div class="side-nav-link" data-scroll-anchor="anchor-detail">📊 详细数据对比</div>
+                        <div class="side-nav-link" data-scroll-anchor="anchor-pair">🤝 结对子建议</div>
                         <div class="side-nav-link" onclick="toggleSubNav(this)"><span>🏅 乡镇排名</span><i
                                 class="ti ti-chevron-right nav-caret"></i></div>
                         <div id="side-nav-teacher-ranks-container" class="side-nav-sub-container"></div>
@@ -5432,7 +5432,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-target"></i> 临界生精准辅导任务单
-                        <button type="button" class="module-help-btn" onclick="showModuleHelp('student-diag')"><i class="ti ti-info-circle"></i><span>筛选规则</span></button>
+                        <button type="button" class="module-help-btn" data-module-help="student-diag"><i class="ti ti-info-circle"></i><span>筛选规则</span></button>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先生成任务单，再决定是批量打印给教师，还是导出做跟踪台账。</div>
