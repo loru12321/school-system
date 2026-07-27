@@ -3098,6 +3098,10 @@ function getModuleCategoryKeyCached(id) {
     if (ModuleSwitchPerfCache.navSignature !== navSignature) {
         ModuleSwitchPerfCache.categoryByModule.clear();
         Object.keys(NAV_STRUCTURE).forEach(catKey => {
+            // 「本次必看」(core) 是快捷聚合入口，其条目本身归属于各自的原分类。
+            // 这里跳过它：否则「模块 → 分类」映射会把 summary 等记成 core 或被后写覆盖，
+            // 导致点击时 currentCategory 与实际展示的子导航不一致。
+            if (catKey === 'core') return;
             const items = Array.isArray(NAV_STRUCTURE[catKey]?.items) ? NAV_STRUCTURE[catKey].items : [];
             items.forEach(item => {
                 if (item?.id) ModuleSwitchPerfCache.categoryByModule.set(item.id, catKey);
@@ -3906,6 +3910,14 @@ function switchTab(id) {
 
     let currentCategory = getCurrentCategoryKey();
     let foundCategory = getModuleCategoryKeyCached(id);
+
+    // 用户正停在「本次必看」且切换的正是该入口里的模块时，保持分类不变。
+    // 否则 switchTab 会把 currentCategory 改回模块的原分类（如 summary → town），
+    // 造成「点了本次必看、却跳进联考分析」——侧栏高亮与子导航都对不上。
+    const coreItems = Array.isArray(NAV_STRUCTURE.core?.items) ? NAV_STRUCTURE.core.items : [];
+    if (currentCategory === 'core' && coreItems.some((item) => item?.id === id)) {
+        foundCategory = 'core';
+    }
 
     if (foundCategory && foundCategory !== currentCategory) {
         setCurrentCategoryKey(foundCategory);

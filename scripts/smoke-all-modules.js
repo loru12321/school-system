@@ -4946,11 +4946,21 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
                     .map((el) => String(el.textContent || '').trim());
                 const structure = window.NAV_STRUCTURE || {};
                 const core = structure.core;
+                const itemIds = core && Array.isArray(core.items) ? core.items.map((item) => item.id) : [];
+                // 「模块 → 分类」映射必须保留模块的**原分类**，不能被 core 覆盖：
+                // 否则点 core 里的模块会跳进别的分类，侧栏高亮与子导航全部错位
+                // （曾真实发生：summary 被映射成 core/town，点「本次必看」跳到「联考分析」）。
+                const ownerOfSummary = typeof window.getModuleCategoryKeyCached === 'function'
+                    ? window.getModuleCategoryKeyCached('summary')
+                    : null;
                 return {
                     firstNavTitle: titles[0] || '',
                     isFirst: titles[0] === '本次必看',
                     itemCount: core && Array.isArray(core.items) ? core.items.length : -1,
-                    itemIds: core && Array.isArray(core.items) ? core.items.map((item) => item.id) : []
+                    itemIds,
+                    summaryOwnerCategory: ownerOfSummary,
+                    // core 不得成为任何模块的归属分类。
+                    ownerNotCore: ownerOfSummary !== 'core'
                 };
             })(),
             overlayHidden: getComputedStyle(document.getElementById('login-overlay')).display === 'none',
