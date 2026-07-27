@@ -243,6 +243,13 @@
         if (typeof window.applyComparisonPanelCollapses === 'function') {
             scheduleModuleTask('comparison-panel-collapse-enter', window.applyComparisonPanelCollapses, { delay: 120, idle: true, timeout: 800 });
         }
+        // 前置条件状态条（只读现有状态、不触发重算）。放进 idle 任务，不占模块切换关键路径；
+        // 内部按模块 id 过滤，非试点模块直接返回。
+        if (window.PrerequisiteStatus && typeof window.PrerequisiteStatus.refresh === 'function') {
+            scheduleModuleTask('prerequisite-status-enter', () => {
+                window.PrerequisiteStatus.refresh(id);
+            }, { delay: 160, idle: true, timeout: 1200 });
+        }
     }
 
     function isTeacherAnalysisActive() {

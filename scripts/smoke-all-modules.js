@@ -1382,6 +1382,16 @@ async function runModuleDeepCheck(page, id) {
                 summaryHighScoreMatchesFormula: summaryHighScoreDiagnostics.highScoreMatches,
                 summaryAdmissionZeroUnlessJulyZhongkao: summaryHighScoreDiagnostics.admissionAllZeroWhenDisallowed
             };
+
+            // 前置条件状态条（prerequisite-status-runtime）必须真的注入到本模块，
+            // 否则它只是个静默 no-op：运行时存在但界面上看不到任何东西。
+            const prerequisiteBar = document.querySelector('#summary > .prerequisite-status-bar');
+            checks.prerequisiteBarRendered = !!prerequisiteBar;
+            checks.prerequisiteBarHasItems = !!prerequisiteBar
+                && prerequisiteBar.querySelectorAll('.prerequisite-status-item').length >= 2;
+            const prerequisiteBarText = prerequisiteBar
+                ? String(prerequisiteBar.innerText || '').replace(/\s+/g, ' ').trim()
+                : '';
             const panel = document.querySelector('.town-submodule-compare-panel[data-submodule="summary"]');
             let schoolProfileCloseWorks = false;
             let schoolProfileCellClickWorks = false;
@@ -1429,6 +1439,7 @@ async function runModuleDeepCheck(page, id) {
             return {
                 ok: Object.values(checks).every(Boolean) && !!panel && schoolProfileCloseWorks && schoolProfileCellClickWorks,
                 checks,
+                prerequisiteBarText,
                 panelReady: !!panel,
                 schoolProfileCloseWorks,
                 schoolProfileCellReady: !!schoolProfileCell,
