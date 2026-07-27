@@ -47,12 +47,12 @@ assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 's
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-// 297: the freshman module's six upload/data-source handlers moved into
+// 253: the freshman module's six upload/data-source handlers moved into
 // freshman-exam-runtime.js (data-fb-pick / data-fb-change); the 17 modal-close,
-// 12 file-pick, 15 showModuleHelp and 11 scrollToAnchor boilerplate handlers all
-// moved into the delegated binder in app-foundation-runtime.js.
-// Ratchet only downward from here.
-assert.ok(inlineHandlerCount <= 297, `inline event handler count grew: ${inlineHandlerCount} > 297`);
+// 12 file-pick, 15 showModuleHelp, 11 scrollToAnchor and 44 DataManager
+// boilerplate handlers all moved into the delegated binder in
+// app-foundation-runtime.js. Ratchet only downward from here.
+assert.ok(inlineHandlerCount <= 253, `inline event handler count grew: ${inlineHandlerCount} > 253`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 // The freshman module's upload/data-source controls are bound declaratively in
@@ -145,6 +145,40 @@ assert.ok(
 assert.ok(
     /window\.scrollToAnchor\(binding\.id, binding\.holder\)/.test(foundationRuntime),
     'the scroll-anchor branch must pass the attribute holder so side-nav highlighting still works'
+);
+
+// DataManager 调度：45 处内联里 44 处收敛为 data-dm-* 属性（余 1 处多语句复合刻意保留）。
+assert.ok(
+    !/on(?:click|change|input)="DataManager\.\w+\((?:'[^']*'|-?[\d.]*|this(?:\.\w+)?)?\)"/.test(html),
+    'single-call DataManager handlers should use data-dm-* attributes instead of inline onclick'
+);
+assert.ok(count(/data-dm-click=/g) >= 31, 'declarative DataManager click bindings should stay wired');
+assert.ok(count(/data-dm-change=/g) >= 11, 'declarative DataManager change bindings should stay wired');
+assert.ok(
+    /data-dm-click'\)/.test(foundationRuntime)
+        && /data-dm-change'\)/.test(foundationRuntime)
+        && /data-dm-input'\)/.test(foundationRuntime),
+    'the foundation runtime must register all three DataManager dispatch listeners'
+);
+// 方法名必须过白名单，参数走独立属性 —— 属性值不得成为 eval 面。
+assert.ok(
+    /isSafeMethodName\s*=\s*\(value\)\s*=>\s*\/\^\[A-Za-z_\$\]/.test(foundationRuntime),
+    'the DataManager dispatcher must validate the method name against an identifier pattern'
+);
+assert.ok(
+    /typeof manager\[method\] !== 'function'/.test(foundationRuntime),
+    'the DataManager dispatcher must verify the method exists before calling it'
+);
+// this.checked / this.value / this 三种取参必须仍被支持，否则 8 个 change 绑定会静默失效。
+assert.ok(
+    /DM_ARG_SOURCES[\s\S]{0,80}?'checked', 'value', 'element'/.test(foundationRuntime),
+    'the DataManager dispatcher must keep the checked/value/element argument sources'
+);
+// 数据管理标签页原本是裸 div（键盘不可达）。role=button 让 app.js 的 Enter 处理器
+// （role === 'button' → target.click()）能触发，配合 tabindex 才真正可达。
+assert.ok(
+    count(/role="button" tabindex="0" data-dm-click="switchTab"/g) >= 8,
+    'the data-manager tabs must stay keyboard reachable (role=button + tabindex)'
 );
 
 console.log(`html hygiene tests passed: style=${inlineStyleCount}, handlers=${inlineHandlerCount}`);

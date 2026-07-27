@@ -459,6 +459,51 @@ function installDeclarativeDomBindings() {
         if (target.disabled) return;
         target.click();
     }, true);
+
+    // DataManager 调度：把 index.html 里 45 处 onclick/onchange/oninput="DataManager.xxx(...)"
+    // 收敛为声明式属性。与上面的 element-id 类绑定关注点不同，故单独走一对监听器。
+    //   data-dm-click / data-dm-change / data-dm-input = "<方法名>"
+    //   data-dm-arg = "<字符串或数字参数>"（可选）
+    //   data-dm-arg-from = "checked" | "value" | "element"（可选，取自触发元素）
+    // 参数走独立属性而不是把表达式塞进属性值，避免属性变成 eval 面。
+    const DM_ARG_SOURCES = new Set(['checked', 'value', 'element']);
+    const isSafeMethodName = (value) => /^[A-Za-z_$][\w$]*$/.test(value);
+
+    const dispatchDataManager = (event, attribute) => {
+        const origin = event.target instanceof Element ? event.target : null;
+        if (!origin) return;
+        const holder = origin.closest(`[${attribute}]`);
+        if (!holder) return;
+
+        const method = String(holder.getAttribute(attribute) || '').trim();
+        if (!isSafeMethodName(method)) return;
+        const manager = window.DataManager;
+        // DataManager 由 app.js / data-manager-core-runtime 提供。未就绪时静默跳过，
+        // 与原内联 onclick 行为一致（那时同样会因对象未定义而无效）。
+        if (!manager || typeof manager[method] !== 'function') return;
+
+        const argSource = String(holder.getAttribute('data-dm-arg-from') || '').trim();
+        if (argSource && DM_ARG_SOURCES.has(argSource)) {
+            if (argSource === 'checked') return void manager[method](holder.checked);
+            if (argSource === 'value') return void manager[method](holder.value);
+            return void manager[method](holder);
+        }
+
+        if (holder.hasAttribute('data-dm-arg')) {
+            const raw = holder.getAttribute('data-dm-arg');
+            // 数字型参数（如 changePage(-1)）保持数字语义，其余按字符串传。
+            const asNumber = Number(raw);
+            const arg = raw !== '' && Number.isFinite(asNumber) && /^-?\d+(?:\.\d+)?$/.test(raw)
+                ? asNumber
+                : raw;
+            return void manager[method](arg);
+        }
+        manager[method]();
+    };
+
+    document.addEventListener('click', (event) => dispatchDataManager(event, 'data-dm-click'), true);
+    document.addEventListener('change', (event) => dispatchDataManager(event, 'data-dm-change'), true);
+    document.addEventListener('input', (event) => dispatchDataManager(event, 'data-dm-input'), true);
 }
 
 installDeclarativeDomBindings();

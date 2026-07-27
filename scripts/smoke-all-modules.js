@@ -4659,8 +4659,22 @@ async function smokeDataManagerTab(page, id) {
             if (!window.DataManager || typeof window.DataManager.switchTab !== 'function') {
                 return { ok: false, id: tabId, error: 'DataManager.switchTab is not available' };
             }
-            await Promise.resolve(window.DataManager.switchTab(tabId));
+            // 优先通过真实点击 tab 元素来切换，走 data-dm-click 委托链路，这样
+            // 「声明式绑定是否真的派发到 DataManager」会被每个 tab 覆盖到；
+            // 找不到对应 tab 元素时回退为直接调用，保持既有覆盖不减。
+            const tabEl = document.querySelector(`[data-dm-click="switchTab"][data-dm-arg="${tabId}"]`);
+            let dispatchedViaDelegation = false;
+            if (tabEl) {
+                tabEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                dispatchedViaDelegation = true;
+            } else {
+                await Promise.resolve(window.DataManager.switchTab(tabId));
+            }
             if (stabilizeMs > 0) await new Promise(resolve => setTimeout(resolve, stabilizeMs));
+            // 走委托时必须确认该 tab 真的激活了：只看「没报错」的话，绑定失效
+            // （点击完全无反应）也会静默通过。并入下面各分支的 ok 判定。
+            const delegationActivatedTab = !dispatchedViaDelegation
+                || !!document.querySelector(`.login-tab.active[data-dm-arg="${tabId}"]`);
             const activePanel = document.querySelector('.data-manager-tab.active,[data-dm-tab].active,.tab-pane.active');
             if (tabId === 'sql') {
                 const checks = {
@@ -4670,8 +4684,10 @@ async function smokeDataManagerTab(page, id) {
                     talkToData: typeof window.talkToData === 'function'
                 };
                 return {
-                    ok: Object.values(checks).every(Boolean),
+                    ok: Object.values(checks).every(Boolean) && delegationActivatedTab,
                     id: tabId,
+                    dispatchedViaDelegation,
+                    delegationActivatedTab,
                     checks
                 };
             }
@@ -4686,14 +4702,18 @@ async function smokeDataManagerTab(page, id) {
                     rowDownloadButton: !hasCloudRows || !!document.querySelector('#dm-cloud-table tbody button[data-cloud-backup-action="download"]')
                 };
                 return {
-                    ok: Object.values(checks).every(Boolean),
+                    ok: Object.values(checks).every(Boolean) && delegationActivatedTab,
                     id: tabId,
+                    dispatchedViaDelegation,
+                    delegationActivatedTab,
                     checks
                 };
             }
             return {
-                ok: true,
+                ok: delegationActivatedTab,
                 id: tabId,
+                dispatchedViaDelegation,
+                delegationActivatedTab,
                 activeText: activePanel?.textContent?.trim()?.slice(0, 80) || ''
             };
         } catch (error) {

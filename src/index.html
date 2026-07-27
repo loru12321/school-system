@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-a8329b0c17f8.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-a8329b0c17f8.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-137fe60bd312.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-137fe60bd312.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -3878,44 +3878,44 @@
                 <h3 style="color:#0f172a; margin:0;"><i class="ti ti-cloud-cog"></i> 云端教务数据综合控制台</h3>
 
                 <div style="display:flex; gap:10px;">
-                    <button class="btn btn-sm btn-purple" onclick="DataManager.saveAndSync()">
+                    <button class="btn btn-sm btn-purple" data-dm-click="saveAndSync">
                         <i class="ti ti-cloud-upload"></i> 保存修改并同步云端
                     </button>
                     <button type="button" class="modal-close-btn" aria-label="关闭数据管理弹窗"
-                        onclick="DataManager.closeCloudManager()">&times;</button>
+                        data-dm-click="closeCloudManager">&times;</button>
                 </div>
             </div>
 
             <!-- 顶部 Tab 切换 -->
             <div
                 style="display:flex; gap:10px; margin-bottom:15px; border-bottom:1px solid #e2e8f0; padding-bottom:10px; overflow-x:auto;">
-                <div class="login-tab active" id="tab-data-stu" onclick="DataManager.switchTab('student')">
+                <div class="login-tab active" id="tab-data-stu" role="button" tabindex="0" data-dm-click="switchTab" data-dm-arg="student">
                     <i class="ti ti-users"></i> 学生成绩
                 </div>
 
-                <div class="login-tab" id="tab-data-exams" onclick="DataManager.switchTab('exams')">
+                <div class="login-tab" id="tab-data-exams" role="button" tabindex="0" data-dm-click="switchTab" data-dm-arg="exams">
                     <i class="ti ti-list-details"></i> 成绩批次
                 </div>
 
-                <div class="login-tab" id="tab-data-tea" onclick="DataManager.switchTab('teacher')">
+                <div class="login-tab" id="tab-data-tea" role="button" tabindex="0" data-dm-click="switchTab" data-dm-arg="teacher">
                     <i class="ti ti-id"></i> 教师任课
                 </div>
 
-                <div class="login-tab" id="tab-data-assessment-roster" onclick="DataManager.switchTab('assessment-roster')">
+                <div class="login-tab" id="tab-data-assessment-roster" role="button" tabindex="0" data-dm-click="switchTab" data-dm-arg="assessment-roster">
                     <i class="ti ti-users-group"></i> 考核名册
                 </div>
 
-                <div class="login-tab" id="tab-data-params" onclick="DataManager.switchTab('params')">
+                <div class="login-tab" id="tab-data-params" role="button" tabindex="0" data-dm-click="switchTab" data-dm-arg="params">
                     <i class="ti ti-settings"></i> 年级指标参数
                 </div>
-                <div class="login-tab" id="tab-data-targets" onclick="DataManager.switchTab('targets')">
+                <div class="login-tab" id="tab-data-targets" role="button" tabindex="0" data-dm-click="switchTab" data-dm-arg="targets">
                     <i class="ti ti-target"></i> 目标人数管理
                 </div>
 
-                <div class="login-tab" id="tab-data-sql" onclick="DataManager.switchTab('sql')">
+                <div class="login-tab" id="tab-data-sql" role="button" tabindex="0" data-dm-click="switchTab" data-dm-arg="sql">
                     <i class="ti ti-terminal-2"></i> SQL 极速查询
                 </div>
-                <div class="login-tab" id="tab-data-cloud" onclick="DataManager.switchTab('cloud')">
+                <div class="login-tab" id="tab-data-cloud" role="button" tabindex="0" data-dm-click="switchTab" data-dm-arg="cloud">
                     <i class="ti ti-cloud"></i> 云端存档管理
                 </div>
             </div>
@@ -3931,12 +3931,12 @@
                 style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px; display:flex; gap:10px;">
                 <input type="text" id="dm-search-input" placeholder="输入姓名/班级/考号筛选..."
                     style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:4px;"
-                    oninput="DataManager.renderCurrentTab()">
-                <button class="btn btn-sm btn-primary" onclick="DataManager.renderCurrentTab()">搜索</button>
+                    data-dm-input="renderCurrentTab">
+                <button class="btn btn-sm btn-primary" data-dm-click="renderCurrentTab">搜索</button>
                 <span id="dm-stu-selected-count"
                     style="align-self:center; font-size:12px; color:#475569; white-space:nowrap;">已选 0 项</span>
                 <button class="btn btn-sm btn-danger" id="dm-stu-batch-delete"
-                    onclick="DataManager.deleteSelectedStudents()" disabled
+                    data-dm-click="deleteSelectedStudents" disabled
                     style="opacity:0.6; white-space:nowrap;">批量删除</button>
             </div>
 
@@ -3947,7 +3947,7 @@
                     <thead>
                         <tr>
                             <th style="width:40px; text-align:center;"><input type="checkbox" id="dm-stu-select-all"
-                                    onchange="DataManager.toggleStudentSelectAll(this.checked)"></th>
+                                    data-dm-change="toggleStudentSelectAll" data-dm-arg-from="checked"></th>
                             <th>学校</th>
                             <th>班级</th>
                             <th>姓名</th>
@@ -3967,24 +3967,24 @@
                         style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; font-size:12px; color:#475569;">
                         <input type="text" id="dm-exams-search" placeholder="按批次、学年、学期、考试名称筛选..."
                             style="flex:1; min-width:260px; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px;"
-                            oninput="DataManager.renderExamBatches()">
+                            data-dm-input="renderExamBatches">
                         <select id="dm-exams-filter"
                             style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px;"
-                            onchange="DataManager.renderExamBatches()">
+                            data-dm-change="renderExamBatches">
                             <option value="all">全部批次</option>
                             <option value="duplicate">疑似重复</option>
                             <option value="empty">空数据</option>
                             <option value="current">当前批次</option>
                         </select>
                         <span id="dm-exams-selected-count" style="white-space:nowrap;">已选 0 项</span>
-                        <button class="btn btn-sm btn-gray" type="button" onclick="DataManager.refreshExamBatchesFromCloud()">
+                        <button class="btn btn-sm btn-gray" type="button" data-dm-click="refreshExamBatchesFromCloud">
                             <i class="ti ti-refresh"></i> 补齐云端历史
                         </button>
-                        <button class="btn btn-sm btn-primary" type="button" onclick="DataManager.selectRecognizedExamBatches()">
+                        <button class="btn btn-sm btn-primary" type="button" data-dm-click="selectRecognizedExamBatches">
                             <i class="ti ti-wand"></i> 识别疑似项
                         </button>
                         <button class="btn btn-sm btn-danger" id="dm-exams-batch-delete" type="button"
-                            onclick="DataManager.deleteSelectedExamBatches()" disabled style="opacity:0.6;">
+                            data-dm-click="deleteSelectedExamBatches" disabled style="opacity:0.6;">
                             <i class="ti ti-trash"></i> 批量删除
                         </button>
                     </div>
@@ -3995,7 +3995,7 @@
                                 <tr>
                                     <th style="width:42px; text-align:center;">
                                         <input type="checkbox" id="dm-exams-select-all"
-                                            onchange="DataManager.toggleExamBatchSelectAll(this.checked)">
+                                            data-dm-change="toggleExamBatchSelectAll" data-dm-arg-from="checked">
                                     </th>
                                     <th>考试批次</th>
                                     <th>学年 / 学期</th>
@@ -4027,7 +4027,7 @@
                                 <label style="font-weight:bold; color:#334155; font-size:13px;">🏫 本校：</label>
                                 <select id="dm-teacher-school-select"
                                     style="padding:6px 10px; width:160px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;"
-                                    onchange="DataManager.updateTeacherSchoolFilter()">
+                                    data-dm-change="updateTeacherSchoolFilter">
                                     <option value="">-- 显示全部 --</option>
                                 </select>
                             </div>
@@ -4036,7 +4036,7 @@
                                 <label style="font-weight:bold; color:#334155; font-size:13px;">📅 学期：</label>
                                 <select id="dm-teacher-term-select"
                                     style="padding:6px 10px; width:200px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; outline:none;"
-                                    onchange="DataManager.switchTeacherTerm(this.value)"></select>
+                                    data-dm-change="switchTeacherTerm" data-dm-arg-from="value"></select>
                             </div>
                         </div>
 
@@ -4060,9 +4060,9 @@
                                 <i class="ti ti-file-import"></i> 导入到当前学期
                             </button>
                             <input type="file" id="dm-teacher-file" accept=".xlsx,.xls" hidden
-                                onchange="DataManager.handleTeacherUpload(this)">
+                                data-dm-change="handleTeacherUpload" data-dm-arg-from="element">
 
-                            <button class="btn btn-sm btn-primary" onclick="DataManager.addTeacher()"
+                            <button class="btn btn-sm btn-primary" data-dm-click="addTeacher"
                                 title="手动添加一条教师任课记录"
                                 style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:4px;">
                                 <i class="ti ti-plus"></i> 手动新增
@@ -4160,7 +4160,7 @@
                             </div>
                         </div>
                         <div style="margin-top:20px; text-align:right;">
-                            <button class="btn btn-primary" onclick="DataManager.saveParamsLocally()">
+                            <button class="btn btn-primary" data-dm-click="saveParamsLocally">
                                 <i class="ti ti-device-floppy"></i> 暂存参数（会尝试立即保存，建议最后统一同步）
                             </button>
                         </div>
@@ -4180,7 +4180,7 @@
                                 <i class="ti ti-file-import"></i> 导入目标人数文件 (.xlsx)
                             </button>
                             <input type="file" id="dm-target-file" accept=".xlsx,.xls" hidden
-                                onchange="DataManager.handleTargetUpload(this)">
+                                data-dm-change="handleTargetUpload" data-dm-arg-from="element">
 
                             <a href="javascript:void(0)"
                                 style="font-size:12px; margin-left:10px; color:#666; text-decoration:underline;"
@@ -4220,7 +4220,7 @@
                                 <h4 style="margin:0; color:#0f172a;"><i class="ti ti-git-merge"></i> 学校名称对应表</h4>
                                 <div id="dm-school-aliases-summary" style="font-size:12px; color:#64748b; margin-top:4px;"></div>
                             </div>
-                            <button class="btn btn-sm btn-primary" onclick="DataManager.openSchoolAliasEditor()">
+                            <button class="btn btn-sm btn-primary" data-dm-click="openSchoolAliasEditor">
                                 <i class="ti ti-plus"></i> 新增对应
                             </button>
                         </div>
@@ -4264,12 +4264,12 @@
                 <div id="dm-sql-area" style="display:none; padding:15px; height:100%; flex-direction:column;">
                     <!-- 提示与常用语句 -->
                     <div style="margin-bottom:10px; display:flex; gap:10px; flex-wrap:wrap;">
-                        <button class="btn btn-sm btn-gray" onclick="DataManager.setQuickSQL('base')">📋 查前10名</button>
-                        <button class="btn btn-sm btn-gray" onclick="DataManager.setQuickSQL('count')">📊 各校人数</button>
-                        <button class="btn btn-sm btn-gray" onclick="DataManager.setQuickSQL('avg')">📈 各班均分</button>
-                        <button class="btn btn-sm btn-gray" onclick="DataManager.setQuickSQL('failed')">📉
+                        <button class="btn btn-sm btn-gray" data-dm-click="setQuickSQL" data-dm-arg="base">📋 查前10名</button>
+                        <button class="btn btn-sm btn-gray" data-dm-click="setQuickSQL" data-dm-arg="count">📊 各校人数</button>
+                        <button class="btn btn-sm btn-gray" data-dm-click="setQuickSQL" data-dm-arg="avg">📈 各班均分</button>
+                        <button class="btn btn-sm btn-gray" data-dm-click="setQuickSQL" data-dm-arg="failed">📉
                             不及格名单</button>
-                        <button class="btn btn-sm btn-gray" onclick="DataManager.setQuickSQL('teacher')">👩‍🏫
+                        <button class="btn btn-sm btn-gray" data-dm-click="setQuickSQL" data-dm-arg="teacher">👩‍🏫
                             查任课学生</button>
                         <div style="flex:1; text-align:right; font-size:12px; color:#666; align-self:center;">
                             表名: <b>students</b> (成绩), <b>teachers</b> (任课)
@@ -4280,13 +4280,13 @@
                     <div style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                         <select id="dm-sql-history-select"
                             style="min-width:220px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;"
-                            onchange="DataManager.applySQLHistory(this.value)">
+                            data-dm-change="applySQLHistory" data-dm-arg-from="value">
                             <option value="">🕘 最近/收藏</option>
                         </select>
                         <input id="dm-sql-history-name" type="text" placeholder="收藏名称(可选)"
                             style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; width:180px;">
-                        <button class="btn btn-sm btn-green" onclick="DataManager.saveNamedSQL()">⭐ 保存收藏</button>
-                        <button class="btn btn-sm btn-gray" onclick="DataManager.clearSQLHistory()">🧹 清空历史</button>
+                        <button class="btn btn-sm btn-green" data-dm-click="saveNamedSQL">⭐ 保存收藏</button>
+                        <button class="btn btn-sm btn-gray" data-dm-click="clearSQLHistory">🧹 清空历史</button>
                     </div>
 
                     <!-- Talk to Data 自然语言查数 -->
@@ -4307,9 +4307,9 @@
                     <div style="margin:10px 0; display:flex; justify-content:space-between;">
                         <div id="sql-status-msg" style="font-size:12px; color:#ef4444; font-weight:bold;"></div>
                         <div>
-                            <button class="btn btn-sm btn-green" onclick="DataManager.exportSQLResult()">📥 导出结果
+                            <button class="btn btn-sm btn-green" data-dm-click="exportSQLResult">📥 导出结果
                                 Excel</button>
-                            <button class="btn btn-primary" onclick="DataManager.runSQL()"><i
+                            <button class="btn btn-primary" data-dm-click="runSQL"><i
                                     class="ti ti-player-play"></i> 执行查询 (Run)</button>
                         </div>
                     </div>
@@ -4363,22 +4363,22 @@
                     <div
                         style="display:flex; gap:12px; align-items:center; font-size:12px; color:#475569; margin-bottom:8px;">
                         <label><input type="checkbox" id="cloud-filter-current"
-                                onchange="DataManager.renderCloudBackups()"> 仅当前项目</label>
+                                data-dm-change="renderCloudBackups"> 仅当前项目</label>
                     </div>
                     <div
                         style="display:flex; gap:8px; align-items:center; font-size:12px; color:#475569; margin-bottom:8px;">
                         <span id="cloud-selected-count">已选 0 项</span>
                         <button class="btn btn-sm btn-danger" id="btn-cloud-batch-delete"
-                            onclick="DataManager.deleteSelectedCloudBackups()" disabled title="请先勾选需要删除的存档"
+                            data-dm-click="deleteSelectedCloudBackups" disabled title="请先勾选需要删除的存档"
                             style="opacity:0.6;">
                             <i class="ti ti-trash"></i> 批量删除
                         </button>
                         <button class="btn btn-sm btn-primary" id="btn-cloud-upload-archive"
-                            onclick="DataManager.triggerCloudArchiveUpload()" title="上传本地存档文档到云端">
+                            data-dm-click="triggerCloudArchiveUpload" title="上传本地存档文档到云端">
                             <i class="ti ti-upload"></i> 上传文档
                         </button>
                         <input type="file" id="dm-cloud-upload-input" accept=".json,application/json" multiple hidden
-                            onchange="DataManager.handleCloudArchiveUpload(this)">
+                            data-dm-change="handleCloudArchiveUpload" data-dm-arg-from="element">
                     </div>
                     <div class="dm-cloud-table-shell" id="dm-cloud-table-shell" data-cloud-state="loading">
                         <div class="dm-cloud-table-scroll" tabindex="0" aria-label="云端存档记录，可横向和纵向滚动">
@@ -4387,7 +4387,7 @@
                                     <tr>
                                         <th style="width:44px; text-align:center;"><input type="checkbox"
                                                 id="dm-cloud-select-all"
-                                                onchange="DataManager.toggleCloudSelectAll(this.checked)" title="全选/取消全选">
+                                                data-dm-change="toggleCloudSelectAll" data-dm-arg-from="checked" title="全选/取消全选">
                                         </th>
                                         <th>数据项目</th>
                                         <th>上传时间</th>
@@ -4404,9 +4404,9 @@
                 <!-- 分页控件 (仅在学生/教师 Tab 显示) -->
                 <div id="dm-pagination"
                     style="padding-top:10px; text-align:right; font-size:12px; color:#666; display:flex; justify-content:flex-end; gap:10px; align-items:center;">
-                    <button class="btn btn-sm btn-gray" onclick="DataManager.changePage(-1)">上一页</button>
+                    <button class="btn btn-sm btn-gray" data-dm-click="changePage" data-dm-arg="-1">上一页</button>
                     <span id="dm-page-info">1 / 1</span>
-                    <button class="btn btn-sm btn-gray" onclick="DataManager.changePage(1)">下一页</button>
+                    <button class="btn btn-sm btn-gray" data-dm-click="changePage" data-dm-arg="1">下一页</button>
                 </div>
             </div>
             </main>
