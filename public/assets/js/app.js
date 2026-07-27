@@ -5201,31 +5201,16 @@ function calculateStudentRanks() {
     });
 }
 
+// 学校综合排名（score2Rate / rank2Rate / scoreBottom / rankBottom）已整体迁移到
+// data-processing-worker.js 的「D. 学校综合排名 (原 calculateRankings)」段（约 167 行起）。
+// 本函数此前以一个裸 `return;` 开头，后面整段代码不可达（其中还引用了本作用域并不存在的
+// townshipSchools，早已无法运行），属于迁移后残留的死代码，现已删除以消除「同一口径多处
+// 实现」的漂移风险。
+//
+// 保留空函数体：唯一调用点在演示数据加载路径（本文件内 loadDemoData()，紧跟 processData()
+// 之后），删掉函数会让该调用抛 ReferenceError。真实排名由 worker 在 processData 内完成。
 function calculateRankings() {
-    return; const doRank = (subject, key) => {
-        const list = Object.values(SCHOOLS).filter(s => s.metrics[subject]);
-        list.sort((a, b) => b.metrics[subject][key] - a.metrics[subject][key]);
-        list.forEach((s, i) => {
-            if (!s.rankings[subject]) s.rankings[subject] = {};
-            if (i > 0 && Math.abs(s.metrics[subject][key] - list[i - 1].metrics[subject][key]) < 0.0001) s.rankings[subject][key] = list[i - 1].rankings[subject][key]; else s.rankings[subject][key] = i + 1;
-        });
-    };
-    [...SUBJECTS, 'total'].forEach(sub => { doRank(sub, 'avg'); doRank(sub, 'excRate'); doRank(sub, 'passRate'); });
-    const max = { avg: 0, exc: 0, pass: 0 };
-    Object.values(SCHOOLS).forEach(s => { if (s.metrics.total) { max.avg = Math.max(max.avg, s.metrics.total.avg); max.exc = Math.max(max.exc, s.metrics.total.excRate); max.pass = Math.max(max.pass, s.metrics.total.passRate); } });
-    const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
-    const wAvg = isGrade9 ? 50 : 60;
-    const wExc = isGrade9 ? 80 : 70;
-    const wPass = isGrade9 ? 50 : 70;
-    townshipSchools.forEach(s => {
-        if (s.metrics.total) {
-            const m = s.metrics.total; const ratedAvg = max.avg > 0 ? (m.avg / max.avg * wAvg) : 0; const ratedExc = max.exc > 0 ? (m.excRate / max.exc * wExc) : 0; const ratedPass = max.pass > 0 ? (m.passRate / max.pass * wPass) : 0;
-            m.ratedAvg = ratedAvg; m.ratedExc = ratedExc; m.ratedPass = ratedPass; s.score2Rate = ratedAvg + ratedExc + ratedPass;
-        } else { s.score2Rate = 0; }
-    });
-    const list = Object.values(SCHOOLS); list.sort((a, b) => b.score2Rate - a.score2Rate); list.forEach((s, i) => s.rank2Rate = i + 1);
-    let maxBAvg = 0; list.forEach(s => maxBAvg = Math.max(maxBAvg, s.bottom3.avg));
-    list.forEach(s => s.scoreBottom = maxBAvg ? (s.bottom3.avg / maxBAvg * 40) : 0); list.sort((a, b) => b.scoreBottom - a.scoreBottom).forEach((s, i) => s.rankBottom = i + 1);
+    /* no-op：实现在 data-processing-worker.js，见上方说明 */
 }
 
 function getRankHTML(rank, type = 'school') { let cls = 'rank-cell'; if (rank === 1) cls += ' r-1'; if (rank === 2) cls += ' r-2'; if (rank === 3) cls += ' r-3'; return `<td class="${cls}">${rank}</td>`; }
