@@ -53,10 +53,18 @@
         return now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
     }
 
+    // 在校届别只有 6/7/8/9 四个年级，因此从 9 年级届别往后取 **4** 个。
+    // 原来取 5 个会多出一个尚未入学的届别（offset=4 对应「5 年级」）：
+    // 2026-07 时会冒出 2026 届、2026-09 后会冒出 2027 届，每年重演。
+    // 空届别不仅无意义，还会让用户误以为该届已建档。
+    const IN_SCHOOL_GRADE_COUNT = 4;
+
     function getRecentCohortYears(now = new Date()) {
         const grade9CohortYear = Number(getCurrentGrade9CohortYear(now));
         const years = [];
-        for (let offset = 0; offset < 5; offset += 1) years.push(String(grade9CohortYear + offset));
+        for (let offset = 0; offset < IN_SCHOOL_GRADE_COUNT; offset += 1) {
+            years.push(String(grade9CohortYear + offset));
+        }
         return years;
     }
 

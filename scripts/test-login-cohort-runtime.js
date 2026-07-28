@@ -120,13 +120,21 @@ assert.strictEqual(spring.select.value, '2024', 'refreshing the login shell shou
 
 const autumn = runLoginRuntime('2026-09-01T00:00:00Z');
 assert.strictEqual(autumn.select.value, '2023', 'from September, grade 9 should roll forward by one cohort');
-assert.ok(autumn.select.innerHTML.includes('2027届'), 'from September, the new incoming cohort should appear in active login choices');
+// 在校届别只有 6/7/8/9 四个年级。2026-09 时 9 年级=2023 届，则 6 年级新生=2026 届。
+// 原断言要求出现 2027 届——那一届当时对应「5 年级」、尚未入学，是错的（每年重演：
+// 2026-07 会冒出 2026 届、2026-09 会冒出 2027 届）。空届别会让用户误以为已建档。
+assert.ok(autumn.select.innerHTML.includes('2026届'), 'from September, the new grade 6 cohort should appear in active login choices');
+assert.ok(!autumn.select.innerHTML.includes('2027届'), 'a cohort that has not enrolled yet must not appear in login choices');
+assert.strictEqual((autumn.select.innerHTML.match(/届<\/option>/g) || []).length, 4,
+    'active login choices should list exactly the four in-school cohorts (grades 6-9)');
 assert.ok(!autumn.select.innerHTML.includes('2022届'), 'from September, the graduated cohort should leave active login choices');
 assert.ok(autumn.graduateSelect.innerHTML.includes('2022届 · 已毕业'), 'from September, the graduated cohort should move to the graduate archive choices');
 assert.strictEqual(
     autumn.window.BootCohortLifecycle.getLoginCohortYears(new Date('2026-09-01T00:00:00Z')).join('|'),
-    '2023|2024|2025|2026|2027',
-    'login lifecycle API should expose active cohorts after September rollover'
+    // 只列在校的四个届别：2023=9年级 / 2024=8 / 2025=7 / 2026=6年级新生。
+    // 原期望多了个 2027（当时相当于「5年级」、尚未入学）。
+    '2023|2024|2025|2026',
+    'login lifecycle API should expose exactly the four in-school cohorts after September rollover'
 );
 
 assert.ok(bootSource.includes('getBootCurrentGrade9CohortYear'), 'boot login path should calculate the grade 9 cohort');
