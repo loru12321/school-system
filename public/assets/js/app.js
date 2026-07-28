@@ -5573,6 +5573,14 @@ function renderTables() {
         buildSummaryDependencySignature('twoRateBottom', townshipSchools),
         '两率一分或后1/3结果已更新，请重新生成总排名。'
     );
+
+    // 两率一分页的「本次要点」：只读上面已算好的各科指标生成文字提示，不参与计算。
+    // 用 guard + try 包裹：辅助信息的任何失败都不得影响主表。
+    try {
+        if (typeof window.renderAnalysisHighlights === 'function') window.renderAnalysisHighlights();
+    } catch (error) {
+        console.warn('[renderTables] 两率一分要点渲染失败（不影响表格）:', error);
+    }
 }
 
 function getStudentBlankScoreSubjects(student, visibleSubjects = SUBJECTS) {

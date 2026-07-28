@@ -1706,10 +1706,38 @@ async function runModuleDeepCheck(page, id) {
                     error: error?.message || String(error)
                 };
             }
+            // 两率一分的「本次要点」：取回真实渲染文本，确认要么有依据、要么整块隐藏。
+            // 另确认学科范围与主表一致——要点绝不能绕过任课教师的学科可见性过滤。
+            const highlightsEl = document.getElementById('analysis-highlights');
+            const highlightItems = highlightsEl
+                ? Array.from(highlightsEl.querySelectorAll('.summary-highlights-list li'))
+                    .map((li) => String(li.innerText || '').trim()).filter(Boolean)
+                : [];
+            const visibleSubjects = typeof window.getTownAnalysisVisibleSubjectsForCurrentUser === 'function'
+                ? window.getTownAnalysisVisibleSubjectsForCurrentUser()
+                : [];
+            checks.analysisHighlightsConsistent = !highlightsEl
+                || (highlightsEl.hidden ? highlightItems.length === 0 : highlightItems.length > 0);
+            // 要点里出现的学科必须都在可见学科集合内。
+            // 注意：本 smoke 以 admin 登录、全科可见，因此这条在此场景下恒真，
+            // 只能作为「没有出现集合外学科」的事实记录；真正的教师学科作用域覆盖
+            // 由 test-analysis-highlights-runtime.js 的单元测试负责。
+            const subjectLeak = highlightItems.some((text) => {
+                const mentioned = (Array.isArray(window.SUBJECTS) ? window.SUBJECTS : [])
+                    .filter((subject) => subject && text.includes(subject));
+                return mentioned.some((subject) => !visibleSubjects.includes(subject));
+            });
+            checks.analysisHighlightsRespectSubjectScope = !subjectLeak;
+
             return {
                 ok: Object.values(checks).every(Boolean) && horizontalReady,
                 checks,
-                horizontalReady
+                horizontalReady,
+                analysisHighlights: {
+                    hidden: highlightsEl ? highlightsEl.hidden : null,
+                    count: highlightItems.length,
+                    items: highlightItems.slice(0, 4)
+                }
             };
         });
     }
