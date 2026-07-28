@@ -4172,7 +4172,7 @@ function handleHighSchoolAdmissionClick(schoolName) {
                 ? '可计算'
                 : getHighSchoolAdmissionStatusText(item, { allowed, line });
             const result = canCalculate
-                ? `${item.admissionCount}/${item.count} 人（${(item.ratio * 100).toFixed(2)}%）`
+                ? `<button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighSchoolAdmissionClassClick(${jsStringLiteral(schoolName)}, ${jsStringLiteral(item.className)})" title="查看${escapeAppHtml(item.className)}班全部高中上线学生姓名" aria-label="查看${escapeAppHtml(item.className)}班高中上线学生姓名">${item.admissionCount}/${item.count} 人（${(item.ratio * 100).toFixed(2)}%）</button>`
                 : '—';
             return `<tr><td>${escapeAppHtml(item.className)}</td><td>${item.count}</td><td>${item.availableCount}</td><td>${result}</td><td>${escapeAppHtml(rowStatus)}</td></tr>`;
         }).join('')
@@ -4193,7 +4193,45 @@ function handleHighSchoolAdmissionClick(schoolName) {
     alert(`${schoolName}\n${status}\n高中上线：${countText}`);
 }
 
+function handleHighSchoolAdmissionClassClick(schoolName, className) {
+    const schoolRecord = getAppSchoolRecord(schoolName);
+    if (!schoolRecord) return;
+    const allowed = isHighSchoolAdmissionExamAllowed();
+    const line = allowed ? readHighSchoolAdmissionLine() : 0;
+    const stats = getHighSchoolAdmissionStatsForSchool(schoolRecord, line);
+    const classStats = stats.classStats.find((item) => String(item.className) === String(className));
+    if (!classStats || !classStats.complete || !allowed || line <= 0) {
+        const reason = getHighSchoolAdmissionStatusText(classStats, { allowed, line });
+        if (window.UI?.toast) window.UI.toast(`无法展示${className}班上线名单：${reason}`, 'warning');
+        else alert(`${schoolName} ${className}\n${reason}`);
+        return;
+    }
+
+    const admitted = classStats.entries
+        .filter((entry) => Number.isFinite(Number(entry.total)) && Number(entry.total) >= line)
+        .sort((left, right) => Number(right.total) - Number(left.total)
+            || String(left.student?.name || '').localeCompare(String(right.student?.name || ''), 'zh-CN'));
+    const rows = admitted.length
+        ? admitted.map((entry, index) => {
+            const total = Number(entry.total);
+            const totalText = Number.isInteger(total) ? String(total) : total.toFixed(1);
+            return `<tr><td>${index + 1}</td><td style="text-align:left;">${escapeAppHtml(entry.student?.name || '未命名')}</td><td>${totalText}</td></tr>`;
+        }).join('')
+        : '<tr><td colspan="3" style="color:#64748b;padding:14px;">该班没有达到当前录取线的学生。</td></tr>';
+    const html = `<div style="text-align:left;line-height:1.7;">
+        <p style="margin:0;"><strong>公办高中录取线：</strong>${line} 分　<strong>${escapeAppHtml(className)}班上线：</strong>${admitted.length}/${classStats.count} 人</p>
+        <p style="margin:2px 0;color:#475569;">以下为达到录取线的学生，按中考总分（含体育）从高到低排列。</p>
+        <div style="overflow:auto;margin-top:12px;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th>序号</th><th style="text-align:left;">学生姓名</th><th>中考总分（含体育）</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+    if (window.Swal && typeof Swal.fire === 'function') {
+        Swal.fire({ title: `${schoolName} · ${className}班上线学生`, html, width: 660, confirmButtonText: '关闭' });
+        return;
+    }
+    alert(`${schoolName} ${className}\n上线学生：${admitted.map((entry) => entry.student?.name || '未命名').join('、') || '无'}`);
+}
+
 window.handleHighSchoolAdmissionClick = handleHighSchoolAdmissionClick;
+window.handleHighSchoolAdmissionClassClick = handleHighSchoolAdmissionClassClick;
 
 function handleExcludedClick(schoolName) {
     const s = getAppSchoolRecord(schoolName);

@@ -321,6 +321,18 @@ assert.ok(
     appSource.includes('const canCalculate = item.complete && allowed && line > 0;'),
     'class admission detail must show complete classes even when another class in the school has missing Zhongkao totals'
 );
+assert.ok(
+    appSource.includes('function handleHighSchoolAdmissionClassClick(schoolName, className)')
+        && appSource.includes('handleHighSchoolAdmissionClassClick(${jsStringLiteral(schoolName)}, ${jsStringLiteral(item.className)})')
+        && appSource.includes('学生姓名')
+        && appSource.includes('中考总分（含体育）'),
+    'each class admission result must open the admitted student names and Zhongkao totals'
+);
+assert.ok(
+    appSource.includes('Number(entry.total) >= line')
+        && appSource.includes('classStats.entries'),
+    'class admission student list must use the same Zhongkao admission total and line as the score calculation'
+);
 const assessmentSource = fs.readFileSync(path.join(root, 'public/assets/js/teaching-assessment-sync-runtime.js'), 'utf8');
 assert.ok(
     assessmentSource.includes('isGrade9ZhongkaoExam(examContext, rows)')
