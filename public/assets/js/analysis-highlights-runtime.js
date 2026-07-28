@@ -40,80 +40,100 @@
         return mine && schools[mine] ? { name: mine, record: schools[mine] } : null;
     }
 
-    // ── 规则 1：本校最弱学科（按校内名次，而非跨科比分数）────────────────────────
-    // 用「本校该科在参评学校中的名次」判断强弱：跨科直接比均分是错的（满分与难度不同），
-    // 但「各科各自的校际名次」是同一量纲，可以横向比较。
+    // 系统的正式口径是「两率一分」= 均分 + 优秀率 + 及格率三项加权，
+    // 且**优秀率权重最高**（9年级 50/80/50，6-8年级 60/70/70，见
+    // data-processing-worker.js 约 233 行）。因此要点必须三项齐看，
+    // 只挑均分或只挑及格率都会给出不完整、甚至误导的判断。
+    const RATE_METRICS = [
+        { key: 'avg', label: '均分' },
+        { key: 'excRate', label: '优秀率' },
+        { key: 'passRate', label: '及格率' }
+    ];
+
+    // ── 规则 1：综合三项校际名次，找最弱与最强学科 ────────────────────────────────
+    // 跨科不能直接比数值（满分与难度不同），但「各科各自的校际名次」是同一量纲。
+    // 这里取三项名次的平均，避免只看单项造成的偏读。
     function weakestByRankItem(mine, subjects) {
         const rows = subjects.map((subject) => {
-            const rank = num(mine.record?.rankings?.[subject]?.avg);
             const count = num(mine.record?.metrics?.[subject]?.count);
-            if (rank === null || !count) return null;
-            return { subject, rank };
+            if (!count) return null;
+            const ranks = RATE_METRICS
+                .map((metric) => num(mine.record?.rankings?.[subject]?.[metric.key]))
+                .filter((rank) => rank !== null);
+            // 三项名次不齐时不参与比较，避免用不同项数算出的均值互相比。
+            if (ranks.length !== RATE_METRICS.length) return null;
+            const mean = ranks.reduce((sum, rank) => sum + rank, 0) / ranks.length;
+            return { subject, mean, ranks };
         }).filter(Boolean);
         if (rows.length < 2) return null;
-        rows.sort((a, b) => a.rank - b.rank);
+        rows.sort((a, b) => a.mean - b.mean);
         const best = rows[0];
         const worst = rows[rows.length - 1];
-        if (best.rank === worst.rank) return null;
+        if (best.mean === worst.mean) return null;
+        const fmt = (row) => `${escapeHtml(row.subject)}（均分第 ${row.ranks[0]}、优秀率第 ${row.ranks[1]}、及格率第 ${row.ranks[2]}）`;
         return {
-            text: `各科校际名次里，<strong>${escapeHtml(worst.subject)}</strong>最靠后（第 ${worst.rank} 名），`
-                + `<strong>${escapeHtml(best.subject)}</strong>最靠前（第 ${best.rank} 名）`,
-            source: '按各科校际名次比较'
+            text: `三项校际名次综合看，最弱是 <strong>${fmt(worst)}</strong>，最强是 <strong>${fmt(best)}</strong>`,
+            source: '两率一分三项名次'
         };
     }
 
-    // ── 规则 2：本校及格率最低的学科（校内自比，绝对水平）────────────────────────
-    function lowestPassRateItem(mine, subjects) {
-        const rows = subjects.map((subject) => {
-            const passRate = num(mine.record?.metrics?.[subject]?.passRate);
-            const count = num(mine.record?.metrics?.[subject]?.count);
-            if (passRate === null || !count) return null;
-            return { subject, passRate };
-        }).filter(Boolean);
-        if (rows.length < 2) return null;
-        rows.sort((a, b) => a.passRate - b.passRate);
-        const worst = rows[0];
-        const best = rows[rows.length - 1];
-        const gap = (best.passRate - worst.passRate) * 100;
-        if (!(gap >= 10)) return null;
-        return {
-            text: `<strong>${escapeHtml(worst.subject)}</strong>及格率 ${(worst.passRate * 100).toFixed(1)}%，`
-                + `比最高的${escapeHtml(best.subject)}低 ${gap.toFixed(1)} 个百分点`,
-            source: '及格率（同校各科对比）'
-        };
-    }
-
-    // ── 规则 3：与全体参评学校最高水平的差距最大的学科 ────────────────────────────
-    function biggestGapToTopItem(mine, subjects) {
+    // ── 规则 2：三项中与全体最高水平差距最大的那一项 ─────────────────────────────
+    // 逐项（均分/优秀率/及格率）找出「本校离最高水平最远」的学科与项目，
+    // 直接对应两率一分赋分里最吃亏的地方。
+    function weakestMetricItem(mine, subjects) {
         const schools = root.SCHOOLS && typeof root.SCHOOLS === 'object' ? root.SCHOOLS : {};
         const all = Object.values(schools);
         if (all.length < 2) return null;
-        const rows = subjects.map((subject) => {
-            const own = num(mine.record?.metrics?.[subject]?.avg);
-            if (own === null) return null;
-            let topAvg = null;
-            let topName = '';
-            all.forEach((school) => {
-                const avg = num(school?.metrics?.[subject]?.avg);
-                const count = num(school?.metrics?.[subject]?.count);
-                if (avg === null || !count) return;
-                if (topAvg === null || avg > topAvg) {
-                    topAvg = avg;
-                    topName = String(school?.name || '').trim();
-                }
+
+        const candidates = [];
+        subjects.forEach((subject) => {
+            RATE_METRICS.forEach((metric) => {
+                const own = num(mine.record?.metrics?.[subject]?.[metric.key]);
+                if (own === null) return;
+                let top = null;
+                all.forEach((school) => {
+                    const value = num(school?.metrics?.[subject]?.[metric.key]);
+                    const count = num(school?.metrics?.[subject]?.count);
+                    if (value === null || !count) return;
+                    if (top === null || value > top) top = value;
+                });
+                if (top === null || top <= 0) return;
+                // 用「差距占最高值的比例」统一量纲，才能在不同项目与学科之间比较。
+                candidates.push({ subject, metric, own, top, ratio: (top - own) / top });
             });
-            if (topAvg === null || topAvg <= 0) return null;
-            // 用「差距占最高分的比例」而不是绝对分差，才能跨科比较。
-            return { subject, gapRatio: (topAvg - own) / topAvg, gap: topAvg - own, topName };
-        }).filter(Boolean);
-        if (!rows.length) return null;
-        rows.sort((a, b) => b.gapRatio - a.gapRatio);
-        const worst = rows[0];
-        if (!(worst.gap > 0)) return null;
+        });
+        if (!candidates.length) return null;
+        candidates.sort((a, b) => b.ratio - a.ratio);
+        const worst = candidates[0];
+        if (!(worst.ratio > 0)) return null;
+        const isRate = worst.metric.key !== 'avg';
+        const shown = isRate
+            ? `${(worst.own * 100).toFixed(1)}%（最高 ${(worst.top * 100).toFixed(1)}%）`
+            : `${worst.own.toFixed(1)} 分（最高 ${worst.top.toFixed(1)} 分）`;
         return {
-            text: `与最高水平差距最大的是<strong>${escapeHtml(worst.subject)}</strong>，`
-                + `均分低 ${worst.gap.toFixed(1)} 分（最高：${escapeHtml(worst.topName)}）`,
-            source: '各科均分与最高校对比'
+            text: `离最高水平最远的一项是<strong>${escapeHtml(worst.subject)}的${worst.metric.label}</strong>：${shown}`,
+            source: '两率一分逐项对比'
+        };
+    }
+
+    // ── 规则 3：优秀率单独提示（权重最高，最容易被忽略）───────────────────────────
+    function excellentRateItem(mine, subjects) {
+        const rows = subjects.map((subject) => {
+            const excRate = num(mine.record?.metrics?.[subject]?.excRate);
+            const count = num(mine.record?.metrics?.[subject]?.count);
+            if (excRate === null || !count) return null;
+            return { subject, excRate };
+        }).filter(Boolean);
+        if (rows.length < 2) return null;
+        rows.sort((a, b) => a.excRate - b.excRate);
+        const worst = rows[0];
+        const best = rows[rows.length - 1];
+        const gap = (best.excRate - worst.excRate) * 100;
+        if (!(gap >= 5)) return null;
+        return {
+            text: `优秀率（赋分权重最高）最低的是<strong>${escapeHtml(worst.subject)}</strong> `
+                + `${(worst.excRate * 100).toFixed(1)}%，比最高的${escapeHtml(best.subject)}低 ${gap.toFixed(1)} 个百分点`,
+            source: '优秀率（同校各科对比）'
         };
     }
 
@@ -124,8 +144,8 @@
         if (subjects.length < 2) return [];
         return [
             weakestByRankItem(mine, subjects),
-            lowestPassRateItem(mine, subjects),
-            biggestGapToTopItem(mine, subjects)
+            weakestMetricItem(mine, subjects),
+            excellentRateItem(mine, subjects)
         ].filter(Boolean).slice(0, MAX_ITEMS);
     }
 

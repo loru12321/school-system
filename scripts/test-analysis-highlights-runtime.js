@@ -17,23 +17,29 @@ function loadRuntime(win) {
     return win.AnalysisHighlightsRuntime;
 }
 
+// 三项（均分/优秀率/及格率）都要给全：正式口径是两率一分三项加权，
+// 运行时也要求三项名次齐备才参与跨科比较。
 function buildSchools() {
     return {
         本校: {
             name: '本校',
             metrics: {
-                语文: { avg: 95, passRate: 0.90, count: 100 },
-                数学: { avg: 70, passRate: 0.50, count: 100 },
-                英语: { avg: 88, passRate: 0.78, count: 100 }
+                语文: { avg: 95, excRate: 0.20, passRate: 0.90, count: 100 },
+                数学: { avg: 70, excRate: 0.06, passRate: 0.50, count: 100 },
+                英语: { avg: 88, excRate: 0.15, passRate: 0.78, count: 100 }
             },
-            rankings: { 语文: { avg: 1 }, 数学: { avg: 8 }, 英语: { avg: 4 } }
+            rankings: {
+                语文: { avg: 1, excRate: 2, passRate: 1 },
+                数学: { avg: 8, excRate: 9, passRate: 8 },
+                英语: { avg: 4, excRate: 5, passRate: 4 }
+            }
         },
         邻校: {
             name: '邻校',
             metrics: {
-                语文: { avg: 100, passRate: 0.95, count: 100 },
-                数学: { avg: 92, passRate: 0.85, count: 100 },
-                英语: { avg: 90, passRate: 0.80, count: 100 }
+                语文: { avg: 100, excRate: 0.30, passRate: 0.95, count: 100 },
+                数学: { avg: 92, excRate: 0.24, passRate: 0.85, count: 100 },
+                英语: { avg: 90, excRate: 0.18, passRate: 0.80, count: 100 }
             },
             rankings: {}
         }
@@ -106,20 +112,41 @@ function buildSchools() {
     assert.strictEqual(runtime.buildItems().length, 0, '未识别本校时不应产出要点');
 }
 
-// ── 6. 各科均衡时不输出「及格率最低」这条（差距 <10 个百分点不值得提示）─────────
+// ── 6. 优秀率差距很小时不单独提示（<5 个百分点不值得占一条）────────────────────
+// 注意数据要给全三项，否则规则会因「数据不齐」而不产出，断言就变成恒真的空断言。
 {
     const schools = buildSchools();
-    schools.本校.metrics.数学 = { avg: 93, passRate: 0.86, count: 100 };
-    schools.本校.rankings.数学 = { avg: 2 };
+    schools.本校.metrics.数学 = { avg: 93, excRate: 0.18, passRate: 0.86, count: 100 };
+    schools.本校.rankings.数学 = { avg: 2, excRate: 3, passRate: 2 };
     const runtime = loadRuntime({
         MY_SCHOOL: '本校',
         SUBJECTS: ['语文', '数学'],
         SCHOOLS: schools,
         getTownAnalysisVisibleSubjectsForCurrentUser: () => ['语文', '数学']
     });
-    const sources = runtime.buildItems().map((item) => item.source);
-    assert.ok(!sources.some((source) => source.includes('及格率')),
-        '及格率差距小于 10 个百分点时不应输出该条');
+    const items = runtime.buildItems();
+    // 前置确认规则确实在工作（否则下面的否定断言没有意义）。
+    assert.ok(items.length > 0, '数据齐备时应产出要点，否则本条断言无效');
+    const sources = items.map((item) => item.source);
+    assert.ok(!sources.some((source) => source.includes('优秀率（同校各科对比）')),
+        '优秀率差距小于 5 个百分点时不应单独占一条');
+}
+
+// ── 7. 三项名次不齐的学科不参与跨科比较（避免用不同项数的均值互相比）───────────
+{
+    const schools = buildSchools();
+    delete schools.本校.rankings.数学.excRate;
+    const runtime = loadRuntime({
+        MY_SCHOOL: '本校',
+        SUBJECTS: ['语文', '数学', '英语'],
+        SCHOOLS: schools,
+        getTownAnalysisVisibleSubjectsForCurrentUser: () => ['语文', '数学', '英语']
+    });
+    const rankItem = runtime.buildItems().find((item) => item.source === '两率一分三项名次');
+    if (rankItem) {
+        assert.ok(!rankItem.text.includes('数学'),
+            '三项名次不齐的学科不得出现在名次综合比较里');
+    }
 }
 
 console.log('analysis-highlights-runtime tests passed');
