@@ -254,16 +254,21 @@ assert.ok(
     'school aliases should refresh through the lightweight gateway path after snapshot apply'
 );
 
+// DataManager 的内联 onclick/onchange 已收敛为声明式 data-dm-* 属性（由
+// app-foundation-runtime.js 的委托 binder 派发）。这两条断言原先写死内联写法，
+// 收敛后即便功能完好也会失败——要守的是「入口仍接到对应方法」，不是绑定语法。
 assert.ok(
     !indexSource.includes('id="cloud-manager-modal"')
         && indexSource.includes('id="data-manager-modal"')
         && indexSource.includes('class="dm-cloud-category-tabs"')
-        && indexSource.includes('onclick="DataManager.closeCloudManager()"'),
+        && (indexSource.includes('onclick="DataManager.closeCloudManager()"')
+            || /data-dm-click="closeCloudManager"/.test(indexSource)),
     'the cloud header entry should reuse the existing tabbed data manager instead of a duplicate modal shell'
 );
 
 assert.ok(
-    /id="cloud-filter-current"\s+onchange=/.test(indexSource)
+    (/id="cloud-filter-current"[\s\S]{0,120}?onchange=/.test(indexSource)
+        || /id="cloud-filter-current"[\s\S]{0,120}?data-dm-change=/.test(indexSource))
         && !/id="cloud-filter-current"\s+checked/.test(indexSource),
     'cloud data management should show all user-visible snapshots by default instead of silently limiting the list to the current workspace'
 );
