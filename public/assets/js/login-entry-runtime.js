@@ -310,7 +310,7 @@
                             <a class="login-stage-brand" href="#login-hero">
                                 <span class="login-stage-brand-mark">SE</span>
                                 <span class="login-stage-brand-copy">
-                                    <strong>校衡台</strong>
+                                    <strong>澄见</strong>
                                     <small>教学数据工作台</small>
                                 </span>
                             </a>
@@ -502,7 +502,7 @@
                             <a class="login-stage-brand" href="#login-hero">
                                 <span class="login-stage-brand-mark">SE</span>
                                 <span class="login-stage-brand-copy">
-                                    <strong>校衡台</strong>
+                                    <strong>澄见</strong>
                                     <small>教学数据工作台</small>
                                 </span>
                             </a>
@@ -701,13 +701,13 @@
                         <div class="login-clean-brand">
                             <span class="login-clean-mark">校</span>
                             <div>
-                                <strong>校衡台</strong>
+                                <strong>澄见</strong>
                                 <small>教学数据工作台</small>
                             </div>
                         </div>
                         <div class="login-clean-copy">
                             <span>学校数据工作台</span>
-                            <h1>校衡台</h1>
+                            <h1>澄见</h1>
                             <p>把联考数据、教师画像、成长轨迹和家校沟通整理成清楚、可信、可行动的教学视图。</p>
                         </div>
                     </section>
@@ -805,7 +805,7 @@
 
             return {
                 chip: nextPortal === 'parent' ? '家长端说明' : '学校端说明',
-                title: '校衡台如何使用',
+                title: '澄见如何使用',
                 copy: '系统介绍集中说明使用流程、模块结构、角色权限、成绩计算和绩效比较规则，首页不再直接展开这些说明。',
                 spotlight,
                 quickStats: [

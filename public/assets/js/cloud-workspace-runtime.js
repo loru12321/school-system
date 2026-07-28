@@ -624,6 +624,11 @@
             examRoom: row?.examRoom || '',
             scores: clonePayloadFragment(row?.scores || {}),
             total: Number(row?.total || 0),
+            // 正式中考录取总分（含体育）独立于五科 total；必须随考试分片往返，
+            // 否则跨设备恢复后会错误显示“缺体育/中考总分”。
+            zhongkaoTotal: row?.zhongkaoTotal !== null && row?.zhongkaoTotal !== undefined && String(row.zhongkaoTotal).trim() !== '' && Number.isFinite(Number(row.zhongkaoTotal))
+                ? Number(row.zhongkaoTotal)
+                : null,
             hasValidScore: row?.hasValidScore !== false,
             blankScoreSubjects: clonePayloadFragment(row?.blankScoreSubjects || [])
         }));

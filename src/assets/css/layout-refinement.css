@@ -619,6 +619,57 @@
     flex-wrap: wrap;
 }
 
+/* 品牌水印：右下角固定，透明度很低。三条硬约束——
+   1) pointer-events:none，绝不拦截数据区的点击与选择；
+   2) 不参与文档流，不挤压任何表格宽度；
+   3) 打印时隐藏，纸面留给数据。 */
+.app-brand-watermark {
+    position: fixed;
+    right: 14px;
+    bottom: 10px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1;
+    opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
+    backdrop-filter: blur(2px);
+    transition: opacity 0.2s ease;
+}
+
+.app-brand-watermark img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    opacity: 0.85;
+}
+
+/* 鼠标移到右下角区域时进一步淡出，避免挡住表格最后一行的视线。 */
+.app-brand-watermark:hover {
+    opacity: 0.18;
+}
+
+@media (max-width: 960px) {
+    /* 移动端屏幕窄，水印只保留徽标，文字省掉。 */
+    .app-brand-watermark span {
+        display: none;
+    }
+}
+
+@media print {
+    .app-brand-watermark {
+        display: none !important;
+    }
+}
+
 /* 「本次必看」子导航的步骤序号：这一类是有先后关系的流水线，用序号让新任教务
    知道从哪开始、下一步去哪。其余分类是并列关系，不加序号。 */
 .shell-story-card__step {

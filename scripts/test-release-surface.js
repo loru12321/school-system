@@ -164,8 +164,8 @@ assert.strictEqual(publicManifest.start_url, '/', 'web manifest should start at 
 assert.strictEqual(publicManifest.orientation, 'any', 'web manifest should allow responsive orientation');
 assert.strictEqual(publicManifest.dir, 'ltr', 'web manifest should declare text direction');
 assert.strictEqual(publicManifest.display, 'standalone', 'web manifest should enable standalone app display');
-assert.strictEqual(publicManifest.name, '校衡台', 'web manifest name should stay readable');
-assert.strictEqual(publicManifest.short_name, '校衡台', 'web manifest short name should stay readable');
+assert.strictEqual(publicManifest.name, '澄见', 'web manifest name should stay readable');
+assert.strictEqual(publicManifest.short_name, '澄见', 'web manifest short name should stay readable');
 assert.ok(publicManifest.description.includes('教务'), 'web manifest description should stay readable');
 assert.ok(!/[�锟]/.test(read('public/site.webmanifest')), 'web manifest should not contain mojibake');
 assert.ok(Array.isArray(publicManifest.categories) && publicManifest.categories.includes('education'), 'web manifest should classify the app for education');

@@ -429,7 +429,7 @@
         const strongs = document.querySelectorAll('.login-look-card strong');
         const labels = ['联考洞察', '教师动线', '家校报告'];
         if (eyebrow) eyebrow.textContent = '学校数据工作台';
-        if (title) title.textContent = '校衡台';
+        if (title) title.textContent = '澄见';
         if (lead) lead.textContent = '把联考数据、教师画像、成长轨迹和家校沟通整理成清楚、可信、可行动的教学视图。';
         strongs.forEach((node, index) => {
             if (labels[index]) node.textContent = labels[index];

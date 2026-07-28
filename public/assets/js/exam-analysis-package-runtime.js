@@ -476,11 +476,10 @@
 
     function addWorksheet(workbook, name, rows, options = {}) {
         const ws = window.XLSX.utils.aoa_to_sheet(rows && rows.length ? rows : [['暂无数据']]);
-        // 注意：当前 vendored 的 xlsx 是 0.18.5 社区版，**写出时不生成 <pane> 节点**，
-        // 所以 '!freeze' / '!panes' 都不会落到文件里（已实测：写后回读为 null，
-        // sheet1.xml 中无 <pane>）。这里保留传参以便将来换库后直接生效，但不要因此
-        // 以为导出的表已经冻结表头——真要冻结需换成支持该特性的写库。
-        if (options.freeze) ws['!freeze'] = options.freeze;
+        // '!freeze' 在此仅作**标记**：xlsx 0.18.5 自己不写 <pane>，真正的冻结由
+        // injectFreezePanes() 在写出后改 sheet XML 完成。默认冻结首行；传 { xSplit }
+        // 可额外冻结左侧若干列（如学生明细锁住学校/班级/姓名/考号/考场）。
+        ws['!freeze'] = options.freeze || { xSplit: 0, ySplit: 1 };
         applyPackageSheetStyle(ws, rows);
         window.XLSX.utils.book_append_sheet(workbook, ws, excelSafeName(name));
         return ws;
@@ -660,7 +659,11 @@
         const examDate = getPackageExamDate(examId, exam);
         const mySchool = String(window.MY_SCHOOL || '').trim();
 
+        // 品牌行放在标题之上标明报告出处。Excel 侧用文字而非图片：xlsx 社区版没有插图
+        // API，往包里塞图片需手写 drawing XML + rels + content-types 四处协同，
+        // 出错概率高、收益有限；徽标图片用在网站上。
         const rows = [
+            [mySchool ? `${mySchool} · 澄见教学数据平台` : '澄见教学数据平台'],
             [title],
             [],
             ['报告范围', scopeText || '—'],
@@ -678,8 +681,8 @@
             rows.push([]);
         }
         rows.push(['阅读提示']);
-        rows.push(['1', '各数据表已开启自动筛选，可直接按学校或班级筛选查看。']);
-        rows.push(['2', '行数较多的表建议自行「视图 → 冻结首行」，方便对照列名。']);
+        rows.push(['1', '各数据表已冻结表头并开启自动筛选，可直接按学校或班级筛选查看。']);
+        rows.push(['2', '学生明细还锁定了左侧身份列，横向滚动时仍可看到姓名与班级。']);
         rows.push(['3', '所有指标口径见「口径说明」工作表；如与系统页面不一致请以系统为准。']);
         rows.push(['4', '本报告由系统自动生成，未做人工调整。']);
         return rows;
@@ -689,8 +692,16 @@
     function addCoverSheet(workbook, rows) {
         const ws = window.XLSX.utils.aoa_to_sheet(rows);
         ws['!cols'] = [{ wch: 18 }, { wch: 72 }];
-        ws['!rows'] = rows.map((_, index) => ({ hpt: index === 0 ? 34 : 20 }));
-        const titleRef = window.XLSX.utils.encode_cell({ r: 0, c: 0 });
+        ws['!rows'] = rows.map((_, index) => ({ hpt: index === 1 ? 34 : 20 }));
+        // 第 0 行是品牌行（学校 · 澄见），第 1 行才是报告标题。
+        const brandRef = window.XLSX.utils.encode_cell({ r: 0, c: 0 });
+        if (ws[brandRef]) {
+            mergeCellStyle(ws[brandRef], {
+                font: { bold: true, sz: 11, color: { rgb: '64748B' } },
+                alignment: { horizontal: 'left', vertical: 'center' }
+            });
+        }
+        const titleRef = window.XLSX.utils.encode_cell({ r: 1, c: 0 });
         if (ws[titleRef]) {
             mergeCellStyle(ws[titleRef], {
                 font: { bold: true, sz: 18, color: { rgb: '0F766E' } },
@@ -699,7 +710,7 @@
         }
         // 左列字段名加粗，便于扫读。
         rows.forEach((row, index) => {
-            if (index === 0 || !row.length) return;
+            if (index <= 1 || !row.length) return;
             const ref = window.XLSX.utils.encode_cell({ r: index, c: 0 });
             if (!ws[ref]) return;
             mergeCellStyle(ws[ref], { font: { bold: true, color: { rgb: '111827' } } });
@@ -722,6 +733,10 @@
                 ['横向对比一览表', '把关键指标按学校并排，便于一眼看差距'],
                 [`${totalLabel} - 综合分析表`, '总分口径下的均分、优秀率、及格率与名次'],
                 ['学科明细', '每个学科单独一张，看哪一科拉分或拖分'],
+                ...(isGrade9Exam() ? [
+                    ['高中上线率赋分详情', '按“中考总分（含体育）”核算；缺少中考总分/体育的学校明确列为不参与'],
+                    ['高中上线率班级明细', '原始表提供班级时，逐班查看上线人数、上线率及缺失状态']
+                ] : []),
                 ['口径说明', '各项指标怎么算的，看报告前先读这张']
             ].filter(Boolean)
         }));
@@ -734,7 +749,10 @@
         if (scope !== 'county') {
             addWorksheetIfUseful(wb, '高分段赋分详情', buildHighScoreRows(schools));
             if (isGrade9Exam()) addWorksheetIfUseful(wb, '指标生达标核算', buildIndicatorRows());
-            if (includeGrade9Support && isGrade9Exam()) addWorksheetIfUseful(wb, '高中上线率赋分详情', buildHighSchoolAdmissionRows(schools));
+            if (includeGrade9Support && isGrade9Exam()) {
+                addWorksheetIfUseful(wb, '高中上线率赋分详情', buildHighSchoolAdmissionRows(schools));
+                addWorksheetIfUseful(wb, '高中上线率班级明细', buildHighSchoolAdmissionClassRows(schools));
+            }
             addWorksheetIfUseful(wb, '后三分之一学生核算', buildBottomRows(schools));
         }
         return wb;
@@ -1222,7 +1240,7 @@
         buildHighSchoolAdmissionRows(schools).slice(1).forEach((row) => {
             const name = String(row?.[0] || '').trim();
             if (!name) return;
-            const score = Number(row?.[5]);
+            const score = Number(row?.[6]);
             if (!Number.isFinite(score)) return;
             map.set(name, score);
             if (typeof window.normalizeSchoolName === 'function') {
@@ -1268,27 +1286,49 @@
 
     function buildHighSchoolAdmissionRows(schools) {
         const line = getHighSchoolAdmissionLine();
-        const rows = [['学校名称', '公办高中录取分数线（五科+体育）', '实考人数', '高中上线人数', '高中上线率(%)', '高中上线率赋分(50)', '体育成绩缺失人数', '状态', '排名', '_标记']];
+        const allowed = typeof window.isHighSchoolAdmissionExamAllowed === 'function'
+            ? window.isHighSchoolAdmissionExamAllowed()
+            : false;
+        const rows = [['学校名称', '公办高中录取分数线（中考总分含体育）', '实考人数', '中考总分/体育可用人数', '高中上线人数', '高中上线率(%)', '高中上线率赋分(50)', '中考总分/体育缺失人数', '状态', '排名', '_标记']];
         const baseList = (schools || []).map((school) => {
+            const stats = typeof window.getHighSchoolAdmissionStatsForSchool === 'function'
+                ? window.getHighSchoolAdmissionStatsForSchool(school, line)
+                : null;
             const students = Array.isArray(school.students) ? school.students : getAllRows().filter((student) => sameSchool(student?.school, school.name));
-            const studentCount = Number(school.metrics?.total?.count) || students.length || 0;
-            const admissionTotals = students.map((student) => (
+            const studentCount = stats ? stats.count : (Number(school.metrics?.total?.count) || students.length || 0);
+            const admissionTotals = stats ? [] : students.map((student) => (
                 typeof window.getHighSchoolAdmissionTotal === 'function'
                     ? window.getHighSchoolAdmissionTotal(student)
                     : null
             ));
-            const missingSportsCount = admissionTotals.filter((value) => !Number.isFinite(value)).length;
-            const complete = missingSportsCount === 0;
-            const admissionCount = line > 0 && complete ? admissionTotals.filter((total) => total >= line).length : 0;
-            const admissionRate = complete && studentCount ? admissionCount / studentCount : 0;
+            const missingAdmissionCount = stats
+                ? Number(stats.missingAdmissionCount) || 0
+                : admissionTotals.filter((value) => !Number.isFinite(value)).length;
+            const complete = stats ? !!stats.complete : missingAdmissionCount === 0;
+            const admissionCount = stats
+                ? (complete && line > 0 ? Number(stats.admissionCount) || 0 : 0)
+                : (line > 0 && complete ? admissionTotals.filter((total) => total >= line).length : 0);
+            const admissionRate = stats
+                ? (complete ? Number(stats.ratio) || 0 : 0)
+                : (complete && studentCount ? admissionCount / studentCount : 0);
+            const status = typeof window.getHighSchoolAdmissionStatusText === 'function'
+                ? window.getHighSchoolAdmissionStatusText(stats || {
+                    count: studentCount,
+                    complete,
+                    missingAdmissionCount,
+                    missingReasonCounts: missingAdmissionCount ? { '未提供中考总分（含体育）或体育成绩': missingAdmissionCount } : {}
+                }, { allowed, line })
+                : (complete ? (line > 0 ? '可计算' : '未配置中考高中过线分数') : '未提供中考总分（含体育）或体育成绩');
             return {
                 name: school.name || '',
                 line,
                 count: studentCount,
+                availableCount: stats ? Number(stats.availableCount) || 0 : studentCount - missingAdmissionCount,
                 admissionCount,
                 admissionRate,
                 complete,
-                missingSportsCount
+                missingAdmissionCount,
+                status
             };
         });
         const maxAdmissionRate = Math.max(...baseList.filter((item) => item.complete).map((item) => item.admissionRate), 0);
@@ -1301,12 +1341,63 @@
                 item.name,
                 item.line || '',
                 item.count,
+                item.availableCount,
                 item.admissionCount,
                 pct(item.admissionRate),
                 num(item.score),
-                index + 1,
+                item.missingAdmissionCount,
+                item.status,
+                item.complete ? index + 1 : '',
                 sameSchool(item.name, getMySchoolName()) ? '本校' : ''
             ]);
+        });
+        return rows;
+    }
+
+    function buildHighSchoolAdmissionClassRows(schools) {
+        const line = getHighSchoolAdmissionLine();
+        const allowed = typeof window.isHighSchoolAdmissionExamAllowed === 'function'
+            ? window.isHighSchoolAdmissionExamAllowed()
+            : false;
+        const rows = [['学校名称', '班级', '公办高中录取分数线', '实考人数', '中考总分/体育可用人数', '高中上线人数', '高中上线率(%)', '状态', '_标记']];
+        (schools || []).forEach((school) => {
+            const stats = typeof window.getHighSchoolAdmissionStatsForSchool === 'function'
+                ? window.getHighSchoolAdmissionStatsForSchool(school, line)
+                : null;
+            if (!stats) return;
+            if (!stats.hasClassData) {
+                rows.push([
+                    school.name || '',
+                    '未提供班级',
+                    line || '',
+                    stats.count,
+                    stats.availableCount,
+                    '',
+                    '',
+                    '原始表未提供班级，无法按班统计',
+                    sameSchool(school.name, getMySchoolName()) ? '本校' : ''
+                ]);
+                return;
+            }
+            stats.classStats.forEach((item) => {
+                const canCalculate = stats.complete && item.complete && allowed && line > 0;
+                const status = canCalculate
+                    ? '可计算'
+                    : (typeof window.getHighSchoolAdmissionStatusText === 'function'
+                        ? window.getHighSchoolAdmissionStatusText(item, { allowed, line })
+                        : '未提供中考总分（含体育）或体育成绩');
+                rows.push([
+                    school.name || '',
+                    item.className,
+                    line || '',
+                    item.count,
+                    item.availableCount,
+                    canCalculate ? item.admissionCount : '',
+                    canCalculate ? pct(item.ratio) : '',
+                    status,
+                    sameSchool(school.name, getMySchoolName()) ? '本校' : ''
+                ]);
+            });
         });
         return rows;
     }
@@ -1715,8 +1806,70 @@
         return wb;
     }
 
+    // 冻结窗格：vendored 的 xlsx 0.18.5 社区版写出时不生成 <pane> 节点（实测 '!freeze'
+    // 写后回读为 null），所以改为**写出后直接改 sheet XML 注入 <pane>**——这是标准
+    // OOXML 结构，Excel / WPS / LibreOffice 都认，不需要换库也不需要装任何软件。
+    //
+    // 每张表冻结多少列由 addWorksheet 时记入 ws['!freeze']（沿用既有约定），
+    // 没有该标记的表默认冻结首行；封面页显式跳过。
+    const FREEZE_SKIP_SHEETS = new Set(['封面']);
+
+    function buildPaneXml(xSplit, ySplit) {
+        const x = Math.max(0, Number(xSplit) || 0);
+        const y = Math.max(0, Number(ySplit) || 0);
+        if (!x && !y) return '';
+        const topLeft = window.XLSX.utils.encode_cell({ r: y, c: x });
+        const activePane = x && y ? 'bottomRight' : (x ? 'topRight' : 'bottomLeft');
+        const attrs = [
+            x ? `xSplit="${x}"` : '',
+            y ? `ySplit="${y}"` : '',
+            `topLeftCell="${topLeft}"`,
+            `activePane="${activePane}"`,
+            'state="frozen"'
+        ].filter(Boolean).join(' ');
+        return `<pane ${attrs}/><selection pane="${activePane}" activeCell="${topLeft}" sqref="${topLeft}"/>`;
+    }
+
+    async function injectFreezePanes(arrayBuffer, workbook) {
+        // 单元测试/离线工具里的 JSZip 常是只实现 file()+generateAsync() 的简化替身，
+        // 没有 loadAsync。这种情况下直接跳过（原样导出），不打警告——它不是故障。
+        if (!window.JSZip || typeof window.JSZip.loadAsync !== 'function') return arrayBuffer;
+        try {
+            const zip = await window.JSZip.loadAsync(arrayBuffer);
+            const names = workbook.SheetNames || [];
+            for (let index = 0; index < names.length; index += 1) {
+                const sheetName = names[index];
+                if (FREEZE_SKIP_SHEETS.has(sheetName)) continue;
+                const ws = workbook.Sheets[sheetName];
+                const freeze = ws && ws['!freeze'];
+                const pane = buildPaneXml(freeze?.xSplit ?? 0, freeze?.ySplit ?? 1);
+                if (!pane) continue;
+                // 工作表 XML 的序号与 SheetNames 顺序一致（xlsx 按追加顺序写 sheetN.xml）。
+                const entry = zip.file(`xl/worksheets/sheet${index + 1}.xml`);
+                if (!entry) continue;
+                let xml = await entry.async('string');
+                if (/<pane /.test(xml)) continue;
+                if (/<sheetView([^>]*)\/>/.test(xml)) {
+                    // 自闭合标签要展开，否则 pane 会落在 sheetView 外面、Excel 直接忽略。
+                    xml = xml.replace(/<sheetView([^>]*)\/>/, `<sheetView$1>${pane}</sheetView>`);
+                } else if (/<sheetView[^>]*>/.test(xml)) {
+                    xml = xml.replace(/(<sheetView[^>]*>)/, `$1${pane}`);
+                } else {
+                    continue;
+                }
+                zip.file(`xl/worksheets/sheet${index + 1}.xml`, xml);
+            }
+            return await zip.generateAsync({ type: 'arraybuffer' });
+        } catch (error) {
+            // 冻结只是阅读便利，失败时保留原始工作簿，绝不因此让整个分析包导不出来。
+            console.warn('[exam-analysis-package] 冻结窗格注入失败，已按原样导出:', error);
+            return arrayBuffer;
+        }
+    }
+
     async function addWorkbook(zip, path, workbook) {
-        zip.file(path, workbookToArrayBuffer(workbook));
+        const raw = workbookToArrayBuffer(workbook);
+        zip.file(path, await injectFreezePanes(raw, workbook));
     }
 
     // 包内阅读说明。只描述本次实际生成了哪些文件、建议的阅读顺序与口径注意，
@@ -1763,7 +1916,7 @@
             '',
             '【口径注意】',
             '· 每个工作簿的第一张「封面」写明范围与生成时间，「口径说明」写明指标算法。',
-            '· 各数据表已开启自动筛选；行数多的表建议自行「视图 → 冻结首行」。',
+            '· 各数据表已冻结表头并开启自动筛选，长表滚动时列名始终可见。',
             '· 跨学科不要直接比平均分：各科满分与难度不同，应看各自的率与名次。',
             '· 本包由系统自动生成、未做人工调整；如与系统页面显示不一致，请以系统页面为准。',
             ''

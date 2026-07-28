@@ -723,8 +723,8 @@ body.dark-mode .shell-overview-card--dock {
 
 /* Final login art direction: replace the empty poster block with an information-led entry panel. */
 #login-overlay[data-login-skin="clean"] {
-    --login-brand-name: "校衡台";
-    --login-brand-initials: "ZH";
+    --login-brand-name: "澄见";
+    --login-brand-initials: "CJ";
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-mark::before {
@@ -732,6 +732,27 @@ body.dark-mode .shell-overview-card--dock {
     font-size: 13px !important;
     font-weight: 900 !important;
     letter-spacing: 0 !important;
+}
+
+/* 放了真实校徽的变体：必须去掉那个 ZH 文字伪元素，否则字会压在徽标上。 */
+#login-overlay[data-login-skin="clean"] .login-clean-mark--logo::before {
+    content: none !important;
+}
+
+.login-clean-mark--logo {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    padding: 3px !important;
+}
+
+.login-clean-mark--logo img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-stage {

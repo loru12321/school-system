@@ -16,7 +16,7 @@ const inlineHandlerCount = count(/\son[a-z]+=/g);
 
 assert.ok(html.indexOf('runtime-registry-runtime.js') < html.indexOf(`boot-runtime-${serviceWorkerVersion}.js`), 'runtime registry must load before boot runtime');
 assert.ok(html.includes('<meta name="description"'), 'index.html should include a search result description');
-assert.ok(html.includes('<meta name="application-name" content="校衡台">'), 'index.html should expose the application name to browsers');
+assert.ok(html.includes('<meta name="application-name" content="澄见">'), 'index.html should expose the application name to browsers');
 assert.ok(html.includes('学校成绩导入、届别档案、教学分析、教师画像和家校报告'), 'index.html should keep readable search description copy');
 assert.ok(html.includes('<meta name="color-scheme" content="light dark">'), 'index.html should declare supported color schemes');
 assert.ok(html.includes('<link rel="canonical" href="https://schoolsystem.com.cn/">'), 'index.html should include the canonical production URL');
@@ -24,10 +24,10 @@ assert.ok(html.includes('<link rel="alternate" hreflang="zh-CN" href="https://sc
 assert.ok(html.includes('<link rel="alternate" hreflang="x-default" href="https://schoolsystem.com.cn/">'), 'index.html should include an x-default alternate URL');
 assert.ok(html.includes('<link rel="manifest" href="./site.webmanifest">'), 'index.html should link the web app manifest');
 assert.ok(html.includes('<link rel="apple-touch-icon" sizes="192x192" href="./assets/brand/app-icon-192.png">'), 'index.html should provide a PNG touch icon');
-assert.ok(html.includes('<meta property="og:title" content="校衡台">'), 'index.html should include Open Graph metadata');
-assert.ok(html.includes('<meta property="og:site_name" content="校衡台">'), 'index.html should include readable Open Graph site name');
-assert.ok(html.includes('<meta name="twitter:title" content="校衡台">'), 'index.html should include readable Twitter metadata');
-assert.ok(html.includes('<meta name="apple-mobile-web-app-title" content="校衡台">'), 'index.html should expose readable iOS app title');
+assert.ok(html.includes('<meta property="og:title" content="澄见">'), 'index.html should include Open Graph metadata');
+assert.ok(html.includes('<meta property="og:site_name" content="澄见">'), 'index.html should include readable Open Graph site name');
+assert.ok(html.includes('<meta name="twitter:title" content="澄见">'), 'index.html should include readable Twitter metadata');
+assert.ok(html.includes('<meta name="apple-mobile-web-app-title" content="澄见">'), 'index.html should expose readable iOS app title');
 assert.ok(html.includes('<meta property="og:locale" content="zh_CN">'), 'index.html should include the Open Graph locale');
 assert.ok(html.includes('<meta property="og:image" content="https://schoolsystem.com.cn/icon.svg">'), 'index.html should include a share image');
 assert.ok(html.includes('<meta name="twitter:card" content="summary">'), 'index.html should include Twitter card metadata');
@@ -179,6 +179,38 @@ assert.ok(
 assert.ok(
     count(/role="button" tabindex="0" data-dm-click="switchTab"/g) >= 8,
     'the data-manager tabs must stay keyboard reachable (role=button + tabindex)'
+);
+
+// ─── 品牌：校徽与水印 ─────────────────────────────────────────────────────────
+// 徽标文件必须存在（登录页会实际请求它），且登录页用的是抠过白底的透明 PNG。
+['school-logo-32.png', 'school-logo-64.png', 'school-logo-128.png', 'school-logo-256.png', 'school-logo-512.png']
+    .forEach((file) => {
+        assert.ok(fs.existsSync(path.join(root, 'public/assets/brand', file)),
+            `school logo asset should exist: ${file}`);
+    });
+assert.ok(
+    /<img src="\.\/assets\/brand\/school-logo-128\.png"/.test(html),
+    'the login brand mark should render the school logo image'
+);
+// 放了真实校徽后必须屏蔽那个 ZH/CJ 文字伪元素，否则字会压在徽标上。
+assert.ok(
+    /login-clean-mark--logo/.test(html),
+    'the logo variant class is required so CSS can disable the initials pseudo-element'
+);
+// 水印三条硬约束：不拦截交互、不参与文档流、打印时隐藏。
+assert.ok(html.includes('class="app-brand-watermark"'), 'the app should carry a brand watermark');
+const refinementCss = fs.readFileSync(path.join(root, 'src/assets/css/layout-refinement.css'), 'utf8');
+assert.ok(
+    /\.app-brand-watermark\s*\{[^}]*pointer-events:\s*none/.test(refinementCss),
+    'the watermark must never intercept clicks on data areas'
+);
+assert.ok(
+    /\.app-brand-watermark\s*\{[^}]*position:\s*fixed/.test(refinementCss),
+    'the watermark must stay out of document flow so it cannot squeeze tables'
+);
+assert.ok(
+    /@media print\s*\{\s*\.app-brand-watermark\s*\{\s*display:\s*none/.test(refinementCss),
+    'the watermark should be hidden when printing'
 );
 
 console.log(`html hygiene tests passed: style=${inlineStyleCount}, handlers=${inlineHandlerCount}`);

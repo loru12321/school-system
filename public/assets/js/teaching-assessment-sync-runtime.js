@@ -664,6 +664,11 @@
         }
         // 运行时容错：主程序尚未暴露 helper 时，仍按同一口径失败关闭，
         // 不回退到已被规范为“五科总”的 row.total。
+        const directTotal = row?.zhongkaoTotal;
+        if (directTotal !== null && directTotal !== undefined && String(directTotal).trim() !== '') {
+            const numeric = toNumber(directTotal, NaN);
+            if (Number.isFinite(numeric)) return numeric;
+        }
         const scores = row?.scores && typeof row.scores === 'object' ? row.scores : null;
         if (!scores) return NaN;
         let total = 0;

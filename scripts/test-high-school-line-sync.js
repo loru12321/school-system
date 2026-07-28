@@ -295,15 +295,43 @@ assert.strictEqual(
     null,
     'missing 体育 must fail closed instead of falling back to the five-subject total'
 );
+assert.strictEqual(
+    admissionWindow.getHighSchoolAdmissionTotal({
+        zhongkaoTotal: 503,
+        scores: { 语文: 110, 数学: 108, 英语: 105, 物理: 70, 化学: 45, 政治: 49 }
+    }),
+    503,
+    'an explicit 中考总分（含体育） must be used even when 体育 is not a separate column'
+);
 assert.ok(
     /getHighSchoolAdmissionTotal\(student\)/.test(pkgSource),
     'analysis package must use the same Zhongkao admission total as the web summary'
+);
+assert.ok(
+    pkgSource.includes('高中上线率班级明细') && pkgSource.includes('buildHighSchoolAdmissionClassRows'),
+    'analysis package must include a per-class admission sheet when the source contains classes'
 );
 const assessmentSource = fs.readFileSync(path.join(root, 'public/assets/js/teaching-assessment-sync-runtime.js'), 'utf8');
 assert.ok(
     assessmentSource.includes('isGrade9ZhongkaoExam(examContext, rows)')
         && assessmentSource.includes('getGrade9ZhongkaoAdmissionTotal(row)'),
     'teacher assessment preview must use the official Zhongkao-only admission total'
+);
+assert.ok(
+    assessmentSource.includes('const directTotal = row?.zhongkaoTotal'),
+    'teacher assessment fallback must retain a saved 中考总分 across runtime load order changes'
+);
+
+const parseRowsSource = fs.readFileSync(path.join(root, 'public/assets/js/parse-rows-runtime.js'), 'utf8');
+assert.ok(
+    parseRowsSource.includes('zhongkaoTotal: -1')
+        && parseRowsSource.includes("['中考总分', '中考总成绩', '中招总分']")
+        && parseRowsSource.includes('stu.zhongkaoTotal'),
+    'score import must retain an explicit Zhongkao total separately from the five-subject total'
+);
+assert.ok(
+    /skipHidden:\s*false/.test(appSource),
+    'score import must explicitly read all worksheet rows regardless of Excel filters or hidden rows'
 );
 
 console.log('✅ 6. 二模 admission gate intact (fail-closed) — passed');
@@ -333,6 +361,10 @@ assert.ok(
 assert.ok(
     workspaceSource.includes('cachedMeta.pendingCloudSync && !lastAppliedCachedNeedsIndicatorRefresh'),
     'cloud-workspace-runtime: pending local cache must not block remote refresh when highSchoolLine is missing'
+);
+assert.ok(
+    workspaceSource.includes('zhongkaoTotal: row?.zhongkaoTotal'),
+    'cloud-workspace-runtime: exam shards must preserve Zhongkao total for cross-device restore'
 );
 assert.ok(
     workspaceSource.includes('async function shouldDeferPendingWorkspaceFlush')

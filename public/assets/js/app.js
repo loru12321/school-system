@@ -4152,6 +4152,46 @@ function handleHighClick(schoolName) {
     DrillSystem.open(`${schoolName} - 高分段(≥${line})名单`, students);
 }
 
+function handleHighSchoolAdmissionClick(schoolName) {
+    const schoolRecord = getAppSchoolRecord(schoolName);
+    if (!schoolRecord) return;
+    const allowed = isHighSchoolAdmissionExamAllowed();
+    const line = allowed ? readHighSchoolAdmissionLine() : 0;
+    const stats = getHighSchoolAdmissionStatsForSchool(schoolRecord, line);
+    const status = getHighSchoolAdmissionStatusText(stats, { allowed, line });
+    const countText = stats.complete && allowed && line > 0
+        ? `${stats.admissionCount}/${stats.count} 人（${(stats.ratio * 100).toFixed(2)}%）`
+        : '—';
+    const classRows = stats.hasClassData
+        ? stats.classStats.map((item) => {
+            const canCalculate = stats.complete && item.complete && allowed && line > 0;
+            const rowStatus = canCalculate
+                ? '可计算'
+                : getHighSchoolAdmissionStatusText(item, { allowed, line });
+            const result = canCalculate
+                ? `${item.admissionCount}/${item.count} 人（${(item.ratio * 100).toFixed(2)}%）`
+                : '—';
+            return `<tr><td>${escapeAppHtml(item.className)}</td><td>${item.count}</td><td>${item.availableCount}</td><td>${result}</td><td>${escapeAppHtml(rowStatus)}</td></tr>`;
+        }).join('')
+        : '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:14px;">原始表未提供班级，无法按班统计。</td></tr>';
+    const missingDetail = stats.complete
+        ? ''
+        : `<p style="margin:8px 0 0;color:#b45309;">${escapeAppHtml(status)}；该校不参与高中上线率赋分。</p>`;
+    const html = `<div style="text-align:left;line-height:1.7;">
+        <p style="margin:0;"><strong>公办高中录取线：</strong>${line > 0 ? `${line} 分` : '未配置'}　<strong>学校上线：</strong>${countText}</p>
+        <p style="margin:2px 0;color:#475569;">数据口径：优先读取“中考总分（含体育）”；没有该列时仅在存在完整五科+体育分时计算，绝不使用五科总或政治分替代。</p>
+        ${missingDetail}
+        <div style="overflow:auto;margin-top:12px;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;">班级</th><th>实考</th><th>总分可用</th><th>高中上线</th><th>状态</th></tr></thead><tbody>${classRows}</tbody></table></div>
+    </div>`;
+    if (window.Swal && typeof Swal.fire === 'function') {
+        Swal.fire({ title: `${schoolName} · 高中上线情况`, html, width: 760, confirmButtonText: '关闭' });
+        return;
+    }
+    alert(`${schoolName}\n${status}\n高中上线：${countText}`);
+}
+
+window.handleHighSchoolAdmissionClick = handleHighSchoolAdmissionClick;
+
 function handleExcludedClick(schoolName) {
     const s = getAppSchoolRecord(schoolName);
     if (!s) return;
@@ -4341,10 +4381,26 @@ const GRADE9_ZHONGKAO_ADMISSION_SUBJECT_ALIASES = Object.freeze({
     体育: Object.freeze(['体育', '体育与健康'])
 });
 
-function getHighSchoolAdmissionTotal(student) {
+function getHighSchoolAdmissionInfo(student) {
+    // 导入表中的「中考总分」是正式录取总分，已含体育；优先使用它，
+    // 不从五科总或政治分反推体育。兼容已归档的旧字段名，便于跨设备恢复。
+    const directFields = ['zhongkaoTotal', 'admissionTotal', 'highSchoolAdmissionTotal'];
+    for (const field of directFields) {
+        const rawValue = student?.[field];
+        if (rawValue === null || rawValue === undefined || String(rawValue).trim() === '') continue;
+        const numeric = Number(rawValue);
+        if (Number.isFinite(numeric)) {
+            return { total: Number(numeric.toFixed(2)), source: '中考总分（含体育）', missingReason: '' };
+        }
+    }
+
     const scores = student?.scores && typeof student.scores === 'object' ? student.scores : null;
-    if (!scores) return null;
+    if (!scores) {
+        return { total: null, source: '', missingReason: '未提供中考总分（含体育）或体育成绩' };
+    }
     let total = 0;
+    let missingSports = false;
+    let missingCulture = false;
     for (const subject of GRADE9_ZHONGKAO_ADMISSION_SUBJECTS) {
         const keys = GRADE9_ZHONGKAO_ADMISSION_SUBJECT_ALIASES[subject] || [subject];
         let value;
@@ -4355,14 +4411,99 @@ function getHighSchoolAdmissionTotal(student) {
             }
         }
         const numeric = typeof value === 'number' ? value : Number(value);
-        // 体育或任一文化科缺失时，不能把旧“五科总”误当正式中考录取总分。
-        if (!Number.isFinite(numeric)) return null;
+        if (!Number.isFinite(numeric)) {
+            if (subject === '体育') missingSports = true;
+            else missingCulture = true;
+            continue;
+        }
         total += numeric;
     }
-    return Number(total.toFixed(2));
+    // 体育或任一文化科缺失时，不能把旧“五科总”误当正式中考录取总分。
+    if (missingCulture) return { total: null, source: '', missingReason: '中考五科成绩不完整' };
+    if (missingSports) return { total: null, source: '', missingReason: '未提供中考总分（含体育）或体育成绩' };
+    return { total: Number(total.toFixed(2)), source: '分科成绩（五科+体育）', missingReason: '' };
+}
+
+function getHighSchoolAdmissionTotal(student) {
+    return getHighSchoolAdmissionInfo(student).total;
 }
 
 window.getHighSchoolAdmissionTotal = getHighSchoolAdmissionTotal;
+window.getHighSchoolAdmissionInfo = getHighSchoolAdmissionInfo;
+
+function getHighSchoolAdmissionStatusText(stats, options = {}) {
+    if (!stats || !Number(stats.count)) return '无学生成绩';
+    if (!stats.complete) {
+        const reasons = Object.entries(stats.missingReasonCounts || {})
+            .filter(([, count]) => Number(count) > 0)
+            .sort((left, right) => Number(right[1]) - Number(left[1]));
+        const reason = reasons[0]?.[0] || '中考总分/体育成绩缺失';
+        return `缺${Number(stats.missingAdmissionCount) || 0}人：${reason}`;
+    }
+    if (options.allowed === false) return '当前考试不计高中上线';
+    if (!Number(options.line)) return '未配置中考高中过线分数';
+    return '可计算';
+}
+
+function summarizeHighSchoolAdmissionStudents(students = [], line = 0) {
+    const entries = (students || []).map((student) => ({ student, ...getHighSchoolAdmissionInfo(student) }));
+    const missing = entries.filter((entry) => !Number.isFinite(entry.total));
+    const complete = missing.length === 0;
+    const count = entries.length;
+    const admissionCount = complete && line > 0
+        ? entries.filter((entry) => entry.total >= line).length
+        : 0;
+    const missingReasonCounts = {};
+    missing.forEach((entry) => {
+        const reason = entry.missingReason || '中考总分/体育成绩缺失';
+        missingReasonCounts[reason] = (missingReasonCounts[reason] || 0) + 1;
+    });
+    return {
+        count,
+        availableCount: count - missing.length,
+        missingAdmissionCount: missing.length,
+        // 保留旧字段，避免任何已有页面/报表读取中断；新文案不再笼统称“待补体育”。
+        missingSportsCount: missing.length,
+        missingReasonCounts,
+        complete,
+        admissionCount,
+        ratio: complete && count ? admissionCount / count : 0,
+        entries
+    };
+}
+
+function getHighSchoolAdmissionStatsForSchool(school, line = readHighSchoolAdmissionLine()) {
+    const schoolRecord = typeof school === 'string' ? getAppSchoolRecord(school) : school;
+    const students = schoolRecord
+        ? (typeof getEquivalentSchoolStudents === 'function'
+            ? getEquivalentSchoolStudents(schoolRecord.name)
+            : (Array.isArray(schoolRecord.students) ? schoolRecord.students : []))
+        : [];
+    const summary = summarizeHighSchoolAdmissionStudents(students, line);
+    const classGroups = new Map();
+    students.forEach((student) => {
+        const className = String(student?.class || '').trim();
+        if (!className || /^(未分班|未知|无|[-—])$/i.test(className)) return;
+        if (!classGroups.has(className)) classGroups.set(className, []);
+        classGroups.get(className).push(student);
+    });
+    const classStats = [...classGroups.entries()]
+        .map(([className, classStudents]) => ({
+            className,
+            ...summarizeHighSchoolAdmissionStudents(classStudents, line)
+        }))
+        .sort((left, right) => String(left.className).localeCompare(String(right.className), 'zh-CN', { numeric: true }));
+    return {
+        ...summary,
+        school: schoolRecord || null,
+        line,
+        classStats,
+        hasClassData: classStats.length > 0
+    };
+}
+
+window.getHighSchoolAdmissionStatsForSchool = getHighSchoolAdmissionStatsForSchool;
+window.getHighSchoolAdmissionStatusText = getHighSchoolAdmissionStatusText;
 
 function calculateHighScoreStatsForSummary(schools = getSummaryTownshipSchools()) {
     const rows = (schools || []).map((school) => {
@@ -4392,18 +4533,8 @@ function calculateHighSchoolAdmissionStatsForSummary(schools = getSummaryTownshi
     const allowed = isHighSchoolAdmissionExamAllowed();
     const line = allowed ? readHighSchoolAdmissionLine() : 0;
     const rows = (schools || []).map((school) => {
-        const students = typeof getEquivalentSchoolStudents === 'function'
-            ? getEquivalentSchoolStudents(school.name)
-            : (Array.isArray(school.students) ? school.students : []);
-        const total = students.length || Number(school?.metrics?.total?.count) || 0;
-        const admissionTotals = students.map((student) => getHighSchoolAdmissionTotal(student));
-        const missingSportsCount = admissionTotals.filter((value) => !Number.isFinite(value)).length;
-        const complete = missingSportsCount === 0;
-        const count = line > 0 && complete
-            ? admissionTotals.filter((totalScore) => totalScore >= line).length
-            : 0;
-        const ratio = complete && total ? count / total : 0;
-        return { school, line, count, ratio, score: 0, complete, missingSportsCount };
+        const stats = getHighSchoolAdmissionStatsForSchool(school, line);
+        return { ...stats, school, score: 0 };
     });
     const maxRatio = Math.max(...rows.filter((row) => row.complete).map((row) => Number(row.ratio) || 0), 0);
     rows.forEach((row) => {
@@ -4412,10 +4543,16 @@ function calculateHighSchoolAdmissionStatsForSummary(schools = getSummaryTownshi
             row.school.highSchoolAdmissionStats = {
                 line: row.line,
                 count: row.count,
+                availableCount: row.availableCount,
+                admissionCount: row.admissionCount,
                 ratio: row.ratio,
                 score: row.score,
                 complete: row.complete,
-                missingSportsCount: row.missingSportsCount
+                missingSportsCount: row.missingSportsCount,
+                missingAdmissionCount: row.missingAdmissionCount,
+                missingReasonCounts: row.missingReasonCounts,
+                classStats: row.classStats,
+                hasClassData: row.hasClassData
             };
         }
     });
@@ -4752,7 +4889,13 @@ async function readExcel(file) {
     const wb = XLSX.read(data, { type: 'array' });
     wb.SheetNames.forEach(sname => {
         if (sname.includes('二模本校') || sname.includes('各班各科') || sname.includes('横向对比')) return;
-        const json = XLSX.utils.sheet_to_json(wb.Sheets[sname], { header: 1 });
+        // Excel 的筛选/隐藏仅影响显示，不得影响成绩归档；始终按工作表完整使用范围读取。
+        const json = XLSX.utils.sheet_to_json(wb.Sheets[sname], {
+            header: 1,
+            defval: null,
+            blankrows: false,
+            skipHidden: false
+        });
         if (json.length < 2) return;
         parseRows(json, sname);
     });
@@ -6732,14 +6875,22 @@ async function calcSummary(isSilent = false) {
         let highSchoolAdmissionCell = '';
         if (isGrade9) {
             const admissionAllowed = isHighSchoolAdmissionExamAllowed();
-            const missingSportsCount = Number(d.admissionStats?.missingSportsCount) || 0;
+            const missingAdmissionCount = Number(d.admissionStats?.missingAdmissionCount ?? d.admissionStats?.missingSportsCount) || 0;
+            const admissionLine = Number(d.admissionStats?.line) || 0;
+            const admissionStatus = getHighSchoolAdmissionStatusText(d.admissionStats, { allowed: admissionAllowed, line: admissionLine });
             const admissionTitle = !admissionAllowed
                 ? '仅 9 年级 7 月中考成绩计算；当前考试不参与高中上线率赋分'
-                : missingSportsCount > 0
-                    ? `有 ${missingSportsCount} 名学生缺少体育成绩，不能按“语数外物化+体育”计算高中上线率`
-                    : '高中上线总分 = 语文 + 数学 + 英语 + 物理 + 化学 + 体育；赋分 = 本校上线率 / 最高学校上线率 × 50';
-            const admissionText = admissionAllowed && missingSportsCount > 0 ? '待补体育' : d.s5.toFixed(2);
-            highSchoolAdmissionCell = `<td data-label="高中上线率赋分" style="color:#047857; background:#ecfdf5; font-weight:bold;" title="${admissionTitle}">${admissionText}</td>`;
+                : missingAdmissionCount > 0
+                    ? `有 ${missingAdmissionCount} 名学生${admissionStatus}，该校不参与高中上线率赋分`
+                    : admissionLine > 0
+                        ? '高中上线优先使用“中考总分（含体育）”；赋分 = 本校上线率 / 最高学校上线率 × 50'
+                        : '尚未配置中考高中过线分数，暂不计算上线率赋分';
+            const admissionText = !admissionAllowed
+                ? '不计'
+                : missingAdmissionCount > 0
+                    ? '待中考总分'
+                    : admissionLine > 0 ? d.s5.toFixed(2) : '待录取线';
+            highSchoolAdmissionCell = `<td data-label="高中上线率赋分" style="color:#047857; background:#ecfdf5; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighSchoolAdmissionClick(${safeSchoolArg})" title="${escapeAppHtml(admissionTitle)}">${admissionText}</button></td>`;
         }
         const rankClass = ['rank-cell', d.rank === 1 ? 'r-1' : '', d.rank === 2 ? 'r-2' : '', d.rank === 3 ? 'r-3' : '']
             .filter(Boolean)

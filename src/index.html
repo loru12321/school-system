@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="校衡台用于学校成绩导入、届别档案、教学分析、教师画像和家校报告，帮助教务团队完成数据管理与教学决策。">
-    <meta name="application-name" content="校衡台">
+    <meta name="description" content="澄见用于学校成绩导入、届别档案、教学分析、教师画像和家校报告，帮助教务团队完成数据管理与教学决策。">
+    <meta name="application-name" content="澄见">
     <meta name="robots" content="index,follow">
     <meta name="color-scheme" content="light dark">
     <link rel="canonical" href="https://schoolsystem.com.cn/">
@@ -15,22 +15,22 @@
     <link rel="apple-touch-icon" sizes="192x192" href="./assets/brand/app-icon-192.png">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="zh_CN">
-    <meta property="og:site_name" content="校衡台">
-    <meta property="og:title" content="校衡台">
+    <meta property="og:site_name" content="澄见">
+    <meta property="og:title" content="澄见">
     <meta property="og:description" content="面向学校教务、班主任和教师的成绩管理、横向评价、成长分析与教学决策工作台。">
     <meta property="og:url" content="https://schoolsystem.com.cn/">
     <meta property="og:image" content="https://schoolsystem.com.cn/icon.svg">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="校衡台">
+    <meta name="twitter:title" content="澄见">
     <meta name="twitter:description" content="面向学校教务、班主任和教师的成绩管理、横向评价、成长分析与教学决策工作台。">
     <meta name="twitter:image" content="https://schoolsystem.com.cn/icon.svg">
     <meta name="theme-color" content="#faf7f4">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="校衡台">
+    <meta name="apple-mobile-web-app-title" content="澄见">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no, email=no, address=no">
-    <title>校衡台</title>
+    <title>澄见</title>
     <link rel="icon" href="./favicon.ico?v=20260321-localgrades-v4" sizes="any" type="image/x-icon">
     <script>
         (function () {
@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-5fbc1c6b8e73.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-5fbc1c6b8e73.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-bafd2fcda439.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-bafd2fcda439.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -157,7 +157,7 @@
         <div
             style="background:linear-gradient(135deg, #4f46e5, #3b82f6); padding:20px 20px 25px 20px; color:white; border-radius:0 0 20px 20px; box-shadow:0 4px 15px rgba(59,130,246,0.3);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <div style="font-size:18px; font-weight:bold;">📊 校衡台</div>
+                <div style="font-size:18px; font-weight:bold;">📊 澄见</div>
                 <div
                     style="display:flex; align-items:center; gap:8px; font-size:14px; background:rgba(255,255,255,0.2); padding:5px 12px; border-radius:20px; backdrop-filter:blur(5px);">
                     <i class="ti ti-user-circle" style="font-size:18px;"></i>
@@ -328,15 +328,19 @@
         <div class="login-clean-shell" aria-label="系统登录">
             <section class="login-clean-stage">
                 <div class="login-clean-brand">
-                    <span class="login-clean-mark">校</span>
+                    <!-- 学校徽标（已抠白底的透明 PNG）。替代原「校」字占位符，尺寸与占位一致，
+                         不占额外版面、不遮挡右侧文字。 -->
+                    <span class="login-clean-mark login-clean-mark--logo">
+                        <img src="./assets/brand/school-logo-128.png" alt="银山实验学校校徽" width="40" height="40" loading="eager" decoding="async">
+                    </span>
                     <div>
-                        <strong>校衡台</strong>
-                        <small>教学数据工作台</small>
+                        <strong>澄见</strong>
+                        <small>银山实验学校 · 教学数据工作台</small>
                     </div>
                 </div>
                 <div class="login-clean-copy">
                     <span>学校数据工作台</span>
-                    <h1>校衡台</h1>
+                    <h1>澄见</h1>
                     <p>把联考数据、教师画像、成长轨迹和家校沟通整理成清楚、可信、可行动的教学视图。</p>
                 </div>
             </section>
@@ -457,7 +461,7 @@
         <!-- 头部 -->
         <div class="mob-dash-header">
             <div class="mob-dash-top">
-                <div class="mob-school-name"><i class="ti ti-building-arch"></i> 校衡台</div>
+                <div class="mob-school-name"><i class="ti ti-building-arch"></i> 澄见</div>
                 <div class="mob-user-info" onclick="Auth.logout()">
                     <i class="ti ti-user-circle"></i> <span id="mob-dash-user">老师</span>
                 </div>
@@ -558,6 +562,13 @@
     <!-- 主应用界面 -->
     <div id="watermark-layer" aria-hidden="true"></div>
     <div class="app-layout hidden" id="app">
+        <!-- 品牌水印：固定在右下角、极低透明度、pointer-events:none，
+             既标明来源（截图汇报时有出处），又不遮挡也不拦截任何数据区交互。
+             打印时隐藏，避免占用纸面。 -->
+        <div class="app-brand-watermark" aria-hidden="true">
+            <img src="./assets/brand/school-logo-64.png" alt="" width="22" height="22" loading="lazy" decoding="async">
+            <span>澄见 · 银山实验学校</span>
+        </div>
         <!-- 📱 新版宽阔侧边栏 (SaaS / Vercel / Notion 风格) -->
         <aside id="app-sidebar" class="sidebar-spacious is-collapsed">
             <nav class="sidebar-nav-container" id="sidebar-nav">
@@ -2539,7 +2550,7 @@
 
             <div id="exam-arranger" class="section card-box analysis-workspace analysis-workspace-tools">
                 <div class="module-desc-bar analysis-hero" style="border-color: var(--color-tools)">
-                    <h3><i class="ti ti-settings-automation"></i> 06 校衡台事务工具</h3>
+                    <h3><i class="ti ti-settings-automation"></i> 06 澄见事务工具</h3>
                     <p>说明：解决日常繁杂教务。包含考场智能编排、自动生成桌贴、新生均衡分班、座位表智能排列（考虑视力/身高/矛盾）等功能。</p>
                     <div class="analysis-scan-strip">
                         <div class="analysis-scan-item">

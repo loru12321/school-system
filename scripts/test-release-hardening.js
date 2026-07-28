@@ -60,8 +60,8 @@ assert.ok(!publicHeaders.includes('/downloads/*'), 'Cloudflare static headers sh
 assert.ok(!worker.includes("pathname.startsWith('/downloads/')"), 'Worker should not special-case hosted installer downloads');
 assert.ok(!worker.includes('worker-release-downloads'), 'Worker should not import removed installer download proxy');
 
-assert.strictEqual(manifest.name, '校衡台', 'manifest app name should be readable Chinese');
-assert.strictEqual(manifest.short_name, '校衡台', 'manifest short name should be readable Chinese');
+assert.strictEqual(manifest.name, '澄见', 'manifest app name should be readable Chinese');
+assert.strictEqual(manifest.short_name, '澄见', 'manifest short name should be readable Chinese');
 assert.ok(manifest.description.includes('教务'), 'manifest description should stay readable');
 assert.ok(!/[锟�]/.test(manifestText), 'manifest should not contain replacement or mojibake characters');
 assert.ok(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 2, 'manifest should keep app shortcuts');
@@ -74,7 +74,7 @@ const swVersion = swVersionMatch ? swVersionMatch[1] : '';
 assert.ok(swVersion, 'could not extract SERVICE_WORKER_VERSION from service-worker-runtime.js');
 assert.ok(!srcIndex.includes('runtimeRefresh') && !srcIndex.includes('SCHOOL_RUNTIME_REFRESH_VERSION'), 'HTML should not rely on runtime-version refresh churn');
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(srcIndex), 'HTML should not query-version runtime JS entries');
-assert.ok(srcIndex.includes('校衡台'), 'HTML metadata should keep readable Chinese application name');
+assert.ok(srcIndex.includes('澄见'), 'HTML metadata should keep readable Chinese application name');
 userFacingReleaseFiles.forEach((relativePath) => {
   assert.ok(!read(relativePath).includes('\uFFFD'), `${relativePath} should not contain replacement characters`);
 });
