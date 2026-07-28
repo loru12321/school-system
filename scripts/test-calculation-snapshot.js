@@ -1785,6 +1785,7 @@ async function main() {
     assert.ok(snapshot.cohortExamCount >= 1, `cohort exam count too low: ${snapshot.cohortExamCount}`);
     if (snapshot.cohortExamCount >= 2) {
         assert.ok(snapshot.cohortGrowthRows > 0, 'cohort growth rows missing');
+        assert.ok(snapshot.cohortVolatilityRows > 0, 'cohort volatility rows missing');
     }
     assert.ok(snapshot.cohortGrowthFinite, 'cohort growth calculation produced non-finite values');
 
