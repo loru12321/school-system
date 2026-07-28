@@ -29,8 +29,9 @@ assert.ok(
 assert.ok(
     source.includes('function buildMajorSubjectSchoolAnalysisWorkbook()')
         && source.includes('const snapshot = calculateMajorSubjectSnapshot(rows, subjects);')
-        && source.includes("buildSchoolAnalysisWorkbook('township', { schools: snapshot.schools, subjects: snapshot.subjects })"),
-    'major-subject workbook should recalculate a separate school-analysis snapshot instead of reusing mixed all-subject totals'
+        && source.includes('const totalLabel = getPackageTotalLabel(snapshot.subjects);')
+        && source.includes('totalLabel'),
+    'major-subject workbook should recalculate a separate school-analysis snapshot and carry its own total label'
 );
 
 assert.ok(
@@ -76,7 +77,6 @@ function createRuntimeContext({ grade, subjects, zhongkao = false }) {
             total: 500
         }
     ];
-    const workbook = { SheetNames: [], Sheets: {} };
     const xlsx = {
         utils: {
             book_new: () => ({ SheetNames: [], Sheets: {} }),
@@ -88,11 +88,7 @@ function createRuntimeContext({ grade, subjects, zhongkao = false }) {
             decode_range: () => ({ s: { r: 0, c: 0 }, e: { r: 1, c: 1 } }),
             encode_cell: ({ r, c }) => `${String.fromCharCode(65 + c)}${r + 1}`
         },
-        write: (wb) => {
-            workbook.SheetNames = wb.SheetNames;
-            workbook.Sheets = wb.Sheets;
-            return Buffer.from('xlsx');
-        }
+        write: (wb) => wb
     };
     const context = {
         console,
@@ -124,7 +120,8 @@ function createRuntimeContext({ grade, subjects, zhongkao = false }) {
             '银山实验学校': { name: '银山实验学校', students: students.slice(0, 1), metrics: {}, rankings: {} },
             '州城中学': { name: '州城中学', students: students.slice(1), metrics: {}, rankings: {} }
         },
-        CONFIG: { name: `${grade}年级`, label: '总分', excRate: 0.15 },
+        // 模拟当前全科界面仍显示“七科总”；主科包必须忽略它，改用传入的主科集合。
+        CONFIG: { name: `${grade}年级`, label: '七科总', excRate: 0.15 },
         CURRENT_EXAM_ID: zhongkao
             ? `2023级-${grade}年级-2025-2026-暑假-中考-2026-07-12`
             : `2023级-${grade}年级-2025-2026-下学期-期末-2026-07-01`,
@@ -138,6 +135,11 @@ function createRuntimeContext({ grade, subjects, zhongkao = false }) {
         filterRowsToTownshipSchools: (rows) => rows,
         getSummaryTownshipSchools() {
             return Object.values(context.SCHOOLS);
+        },
+        getTotalSubjectLabel({ subjects: labelSubjects = [] } = {}) {
+            const numerals = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+            const count = Array.isArray(labelSubjects) ? labelSubjects.length : 0;
+            return count ? `${numerals[count] || count}科总` : context.CONFIG.label;
         }
     };
     if (zhongkao) {
@@ -155,7 +157,12 @@ function createRuntimeContext({ grade, subjects, zhongkao = false }) {
     }
     context.window = context;
     vm.runInNewContext(source, context, { filename: 'exam-analysis-package-runtime.js' });
-    return { context, files, workbook };
+    return { context, files };
+}
+
+function getWorkbookRows(file, sheetName) {
+    const workbook = file?.payload;
+    return workbook?.Sheets?.[sheetName]?.rows || [];
 }
 
 (async () => {
@@ -170,10 +177,14 @@ function createRuntimeContext({ grade, subjects, zhongkao = false }) {
     {
         const { context, files } = createRuntimeContext({ grade: '7', subjects: ['语文', '数学', '英语', '历史', '地理', '生物'] });
         await context.downloadExamAnalysisPackage();
-        assert.ok(
-            files.some((file) => /学校\/.*主科学校分析.*\.xlsx$/.test(file.name)),
-            'grade 7 package should include a major-subject school workbook'
-        );
+        const majorFile = files.find((file) => /学校\/.*主科学校分析.*\.xlsx$/.test(file.name));
+        assert.ok(majorFile, 'grade 7 package should include a major-subject school workbook');
+        const totalRows = getWorkbookRows(majorFile, '三科总 - 综合分析表');
+        assert.strictEqual(totalRows[0]?.[3], '三科总平均分', 'major total sheet header must use the three-subject label');
+        const horizontalRows = getWorkbookRows(majorFile, '横向对比一览表');
+        const horizontalLabels = horizontalRows.map((row) => String(row?.[0] || '')).join('|');
+        assert.ok(horizontalLabels.includes('三科总平均分（排名）'), 'major horizontal sheet must use the three-subject label');
+        assert.ok(!/七科总/.test(`${totalRows.flat().join('|')}|${horizontalLabels}`), 'major workbook must never leak the full-subject label');
     }
     {
         const { context, files } = createRuntimeContext({ grade: '9', subjects: ['语文', '数学', '英语', '物理', '化学', '政治'] });

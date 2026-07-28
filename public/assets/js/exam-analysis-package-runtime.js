@@ -491,12 +491,28 @@
         return window.XLSX.write(workbook, { bookType: 'xlsx', type: 'array', cellStyles: true });
     }
 
-    function schoolRankRows(schools, subject, scope = 'township') {
+    // 一个分析包可以使用与当前全科界面不同的科目集合（例如 6/7 年级的三科主科包）。
+    // 不能回读 CONFIG.label：它描述当前全科数据，会把“三科总”误标成“七科总”。
+    function getPackageTotalLabel(subjects = []) {
+        const normalizedSubjects = [...new Set((Array.isArray(subjects) ? subjects : [])
+            .map((subject) => String(subject || '').trim())
+            .filter(Boolean))];
+        if (typeof window.getTotalSubjectLabel === 'function') {
+            const label = String(window.getTotalSubjectLabel({ subjects: normalizedSubjects }) || '').trim();
+            if (label) return label;
+        }
+        const numerals = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+        return normalizedSubjects.length
+            ? `${numerals[normalizedSubjects.length] || String(normalizedSubjects.length)}科总`
+            : (window.CONFIG?.label || '总分');
+    }
+
+    function schoolRankRows(schools, subject, scope = 'township', options = {}) {
         if (scope === 'county') {
-            return countySchoolRankRows(schools, subject);
+            return countySchoolRankRows(schools, subject, options);
         }
         const isTotal = subject === 'total';
-        const title = isTotal ? (window.CONFIG?.label || '总分') : subject;
+        const title = isTotal ? (options.totalLabel || '总分') : subject;
         const rows = [[
             '序号', '学校', '实考人数', `${title}平均分`, '优秀率(%)', '及格率(%)',
             '平均分排名', '优秀率排名', '及格率排名', '两率一分', '综合排名', '_标记'
@@ -530,9 +546,9 @@
         return rows;
     }
 
-    function countySchoolRankRows(schools, subject) {
+    function countySchoolRankRows(schools, subject, options = {}) {
         const isTotal = subject === 'total';
-        const title = isTotal ? (window.CONFIG?.label || '总分') : subject;
+        const title = isTotal ? (options.totalLabel || '总分') : subject;
         const weights = getTwoRateWeightsForPackage();
         const entries = (schools || [])
             .filter((school) => school?.metrics?.[subject])
@@ -631,15 +647,13 @@
         const wb = window.XLSX.utils.book_new();
         const schools = options.schools || (scope === 'county' ? Object.values(window.SCHOOLS || {}) : getTownshipSchools());
         const subjects = options.subjects || getSubjectList(getAllRows());
-        const totalLabel = options.totalLabel || (typeof window.getTotalSubjectLabel === 'function'
-            ? window.getTotalSubjectLabel({ subjects })
-            : '总分');
+        const totalLabel = options.totalLabel || getPackageTotalLabel(subjects);
         const includeGrade9Support = options.includeGrade9Support !== false;
         if (options.referenceNote) addWorksheet(wb, '口径说明', options.referenceNote);
         if (scope !== 'county') addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope, { includeGrade9Support }));
-        addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects, scope));
+        addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects, scope, { totalLabel }));
         if (scope !== 'county' && includeGrade9Support && isGrade9Exam()) addWorksheet(wb, '9年级专项核算对照表', buildSupportMetricComparisonRows(schools));
-        addWorksheet(wb, `${totalLabel} - 综合分析表`, schoolRankRows(schools, 'total', scope));
+        addWorksheet(wb, `${totalLabel} - 综合分析表`, schoolRankRows(schools, 'total', scope, { totalLabel }));
         subjects.forEach((subject) => addWorksheet(wb, `${subject} 学科明细`, schoolRankRows(schools, subject, scope)));
         if (scope !== 'county') {
             addWorksheetIfUseful(wb, '高分段赋分详情', buildHighScoreRows(schools));
@@ -806,7 +820,12 @@
         const subjects = getMajorSubjectsForPackage(rows);
         if (!subjects.length) return null;
         const snapshot = calculateMajorSubjectSnapshot(rows, subjects);
-        return buildSchoolAnalysisWorkbook('township', { schools: snapshot.schools, subjects: snapshot.subjects });
+        const totalLabel = getPackageTotalLabel(snapshot.subjects);
+        return buildSchoolAnalysisWorkbook('township', {
+            schools: snapshot.schools,
+            subjects: snapshot.subjects,
+            totalLabel
+        });
     }
 
     function getPackageExamMeta(exam = {}) {
@@ -1077,7 +1096,7 @@
         return school?.rankings?.[subject]?.[key] || rankMaps.get(subject)?.get(school)?.[key] || '';
     }
 
-    function buildHorizontalRows(schools, subjects, scope = 'township') {
+    function buildHorizontalRows(schools, subjects, scope = 'township', options = {}) {
         const sortedSchools = schools.slice().sort((a, b) => {
             const leftRank = scope === 'county' ? (a.countyRank2Rate || 9999) : (a.rank2Rate || 9999);
             const rightRank = scope === 'county' ? (b.countyRank2Rate || 9999) : (b.rank2Rate || 9999);
@@ -1087,7 +1106,7 @@
         const rankMaps = new Map([...subjects, 'total'].map((subject) => [subject, buildSchoolMetricRankMap(schools, subject)]));
         const rows = [['统计项目 / 学校', ...sortedSchools.map((school) => `${school.name}${sameSchool(school.name, getMySchoolName()) ? '（本校）' : ''}`)]];
         [...subjects, 'total'].forEach((subject) => {
-            const label = subject === 'total' ? (window.CONFIG?.label || '总分') : subject;
+            const label = subject === 'total' ? (options.totalLabel || '总分') : subject;
             rows.push([`${label}平均分（排名）`, ...sortedSchools.map((school) => formatHorizontalValue(
                 school.metrics?.[subject]?.avg,
                 getHorizontalMetricRank(rankMaps, school, subject, 'avg', scope)
