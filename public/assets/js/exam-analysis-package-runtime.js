@@ -476,6 +476,10 @@
 
     function addWorksheet(workbook, name, rows, options = {}) {
         const ws = window.XLSX.utils.aoa_to_sheet(rows && rows.length ? rows : [['暂无数据']]);
+        // 注意：当前 vendored 的 xlsx 是 0.18.5 社区版，**写出时不生成 <pane> 节点**，
+        // 所以 '!freeze' / '!panes' 都不会落到文件里（已实测：写后回读为 null，
+        // sheet1.xml 中无 <pane>）。这里保留传参以便将来换库后直接生效，但不要因此
+        // 以为导出的表已经冻结表头——真要冻结需换成支持该特性的写库。
         if (options.freeze) ws['!freeze'] = options.freeze;
         applyPackageSheetStyle(ws, rows);
         window.XLSX.utils.book_append_sheet(workbook, ws, excelSafeName(name));
@@ -643,12 +647,84 @@
         return rankMap;
     }
 
+    // 封面页：收到报告的人（校长、上级）打开文件第一眼应该知道「这是什么、什么范围、
+    // 什么时候生成的、怎么读」，而不是直接撞上一张数据表。
+    // 只汇总已有元信息，不做任何计算。
+    function buildCoverRows(options = {}) {
+        const title = String(options.title || getExamPackageTitle() || '考试分析报告').trim();
+        const scopeText = options.scopeText || '';
+        const sheetGuide = Array.isArray(options.sheetGuide) ? options.sheetGuide : [];
+        const examId = String(window.CURRENT_EXAM_ID || '').trim();
+        const exam = (window.COHORT_DB?.exams || {})[examId] || {};
+        const academicYear = getPackageExamAcademicYear(examId, exam);
+        const examDate = getPackageExamDate(examId, exam);
+        const mySchool = String(window.MY_SCHOOL || '').trim();
+
+        const rows = [
+            [title],
+            [],
+            ['报告范围', scopeText || '—'],
+            ['本校', mySchool || '未识别'],
+            ['学年', academicYear || '—'],
+            ['考试日期', examDate || '—'],
+            ['考试标识', examId || '—'],
+            ['生成时间', new Date().toLocaleString('zh-CN')],
+            []
+        ];
+        if (sheetGuide.length) {
+            rows.push(['本文件包含以下工作表']);
+            rows.push(['工作表', '看什么']);
+            sheetGuide.forEach(([name, purpose]) => rows.push([name, purpose]));
+            rows.push([]);
+        }
+        rows.push(['阅读提示']);
+        rows.push(['1', '各数据表已开启自动筛选，可直接按学校或班级筛选查看。']);
+        rows.push(['2', '行数较多的表建议自行「视图 → 冻结首行」，方便对照列名。']);
+        rows.push(['3', '所有指标口径见「口径说明」工作表；如与系统页面不一致请以系统为准。']);
+        rows.push(['4', '本报告由系统自动生成，未做人工调整。']);
+        return rows;
+    }
+
+    // 封面页不需要冻结表头与筛选器（它不是数据表），单独走一个简化样式。
+    function addCoverSheet(workbook, rows) {
+        const ws = window.XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 18 }, { wch: 72 }];
+        ws['!rows'] = rows.map((_, index) => ({ hpt: index === 0 ? 34 : 20 }));
+        const titleRef = window.XLSX.utils.encode_cell({ r: 0, c: 0 });
+        if (ws[titleRef]) {
+            mergeCellStyle(ws[titleRef], {
+                font: { bold: true, sz: 18, color: { rgb: '0F766E' } },
+                alignment: { horizontal: 'left', vertical: 'center' }
+            });
+        }
+        // 左列字段名加粗，便于扫读。
+        rows.forEach((row, index) => {
+            if (index === 0 || !row.length) return;
+            const ref = window.XLSX.utils.encode_cell({ r: index, c: 0 });
+            if (!ws[ref]) return;
+            mergeCellStyle(ws[ref], { font: { bold: true, color: { rgb: '111827' } } });
+        });
+        window.XLSX.utils.book_append_sheet(workbook, ws, '封面');
+        return ws;
+    }
+
     function buildSchoolAnalysisWorkbook(scope = 'township', options = {}) {
         const wb = window.XLSX.utils.book_new();
         const schools = options.schools || (scope === 'county' ? Object.values(window.SCHOOLS || {}) : getTownshipSchools());
         const subjects = options.subjects || getSubjectList(getAllRows());
         const totalLabel = options.totalLabel || getPackageTotalLabel(subjects);
         const includeGrade9Support = options.includeGrade9Support !== false;
+        addCoverSheet(wb, buildCoverRows({
+            title: `${getExamPackageStem()}学校分析报告`,
+            scopeText: scope === 'county' ? '县域范围内各学校' : '乡镇范围内各学校',
+            sheetGuide: [
+                ['综合分析报告', '各校综合总分与总排名，汇报开头用这张'],
+                ['横向对比一览表', '把关键指标按学校并排，便于一眼看差距'],
+                [`${totalLabel} - 综合分析表`, '总分口径下的均分、优秀率、及格率与名次'],
+                ['学科明细', '每个学科单独一张，看哪一科拉分或拖分'],
+                ['口径说明', '各项指标怎么算的，看报告前先读这张']
+            ].filter(Boolean)
+        }));
         if (options.referenceNote) addWorksheet(wb, '口径说明', options.referenceNote);
         if (scope !== 'county') addWorksheet(wb, '综合分析报告', buildComprehensiveSummaryRows(schools, subjects, scope, { includeGrade9Support }));
         addWorksheet(wb, '横向对比一览表', buildHorizontalRows(schools, subjects, scope, { totalLabel }));
@@ -1330,6 +1406,14 @@
     function buildRawScoreWorkbook(rows = getAllRows()) {
         const wb = window.XLSX.utils.book_new();
         const subjects = getSubjectList(rows);
+        addCoverSheet(wb, buildCoverRows({
+            title: `${getExamPackageStem()}原始成绩`,
+            scopeText: '本次考试全部考生原始成绩（按学校分表）',
+            sheetGuide: [
+                ['各学校工作表', '该校全部考生的各科原始分，一校一张表'],
+                ['用途', '留档与核对用；分析结论请看「学校/」目录下的分析报告']
+            ]
+        }));
         const grouped = new Map();
         rows.forEach((student) => {
             const school = String(student?.school || '未知学校').trim() || '未知学校';
@@ -1441,6 +1525,15 @@
     function buildStudentDetailWorkbook(rows, options = {}) {
         const subjects = getSubjectList(rows);
         const includeCounty = !!options.includeCounty;
+        // 与学校分析报告保持一致：所有对外文件第一张都是封面，说明范围与生成时间。
+        const studentCover = buildCoverRows({
+            title: `${getExamPackageStem()}学生考试明细`,
+            scopeText: includeCounty ? '县域范围内全部考生（含县域位次）' : '乡镇范围内全部考生',
+            sheetGuide: [
+                ['学生明细', '逐个学生的各科成绩与位次，可按学校/班级筛选'],
+                ['口径说明', '空分与缺考如何计入，以及位次口径']
+            ]
+        });
         const fallbackRanks = buildStudentRankFallbacks(rows, subjects, includeCounty);
         const headers = ['学校', '班级', '姓名', '考号', '考场'];
         subjects.forEach((subject) => {
@@ -1478,6 +1571,7 @@
             data.push(row);
         });
         const wb = window.XLSX.utils.book_new();
+        addCoverSheet(wb, studentCover);
         addWorksheet(wb, '学生考试明细', data, { freeze: { xSplit: 5, ySplit: 1 } });
         return wb;
     }
@@ -1544,6 +1638,16 @@
         const wb = window.XLSX.utils.book_new();
         const data = window.TOWNSHIP_RANKING_DATA || {};
         const subjects = getSubjectList(getAllRows());
+        // 教师相关文件的封面额外写明「未做生源校正」——这份文件常被直接转发，
+        // 收到的人未必了解口径，容易把名次当成教学水平的唯一证据。
+        addCoverSheet(wb, buildCoverRows({
+            title: `${getExamPackageStem()}教师乡镇排名`,
+            scopeText: '乡镇范围内同学科教师',
+            sheetGuide: [
+                ['各学科 教师乡镇排名', '同一学科内的教师均分、优秀率、及格率与名次'],
+                ['注意', '排名未做生源校正；样本人数少时名次波动大，建议连续看 2-3 次趋势']
+            ]
+        }));
         subjects.forEach((subject) => {
             const rows = data[subject] || [];
             addWorksheet(wb, `${subject} 教师乡镇排名`, [
@@ -1569,6 +1673,14 @@
         const wb = window.XLSX.utils.book_new();
         const rankingData = window.COUNTY_TEACHER_RANKING_DATA || {};
         const subjects = getSubjectList(getAllRows());
+        addCoverSheet(wb, buildCoverRows({
+            title: `${getExamPackageStem()}教师县域排名`,
+            scopeText: '县域范围内同学科教师',
+            sheetGuide: [
+                ['各学科 教师县域排名', '县域范围内同学科教师的指标与名次'],
+                ['注意', '排名未做生源校正；跨学科不可比较名次']
+            ]
+        }));
         subjects.forEach((subject) => {
             const rows = (rankingData[subject] || []).slice().sort((a, b) => {
                 if ((a.rankAvg || 9999) !== (b.rankAvg || 9999)) return (a.rankAvg || 9999) - (b.rankAvg || 9999);
@@ -1596,6 +1708,57 @@
 
     async function addWorkbook(zip, path, workbook) {
         zip.file(path, workbookToArrayBuffer(workbook));
+    }
+
+    // 包内阅读说明。只描述本次实际生成了哪些文件、建议的阅读顺序与口径注意，
+    // 不含任何计算；文件清单按实际生成条件拼装，避免列出不存在的文件。
+    function buildPackageReadme(context = {}) {
+        const { packageTitle, packageStem, suffix, includeCounty, hasMajorSubject, politics } = context;
+        const examId = String(window.CURRENT_EXAM_ID || '').trim();
+        const exam = (window.COHORT_DB?.exams || {})[examId] || {};
+        const mySchool = String(window.MY_SCHOOL || '').trim() || '未识别';
+
+        const files = [`${packageStem}成绩${suffix}.xlsx  —— 原始成绩，按学校分表`];
+        if (politics?.withoutPolitics) {
+            files.push(`学校/${packageStem}学校分析（不含政治）${suffix}.xlsx  —— 正式口径的学校分析`);
+            if (politics.withPolitics) {
+                files.push(`学校/${packageStem}学校分析（含政治·二模参考）${suffix}.xlsx  —— 仅供参考，不作正式依据`);
+            }
+        } else {
+            files.push(`学校/${packageStem}学校分析${suffix}.xlsx  —— 学校分析主报告`);
+        }
+        if (hasMajorSubject) files.push(`学校/${packageStem}主科学校分析${suffix}.xlsx  —— 只看主科的学校分析`);
+        if (includeCounty) files.push(`学校/${packageStem}学校县域分析${suffix}.xlsx  —— 县域范围对比`);
+        files.push(`学生/${packageStem}学生乡镇考试明细.xlsx  —— 逐个学生成绩与位次`);
+        if (includeCounty) files.push(`学生/${packageStem}学生考试明细 县域排名.xlsx  —— 含县域位次`);
+        files.push(`教师/${packageStem}教师分析${suffix}.xlsx  —— 教师所教班级表现`);
+        if (includeCounty) files.push(`教师/${packageStem}教师县域分析${suffix}.xlsx  —— 教师县域对比`);
+
+        return [
+            packageTitle || '考试分析包',
+            '='.repeat(48),
+            '',
+            `本校：${mySchool}`,
+            `学年：${getPackageExamAcademicYear(examId, exam) || '—'}`,
+            `考试日期：${getPackageExamDate(examId, exam) || '—'}`,
+            `生成时间：${new Date().toLocaleString('zh-CN')}`,
+            '',
+            '【建议阅读顺序】',
+            '1. 先看「学校分析」的封面页与口径说明，确认指标怎么算。',
+            '2. 再看「综合分析报告」定整体站位（各校综合总分与总排名）。',
+            '3. 需要拆到学科时看各「学科明细」，判断哪一科拉分或拖分。',
+            '4. 要落到人时再翻「学生」和「教师」目录下的明细。',
+            '',
+            '【本包文件清单】',
+            ...files.map((line, index) => `${index + 1}. ${line}`),
+            '',
+            '【口径注意】',
+            '· 每个工作簿的第一张「封面」写明范围与生成时间，「口径说明」写明指标算法。',
+            '· 各数据表已开启自动筛选；行数多的表建议自行「视图 → 冻结首行」。',
+            '· 跨学科不要直接比平均分：各科满分与难度不同，应看各自的率与名次。',
+            '· 本包由系统自动生成、未做人工调整；如与系统页面显示不一致，请以系统页面为准。',
+            ''
+        ].join('\r\n');
     }
 
     async function downloadExamAnalysisPackage() {
@@ -1639,6 +1802,17 @@
             if (includeCounty) await addWorkbook(zip, `学生/${packageStem}学生考试明细 县域排名.xlsx`, buildStudentDetailWorkbook(allRows, { includeCounty: true }));
             await addWorkbook(zip, `教师/${packageStem}教师分析${suffix}.xlsx`, buildTeacherTownWorkbook());
             if (includeCounty) await addWorkbook(zip, `教师/${packageStem}教师县域分析${suffix}.xlsx`, buildTeacherCountyWorkbook());
+
+            // 包内说明：7 个文件分散在三个目录，收到 zip 的人需要知道先看哪个。
+            // 用 .txt 而不是 .md：教务多用 Windows 直接双击打开，txt 更稳。
+            zip.file('阅读说明.txt', buildPackageReadme({
+                packageTitle,
+                packageStem,
+                suffix,
+                includeCounty,
+                hasMajorSubject: !!majorSubjectWorkbook,
+                politics: grade9PoliticsReferences
+            }));
 
             const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 1 } });
             const link = document.createElement('a');
