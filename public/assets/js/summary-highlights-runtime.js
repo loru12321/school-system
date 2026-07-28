@@ -142,14 +142,25 @@
         // 优秀线直接取系统已划好的 THRESHOLDS（可能是分位线，随数据变化），不自行推算。
         const excLine = num(root.THRESHOLDS?.total?.exc);
         if (excLine === null || excLine <= 0) return null;
-        // 距优秀线 10 分以内视为「就差一点」——此处仅用于提示规模，
-        // 精确判定与可调分值仍以「临界学生」模块为准。
-        const nearly = totals.filter((total) => total < excLine && total >= excLine - 10).length;
+        // 临界分值与「临界学生」模块保持同源：该模块读 #mpGap，为空时默认 5 分
+        // （marginal-push-runtime.js getMarginalConfig）。此前这里硬编码 10 分，与模块
+        // 默认值不一致，用户对着两处会看到不同人数。
+        //
+        // 注意：临界学生模块是懒加载的，用户没进过该模块时 #mpGap 尚未渲染，这里必然
+        // 取到默认值 5。因此文案只说「默认口径」，不谎称「按模块当前设置」——真正的
+        // 精确名单仍以该模块为准，用户在那里调分值后看到的数字可以与此处不同。
+        const rawGap = num(root.document?.getElementById('mpGap')?.value);
+        const usingDefault = rawGap === null;
+        const gap = Math.max(0.1, usingDefault ? 5 : rawGap);
+        const nearly = totals.filter((total) => total < excLine && total >= excLine - gap).length;
         if (!nearly) return null;
+        // 措辞区分数据来源：未进过临界模块时 #mpGap 不存在、用的是默认 5 分；
+        // 进过并设过值则跟随该设置。谎称哪一种都会让用户对不上数。
+        const scopeText = usingDefault ? `默认口径 ${gap} 分内` : `当前设定 ${gap} 分内`;
         return {
-            text: `有 <strong>${nearly}</strong> 人距优秀线（${excLine.toFixed(1)}）不到 10 分，`
-                + '属于提分性价比较高的一批',
-            source: '临界学生'
+            text: `距优秀线（${excLine.toFixed(1)}）<strong>${scopeText}</strong>有 `
+                + `<strong>${nearly}</strong> 人，属于提分性价比较高的一批`,
+            source: '临界学生（分值可在该模块调整）'
         };
     }
 
