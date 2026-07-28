@@ -1054,6 +1054,45 @@
         activateSubmodule(firstItem, category);
     }
 
+    // 「本次必看」最后一步的收口提示。只在 core 分类、且当前正停在最后一步时出现，
+    // 避免在浏览中途就催用户导出。
+    function renderCoreWorkflowFinishHint(container, visibleItems) {
+        if (!container || currentCategory !== 'core') return;
+        const lastItem = visibleItems[visibleItems.length - 1];
+        if (!lastItem || getActiveSectionId() !== lastItem.id) return;
+
+        const hint = document.createElement('div');
+        hint.className = 'core-workflow-finish';
+        hint.innerHTML = `
+            <span class="core-workflow-finish__text">
+                <strong>六步走完了。</strong>接下来交材料：分析包给校长和上级，成绩单发给家长。
+            </span>
+            <span class="core-workflow-finish__actions">
+                <button type="button" class="btn btn-green" data-core-finish="package">
+                    <i class="ti ti-file-zip"></i> 下载考试分析包
+                </button>
+                <button type="button" class="btn" data-core-finish="report">
+                    <i class="ti ti-certificate"></i> 去生成成绩单
+                </button>
+            </span>`;
+
+        hint.querySelector('[data-core-finish="package"]').onclick = function (event) {
+            event.stopPropagation();
+            // 复用综合评价页既有的分析包导出，不新增导出逻辑；未就绪时回到该页让用户手动点。
+            if (typeof window.downloadExamAnalysisPackage === 'function') {
+                window.downloadExamAnalysisPackage();
+            } else if (typeof switchTab === 'function') {
+                switchTab('summary');
+            }
+        };
+        hint.querySelector('[data-core-finish="report"]').onclick = function (event) {
+            event.stopPropagation();
+            if (typeof switchTab === 'function') switchTab('report-generator');
+        };
+
+        container.appendChild(hint);
+    }
+
     function renderSubNavigation() {
         const subNavContainer = document.getElementById('sub-nav-container');
         if (!subNavContainer) return;
@@ -1114,6 +1153,11 @@
 
             subNavContainer.appendChild(card);
         });
+
+        // 流程收口：走到「本次必看」最后一步时，明确告诉用户接下来该交什么材料。
+        // 产出入口原本只在第 1 步（综合评价页的导出报告 / 下载分析包），走到第 6 步后
+        // 用户得自己翻回去找 —— 这条提示把终点补上，按钮直达，不新增任何导出能力。
+        renderCoreWorkflowFinishHint(subNavContainer, visibleItems);
 
         setTimeout(function () {
             const lastAuto = window.__SHELL_LAST_DEFAULT_MODULE_AUTO__ || {};

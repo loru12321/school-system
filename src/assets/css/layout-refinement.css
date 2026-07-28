@@ -595,6 +595,30 @@
     font-weight: 800;
 }
 
+/* 流程收口条：只在「本次必看」最后一步出现，提示该交什么材料。 */
+.core-workflow-finish {
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 10px 14px;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    border-radius: 10px;
+    background: #f0fdf4;
+    color: #14532d;
+    font-size: 13px;
+}
+
+.core-workflow-finish__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 /* 「本次必看」子导航的步骤序号：这一类是有先后关系的流水线，用序号让新任教务
    知道从哪开始、下一步去哪。其余分类是并列关系，不加序号。 */
 .shell-story-card__step {

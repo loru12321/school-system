@@ -5024,15 +5024,25 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         try {
             await page.click('#sidebar-nav .sidebar-menu-item:first-child');
             await page.waitForTimeout(1200);
-            return await page.evaluate(() => {
+            const base = await page.evaluate(() => {
                 const cards = Array.from(document.querySelectorAll('#sub-nav-container .shell-story-card'));
                 return {
                     category: typeof window.getCurrentNavCategory === 'function' ? window.getCurrentNavCategory() : '',
                     highlighted: String(document.querySelector('#sidebar-nav .sidebar-menu-item.active .sidebar-menu-item__title')?.textContent || '').trim(),
                     steps: cards.map((card) => String(card.querySelector('.shell-story-card__step')?.textContent || '').trim()),
-                    titles: cards.map((card) => String(card.querySelector('.shell-story-card__title')?.textContent || '').trim())
+                    titles: cards.map((card) => String(card.querySelector('.shell-story-card__title')?.textContent || '').trim()),
+                    // 刚进入时停在第 1 步，此时不应出现收口提示。
+                    finishHintOnFirstStep: !!document.querySelector('.core-workflow-finish')
                 };
             });
+            // 点到最后一步，确认收口提示出现（整条流水线要有终点）。
+            await page.evaluate(() => {
+                const cards = Array.from(document.querySelectorAll('#sub-nav-container .shell-story-card'));
+                cards[cards.length - 1]?.click();
+            });
+            await page.waitForTimeout(1500);
+            base.finishHintOnLastStep = await page.evaluate(() => !!document.querySelector('.core-workflow-finish'));
+            return base;
         } catch (error) {
             return { error: String(error?.message || error).slice(0, 160) };
         }
@@ -5047,6 +5057,14 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         const expectedSteps = ['1', '2', '3', '4', '5', '6'];
         if (coreWorkflowSteps.steps.join(',') !== expectedSteps.join(',')) {
             errors.push({ scope: 'core-workflow-nav', message: `core workflow steps not numbered 1-6: ${coreWorkflowSteps.steps.join('|') || 'none'}` });
+        }
+        // 收口条只应在最后一步出现：停在第 1 步时不该催用户导出。
+        if (coreWorkflowSteps.finishHintOnFirstStep) {
+            errors.push({ scope: 'core-workflow-nav', message: 'finish hint should not show on the first step' });
+        }
+        // 走到最后一步时必须出现收口条，否则整条流水线没有终点。
+        if (coreWorkflowSteps.finishHintOnLastStep === false) {
+            errors.push({ scope: 'core-workflow-nav', message: 'finish hint missing on the last step' });
         }
     }
 
