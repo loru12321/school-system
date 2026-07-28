@@ -5682,8 +5682,8 @@ function getTownAnalysisVisibleSubjectsForCurrentUser() {
     return allSubjects.filter(subject => normalizedVisible.has(normalizeSubject(subject)));
 }
 
-// 中考政治二模参考是独立的只读展示，不会写进 SUBJECTS 或 SCHOOLS。它的资料较大，
-// 只在打开“两率一分”时按需读取，以免影响登录和主分析的计算路径。
+// 中考政治二模参考会固化到中考归档的展示字段，但绝不写进 SUBJECTS 或 SCHOOLS。
+// 首次在“两率一分”按需补齐，随后直接用中考归档，以免影响登录和主分析的计算路径。
 const Grade9PoliticsReferenceRenderState = {
     pendingKeys: new Set(),
     completedKeys: new Set()

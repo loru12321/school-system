@@ -1,7 +1,7 @@
 (() => {
     if (typeof window === 'undefined' || window.Grade9PoliticsReferenceRuntime) return;
 
-    const state = { key: '', summary: null, promise: null };
+    const state = { key: '', summary: null, promise: null, persistence: null };
     const POLITICS = '政治';
     const WEIGHTS = Object.freeze({ avg: 50, excellent: 80, pass: 50 });
 
@@ -13,6 +13,12 @@
         if (value === null || value === undefined || text(value) === '') return NaN;
         const numeric = Number(value);
         return Number.isFinite(numeric) ? numeric : NaN;
+    }
+
+    function sameScore(left, right) {
+        const a = score(left);
+        const b = score(right);
+        return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 0.0001;
     }
 
     function normalized(value) {
@@ -187,22 +193,8 @@
         });
     }
 
-    function buildSummary(context, secondMock) {
-        const scopeNames = getTownshipSchoolNames();
-        const index = buildSecondMockIndex(secondMock?.exam?.data || []);
-        const matchedRows = [];
-        let unmatched = 0;
-        context.rows.forEach(row => {
-            if (scopeNames.length && !scopeNames.some(name => sameSchool(name, row?.school))) return;
-            const referenceRow = resolveSecondMockRow(row, index);
-            const politicsScore = score(referenceRow?.scores?.[POLITICS]);
-            if (!Number.isFinite(politicsScore)) {
-                unmatched += 1;
-                return;
-            }
-            matchedRows.push({ ...row, school: getDisplaySchoolName(row?.school, scopeNames), politicsScore });
-        });
-        const thresholds = getThresholds(secondMock, matchedRows.map(row => row.politicsScore));
+    function buildMetricsSummary(context, matchedRows, unmatched, details) {
+        const thresholds = details.thresholds;
         const bySchool = new Map();
         matchedRows.forEach(row => {
             const name = text(row.school) || '未命名学校';
@@ -248,15 +240,178 @@
         return {
             status: 'ready',
             available: schools.length > 0,
-            signature: `${context.key}::${secondMock.examId}::${matchedRows.length}`,
-            sourceLabel: examDate(secondMock.examId, secondMock.exam) || secondMock.examId,
-            sourceExamId: secondMock.examId,
+            signature: `${context.key}::${details.sourceExamId}::${matchedRows.length}`,
+            sourceLabel: details.sourceLabel,
+            sourceExamId: details.sourceExamId,
+            sourceMode: details.sourceMode,
             thresholds,
             matched: matchedRows.length,
             unmatched,
             schools,
-            reason: schools.length ? '' : '同届二模已找到，但没有匹配到当前中考学生的政治成绩。'
+            reason: schools.length ? '' : '没有匹配到当前中考学生的政治二模成绩。'
         };
+    }
+
+    function getMatchedRows(context, valueOf) {
+        const scopeNames = getTownshipSchoolNames();
+        const matchedRows = [];
+        let unmatched = 0;
+        context.rows.forEach(row => {
+            if (scopeNames.length && !scopeNames.some(name => sameSchool(name, row?.school))) return;
+            const politicsScore = score(valueOf(row));
+            if (!Number.isFinite(politicsScore)) {
+                unmatched += 1;
+                return;
+            }
+            matchedRows.push({ ...row, school: getDisplaySchoolName(row?.school, scopeNames), politicsScore });
+        });
+        return { matchedRows, unmatched };
+    }
+
+    function buildSummary(context, secondMock) {
+        const index = buildSecondMockIndex(secondMock?.exam?.data || []);
+        const matched = getMatchedRows(context, row => resolveSecondMockRow(row, index)?.scores?.[POLITICS]);
+        const thresholds = getThresholds(secondMock, matched.matchedRows.map(row => row.politicsScore));
+        return buildMetricsSummary(context, matched.matchedRows, matched.unmatched, {
+            thresholds,
+            sourceExamId: secondMock.examId,
+            sourceLabel: examDate(secondMock.examId, secondMock.exam) || secondMock.examId,
+            sourceMode: 'second-mock'
+        });
+    }
+
+    function getStoredReference(context) {
+        const reference = context.exam?.meta?.politicsReference;
+        if (!reference || typeof reference !== 'object') return null;
+        const sourceExamId = text(reference.sourceExamId);
+        const exc = score(reference?.thresholds?.exc);
+        const pass = score(reference?.thresholds?.pass);
+        if (!sourceExamId || !Number.isFinite(exc) || !Number.isFinite(pass)) return null;
+        return {
+            sourceExamId,
+            sourceLabel: text(reference.sourceLabel) || sourceExamId,
+            thresholds: {
+                exc,
+                pass,
+                source: text(reference?.thresholds?.source) || '已归档二模分数线'
+            }
+        };
+    }
+
+    function buildStoredSummary(context) {
+        const reference = getStoredReference(context);
+        if (!reference) return null;
+        const matched = getMatchedRows(context, row => row?.scores?.[POLITICS]);
+        if (!matched.matchedRows.length) return null;
+        return buildMetricsSummary(context, matched.matchedRows, matched.unmatched, {
+            ...reference,
+            sourceMode: 'archived-copy'
+        });
+    }
+
+    function updatePoliticsScores(rows, index) {
+        let matched = 0;
+        let updated = 0;
+        (Array.isArray(rows) ? rows : []).forEach(row => {
+            const referenceRow = resolveSecondMockRow(row, index);
+            const politicsScore = score(referenceRow?.scores?.[POLITICS]);
+            if (!Number.isFinite(politicsScore)) return;
+            matched += 1;
+            if (sameScore(row?.scores?.[POLITICS], politicsScore)) return;
+            row.scores = { ...(row?.scores || {}), [POLITICS]: politicsScore };
+            updated += 1;
+        });
+        return { matched, updated };
+    }
+
+    function sameReferenceMetadata(left, right) {
+        return text(left?.sourceExamId) === text(right?.sourceExamId)
+            && text(left?.sourceLabel) === text(right?.sourceLabel)
+            && sameScore(left?.thresholds?.exc, right?.thresholds?.exc)
+            && sameScore(left?.thresholds?.pass, right?.thresholds?.pass)
+            && text(left?.thresholds?.source) === text(right?.thresholds?.source)
+            && Number(left?.matched || 0) === Number(right?.matched || 0);
+    }
+
+    // 将二模政治固化为中考归档的展示字段。政治不加入 SUBJECTS，也绝不改 total、
+    // 正式排名、指标生、高分段或高中上线；这些字段始终只由正式五科/中考总分计算。
+    function copyPoliticsToCurrentExam(context, secondMock, summary) {
+        const index = buildSecondMockIndex(secondMock?.exam?.data || []);
+        const runtimeResult = updatePoliticsScores(context.rows, index);
+        const archivedRows = Array.isArray(context.exam?.data) ? context.exam.data : [];
+        const archiveResult = archivedRows === context.rows ? { matched: runtimeResult.matched, updated: 0 } : updatePoliticsScores(archivedRows, index);
+        const nextReference = {
+            sourceExamId: secondMock.examId,
+            sourceLabel: summary.sourceLabel,
+            thresholds: {
+                exc: summary.thresholds.exc,
+                pass: summary.thresholds.pass,
+                source: summary.thresholds.source
+            },
+            matched: runtimeResult.matched,
+            copiedAt: new Date().toISOString()
+        };
+        const existingMeta = context.exam?.meta && typeof context.exam.meta === 'object' ? context.exam.meta : {};
+        const metadataChanged = !sameReferenceMetadata(existingMeta.politicsReference, nextReference);
+        if (metadataChanged && context.exam && typeof context.exam === 'object') {
+            context.exam.meta = { ...existingMeta, politicsReference: nextReference };
+            context.meta = context.exam.meta;
+        }
+        return {
+            changed: runtimeResult.updated > 0 || archiveResult.updated > 0 || metadataChanged,
+            matched: runtimeResult.matched,
+            updated: runtimeResult.updated + archiveResult.updated,
+            sourceExamId: secondMock.examId
+        };
+    }
+
+    function queuePoliticsCopySave(context, copy) {
+        if (!copy?.changed || !context.examId) return null;
+        const key = `${context.examId}::${copy.sourceExamId}`;
+        if (state.persistence?.key === key && state.persistence.status === 'pending' && state.persistence.promise) {
+            return state.persistence.promise;
+        }
+        const persistence = {
+            key,
+            status: 'pending',
+            examId: context.examId,
+            sourceExamId: copy.sourceExamId,
+            matched: copy.matched,
+            updated: copy.updated,
+            promise: null
+        };
+        state.persistence = persistence;
+        persistence.promise = (async () => {
+            const save = typeof window.saveCloudData === 'function'
+                ? window.saveCloudData
+                : window.CloudManager?.save;
+            if (typeof save !== 'function') {
+                persistence.status = 'unavailable';
+                console.warn('[politics-reference] 未找到云端保存入口，政治二模参考仍只保留在当前页面。');
+                return false;
+            }
+            if (text(window.CURRENT_EXAM_ID) !== context.examId) {
+                persistence.status = 'skipped';
+                return false;
+            }
+            try {
+                const queued = await save({
+                    mode: 'exam',
+                    examKey: context.examId,
+                    background: true,
+                    forceUpload: true,
+                    sourceLabel: 'grade9-politics-reference-copy'
+                });
+                persistence.status = queued ? 'queued' : 'failed';
+                if (!queued) console.warn('[politics-reference] 政治二模参考未进入云端同步队列。');
+                return queued === true;
+            } catch (error) {
+                persistence.status = 'failed';
+                console.warn('[politics-reference] 政治二模参考云端同步失败:', error?.message || error);
+                return false;
+            }
+        })();
+        return persistence.promise;
     }
 
     async function ensureSummary() {
@@ -267,6 +422,13 @@
         state.key = context.key;
         state.summary = { status: 'loading', available: false, signature: `${context.key}::loading` };
         state.promise = (async () => {
+            // 一旦已经由二模复制并保存到中考归档，直接读中考分片，不再重复拉历史二模。
+            const storedSummary = buildStoredSummary(context);
+            if (storedSummary) {
+                state.summary = storedSummary;
+                return state.summary;
+            }
+
             let secondMock = findSecondMock(context);
             if (!secondMock && context.cohort && typeof window.CloudManager?.fetchCohortExamsToLocal === 'function') {
                 try {
@@ -281,7 +443,6 @@
                     });
                     secondMock = findSecondMock(context);
                     // 若二模不是最近两次（例如中间还有一次补测），再兜底拉完整历史。
-                    // 这条路径只在少数届别触发，且不会阻塞正式中考五科的任何计算。
                     if (!secondMock) {
                         await window.CloudManager.fetchCohortExamsToLocal(context.cohort, {
                             background: false,
@@ -301,14 +462,20 @@
                     return state.summary;
                 }
             }
-            state.summary = secondMock
-                ? buildSummary(context, secondMock)
-                : {
+            if (!secondMock) {
+                state.summary = {
                     status: 'ready',
                     available: false,
                     signature: `${context.key}::missing`,
                     reason: '未找到同届同学年度的九年级二模政治成绩。'
                 };
+                return state.summary;
+            }
+
+            const summary = buildSummary(context, secondMock);
+            const copy = copyPoliticsToCurrentExam(context, secondMock, summary);
+            queuePoliticsCopySave(context, copy);
+            state.summary = summary;
             return state.summary;
         })();
         try {
@@ -324,5 +491,22 @@
         return state.summary;
     }
 
-    window.Grade9PoliticsReferenceRuntime = Object.freeze({ ensureSummary, getSummary });
+    async function flushPendingPersistence() {
+        if (!state.persistence?.promise) return state.persistence?.status || 'idle';
+        await state.persistence.promise;
+        return state.persistence.status;
+    }
+
+    function getPersistenceState() {
+        if (!state.persistence) return null;
+        const { promise, ...snapshot } = state.persistence;
+        return { ...snapshot };
+    }
+
+    window.Grade9PoliticsReferenceRuntime = Object.freeze({
+        ensureSummary,
+        getSummary,
+        flushPendingPersistence,
+        getPersistenceState
+    });
 })();
