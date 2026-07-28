@@ -2,6 +2,38 @@
     if (typeof window === 'undefined' || window.__MODULE_HELP_RUNTIME_PATCHED__) return;
 
 const SYSTEM_MANUAL = {
+    'correlation-analysis': {
+        title: '🔗 学科关联分析·使用说明',
+        fit: `用于<strong>看学科之间是否同强同弱</strong>，以及每个学科在本校是提分项还是拖分项。`,
+        when: `需要判断学科结构问题、安排跨学科协作时使用。`,
+        use: `<ul>
+                    <li><strong>相关性矩阵：</strong>数值越接近 1，表示两科成绩的高低越同步。</li>
+                    <li><strong>提分/拖分：</strong>看每个学科把学生的总分位次往前拉还是往后拖。</li>
+                    <li><strong>样本要求：</strong>不足 5 人时不出结果；人数偏少时结论很不稳定，只宜参考。</li>
+                  </ul>`,
+        calc: `<strong>相关性用 Pearson 相关系数</strong>（−1 到 1）。<br>
+                   <div class="formula-box">
+                   提分：该生单科镇排名 比 总分镇排名 靠前超过（参评人数 × 10%）个位次<br>
+                   拖分：该生单科镇排名 比 总分镇排名 落后超过（参评人数 × 10%）个位次<br>
+                   其余计入「持平」
+                   </div>
+                   <strong>⚠️ 相关不等于因果。</strong>两科相关高，通常反映的是「学习能力/投入」这类
+                   共同原因，<strong>不能推出「补A就能提B」</strong>。这里也不做显著性检验，
+                   样本小的时候相关系数很容易偶然偏高，请结合人数一起看。`
+    },
+    'cohort-growth': {
+        title: '📚 纵向成长档案·使用说明',
+        fit: `用于<strong>看同一批学生在多次考试中的变化轨迹</strong>，而不只看某一次的结果。`,
+        when: `本届已有两次以上考试数据、需要看趋势或做阶段复盘时使用。`,
+        use: `<ul>
+                    <li>选择届别与考试范围后生成成长轨迹。只有一次考试时没有可比内容。</li>
+                    <li>适合回答「这批学生这一年到底有没有进步」这类问题。</li>
+                  </ul>`,
+        calc: `<strong>⚠️ 跨考试比较的前提是口径一致。</strong>不同考试的试卷难度、参评范围、
+                   甚至科目构成都可能不同，<strong>原始分直接比较会把难度差异误读成进退步</strong>。<br>
+                   因此看趋势时优先关注<strong>位次变化</strong>而不是分数变化；如果某次考试参评学校
+                   或科目有调整，该次数据不宜与其他次直接连线解读。`
+    },
     'teacher-analysis': {
         title: '👩‍🏫 教师表现·使用说明',
         fit: `用于<strong>查看每位教师所教班级的学科表现</strong>，发现结构性强项与短板。`,

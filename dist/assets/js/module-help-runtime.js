@@ -1,4 +1,22 @@
-(()=>{if(typeof window=="undefined"||window.__MODULE_HELP_RUNTIME_PATCHED__)return;const i={"teacher-analysis":{title:"👩‍🏫 教师表现·使用说明",fit:"用于<strong>查看每位教师所教班级的学科表现</strong>，发现结构性强项与短板。",when:"成绩导入并完成「任课表同步」之后使用。未同步任课表时本页无数据。",use:`<ul>
+(()=>{if(typeof window=="undefined"||window.__MODULE_HELP_RUNTIME_PATCHED__)return;const r={"correlation-analysis":{title:"🔗 学科关联分析·使用说明",fit:"用于<strong>看学科之间是否同强同弱</strong>，以及每个学科在本校是提分项还是拖分项。",when:"需要判断学科结构问题、安排跨学科协作时使用。",use:`<ul>
+                    <li><strong>相关性矩阵：</strong>数值越接近 1，表示两科成绩的高低越同步。</li>
+                    <li><strong>提分/拖分：</strong>看每个学科把学生的总分位次往前拉还是往后拖。</li>
+                    <li><strong>样本要求：</strong>不足 5 人时不出结果；人数偏少时结论很不稳定，只宜参考。</li>
+                  </ul>`,calc:`<strong>相关性用 Pearson 相关系数</strong>（−1 到 1）。<br>
+                   <div class="formula-box">
+                   提分：该生单科镇排名 比 总分镇排名 靠前超过（参评人数 × 10%）个位次<br>
+                   拖分：该生单科镇排名 比 总分镇排名 落后超过（参评人数 × 10%）个位次<br>
+                   其余计入「持平」
+                   </div>
+                   <strong>⚠️ 相关不等于因果。</strong>两科相关高，通常反映的是「学习能力/投入」这类
+                   共同原因，<strong>不能推出「补A就能提B」</strong>。这里也不做显著性检验，
+                   样本小的时候相关系数很容易偶然偏高，请结合人数一起看。`},"cohort-growth":{title:"📚 纵向成长档案·使用说明",fit:"用于<strong>看同一批学生在多次考试中的变化轨迹</strong>，而不只看某一次的结果。",when:"本届已有两次以上考试数据、需要看趋势或做阶段复盘时使用。",use:`<ul>
+                    <li>选择届别与考试范围后生成成长轨迹。只有一次考试时没有可比内容。</li>
+                    <li>适合回答「这批学生这一年到底有没有进步」这类问题。</li>
+                  </ul>`,calc:`<strong>⚠️ 跨考试比较的前提是口径一致。</strong>不同考试的试卷难度、参评范围、
+                   甚至科目构成都可能不同，<strong>原始分直接比较会把难度差异误读成进退步</strong>。<br>
+                   因此看趋势时优先关注<strong>位次变化</strong>而不是分数变化；如果某次考试参评学校
+                   或科目有调整，该次数据不宜与其他次直接连线解读。`},"teacher-analysis":{title:"👩‍🏫 教师表现·使用说明",fit:"用于<strong>查看每位教师所教班级的学科表现</strong>，发现结构性强项与短板。",when:"成绩导入并完成「任课表同步」之后使用。未同步任课表时本页无数据。",use:`<ul>
                     <li><strong>前提：</strong>必须先在「导入与设置」上传【班级-学科-教师】对应表并同步，否则系统不知道谁教哪个班。</li>
                     <li><strong>看什么：</strong>同学科横向比较各教师所带班级的均分与两率，再结合生源差异判断。</li>
                     <li><strong>注意：</strong>单次考试、单个班级样本有限，名次波动是正常的；建议连续看 2-3 次考试的趋势，不要用一次结果下结论。</li>
@@ -51,9 +69,9 @@
                    该分值由使用者在「临界学生」页自行设置，并非固定 5 分——放大会纳入更多人，缩小则更聚焦。<br>
                    <strong>2. 偏科挖掘</strong>：总分排名靠前，但单科排名严重滞后的学生。<br>
                    <strong>3. 优劣势透视</strong>：基于 Z-Score (标准分) 判断学科强弱。`},tools:{title:"🛠️ 教务考务工具·算法说明",fit:"用于<strong>教务考务流程化</strong>与日常工作降本。",when:"开学初、考试前后、宣传展示时使用。",use:"包含新生分班、考场编排、座位调整等教务工具。",calc:`<strong>分班算法</strong>：S型蛇形排列 + 均分极差优化 (模拟退火)。<br>
-                   <strong>考场编排</strong>：同班互斥逻辑 (自动检测并调换同班相邻考生)。`},"starter-hub":{title:"🚀 新手入口·说明",fit:"用于<strong>新教师快速上手</strong>，一步完成核心配置。",when:"第一次使用系统或更换学期/届别后。",use:"按“学期 → 成绩 → 任课 → 教师画像”顺序完成配置。",calc:"本页不计算成绩，只提供流程引导、诊断与快捷入口。"}};i.teacher&&(i.teacher.calc=`<strong>当前模型：联考赋分 + 基线校正 + 置信修正</strong><br>
+                   <strong>考场编排</strong>：同班互斥逻辑 (自动检测并调换同班相邻考生)。`},"starter-hub":{title:"🚀 新手入口·说明",fit:"用于<strong>新教师快速上手</strong>，一步完成核心配置。",when:"第一次使用系统或更换学期/届别后。",use:"按“学期 → 成绩 → 任课 → 教师画像”顺序完成配置。",calc:"本页不计算成绩，只提供流程引导、诊断与快捷入口。"}};r.teacher&&(r.teacher.calc=`<strong>当前模型：联考赋分 + 基线校正 + 置信修正</strong><br>
                    <div class="formula-box">教学质量分 = 联考赋分(折算100) × 置信系数 + 基线校正 + 工作量修正</div>
-                   联考赋分按系统现有“两率一分”标准计算；基线校正按最近一次历史考试的匹配学生、分层基础与实际结果的超预期差折算。`);function s(o){const t=i[o]||(window.PermissionPolicy&&window.PermissionPolicy[o]&&window.PermissionPolicy[o].title?window.PermissionPolicy[o]:null);if(!t){Swal.fire({title:"📘 模型说明",html:`<div class="help-modal-content">
+                   联考赋分按系统现有“两率一分”标准计算；基线校正按最近一次历史考试的匹配学生、分层基础与实际结果的超预期差折算。`);function i(o){const t=r[o]||(window.PermissionPolicy&&window.PermissionPolicy[o]&&window.PermissionPolicy[o].title?window.PermissionPolicy[o]:null);if(!t){Swal.fire({title:"📘 模型说明",html:`<div class="help-modal-content">
                         <h4>🎯 适合干什么</h4>
                         <div>用于当前模块的功能理解与使用边界说明。</div>
                         <h4>⏱️ 什么时候用</h4>
@@ -69,4 +87,4 @@
                     <h4>🧮 计算方式 / 底层逻辑</h4>
                     <div>${t.calc}</div>
                 </div>
-            `,width:600,confirmButtonText:"我明白了",confirmButtonColor:"#4f46e5"})}function r(o){const t=document.getElementById(o);if(!t)return;const l=t.querySelector(".sec-head h2")||t.querySelector(".module-desc-bar h3");if(!l||l.querySelector(".module-help-btn"))return;const n=document.createElement("button");n.type="button",n.className="module-help-btn",n.innerHTML='<i class="ti ti-info-circle"></i><span>口径说明</span>',n.onclick=()=>s(o),l.appendChild(n)}window.SYSTEM_MANUAL=i,window.showModuleHelp=s,window.ensureModuleHelpButton=r,window.__MODULE_HELP_RUNTIME_PATCHED__=!0})();
+            `,width:600,confirmButtonText:"我明白了",confirmButtonColor:"#4f46e5"})}function l(o){const t=document.getElementById(o);if(!t)return;const s=t.querySelector(".sec-head h2")||t.querySelector(".module-desc-bar h3");if(!s||s.querySelector(".module-help-btn"))return;const n=document.createElement("button");n.type="button",n.className="module-help-btn",n.innerHTML='<i class="ti ti-info-circle"></i><span>口径说明</span>',n.onclick=()=>i(o),s.appendChild(n)}window.SYSTEM_MANUAL=r,window.showModuleHelp=i,window.ensureModuleHelpButton=l,window.__MODULE_HELP_RUNTIME_PATCHED__=!0})();

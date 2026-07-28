@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-2dfa8358eb02.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-2dfa8358eb02.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-1a3b800a3c2a.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-1a3b800a3c2a.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -4916,7 +4916,12 @@
             </div>
         </div>
         <div class="sec-head analysis-shell-head">
-            <h2><i class="ti ti-timeline"></i> 成长轨迹与稳定性分析</h2>
+            <!-- 帮助按钮必须放在 .module-desc-bar 之外：app-foundation-runtime.js 的
+                 installModuleIntroPanelRemover() 用 MutationObserver 删除所有
+                 .module-desc-bar，放在里面的按钮运行时会被一起清掉（已踩过）。 -->
+            <h2><i class="ti ti-timeline"></i> 成长轨迹与稳定性分析
+                <button type="button" class="module-help-btn" data-module-help="cohort-growth"><i class="ti ti-info-circle"></i><span>口径与注意</span></button>
+            </h2>
             <div class="analysis-action-stack">
                 <div class="analysis-action-note">建议先确保同一届别下已经累计多次考试，再生成成长档案；如果考试次数太少，这页更适合先当作趋势预览而不是结论依据。</div>
                 <div class="analysis-actions cohort-growth-actions">
@@ -5324,7 +5329,10 @@
                     </div>
                 </div>
                 <div class="sec-head analysis-shell-head">
-                    <h2><i class="ti ti-topology-star-3"></i> 学科贡献度与关联性深度分析</h2>
+                    <!-- 帮助按钮放在 .module-desc-bar 之外，见 cohort-growth 处同样说明。 -->
+                    <h2><i class="ti ti-topology-star-3"></i> 学科贡献度与关联性深度分析
+                        <button type="button" class="module-help-btn" data-module-help="correlation-analysis"><i class="ti ti-info-circle"></i><span>口径与注意</span></button>
+                    </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先选分析范围，再生成结果；阅读顺序最好是“相关矩阵 -> 贡献度 -> 提分/拖分频率”，这样更容易形成完整判断。</div>
                         <div class="analysis-actions">
