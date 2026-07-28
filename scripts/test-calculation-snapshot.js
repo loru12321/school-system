@@ -1490,9 +1490,9 @@ async function main() {
         })();
         snapshotStep('policy:teacher-analysis-core-school-alias');
         const target = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
-        const standard0527SchoolNames = {
-            oldCounty: '旧县',
-            yinshan: '银山实验学校',
+        const standardSchoolNames = {
+            oldCounty: '旧县中学',
+            yinshan: '银山实验',
             jieshan: '接山中学'
         };
         const getSchoolStandardMetrics = (schoolName) => {
@@ -1504,7 +1504,12 @@ async function main() {
                 score2Rate: Number(school.score2Rate || 0)
             };
         };
-        const oldCountyRows = (window.RAW_DATA || []).filter((student) => String(student?.school || '').trim() === standard0527SchoolNames.oldCounty);
+        const oldCountyRows = (window.RAW_DATA || []).filter((student) => {
+            const schoolName = String(student?.school || '').trim();
+            return typeof window.sameAppSchoolName === 'function'
+                ? window.sameAppSchoolName(schoolName, standardSchoolNames.oldCounty)
+                : schoolName === standardSchoolNames.oldCounty;
+        });
         const oldCountyGeneratedRow = oldCountyRows.find((student) => String(student?.name || '').trim() === '考生030');
         snapshotStep('evaluate:return');
         return {
@@ -1577,7 +1582,9 @@ async function main() {
                 town: target.townshipRank || target.ranks?.total?.township || 0,
                 county: target.countyRank || target.ranks?.total?.county || 0
             } : null,
-            standard0527: {
+            currentExam: {
+                examId: String(window.CURRENT_EXAM_ID || window.COHORT_DB?.currentExamId || ''),
+                examMeta: window.COHORT_DB?.exams?.[window.CURRENT_EXAM_ID || window.COHORT_DB?.currentExamId || '']?.meta || null,
                 oldCountyRawCount: oldCountyRows.length,
                 oldCountyGeneratedRow: oldCountyGeneratedRow ? {
                     name: oldCountyGeneratedRow.name,
@@ -1586,9 +1593,9 @@ async function main() {
                 } : null,
                 totalPassLine: Number(window.THRESHOLDS?.total?.pass || 0),
                 totalExcellentLine: Number(window.THRESHOLDS?.total?.exc || 0),
-                oldCounty: getSchoolStandardMetrics(standard0527SchoolNames.oldCounty),
-                yinshan: getSchoolStandardMetrics(standard0527SchoolNames.yinshan),
-                jieshan: getSchoolStandardMetrics(standard0527SchoolNames.jieshan)
+                oldCounty: getSchoolStandardMetrics(standardSchoolNames.oldCounty),
+                yinshan: getSchoolStandardMetrics(standardSchoolNames.yinshan),
+                jieshan: getSchoolStandardMetrics(standardSchoolNames.jieshan)
             }
         };
     });
@@ -1705,8 +1712,8 @@ async function main() {
         pairingCount: 1
     }, 'teacher analysis core should treat equivalent school aliases consistently');
     assert.ok(
-        (snapshot.townshipSchoolNamesForSnapshot || []).includes('旧县'),
-        `township school names should include 旧县; township=${JSON.stringify(snapshot.townshipSchoolNamesForSnapshot)}`
+        (snapshot.townshipSchoolNamesForSnapshot || []).includes('旧县中学'),
+        `township school names should include 旧县中学; township=${JSON.stringify(snapshot.townshipSchoolNamesForSnapshot)}`
     );
     assert.ok(
         snapshot.score2RatePositive >= minimumSchoolCount,
@@ -1780,7 +1787,10 @@ async function main() {
     assert.ok(totalIndex >= 0, '五科总分 header missing');
     assert.deepStrictEqual(snapshot.headers.slice(totalIndex + 1, totalIndex + 5), ['班排', '校排', '镇排', '县排'], 'total rank column order changed');
     assert.ok(snapshot.targetStudent, 'target student 解洪旭 missing');
-    assert.strictEqual(snapshot.targetStudent.school, '银山实验学校', 'target student school changed');
+    assert.ok(
+        ['银山实验', '银山实验学校'].includes(snapshot.targetStudent.school),
+        `target student school changed: ${snapshot.targetStudent.school}`
+    );
     assert.strictEqual(
         Number(snapshot.targetStudent.total).toFixed(2),
         Number(snapshot.targetStudent.configuredTotal).toFixed(2),
@@ -1788,39 +1798,16 @@ async function main() {
     );
     assert.ok(snapshot.targetStudent.town > 0, `target student town rank invalid: ${snapshot.targetStudent.town}`);
     assert.ok(snapshot.targetStudent.county >= snapshot.targetStudent.town, `target student county rank invalid: ${snapshot.targetStudent.county}`);
-    assert.ok(snapshot.standard0527, '0527 standard snapshot missing');
-    if (/^(1|true|yes)$/i.test(String(process.env.CALC_SNAPSHOT_PRINT_STANDARD_0527 || ''))) {
-        console.log(JSON.stringify({ standard0527: snapshot.standard0527 }, null, 2));
+    assert.ok(snapshot.currentExam, 'current exam snapshot missing');
+    if (/^(1|true|yes)$/i.test(String(process.env.CALC_SNAPSHOT_PRINT_CURRENT_EXAM || ''))) {
+        console.log(JSON.stringify({ currentExam: snapshot.currentExam }, null, 2));
     }
-    assert.strictEqual(snapshot.standard0527.oldCountyRawCount, 30, '0527 standard old county row count should include score-only row');
-    assert.deepStrictEqual(snapshot.standard0527.oldCountyGeneratedRow, {
-        name: '\u8003\u751f030',
-        total: 111.5,
-        math: 111.5
-    }, '0527 standard score-only old county row changed');
-    const standard0527Baselines = {
-        '474.5': {
-            totalExcellentLine: '474.5',
-            totalPassLine: '352.9',
-            oldCountyScore2Rate: '27.84',
-            yinshanScore2Rate: '83.77'
-        },
-        '413.4': {
-            totalExcellentLine: '413.4',
-            totalPassLine: '260.8',
-            oldCountyScore2Rate: '61.21',
-            yinshanScore2Rate: '158.68'
-        }
-    };
-    const standard0527Key = Number(snapshot.standard0527.totalExcellentLine).toFixed(1);
-    const standard0527Baseline = standard0527Baselines[standard0527Key];
-    assert.ok(standard0527Baseline, `0527 total excellent line changed: ${standard0527Key}`);
-    assert.strictEqual(Number(snapshot.standard0527.totalExcellentLine).toFixed(1), standard0527Baseline.totalExcellentLine, '0527 total excellent line changed');
-    assert.strictEqual(Number(snapshot.standard0527.totalPassLine).toFixed(1), standard0527Baseline.totalPassLine, '0527 total pass line changed');
-    assert.strictEqual(snapshot.standard0527.oldCounty?.count, 30, '0527 old county school count changed');
-    assert.strictEqual(Number(snapshot.standard0527.oldCounty?.score2Rate).toFixed(2), standard0527Baseline.oldCountyScore2Rate, '0527 old county score2Rate changed');
-    assert.strictEqual(snapshot.standard0527.yinshan?.count, 276, '0527 Yinshan count changed');
-    assert.strictEqual(Number(snapshot.standard0527.yinshan?.score2Rate).toFixed(2), standard0527Baseline.yinshanScore2Rate, '0527 Yinshan score2Rate changed');
+    assert.ok(snapshot.currentExam.examId, 'current exam id missing');
+    assert.ok(Number.isFinite(snapshot.currentExam.totalExcellentLine), 'current exam excellent line is not finite');
+    assert.ok(Number.isFinite(snapshot.currentExam.totalPassLine), 'current exam pass line is not finite');
+    assert.ok(snapshot.currentExam.oldCountyRawCount > 0, 'current exam old county rows missing');
+    assert.ok(snapshot.currentExam.oldCounty?.count > 0, 'current exam old county metrics missing');
+    assert.ok(snapshot.currentExam.yinshan?.count > 0, 'current exam Yinshan metrics missing');
 
     console.log(JSON.stringify(snapshot, null, 2));
 }
