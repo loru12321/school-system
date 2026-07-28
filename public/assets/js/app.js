@@ -4164,7 +4164,10 @@ function handleHighSchoolAdmissionClick(schoolName) {
         : '—';
     const classRows = stats.hasClassData
         ? stats.classStats.map((item) => {
-            const canCalculate = stats.complete && item.complete && allowed && line > 0;
+            // 学校总赋分必须仍然以全校数据完整为前提；但弹窗是明细视图，
+            // 不能因为其他班缺少中考总分/体育而抹掉本班已完整的上线结果。
+            // 因此班级行只按本班的数据完整性判断，绝不影响学校赋分口径。
+            const canCalculate = item.complete && allowed && line > 0;
             const rowStatus = canCalculate
                 ? '可计算'
                 : getHighSchoolAdmissionStatusText(item, { allowed, line });
@@ -6890,7 +6893,7 @@ async function calcSummary(isSilent = false) {
                 : missingAdmissionCount > 0
                     ? '待中考总分'
                     : admissionLine > 0 ? d.s5.toFixed(2) : '待录取线';
-            highSchoolAdmissionCell = `<td data-label="高中上线率赋分" style="color:#047857; background:#ecfdf5; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighSchoolAdmissionClick(${safeSchoolArg})" title="${escapeAppHtml(admissionTitle)}">${admissionText}</button></td>`;
+            highSchoolAdmissionCell = `<td data-label="高中上线率赋分" style="color:#047857; background:#ecfdf5; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" data-school="${escapeAppHtml(d.name)}" data-drill="high-school-admission" onclick="handleHighSchoolAdmissionClick(${safeSchoolArg})" title="${escapeAppHtml(admissionTitle)}；点击查看该校各班高中上线情况" aria-label="查看${escapeAppHtml(d.name)}各班高中上线情况">${admissionText}</button></td>`;
         }
         const rankClass = ['rank-cell', d.rank === 1 ? 'r-1' : '', d.rank === 2 ? 'r-2' : '', d.rank === 3 ? 'r-3' : '']
             .filter(Boolean)

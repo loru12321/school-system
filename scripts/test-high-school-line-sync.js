@@ -311,6 +311,16 @@ assert.ok(
     pkgSource.includes('高中上线率班级明细') && pkgSource.includes('buildHighSchoolAdmissionClassRows'),
     'analysis package must include a per-class admission sheet when the source contains classes'
 );
+assert.ok(
+    appSource.includes('function handleHighSchoolAdmissionClick(schoolName)')
+        && appSource.includes('data-drill="high-school-admission"')
+        && appSource.includes('查看${escapeAppHtml(d.name)}各班高中上线情况'),
+    'summary admission-score cell must open the selected school\'s per-class admission detail'
+);
+assert.ok(
+    appSource.includes('const canCalculate = item.complete && allowed && line > 0;'),
+    'class admission detail must show complete classes even when another class in the school has missing Zhongkao totals'
+);
 const assessmentSource = fs.readFileSync(path.join(root, 'public/assets/js/teaching-assessment-sync-runtime.js'), 'utf8');
 assert.ok(
     assessmentSource.includes('isGrade9ZhongkaoExam(examContext, rows)')
