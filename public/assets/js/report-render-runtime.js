@@ -471,6 +471,21 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         }
     });
 
+    // 个人报告会被打印给家长看，tooltip 在纸上不存在，所以这里用可见脚注而不是 title：
+    // 表里政治一行带着班排/校排/镇排，不写清楚容易被当成本次中考的科目成绩。
+    // 只在该学生确实显示了政治这类展示科目时才出现。
+    const reportDisplayOnlyNotices = [...new Set(reportSubjectsForRank
+        .filter((sub) => stuScores[sub] !== undefined)
+        .map((sub) => (typeof window.getConfiguredDisplaySubjectNotice === 'function'
+            ? window.getConfiguredDisplaySubjectNotice(sub)
+            : ''))
+        .filter(Boolean))];
+    const displayOnlyFootnote = reportDisplayOnlyNotices.length
+        ? `<div style="font-size:10px; color:#94a3b8; line-height:1.6; margin-top:8px;">${reportDisplayOnlyNotices
+            .map((notice) => `注：${tmEscapeHtml(notice)}`)
+            .join('<br>')}</div>`
+        : '';
+
     const fluentStyle = `
             <style>
                 .fluent-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.05); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
@@ -706,6 +721,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩对比</th><th>班排对比</th><th>校排对比</th><th style="${townColStyle}">镇排对比</th><th style="${countyColStyle}">县排对比</th></tr></thead>
                 <tbody>${tableRows}</tbody>
             </table>
+            ${displayOnlyFootnote ? `<div style="padding:0 20px 14px;">${displayOnlyFootnote}</div>` : ''}
         </div>
         </div>`;
 

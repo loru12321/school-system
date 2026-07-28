@@ -73,4 +73,31 @@ assert.ok(/数据截至/.test(packageSource),
 assert.ok(!/如与系统页面显示不一致，请以系统页面为准/.test(packageSource),
     'the self-undermining wording must stay out of the package readme');
 
+// ── 5. 网页端个人报告的政治脚注 ──────────────────────────────────────────────
+// 个人报告会被打印/导出 PDF 发给家长，纸上没有 tooltip。学生明细和教师分析用
+// title 提示够用（都是交互表格），但个人报告必须是可见文本，否则政治那一行带着
+// 班排/校排/镇排出现在家长手里，没有任何说明。
+const reportSource = fs.readFileSync(path.join(root, 'public/assets/js/report-render-runtime.js'), 'utf8');
+
+assert.ok(/getConfiguredDisplaySubjectNotice/.test(reportSource),
+    'the student report must read the display-only subject notice');
+assert.ok(/displayOnlyFootnote/.test(reportSource),
+    'the student report must build a visible footnote for display-only subjects');
+
+// 必须真的注入到报告 HTML 里，不能只声明不使用（否则脚注是死代码）。
+// 注意不能只搜变量名：声明本身就含变量名，删掉注入点也照样匹配。
+const footnoteDeclarations = (reportSource.match(/const displayOnlyFootnote\s*=/g) || []).length;
+const footnoteReferences = (reportSource.match(/displayOnlyFootnote/g) || []).length;
+assert.strictEqual(footnoteDeclarations, 1,
+    'the report should build the display-only footnote exactly once');
+assert.ok(footnoteReferences > footnoteDeclarations + 1,
+    'the footnote must be referenced in the report template, not just declared');
+assert.ok(/<tbody>\$\{tableRows\}<\/tbody>[\s\S]{0,200}displayOnlyFootnote/.test(reportSource),
+    'the footnote must be injected right after the subject table so printed reports carry it');
+
+// 只在该学生确实显示了政治时才出现，否则每份报告都挂一句无关脚注。
+// 绑定到脚注自己的过滤链上：表格行循环里也有同样的判断，泛匹配会漏掉恒真变异。
+assert.ok(/reportSubjectsForRank[\s\S]{0,120}\.filter\(\(sub\) => stuScores\[sub\] !== undefined\)/.test(reportSource),
+    'the footnote must only consider subjects the student actually has scores for');
+
 console.log('exam-analysis-package politics display contract passed');
