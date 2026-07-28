@@ -1,90 +1,5 @@
 [
   {
-    "recordedAt": "2026-07-17T07:42:03.645Z",
-    "commit": "d0e10a2c36ad",
-    "branch": "main",
-    "runId": "29563824434",
-    "runAttempt": "1",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 6976,
-    "appReadyMs": 6,
-    "totalMs": 29833,
-    "moduleCount": 31,
-    "slowestModules": [
-      {
-        "id": "indicator",
-        "switchMs": 38.5,
-        "deepCheckMs": 2097,
-        "totalMs": 2135.5
-      },
-      {
-        "id": "report-generator",
-        "switchMs": 31.60000000000582,
-        "deepCheckMs": 1335,
-        "totalMs": 1366.6000000000058
-      },
-      {
-        "id": "correlation-analysis",
-        "switchMs": 11.799999999988358,
-        "deepCheckMs": 1079,
-        "totalMs": 1090.7999999999884
-      },
-      {
-        "id": "teacher-analysis",
-        "switchMs": 48.09999999999127,
-        "deepCheckMs": 867,
-        "totalMs": 915.0999999999913
-      },
-      {
-        "id": "potential-analysis",
-        "switchMs": 28.10000000000582,
-        "deepCheckMs": 720,
-        "totalMs": 748.1000000000058
-      },
-      {
-        "id": "progress-analysis",
-        "switchMs": 65.79999999998836,
-        "deepCheckMs": 653,
-        "totalMs": 718.7999999999884
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 36,
-        "deepCheckMs": 654,
-        "totalMs": 690
-      },
-      {
-        "id": "analysis",
-        "switchMs": 7.5,
-        "deepCheckMs": 649,
-        "totalMs": 656.5
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "cloud",
-        "durationMs": 1111
-      },
-      {
-        "id": "student",
-        "durationMs": 672
-      },
-      {
-        "id": "teacher",
-        "durationMs": 640
-      },
-      {
-        "id": "targets",
-        "durationMs": 631
-      }
-    ],
-    "longTaskCount": 0,
-    "maxLongTaskMs": 0,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-07-17T07:54:27.419Z",
     "commit": "acf51a71e2c9",
     "branch": "main",
@@ -6792,6 +6707,91 @@
       {
         "id": "teacher",
         "durationMs": 642
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-28T01:38:34.291Z",
+    "commit": "c8ff54e2cdfa",
+    "branch": "main",
+    "runId": "30320761829",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 6229,
+    "appReadyMs": 108,
+    "totalMs": 31622,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "indicator",
+        "switchMs": 32.79999999998836,
+        "deepCheckMs": 1994,
+        "totalMs": 2026.7999999999884
+      },
+      {
+        "id": "teacher-analysis",
+        "switchMs": 54.5,
+        "deepCheckMs": 1775,
+        "totalMs": 1829.5
+      },
+      {
+        "id": "teacher-township-ranking",
+        "switchMs": 5,
+        "deepCheckMs": 864,
+        "totalMs": 869
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 34.20000000001164,
+        "deepCheckMs": 788,
+        "totalMs": 822.2000000000116
+      },
+      {
+        "id": "analysis",
+        "switchMs": 58.800000000046566,
+        "deepCheckMs": 661,
+        "totalMs": 719.8000000000466
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 43,
+        "deepCheckMs": 622,
+        "totalMs": 665
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 15,
+        "deepCheckMs": 576,
+        "totalMs": 591
+      },
+      {
+        "id": "subject-balance",
+        "switchMs": 30,
+        "deepCheckMs": 508,
+        "totalMs": 538
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1106
+      },
+      {
+        "id": "student",
+        "durationMs": 642
+      },
+      {
+        "id": "targets",
+        "durationMs": 633
+      },
+      {
+        "id": "teacher",
+        "durationMs": 632
       }
     ],
     "longTaskCount": 0,
