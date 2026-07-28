@@ -1500,6 +1500,26 @@ async function runModuleDeepCheck(page, id) {
                 count: highlightItems.length,
                 items: highlightItems.slice(0, 5)
             };
+            // 要点报的名次必须与同一页主表的「总排名」一致。曾出现过三种口径打架：
+            // 按总分均分自排（第 11/24 所）、两率一分单项 rank2Rate（第 3）、
+            // 主表综合总排名（第 2）——用户在一个页面看到两个数字就会失去信任。
+            const summaryRankMatchesTable = (() => {
+                const mine = String(window.MY_SCHOOL || '').trim();
+                if (!mine || !highlightItems.length) return true;
+                const rows = Array.from(document.querySelectorAll('#tb-summary tbody tr'));
+                const myRow = rows.find((tr) => String(tr.innerText || '').includes(mine));
+                if (!myRow) return true;
+                const cells = Array.from(myRow.querySelectorAll('td')).map((td) => String(td.innerText || '').trim());
+                const tableRank = cells[cells.length - 1];
+                if (!tableRank) return true;
+                // 只校验含「排第 N」的那条要点。
+                const rankItem = highlightItems.find((text) => /排第\s*\d+/.test(text));
+                if (!rankItem) return true;
+                const claimed = (rankItem.match(/排第\s*(\d+)/) || [])[1];
+                return claimed === tableRank;
+            })();
+            checks.summaryRankMatchesTable = summaryRankMatchesTable;
+
             // 可见时必须有条目，隐藏时必须没有——两者错配说明渲染逻辑有问题。
             checks.summaryHighlightsConsistent = !highlightsEl
                 || (highlightsEl.hidden ? highlightItems.length === 0 : highlightItems.length > 0);

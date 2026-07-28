@@ -70,28 +70,52 @@
         };
     }
 
-    // ── 规则 2：本校在参评学校中的总分位置 ────────────────────────────────────────
+    // ── 规则 2：本校在参评学校中的位置 ────────────────────────────────────────────
+    // 本页的正式结论是「综合总分 / 总排名」——由两率一分 + 后1/3 + 指标生 + 高分段 +
+    // 上线率合计而来（见 app.js calcSummary 里的 s1..s5）。它既不等于总分均分排名，
+    // 也不等于两率一分单项的 rank2Rate（实测本校 rank2Rate=3 而总排名=2）。
+    //
+    // 因此这里**直接从已渲染的 #tb-summary 主表读取**本校的综合总分与总排名：
+    // 用户看到的要点与同一页表格必然一致，也天然遵循「只读已算好的结果」。
+    // 自己重排任何一种口径都会造成两个数字打架。
     function schoolPositionItem(mine) {
-        const schools = root.SCHOOLS && typeof root.SCHOOLS === 'object' ? root.SCHOOLS : {};
-        const rows = Object.values(schools).map((school) => {
-            const avg = num(school?.metrics?.total?.avg);
-            const count = num(school?.metrics?.total?.count);
-            if (avg === null || !count) return null;
-            return { name: String(school?.name || '').trim(), avg };
-        }).filter(Boolean);
-        // 单校模式下没有横向可比对象，不输出。
+        const table = root.document?.getElementById('tb-summary');
+        const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
         if (rows.length < 2) return null;
-        rows.sort((a, b) => b.avg - a.avg);
-        const index = rows.findIndex((row) => row.name === mine.name);
-        if (index < 0) return null;
-        const self = rows[index];
-        const top = rows[0];
-        const gapToTop = top.avg - self.avg;
-        const positionText = index === 0
-            ? `总分均分 ${self.avg.toFixed(1)}，在 ${rows.length} 所参评学校中<strong>排第 1</strong>`
-            : `总分均分 ${self.avg.toFixed(1)}，在 ${rows.length} 所参评学校中排第 <strong>${index + 1}</strong>，`
-                + `距第 1 名（${escapeHtml(top.name)}）差 ${gapToTop.toFixed(1)} 分`;
-        return { text: positionText, source: '综合评价' };
+
+        const parse = (tr) => {
+            const cells = Array.from(tr.querySelectorAll('td')).map((td) => String(td.innerText || '').trim());
+            if (cells.length < 3) return null;
+            // 学校名在首列，综合总分与总排名固定在最后两列（列数随年级变化，故从末尾取）。
+            return {
+                name: cells[0],
+                total: num(cells[cells.length - 2]),
+                rank: num(cells[cells.length - 1])
+            };
+        };
+        const parsed = rows.map(parse).filter((row) => row && row.name && row.rank !== null);
+        if (parsed.length < 2) return null;
+
+        const self = parsed.find((row) => row.name === mine.name);
+        if (!self) return null;
+        parsed.sort((a, b) => a.rank - b.rank);
+        const top = parsed[0];
+
+        if (self.rank === top.rank) {
+            return {
+                text: `综合总分 ${self.total === null ? '-' : self.total.toFixed(1)}，`
+                    + `在 ${parsed.length} 所参评学校中<strong>排第 1</strong>`,
+                source: '综合评价总排名'
+            };
+        }
+        const gapText = (self.total !== null && top.total !== null)
+            ? `，距第 1 名（${escapeHtml(top.name)}）差 ${(top.total - self.total).toFixed(1)} 分`
+            : `，第 1 名是 ${escapeHtml(top.name)}`;
+        return {
+            text: `综合总分 ${self.total === null ? '-' : self.total.toFixed(1)}，`
+                + `在 ${parsed.length} 所参评学校中排第 <strong>${self.rank}</strong>${gapText}`,
+            source: '综合评价总排名'
+        };
     }
 
     // ── 规则 3：后 1/3 学生规模 ──────────────────────────────────────────────────
