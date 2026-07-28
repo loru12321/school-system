@@ -157,6 +157,8 @@
     "smoke:mobile:local": "node -e \"process.env.SMOKE_SCRIPT='./smoke-mobile-shell.js'; require('./scripts/run-local-smoke.js')\"",
     "smoke:layout": "node scripts/smoke-layout-regression.js",
     "smoke:layout:local": "node -e \"process.env.SMOKE_SCRIPT='./smoke-layout-regression.js'; require('./scripts/run-local-smoke.js')\"",
+    "smoke:exam-package": "node scripts/smoke-exam-analysis-package.js",
+    "smoke:exam-package:local": "node -e \"process.env.SMOKE_SCRIPT='./smoke-exam-analysis-package.js'; require('./scripts/run-local-smoke.js')\"",
     "smoke:prod-minimal": "npm run verify:prod-minimal",
     "report:account-migration": "node scripts/report-account-migration-status.mjs",
     "supabase:lockdown-legacy-rls": "node scripts/apply-supabase-rls-lockdown.mjs",
