@@ -11,6 +11,9 @@ const RUNTIME_PATH = path.resolve(__dirname, '../public/assets/js/analysis-highl
 function loadRuntime(win) {
     delete require.cache[require.resolve(RUNTIME_PATH)];
     win.document = { getElementById: () => null };
+    // 运行时有「当前届别无成绩数据则不产出」的守卫（防止切届别后复述上一届结论）。
+    // 用例未显式设置时默认给一条，否则全部会被那道守卫拦掉、变成恒真的空断言。
+    if (!Object.prototype.hasOwnProperty.call(win, 'RAW_DATA')) win.RAW_DATA = [{ total: 400 }];
     win.window = win;
     global.window = win;
     require(RUNTIME_PATH);
@@ -147,6 +150,19 @@ function buildSchools() {
         assert.ok(!rankItem.text.includes('数学'),
             '三项名次不齐的学科不得出现在名次综合比较里');
     }
+}
+
+// ── 8. 当前届别无成绩数据时不产出（防止切届别后复述上一届结论）────────────────
+{
+    const win = {
+        MY_SCHOOL: '本校',
+        RAW_DATA: [],
+        SUBJECTS: ['语文', '数学', '英语'],
+        SCHOOLS: buildSchools(),
+        getTownAnalysisVisibleSubjectsForCurrentUser: () => ['语文', '数学', '英语']
+    };
+    assert.strictEqual(loadRuntime(win).buildItems().length, 0,
+        '当前届别没有成绩数据时不得产出任何要点');
 }
 
 console.log('analysis-highlights-runtime tests passed');

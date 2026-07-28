@@ -65,6 +65,9 @@ function baseSchools() {
 function makeWin({ rows, mpGap, schools }) {
     return {
         MY_SCHOOL: '本校',
+        // 默认给一条成绩数据：运行时有「当前届别无数据则不产出」的守卫，
+        // 不给的话所有用例都会被那道守卫拦掉、变成恒真的空断言。
+        RAW_DATA: [{ total: 400 }],
         SUBJECTS: ['语文', '数学'],
         THRESHOLDS: { total: { exc: 413.4 } },
         SCHOOLS: schools || baseSchools(),
@@ -138,7 +141,34 @@ function makeWin({ rows, mpGap, schools }) {
         `20 分内应为 10 人，实际：${item.text}`);
 }
 
-// ── 6. 学科结论走三项名次，且尊重学科可见性 ──────────────────────────────────
+// ── 6b. 当前届别无成绩数据时一条都不产出（防止复述上一届结论）────────────────
+// 真实场景：切到还没导入成绩的届别，系统按设计保留上一届已生成的综合评价表，
+// 若不守这一道，要点会把上一届的「排第 1」当成本届结果说出来。
+{
+    const rows = [
+        makeRow(['沙河站中学', '170.0', '40.0', '315.6', '1']),
+        makeRow(['本校', '158.7', '39.9', '295.4', '2'])
+    ];
+    const win = makeWin({ rows });
+    win.RAW_DATA = [];
+    const runtime = loadRuntime(win);
+    assert.strictEqual(runtime.buildItems().length, 0,
+        '当前届别没有成绩数据时不得产出任何要点（旧表仍在页面上）');
+}
+
+// ── 6c. 有成绩数据时正常产出（确认上一条不是恒真的空断言）─────────────────────
+{
+    const rows = [
+        makeRow(['沙河站中学', '170.0', '40.0', '315.6', '1']),
+        makeRow(['本校', '158.7', '39.9', '295.4', '2'])
+    ];
+    const win = makeWin({ rows });
+    win.RAW_DATA = [{ total: 400 }];
+    const runtime = loadRuntime(win);
+    assert.ok(runtime.buildItems().length > 0, '有成绩数据时应正常产出要点');
+}
+
+// ── 7. 学科结论走三项名次，且尊重学科可见性 ──────────────────────────────────
 {
     const rows = [
         makeRow(['沙河站中学', '170.0', '40.0', '315.6', '1']),

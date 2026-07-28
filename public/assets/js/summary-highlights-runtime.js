@@ -165,6 +165,13 @@
     }
 
     function buildItems() {
+        // 切到无数据的届别时，系统按设计保留上一届已生成的综合评价表（避免自动重算），
+        // 且不会自动标记「需重新生成」。若不加这道守卫，要点会把上一届的排名当成本届结论
+        // 复述出来——教务看到「2026 届排第 1」而该届其实一条成绩都没有，是严重误导。
+        // 因此：当前届别没有成绩数据时，一条都不产出（整块隐藏）。
+        const rawData = Array.isArray(root.RAW_DATA) ? root.RAW_DATA : [];
+        if (!rawData.length) return [];
+
         const mine = getMySchoolRecord();
         if (!mine) return [];
         const record = mine.record;

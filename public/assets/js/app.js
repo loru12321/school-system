@@ -953,6 +953,7 @@ function setRawData(rows) {
     if (typeof RAW_DATA !== 'undefined') RAW_DATA = nextRows;
     window.RAW_DATA = nextRows;
     window.__RAW_DATA_VERSION = (Number(window.__RAW_DATA_VERSION) || 0) + 1;
+
     return nextRows;
 }
 
@@ -1084,6 +1085,20 @@ function syncDataRuntimeState(patch = {}) {
 }
 
 function clearDataRuntimeState(options = {}) {
+    // 数据被清空（切届别、重置工作区等）时，上一次生成的「本次要点」立刻失效。
+    // 系统按设计保留旧的综合评价表等用户手动重新生成，但**结论性文字不能留**：
+    // 切到无成绩的届别后，要点若还挂着上一届的「排第 1」，教务会当成本届结果。
+    // 注意必须放在函数开头——走 DataStateRuntime 分支时会直接 return，不经过下面的
+    // setRawData（我最初把清理挂在 setRawData 里，因此完全没被触发）。
+    try {
+        ['summary-highlights', 'analysis-highlights'].forEach((id) => {
+            const box = document.getElementById(id);
+            if (!box) return;
+            box.innerHTML = '';
+            box.hidden = true;
+        });
+    } catch (_) { /* 清理失败不应影响数据状态重置 */ }
+
     if (DataStateRuntime && typeof DataStateRuntime.clearDataState === 'function') {
         return syncDataRuntimeState(DataStateRuntime.clearDataState(options));
     }

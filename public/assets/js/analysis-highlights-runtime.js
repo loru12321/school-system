@@ -138,6 +138,11 @@
     }
 
     function buildItems() {
+        // 与综合评价页同一道守卫：切到无成绩数据的届别时，页面可能仍留着上一届渲染结果，
+        // 要点绝不能把旧届别的数字当成本届结论复述出来。
+        const rawData = Array.isArray(root.RAW_DATA) ? root.RAW_DATA : [];
+        if (!rawData.length) return [];
+
         const mine = getMySchoolRecord();
         if (!mine) return [];
         const subjects = getVisibleSubjects();
