@@ -471,19 +471,10 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         }
     });
 
-    // 个人报告会被打印给家长看，tooltip 在纸上不存在，所以这里用可见脚注而不是 title：
-    // 表里政治一行带着班排/校排/镇排，不写清楚容易被当成本次中考的科目成绩。
-    // 只在该学生确实显示了政治这类展示科目时才出现。
-    const reportDisplayOnlyNotices = [...new Set(reportSubjectsForRank
-        .filter((sub) => stuScores[sub] !== undefined)
-        .map((sub) => (typeof window.getConfiguredDisplaySubjectNotice === 'function'
-            ? window.getConfiguredDisplaySubjectNotice(sub)
-            : ''))
-        .filter(Boolean))];
-    const displayOnlyFootnote = reportDisplayOnlyNotices.length
-        ? `<div style="font-size:10px; color:#94a3b8; line-height:1.6; margin-top:8px;">${reportDisplayOnlyNotices
-            .map((notice) => `注：${tmEscapeHtml(notice)}`)
-            .join('<br>')}</div>`
+    // 政治等展示类科目的可见脚注（打印给家长时 tooltip 不存在）。构造在 app.js，
+    // 因为本文件贴着体积预算，且文案口径归那边统一。
+    const displayOnlyFootnote = typeof window.buildDisplayOnlySubjectFootnote === 'function'
+        ? window.buildDisplayOnlySubjectFootnote(reportSubjectsForRank, (sub) => stuScores[sub] !== undefined)
         : '';
 
     const fluentStyle = `
@@ -496,6 +487,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 .fluent-table th { text-align: center; padding: 10px 5px; color: #64748b; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; background: rgba(248, 250, 252, 0.5); }
                 .fluent-table td { text-align: center; padding: 12px 5px; border-bottom: 1px solid rgba(0,0,0,0.03); font-size: 14px; }
                 .fluent-table tr:last-child td { border-bottom: none; }
+                .report-display-note { font-size:10px; color:#94a3b8; line-height:1.6; padding:0 20px 6px; }
                 .report-metric-compare { display:grid; gap:3px; min-width:78px; text-align:left; line-height:1.35; }
                 .report-metric-compare > div { display:flex; align-items:center; justify-content:space-between; gap:6px; white-space:nowrap; }
                 .report-metric-compare > div > span:first-child { color:#94a3b8; font-size:10px; font-weight:600; }
@@ -661,7 +653,10 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                     }
                     .report-insight-card, .report-action-card, .report-subject-item { padding:14px 16px; }
                 }
-                @media print { .fluent-card { box-shadow: none; border: 1px solid #ccc; backdrop-filter: none; } }
+                /* 脚注颜色无需在此覆盖：main.css 的 @media print 已对 div 强制 #000!important，
+                   这里只补分页保护，避免口径说明被截成两半。 */
+                @media print { .fluent-card { box-shadow: none; border: 1px solid #ccc; backdrop-filter: none; }
+                    .report-display-note { break-inside:avoid; } }
             </style>
         `;
 
@@ -721,7 +716,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩对比</th><th>班排对比</th><th>校排对比</th><th style="${townColStyle}">镇排对比</th><th style="${countyColStyle}">县排对比</th></tr></thead>
                 <tbody>${tableRows}</tbody>
             </table>
-            ${displayOnlyFootnote ? `<div style="padding:0 20px 14px;">${displayOnlyFootnote}</div>` : ''}
+            ${displayOnlyFootnote}
         </div>
         </div>`;
 

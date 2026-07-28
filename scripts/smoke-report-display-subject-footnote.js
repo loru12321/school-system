@@ -14,6 +14,23 @@ try {
 
 const { chromium } = require('playwright');
 
+// 与 smoke-layout-regression.js 保持一致：CI 用系统 Chrome，通过
+// PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH 注入，此时必须走 executablePath +
+// --no-sandbox，不能再传 channel，否则 CI 里起不来。
+function getChromeLaunchOptions() {
+    const args = [];
+    const hostResolverRules = String(process.env.SMOKE_HOST_RESOLVER_RULES || '').trim();
+    if (hostResolverRules) {
+        args.push(`--host-resolver-rules=${hostResolverRules}`);
+    }
+    const executablePath = String(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '').trim();
+    if (executablePath) {
+        return { executablePath, headless: true, args: Array.from(new Set([...args, '--no-sandbox'])) };
+    }
+    const browserChannel = String(process.env.SMOKE_BROWSER_CHANNEL || 'chrome').trim() || 'chrome';
+    return { channel: browserChannel, headless: true, args };
+}
+
 async function enterWorkspace(page) {
     await page.goto(process.env.SMOKE_URL || 'https://schoolsystem.com.cn/', {
         waitUntil: 'commit',
@@ -86,11 +103,34 @@ async function renderAndReadFootnote(page, name) {
     });
 }
 
+// 报告的主要交付形态是打印/导出 PDF。切到 print 媒体后要确认脚注仍然渲染，
+// 并且颜色没有淡到读不出来 —— 屏幕上用的 #94a3b8 打出来可能几乎看不见，
+// 所以 @media print 里强制成黑色，这里把实际生效的计算样式读回来验证。
+async function readPrintFootnoteState(page) {
+    await page.emulateMedia({ media: 'print' });
+    try {
+        return await page.evaluate(() => {
+            const note = document.querySelector('.report-display-note');
+            if (!note) return { present: false };
+            const style = getComputedStyle(note);
+            const rect = note.getBoundingClientRect();
+            return {
+                present: true,
+                text: (note.innerText || note.textContent || '').trim(),
+                display: style.display,
+                visibility: style.visibility,
+                color: style.color,
+                breakInside: style.breakInside,
+                hasSize: rect.width > 0 && rect.height > 0
+            };
+        });
+    } finally {
+        await page.emulateMedia({ media: 'screen' });
+    }
+}
+
 (async () => {
-    const browser = await chromium.launch({
-        channel: String(process.env.SMOKE_BROWSER_CHANNEL || 'chrome').trim() || 'chrome',
-        headless: true
-    });
+    const browser = await chromium.launch(getChromeLaunchOptions());
     const page = await browser.newPage({ viewport: { width: 1440, height: 1800 } });
     try {
         await enterWorkspace(page);
@@ -114,6 +154,7 @@ async function renderAndReadFootnote(page, name) {
         await page.waitForTimeout(1500);
 
         const withSubject = await renderAndReadFootnote(page, target.name);
+        const printState = await readPrintFootnoteState(page);
         assert.ok(withSubject.foundCard, 'the student report table card must render');
         assert.ok(
             withSubject.subjectRows.some((row) => row.includes(displaySubject)),
@@ -126,6 +167,35 @@ async function renderAndReadFootnote(page, name) {
         assert.ok(
             /不计入/.test(withSubject.noteLines[0]),
             `the footnote must state the score is excluded from the official metrics, got ${JSON.stringify(withSubject.noteLines[0])}`
+        );
+
+        // print 模式：报告的主要交付形态是打印/导出 PDF，脚注在纸上必须仍然可见可读。
+        assert.ok(printState.present, 'the footnote element must exist in print media');
+        assert.ok(printState.hasSize, 'the footnote must occupy layout space in print media (not collapsed)');
+        assert.notStrictEqual(printState.display, 'none', 'the footnote must not be display:none in print media');
+        assert.notStrictEqual(printState.visibility, 'hidden', 'the footnote must not be visibility:hidden in print media');
+        assert.ok(
+            /不计入/.test(printState.text),
+            `the print footnote must carry the disclaimer text, got ${JSON.stringify(printState.text)}`
+        );
+
+        // 打印时淡灰几乎看不见。压深由 main.css 的 @media print（对 div 强制 #000!important）
+        // 负责，报告层不再重复声明；这条断言守的是最终结果，所以哪一层实现都能覆盖。
+        // 取 sRGB 相对亮度而非硬编码 rgb(0,0,0)，将来改成 #111/#222 不会假红。
+        const channels = String(printState.color || '').match(/[\d.]+/g);
+        assert.ok(channels && channels.length >= 3, `unexpected print color: ${printState.color}`);
+        const [r, g, b] = channels.slice(0, 3).map(Number);
+        const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+        assert.ok(
+            luminance < 0.45,
+            `the print footnote must be dark enough to read on paper, got ${printState.color} (luminance ${luminance.toFixed(3)})`
+        );
+
+        // 口径说明被分页截成两半，家长手里就是半句话。这条由报告层的
+        // .report-display-note { break-inside:avoid } 提供。
+        assert.strictEqual(
+            printState.breakInside, 'avoid',
+            `the print footnote must not be split across pages, got break-inside:${printState.breakInside}`
         );
 
         // 反向验证：数据集里可能每个学生都有政治，所以克隆一个去掉该科成绩，

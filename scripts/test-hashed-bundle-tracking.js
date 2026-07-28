@@ -75,16 +75,85 @@ assert.strictEqual(
 );
 
 const fs = require('fs');
-const indexHtml = fs.readFileSync(path.join(projectRoot, 'src/index.html'), 'utf8');
-const referenced = new Set((indexHtml.match(/runtime-[0-9a-f]{12}/g) || []).map((ref) => ref.replace('runtime-', '')));
+
+function readVersions(relativePath) {
+    const source = fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
+    return new Set((source.match(/runtime-[0-9a-f]{12}/g) || []).map((ref) => ref.replace('runtime-', '')));
+}
+
+function assertSingleVersion(relativePath) {
+    const versions = readVersions(relativePath);
+    assert.strictEqual(
+        versions.size, 1,
+        `${relativePath} should reference exactly one asset version, found: ${[...versions].join(', ')}`
+    );
+    return [...versions][0];
+}
+
+const srcVersion = assertSingleVersion('src/index.html');
+const trackedVersion = [...allVersions][0];
 assert.strictEqual(
-    referenced.size, 1,
-    `src/index.html should reference exactly one asset version, found: ${[...referenced].join(', ')}`
-);
-assert.strictEqual(
-    [...referenced][0], [...allVersions][0],
-    `src/index.html references asset version ${[...referenced][0]} but the tracked bundles are ${[...allVersions][0]}; `
+    srcVersion, trackedVersion,
+    `src/index.html references asset version ${srcVersion} but the tracked bundles are ${trackedVersion}; `
     + 'run npm run build before git add'
 );
 
-console.log('hashed bundle tracking tests passed');
+// ── 构建后校验 ────────────────────────────────────────────────────────────────
+// 上面几条只看 Git 索引和 src/，证明不了「构建产物」也一致。dist/ 是真正发布出去
+// 的东西：dist/index.html 指向的版本、dist 里实际存在的哈希产物、public 侧被跟踪的
+// 产物三者必须对齐，否则线上会去请求一个不存在的文件。
+//
+// dist/ 可能尚未构建（干净 clone、或只跑单测），那种情况下跳过而不是假失败；
+// 构建后的校验由 validate 在 `npm run build` 之后再跑一次来保证。
+const distIndexPath = path.join(projectRoot, 'dist/index.html');
+if (!fs.existsSync(distIndexPath)) {
+    console.log('hashed bundle tracking tests passed (dist not built; post-build checks skipped)');
+    return;
+}
+
+const distVersion = assertSingleVersion('dist/index.html');
+assert.strictEqual(
+    distVersion, srcVersion,
+    `dist/index.html references ${distVersion} but src/index.html references ${srcVersion}; `
+    + 'dist is stale, run npm run build'
+);
+
+// dist/sw.js 带的内容版本号决定 service worker 去取哪个哈希产物，漏更新会让
+// 线上 SW 请求一个不存在的文件（9bae1ce0 那次漂移就属于这一类）。
+const distSwPath = path.join(projectRoot, 'dist/sw.js');
+if (fs.existsSync(distSwPath)) {
+    const swVersions = readVersions('dist/sw.js');
+    if (swVersions.size > 0) {
+        assert.ok(
+            swVersions.size === 1 && [...swVersions][0] === distVersion,
+            `dist/sw.js references ${[...swVersions].join(', ')} but dist/index.html references ${distVersion}`
+        );
+    }
+}
+
+// dist/index.html 引用的哈希产物必须真的在 dist 里存在（inline-scripts 会把部分
+// 脚本内联进 HTML，所以只校验仍以 <script src> 形式引用的那些）。
+const distIndexSource = fs.readFileSync(distIndexPath, 'utf8');
+const distReferencedFiles = [...distIndexSource.matchAll(/src="\.?\/?([^"]*?runtime-runtime-[0-9a-f]{12}\.js)(?:\?[^"]*)?"/g)]
+    .map((match) => match[1].replace(/^.*assets\//, 'assets/'));
+distReferencedFiles.forEach((relative) => {
+    const candidate = path.join(projectRoot, 'dist', relative);
+    assert.ok(
+        fs.existsSync(candidate),
+        `dist/index.html references ${relative} but that file is missing from dist/; run npm run build`
+    );
+});
+
+// public 侧被跟踪的哈希产物必须在 dist 里有对应文件，否则发布出去的版本和仓库
+// 记录的版本不是同一套。
+trackedInPublic
+    .filter((file) => file.startsWith('public/assets/js/'))
+    .forEach((file) => {
+        const distTwin = path.join(projectRoot, file.replace(/^public\//, 'dist/'));
+        assert.ok(
+            fs.existsSync(distTwin),
+            `${file} is tracked but its dist counterpart is missing; run npm run build`
+        );
+    });
+
+console.log(`hashed bundle tracking tests passed (asset version ${distVersion}, dist verified)`);

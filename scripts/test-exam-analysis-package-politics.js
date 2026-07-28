@@ -77,27 +77,49 @@ assert.ok(!/如与系统页面显示不一致，请以系统页面为准/.test(p
 // 个人报告会被打印/导出 PDF 发给家长，纸上没有 tooltip。学生明细和教师分析用
 // title 提示够用（都是交互表格），但个人报告必须是可见文本，否则政治那一行带着
 // 班排/校排/镇排出现在家长手里，没有任何说明。
+// 脚注 HTML 的构造在 app.js（report-render-runtime.js 贴着体积预算，且文案口径
+// 归 app.js 统一），报告层只负责调用并注入。所以这里跨两个文件断言。
+//
+// 刻意不写死实现细节（变量名、整行代码、参数顺序）：那样的正则会随重构过时，
+// 变成假红。渲染层面的回归由 smoke:report-footnote:local 用真实浏览器覆盖。
 const reportSource = fs.readFileSync(path.join(root, 'public/assets/js/report-render-runtime.js'), 'utf8');
 
-assert.ok(/getConfiguredDisplaySubjectNotice/.test(reportSource),
-    'the student report must read the display-only subject notice');
-assert.ok(/displayOnlyFootnote/.test(reportSource),
-    'the student report must build a visible footnote for display-only subjects');
+// 构造侧：读口径文案 + 产出可见正文元素（而不是 title/伪元素，纸面上看不见）。
+assert.ok(/function buildDisplayOnlySubjectFootnote/.test(appSource),
+    'app.js must provide the display-only subject footnote builder');
+assert.ok(/window\.buildDisplayOnlySubjectFootnote\s*=/.test(appSource),
+    'the footnote builder must be exposed on window for the report runtime');
+// 只取 builder 自己的函数体：从声明处切到下一个顶层 function，否则会把后面
+// 别的函数里的同名调用也算进来，让"builder 不读口径文案"这种变异漏网。
+const builderStart = appSource.indexOf('function buildDisplayOnlySubjectFootnote');
+assert.ok(builderStart >= 0, 'the footnote builder must exist in app.js');
+const afterBuilder = appSource.slice(builderStart + 1);
+const nextTopLevelFn = afterBuilder.search(/\n(?:function |window\.)/);
+const builderBody = nextTopLevelFn >= 0 ? afterBuilder.slice(0, nextTopLevelFn) : afterBuilder;
+assert.ok(/getConfiguredDisplaySubjectNotice/.test(builderBody),
+    'the footnote builder must read the shared display-only subject notice');
+assert.ok(/report-display-note/.test(builderBody),
+    'the footnote must render as a visible element carrying the .report-display-note class');
 
-// 必须真的注入到报告 HTML 里，不能只声明不使用（否则脚注是死代码）。
-// 注意不能只搜变量名：声明本身就含变量名，删掉注入点也照样匹配。
-const footnoteDeclarations = (reportSource.match(/const displayOnlyFootnote\s*=/g) || []).length;
-const footnoteReferences = (reportSource.match(/displayOnlyFootnote/g) || []).length;
-assert.strictEqual(footnoteDeclarations, 1,
-    'the report should build the display-only footnote exactly once');
-assert.ok(footnoteReferences > footnoteDeclarations + 1,
-    'the footnote must be referenced in the report template, not just declared');
-assert.ok(/<tbody>\$\{tableRows\}<\/tbody>[\s\S]{0,200}displayOnlyFootnote/.test(reportSource),
+// 报告侧：必须真的调用并注入，不能只声明不使用（否则脚注是死代码）。
+assert.ok(/buildDisplayOnlySubjectFootnote\(/.test(reportSource),
+    'the student report must call the footnote builder');
+const footnoteRefs = (reportSource.match(/displayOnlyFootnote/g) || []).length;
+assert.ok(footnoteRefs >= 2,
+    'the footnote must be both built and injected in the report template');
+assert.ok(/<tbody>\$\{tableRows\}<\/tbody>[\s\S]{0,240}\$\{displayOnlyFootnote\}/.test(reportSource),
     'the footnote must be injected right after the subject table so printed reports carry it');
 
-// 只在该学生确实显示了政治时才出现，否则每份报告都挂一句无关脚注。
-// 绑定到脚注自己的过滤链上：表格行循环里也有同样的判断，泛匹配会漏掉恒真变异。
-assert.ok(/reportSubjectsForRank[\s\S]{0,120}\.filter\(\(sub\) => stuScores\[sub\] !== undefined\)/.test(reportSource),
+// 只在该学生确实有该科成绩时才出现，否则每份报告都挂一句无关脚注。
+// 绑定到传给 builder 的判定回调，而不是表格行循环里的同名判断。
+assert.ok(/buildDisplayOnlySubjectFootnote\([\s\S]{0,160}?stuScores\[[^\]]+\]\s*!==\s*undefined/.test(reportSource),
     'the footnote must only consider subjects the student actually has scores for');
+
+// 报告样式必须真的定义该类，否则脚注拿不到字号/间距，打印出来是裸文本。
+assert.ok(/\.report-display-note\s*\{/.test(reportSource),
+    'the report must define .report-display-note styling');
+// 分页保护：口径说明被截成两半，家长手里就是半句话。
+assert.ok(/\.report-display-note\s*\{[^}]*break-inside\s*:\s*avoid/.test(reportSource),
+    'the footnote must set break-inside:avoid so print does not split it');
 
 console.log('exam-analysis-package politics display contract passed');

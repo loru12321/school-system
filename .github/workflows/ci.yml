@@ -110,7 +110,7 @@ jobs:
         env:
           NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
           PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
-        run: npm run test:calculation-snapshot:local && npm run smoke:layout:local
+        run: npm run test:calculation-snapshot:local && npm run smoke:layout:local && npm run smoke:report-footnote:local
 
   root-validate:
     name: Root Validate

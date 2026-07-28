@@ -120,7 +120,14 @@ const budgets = {
   // 具体排名，成绩卡片改为默认只显示所处区间（年级前 30% 等），由 shouldShowParentRank()
   // 控制、学校确认政策后可恢复。该文件在上一次调整后只剩 48 字节余量，属合规必需功能，
   // 代码已收紧到最小实现（三元链、共用 bandStyle、无冗余常量），故按既有惯例小幅上调。
-  publicReportRenderJs: 66_400
+  // 67_200（2026-07-29）：个人报告的展示类科目可见脚注。报告会打印或导出 PDF 给家长，
+  // 纸面上没有 tooltip，政治那一行带着班排/校排/镇排，没有可见说明会被当成本次中考的
+  // 科目成绩，属口径合规必需。上一次调整后该文件只剩 141 字节余量，任何可见实现都放不进。
+  // 已做三轮压缩：合并 DOM 层级 + 样式提成 .report-display-note 类；HTML 构造整体下沉到
+  // app.js 的 buildDisplayOnlySubjectFootnote()（本文件只留一次调用）；再砍注释与守卫后
+  // 仍超 279 字节，即纯压缩无法达标。注意本预算量的是 public/ 未压缩源码，实际交付的
+  // dist/assets/js/report-render-runtime.js 约 45.9KB 且不在本表内，故用户下载体积不变。
+  publicReportRenderJs: 67_200
 };
 
 const actual = {

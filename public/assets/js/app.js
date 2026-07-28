@@ -2890,6 +2890,23 @@ function getConfiguredDisplaySubjectNotice(subject, config = CONFIG) {
     return '';
 }
 
+// 个人报告会被打印或导出 PDF 交给家长，纸面上没有 tooltip。展示类科目（政治）那一行
+// 带着班排/校排/镇排，没有可见说明容易被当成本次中考的科目成绩。这里产出正文元素而
+// 不是 title/伪元素，保证 print 时仍可见；样式类 .report-display-note 由报告页提供。
+// 放在 app.js 而非 report-render-runtime.js：后者贴着体积预算，且文案口径本就归这里。
+function buildDisplayOnlySubjectFootnote(subjects, hasScore, config = CONFIG) {
+    const owned = typeof hasScore === 'function' ? hasScore : () => true;
+    const escape = typeof window.tmEscapeHtml === 'function'
+        ? window.tmEscapeHtml
+        : (value) => String(value == null ? '' : value);
+    return [...new Set((Array.isArray(subjects) ? subjects : [])
+        .filter((subject) => owned(subject))
+        .map((subject) => getConfiguredDisplaySubjectNotice(subject, config))
+        .filter(Boolean))]
+        .map((notice) => `<div class="report-display-note">注：${escape(notice)}</div>`)
+        .join('');
+}
+
 function getConfiguredReadOnlyDisplaySubjects(config = CONFIG, fallbackSubjects = SUBJECTS) {
     const displaySubjects = getConfiguredDisplaySubjects(config);
     if (Array.isArray(displaySubjects)) return [...new Set(displaySubjects.filter(Boolean))];
@@ -2899,6 +2916,7 @@ function getConfiguredReadOnlyDisplaySubjects(config = CONFIG, fallbackSubjects 
 window.isConfiguredDisplayOnlySubject = isConfiguredDisplayOnlySubject;
 window.getConfiguredDisplaySubjectLabel = getConfiguredDisplaySubjectLabel;
 window.getConfiguredDisplaySubjectNotice = getConfiguredDisplaySubjectNotice;
+window.buildDisplayOnlySubjectFootnote = buildDisplayOnlySubjectFootnote;
 window.getConfiguredReadOnlyDisplaySubjects = getConfiguredReadOnlyDisplaySubjects;
 RAW_DATA = initialDataSnapshot.rawData || [];
 SCHOOLS = initialDataSnapshot.schools || {};
