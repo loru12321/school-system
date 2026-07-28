@@ -1,90 +1,5 @@
 [
   {
-    "recordedAt": "2026-07-17T09:08:30.527Z",
-    "commit": "33bd40e8566b",
-    "branch": "main",
-    "runId": "29568796923",
-    "runAttempt": "1",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 7952,
-    "appReadyMs": 8,
-    "totalMs": 28333,
-    "moduleCount": 31,
-    "slowestModules": [
-      {
-        "id": "teacher-analysis",
-        "switchMs": 50.10000000000582,
-        "deepCheckMs": 1646,
-        "totalMs": 1696.1000000000058
-      },
-      {
-        "id": "report-generator",
-        "switchMs": 11,
-        "deepCheckMs": 912,
-        "totalMs": 923
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 49,
-        "deepCheckMs": 643,
-        "totalMs": 692
-      },
-      {
-        "id": "analysis",
-        "switchMs": 8.89999999999418,
-        "deepCheckMs": 524,
-        "totalMs": 532.8999999999942
-      },
-      {
-        "id": "subject-balance",
-        "switchMs": 31.5,
-        "deepCheckMs": 499,
-        "totalMs": 530.5
-      },
-      {
-        "id": "teacher-township-ranking",
-        "switchMs": 3.3999999999941792,
-        "deepCheckMs": 517,
-        "totalMs": 520.3999999999942
-      },
-      {
-        "id": "freshman-simulator",
-        "switchMs": 54.09999999997672,
-        "deepCheckMs": 426,
-        "totalMs": 480.0999999999767
-      },
-      {
-        "id": "grade-scheduler",
-        "switchMs": 33.69999999998254,
-        "deepCheckMs": 443,
-        "totalMs": 476.69999999998254
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "cloud",
-        "durationMs": 1129
-      },
-      {
-        "id": "student",
-        "durationMs": 701
-      },
-      {
-        "id": "targets",
-        "durationMs": 641
-      },
-      {
-        "id": "teacher",
-        "durationMs": 638
-      }
-    ],
-    "longTaskCount": 0,
-    "maxLongTaskMs": 0,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-07-17T09:13:49.459Z",
     "commit": "6d54d4f51ae6",
     "branch": "main",
@@ -6791,6 +6706,91 @@
       },
       {
         "id": "targets",
+        "durationMs": 631
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-07-28T05:24:36.963Z",
+    "commit": "7d071bba84aa",
+    "branch": "main",
+    "runId": "30331472970",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 5424,
+    "appReadyMs": 103,
+    "totalMs": 31063,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "teacher-analysis",
+        "switchMs": 52.30000000000291,
+        "deepCheckMs": 1703,
+        "totalMs": 1755.300000000003
+      },
+      {
+        "id": "seat-adjustment",
+        "switchMs": 74.80000000000291,
+        "deepCheckMs": 869,
+        "totalMs": 943.8000000000029
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 48,
+        "deepCheckMs": 819,
+        "totalMs": 867
+      },
+      {
+        "id": "teacher-township-ranking",
+        "switchMs": 2.5,
+        "deepCheckMs": 857,
+        "totalMs": 859.5
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 23.69999999999709,
+        "deepCheckMs": 805,
+        "totalMs": 828.6999999999971
+      },
+      {
+        "id": "analysis",
+        "switchMs": 61.40000000000873,
+        "deepCheckMs": 697,
+        "totalMs": 758.4000000000087
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 17.40000000000873,
+        "deepCheckMs": 584,
+        "totalMs": 601.4000000000087
+      },
+      {
+        "id": "indicator",
+        "switchMs": 20.59999999999127,
+        "deepCheckMs": 500,
+        "totalMs": 520.5999999999913
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1114
+      },
+      {
+        "id": "student",
+        "durationMs": 659
+      },
+      {
+        "id": "targets",
+        "durationMs": 634
+      },
+      {
+        "id": "teacher",
         "durationMs": 631
       }
     ],
