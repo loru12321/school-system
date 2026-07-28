@@ -1498,10 +1498,15 @@ async function main() {
         const getSchoolStandardMetrics = (schoolName) => {
             const school = window.SCHOOLS?.[schoolName] || null;
             if (!school) return null;
+            const totalMetrics = school.metrics?.total || null;
             return {
                 count: Array.isArray(school.students) ? school.students.length : 0,
-                avg: Number(school.avg || 0),
-                score2Rate: Number(school.score2Rate || 0)
+                // 均分/优秀率/及格率取自 metrics.total（学校对象本身没有 avg 字段）
+                avg: Number(totalMetrics?.avg || 0),
+                excRate: Number(totalMetrics?.excRate || 0),
+                passRate: Number(totalMetrics?.passRate || 0),
+                // 两率一分赋分总分（9年级满分 180），不是百分比
+                ratedTotal: Number(school.score2Rate || 0)
             };
         };
         const oldCountyRows = (window.RAW_DATA || []).filter((student) => {
@@ -1808,6 +1813,14 @@ async function main() {
     assert.ok(snapshot.currentExam.oldCountyRawCount > 0, 'current exam old county rows missing');
     assert.ok(snapshot.currentExam.oldCounty?.count > 0, 'current exam old county metrics missing');
     assert.ok(snapshot.currentExam.yinshan?.count > 0, 'current exam Yinshan metrics missing');
+    ['oldCounty', 'yinshan', 'jieshan'].forEach((key) => {
+        const metrics = snapshot.currentExam[key];
+        if (!metrics) return;
+        assert.ok(metrics.avg > 0, `current exam ${key} average must be positive: ${metrics.avg}`);
+        assert.ok(metrics.excRate >= 0 && metrics.excRate <= 1, `current exam ${key} excellent rate out of range: ${metrics.excRate}`);
+        assert.ok(metrics.passRate >= 0 && metrics.passRate <= 1, `current exam ${key} pass rate out of range: ${metrics.passRate}`);
+        assert.ok(metrics.ratedTotal >= 0 && metrics.ratedTotal <= 180, `current exam ${key} rated total out of range: ${metrics.ratedTotal}`);
+    });
 
     console.log(JSON.stringify(snapshot, null, 2));
 }
