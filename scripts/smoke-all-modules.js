@@ -1468,6 +1468,43 @@ async function runModuleDeepCheck(page, id) {
                 summaryAdmissionZeroUnlessJulyZhongkao: summaryHighScoreDiagnostics.admissionAllZeroWhenDisallowed
             };
 
+            // 九年级中考政治是同届二模的独立单科参考。它必须真实显示三项赋分，
+            // 但绝不能污染中考正式五科数组或综合总表；这里只在对应考试上验证。
+            const politicsReferenceExpected = /9\s*年级|九年级/.test(String(window.CONFIG?.name || ''))
+                && /中考/.test(String(window.CURRENT_EXAM_ID || ''));
+            let politicsReference = { expected: politicsReferenceExpected, available: null };
+            if (politicsReferenceExpected) {
+                await smokeTimeout(
+                    typeof window.loadOptionalRuntime === 'function'
+                        ? window.loadOptionalRuntime('grade9-politics-reference', './assets/js/grade9-politics-reference-runtime.js')
+                        : Promise.resolve(),
+                    10000
+                );
+                const referenceSummary = typeof window.Grade9PoliticsReferenceRuntime?.ensureSummary === 'function'
+                    ? await smokeTimeout(window.Grade9PoliticsReferenceRuntime.ensureSummary(), 10000)
+                    : null;
+                if (typeof window.renderTables === 'function') window.renderTables();
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const tab = Array.from(document.querySelectorAll('#two-rate-table-jumpbar button'))
+                    .find(button => /政治（二模参考）/.test(String(button?.innerText || button?.textContent || '')));
+                const panel = document.getElementById('anchor-subject-politics-reference');
+                const panelText = String(panel?.innerText || panel?.textContent || '');
+                politicsReference = {
+                    expected: true,
+                    available: referenceSummary?.available === true,
+                    matched: Number(referenceSummary?.matched || 0),
+                    sourceExamId: referenceSummary?.sourceExamId || '',
+                    tabPresent: !!tab,
+                    panelPresent: !!panel,
+                    hasThreeRateScores: /平均分赋分/.test(panelText) && /优秀率赋分/.test(panelText) && /及格率赋分/.test(panelText),
+                    formalSubjects: Array.isArray(window.SUBJECTS) ? window.SUBJECTS.slice() : []
+                };
+                checks.politicsReferenceRuntime = !!window.Grade9PoliticsReferenceRuntime;
+                checks.politicsReferenceAvailable = politicsReference.available && politicsReference.matched > 0;
+                checks.politicsReferenceTabAndPanel = politicsReference.tabPresent && politicsReference.panelPresent && politicsReference.hasThreeRateScores;
+                checks.politicsReferenceDoesNotPolluteFiveSubjects = !politicsReference.formalSubjects.includes('政治');
+            }
+
             // 前置条件状态条（prerequisite-status-runtime）必须真的注入到本模块，
             // 否则它只是个静默 no-op：运行时存在但界面上看不到任何东西。
             const prerequisiteBar = document.querySelector('#summary > .prerequisite-status-bar');
@@ -1571,6 +1608,7 @@ async function runModuleDeepCheck(page, id) {
                 summaryDirty,
                 summaryIndicatorDiagnostics,
                 summaryHighScoreDiagnostics,
+                politicsReference,
                 staleTexts,
                 stateTrace
             };

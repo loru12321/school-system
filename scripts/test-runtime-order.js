@@ -1044,7 +1044,9 @@ assert.ok(shellRuntime.includes('activateCurrentCategoryDefaultModule(key)'), 'c
 assert.ok(appSource.includes("const fallbackIds = ['starter-hub', 'teacher-analysis', 'student-overview', 'report-generator'];"), 'base config guard should redirect to the first role-visible module instead of forcing starter hub');
 assert.ok(appSource.includes('function getTownAnalysisVisibleSubjectsForCurrentUser()'), 'town analysis should centralize role-aware subject detail visibility');
 assert.ok(appSource.includes("if (role !== 'teacher') return allSubjects;"), 'only teacher role should hide non-teaching subject detail tables');
-assert.ok(appSource.includes('visibleSubjects.forEach(sub => {'), 'town analysis subject detail tables should render only visible subjects');
+assert.ok(appSource.includes("type: 'official'"), 'town analysis should retain role-filtered formal subject entries');
+assert.ok(appSource.includes("type: 'politics-reference'"), 'grade 9 politics second-mock reference should be a separate table entry');
+assert.ok(appSource.includes('canCurrentUserViewTownAnalysisSubject'), 'politics reference should respect a teacher\'s subject visibility');
 assert.ok(indexHtml.includes('data-role-allow="admin,director,grade_director"'), 'teacher multi-period compare panel should only be visible to admin, director, and grade director');
 assert.ok(appSource.includes('function applyRoleAllowVisibility(root = document)'), 'role-limited local panels should be hidden by a shared runtime helper');
 assert.ok(indexHtml.includes('class="analysis-action-stack" data-role-allow="admin,director,grade_director"'), 'student detail export actions should be admin/director/grade-director only');

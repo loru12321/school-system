@@ -2885,7 +2885,7 @@ function getConfiguredDisplaySubjectLabel(subject, config = CONFIG) {
 function getConfiguredDisplaySubjectNotice(subject, config = CONFIG) {
     const normalized = String(subject || '').trim();
     if (normalized === '政治' && isConfiguredDisplayOnlySubject(normalized, config) && String(config?.name || '').includes('9')) {
-        return '九年级中考政治取同届二模成绩，仅作单科展示、排名和政治教师分析；不计入中考五科总、两率一分、指标生、高分段或高中上线。';
+        return '九年级中考政治取同届二模成绩，单科两率一分与排名仅供参考；不计入中考五科总、综合评价、指标生、高分段或高中上线。';
     }
     return '';
 }
@@ -5682,6 +5682,99 @@ function getTownAnalysisVisibleSubjectsForCurrentUser() {
     return allSubjects.filter(subject => normalizedVisible.has(normalizeSubject(subject)));
 }
 
+// 中考政治二模参考是独立的只读展示，不会写进 SUBJECTS 或 SCHOOLS。它的资料较大，
+// 只在打开“两率一分”时按需读取，以免影响登录和主分析的计算路径。
+const Grade9PoliticsReferenceRenderState = {
+    pendingKeys: new Set(),
+    completedKeys: new Set()
+};
+
+function isCurrentGrade9ZhongkaoForPoliticsReference() {
+    const examId = String(window.CURRENT_EXAM_ID || readWorkspaceExamId() || '').trim();
+    const exam = window.COHORT_DB?.exams?.[examId] || {};
+    const meta = exam?.meta && typeof exam.meta === 'object' ? exam.meta : {};
+    const source = [CONFIG?.name, examId, meta?.name, meta?.examName, meta?.type, exam?.examLabel]
+        .map(value => String(value || ''))
+        .join(' ');
+    return /9\s*年级|九年级/.test(source) && /中考/.test(source);
+}
+
+function canCurrentUserViewTownAnalysisSubject(subject) {
+    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    if ((user?.role || 'guest') !== 'teacher') return true;
+    const scope = typeof getVisibleSubjectsForTeacherUser === 'function'
+        ? getVisibleSubjectsForTeacherUser(user)
+        : (typeof getTeacherScopeForUser === 'function' ? getTeacherScopeForUser(user)?.subjects : null);
+    if (!(scope instanceof Set) || scope.size === 0) return false;
+    const normalizedSubject = normalizeSubject(subject);
+    return Array.from(scope).some(item => normalizeSubject(item) === normalizedSubject);
+}
+
+function getGrade9PoliticsReferenceSummaryForTables() {
+    const runtime = window.Grade9PoliticsReferenceRuntime;
+    return runtime && typeof runtime.getSummary === 'function' ? runtime.getSummary() : null;
+}
+
+function requestGrade9PoliticsReferenceSummary(summarySignature) {
+    if (!isCurrentGrade9ZhongkaoForPoliticsReference()) return;
+    const requestKey = `${summarySignature}::politics-reference`;
+    if (Grade9PoliticsReferenceRenderState.pendingKeys.has(requestKey)
+        || Grade9PoliticsReferenceRenderState.completedKeys.has(requestKey)) return;
+    Grade9PoliticsReferenceRenderState.pendingKeys.add(requestKey);
+    const loadRuntime = typeof loadOptionalRuntime === 'function'
+        ? loadOptionalRuntime('grade9-politics-reference', './assets/js/grade9-politics-reference-runtime.js')
+        : Promise.resolve();
+    Promise.resolve(loadRuntime)
+        .then(() => window.Grade9PoliticsReferenceRuntime?.ensureSummary?.())
+        .then(() => {
+            Grade9PoliticsReferenceRenderState.completedKeys.add(requestKey);
+            // 考试切换期间旧请求可能后到；只有当前同一份汇总才允许补绘页面。
+            if (`${getSummaryRenderSignature()}::politics-reference` === requestKey) renderTables();
+        })
+        .catch(error => {
+            console.warn('[politics-reference] 二模两率一分读取失败:', error?.message || error);
+        })
+        .finally(() => Grade9PoliticsReferenceRenderState.pendingKeys.delete(requestKey));
+}
+
+function buildGrade9PoliticsReferenceTable(reference) {
+    const anchorId = 'anchor-subject-politics-reference';
+    const baseClass = 'anchor-target analysis-anchor-panel analysis-generated-panel';
+    const notice = '同届最新二模的单科参考结果，不计入中考五科总、综合总表、指标生、高分段或高中上线。';
+    if (!reference || reference.status === 'loading') {
+        return `<div id="${anchorId}" class="${baseClass}"><div class="sub-header analysis-section-head analysis-generated-header"><span>📘 政治（二模参考）· 两率一分</span></div><div class="analysis-empty-state">正在读取同届二模政治成绩与分数线，请稍候…</div></div>`;
+    }
+    if (!reference.available) {
+        const reason = escapeAppHtml(reference.reason || '未找到同届同学年度的九年级二模政治成绩。');
+        return `<div id="${anchorId}" class="${baseClass}"><div class="sub-header analysis-section-head analysis-generated-header"><span>📘 政治（二模参考）· 两率一分</span></div><div class="analysis-generated-note">${notice}</div><div class="analysis-empty-state">${reason}</div></div>`;
+    }
+    const thresholds = reference.thresholds || {};
+    const source = escapeAppHtml(reference.sourceLabel || '同届最新二模');
+    const rows = Array.isArray(reference.schools) ? reference.schools : [];
+    const htmlRows = rows.map(school => {
+        const metric = school.metrics || {};
+        const ranking = school.rankings || {};
+        const isMySchool = sameAppSchoolName(school.name, MY_SCHOOL);
+        return `<tr class="${isMySchool ? 'bg-highlight' : ''}">
+            <td data-label="学校名称">${escapeAppHtml(school.name)}</td>
+            <td data-label="实考人数">${metric.count || 0}</td>
+            <td data-label="平均分">${formatRankDisplay(metric.avg || 0, ranking.avg || 0)}</td>
+            <td data-label="优秀率">${formatRankDisplay(metric.excRate || 0, ranking.excRate || 0, 'school', true)}</td>
+            <td data-label="及格率">${formatRankDisplay(metric.passRate || 0, ranking.passRate || 0, 'school', true)}</td>
+            <td data-label="均分赋分">${Number(metric.ratedAvg || 0).toFixed(2)}</td>
+            <td data-label="优率赋分">${Number(metric.ratedExc || 0).toFixed(2)}</td>
+            <td data-label="及格赋分">${Number(metric.ratedPass || 0).toFixed(2)}</td>
+            <td data-label="两率一分总分" class="text-red" style="font-size:1.05em;font-weight:bold;">${Number(school.score2Rate || 0).toFixed(2)}</td>
+            ${getRankHTML(ranking.score2Rate || 0)}
+        </tr>`;
+    }).join('') || '<tr><td colspan="10" class="analysis-empty-cell">暂无可匹配的政治二模成绩</td></tr>';
+    return `<div id="${anchorId}" class="${baseClass}">
+        <div class="sub-header analysis-section-head analysis-generated-header"><span>📘 政治（二模参考）· 单科两率一分</span><span class="analysis-generated-meta"><span class="analysis-table-tag">来源 ${source}</span><span class="analysis-table-tag">覆盖 ${rows.length} 校</span><span class="analysis-table-tag">优秀线 ≥ ${Number(thresholds.exc || 0).toFixed(1)}</span><span class="analysis-table-tag">及格线 ≥ ${Number(thresholds.pass || 0).toFixed(1)}</span></span></div>
+        <div class="analysis-generated-note">${notice} 已按政治二模的均分、优秀率、及格率分别赋分（50 / 80 / 50），仅用于政治单科比较。</div>
+        <div class="table-wrap analysis-table-shell"><table class="analysis-generated-table"><thead><tr><th>学校名称</th><th>实考人数</th><th>平均分</th><th>优秀率</th><th>及格率</th><th>平均分赋分</th><th>优秀率赋分</th><th>及格率赋分</th><th>两率一分总分</th><th>排名</th></tr></thead><tbody>${htmlRows}</tbody></table></div>
+    </div>`;
+}
+
 function scrollToTableAnchor(anchorId, trigger = null) {
     const target = document.getElementById(anchorId);
     if (!target) {
@@ -5697,19 +5790,16 @@ function scrollToTableAnchor(anchorId, trigger = null) {
     return true;
 }
 
-function renderTwoRateTableJumpbar(visibleSubjects, summarySignature) {
+function renderTwoRateTableJumpbar(subjectEntries, summarySignature) {
     const jumpbar = document.getElementById('two-rate-table-jumpbar');
     if (!jumpbar) return;
-    const subjects = Array.isArray(visibleSubjects) ? visibleSubjects.filter(Boolean) : [];
-    const navKey = `${summarySignature}::jumpbar::${subjects.map(s => normalizeSubject(s)).join('|')}`;
+    const entries = (Array.isArray(subjectEntries) ? subjectEntries : [])
+        .filter(entry => entry && entry.label && entry.anchorId);
+    const navKey = `${summarySignature}::jumpbar::${entries.map(entry => `${entry.key || entry.label}:${entry.state || ''}`).join('|')}`;
     if (jumpbar.dataset.summaryRenderSig === navKey && jumpbar.children.length) return;
     const buttons = [
         { label: '综合总表', anchorId: 'anchor-total', tone: 'total' },
-        ...subjects.map(subject => ({
-            label: subject,
-            anchorId: `anchor-subject-${subject}`,
-            tone: 'subject'
-        })),
+        ...entries.map(entry => ({ label: entry.label, anchorId: entry.anchorId, tone: entry.tone || 'subject' })),
         { label: '横向对比', anchorId: 'horizontal-box', tone: 'compare' }
     ];
     jumpbar.innerHTML = `
@@ -5801,8 +5891,27 @@ function renderTables() {
     const subContainer = document.getElementById('subject-tables-container');
     const sideNavSubjects = document.getElementById('side-nav-subjects-container');
     const visibleSubjects = getTownAnalysisVisibleSubjectsForCurrentUser();
-    const subjectRenderKey = `${summarySignature}::subjects::${visibleSubjects.map(s => normalizeSubject(s)).join('|')}`;
-    renderTwoRateTableJumpbar(visibleSubjects, summarySignature);
+    const politicsReferenceApplicable = isCurrentGrade9ZhongkaoForPoliticsReference()
+        && canCurrentUserViewTownAnalysisSubject('政治');
+    if (politicsReferenceApplicable) requestGrade9PoliticsReferenceSummary(summarySignature);
+    const politicsReference = politicsReferenceApplicable ? getGrade9PoliticsReferenceSummaryForTables() : null;
+    const subjectEntries = [
+        ...visibleSubjects.map(subject => ({
+            type: 'official',
+            key: `official:${normalizeSubject(subject)}`,
+            label: subject,
+            anchorId: `anchor-subject-${subject}`
+        })),
+        ...(politicsReferenceApplicable ? [{
+            type: 'politics-reference',
+            key: 'politics-reference',
+            label: '政治（二模参考）',
+            anchorId: 'anchor-subject-politics-reference',
+            state: politicsReference?.signature || politicsReference?.status || 'loading'
+        }] : [])
+    ];
+    const subjectRenderKey = `${summarySignature}::subjects::${subjectEntries.map(entry => `${entry.key}:${entry.state || ''}`).join('|')}`;
+    renderTwoRateTableJumpbar(subjectEntries, subjectRenderKey);
 
     if (subContainer?.dataset.summaryRenderSig !== subjectRenderKey || sideNavSubjects?.dataset.summaryRenderSig !== subjectRenderKey) {
     if (subContainer) subContainer.innerHTML = '';
@@ -5813,7 +5922,20 @@ function renderTables() {
         return;
     }
 
-    visibleSubjects.forEach(sub => {
+    subjectEntries.forEach(entry => {
+        if (entry.type === 'politics-reference') {
+            const panel = document.createElement('div');
+            panel.innerHTML = buildGrade9PoliticsReferenceTable(politicsReference);
+            const politicsBox = panel.firstElementChild;
+            if (politicsBox) subContainer.appendChild(politicsBox);
+            const navLink = document.createElement('a');
+            navLink.className = 'side-nav-sub-link';
+            navLink.innerText = entry.label;
+            navLink.onclick = () => scrollToSubAnchor(entry.anchorId, navLink);
+            sideNavSubjects.appendChild(navLink);
+            return;
+        }
+        const sub = entry.label;
         const thresh = THRESHOLDS[sub];
         const subList = townshipSchools.filter(s => s.metrics[sub]).sort((a, b) => (a.rankings[sub].avg - b.rankings[sub].avg));
         const box = document.createElement('div');
@@ -5835,7 +5957,7 @@ function renderTables() {
         }
         tbody.innerHTML = htmlSub; subContainer.appendChild(box); const navLink = document.createElement('a'); navLink.className = 'side-nav-sub-link'; navLink.innerText = sub; navLink.onclick = () => scrollToSubAnchor(anchorId, navLink); sideNavSubjects.appendChild(navLink);
     });
-    if (visibleSubjects.length === 0) {
+    if (subjectEntries.length === 0) {
         subContainer.innerHTML = '<div class="analysis-empty-state">当前教师账号未匹配到任教学科，暂不展示学科明细。</div>';
         sideNavSubjects.innerHTML = '<span class="analysis-empty-cell">暂无可见学科</span>';
     }

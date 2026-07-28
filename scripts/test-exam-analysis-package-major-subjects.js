@@ -59,6 +59,12 @@ assert.ok(
     'grade 9 politics reference workbook should explicitly protect official Zhongkao calculations'
 );
 
+assert.ok(
+    source.includes('function getGrade9ZhongkaoDisplayData')
+        && source.includes("return { rows: politics.rows, subjects: [...officialSubjects, '政治'], politics }"),
+    'grade 9 export details should merge second-mock politics only as display data'
+);
+
 function createRuntimeContext({ grade, subjects, zhongkao = false }) {
     const files = [];
     const students = [
@@ -205,6 +211,18 @@ function getWorkbookRows(file, sheetName) {
             files.some((file) => /学校\/.*学校分析（含政治·二模参考）.*\.xlsx$/.test(file.name)),
             'grade 9 Zhongkao package should include the isolated second-mock politics reference workbook'
         );
+        const rawScoreFile = files.find((file) => /成绩.*\.xlsx$/.test(file.name) && !file.name.includes('/'));
+        const rawScoreRows = getWorkbookRows(rawScoreFile, '银山实验学校');
+        assert.ok(rawScoreRows[0]?.includes('政治（二模参考）'), 'raw score workbook should include second-mock politics as a display-only column');
+        assert.strictEqual(rawScoreRows[0]?.at(-2), '五科总', 'raw score workbook total must remain the formal five-subject total');
+
+        const studentDetailFile = files.find((file) => /学生\/.*学生乡镇考试明细\.xlsx$/.test(file.name));
+        const studentDetailRows = getWorkbookRows(studentDetailFile, '学生考试明细');
+        assert.ok(studentDetailRows[0]?.includes('政治（二模参考）分数'), 'student detail workbook should include second-mock politics score');
+        assert.ok(studentDetailRows[0]?.includes('政治（二模参考）镇排'), 'student detail workbook should include second-mock politics township rank');
+
+        const teacherFile = files.find((file) => /教师\/.*教师分析.*\.xlsx$/.test(file.name));
+        assert.ok(teacherFile?.payload?.SheetNames.includes('政治（二模参考） 教师乡镇排名'), 'teacher workbook should include politics teacher township ranking sheet');
     }
     console.log('test-exam-analysis-package-major-subjects passed');
 })().catch((error) => {

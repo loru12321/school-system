@@ -1045,6 +1045,23 @@
         return { rows: mergedRows, matched, secondMock };
     }
 
+    // 中考主科仍固定为五科；这里只为原始成绩、学生明细和教师明细补充政治二模参考列。
+    // 合并后的 rows 只在导出过程内使用，绝不回写 RAW_DATA、SUBJECTS 或学生正式 total。
+    function getGrade9ZhongkaoDisplayData(rows = getAllRows()) {
+        const officialSubjects = getSubjectList(rows).filter((subject) => subject !== '政治');
+        if (!isGrade9ZhongkaoPackage()) return { rows, subjects: officialSubjects, politics: null };
+        const politics = getGrade9SecondMockPoliticsRows(rows);
+        if (!politics.matched) return { rows, subjects: officialSubjects, politics };
+        return { rows: politics.rows, subjects: [...officialSubjects, '政治'], politics };
+    }
+
+    function getPackageDisplaySubjectLabel(subject) {
+        if (subject === '政治' && isGrade9ZhongkaoPackage()) return '政治（二模参考）';
+        return typeof window.getConfiguredDisplaySubjectLabel === 'function'
+            ? window.getConfiguredDisplaySubjectLabel(subject)
+            : subject;
+    }
+
     function buildGrade9ZhongkaoPoliticsReferenceWorkbooks() {
         if (!isGrade9ZhongkaoPackage()) return null;
         const rows = getTownshipRows();
@@ -1505,7 +1522,9 @@
 
     function buildRawScoreWorkbook(rows = getAllRows()) {
         const wb = window.XLSX.utils.book_new();
-        const subjects = getSubjectList(rows);
+        const displayData = getGrade9ZhongkaoDisplayData(rows);
+        const subjects = displayData.subjects;
+        const totalLabel = getPackageTotalLabel(subjects.filter((subject) => subject !== '政治'));
         addCoverSheet(wb, buildCoverRows({
             title: `${getExamPackageStem()}原始成绩`,
             scopeText: '本次考试全部考生原始成绩（按学校分表）',
@@ -1515,13 +1534,13 @@
             ]
         }));
         const grouped = new Map();
-        rows.forEach((student) => {
+        displayData.rows.forEach((student) => {
             const school = String(student?.school || '未知学校').trim() || '未知学校';
             if (!grouped.has(school)) grouped.set(school, []);
             grouped.get(school).push(student);
         });
         grouped.forEach((students, school) => {
-            const data = [['学校', '班级', '姓名', '考号', '考场', ...subjects, window.CONFIG?.label || '总分', '_标记']];
+            const data = [['学校', '班级', '姓名', '考号', '考场', ...subjects.map(getPackageDisplaySubjectLabel), totalLabel, '_标记']];
             students
                 .slice()
                 .sort((a, b) => String(a.class || '').localeCompare(String(b.class || ''), 'zh-CN', { numeric: true }) || (Number(b.total) || 0) - (Number(a.total) || 0))
@@ -1623,7 +1642,10 @@
     }
 
     function buildStudentDetailWorkbook(rows, options = {}) {
-        const subjects = getSubjectList(rows);
+        const displayData = getGrade9ZhongkaoDisplayData(rows);
+        const subjects = displayData.subjects;
+        const displayRows = displayData.rows;
+        const totalLabel = getPackageTotalLabel(subjects.filter((subject) => subject !== '政治'));
         const includeCounty = !!options.includeCounty;
         // 与学校分析报告保持一致：所有对外文件第一张都是封面，说明范围与生成时间。
         const studentCover = buildCoverRows({
@@ -1634,17 +1656,18 @@
                 ['口径说明', '空分与缺考如何计入，以及位次口径']
             ]
         });
-        const fallbackRanks = buildStudentRankFallbacks(rows, subjects, includeCounty);
+        const fallbackRanks = buildStudentRankFallbacks(displayRows, subjects, includeCounty);
         const headers = ['学校', '班级', '姓名', '考号', '考场'];
         subjects.forEach((subject) => {
-            headers.push(`${subject}分数`, `${subject}校排`, `${subject}镇排`);
-            if (includeCounty) headers.push(`${subject}县排`);
+            const label = getPackageDisplaySubjectLabel(subject);
+            headers.push(`${label}分数`, `${label}校排`, `${label}镇排`);
+            if (includeCounty) headers.push(`${label}县排`);
         });
-        headers.push(`${window.CONFIG?.label || '总分'}`, '总分班排', '总分校排', '总分镇排');
-        if (includeCounty) headers.push('总分县排');
+        headers.push(totalLabel, `${totalLabel}班排`, `${totalLabel}校排`, `${totalLabel}镇排`);
+        if (includeCounty) headers.push(`${totalLabel}县排`);
         headers.push('_标记');
         const data = [headers];
-        rows.slice().sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0)).forEach((student) => {
+        displayRows.slice().sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0)).forEach((student) => {
             const row = [
                 student.school || '',
                 student.class || '',
@@ -1737,7 +1760,7 @@
     function buildTeacherTownWorkbook() {
         const wb = window.XLSX.utils.book_new();
         const data = window.TOWNSHIP_RANKING_DATA || {};
-        const subjects = getSubjectList(getAllRows());
+        const subjects = getGrade9ZhongkaoDisplayData(getAllRows()).subjects;
         // 教师相关文件的封面额外写明「未做生源校正」——这份文件常被直接转发，
         // 收到的人未必了解口径，容易把名次当成教学水平的唯一证据。
         addCoverSheet(wb, buildCoverRows({
@@ -1750,7 +1773,7 @@
         }));
         subjects.forEach((subject) => {
             const rows = data[subject] || [];
-            addWorksheet(wb, `${subject} 教师乡镇排名`, [
+            addWorksheet(wb, `${getPackageDisplaySubjectLabel(subject)} 教师乡镇排名`, [
                 ['教师/学校', '类型', '平均分', '乡镇均分排名', '优秀率(%)', '乡镇优率排名', '及格率(%)', '乡镇及格排名', '样本人数', '_对象标记'],
                 ...rows.map((item) => [
                     item.name || '',
@@ -1772,7 +1795,7 @@
     function buildTeacherCountyWorkbook() {
         const wb = window.XLSX.utils.book_new();
         const rankingData = window.COUNTY_TEACHER_RANKING_DATA || {};
-        const subjects = getSubjectList(getAllRows());
+        const subjects = getGrade9ZhongkaoDisplayData(getAllRows()).subjects;
         addCoverSheet(wb, buildCoverRows({
             title: `${getExamPackageStem()}教师县域排名`,
             scopeText: '县域范围内同学科教师',
@@ -1787,7 +1810,7 @@
                 if (a.type !== b.type) return a.type === 'teacher' ? -1 : 1;
                 return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { numeric: true });
             });
-            addWorksheet(wb, `${subject} 同学科县域排名`, [
+            addWorksheet(wb, `${getPackageDisplaySubjectLabel(subject)} 同学科县域排名`, [
                 ['县均分排', '教师/学校', '类型', '平均分', '县优率排', '优秀率(%)', '县及格排', '及格率(%)', '样本人数', '_对象标记'],
                 ...rows.map((item) => [
                     item.rankAvg || '',
