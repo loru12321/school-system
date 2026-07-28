@@ -20,7 +20,7 @@ const protectedPolicies = [
     'teacherCompareSchoolIsolationPolicy',
     'teacherTownshipValueMismatches',
     'teacherTownshipAverageMismatches',
-    'standard0527'
+    'currentExam'
 ];
 
 protectedPolicies.forEach((token) => {
