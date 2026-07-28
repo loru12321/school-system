@@ -421,6 +421,14 @@ const DataManager = {
 
     switchTab: function (tab) {
         if (tab === 'history') tab = 'student';
+        const indicatorWorkspaceAllowed = typeof window.isIndicatorPromptAllowed === 'function'
+            && window.isIndicatorPromptAllowed();
+        if ((tab === 'params' || tab === 'targets') && !indicatorWorkspaceAllowed) {
+            if (window.UI && typeof window.UI.toast === 'function') {
+                window.UI.toast('指标参数和目标人数仅在 9 年级显示与维护', 'info');
+            }
+            tab = 'student';
+        }
         this.currentTab = tab;
         this.pagination.page = 1;
         this.decorateLayout();
@@ -428,6 +436,13 @@ const DataManager = {
         if (searchInput) searchInput.value = '';
 
         document.querySelectorAll('.login-tab').forEach(el => el.classList.remove('active'));
+        ['tab-data-params', 'tab-data-targets'].forEach((id) => {
+            const indicatorTab = document.getElementById(id);
+            if (!indicatorTab) return;
+            indicatorTab.hidden = !indicatorWorkspaceAllowed;
+            indicatorTab.style.display = indicatorWorkspaceAllowed ? '' : 'none';
+            indicatorTab.setAttribute('aria-hidden', indicatorWorkspaceAllowed ? 'false' : 'true');
+        });
 
         let tabId = 'tab-data-stu';
         if (tab === 'exams') tabId = 'tab-data-exams';

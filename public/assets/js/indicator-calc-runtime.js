@@ -37,6 +37,11 @@
 
     const IndicatorCalcPerfCache = { signature: '', rows: [] };
 
+    function clearCache() {
+        IndicatorCalcPerfCache.signature = '';
+        IndicatorCalcPerfCache.rows = [];
+    }
+
     function cloneIndicatorCalcRows(rows) {
         return Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
     }
@@ -70,6 +75,8 @@
 
     function calcIndicators(isSilent = false) {
         if (!root.isIndicatorPromptAllowed()) {
+            clearCache();
+            if (typeof root.clearIndicatorRuntimeState === 'function') root.clearIndicatorRuntimeState();
             root.clearIndicatorTargetMatchPanel();
             if (!isSilent && root.UI) root.UI.toast('仅 9 年级可使用指标生功能', 'warning');
             return [];
@@ -312,5 +319,5 @@
     // 回挂到 window：CORE 槽预置 window.calcIndicators，供 app.js 裸调用者/ calcSummary /
     // support-metrics 猴补丁 / exam-analysis-package 经 window 解析，以及指标表 onclick。
     root.calcIndicators = calcIndicators;
-    root.IndicatorCalcRuntime = { calcIndicators };
+    root.IndicatorCalcRuntime = { calcIndicators, clearCache };
 })(typeof window !== 'undefined' ? window : globalThis);

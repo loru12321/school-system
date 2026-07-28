@@ -643,7 +643,7 @@
         subjects.forEach((subject) => addWorksheet(wb, `${subject} 学科明细`, schoolRankRows(schools, subject, scope)));
         if (scope !== 'county') {
             addWorksheetIfUseful(wb, '高分段赋分详情', buildHighScoreRows(schools));
-            addWorksheetIfUseful(wb, '指标生达标核算', buildIndicatorRows());
+            if (isGrade9Exam()) addWorksheetIfUseful(wb, '指标生达标核算', buildIndicatorRows());
             if (includeGrade9Support && isGrade9Exam()) addWorksheetIfUseful(wb, '高中上线率赋分详情', buildHighSchoolAdmissionRows(schools));
             addWorksheetIfUseful(wb, '后三分之一学生核算', buildBottomRows(schools));
         }
@@ -967,6 +967,7 @@
     }
 
     function getIndicatorScoreMap() {
+        if (!isGrade9Exam()) return new Map();
         let indicatorRows = [];
         if (Array.isArray(window.INDICATOR_LAST_RESULT) && window.INDICATOR_LAST_RESULT.length) {
             indicatorRows = window.INDICATOR_LAST_RESULT;
@@ -1207,6 +1208,7 @@
     }
 
     function getIndicatorCalcRows() {
+        if (!isGrade9Exam()) return [];
         let rows = Array.isArray(window.__LAST_INDICATOR_CALC_DATA__) ? window.__LAST_INDICATOR_CALC_DATA__ : [];
         if (!rows.length && Array.isArray(window.INDICATOR_LAST_RESULT)) rows = window.INDICATOR_LAST_RESULT;
         if (!rows.length && typeof window.calcIndicators === 'function') {

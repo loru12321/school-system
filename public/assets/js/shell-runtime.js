@@ -449,6 +449,11 @@
             if (typeof canAccessModule === 'function' && !canAccessModule(item.id)) {
                 return false;
             }
+            if (item.id === 'indicator'
+                && typeof window.isIndicatorModuleVisible === 'function'
+                && !window.isIndicatorModuleVisible()) {
+                return false;
+            }
             if (item.id === 'report-generator' && typeof CONFIG !== 'undefined' && !CONFIG.showQuery) {
                 return false;
             }
@@ -459,6 +464,9 @@
     function isVisibleModuleActive(activeSectionId, visibleItems) {
         if (!activeSectionId) return false;
         if (typeof canAccessModule === 'function' && !canAccessModule(activeSectionId)) return false;
+        if (activeSectionId === 'indicator'
+            && typeof window.isIndicatorModuleVisible === 'function'
+            && !window.isIndicatorModuleVisible()) return false;
         return visibleItems.some((item) => item.id === activeSectionId);
     }
 

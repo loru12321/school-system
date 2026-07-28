@@ -1088,6 +1088,41 @@ async function smokeSwitchModule(page, id) {
         };
     }, id);
 
+    // 指标生是九年级专属模块。低年级的正确行为不是“等待页面出现”，而是
+    // 入口保持隐藏且 switchTab 无法激活它；把这一规则作为单独的烟测断言，
+    // 避免旧的“所有模块必须可切换”假设制造假性能超时。
+    if (id === 'indicator') {
+        const gradeGate = await page.evaluate(() => {
+            const allowed = typeof window.isIndicatorPromptAllowed !== 'function'
+                || window.isIndicatorPromptAllowed();
+            if (allowed) return { allowed: true };
+            const section = document.getElementById('indicator');
+            const style = section ? getComputedStyle(section) : null;
+            if (typeof window.switchTab === 'function') window.switchTab('indicator');
+            const afterStyle = section ? getComputedStyle(section) : null;
+            const hidden = !!section && (section.hidden === true
+                || afterStyle?.display === 'none'
+                || section.getAttribute('aria-hidden') === 'true');
+            return {
+                allowed: false,
+                hidden,
+                active: !!section?.classList.contains('active'),
+                initialDisplay: style?.display || '',
+                display: afterStyle?.display || ''
+            };
+        });
+        if (!gradeGate.allowed) {
+            return withActivationTiming({
+                ok: gradeGate.hidden && !gradeGate.active,
+                id,
+                visible: !gradeGate.hidden,
+                active: gradeGate.active,
+                skippedByGradeRule: true,
+                gradeGate
+            });
+        }
+    }
+
     try {
         if (id === 'bottom3') {
             await page.evaluate(() => {
@@ -1708,11 +1743,17 @@ async function runModuleDeepCheck(page, id) {
                             const fallbackTable = document.querySelector('#horizontal-table table');
                             const fallbackSchoolColumns = Math.max(0, fallbackTable?.querySelectorAll('thead th')?.length - 1 || 0);
                             const allSchoolCount = Object.keys(window.SCHOOLS || {}).length;
+                            const expectedTownshipSchoolCount = typeof window.getTownshipManagedSchoolNames === 'function'
+                                ? window.getTownshipManagedSchoolNames(Object.keys(window.SCHOOLS || {})).length
+                                : allSchoolCount;
                             checks.horizontalFallbackScopeReady = !!box
                                 && !box.classList.contains('hidden')
                                 && !!fallbackTable
                                 && fallbackSchoolColumns > 0
-                                && fallbackSchoolColumns < allSchoolCount;
+                                // 某些低年级考试只上传了乡镇学校。此时乡镇范围与
+                                // 当前数据全集相同，不能再用 “< allSchoolCount” 误判；
+                                // 对比实际应使用的乡镇范围，才能覆盖两种合法数据形态。
+                                && fallbackSchoolColumns === expectedTownshipSchoolCount;
                         } finally {
                             window.listAvailableSchoolsForCompare = originalScopeHelper;
                         }
@@ -1906,6 +1947,43 @@ async function runModuleDeepCheck(page, id) {
     }
     if (id === 'indicator') {
         return page.evaluate(async () => {
+            const indicatorVisible = typeof window.isIndicatorPromptAllowed !== 'function'
+                || window.isIndicatorPromptAllowed();
+            if (!indicatorVisible) {
+                const section = document.getElementById('indicator');
+                const sectionStyle = section ? getComputedStyle(section) : null;
+                const calcResult = typeof window.calcIndicators === 'function'
+                    ? window.calcIndicators(true)
+                    : [];
+                const targetTab = document.getElementById('tab-data-targets');
+                const paramsTab = document.getElementById('tab-data-params');
+                const isHidden = (element) => !!element && (element.hidden === true
+                    || getComputedStyle(element).display === 'none'
+                    || element.getAttribute('aria-hidden') === 'true');
+                const resultCleared = (!Array.isArray(window.INDICATOR_LAST_RESULT)
+                        || window.INDICATOR_LAST_RESULT.length === 0)
+                    && (!Array.isArray(window.__LAST_INDICATOR_CALC_DATA__)
+                        || window.__LAST_INDICATOR_CALC_DATA__.length === 0);
+                const schoolScoresCleared = Object.values(window.SCHOOLS || {}).every((school) =>
+                    Number(school?.scoreInd || 0) === 0 && Number(school?.rankInd || 0) === 0);
+                const checks = {
+                    sectionHidden: !!section && (section.hidden === true
+                        || sectionStyle?.display === 'none'
+                        || section.getAttribute('aria-hidden') === 'true'),
+                    targetTabHidden: isHidden(targetTab),
+                    paramsTabHidden: isHidden(paramsTab),
+                    calcBlocked: Array.isArray(calcResult) && calcResult.length === 0,
+                    resultCleared,
+                    schoolScoresCleared
+                };
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    skippedByGradeRule: true,
+                    calcAllowed: false,
+                    calculationSkippedByRule: true,
+                    checks
+                };
+            }
             const toNumber = (value, fallback = 0) => {
                 const number = Number(value);
                 return Number.isFinite(number) ? number : fallback;
@@ -4725,6 +4803,27 @@ async function smokeDataManagerTab(page, id) {
         try {
             if (!window.DataManager || typeof window.DataManager.switchTab !== 'function') {
                 return { ok: false, id: tabId, error: 'DataManager.switchTab is not available' };
+            }
+            const indicatorWorkspaceAllowed = typeof window.isIndicatorPromptAllowed !== 'function'
+                || window.isIndicatorPromptAllowed();
+            if ((tabId === 'targets' || tabId === 'params') && !indicatorWorkspaceAllowed) {
+                const tabEl = document.querySelector(`[data-dm-click="switchTab"][data-dm-arg="${tabId}"]`);
+                const area = document.getElementById(tabId === 'targets' ? 'dm-targets-area' : 'dm-params-area');
+                await Promise.resolve(window.DataManager.switchTab(tabId));
+                const tabHidden = !!tabEl && (tabEl.hidden === true
+                    || getComputedStyle(tabEl).display === 'none'
+                    || tabEl.getAttribute('aria-hidden') === 'true');
+                const areaHidden = !!area && (area.hidden === true
+                    || getComputedStyle(area).display === 'none'
+                    || area.getAttribute('aria-hidden') === 'true');
+                const blocked = window.DataManager.currentTab !== tabId;
+                const checks = { tabHidden, areaHidden, blocked };
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    id: tabId,
+                    skippedByGradeRule: true,
+                    checks
+                };
             }
             // 优先通过真实点击 tab 元素来切换，走 data-dm-click 委托链路，这样
             // 「声明式绑定是否真的派发到 DataManager」会被每个 tab 覆盖到；

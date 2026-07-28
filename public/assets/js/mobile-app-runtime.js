@@ -246,6 +246,11 @@
         if (typeof window.canAccessModule === 'function' && !window.canAccessModule(id)) {
             return false;
         }
+        if (id === 'indicator'
+            && typeof window.isIndicatorModuleVisible === 'function'
+            && !window.isIndicatorModuleVisible()) {
+            return false;
+        }
         if (id === 'report-generator' && typeof window.CONFIG !== 'undefined' && window.CONFIG && !window.CONFIG.showQuery) {
             return false;
         }

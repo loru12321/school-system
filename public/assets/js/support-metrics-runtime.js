@@ -103,8 +103,30 @@
         return [];
     }
 
+    function isIndicatorEnabled() {
+        return typeof root.isIndicatorPromptAllowed !== 'function' || root.isIndicatorPromptAllowed();
+    }
+
+    function resetIndicatorSummary() {
+        setText('indicator-school-count', '--');
+        setText('indicator-top-score', '--');
+        setText('indicator-top-school', '仅 9 年级启用');
+        setText('indicator-missing-target-count', '--');
+        lastIndicatorSummary = {
+            ok: false,
+            count: 0,
+            finite: true,
+            topScore: 0,
+            topSchool: '',
+            issueCount: 0
+        };
+        root.INDICATOR_LAST_SUMMARY = lastIndicatorSummary;
+        return lastIndicatorSummary;
+    }
+
     function refreshIndicatorSummary(result) {
         installWrappers();
+        if (!isIndicatorEnabled()) return resetIndicatorSummary();
         const rows = normalizeIndicatorRows(result)
             .map((row) => ({
                 name: String(row?.name || '').trim(),
@@ -180,7 +202,11 @@
         if (typeof originalCalcIndicators !== 'function' || originalCalcIndicators.__supportMetricsWrapped) return false;
         const wrappedCalcIndicators = function (...args) {
             const result = originalCalcIndicators.apply(this, args);
-            if (Array.isArray(result)) root.INDICATOR_LAST_RESULT = result;
+            if (Array.isArray(result) && isIndicatorEnabled()) root.INDICATOR_LAST_RESULT = result;
+            if (!isIndicatorEnabled()) {
+                root.INDICATOR_LAST_RESULT = [];
+                root.__LAST_INDICATOR_CALC_DATA__ = [];
+            }
             schedule(() => refreshIndicatorSummary(result), 0);
             return result;
         };

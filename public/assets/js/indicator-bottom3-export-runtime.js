@@ -34,6 +34,10 @@
         }
 
         if (type === 'indicator') {
+            if (typeof root.isIndicatorPromptAllowed === 'function' && !root.isIndicatorPromptAllowed()) {
+                root.alert('指标生核算结果仅可在 9 年级导出');
+                return;
+            }
             const table = document.getElementById('tb-indicator');
             if (table.rows.length < 3) return root.alert("请先点击【开始计算】");
 

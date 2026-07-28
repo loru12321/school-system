@@ -3878,6 +3878,14 @@ function switchTab(id) {
         console.warn(`${id} has been removed; redirecting to ${removedModuleRedirects[id]}`);
         id = removedModuleRedirects[id];
     }
+    if (id === 'indicator' && !isIndicatorModuleVisible()) {
+        clearIndicatorRuntimeState();
+        if (window.UI && typeof UI.toast === 'function') {
+            UI.toast('指标生核算仅在 9 年级显示和使用', 'info');
+        }
+        if (typeof renderNavigation === 'function') renderNavigation();
+        return;
+    }
     if (window.DEBUG_MODULE_SWITCH) console.debug(`🔄 切换模块: ${id}`);
     if (!canAccessModule(id)) {
         alert('⛔ 权限不足：该模块对当前角色不可见');
@@ -6225,6 +6233,48 @@ function isIndicatorPromptAllowed() {
     return ctx.grade === '9';
 }
 
+// 指标生是九年级专属口径。届别/考试切换后，浏览器内存里可能还留有上一次
+// 九年级的核算结果；这些结果绝不能被低年级汇总、概览或导出再次读取。
+// 这里只清运行时派生值，不修改云端保存的 TARGETS / INDICATOR_PARAMS 历史资料。
+function clearIndicatorRuntimeState() {
+    window.INDICATOR_LAST_RESULT = [];
+    window.__LAST_INDICATOR_CALC_DATA__ = [];
+    window.INDICATOR_LAST_SUMMARY = {
+        ok: false,
+        count: 0,
+        finite: true,
+        topScore: 0,
+        topSchool: '',
+        issueCount: 0
+    };
+    if (window.IndicatorCalcRuntime && typeof window.IndicatorCalcRuntime.clearCache === 'function') {
+        window.IndicatorCalcRuntime.clearCache();
+    }
+    Object.values(SCHOOLS || window.SCHOOLS || {}).forEach((school) => {
+        if (!school || typeof school !== 'object') return;
+        school.scoreInd = 0;
+        school.rankInd = 0;
+    });
+    clearIndicatorTargetMatchPanel();
+    const indicatorBody = document.querySelector('#tb-indicator tbody');
+    if (indicatorBody) indicatorBody.innerHTML = '';
+    const metricValues = {
+        'indicator-school-count': '--',
+        'indicator-top-score': '--',
+        'indicator-top-school': '仅 9 年级启用',
+        'indicator-missing-target-count': '--'
+    };
+    Object.entries(metricValues).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    });
+    return true;
+}
+
+function isIndicatorModuleVisible() {
+    return isIndicatorPromptAllowed();
+}
+
 function isIndicatorAllowed() {
     return isIndicatorPromptAllowed();
 }
@@ -6254,6 +6304,19 @@ function isIndicatorCalcAllowed() {
 function updateIndicatorUIState() {
     const promptAllowed = isIndicatorPromptAllowed();
     const calcAllowed = isIndicatorCalcAllowed();
+    const indicatorSection = document.getElementById('indicator');
+    if (indicatorSection) {
+        indicatorSection.hidden = !promptAllowed;
+        indicatorSection.setAttribute('aria-hidden', promptAllowed ? 'false' : 'true');
+        if (!promptAllowed) {
+            indicatorSection.dataset.hiddenByIndicatorGrade = 'true';
+            indicatorSection.style.display = 'none';
+        } else if (indicatorSection.dataset.hiddenByIndicatorGrade === 'true') {
+            delete indicatorSection.dataset.hiddenByIndicatorGrade;
+            indicatorSection.style.display = '';
+        }
+    }
+    if (!promptAllowed) clearIndicatorRuntimeState();
     const btn = document.getElementById('btn-indicator-calc');
     if (btn) {
         btn.disabled = !calcAllowed;
@@ -6264,6 +6327,15 @@ function updateIndicatorUIState() {
     }
     const paramsArea = document.getElementById('dm-params-area');
     if (paramsArea) paramsArea.style.display = promptAllowed ? 'block' : 'none';
+    const targetsArea = document.getElementById('dm-targets-area');
+    if (targetsArea && !promptAllowed) targetsArea.style.display = 'none';
+    ['tab-data-params', 'tab-data-targets'].forEach((id) => {
+        const tab = document.getElementById(id);
+        if (!tab) return;
+        tab.hidden = !promptAllowed;
+        tab.style.display = promptAllowed ? '' : 'none';
+        tab.setAttribute('aria-hidden', promptAllowed ? 'false' : 'true');
+    });
     const i1 = document.getElementById('dm_ind1_input');
     const i2 = document.getElementById('dm_ind2_input');
     if (i1) i1.disabled = !promptAllowed;
@@ -6502,8 +6574,10 @@ function renderIndicatorTargetMatchPanel(calcData, line1, line2) {
 const SummaryIndicatorHydrationState = { key: '', pending: false };
 
 async function calcSummary(isSilent = false) {
-    const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
+    const isGrade9 = isIndicatorPromptAllowed();
     let indicatorRowsForSummary = [];
+
+    if (!isGrade9) clearIndicatorRuntimeState();
 
     if (isGrade9 && !hasIndicatorCalcInputs() && typeof ensureIndicatorWorkspaceFromCloud === 'function') {
         const hydrationKey = getIndicatorWorkspaceKey();
@@ -6540,7 +6614,7 @@ async function calcSummary(isSilent = false) {
             SummaryRefreshState.suppress = previousSuppress;
         }
     }
-    if (!indicatorRowsForSummary.length && Array.isArray(window.INDICATOR_LAST_RESULT)) {
+    if (isGrade9 && !indicatorRowsForSummary.length && Array.isArray(window.INDICATOR_LAST_RESULT)) {
         indicatorRowsForSummary = window.INDICATOR_LAST_RESULT;
     }
     const indicatorScoreMap = new Map();

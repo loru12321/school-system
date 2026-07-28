@@ -42,6 +42,19 @@
         if (typeof root.alert === 'function') root.alert(String(message || ''));
     }
 
+    function isIndicatorWorkspaceAllowed() {
+        // 独立单元测试/离线工具没有 app.js 的年级解析器时保留既有行为；线上
+        // 工作区总会提供该函数，因此低年级会按年级门禁隐藏目标人数维护。
+        return typeof root.isIndicatorPromptAllowed !== 'function' || root.isIndicatorPromptAllowed();
+    }
+
+    function hideTargetWorkspace() {
+        const area = root.document && typeof root.document.getElementById === 'function'
+            ? root.document.getElementById('dm-targets-area')
+            : null;
+        if (area && area.style) area.style.display = 'none';
+    }
+
     function escapeHtml(value) {
         const runtimeEscape = root.SchoolRuntime && typeof root.SchoolRuntime.escapeHtml === 'function'
             ? root.SchoolRuntime.escapeHtml
@@ -74,6 +87,10 @@
 
     function renderTargets(manager) {
         if (!manager) return;
+        if (!isIndicatorWorkspaceAllowed()) {
+            hideTargetWorkspace();
+            return;
+        }
         const doc = root.document;
         const tbody = doc && typeof doc.getElementById === 'function' ? doc.getElementById('dm-targets-tbody') : null;
         if (!tbody) return;
@@ -110,6 +127,10 @@
     }
 
     function editTarget(manager, schoolName) {
+        if (!isIndicatorWorkspaceAllowed()) {
+            safeToast('指标目标人数仅可在 9 年级维护', 'info');
+            return;
+        }
         const swal = root.Swal;
         if (!manager || !swal || typeof swal.fire !== 'function') return;
 
@@ -142,6 +163,10 @@
 
     async function deleteTarget(manager, schoolName) {
         if (!manager) return;
+        if (!isIndicatorWorkspaceAllowed()) {
+            safeToast('指标目标人数仅可在 9 年级维护', 'info');
+            return;
+        }
         if (typeof root.confirm === 'function' && !root.confirm('确定删除？')) return;
 
         const targets = readTargetsStateSafe();
@@ -159,6 +184,10 @@
 
     function handleTargetUpload(manager, input) {
         if (!manager || !input) return;
+        if (!isIndicatorWorkspaceAllowed()) {
+            safeToast('指标目标人数仅可在 9 年级维护', 'info');
+            return;
+        }
         if (typeof root.isArchiveLocked === 'function' && root.isArchiveLocked()) {
             safeAlert('⛔ 当前考试已封存，禁止导入目标人数');
             return;
