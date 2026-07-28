@@ -1,4 +1,6 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { chromium } = require('playwright');
 
 const url = process.env.SMOKE_URL || 'https://schoolsystem.com.cn/?verify=calc-snapshot';
@@ -1788,9 +1790,26 @@ async function main() {
     assert.strictEqual(snapshot.seatAdjustmentDeskCount, snapshot.seatAdjustmentCount, 'seat adjustment rendered seat count mismatch');
     assert.ok(snapshot.seatAdjustmentFinite, 'seat adjustment calculation produced non-finite values');
     assert.ok(snapshot.cohortExamCount >= 1, `cohort exam count too low: ${snapshot.cohortExamCount}`);
+    // 下面两个期数门槛是从 cohort-growth-runtime.js 读出来的，这里把它锁住：
+    // 源码改了阈值而测试不知道，就会重新变成假红（原来那次就是这么来的）。
+    const cohortGrowthSource = fs.readFileSync(
+        path.join(__dirname, '..', 'public/assets/js/cohort-growth-runtime.js'), 'utf8');
+    assert.ok(/finiteP\.length\s*>=\s*2/.test(cohortGrowthSource),
+        'cohort growth still expected to need 2 exams; update the snapshot gate if this changed');
+    assert.ok(/finiteZ\.length\s*>=\s*4/.test(cohortGrowthSource),
+        'cohort volatility still expected to need 4 exams; update the snapshot gate if this changed');
+
+    // growth 和 volatility 的成行门槛不同，不能共用一个期数条件：
+    // cohort-growth-runtime.js 里 growth 需要 finiteP.length >= 2（两期即可算首末差），
+    // volatility 需要 finiteZ.length >= 4（少于四期算不出有意义的 σ）。
+    // 原先两条都挂在 cohortExamCount >= 2 上，在恰好 2–3 期时 volatility 必然为空而假红
+    // （本地常是 1 期所以整块跳过，CI 拉到 2–3 期就炸，表现为"偶发"）。
     if (snapshot.cohortExamCount >= 2) {
         assert.ok(snapshot.cohortGrowthRows > 0, 'cohort growth rows missing');
-        assert.ok(snapshot.cohortVolatilityRows > 0, 'cohort volatility rows missing');
+    }
+    if (snapshot.cohortExamCount >= 4) {
+        assert.ok(snapshot.cohortVolatilityRows > 0,
+            `cohort volatility rows missing with ${snapshot.cohortExamCount} exams`);
     }
     assert.ok(snapshot.cohortGrowthFinite, 'cohort growth calculation produced non-finite values');
 
