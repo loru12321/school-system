@@ -331,11 +331,20 @@
             `;
         };
 
+        const teacherAnalysisSubjects = typeof window.getTeacherAnalysisDisplaySubjects === 'function'
+            ? window.getTeacherAnalysisDisplaySubjects()
+            : (window.SUBJECTS || []);
         let htmlAll = '';
-        (window.SUBJECTS || []).forEach((subject) => {
+        teacherAnalysisSubjects.forEach((subject) => {
             if (visibleSubjectSet && visibleSubjectSet.size > 0 && !visibleSubjectSet.has(normalizeSubjectFn(subject))) return;
             const rankingData = window.TOWNSHIP_RANKING_DATA?.[subject];
             if (!rankingData?.length) return;
+            const subjectLabel = typeof window.getConfiguredDisplaySubjectLabel === 'function'
+                ? window.getConfiguredDisplaySubjectLabel(subject)
+                : subject;
+            const subjectNotice = typeof window.getConfiguredDisplaySubjectNotice === 'function'
+                ? window.getConfiguredDisplaySubjectNotice(subject)
+                : '';
             const townshipAvg = townshipAverages[subject] || buildFallbackTownshipAverage(rankingData);
             let tbodyHtml = '';
             rankingData.forEach((item) => {
@@ -369,13 +378,13 @@
             htmlAll += `
                 <div id="${anchorId}" class="anchor-target analysis-anchor-panel analysis-generated-panel">
                     <div class="sub-header analysis-section-head analysis-generated-header">
-                        <span>${teacherEscapeHtml(subject)} 教师乡镇排名</span>
+                        <span title="${teacherEscapeHtml(subjectNotice)}">${teacherEscapeHtml(subjectLabel)} 教师乡镇排名</span>
                         <span class="analysis-generated-meta">
                             <span class="analysis-table-tag">共 ${teacherEscapeHtml(rankingData.length)} 条</span>
                             <span class="analysis-table-tag">含外校整体数据</span>
                         </span>
                     </div>
-                    <div class="analysis-generated-note">教师与学校数据同表展示，便于对照镇均水平、乡镇排名和学科整体波动。</div>
+                    <div class="analysis-generated-note">${teacherEscapeHtml(subjectNotice || '教师与学校数据同表展示，便于对照镇均水平、乡镇排名和学科整体波动。')}</div>
                     ${renderTeacherRankQuickView(subject, rankingData)}
                     <div class="table-wrap analysis-table-shell">
                         <table class="comparison-table analysis-generated-table">
@@ -402,7 +411,7 @@
             if (sideNav) {
                 const navLink = document.createElement('a');
                 navLink.className = 'side-nav-sub-link';
-                navLink.innerText = subject;
+                navLink.innerText = subjectLabel;
                 navLink.onclick = () => {
                     if (typeof window.scrollToSubAnchor === 'function') window.scrollToSubAnchor(anchorId, navLink);
                 };

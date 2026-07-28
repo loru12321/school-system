@@ -46,9 +46,72 @@
         return doc.querySelector('#dm-student-table tbody');
     }
 
+    function getDisplayOnlySubjects() {
+        const configured = typeof root.getConfiguredExtraDisplaySubjects === 'function'
+            ? root.getConfiguredExtraDisplaySubjects(root.CONFIG || {})
+            : [];
+        return Array.from(new Set((Array.isArray(configured) ? configured : [])
+            .map((subject) => String(subject || '').trim())
+            .filter(Boolean)));
+    }
+
+    function getDisplaySubjectLabel(subject) {
+        return typeof root.getConfiguredDisplaySubjectLabel === 'function'
+            ? root.getConfiguredDisplaySubjectLabel(subject)
+            : String(subject || '').trim();
+    }
+
+    function getDisplaySubjectNotice(subject) {
+        return typeof root.getConfiguredDisplaySubjectNotice === 'function'
+            ? root.getConfiguredDisplaySubjectNotice(subject)
+            : '';
+    }
+
+    function syncDisplayOnlySubjectHeaders(subjects) {
+        const doc = root.document;
+        const headerRow = doc && typeof doc.querySelector === 'function'
+            ? doc.querySelector('#dm-student-table thead tr')
+            : null;
+        if (!headerRow || typeof headerRow.querySelectorAll !== 'function') return;
+        headerRow.querySelectorAll('[data-dm-display-subject]').forEach((cell) => cell.remove());
+        const operationHeader = headerRow.lastElementChild;
+        if (!operationHeader || typeof doc.createElement !== 'function') return;
+        subjects.forEach((subject) => {
+            const cell = doc.createElement('th');
+            cell.dataset.dmDisplaySubject = subject;
+            cell.textContent = getDisplaySubjectLabel(subject);
+            cell.title = getDisplaySubjectNotice(subject);
+            headerRow.insertBefore(cell, operationHeader);
+        });
+    }
+
+    function escapeStudentCell(manager, value) {
+        if (manager && typeof manager.escapeDataManagerHtml === 'function') {
+            return manager.escapeDataManagerHtml(value);
+        }
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function renderDisplayOnlyScoreCells(manager, student, subjects) {
+        return subjects.map((subject) => {
+            const value = student?.scores?.[subject];
+            const score = Number.isFinite(Number(value)) ? value : '-';
+            const label = getDisplaySubjectLabel(subject);
+            const notice = getDisplaySubjectNotice(subject);
+            return `<td title="${escapeStudentCell(manager, notice)}" data-label="${escapeStudentCell(manager, label)}">${escapeStudentCell(manager, score)}</td>`;
+        }).join('');
+    }
+
     function renderStudents(manager, keyword) {
         const rawData = getRawDataRef();
         if (!manager || !Array.isArray(rawData)) return;
+        const displayOnlySubjects = getDisplayOnlySubjects();
+        syncDisplayOnlySubjectHeaders(displayOnlySubjects);
 
         const normalizedKeyword = String(keyword || '').trim().toLowerCase();
         const list = [];
@@ -94,7 +157,7 @@
         if (!tbody) return;
 
         if (pageData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">无数据</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="${7 + displayOnlySubjects.length}" style="text-align:center; padding:20px; color:#999;">无数据</td></tr>`;
         } else {
             const rows = pageData.map((item) => {
                 const student = item && item.student ? item.student : {};
@@ -112,8 +175,9 @@
                     <td style="font-weight:bold;">${name}</td>
                     <td>${examId}</td>
                     <td>${total}</td>
+                    ${renderDisplayOnlyScoreCells(manager, student, displayOnlySubjects)}
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button> 
+                        <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button>
                         <button class="btn btn-sm btn-danger" onclick="DataManager.deleteStudent(${originalIndex})" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
                     </td>
                 </tr>`;

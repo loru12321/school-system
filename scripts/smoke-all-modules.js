@@ -3089,6 +3089,11 @@ async function runModuleDeepCheck(page, id) {
                 const container = document.getElementById('teacher-township-ranking-container');
                 const text = String(container?.textContent || '').replace(/\s+/g, ' ').trim();
                 const teacherMapCount = Object.keys(window.TEACHER_MAP || {}).length;
+                const politicsExpected = (typeof window.getConfiguredExtraDisplaySubjects === 'function'
+                    ? window.getConfiguredExtraDisplaySubjects(window.CONFIG || {})
+                    : []).includes('政治')
+                    && (window.RAW_DATA || []).some((row) => Number.isFinite(Number(row?.scores?.政治)));
+                const politicsRankingRows = window.TOWNSHIP_RANKING_DATA?.政治;
                 state = {
                     sectionReady: !!section,
                     sectionActive: !!section?.classList.contains('active'),
@@ -3099,10 +3104,15 @@ async function runModuleDeepCheck(page, id) {
                     hasRankingRows: !!container?.querySelector('tbody tr, .teacher-township-quick-card'),
                     hasExplicitEmptyState: /暂无教师乡镇排名数据|未导入任课表/.test(text),
                     teacherMapCount,
-                    expectsTeacherData
+                    expectsTeacherData,
+                    politicsExpected,
+                    politicsRankingReady: !politicsExpected || (Array.isArray(politicsRankingRows)
+                        && politicsRankingRows.some((row) => row?.type === 'teacher')
+                        && text.includes('政治（二模参考）'))
                 };
                 if (state.sectionActive
                     && state.contentReady
+                    && state.politicsRankingReady
                     && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))) break;
                 await wait(150);
             }
@@ -3114,6 +3124,7 @@ async function runModuleDeepCheck(page, id) {
                     && state.runtimeReady
                     && state.renderScheduled
                     && state.contentReady
+                    && state.politicsRankingReady
                     && (state.hasRankingRows || (!expectsTeacherData && state.hasExplicitEmptyState))
                     && (!expectsTeacherData || state.teacherMapCount > 0)),
                 checks: state || {
@@ -3126,7 +3137,9 @@ async function runModuleDeepCheck(page, id) {
                     hasRankingRows: false,
                     hasExplicitEmptyState: false,
                     teacherMapCount: 0,
-                    expectsTeacherData
+                    expectsTeacherData,
+                    politicsExpected: false,
+                    politicsRankingReady: false
                 }
             };
         }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
@@ -3877,11 +3890,17 @@ async function runModuleDeepCheck(page, id) {
                 const detailCountyRankAfterTownRank = detailHeaders.some((header, index) => (
                     header.includes('镇排') && String(detailHeaders[index + 1] || '').includes('县排')
                 ));
+                const politicsExpected = (typeof window.getConfiguredExtraDisplaySubjects === 'function'
+                    ? window.getConfiguredExtraDisplaySubjects(window.CONFIG || {})
+                    : []).includes('政治')
+                    && (window.RAW_DATA || []).some((row) => Number.isFinite(Number(row?.scores?.政治)));
                 return {
                     rows: detailRows,
                     headers: detailHeaders,
                     classOptionCount: detailClassOptionCount,
                     countyRankAfterTownRank: detailCountyRankAfterTownRank,
+                    politicsExpected,
+                    politicsHeaderReady: !politicsExpected || detailHeaders.some((header) => header.includes('政治（二模参考）')),
                     ready: detailClassOptionCount > 0 && detailRows > 0
                 };
             };
@@ -3932,6 +3951,7 @@ async function runModuleDeepCheck(page, id) {
                     classOptionsReady: detailState.classOptionCount > 0,
                     tableReady: !!table,
                     rowsRendered: detailState.rows > 0,
+                    politicsHeaderReady: detailState.politicsHeaderReady,
                     countyRankBoundaryCoveredByIndexTest: true,
                     targetStudentTownRankReady: !targetStudent || targetTownRank > 0,
                     targetStudentCountyRankReady: !targetStudent || (targetCountyRank > 0 && targetCountyRank >= targetTownRank),
@@ -4075,10 +4095,17 @@ async function runModuleDeepCheck(page, id) {
             const reportVisible = !!reportWrap && !reportWrap.classList.contains('hidden');
             const contentReady = !!capture && String(capture.innerHTML || '').trim().length > 0;
             reportState = readReportState();
-            const scoreSubjects = (window.SUBJECTS || []).filter((subject) => student.scores?.[subject] !== undefined);
+            const configuredDisplaySubjects = typeof window.getConfiguredDisplaySubjects === 'function'
+                ? window.getConfiguredDisplaySubjects(window.CONFIG || {})
+                : null;
+            const scoreSubjects = (Array.isArray(configuredDisplaySubjects) ? configuredDisplaySubjects : (window.SUBJECTS || []))
+                .filter((subject) => student.scores?.[subject] !== undefined);
             const renderedSubjectRanks = scoreSubjects.map((subject) => {
+                const subjectLabel = typeof window.getConfiguredDisplaySubjectLabel === 'function'
+                    ? window.getConfiguredDisplaySubjectLabel(subject)
+                    : subject;
                 const row = Array.from(capture?.querySelectorAll('#tb-query tbody tr') || []).find((candidate) => (
-                    String(candidate.querySelector('td[data-label="科目"]')?.textContent || '').trim() === subject
+                    String(candidate.querySelector('td[data-label="科目"]')?.textContent || '').trim() === subjectLabel
                 ));
                 return {
                     subject,

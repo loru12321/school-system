@@ -642,9 +642,12 @@ async function main() {
             };
         };
         const isTownshipSchoolName = buildTownshipSchoolMatcher();
+        const teacherTownshipSubjects = typeof window.getTeacherAnalysisDisplaySubjects === 'function'
+            ? window.getTeacherAnalysisDisplaySubjects()
+            : (window.SUBJECTS || []);
         const buildIndependentTeacherTownshipRows = () => {
             const rows = [];
-            (window.SUBJECTS || []).forEach((subject) => {
+            teacherTownshipSubjects.forEach((subject) => {
                 const rankingData = [];
                 Object.keys(window.TEACHER_STATS || {}).forEach((teacherName) => {
                     const data = window.TEACHER_STATS?.[teacherName]?.[subject];
@@ -687,7 +690,9 @@ async function main() {
             const container = document.getElementById('teacher-township-ranking-container');
             return Array.from(container?.querySelectorAll('.analysis-anchor-panel') || []).flatMap((panel) => {
                 const heading = String(panel.querySelector('.analysis-section-head > span')?.textContent || '').trim();
-                const subject = heading.replace(/\s*教师乡镇排名\s*$/, '');
+                const subject = heading
+                    .replace(/\s*教师乡镇排名\s*$/, '')
+                    .replace(/（二模参考）$/, '');
                 return Array.from(panel.querySelectorAll('tbody tr')).map((row) => {
                     const cells = Array.from(row.cells || []);
                     return {
@@ -751,7 +756,7 @@ async function main() {
             .map(compareTownshipRow)
             .filter(Boolean);
         snapshotStep('check:teacher-township-independent');
-        const townshipAverageChecks = (window.SUBJECTS || []).map((subject) => {
+        const townshipAverageChecks = teacherTownshipSubjects.map((subject) => {
             let count = 0;
             let total = 0;
             (window.RAW_DATA || []).forEach((row) => {

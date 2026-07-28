@@ -389,10 +389,9 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
     };
     const renderMetricComparison = window.ReportInsightRuntime.renderMetricComparison;
 
-    // 数据容错（云端简版对象可能缺少scores）
     const stuScores = (reportStu && typeof reportStu === 'object' && reportStu.scores && typeof reportStu.scores === 'object') ? reportStu.scores : {};
 
-    const reportSubjectsForRank = [...new Set(SUBJECTS)];
+    const reportSubjectsForRank=window.getConfiguredReadOnlyDisplaySubjects?.()||SUBJECTS;
     const reportRankIndex = window.RankingDataService?.buildStudentRankSnapshot(RAW_DATA, reportStu, reportSubjectsForRank) || null;
     const readCurrentRank = (subject, scope) => {
         const stored = safeGet(reportStu, `ranks.${subject}.${scope}`, '-');
@@ -419,7 +418,6 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
         ? readHistoricalRankValue(prevHistoryEntry, compareStu, 'total', 'county')
         : '-';
 
-    // 单校判断
     const townColStyle = hasTownshipRankData ? '' : 'display:none !important;';
     const countyColStyle = showCountyRank ? '' : 'display:none !important;';
 
@@ -439,9 +437,9 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
             ${renderResponsiveTableCell('县排对比', renderMetricComparison(curCountyRank, prevCountyRank, 'rank'), `${countyColStyle} font-weight:bold; color:#334155;`)}
         </tr>`;
 
-    const uniqueSubjects = [...new Set(SUBJECTS)];
-    uniqueSubjects.forEach(sub => {
+    reportSubjectsForRank.forEach(sub => {
         if (stuScores[sub] !== undefined) {
+            const subjectLabel=window.getConfiguredDisplaySubjectLabel?.(sub)||sub;
             const prevSubScore = compareStu && compareStu.scores ? readScoreValue(compareStu.scores[sub]) : '-';
             const subTrend = getTrendBadge(stuScores[sub], prevSubScore, 'score');
 
@@ -463,7 +461,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 : '-';
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
-                    ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}
+                    ${renderResponsiveTableCell('科目', tmEscapeHtml(subjectLabel), 'font-weight:600; color:#475569;')}
                     ${renderResponsiveTableCell('成绩对比', renderMetricComparison(stuScores[sub], prevSubScore, 'score'), 'font-weight:bold;color:#334155;')}
                     ${renderResponsiveTableCell('班排对比', renderMetricComparison(curClassR, prevClassR, 'rank'), 'color:#64748b;')}
                     ${renderResponsiveTableCell('校排对比', renderMetricComparison(curSR, prevSchoolR, 'rank'), 'color:#64748b;')}

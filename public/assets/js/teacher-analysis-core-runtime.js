@@ -62,6 +62,25 @@
         return areSchoolNamesEquivalentFn(leftName, rightName);
     }
 
+    // 九年级政治是中考页面的二模参考展示科目。把它只加入单科教师统计/排名，
+    // 不回写 SUBJECTS，因此不会进入五科总或任何正式中考汇总公式。
+    function getTeacherAnalysisDisplaySubjects() {
+        const baseSubjects = Array.isArray(window.SUBJECTS) ? window.SUBJECTS.filter(Boolean) : [];
+        const configuredExtras = typeof window.getConfiguredExtraDisplaySubjects === 'function'
+            ? window.getConfiguredExtraDisplaySubjects(window.CONFIG || {})
+            : [];
+        const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
+        const result = [...baseSubjects];
+        (Array.isArray(configuredExtras) ? configuredExtras : []).forEach((subject) => {
+            const normalized = normalizeSubjectFn(subject);
+            if (!normalized || result.some((item) => normalizeSubjectFn(item) === normalized)) return;
+            if (rows.some((row) => Number.isFinite(teacherToNumber(row?.scores?.[normalized], NaN)))) {
+                result.push(normalized);
+            }
+        });
+        return result;
+    }
+
     function teacherSchoolListContains(candidates, schoolName) {
         const targetSchool = teacherNormalizeSchoolName(schoolName);
         if (!targetSchool) return false;
@@ -153,7 +172,7 @@
     }
 
     function buildTeacherRuntimeSignature(rows, activeSchool = '') {
-        const subjectList = Array.isArray(window.SUBJECTS) ? window.SUBJECTS : [];
+        const subjectList = getTeacherAnalysisDisplaySubjects();
         const teacherMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
         const teacherSchoolMap = window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
         const baselineId = String(
@@ -1085,8 +1104,9 @@
         };
         perfProbe.mark('scope students');
 
-        const subjectList = (window.SUBJECTS && window.SUBJECTS.length)
-            ? window.SUBJECTS
+        const displaySubjects = getTeacherAnalysisDisplaySubjects();
+        const subjectList = displaySubjects.length
+            ? displaySubjects
             : [...new Set(mySchoolStudents.flatMap((student) => Object.keys(student.scores || {})).map(normalizeSubjectFn))];
         const subjectByNormalized = new Map(subjectList.map((subject) => [normalizeSubjectFn(subject), subject]));
         const studentsByClassSubject = new Map();
@@ -1547,7 +1567,7 @@
                 source: 'school-metrics'
             };
         };
-        (window.SUBJECTS || []).forEach((subject) => {
+        getTeacherAnalysisDisplaySubjects().forEach((subject) => {
             const townshipAverage = buildTownshipAverage(subject);
             if (townshipAverage) window.TEACHER_TOWNSHIP_AVERAGES[subject] = townshipAverage;
             const rankingData = [];
@@ -1611,6 +1631,7 @@
         teacherEscapeHtml,
         teacherGetSchoolRecord,
         teacherGetWeightConfig,
+        getTeacherAnalysisDisplaySubjects,
         getProgressBaselineExamList,
         resolveProgressBaselineExamEntry,
         pickDefaultProgressBaselineExamId,

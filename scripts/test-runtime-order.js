@@ -183,6 +183,7 @@ const comparisonRenderRuntime = fs.readFileSync(comparisonRenderRuntimePath, 'ut
 const cohortExamMetaRuntime = fs.readFileSync(cohortExamMetaRuntimePath, 'utf8');
 const cohortDbCoreRuntime = fs.readFileSync(cohortDbCoreRuntimePath, 'utf8');
 const dataManagerCoreRuntime = fs.readFileSync(dataManagerCoreRuntimePath, 'utf8');
+const dataManagerStudentRuntime = fs.readFileSync(dataManagerStudentRuntimePath, 'utf8');
 const dataCloudRuntime = fs.readFileSync(dataCloudRuntimePath, 'utf8');
 const runtimeLoaderRuntime = fs.readFileSync(runtimeLoaderRuntimePath, 'utf8');
 const bootRuntime = `${bootRuntimeSource}\n${runtimeLoaderRuntime}`;
@@ -219,6 +220,7 @@ const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/a
 const edgeGatewaySource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/edge-gateway-runtime.js'), 'utf8');
 const appFoundationRuntime = fs.readFileSync(appFoundationRuntimePath, 'utf8');
 const reportHistoryRuntime = fs.readFileSync(reportHistoryRuntimePath, 'utf8');
+const reportRenderRuntime = fs.readFileSync(reportRenderRuntimePath, 'utf8');
 const townSubmoduleCompareRuntime = fs.readFileSync(townSubmoduleCompareRuntimePath, 'utf8');
 const macroAnalysisCompatRuntime = fs.readFileSync(macroAnalysisCompatRuntimePath, 'utf8');
 const cloudRuntime = fs.readFileSync(cloudRuntimePath, 'utf8');
@@ -1380,8 +1382,38 @@ assert.ok(
 );
 assert.ok(appSource.includes('function getConfiguredExtraDisplaySubjects'), 'app.js should expose display-only subjects for lightweight detail views');
 assert.ok(
+    appSource.includes('function getConfiguredDisplaySubjectLabel')
+        && appSource.includes('function getConfiguredDisplaySubjectNotice'),
+    'grade 9 display-only subjects should carry a visible source label and a no-impact explanation'
+);
+assert.ok(
     parseRowsRuntime.includes('detectedSubjects.forEach(sub =>'),
     'parseRows should store display-only subject scores without adding them to global heavy subjects'
+);
+assert.ok(
+    studentDetailsRenderRuntime.includes('getConfiguredDisplaySubjectLabel')
+        && studentDetailsRenderRuntime.includes('getStudentDetailsRankSnapshot(student, visibleSubjects'),
+    'student detail desktop and mobile views should show grade 9 politics with isolated live rank snapshots'
+);
+assert.ok(
+    dataManagerStudentRuntime.includes('syncDisplayOnlySubjectHeaders')
+        && dataManagerStudentRuntime.includes('renderDisplayOnlyScoreCells'),
+    'data manager should show the display-only politics score without making it a total subject'
+);
+assert.ok(
+    reportRenderRuntime.includes('getConfiguredReadOnlyDisplaySubjects')
+        && reportRenderRuntime.includes('getConfiguredDisplaySubjectLabel'),
+    'student reports should show the isolated grade 9 politics reference row'
+);
+assert.ok(
+    teacherAnalysisCoreRuntime.includes('function getTeacherAnalysisDisplaySubjects')
+        && teacherAnalysisCoreRuntime.includes('getTeacherAnalysisDisplaySubjects().forEach((subject) =>'),
+    'teacher analysis should calculate display-only politics rankings without adding it to formal subjects'
+);
+assert.ok(
+    teacherAnalysisBridgeRuntime.includes('function getCorrelationSubjects()')
+        && teacherAnalysisBridgeRuntime.includes('return window.SUBJECTS.filter(Boolean);'),
+    'correlation and contribution analysis must stay on formal total subjects, excluding display-only politics'
 );
 assert.ok(
     appSource.includes('function normalizeImportedClassForGrade'),

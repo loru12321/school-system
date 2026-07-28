@@ -703,33 +703,39 @@ function buildStudentScoreAuditBadge(student, subject, escapeFn = escapeAppHtml)
     return '';
 }
 
-function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible) {
-    const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
-    const townRank = getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' });
+function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible, rankItem = null) {
+    const subjectLabel = typeof getConfiguredDisplaySubjectLabel === 'function'
+        ? getConfiguredDisplaySubjectLabel(sub)
+        : sub;
+    const subjectNotice = typeof getConfiguredDisplaySubjectNotice === 'function'
+        ? getConfiguredDisplaySubjectNotice(sub)
+        : '';
+    const score = rankItem?.score !== undefined ? rankItem.score : (student.scores[sub] !== undefined ? student.scores[sub] : '-');
+    const townRank = rankItem?.township ?? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' });
     const scoreArg = Number.isFinite(Number(score)) ? Number(score) : jsStringLiteral(score);
     const clickAttr = `onclick="updateStudentScore(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.class)}, ${jsStringLiteral(sub)}, ${scoreArg})"`;
     const auditBadge = buildStudentScoreAuditBadge(student, sub, tmEscapeHtml);
     const scoreButton = `
-        <button type="button" class="student-detail-mobile-score-btn" ${clickAttr} title="点击修改${tmEscapeHtml(sub)}成绩">
+        <button type="button" class="student-detail-mobile-score-btn" ${clickAttr} title="${tmEscapeHtml(subjectNotice || `点击修改${sub}成绩`)}">
             ${tmEscapeHtml(score)}${auditBadge}
         </button>
     `;
 
     const rankChips = [];
     if (!isTeacher && !isClassTeacher) {
-        rankChips.push(`<span>校 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
+        rankChips.push(`<span>校 ${tmEscapeHtml(rankItem?.school ?? safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
         if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(townRank)}</span>`);
-        if (countyRankVisible) rankChips.push(`<span>县 ${tmEscapeHtml(getStudentCountyRankValue(student, sub))}</span>`);
+        if (countyRankVisible) rankChips.push(`<span>县 ${tmEscapeHtml(rankItem?.county ?? getStudentCountyRankValue(student, sub))}</span>`);
     } else {
-        rankChips.push(`<span>级 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
+        rankChips.push(`<span>级 ${tmEscapeHtml(rankItem?.school ?? safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
         if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(townRank)}</span>`);
-        if (countyRankVisible) rankChips.push(`<span>县 ${tmEscapeHtml(getStudentCountyRankValue(student, sub))}</span>`);
+        if (countyRankVisible) rankChips.push(`<span>县 ${tmEscapeHtml(rankItem?.county ?? getStudentCountyRankValue(student, sub))}</span>`);
     }
 
     return `
         <div class="student-detail-mobile-subject">
             <div class="student-detail-mobile-subject-head">
-                <span>${tmEscapeHtml(sub)}</span>
+                <span title="${tmEscapeHtml(subjectNotice)}">${tmEscapeHtml(subjectLabel)}</span>
                 ${scoreButton}
             </div>
             <div class="student-detail-mobile-rank-row">
@@ -754,8 +760,9 @@ function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClas
     const totalRankCountyValue = getStudentCountyRankValue(student, 'total');
     const totalRankTownValue = getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' });
 
+    const rank = getStudentDetailsRankSnapshot(student, visibleSubjects, townRankVisible, countyRankVisible, STD_STATE.dataSignature);
     const subjectCards = visibleSubjects.map((sub) => (
-        buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible)
+        buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible, rank?.subjects?.[sub] || null)
     )).join('');
 
     const metaCards = [
@@ -1127,7 +1134,10 @@ function renderStudentDetails(reset = true) {
     const countyHeaderStyle = countyRankVisible ? '' : 'display:none;'; // 没有全县成绩时隐藏列
 
     visibleSubjects.forEach(sub => {
-        headerHTML += buildTh(sub, sub, '80px');
+        const subjectLabel = typeof getConfiguredDisplaySubjectLabel === 'function'
+            ? getConfiguredDisplaySubjectLabel(sub)
+            : sub;
+        headerHTML += buildTh(subjectLabel, sub, '80px');
         if (!isTeacher && !isClassTeacher) {
             headerHTML += `<th>校排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
         } else {
@@ -1201,20 +1211,26 @@ function renderStudentDetails(reset = true) {
                 const rankItem = rank?.subjects?.[sub] || {};
                 const score = rankItem.score !== undefined ? rankItem.score : '-';
                 const scoreDisplay = `${escapeAppHtml(String(score))}${buildStudentScoreAuditBadge(student, sub, escapeAppHtml)}`;
+                const subjectLabel = typeof getConfiguredDisplaySubjectLabel === 'function'
+                    ? getConfiguredDisplaySubjectLabel(sub)
+                    : sub;
+                const subjectNotice = typeof getConfiguredDisplaySubjectNotice === 'function'
+                    ? getConfiguredDisplaySubjectNotice(sub)
+                    : '';
 
                 const scoreArg = Number.isFinite(Number(score)) ? Number(score) : jsStringLiteral(score);
                 const clickAttr = `onclick="updateStudentScore(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.class)}, ${jsStringLiteral(sub)}, ${scoreArg})"`;
 
                 if (!isTeacher && !isClassTeacher) {
-                    row += `<td data-label="${tmEscapeHtml(sub)}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${scoreDisplay}</td>
-                                <td data-label="${tmEscapeHtml(sub)}校排" class="text-gray">${tmEscapeHtml(rankItem.school ?? '-')}</td>
-                                <td data-label="${tmEscapeHtml(sub)}镇排" class="text-gray" style="${townHeaderStyle}">${tmEscapeHtml(rankItem.township ?? '-')}</td>
-                                <td data-label="${tmEscapeHtml(sub)}县排" class="text-gray" style="${countyHeaderStyle}">${tmEscapeHtml(rankItem.county ?? '-')}</td>`;
+                    row += `<td data-label="${tmEscapeHtml(subjectLabel)}分数" ${clickAttr} style="cursor:pointer;" title="${tmEscapeHtml(subjectNotice || '点击修改')}">${scoreDisplay}</td>
+                                <td data-label="${tmEscapeHtml(subjectLabel)}校排" class="text-gray">${tmEscapeHtml(rankItem.school ?? '-')}</td>
+                                <td data-label="${tmEscapeHtml(subjectLabel)}镇排" class="text-gray" style="${townHeaderStyle}">${tmEscapeHtml(rankItem.township ?? '-')}</td>
+                                <td data-label="${tmEscapeHtml(subjectLabel)}县排" class="text-gray" style="${countyHeaderStyle}">${tmEscapeHtml(rankItem.county ?? '-')}</td>`;
                 } else {
-                    row += `<td data-label="${tmEscapeHtml(sub)}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${scoreDisplay}</td>
-                                <td data-label="${tmEscapeHtml(sub)}级排" class="text-gray">${tmEscapeHtml(rankItem.school ?? '-')}</td>
-                                <td data-label="${tmEscapeHtml(sub)}镇排" class="text-gray" style="${townHeaderStyle}">${tmEscapeHtml(rankItem.township ?? '-')}</td>
-                                <td data-label="${tmEscapeHtml(sub)}县排" class="text-gray" style="${countyHeaderStyle}">${tmEscapeHtml(rankItem.county ?? '-')}</td>`;
+                    row += `<td data-label="${tmEscapeHtml(subjectLabel)}分数" ${clickAttr} style="cursor:pointer;" title="${tmEscapeHtml(subjectNotice || '点击修改')}">${scoreDisplay}</td>
+                                <td data-label="${tmEscapeHtml(subjectLabel)}级排" class="text-gray">${tmEscapeHtml(rankItem.school ?? '-')}</td>
+                                <td data-label="${tmEscapeHtml(subjectLabel)}镇排" class="text-gray" style="${townHeaderStyle}">${tmEscapeHtml(rankItem.township ?? '-')}</td>
+                                <td data-label="${tmEscapeHtml(subjectLabel)}县排" class="text-gray" style="${countyHeaderStyle}">${tmEscapeHtml(rankItem.county ?? '-')}</td>`;
                 }
             });
 

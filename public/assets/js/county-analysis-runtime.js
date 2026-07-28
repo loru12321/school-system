@@ -111,6 +111,21 @@
         return text.replace(/\s+/g, '');
     }
 
+    // 与教师画像保持一致：九年级政治可作为二模参考参加单科教师排名，
+    // 但不加入学校两率一分和任何正式中考汇总口径。
+    function getCountyTeacherDisplaySubjects() {
+        if (typeof window.getTeacherAnalysisDisplaySubjects === 'function') {
+            return window.getTeacherAnalysisDisplaySubjects();
+        }
+        return Array.isArray(window.SUBJECTS) ? window.SUBJECTS.filter(Boolean) : [];
+    }
+
+    function getCountyTeacherDisplaySubjectLabel(subject) {
+        return typeof window.getConfiguredDisplaySubjectLabel === 'function'
+            ? window.getConfiguredDisplaySubjectLabel(subject)
+            : subject;
+    }
+
     function getCountyGradeNumber() {
         const meta = typeof window.getExamMetaFromUI === 'function' ? window.getExamMetaFromUI() : {};
         const readStorage = (key) => {
@@ -829,13 +844,13 @@
         const scoped = getScopedTeacherAssignmentsForCounty();
         const teacherMap = scoped.map || {};
         const teacherSchool = scoped.scoped ? scoped.schoolName : inferCountyTeacherSchoolFromMap(teacherMap);
-        const signature = `${getDataSignature()}::${teacherSchool}::${Object.entries(teacherMap).map(([key, value]) => `${key}:${value}`).sort().join('|')}`;
+        const signature = `${getDataSignature()}::${teacherSchool}::${getCountyTeacherDisplaySubjects().join('|')}::${Object.entries(teacherMap).map(([key, value]) => `${key}:${value}`).sort().join('|')}`;
         if (state.countyTeacherStatsSignature === signature) return state.countyTeacherStats;
 
         const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
         const schoolRows = teacherSchool ? rows.filter((student) => countySameSchoolName(student?.school, teacherSchool)) : rows;
         const subjectByNormalized = new Map(
-            (window.SUBJECTS || []).map((subject) => [normalizeCountySubjectName(subject), subject])
+            getCountyTeacherDisplaySubjects().map((subject) => [normalizeCountySubjectName(subject), subject])
         );
         const thresholdLinesBySubject = precomputeCountyTeacherThresholdLines(schoolRows);
         const rowsByClassSubject = new Map();
@@ -1124,7 +1139,7 @@
 
     function calculateCountyTeacherRanking(scope) {
         const normalized = normalizeScope(scope || getCurrentScope() || { includesCounty: false, townshipSchools: getSchoolNames() });
-        const rankingSignature = `${getTeacherStatsSignature()}::${(normalized.townshipSchools || []).join('|')}::${normalized.includesCounty ? 'county' : 'township'}`;
+        const rankingSignature = `${getTeacherStatsSignature()}::${getCountyTeacherDisplaySubjects().join('|')}::${(normalized.townshipSchools || []).join('|')}::${normalized.includesCounty ? 'county' : 'township'}`;
         if (state.lastTeacherRankSignature === rankingSignature && window.COUNTY_TEACHER_RANKINGS && window.COUNTY_TEACHER_RANKING_DATA) {
             return window.COUNTY_TEACHER_RANKINGS;
         }
@@ -1133,7 +1148,7 @@
         const rankings = {};
         const rankingDataMap = {};
 
-        sortCountySubjects(window.SUBJECTS || []).forEach((subject) => {
+        sortCountySubjects(getCountyTeacherDisplaySubjects()).forEach((subject) => {
         const rankingData = [];
 
             Object.entries(teacherStats).forEach(([teacherName, subjectMap]) => {
@@ -1733,7 +1748,7 @@
         const subjectTables = getTeacherSubjectCountyTables().map((group) => `
             <div class="analysis-anchor-panel county-teacher-subject-rank">
                 <div class="county-section-head">
-                    <div class="sub-header analysis-section-head">${escapeHtml(group.subject)} 同学科县域排名</div>
+                    <div class="sub-header analysis-section-head">${escapeHtml(getCountyTeacherDisplaySubjectLabel(group.subject))} 同学科县域排名</div>
                 </div>
                 <div class="table-wrap analysis-table-shell county-teacher-rank-table">
                     <table class="analysis-generated-table county-analysis-table">
@@ -1774,7 +1789,7 @@
                 ${rows.map((row, index) => `
                     <article class="county-portrait-card ${row.riskLevel === 'risk' ? 'is-risk' : ''}">
                         <span class="county-portrait-rank">#${index + 1}</span>
-                        <h4>${escapeHtml(row.teacherName)} / ${escapeHtml(row.subject)}</h4>
+                        <h4>${escapeHtml(row.teacherName)} / ${escapeHtml(getCountyTeacherDisplaySubjectLabel(row.subject))}</h4>
                         <strong>${formatNumber(row.score, 1)}</strong>
                         <p>均分 ${formatNumber(row.avg, 1)} · 优秀率 ${formatPercent(row.excellentRate)} · 及格率 ${formatPercent(row.passRate)} · 样本 ${row.studentCount}</p>
                         <div class="county-portrait-rankline">

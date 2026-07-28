@@ -83,7 +83,10 @@ const context = {
     listAvailableSchoolsForCompare() {
         return ['甲校别名', '乙校'];
     },
-    CONFIG: { name: '9年级模拟' },
+    CONFIG: { name: '9年级模拟', extraDisplaySubs: [] },
+    getConfiguredExtraDisplaySubjects(config = {}) {
+        return Array.isArray(config.extraDisplaySubs) ? config.extraDisplaySubs : [];
+    },
     CURRENT_EXAM_ID: '',
     CURRENT_TERM_ID: '',
     TARGETS: {},
@@ -182,6 +185,34 @@ assert.ok(aliasStats, 'teacher stats should be generated for an equivalent schoo
 assert.strictEqual(aliasStats.studentCount, 2);
 assert.strictEqual(Number(aliasStats.avg), 85);
 assert.strictEqual(context.lastAlert, undefined);
+
+// 九年级中考政治来自二模：它应进入政治教师的单科统计与乡镇排名，
+// 但绝不能被写回正式 SUBJECTS，从而保持五科总及其他中考公式不变。
+context.CONFIG.extraDisplaySubs = ['政治'];
+context.THRESHOLDS.政治 = { exc: 85, pass: 60 };
+context.RAW_DATA = [
+    { school: '甲校', class: '9.1', name: '甲一', total: 100, scores: { 数学: 90, 政治: 80 } },
+    { school: '甲校', class: '9.1', name: '甲二', total: 80, scores: { 数学: 80, 政治: 70 } },
+    { school: '乙校', class: '9.1', name: '乙一', total: 100, scores: { 数学: 100, 政治: 90 } }
+];
+context.TEACHER_MAP = {
+    '9.1_数学': '甲校教师',
+    '9.1_政治': '政治教师'
+};
+context.TEACHER_SCHOOL_MAP = {
+    '9.1_数学': '甲校',
+    '9.1_政治': '甲校'
+};
+context.TEACHER_STATS = {};
+context.analyzeTeachers({ render: false, force: true });
+const politicsStats = context.TEACHER_STATS['政治教师']?.政治;
+assert.ok(politicsStats, 'grade 9 display-only politics should produce its teacher statistics');
+assert.strictEqual(politicsStats.studentCount, 2);
+assert.strictEqual(Number(politicsStats.avg), 75);
+assert.ok(!context.SUBJECTS.includes('政治'), 'display-only politics must stay out of the formal five-subject list');
+assert.strictEqual(Number(context.TEACHER_STATS['甲校教师']?.数学?.avg), 85, 'adding politics display must not alter the math teacher metric');
+context.calculateTeacherTownshipRanking({ force: true, teacherMetricScope: 'admin' });
+assert.ok(context.TEACHER_TOWNSHIP_RANKINGS?.['政治教师']?.政治, 'grade 9 display-only politics should have a teacher township ranking');
 
 const classTeacherUser = {
     role: 'class_teacher',

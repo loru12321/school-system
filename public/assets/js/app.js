@@ -2866,6 +2866,40 @@ window.refreshTotalSubjectPresentation = refreshTotalSubjectPresentation;
 function getConfiguredExtraDisplaySubjects(config = CONFIG) {
     return Array.isArray(config.extraDisplaySubs) ? config.extraDisplaySubs.filter(Boolean) : [];
 }
+
+// 展示科目不进入 SUBJECTS：这样九年级中考的政治二模成绩可以在学生、报告和教师
+// 页面单独查看，却不会被五科总、两率一分、指标生或高中上线等正式口径读取。
+function isConfiguredDisplayOnlySubject(subject, config = CONFIG) {
+    const normalized = String(subject || '').trim();
+    return !!normalized && getConfiguredExtraDisplaySubjects(config).some((item) => String(item || '').trim() === normalized);
+}
+
+function getConfiguredDisplaySubjectLabel(subject, config = CONFIG) {
+    const normalized = String(subject || '').trim();
+    if (normalized === '政治' && isConfiguredDisplayOnlySubject(normalized, config) && String(config?.name || '').includes('9')) {
+        return '政治（二模参考）';
+    }
+    return normalized;
+}
+
+function getConfiguredDisplaySubjectNotice(subject, config = CONFIG) {
+    const normalized = String(subject || '').trim();
+    if (normalized === '政治' && isConfiguredDisplayOnlySubject(normalized, config) && String(config?.name || '').includes('9')) {
+        return '九年级中考政治取同届二模成绩，仅作单科展示、排名和政治教师分析；不计入中考五科总、两率一分、指标生、高分段或高中上线。';
+    }
+    return '';
+}
+
+function getConfiguredReadOnlyDisplaySubjects(config = CONFIG, fallbackSubjects = SUBJECTS) {
+    const displaySubjects = getConfiguredDisplaySubjects(config);
+    if (Array.isArray(displaySubjects)) return [...new Set(displaySubjects.filter(Boolean))];
+    return [...new Set((Array.isArray(fallbackSubjects) ? fallbackSubjects : []).filter(Boolean))];
+}
+
+window.isConfiguredDisplayOnlySubject = isConfiguredDisplayOnlySubject;
+window.getConfiguredDisplaySubjectLabel = getConfiguredDisplaySubjectLabel;
+window.getConfiguredDisplaySubjectNotice = getConfiguredDisplaySubjectNotice;
+window.getConfiguredReadOnlyDisplaySubjects = getConfiguredReadOnlyDisplaySubjects;
 RAW_DATA = initialDataSnapshot.rawData || [];
 SCHOOLS = initialDataSnapshot.schools || {};
 SUBJECTS = initialDataSnapshot.subjects || [];
