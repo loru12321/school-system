@@ -66,6 +66,28 @@ vm.runInContext(source, context, { filename: 'grade9-politics-reference-runtime.
     assert.ok(schoolB.score2Rate > schoolA.score2Rate, 'politics reference scoring should rank only the politics metric set');
     assert.strictEqual(currentRows.every(row => row.scores.政治 === undefined), true, 'politics reference must not write back to the formal zhongkao rows');
     assert.strictEqual(context.window.Grade9PoliticsReferenceRuntime.getSummary(), summary, 'cached summary should be available for the table renderer');
+
+    // 冷缓存先只取最近两条考试（中考 + 二模）；不要为了政治参考阻塞式拉完整届历史。
+    const secondMockSnapshot = context.window.COHORT_DB.exams[secondMockId];
+    delete context.window.COHORT_DB.exams[secondMockId];
+    const cloudCalls = [];
+    context.window.CloudManager = {
+        fetchCohortExamsToLocal: async (_cohortId, options) => {
+            cloudCalls.push({ ...options });
+            context.window.COHORT_DB.exams[secondMockId] = secondMockSnapshot;
+            return { success: true, updated: 1 };
+        }
+    };
+    context.window.__RAW_DATA_VERSION = 8;
+    const hydrated = await context.window.Grade9PoliticsReferenceRuntime.ensureSummary();
+    assert.ok(hydrated.available, 'the fast history hydration should make politics reference available');
+    assert.deepStrictEqual(cloudCalls[0], {
+        background: false,
+        latestOnly: false,
+        minCount: 2,
+        maxFetch: 2,
+        refreshSelectors: false
+    }, 'cold politics reference should fetch only the two newest snapshots first');
     console.log('grade9 politics reference runtime tests passed');
 })().catch(error => {
     console.error(error);

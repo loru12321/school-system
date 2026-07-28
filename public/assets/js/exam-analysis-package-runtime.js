@@ -992,9 +992,19 @@
             await window.CloudManager.fetchCohortExamsToLocal(cohortId, {
                 background: false,
                 latestOnly: false,
-                minCount: 3,
+                minCount: 2,
+                maxFetch: 2,
                 refreshSelectors: false
             });
+            // 个别届别在中考和二模之间还归档了其他考试；只有这时才拉取第三条历史。
+            if (!findGrade9SecondMockForPackage()) {
+                await window.CloudManager.fetchCohortExamsToLocal(cohortId, {
+                    background: false,
+                    latestOnly: false,
+                    minCount: 3,
+                    refreshSelectors: false
+                });
+            }
         } catch (error) {
             console.warn('[exam-analysis-package] failed to load grade 9 second-mock politics source:', error?.message || error);
         }

@@ -273,10 +273,24 @@
                     await window.CloudManager.fetchCohortExamsToLocal(context.cohort, {
                         background: false,
                         latestOnly: false,
-                        minCount: 3,
+                        // 中考和二模通常是同届最新两次考试。先只取这两个元数据/快照，
+                        // 避免首次打开单科参考时把整届历史数据排队拉完。
+                        minCount: 2,
+                        maxFetch: 2,
                         refreshSelectors: false
                     });
                     secondMock = findSecondMock(context);
+                    // 若二模不是最近两次（例如中间还有一次补测），再兜底拉完整历史。
+                    // 这条路径只在少数届别触发，且不会阻塞正式中考五科的任何计算。
+                    if (!secondMock) {
+                        await window.CloudManager.fetchCohortExamsToLocal(context.cohort, {
+                            background: false,
+                            latestOnly: false,
+                            minCount: 3,
+                            refreshSelectors: false
+                        });
+                        secondMock = findSecondMock(context);
+                    }
                 } catch (error) {
                     state.summary = {
                         status: 'ready',
