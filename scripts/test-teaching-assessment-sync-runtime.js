@@ -80,7 +80,7 @@ const context = {
     },
     normalizeClass: (value) => String(value || '').trim(),
     normalizeSchoolName: (value) => String(value || '').replace(/学校$/, '').trim(),
-    readIndicatorState: () => ({ ind1: '2', ind2: '5', highSchoolLine: '600' })
+    readIndicatorState: () => ({ ind1: '2', ind2: '5', highSchoolLine: '560' })
   }
 };
 context.window.window = context.window;
@@ -212,11 +212,11 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
 
       context.window.CURRENT_EXAM_ID = '2022级-9年级-2025-2026-暑假-7月中考-2026-07-12';
       context.window.RAW_DATA = [
-        { name: '九甲', school: '银山实验学校', class: '9.1', total: 620, scores: { 语文: 108, 数学: 112, 英语: 110, 物理: 96, 化学: 94 } },
-        { name: '九乙', school: '银山实验学校', class: '9.1', total: 560, scores: { 语文: 98, 数学: 101, 英语: 100, 物理: 88, 化学: 86 } },
-        { name: '九丁', school: '银山实验学校', class: '9.2', total: 610, scores: { 语文: 106, 数学: 110, 英语: 108, 物理: 94, 化学: 92 } },
-        { name: '九戊', school: '银山实验学校', class: '9.2', total: 605, scores: { 语文: 105, 数学: 109, 英语: 107, 物理: 93, 化学: 91 } },
-        { name: '九丙', school: '兄弟学校', class: '9.1', total: 630, scores: { 语文: 110, 数学: 114, 英语: 112, 物理: 98, 化学: 96 } }
+        { name: '九甲', school: '银山实验学校', class: '9.1', total: 620, scores: { 语文: 108, 数学: 112, 英语: 110, 物理: 96, 化学: 94, 体育: 58 } },
+        { name: '九乙', school: '银山实验学校', class: '9.1', total: 560, scores: { 语文: 98, 数学: 101, 英语: 100, 物理: 88, 化学: 86, 体育: 55 } },
+        { name: '九丁', school: '银山实验学校', class: '9.2', total: 610, scores: { 语文: 106, 数学: 110, 英语: 108, 物理: 94, 化学: 92, 体育: 56 } },
+        { name: '九戊', school: '银山实验学校', class: '9.2', total: 605, scores: { 语文: 105, 数学: 109, 英语: 107, 物理: 93, 化学: 91, 体育: 57 } },
+        { name: '九丙', school: '兄弟学校', class: '9.1', total: 630, scores: { 语文: 110, 数学: 114, 英语: 112, 物理: 98, 化学: 96, 体育: 58 } }
       ];
       context.window.TEACHER_MAP = { '9.1_政治': '政一', '9.2_政治': '政二', '9.1_语文': '语一', '9.2_语文': '语二', '9.1_体育': '体一', '9.2_体育': '体二' };
       context.window.TEACHER_STATS = {};
@@ -266,7 +266,7 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         assert.ok(classTargetItems.every((item) => item.preview_only === true), 'class target completion should be marked preview-only');
         const highSchoolItems = grade9Payload.preview_items.filter((item) => item.project_id === 'class_high_school_contribution_grad');
         assert.ok(!grade9Payload.items.some((item) => item.project_id === 'class_high_school_contribution_grad'), 'high-school contribution must stay out of formal sync payload');
-        assert.ok(highSchoolItems.length >= 2, '9th grade July exam should preview own-school class high-school contribution rows');
+        assert.ok(highSchoolItems.length >= 2, '9th grade Zhongkao should preview own-school class high-school contribution rows');
         assert.ok(highSchoolItems.every((item) => item.max_score === 15), 'high-school contribution max score should be 15');
         const highSchoolScores = Object.fromEntries(highSchoolItems.map((item) => [item.teacher_name, item.score]));
         assert.strictEqual(highSchoolScores['政一'], 7.5, 'class 9.1 rate 1/2 should score 7.5 against own-school best class rate 1');
@@ -274,6 +274,7 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         assert.strictEqual(highSchoolScores['语一'], 7.5, 'class 9.1 language teacher should receive the same class high-school contribution score');
         assert.strictEqual(highSchoolScores['语二'], 15, 'class 9.2 language teacher should receive the same class high-school contribution score');
         assert.ok(highSchoolItems.every((item) => /本校级部班级最高过线率/.test(item.note)), 'notes should explain own-school grade best-class denominator');
+        assert.ok(highSchoolItems.every((item) => /语数外物化\+体育/.test(item.note)), 'high-school contribution must use the five-subject-plus-PE Zhongkao total');
         assert.ok(highSchoolItems.every((item) => item.preview_only === true), 'high-school contribution should be marked preview-only');
         const highScoreItems = grade9Payload.preview_items.filter((item) => item.project_id === 'class_high_score_grad');
         assert.ok(highScoreItems.length >= 2, '9th grade high-score contribution should be available as preview rows');

@@ -1268,24 +1268,33 @@
 
     function buildHighSchoolAdmissionRows(schools) {
         const line = getHighSchoolAdmissionLine();
-        const rows = [['学校名称', '公办高中录取分数线', '实考人数', '高中上线人数', '高中上线率(%)', '高中上线率赋分(50)', '排名', '_标记']];
+        const rows = [['学校名称', '公办高中录取分数线（五科+体育）', '实考人数', '高中上线人数', '高中上线率(%)', '高中上线率赋分(50)', '体育成绩缺失人数', '状态', '排名', '_标记']];
         const baseList = (schools || []).map((school) => {
             const students = Array.isArray(school.students) ? school.students : getAllRows().filter((student) => sameSchool(student?.school, school.name));
             const studentCount = Number(school.metrics?.total?.count) || students.length || 0;
-            const admissionCount = line > 0 ? students.filter((student) => Number(student?.total) >= line).length : 0;
-            const admissionRate = studentCount ? admissionCount / studentCount : 0;
+            const admissionTotals = students.map((student) => (
+                typeof window.getHighSchoolAdmissionTotal === 'function'
+                    ? window.getHighSchoolAdmissionTotal(student)
+                    : null
+            ));
+            const missingSportsCount = admissionTotals.filter((value) => !Number.isFinite(value)).length;
+            const complete = missingSportsCount === 0;
+            const admissionCount = line > 0 && complete ? admissionTotals.filter((total) => total >= line).length : 0;
+            const admissionRate = complete && studentCount ? admissionCount / studentCount : 0;
             return {
                 name: school.name || '',
                 line,
                 count: studentCount,
                 admissionCount,
-                admissionRate
+                admissionRate,
+                complete,
+                missingSportsCount
             };
         });
-        const maxAdmissionRate = Math.max(...baseList.map((item) => item.admissionRate), 0);
+        const maxAdmissionRate = Math.max(...baseList.filter((item) => item.complete).map((item) => item.admissionRate), 0);
         const list = baseList.map((item) => ({
             ...item,
-            score: maxAdmissionRate ? item.admissionRate / maxAdmissionRate * 50 : 0
+            score: item.complete && maxAdmissionRate ? item.admissionRate / maxAdmissionRate * 50 : 0
         })).sort((left, right) => right.score - left.score || String(left.name).localeCompare(String(right.name), 'zh-CN', { numeric: true }));
         list.forEach((item, index) => {
             rows.push([

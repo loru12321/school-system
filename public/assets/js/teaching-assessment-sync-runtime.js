@@ -641,6 +641,43 @@
         return normalizeGrade(getExamGrade(context.currentExamId, context.exam || {}, rows)) === '9';
     }
 
+    function isGrade9ZhongkaoExam(context = getCurrentExamContext(), rows = getCurrentRows()) {
+        if (!isGrade9Exam(context, rows) || !isJulyExam(context)) return false;
+        const exam = context?.exam || {};
+        const descriptor = [
+            context?.currentExamId,
+            exam?.name,
+            exam?.title,
+            exam?.label,
+            exam?.date,
+            exam?.examDate,
+            exam?.exam_date,
+            getExamLabel(context)
+        ].map(text).filter(Boolean).join(' ');
+        return /中考/.test(descriptor);
+    }
+
+    function getGrade9ZhongkaoAdmissionTotal(row) {
+        if (typeof root.getHighSchoolAdmissionTotal === 'function') {
+            const total = root.getHighSchoolAdmissionTotal(row);
+            return Number.isFinite(total) ? total : NaN;
+        }
+        // 运行时容错：主程序尚未暴露 helper 时，仍按同一口径失败关闭，
+        // 不回退到已被规范为“五科总”的 row.total。
+        const scores = row?.scores && typeof row.scores === 'object' ? row.scores : null;
+        if (!scores) return NaN;
+        let total = 0;
+        for (const subject of ['语文', '数学', '英语', '物理', '化学', '体育']) {
+            const value = subject === '体育'
+                ? (Object.prototype.hasOwnProperty.call(scores, '体育') ? scores.体育 : scores.体育与健康)
+                : scores[subject];
+            const numeric = toNumber(value, NaN);
+            if (!Number.isFinite(numeric)) return NaN;
+            total += numeric;
+        }
+        return total;
+    }
+
     function readHighSchoolLine() {
         const indicator = typeof root.readIndicatorState === 'function'
             ? (root.readIndicatorState() || {})
@@ -1842,10 +1879,13 @@
         if (!Number.isFinite(line) || line <= 0) return [];
         const ownSchool = normalizeSchoolForSync(root.MY_SCHOOL || '银山实验学校');
         const ownRows = rows.filter((row) => normalizeSchoolForSync(row?.school) === ownSchool);
+        const admissionTotals = ownRows.map((row) => getGrade9ZhongkaoAdmissionTotal(row));
+        // 上线率不能把缺体育的“五科总”错当中考录取总分；数据不完整时停止生成正式预览。
+        if (admissionTotals.some((total) => !Number.isFinite(total))) return [];
         const classMap = new Map();
-        ownRows.forEach((row) => {
+        ownRows.forEach((row, index) => {
             const className = typeof root.normalizeClass === 'function' ? root.normalizeClass(row?.class) : text(row?.class);
-            const total = getTotal(row);
+            const total = admissionTotals[index];
             if (!className || !Number.isFinite(total)) return;
             if (!classMap.has(className)) classMap.set(className, { className, total: 0, over: 0 });
             const metric = classMap.get(className);
@@ -1874,7 +1914,7 @@
                     project_id: PROJECTS.classHighSchoolContribution,
                     score,
                     max_score: 15,
-                    note: `9年级7月中考高中过线分数 ${line}；任教班级 ${over}/${total} 人过线，过线率 ${pct(rate)}；本校级部班级最高过线率 ${pct(highestRate)}，折算 ${score}/15。`,
+                    note: `9年级7月中考高中过线分数 ${line}（语数外物化+体育）；任教班级 ${over}/${total} 人过线，过线率 ${pct(rate)}；本校级部班级最高过线率 ${pct(highestRate)}，折算 ${score}/15。`,
                     source: 'teaching-management'
                 };
             })
@@ -1933,9 +1973,9 @@
         const preview = [
             ...markPreviewOnly(buildClassTargetGradItems(teachers, rows), '当前仅做毕业班指标完成公式预览，不写入考核系统。')
         ];
-        if (highSchoolLine > 0) {
+        if (isGrade9ZhongkaoExam(examContext, rows) && highSchoolLine > 0) {
             preview.push(...markPreviewOnly(buildClassHighSchoolContributionItems(teachers, rows, highSchoolLine), '当前仅做高中贡献率公式预览，不写入考核系统。'));
-        } else {
+        } else if (isGrade9ZhongkaoExam(examContext, rows)) {
             skipped.push('9年级7月中考缺少“中考高中过线分数”，高中贡献率只显示公式审计，不生成预览分。');
         }
         preview.push(...markPreviewOnly(buildClassHighScoreGradItems(teachers, rows), '当前仅做高分段贡献公式预览，不写入考核系统。'));

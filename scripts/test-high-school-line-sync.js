@@ -267,7 +267,47 @@ assert.ok(
     'exam-analysis-package-runtime: the fail-open guard form must not come back'
 );
 
+// ─── 7. 正式中考高中上线总分：五科 + 体育 ───────────────────────────────────
+
+const admissionTotalBlock = appSource.match(
+    /const GRADE9_ZHONGKAO_ADMISSION_SUBJECTS[\s\S]*?window\.getHighSchoolAdmissionTotal = getHighSchoolAdmissionTotal;/
+);
+assert.ok(admissionTotalBlock, 'app.js must expose the dedicated Grade 9 Zhongkao admission-total helper');
+const admissionWindow = {};
+vm.runInNewContext(admissionTotalBlock[0], { window: admissionWindow, Number, Object });
+assert.strictEqual(typeof admissionWindow.getHighSchoolAdmissionTotal, 'function', 'admission-total helper must be callable by export and assessment runtimes');
+
+const fullZhongkaoRow = {
+    scores: { 语文: 110, 数学: 108, 英语: 105, 物理: 70, 化学: 45, 体育: 56, 政治: 49 }
+};
+assert.strictEqual(
+    admissionWindow.getHighSchoolAdmissionTotal(fullZhongkaoRow),
+    494,
+    'admission total must include 体育 but exclude 政治'
+);
+assert.strictEqual(
+    admissionWindow.getHighSchoolAdmissionTotal({ scores: { ...fullZhongkaoRow.scores, 体育: 0 } }),
+    438,
+    '体育 0 分 is a valid Zhongkao score and must not be treated as missing'
+);
+assert.strictEqual(
+    admissionWindow.getHighSchoolAdmissionTotal({ scores: { 语文: 110, 数学: 108, 英语: 105, 物理: 70, 化学: 45 } }),
+    null,
+    'missing 体育 must fail closed instead of falling back to the five-subject total'
+);
+assert.ok(
+    /getHighSchoolAdmissionTotal\(student\)/.test(pkgSource),
+    'analysis package must use the same Zhongkao admission total as the web summary'
+);
+const assessmentSource = fs.readFileSync(path.join(root, 'public/assets/js/teaching-assessment-sync-runtime.js'), 'utf8');
+assert.ok(
+    assessmentSource.includes('isGrade9ZhongkaoExam(examContext, rows)')
+        && assessmentSource.includes('getGrade9ZhongkaoAdmissionTotal(row)'),
+    'teacher assessment preview must use the official Zhongkao-only admission total'
+);
+
 console.log('✅ 6. 二模 admission gate intact (fail-closed) — passed');
+console.log('✅ 7. 正式中考高中上线总分（五科+体育）— passed');
 
 // ─── 7. cloud-workspace-runtime hasWorkspaceIndicatorParams includes highSchoolLine ─
 
