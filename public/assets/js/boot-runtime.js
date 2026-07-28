@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-a8de2e0c718f';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-6f3b13d1db6c';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -132,6 +132,7 @@ var DEFERRED_APP_MODULES = [
 // 「本次要点」：只读已算好的结果生成提示，属辅助信息，故走延迟加载不占首屏。
 'summary-highlights-runtime.js',
 'analysis-highlights-runtime.js',
+'teacher-highlights-runtime.js',
 'marginal-push-runtime.js',
 'seat-adjustment-runtime.js',
 'subject-balance-runtime.js',

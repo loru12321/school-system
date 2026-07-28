@@ -245,6 +245,14 @@
         teacherUiRenderCache.cardsHtml = html;
         container.dataset.teacherCardsSignature = signature;
         container.innerHTML = html;
+
+        // 「本次要点」只读已算好的 TEACHER_STATS 生成规模与提示，不参与计算。
+        // try 包裹：辅助信息的任何失败都不得影响教师卡片主体。
+        try {
+            if (typeof window.renderTeacherHighlights === 'function') window.renderTeacherHighlights();
+        } catch (error) {
+            console.warn('[teacher-cards] 本次要点渲染失败（不影响卡片）:', error);
+        }
     }
 
     function renderTeacherTownshipRanking() {

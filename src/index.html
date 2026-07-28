@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-a8de2e0c718f.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-a8de2e0c718f.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-6f3b13d1db6c.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-6f3b13d1db6c.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -5184,6 +5184,10 @@
                                 <span class="analysis-flow-note">最后形成结对子建议，并输出乡镇排名结果。</span>
                             </div>
                         </div>
+                        <!-- 本次要点：由 teacher-highlights-runtime.js 生成。
+                             与前两页不同，这里**只汇总规模与系统已有的样本提示，不点名教师、
+                             不做因果归因**——教师评价涉及考核，且评价分未做生源校正。 -->
+                        <div id="teacher-highlights" class="summary-highlights" hidden aria-live="polite"></div>
                         <div id="anchor-cards" class="anchor-target analysis-anchor-panel"> <!-- 使用 x-data 声明这是一个 Alpine 组件，x-show 控制显示 -->
                             <div class="teacher-cards-container" id="teacherCardsContainer" x-data>
 
