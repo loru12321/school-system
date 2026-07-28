@@ -119,11 +119,18 @@ async function run() {
       assert.strictEqual(state.locked, false, 'the first four failed attempts must not lock the account');
     }
     const locked = await recordFailedLogin(request, db, 'rate-user');
-    assert.strictEqual(locked.locked, true, 'the fifth failed attempt must lock the account/IP window');
+    assert.strictEqual(locked.locked, true, 'the fifth failed attempt must lock that account');
     assert.ok(locked.retryAfterSeconds > 0, 'a locked login should report a retry window');
     assert.strictEqual((await getLoginRateLimit(request, db, 'rate-user')).locked, true, 'lock state must survive a new request');
+    assert.strictEqual((await getLoginRateLimit(request, db, 'another-user')).locked, false, 'one account lock must not block other accounts on the same school network');
     await clearLoginRateLimit(request, db, 'rate-user');
     assert.strictEqual((await getLoginRateLimit(request, db, 'rate-user')).locked, false, 'a valid login can clear its own rate-limit state');
+    assert.ok(db.rows.has('ip:203.0.113.10'), 'clearing one user must retain the IP abuse counter');
+
+    for (let index = 0; index < 25; index += 1) {
+      await recordFailedLogin(request, db, `burst-user-${index}`);
+    }
+    assert.strictEqual((await getLoginRateLimit(request, db, 'unrelated-user')).locked, true, 'a clear high-frequency burst must still trigger an IP-wide lock');
 
     console.log('worker auth security tests passed');
   } finally {

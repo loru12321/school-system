@@ -48,6 +48,12 @@ export const SESSION_COOKIE_NAME = '__Host-school-session';
 const LOGIN_MAX_FAILURES = 5;
 const LOGIN_FAILURE_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_LOCK_MS = 15 * 60 * 1000;
+// Schools commonly share one public IP.  Keep the strict per-account lock,
+// but only apply an IP-wide lock to a clearly abnormal burst.  This prevents
+// one teacher's mistyped password from blocking every colleague on campus.
+const LOGIN_IP_MAX_FAILURES = 30;
+const LOGIN_IP_FAILURE_WINDOW_MS = 5 * 60 * 1000;
+const LOGIN_IP_LOCK_MS = 15 * 60 * 1000;
 
 const ensuredLoginRateLimitDbs = new WeakSet();
 
@@ -84,6 +90,30 @@ function getLoginRateLimitKeys(request, username) {
   return Array.from(new Set(keys));
 }
 
+function getLoginRateLimitPolicy(scopeKey) {
+  if (String(scopeKey || '').startsWith('ip:')) {
+    return {
+      maxFailures: LOGIN_IP_MAX_FAILURES,
+      failureWindowMs: LOGIN_IP_FAILURE_WINDOW_MS,
+      lockMs: LOGIN_IP_LOCK_MS
+    };
+  }
+  return {
+    maxFailures: LOGIN_MAX_FAILURES,
+    failureWindowMs: LOGIN_FAILURE_WINDOW_MS,
+    lockMs: LOGIN_LOCK_MS
+  };
+}
+
+function isLoginRateLimitRowLocked(row, now = Date.now()) {
+  const policy = getLoginRateLimitPolicy(row?.scope_key);
+  const failedCount = Number(row?.failed_count || 0);
+  const lockedUntil = Date.parse(String(row?.locked_until || ''));
+  return failedCount >= policy.maxFailures
+    && Number.isFinite(lockedUntil)
+    && lockedUntil > now;
+}
+
 export async function ensureLoginRateLimitTable(db) {
   if (!db || typeof db !== 'object' || ensuredLoginRateLimitDbs.has(db)) return;
   await db.prepare(`
@@ -104,13 +134,13 @@ export async function getLoginRateLimit(request, db, username) {
   const keys = getLoginRateLimitKeys(request, username);
   if (!keys.length) return { locked: false, retryAfterSeconds: 0 };
   const placeholders = keys.map(() => '?').join(', ');
-  const rows = await db.prepare(`SELECT scope_key, locked_until FROM login_rate_limits WHERE scope_key IN (${placeholders})`)
+  const rows = await db.prepare(`SELECT scope_key, failed_count, locked_until FROM login_rate_limits WHERE scope_key IN (${placeholders})`)
     .bind(...keys)
     .all();
   const now = Date.now();
   const lockedUntil = (Array.isArray(rows?.results) ? rows.results : [])
+    .filter((row) => isLoginRateLimitRowLocked(row, now))
     .map((row) => Date.parse(String(row?.locked_until || '')))
-    .filter((value) => Number.isFinite(value) && value > now)
     .sort((left, right) => right - left)[0] || 0;
   return {
     locked: lockedUntil > now,
@@ -124,13 +154,14 @@ export async function recordFailedLogin(request, db, username) {
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   const rows = await Promise.all(keys.map(async (scopeKey) => {
+    const policy = getLoginRateLimitPolicy(scopeKey);
     const existing = await db.prepare('SELECT failed_count, first_failed_at FROM login_rate_limits WHERE scope_key = ? LIMIT 1')
       .bind(scopeKey)
       .first();
     const firstFailedAt = Date.parse(String(existing?.first_failed_at || ''));
-    const inWindow = Number.isFinite(firstFailedAt) && now - firstFailedAt < LOGIN_FAILURE_WINDOW_MS;
+    const inWindow = Number.isFinite(firstFailedAt) && now - firstFailedAt < policy.failureWindowMs;
     const failedCount = (inWindow ? Number(existing?.failed_count || 0) : 0) + 1;
-    const lockedUntil = failedCount >= LOGIN_MAX_FAILURES ? new Date(now + LOGIN_LOCK_MS).toISOString() : null;
+    const lockedUntil = failedCount >= policy.maxFailures ? new Date(now + policy.lockMs).toISOString() : null;
     await db.prepare(`
       INSERT INTO login_rate_limits (scope_key, failed_count, first_failed_at, last_failed_at, locked_until)
       VALUES (?, ?, ?, ?, ?)
@@ -140,10 +171,15 @@ export async function recordFailedLogin(request, db, username) {
         last_failed_at = excluded.last_failed_at,
         locked_until = excluded.locked_until
     `).bind(scopeKey, failedCount, inWindow ? existing.first_failed_at : nowIso, nowIso, lockedUntil).run();
-    return { failedCount, lockedUntil };
+    return { scopeKey, failedCount, lockedUntil };
   }));
-  const lockedUntil = rows.map((row) => Date.parse(String(row.lockedUntil || '')))
-    .filter(Number.isFinite)
+  const lockedUntil = rows
+    .filter((row) => isLoginRateLimitRowLocked({
+      scope_key: row.scopeKey,
+      failed_count: row.failedCount,
+      locked_until: row.lockedUntil
+    }, now))
+    .map((row) => Date.parse(String(row.lockedUntil || '')))
     .sort((left, right) => right - left)[0] || 0;
   return {
     locked: lockedUntil > now,
@@ -153,10 +189,12 @@ export async function recordFailedLogin(request, db, username) {
 
 export async function clearLoginRateLimit(request, db, username) {
   await ensureLoginRateLimitTable(db);
-  const keys = getLoginRateLimitKeys(request, username);
-  if (!keys.length) return;
-  const placeholders = keys.map(() => '?').join(', ');
-  await db.prepare(`DELETE FROM login_rate_limits WHERE scope_key IN (${placeholders})`).bind(...keys).run();
+  const usernameKey = `user:${normalizeText(username).toLowerCase()}`;
+  if (!usernameKey || usernameKey === 'user:') return;
+  // A successful sign-in should clear only that person's retry state.  Do not
+  // let a valid login erase an IP-wide abuse signal accumulated by other
+  // accounts on the same network.
+  await db.prepare('DELETE FROM login_rate_limits WHERE scope_key = ?').bind(usernameKey).run();
 }
 
 // ---------------------------------------------------------------------------
