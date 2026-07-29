@@ -72,6 +72,11 @@ async function run() {
     assert.ok(tbody.innerHTML.includes('张三'));
     assert.ok(tbody.innerHTML.includes('李四'));
 
+    root.RAW_DATA[1].name = '<img src=x onerror=alert(1)>';
+    runtime.renderStudents(manager, '');
+    assert.ok(tbody.innerHTML.includes('&lt;img'), 'student cells must remain escaped after the fast unfiltered render path');
+    root.RAW_DATA[1].name = '李四';
+
     currentBoxes = [
         { dataset: { idx: '0' }, checked: false },
         { dataset: { idx: '1' }, checked: false }

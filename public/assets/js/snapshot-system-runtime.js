@@ -15,6 +15,10 @@ function getCurrentSnapshotPayload() {
     return {
         CURRENT_PROJECT_KEY: workspaceSnapshot.currentProjectKey || '',
         COHORT_DB: workspaceSnapshot.cohortDb || null,
+        // Keep roster locks in a dedicated snapshot field as well as CohortDB.
+        // Workspace snapshots are split into metadata and exam shards; this
+        // makes the audit-critical 95% roster survive either restore path.
+        ASSESSMENT_ROSTERS: workspaceSnapshot.cohortDb?.assessmentRosters || {},
         CURRENT_COHORT_ID: workspaceSnapshot.currentCohortId || '',
         CURRENT_COHORT_META: workspaceSnapshot.currentCohortMeta || null,
         CURRENT_EXAM_ID: workspaceSnapshot.currentExamId || '',
@@ -402,6 +406,11 @@ function applySnapshotPayload(db, options = {}) {
         return false;
     }
     COHORT_DB = db.COHORT_DB || COHORT_DB || null;
+    if (COHORT_DB && Object.prototype.hasOwnProperty.call(db, 'ASSESSMENT_ROSTERS')) {
+        COHORT_DB.assessmentRosters = db.ASSESSMENT_ROSTERS && typeof db.ASSESSMENT_ROSTERS === 'object'
+            ? db.ASSESSMENT_ROSTERS
+            : {};
+    }
     CURRENT_COHORT_ID = db.CURRENT_COHORT_ID || CURRENT_COHORT_ID || '';
     CURRENT_COHORT_META = db.CURRENT_COHORT_META || CURRENT_COHORT_META || null;
     CURRENT_EXAM_ID = db.CURRENT_EXAM_ID || CURRENT_EXAM_ID || '';

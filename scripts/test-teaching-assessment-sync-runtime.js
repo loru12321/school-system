@@ -12,6 +12,7 @@ const rosterRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/as
 const bootRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
 const teachingCss = fs.readFileSync(path.join(root, 'public/assets/css/teaching-management-module.css'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
+const snapshotRuntimeSource = fs.readFileSync(path.join(root, 'public/assets/js/snapshot-system-runtime.js'), 'utf8');
 
 function buildTeacherStatsFromRows(win) {
   const stats = {};
@@ -90,6 +91,10 @@ context.window.setTimeout = context.setTimeout;
 context.window.analyzeTeachersV2 = () => buildTeacherStatsFromRows(context.window);
 const initialRosterDb = { assessmentRosters: {}, exams: {} };
 context.window.CohortDB = { ensure: () => initialRosterDb };
+context.window.saveCloudData = async (options) => {
+  context.window.__lastRosterCloudSave = options;
+  return true;
+};
 
 vm.createContext(context);
 vm.runInContext(source, context);
@@ -105,6 +110,11 @@ assert.ok(source.includes('tmRunAutomaticAssessmentSync'), 'assessment sync shou
 assert.ok(source.includes('tmBuildTeacherAssessmentSyncAudit'), 'assessment sync should expose a reconciliation audit builder');
 assert.ok(source.includes("await root.CloudManager.loadTeachers({ background: true, toast: false })"), 'assessment sync should wait for the active cohort teacher roster before calculating');
 assert.ok(source.includes('root.syncRuntimeStateToWindow?.()'), 'assessment roster locks should be published to the workspace before cloud save');
+assert.ok(source.includes('名册未保存到云端'), 'a failed roster cloud write must reject the lock instead of reporting a false success');
+assert.ok(source.includes('WorkspaceState.setCohortDb(db)'), 'roster locks must update the WorkspaceState serialization source before saving');
+assert.ok(source.includes('rollback roster state publish failed'), 'a failed roster cloud write must roll back its in-memory lock mutation');
+assert.ok(snapshotRuntimeSource.includes('ASSESSMENT_ROSTERS: workspaceSnapshot.cohortDb?.assessmentRosters || {}'), 'workspace snapshots must carry roster locks in the metadata payload');
+assert.ok(snapshotRuntimeSource.includes('COHORT_DB.assessmentRosters = db.ASSESSMENT_ROSTERS'), 'workspace restore must restore dedicated roster locks into CohortDB');
 assert.ok(source.includes('AssessmentRosterCore') && source.includes('getAssessmentRosterPanelState'), 'assessment sync should expose a core 95% roster API without coupling it to the UI renderer');
 assert.ok(indexHtml.includes('tab-data-assessment-roster'), 'data manager should expose a dedicated assessment roster tab');
 assert.ok(dataManagerRuntimeSource.includes("tab === 'assessment-roster'") && runtimeLoaderSource.includes("'assessment-roster'"), 'assessment roster tab should lazy-load its dedicated renderer');
@@ -143,7 +153,21 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
     assert.ok(Number(item.score) >= 0, `score should be non-negative for ${item.project_id}`);
   });
   context.window.CURRENT_EXAM_ID = '2025级-6年级-2025-2026-暑假-7月质量监测-2026-07-12';
-  return context.window.AssessmentRosterCore.lockCurrentRoster().then(() => context.window.tmBuildTeacherAssessmentSyncPayload()).then((julyPayload) => {
+  return context.window.AssessmentRosterCore.lockCurrentRoster().then(() => {
+    assert.strictEqual(context.window.__lastRosterCloudSave?.mode, 'workspace', 'locking must save the workspace snapshot');
+    assert.strictEqual(context.window.__lastRosterCloudSave?.forceUpload, true, 'locking must force the cloud write');
+    assert.strictEqual(context.window.__lastRosterCloudSave?.sourceLabel, 'assessment-roster-lock', 'locking must mark the cloud write source');
+    context.window.saveCloudData = async () => false;
+    return context.window.AssessmentRosterCore.lockCurrentRoster()
+      .then(() => assert.fail('a failed cloud save must not report a roster lock success'))
+      .catch((error) => assert.match(String(error?.message || error), /名册未保存到云端/));
+  }).then(() => {
+    context.window.saveCloudData = async (options) => {
+      context.window.__lastRosterCloudSave = options;
+      return true;
+    };
+    return context.window.tmBuildTeacherAssessmentSyncPayload();
+  }).then((julyPayload) => {
     const julyProjectIds = new Set(julyPayload.items.map((item) => item.project_id));
     assert.ok(julyProjectIds.has('teacher_two_rates_one_score'), 'July payload should include two-rates-one-score');
     assert.ok(julyProjectIds.has('teacher_class_collaboration'), 'July payload should include class collaboration');

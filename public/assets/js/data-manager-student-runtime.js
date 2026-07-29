@@ -114,10 +114,13 @@
         syncDisplayOnlySubjectHeaders(displayOnlySubjects);
 
         const normalizedKeyword = String(keyword || '').trim().toLowerCase();
-        const list = [];
-        for (let index = 0; index < rawData.length; index += 1) {
-            const student = rawData[index] || {};
-            if (normalizedKeyword) {
+        // The initial student tab is normally an unfiltered list.  Do not clone
+        // every score row and build a full index set just to draw one page.
+        // Keep matched indexes only when a search actually needs filtering.
+        const matchedIndexes = normalizedKeyword ? [] : null;
+        if (normalizedKeyword) {
+            for (let index = 0; index < rawData.length; index += 1) {
+                const student = rawData[index] || {};
                 const name = String(student.name != null ? student.name : '').toLowerCase();
                 const examId = String(student.id != null ? student.id : '');
                 const klass = String(student.class != null ? student.class : '').toLowerCase();
@@ -128,8 +131,8 @@
                     && !school.includes(normalizedKeyword)) {
                     continue;
                 }
+                matchedIndexes.push(index);
             }
-            list.push({ student, _originalIndex: index });
         }
 
         manager.pagination = manager.pagination || { page: 1, size: 20, total: 0 };
@@ -140,41 +143,44 @@
             manager.pagination.page = 1;
         }
 
-        manager.pagination.total = list.length;
+        manager.pagination.total = matchedIndexes ? matchedIndexes.length : rawData.length;
         const totalPages = Math.ceil(manager.pagination.total / manager.pagination.size) || 1;
         if (manager.pagination.page > totalPages) manager.pagination.page = totalPages;
         if (manager.pagination.page < 1) manager.pagination.page = 1;
 
         const start = (manager.pagination.page - 1) * manager.pagination.size;
-        const pageData = list.slice(start, start + manager.pagination.size);
-        const validIndexSet = new Set(list.map((item) => item._originalIndex));
+        const pageIndexes = matchedIndexes
+            ? matchedIndexes.slice(start, start + manager.pagination.size)
+            : Array.from({ length: Math.max(0, Math.min(manager.pagination.size, rawData.length - start)) }, (_, offset) => start + offset);
         const selection = ensureStudentSelection(manager);
-        selection.forEach((idx) => {
-            if (!validIndexSet.has(idx)) selection.delete(idx);
-        });
+        if (matchedIndexes && selection.size) {
+            const validIndexSet = new Set(matchedIndexes);
+            selection.forEach((idx) => {
+                if (!validIndexSet.has(idx)) selection.delete(idx);
+            });
+        }
 
         const tbody = queryStudentTableBody();
         if (!tbody) return;
 
-        if (pageData.length === 0) {
+        if (pageIndexes.length === 0) {
             tbody.innerHTML = `<tr><td colspan="${7 + displayOnlySubjects.length}" style="text-align:center; padding:20px; color:#999;">无数据</td></tr>`;
         } else {
-            const rows = pageData.map((item) => {
-                const student = item && item.student ? item.student : {};
+            const rows = pageIndexes.map((originalIndex) => {
+                const student = rawData[originalIndex] || {};
                 const school = student.school != null ? student.school : '';
                 const klass = student.class != null ? student.class : '';
                 const name = student.name != null ? student.name : '';
                 const examId = student.id != null ? student.id : '';
                 const total = student.total != null ? student.total : '';
-                const originalIndex = item && Number.isInteger(item._originalIndex) ? item._originalIndex : -1;
                 return `
                 <tr>
                     <td style="text-align:center;"><input type="checkbox" class="dm-stu-select" data-idx="${originalIndex}" ${selection.has(originalIndex) ? 'checked' : ''} onchange="DataManager.toggleStudentSelection(this)"></td>
-                    <td>${school}</td>
-                    <td>${klass}</td>
-                    <td style="font-weight:bold;">${name}</td>
-                    <td>${examId}</td>
-                    <td>${total}</td>
+                    <td>${escapeStudentCell(manager, school)}</td>
+                    <td>${escapeStudentCell(manager, klass)}</td>
+                    <td style="font-weight:bold;">${escapeStudentCell(manager, name)}</td>
+                    <td>${escapeStudentCell(manager, examId)}</td>
+                    <td>${escapeStudentCell(manager, total)}</td>
                     ${renderDisplayOnlyScoreCells(manager, student, displayOnlySubjects)}
                     <td>
                         <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button>

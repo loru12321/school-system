@@ -219,6 +219,13 @@
         const db = root.CohortDB && typeof root.CohortDB.ensure === 'function' ? root.CohortDB.ensure() : null;
         if (!db) return null;
         db.assessmentRosters = db.assessmentRosters || {};
+        // CohortDB owns this data, but WorkspaceState is the object serialized by
+        // the cloud-workspace writer.  Keep both references aligned before a
+        // roster lock is reported as successful.
+        root.COHORT_DB = db;
+        if (root.WorkspaceState && typeof root.WorkspaceState.setCohortDb === 'function') {
+            root.WorkspaceState.setCohortDb(db);
+        }
         return db.assessmentRosters;
     }
 
@@ -298,14 +305,38 @@
         } catch (error) {
             console.warn('[assessment-sync] publish roster state failed:', error);
         }
-        if (typeof root.saveCloudData !== 'function') return false;
-        return root.saveCloudData({ mode: 'workspace', forceUpload: true, sourceLabel });
+        if (typeof root.saveCloudData !== 'function') {
+            throw new Error('名册未保存：云端同步功能尚未就绪。');
+        }
+        const saved = await root.saveCloudData({ mode: 'workspace', forceUpload: true, sourceLabel });
+        if (saved !== true) {
+            throw new Error('名册未保存到云端：请检查网络后重新锁定，系统不会生成教师自动分。');
+        }
+        return true;
     }
 
     async function lockAssessmentRosters() {
+        const store = assessmentRosterStore();
+        // Building a snapshot mutates CohortDB. Keep a rollback copy so a failed
+        // network write cannot leave a locally "locked" roster that disappears
+        // after refresh yet still enables automatic scoring in this tab.
+        const previousStore = store ? JSON.parse(JSON.stringify(store)) : null;
         const result = buildAssessmentRosterSnapshot(getCurrentExamContext());
         if (!result.ok) throw new Error(result.reason);
-        await persistAssessmentRosters('assessment-roster-lock');
+        try {
+            await persistAssessmentRosters('assessment-roster-lock');
+        } catch (error) {
+            if (store && previousStore) {
+                Object.keys(store).forEach((key) => delete store[key]);
+                Object.assign(store, previousStore);
+                try {
+                    root.syncRuntimeStateToWindow?.();
+                } catch (restoreError) {
+                    console.warn('[assessment-sync] rollback roster state publish failed:', restoreError);
+                }
+            }
+            throw error;
+        }
         root.dispatchEvent?.(new CustomEvent('assessment-roster-locked', { detail: result }));
         setTimeout(() => runAutomaticAssessmentSync({ force: false }).catch(() => {}), 300);
         return result;

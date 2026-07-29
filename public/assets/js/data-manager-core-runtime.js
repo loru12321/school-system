@@ -1193,6 +1193,9 @@ const DataManager = {
     },
 
     renderStudents: function (keyword) {
+        if (window.DataManagerStudentRuntime && typeof window.DataManagerStudentRuntime.renderStudents === 'function') {
+            return window.DataManagerStudentRuntime.renderStudents(this, keyword);
+        }
         if (!window.RAW_DATA) return;
 
         let list = keyword

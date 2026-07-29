@@ -1,9 +1,12 @@
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 
 const createDataManagerTabRuntime = require(path.resolve(__dirname, '../public/assets/js/data-manager-tab-runtime.js'));
+const coreSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/data-manager-core-runtime.js'), 'utf8');
 
 function run() {
+    assert.ok(coreSource.includes('DataManagerStudentRuntime.renderStudents(this, keyword)'), 'core DataManager must use the paged student runtime instead of cloning every row on first render');
     const renderCalls = [];
     const searchInput = { value: '  701  ' };
     const pageInfo = { innerText: '' };

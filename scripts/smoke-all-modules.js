@@ -5418,11 +5418,16 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     for (const id of DATA_MANAGER_TABS) {
         currentScope = `dm:${id}`;
         trace('data-manager-tab:start', { id });
-        const tabMeasurement = await measureAsync(
-            `dm:${id}`,
-            () => withPagePerformancePhase(
-                page,
-                `smoke-dm:${id}`,
+        // The phase marker is harness bookkeeping, not part of a user tab
+        // switch.  Under a busy browser it can wait behind earlier module
+        // cleanup even when the delegated DataManager action itself is fast.
+        // Keep the marker for long-task attribution while timing the actual
+        // tab action only.
+        const tabMeasurement = await withPagePerformancePhase(
+            page,
+            `smoke-dm:${id}`,
+            () => measureAsync(
+                `dm:${id}`,
                 () => withTimeoutResult(
                     () => smokeDataManagerTab(page, id),
                     DATA_MANAGER_TAB_TIMEOUT_MS,
