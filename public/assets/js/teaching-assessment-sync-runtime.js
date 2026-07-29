@@ -178,12 +178,13 @@
     };
 
     const SUBJECT_ORDER = ['语文', '数学', '英语', '物理', '化学', '政治', '历史', '地理', '生物', '体育', '音乐', '美术', '信息', '科学'];
+    // 八年级史地生须从原二模单独读取。九年级政治不同：它使用本次
+    // 中考整理表中人工整理过的“二模政治”列，绝不回填原始二模考试分数。
     const ASSESSMENT_SECOND_MOCK_SUBJECTS_BY_GRADE = {
-        8: ['历史', '地理', '生物'],
-        9: ['政治']
+        8: ['历史', '地理', '生物']
     };
     const GRADE8_SECOND_MOCK_ASSESSMENT_SUBJECTS = new Set(['历史', '地理', '生物']);
-    const ASSESSMENT_CALCULATION_VERSION = 'teacher-personal-v3.2026-07';
+    const ASSESSMENT_CALCULATION_VERSION = 'teacher-personal-v4.2026-07-curated-politics';
     const ASSESSMENT_ROSTER_INCLUDED_STATUSES = new Set(['active', 'transfer_in', 'leave', 'dropout']);
     const ASSESSMENT_ROSTER_EXCLUDED_STATUSES = new Set(['transfer_out', 'not_enrolled']);
     const NON_GRAD_TOP_SUBJECTS = {
@@ -573,6 +574,43 @@
         return context;
     }
 
+    async function ensureGrade9CuratedPoliticsReferenceReady(context, rows) {
+        if (!isGrade9ZhongkaoExam(context, rows)
+            || !(rows || []).some((row) => Number.isFinite(getSubjectScore(row, '政治')))) return null;
+        try {
+            // 该运行时仍由政治展示页按需加载；考核预检不可为了取阈值而抢先加载它，
+            // 否则教师乡镇页会在自身重绘前出现不稳定的“半加载”行数。
+            if (!root.Grade9PoliticsReferenceRuntime) return null;
+            const summary = await root.Grade9PoliticsReferenceRuntime?.ensureSummary?.();
+            if (!summary?.available || text(summary.sourceExamId) !== text(context.currentExamId)) return null;
+            const excellent = toNumber(summary.thresholds?.exc, NaN);
+            const pass = toNumber(summary.thresholds?.pass, NaN);
+            return Number.isFinite(excellent) && Number.isFinite(pass) ? summary : null;
+        } catch (error) {
+            console.warn('[assessment-sync] load curated grade9 politics reference failed:', error?.message || error);
+            return null;
+        }
+    }
+
+    function withGrade9CuratedPoliticsThreshold(context, summary) {
+        if (!summary?.thresholds) return context;
+        const exam = context?.exam || {};
+        const source = exam.thresholds || exam.meta?.thresholds || root.THRESHOLDS || {};
+        return {
+            ...context,
+            exam: {
+                ...exam,
+                thresholds: {
+                    ...source,
+                    政治: {
+                        exc: summary.thresholds.exc,
+                        pass: summary.thresholds.pass
+                    }
+                }
+            }
+        };
+    }
+
     function extractExamMonth(context = getCurrentExamContext()) {
         const exam = context.exam || {};
         const candidates = [
@@ -800,6 +838,11 @@
         return isSecondMockAssessmentTeacher(teacher)
             && normalizeGrade(teacher?.grade) === '8'
             && GRADE8_SECOND_MOCK_ASSESSMENT_SUBJECTS.has(normalizeSubject(teacher?.subject));
+    }
+
+    function isGrade9CuratedPoliticsAssessmentTeacher(teacher) {
+        return normalizeGrade(teacher?.grade) === '9'
+            && normalizeSubject(teacher?.subject) === '政治';
     }
 
     function getCurrentCompositeBaseInfo(rows, context) {
@@ -2155,21 +2198,38 @@
             };
         }
         const syncSettings = await fetchAssessmentSyncSettings(getAcademicYearForSync());
+        const grade9CuratedPoliticsReference = await ensureGrade9CuratedPoliticsReferenceReady(examContext, rows);
+        const assessmentExamContext = withGrade9CuratedPoliticsThreshold(examContext, grade9CuratedPoliticsReference);
         const julyTeachers = teachers.filter((teacher) => !isSecondMockAssessmentTeacher(teacher));
         const grade8SecondMockTeachers = teachers.filter(isGrade8SecondMockAssessmentTeacher);
         const secondMockTeachers = teachers.filter(isSecondMockAssessmentTeacher);
+        const grade9CuratedPoliticsTeachers = teachers.filter(isGrade9CuratedPoliticsAssessmentTeacher);
         const julyBuild = buildAssessmentItemsForRows({
             teachers: julyTeachers,
             rows,
-            examContext,
+            examContext: assessmentExamContext,
             syncSettings,
             skipped,
             sourceNoteSuffix: '本系统所有模块均只按7月期末上传成绩本身计算，不合并二模补科。'
         });
-        const julyItems = attachAssessmentCalculationMetadata(julyBuild.items, julyBuild, {
+        let julyItems = attachAssessmentCalculationMetadata(julyBuild.items, julyBuild, {
             source_label: examLabel,
             threshold_source: `联考分析分数线：${examLabel || examDate || '当前7月考试'}`
         });
+        const grade9CuratedPoliticsKeys = new Set(grade9CuratedPoliticsTeachers
+            .map((teacher) => teacherKeyFor(teacher.teacher_name, teacher.grade, teacher.subject)));
+        if (grade9CuratedPoliticsKeys.size) {
+            julyItems = julyItems.map((item) => {
+                const key = teacherKeyFor(item.teacher_name, item.grade, item.subject);
+                if (!grade9CuratedPoliticsKeys.has(key)) return item;
+                return {
+                    ...item,
+                    curated_politics_source: true,
+                    curated_politics_source_mode: 'zhongkao-curated-second-mock-politics',
+                    note: `${item.note || ''} 九年级政治教师考核读取本次中考整理表中人工整理的二模政治列；不读取、不回填原始二模考试政治成绩。`.trim()
+                };
+            });
+        }
         const secondMockSubjects = getSecondMockSubjectsForGrade(julyBuild.baseInfo.grade)
             .filter((subject) => GRADE8_SECOND_MOCK_ASSESSMENT_SUBJECTS.has(subject));
         let secondMockExam = null;
@@ -2212,7 +2272,7 @@
             ...secondMockItems
         ], skipped);
         const items = crossGrade.items;
-        const previewItems = buildFormulaAuditPreviewItems({ teachers, rows, examContext, highSchoolLine, skipped })
+        const previewItems = buildFormulaAuditPreviewItems({ teachers, rows, examContext: assessmentExamContext, highSchoolLine, skipped })
             .map((item) => ({
                 ...item,
                 source_exam_id: examContext.currentExamId,
@@ -2223,6 +2283,7 @@
         const growthBaselineExam = julyBuild.growthBaselineExam;
         const grade8SecondMockItems = secondMockItems.filter((item) => item.grade8_second_mock_source);
         const hasGrade8SecondMockItems = grade8SecondMockItems.length > 0;
+        const grade9CuratedPoliticsItems = julyItems.filter((item) => item.curated_politics_source === true);
         return {
             academic_year: getAcademicYearForSync(),
             source_exam_id: examContext.currentExamId,
@@ -2257,6 +2318,12 @@
             second_mock_exam_date: secondMockExam ? extractExamDate({ currentExamId: secondMockExam.examId, exam: secondMockExam.exam }) : '',
             second_mock_subjects: getSecondMockSubjectsForGrade(julyBuild.baseInfo.grade),
             second_mock_items: secondMockItems.length,
+            grade9_curated_politics_source: grade9CuratedPoliticsItems.length > 0,
+            grade9_curated_politics_exam_id: grade9CuratedPoliticsItems.length > 0 ? examContext.currentExamId : '',
+            grade9_curated_politics_exam_label: grade9CuratedPoliticsItems.length > 0 ? examLabel : '',
+            grade9_curated_politics_exam_date: grade9CuratedPoliticsItems.length > 0 ? examDate : '',
+            grade9_curated_politics_items: grade9CuratedPoliticsItems.length,
+            grade9_curated_politics_threshold_source: grade9CuratedPoliticsReference?.thresholds?.source || '',
             grade8_second_mock_exam_id: hasGrade8SecondMockItems ? (secondMockExam?.examId || '') : '',
             grade8_second_mock_exam_label: hasGrade8SecondMockItems && secondMockExam ? getExamLabel({ currentExamId: secondMockExam.examId, exam: secondMockExam.exam }) : '',
             grade8_second_mock_exam_date: hasGrade8SecondMockItems && secondMockExam ? extractExamDate({ currentExamId: secondMockExam.examId, exam: secondMockExam.exam }) : '',
@@ -2510,6 +2577,12 @@
                 secondMockExamDate: payload.second_mock_exam_date || '',
                 secondMockSubjects: payload.second_mock_subjects || [],
                 secondMockItems: payload.second_mock_items || 0,
+                grade9CuratedPoliticsSource: payload.grade9_curated_politics_source === true,
+                grade9CuratedPoliticsExamId: payload.grade9_curated_politics_exam_id || '',
+                grade9CuratedPoliticsExamLabel: payload.grade9_curated_politics_exam_label || '',
+                grade9CuratedPoliticsExamDate: payload.grade9_curated_politics_exam_date || '',
+                grade9CuratedPoliticsItems: payload.grade9_curated_politics_items || 0,
+                grade9CuratedPoliticsThresholdSource: payload.grade9_curated_politics_threshold_source || '',
                 grade8SecondMockExamId: payload.grade8_second_mock_exam_id || '',
                 grade8SecondMockExamLabel: payload.grade8_second_mock_exam_label || '',
                 grade8SecondMockExamDate: payload.grade8_second_mock_exam_date || '',
@@ -2555,12 +2628,10 @@
         const calculation = audit.calculation || {};
         const hasSecondMockSource = !!composite.secondMockExamId || !!composite.secondMockItems;
         const secondMockSubjects = composite.secondMockSubjects || [];
-        const isGrade9PoliticsSecondMock = String(composite.grade) === '9' && secondMockSubjects.includes('政治');
         const isGrade8HistoryGeoBioSecondMock = String(composite.grade) === '8'
             && ['历史', '地理', '生物'].some((subject) => secondMockSubjects.includes(subject));
-        const secondMockSourceLabel = isGrade9PoliticsSecondMock
-            ? '九年级政治教师考核取二模'
-            : (isGrade8HistoryGeoBioSecondMock ? '八年级史地生教师考核取二模' : '二模教师考核来源');
+        const secondMockSourceLabel = isGrade8HistoryGeoBioSecondMock ? '八年级史地生教师考核取二模' : '二模教师考核来源';
+        const hasGrade9CuratedPolitics = composite.grade9CuratedPoliticsSource === true;
         const missingRows = (composite.missing || []).slice(0, 10).map((item) => `
             <tr>
                 <td>${escapeHtml(item.school || '-')}</td>
@@ -2579,6 +2650,7 @@
                     <span class="status-chip info">${escapeHtml(calculation.version || '')}</span>
                     <span class="status-chip ${calculation.rosterLocked ? 'ok' : 'warn'}">${calculation.rosterLocked ? '95%名册已锁定' : '95%名册未锁定'}</span>
                     <span class="status-chip info">补零 ${escapeHtml(calculation.rosterZeroFill || 0)} 人</span>
+                    ${hasGrade9CuratedPolitics ? `<span class="status-chip info">九年级政治：中考整理表的人工二模政治列（${escapeHtml(composite.grade9CuratedPoliticsExamDate || composite.grade9CuratedPoliticsExamLabel || composite.grade9CuratedPoliticsExamId)}，${escapeHtml(composite.grade9CuratedPoliticsItems || 0)} 条${composite.grade9CuratedPoliticsThresholdSource ? `；分数线：${escapeHtml(composite.grade9CuratedPoliticsThresholdSource)}` : ''}）</span>` : ''}
                     ${hasSecondMockSource ? `<span class="status-chip info">${secondMockSourceLabel}：${escapeHtml(composite.secondMockExamDate || composite.secondMockExamLabel || composite.secondMockExamId)}</span>` : ''}
                     ${hasSecondMockSource && secondMockSubjects.length ? `<span class="status-chip info">二模科目：${escapeHtml(secondMockSubjects.join('、'))}；已生成 ${escapeHtml(composite.secondMockItems || 0)} 条</span>` : ''}
                     ${composite.missingCount ? `<span class="status-chip warn">补科缺失 ${escapeHtml(composite.missingCount)} 条</span>` : ''}

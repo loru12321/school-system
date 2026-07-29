@@ -510,7 +510,9 @@ const DataManager = {
             if (window.AssessmentRoster?.renderDataManagerPanel) {
                 window.setTimeout(renderRoster, 0);
             } else if (window.SystemRuntimeLoader?.load) {
-                window.SystemRuntimeLoader.load('teaching-assessment-sync')
+                // The roster panel needs both the sync core and its own renderer.
+                // Loading only the sync entry leaves the tab active but blank.
+                window.SystemRuntimeLoader.load('assessment-roster')
                     .then(() => window.setTimeout(renderRoster, 0))
                     .catch((error) => console.warn('[DataManager] assessment roster runtime load failed:', error?.message || error));
             }

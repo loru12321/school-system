@@ -108,6 +108,7 @@ assert.ok(source.includes('root.syncRuntimeStateToWindow?.()'), 'assessment rost
 assert.ok(source.includes('AssessmentRosterCore') && source.includes('getAssessmentRosterPanelState'), 'assessment sync should expose a core 95% roster API without coupling it to the UI renderer');
 assert.ok(indexHtml.includes('tab-data-assessment-roster'), 'data manager should expose a dedicated assessment roster tab');
 assert.ok(dataManagerRuntimeSource.includes("tab === 'assessment-roster'") && runtimeLoaderSource.includes("'assessment-roster'"), 'assessment roster tab should lazy-load its dedicated renderer');
+assert.ok(dataManagerRuntimeSource.includes("SystemRuntimeLoader.load('assessment-roster')"), 'assessment roster tab must load its renderer bundle, not only the sync core');
 assert.ok(rosterRuntimeSource.includes('根据当前成绩锁定名册') && rosterRuntimeSource.includes('95%目标'), 'assessment roster renderer should show lock controls and 95% target counts');
 assert.ok(bootRuntimeSource.includes("'teaching-assessment-sync-runtime.js'"), 'assessment sync runtime should load with the workbench, not only after entering teacher analysis');
 assert.ok(indexHtml.includes('考核同步对账'), 'teaching management page should show a fixed assessment sync reconciliation entry');
@@ -212,12 +213,19 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
 
       context.window.CURRENT_EXAM_ID = '2022级-9年级-2025-2026-暑假-7月中考-2026-07-12';
       context.window.RAW_DATA = [
-        { name: '九甲', school: '银山实验学校', class: '9.1', total: 620, scores: { 语文: 108, 数学: 112, 英语: 110, 物理: 96, 化学: 94, 体育: 58 } },
-        { name: '九乙', school: '银山实验学校', class: '9.1', total: 560, scores: { 语文: 98, 数学: 101, 英语: 100, 物理: 88, 化学: 86, 体育: 55 } },
-        { name: '九丁', school: '银山实验学校', class: '9.2', total: 610, scores: { 语文: 106, 数学: 110, 英语: 108, 物理: 94, 化学: 92, 体育: 56 } },
-        { name: '九戊', school: '银山实验学校', class: '9.2', total: 605, scores: { 语文: 105, 数学: 109, 英语: 107, 物理: 93, 化学: 91, 体育: 57 } },
-        { name: '九丙', school: '兄弟学校', class: '9.1', total: 630, scores: { 语文: 110, 数学: 114, 英语: 112, 物理: 98, 化学: 96, 体育: 58 } }
+        { name: '九甲', school: '银山实验学校', class: '9.1', total: 620, scores: { 语文: 108, 数学: 112, 英语: 110, 物理: 96, 化学: 94, 政治: 83, 体育: 58 } },
+        { name: '九乙', school: '银山实验学校', class: '9.1', total: 560, scores: { 语文: 98, 数学: 101, 英语: 100, 物理: 88, 化学: 86, 政治: 71, 体育: 55 } },
+        { name: '九丁', school: '银山实验学校', class: '9.2', total: 610, scores: { 语文: 106, 数学: 110, 英语: 108, 物理: 94, 化学: 92, 政治: 81, 体育: 56 } },
+        { name: '九戊', school: '银山实验学校', class: '9.2', total: 605, scores: { 语文: 105, 数学: 109, 英语: 107, 物理: 93, 化学: 91, 政治: 76, 体育: 57 } },
+        { name: '九丙', school: '兄弟学校', class: '9.1', total: 630, scores: { 语文: 110, 数学: 114, 英语: 112, 物理: 98, 化学: 96, 政治: 89, 体育: 58 } }
       ];
+      context.window.Grade9PoliticsReferenceRuntime = {
+        ensureSummary: async () => ({
+          available: true,
+          sourceExamId: context.window.CURRENT_EXAM_ID,
+          thresholds: { exc: 80, pass: 60, source: '最新中考整理表归档分数线' }
+        })
+      };
       context.window.TEACHER_MAP = { '9.1_政治': '政一', '9.2_政治': '政二', '9.1_语文': '语一', '9.2_语文': '语二', '9.1_体育': '体一', '9.2_体育': '体二' };
       context.window.TEACHER_STATS = {};
       context.window.CohortDB = (() => {
@@ -248,8 +256,15 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         return { ensure: () => db };
       })();
       return context.window.AssessmentRosterCore.lockCurrentRoster().then(() => context.window.tmBuildTeacherAssessmentSyncPayload()).then((grade9Payload) => {
-        assert.ok(grade9Payload.items.some((item) => item.subject === '政治' && item.second_mock_source === true), '9th grade politics teacher should sync from second mock source rows');
-        assert.deepStrictEqual(Array.from(grade9Payload.second_mock_subjects), ['政治'], '9th grade politics assessment should identify the second-mock subject');
+        const grade9PoliticsItems = grade9Payload.items.filter((item) => item.subject === '政治');
+        assert.ok(grade9PoliticsItems.length > 0, '9th grade politics teacher should produce formal assessment items from the curated column');
+        assert.ok(grade9PoliticsItems.every((item) => item.curated_politics_source === true), '9th grade politics must be marked as the curated Zhongkao politics source');
+        assert.ok(grade9PoliticsItems.every((item) => item.second_mock_source !== true), '9th grade politics must not read raw second-mock rows');
+        assert.ok(grade9PoliticsItems.every((item) => item.source_exam_id === context.window.CURRENT_EXAM_ID && /人工整理的二模政治列/.test(item.note)), '9th grade politics must come from the current Zhongkao archive column');
+        assert.deepStrictEqual(Array.from(grade9Payload.second_mock_subjects), [], 'raw second-mock subjects are reserved for grade 8 history/geography/biology');
+        assert.strictEqual(grade9Payload.grade9_curated_politics_source, true, 'payload should expose the curated politics provenance');
+        assert.ok(/政治:80\/60/.test(grade9Payload.threshold_snapshot), 'politics thresholds must come from the curated Zhongkao reference, not the raw second mock');
+        assert.strictEqual(grade9Payload.grade9_curated_politics_threshold_source, '最新中考整理表归档分数线', 'payload should retain the curated politics threshold provenance');
         assert.deepStrictEqual(Array.from(grade9Payload.makeup_subjects), [], 'second mock source rows should not be reported as July makeup subjects');
         const grade9ExcellentItems = grade9Payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution');
         assert.ok(grade9ExcellentItems.length > 0, '9th grade excellent contribution should be generated from 550/600 high-score tiers');
@@ -280,9 +295,10 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         assert.ok(highScoreItems.length >= 2, '9th grade high-score contribution should be available as preview rows');
         assert.ok(highScoreItems.every((item) => item.max_score === 15 && /550分以上/.test(item.note)), 'high-score preview should explain the 550-point rule');
         const previewAudit = context.window.tmBuildTeacherAssessmentSyncAudit(grade9Payload, { written: grade9Payload.items.length, skipped: [] });
-        assert.deepStrictEqual(Array.from(previewAudit.composite.secondMockSubjects), ['政治'], 'audit should expose the 9th grade politics second-mock source');
-        assert.strictEqual(previewAudit.composite.secondMockExamDate, '2026-05-27', 'audit should expose the selected second-mock date');
-        assert.ok(source.includes('九年级政治教师考核取二模'), 'audit UI should explicitly label the 9th grade politics second-mock rule');
+        assert.deepStrictEqual(Array.from(previewAudit.composite.secondMockSubjects), [], 'audit must not label curated politics as raw second-mock data');
+        assert.strictEqual(previewAudit.composite.grade9CuratedPoliticsSource, true, 'audit should expose the curated politics source');
+        assert.strictEqual(previewAudit.composite.grade9CuratedPoliticsExamDate, '2026-07-12', 'audit should show the Zhongkao archive date for curated politics');
+        assert.ok(source.includes('中考整理表的人工二模政治列'), 'audit UI should explicitly label the curated politics rule');
         assert.strictEqual(previewAudit.projects.class_target_grad.mode, 'preview', 'class target should be represented as preview-only in audit');
         assert.strictEqual(previewAudit.projects.class_target_grad.preview, classTargetItems.length, 'audit should count preview-only class target rows');
         assert.strictEqual(previewAudit.projects.class_high_school_contribution_grad.mode, 'preview', 'high-school contribution should be represented as preview-only in audit');

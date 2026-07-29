@@ -677,6 +677,27 @@ async function main() {
                         studentCount: toNumber(metrics.count)
                     });
                 });
+                // 九年级政治是中考整理表的独立展示项，不存在于正式 SCHOOLS.metrics。
+                // 同步逻辑提前加载该参考后，渲染表会追加它的各校行；快照的独立口径
+                // 必须使用同一来源，不能把它误判为多出的正式学科数据。
+                if (subject === '政治') {
+                    const referenceSchools = window.Grade9PoliticsReferenceRuntime?.getSummary?.()?.referenceSchools || [];
+                    referenceSchools.forEach((school) => {
+                        const name = String(school?.name || '').trim();
+                        const metrics = school?.metrics || {};
+                        if (!name || window.sameAppSchoolName(name, window.MY_SCHOOL) || !isTownshipSchoolName(name)) return;
+                        if (rankingData.some((item) => item.type === 'school' && window.sameAppSchoolName(item.name, name))) return;
+                        rankingData.push({
+                            subject,
+                            name,
+                            type: 'school',
+                            avg: toNumber(metrics.avg),
+                            excellentRate: toNumber(metrics.excRate),
+                            passRate: toNumber(metrics.passRate),
+                            studentCount: toNumber(metrics.count)
+                        });
+                    });
+                }
                 rankingData.sort((left, right) => right.avg - left.avg);
                 rankingData.forEach((item, index) => { item.rankAvg = index + 1; });
                 rankingData.sort((left, right) => right.excellentRate - left.excellentRate);
