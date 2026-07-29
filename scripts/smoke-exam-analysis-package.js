@@ -307,6 +307,22 @@ async function login(page) {
                 })
             };
         });
+        // 中考政治仅作同届二模参考，但教师乡镇表必须带齐二模外校学校聚合行。
+        // 导出函数应自行完成读取/回填；回归断言只使用正式的乡镇学校范围，避免先
+        // 行为加载掩盖下载路径本身的遗漏问题。
+        const politicsReferenceScope = await page.evaluate((townshipNames) => {
+            const ownSchool = String(window.MY_SCHOOL || window.DEFAULT_MY_SCHOOL_NAME || '').trim();
+            const sameSchool = typeof window.sameAppSchoolName === 'function'
+                ? window.sameAppSchoolName
+                : (left, right) => String(left || '').trim() === String(right || '').trim();
+            const externalSchoolNames = (townshipNames || [])
+                .map((name) => String(name || '').trim())
+                .filter((name) => name && !sameSchool(name, ownSchool));
+            if (!externalSchoolNames.length) {
+                throw new Error('grade-9 politics reference has no external township schools');
+            }
+            return { externalSchoolNames };
+        }, packageScope.townshipNames);
         const expectedSupportRows = await page.evaluate(() => {
             if (typeof window.renderTables === 'function') window.renderTables();
             if (typeof window.calcSummary === 'function') window.calcSummary(true);
@@ -700,6 +716,22 @@ async function login(page) {
         if (!teacherTownSummary.sheetNames.includes('政治（二模参考） 教师乡镇排名')) {
             fail(`teacher township workbook missing politics reference sheet: ${teacherTownSummary.sheetNames.join(', ')}`);
         }
+        const politicsTeacherRows = teacherTownSummary.rowsBySheetName['政治（二模参考） 教师乡镇排名'] || [];
+        const politicsTeacherHeader = politicsTeacherRows[0] || [];
+        const politicsTeacherNameIndex = findColumn(politicsTeacherHeader, ['教师/学校']);
+        const politicsTeacherTypeIndex = findColumn(politicsTeacherHeader, ['类型']);
+        if (politicsTeacherNameIndex < 0 || politicsTeacherTypeIndex < 0) {
+            fail(`${teacherTownName}:政治（二模参考） 教师乡镇排名 missing name/type columns: ${politicsTeacherHeader.join(',')}`);
+        }
+        const politicsExternalSchoolRows = getDataRows(politicsTeacherRows, politicsTeacherNameIndex)
+            .filter((row) => String(row?.[politicsTeacherTypeIndex] || '').trim() === '学校');
+        const politicsExternalSchoolNames = new Set(politicsExternalSchoolRows
+            .map((row) => String(row?.[politicsTeacherNameIndex] || '').trim()));
+        const missingPoliticsSchools = politicsReferenceScope.externalSchoolNames
+            .filter((name) => !politicsExternalSchoolNames.has(name));
+        if (missingPoliticsSchools.length) {
+            fail(`${teacherTownName}:政治（二模参考） 教师乡镇排名 is missing external schools: ${missingPoliticsSchools.join(', ')}`);
+        }
         Object.entries(teacherTownSummary.rowsBySheetName).forEach(([sheet, rows]) => {
             const header = rows[0] || [];
             const nameIndex = findColumn(header, ['教师/学校']);
@@ -722,7 +754,8 @@ async function login(page) {
             schoolSummaryRows: schoolFirstSheetRows,
             schoolCountySheets: schoolCountySummary.sheetNames,
             schoolCountyRows: countySchoolRows.length,
-            teacherCountyRows: teacherCountySummary.rowCounts
+            teacherCountyRows: teacherCountySummary.rowCounts,
+            politicsExternalSchoolRows: politicsExternalSchoolRows.length
         };
         console.log(JSON.stringify(result, null, 2));
     } finally {

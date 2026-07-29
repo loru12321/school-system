@@ -211,8 +211,26 @@ assert.strictEqual(politicsStats.studentCount, 2);
 assert.strictEqual(Number(politicsStats.avg), 75);
 assert.ok(!context.SUBJECTS.includes('政治'), 'display-only politics must stay out of the formal five-subject list');
 assert.strictEqual(Number(context.TEACHER_STATS['甲校教师']?.数学?.avg), 85, 'adding politics display must not alter the math teacher metric');
+context.Grade9PoliticsReferenceRuntime = {
+    getSummary() {
+        return {
+            signature: 'politics-reference-schools-v1',
+            referenceSchools: [
+                { name: '甲校', metrics: { count: 2, avg: 75, excRate: 0, passRate: 1 } },
+                { name: '乙校', metrics: { count: 3, avg: 82, excRate: 1 / 3, passRate: 1 } },
+                { name: '丙校', metrics: { count: 2, avg: 68, excRate: 0, passRate: 0.5 } }
+            ]
+        };
+    },
+    ensureSummary: async () => context.Grade9PoliticsReferenceRuntime.getSummary()
+};
 context.calculateTeacherTownshipRanking({ force: true, teacherMetricScope: 'admin' });
 assert.ok(context.TEACHER_TOWNSHIP_RANKINGS?.['政治教师']?.政治, 'grade 9 display-only politics should have a teacher township ranking');
+const politicsRankingRows = context.TOWNSHIP_RANKING_DATA.政治 || [];
+assert.ok(politicsRankingRows.some((row) => row.type === 'school' && row.name === '乙校'), 'politics township ranking must include second-mock external school aggregates');
+assert.ok(politicsRankingRows.some((row) => row.type === 'school' && row.name === '丙校'), 'politics township ranking must retain every eligible external school aggregate');
+assert.ok(!politicsRankingRows.some((row) => row.type === 'school' && row.name === '甲校'), 'current school must remain represented by its teachers, not a duplicate politics school row');
+assert.strictEqual(Number(context.TEACHER_TOWNSHIP_AVERAGES.政治.count), 7, 'politics township benchmark must use all second-mock school samples');
 
 const classTeacherUser = {
     role: 'class_teacher',

@@ -66,6 +66,13 @@ assert.ok(/politics\?\.politics\?\.matched/.test(packageSource),
 assert.ok(/「五科总」始终不含政治/.test(packageSource),
     'the readme must state explicitly that 五科总 never includes 政治');
 
+// 压缩包教师乡镇表也必须等待政治二模学校聚合完成；否则网页已经显示外校学校行，
+// 但刚下载的包仍会只剩本校政治教师，形成两套口径。
+assert.ok(/Grade9PoliticsReferenceRuntime\?\.ensureSummary/.test(packageSource),
+    'package teacher ranking warmup must await the grade-9 politics school reference');
+assert.ok(/calculateTeacherTownshipRanking\(\{ force: true, teacherMetricScope: 'admin' \}\)/.test(packageSource),
+    'package must rebuild teacher township rankings after politics school reference warmup');
+
 // ── 4. 不要再出现「与系统页面不一致」这种自伤措辞 ────────────────────────────
 // 对外材料上写「可能和系统不一致」会让收件人怀疑整份数据；应改为标明数据截止时间。
 assert.ok(/数据截至/.test(packageSource),

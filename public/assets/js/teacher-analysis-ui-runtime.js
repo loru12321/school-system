@@ -52,6 +52,31 @@
         comparisonHtml: ''
     };
 
+    // 教师乡镇页也可能是用户首次查看政治参考的入口。异步补齐同届二模学校聚合后
+    // 只重算当前页，既不阻塞教师页首屏，也不会把政治混入正式中考统计。
+    function warmTeacherTownshipPoliticsReference() {
+        const runtime = window.Grade9PoliticsReferenceRuntime;
+        const subjects = typeof window.getTeacherAnalysisDisplaySubjects === 'function'
+            ? window.getTeacherAnalysisDisplaySubjects()
+            : [];
+        const summary = runtime?.getSummary?.();
+        if (!runtime || typeof runtime.ensureSummary !== 'function'
+            || !subjects.some((subject) => normalizeSubjectFn(subject) === '政治')
+            || (Array.isArray(summary?.referenceSchools) && summary.referenceSchools.length)
+            || window.__TEACHER_POLITICS_REFERENCE_PROMISE__) return;
+        window.__TEACHER_POLITICS_REFERENCE_PROMISE__ = Promise.resolve(runtime.ensureSummary())
+            .then((nextSummary) => {
+                if (!Array.isArray(nextSummary?.referenceSchools) || !nextSummary.referenceSchools.length) return;
+                if (typeof window.calculateTeacherTownshipRanking === 'function') {
+                    window.calculateTeacherTownshipRanking({ force: true, teacherMetricScope: 'admin' });
+                }
+                const section = document.getElementById('teacher-township-ranking');
+                if (section?.classList?.contains('active')) renderTeacherTownshipRanking();
+            })
+            .catch((error) => console.warn('[teacher-township] 政治二模学校参考读取失败:', error?.message || error))
+            .finally(() => { window.__TEACHER_POLITICS_REFERENCE_PROMISE__ = null; });
+    }
+
     function teacherBuildUiStatsSignature(stats, extra = '') {
         const parts = [String(extra || '')];
         Object.keys(stats || {}).sort().forEach((teacherName) => {
@@ -263,6 +288,7 @@
         const sideNav = document.getElementById('side-nav-teacher-ranks-container');
         if (sideNav) sideNav.innerHTML = '';
         if (!container) return;
+        warmTeacherTownshipPoliticsReference();
         if (typeof window.calculateTeacherTownshipRanking === 'function') {
             window.calculateTeacherTownshipRanking({ teacherMetricScope: 'admin' });
         }

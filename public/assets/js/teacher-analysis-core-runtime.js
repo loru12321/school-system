@@ -217,6 +217,9 @@
                 .join(',')}`)
             .sort()
             .join('|');
+        const politicsReference = window.Grade9PoliticsReferenceRuntime?.getSummary?.();
+        const politicsReferenceSignature = String(politicsReference?.signature || '')
+            || String((politicsReference?.referenceSchools || []).length || 0);
         return [
             Number(window.__RAW_DATA_VERSION || 0),
             Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
@@ -224,8 +227,31 @@
             Object.keys(window.TARGETS || {}).sort().join('|'),
             (window.SUBJECTS || []).join(','),
             teacherNormalizeSchoolName(window.MY_SCHOOL || (window.localStorage && window.localStorage.getItem('MY_SCHOOL')) || ''),
-            statsShape
+            statsShape,
+            politicsReferenceSignature
         ].join('::');
+    }
+
+    function getTeacherPoliticsReferenceSchoolRows(subject) {
+        if (normalizeSubjectFn(subject) !== '政治') return [];
+        const summary = window.Grade9PoliticsReferenceRuntime?.getSummary?.();
+        const schools = Array.isArray(summary?.referenceSchools) ? summary.referenceSchools : [];
+        return schools.map((school) => {
+            const metrics = school?.metrics || {};
+            const name = teacherNormalizeSchoolName(school?.name);
+            const count = teacherToNumber(metrics.count, 0);
+            if (!name || count <= 0) return null;
+            return {
+                name,
+                type: 'school',
+                subject,
+                avg: teacherToNumber(metrics.avg, 0),
+                excellentRate: teacherToNumber(metrics.excRate, 0),
+                passRate: teacherToNumber(metrics.passRate, 0),
+                studentCount: count,
+                source: 'grade9-second-mock-politics'
+            };
+        }).filter(Boolean);
     }
 
     function renderTeacherAnalysisOutputs(renderOptions = {}) {
@@ -1517,6 +1543,19 @@
             return matched;
         };
         const buildTownshipAverage = (subject) => {
+            const politicsReferenceRows = getTeacherPoliticsReferenceSchoolRows(subject);
+            if (politicsReferenceRows.length) {
+                const count = politicsReferenceRows.reduce((sum, row) => sum + teacherToNumber(row.studentCount, 0), 0);
+                if (count > 0) {
+                    return {
+                        avg: politicsReferenceRows.reduce((sum, row) => sum + teacherToNumber(row.avg, 0) * teacherToNumber(row.studentCount, 0), 0) / count,
+                        excRate: politicsReferenceRows.reduce((sum, row) => sum + teacherToNumber(row.excellentRate, 0) * teacherToNumber(row.studentCount, 0), 0) / count,
+                        passRate: politicsReferenceRows.reduce((sum, row) => sum + teacherToNumber(row.passRate, 0) * teacherToNumber(row.studentCount, 0), 0) / count,
+                        count,
+                        source: 'grade9-second-mock-politics'
+                    };
+                }
+            }
             let rawCount = 0;
             let rawTotal = 0;
             const rawRows = [];
@@ -1596,6 +1635,12 @@
                     passRate: teacherToNumber(metrics.passRate, 0),
                     studentCount: teacherToNumber(metrics.count, 0)
                 });
+            });
+            getTeacherPoliticsReferenceSchoolRows(subject).forEach((schoolRow) => {
+                const alreadyIncluded = rankingData.some((item) => item.type === 'school'
+                    && teacherSameSchoolName(item.name, schoolRow.name));
+                if (alreadyIncluded || teacherSameSchoolName(schoolRow.name, window.MY_SCHOOL)) return;
+                rankingData.push(schoolRow);
             });
             rankingData.sort((left, right) => right.avg - left.avg);
             rankingData.forEach((item, index) => { item.rankAvg = index + 1; });

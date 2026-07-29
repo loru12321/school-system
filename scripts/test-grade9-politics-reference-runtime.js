@@ -73,6 +73,7 @@ vm.runInContext(source, context, { filename: 'grade9-politics-reference-runtime.
     assert.strictEqual(summary.matched, 4);
     assert.strictEqual(summary.unmatched, 0);
     assert.strictEqual(summary.schools.length, 2);
+    assert.strictEqual(summary.referenceSchools.length, 2, 'politics reference must retain all second-mock school aggregates, not only current-exam rows');
     const schoolA = summary.schools.find(item => item.name === '甲校');
     const schoolB = summary.schools.find(item => item.name === '乙校');
     assert.strictEqual(Number(schoolA.metrics.avg.toFixed(2)), 71);
@@ -81,12 +82,14 @@ vm.runInContext(source, context, { filename: 'grade9-politics-reference-runtime.
     assert.strictEqual(Number(schoolB.metrics.avg.toFixed(2)), 80);
     assert.strictEqual(schoolB.rankings.avg, 1);
     assert.ok(schoolB.score2Rate > schoolA.score2Rate, 'politics reference scoring should rank only the politics metric set');
+    assert.strictEqual(summary.referenceSchools.find(item => item.name === '乙校')?.metrics.count, 2);
 
     assert.deepStrictEqual(currentRows.map(row => row.scores.政治), [82, 60, 90, 70], 'second-mock politics should be copied into the current zhongkao archive rows');
     assert.deepStrictEqual(currentRows.map(row => row.total), totalsBeforeCopy, 'copying politics must not change five-subject totals');
     assert.deepStrictEqual(context.window.SUBJECTS, ['语文', '数学', '英语', '物理', '化学'], 'display-only politics must not enter formal subjects');
     assert.strictEqual(context.window.COHORT_DB.exams[currentExamId].meta.politicsReference.sourceExamId, secondMockId, 'current zhongkao archive should retain the second-mock source');
     assert.strictEqual(context.window.COHORT_DB.exams[currentExamId].meta.politicsReference.thresholds.exc, 80, 'current zhongkao archive should retain the reference threshold');
+    assert.strictEqual(context.window.COHORT_DB.exams[currentExamId].meta.politicsReference.schoolMetrics.length, 2, 'current zhongkao archive should retain second-mock school aggregates for teacher/package display');
     assert.strictEqual(await context.window.Grade9PoliticsReferenceRuntime.flushPendingPersistence(), 'queued', 'copy should be queued to the exam cloud shard');
     assert.deepStrictEqual(cloudSaves, [{
         mode: 'exam',
@@ -101,6 +104,7 @@ vm.runInContext(source, context, { filename: 'grade9-politics-reference-runtime.
     const stored = await context.window.Grade9PoliticsReferenceRuntime.ensureSummary();
     assert.ok(stored.available, 'stored politics reference should render from the zhongkao archive');
     assert.strictEqual(stored.sourceMode, 'archived-copy');
+    assert.strictEqual(stored.referenceSchools.length, 2, 'stored politics reference must keep external-school aggregates without reloading second mock');
     assert.strictEqual(cloudSaves.length, 1, 'unchanged archived copy must not enqueue another cloud save');
 
     // 冷缓存先只取最近两条考试（中考 + 二模）；不要为了政治参考阻塞式拉完整届历史。

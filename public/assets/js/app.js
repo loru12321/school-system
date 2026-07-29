@@ -5740,7 +5740,7 @@ function requestGrade9PoliticsReferenceSummary(summarySignature) {
         || Grade9PoliticsReferenceRenderState.completedKeys.has(requestKey)) return;
     Grade9PoliticsReferenceRenderState.pendingKeys.add(requestKey);
     const loadRuntime = typeof loadOptionalRuntime === 'function'
-        ? loadOptionalRuntime('grade9-politics-reference', './assets/js/grade9-politics-reference-runtime.js')
+        ? loadOptionalRuntime('grade9-politics', './assets/js/grade9-politics-reference-runtime.js')
         : Promise.resolve();
     Promise.resolve(loadRuntime)
         .then(() => window.Grade9PoliticsReferenceRuntime?.ensureSummary?.())
@@ -5768,7 +5768,11 @@ function buildGrade9PoliticsReferenceTable(reference) {
     }
     const thresholds = reference.thresholds || {};
     const source = escapeAppHtml(reference.sourceLabel || '同届最新二模');
-    const rows = Array.isArray(reference.schools) ? reference.schools : [];
+    // 中考归档可能只含本校学生；政治学校对比始终取同届二模的学校聚合，
+    // 这样外校不会因为中考正式数据不考政治而在参考表中消失。
+    const rows = Array.isArray(reference.referenceSchools) && reference.referenceSchools.length
+        ? reference.referenceSchools
+        : (Array.isArray(reference.schools) ? reference.schools : []);
     const htmlRows = rows.map(school => {
         const metric = school.metrics || {};
         const ranking = school.rankings || {};

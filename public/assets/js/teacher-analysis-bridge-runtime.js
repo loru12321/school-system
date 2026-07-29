@@ -456,7 +456,10 @@
         const getExcelNumFn = typeof getExcelNum === 'function' ? getExcelNum : ((value) => value);
         const getExcelPercentFn = typeof getExcelPercent === 'function' ? getExcelPercent : ((value) => value);
 
-        getAvailableSubjects().forEach((subject) => {
+        const rankingSubjects = typeof window.getTeacherAnalysisDisplaySubjects === 'function'
+            ? window.getTeacherAnalysisDisplaySubjects()
+            : getAvailableSubjects();
+        rankingSubjects.forEach((subject) => {
             if (visibleSubjectSet && visibleSubjectSet.size > 0 && !visibleSubjectSet.has(normalizeSubject(subject))) return;
             const rows = TOWNSHIP_RANKING_DATA[subject];
             if (!Array.isArray(rows) || !rows.length) return;
@@ -476,7 +479,10 @@
                     item.rankPass
                 ]);
             });
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(wsData), buildSafeSheetName(subject, '乡镇排名'));
+            const subjectLabel = typeof window.getConfiguredDisplaySubjectLabel === 'function'
+                ? window.getConfiguredDisplaySubjectLabel(subject)
+                : subject;
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(wsData), buildSafeSheetName(subjectLabel, '乡镇排名'));
         });
 
         const exportTag = resolveTeacherExportTag(user, fileSubjectSet);

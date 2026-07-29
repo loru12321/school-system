@@ -300,7 +300,7 @@
         // 绝不能跳过门禁直接去读分数线 —— 否则二模/非7月又会算出非零上线率赋分并计入
         // 综合总分，正是上面注释描述的那个背离。
         if (typeof window.isHighSchoolAdmissionExamAllowed !== 'function') {
-            console.warn('[exam-analysis-package] isHighSchoolAdmissionExamAllowed 不可用，高中上线率按 0 处理（fail-closed）');
+            console.warn('[package] admission disabled');
             return 0;
         }
         if (!window.isHighSchoolAdmissionExamAllowed()) {
@@ -1014,7 +1014,7 @@
                 });
             }
         } catch (error) {
-            console.warn('[exam-analysis-package] failed to load grade 9 second-mock politics source:', error?.message || error);
+            console.warn('[package] politics source:', error?.message || error);
         }
     }
 
@@ -1126,7 +1126,7 @@
                 const result = window.calcIndicators(true);
                 if (Array.isArray(result)) indicatorRows = result;
             } catch (error) {
-                console.warn('[exam-analysis-package] indicator warmup failed:', error);
+                console.warn('[package] indicator:', error);
             }
         }
         const map = new Map();
@@ -1733,8 +1733,12 @@
         if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
             await window.SystemRuntimeLoader.load('teacher-analysis').catch(() => {});
         }
+        // 教师乡镇表中的政治学校行来自同届二模学校聚合。先确保它已读取/回填，
+        // 再计算 TOWNSHIP_RANKING_DATA，避免网页与压缩包出现“政治仅两位本校教师”。
+        if (!window.Grade9PoliticsReferenceRuntime) await loadOptionalRuntime('grade9-politics', './assets/js/grade9-politics-reference-runtime.js');
+        if (window.Grade9PoliticsReferenceRuntime?.ensureSummary) await window.Grade9PoliticsReferenceRuntime.ensureSummary();
         if (typeof window.calculateTeacherTownshipRanking === 'function') {
-            window.calculateTeacherTownshipRanking({ teacherMetricScope: 'admin' });
+            window.calculateTeacherTownshipRanking({ force: true, teacherMetricScope: 'admin' });
         }
         if (includeCounty && window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
             await window.SystemRuntimeLoader.load('county-analysis').catch(() => {});
@@ -1745,7 +1749,7 @@
                 if (window.CountyAnalysisRuntime?.applyCountyRanks) window.CountyAnalysisRuntime.applyCountyRanks();
                 if (window.CountyAnalysisRuntime?.renderCountyAnalysis) window.CountyAnalysisRuntime.renderCountyAnalysis();
             } catch (error) {
-                console.warn('[exam-analysis-package] county teacher ranking warmup failed:', error);
+                console.warn('[package] county teacher:', error);
             }
         }
     }
@@ -1755,14 +1759,14 @@
             try {
                 window.renderHighScoreTable();
             } catch (error) {
-                console.warn('[exam-analysis-package] high-score warmup failed:', error);
+                console.warn('[package] high score:', error);
             }
         }
         if (typeof window.renderBottom3TableOnly === 'function') {
             try {
                 window.renderBottom3TableOnly();
             } catch (error) {
-                console.warn('[exam-analysis-package] bottom3 warmup failed:', error);
+                console.warn('[package] bottom3:', error);
             }
         }
         if (!isGrade9Exam()) return;
@@ -1774,7 +1778,7 @@
             }
             if (typeof window.calcIndicators === 'function') window.calcIndicators(true);
         } catch (error) {
-            console.warn('[exam-analysis-package] indicator warmup failed:', error);
+            console.warn('[package] indicator:', error);
         }
     }
 
@@ -1917,7 +1921,7 @@
             return await zip.generateAsync({ type: 'arraybuffer' });
         } catch (error) {
             // 冻结只是阅读便利，失败时保留原始工作簿，绝不因此让整个分析包导不出来。
-            console.warn('[exam-analysis-package] 冻结窗格注入失败，已按原样导出:', error);
+            console.warn('[package] freeze panes:', error);
             return arrayBuffer;
         }
     }
@@ -2058,7 +2062,7 @@
             toast(`已生成${packageTitle}：${link.download}`, 'success');
             return link.download;
         } catch (error) {
-            console.error('[exam-analysis-package] download failed:', error);
+            console.error('[package] download:', error);
             toast(`${getExamPackageTitle()}生成失败：${error?.message || error}`, 'error');
             throw error;
         }

@@ -268,16 +268,53 @@
         return { matchedRows, unmatched };
     }
 
+    // 中考归档的 RAW_DATA 在部分来源里只含本校学生，不能再用它反推外校政治。
+    // 政治本来就是同届二模参考，所以学校维度直接按二模原始行汇总；只保存学校
+    // 聚合指标，不保存外校学生姓名，供网页和分析包的教师乡镇对比共用。
+    function getReferenceSchoolRows(context, rows) {
+        const scopeNames = getTownshipSchoolNames();
+        const matchedRows = [];
+        (rows || []).forEach(row => {
+            if (scopeNames.length && !scopeNames.some(name => sameSchool(name, row?.school))) return;
+            const politicsScore = score(row?.scores?.[POLITICS]);
+            if (!Number.isFinite(politicsScore)) return;
+            matchedRows.push({
+                ...row,
+                school: getDisplaySchoolName(row?.school, scopeNames),
+                politicsScore
+            });
+        });
+        return matchedRows;
+    }
+
+    function getReferenceSchoolMetrics(value) {
+        return Array.isArray(value) ? value.filter(item => item?.name && item?.metrics?.count > 0) : [];
+    }
+
+    function referenceSchoolMetricsSignature(value) {
+        return JSON.stringify(value || []);
+    }
+
     function buildSummary(context, secondMock) {
         const index = buildSecondMockIndex(secondMock?.exam?.data || []);
         const matched = getMatchedRows(context, row => resolveSecondMockRow(row, index)?.scores?.[POLITICS]);
-        const thresholds = getThresholds(secondMock, matched.matchedRows.map(row => row.politicsScore));
-        return buildMetricsSummary(context, matched.matchedRows, matched.unmatched, {
+        const referenceRows = getReferenceSchoolRows(context, secondMock?.exam?.data || []);
+        const thresholds = getThresholds(secondMock, referenceRows.map(row => row.politicsScore));
+        const details = {
             thresholds,
             sourceExamId: secondMock.examId,
             sourceLabel: examDate(secondMock.examId, secondMock.exam) || secondMock.examId,
             sourceMode: 'second-mock'
-        });
+        };
+        const matchedSummary = buildMetricsSummary(context, matched.matchedRows, matched.unmatched, details);
+        const referenceSummary = buildMetricsSummary(context, referenceRows, 0, details);
+        return {
+            ...matchedSummary,
+            available: matchedSummary.available || referenceSummary.available,
+            referenceSchools: referenceSummary.schools,
+            signature: `${matchedSummary.signature}::reference:${referenceSummary.schools.length}`,
+            reason: (matchedSummary.available || referenceSummary.available) ? '' : matchedSummary.reason
+        };
     }
 
     function getStoredReference(context) {
@@ -294,19 +331,29 @@
                 exc,
                 pass,
                 source: text(reference?.thresholds?.source) || '已归档二模分数线'
-            }
+            },
+            schoolMetrics: getReferenceSchoolMetrics(reference.schoolMetrics)
         };
     }
 
     function buildStoredSummary(context) {
         const reference = getStoredReference(context);
         if (!reference) return null;
+        // 早期归档只保存了本校学生的复制分数，没有外校学校聚合。此时继续读取二模
+        // 并回填归档，不能把只有本校的旧摘要误当作完整乡镇政治参考。
+        if (!reference.schoolMetrics.length) return null;
         const matched = getMatchedRows(context, row => row?.scores?.[POLITICS]);
-        if (!matched.matchedRows.length) return null;
-        return buildMetricsSummary(context, matched.matchedRows, matched.unmatched, {
+        const matchedSummary = buildMetricsSummary(context, matched.matchedRows, matched.unmatched, {
             ...reference,
             sourceMode: 'archived-copy'
         });
+        return {
+            ...matchedSummary,
+            available: true,
+            referenceSchools: reference.schoolMetrics,
+            signature: `${matchedSummary.signature}::reference:${reference.schoolMetrics.length}`,
+            reason: ''
+        };
     }
 
     function updatePoliticsScores(rows, index) {
@@ -330,7 +377,8 @@
             && sameScore(left?.thresholds?.exc, right?.thresholds?.exc)
             && sameScore(left?.thresholds?.pass, right?.thresholds?.pass)
             && text(left?.thresholds?.source) === text(right?.thresholds?.source)
-            && Number(left?.matched || 0) === Number(right?.matched || 0);
+            && Number(left?.matched || 0) === Number(right?.matched || 0)
+            && referenceSchoolMetricsSignature(left?.schoolMetrics) === referenceSchoolMetricsSignature(right?.schoolMetrics);
     }
 
     // 将二模政治固化为中考归档的展示字段。政治不加入 SUBJECTS，也绝不改 total、
@@ -348,6 +396,7 @@
                 pass: summary.thresholds.pass,
                 source: summary.thresholds.source
             },
+            schoolMetrics: getReferenceSchoolMetrics(summary.referenceSchools),
             matched: runtimeResult.matched,
             copiedAt: new Date().toISOString()
         };
