@@ -521,7 +521,7 @@ async function login(page) {
                 assertNumericColumn(rows, header, nameIndex, ['县均分排'], `${teacherCountyName}:${sheet}`, { minimumRows: 2 });
                 assertNumericColumn(rows, header, nameIndex, ['平均分'], `${teacherCountyName}:${sheet}`, { minimumRows: 2 });
             });
-            if (!teacherCountySummary.sheetNames.includes('政治（中考整理表参考） 同学科县域排名')) {
+            if (!teacherCountySummary.sheetNames.includes('政治（参考二模数据） 同学科县域排名')) {
                 fail(`teacher county workbook missing politics reference sheet: ${teacherCountySummary.sheetNames.join(', ')}`);
             }
         }
@@ -535,7 +535,7 @@ async function login(page) {
             const nameIndex = findColumn(header, ['姓名']);
             if (nameIndex < 0) return;
             assertNumericColumn(rows, header, nameIndex, ['总分', '五科总'], `${rawScoreName}:${sheet}`, { minimumRows: 1, allowZero: true });
-            assertNumericColumn(rows, header, nameIndex, ['政治（中考整理表参考）'], `${rawScoreName}:${sheet}`, { minimumRows: 1, allowZero: true });
+            assertNumericColumn(rows, header, nameIndex, ['政治（参考二模数据）'], `${rawScoreName}:${sheet}`, { minimumRows: 1, allowZero: true });
         });
 
         const { name: schoolAnalysisName, summary: schoolAnalysisSummary } = await readWorkbookFromPackage(outerZip, files, workbookPattern.schoolAnalysis, 'school analysis workbook');
@@ -685,8 +685,8 @@ async function login(page) {
         const studentTownNameIndex = findColumn(studentTownHeader, ['姓名']);
         assertNumericColumn(studentTownRows, studentTownHeader, studentTownNameIndex, ['总分', '五科总'], `${studentTownName}:学生考试明细`, { minimumRows: 50, allowZero: true });
         assertNumericColumn(studentTownRows, studentTownHeader, studentTownNameIndex, ['总分镇排', '五科总镇排'], `${studentTownName}:学生考试明细`, { minimumRows: 50, requiredWhenColumnNames: ['总分', '五科总'] });
-        assertNumericColumn(studentTownRows, studentTownHeader, studentTownNameIndex, ['政治（中考整理表参考）分数'], `${studentTownName}:学生考试明细`, { minimumRows: 50, allowZero: true });
-        assertNumericColumn(studentTownRows, studentTownHeader, studentTownNameIndex, ['政治（中考整理表参考）镇排'], `${studentTownName}:学生考试明细`, { minimumRows: 50, requiredWhenColumnNames: ['政治（中考整理表参考）分数'] });
+        assertNumericColumn(studentTownRows, studentTownHeader, studentTownNameIndex, ['政治（参考二模数据）分数'], `${studentTownName}:学生考试明细`, { minimumRows: 50, allowZero: true });
+        assertNumericColumn(studentTownRows, studentTownHeader, studentTownNameIndex, ['政治（参考二模数据）镇排'], `${studentTownName}:学生考试明细`, { minimumRows: 50, requiredWhenColumnNames: ['政治（参考二模数据）分数'] });
 
         if (hasCountyWorkbooks) {
         const studentCountyWorkbook = await readWorkbookFromPackage(outerZip, files, /学生\/.*学生考试明细 县域排名\.xlsx$/, 'county student workbook');
@@ -698,8 +698,8 @@ async function login(page) {
         const studentCountySchoolIndex = findColumn(studentCountyHeader, ['学校']);
         assertNumericColumn(studentCountyRows, studentCountyHeader, studentCountyNameIndex, ['总分', '五科总'], `${studentCountyName}:学生考试明细`, { minimumRows: 50, allowZero: true });
         assertNumericColumn(studentCountyRows, studentCountyHeader, studentCountyNameIndex, ['总分县排', '五科总县排'], `${studentCountyName}:学生考试明细`, { minimumRows: 50, requiredWhenColumnNames: ['总分', '五科总'] });
-        assertNumericColumn(studentCountyRows, studentCountyHeader, studentCountyNameIndex, ['政治（中考整理表参考）分数'], `${studentCountyName}:学生考试明细`, { minimumRows: 50, allowZero: true });
-        assertNumericColumn(studentCountyRows, studentCountyHeader, studentCountyNameIndex, ['政治（中考整理表参考）县排'], `${studentCountyName}:学生考试明细`, { minimumRows: 50, requiredWhenColumnNames: ['政治（中考整理表参考）分数'] });
+        assertNumericColumn(studentCountyRows, studentCountyHeader, studentCountyNameIndex, ['政治（参考二模数据）分数'], `${studentCountyName}:学生考试明细`, { minimumRows: 50, allowZero: true });
+        assertNumericColumn(studentCountyRows, studentCountyHeader, studentCountyNameIndex, ['政治（参考二模数据）县排'], `${studentCountyName}:学生考试明细`, { minimumRows: 50, requiredWhenColumnNames: ['政治（参考二模数据）分数'] });
         const townshipRankColumns = getColumnIndexesByPattern(studentCountyHeader, /镇排/);
         const countyDirectSet = new Set((packageScope.countyDirectNames || []).map((name) => String(name || '').trim()));
         const badCountyDirectTownRanks = studentCountyRows.slice(1).filter((row) => {
@@ -713,15 +713,15 @@ async function login(page) {
         }
 
         const { name: teacherTownName, summary: teacherTownSummary } = await readWorkbookFromPackage(outerZip, files, workbookPattern.teacherTown, 'township teacher workbook');
-        if (!teacherTownSummary.sheetNames.includes('政治（中考整理表参考） 教师乡镇排名')) {
+        if (!teacherTownSummary.sheetNames.includes('政治（参考二模数据） 教师乡镇排名')) {
             fail(`teacher township workbook missing politics reference sheet: ${teacherTownSummary.sheetNames.join(', ')}`);
         }
-        const politicsTeacherRows = teacherTownSummary.rowsBySheetName['政治（中考整理表参考） 教师乡镇排名'] || [];
+        const politicsTeacherRows = teacherTownSummary.rowsBySheetName['政治（参考二模数据） 教师乡镇排名'] || [];
         const politicsTeacherHeader = politicsTeacherRows[0] || [];
         const politicsTeacherNameIndex = findColumn(politicsTeacherHeader, ['教师/学校']);
         const politicsTeacherTypeIndex = findColumn(politicsTeacherHeader, ['类型']);
         if (politicsTeacherNameIndex < 0 || politicsTeacherTypeIndex < 0) {
-            fail(`${teacherTownName}:政治（中考整理表参考） 教师乡镇排名 missing name/type columns: ${politicsTeacherHeader.join(',')}`);
+            fail(`${teacherTownName}:政治（参考二模数据） 教师乡镇排名 missing name/type columns: ${politicsTeacherHeader.join(',')}`);
         }
         const politicsExternalSchoolRows = getDataRows(politicsTeacherRows, politicsTeacherNameIndex)
             .filter((row) => String(row?.[politicsTeacherTypeIndex] || '').trim() === '学校');
@@ -730,7 +730,7 @@ async function login(page) {
         const missingPoliticsSchools = politicsReferenceScope.externalSchoolNames
             .filter((name) => !politicsExternalSchoolNames.has(name));
         if (missingPoliticsSchools.length) {
-            fail(`${teacherTownName}:政治（中考整理表参考） 教师乡镇排名 is missing external schools: ${missingPoliticsSchools.join(', ')}`);
+            fail(`${teacherTownName}:政治（参考二模数据） 教师乡镇排名 is missing external schools: ${missingPoliticsSchools.join(', ')}`);
         }
         Object.entries(teacherTownSummary.rowsBySheetName).forEach(([sheet, rows]) => {
             const header = rows[0] || [];

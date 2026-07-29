@@ -1486,7 +1486,7 @@ async function runModuleDeepCheck(page, id) {
                 if (typeof window.renderTables === 'function') window.renderTables();
                 await new Promise(resolve => setTimeout(resolve, 100));
                 const tab = Array.from(document.querySelectorAll('#two-rate-table-jumpbar button'))
-                    .find(button => /政治（中考整理表参考）/.test(String(button?.innerText || button?.textContent || '')));
+                    .find(button => /政治（参考二模数据）/.test(String(button?.innerText || button?.textContent || '')));
                 const panel = document.getElementById('anchor-subject-politics-reference');
                 const panelText = String(panel?.innerText || panel?.textContent || '');
                 politicsReference = {
@@ -3146,7 +3146,7 @@ async function runModuleDeepCheck(page, id) {
                     politicsExpected,
                     politicsRankingReady: !politicsExpected || (Array.isArray(politicsRankingRows)
                         && politicsRankingRows.some((row) => row?.type === 'teacher')
-                        && text.includes('政治（中考整理表参考）'))
+                        && text.includes('政治（参考二模数据）'))
                 };
                 if (state.sectionActive
                     && state.contentReady
@@ -3938,7 +3938,7 @@ async function runModuleDeepCheck(page, id) {
                     classOptionCount: detailClassOptionCount,
                     countyRankAfterTownRank: detailCountyRankAfterTownRank,
                     politicsExpected,
-                    politicsHeaderReady: !politicsExpected || detailHeaders.some((header) => header.includes('政治（中考整理表参考）')),
+                    politicsHeaderReady: !politicsExpected || detailHeaders.some((header) => header.includes('政治（参考二模数据）')),
                     ready: detailClassOptionCount > 0 && detailRows > 0
                 };
             };

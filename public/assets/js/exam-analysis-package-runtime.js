@@ -3,6 +3,8 @@
 
     const DEFAULT_EXAM_DATE = '2026-05-27';
     const INVALID_SHEET_CHARS = /[\\/?*\[\]:]/g;
+    const GRADE9_ZHONGKAO_POLITICS_LABEL = '政治（参考二模数据）';
+    const GRADE9_ZHONGKAO_POLITICS_NOTE = '备注：参考二模数据（以本次中考整理表内人工整理的政治列为准）。';
 
     function toast(message, type = 'info') {
         if (window.UI && typeof window.UI.toast === 'function') return window.UI.toast(message, type);
@@ -983,7 +985,7 @@
     }
 
     function getPackageDisplaySubjectLabel(subject) {
-        if (subject === '政治' && isGrade9ZhongkaoPackage()) return '政治（中考整理表参考）';
+        if (subject === '政治' && isGrade9ZhongkaoPackage()) return GRADE9_ZHONGKAO_POLITICS_LABEL;
         return typeof window.getConfiguredDisplaySubjectLabel === 'function'
             ? window.getConfiguredDisplaySubjectLabel(subject)
             : subject;
@@ -1013,7 +1015,8 @@
             referenceNote: [
                 ['项目', '说明'],
                 ['用途', '九年级中考整理表政治参考展示；不写回中考主分析。'],
-                ['政治来源', `最新中考整理表：${sourceLabel}`],
+                ['政治备注', '参考二模数据（以本次中考整理表内人工整理的政治列为准）。'],
+                ['政治来源', `本次中考整理表内人工整理的二模政治列：${sourceLabel}`],
                 ['纳入人数', `${politics.matched} 人（仅限整理表中有政治分者）`],
                 ['不参与', '中考五科总分、排名、两率一分、指标生、高分段、高中上线率等任何正式中考计算。']
             ]
@@ -1448,7 +1451,7 @@
         if (!displayData?.politics?.matched) return [];
         if (!Array.isArray(displayData.subjects) || !displayData.subjects.includes('政治')) return [];
         return [
-            '本次中考不考政治。「政治（中考整理表参考）」只取最新中考整理表中已有政治分的学生，二模独有学生不补入。',
+            `${GRADE9_ZHONGKAO_POLITICS_NOTE} 「${GRADE9_ZHONGKAO_POLITICS_LABEL}」只取本次中考整理表内人工整理的政治列；原始二模不会自动覆盖该列，整理表外学生不补入。`,
             '政治只作单科展示，不计入五科总分、两率一分、指标生、高分段与高中上线率等任何正式中考口径。'
         ];
     }
@@ -1730,14 +1733,16 @@
     function buildTeacherCountyWorkbook() {
         const wb = window.XLSX.utils.book_new();
         const rankingData = window.COUNTY_TEACHER_RANKING_DATA || {};
-        const subjects = getGrade9ZhongkaoDisplayData(getAllRows()).subjects;
+        const displayData = getGrade9ZhongkaoDisplayData(getAllRows());
+        const subjects = displayData.subjects;
         addCoverSheet(wb, buildCoverRows({
             title: `${getExamPackageStem()}教师县域排名`,
             scopeText: '县域范围内同学科教师',
             sheetGuide: [
                 ['各学科 教师县域排名', '县域范围内同学科教师的指标与名次'],
                 ['注意', '排名未做生源校正；跨学科不可比较名次']
-            ]
+            ],
+            notices: buildPoliticsCoverNotices(displayData)
         }));
         subjects.forEach((subject) => {
             const rows = (rankingData[subject] || []).slice().sort((a, b) => {
@@ -1841,12 +1846,12 @@
         // 匹配人数在嵌套的 politics 上；只有真的匹配到人并生成了对照本才写政治说明。
         const politicsMatched = Number(politics?.politics?.matched || 0);
         const showPolitics = politicsMatched > 0 && !!politics?.withPolitics;
-        const politicsNote = showPolitics ? '（含政治单列，不计入五科总）' : '';
+        const politicsNote = showPolitics ? '（含政治单列，备注：参考二模数据，不计入五科总）' : '';
         const files = [`${packageStem}成绩${suffix}.xlsx  —— 原始成绩，按学校分表${politicsNote}`];
         if (politics?.withoutPolitics) {
             files.push(`学校/${packageStem}学校分析（不含政治）${suffix}.xlsx  —— 正式口径的学校分析，结论以此为准`);
             if (politics.withPolitics) {
-                files.push(`学校/${packageStem}学校分析（含政治·中考整理表参考）${suffix}.xlsx  —— 政治对照，仅供参考，不作正式依据`);
+                files.push(`学校/${packageStem}学校分析（含政治·参考二模数据）${suffix}.xlsx  —— 政治对照，仅供参考，不作正式依据`);
             }
         } else {
             files.push(`学校/${packageStem}学校分析${suffix}.xlsx  —— 学校分析主报告`);
@@ -1879,12 +1884,12 @@
             // 政治单列在多个工作簿里出现，只在「含政治」那一本写口径不够：
             // 拿到学生明细/教师分析的班主任和科任老师不会去翻学校分析。
             ...(showPolitics ? [
-                '【政治怎么看】',
-                `· 本次中考不考政治。包内的「政治（中考整理表参考）」只取最新中考整理表中已有政治分的学生，共纳入 ${politicsMatched} 人。`,
+                '【政治备注：参考二模数据】',
+                `· 本次中考不考政治。包内的「${GRADE9_ZHONGKAO_POLITICS_LABEL}」以本次中考整理表内人工整理的政治列为准，共纳入 ${politicsMatched} 人。`,
                 '· 政治单独成列、单独排名，只用于看政治一科的表现和政治教师分析。',
                 '· 政治不计入五科总分、两率一分、指标生、高分段、高中上线率等任何正式中考口径。',
-                '· 因此「五科总」始终不含政治；要看含政治的对照，只用「学校分析（含政治·中考整理表参考）」，且不作正式依据。',
-                '· 二模只用于核对最新表中的政治值；二模有而最新表未入库的学生不会补入本包。',
+                '· 因此「五科总」始终不含政治；要看含政治的对照，只用「学校分析（含政治·参考二模数据）」，且不作正式依据。',
+                '· 原始二模仅用于核对，不会覆盖中考整理表内人工整理的政治列；整理表没有该学生时不补入本包。',
                 ''
             ] : []),
             '【口径注意】',
@@ -1922,7 +1927,7 @@
             if (grade9PoliticsReferences?.withoutPolitics) {
                 await addWorkbook(zip, `学校/${packageStem}学校分析（不含政治）${suffix}.xlsx`, grade9PoliticsReferences.withoutPolitics);
                 if (grade9PoliticsReferences.withPolitics) {
-                    await addWorkbook(zip, `学校/${packageStem}学校分析（含政治·中考整理表参考）${suffix}.xlsx`, grade9PoliticsReferences.withPolitics);
+                    await addWorkbook(zip, `学校/${packageStem}学校分析（含政治·参考二模数据）${suffix}.xlsx`, grade9PoliticsReferences.withPolitics);
                 } else {
                     toast('最新中考整理表中没有政治成绩，已只生成正式五科学校分析。', 'warning');
                 }

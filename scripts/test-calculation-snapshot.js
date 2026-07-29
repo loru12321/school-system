@@ -717,7 +717,7 @@ async function main() {
                     .replace(/\s*教师乡镇排名\s*$/, '')
                     .trim()
                     // 发布前快照先跑线上旧版；部署后跑新版，二者都要能归一为“政治”。
-                    .replace(/（(?:中考整理表|二模)参考）$/, '')
+                    .replace(/（(?:中考整理表参考|二模参考|参考二模数据)）$/, '')
                     .trim();
                 return Array.from(panel.querySelectorAll('tbody tr')).map((row) => {
                     const cells = Array.from(row.cells || []);

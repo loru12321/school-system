@@ -38,11 +38,15 @@ assert.ok(!/getGrade9SecondMockPoliticsRows/.test(packageSource),
 assert.ok(/function buildPoliticsCoverNotices\(/.test(packageSource),
     'the package runtime must keep the politics cover-notice builder');
 
-// 提醒必须说清「唯一统计源」和「不计入正式口径」这两点。
-assert.ok(/只取最新中考整理表中已有政治分的学生/.test(packageSource),
-    'the politics notice must state that the latest Zhongkao sheet is the only politics statistic source');
-assert.ok(/二模独有学生不补入/.test(packageSource),
-    'the politics notice must state that second-mock-only students are never backfilled');
+// 提醒必须显式写明「参考二模数据」、人工整理源和「不计入正式口径」。
+assert.ok(/GRADE9_ZHONGKAO_POLITICS_LABEL = '政治（参考二模数据）'/.test(packageSource),
+    'the politics label must visibly state that it references second-mock data');
+assert.ok(/参考二模数据（以本次中考整理表内人工整理的政治列为准）/.test(packageSource),
+    'the politics notice must state that the curated Zhongkao column, not the raw mock sheet, is authoritative');
+assert.ok(/原始二模不会自动覆盖该列/.test(packageSource),
+    'the politics notice must state that raw second-mock data never overwrites the curated column');
+assert.ok(/整理表外学生不补入/.test(packageSource),
+    'the politics notice must state that students outside the curated sheet are never backfilled');
 assert.ok(/不计入五科总分、两率一分、指标生、高分段与高中上线率/.test(packageSource),
     'the politics notice must enumerate the official metrics 政治 stays out of');
 
@@ -60,8 +64,8 @@ assert.ok(/options\.notices/.test(packageSource) && /'特别提醒'/.test(packag
     'buildCoverRows must render the notices block onto the cover sheet');
 
 // ── 3. 阅读说明里的政治段落 ──────────────────────────────────────────────────
-assert.ok(/【政治怎么看】/.test(packageSource),
-    'the package readme must carry a dedicated 政治 section');
+assert.ok(/【政治备注：参考二模数据】/.test(packageSource),
+    'the package readme must carry a dedicated visible second-mock reference note');
 assert.ok(/showPolitics \?/.test(packageSource),
     'the readme politics section must be conditional on politics actually being matched');
 

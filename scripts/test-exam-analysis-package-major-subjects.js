@@ -49,7 +49,7 @@ assert.ok(
 assert.ok(
     source.includes('function buildGrade9ZhongkaoPoliticsReferenceWorkbooks()')
         && source.includes("学校分析（不含政治）")
-        && source.includes("学校分析（含政治·中考整理表参考）"),
+        && source.includes("学校分析（含政治·参考二模数据）"),
     'grade 9 Zhongkao package should generate separate school-analysis workbooks with and without latest-sheet politics'
 );
 
@@ -211,22 +211,22 @@ function getWorkbookRows(file, sheetName) {
             'grade 9 Zhongkao package should include the official five-subject school workbook'
         );
         assert.ok(
-            files.some((file) => /学校\/.*学校分析（含政治·中考整理表参考）.*\.xlsx$/.test(file.name)),
+            files.some((file) => /学校\/.*学校分析（含政治·参考二模数据）.*\.xlsx$/.test(file.name)),
             'grade 9 Zhongkao package should include the isolated latest-sheet politics reference workbook'
         );
         const rawScoreFile = files.find((file) => /成绩.*\.xlsx$/.test(file.name) && !file.name.includes('/'));
         const rawScoreRows = getWorkbookRows(rawScoreFile, '银山实验学校');
-        assert.ok(rawScoreRows[0]?.includes('政治（中考整理表参考）'), 'raw score workbook should include latest-sheet politics as a display-only column');
-        assert.strictEqual(rawScoreRows[1]?.[rawScoreRows[0].indexOf('政治（中考整理表参考）')], 80, 'raw score workbook must retain the latest Zhongkao politics score instead of the conflicting second-mock value');
+        assert.ok(rawScoreRows[0]?.includes('政治（参考二模数据）'), 'raw score workbook should visibly mark politics as reference second-mock data');
+        assert.strictEqual(rawScoreRows[1]?.[rawScoreRows[0].indexOf('政治（参考二模数据）')], 80, 'raw score workbook must retain the curated Zhongkao politics value instead of the raw conflicting second-mock value');
         assert.strictEqual(rawScoreRows[0]?.at(-2), '五科总', 'raw score workbook total must remain the formal five-subject total');
 
         const studentDetailFile = files.find((file) => /学生\/.*学生乡镇考试明细\.xlsx$/.test(file.name));
         const studentDetailRows = getWorkbookRows(studentDetailFile, '学生考试明细');
-        assert.ok(studentDetailRows[0]?.includes('政治（中考整理表参考）分数'), 'student detail workbook should include latest-sheet politics score');
-        assert.ok(studentDetailRows[0]?.includes('政治（中考整理表参考）镇排'), 'student detail workbook should include latest-sheet politics township rank');
+        assert.ok(studentDetailRows[0]?.includes('政治（参考二模数据）分数'), 'student detail workbook should visibly mark the reference-second-mock politics score');
+        assert.ok(studentDetailRows[0]?.includes('政治（参考二模数据）镇排'), 'student detail workbook should visibly mark the reference-second-mock politics township rank');
 
         const teacherFile = files.find((file) => /教师\/.*教师分析.*\.xlsx$/.test(file.name));
-        assert.ok(teacherFile?.payload?.SheetNames.includes('政治（中考整理表参考） 教师乡镇排名'), 'teacher workbook should include politics teacher township ranking sheet');
+        assert.ok(teacherFile?.payload?.SheetNames.includes('政治（参考二模数据） 教师乡镇排名'), 'teacher workbook should include visibly marked politics teacher township ranking sheet');
     }
     console.log('test-exam-analysis-package-major-subjects passed');
 })().catch((error) => {

@@ -111,7 +111,7 @@
         return text.replace(/\s+/g, '');
     }
 
-    // 与教师画像保持一致：九年级政治可作为中考整理表参考参加单科教师排名，
+    // 与教师画像保持一致：九年级政治以人工整理的二模参考列参加单科教师排名，
     // 但不加入学校两率一分和任何正式中考汇总口径。
     function getCountyTeacherDisplaySubjects() {
         if (typeof window.getTeacherAnalysisDisplaySubjects === 'function') {

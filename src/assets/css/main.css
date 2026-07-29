@@ -1438,6 +1438,23 @@ header {
     color: #334155;
 }
 
+/* 九年级中考政治的来源备注放在标题流内：可换行、不绝对定位，绝不遮挡表格数据。 */
+.analysis-reference-note {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    max-width: 100%;
+    padding: 4px 10px;
+    border: 1px solid rgba(180, 83, 9, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 251, 235, 0.94);
+    color: #92400e;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.45;
+    white-space: normal;
+}
+
 .analysis-generated-note {
     font-size: 12px;
     line-height: 1.6;
