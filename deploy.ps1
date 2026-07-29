@@ -55,15 +55,13 @@ if ($trackedUpdatePaths.Count -gt 0) {
 }
 Invoke-Git (@("add", "--") + $sourcePaths)
 
-# dist/ 在 .gitignore 里，所以必须 -f。sw.js 每次构建都会换内容版本号，
-# 漏了它会让线上 service worker 指向不存在的哈希产物。
+# dist/ 在 .gitignore 里，所以入口和 sw.js 必须显式暂存。普通运行时文件已由
+# 上面的 `git add -u -- dist` 处理；不能 `git add -f dist/assets`，因为其中带哈希
+# 的运行时是可重建产物，仓库约定要求它们保持未跟踪。
 if (Test-Path "dist") {
     Invoke-Git @("add", "-f", "--", "dist/index.html")
     if (Test-Path "dist/sw.js") {
         Invoke-Git @("add", "-f", "--", "dist/sw.js")
-    }
-    if (Test-Path "dist/assets") {
-        Invoke-Git @("add", "-f", "--", "dist/assets")
     }
 }
 
