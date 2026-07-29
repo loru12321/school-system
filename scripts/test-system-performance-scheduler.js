@@ -63,6 +63,7 @@ async function wait(ms) {
   const scheduler = fakeWindow.SystemPerformance;
   assert.strictEqual(typeof scheduler.scheduleTask, 'function');
   assert.strictEqual(typeof scheduler.clearScheduledTask, 'function');
+  assert.strictEqual(typeof scheduler.getSnapshot, 'function');
 
   const replaceRuns = [];
   scheduler.scheduleTask('replace-me', () => replaceRuns.push('first'), { delay: 30 });
@@ -86,6 +87,11 @@ async function wait(ms) {
   scheduler.scheduleTask('idle-task', () => idleRuns.push('idle'), { idle: true, timeout: 20 });
   await wait(30);
   assert.deepStrictEqual(idleRuns, ['idle']);
+  const idleTask = scheduler.getSnapshot().scheduledTasks.find((item) => item.key === 'idle-task');
+  assert.ok(idleTask, 'completed scheduled tasks should be retained for diagnosis');
+  assert.strictEqual(idleTask.type, 'scheduled');
+  assert.ok(idleTask.durationMs >= idleTask.blockedMs, 'blocked time cannot exceed end-to-end duration');
+  assert.strictEqual(idleTask.networkWaitMs, Math.max(0, idleTask.durationMs - idleTask.blockedMs), 'network wait must be derived from duration minus main-thread blocking');
 
   let cohortFetches = 0;
   fakeWindow.CloudManager.fetchCohortExamsToLocal = () => new Promise((resolve) => {
@@ -95,12 +101,21 @@ async function wait(ms) {
   scheduler.patchCloudManager();
   await fakeWindow.CloudManager.fetchCohortExamsToLocal('2022', { background: true, minCount: 1, latestOnly: true });
   await fakeWindow.CloudManager.fetchCohortExamsToLocal('2022', { background: true, minCount: 1, latestOnly: false });
+  // The caller is resolved before the scheduler's diagnostic finally handler;
+  // yield one macrotask so both completed reads have written their records.
+  await wait(0);
   const snapshotAfterBackgroundFetch = scheduler.getSnapshot();
   assert.strictEqual(cohortFetches, 2, 'latestOnly and full cohort fetches should use distinct cache keys');
+  const cohortTaskRecords = snapshotAfterBackgroundFetch.scheduledTasks
+    .filter((item) => String(item.key || '').includes('fetchCohortExamsToLocal'));
+  assert.strictEqual(cohortTaskRecords.length, 2, 'each uncached cohort pull should emit one scheduler timing record');
+  assert.ok(cohortTaskRecords.every((item) => item.type === 'queue'), 'cloud pulls should be recorded as queued scheduler tasks');
+  assert.ok(cohortTaskRecords.every((item) => item.durationMs >= 1200 && item.networkWaitMs > 1000), 'slow cloud waits should stay in derived network wait, not native jank');
+  assert.ok(Array.isArray(snapshotAfterBackgroundFetch.nativeLongTasks) && snapshotAfterBackgroundFetch.nativeLongTasks.length === 0, 'without PerformanceObserver entries, native long-task history must stay empty');
   assert.strictEqual(
     snapshotAfterBackgroundFetch.longTasks.some((item) => String(item.key || '').includes('fetchCohortExamsToLocal')),
     false,
-    'background cohort fetch duration should not be reported as a main-thread long task'
+    'background cohort fetch duration should never be reported as a main-thread long task'
   );
 
   assert.strictEqual(scheduler.getSnapshot().scheduled, 0);

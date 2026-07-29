@@ -30,7 +30,10 @@ function buildRun(smoke) {
   const moduleTimings = Array.isArray(perf.moduleTimings) ? perf.moduleTimings : [];
   const dataManagerTimings = Array.isArray(perf.dataManagerTimings) ? perf.dataManagerTimings : [];
   const budgetFailures = Array.isArray(perf.budgetFailures) ? perf.budgetFailures : [];
-  const longTasks = Array.isArray(perf.longTasks) ? perf.longTasks : [];
+  const nativeLongTasks = Array.isArray(perf.nativeLongTasks)
+    ? perf.nativeLongTasks
+    : (Array.isArray(perf.longTasks) ? perf.longTasks : []);
+  const scheduledTasks = Array.isArray(perf.scheduledTasks) ? perf.scheduledTasks : [];
   return {
     recordedAt: new Date().toISOString(),
     commit: String(process.env.GITHUB_SHA || process.env.PERFORMANCE_COMMIT || '').slice(0, 12),
@@ -53,8 +56,15 @@ function buildRun(smoke) {
       id: item.id,
       durationMs: num(item.durationMs)
     })),
-    longTaskCount: longTasks.length,
-    maxLongTaskMs: longTasks.reduce((max, item) => Math.max(max, num(item?.duration)), 0),
+    // Keep longTask* fields for existing thresholds/history. They now mean only
+    // PerformanceObserver native long tasks, never end-to-end cloud waits.
+    longTaskCount: nativeLongTasks.length,
+    maxLongTaskMs: nativeLongTasks.reduce((max, item) => Math.max(max, num(item?.duration)), 0),
+    nativeLongTaskCount: nativeLongTasks.length,
+    maxNativeLongTaskMs: nativeLongTasks.reduce((max, item) => Math.max(max, num(item?.duration)), 0),
+    scheduledTaskCount: scheduledTasks.length,
+    maxScheduledTaskMs: scheduledTasks.reduce((max, item) => Math.max(max, num(item?.durationMs)), 0),
+    maxNetworkWaitMs: scheduledTasks.reduce((max, item) => Math.max(max, num(item?.networkWaitMs)), 0),
     budgetFailureCount: budgetFailures.length,
     budgetFailures: budgetFailures.map((item) => ({
       label: item.label,
@@ -95,7 +105,8 @@ function buildReport(history) {
     `- Total smoke time: ${latest.totalMs} ms ${delta(latest, previous, 'totalMs') ? `(${delta(latest, previous, 'totalMs')} ms vs previous)` : ''}`,
     `- Login: ${latest.loginMs} ms`,
     `- App ready: ${latest.appReadyMs} ms`,
-    `- Long tasks: ${latest.longTaskCount}, max ${latest.maxLongTaskMs} ms`,
+    `- Native long tasks: ${latest.nativeLongTaskCount ?? latest.longTaskCount}, max ${latest.maxNativeLongTaskMs ?? latest.maxLongTaskMs} ms`,
+    `- Scheduled task samples: ${latest.scheduledTaskCount || 0}, max end-to-end ${latest.maxScheduledTaskMs || 0} ms, max derived network wait ${latest.maxNetworkWaitMs || 0} ms`,
     `- Budget failures: ${latest.budgetFailureCount}`,
     `- Errors: ${latest.errorCount}`,
     '',
@@ -110,12 +121,13 @@ function buildReport(history) {
     '',
     '## Recent Runs',
     '',
-    markdownTable(recent, ['Commit', 'Total', 'Login', 'App ready', 'Long tasks', 'Budget failures', 'Errors'], (item) => [
+    markdownTable(recent, ['Commit', 'Total', 'Login', 'App ready', 'Native long tasks', 'Scheduled tasks', 'Budget failures', 'Errors'], (item) => [
       `\`${item.commit || 'local'}\``,
       `${item.totalMs} ms`,
       `${item.loginMs} ms`,
       `${item.appReadyMs} ms`,
-      String(item.longTaskCount),
+      String(item.nativeLongTaskCount ?? item.longTaskCount),
+      String(item.scheduledTaskCount || 0),
       String(item.budgetFailureCount),
       String(item.errorCount)
     ]),

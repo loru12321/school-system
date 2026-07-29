@@ -4,6 +4,7 @@
     const DEFAULT_TTL_MS = 30000;
     const MAX_CACHE_SIZE = 80;
     const MAX_CONCURRENT_TASKS = 4;
+    const MAX_TASK_HISTORY = 80;
     const DIRECT_READ_METHODS = new Set(['loadTeachers', 'fetchStudentExamHistory']);
     const state = {
         active: 0,
@@ -13,12 +14,48 @@
         cache: new Map(),
         patchAttempts: 0,
         patchedStableTicks: 0,
-        longTasks: [],
+        // 仅 PerformanceObserver('longtask') 写入这里。不要把网络/await 的端到端
+        // 等待混进来，否则“慢请求”会被错误地当作页面主线程卡顿。
+        nativeLongTasks: [],
+        // 调度器任务保留端到端数据：durationMs 是实际运行到完成，blockedMs 是同步
+        // 主线程占用，networkWaitMs 是由二者派生的非阻塞等待（可能包含网络/定时器）。
+        // 不建立独立 networkWaits 队列，避免同一事实被两套指标重复解释。
+        scheduledTasks: [],
         phaseStack: []
     };
 
     function now() {
         return Date.now();
+    }
+
+    function monotonicNow() {
+        const perf = window.performance;
+        return perf && typeof perf.now === 'function' ? perf.now() : now();
+    }
+
+    function roundMs(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? Math.max(0, Math.round(number * 10) / 10) : 0;
+    }
+
+    function rememberScheduledTask(detail = {}) {
+        const durationMs = roundMs(Number(detail.finishedAt) - Number(detail.startedAt));
+        const blockedMs = Math.min(durationMs, roundMs(detail.blockedMs));
+        state.scheduledTasks.push({
+            key: String(detail.key || detail.label || 'task'),
+            type: String(detail.type || 'scheduled'),
+            durationMs,
+            blockedMs,
+            // This is intentionally a derived field, not a separate event stream.
+            // It represents non-blocking wait and is only a network proxy when the
+            // task itself is a cloud read.
+            networkWaitMs: roundMs(durationMs - blockedMs),
+            queuedMs: roundMs(Number(detail.startedAt) - Number(detail.queuedAt)),
+            status: detail.status === 'error' ? 'error' : 'ok',
+            phase: String(detail.phase || ''),
+            time: new Date().toISOString()
+        });
+        state.scheduledTasks = state.scheduledTasks.slice(-MAX_TASK_HISTORY);
     }
 
     function stableStringify(value) {
@@ -65,26 +102,40 @@
         while (state.active < MAX_CONCURRENT_TASKS && state.queue.length) {
             const item = state.queue.shift();
             state.active += 1;
-            const start = now();
+            const startedAt = monotonicNow();
+            const phase = currentPhase();
+            let blockedMs = 0;
+            let status = 'ok';
             Promise.resolve()
-                .then(item.task)
+                .then(() => {
+                    const blockedStartedAt = monotonicNow();
+                    try {
+                        return item.task();
+                    } finally {
+                        blockedMs = roundMs(monotonicNow() - blockedStartedAt);
+                    }
+                })
                 .then((value) => {
                     remember(item.cacheKey, value, item.ttlMs);
                     item.resolve(value);
                 })
-                .catch(item.reject)
+                .catch((error) => {
+                    status = 'error';
+                    item.reject(error);
+                })
                 .finally(() => {
                     state.active -= 1;
                     if (item.cacheKey) state.inflight.delete(item.cacheKey);
-                    const duration = now() - start;
-                    if (item.trackLongTask !== false && duration > 1200) {
-                        state.longTasks.push({
-                            key: item.cacheKey || item.label || 'task',
-                            duration,
-                            time: new Date().toISOString()
-                        });
-                        state.longTasks = state.longTasks.slice(-20);
-                    }
+                    rememberScheduledTask({
+                        key: item.cacheKey || item.label || 'task',
+                        type: 'queue',
+                        queuedAt: item.queuedAt,
+                        startedAt,
+                        finishedAt: monotonicNow(),
+                        blockedMs,
+                        status,
+                        phase
+                    });
                     drainQueue();
                 });
         }
@@ -109,7 +160,7 @@
                 resolve,
                 reject,
                 priority: Number(options.priority || 0),
-                trackLongTask: options.trackLongTask !== false
+                queuedAt: monotonicNow()
             });
             state.queue.sort((a, b) => b.priority - a.priority);
             scheduleIdle(drainQueue);
@@ -156,17 +207,46 @@
             timerId: 0,
             frameId: 0,
             idleId: 0,
-            cancelled: false
+            cancelled: false,
+            queuedAt: monotonicNow()
         };
 
         const run = () => {
             if (item.cancelled) return;
             state.scheduled.delete(key);
+            const startedAt = monotonicNow();
+            const phase = currentPhase();
+            let blockedMs = 0;
+            let status = 'ok';
+            let result;
             try {
-                task();
+                const blockedStartedAt = monotonicNow();
+                try {
+                    result = task();
+                } finally {
+                    blockedMs = roundMs(monotonicNow() - blockedStartedAt);
+                }
             } catch (error) {
+                status = 'error';
                 console.warn(`[SystemPerformance:${key}]`, error);
             }
+            Promise.resolve(result)
+                .catch((error) => {
+                    status = 'error';
+                    console.warn(`[SystemPerformance:${key}]`, error);
+                })
+                .finally(() => {
+                    rememberScheduledTask({
+                        key,
+                        type: 'scheduled',
+                        queuedAt: item.queuedAt,
+                        startedAt,
+                        finishedAt: monotonicNow(),
+                        blockedMs,
+                        status,
+                        phase
+                    });
+                });
         };
 
         const arm = () => {
@@ -292,8 +372,7 @@
                 label: method,
                 cacheKey,
                 ttlMs: noCache ? 0 : ttlMs,
-                priority: isBackground ? -1 : 1,
-                trackLongTask: method !== 'load' && !(isBackground && method === 'fetchCohortExamsToLocal')
+                priority: isBackground ? -1 : 1
             });
         };
         wrapped.__systemPerformanceWrapped = true;
@@ -401,9 +480,9 @@
                     // (if any) so real user jank can be told apart from noise.
                     const phase = currentPhase();
                     if (phase) record.phase = phase;
-                    state.longTasks.push(record);
+                    state.nativeLongTasks.push(record);
                 });
-                state.longTasks = state.longTasks.slice(-20);
+                state.nativeLongTasks = state.nativeLongTasks.slice(-20);
             });
             observer.observe({ entryTypes: ['longtask'] });
         } catch (_) {}
@@ -417,7 +496,10 @@
             scheduled: state.scheduled.size,
             cached: state.cache.size,
             cloudPatched: patchCloudManager(),
-            longTasks: state.longTasks.slice()
+            nativeLongTasks: state.nativeLongTasks.slice(),
+            scheduledTasks: state.scheduledTasks.slice(),
+            // 兼容已有 smoke / 性能趋势消费者；语义已固定为 nativeLongTasks。
+            longTasks: state.nativeLongTasks.slice()
         };
     }
 

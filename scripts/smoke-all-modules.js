@@ -280,6 +280,8 @@ async function readPerformanceSnapshot(page) {
         if (!runtime || typeof runtime.getSnapshot !== 'function') {
             return {
                 available: false,
+                nativeLongTasks: [],
+                scheduledTasks: [],
                 longTasks: []
             };
         }
@@ -292,11 +294,21 @@ async function readPerformanceSnapshot(page) {
             scheduled: Number(snapshot.scheduled || 0),
             cached: Number(snapshot.cached || 0),
             cloudPatched: !!snapshot.cloudPatched,
-            longTasks: Array.isArray(snapshot.longTasks) ? snapshot.longTasks : []
+            nativeLongTasks: Array.isArray(snapshot.nativeLongTasks)
+                ? snapshot.nativeLongTasks
+                : (Array.isArray(snapshot.longTasks) ? snapshot.longTasks : []),
+            scheduledTasks: Array.isArray(snapshot.scheduledTasks) ? snapshot.scheduledTasks : [],
+            // Performance Trend still reads this legacy field. It is now strictly
+            // nativeLongTasks, never a cloud request's end-to-end wait.
+            longTasks: Array.isArray(snapshot.nativeLongTasks)
+                ? snapshot.nativeLongTasks
+                : (Array.isArray(snapshot.longTasks) ? snapshot.longTasks : [])
         };
     }).catch((error) => ({
         available: false,
         error: error?.message || String(error),
+        nativeLongTasks: [],
+        scheduledTasks: [],
         longTasks: []
     }));
 }
@@ -5216,6 +5228,10 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
                 buildBudgetStatus(loginMeasurement.durationMs, PERFORMANCE_BUDGETS.loginMs, 'login'),
                 buildBudgetStatus(appReadyMeasurement.durationMs, PERFORMANCE_BUDGETS.appReadyMs, 'app-ready')
             ],
+            nativeLongTasks: [],
+            scheduledTasks: [],
+            maxScheduledTaskMs: 0,
+            maxNetworkWaitMs: 0,
             longTasks: []
         },
         errors
@@ -5286,7 +5302,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     trace('hotspot-prewarm:done', summary.performance.hotspotPrewarm);
     const performanceBudgetWindowStartedAt = Date.now();
     await page.waitForTimeout(800);
-    const performanceBudgetLongTaskBaseline = (await readPerformanceSnapshot(page)).longTasks.length;
+    const performanceBudgetLongTaskBaseline = (await readPerformanceSnapshot(page)).nativeLongTasks.length;
 
     for (const id of SWITCH_MODULE_IDS) {
         currentScope = `switch:${id}`;
@@ -5459,7 +5475,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         .slice(0, 4);
     const performanceSnapshot = await readPerformanceSnapshot(page);
     summary.performance.systemPerformanceSnapshot = performanceSnapshot;
-    summary.performance.longTasks = (performanceSnapshot.longTasks || [])
+    summary.performance.nativeLongTasks = (performanceSnapshot.nativeLongTasks || [])
         .slice(performanceBudgetLongTaskBaseline)
         .filter((item) => {
             const taskTime = Date.parse(String(item?.time || ''));
@@ -5467,6 +5483,17 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         })
         .filter((item) => !String(item?.phase || '').startsWith('smoke-deep:'))
         .filter((item) => Number(item?.duration || 0) >= PERFORMANCE_BUDGETS.longTaskMs);
+    summary.performance.scheduledTasks = (performanceSnapshot.scheduledTasks || [])
+        .filter((item) => {
+            const taskTime = Date.parse(String(item?.time || ''));
+            return !Number.isFinite(taskTime) || taskTime >= performanceBudgetWindowStartedAt;
+        });
+    summary.performance.maxScheduledTaskMs = summary.performance.scheduledTasks
+        .reduce((max, item) => Math.max(max, Number(item?.durationMs) || 0), 0);
+    summary.performance.maxNetworkWaitMs = summary.performance.scheduledTasks
+        .reduce((max, item) => Math.max(max, Number(item?.networkWaitMs) || 0), 0);
+    // Compatibility for the existing trend schema. These are native-only now.
+    summary.performance.longTasks = summary.performance.nativeLongTasks.slice();
     summary.performance.budgetFailures = summary.performance.budgetStatus.filter((item) => !item.ok);
 
     writeSmokeOutput(summary);

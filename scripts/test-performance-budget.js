@@ -35,6 +35,9 @@ const requiredSmokeTokens = [
   'slowestModules',
   'slowestDataManagerTabs',
   'systemPerformanceSnapshot',
+  'nativeLongTasks',
+  'scheduledTasks',
+  'networkWaitMs',
   'longTasks',
   'budgetFailures',
   'switchMs',
@@ -154,6 +157,8 @@ console.log(JSON.stringify({
   guards: {
     moduleTimings: true,
     dataManagerTimings: true,
+    nativeLongTasks: true,
+    scheduledTasks: true,
     longTasks: true,
     strictMode: true
   }
