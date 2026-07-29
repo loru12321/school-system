@@ -68,7 +68,11 @@ function createContext({ examId, rows, teacherMap, exams = {}, syncSettings = { 
       readIndicatorState: () => ({ ind1: '2', ind2: '4', highSchoolLine: '390' }),
       EdgeGateway: {
         getAssessmentSyncSettings: async () => ({ settings: syncSettings })
-      }
+      },
+      // The fixture locks its roster before building formal scores, matching a
+      // completed cloud write. Failed writes are deliberately rolled back by
+      // the production runtime and are covered by the dedicated roster test.
+      saveCloudData: async () => true
     }
   };
   context.window.window = context.window;
