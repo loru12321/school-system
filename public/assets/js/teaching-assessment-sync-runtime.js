@@ -580,16 +580,47 @@
         try {
             // 该运行时仍由政治展示页按需加载；考核预检不可为了取阈值而抢先加载它，
             // 否则教师乡镇页会在自身重绘前出现不稳定的“半加载”行数。
-            if (!root.Grade9PoliticsReferenceRuntime) return null;
-            const summary = await root.Grade9PoliticsReferenceRuntime?.ensureSummary?.();
-            if (!summary?.available || text(summary.sourceExamId) !== text(context.currentExamId)) return null;
-            const excellent = toNumber(summary.thresholds?.exc, NaN);
-            const pass = toNumber(summary.thresholds?.pass, NaN);
-            return Number.isFinite(excellent) && Number.isFinite(pass) ? summary : null;
+            if (root.Grade9PoliticsReferenceRuntime) {
+                const summary = await root.Grade9PoliticsReferenceRuntime.ensureSummary?.();
+                const excellent = toNumber(summary?.thresholds?.exc, NaN);
+                const pass = toNumber(summary?.thresholds?.pass, NaN);
+                if (summary?.available
+                    && text(summary.sourceExamId) === text(context.currentExamId)
+                    && Number.isFinite(excellent)
+                    && Number.isFinite(pass)) return summary;
+            }
         } catch (error) {
             console.warn('[assessment-sync] load curated grade9 politics reference failed:', error?.message || error);
-            return null;
         }
+        return buildGrade9CuratedPoliticsThresholdReference(context, rows);
+    }
+
+    function buildGrade9CuratedPoliticsThresholdReference(context, rows) {
+        const archiveThresholds = context?.exam?.thresholds || context?.exam?.meta?.thresholds || {};
+        const archivePolitics = archiveThresholds?.政治 || archiveThresholds?.[normalizeSubject('政治')] || {};
+        const archivedExcellent = toNumber(archivePolitics.exc ?? archivePolitics.excellent ?? archivePolitics.excellentLine, NaN);
+        const archivedPass = toNumber(archivePolitics.pass ?? archivePolitics.passLine, NaN);
+        if (Number.isFinite(archivedExcellent) && Number.isFinite(archivedPass)) {
+            return {
+                available: true,
+                sourceExamId: context?.currentExamId || '',
+                thresholds: { exc: archivedExcellent, pass: archivedPass, source: '中考整理表归档分数线' }
+            };
+        }
+        const values = (rows || []).map((row) => getSubjectScore(row, '政治'))
+            .filter(Number.isFinite)
+            .sort((left, right) => right - left);
+        if (!values.length) return null;
+        const at = (ratio) => values[Math.max(0, Math.ceil(values.length * ratio) - 1)] || 0;
+        return {
+            available: true,
+            sourceExamId: context?.currentExamId || '',
+            thresholds: {
+                exc: at(0.15),
+                pass: at(0.50),
+                source: '按中考整理表重建（前15% / 前50%）'
+            }
+        };
     }
 
     function withGrade9CuratedPoliticsThreshold(context, summary) {

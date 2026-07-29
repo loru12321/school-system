@@ -219,13 +219,6 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         { name: '九戊', school: '银山实验学校', class: '9.2', total: 605, scores: { 语文: 105, 数学: 109, 英语: 107, 物理: 93, 化学: 91, 政治: 76, 体育: 57 } },
         { name: '九丙', school: '兄弟学校', class: '9.1', total: 630, scores: { 语文: 110, 数学: 114, 英语: 112, 物理: 98, 化学: 96, 政治: 89, 体育: 58 } }
       ];
-      context.window.Grade9PoliticsReferenceRuntime = {
-        ensureSummary: async () => ({
-          available: true,
-          sourceExamId: context.window.CURRENT_EXAM_ID,
-          thresholds: { exc: 80, pass: 60, source: '最新中考整理表归档分数线' }
-        })
-      };
       context.window.TEACHER_MAP = { '9.1_政治': '政一', '9.2_政治': '政二', '9.1_语文': '语一', '9.2_语文': '语二', '9.1_体育': '体一', '9.2_体育': '体二' };
       context.window.TEACHER_STATS = {};
       context.window.CohortDB = (() => {
@@ -263,8 +256,8 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         assert.ok(grade9PoliticsItems.every((item) => item.source_exam_id === context.window.CURRENT_EXAM_ID && /人工整理的二模政治列/.test(item.note)), '9th grade politics must come from the current Zhongkao archive column');
         assert.deepStrictEqual(Array.from(grade9Payload.second_mock_subjects), [], 'raw second-mock subjects are reserved for grade 8 history/geography/biology');
         assert.strictEqual(grade9Payload.grade9_curated_politics_source, true, 'payload should expose the curated politics provenance');
-        assert.ok(/政治:80\/60/.test(grade9Payload.threshold_snapshot), 'politics thresholds must come from the curated Zhongkao reference, not the raw second mock');
-        assert.strictEqual(grade9Payload.grade9_curated_politics_threshold_source, '最新中考整理表归档分数线', 'payload should retain the curated politics threshold provenance');
+        assert.ok(/政治:89\/81/.test(grade9Payload.threshold_snapshot), 'missing archive lines must be rebuilt from the current curated Zhongkao politics column, not the raw second mock');
+        assert.strictEqual(grade9Payload.grade9_curated_politics_threshold_source, '按中考整理表重建（前15% / 前50%）', 'payload should retain the fallback threshold provenance');
         assert.deepStrictEqual(Array.from(grade9Payload.makeup_subjects), [], 'second mock source rows should not be reported as July makeup subjects');
         const grade9ExcellentItems = grade9Payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution');
         assert.ok(grade9ExcellentItems.length > 0, '9th grade excellent contribution should be generated from 550/600 high-score tiers');
