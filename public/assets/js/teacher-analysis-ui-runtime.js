@@ -52,7 +52,7 @@
         comparisonHtml: ''
     };
 
-    // 教师乡镇页也可能是用户首次查看政治参考的入口。异步补齐同届二模学校聚合后
+    // 教师乡镇页也可能是用户首次查看政治参考的入口。异步读取最新中考整理表学校聚合后
     // 只重算当前页，既不阻塞教师页首屏，也不会把政治混入正式中考统计。
     function warmTeacherTownshipPoliticsReference() {
         const runtime = window.Grade9PoliticsReferenceRuntime;
@@ -73,7 +73,7 @@
                 const section = document.getElementById('teacher-township-ranking');
                 if (section?.classList?.contains('active')) renderTeacherTownshipRanking();
             })
-            .catch((error) => console.warn('[teacher-township] 政治二模学校参考读取失败:', error?.message || error))
+            .catch((error) => console.warn('[teacher-township] 政治整理表学校参考读取失败:', error?.message || error))
             .finally(() => { window.__TEACHER_POLITICS_REFERENCE_PROMISE__ = null; });
     }
 

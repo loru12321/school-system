@@ -300,7 +300,6 @@
         // 绝不能跳过门禁直接去读分数线 —— 否则二模/非7月又会算出非零上线率赋分并计入
         // 综合总分，正是上面注释描述的那个背离。
         if (typeof window.isHighSchoolAdmissionExamAllowed !== 'function') {
-            console.warn('[package] admission disabled');
             return 0;
         }
         if (!window.isHighSchoolAdmissionExamAllowed()) {
@@ -965,116 +964,26 @@
         return isGrade9Exam() && getExamTypeLabel() === '中考';
     }
 
-    function isGrade9SecondMockExamForPackage(examId = '', exam = {}) {
-        const meta = getPackageExamMeta(exam);
-        const source = [examId, meta.type, meta.name, meta.examName, exam.name, exam.title].map((value) => String(value || '')).join(' ');
-        const grade = String(meta.grade || meta.gradeLabel || exam.grade || exam.gradeLabel || '');
-        return /二模/.test(source) && (/9\s*年级|九年级/.test(`${source} ${grade}`) || String(grade).trim() === '9');
+    function getGrade9LatestPoliticsRows(rows = getTownshipRows()) {
+        const copiedRows = (rows || []).map((row) => ({ ...row, scores: { ...(row?.scores || {}) } }));
+        return {
+            rows: copiedRows,
+            matched: copiedRows.filter((row) => Number.isFinite(Number(row?.scores?.政治))).length
+        };
     }
 
-    function findGrade9SecondMockForPackage() {
-        const currentExamId = String(window.CURRENT_EXAM_ID || '').trim();
-        const currentExam = window.COHORT_DB?.exams?.[currentExamId] || {};
-        const currentMeta = getPackageExamMeta(currentExam);
-        const cohortId = getActiveCohortId() || normalizeCohortId(currentMeta.cohortId || currentMeta.cohort_id || currentExamId);
-        const academicYear = getPackageExamAcademicYear(currentExamId, currentExam);
-        const candidates = Object.entries(window.COHORT_DB?.exams || {})
-            .filter(([examId, exam]) => {
-                if (examId === currentExamId || !isGrade9SecondMockExamForPackage(examId, exam)) return false;
-                const meta = getPackageExamMeta(exam);
-                const examCohort = normalizeCohortId(meta.cohortId || meta.cohort_id || examId);
-                const examAcademicYear = getPackageExamAcademicYear(examId, exam);
-                return (!cohortId || !examCohort || cohortId === examCohort)
-                    && (!academicYear || !examAcademicYear || academicYear === examAcademicYear);
-            })
-            .map(([examId, exam]) => ({ examId, exam, date: getPackageExamDate(examId, exam) }))
-            .sort((left, right) => String(right.date).localeCompare(String(left.date)) || String(right.examId).localeCompare(String(left.examId)));
-        return candidates[0] || null;
-    }
-
-    async function ensureGrade9SecondMockForPackage() {
-        if (!isGrade9ZhongkaoPackage() || findGrade9SecondMockForPackage()) return;
-        const cohortId = getActiveCohortId() || getCurrentExamCohortId();
-        if (!cohortId || typeof window.CloudManager?.fetchCohortExamsToLocal !== 'function') return;
-        try {
-            await window.CloudManager.fetchCohortExamsToLocal(cohortId, {
-                background: false,
-                latestOnly: false,
-                minCount: 2,
-                maxFetch: 2,
-                refreshSelectors: false
-            });
-            // 个别届别在中考和二模之间还归档了其他考试；只有这时才拉取第三条历史。
-            if (!findGrade9SecondMockForPackage()) {
-                await window.CloudManager.fetchCohortExamsToLocal(cohortId, {
-                    background: false,
-                    latestOnly: false,
-                    minCount: 3,
-                    refreshSelectors: false
-                });
-            }
-        } catch (error) {
-            console.warn('[package] politics source:', error?.message || error);
-        }
-    }
-
-    function normalizedPackageIdentity(value) {
-        return String(value || '').replace(/\s+/g, '').replace(/[\u200b-\u200f\uFEFF]/g, '').trim();
-    }
-
-    function getPackageStudentIdentityKeys(row = {}) {
-        const name = normalizedPackageIdentity(row.name);
-        if (!name) return [];
-        const id = normalizedPackageIdentity(row.id);
-        const className = normalizedPackageIdentity(row.class);
-        const schoolKeys = getSchoolLookupKeys(row.school, [row.originalSchoolName]).map(normalizedPackageIdentity).filter(Boolean);
-        const keys = [];
-        if (id && !/^[-—]+$/.test(id)) keys.push(`id:${id}`);
-        schoolKeys.forEach((school) => {
-            if (className) keys.push(`school-class-name:${school}|${className}|${name}`);
-            keys.push(`school-name:${school}|${name}`);
-        });
-        keys.push(`name:${name}`);
-        return [...new Set(keys)];
-    }
-
-    function getGrade9SecondMockPoliticsRows(rows = getTownshipRows()) {
-        const secondMock = findGrade9SecondMockForPackage();
-        const mockRows = Array.isArray(secondMock?.exam?.data) ? secondMock.exam.data : [];
-        const byIdentity = new Map();
-        mockRows.forEach((row) => {
-            const score = Number(row?.scores?.政治);
-            if (!Number.isFinite(score)) return;
-            getPackageStudentIdentityKeys(row).forEach((key) => {
-                const list = byIdentity.get(key) || [];
-                list.push(score);
-                byIdentity.set(key, list);
-            });
-        });
-        let matched = 0;
-        const mergedRows = (rows || []).map((row) => {
-            const values = getPackageStudentIdentityKeys(row)
-                .map((key) => byIdentity.get(key) || [])
-                .find((list) => list.length === 1) || [];
-            if (!values.length) return { ...row, scores: { ...(row?.scores || {}) } };
-            matched += 1;
-            return { ...row, scores: { ...(row?.scores || {}), 政治: values[0] } };
-        });
-        return { rows: mergedRows, matched, secondMock };
-    }
-
-    // 中考主科仍固定为五科；这里只为原始成绩、学生明细和教师明细补充政治二模参考列。
-    // 合并后的 rows 只在导出过程内使用，绝不回写 RAW_DATA、SUBJECTS 或学生正式 total。
+    // 中考主科仍固定为五科；这里只为原始成绩、学生明细和教师明细附上最新中考整理表已有的政治列。
+    // 不从二模补学生或补分，且绝不回写 RAW_DATA、SUBJECTS 或学生正式 total。
     function getGrade9ZhongkaoDisplayData(rows = getAllRows()) {
         const officialSubjects = getSubjectList(rows).filter((subject) => subject !== '政治');
         if (!isGrade9ZhongkaoPackage()) return { rows, subjects: officialSubjects, politics: null };
-        const politics = getGrade9SecondMockPoliticsRows(rows);
+        const politics = getGrade9LatestPoliticsRows(rows);
         if (!politics.matched) return { rows, subjects: officialSubjects, politics };
         return { rows: politics.rows, subjects: [...officialSubjects, '政治'], politics };
     }
 
     function getPackageDisplaySubjectLabel(subject) {
-        if (subject === '政治' && isGrade9ZhongkaoPackage()) return '政治（二模参考）';
+        if (subject === '政治' && isGrade9ZhongkaoPackage()) return '政治（中考整理表参考）';
         return typeof window.getConfiguredDisplaySubjectLabel === 'function'
             ? window.getConfiguredDisplaySubjectLabel(subject)
             : subject;
@@ -1091,13 +1000,11 @@
             subjects: officialSnapshot.subjects,
             totalLabel: `${officialSubjects.length === 5 ? '五科总' : `${officialSubjects.length}科总`}（不含政治）`
         });
-        const politics = getGrade9SecondMockPoliticsRows(rows);
+        const politics = getGrade9LatestPoliticsRows(rows);
         if (!politics.matched) return { withoutPolitics, withPolitics: null, politics };
         const withPoliticsSubjects = [...officialSubjects, '政治'];
         const withPoliticsSnapshot = calculateMajorSubjectSnapshot(politics.rows, withPoliticsSubjects);
-        const sourceLabel = politics.secondMock
-            ? (getPackageExamDate(politics.secondMock.examId, politics.secondMock.exam) || politics.secondMock.examId)
-            : '未找到';
+        const sourceLabel = getCurrentExamDate() || String(window.CURRENT_EXAM_ID || '') || '未标注日期';
         const withPolitics = buildSchoolAnalysisWorkbook('township', {
             schools: withPoliticsSnapshot.schools,
             subjects: withPoliticsSnapshot.subjects,
@@ -1105,9 +1012,9 @@
             includeGrade9Support: false,
             referenceNote: [
                 ['项目', '说明'],
-                ['用途', '九年级中考政治二模参考展示；不写回中考主分析。'],
-                ['政治来源', `同届同学年度最新二模：${sourceLabel}`],
-                ['匹配人数', `${politics.matched} 人`],
+                ['用途', '九年级中考整理表政治参考展示；不写回中考主分析。'],
+                ['政治来源', `最新中考整理表：${sourceLabel}`],
+                ['纳入人数', `${politics.matched} 人（仅限整理表中有政治分者）`],
                 ['不参与', '中考五科总分、排名、两率一分、指标生、高分段、高中上线率等任何正式中考计算。']
             ]
         });
@@ -1125,9 +1032,7 @@
             try {
                 const result = window.calcIndicators(true);
                 if (Array.isArray(result)) indicatorRows = result;
-            } catch (error) {
-                console.warn('[package] indicator:', error);
-            }
+            } catch {}
         }
         const map = new Map();
         indicatorRows.forEach((row) => {
@@ -1543,7 +1448,7 @@
         if (!displayData?.politics?.matched) return [];
         if (!Array.isArray(displayData.subjects) || !displayData.subjects.includes('政治')) return [];
         return [
-            '本次中考不考政治。「政治（二模参考）」取自同届同学年度二模，与其他学科不是同一场考试，排名不可直接互比。',
+            '本次中考不考政治。「政治（中考整理表参考）」只取最新中考整理表中已有政治分的学生，二模独有学生不补入。',
             '政治只作单科展示，不计入五科总分、两率一分、指标生、高分段与高中上线率等任何正式中考口径。'
         ];
     }
@@ -1733,9 +1638,11 @@
         if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
             await window.SystemRuntimeLoader.load('teacher-analysis').catch(() => {});
         }
-        // 教师乡镇表中的政治学校行来自同届二模学校聚合。先确保它已读取/回填，
+        // 教师乡镇表中的政治学校行来自最新中考整理表的学校聚合。先确保它已读取，
         // 再计算 TOWNSHIP_RANKING_DATA，避免网页与压缩包出现“政治仅两位本校教师”。
-        if (!window.Grade9PoliticsReferenceRuntime) await loadOptionalRuntime('grade9-politics', './assets/js/grade9-politics-reference-runtime.js');
+        if (!window.Grade9PoliticsReferenceRuntime && typeof loadOptionalRuntime === 'function') {
+            await loadOptionalRuntime('grade9-politics', './assets/js/grade9-politics-reference-runtime.js');
+        }
         if (window.Grade9PoliticsReferenceRuntime?.ensureSummary) await window.Grade9PoliticsReferenceRuntime.ensureSummary();
         if (typeof window.calculateTeacherTownshipRanking === 'function') {
             window.calculateTeacherTownshipRanking({ force: true, teacherMetricScope: 'admin' });
@@ -1748,9 +1655,7 @@
                 }
                 if (window.CountyAnalysisRuntime?.applyCountyRanks) window.CountyAnalysisRuntime.applyCountyRanks();
                 if (window.CountyAnalysisRuntime?.renderCountyAnalysis) window.CountyAnalysisRuntime.renderCountyAnalysis();
-            } catch (error) {
-                console.warn('[package] county teacher:', error);
-            }
+            } catch {}
         }
     }
 
@@ -1758,16 +1663,12 @@
         if (typeof window.renderHighScoreTable === 'function') {
             try {
                 window.renderHighScoreTable();
-            } catch (error) {
-                console.warn('[package] high score:', error);
-            }
+            } catch {}
         }
         if (typeof window.renderBottom3TableOnly === 'function') {
             try {
                 window.renderBottom3TableOnly();
-            } catch (error) {
-                console.warn('[package] bottom3:', error);
-            }
+            } catch {}
         }
         if (!isGrade9Exam()) return;
         try {
@@ -1777,9 +1678,7 @@
                 await Promise.resolve(window.ensureIndicatorWorkspaceFromCloud('analysis-package', 12000));
             }
             if (typeof window.calcIndicators === 'function') window.calcIndicators(true);
-        } catch (error) {
-            console.warn('[package] indicator:', error);
-        }
+        } catch {}
     }
 
     function buildTeacherMark(item) {
@@ -1919,9 +1818,8 @@
                 zip.file(`xl/worksheets/sheet${index + 1}.xml`, xml);
             }
             return await zip.generateAsync({ type: 'arraybuffer' });
-        } catch (error) {
+        } catch {
             // 冻结只是阅读便利，失败时保留原始工作簿，绝不因此让整个分析包导不出来。
-            console.warn('[package] freeze panes:', error);
             return arrayBuffer;
         }
     }
@@ -1948,7 +1846,7 @@
         if (politics?.withoutPolitics) {
             files.push(`学校/${packageStem}学校分析（不含政治）${suffix}.xlsx  —— 正式口径的学校分析，结论以此为准`);
             if (politics.withPolitics) {
-                files.push(`学校/${packageStem}学校分析（含政治·二模参考）${suffix}.xlsx  —— 政治对照，仅供参考，不作正式依据`);
+                files.push(`学校/${packageStem}学校分析（含政治·中考整理表参考）${suffix}.xlsx  —— 政治对照，仅供参考，不作正式依据`);
             }
         } else {
             files.push(`学校/${packageStem}学校分析${suffix}.xlsx  —— 学校分析主报告`);
@@ -1982,11 +1880,11 @@
             // 拿到学生明细/教师分析的班主任和科任老师不会去翻学校分析。
             ...(showPolitics ? [
                 '【政治怎么看】',
-                `· 本次中考不考政治。包内的「政治（二模参考）」取自同届同学年度二模，共匹配 ${politicsMatched} 人。`,
+                `· 本次中考不考政治。包内的「政治（中考整理表参考）」只取最新中考整理表中已有政治分的学生，共纳入 ${politicsMatched} 人。`,
                 '· 政治单独成列、单独排名，只用于看政治一科的表现和政治教师分析。',
                 '· 政治不计入五科总分、两率一分、指标生、高分段、高中上线率等任何正式中考口径。',
-                '· 因此「五科总」始终不含政治；要看含政治的对照，只用「学校分析（含政治·二模参考）」，且不作正式依据。',
-                '· 政治与其他学科来自不同考试，两者的排名不可直接相互比较。',
+                '· 因此「五科总」始终不含政治；要看含政治的对照，只用「学校分析（含政治·中考整理表参考）」，且不作正式依据。',
+                '· 二模只用于核对最新表中的政治值；二模有而最新表未入库的学生不会补入本包。',
                 ''
             ] : []),
             '【口径注意】',
@@ -2010,7 +1908,6 @@
             if (typeof window.renderTables === 'function') window.renderTables();
             if (typeof window.calcSummary === 'function') window.calcSummary(true);
             await ensureSupportMetricsForPackage();
-            await ensureGrade9SecondMockForPackage();
             if (typeof window.calcSummary === 'function') window.calcSummary(true);
 
             const zip = new window.JSZip();
@@ -2025,9 +1922,9 @@
             if (grade9PoliticsReferences?.withoutPolitics) {
                 await addWorkbook(zip, `学校/${packageStem}学校分析（不含政治）${suffix}.xlsx`, grade9PoliticsReferences.withoutPolitics);
                 if (grade9PoliticsReferences.withPolitics) {
-                    await addWorkbook(zip, `学校/${packageStem}学校分析（含政治·二模参考）${suffix}.xlsx`, grade9PoliticsReferences.withPolitics);
+                    await addWorkbook(zip, `学校/${packageStem}学校分析（含政治·中考整理表参考）${suffix}.xlsx`, grade9PoliticsReferences.withPolitics);
                 } else {
-                    toast('未匹配到九年级政治二模成绩，已只生成正式五科学校分析。', 'warning');
+                    toast('最新中考整理表中没有政治成绩，已只生成正式五科学校分析。', 'warning');
                 }
             } else {
                 await addWorkbook(zip, `学校/${packageStem}学校分析${suffix}.xlsx`, buildSchoolAnalysisWorkbook('township'));

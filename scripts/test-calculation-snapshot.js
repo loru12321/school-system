@@ -694,7 +694,10 @@ async function main() {
                 const heading = String(panel.querySelector('.analysis-section-head > span')?.textContent || '').trim();
                 const subject = heading
                     .replace(/\s*教师乡镇排名\s*$/, '')
-                    .replace(/（二模参考）$/, '');
+                    .trim()
+                    // 发布前快照先跑线上旧版；部署后跑新版，二者都要能归一为“政治”。
+                    .replace(/（(?:中考整理表|二模)参考）$/, '')
+                    .trim();
                 return Array.from(panel.querySelectorAll('tbody tr')).map((row) => {
                     const cells = Array.from(row.cells || []);
                     return {

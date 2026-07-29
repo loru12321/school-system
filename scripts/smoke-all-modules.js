@@ -1468,7 +1468,7 @@ async function runModuleDeepCheck(page, id) {
                 summaryAdmissionZeroUnlessJulyZhongkao: summaryHighScoreDiagnostics.admissionAllZeroWhenDisallowed
             };
 
-            // 九年级中考政治是同届二模的独立单科参考。它必须真实显示三项赋分，
+            // 九年级中考政治只取最新中考整理表的独立单科参考。它必须真实显示三项赋分，
             // 但绝不能污染中考正式五科数组或综合总表；这里只在对应考试上验证。
             const politicsReferenceExpected = /9\s*年级|九年级/.test(String(window.CONFIG?.name || ''))
                 && /中考/.test(String(window.CURRENT_EXAM_ID || ''));
@@ -1486,7 +1486,7 @@ async function runModuleDeepCheck(page, id) {
                 if (typeof window.renderTables === 'function') window.renderTables();
                 await new Promise(resolve => setTimeout(resolve, 100));
                 const tab = Array.from(document.querySelectorAll('#two-rate-table-jumpbar button'))
-                    .find(button => /政治（二模参考）/.test(String(button?.innerText || button?.textContent || '')));
+                    .find(button => /政治（中考整理表参考）/.test(String(button?.innerText || button?.textContent || '')));
                 const panel = document.getElementById('anchor-subject-politics-reference');
                 const panelText = String(panel?.innerText || panel?.textContent || '');
                 politicsReference = {
@@ -3146,7 +3146,7 @@ async function runModuleDeepCheck(page, id) {
                     politicsExpected,
                     politicsRankingReady: !politicsExpected || (Array.isArray(politicsRankingRows)
                         && politicsRankingRows.some((row) => row?.type === 'teacher')
-                        && text.includes('政治（二模参考）'))
+                        && text.includes('政治（中考整理表参考）'))
                 };
                 if (state.sectionActive
                     && state.contentReady
@@ -3938,7 +3938,7 @@ async function runModuleDeepCheck(page, id) {
                     classOptionCount: detailClassOptionCount,
                     countyRankAfterTownRank: detailCountyRankAfterTownRank,
                     politicsExpected,
-                    politicsHeaderReady: !politicsExpected || detailHeaders.some((header) => header.includes('政治（二模参考）')),
+                    politicsHeaderReady: !politicsExpected || detailHeaders.some((header) => header.includes('政治（中考整理表参考）')),
                     ready: detailClassOptionCount > 0 && detailRows > 0
                 };
             };

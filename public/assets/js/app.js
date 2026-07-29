@@ -2867,7 +2867,7 @@ function getConfiguredExtraDisplaySubjects(config = CONFIG) {
     return Array.isArray(config.extraDisplaySubs) ? config.extraDisplaySubs.filter(Boolean) : [];
 }
 
-// 展示科目不进入 SUBJECTS：这样九年级中考的政治二模成绩可以在学生、报告和教师
+// 展示科目不进入 SUBJECTS：这样九年级中考整理表中的政治参考成绩可以在学生、报告和教师
 // 页面单独查看，却不会被五科总、两率一分、指标生或高中上线等正式口径读取。
 function isConfiguredDisplayOnlySubject(subject, config = CONFIG) {
     const normalized = String(subject || '').trim();
@@ -2877,7 +2877,7 @@ function isConfiguredDisplayOnlySubject(subject, config = CONFIG) {
 function getConfiguredDisplaySubjectLabel(subject, config = CONFIG) {
     const normalized = String(subject || '').trim();
     if (normalized === '政治' && isConfiguredDisplayOnlySubject(normalized, config) && String(config?.name || '').includes('9')) {
-        return '政治（二模参考）';
+        return '政治（中考整理表参考）';
     }
     return normalized;
 }
@@ -2885,7 +2885,7 @@ function getConfiguredDisplaySubjectLabel(subject, config = CONFIG) {
 function getConfiguredDisplaySubjectNotice(subject, config = CONFIG) {
     const normalized = String(subject || '').trim();
     if (normalized === '政治' && isConfiguredDisplayOnlySubject(normalized, config) && String(config?.name || '').includes('9')) {
-        return '九年级中考政治取同届二模成绩，单科两率一分与排名仅供参考；不计入中考五科总、综合评价、指标生、高分段或高中上线。';
+        return '九年级中考政治取最新中考整理表中实际有政治分的学生，单科两率一分与排名仅供参考；不计入中考五科总、综合评价、指标生、高分段或高中上线。';
     }
     return '';
 }
@@ -5700,8 +5700,8 @@ function getTownAnalysisVisibleSubjectsForCurrentUser() {
     return allSubjects.filter(subject => normalizedVisible.has(normalizeSubject(subject)));
 }
 
-// 中考政治二模参考会固化到中考归档的展示字段，但绝不写进 SUBJECTS 或 SCHOOLS。
-// 首次在“两率一分”按需补齐，随后直接用中考归档，以免影响登录和主分析的计算路径。
+// 中考政治只读取最新中考整理表的展示字段，绝不写进 SUBJECTS 或 SCHOOLS。
+// 二模只用于逐校核对，不回填、不补入最新表未收录的学生。
 const Grade9PoliticsReferenceRenderState = {
     pendingKeys: new Set(),
     completedKeys: new Set()
@@ -5749,27 +5749,23 @@ function requestGrade9PoliticsReferenceSummary(summarySignature) {
             // 考试切换期间旧请求可能后到；只有当前同一份汇总才允许补绘页面。
             if (`${getSummaryRenderSignature()}::politics-reference` === requestKey) renderTables();
         })
-        .catch(error => {
-            console.warn('[politics-reference] 二模两率一分读取失败:', error?.message || error);
-        })
+        .catch(error => console.warn('[politics-reference] 中考整理表政治读取失败:', error?.message || error))
         .finally(() => Grade9PoliticsReferenceRenderState.pendingKeys.delete(requestKey));
 }
 
 function buildGrade9PoliticsReferenceTable(reference) {
     const anchorId = 'anchor-subject-politics-reference';
     const baseClass = 'anchor-target analysis-anchor-panel analysis-generated-panel';
-    const notice = '同届最新二模的单科参考结果，不计入中考五科总、综合总表、指标生、高分段或高中上线。';
+    const notice = '只统计最新中考整理表中实际有政治分的学生；不计入中考五科总、综合总表、指标生、高分段或高中上线。';
     if (!reference || reference.status === 'loading') {
-        return `<div id="${anchorId}" class="${baseClass}"><div class="sub-header analysis-section-head analysis-generated-header"><span>📘 政治（二模参考）· 两率一分</span></div><div class="analysis-empty-state">正在读取同届二模政治成绩与分数线，请稍候…</div></div>`;
+        return `<div id="${anchorId}" class="${baseClass}"><div class="sub-header analysis-section-head analysis-generated-header"><span>📘 政治（中考整理表参考）· 两率一分</span></div><div class="analysis-empty-state">正在读取最新中考整理表中的政治成绩，请稍候…</div></div>`;
     }
     if (!reference.available) {
-        const reason = escapeAppHtml(reference.reason || '未找到同届同学年度的九年级二模政治成绩。');
-        return `<div id="${anchorId}" class="${baseClass}"><div class="sub-header analysis-section-head analysis-generated-header"><span>📘 政治（二模参考）· 两率一分</span></div><div class="analysis-generated-note">${notice}</div><div class="analysis-empty-state">${reason}</div></div>`;
+        const reason = escapeAppHtml(reference.reason || '最新中考整理表中没有可用的政治成绩。');
+        return `<div id="${anchorId}" class="${baseClass}"><div class="sub-header analysis-section-head analysis-generated-header"><span>📘 政治（中考整理表参考）· 两率一分</span></div><div class="analysis-generated-note">${notice}</div><div class="analysis-empty-state">${reason}</div></div>`;
     }
     const thresholds = reference.thresholds || {};
-    const source = escapeAppHtml(reference.sourceLabel || '同届最新二模');
-    // 中考归档可能只含本校学生；政治学校对比始终取同届二模的学校聚合，
-    // 这样外校不会因为中考正式数据不考政治而在参考表中消失。
+    const source = escapeAppHtml(reference.sourceLabel || '最新中考整理表');
     const rows = Array.isArray(reference.referenceSchools) && reference.referenceSchools.length
         ? reference.referenceSchools
         : (Array.isArray(reference.schools) ? reference.schools : []);
@@ -5789,10 +5785,14 @@ function buildGrade9PoliticsReferenceTable(reference) {
             <td data-label="两率一分总分" class="text-red" style="font-size:1.05em;font-weight:bold;">${Number(school.score2Rate || 0).toFixed(2)}</td>
             ${getRankHTML(ranking.score2Rate || 0)}
         </tr>`;
-    }).join('') || '<tr><td colspan="10" class="analysis-empty-cell">暂无可匹配的政治二模成绩</td></tr>';
+    }).join('') || '<tr><td colspan="10" class="analysis-empty-cell">最新中考整理表中暂无可用政治成绩</td></tr>';
+    const audit = reference.audit || {};
+    const auditText = audit.status === 'ready'
+        ? `二模核对 ${audit.schoolCount || 0} 校：一致 ${audit.same || 0} 人、分数不同 ${audit.different || 0} 人、二模有而最新表未入库 ${audit.mockOnly || 0} 人（仅核对，不补入统计）。`
+        : '二模核对待同届二模数据加载后显示；不影响本表按最新中考整理表统计。';
     return `<div id="${anchorId}" class="${baseClass}">
-        <div class="sub-header analysis-section-head analysis-generated-header"><span>📘 政治（二模参考）· 单科两率一分</span><span class="analysis-generated-meta"><span class="analysis-table-tag">来源 ${source}</span><span class="analysis-table-tag">覆盖 ${rows.length} 校</span><span class="analysis-table-tag">优秀线 ≥ ${Number(thresholds.exc || 0).toFixed(1)}</span><span class="analysis-table-tag">及格线 ≥ ${Number(thresholds.pass || 0).toFixed(1)}</span></span></div>
-        <div class="analysis-generated-note">${notice} 已按政治二模的均分、优秀率、及格率分别赋分（50 / 80 / 50），仅用于政治单科比较。</div>
+        <div class="sub-header analysis-section-head analysis-generated-header"><span>📘 政治（中考整理表参考）· 单科两率一分</span><span class="analysis-generated-meta"><span class="analysis-table-tag">来源 ${source}</span><span class="analysis-table-tag">覆盖 ${rows.length} 校</span><span class="analysis-table-tag">优秀线 ≥ ${Number(thresholds.exc || 0).toFixed(1)}</span><span class="analysis-table-tag">及格线 ≥ ${Number(thresholds.pass || 0).toFixed(1)}</span></span></div>
+        <div class="analysis-generated-note">${notice} 已按最新中考整理表的均分、优秀率、及格率分别赋分（50 / 80 / 50），仅用于政治单科比较。${auditText}</div>
         <div class="table-wrap analysis-table-shell"><table class="analysis-generated-table"><thead><tr><th>学校名称</th><th>实考人数</th><th>平均分</th><th>优秀率</th><th>及格率</th><th>平均分赋分</th><th>优秀率赋分</th><th>及格率赋分</th><th>两率一分总分</th><th>排名</th></tr></thead><tbody>${htmlRows}</tbody></table></div>
     </div>`;
 }
@@ -5927,7 +5927,7 @@ function renderTables() {
         ...(politicsReferenceApplicable ? [{
             type: 'politics-reference',
             key: 'politics-reference',
-            label: '政治（二模参考）',
+            label: '政治（中考整理表参考）',
             anchorId: 'anchor-subject-politics-reference',
             state: politicsReference?.signature || politicsReference?.status || 'loading'
         }] : [])

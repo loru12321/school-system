@@ -97,12 +97,15 @@ export async function syncReferencedAssets({
     const sourcePath = path.join(sourceJsDir, entry.name);
     const targetPath = path.join(targetJsDir, entry.name);
     const sourceCode = fs.readFileSync(sourcePath, 'utf8');
+    // 分析包只会在已进入系统的现代浏览器中按需加载；保留可选链等现代语法，
+    // 避免为了历史浏览器把离线导出包重复展开，挤占 lt.html 的发布体积预算。
+    const target = entry.name === 'exam-analysis-package-runtime.js' ? 'es2020' : 'es2018';
     const minified = transformSync(sourceCode, {
       loader: 'js',
       minify: true,
       legalComments: 'none',
       charset: 'utf8',
-      target: 'es2018'
+      target
     });
     await writeFileWithRetry(targetPath, minified.code, 'utf8');
     console.log(`Synced asset: ${sourcePath} -> ${targetPath} (${sourceCode.length}B -> ${minified.code.length}B)`);

@@ -62,8 +62,6 @@
         return areSchoolNamesEquivalentFn(leftName, rightName);
     }
 
-    // 九年级政治是中考页面的二模参考展示科目。把它只加入单科教师统计/排名，
-    // 不回写 SUBJECTS，因此不会进入五科总或任何正式中考汇总公式。
     function getTeacherAnalysisDisplaySubjects() {
         const baseSubjects = Array.isArray(window.SUBJECTS) ? window.SUBJECTS.filter(Boolean) : [];
         const configuredExtras = typeof window.getConfiguredExtraDisplaySubjects === 'function'
@@ -249,7 +247,7 @@
                 excellentRate: teacherToNumber(metrics.excRate, 0),
                 passRate: teacherToNumber(metrics.passRate, 0),
                 studentCount: count,
-                source: 'grade9-second-mock-politics'
+                source: 'g9p'
             };
         }).filter(Boolean);
     }
@@ -370,6 +368,10 @@
     }
 
     function teacherResolveThresholds(subject, students = []) {
+        if (normalizeSubjectFn(subject) === '政治') {
+            const politics = window.Grade9PoliticsReferenceRuntime?.getSummary?.()?.thresholds || {}, exc = teacherToNumber(politics.exc, NaN), pass = teacherToNumber(politics.pass, NaN);
+            if (Number.isFinite(exc) && Number.isFinite(pass)) return { exc, pass, low: pass * 0.6 };
+        }
         const fallbackScores = students
             .map((student) => teacherToNumber(student?.scores?.[subject], NaN))
             .filter((score) => Number.isFinite(score))
@@ -1552,7 +1554,7 @@
                         excRate: politicsReferenceRows.reduce((sum, row) => sum + teacherToNumber(row.excellentRate, 0) * teacherToNumber(row.studentCount, 0), 0) / count,
                         passRate: politicsReferenceRows.reduce((sum, row) => sum + teacherToNumber(row.passRate, 0) * teacherToNumber(row.studentCount, 0), 0) / count,
                         count,
-                        source: 'grade9-second-mock-politics'
+                        source: 'g9p'
                     };
                 }
             }

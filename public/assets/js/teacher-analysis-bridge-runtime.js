@@ -167,7 +167,7 @@
         return { subjectScores, totalScores };
     }
 
-    // 关联性、贡献度与提分/拖分的基准是正式总分科目。九年级政治二模成绩
+    // 关联性、贡献度与提分/拖分的基准是正式总分科目。九年级中考整理表政治成绩
     // 仅在学生明细和政治教师排名中展示，不能与五科总建立统计关联。
     function getCorrelationSubjects() {
         if (Array.isArray(window.SUBJECTS)) return window.SUBJECTS.filter(Boolean);

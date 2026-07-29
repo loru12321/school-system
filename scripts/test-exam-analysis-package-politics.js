@@ -1,6 +1,7 @@
 // 九年级中考政治「只展示、不影响正式口径」的防误读契约测试。
 //
-// 背景：中考不考政治，包内政治取同届二模成绩，只做单科展示与政治教师分析。
+// 背景：中考不考政治，包内政治只取最新中考整理表中已有的政治成绩，
+// 二模仅作核对，不回填、不补入学生或分数。
 // 风险不在算错，而在**误读**：学生明细/教师分析这两份文件常被单独转发给班主任
 // 和科任老师，收到的人看不到包外的「阅读说明」，如果封面不写清楚，很容易把政治
 // 当成中考科目、或拿政治名次和其他学科名次直接相比。
@@ -28,14 +29,20 @@ assert.ok(/展示科目不进入 SUBJECTS/.test(appSource),
 // 正式口径一律显式剔除政治。
 assert.ok(/filter\(\(subject\) => subject !== '政治'\)/.test(packageSource),
     'official subject lists must explicitly exclude 政治');
+assert.ok(/function getGrade9LatestPoliticsRows\(/.test(packageSource),
+    'package politics display rows must come from the current latest Zhongkao sheet');
+assert.ok(!/getGrade9SecondMockPoliticsRows/.test(packageSource),
+    'package must never merge second-mock politics into Zhongkao rows');
 
 // ── 2. 带政治列的工作簿，封面必须有提醒 ──────────────────────────────────────
 assert.ok(/function buildPoliticsCoverNotices\(/.test(packageSource),
     'the package runtime must keep the politics cover-notice builder');
 
-// 提醒必须说清「不是同一场考试」和「不计入正式口径」这两点。
-assert.ok(/不是同一场考试|排名不可直接互比/.test(packageSource),
-    'the politics notice must warn that 政治 comes from a different exam');
+// 提醒必须说清「唯一统计源」和「不计入正式口径」这两点。
+assert.ok(/只取最新中考整理表中已有政治分的学生/.test(packageSource),
+    'the politics notice must state that the latest Zhongkao sheet is the only politics statistic source');
+assert.ok(/二模独有学生不补入/.test(packageSource),
+    'the politics notice must state that second-mock-only students are never backfilled');
 assert.ok(/不计入五科总分、两率一分、指标生、高分段与高中上线率/.test(packageSource),
     'the politics notice must enumerate the official metrics 政治 stays out of');
 
@@ -66,7 +73,7 @@ assert.ok(/politics\?\.politics\?\.matched/.test(packageSource),
 assert.ok(/「五科总」始终不含政治/.test(packageSource),
     'the readme must state explicitly that 五科总 never includes 政治');
 
-// 压缩包教师乡镇表也必须等待政治二模学校聚合完成；否则网页已经显示外校学校行，
+// 压缩包教师乡镇表也必须等待政治整理表学校聚合完成；否则网页已经显示外校学校行，
 // 但刚下载的包仍会只剩本校政治教师，形成两套口径。
 assert.ok(/Grade9PoliticsReferenceRuntime\?\.ensureSummary/.test(packageSource),
     'package teacher ranking warmup must await the grade-9 politics school reference');

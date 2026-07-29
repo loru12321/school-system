@@ -186,7 +186,7 @@ assert.strictEqual(aliasStats.studentCount, 2);
 assert.strictEqual(Number(aliasStats.avg), 85);
 assert.strictEqual(context.lastAlert, undefined);
 
-// 九年级中考政治来自二模：它应进入政治教师的单科统计与乡镇排名，
+// 九年级中考整理表政治应进入政治教师的单科统计与乡镇排名，
 // 但绝不能被写回正式 SUBJECTS，从而保持五科总及其他中考公式不变。
 context.CONFIG.extraDisplaySubs = ['政治'];
 context.THRESHOLDS.政治 = { exc: 85, pass: 60 };
@@ -215,6 +215,7 @@ context.Grade9PoliticsReferenceRuntime = {
     getSummary() {
         return {
             signature: 'politics-reference-schools-v1',
+            thresholds: { exc: 80, pass: 70 },
             referenceSchools: [
                 { name: '甲校', metrics: { count: 2, avg: 75, excRate: 0, passRate: 1 } },
                 { name: '乙校', metrics: { count: 3, avg: 82, excRate: 1 / 3, passRate: 1 } },
@@ -227,7 +228,10 @@ context.Grade9PoliticsReferenceRuntime = {
 context.calculateTeacherTownshipRanking({ force: true, teacherMetricScope: 'admin' });
 assert.ok(context.TEACHER_TOWNSHIP_RANKINGS?.['政治教师']?.政治, 'grade 9 display-only politics should have a teacher township ranking');
 const politicsRankingRows = context.TOWNSHIP_RANKING_DATA.政治 || [];
-assert.ok(politicsRankingRows.some((row) => row.type === 'school' && row.name === '乙校'), 'politics township ranking must include second-mock external school aggregates');
+const politicsTeacherRow = politicsRankingRows.find((row) => row.type === 'teacher' && row.name === '政治教师');
+assert.strictEqual(politicsTeacherRow?.excellentRate, 0.5, 'teacher politics excellent rate must use the same latest-zhongkao threshold as external schools');
+assert.strictEqual(politicsTeacherRow?.passRate, 1, 'teacher politics pass rate must use the same latest-zhongkao threshold as external schools');
+assert.ok(politicsRankingRows.some((row) => row.type === 'school' && row.name === '乙校'), 'politics township ranking must include latest-sheet external school aggregates');
 assert.ok(politicsRankingRows.some((row) => row.type === 'school' && row.name === '丙校'), 'politics township ranking must retain every eligible external school aggregate');
 assert.ok(!politicsRankingRows.some((row) => row.type === 'school' && row.name === '甲校'), 'current school must remain represented by its teachers, not a duplicate politics school row');
 assert.strictEqual(Number(context.TEACHER_TOWNSHIP_AVERAGES.政治.count), 7, 'politics township benchmark must use all second-mock school samples');
