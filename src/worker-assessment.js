@@ -16,8 +16,17 @@ const ASSESSMENT_PROJECT_LIMITS = {
   teacher_class_collaboration: 10,
   teacher_subject_collaboration: 10,
   teacher_bottom_third: 10,
-  teacher_excellent_contribution: 5
+  teacher_excellent_contribution: 5,
+  class_target_grad: 33,
+  class_high_school_contribution_grad: 15,
+  class_high_score_grad: 15
 };
+
+const GRADUATE_CLASS_AUTO_SYNC_PROJECT_IDS = new Set([
+  'class_target_grad',
+  'class_high_school_contribution_grad',
+  'class_high_score_grad'
+]);
 
 // ---------------------------------------------------------------------------
 // Supabase REST client
@@ -129,6 +138,7 @@ function normalizeAssessmentScoreItem(input) {
     score: Number(score.toFixed(3)),
     note: normalizeText(input?.note).slice(0, 500),
     source: normalizeText(input?.source || 'schoolsystem').slice(0, 60),
+    source_exam_id: normalizeText(input?.source_exam_id).slice(0, 180),
     source_exam_date: normalizeText(input?.source_exam_date).slice(0, 40),
     source_exam_label: normalizeText(input?.source_exam_label).slice(0, 120),
     makeup_exam_date: normalizeText(input?.makeup_exam_date).slice(0, 40),
@@ -149,6 +159,20 @@ function normalizeAssessmentScoreItem(input) {
     cross_grade_mode: normalizeText(input?.cross_grade_mode).slice(0, 40),
     cross_grade_rank_difference: Math.max(0, Number(input?.cross_grade_rank_difference || 0) || 0)
   };
+}
+
+function isJulyAssessmentDate(value) {
+  const text = normalizeText(value);
+  return /(?:^|[-/.年])0?7(?:[-/.月]|$)/.test(text);
+}
+
+function getGraduateClassSyncEligibilityError(item) {
+  if (!GRADUATE_CLASS_AUTO_SYNC_PROJECT_IDS.has(item.project_id)) return '';
+  if (item.grade !== '9') return '班级自动导入只允许九年级记录';
+  if (!isJulyAssessmentDate(item.source_exam_date)) return '班级自动导入只允许7月真实中考成绩';
+  const source = `${item.source_exam_id} ${item.source_exam_label} ${item.note}`;
+  if (!/中考/.test(source)) return '班级自动导入必须标记为真实中考成绩';
+  return '';
 }
 
 function buildAssessmentSyncChangeNote(item) {
@@ -322,6 +346,11 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
   let protectedManualCount = 0;
 
   items.forEach((item) => {
+    const eligibilityError = getGraduateClassSyncEligibilityError(item);
+    if (eligibilityError) {
+      skipped.push({ teacher_name: item.teacher_name, grade: item.grade, subject: item.subject, project_id: item.project_id, reason: eligibilityError });
+      return;
+    }
     const match = findAssessmentTeacherMatch(teachers, item);
     if (match.ambiguous) {
       skipped.push({ teacher_name: item.teacher_name, grade: item.grade, subject: item.subject, project_id: item.project_id, reason: `目标考核系统教师匹配不唯一（${match.candidateCount}人）` });

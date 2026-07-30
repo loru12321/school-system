@@ -274,17 +274,17 @@ async function checkGrade9() {
   const excellentItems = payload.items.filter((item) => item.project_id === 'teacher_excellent_contribution');
   assert.ok(excellentItems.length > 0, '9年级应生成文化学科教师尖子生培养贡献');
   assert.ok(excellentItems.every((item) => /体育60分/.test(item.note) && /体育教师不进入教师考核/.test(item.note)), '9年级尖子生贡献说明应写明体育只计入总分、不考核体育教师');
-  const highSchoolItems = payload.preview_items.filter((item) => item.project_id === 'class_high_school_contribution_grad');
-  assert.ok(highSchoolItems.length >= 2, '9年级应生成高中过线率预览项');
-  assert.ok(highSchoolItems.every((item) => item.preview_only), '9年级高中过线率只能预览，不能正式同步');
+  const highSchoolItems = payload.items.filter((item) => item.project_id === 'class_high_school_contribution_grad');
+  assert.ok(highSchoolItems.length >= 2, '9年级应生成高中过线率自动同步项');
+  assert.ok(highSchoolItems.every((item) => item.class_assessment_sync === true), '9年级高中过线率必须标记为班级自动同步项');
   const scores = Object.fromEntries(highSchoolItems.map((item) => [item.teacher_name, item.score]));
   assert.strictEqual(scores['九语一'], 7.5, '9.1 在390线下过线率1/2，应按本校最高1折算7.5分');
   assert.strictEqual(scores['九语二'], 15, '9.2 在390线下过线率2/2，应按本校最高1折算15分');
   assert.ok(highSchoolItems.every((item) => /高中过线分数 390/.test(item.note)), '9年级测试必须使用390过线分数');
   assert.ok(highSchoolItems.every((item) => /2\/2|1\/2/.test(item.note)), '9年级过线率应按含体育后的总分统计');
   assert.ok(highSchoolItems.every((item) => /本校级部班级最高过线率/.test(item.note)), '9年级过线率分母必须是本校级部班级最高');
-  assert.ok(!payload.items.some((item) => item.project_id === 'class_high_school_contribution_grad'), '9年级过线率不能进入正式同步 items');
-  assert.ok(payload.preview_items.some((item) => item.project_id === 'class_target_grad' && item.max_score === 33), '毕业班指标完成应按33分预览');
+  assert.ok(payload.items.some((item) => item.project_id === 'class_target_grad' && item.max_score === 33 && item.class_assessment_sync === true), '毕业班指标完成应按33分自动同步');
+  assert.ok(payload.items.some((item) => item.project_id === 'class_high_score_grad' && item.max_score === 15 && item.class_assessment_sync === true), '高分段贡献应按15分自动同步');
   return payload;
 }
 

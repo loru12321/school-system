@@ -28,6 +28,16 @@
         PROJECTS.excellentContribution
     ];
 
+    // These are class-assessment records, but the assessment system stores them
+    // against the responsible teacher just like the teacher-personal projects.
+    // Keep this list separate from SYNC_ENABLED_PROJECT_IDS: cross-grade merging
+    // is a teacher-personal rule and must never alter a class score.
+    const CLASS_AUTO_SYNC_PROJECT_IDS = [
+        PROJECTS.classTargetGrad,
+        PROJECTS.classHighSchoolContribution,
+        PROJECTS.classHighScoreGrad
+    ];
+
     const PREVIEW_ONLY_PROJECT_IDS = [
         PROJECTS.classTermScoreNonGrad,
         PROJECTS.classTopStudentsNonGrad,
@@ -35,10 +45,9 @@
         PROJECTS.classTargetNonGrad,
         PROJECTS.classBottomThirdNonGrad,
         PROJECTS.classTwoRatesOneScoreGrad,
-        PROJECTS.classTargetGrad,
         PROJECTS.classBottomThirdGrad,
-        PROJECTS.classHighSchoolContribution,
-        PROJECTS.classHighScoreGrad
+        // 毕业班指标完成、高中贡献率、高分段贡献有完整且固定的中考数据口径，
+        // 已移至 CLASS_AUTO_SYNC_PROJECT_IDS；其余班级项目仍只做审计。
     ];
 
     const PROJECT_LABELS = {
@@ -142,16 +151,16 @@
         [PROJECTS.classHighSchoolContribution]: {
             max: 15,
             requiresJuly: true,
-            syncMode: 'preview',
+            syncMode: 'sync',
             source: '教学管理 · 9 年级 7 月中考高中过线',
-            formula: '高中贡献率只使用 9 年级 7 月上传的中考成绩：中考总分含体育60分，按云端管理填写的中考高中过线分数统计本校每班过线率，再按“本班过线率 / 本校级部班级最高过线率 × 15”折算；当前仅预览，不写入考核系统。'
+            formula: '高中贡献率只使用 9 年级 7 月上传的真实中考成绩：中考总分含体育60分，按云端管理填写的中考高中过线分数统计本校每班过线率，再按“本班过线率 / 本校级部班级最高过线率 × 15”折算；缺任一学生的中考总分或体育数据时整项停止同步。'
         },
         [PROJECTS.classTargetGrad]: {
             max: 33,
             requiresJuly: true,
-            syncMode: 'preview',
+            syncMode: 'sync',
             source: '教学管理 · 9 年级 7 月中考指标完成',
-            formula: '毕业班指标完成只使用 9 年级 7 月中考成绩：中考总分含体育60分；指标一每班9人基础10分、超额额外按本校级部最高超额人数加5分；指标二每班40人基础10分、超额额外按本校级部最高超额人数加8分；当前仅预览，不写入考核系统。'
+            formula: '毕业班指标完成只使用 9 年级 7 月真实中考成绩：沿用当前中考总分口径；指标一每班9人基础10分、超额额外按本校级部最高超额人数加5分；指标二每班40人基础10分、超额额外按本校级部最高超额人数加8分。'
         },
         [PROJECTS.classBottomThirdGrad]: {
             max: 5,
@@ -163,9 +172,9 @@
         [PROJECTS.classHighScoreGrad]: {
             max: 15,
             requiresJuly: true,
-            syncMode: 'preview',
+            syncMode: 'sync',
             source: '公式审计 · 9 年级 7 月中考高分段',
-            formula: '高分段贡献只使用9年级7月中考，中考总分含体育60分；总分550分以上人数 / 本校级部最高班级550分以上人数 × 15；这是本校内部班级比较，当前仅预览，不写入考核系统。'
+            formula: '高分段贡献只使用 9 年级 7 月真实中考，沿用当前中考总分口径；总分550分以上人数 / 本校级部最高班级550分以上人数 × 15；这是本校内部班级比较。'
         },
         [PROJECTS.teacherWorkload]: {
             max: 5,
@@ -1913,6 +1922,18 @@
         };
     }
 
+    function getGrade9OwnSchoolAdmissionRows(rows) {
+        const ownSchool = normalizeSchoolForSync(root.MY_SCHOOL || '银山实验学校');
+        const ownRows = (rows || []).filter((row) => normalizeSchoolForSync(row?.school) === ownSchool);
+        const entries = ownRows.map((row) => ({
+            row,
+            className: typeof root.normalizeClass === 'function' ? root.normalizeClass(row?.class) : text(row?.class),
+            total: getGrade9ZhongkaoAdmissionTotal(row)
+        }));
+        const invalid = entries.filter((item) => !item.className || !Number.isFinite(item.total));
+        return { ownSchool, entries, invalid };
+    }
+
     function buildOwnSchoolClassTargetMetrics(rows) {
         const ownSchool = normalizeSchoolForSync(root.MY_SCHOOL || '银山实验学校');
         const { ind1Rank, ind2Rank, ind1Line, ind2Line } = getIndicatorScoreLines(rows);
@@ -1987,15 +2008,11 @@
 
     function buildClassHighSchoolContributionItems(teachers, rows, line) {
         if (!Number.isFinite(line) || line <= 0) return [];
-        const ownSchool = normalizeSchoolForSync(root.MY_SCHOOL || '银山实验学校');
-        const ownRows = rows.filter((row) => normalizeSchoolForSync(row?.school) === ownSchool);
-        const admissionTotals = ownRows.map((row) => getGrade9ZhongkaoAdmissionTotal(row));
-        // 上线率不能把缺体育的“五科总”错当中考录取总分；数据不完整时停止生成正式预览。
-        if (admissionTotals.some((total) => !Number.isFinite(total))) return [];
+        const { ownSchool, entries, invalid } = getGrade9OwnSchoolAdmissionRows(rows);
+        // 上线率不能把缺体育的“五科总”错当中考录取总分；数据不完整时停止自动导入。
+        if (invalid.length) return [];
         const classMap = new Map();
-        ownRows.forEach((row, index) => {
-            const className = typeof root.normalizeClass === 'function' ? root.normalizeClass(row?.class) : text(row?.class);
-            const total = admissionTotals[index];
+        entries.forEach(({ className, total }) => {
             if (!className || !Number.isFinite(total)) return;
             if (!classMap.has(className)) classMap.set(className, { className, total: 0, over: 0 });
             const metric = classMap.get(className);
@@ -2061,35 +2078,47 @@
                     project_id: PROJECTS.classHighScoreGrad,
                     score,
                     max_score: 15,
-                    preview_only: true,
-                    note: `9年级7月中考高分段贡献预览：任教班级550分以上 ${high}/${total} 人，本校级部最高班级高分段 ${highest} 人，折算 ${score}/15。`,
-                    source: 'teaching-management-preview'
+                    note: `9年级7月中考高分段贡献：任教班级550分以上 ${high}/${total} 人，本校级部最高班级高分段 ${highest} 人，折算 ${score}/15。`,
+                    source: 'teaching-management'
                 };
             })
             .filter(Boolean);
     }
 
-    function markPreviewOnly(items, reason) {
-        return (items || []).map((item) => ({
-            ...item,
-            preview_only: true,
-            note: `${item.note || ''}${item.note ? ' ' : ''}${reason || '当前仅做公式审计预览，不写入考核系统。'}`
-        }));
-    }
-
-    function buildFormulaAuditPreviewItems({ teachers, rows, examContext, highSchoolLine, skipped }) {
-        if (!isJulyExam(examContext)) return [];
-        if (!isGrade9Exam(examContext, rows)) return [];
-        const preview = [
-            ...markPreviewOnly(buildClassTargetGradItems(teachers, rows), '当前仅做毕业班指标完成公式预览，不写入考核系统。')
-        ];
-        if (isGrade9ZhongkaoExam(examContext, rows) && highSchoolLine > 0) {
-            preview.push(...markPreviewOnly(buildClassHighSchoolContributionItems(teachers, rows, highSchoolLine), '当前仅做高中贡献率公式预览，不写入考核系统。'));
-        } else if (isGrade9ZhongkaoExam(examContext, rows)) {
-            skipped.push('9年级7月中考缺少“中考高中过线分数”，高中贡献率只显示公式审计，不生成预览分。');
+    function buildAutomaticGraduateClassItems({ teachers, rows, examContext, highSchoolLine, skipped }) {
+        if (!isGrade9ZhongkaoExam(examContext, rows)) return [];
+        const items = [];
+        const targetItems = buildClassTargetGradItems(teachers, rows);
+        if (targetItems.length) {
+            items.push(...targetItems);
+        } else {
+            skipped.push('9年级真实中考未生成“毕业班指标完成”：请检查指标一、指标二划线名次、总分和任课表。');
         }
-        preview.push(...markPreviewOnly(buildClassHighScoreGradItems(teachers, rows), '当前仅做高分段贡献公式预览，不写入考核系统。'));
-        return preview.filter((item) => Number.isFinite(toNumber(item.score, NaN)) && item.score >= 0);
+
+        if (highSchoolLine > 0) {
+            const admission = getGrade9OwnSchoolAdmissionRows(rows);
+            if (admission.invalid.length) {
+                const samples = admission.invalid.slice(0, 5).map((item) => `${item.className || '未识别班级'}${text(item.row?.name) ? `·${text(item.row.name)}` : ''}`);
+                skipped.push(`9年级真实中考“高中贡献率”未同步：本校 ${admission.invalid.length} 名学生缺少有效中考总分或体育成绩（${samples.join('、')}${admission.invalid.length > samples.length ? '等' : ''}）。`);
+            } else {
+                const highSchoolItems = buildClassHighSchoolContributionItems(teachers, rows, highSchoolLine);
+                if (highSchoolItems.length) {
+                    items.push(...highSchoolItems);
+                } else {
+                    skipped.push('9年级真实中考未生成“高中贡献率”：请检查中考高中过线分数和本校班级过线数据。');
+                }
+            }
+        } else {
+            skipped.push('9年级真实中考未填写“中考高中过线分数”，高中贡献率不会自动导入。');
+        }
+
+        const highScoreItems = buildClassHighScoreGradItems(teachers, rows);
+        if (highScoreItems.length) {
+            items.push(...highScoreItems);
+        } else {
+            skipped.push('9年级真实中考未生成“高分段贡献”：请检查本校班级总分及550分高分段数据。');
+        }
+        return items;
     }
 
     function assessmentRosterSummary(roster = {}) {
@@ -2333,14 +2362,32 @@
             ...julyItems,
             ...secondMockItems
         ], skipped);
-        const items = crossGrade.items;
-        const previewItems = buildFormulaAuditPreviewItems({ teachers, rows, examContext: assessmentExamContext, highSchoolLine, skipped })
-            .map((item) => ({
-                ...item,
-                source_exam_id: examContext.currentExamId,
-                source_exam_label: examLabel,
-                source_exam_date: examDate
-            }));
+        const classAutomaticItems = attachAssessmentCalculationMetadata(
+            buildAutomaticGraduateClassItems({
+                teachers,
+                rows,
+                examContext: assessmentExamContext,
+                highSchoolLine,
+                skipped
+            }),
+            julyBuild,
+            {
+                source_label: examLabel,
+                threshold_source: `联考分析分数线：${examLabel || examDate || '当前7月考试'}`
+            }
+        ).map((item) => ({
+            ...item,
+            source_exam_id: examContext.currentExamId,
+            source_exam_label: examLabel,
+            source_exam_date: examDate,
+            class_assessment_sync: true
+        }));
+        // Cross-grade handling is limited to the five teacher-personal items.
+        // Class records are scored from the assigned class and must remain intact.
+        const items = crossGrade.items.concat(classAutomaticItems).sort(sortTeacherItems);
+        // Do not synthesize preview scores for the remaining class projects:
+        // their formulas have not been approved for automation.
+        const previewItems = [];
         const compositeGrade = normalizeGrade(julyBuild.baseInfo.grade);
         const growthBaselineExam = julyBuild.growthBaselineExam;
         const grade8SecondMockItems = secondMockItems.filter((item) => item.grade8_second_mock_source);
@@ -2583,6 +2630,7 @@
         const skippedCounts = countSkippedByProject(result?.skipped || []);
         const projectIds = [
             ...SYNC_ENABLED_PROJECT_IDS,
+            ...CLASS_AUTO_SYNC_PROJECT_IDS,
             PROJECTS.teacherWorkload,
             ...PREVIEW_ONLY_PROJECT_IDS
         ];
@@ -2670,7 +2718,12 @@
 
     function buildAuditHtml(audit) {
         const ruleChip = (project) => {
-            if (project.mode === 'sync') return project.requiresJuly ? '<span class="status-chip ok">7月可同步</span>' : '<span class="status-chip ok">可同步</span>';
+            if (project.mode === 'sync') {
+                const graduateClass = CLASS_AUTO_SYNC_PROJECT_IDS.includes(project.id);
+                return graduateClass
+                    ? '<span class="status-chip ok">真实中考可同步</span>'
+                    : (project.requiresJuly ? '<span class="status-chip ok">7月可同步</span>' : '<span class="status-chip ok">可同步</span>');
+            }
             if (project.mode === 'preview') return '<span class="status-chip info">只预览</span>';
             if (project.mode === 'manual') return '<span class="status-chip info">手填</span>';
             return '<span class="status-chip warn">需确认</span>';
@@ -2736,8 +2789,10 @@
 
     function summarizeMissingProjects(items) {
         const projectSet = new Set((items || []).map((item) => item.project_id));
-        const missing = SYNC_ENABLED_PROJECT_IDS.filter((projectId) => !projectSet.has(projectId));
-        const manual = ['课时量'];
+        const missing = SYNC_ENABLED_PROJECT_IDS
+            .concat(CLASS_AUTO_SYNC_PROJECT_IDS)
+            .filter((projectId) => !projectSet.has(projectId));
+        const manual = ['课时量成绩', '毕业班两率一分', '毕业班后 1/3 学生成绩'];
         return {
             missing: missing.map((projectId) => PROJECT_LABELS[projectId] || projectId),
             manual
@@ -2749,13 +2804,14 @@
         (items || []).forEach((item) => {
             counts[item.project_id] = (counts[item.project_id] || 0) + 1;
         });
-        const rows = SYNC_ENABLED_PROJECT_IDS.map((projectId) => {
+        const rows = SYNC_ENABLED_PROJECT_IDS.concat(CLASS_AUTO_SYNC_PROJECT_IDS).map((projectId) => {
             const count = counts[projectId] || 0;
             const ok = count > 0;
+            const mode = CLASS_AUTO_SYNC_PROJECT_IDS.includes(projectId) ? '真实中考自动导入' : '可同步';
             return `
                 <div class="tm-assessment-sync-project ${ok ? 'is-ready' : 'is-missing'}">
                     <strong>${escapeHtml(PROJECT_LABELS[projectId] || projectId)}</strong>
-                    <span>${ok ? `可同步 ${count} 条` : '缺少可同步数据'}</span>
+                    <span>${ok ? `${mode} ${count} 条` : '缺少可同步数据'}</span>
                 </div>
             `;
         }).join('');
@@ -2961,7 +3017,7 @@
             <div class="tm-assessment-sync-copy">
                 <div class="tm-next-title"><i class="ti ti-cloud-upload"></i> 同步到教师教学质量考核系统</div>
                 <div class="tm-next-desc"><strong>位置：教学管理首页。</strong>从当前联考成绩和教学管理任课表生成教师个人考核分值。合规的新计算结果会覆盖考核系统中同一教师、同一项目的旧分；缺成绩、缺任课表或目标系统未匹配到教师时不会写入。</div>
-                <div class="tm-assessment-sync-note is-soft">班级考核项目当前只做公式审计预览，不写入考核系统；6-9年级缺少对应7月成绩时不会生成真实同步分。</div>
+                <div class="tm-assessment-sync-note is-soft">课时量、毕业班两率一分、毕业班后 1/3 仍需手填；毕业班指标完成、高中贡献率和高分段贡献只在 9 年级 7 月真实中考、数据完整时自动导入。</div>
                 <div class="tm-next-meta">
                     <span class="status-chip info">两率一分</span>
                     <span class="status-chip info">班级协调</span>
