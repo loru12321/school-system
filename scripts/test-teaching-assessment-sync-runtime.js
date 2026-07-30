@@ -107,6 +107,7 @@ assert.ok(
   'teacher analysis page should load assessment sync runtime'
 );
 assert.ok(source.includes('tmRunAutomaticAssessmentSync'), 'assessment sync should expose an automatic background sync runner');
+assert.ok(source.includes('isLocalPreviewRuntime'), 'local previews must never run automatic production assessment writes');
 assert.ok(source.includes('tmBuildTeacherAssessmentSyncAudit'), 'assessment sync should expose a reconciliation audit builder');
 assert.ok(source.includes("await root.CloudManager.loadTeachers({ background: true, toast: false })"), 'assessment sync should wait for the active cohort teacher roster before calculating');
 assert.ok(source.includes('root.syncRuntimeStateToWindow?.()'), 'assessment roster locks should be published to the workspace before cloud save');

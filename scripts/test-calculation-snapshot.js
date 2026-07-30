@@ -741,7 +741,11 @@ async function main() {
         const expectedTownshipRows = buildIndependentTeacherTownshipRows();
         let renderedTownshipRows = readTeacherTownshipDomRows();
         let renderedTownshipRowMap = new Map(renderedTownshipRows.map((row) => [`${row.subject}::${row.type}::${row.name}`, row]));
-        const townshipAverages = window.TEACHER_TOWNSHIP_AVERAGES || {};
+        // Grade-9 politics reference hydration may atomically replace this
+        // object while the snapshot is running. Always use the current object
+        // that the immediately preceding ranking render used, not a stale
+        // reference captured before that refresh.
+        const getTownshipAverages = () => window.TEACHER_TOWNSHIP_AVERAGES || {};
         const calcBenchmarkDelta = (value, benchmark) => {
             if (!Number.isFinite(value) || !Number.isFinite(benchmark) || Math.abs(benchmark) < 1e-9) return null;
             return ((value - benchmark) / benchmark) * 100;
@@ -749,6 +753,7 @@ async function main() {
         const compareTownshipRow = (expected) => {
             const rendered = renderedTownshipRowMap.get(`${expected.subject}::${expected.type}::${expected.name}`);
             if (!rendered) return { key: `${expected.subject}::${expected.type}::${expected.name}`, reason: 'missing-rendered-row' };
+            const townshipAverages = getTownshipAverages();
             const avgBenchmark = toNumber(townshipAverages?.[expected.subject]?.avg, NaN);
             const excBenchmark = toNumber(townshipAverages?.[expected.subject]?.excRate, NaN);
             const passBenchmark = toNumber(townshipAverages?.[expected.subject]?.passRate, NaN);
@@ -793,7 +798,7 @@ async function main() {
                 total += score;
             });
             const avg = count ? total / count : 0;
-            const renderedAverage = townshipAverages?.[subject] || {};
+            const renderedAverage = getTownshipAverages()?.[subject] || {};
             return {
                 subject,
                 rawCount: count,

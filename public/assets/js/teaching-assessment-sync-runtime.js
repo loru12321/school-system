@@ -2516,9 +2516,18 @@
         ].join('|');
     }
 
+    function isLocalPreviewRuntime() {
+        const hostname = text(root.location?.hostname).toLowerCase();
+        // The local smoke server proxies API calls to the currently deployed
+        // Worker. Never let a preview write data through an older Worker that
+        // has not received the matching project whitelist yet.
+        return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+    }
+
     function canRunAutomaticAssessmentSync() {
         return !!(
-            root.EdgeGateway
+            !isLocalPreviewRuntime()
+            && root.EdgeGateway
             && typeof root.EdgeGateway.syncAssessmentScores === 'function'
             && typeof root.EdgeGateway.canUseAuthorizedRequests === 'function'
             && root.EdgeGateway.canUseAuthorizedRequests()
