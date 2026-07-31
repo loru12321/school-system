@@ -40,6 +40,10 @@ assert.ok(
     scripts['check:calculation']?.includes('test:calculation-snapshot:contract'),
     'calculation release check should run the source contract before browser snapshot'
 );
+assert.ok(
+    scripts['check:calculation']?.includes('test:calculation-snapshot:local'),
+    'calculation release check should use the freshly built local surface instead of a deployment-timed production request'
+);
 
 // ─── 两率赋分权重与后1/3系数：worker 侧与导出侧必须保持同一口径 ───────────────
 //
