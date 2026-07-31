@@ -219,6 +219,228 @@ html body:not(.dark-mode) #app .workflow-path__step.is-active {
     color: var(--ins-coral-deep) !important;
 }
 
+/* Opera-style workspace context: state and task continuity without another dashboard. */
+#app .workspace-context-bar {
+    display: grid;
+    grid-template-columns: minmax(220px, auto) minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    margin-top: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--ins-line);
+    border-radius: var(--ins-radius-small);
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--ins-ink);
+}
+
+#app .workspace-context-bar__loading {
+    color: var(--ins-muted);
+    font-size: 12px;
+}
+
+#app .workspace-context-summary {
+    min-width: 0;
+    padding-right: 16px;
+    border-right: 1px solid var(--ins-line);
+}
+
+#app .workspace-context-kicker,
+#app .workspace-context-group__label {
+    display: block;
+    color: var(--ins-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+
+#app .workspace-context-title {
+    display: block;
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--ins-ink-strong);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#app .workspace-context-statuses,
+#app .workspace-context-task-groups,
+#app .workspace-context-actions,
+#app .workspace-context-module-list {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+#app .workspace-context-statuses {
+    flex-wrap: wrap;
+}
+
+#app .workspace-context-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 26px;
+    padding: 0 8px;
+    border: 1px solid var(--ins-line);
+    border-radius: 999px;
+    background: var(--ins-surface);
+    color: var(--ins-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+#app .workspace-context-status i {
+    color: var(--ins-coral-deep);
+    font-size: 13px;
+}
+
+#app .workspace-context-status.is-positive i { color: var(--ins-mint); }
+#app .workspace-context-status.is-warning i { color: #b7791f; }
+
+#app .workspace-context-task-groups {
+    grid-column: 1 / -1;
+    align-items: stretch;
+    flex-wrap: wrap;
+    padding-top: 9px;
+    border-top: 1px solid var(--ins-line);
+}
+
+#app .workspace-context-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+
+#app .workspace-context-group + .workspace-context-group {
+    padding-left: 12px;
+    border-left: 1px solid var(--ins-line);
+}
+
+#app .workspace-context-group__label {
+    flex: 0 0 auto;
+}
+
+#app .workspace-context-module-list {
+    flex-wrap: wrap;
+}
+
+#app .workspace-context-module {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ins-ink);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+#app .workspace-context-module i {
+    margin-right: 5px;
+    color: var(--ins-muted);
+    font-size: 14px;
+}
+
+#app .workspace-context-module:hover,
+#app .workspace-context-module:focus-visible {
+    border-color: #f1cbd2;
+    background: var(--ins-coral-soft);
+    color: var(--ins-coral-deep);
+    outline: none;
+}
+
+#app .workspace-context-module.is-active {
+    border-color: #f1cbd2;
+    background: var(--ins-coral-soft);
+    color: var(--ins-coral-deep);
+}
+
+#app .workspace-context-pin {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ins-muted);
+    cursor: pointer;
+}
+
+#app .workspace-context-pin:hover,
+#app .workspace-context-pin[aria-pressed="true"] {
+    background: var(--ins-lilac-soft);
+    color: #71569e;
+}
+
+body.dark-mode #app .workspace-context-bar {
+    border-color: #334155;
+    background: #111827;
+    color: #e5e7eb;
+}
+
+body.dark-mode #app .workspace-context-summary,
+body.dark-mode #app .workspace-context-task-groups,
+body.dark-mode #app .workspace-context-group + .workspace-context-group {
+    border-color: #334155;
+}
+
+body.dark-mode #app .workspace-context-title,
+body.dark-mode #app .workspace-context-module {
+    color: #f8fafc;
+}
+
+body.dark-mode #app .workspace-context-status {
+    border-color: #334155;
+    background: #172033;
+    color: #cbd5e1;
+}
+
+body.dark-mode #app .workspace-context-module:hover,
+body.dark-mode #app .workspace-context-module.is-active {
+    border-color: #744e59;
+    background: #3c2630;
+    color: #fbc7d0;
+}
+
+@media (max-width: 900px) {
+    #app .workspace-context-bar {
+        grid-template-columns: 1fr;
+        gap: 9px;
+        margin-top: 8px;
+        padding: 10px 12px;
+    }
+
+    #app .workspace-context-summary {
+        padding: 0;
+        border: 0;
+    }
+
+    #app .workspace-context-task-groups {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 9px;
+    }
+
+    #app .workspace-context-group + .workspace-context-group {
+        padding: 9px 0 0;
+        border-top: 1px solid var(--ins-line);
+        border-left: 0;
+    }
+}
+
 html body:not(.dark-mode) #app .shell-module-rail-chip {
     border: 1px solid transparent !important;
     border-radius: 999px !important;

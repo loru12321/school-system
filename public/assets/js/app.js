@@ -3977,6 +3977,7 @@ function switchTab(id) {
     if (window.DEBUG_MODULE_SWITCH) console.debug(`✅ 激活模块: ${id}`);
     targetSection.classList.add('active');
     targetSection.style.display = 'block';
+    window.dispatchEvent(new CustomEvent('school:module-changed', { detail: { id, previousId: previousModuleId } }));
     if (id === 'blank-score-audit' && typeof renderBlankScoreAuditModule === 'function') {
         scheduleAfterPaint(() => renderBlankScoreAuditModule());
     }
