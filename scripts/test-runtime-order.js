@@ -70,6 +70,7 @@ const marginalPushRuntimePath = path.resolve(__dirname, '../public/assets/js/mar
 const permissionPolicyRuntimePath = path.resolve(__dirname, '../public/assets/js/permission-policy-runtime.js');
 const rankingDataServiceRuntimePath = path.resolve(__dirname, '../public/assets/js/ranking-data-service-runtime.js');
 const studentJumpRuntimePath = path.resolve(__dirname, '../public/assets/js/student-jump-runtime.js');
+const spotlightContextRuntimePath = path.resolve(__dirname, '../public/assets/js/spotlight-context-runtime.js');
 const schoolProfileRuntimePath = path.resolve(__dirname, '../public/assets/js/school-profile-runtime.js');
 const teachingManagementRuntimePath = path.resolve(__dirname, '../public/assets/js/teaching-management-runtime.js');
 const teachingManagementCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/teaching-management-cloud-runtime.js');
@@ -150,6 +151,7 @@ assert.ok(fs.existsSync(marginalPushRuntimePath), 'marginal-push-runtime.js shou
 assert.ok(fs.existsSync(permissionPolicyRuntimePath), 'permission-policy-runtime.js should exist');
 assert.ok(fs.existsSync(rankingDataServiceRuntimePath), 'ranking-data-service-runtime.js should exist');
 assert.ok(fs.existsSync(studentJumpRuntimePath), 'student-jump-runtime.js should exist');
+assert.ok(fs.existsSync(spotlightContextRuntimePath), 'spotlight-context-runtime.js should exist');
 assert.ok(fs.existsSync(schoolProfileRuntimePath), 'school-profile-runtime.js should exist');
 assert.ok(fs.existsSync(teachingManagementRuntimePath), 'teaching-management-runtime.js should exist');
 assert.ok(fs.existsSync(teachingManagementCloudRuntimePath), 'teaching-management-cloud-runtime.js should exist');
@@ -217,6 +219,7 @@ const snapshotSystemRuntime = fs.readFileSync(snapshotSystemRuntimePath, 'utf8')
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
+const spotlightContextRuntime = fs.readFileSync(spotlightContextRuntimePath, 'utf8');
 const edgeGatewaySource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/edge-gateway-runtime.js'), 'utf8');
 const appFoundationRuntime = fs.readFileSync(appFoundationRuntimePath, 'utf8');
 const reportHistoryRuntime = fs.readFileSync(reportHistoryRuntimePath, 'utf8');
@@ -1173,17 +1176,17 @@ assert.ok(appSource.includes('container.appendChild(teacherInputFragment);'), 't
 assert.ok(!appSource.includes('container.appendChild(inputDiv);'), 'teacher input generation should avoid per-control container appends');
 assert.ok(appSource.includes('const targetRowsHtml = Object.keys(SCHOOLS).map'), 'target editor should build school rows off-DOM before writing to tbody');
 assert.ok(appSource.includes("tbody.innerHTML = targetRowsHtml.join('');"), 'target editor should write school target rows to the DOM once');
-assert.ok(appSource.includes('const spotlightRowsHtml = [];'), 'spotlight search should collect result rows before writing to the result container');
-assert.ok(appSource.includes("resDiv.innerHTML = spotlightRowsHtml.join('');"), 'spotlight search should write results to the DOM once per query');
-assert.ok(!appSource.includes('resDiv.innerHTML +='), 'spotlight search should avoid per-result DOM writes');
+assert.ok(spotlightContextRuntime.includes('const fragment = global.document.createDocumentFragment();'), 'spotlight search should collect result rows in a DOM fragment');
+assert.ok(spotlightContextRuntime.includes('root.replaceChildren(fragment);'), 'spotlight search should replace result rows with one DOM write');
+assert.ok(!spotlightContextRuntime.includes('.innerHTML'), 'spotlight search should avoid interpolated or incremental HTML writes');
 // 命令面板契约：模块入口必须从 NAV_STRUCTURE（唯一真源）读取，不得回退到硬编码模块列表。
 assert.ok(
-    /const spotlightNav = \(typeof NAV_STRUCTURE/.test(appSource),
+    spotlightContextRuntime.includes('global.NAV_STRUCTURE'),
     'command palette should enumerate modules from NAV_STRUCTURE, not a hardcoded list'
 );
 assert.ok(
-    appSource.includes('// 命令面板默认态：无输入时按分类分组列出全部可进入模块'),
-    'command palette should render all accessible modules grouped by category when the query is empty'
+    spotlightContextRuntime.includes('当前工作区 · ${currentCategory.title}'),
+    'command palette should prioritize the active workspace when the query is empty'
 );
 assert.ok(marginalPushRuntime.includes('const ticketHtml = [];'), 'marginal ticket generation should collect cards off-DOM');
 assert.ok(marginalPushRuntime.includes('ticketHtml.push(`'), 'marginal ticket generation should append card HTML to an off-DOM buffer');

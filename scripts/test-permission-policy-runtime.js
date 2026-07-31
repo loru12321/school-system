@@ -240,13 +240,13 @@ assert.ok(
     'navigation should select the first accessible category instead of hard-coded role branches'
 );
 
-const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const spotlightSource = fs.readFileSync(path.join(root, 'public/assets/js/spotlight-context-runtime.js'), 'utf8');
 assert.ok(
-    appSource.includes(".filter(m => typeof canAccessModule !== 'function' || canAccessModule(m.id))"),
+    spotlightSource.includes("typeof global.canAccessModule === 'function' && !global.canAccessModule(id)"),
     'spotlight module search should suppress inaccessible module hits'
 );
 assert.ok(
-    appSource.includes('PermissionPolicy.filterStudentRows(currentUser, matches)'),
+    spotlightSource.includes('PermissionPolicy.filterStudentRows(currentUser, matches)'),
     'spotlight student search should suppress inaccessible student hits'
 );
 
