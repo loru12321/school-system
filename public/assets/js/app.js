@@ -5280,7 +5280,7 @@ async function processDataInner() {
     const computeClassRanks = () => calculateClassRanksOnly();
 
     const finalizeSchools = (isSingleSchool) => {
-        if (typeof fuseInstance !== 'undefined') fuseInstance = null; // 强制重建索引
+        window.SpotlightRuntime?.invalidateIndex?.(); // 成绩更新后再构建学生搜索索引
 
         setSchools(SCHOOLS);
         setThresholds(THRESHOLDS);
@@ -7640,124 +7640,6 @@ document.addEventListener('keydown', function (e) {
     e.preventDefault();
     btn.click();
 });
-
-function updateSpotlightSelection(items, index) {
-    items.forEach(el => el.classList.remove('active'));
-    if (items[index]) {
-        items[index].classList.add('active');
-        items[index].scrollIntoView({ block: 'nearest' }); // 确保可见
-        items[index].style.backgroundColor = 'var(--primary-light)';
-    }
-}
-
-let fuseInstance = null;
-
-function initFuse() {
-    if (!window.Fuse || RAW_DATA.length === 0) return;
-
-    const options = {
-        keys: ['name', 'id', 'class', 'school'], // 搜索字段
-        threshold: 0.3, // 模糊阈值：0.0完全匹配，1.0匹配任何。0.3适合人名容错
-        distance: 100,
-        ignoreLocation: true, // 忽略位置，只要包含就行
-        minMatchCharLength: 2
-    };
-    fuseInstance = new Fuse(RAW_DATA, options);
-}
-
-function doSpotlightSearch() {
-    const val = document.getElementById('spotlight-input').value.trim();
-    const resDiv = document.getElementById('spotlight-results');
-    resDiv.innerHTML = '';
-    const spotlightRowsHtml = [];
-
-    // 从 NAV_STRUCTURE（模块唯一真源）读取全部模块，避免硬编码列表漏掉入口。
-    const spotlightNav = (typeof NAV_STRUCTURE !== 'undefined' && NAV_STRUCTURE) || window.NAV_STRUCTURE || {};
-    const needle = val.toLowerCase();
-
-    // 命令面板默认态：无输入时按分类分组列出全部可进入模块，用户无需先猜分类。
-    if (!needle) {
-        Object.keys(spotlightNav).forEach((catKey) => {
-            const category = spotlightNav[catKey];
-            const items = Array.isArray(category && category.items) ? category.items : [];
-            const accessible = items.filter(item => typeof canAccessModule !== 'function' || canAccessModule(item.id));
-            if (accessible.length === 0) return;
-            spotlightRowsHtml.push(`<div class="spotlight-group-label">${escapeAppHtml((category && category.title) || '')}</div>`);
-            accessible.forEach((item) => {
-                spotlightRowsHtml.push(`
-                    <div class="spotlight-item" onclick="switchTab('${item.id}');closeSpotlight()">
-                        <span>🛠️ ${escapeAppHtml(item.text || item.id)}<small style="color:#94a3b8;margin-left:6px;">${escapeAppHtml(item.hint || '')}</small></span>
-                        <span style="font-size:10px;color:#999">进入</span>
-                    </div>`);
-            });
-        });
-        resDiv.innerHTML = spotlightRowsHtml.join('');
-        return;
-    }
-
-    const modules = Object.keys(spotlightNav).flatMap((catKey) => {
-        const category = spotlightNav[catKey];
-        const items = Array.isArray(category && category.items) ? category.items : [];
-        return items.map((item) => ({
-            name: item.text || item.id,
-            id: item.id,
-            categoryTitle: (category && category.title) || '',
-            searchText: [item.text, item.hint, item.id, category && category.title, category && category.eyebrow]
-                .filter(Boolean)
-                .join(' ')
-                .toLowerCase()
-        }));
-    });
-
-    let moduleMatchCount = 0;
-    modules
-        .filter(m => typeof canAccessModule !== 'function' || canAccessModule(m.id))
-        .forEach(m => {
-        if (m.searchText.includes(needle)) {
-            moduleMatchCount++;
-            spotlightRowsHtml.push(`
-                    <div class="spotlight-item" onclick="switchTab('${m.id}');closeSpotlight()">
-                        <span>🛠️ 功能：${escapeAppHtml(m.name)}<small style="color:#94a3b8;margin-left:6px;">${escapeAppHtml(m.categoryTitle)}</small></span>
-                        <span style="font-size:10px;color:#999">跳转</span>
-                    </div>`);
-        }
-    });
-
-    let matches = [];
-
-    if (!fuseInstance && RAW_DATA.length > 0) initFuse();
-
-    if (fuseInstance) {
-        const results = fuseInstance.search(val);
-        matches = results.map(r => r.item).slice(0, 8); // 取前8个
-    } else {
-        matches = RAW_DATA.filter(s => s.name.includes(val) || String(s.id).includes(val)).slice(0, 5);
-    }
-    if (window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
-        const currentUser = typeof getCurrentUser === 'function'
-            ? getCurrentUser()
-            : (window.AuthState && typeof window.AuthState.getCurrentUser === 'function'
-                ? window.AuthState.getCurrentUser()
-                : (typeof Auth !== 'undefined' ? Auth.currentUser : null));
-        matches = window.PermissionPolicy.filterStudentRows(currentUser, matches);
-    }
-
-    if (matches.length === 0) {
-        // 仅当功能与学生都无结果时才提示，避免模块命中时误报“无匹配”。
-        if (moduleMatchCount === 0) {
-            spotlightRowsHtml.push(`<div style="padding:10px; text-align:center; color:#999;">无匹配结果</div>`);
-        }
-    } else {
-        matches.forEach(s => {
-            spotlightRowsHtml.push(`
-                    <div class="spotlight-item" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)})">
-                        <span>👤 ${escapeAppHtml(s.name)} <small style="color:#666">(${escapeAppHtml(s.school)} ${escapeAppHtml(s.class)})</small></span>
-                        <span style="font-weight:bold;">${escapeAppHtml(s.total)}分</span>
-                    </div>`);
-        });
-    }
-    resDiv.innerHTML = spotlightRowsHtml.join('');
-}
 
 function ensureAuthCurrentUserFromSession() {
     let sessionUser = null;

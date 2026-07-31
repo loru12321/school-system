@@ -50,7 +50,13 @@ function toggleDarkMode() {
 function openSpotlight() {
     const mask = document.getElementById('spotlight-mask');
     const input = document.getElementById('spotlight-input');
-    if (mask) mask.style.display = 'flex';
+    if (mask) {
+        const active = document.activeElement;
+        if (active && active !== document.body) mask.__spotlightReturnFocus = active;
+        mask.style.display = 'flex';
+        mask.classList.add('is-open');
+        mask.setAttribute('aria-hidden', 'false');
+    }
     if (input) {
         input.value = '';
         input.focus();
@@ -60,7 +66,16 @@ function openSpotlight() {
 }
 
 function closeSpotlight() {
-    document.getElementById('spotlight-mask').style.display = 'none';
+    const mask = document.getElementById('spotlight-mask');
+    if (!mask) return;
+    mask.style.display = 'none';
+    mask.classList.remove('is-open');
+    mask.setAttribute('aria-hidden', 'true');
+    const returnFocus = mask.__spotlightReturnFocus;
+    mask.__spotlightReturnFocus = null;
+    if (returnFocus && typeof returnFocus.focus === 'function' && document.contains(returnFocus)) {
+        setTimeout(() => returnFocus.focus(), 0);
+    }
 }
 
 function showCertificate(name, honorType) {

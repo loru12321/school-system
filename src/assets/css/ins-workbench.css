@@ -415,6 +415,66 @@ body.dark-mode #app .workspace-context-module.is-active {
     color: #fbc7d0;
 }
 
+/* 全局搜索保留“操作台”密度，并优先显示当前届别工作上下文。 */
+html body:not(.dark-mode) #spotlight-mask {
+    align-items: flex-start;
+    padding: clamp(56px, 10vh, 112px) 16px 24px;
+    background: rgba(46, 36, 42, 0.38);
+    backdrop-filter: blur(10px);
+}
+
+html body:not(.dark-mode) #spotlight-mask .spotlight-box {
+    width: min(720px, 100%);
+    max-width: none;
+    border: 1px solid var(--ins-line);
+    border-top: 3px solid var(--ins-coral);
+    border-radius: 18px;
+    background: var(--ins-surface);
+    box-shadow: 0 24px 68px rgba(52, 34, 42, 0.2);
+}
+
+html body:not(.dark-mode) #spotlight-mask .spotlight-item {
+    width: 100%;
+    min-height: 54px;
+    padding: 10px 18px;
+    border: 0;
+    border-bottom: 1px solid #f1ebe9;
+    background: transparent;
+    color: var(--ins-ink);
+    font: inherit;
+    text-align: left;
+}
+
+html body:not(.dark-mode) #spotlight-mask .spotlight-item__title {
+    font-weight: 800;
+}
+
+html body:not(.dark-mode) #spotlight-mask .spotlight-item:hover,
+html body:not(.dark-mode) #spotlight-mask .spotlight-item.active {
+    background: var(--ins-coral-soft);
+    color: var(--ins-coral-deep);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    html body:not(.dark-mode) #spotlight-mask.is-open .spotlight-box {
+        animation: ins-spotlight-panel-in 190ms cubic-bezier(.2, .8, .2, 1) both;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #spotlight-mask *,
+    #spotlight-mask *::before,
+    #spotlight-mask *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+@keyframes ins-spotlight-panel-in {
+    from { opacity: 0; transform: translateY(-8px) scale(.99); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (max-width: 900px) {
     #app .workspace-context-bar {
         grid-template-columns: 1fr;

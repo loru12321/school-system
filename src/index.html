@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-20598f2d6575.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-20598f2d6575.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-07707936a6f0.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-07707936a6f0.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -3089,14 +3089,14 @@
     <div id="batch-print-container" style="display:none;"></div>
     <div id="desk-labels-print-area"></div>
     <!-- 全局快捷搜索弹窗 -->
-    <div id="spotlight-mask" class="spotlight-mask" onclick="closeSpotlight(event)">
-        <div class="spotlight-box" onclick="event.stopPropagation()">
+    <div id="spotlight-mask" class="spotlight-mask" aria-hidden="true" onclick="closeSpotlight(event)">
+        <div class="spotlight-box" role="dialog" aria-modal="true" aria-label="全局快捷搜索" onclick="event.stopPropagation()">
             <div class="spotlight-input-wrap">
                 <i class="ti ti-search" style="font-size:24px; color:var(--primary); margin-right:10px;"></i>
                 <input type="text" id="spotlight-input" class="spotlight-input" placeholder="搜索功能模块或学生姓名、学校、班级..."
                     oninput="doSpotlightSearch()">
             </div>
-            <div id="spotlight-results" class="spotlight-results"></div>
+            <div id="spotlight-results" class="spotlight-results" role="listbox" aria-label="搜索结果"></div>
             <div class="spotlight-hint">↑↓ 选择 · 回车进入 · Esc 关闭　|　输入即筛选功能与学生</div>
         </div>
     </div>
