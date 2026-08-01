@@ -4706,7 +4706,10 @@ async function runModuleDeepCheck(page, id) {
                 preflightReady: !!scheduler && typeof scheduler.preflight === 'function',
                 manualAdjustReady: !!scheduler && typeof scheduler.swapScheduleCells === 'function'
                     && typeof scheduler.undoManualMove === 'function',
-                existingImportReady: !!scheduler && typeof scheduler.importExisting === 'function'
+                existingImportReady: !!scheduler && typeof scheduler.importExisting === 'function',
+                lockedImportReady: !!scheduler && typeof scheduler.importLockedSchedule === 'function',
+                jointProjectReady: !!scheduler && typeof scheduler.getCrossGradeTeachers === 'function'
+                    && typeof scheduler.getScheduleResourceConflicts === 'function'
             };
             if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
                 return {
@@ -4720,16 +4723,25 @@ async function runModuleDeepCheck(page, id) {
             }
 
             scheduler.data = [];
+            scheduler.demands = [];
+            scheduler.lockedSchedule = Object.create(null);
             scheduler.schedule = {};
             scheduler.classes = [];
             scheduler.rules = { meetings: [], busy: [], activities: [], combined: [] };
 
             const sampleRows = [
-                { 教师姓名: '张老师', 学科: '语文', 任教班级: '701,702', 周课时量: 4 },
-                { 教师姓名: '李老师', 学科: '数学', 任教班级: '701,702', 周课时量: 4 },
-                { 教师姓名: '王老师', 学科: '英语', 任教班级: '701,702', 周课时量: 4 },
-                { 教师姓名: '赵老师', 学科: '物理', 任教班级: '701,702', 周课时量: 2 },
-                { 教师姓名: '周老师', 学科: '历史', 任教班级: '701,702', 周课时量: 2 }
+                { 年级: 6, 班级: '6.1', 教师姓名: '张老师', 学科: '语文', 每班周课时: 2 },
+                { 年级: 6, 班级: '6.1', 教师姓名: '李老师', 学科: '数学', 每班周课时: 2 },
+                { 年级: 6, 班级: '6.1', 教师姓名: '王老师', 学科: '英语', 每班周课时: 2 },
+                { 年级: 6, 班级: '6.5', 教师姓名: 'B教师', 学科: '生物', 每班周课时: 2, '场地/资源（可选）': '生物实验室' },
+                { 年级: 6, 班级: '6.6', 教师姓名: 'B教师', 学科: '生物', 每班周课时: 2, '场地/资源（可选）': '生物实验室' },
+                { 年级: 6, 班级: '6.5', 教师姓名: '李老师', 学科: '数学', 每班周课时: 2 },
+                { 年级: 6, 班级: '6.6', 教师姓名: '王老师', 学科: '英语', 每班周课时: 2 },
+                { 年级: 7, 班级: '7.1', 教师姓名: 'B教师', 学科: '生物', 每班周课时: 3, '场地/资源（可选）': '生物实验室' },
+                { 年级: 7, 班级: '7.2', 教师姓名: 'B教师', 学科: '生物', 每班周课时: 3, '场地/资源（可选）': '生物实验室' },
+                { 年级: 7, 班级: '7.3', 教师姓名: 'C教师', 学科: '生物', 每班周课时: 3, '场地/资源（可选）': '生物实验室' },
+                { 年级: 7, 班级: '7.1', 教师姓名: '体育教师', 学科: '体育', 每班周课时: 2, '场地/资源（可选）': '田径场' },
+                { 年级: 6, 班级: '6.1', 教师姓名: '体育教师', 学科: '体育', 每班周课时: 2, '场地/资源（可选）': '田径场' }
             ];
 
             const alerts = [];
@@ -4754,8 +4766,9 @@ async function runModuleDeepCheck(page, id) {
                 setChecked('sch_rule_morning_read', true);
                 setChecked('sch_rule_noon_write', true);
 
-                setValue('sch_comb_subject', '物理');
+                setValue('sch_comb_subject', '生物');
                 setValue('sch_comb_slot', 'eve_1');
+                setValue('sch_comb_scope', 'grade');
                 scheduler.addConstraint('combined');
                 setValue('sch_meet_day', '5');
                 setValue('sch_meet_slot', 'pm_3');
@@ -4813,13 +4826,13 @@ async function runModuleDeepCheck(page, id) {
             const lessonCells = classes.flatMap(className => Object.entries(schedule[className] || {})
                 .filter(([slotId, cell]) => !slotId.startsWith('_') && cell && cell.subject)
                 .map(([slotId, cell]) => ({ className, slotId, cell })));
-            const combinedEntries = lessonCells.filter(entry => entry.cell.isCombined && entry.cell.subject === '物理');
+            const combinedEntries = lessonCells.filter(entry => entry.cell.isCombined && entry.cell.subject === '生物');
             const combinedDaySet = new Set(combinedEntries.map(entry => entry.slotId.split('_')[0]));
             const combinedClasses = new Set(combinedEntries.map(entry => entry.className));
             const malformedSlotIds = lessonCells.filter(entry => (
                 /^d[1-5]_(am|pm|eve)__/.test(entry.slotId) || /^d[1-5]_(am|pm|eve)\d/.test(entry.slotId)
             ));
-            const combinedOnRequestedSlot = combinedEntries.length === classes.length
+            const combinedOnRequestedSlot = combinedEntries.length >= 2
                 && combinedEntries.every(entry => /^d[1-4]_eve_1$/.test(entry.slotId));
             const wednesdayPmBlocked = classes.every(className => ['d3_pm_1', 'd3_pm_2', 'd3_pm_3', 'd3_pm_4'].every(slotId => (
                 schedule[className]?.[slotId]?.subject === '🚫 无课'
@@ -4836,11 +4849,11 @@ async function runModuleDeepCheck(page, id) {
             const tableText = document.getElementById('sch_table')?.textContent || '';
             const previewText = document.getElementById('sch_resource_preview')?.textContent || '';
             const auditText = document.getElementById('sch_audit_summary')?.textContent || '';
-            const resourceRecordsBeforeImport = scheduler.data.length;
+            const demandRecordsBeforeImport = scheduler.demands.length;
+            const crossGradeTeachers = scheduler.getCrossGradeTeachers();
+            const resourceConflictsBeforeImport = scheduler.getScheduleResourceConflicts();
             const tableRenderedBeforeImport = document.querySelectorAll('#sch_table tbody tr').length >= 10
                 && tableText.includes('语文')
-                && tableText.includes('物理')
-                && tableText.includes('(合)')
                 && tableText.includes('班会');
 
             let manualSwapWorked = false;
@@ -4866,10 +4879,59 @@ async function runModuleDeepCheck(page, id) {
                 }
             }
 
+            const lockedRows = [
+                ['年级', '班级', '时段', '周一', '周二', '周三', '周四', '周五'],
+                [6, '6.1班', '上午1', '语文\n(张老师)', '', '', '', '']
+            ];
+            const lockedWorkbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(lockedWorkbook, XLSX.utils.aoa_to_sheet(lockedRows), '联合总课表');
+            const lockedBytes = XLSX.write(lockedWorkbook, { bookType: 'xlsx', type: 'array' });
+            await scheduler.importLockedSchedule({
+                files: [new File([lockedBytes], 'locked-grade-smoke.xlsx', {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                })],
+                value: ''
+            });
+            const lockWasLoaded = scheduler.lockedSchedule?.['6.1']?.d1_am_1?.locked === true
+                && scheduler.schedule?.['6.1']?.d1_am_1?.subject === '语文';
+            scheduler.run();
+            await waitUntil(() => {
+                const button = document.getElementById('sch_run_btn');
+                return button && !button.disabled && scheduler.schedule?.['6.1']?.d1_am_1?.locked === true;
+            });
+            const lockedImportWorked = lockWasLoaded
+                && scheduler.schedule?.['6.1']?.d1_am_1?.subject === '语文'
+                && scheduler.schedule?.['6.1']?.d1_am_1?.locked === true;
+
+            const originalWriteFile = XLSX.writeFile;
+            let exportedWorkbook = null;
+            let templateWorkbook = null;
+            try {
+                XLSX.writeFile = (workbook, fileName) => {
+                    if (String(fileName).includes('模板')) templateWorkbook = workbook;
+                    else exportedWorkbook = workbook;
+                };
+                scheduler.downloadTemplate();
+                scheduler.exportResult();
+            } finally {
+                XLSX.writeFile = originalWriteFile;
+            }
+            const exportedSheetNames = exportedWorkbook?.SheetNames || [];
+            const templateSheetNames = templateWorkbook?.SheetNames || [];
+            const exportedRoundTrip = exportedWorkbook ? scheduler.readExistingSchedule(exportedWorkbook) : null;
+            const templateReady = templateSheetNames.includes('联合任课表')
+                && templateSheetNames.includes('填写说明')
+                && String(templateWorkbook?.Sheets?.['填写说明']?.A2?.v || '').includes('一班一行');
+            const exportedWorkbookReady = exportedSheetNames.includes('联合总课表')
+                && exportedSheetNames.includes('教师总表')
+                && exportedSheetNames.includes('跨级教师清单')
+                && exportedSheetNames.includes('导入与锁定说明')
+                && (exportedRoundTrip?.importedCells || 0) > 0;
+
             const importRows = [
-                ['班级', '时段', '周一', '周二', '周三', '周四', '周五'],
-                ['901班', '上午1', '语文\n(张老师)', '数学\n(李老师)', '', '', ''],
-                ['901班', '下午1', '', '', '英语\n(王老师)', '', '']
+                ['年级', '班级', '时段', '周一', '周二', '周三', '周四', '周五'],
+                [9, '9.1班', '上午1', '语文\n(张老师)\n[教室A]', '数学\n(李老师)', '', '', ''],
+                [9, '9.1班', '下午1', '', '', '英语\n(王老师)', '', '']
             ];
             const importWorkbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(importWorkbook, XLSX.utils.aoa_to_sheet(importRows), '级部总课表');
@@ -4881,16 +4943,35 @@ async function runModuleDeepCheck(page, id) {
                 value: ''
             });
             const existingImportWorked = scheduler.classes.length === 1
-                && scheduler.classes[0] === '901'
-                && scheduler.schedule['901']?.d1_am_1?.subject === '语文'
-                && scheduler.schedule['901']?.d2_am_1?.teacher === '李老师'
-                && scheduler.schedule['901']?.d3_pm_1?.subject === '英语'
+                && scheduler.classes[0] === '9.1'
+                && scheduler.schedule['9.1']?.d1_am_1?.subject === '语文'
+                && scheduler.schedule['9.1']?.d1_am_1?.venue === '教室A'
+                && scheduler.schedule['9.1']?.d2_am_1?.teacher === '李老师'
+                && scheduler.schedule['9.1']?.d3_pm_1?.subject === '英语'
                 && !document.getElementById('sch_result_area')?.classList.contains('hidden');
+
+            const standaloneRows = [
+                { 年级: 6, 班级: '6.1', 教师姓名: '单级语文教师', 学科: '语文', 每班周课时: 2 },
+                { 年级: 6, 班级: '6.2', 教师姓名: '单级数学教师', 学科: '数学', 每班周课时: 2 }
+            ];
+            await scheduler.loadData({ files: [makeWorkbookFile(standaloneRows, 'single-grade-scheduler-smoke.xlsx')], value: '' });
+            const standalonePreflight = scheduler.preflight({ silent: true });
+            scheduler.run();
+            await waitUntil(() => {
+                const button = document.getElementById('sch_run_btn');
+                return button && !button.disabled && scheduler.schedule?.['6.1'] && scheduler.schedule?.['6.2'];
+            });
+            const standaloneImportWorked = !!(standalonePreflight.ok
+                && scheduler.getProjectGrades().join(',') === '6'
+                && scheduler.classes.length === 2
+                && scheduler.schedule['6.1'] && scheduler.schedule['6.2']);
             const resultChecks = {
                 ...checks,
-                importedRecordsMatch: resourceRecordsBeforeImport === sampleRows.length,
-                classListReady: classes.length === 2 && classes.includes('701') && classes.includes('702'),
-                previewRendered: previewText.includes('已导入') && previewText.includes('5'),
+                importedRecordsMatch: demandRecordsBeforeImport === sampleRows.length,
+                classListReady: classes.length === 6 && ['6.1', '6.5', '6.6', '7.1', '7.2', '7.3'].every(className => classes.includes(className)),
+                previewRendered: previewText.includes('学年联合项目') && previewText.includes('6、7年级'),
+                crossGradeTeacherDetected: crossGradeTeachers.some(item => item.name === 'B教师'
+                    && item.grades.join(',') === '6,7'),
                 combinedRuleRendered: document.querySelectorAll('#sch_tags_combined .tag-chip').length === 1,
                 meetingRuleRendered: document.querySelectorAll('#sch_tags_meeting .tag-chip').length === 1,
                 busyRuleRendered: document.querySelectorAll('#sch_tags_busy .tag-chip').length === 1,
@@ -4900,27 +4981,33 @@ async function runModuleDeepCheck(page, id) {
                 resultAreaVisible: !document.getElementById('sch_result_area')?.classList.contains('hidden'),
                 slotIdsNormalized: malformedSlotIds.length === 0,
                 noTeacherDoubleBooked: teacherConflicts.length === 0,
+                noVenueDoubleBooked: resourceConflictsBeforeImport.filter(conflict => conflict.type === 'venue').length === 0,
                 fridayEveningRuleRespected: fridayEveningEmpty,
                 busyTeacherRuleRespected: busyTeacherRespected,
                 meetingRuleApplied: fridayMeetingReady,
                 activityRuleApplied: wednesdayPmBlocked,
                 combinedRuleApplied: combinedOnRequestedSlot
-                    && combinedClasses.size === classes.length
-                    && combinedDaySet.size === 1
+                    && combinedClasses.has('6.5')
+                    && combinedClasses.has('6.6')
+                    && combinedDaySet.size >= 1
                     && !combinedEntries.some(entry => entry.slotId === 'd5_eve_1'),
                 auditRendered: !document.getElementById('sch_audit_area')?.classList.contains('hidden')
                     && auditText.includes('已完成规则审计')
                     && document.querySelectorAll('#sch_audit_list .tag-chip').length >= 1,
                 manualSwapWorked,
                 manualUndoWorked,
-                existingImportWorked
+                lockedImportWorked,
+                templateReady,
+                exportedWorkbookReady,
+                existingImportWorked,
+                standaloneImportWorked
             };
 
             return {
                 ok: Object.values(resultChecks).every(Boolean),
                 checks: resultChecks,
                 counts: {
-                    records: scheduler.data.length,
+                    demands: demandRecordsBeforeImport,
                     classes: classes.length,
                     lessonCells: lessonCells.length,
                     combinedCells: combinedEntries.length,

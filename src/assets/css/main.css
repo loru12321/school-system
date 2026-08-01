@@ -533,6 +533,36 @@ header {
     flex-wrap: wrap;
 }
 
+#grade-scheduler .scheduler-project-status {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid #ddd6fe;
+    border-radius: 10px;
+    background: #faf5ff;
+    color: #5b21b6;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.55;
+}
+
+#grade-scheduler .scheduler-project-status.is-ok {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+    color: #166534;
+}
+
+#grade-scheduler .scheduler-project-status.is-warning {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+#grade-scheduler .scheduler-project-status.is-error {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
 #grade-scheduler .scheduler-preflight-head strong {
     display: block;
     color: #3b0764;

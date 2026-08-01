@@ -22,8 +22,13 @@ const stylesheet = read('src/assets/css/main.css');
     'canPlaceManualCell: function',
     'bindDeclarativeHandlers: function',
     'importExisting: async function',
+    'importLockedSchedule: async function',
+    'readExistingSchedule: function',
     'parseImportedPeriod: function',
-    'rebuildResourceDataFromSchedule: function'
+    'parseJointDemandRows: function',
+    'rebuildProjectFromDemands: function',
+    'rebuildResourceDataFromSchedule: function',
+    'getScheduleResourceConflicts: function'
 ].forEach(token => assert.ok(scheduler.includes(token), `grade scheduler should expose ${token}`));
 
 assert.ok(!scheduler.includes('功能开发中：支持上传 Excel 反向解析课表'), 'existing timetable import must not remain a placeholder');
@@ -31,11 +36,19 @@ assert.ok(scheduler.includes("p === '上午'"), 'teacher busy parser should acce
 assert.ok(scheduler.includes("p === '下午'"), 'teacher busy parser should accept documented 下午 shorthand');
 assert.ok(scheduler.includes("p === '晚自习'"), 'teacher busy parser should accept documented 晚自习 shorthand');
 assert.ok(scheduler.includes("document.getElementById('sch_run_btn')"), 'run state should bind to the dedicated run button');
+assert.ok(scheduler.includes("'学年联合排课导入模板.xlsx'"), 'scheduler should export a dedicated joint-scheduling Excel template');
+assert.ok(scheduler.includes("'联合总课表'"), 'scheduler export should include a round-trippable joint timetable sheet');
+assert.ok(scheduler.includes("'教师总表'"), 'scheduler export should include a cross-grade teacher review sheet');
 
 [
     'sch_preflight_area',
     'sch_manual_undo',
     'sch_run_btn',
+    'sch_project_status',
+    'schedulerLockedImportFile',
+    'sch_comb_scope',
+    'sch_meet_scope',
+    'sch_act_scope',
     'data-scheduler-change="activity-range"',
     'data-scheduler-click="preflight"',
     'data-fb-insight-action="preflight"',
@@ -56,6 +69,7 @@ assert.ok(runtimeLoader.includes("bootEntry('freshman-constraint-insight', bootJ
 
 [
     '.scheduler-preflight',
+    '.scheduler-project-status',
     '.scheduler-cell.is-selected',
     '.freshman-constraint-review',
     '.freshman-rule-chip'

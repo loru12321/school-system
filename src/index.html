@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-7e24100ffb1d.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-7e24100ffb1d.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-61f374f45369.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-61f374f45369.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -2723,8 +2723,8 @@
 
             <div id="grade-scheduler" class="section card-box analysis-workspace analysis-workspace-violet">
                 <div class="module-desc-bar analysis-hero" style="border-color: #7c3aed">
-                    <h3><i class="ti ti-calendar-time"></i> 下一年级部排课系统</h3>
-                    <p>说明：独立于当前成绩数据。用于新学期排课，支持自定义课时结构、合堂课、早晚自习特定规则以及教师均衡排班。</p>
+                    <h3><i class="ti ti-calendar-time"></i> 学年联合智能排课</h3>
+                    <p>独立于成绩与考核数据。单个级部可单独排课；有跨级教师或共享场地时，将相关年级一次导入，系统会统一避让撞课。</p>
                     <div class="analysis-scan-strip">
                         <div class="analysis-scan-item">
                             <span class="analysis-scan-label">Focus</span>
@@ -2733,8 +2733,8 @@
                         </div>
                         <div class="analysis-scan-item">
                             <span class="analysis-scan-label">Use</span>
-                            <strong class="analysis-scan-value">级部排课</strong>
-                            <span class="analysis-scan-note">适合新学期前完成年级排课、约束校验和疲劳审计。</span>
+                            <strong class="analysis-scan-value">单级部 / 联合排课</strong>
+                            <span class="analysis-scan-note">无跨级冲突时可单独导入一个级部；跨级教师或场地则联合排课。</span>
                         </div>
                         <div class="analysis-scan-item">
                             <span class="analysis-scan-label">Output</span>
@@ -2745,27 +2745,32 @@
                 </div>
 
                 <div class="sec-head analysis-shell-head">
-                    <h2><i class="ti ti-layout-grid"></i> 级部智能排课</h2>
+                    <h2><i class="ti ti-layout-grid"></i> 学年联合排课</h2>
                     <div class="analysis-action-stack">
-                        <div class="analysis-action-note">建议先完成课时结构和约束设置，再导入现有课表做优化；导出 Excel 适合留档，疲劳审计适合二次微调。</div>
+                        <div class="analysis-action-note">先导入任课表并做规则预检；已有确认课表可作为锁定底图导入。单级部可独立操作，跨级教师和共享场地须同批导入。</div>
                         <div class="analysis-actions">
                             <button class="btn btn-purple" onclick="SCHEDULER.exportResult()">📥 导出课表(Excel)</button>
                             <button class="btn btn-orange"
                                 data-pick-file="schedulerImportFile">📤
                                 导入已有课表优化</button>
+                            <button class="btn btn-gray"
+                                data-pick-file="schedulerLockedImportFile">🔒
+                                导入锁定级部课表</button>
                             <button class="btn btn-gray" type="button" data-scheduler-click="preflight"><i class="ti ti-shield-check"></i> 规则预检</button>
                             <button class="btn btn-gray" onclick="SCHEDULER.auditFatigue()"><i class="ti ti-heart-rate-monitor"></i> 疲劳审计</button>
                             <input type="file" id="schedulerImportFile" accept=".xlsx,.xls" hidden
                                 onchange="SCHEDULER.importExisting(this)">
+                            <input type="file" id="schedulerLockedImportFile" accept=".xlsx,.xls" hidden
+                                data-scheduler-file="import-locked">
                         </div>
                     </div>
                 </div>
                 <details class="explain-panel analysis-doc-panel">
                     <summary>排课口径与使用建议</summary>
                     <div class="explain-content">
-                        <p>建议先配置课时结构与常规规则，再导入教师任课表和动态约束，最后统一生成课表。</p>
-                        <p>合堂规则、教师禁排和教研活动适合先少量添加，再结合结果逐步微调。</p>
-                        <p>生成课表后建议先看预览，再做疲劳审计，确认没有连续高负荷或冲突安排。</p>
+                        <p>无跨级教师或共享场地时，可只导入一个级部的 Excel；系统仍会完成该级部内的教师、场地与规则避让。</p>
+                        <p>如教师或场地跨级使用，相关年级必须放在同一份“联合任课表”中。先排好的级部可从导出表重新导入为锁定底图，其课节不会被移动。</p>
+                        <p>合堂规则、教师禁排和教研活动适合先少量添加，再结合结果逐步微调；生成后请按班级和按教师复核，并运行疲劳审计。</p>
                     </div>
                 </details>
 
@@ -2820,10 +2825,10 @@
                     <div class="upload-box" style="flex:1; min-height:150px; padding:20px;"
                         data-pick-file="schTeacherFile">
                         <div class="upload-icon"><i class="ti ti-users"></i></div>
-                        <div style="font-weight:bold;">导入新学期教师任课表 (Excel)</div>
+                        <div style="font-weight:bold;">导入学年联合任课表 (Excel)</div>
                         <div style="font-size:12px; color:#64748b;">
-                            必需列: [教师姓名] [学科] [任教班级] [周课时量]<br>
-                            (例如: 张三 | 语文 | 701,702 | 12)
+                            必需列: [年级] [班级] [教师姓名] [学科] [每班周课时]<br>
+                            一班一行；单级部可只填本级部，跨级教师/共享场地请把相关年级同批导入。
                         </div>
                         <input type="file" id="schTeacherFile" accept=".xlsx,.xls" hidden
                             onchange="SCHEDULER.loadData(this)">
@@ -2834,7 +2839,7 @@
                         <div style="display:flex; justify-content:space-between;">
                             <h4 style="margin:0;">📋 待排课程资源预览</h4>
                             <button class="btn btn-sm btn-green" onclick="SCHEDULER.downloadTemplate()"><i
-                                    class="ti ti-download"></i> 下载任课模板</button>
+                                    class="ti ti-download"></i> 下载联合模板与说明</button>
                         </div>
                         <div id="sch_resource_preview" style="margin-top:10px; font-size:12px; color:#666;">
                             请先上传 Excel 文件...
@@ -2879,6 +2884,12 @@
                                     <option value="英语">英语</option>
                                 </select>
 
+                                <span style="font-size:12px; color:#666;">范围:</span>
+                                <select id="sch_comb_scope" style="width:190px; padding:4px; border:1px solid #fed7aa;">
+                                    <option value="grade">同一教师同学科、同年级班级</option>
+                                    <option value="all">允许跨年级合堂（仅真实合堂）</option>
+                                </select>
+
                                 <button class="btn btn-sm" style="background:#ea580c; color:white;"
                                     onclick="SCHEDULER.addConstraint('combined')">
                                     <i class="ti ti-link"></i> 添加规则
@@ -2887,7 +2898,7 @@
                             <div id="sch_tags_combined" class="tag-widget-container"
                                 style="min-height:35px; background:white; border-color:#fed7aa;"></div>
                             <div style="font-size:11px; color:#c2410c; margin-top:4px;">
-                                ℹ️ 逻辑：系统会自动寻找该学科教多个班的老师，尝试在周一至周五的指定时段，安排其所有班级一起上课。
+                                ℹ️ 默认只在同年级内合堂，避免把不同年级误合并；只有真实跨级合堂时才选择“允许跨年级”。
                             </div>
                         </div>
 
@@ -2907,6 +2918,9 @@
                                     <option value="pm_3">下午第3节</option>
                                     <option value="pm_4">下午第4节</option>
                                     <option value="eve_1">晚自习第1节</option>
+                                </select>
+                                <select id="sch_meet_scope" style="width:120px; padding:4px;">
+                                    <option value="ALL">全部导入年级</option>
                                 </select>
                                 <button class="btn btn-sm btn-primary" onclick="SCHEDULER.addConstraint('meeting')">➕
                                     添加</button>
@@ -2960,8 +2974,11 @@
                                     style="width:80px; padding:4px; display:none;">
 
                                 <span>对象:</span>
+                                <select id="sch_act_scope" style="width:120px; padding:4px;">
+                                    <option value="ALL">全部导入年级</option>
+                                </select>
                                 <select id="sch_act_subject" style="width:100px; padding:4px;">
-                                    <option value="ALL">全级部(无课)</option>
+                                    <option value="ALL">所选年级无课</option>
                                     <option value="语文">语文组</option>
                                     <option value="数学">数学组</option>
                                     <option value="英语">英语组</option>
@@ -2978,14 +2995,14 @@
                     </div>
 
                     <div style="font-size:11px; color:#666; margin-top:5px; padding-left:5px;">
-                        💡 提示：教师禁排支持输入 "上午"、"下午" 或具体数字 "1,2"；全级部无课会自动跳过排课。
+                        💡 提示：教师禁排支持输入 "上午"、"下午" 或具体数字 "1,2"；所选年级无课会自动跳过排课。
                     </div>
                 </div>
 
                 <div style="margin-top:20px; text-align:center;">
                     <button id="sch_run_btn" class="btn btn-primary" style="padding:12px 30px; font-size:16px;"
                         onclick="SCHEDULER.run()">
-                        🚀 开始智能排课
+                        🚀 开始联合排课
                     </button>
                 </div>
 
@@ -3001,12 +3018,16 @@
                     <div id="sch_preflight_issues" class="scheduler-preflight-issues"></div>
                 </div>
 
+                <div id="sch_project_status" class="scheduler-project-status" aria-live="polite">
+                    导入任课表后，这里会显示单级部或联合项目的资源、锁定课与冲突状态。
+                </div>
+
                 <!-- 4. 结果展示 -->
                 <div id="sch_result_area" class="hidden analysis-anchor-panel" style="margin-top:20px;">
-                    <div class="sub-header analysis-section-head">📅 排课结果预览 (点击单元格可微调)</div>
+                    <div class="sub-header analysis-section-head">📅 排课结果预览 (按班级 / 按教师复核后可微调)</div>
                     <div class="analysis-table-meta">
                         <span><strong>微调方式：</strong>按班级查看时依次点击两个节次交换；固定规则时段不可移动。</span>
-                        <span><strong>即时校验：</strong>每次交换都会检查教师撞课、禁排和教研占用；可撤销上一步。</span>
+                        <span><strong>即时校验：</strong>每次交换都会检查教师、共享场地、禁排和教研占用；可撤销上一步。</span>
                     </div>
                     <div class="scheduler-manual-bar">
                         <span id="sch_manual_status">按班级查看时，依次点击两个节次即可交换；每次都会校验教师撞课和禁排规则。</span>
