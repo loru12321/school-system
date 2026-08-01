@@ -515,6 +515,247 @@ header {
     --analysis-border: #ddd6fe;
 }
 
+/* 可解释的排课工作台：先检查规则，再生成与微调，避免只有一堆配置控件。 */
+#grade-scheduler .scheduler-preflight {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px solid #ddd6fe;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #faf5ff 0%, #fff 76%);
+}
+
+#grade-scheduler .scheduler-preflight-head,
+#grade-scheduler .scheduler-manual-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+#grade-scheduler .scheduler-preflight-head strong {
+    display: block;
+    color: #3b0764;
+    font-size: 14px;
+}
+
+#grade-scheduler .scheduler-eyebrow {
+    display: block;
+    margin-bottom: 2px;
+    color: #7c3aed;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .12em;
+}
+
+#grade-scheduler .scheduler-preflight-summary {
+    margin-top: 10px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+#grade-scheduler .scheduler-summary-sep {
+    color: #a78bfa;
+}
+
+#grade-scheduler .scheduler-preflight-issues {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+#grade-scheduler .scheduler-preflight-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+#grade-scheduler .scheduler-preflight-item.is-ok {
+    background: #ecfdf5;
+    color: #166534;
+}
+
+#grade-scheduler .scheduler-preflight-item.is-warning {
+    background: #fffbeb;
+    color: #92400e;
+}
+
+#grade-scheduler .scheduler-preflight-item.is-error {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+#grade-scheduler .scheduler-manual-bar {
+    margin: 10px 0;
+    padding: 9px 10px;
+    border: 1px solid #ddd6fe;
+    border-radius: 10px;
+    background: #faf5ff;
+    color: #5b21b6;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+#grade-scheduler .scheduler-cell {
+    display: grid;
+    width: 100%;
+    min-width: 74px;
+    min-height: 44px;
+    place-content: center;
+    gap: 2px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #1e3a8a;
+    cursor: pointer;
+    font: inherit;
+    line-height: 1.2;
+    transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+}
+
+#grade-scheduler .scheduler-cell:hover:not(:disabled) {
+    border-color: #c4b5fd;
+    background: #faf5ff;
+    transform: translateY(-1px);
+}
+
+#grade-scheduler .scheduler-cell span {
+    color: #64748b;
+    font-size: 10px;
+}
+
+#grade-scheduler .scheduler-cell .scheduler-cell-empty {
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+#grade-scheduler .scheduler-cell.is-selected {
+    border-color: #7c3aed;
+    outline: 2px solid rgba(124, 58, 237, .18);
+    background: #ede9fe;
+}
+
+#grade-scheduler .scheduler-cell.is-fixed {
+    cursor: not-allowed;
+    opacity: .74;
+}
+
+#freshman-simulator .freshman-constraint-review {
+    margin: 0 0 15px;
+    padding: 14px 16px;
+    border: 1px solid #ddd6fe;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #faf5ff 0%, #fff 76%);
+}
+
+#freshman-simulator .freshman-constraint-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+#freshman-simulator .freshman-constraint-head strong {
+    display: block;
+    color: #3b0764;
+    font-size: 14px;
+}
+
+#freshman-simulator .freshman-review-eyebrow {
+    display: block;
+    margin-bottom: 2px;
+    color: #7c3aed;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .12em;
+}
+
+#freshman-simulator .freshman-constraint-summary {
+    margin-top: 10px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+#freshman-simulator .freshman-rule-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+#freshman-simulator .freshman-rule-chip {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    padding: 5px 8px;
+    border: 1px solid #e9d5ff;
+    border-radius: 999px;
+    background: #fff;
+    color: #6b21a8;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+#freshman-simulator .freshman-rule-chip b {
+    color: #7c3aed;
+}
+
+#freshman-simulator .freshman-review-notes {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+#freshman-simulator .freshman-review-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+#freshman-simulator .freshman-review-note.is-ok {
+    background: #ecfdf5;
+    color: #166534;
+}
+
+#freshman-simulator .freshman-review-note.is-warning {
+    background: #fffbeb;
+    color: #92400e;
+}
+
+#freshman-simulator .freshman-review-note.is-error {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+    #grade-scheduler .scheduler-preflight,
+    #grade-scheduler .scheduler-manual-bar {
+        padding: 12px;
+    }
+
+    #grade-scheduler .scheduler-manual-bar .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #freshman-simulator .freshman-constraint-review {
+        padding: 12px;
+    }
+}
+
 .analysis-workspace-progress {
     --analysis-accent: #f59e0b;
     --analysis-surface: #fffbeb;

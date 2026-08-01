@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-07707936a6f0.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-07707936a6f0.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-7e24100ffb1d.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-7e24100ffb1d.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -2344,6 +2344,18 @@
                             <input type="file" id="fbFileInput" accept=".xlsx,.xls" hidden data-fb-change="FB_loadData">
                         </div>
                     </div>
+                    <div id="fb_constraint_review" class="hidden freshman-constraint-review" aria-live="polite">
+                        <div class="freshman-constraint-head">
+                            <div>
+                                <span class="freshman-review-eyebrow">ASSIGNMENT REVIEW</span>
+                                <strong>分班条件与规则总览</strong>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-gray" data-fb-insight-action="preflight"><i class="ti ti-shield-check"></i> 检查条件</button>
+                        </div>
+                        <div id="fb_constraint_summary" class="freshman-constraint-summary">选择数据源和规则后，可先检查本轮分班条件。</div>
+                        <div id="fb_constraint_rules" class="freshman-rule-chips"></div>
+                        <div id="fb_constraint_issues" class="freshman-review-notes"></div>
+                    </div>
                     <div style="border-bottom:1px dashed #cbd5e1; padding-bottom:15px; margin-bottom:15px;">
                         <div
                             style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:15px;">
@@ -2741,6 +2753,7 @@
                             <button class="btn btn-orange"
                                 data-pick-file="schedulerImportFile">📤
                                 导入已有课表优化</button>
+                            <button class="btn btn-gray" type="button" data-scheduler-click="preflight"><i class="ti ti-shield-check"></i> 规则预检</button>
                             <button class="btn btn-gray" onclick="SCHEDULER.auditFatigue()"><i class="ti ti-heart-rate-monitor"></i> 疲劳审计</button>
                             <input type="file" id="schedulerImportFile" accept=".xlsx,.xls" hidden
                                 onchange="SCHEDULER.importExisting(this)">
@@ -2799,15 +2812,6 @@
                             节</label>
                         <label><input type="checkbox" id="sch_rule_morning_read" checked> 添加 [07:00] 小晨读+早读</label>
                         <label><input type="checkbox" id="sch_rule_noon_write" checked> 添加 [13:30] 午间练字/午唱</label>
-                        <div
-                            style="grid-column: 1/-1; background:#fff; padding:8px; border:1px solid #eee; border-radius:4px;">
-                            <strong>🔗 合堂/连堂规则 (晚自习):</strong><br>
-                            <select id="sch_combined_slot" style="margin-top:5px;">
-                                <option value="eve_3">晚自习第3节</option>
-                                <option value="eve_all">整个晚自习</option>
-                            </select>
-                            <span style="color:#666;"> 必须由同一老师跨班连上 (如: 1,2,3班合堂)</span>
-                        </div>
                     </div>
                 </div>
 
@@ -2947,7 +2951,7 @@
                                     <option value="4">周四</option>
                                     <option value="5">周五</option>
                                 </select>
-                                <select id="sch_act_range" style="width:120px; padding:4px;">
+                                <select id="sch_act_range" style="width:120px; padding:4px;" data-scheduler-change="activity-range">
                                     <option value="pm_all">整个下午</option>
                                     <option value="am_all">整个上午</option>
                                     <option value="custom">指定节次→</option>
@@ -2979,18 +2983,34 @@
                 </div>
 
                 <div style="margin-top:20px; text-align:center;">
-                    <button class="btn btn-primary" style="padding:12px 30px; font-size:16px;"
+                    <button id="sch_run_btn" class="btn btn-primary" style="padding:12px 30px; font-size:16px;"
                         onclick="SCHEDULER.run()">
                         🚀 开始智能排课
                     </button>
+                </div>
+
+                <div id="sch_preflight_area" class="hidden scheduler-preflight" aria-live="polite">
+                    <div class="scheduler-preflight-head">
+                        <div>
+                            <span class="scheduler-eyebrow">RULE CHECK</span>
+                            <strong>排课前置条件</strong>
+                        </div>
+                        <button class="btn btn-sm btn-gray" type="button" data-scheduler-click="preflight"><i class="ti ti-refresh"></i> 重新检查</button>
+                    </div>
+                    <div id="sch_preflight_summary" class="scheduler-preflight-summary">导入任课表后，系统会检查规则是否能落在当前课时结构中。</div>
+                    <div id="sch_preflight_issues" class="scheduler-preflight-issues"></div>
                 </div>
 
                 <!-- 4. 结果展示 -->
                 <div id="sch_result_area" class="hidden analysis-anchor-panel" style="margin-top:20px;">
                     <div class="sub-header analysis-section-head">📅 排课结果预览 (点击单元格可微调)</div>
                     <div class="analysis-table-meta">
-                        <span><strong>阅读建议：</strong>先切换按班级/按教师查看，再检查关键约束时段是否被占满。</span>
-                        <span><strong>导出建议：</strong>适合生成正式课表前做人工复核和局部微调。</span>
+                        <span><strong>微调方式：</strong>按班级查看时依次点击两个节次交换；固定规则时段不可移动。</span>
+                        <span><strong>即时校验：</strong>每次交换都会检查教师撞课、禁排和教研占用；可撤销上一步。</span>
+                    </div>
+                    <div class="scheduler-manual-bar">
+                        <span id="sch_manual_status">按班级查看时，依次点击两个节次即可交换；每次都会校验教师撞课和禁排规则。</span>
+                        <button id="sch_manual_undo" type="button" class="btn btn-sm btn-gray" data-scheduler-click="undo-manual-move" disabled><i class="ti ti-arrow-back-up"></i> 撤销上一步</button>
                     </div>
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <select id="sch_view_mode" onchange="SCHEDULER.renderTable()">

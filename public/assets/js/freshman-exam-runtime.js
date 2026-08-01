@@ -2259,7 +2259,15 @@ function EXAM_exportResult() {
         get classes() { return FB_CLASSES; },
         get simulatedData() { return FB_SIMULATED_DATA; },
         get examData() { return EXAM_DATA; },
-        get examRooms() { return EXAM_ROOMS; }
+        get examRooms() { return EXAM_ROOMS; },
+        get assignmentDataStatus() {
+            return {
+                studentCount: FB_STUDENTS.length,
+                genderRows: Object.keys(FB_GENDER_MAP || {}).length,
+                violationRows: Object.keys(FB_VIOLATION_SET || {}).length,
+                lastAssembly: FB_LAST_ASSEMBLY ? { ...FB_LAST_ASSEMBLY } : null
+            };
+        }
     };
 
     if (typeof FB_loadData === 'function') window.FB_loadData = FB_loadData;

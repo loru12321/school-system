@@ -4283,6 +4283,8 @@ async function runModuleDeepCheck(page, id) {
                 xlsxReady: !!(window.XLSX && window.XLSX.utils),
                 chartReady: typeof window.Chart === 'function',
                 importReady: typeof window.FB_loadData === 'function',
+                constraintReviewReady: typeof window.FB_preflight === 'function'
+                    && !!window.FreshmanConstraintInsightRuntime,
                 divisionReady: typeof window.FB_runDivision === 'function'
                     && typeof window.FB_generateSingleScheme === 'function'
                     && typeof window.FB_applyScheme === 'function',
@@ -4385,6 +4387,8 @@ async function runModuleDeepCheck(page, id) {
                 if (classInput) classInput.value = '4';
                 if (algorithmSelect) algorithmSelect.value = 'snake';
                 if (diffSelect) diffSelect.value = 'spread';
+                const review = window.FB_preflight({ silent: true });
+                if (!review.ok) throw new Error('freshman assignment review rejected valid smoke data');
 
                 window.FB_runDivision();
                 await waitUntil(() => runtime.classes.length === 4
@@ -4431,7 +4435,9 @@ async function runModuleDeepCheck(page, id) {
                 resultsAreaVisible: !document.getElementById('fb-results-area')?.classList.contains('hidden'),
                 simulatedDataSynced: simulatedDataCount === expectedTotal,
                 persistedStateSynced: persistedCount === expectedTotal,
-                importSucceeded: alerts.some(message => message.includes(String(expectedTotal)))
+                importSucceeded: alerts.some(message => message.includes(String(expectedTotal))),
+                constraintReviewRendered: !document.getElementById('fb_constraint_review')?.classList.contains('hidden')
+                    && document.getElementById('fb_constraint_summary')?.textContent.includes('条件可执行')
             };
 
             return {
@@ -4696,7 +4702,11 @@ async function runModuleDeepCheck(page, id) {
                 importReady: !!scheduler && typeof scheduler.loadData === 'function',
                 runReady: !!scheduler && typeof scheduler.run === 'function',
                 renderReady: !!scheduler && typeof scheduler.renderTable === 'function',
-                auditReady: !!scheduler && typeof scheduler.auditFatigue === 'function'
+                auditReady: !!scheduler && typeof scheduler.auditFatigue === 'function',
+                preflightReady: !!scheduler && typeof scheduler.preflight === 'function',
+                manualAdjustReady: !!scheduler && typeof scheduler.swapScheduleCells === 'function'
+                    && typeof scheduler.undoManualMove === 'function',
+                existingImportReady: !!scheduler && typeof scheduler.importExisting === 'function'
             };
             if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
                 return {
@@ -4758,6 +4768,8 @@ async function runModuleDeepCheck(page, id) {
                 setValue('sch_act_range', 'pm_all');
                 setValue('sch_act_subject', 'ALL');
                 scheduler.addConstraint('activity');
+                const preflight = scheduler.preflight({ silent: true });
+                if (!preflight.ok) throw new Error('grade scheduler preflight rejected valid smoke data');
 
                 scheduler.run();
                 await waitUntil(() => {
@@ -4824,9 +4836,59 @@ async function runModuleDeepCheck(page, id) {
             const tableText = document.getElementById('sch_table')?.textContent || '';
             const previewText = document.getElementById('sch_resource_preview')?.textContent || '';
             const auditText = document.getElementById('sch_audit_summary')?.textContent || '';
+            const resourceRecordsBeforeImport = scheduler.data.length;
+            const tableRenderedBeforeImport = document.querySelectorAll('#sch_table tbody tr').length >= 10
+                && tableText.includes('语文')
+                && tableText.includes('物理')
+                && tableText.includes('(合)')
+                && tableText.includes('班会');
+
+            let manualSwapWorked = false;
+            let manualUndoWorked = false;
+            const editable = Object.entries(schedule[classes[0]] || {})
+                .filter(([slotId, cell]) => !slotId.startsWith('_') && cell && !cell.fixed);
+            for (let firstIndex = 0; firstIndex < editable.length && !manualSwapWorked; firstIndex++) {
+                for (let secondIndex = firstIndex + 1; secondIndex < editable.length && !manualSwapWorked; secondIndex++) {
+                    const [firstSlotId, firstCell] = editable[firstIndex];
+                    const [secondSlotId, secondCell] = editable[secondIndex];
+                    const ignoredSlots = [firstSlotId, secondSlotId];
+                    const firstCheck = scheduler.canPlaceManualCell(classes[0], secondSlotId, firstCell, ignoredSlots);
+                    const secondCheck = scheduler.canPlaceManualCell(classes[0], firstSlotId, secondCell, ignoredSlots);
+                    if (!firstCheck.ok || !secondCheck.ok) continue;
+                    const firstSubject = firstCell.subject;
+                    const secondSubject = secondCell.subject;
+                    scheduler.swapScheduleCells(classes[0], firstSlotId, secondSlotId);
+                    manualSwapWorked = schedule[classes[0]][firstSlotId]?.subject === secondSubject
+                        && schedule[classes[0]][secondSlotId]?.subject === firstSubject;
+                    scheduler.undoManualMove();
+                    manualUndoWorked = schedule[classes[0]][firstSlotId]?.subject === firstSubject
+                        && schedule[classes[0]][secondSlotId]?.subject === secondSubject;
+                }
+            }
+
+            const importRows = [
+                ['班级', '时段', '周一', '周二', '周三', '周四', '周五'],
+                ['901班', '上午1', '语文\n(张老师)', '数学\n(李老师)', '', '', ''],
+                ['901班', '下午1', '', '', '英语\n(王老师)', '', '']
+            ];
+            const importWorkbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(importWorkbook, XLSX.utils.aoa_to_sheet(importRows), '级部总课表');
+            const importBytes = XLSX.write(importWorkbook, { bookType: 'xlsx', type: 'array' });
+            await scheduler.importExisting({
+                files: [new File([importBytes], 'existing-schedule-smoke.xlsx', {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                })],
+                value: ''
+            });
+            const existingImportWorked = scheduler.classes.length === 1
+                && scheduler.classes[0] === '901'
+                && scheduler.schedule['901']?.d1_am_1?.subject === '语文'
+                && scheduler.schedule['901']?.d2_am_1?.teacher === '李老师'
+                && scheduler.schedule['901']?.d3_pm_1?.subject === '英语'
+                && !document.getElementById('sch_result_area')?.classList.contains('hidden');
             const resultChecks = {
                 ...checks,
-                importedRecordsMatch: scheduler.data.length === sampleRows.length,
+                importedRecordsMatch: resourceRecordsBeforeImport === sampleRows.length,
                 classListReady: classes.length === 2 && classes.includes('701') && classes.includes('702'),
                 previewRendered: previewText.includes('已导入') && previewText.includes('5'),
                 combinedRuleRendered: document.querySelectorAll('#sch_tags_combined .tag-chip').length === 1,
@@ -4834,11 +4896,7 @@ async function runModuleDeepCheck(page, id) {
                 busyRuleRendered: document.querySelectorAll('#sch_tags_busy .tag-chip').length === 1,
                 activityRuleRendered: document.querySelectorAll('#sch_tags_activity .tag-chip').length === 1,
                 scheduleGenerated: classes.every(className => schedule[className] && Object.keys(schedule[className]).length > 0),
-                tableRendered: document.querySelectorAll('#sch_table tbody tr').length >= 10
-                    && tableText.includes('语文')
-                    && tableText.includes('物理')
-                    && tableText.includes('(合)')
-                    && tableText.includes('班会'),
+                tableRendered: tableRenderedBeforeImport,
                 resultAreaVisible: !document.getElementById('sch_result_area')?.classList.contains('hidden'),
                 slotIdsNormalized: malformedSlotIds.length === 0,
                 noTeacherDoubleBooked: teacherConflicts.length === 0,
@@ -4852,7 +4910,10 @@ async function runModuleDeepCheck(page, id) {
                     && !combinedEntries.some(entry => entry.slotId === 'd5_eve_1'),
                 auditRendered: !document.getElementById('sch_audit_area')?.classList.contains('hidden')
                     && auditText.includes('已完成规则审计')
-                    && document.querySelectorAll('#sch_audit_list .tag-chip').length >= 1
+                    && document.querySelectorAll('#sch_audit_list .tag-chip').length >= 1,
+                manualSwapWorked,
+                manualUndoWorked,
+                existingImportWorked
             };
 
             return {

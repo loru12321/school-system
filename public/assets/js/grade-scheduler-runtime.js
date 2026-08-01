@@ -7,6 +7,9 @@ const SCHEDULER = {
     classes: [], // 所有班级列表
     teacherSlotIndex: null,
     maxIterations: 8000,
+    manualSelection: null,
+    manualHistory: [],
+    lastPreflight: null,
 
     // 存储动态添加的规则
     rules: {
@@ -30,6 +33,7 @@ const SCHEDULER = {
 
             this.rules.combined.push({ subject, slot, id: Date.now() });
             this.renderTags('combined', this.rules.combined, r => `🔗 ${r.subject} (${this.getSlotName(r.slot)} 合堂)`);
+            this.preflight({ silent: true });
         }
         else if (type === 'meeting') {
             const day = document.getElementById('sch_meet_day').value;
@@ -39,6 +43,7 @@ const SCHEDULER = {
 
             this.rules.meetings.push({ day, slot, id: Date.now() });
             this.renderTags('meeting', this.rules.meetings, m => `周${m.day} ${this.getSlotName(m.slot)} (班会)`);
+            this.preflight({ silent: true });
         }
         else if (type === 'busy') {
             const day = document.getElementById('sch_busy_day').value;
@@ -49,15 +54,19 @@ const SCHEDULER = {
             this.rules.busy.push({ day, slotsStr: slotsRaw, name, id: Date.now() });
             this.renderTags('busy', this.rules.busy, b => `${b.name}: 周${b.day} [${b.slotsStr}] 不排`);
             document.getElementById('sch_busy_name').value = '';
+            this.preflight({ silent: true });
         }
         else if (type === 'activity') {
             const day = document.getElementById('sch_act_day').value;
             const range = document.getElementById('sch_act_range').value;
             const subject = document.getElementById('sch_act_subject').value;
-            let labelRange = range === 'pm_all' ? '下午' : (range === 'am_all' ? '上午' : '指定节');
+            const slotsStr = String(document.getElementById('sch_act_custom_slots')?.value || '').trim();
+            if (range === 'custom' && !slotsStr) return window.UI.alert('请填写需要锁定的节次，例如：1,2 或 am_1,pm_2。');
+            const labelRange = range === 'pm_all' ? '下午' : (range === 'am_all' ? '上午' : (range === 'eve_all' ? '晚自习' : `指定节次 ${slotsStr}`));
 
-            this.rules.activities.push({ day, range, subject, id: Date.now() });
+            this.rules.activities.push({ day, range, subject, slotsStr, id: Date.now() });
             this.renderTags('activity', this.rules.activities, a => `周${a.day} ${labelRange} (${a.subject === "ALL" ? "全级无课" : a.subject + "教研"})`);
+            this.preflight({ silent: true });
         }
     },
 
@@ -74,6 +83,7 @@ const SCHEDULER = {
         if (type === 'activity') this.renderTags('activity', this.rules.activities, a => `周${a.day} ${a.range} (${a.subject})`);
         // 🟢 新增 combined 渲染
         if (type === 'combined') this.renderTags('combined', this.rules.combined, r => `🔗 ${r.subject} (${this.getSlotName(r.slot)} 合堂)`);
+        this.preflight({ silent: true });
     },
 
     renderTags: function (type, list, labelFn) {
@@ -102,6 +112,134 @@ const SCHEDULER = {
         const parts = this.normalizeSlotCode(code).split('_');
         if (parts.length >= 2) return `${map[parts[0]] || ''}第${parts[parts.length - 1]}节`;
         return code;
+    },
+
+    escapeHtml: function (value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+    },
+
+    getSlotConfig: function () {
+        const readCount = (id, fallback) => {
+            const value = parseInt(document.getElementById(id)?.value, 10);
+            return Number.isFinite(value) && value >= 0 ? value : fallback;
+        };
+        return {
+            am: readCount('sch_am_count', 4),
+            pm: readCount('sch_pm_count', 4),
+            eve: readCount('sch_eve_count', 3)
+        };
+    },
+
+    isValidSlotCode: function (slotCode, config = this.getSlotConfig()) {
+        const match = this.normalizeSlotCode(slotCode).match(/^(am|pm|eve)_(\d+)$/);
+        if (!match) return false;
+        return Number(match[2]) >= 1 && Number(match[2]) <= Number(config[match[1]] || 0);
+    },
+
+    getActivitySlots: function (activity, config = this.getSlotConfig()) {
+        if (!activity) return [];
+        if (activity.range === 'custom') {
+            return this.parseBusySlots(activity.day, activity.slotsStr || '', config.am, config.pm, config.eve);
+        }
+        return this.resolveTimeRange(activity.day, activity.range, config.am, config.pm, config.eve);
+    },
+
+    getConstraintCounts: function () {
+        return {
+            meetings: this.rules.meetings.length,
+            busy: this.rules.busy.length,
+            activities: this.rules.activities.length,
+            combined: this.rules.combined.length
+        };
+    },
+
+    preflight: function (options = {}) {
+        const config = this.getSlotConfig();
+        const errors = [];
+        const warnings = [];
+        const teachers = new Set(this.data.map(item => this.normalizeTeacherName(item.name)).filter(Boolean));
+        const subjects = new Set(this.data.map(item => String(item.subject || '').trim()).filter(Boolean));
+
+        if (!this.data.length) errors.push('请先导入教师任课表。');
+        if (!this.classes.length) errors.push('任课表中未识别到班级，请检查“任教班级”列。');
+        if (config.am + config.pm + config.eve <= 0) errors.push('上午、下午和晚自习节数不能同时为 0。');
+
+        this.rules.meetings.forEach((rule) => {
+            if (!this.isValidSlotCode(rule.slot, config)) {
+                errors.push(`固定班会“周${rule.day} ${this.getSlotName(rule.slot)}”超出当前课时结构。`);
+            }
+        });
+        this.rules.busy.forEach((rule) => {
+            if (!teachers.has(this.normalizeTeacherName(rule.name))) {
+                warnings.push(`教师禁排中的“${rule.name}”未在任课表中识别到；该条规则暂不会命中排课教师。`);
+            }
+            const invalid = this.parseBusySlots(rule.day, rule.slotsStr, config.am, config.pm, config.eve)
+                .some(slotId => !this.isValidSlotCode(slotId.replace(/^d\d+_/, ''), config));
+            if (invalid) errors.push(`教师“${rule.name}”的禁排节次超出当前课时结构。`);
+        });
+        this.rules.activities.forEach((rule) => {
+            const slots = this.getActivitySlots(rule, config);
+            if (!slots.length) errors.push(`教研/无课规则“周${rule.day}”未识别到有效节次。`);
+            if (slots.some(slotId => !this.isValidSlotCode(slotId.replace(/^d\d+_/, ''), config))) {
+                errors.push(`教研/无课规则“周${rule.day}”包含超出当前课时结构的节次。`);
+            }
+            if (rule.subject !== 'ALL' && !subjects.has(rule.subject)) {
+                warnings.push(`“${rule.subject}”教研规则未在任课表中识别到该学科。`);
+            }
+        });
+        this.rules.combined.forEach((rule) => {
+            if (!subjects.has(rule.subject)) warnings.push(`合堂规则“${rule.subject}”未在任课表中识别到该学科。`);
+            if (!this.isValidSlotCode(rule.slot, config)) {
+                errors.push(`合堂规则“${rule.subject} ${this.getSlotName(rule.slot)}”超出当前课时结构。`);
+            }
+        });
+
+        const counts = this.getConstraintCounts();
+        const result = {
+            ok: errors.length === 0,
+            errors,
+            warnings,
+            counts,
+            meta: { classCount: this.classes.length, teacherCount: teachers.size, config }
+        };
+        this.lastPreflight = result;
+        this.renderPreflight(result);
+        if (!options.silent && window.UI) {
+            UI.toast(result.ok
+                ? `规则预检通过：${result.meta.classCount} 个班级、${result.meta.teacherCount} 位教师。`
+                : `规则预检发现 ${result.errors.length} 项需要处理的问题。`, result.ok ? 'success' : 'warning');
+        }
+        return result;
+    },
+
+    renderPreflight: function (result) {
+        const area = document.getElementById('sch_preflight_area');
+        const summary = document.getElementById('sch_preflight_summary');
+        const issues = document.getElementById('sch_preflight_issues');
+        if (!area || !summary || !issues) return;
+        area.classList.remove('hidden');
+        const counts = result.counts;
+        summary.innerHTML = [
+            `<strong>${result.ok ? '可生成课表' : '暂不建议生成'}</strong>`,
+            `${result.meta.classCount} 个班级`,
+            `${result.meta.teacherCount} 位教师`,
+            `班会 ${counts.meetings} · 禁排 ${counts.busy} · 教研 ${counts.activities} · 合堂 ${counts.combined}`
+        ].join(' <span class="scheduler-summary-sep">·</span> ');
+        const items = [
+            ...result.errors.map(text => ({ type: 'error', text })),
+            ...result.warnings.map(text => ({ type: 'warning', text }))
+        ];
+        issues.innerHTML = items.length
+            ? items.map(item => `<div class="scheduler-preflight-item is-${item.type}"><i class="ti ${item.type === 'error' ? 'ti-alert-triangle' : 'ti-info-circle'}"></i>${this.escapeHtml(item.text)}</div>`).join('')
+            : '<div class="scheduler-preflight-item is-ok"><i class="ti ti-circle-check"></i>任课资源与已配置规则可以直接用于本轮排课。</div>';
+    },
+
+    onActivityRangeChange: function (select) {
+        const custom = document.getElementById('sch_act_custom_slots');
+        if (!custom) return;
+        custom.style.display = String(select?.value || '') === 'custom' ? '' : 'none';
     },
 
     downloadTemplate: function () {
@@ -184,6 +322,10 @@ const SCHEDULER = {
                 targetSel.innerHTML = this.classes.map(c => `<option value="${c}">${c}班</option>`).join('');
             }
 
+            this.manualSelection = null;
+            this.manualHistory = [];
+            this.preflight({ silent: true });
+
             if (window.UI) UI.toast(`✅ 任课数据导入成功（${this.data.length} 条）`, 'success');
         } catch (e) {
             console.error(e);
@@ -196,8 +338,13 @@ const SCHEDULER = {
     // --- 核心排课逻辑 (Run) ---
     run: function () {
         if (!this.data.length) return window.UI.alert("请先导入教师任课数据");
+        const preflight = this.preflight({ silent: true });
+        if (!preflight.ok) {
+            return window.UI.alert(`请先处理排课预检中的 ${preflight.errors.length} 项问题。`);
+        }
 
-        const btn = document.querySelector('#grade-scheduler .btn-primary');
+        const btn = document.getElementById('sch_run_btn');
+        if (!btn) return window.UI.alert('排课启动按钮未找到，请刷新页面后重试。');
         btn.innerHTML = '<i class="ti ti-loader"></i> 正在进行多维约束运算...';
         btn.disabled = true;
 
@@ -229,7 +376,7 @@ const SCHEDULER = {
                 // --- 阶段 A & B (保持不变，略) ---
                 // A. 全局封锁 (活动)
                 this.rules.activities.forEach(act => {
-                    const targetSlots = this.resolveTimeRange(act.day, act.range, am, pm, eve);
+                    const targetSlots = this.getActivitySlots(act, { am, pm, eve });
                     this.classes.forEach(cls => {
                         targetSlots.forEach(slotId => {
                             if (act.subject === 'ALL') {
@@ -365,6 +512,9 @@ const SCHEDULER = {
                 }
 
                 this.renderTable();
+                this.manualSelection = null;
+                this.manualHistory = [];
+                this.updateManualControls();
                 document.getElementById('sch_result_area').classList.remove('hidden');
                 UI.toast("✅ 排课完成！已应用所有复杂约束。", "success");
 
@@ -555,7 +705,13 @@ const SCHEDULER = {
         parts.forEach(p => {
             p = p.trim();
             if (!p) return;
-            if (/^\d+$/.test(p)) {
+            if (p === '上午' || /^am(?:_all)?$/i.test(p)) {
+                for (let i = 1; i <= amLimit; i++) res.push(`d${day}_am_${i}`);
+            } else if (p === '下午' || /^pm(?:_all)?$/i.test(p)) {
+                for (let i = 1; i <= pmLimit; i++) res.push(`d${day}_pm_${i}`);
+            } else if (p === '晚' || p === '晚自习' || /^eve(?:_all)?$/i.test(p)) {
+                for (let i = 1; i <= eveLimit; i++) res.push(`d${day}_eve_${i}`);
+            } else if (/^\d+$/.test(p)) {
                 let n = parseInt(p, 10);
                 if (n <= amLimit) res.push(`d${day}_am_${n}`);
                 else if (n <= amLimit + pmLimit) res.push(`d${day}_pm_${n - amLimit}`);
@@ -594,6 +750,136 @@ const SCHEDULER = {
         return false;
     },
 
+    rebuildTeacherSlotIndex: function () {
+        this.resetTeacherSlotIndex();
+        this.classes.forEach(cls => {
+            const entries = this.schedule[cls] || {};
+            Object.keys(entries).forEach(slotId => {
+                if (slotId === '_blackList') return;
+                const cell = entries[slotId];
+                if (cell?.teacher && cell.teacher !== '-') this.markTeacherBusy(cell.teacher, slotId);
+            });
+        });
+    },
+
+    canPlaceManualCell: function (className, slotId, cell, ignoredSlots) {
+        if (!cell) return { ok: true };
+        const blocked = this.schedule[className]?._blackList?.[slotId] || [];
+        if (blocked.includes('ALL') || blocked.includes(cell.subject)) {
+            return { ok: false, message: `${this.getSlotName(slotId.replace(/^d\d+_/, ''))} 已被该学科规则锁定。` };
+        }
+        const teacher = this.normalizeTeacherName(cell.teacher);
+        if (!teacher || teacher === '-') return { ok: true };
+        const hasConflict = this.classes.some(cls => Object.keys(this.schedule[cls] || {}).some(otherSlot => {
+            if (otherSlot === '_blackList') return false;
+            if (cls === className && ignoredSlots.includes(otherSlot)) return false;
+            if (otherSlot !== slotId) return false;
+            return this.normalizeTeacherName(this.schedule[cls]?.[otherSlot]?.teacher) === teacher;
+        }));
+        return hasConflict
+            ? { ok: false, message: `“${teacher}”在${this.getSlotName(slotId.replace(/^d\d+_/, ''))}已有其他班级课程。` }
+            : { ok: true };
+    },
+
+    selectScheduleCell: function (slotId) {
+        const mode = document.getElementById('sch_view_mode')?.value;
+        const className = document.getElementById('sch_view_target')?.value;
+        if (mode !== 'class' || !className) {
+            return window.UI?.toast('请先切换到“按班级查看”，再选择两节课进行微调。', 'info');
+        }
+        const current = this.manualSelection;
+        if (!current || current.className !== className) {
+            this.manualSelection = { className, slotId };
+            this.renderTable();
+            this.updateManualControls();
+            return window.UI?.toast(`已选择${this.getSlotName(slotId.replace(/^d\d+_/, ''))}，再选择目标节次即可交换。`, 'info');
+        }
+        if (current.slotId === slotId) {
+            this.manualSelection = null;
+            this.renderTable();
+            this.updateManualControls();
+            return;
+        }
+        this.swapScheduleCells(className, current.slotId, slotId);
+    },
+
+    swapScheduleCells: function (className, firstSlotId, secondSlotId) {
+        const first = this.schedule[className]?.[firstSlotId] || null;
+        const second = this.schedule[className]?.[secondSlotId] || null;
+        if (!first && !second) {
+            this.manualSelection = null;
+            this.renderTable();
+            return window.UI?.toast('两个节次都是空课，无需调整。', 'info');
+        }
+        if (first?.fixed || second?.fixed) {
+            return window.UI?.alert('固定班会、无课或合堂时段不可手动移动；请先调整相应规则后重新生成。');
+        }
+        const ignoredSlots = [firstSlotId, secondSlotId];
+        const firstCheck = this.canPlaceManualCell(className, secondSlotId, first, ignoredSlots);
+        const secondCheck = this.canPlaceManualCell(className, firstSlotId, second, ignoredSlots);
+        if (!firstCheck.ok || !secondCheck.ok) {
+            return window.UI?.alert(`无法调整：${firstCheck.message || secondCheck.message}`);
+        }
+
+        this.manualHistory.push({
+            className,
+            firstSlotId,
+            secondSlotId,
+            first: first ? { ...first } : null,
+            second: second ? { ...second } : null
+        });
+        if (this.manualHistory.length > 20) this.manualHistory.shift();
+        if (second) this.schedule[className][firstSlotId] = second;
+        else delete this.schedule[className][firstSlotId];
+        if (first) this.schedule[className][secondSlotId] = first;
+        else delete this.schedule[className][secondSlotId];
+        this.manualSelection = null;
+        this.rebuildTeacherSlotIndex();
+        this.renderTable();
+        this.updateManualControls();
+        if (!document.getElementById('sch_audit_area')?.classList.contains('hidden')) this.auditFatigue();
+        window.UI?.toast('已完成局部交换，并通过教师撞课与规则占用校验。', 'success');
+    },
+
+    undoManualMove: function () {
+        const entry = this.manualHistory.pop();
+        if (!entry) return window.UI?.toast('暂无可撤销的排课调整。', 'info');
+        const target = this.schedule[entry.className] || (this.schedule[entry.className] = {});
+        if (entry.first) target[entry.firstSlotId] = entry.first;
+        else delete target[entry.firstSlotId];
+        if (entry.second) target[entry.secondSlotId] = entry.second;
+        else delete target[entry.secondSlotId];
+        this.manualSelection = null;
+        this.rebuildTeacherSlotIndex();
+        this.renderTable();
+        this.updateManualControls();
+        if (!document.getElementById('sch_audit_area')?.classList.contains('hidden')) this.auditFatigue();
+        window.UI?.toast('已撤销上一步课表调整。', 'success');
+    },
+
+    updateManualControls: function () {
+        const undo = document.getElementById('sch_manual_undo');
+        const status = document.getElementById('sch_manual_status');
+        if (undo) undo.disabled = !this.manualHistory.length;
+        if (status) {
+            status.textContent = this.manualSelection
+                ? `已选择 ${this.getSlotName(this.manualSelection.slotId.replace(/^d\d+_/, ''))}：再点一个同班节次即可交换。`
+                : '按班级查看时，依次点击两个节次即可交换；每次都会校验教师撞课和禁排规则。';
+        }
+    },
+
+    getClassCellHtml: function (className, slotId) {
+        const cell = this.schedule[className]?.[slotId] || null;
+        const selected = this.manualSelection?.className === className && this.manualSelection?.slotId === slotId;
+        const title = cell
+            ? `${cell.subject || ''}${cell.teacher ? ` · ${cell.teacher}` : ''}`
+            : '空课';
+        const content = cell
+            ? `<strong>${this.escapeHtml(cell.subject)}</strong><span>${this.escapeHtml(cell.teacher || '')}</span>`
+            : '<span class="scheduler-cell-empty">空课</span>';
+        return `<button type="button" class="scheduler-cell${selected ? ' is-selected' : ''}${cell?.fixed ? ' is-fixed' : ''}" data-scheduler-slot="${this.escapeHtml(slotId)}" title="${this.escapeHtml(cell?.fixed ? '固定规则时段，不可移动' : `${title}：点击选择/交换`)}" ${cell?.fixed ? 'disabled' : ''}>${content}</button>`;
+    },
+
     renderTable: function () {
         const mode = document.getElementById('sch_view_mode').value;
         let target = document.getElementById('sch_view_target').value;
@@ -628,16 +914,14 @@ const SCHEDULER = {
             let cellData = null;
 
             if (mode === 'class') {
-                cellData = this.schedule[target]?.[slotId];
-                if (!cellData) return '';
-                return `<div style="font-weight:bold; color:#1e3a8a;">${cellData.subject}</div><div style="font-size:10px; color:#666;">${cellData.teacher}</div>`;
+                return this.getClassCellHtml(target, slotId);
             } else {
                 const foundCls = [];
                 this.classes.forEach(c => {
                     const s = this.schedule[c][slotId];
                     if (s && typeof s.teacher === 'string' && s.teacher.includes(target)) foundCls.push(c);
                 });
-                if (foundCls.length) return `<div style="font-weight:bold; color:#059669;">${foundCls.join(',')}班</div><div style="font-size:10px;">上课</div>`;
+                if (foundCls.length) return `<div style="font-weight:bold; color:#059669;">${this.escapeHtml(foundCls.join(','))}班</div><div style="font-size:10px;">上课</div>`;
             }
             return `<span style="color:#eee;">-</span>`;
         };
@@ -697,6 +981,7 @@ const SCHEDULER = {
 
         html += `</tbody>`;
         table.innerHTML = html;
+        this.updateManualControls();
     },
 
     getExportCellText: function (className, slotId) {
@@ -762,10 +1047,143 @@ const SCHEDULER = {
         XLSX.writeFile(wb, "智能排课结果.xlsx");
     },
 
-    importExisting: function () { window.UI.alert("功能开发中：支持上传 Excel 反向解析课表"); }
+    parseImportedPeriod: function (value) {
+        const text = String(value || '').replace(/\s+/g, '');
+        const match = text.match(/^(上午|下午|晚|晚自习)(\d+)$/);
+        if (!match) return '';
+        const type = match[1] === '上午' ? 'am' : (match[1] === '下午' ? 'pm' : 'eve');
+        return `${type}_${match[2]}`;
+    },
+
+    parseImportedCell: function (value) {
+        const text = String(value == null ? '' : value).trim();
+        if (!text || text === '-' || text === '(放假)' || text === '—') return null;
+        const normalized = text.replace(/\r/g, '').trim();
+        const match = normalized.match(/^([\s\S]*?)(?:\n)?\(([^()]+)\)\s*$/);
+        const subject = String(match ? match[1] : normalized).trim();
+        const teacher = String(match ? match[2] : '').trim();
+        if (!subject) return null;
+        return {
+            subject,
+            teacher: teacher || '-',
+            fixed: subject === '班会' || subject === '🚫 无课'
+        };
+    },
+
+    rebuildResourceDataFromSchedule: function () {
+        const resources = new Map();
+        this.classes.forEach(cls => {
+            Object.keys(this.schedule[cls] || {}).forEach(slotId => {
+                if (slotId === '_blackList') return;
+                const cell = this.schedule[cls][slotId];
+                const teacher = this.normalizeTeacherName(cell?.teacher);
+                const subject = String(cell?.subject || '').trim();
+                if (!teacher || teacher === '-' || !subject || cell?.fixed) return;
+                const key = `${teacher}__${subject}`;
+                if (!resources.has(key)) resources.set(key, { name: teacher, subject, classes: new Set(), hours: 0 });
+                const resource = resources.get(key);
+                resource.classes.add(cls);
+                resource.hours += 1;
+            });
+        });
+        this.data = Array.from(resources.values()).map(item => ({
+            name: item.name,
+            subject: item.subject,
+            classes: Array.from(item.classes),
+            hours: item.hours
+        }));
+    },
+
+    importExisting: async function (input) {
+        const file = input?.files?.[0];
+        if (!file) return;
+        try {
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            const headerIndex = rows.findIndex(row => String(row?.[0] || '').trim() === '班级'
+                && String(row?.[1] || '').trim() === '时段');
+            if (headerIndex < 0) {
+                return window.UI.alert('未识别到“班级 / 时段 / 周一至周五”表头。请导入本模块导出的课表，或使用相同列结构。');
+            }
+
+            const nextSchedule = {};
+            const foundClasses = new Set();
+            let importedCells = 0;
+            rows.slice(headerIndex + 1).forEach(row => {
+                const className = String(row?.[0] || '').trim().replace(/班$/, '');
+                const period = this.parseImportedPeriod(row?.[1]);
+                if (!className || !period || className === '---') return;
+                if (!nextSchedule[className]) nextSchedule[className] = {};
+                foundClasses.add(className);
+                for (let day = 1; day <= 5; day++) {
+                    const cell = this.parseImportedCell(row[day + 1]);
+                    if (!cell) continue;
+                    nextSchedule[className][`d${day}_${period}`] = cell;
+                    importedCells += 1;
+                }
+            });
+            if (!foundClasses.size || !importedCells) {
+                return window.UI.alert('已读取文件，但没有识别到可编辑课程。请确认第一张工作表包含班级课表。');
+            }
+
+            this.schedule = nextSchedule;
+            this.classes = Array.from(foundClasses).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
+            this.rebuildResourceDataFromSchedule();
+            this.rebuildTeacherSlotIndex();
+            this.manualSelection = null;
+            this.manualHistory = [];
+
+            const target = document.getElementById('sch_view_target');
+            const mode = document.getElementById('sch_view_mode');
+            if (mode) mode.value = 'class';
+            if (target) target.innerHTML = this.classes.map(cls => `<option value="${this.escapeHtml(cls)}">${this.escapeHtml(cls)}班</option>`).join('');
+            const preview = document.getElementById('sch_resource_preview');
+            if (preview) {
+                preview.innerHTML = `<div style="color:#166534;"><strong>已导入现有课表</strong>：${this.classes.length} 个班级、${importedCells} 个可编辑课程时段。</div>`
+                    + '<div style="padding-top:6px; color:#64748b;">现在可直接按班级查看、交换两个节次、撤销，并在导出前执行疲劳审计。</div>';
+            }
+            document.getElementById('sch_result_area')?.classList.remove('hidden');
+            this.renderTable();
+            this.preflight({ silent: true });
+            window.UI?.toast(`已导入 ${this.classes.length} 个班级的现有课表，可直接微调。`, 'success');
+        } catch (error) {
+            console.error('[grade-scheduler] import existing failed:', error);
+            window.UI?.alert(`导入已有课表失败：${error?.message || error}`);
+        } finally {
+            if (input) input.value = '';
+        }
+    },
+
+    // 课表单元格在每次渲染时重建，因此用一次捕获阶段的委托即可覆盖预检、
+    // 撤销和动态单元格。属性值只映射到下面三种固定动作，不解析任意方法名。
+    bindDeclarativeHandlers: function () {
+        if (document.documentElement.dataset.schedulerBindingsInstalled === '1') return;
+        document.documentElement.dataset.schedulerBindingsInstalled = '1';
+        document.addEventListener('click', (event) => {
+            const actionTrigger = event.target?.closest?.('[data-scheduler-click]');
+            if (actionTrigger && document.documentElement.contains(actionTrigger) && !actionTrigger.disabled) {
+                const action = actionTrigger.dataset.schedulerClick;
+                if (action === 'preflight') this.preflight();
+                if (action === 'undo-manual-move') this.undoManualMove();
+                return;
+            }
+            const cell = event.target?.closest?.('[data-scheduler-slot]');
+            if (!cell || !document.documentElement.contains(cell) || cell.disabled) return;
+            const slotId = String(cell.dataset.schedulerSlot || '').trim();
+            if (/^d[1-5]_(?:am|pm|eve)_\d+$/.test(slotId)) this.selectScheduleCell(slotId);
+        }, true);
+        document.addEventListener('change', (event) => {
+            const select = event.target?.closest?.('[data-scheduler-change]');
+            if (!select || !document.documentElement.contains(select)) return;
+            if (select.dataset.schedulerChange === 'activity-range') this.onActivityRangeChange(select);
+        });
+    }
 };
 
     window.SCHEDULER = SCHEDULER;
     window.GradeSchedulerRuntime = SCHEDULER;
+    SCHEDULER.bindDeclarativeHandlers();
     window.__GRADE_SCHEDULER_RUNTIME_PATCHED__ = true;
 })();

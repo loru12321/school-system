@@ -52,7 +52,12 @@ const NON_INLINE_RUNTIME_PATHS = new Set([
     './assets/js/history-compare-runtime.js',
     // Teacher-assessment automation requires the authenticated Worker bridge;
     // keep this specialist runtime out of the legacy offline single-file bundle.
-    './assets/js/teaching-assessment-sync-runtime.js'
+    './assets/js/teaching-assessment-sync-runtime.js',
+    // The scheduler is now an interactive editing workbench. Keep its demand
+    // runtime external in lt.html so the legacy single-file artifact stays
+    // below its strict transport budget; normal web and local-file use load it
+    // from ./public/assets only when the module is opened.
+    './assets/js/grade-scheduler-runtime.js'
 ]);
 
 // Keep original script semantics intact; only normalize newlines.
