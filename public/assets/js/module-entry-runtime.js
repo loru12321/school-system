@@ -1077,9 +1077,14 @@
         };
 
         const loaders = [];
-        if (typeof window.ensureFreshmanExamRuntimeLoaded === 'function'
-            && !window.__FRESHMAN_EXAM_RUNTIME_PATCHED__) {
-            loaders.push(window.ensureFreshmanExamRuntimeLoaded());
+        const readyLoader = id === 'freshman-simulator'
+            ? window.ensureFreshmanSimulatorRuntimeLoaded
+            : (window.ensureExamArrangerRuntimeLoaded || window.ensureFreshmanExamRuntimeLoaded);
+        // 各入口在模块激活后并行准备实际交互所需的 vendor。即使核心运行时
+        // 已被其他入口加载，也要确保 Excel/图表依赖已就绪，避免首个文件
+        // 导入动作抢在依赖加载前而变成“只有外壳”。
+        if (typeof readyLoader === 'function') {
+            loaders.push(readyLoader());
         }
         if (loaders.length) {
             Promise.all(loaders)

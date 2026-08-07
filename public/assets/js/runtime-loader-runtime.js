@@ -752,6 +752,25 @@ window.ensureFreshmanExamRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('freshman-exam');
 };
 
+// 新生分班首次导入会同时用到运行时、Excel 解析和结果图表。把三者并行
+// 发起，避免用户刚进入模块后又按串行链路等待两个大体积 vendor；该函数仅
+// 由对应模块入口调用，不会扩大登录首屏下载量。
+window.ensureFreshmanSimulatorRuntimeLoaded = function () {
+return Promise.all([
+    window.ensureFreshmanExamRuntimeLoaded(),
+    window.ensureXlsxVendorLoaded(),
+    window.ensureChartVendorLoaded()
+]).then((result) => result[0]);
+};
+
+// 考务编排同样需要导入 Excel，但不绘制分班均衡图，故不加载 Chart。
+window.ensureExamArrangerRuntimeLoaded = function () {
+return Promise.all([
+    window.ensureFreshmanExamRuntimeLoaded(),
+    window.ensureXlsxVendorLoaded()
+]).then((result) => result[0]);
+};
+
 window.ensureGradeSchedulerRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('grade-scheduler');
 };

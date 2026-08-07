@@ -17,6 +17,7 @@ const scripts = packageJson.scripts || {};
 const smoke = read('scripts/smoke-all-modules.js');
 const schedulerTest = read('scripts/test-system-performance-scheduler.js');
 const moduleEntryRuntime = read('public/assets/js/module-entry-runtime.js');
+const runtimeLoaderRuntime = read('public/assets/js/runtime-loader-runtime.js');
 const countyAnalysisRuntime = read('public/assets/js/county-analysis-runtime.js');
 const cohortGrowthRuntime = read('public/assets/js/cohort-growth-runtime.js');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
@@ -85,6 +86,19 @@ assert.ok(
   moduleEntryRuntime.includes("scheduleActiveModuleTask('data-quality', 'data-quality-render'")
     && moduleEntryRuntime.includes('{ delay: 1200, idle: true, timeout: 2000 }'),
   'data-quality analysis should run after the navigation shell is ready and cancel when the user leaves'
+);
+assert.ok(
+  runtimeLoaderRuntime.includes('window.ensureFreshmanSimulatorRuntimeLoaded = function ()')
+    && runtimeLoaderRuntime.includes('window.ensureExamArrangerRuntimeLoaded = function ()')
+    && runtimeLoaderRuntime.includes('window.ensureXlsxVendorLoaded()')
+    && runtimeLoaderRuntime.includes('window.ensureChartVendorLoaded()'),
+  'new-student and exam-arranger entries should prepare their real interactive vendors on entry'
+);
+assert.ok(
+  moduleEntryRuntime.includes("id === 'freshman-simulator'")
+    && moduleEntryRuntime.includes('window.ensureFreshmanSimulatorRuntimeLoaded')
+    && moduleEntryRuntime.includes('window.ensureExamArrangerRuntimeLoaded'),
+  'module entry should use the scoped, concurrent readiness loaders instead of a core-runtime-only shell'
 );
 assert.ok(
   countyAnalysisRuntime.includes('function releaseCountyAnalysisHeavyDom()')
