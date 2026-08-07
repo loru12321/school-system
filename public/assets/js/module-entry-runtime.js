@@ -1201,8 +1201,10 @@
             // The compatibility runtime used to rely on background hydration.
             // That leaves the analysis shell interactive but its comparison and
             // export actions absent on lazy connections. Load it on entry instead.
+            const macroAnalysisRuntimeReady = window.__MACRO_ANALYSIS_COMPAT_RUNTIME_PATCHED__ === true;
+            const tableHeatmapRuntimeReady = typeof window.toggleTableHeatmap === 'function';
             if (typeof window.ensureMacroAnalysisCompatRuntimeLoaded === 'function'
-                && !window.__MACRO_ANALYSIS_COMPAT_RUNTIME_PATCHED__) {
+                && (!macroAnalysisRuntimeReady || !tableHeatmapRuntimeReady)) {
                 return window.ensureMacroAnalysisCompatRuntimeLoaded()
                     .then(initializeAnalysis)
                     .catch((error) => {

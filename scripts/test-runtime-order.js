@@ -454,7 +454,6 @@ const postAppDeferredRefs = [
     segmentAnalysisRef,
     starterGuideRef,
     potentialAnalysisRef,
-    tableHeatmapRef,
     dataDoctorRef,
     blankScoreAuditRef,
     targetGapAnalysisRef,
@@ -464,7 +463,6 @@ const postAppDeferredRefs = [
     templateDownloadRef,
     highScoreExportRef,
     cohortGrowthRef,
-    macroAnalysisCompatRef,
     compareCloudContextRef,
     compareExamSyncRef,
     reportCompareRef,
@@ -1676,11 +1674,13 @@ assert.ok(reportHistoryRuntime.includes('cloudHistoryByStudent') && reportHistor
 assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;'), 'teacher analysis should not leave an activated shell empty for over a second');
 assert.ok(
     runtimeLoaderRuntime.includes("'macro-analysis-compat': bootSkill('demand', 'demand', ['analysis', 'renderHorizontalTable', 'exportHorizontalExcel', 'exportMacroTables']")
+        && runtimeLoaderRuntime.includes("bootEntry('table-heatmap', bootJs('table-heatmap-runtime.js'))")
         && runtimeLoaderRuntime.includes("bootEntry('macro-analysis-compat', bootJs('macro-analysis-compat-runtime.js'))")
         && runtimeLoaderRuntime.includes('window.ensureMacroAnalysisCompatRuntimeLoaded = function ()')
         && runtimeLoaderRuntime.includes("window.SystemRuntimeLoader.load('macro-analysis-compat')"),
-    'county analysis compatibility actions should have an on-demand runtime loader'
+    'county analysis compatibility actions and their heatmap control should have an on-demand runtime loader'
 );
+assert.ok(!normalizedDeferredManifest.includes(tableHeatmapRef), 'table heatmap should load with the analysis interaction instead of racing the generic deferred queue');
 assert.ok(
     macroAnalysisCompatRuntime.includes('const allSchools = Object.values(window.SCHOOLS || {});')
         && macroAnalysisCompatRuntime.includes('const schoolNames = Object.keys(window.SCHOOLS || {});')
@@ -1699,8 +1699,10 @@ assert.ok(
 assert.ok(
     moduleEntryRuntime.includes("if (typeof window.ensureMacroAnalysisCompatRuntimeLoaded === 'function'")
         && moduleEntryRuntime.includes('return window.ensureMacroAnalysisCompatRuntimeLoaded()')
+        && moduleEntryRuntime.includes("const tableHeatmapRuntimeReady = typeof window.toggleTableHeatmap === 'function';")
+        && moduleEntryRuntime.includes('(!macroAnalysisRuntimeReady || !tableHeatmapRuntimeReady)')
         && moduleEntryRuntime.includes('macro compatibility runtime failed'),
-    'analysis entry should load its compatibility actions before rendering the interactive shell'
+    'analysis entry should load its compatibility actions and heatmap control before rendering the interactive shell'
 );
 assert.ok(smokeAllModules.includes('waitForTeacherAutoRestore(page)'), 'module smoke should observe startup teacher auto restore before prewarming');
 assert.ok(!smokeAllModules.includes("name: 'restoreTeacherMap'"), 'module smoke must not repair teacher assignments during prewarm');

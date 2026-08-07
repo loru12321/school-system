@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-64f7293ec6cf';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-f366b9ec8b2c';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -139,7 +139,6 @@ var DEFERRED_APP_MODULES = [
 'segment-analysis-runtime.js',
 'starter-guide-runtime.js',
 'potential-analysis-runtime.js',
-'table-heatmap-runtime.js',
 'data-doctor-runtime.js',
 'blank-score-audit-runtime.js',
 'target-gap-analysis-runtime.js',
@@ -149,7 +148,6 @@ var DEFERRED_APP_MODULES = [
 'template-download-runtime.js',
 'high-score-export-runtime.js',
 'cohort-growth-runtime.js',
-'macro-analysis-compat-runtime.js',
 'compare-cloud-context-runtime.js',
 'compare-exam-sync-runtime.js',
 'report-compare-runtime.js',

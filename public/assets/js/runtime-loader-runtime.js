@@ -93,6 +93,10 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('county-analysis', bootJs('county-analysis-runtime.js'))
 ]),
 'macro-analysis-compat': bootSkill('demand', 'demand', ['analysis', 'renderHorizontalTable', 'exportHorizontalExcel', 'exportMacroTables'], [
+    // The analysis shell exposes the heatmap action immediately.  Keep its
+    // implementation in the same demand-loaded boundary so a slow deferred
+    // queue cannot leave the button as an empty shell on first entry.
+    bootEntry('table-heatmap', bootJs('table-heatmap-runtime.js')),
     bootEntry('macro-analysis-compat', bootJs('macro-analysis-compat-runtime.js'))
 ]),
 'progress-analysis': bootSkill('demand', 'full', ['progress-analysis'], [
