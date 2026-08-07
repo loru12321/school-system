@@ -870,10 +870,53 @@ async function main() {
         })();
         const seatAdjustmentDeskCount = document.querySelectorAll('#seat-adj-container .desk:not(.desk-empty)').length;
         snapshotStep('check:seat-adjustment');
+        // Cohort volatility is meaningful only after the history archive is
+        // hydrated. The entry path intentionally restores just the latest exam
+        // first, so make this test's history prerequisite explicit instead of
+        // racing a background prefetch.
+        const cohortHistorySync = (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function')
+            ? await Promise.race([
+                Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(window.CURRENT_COHORT_ID, {
+                    force: true,
+                    latestOnly: false,
+                    minCount: 4,
+                    refreshSelectors: false
+                })),
+                new Promise((resolve) => setTimeout(() => resolve({ success: false, timedOut: true }), 45000))
+            ])
+            : { success: false, unavailable: true };
         await boundedSwitchTab('cohort-growth');
+        window.CohortGrowth?.updateScopeControls?.();
+        const cohortGrowthScope = {
+            school: document.getElementById('cgSchoolSelect')?.value || 'ALL',
+            className: document.getElementById('cgClassSelect')?.value || 'ALL'
+        };
         const cohortGrowthResult = typeof window.CohortGrowth?.compute === 'function'
             ? window.CohortGrowth.compute()
             : { volatility: [], growth: [] };
+        const cohortGrowthAllResult = typeof window.CohortGrowth?.compute === 'function'
+            ? window.CohortGrowth.compute({ school: 'ALL', className: 'ALL' })
+            : { volatility: [], growth: [] };
+        const cohortIdentityCounts = new Map();
+        const cohortNameSchoolCounts = new Map();
+        const cohortIdSchoolCounts = new Map();
+        Object.values(window.COHORT_DB?.exams || {}).forEach((exam) => {
+            (Array.isArray(exam?.data) ? exam.data : []).forEach((student) => {
+                const key = typeof window.CohortGrowth?.getStudentKey === 'function'
+                    ? window.CohortGrowth.getStudentKey(student)
+                    : '';
+                if (key) cohortIdentityCounts.set(key, Number(cohortIdentityCounts.get(key) || 0) + 1);
+                const nameSchoolKey = `${String(student?.school || '').trim()}|${String(student?.name || '').trim()}`;
+                if (nameSchoolKey !== '|') {
+                    cohortNameSchoolCounts.set(nameSchoolKey, Number(cohortNameSchoolCounts.get(nameSchoolKey) || 0) + 1);
+                }
+                const studentId = String(student?.studentId || student?.id || student?.examNo || '').trim();
+                const idSchoolKey = `${String(student?.school || '').trim()}|${studentId}`;
+                if (studentId && studentId !== '-' && idSchoolKey !== '|') {
+                    cohortIdSchoolCounts.set(idSchoolKey, Number(cohortIdSchoolCounts.get(idSchoolKey) || 0) + 1);
+                }
+            });
+        });
         const cohortGrowthValues = [
             ...(cohortGrowthResult.volatility || []).flatMap((row) => [row.count, row.sigma]),
             ...(cohortGrowthResult.growth || []).flatMap((row) => [row.start, row.end, row.delta])
@@ -1610,8 +1653,23 @@ async function main() {
                 strategy: seatAdjustmentResult.strategy || ''
             } : null,
             cohortExamCount: Object.keys(window.COHORT_DB?.exams || {}).length,
+            cohortHistorySync: {
+                success: cohortHistorySync?.success === true,
+                timedOut: cohortHistorySync?.timedOut === true,
+                count: Number(cohortHistorySync?.count || 0),
+                updated: Number(cohortHistorySync?.updated || 0)
+            },
+            cohortGrowthScope,
             cohortVolatilityRows: Array.isArray(cohortGrowthResult.volatility) ? cohortGrowthResult.volatility.length : 0,
             cohortGrowthRows: Array.isArray(cohortGrowthResult.growth) ? cohortGrowthResult.growth.length : 0,
+            cohortAllVolatilityRows: Array.isArray(cohortGrowthAllResult.volatility) ? cohortGrowthAllResult.volatility.length : 0,
+            cohortAllGrowthRows: Array.isArray(cohortGrowthAllResult.growth) ? cohortGrowthAllResult.growth.length : 0,
+            cohortIdentitySeriesAtLeast4: Array.from(cohortIdentityCounts.values()).filter((count) => count >= 4).length,
+            cohortIdentitySeriesMax: Math.max(0, ...Array.from(cohortIdentityCounts.values())),
+            cohortNameSchoolSeriesAtLeast4: Array.from(cohortNameSchoolCounts.values()).filter((count) => count >= 4).length,
+            cohortNameSchoolSeriesMax: Math.max(0, ...Array.from(cohortNameSchoolCounts.values())),
+            cohortIdSchoolSeriesAtLeast4: Array.from(cohortIdSchoolCounts.values()).filter((count) => count >= 4).length,
+            cohortIdSchoolSeriesMax: Math.max(0, ...Array.from(cohortIdSchoolCounts.values())),
             cohortGrowthFinite: cohortGrowthValues.every((value) => Number.isFinite(Number(value))),
             headers,
             targetStudent: target ? {
@@ -1838,7 +1896,17 @@ async function main() {
     }
     if (snapshot.cohortExamCount >= 4) {
         assert.ok(snapshot.cohortVolatilityRows > 0,
-            `cohort volatility rows missing with ${snapshot.cohortExamCount} exams`);
+            `cohort volatility rows missing with ${snapshot.cohortExamCount} exams; diagnostics=${JSON.stringify({
+                scope: snapshot.cohortGrowthScope,
+                allVolatilityRows: snapshot.cohortAllVolatilityRows,
+                allGrowthRows: snapshot.cohortAllGrowthRows,
+                identitySeriesAtLeast4: snapshot.cohortIdentitySeriesAtLeast4,
+                identitySeriesMax: snapshot.cohortIdentitySeriesMax,
+                nameSchoolSeriesAtLeast4: snapshot.cohortNameSchoolSeriesAtLeast4,
+                nameSchoolSeriesMax: snapshot.cohortNameSchoolSeriesMax,
+                idSchoolSeriesAtLeast4: snapshot.cohortIdSchoolSeriesAtLeast4,
+                idSchoolSeriesMax: snapshot.cohortIdSchoolSeriesMax
+            })}`);
     }
     assert.ok(snapshot.cohortGrowthFinite, 'cohort growth calculation produced non-finite values');
 

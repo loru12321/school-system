@@ -98,6 +98,15 @@ assert.ok(
   'warmColdLoginCaches must RETURN the hydrated payload (idb-independent) so switchCohort can consume it directly — idb-keyval may not be ready this early in login'
 );
 assert.ok(
+  /function scheduleColdLoginLocalCachePrime[\s\S]*SystemPerformance[\s\S]*scheduleTask/.test(dataCloud)
+    && /warmColdLoginCaches[\s\S]*cachePrimeEntries[\s\S]*scheduleColdLoginLocalCachePrime\(cachePrimeEntries\)[\s\S]*return rawLen > 0 \? hydrated : true/.test(dataCloud),
+  'cold-login cache writes must be scheduled after hydration rather than delaying the preloaded workspace result'
+);
+assert.ok(
+  !/warmColdLoginCaches[\s\S]*await writeLocalCache[\s\S]*return rawLen > 0 \? hydrated : true/.test(dataCloud),
+  'cold-login cache prime must not await IndexedDB before switchCohort receives the hydrated cloud payload'
+);
+assert.ok(
   /bootstrapPreloaded[\s\S]*warmResult\.RAW_DATA[\s\S]*bootstrapPreloaded = warmResult/.test(appJs)
     && /options\.preloadedData \|\| bootstrapPreloaded \|\| await DB\.get/.test(appJs),
   'switchCohort must consume the warm-up payload directly as preloadedData, bypassing the local-cache round-trip'

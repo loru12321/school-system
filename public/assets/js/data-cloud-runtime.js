@@ -759,6 +759,43 @@
         return true;
     }
 
+    // Cold login consumes the hydrated payload directly in switchCohort, so
+    // persisting its workspace/shard cache must never extend the visible entry
+    // path.  Keep this as a best-effort background prime only: the next login
+    // can benefit from IndexedDB, while this login remains driven by the
+    // authenticated, client-validated cloud payload already in memory.
+    function scheduleColdLoginLocalCachePrime(entries) {
+        const jobs = (Array.isArray(entries) ? entries : [])
+            .filter((entry) => entry && normalizeText(entry.key) && entry.value && typeof entry.value === 'object')
+            .map((entry) => ({
+                key: normalizeText(entry.key),
+                value: entry.value,
+                meta: entry.meta && typeof entry.meta === 'object' ? entry.meta : {}
+            }));
+        if (!jobs.length) return false;
+
+        const run = () => Promise.all(jobs.map((job) => writeLocalCache(job.key, job.value, job.meta)
+            .catch((error) => {
+                debugLog('[cold-login-cache] background prime failed:', error);
+                return false;
+            })))
+            .then(() => true);
+        const scheduler = root.SystemPerformance;
+        const taskKey = `cold-login-cache-prime:${jobs.map((job) => job.key).sort().join('|')}`;
+        if (scheduler && typeof scheduler.scheduleTask === 'function') {
+            // A small delay keeps the fallback scheduler asynchronous on browsers
+            // without requestIdleCallback as well.
+            scheduler.scheduleTask(taskKey, run, { delay: 16, idle: true, timeout: 5000, replace: true });
+            return true;
+        }
+        if (typeof root.setTimeout === 'function') {
+            root.setTimeout(() => { run(); }, 0);
+            return true;
+        }
+        run();
+        return true;
+    }
+
     async function readLocalCache(key) {
         const store = getIdbKeyval();
         if (!store || typeof store.get !== 'function') return null;
@@ -1977,6 +2014,7 @@
         // prefetched shard when that pick matches shard.key — otherwise bail to the
         // normal path so "restore the latest exam" is never altered.
         let hydrated = null;
+        const cachePrimeEntries = [];
         if (isSplitWorkspacePayload(payload)) {
             const shard = bundle.currentShard;
             const metaRows = Array.isArray(bundle.examMeta)
@@ -2002,19 +2040,20 @@
             }
             hydrated = normalizeWorkspacePayload(mergeSplitWorkspacePayload(payload, examPayload, shardKey));
             // Seed the shard's own local cache too, so a later readSplitExamPayload
-            // (e.g. exam switch) reuses it without a round-trip.
-            await writeLocalCache(shardKey, examPayload, { updatedAt: shard.updated_at }).catch(() => false);
+            // (e.g. exam switch) reuses it without a round-trip. This is delayed
+            // below because switchCohort already receives `hydrated` directly.
+            cachePrimeEntries.push({ key: shardKey, value: examPayload, meta: { updatedAt: shard.updated_at } });
         } else {
             hydrated = normalizeWorkspacePayload(payload);
         }
 
         if (!hydrated || !workspacePayloadMatchesKey(key, hydrated)) return false;
 
-        // Best-effort local-cache prime (helps once idb-keyval is ready for later
-        // reads). NOT relied upon this login: idb-keyval can be unavailable this
-        // early, so the hydrated payload is RETURNED to switchCohort and fed in as
-        // preloadedData, bypassing the local-cache round-trip entirely.
-        await writeLocalCache(key, hydrated, { updatedAt: workspaceRow.updated_at }).catch(() => false);
+        // Best-effort local-cache prime (helps later reads). It is explicitly not
+        // awaited: this login already bypasses IndexedDB by returning `hydrated`
+        // as preloadedData, so waiting here would only add cache I/O to first paint.
+        cachePrimeEntries.push({ key, value: hydrated, meta: { updatedAt: workspaceRow.updated_at } });
+        scheduleColdLoginLocalCachePrime(cachePrimeEntries);
         const rawLen = hydrated && Array.isArray(hydrated.RAW_DATA) ? hydrated.RAW_DATA.length : 0;
         // Return the hydrated payload so switchCohort consumes it directly as
         // preloadedData (idb-independent). Falls back to `true` if somehow empty.
