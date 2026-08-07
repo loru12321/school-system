@@ -1074,6 +1074,18 @@
         };
     }
 
+    function hasIndicatorCalculationInputs(payload) {
+        const indicator = normalizeIndicatorParams(payload?.INDICATOR_PARAMS);
+        const rank1 = parseInt(indicator.ind1, 10);
+        const rank2 = parseInt(indicator.ind2, 10);
+        return rank1 > 0 && rank2 > 0 && getPayloadTargetCount(payload) > 0;
+    }
+
+    function needsIndicatorWorkspaceSupport(payload) {
+        return needsIndicatorPayloadSupplement(payload)
+            || !hasIndicatorCalculationInputs(payload);
+    }
+
     function mergeIndicatorPayloadFields(payload, supplement) {
         const base = (payload && typeof payload === 'object') ? { ...payload } : {};
         if (!supplement || typeof supplement !== 'object') return base;
@@ -1109,12 +1121,12 @@
         return prefix ? `cache_${prefix}${key}` : `cache_${key}`;
     }
 
-    async function loadSnapshotPayloadByKey(key) {
+    async function loadSnapshotPayloadByKey(key, options = {}) {
         const snapshotKey = String(key || '').trim();
         if (!snapshotKey) return null;
 
         try {
-            if (window.idbKeyval) {
+            if (options.preferRemote !== true && window.idbKeyval) {
                 const cached = await idbKeyval.get(getScopedCacheKey(snapshotKey));
                 if (cached && typeof cached === 'object' && !needsIndicatorPayloadSupplement(cached)) return cached;
             }
@@ -2454,6 +2466,54 @@
     };
 
     let indicatorSupportLoadPromise = null;
+
+    function listCurrentExamIndicatorSupportKeys(payload, cohortId) {
+        const currentExamKey = String(payload?.__CURRENT_EXAM_KEY || '').trim();
+        const currentExamId = String(payload?.CURRENT_EXAM_ID || '').trim();
+        const payloadDbExamId = String(payload?.COHORT_DB?.currentExamId || '').trim();
+        const runtimeExamId = String(window.CURRENT_EXAM_ID || '').trim();
+        const runtimeDbExamId = String(window.COHORT_DB?.currentExamId || '').trim();
+        const managerExamKey = typeof CloudManager.getKey === 'function'
+            ? String(CloudManager.getKey() || '').trim()
+            : '';
+
+        return [
+            currentExamKey,
+            currentExamId,
+            payloadDbExamId,
+            runtimeExamId,
+            runtimeDbExamId,
+            managerExamKey
+        ].filter((key, index, keys) => (
+            key
+            && !/^cohort::/i.test(key)
+            && normalizeCohortId(key) === cohortId
+            && keys.indexOf(key) === index
+        ));
+    }
+
+    async function supplementIndicatorSupportFromCurrentExam(payload, cohortId) {
+        let merged = payload && typeof payload === 'object' ? payload : {};
+        if (!needsIndicatorWorkspaceSupport(merged)) return merged;
+
+        // The cohort metadata record is intentionally scoreless after the workspace
+        // split. Parameters may therefore exist only on the active exam snapshot.
+        // Read at most the exact active-exam candidates, force the remote version,
+        // and merge only TARGETS / INDICATOR_PARAMS. RAW_DATA is never applied here.
+        const keys = listCurrentExamIndicatorSupportKeys(merged, cohortId);
+        for (const key of keys) {
+            try {
+                const examPayload = await loadSnapshotPayloadByKey(key, { preferRemote: true });
+                if (!examPayload || typeof examPayload !== 'object') continue;
+                merged = mergeIndicatorPayloadFields(merged, examPayload);
+                if (!needsIndicatorWorkspaceSupport(merged)) break;
+            } catch (error) {
+                console.warn('[Indicator] active-exam support restore skipped:', key, error);
+            }
+        }
+        return merged;
+    }
+
     window.loadIndicatorSupportFromCloud = () => {
         if (indicatorSupportLoadPromise) return indicatorSupportLoadPromise;
         indicatorSupportLoadPromise = (async () => {
@@ -2464,9 +2524,9 @@
             if (!payload || typeof payload !== 'object') payload = {};
 
             // 旧版本曾把空的 TARGETS / INDICATOR_PARAMS 写回当前工作区。
-            // 当前元数据为空时，只查询本届 pre-split 备份，不扫描考试分片或
-            // STUDENT_HISTORY 索引。这样既能找回历史配置，也不会重新下载成绩。
-            if (needsIndicatorPayloadSupplement(payload)) {
+            // 先只查询本届 pre-split 备份，不扫描考试分片或 STUDENT_HISTORY 索引；
+            // 若仍缺失，下面只会精确读取当前考试记录的支持字段。
+            if (needsIndicatorWorkspaceSupport(payload)) {
                 const { data: backupRows, error: backupError } = await selectSystemData({
                     select: 'key,updated_at',
                     keyLike: `BACKUP_cohort::${cohortId}_pre_split_%`,
@@ -2479,9 +2539,11 @@
                     const backupPayload = await loadSnapshotPayloadByKey(row?.key);
                     if (!backupPayload || typeof backupPayload !== 'object') continue;
                     payload = mergeIndicatorPayloadFields(payload, backupPayload);
-                    if (!needsIndicatorPayloadSupplement(payload)) break;
+                    if (!needsIndicatorWorkspaceSupport(payload)) break;
                 }
             }
+
+            payload = await supplementIndicatorSupportFromCurrentExam(payload, cohortId);
 
             const targets = payload.TARGETS && typeof payload.TARGETS === 'object' ? payload.TARGETS : {};
             const indicator = normalizeIndicatorParams(payload.INDICATOR_PARAMS);
