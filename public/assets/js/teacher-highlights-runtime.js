@@ -149,13 +149,17 @@
 
         container.innerHTML = `
             <div class="summary-highlights-head">
-                <strong>本次要点</strong>
-                <span class="summary-highlights-note">自动生成，供参考；只汇总规模与提示，不对个人下结论</span>
+                <strong>本次决策摘要</strong>
+                <span class="summary-highlights-note">只汇总规模与提示，不对个人下结论</span>
             </div>
             <ul class="summary-highlights-list">
-                ${items.map((item) => `<li>${item.text}<span class="summary-highlights-src">来源：${escapeHtml(item.source)}</span></li>`).join('')}
+                ${items.map((item) => `<li class="summary-highlights-item" data-insight-source="${escapeHtml(item.source)}"><span class="summary-highlights-copy">${item.text}</span><span class="summary-highlights-meta"><span class="summary-highlights-src">来源：${escapeHtml(item.source)}</span></span></li>`).join('')}
             </ul>`;
         container.hidden = false;
+        // 只通知展示层补充「核对」入口；不改变教师评价的指标和结果。
+        if (typeof root.CustomEvent === 'function') {
+            root.dispatchEvent(new root.CustomEvent('school:decision-brief-render', { detail: { containerId: CONTAINER_ID } }));
+        }
         return { ok: true, count: items.length };
     }
 

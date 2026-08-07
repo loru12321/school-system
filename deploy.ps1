@@ -44,7 +44,8 @@ if ($missingPaths.Count -gt 0) {
 
 # `git add -u -- <path>` 在该路径下尚无跟踪文件时会以 128 退出（dist/ 被 ignore
 # 时尤其容易撞上），所以先问 git 哪些路径真的有跟踪内容，只对这些跑 -u。
-$trackedUpdatePaths = @(@($sourcePaths) + @("dist") | Where-Object {
+$trackedCandidates = @($sourcePaths) + @("dist")
+$trackedUpdatePaths = @($trackedCandidates | Where-Object {
     $probe = & git ls-files -- $_
     if ($LASTEXITCODE -ne 0) { throw "git ls-files -- $_ failed with exit code $LASTEXITCODE" }
     -not [string]::IsNullOrWhiteSpace($probe)

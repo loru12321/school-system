@@ -175,13 +175,17 @@
 
         container.innerHTML = `
             <div class="summary-highlights-head">
-                <strong>本次要点</strong>
-                <span class="summary-highlights-note">自动生成，供参考；具体数字见下方表格</span>
+                <strong>本次决策摘要</strong>
+                <span class="summary-highlights-note">结论、依据与核对入口都来自当前已生成结果</span>
             </div>
             <ul class="summary-highlights-list">
-                ${items.map((item) => `<li>${item.text}<span class="summary-highlights-src">来源：${escapeHtml(item.source)}</span></li>`).join('')}
+                ${items.map((item) => `<li class="summary-highlights-item" data-insight-source="${escapeHtml(item.source)}"><span class="summary-highlights-copy">${item.text}</span><span class="summary-highlights-meta"><span class="summary-highlights-src">来源：${escapeHtml(item.source)}</span></span></li>`).join('')}
             </ul>`;
         container.hidden = false;
+        // 只通知展示层补充「核对」入口；不改变本页任何计算、排序或数据状态。
+        if (typeof root.CustomEvent === 'function') {
+            root.dispatchEvent(new root.CustomEvent('school:decision-brief-render', { detail: { containerId: CONTAINER_ID } }));
+        }
         return { ok: true, count: items.length };
     }
 
