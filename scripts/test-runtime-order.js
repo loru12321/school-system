@@ -1677,6 +1677,8 @@ assert.ok(
         && runtimeLoaderRuntime.includes("bootEntry('table-heatmap', bootJs('table-heatmap-runtime.js'))")
         && runtimeLoaderRuntime.includes("bootEntry('macro-analysis-compat', bootJs('macro-analysis-compat-runtime.js'))")
         && runtimeLoaderRuntime.includes('window.ensureMacroAnalysisCompatRuntimeLoaded = function ()')
+        && runtimeLoaderRuntime.includes('window.ensureTableHeatmapRuntimeLoaded = function ()')
+        && runtimeLoaderRuntime.includes("installOptionalRuntimeMethod('toggleTableHeatmap', window.ensureTableHeatmapRuntimeLoaded);")
         && runtimeLoaderRuntime.includes("window.SystemRuntimeLoader.load('macro-analysis-compat')"),
     'county analysis compatibility actions and their heatmap control should have an on-demand runtime loader'
 );
@@ -1695,6 +1697,11 @@ assert.ok(
     smokeAllModules.includes('await Promise.resolve(window.renderHorizontalTable());')
         && smokeAllModules.includes('first click into a false production failure'),
     'analysis smoke should await the demand-loaded horizontal-table action before checking its shell'
+);
+assert.ok(
+    smokeAllModules.includes('tableHeatmapToggleWorks')
+        && smokeAllModules.includes("await Promise.resolve(window.toggleTableHeatmap('horizontal-table'))"),
+    'analysis smoke should verify the heatmap can complete its first demand-loaded toggle'
 );
 assert.ok(
     moduleEntryRuntime.includes("if (typeof window.ensureMacroAnalysisCompatRuntimeLoaded === 'function'")

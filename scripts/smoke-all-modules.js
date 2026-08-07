@@ -1752,6 +1752,7 @@ async function runModuleDeepCheck(page, id) {
                 exportMacroTables: typeof window.exportMacroTables === 'function',
                 renderTables: typeof window.renderTables === 'function',
                 toggleTableHeatmap: typeof window.toggleTableHeatmap === 'function',
+                tableHeatmapToggleWorks: false,
                 tableAnchorJumpbarReady: false,
                 tableAnchorButtonsReady: false
             };
@@ -1776,6 +1777,14 @@ async function runModuleDeepCheck(page, id) {
                     const box = document.getElementById('horizontal-box');
                     const table = document.querySelector('#horizontal-table table');
                     horizontalReady = !!box && !box.classList.contains('hidden') && !!table;
+                    if (checks.toggleTableHeatmap) {
+                        const heatmapContainer = document.getElementById('horizontal-table');
+                        await Promise.resolve(window.toggleTableHeatmap('horizontal-table'));
+                        const enabled = !!heatmapContainer?.classList.contains('heatmap-mode');
+                        await Promise.resolve(window.toggleTableHeatmap('horizontal-table'));
+                        checks.tableHeatmapToggleWorks = enabled
+                            && !heatmapContainer?.classList.contains('heatmap-mode');
+                    }
 
                     // Cloud hydration can leave the compare-list cache empty for
                     // one turn even though SCHOOLS is complete.  Verify the

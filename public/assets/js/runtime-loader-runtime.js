@@ -717,6 +717,10 @@ window.ensureMacroAnalysisCompatRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('macro-analysis-compat');
 };
 
+window.ensureTableHeatmapRuntimeLoaded = function () {
+return loadOptionalRuntime('table-heatmap', bootJs('table-heatmap-runtime.js'));
+};
+
 window.ensureProgressAnalysisRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('progress-analysis');
 };
@@ -966,6 +970,11 @@ installOptionalRuntimeMethod(name, window.ensureCountyAnalysisRuntimeLoaded);
 ['renderHorizontalTable', 'exportHorizontalExcel', 'exportMacroTables'].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureMacroAnalysisCompatRuntimeLoaded);
 });
+
+// The analysis button is rendered before its small display runtime arrives on
+// slow connections.  The proxy makes that very first click load and replay
+// the action instead of becoming a no-op while the module finishes loading.
+installOptionalRuntimeMethod('toggleTableHeatmap', window.ensureTableHeatmapRuntimeLoaded);
 
 [
 'switchValueAddedView',
