@@ -13,7 +13,9 @@ const scripts = packageJson.scripts || {};
 const indexHtml = read('src/index.html');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
 const workflowRuntime = read('public/assets/js/workflow-insight-runtime.js');
+const studentOverviewRuntime = read('public/assets/js/student-overview-runtime.js');
 const shellCss = read('src/assets/css/shell.css');
+const mainCss = read('src/assets/css/main.css');
 
 assert.ok(indexHtml.includes('id="shell-workflow-path"'), 'shell overview should include workflow path mount');
 assert.ok(indexHtml.includes('id="workspace-drawer-workflow"'), 'workspace drawer should include workflow path mount');
@@ -42,6 +44,35 @@ assert.ok(
     '.calculation-policy-strip'
 ].forEach((token) => {
     assert.ok(shellCss.includes(token), `shell css missing workflow interaction style: ${token}`);
+});
+
+[
+    'function smBuildActionQueue',
+    'function smRenderActionQueue',
+    'function smOpenStudentDataManager',
+    'window.MP_DATA_CACHE',
+    'data-sm-action',
+    "DataManager.open('student')",
+    'smJumpToStudentModule(target)'
+].forEach((token) => {
+    assert.ok(studentOverviewRuntime.includes(token), `student overview action queue missing contract token: ${token}`);
+});
+
+[
+    'id="smActionQueue"',
+    'id="smActionQueueList"',
+    'data-scroll-anchor="smActionQueue"'
+].forEach((token) => {
+    assert.ok(indexHtml.includes(token), `student overview action queue HTML missing contract token: ${token}`);
+});
+
+[
+    '#student-overview .sm-action-queue',
+    '#student-overview .sm-action-item',
+    'body.dark-mode #student-overview .sm-action-queue',
+    '#student-overview .sm-action-cta:focus-visible'
+].forEach((token) => {
+    assert.ok(mainCss.includes(token), `student overview action queue CSS missing contract token: ${token}`);
 });
 
 assert.strictEqual(

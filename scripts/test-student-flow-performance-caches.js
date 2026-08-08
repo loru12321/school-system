@@ -150,7 +150,7 @@ if (boot.includes("'updateProgressMultiExamSelects',")) {
     'CorrelationAnalysisPerfCache.townshipRankFallbacks.set(cacheKey, ranks)'
 ].forEach((token) => assertContains(teacherBridge, token, teacherBridgeFile));
 
-const marginalStart = overview.indexOf('function smBuildMarginalSummary()');
+const marginalStart = overview.indexOf('function smBuildMarginalSummary(');
 const marginalEnd = overview.indexOf('function smGetSchoolListCached()', marginalStart);
 const marginalSource = marginalStart >= 0 && marginalEnd > marginalStart ? overview.slice(marginalStart, marginalEnd) : '';
 if (!marginalSource || marginalSource.includes('JSON.stringify')) {

@@ -95,24 +95,51 @@ function smBuildUniqueStudentCount(rawList, schoolName = '', className = '') {
     return seen.size;
 }
 
-function smBuildMarginalSummary() {
-    const source = (window.MARGINAL_STUDENTS && typeof window.MARGINAL_STUDENTS === 'object') ? window.MARGINAL_STUDENTS : {};
+function smBuildMarginalSummary(context = {}, selectedClass = '') {
+    const selectedSchool = String(context.schoolValue || context.schoolText || '').trim();
+    const taskRows = Array.isArray(window.MP_DATA_CACHE) ? window.MP_DATA_CACHE : [];
     let classCount = 0;
     let total = 0;
-    const signatureParts = Object.keys(source).sort().map((classKey) => {
-        const subjectMap = source[classKey] || {};
-        classCount += 1;
-        const subjectParts = Object.keys(subjectMap).sort().map((subject) => {
-            const subjectData = subjectMap[subject] || {};
-            const excellentList = Array.isArray(subjectData?.excellentMarginal) ? subjectData.excellentMarginal : [];
-            const passList = Array.isArray(subjectData?.passMarginal) ? subjectData.passMarginal : [];
-            const excellentCount = excellentList.length;
-            const passCount = passList.length;
-            total += excellentCount + passCount;
-            return `${subject}:${excellentCount}:${passCount}`;
+    const signatureParts = [`${selectedSchool}::${selectedClass}`];
+
+    if (taskRows.length) {
+        const classNames = new Set();
+        taskRows.forEach((row) => {
+            if (!row) return;
+            if (selectedSchool && !smSchoolMatches(row.school, selectedSchool)) return;
+            const rowClass = normalizeClass(row.class || '');
+            if (selectedClass && rowClass !== selectedClass) return;
+            total += 1;
+            if (rowClass) classNames.add(rowClass);
+            signatureParts.push([
+                String(row.school || '').trim(),
+                rowClass,
+                String(row.subject || '').trim(),
+                String(row.name || '').trim(),
+                String(row.category || '').trim(),
+                String(row.target || '').trim(),
+                String(row.diff || '').trim()
+            ].join('|'));
         });
-        return [classKey, ...subjectParts].join('|');
-    });
+        classCount = classNames.size;
+        signatureParts.unshift('mp');
+    } else {
+        const legacySource = (window.MARGINAL_STUDENTS && typeof window.MARGINAL_STUDENTS === 'object') ? window.MARGINAL_STUDENTS : {};
+        Object.keys(legacySource).sort().forEach((classKey) => {
+            const subjectMap = legacySource[classKey] || {};
+            classCount += 1;
+            const subjectParts = Object.keys(subjectMap).sort().map((subject) => {
+                const subjectData = subjectMap[subject] || {};
+                const excellentCount = Array.isArray(subjectData?.excellentMarginal) ? subjectData.excellentMarginal.length : 0;
+                const passCount = Array.isArray(subjectData?.passMarginal) ? subjectData.passMarginal.length : 0;
+                total += excellentCount + passCount;
+                return `${subject}:${excellentCount}:${passCount}`;
+            });
+            signatureParts.push([classKey, ...subjectParts].join('|'));
+        });
+        signatureParts.unshift('legacy');
+    }
+
     const signature = signatureParts.join('||');
     if (StudentOverviewPerfCache.marginalSignature === signature) {
         return StudentOverviewPerfCache.marginalSummary;
@@ -215,7 +242,7 @@ function smBuildOverviewModel() {
     const fullProgressRows = readProgressCacheFullState();
     const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();
     const progressSummary = smBuildProgressSummary(progressRows, context, selectedClass);
-    const marginalSummary = smBuildMarginalSummary();
+    const marginalSummary = smBuildMarginalSummary(context, selectedClass);
     const potentialSourceRows = Array.isArray(window.POTENTIAL_STUDENTS_CACHE) ? window.POTENTIAL_STUDENTS_CACHE : [];
     const potentialCount = smBuildPotentialCount(potentialSourceRows, context, selectedClass);
     const uniqueStudentCount = smBuildUniqueStudentCount(rawData, context.schoolValue, selectedClass);
@@ -244,6 +271,145 @@ function smBuildOverviewModel() {
         marginalRecordCount: marginalSummary.total,
         potentialCount
     };
+}
+
+function smBuildActionQueue(model) {
+    const queue = [];
+    const add = (key, tone, title, reason, actionLabel, target = '', action = 'jump') => {
+        queue.push({ key, tone, title, reason, actionLabel, target, action });
+    };
+
+    if (!model.scoreReady) {
+        add(
+            'import-score',
+            'warning',
+            '接入当前届别的成绩数据',
+            '尚未发现可用于学情诊断的成绩与考试期次，后续分析不能可靠生成。',
+            '打开数据管理',
+            '',
+            'open-data-manager'
+        );
+        return queue;
+    }
+
+    if (!model.schoolReady) {
+        add(
+            'confirm-scope',
+            'attention',
+            '锁定学校与班级范围',
+            '当前范围未锁定，部分结果会按全范围展示，不适合直接用于跟进。',
+            '进入学生明细',
+            'student-details'
+        );
+    }
+
+    if (model.exams.length < 2) {
+        add(
+            'complete-history',
+            'warning',
+            '补齐可对比的历史考试',
+            '目前不足 2 期考试，无法形成可靠的进退步与成长对比。',
+            '打开数据管理',
+            '',
+            'open-data-manager'
+        );
+    } else if (!model.progressReady) {
+        add(
+            'generate-progress',
+            'attention',
+            '生成本范围的进退步结果',
+            '已有可对比考试，但尚未生成进退步记录，无法识别需要优先复核的学生。',
+            '进入进退步分析',
+            'progress-analysis'
+        );
+    } else if (model.declineCount > 0) {
+        add(
+            'review-decline',
+            'warning',
+            `复核 ${model.declineCount} 名退步学生`,
+            `当前范围已有 ${model.progressCount} 条进退步记录，其中 ${model.declineCount} 名学生出现退步。`,
+            '查看进退步明细',
+            'progress-analysis'
+        );
+    }
+
+    if (model.schoolReady) {
+        if (model.marginalRecordCount > 0) {
+            add(
+                'review-marginal',
+                'attention',
+                `处理 ${model.marginalRecordCount} 条临界生记录`,
+                `临界生结果已覆盖 ${model.marginalClassCount} 个班级，可继续查看学科与班级干预名单。`,
+                '进入临界生干预',
+                'marginal-push'
+            );
+        } else {
+            add(
+                'generate-marginal',
+                'ready',
+                '生成临界生干预名单',
+                '当前学校尚未生成临界生结果；先生成名单后再安排分科、分班跟进。',
+                '进入临界生干预',
+                'marginal-push'
+            );
+        }
+    }
+
+    if (model.potentialCount > 0) {
+        add(
+            'review-potential',
+            'ready',
+            `查看 ${model.potentialCount} 名偏科潜力生`,
+            '当前范围已有偏科潜力分析结果，可结合学生明细继续复核。',
+            '进入偏科潜力挖掘',
+            'potential-analysis'
+        );
+    }
+
+    if (!queue.length) {
+        add(
+            'review-students',
+            'ready',
+            '继续查看学生明细',
+            '当前学情分析的基础条件已就绪，可从学生明细进入下一轮复盘。',
+            '进入学生明细',
+            'student-details'
+        );
+    }
+
+    return queue.slice(0, 4);
+}
+
+function smRenderActionQueue(model) {
+    const list = document.getElementById('smActionQueueList');
+    const status = document.getElementById('smActionQueueStatus');
+    if (!list || !status) return;
+    const actions = smBuildActionQueue(model);
+    status.textContent = actions.length ? `${actions.length} 项待处理` : '已就绪';
+    status.className = `sm-action-queue__status${actions.some((item) => item.tone === 'warning') ? ' is-warning' : ''}`;
+    list.innerHTML = `<div class="sm-action-list">${actions.map((item, index) => `
+        <div class="sm-action-item is-${tmEscapeHtml(item.tone)}">
+            <span class="sm-action-index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
+            <div class="sm-action-copy">
+                <strong>${tmEscapeHtml(item.title)}</strong>
+                <span>${tmEscapeHtml(item.reason)}</span>
+            </div>
+            <button type="button" class="sm-action-cta" data-sm-action="${tmEscapeHtml(item.action)}" data-sm-target="${tmEscapeHtml(item.target)}">
+                ${tmEscapeHtml(item.actionLabel)} <i class="ti ti-arrow-right" aria-hidden="true"></i>
+            </button>
+        </div>`).join('')}</div>`;
+}
+
+function smOpenStudentDataManager() {
+    if (window.DataManager && typeof window.DataManager.open === 'function') {
+        window.DataManager.open('student');
+        return true;
+    }
+    if (window.UI && typeof window.UI.toast === 'function') {
+        window.UI.toast('数据管理模块正在加载，请稍候重试。', 'info');
+        return false;
+    }
+    return false;
 }
 
 function smSetQuickEntryState(button, enabled, hint = '') {
@@ -467,6 +633,17 @@ function bindStudentOverviewActions() {
             if (!btn.disabled) smJumpToStudentModule(btn.dataset.target || '');
         };
     });
+
+    document.querySelectorAll('#smActionQueue [data-sm-action]').forEach((btn) => {
+        btn.onclick = () => {
+            if (btn.dataset.smAction === 'open-data-manager') {
+                smOpenStudentDataManager();
+                return;
+            }
+            const target = String(btn.dataset.smTarget || '').trim();
+            if (target) smJumpToStudentModule(target);
+        };
+    });
 }
 
 function renderStudentOverview() {
@@ -484,6 +661,7 @@ function renderStudentOverview() {
         improve: model.improveCount,
         decline: model.declineCount,
         marginal: model.marginalRecordCount,
+        marginalClasses: model.marginalClassCount,
         potential: model.potentialCount,
         schools: model.schoolList.join('|')
     });
@@ -540,6 +718,8 @@ function renderStudentOverview() {
     tmSetHtml('smReadySchool', tmBuildMiniCard('学校范围', model.schoolReady ? context.schoolText : '未识别'));
     tmSetHtml('smReadyProgress', tmBuildMiniCard('进退步结果', model.progressReady ? `已生成 ${model.progressCount} 条` : '未生成'));
     tmSetHtml('smReadySupport', tmBuildMiniCard('干预名单', model.supportReady ? '边缘生/潜力生已准备' : '待生成'));
+
+    smRenderActionQueue(model);
 
     const insights = [];
     if (!model.scoreReady) insights.push('当前届别还没有可用于学情诊断的成绩数据，建议先导入成绩。');

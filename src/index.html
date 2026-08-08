@@ -105,8 +105,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-ca1fd738bda5.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-ca1fd738bda5.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-7a3fb5e5361f.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-7a3fb5e5361f.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -4552,6 +4552,7 @@
                         <div class="side-nav-title">总览导航</div>
                         <div class="analysis-side-note">先看就绪状态与提示，再决定进入哪个学生分析子模块。</div>
                         <div class="side-nav-link active" data-scroll-anchor="smReadiness">📋 数据就绪</div>
+                        <div class="side-nav-link" data-scroll-anchor="smActionQueue">✓ 今日优先</div>
                         <div class="side-nav-link" data-scroll-anchor="smInsights">🧭 学情提示</div>
                         <div class="side-nav-link" data-scroll-anchor="smQuickEntry">⚡ 快捷入口</div>
                         <div class="side-nav-link" data-scroll-anchor="smSummary">📊 本次摘要</div>
@@ -4583,6 +4584,17 @@
                                 <div id="smReadyProgress"></div>
                                 <div id="smReadySupport"></div>
                             </div>
+                        </div>
+
+                        <div id="smActionQueue" class="anchor-target analysis-anchor-panel sm-action-queue" style="margin-bottom:14px;">
+                            <div class="sub-header analysis-section-head sm-action-queue__head">
+                                <div>
+                                    <span>✓ 今日优先</span>
+                                    <small>基于当前范围的真实数据状态生成；不修改任何成绩或计算结果。</small>
+                                </div>
+                                <span id="smActionQueueStatus" class="sm-action-queue__status">正在检查</span>
+                            </div>
+                            <div id="smActionQueueList" aria-live="polite">正在整理下一步…</div>
                         </div>
 
                         <div id="smInsights" class="anchor-target analysis-anchor-panel" style="margin-bottom:14px;">
