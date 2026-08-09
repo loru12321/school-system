@@ -569,6 +569,44 @@ html body:not(.dark-mode) #app :is(.analysis-shell-head, .sec-head.analysis-shel
     box-shadow: none !important;
 }
 
+/* Keep each analysis legible as a short operational route: set scope, read
+ * evidence, then take the next action. This reuses the real module flow, not
+ * a decorative onboarding layer. */
+html body:not(.dark-mode) #app .analysis-workspace .analysis-flow-banner {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 !important;
+    margin: 0 0 14px !important;
+    padding: 0 !important;
+    border: 1px solid var(--ins-line) !important;
+    border-radius: 7px !important;
+    background: var(--ins-surface-soft) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace .analysis-flow-step {
+    min-height: 102px;
+    padding: 15px 17px !important;
+    border: 0 !important;
+    border-right: 1px solid var(--ins-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace .analysis-flow-step:last-child {
+    border-right: 0 !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace .analysis-flow-kicker {
+    color: var(--ins-coral-deep) !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+}
+
+html body:not(.dark-mode) #app .analysis-workspace .analysis-flow-value {
+    color: var(--ins-ink-strong) !important;
+}
+
 html body:not(.dark-mode) #app :is(.control-panel, .analysis-inline-panel, .analysis-anchor-panel, .analysis-doc-panel, .analysis-generated-panel, .table-wrap, .analysis-table-wrap) {
     padding: 18px 0 !important;
     border: 0 !important;
@@ -588,8 +626,8 @@ html body:not(.dark-mode) #app :is(input, select, textarea, .form-control) {
 }
 
 html body:not(.dark-mode) #app :is(input, select, textarea, .form-control):focus {
-    border-color: #e7aab5 !important;
-    box-shadow: 0 0 0 3px rgba(217, 120, 135, 0.12) !important;
+    border-color: #79abb4 !important;
+    box-shadow: 0 0 0 3px rgba(24, 116, 134, 0.12) !important;
 }
 
 html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-primary, .btn.btn-purple, .btn.btn-blue, .primary-btn, .analysis-action-btn.primary, button.primary) {
@@ -659,8 +697,8 @@ html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summar
 }
 
 html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summary-card):hover {
-    border-color: #efd6da !important;
-    box-shadow: 0 8px 22px rgba(98, 59, 68, 0.07) !important;
+    border-color: #c7e0e2 !important;
+    box-shadow: 0 8px 22px rgba(24, 116, 134, 0.07) !important;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -706,5 +744,19 @@ html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summar
     html body:not(.dark-mode) #app .section.card-box.analysis-workspace {
         padding: 14px !important;
         border-radius: 14px !important;
+    }
+
+    html body:not(.dark-mode) #app .analysis-workspace .analysis-flow-banner {
+        grid-template-columns: 1fr !important;
+    }
+
+    html body:not(.dark-mode) #app .analysis-workspace .analysis-flow-step {
+        min-height: 0;
+        border-right: 0 !important;
+        border-bottom: 1px solid var(--ins-line) !important;
+    }
+
+    html body:not(.dark-mode) #app .analysis-workspace .analysis-flow-step:last-child {
+        border-bottom: 0 !important;
     }
 }
