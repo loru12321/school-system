@@ -3050,6 +3050,12 @@ function syncRuntimeStateToWindow() {
 
 let TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {};
 let POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {};
+// 偏科潜力结果由 deferred runtime 通过裸名全局词法绑定写入。只读 getter 让
+// 学情总览可安全读取同一份结果，同时不把可变数组挂到 window 上。
+function readPotentialStudentsCache() {
+    return POTENTIAL_STUDENTS_CACHE;
+}
+window.readPotentialStudentsCache = readPotentialStudentsCache;
 let radarChartInstance = null;
 let segmentChartInstance = null; // 新增：分数段直方图实例
 let trendChartInstance = null; // 进退步趋势图实例

@@ -79,13 +79,10 @@ function resolveBuiltScriptPath(projectRoot, src) {
     return path.join(projectRoot, 'dist', relativeSrc);
 }
 
-function readLocalScriptContent(projectRoot, src) {
+function readLocalScriptContent(projectRoot, src, { preferPublic = false } = {}) {
     const builtPath = resolveBuiltScriptPath(projectRoot, src);
     const publicPath = resolvePublicScriptPath(projectRoot, src);
-
-    // Runtime manifests are patched in public before dist is rebuilt.
-    const isRuntimeManifest = MANIFEST_RUNTIME_PATHS.some((manifestPath) => src.includes(path.basename(manifestPath)));
-    const sourcePath = (isRuntimeManifest && fs.existsSync(publicPath)) ? publicPath : (fs.existsSync(builtPath) ? builtPath : publicPath);
+    const sourcePath = (preferPublic && fs.existsSync(publicPath)) ? publicPath : (fs.existsSync(builtPath) ? builtPath : publicPath);
 
     if (!fs.existsSync(sourcePath)) {
         return '';
@@ -212,7 +209,9 @@ function shouldInlineRuntimeSource(src) {
 function getBootRuntimeSkillSources(projectRoot) {
     const sources = new Set();
     for (const manifestPath of MANIFEST_RUNTIME_PATHS) {
-        const content = readLocalScriptContent(projectRoot, manifestPath);
+        // Read the authored manifest only for source discovery; the final
+        // offline file inlines the equivalent minified dist runtime.
+        const content = readLocalScriptContent(projectRoot, manifestPath, { preferPublic: true });
         if (!content) continue;
         const manifestMatch = content.match(/var\s+SYSTEM_RUNTIME_SKILLS\s*=\s*\{([\s\S]*?)\n\};/);
         if (!manifestMatch) continue;

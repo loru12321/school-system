@@ -51,6 +51,7 @@ assert.ok(
     'function smRenderActionQueue',
     'function smOpenStudentDataManager',
     'window.MP_DATA_CACHE',
+    'window.readPotentialStudentsCache',
     'data-sm-action',
     "DataManager.open('student')",
     'smJumpToStudentModule(target)'

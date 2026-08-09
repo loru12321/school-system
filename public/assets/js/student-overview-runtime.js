@@ -1,16 +1,8 @@
 // Teaching management runtime: student overview dashboard.
-const StudentOverviewPerfCache = {
-    schoolListSignature: '',
-    schoolList: [],
-    uniqueCountSignature: '',
-    uniqueCount: 0,
-    marginalSignature: '',
-    marginalSummary: { classCount: 0, total: 0 },
-    progressSignature: '',
-    progressSummary: null,
-    potentialSignature: '',
-    potentialCount: 0,
-    renderSignature: ''
+const smCache = {
+    ls: '', list: [], us: '', uc: 0,
+    ms: '', marginal: { classCount: 0, total: 0 },
+    ps: '', progress: null, pts: '', potential: 0, rs: ''
 };
 var SM_OVERVIEW_RENDER_FRAME = 0;
 
@@ -65,15 +57,11 @@ function smSchoolMatches(rowSchool, selectedSchool) {
 
 function smBuildUniqueStudentCount(rawList, schoolName = '', className = '') {
     const rows = Array.isArray(rawList) ? rawList : [];
-    const rawSelectedSchool = String(schoolName || '').trim();
-    const selectedLower = rawSelectedSchool.toLowerCase();
-    const selectedSchool = (selectedLower === 'all' || selectedLower === '__all__' || rawSelectedSchool === '全部学校' || rawSelectedSchool.includes('请选择') || rawSelectedSchool.includes('请先选择'))
-        ? ''
-        : rawSelectedSchool;
+    const selectedSchool = String(schoolName || '').trim();
     const selectedClass = normalizeClass(className || '');
     const signature = `${smRowsSignature(rows)}::${selectedSchool}::${selectedClass}`;
-    if (StudentOverviewPerfCache.uniqueCountSignature === signature) {
-        return StudentOverviewPerfCache.uniqueCount;
+    if (smCache.us === signature) {
+        return smCache.uc;
     }
     const seen = new Set();
 
@@ -90,13 +78,13 @@ function smBuildUniqueStudentCount(rawList, schoolName = '', className = '') {
         if (key !== '||') seen.add(key);
     });
 
-    StudentOverviewPerfCache.uniqueCountSignature = signature;
-    StudentOverviewPerfCache.uniqueCount = seen.size;
+    smCache.us = signature;
+    smCache.uc = seen.size;
     return seen.size;
 }
 
 function smBuildMarginalSummary(context = {}, selectedClass = '') {
-    const selectedSchool = String(context.schoolValue || context.schoolText || '').trim();
+    const selectedSchool = context.schoolValue;
     const taskRows = Array.isArray(window.MP_DATA_CACHE) ? window.MP_DATA_CACHE : [];
     let classCount = 0;
     let total = 0;
@@ -141,32 +129,32 @@ function smBuildMarginalSummary(context = {}, selectedClass = '') {
     }
 
     const signature = signatureParts.join('||');
-    if (StudentOverviewPerfCache.marginalSignature === signature) {
-        return StudentOverviewPerfCache.marginalSummary;
+    if (smCache.ms === signature) {
+        return smCache.marginal;
     }
-    StudentOverviewPerfCache.marginalSignature = signature;
-    StudentOverviewPerfCache.marginalSummary = { classCount, total };
-    return StudentOverviewPerfCache.marginalSummary;
+    smCache.ms = signature;
+    smCache.marginal = { classCount, total };
+    return smCache.marginal;
 }
 
 function smGetSchoolListCached() {
     const schools = window.SCHOOLS || {};
     const signature = Object.keys(schools).sort().join('|');
-    if (StudentOverviewPerfCache.schoolListSignature === signature) {
-        return StudentOverviewPerfCache.schoolList;
+    if (smCache.ls === signature) {
+        return smCache.list;
     }
-    StudentOverviewPerfCache.schoolListSignature = signature;
-    StudentOverviewPerfCache.schoolList = (typeof listAvailableSchoolsForCompare === 'function')
+    smCache.ls = signature;
+    smCache.list = (typeof listAvailableSchoolsForCompare === 'function')
         ? listAvailableSchoolsForCompare('all')
         : Object.keys(schools);
-    return StudentOverviewPerfCache.schoolList;
+    return smCache.list;
 }
 
 function smBuildProgressSummary(progressRows, context, selectedClass) {
     const rows = Array.isArray(progressRows) ? progressRows : [];
     const signature = `${smRowsSignature(rows)}::${context.schoolValue || ''}::${selectedClass || ''}`;
-    if (StudentOverviewPerfCache.progressSignature === signature && StudentOverviewPerfCache.progressSummary) {
-        return StudentOverviewPerfCache.progressSummary;
+    if (smCache.ps === signature && smCache.progress) {
+        return smCache.progress;
     }
     let progressCount = 0;
     let improveCount = 0;
@@ -181,16 +169,16 @@ function smBuildProgressSummary(progressRows, context, selectedClass) {
         else if (changeValue < 0) declineCount += 1;
         else stableCount += 1;
     });
-    StudentOverviewPerfCache.progressSignature = signature;
-    StudentOverviewPerfCache.progressSummary = { progressCount, improveCount, declineCount, stableCount };
-    return StudentOverviewPerfCache.progressSummary;
+    smCache.ps = signature;
+    smCache.progress = { progressCount, improveCount, declineCount, stableCount };
+    return smCache.progress;
 }
 
 function smBuildPotentialCount(potentialSourceRows, context, selectedClass) {
     const rows = Array.isArray(potentialSourceRows) ? potentialSourceRows : [];
     const signature = `${smRowsSignature(rows)}::${context.schoolValue || ''}::${selectedClass || ''}`;
-    if (StudentOverviewPerfCache.potentialSignature === signature) {
-        return StudentOverviewPerfCache.potentialCount;
+    if (smCache.pts === signature) {
+        return smCache.potential;
     }
     let potentialCount = 0;
     rows.forEach((row) => {
@@ -198,15 +186,15 @@ function smBuildPotentialCount(potentialSourceRows, context, selectedClass) {
         if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return;
         potentialCount += 1;
     });
-    StudentOverviewPerfCache.potentialSignature = signature;
-    StudentOverviewPerfCache.potentialCount = potentialCount;
+    smCache.pts = signature;
+    smCache.potential = potentialCount;
     return potentialCount;
 }
 
 function smGetCurrentStudentContext() {
     const fallbackSchool = readCurrentSchool();
     const studentSchoolSelect = document.getElementById('studentSchoolSelect');
-    const schoolValue = String(studentSchoolSelect?.value || '').trim();
+    const schoolValue = String(studentSchoolSelect?.value || fallbackSchool || '').trim();
     const schoolText = String(studentSchoolSelect?.selectedOptions?.[0]?.textContent || schoolValue || fallbackSchool || '未识别').trim();
     const classValue = tmGetSelectRawValue(['studentClassSelect', 'sbClassSelect', 'sel-class'], '');
     const classText = tmGetSelectDisplayValue(['studentClassSelect', 'sbClassSelect', 'sel-class'], '全部班级');
@@ -243,7 +231,9 @@ function smBuildOverviewModel() {
     const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();
     const progressSummary = smBuildProgressSummary(progressRows, context, selectedClass);
     const marginalSummary = smBuildMarginalSummary(context, selectedClass);
-    const potentialSourceRows = Array.isArray(window.POTENTIAL_STUDENTS_CACHE) ? window.POTENTIAL_STUDENTS_CACHE : [];
+    const potentialSourceRows = typeof window.readPotentialStudentsCache === 'function'
+        ? window.readPotentialStudentsCache()
+        : [];
     const potentialCount = smBuildPotentialCount(potentialSourceRows, context, selectedClass);
     const uniqueStudentCount = smBuildUniqueStudentCount(rawData, context.schoolValue, selectedClass);
     const scoreReady = rawData.length > 0 && exams.length > 0;
@@ -665,11 +655,11 @@ function renderStudentOverview() {
         potential: model.potentialCount,
         schools: model.schoolList.join('|')
     });
-    if (StudentOverviewPerfCache.renderSignature === renderSignature) {
+    if (smCache.rs === renderSignature) {
         bindStudentOverviewActions();
         return;
     }
-    StudentOverviewPerfCache.renderSignature = renderSignature;
+    smCache.rs = renderSignature;
 
     tmSetHtml('smStatScores', tmBuildStatCard(
         '当前成绩库',
@@ -691,7 +681,7 @@ function renderStudentOverview() {
         '进退步状态',
         model.progressReady ? '已生成' : '待分析',
         model.progressReady ? 'ok' : 'warn',
-        model.progressReady ? `${model.progressCount} 条记录` : `${model.progressCount} 条记录`,
+        `${model.progressCount} 条记录`,
         model.progressReady
             ? `进步 ${model.improveCount} 人 / 退步 ${model.declineCount} 人 / 持平 ${model.stableCount} 人`
             : '进入进退步/增值评价后可自动生成结果'
@@ -701,9 +691,7 @@ function renderStudentOverview() {
         '干预准备',
         model.supportReady ? '已准备' : '待补结果',
         model.supportReady ? 'ok' : 'warn',
-        model.supportReady
-            ? `边缘生 ${model.marginalRecordCount} 人 / 潜力生 ${model.potentialCount} 人`
-            : `边缘生 ${model.marginalRecordCount} 人 / 潜力生 ${model.potentialCount} 人`,
+        `边缘生 ${model.marginalRecordCount} 人 / 潜力生 ${model.potentialCount} 人`,
         `涉及 ${model.marginalClassCount} 个班级的边缘生缓存`
     ));
 

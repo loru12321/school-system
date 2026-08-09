@@ -15,10 +15,9 @@
  * runtime 提供，本模块在其后（DEFERRED_APP_MODULES）加载，通过 root.* 访问并带
  * typeof 兜底。formatVal 为 4 行纯格式化函数，此处内联同一份，避免跨模块耦合。
  *
- * POTENTIAL_STUDENTS_CACHE 沿用 app.js 顶层 let 的「裸名」全局词法绑定（app.js:2952
- * 声明、4859 处重置均保持不动）：本模块以裸名写入，与 snapshot-system-runtime 的裸名
- * 读取（snapshot 的 payload 采集）保持逐字节一致；student-overview 的 window. 读取此前
- * 恒为 undefined→[]（既有行为），本轮不改动、不复活，以免改变已展示的计数口径。
+ * POTENTIAL_STUDENTS_CACHE 沿用 app.js 顶层 let 的「裸名」全局词法绑定：本模块以裸名写入，
+ * 与 snapshot-system-runtime 的裸名读取保持一致。学情总览通过 app.js 的只读
+ * readPotentialStudentsCache() 获取同一份结果；仍不把可变数组直接挂到 window，避免跨模块写入。
  */
 (function (root) {
     if (!root) return;

@@ -2703,7 +2703,10 @@ async function runModuleDeepCheck(page, id) {
             const buildExpected = (model) => {
                 const context = model.context || {};
                 const rawRows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
-                const selectedSchool = String(context.schoolValue || '').trim();
+                const rawSelectedSchool = String(context.schoolValue || context.schoolText || '').trim();
+                const selectedSchool = ['all', '__all__', '全部学校', '未识别', '未选择'].includes(rawSelectedSchool.toLowerCase())
+                    ? ''
+                    : rawSelectedSchool;
                 const selectedClass = normalizeClassValue(context.classValue || '');
                 const seen = new Set();
                 rawRows.forEach((row) => {
@@ -2737,26 +2740,39 @@ async function runModuleDeepCheck(page, id) {
                     else progress.stable += 1;
                 });
 
-                const marginalSource = (window.MARGINAL_STUDENTS && typeof window.MARGINAL_STUDENTS === 'object')
-                    ? window.MARGINAL_STUDENTS
-                    : {};
                 let marginalClassCount = 0;
                 let marginalRecordCount = 0;
-                Object.entries(marginalSource).forEach(([, subjectMap]) => {
-                    marginalClassCount += 1;
-                    Object.values(subjectMap || {}).forEach((subjectData) => {
-                        const excellentList = Array.isArray(subjectData?.excellentMarginal)
-                            ? subjectData.excellentMarginal
-                            : [];
-                        const passList = Array.isArray(subjectData?.passMarginal)
-                            ? subjectData.passMarginal
-                            : [];
-                        marginalRecordCount += excellentList.length + passList.length;
+                const marginalTaskRows = Array.isArray(window.MP_DATA_CACHE) ? window.MP_DATA_CACHE : [];
+                if (marginalTaskRows.length) {
+                    const classNames = new Set();
+                    marginalTaskRows.forEach((row) => {
+                        if (selectedSchool && !schoolMatches(row.school, selectedSchool)) return;
+                        const rowClass = normalizeClassValue(row.class || '');
+                        if (selectedClass && rowClass !== selectedClass) return;
+                        marginalRecordCount += 1;
+                        if (rowClass) classNames.add(rowClass);
                     });
-                });
+                    marginalClassCount = classNames.size;
+                } else {
+                    const marginalSource = (window.MARGINAL_STUDENTS && typeof window.MARGINAL_STUDENTS === 'object')
+                        ? window.MARGINAL_STUDENTS
+                        : {};
+                    Object.entries(marginalSource).forEach(([, subjectMap]) => {
+                        marginalClassCount += 1;
+                        Object.values(subjectMap || {}).forEach((subjectData) => {
+                            const excellentList = Array.isArray(subjectData?.excellentMarginal)
+                                ? subjectData.excellentMarginal
+                                : [];
+                            const passList = Array.isArray(subjectData?.passMarginal)
+                                ? subjectData.passMarginal
+                                : [];
+                            marginalRecordCount += excellentList.length + passList.length;
+                        });
+                    });
+                }
 
-                const potentialRows = Array.isArray(window.POTENTIAL_STUDENTS_CACHE)
-                    ? window.POTENTIAL_STUDENTS_CACHE
+                const potentialRows = typeof window.readPotentialStudentsCache === 'function'
+                    ? window.readPotentialStudentsCache()
                     : [];
                 let potentialCount = 0;
                 potentialRows.forEach((row) => {
@@ -2828,6 +2844,17 @@ async function runModuleDeepCheck(page, id) {
             const quickStateMismatches = Object.entries(expectedQuickStates)
                 .filter(([target, enabled]) => quickStates[target] !== enabled)
                 .map(([target, enabled]) => ({ target, expectedEnabled: enabled, actualEnabled: quickStates[target] }));
+            const expectedActionQueue = typeof window.smBuildActionQueue === 'function'
+                ? window.smBuildActionQueue(model)
+                : [];
+            const actionQueue = document.getElementById('smActionQueue');
+            const actionStatus = document.getElementById('smActionQueueStatus');
+            const actionButtons = Array.from(document.querySelectorAll('#smActionQueue [data-sm-action]'));
+            const actionButtonMismatches = actionButtons
+                .map((button, index) => ({ button, action: expectedActionQueue[index] || null }))
+                .filter(({ button, action }) => !action
+                    || button.dataset.smAction !== action.action
+                    || (action.action === 'jump' && button.dataset.smTarget !== action.target));
             const countFields = [
                 model.uniqueStudentCount,
                 model.progressCount,
@@ -2885,6 +2912,10 @@ async function runModuleDeepCheck(page, id) {
                     && statSupportText.includes(String(model.potentialCount)),
                 quickEntryReady: quickButtons.length === Object.keys(expectedQuickStates).length,
                 quickEntryStatesMatch: quickStateMismatches.length === 0,
+                actionQueueReady: !!actionQueue && !!actionStatus && typeof window.smBuildActionQueue === 'function',
+                actionQueueCountMatches: actionButtons.length === expectedActionQueue.length && actionButtons.length > 0,
+                actionQueueStatusMatches: String(actionStatus?.textContent || '').includes(String(expectedActionQueue.length)),
+                actionQueueActionsMatch: actionButtonMismatches.length === 0,
                 topQuickStatesMatch: (!!document.getElementById('smQuickStudentBtn')?.disabled) === !expectedQuickStates['student-details']
                     && (!!document.getElementById('smQuickProgressBtn')?.disabled) === !expectedQuickStates['progress-analysis']
                     && (!!document.getElementById('smQuickReportBtn')?.disabled) === !expectedQuickStates['report-generator']
@@ -2906,7 +2937,13 @@ async function runModuleDeepCheck(page, id) {
                     potential: model.potentialCount
                 },
                 expected,
-                quickStateMismatches
+                quickStateMismatches,
+                actionButtonMismatches: actionButtonMismatches.map(({ button, action }) => ({
+                    action: action?.action || null,
+                    expectedTarget: action?.target || '',
+                    actualAction: button.dataset.smAction || '',
+                    actualTarget: button.dataset.smTarget || ''
+                }))
             };
         }, { strictPerformance: STRICT_PERFORMANCE_BUDGETS });
     }

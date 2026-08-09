@@ -78,14 +78,18 @@ const pkg = JSON.parse(read(packageFile));
 ].forEach((token) => assertContains(studentDetails, token, studentDetailsFile));
 
 [
-    'StudentOverviewPerfCache',
+    'smCache',
     'smRowsSignature',
     'smGetSchoolListCached',
     'smBuildProgressSummary',
     'signatureParts',
     'smBuildPotentialCount',
+    'readPotentialStudentsCache',
     'renderSignature'
 ].forEach((token) => assertContains(overview, token, overviewFile));
+
+assertContains(app, 'function readPotentialStudentsCache()', appFile);
+assertContains(app, 'window.readPotentialStudentsCache = readPotentialStudentsCache;', appFile);
 
 [
     'ProgressBaselineExamPerfCache',
