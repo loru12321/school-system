@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-f9ee555b013e';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-9196a0fcc423';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -478,12 +478,7 @@ scheduleIdleBootTask(() => {
 function prewarmLoginTransitionModules() {
 if (window.__LOGIN_TRANSITION_PREFETCH_STARTED__) return;
 if (!shouldPrefetchLoginModules()) return;
-// Authentication and the selected-cohort cloud bundle are the critical path.
-// Do not start the full desktop preload (36 modules by default) while either is
-// in flight: even `prefetch` can occupy connections on constrained networks.
-// Reuse the deliberately small login budget so the first workbench modules are
-// warm without making the submit action feel stalled.
-const limit = Math.min(getLoginModulePrefetchLimit(), APP_MODULES.length);
+const limit = Math.min(getAppModulePreloadLimit(), APP_MODULES.length);
 if (limit <= 0) return;
 window.__LOGIN_TRANSITION_PREFETCH_STARTED__ = true;
 prefetchAppModuleList(APP_MODULES.slice(0, limit), 'login-transition');
@@ -1820,13 +1815,10 @@ const bootAuth = window.Auth || {
 
         try {
             const loginRequest = bootGateway.login(user, pass, className);
+            prewarmLoginTransitionModules();
             const result = await loginRequest;
 
             if (result && result.user) {
-                // Start the small core-module warm-up only after the gateway has
-                // answered. This keeps authentication and cloud restore from
-                // competing with a broad script prefetch on a cold connection.
-                prewarmLoginTransitionModules();
                 const matchedUser = result.user;
                 writeBootSessionUser(matchedUser);
                 setBootHelperMessage('身份验证成功，正在载入工作台。', 'success');
