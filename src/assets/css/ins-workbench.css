@@ -8,20 +8,20 @@
  */
 
 :root {
-    --ins-canvas: #faf7f4;
-    --ins-canvas-soft: #f5f0ed;
-    --ins-surface: #ffffff;
-    --ins-surface-soft: #fffaf8;
-    --ins-ink: #2a2830;
-    --ins-ink-strong: #1e1b22;
-    --ins-muted: #7e7780;
-    --ins-line: #ebe3e1;
-    --ins-line-strong: #ddd0d0;
-    --ins-coral: #d97887;
-    --ins-coral-deep: #bd5d70;
-    --ins-coral-soft: #fcebed;
-    --ins-mint: #4d9a89;
-    --ins-mint-soft: #e7f4ef;
+    --ins-canvas: #f7f5f1;
+    --ins-canvas-soft: #f0efea;
+    --ins-surface: #fffefd;
+    --ins-surface-soft: #fbfaf7;
+    --ins-ink: #4c5962;
+    --ins-ink-strong: #1f2b35;
+    --ins-muted: #74808a;
+    --ins-line: #e7e4de;
+    --ins-line-strong: #d6d9d5;
+    --ins-coral: #187486;
+    --ins-coral-deep: #105e6e;
+    --ins-coral-soft: #e7f2f3;
+    --ins-mint: #2f7c68;
+    --ins-mint-soft: #e9f4f0;
     --ins-lilac-soft: #f1edf8;
     --ins-radius: 18px;
     --ins-radius-small: 12px;
@@ -524,10 +524,13 @@ html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-curr
 /* Modules retain clear boundaries for dense data and large tables. */
 html body:not(.dark-mode) #app .section.card-box,
 html body:not(.dark-mode) #app .section.card-box.analysis-workspace {
-    padding: 20px !important;
-    border: 1px solid var(--ins-line) !important;
-    border-radius: var(--ins-radius) !important;
-    background: var(--ins-surface) !important;
+    width: min(100%, 1480px) !important;
+    margin-right: auto !important;
+    margin-left: auto !important;
+    padding: 8px 0 34px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
     box-shadow: none !important;
 }
 
@@ -540,9 +543,12 @@ html body:not(.dark-mode) #app .analysis-workspace {
 
 html body:not(.dark-mode) #app .module-desc-bar,
 html body:not(.dark-mode) #app .analysis-workspace .module-desc-bar.analysis-hero {
+    margin: 0 0 14px !important;
+    padding: 22px 2px 18px !important;
     border: 0 !important;
-    border-radius: var(--ins-radius-small) !important;
-    background: var(--ins-canvas-soft) !important;
+    border-bottom: 1px solid var(--ins-line-strong) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
     box-shadow: none !important;
 }
 
@@ -550,7 +556,9 @@ html body:not(.dark-mode) #app .analysis-workspace .module-desc-bar h3,
 html body:not(.dark-mode) #app .module-desc-bar h3 {
     color: var(--ins-ink-strong) !important;
     font-family: inherit !important;
-    letter-spacing: -0.015em !important;
+    font-size: clamp(23px, 2.25vw, 31px) !important;
+    font-weight: 780 !important;
+    letter-spacing: -0.035em !important;
 }
 
 html body:not(.dark-mode) #app :is(.analysis-shell-head, .sec-head.analysis-shell-head) {
@@ -562,9 +570,11 @@ html body:not(.dark-mode) #app :is(.analysis-shell-head, .sec-head.analysis-shel
 }
 
 html body:not(.dark-mode) #app :is(.control-panel, .analysis-inline-panel, .analysis-anchor-panel, .analysis-doc-panel, .analysis-generated-panel, .table-wrap, .analysis-table-wrap) {
-    border-color: var(--ins-line) !important;
-    border-radius: var(--ins-radius-small) !important;
-    background: #ffffff !important;
+    padding: 18px 0 !important;
+    border: 0 !important;
+    border-top: 1px solid var(--ins-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
 }
@@ -615,9 +625,9 @@ html body:not(.dark-mode) #app table {
 }
 
 html body:not(.dark-mode) #app table thead th {
-    border-color: var(--ins-line) !important;
-    background: #f8f4f3 !important;
-    color: #4a424b !important;
+    border-color: #344452 !important;
+    background: #344452 !important;
+    color: #f9fbfb !important;
     font-weight: 750 !important;
 }
 
@@ -626,7 +636,7 @@ html body:not(.dark-mode) #app table :is(td, th) {
 }
 
 html body:not(.dark-mode) #app table tbody tr:hover {
-    background: #fff6f5 !important;
+    background: #f0f8f8 !important;
 }
 
 html body:not(.dark-mode) #app :is(.modal-content, .workspace-drawer-panel, .spotlight-box) {
@@ -643,8 +653,8 @@ html body:not(.dark-mode) #app .workspace-drawer-panel {
 
 html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summary-card) {
     border-color: var(--ins-line) !important;
-    border-radius: var(--ins-radius-small) !important;
-    background: #ffffff !important;
+    border-radius: 7px !important;
+    background: var(--ins-surface) !important;
     box-shadow: none !important;
 }
 

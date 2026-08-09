@@ -301,10 +301,10 @@
         .tm-mini-card {
             height: 100%;
             padding: 16px 18px;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
         }
 
         .tm-stat-head {
