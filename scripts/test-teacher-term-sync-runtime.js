@@ -174,9 +174,13 @@ assert.ok(
 assert.ok(
   cloud.includes('function refreshLoadedTeacherAnalysis(options = {})')
     && cloud.includes("section.classList.contains('active')")
-    && cloud.includes('deferAnalysis: options.deferAnalysis === true')
     && cloud.includes('{ deferAnalysis: background }'),
   'background teacher restore should defer and cancel stale teacher-analysis refresh work'
+);
+
+assert.ok(
+  /DataManager\.syncTeacherHistory\(\{[\s\S]*?source:\s*'cloud',[\s\S]*?deferAnalysis:\s*true/.test(cloud),
+  'one cloud roster restore must persist its history silently and leave the single scheduled refresh in charge of rendering'
 );
 
 assert.ok(

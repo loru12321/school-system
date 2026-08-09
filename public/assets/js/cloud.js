@@ -404,7 +404,10 @@
                 termId: keyTermId || getCurrentTeacherTermId() || getCurrentTermId() || '',
                 source: 'cloud',
                 timestamp: updatedAt || '',
-                deferAnalysis: options.deferAnalysis === true
+                // The single refresh below owns both interactive and background
+                // updates. Letting history persistence refresh as well used to
+                // render the full teacher surface twice after one cloud pull.
+                deferAnalysis: true
             });
         }
         if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
