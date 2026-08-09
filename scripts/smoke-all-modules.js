@@ -5490,6 +5490,56 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
         }
     }
 
+    // 「本次必看」和「联考分析」都复用了 analysis。进入原分类再点两率一分时，
+    // 导航壳层必须高亮当前分类里的对应项，不能因跨分类同 ID 回退到第一项（综合评价）。
+    currentScope = 'duplicate-module-nav-state';
+    const duplicateModuleNavState = await (async () => {
+        try {
+            const categoryClicked = await page.evaluate(() => {
+                const categoryTitle = String(window.NAV_STRUCTURE?.town?.title || '').trim();
+                const category = Array.from(document.querySelectorAll('#sidebar-nav .sidebar-menu-item'))
+                    .find((item) => String(item.querySelector('.sidebar-menu-item__title')?.textContent || '').trim() === categoryTitle);
+                if (!category) return false;
+                category.click();
+                return true;
+            });
+            if (!categoryClicked) return { error: '联考分析 category missing' };
+            await page.waitForTimeout(450);
+            await page.click('#shell-module-rail [data-module-id="analysis"]');
+            await page.waitForTimeout(450);
+            return await page.evaluate(() => ({
+                category: typeof window.getCurrentNavCategory === 'function' ? window.getCurrentNavCategory() : '',
+                activeModuleIds: Array.from(document.querySelectorAll('#shell-module-rail .shell-module-rail-chip.is-active'))
+                    .map((chip) => chip.getAttribute('data-module-id')),
+                activePressed: document.querySelector('#shell-module-rail [data-module-id="analysis"]')?.getAttribute('aria-pressed') || '',
+                status: String(document.getElementById('shell-module-rail-status')?.textContent || '').trim(),
+                section: document.querySelector('.section.active')?.id || ''
+            }));
+        } catch (error) {
+            return { error: String(error?.message || error).slice(0, 160) };
+        }
+    })();
+    summary.duplicateModuleNavState = duplicateModuleNavState;
+    if (duplicateModuleNavState.error) {
+        errors.push({ scope: 'duplicate-module-nav-state', message: `duplicate module nav probe failed: ${duplicateModuleNavState.error}` });
+    } else {
+        if (duplicateModuleNavState.category !== 'town') {
+            errors.push({ scope: 'duplicate-module-nav-state', message: `联考分析 category resolved as ${duplicateModuleNavState.category || 'empty'}` });
+        }
+        if (duplicateModuleNavState.activeModuleIds.join(',') !== 'analysis') {
+            errors.push({ scope: 'duplicate-module-nav-state', message: `analysis rail active state is ${duplicateModuleNavState.activeModuleIds.join(',') || 'none'}` });
+        }
+        if (duplicateModuleNavState.activePressed !== 'true') {
+            errors.push({ scope: 'duplicate-module-nav-state', message: 'analysis rail chip should expose aria-pressed=true' });
+        }
+        if (!duplicateModuleNavState.status.includes('两率一分对比')) {
+            errors.push({ scope: 'duplicate-module-nav-state', message: `analysis rail status mismatch: ${duplicateModuleNavState.status || 'empty'}` });
+        }
+        if (duplicateModuleNavState.section !== 'analysis') {
+            errors.push({ scope: 'duplicate-module-nav-state', message: `active content section is ${duplicateModuleNavState.section || 'none'}` });
+        }
+    }
+
     currentScope = 'hotspot-prewarm';
     trace('hotspot-prewarm:start');
     summary.performance.hotspotPrewarm = await prewarmSmokeHotspots(page);

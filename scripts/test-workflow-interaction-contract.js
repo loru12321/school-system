@@ -14,6 +14,7 @@ const indexHtml = read('src/index.html');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
 const workflowRuntime = read('public/assets/js/workflow-insight-runtime.js');
 const studentOverviewRuntime = read('public/assets/js/student-overview-runtime.js');
+const shellRuntime = read('public/assets/js/shell-runtime.js');
 const shellCss = read('src/assets/css/shell.css');
 const mainCss = read('src/assets/css/main.css');
 
@@ -45,6 +46,19 @@ assert.ok(
 ].forEach((token) => {
     assert.ok(shellCss.includes(token), `shell css missing workflow interaction style: ${token}`);
 });
+
+assert.ok(
+    shellRuntime.includes('const requestedActiveId = activeId || getActiveSectionId();'),
+    'shell navigation should resolve the requested active module before rendering chrome'
+);
+assert.ok(
+    shellRuntime.includes('visibleItems.find((item) => item.id === requestedActiveId) || fallbackItem'),
+    'shell navigation should resolve active state inside the current category when module ids are reused'
+);
+assert.ok(
+    !shellRuntime.includes('const resolvedActive = findItemById(activeId || getActiveSectionId());'),
+    'shell navigation must not resolve duplicate module ids across categories before checking the current category'
+);
 
 [
     'function smBuildActionQueue',

@@ -910,10 +910,11 @@
 
         const visibleItems = resolveVisibleItems(category);
         const fallbackItem = visibleItems[0] || category.items[0] || null;
-        const resolvedActive = findItemById(activeId || getActiveSectionId());
-        const activeItem = (resolvedActive && resolvedActive.categoryKey === currentCategory)
-            ? resolvedActive.item
-            : fallbackItem;
+        // 同一模块可同时出现在「本次必看」和它的原分类中。壳层状态必须以当前
+        // 分类的可见项为准，否则 findItemById 会先命中 core 的同名入口，继而
+        // 退回到当前分类第一项，造成内容已切换、导航却高亮错误模块。
+        const requestedActiveId = activeId || getActiveSectionId();
+        const activeItem = visibleItems.find((item) => item.id === requestedActiveId) || fallbackItem;
 
         const activeTitle = activeItem ? activeItem.text : category.title;
         const activeHint = activeItem ? activeItem.hint : category.summary;
