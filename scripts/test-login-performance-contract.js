@@ -134,6 +134,18 @@ assert.match(
 );
 assert.match(
   bootRuntimeJs,
+  /function prewarmLoginTransitionModules\(\)[\s\S]*?Math\.min\(getLoginModulePrefetchLimit\(\), APP_MODULES\.length\)/,
+  'post-auth warm-up must use the small login prefetch budget rather than the full desktop module budget'
+);
+const gatewayLoginIndex = bootRuntimeJs.indexOf('const loginRequest = bootGateway.login');
+const gatewayResultIndex = bootRuntimeJs.indexOf('const result = await loginRequest;', gatewayLoginIndex);
+const transitionPrefetchIndex = bootRuntimeJs.indexOf('prewarmLoginTransitionModules();', gatewayResultIndex);
+assert.ok(
+  gatewayLoginIndex >= 0 && gatewayResultIndex > gatewayLoginIndex && transitionPrefetchIndex > gatewayResultIndex,
+  'login transition prefetch must start only after gateway authentication has completed'
+);
+assert.match(
+  bootRuntimeJs,
   /function shouldPrefetchLoginModules\(\)/,
   'login page module prefetch should have a connection and viewport gate'
 );
