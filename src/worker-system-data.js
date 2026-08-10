@@ -677,6 +677,7 @@ async function handleSystemDataBootstrap(request, env) {
   const cohortId = normalizeText(payload?.cohortId) || extractSystemDataCohortId(cohortKey);
   const rawLimit = Number(payload?.latestExamLimit);
   const latestExamLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 24) : 12;
+  const requestedExamKey = normalizeText(payload?.currentExamKey);
 
   // Phase 1 (one in-region D1 batch): workspace row + latest same-cohort exam
   // metadata. Selection stays 100% client-side (compareWorkspaceExamRows scoring),
@@ -709,11 +710,13 @@ async function handleSystemDataBootstrap(request, env) {
   // this shard when its pick matches shard.key; otherwise it discards it and
   // fetches the correct shard, so this is a hint, never an authority.
   const newestExamKey = examMetaRows.length ? normalizeText(examMetaRows[0].key) : '';
+  const requestedExamExists = requestedExamKey && examMetaRows.some((row) => normalizeText(row?.key) === requestedExamKey);
+  const prefetchedExamKey = requestedExamExists ? requestedExamKey : newestExamKey;
   let currentShard = null;
-  if (newestExamKey) {
+  if (prefetchedExamKey) {
     const shardRes = await db
       .prepare(`SELECT key, updated_at, content_text, object_key FROM ${SYSTEM_DATA_TABLE} WHERE key = ?`)
-      .bind(newestExamKey)
+      .bind(prefetchedExamKey)
       .all()
       .catch(() => null);
     const shardRaw = firstRow(shardRes);

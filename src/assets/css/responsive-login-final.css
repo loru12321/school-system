@@ -1,38 +1,22 @@
 /*
  * Canonical login surface.
  *
- * This is the only final-cascade owner for the clean login skin.  Older
- * compatibility sheets can keep styling unused legacy markup, but they must
- * not determine the active school and parent entry surface.
+ * A quiet, operational entry screen: the school identity gives orientation,
+ * while the form remains the only primary task. This final cascade deliberately
+ * neutralises decorative legacy themes instead of adding another visual layer.
  */
 
 :root {
-    --login-surface: #f7f9fc;
+    --login-surface: #f6f8fb;
     --login-paper: #ffffff;
-    --login-ink: #142033;
-    --login-muted: #63748a;
-    --login-line: #dce5ef;
-    --login-soft: #f2f6fa;
-    --login-accent: #2858d8;
-    --login-accent-deep: #1d43b4;
-    --login-accent-soft: #eaf0ff;
-    --login-radius: 24px;
-}
-
-/* INS-inspired login refinement.  It keeps the existing responsive contract
- * and runtime hooks while replacing the previous blue, technical visual with
- * a warm editorial entry screen. */
-:root {
-    --login-surface: #faf7f4;
-    --login-paper: #ffffff;
-    --login-ink: #2a2830;
-    --login-muted: #817983;
-    --login-line: #ebe2e1;
-    --login-soft: #f7f0ef;
-    --login-accent: #d97887;
-    --login-accent-deep: #bd5d70;
-    --login-accent-soft: #fcebed;
-    --login-radius: 26px;
+    --login-ink: #182230;
+    --login-muted: #66758a;
+    --login-line: #dfe6ef;
+    --login-soft: #f1f5f9;
+    --login-accent: #2563eb;
+    --login-accent-deep: #1d4ed8;
+    --login-accent-soft: #eaf1ff;
+    --login-radius: 18px;
 }
 
 body.login-overlay-active {
@@ -50,7 +34,7 @@ html body #login-overlay[data-login-skin="clean"] {
     width: 100vw !important;
     min-height: 100svh !important;
     min-height: 100dvh !important;
-    padding: clamp(16px, 3vw, 44px) !important;
+    padding: clamp(16px, 3vw, 40px) !important;
     overflow: auto !important;
     box-sizing: border-box !important;
     color: var(--login-ink) !important;
@@ -58,6 +42,8 @@ html body #login-overlay[data-login-skin="clean"] {
     background-image: none !important;
 }
 
+/* The page should feel immediate on a cold device. Motion belongs to the
+ * loading state, not to form paint or navigation. */
 html body #login-overlay[data-login-skin="clean"] * {
     animation: none !important;
 }
@@ -78,110 +64,87 @@ html body #login-overlay[data-login-skin="clean"] .login-form-actions {
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
-    align-items: stretch !important;
-    width: min(1360px, 100%) !important;
-    min-height: min(820px, calc(100dvh - clamp(32px, 6vw, 88px))) !important;
+    width: min(1280px, 100%) !important;
+    min-height: min(760px, calc(100dvh - clamp(32px, 6vw, 80px))) !important;
     display: grid !important;
-    grid-template-columns: minmax(0, 1.04fr) minmax(420px, 0.96fr) !important;
+    align-items: stretch !important;
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 0.92fr) !important;
     overflow: hidden !important;
     margin: auto !important;
     padding: 0 !important;
-    border: 1px solid rgba(207, 218, 231, 0.92) !important;
+    border: 1px solid var(--login-line) !important;
     border-radius: var(--login-radius) !important;
     background: var(--login-paper) !important;
-    box-shadow: 0 26px 80px rgba(31, 54, 86, 0.12) !important;
+    box-shadow: 0 18px 48px rgba(23, 42, 70, 0.08) !important;
 }
 
+/* Identity is calm supporting context, never a marketing hero. */
 html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-    position: relative !important;
     min-width: 0 !important;
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    gap: clamp(52px, 11vh, 116px) !important;
-    padding: clamp(34px, 5vw, 76px) !important;
+    gap: 48px !important;
+    padding: clamp(34px, 5vw, 68px) !important;
     overflow: hidden !important;
     color: var(--login-ink) !important;
     border: 0 !important;
     border-right: 1px solid var(--login-line) !important;
     border-radius: 0 !important;
-    background:
-        linear-gradient(rgba(40, 88, 216, 0.042) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(40, 88, 216, 0.042) 1px, transparent 1px),
-        linear-gradient(145deg, #f8fbff 0%, #f3f7fc 58%, #eef4fb 100%) !important;
-    background-size: 46px 46px, 46px 46px, auto !important;
+    background: #f2f6fb !important;
+    background-image: none !important;
     box-shadow: none !important;
 }
 
-html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-    content: "" !important;
-    position: absolute !important;
-    right: clamp(36px, 6vw, 88px) !important;
-    bottom: clamp(34px, 7vw, 90px) !important;
-    width: min(340px, 47%) !important;
-    aspect-ratio: 1.16 !important;
-    display: block !important;
-    border: 1px solid rgba(40, 88, 216, 0.16) !important;
-    border-radius: 26px !important;
-    background:
-        linear-gradient(90deg, transparent 0 31%, rgba(40, 88, 216, 0.08) 31% 32%, transparent 32% 66%, rgba(16, 134, 123, 0.10) 66% 67%, transparent 67%),
-        linear-gradient(180deg, transparent 0 25%, rgba(40, 88, 216, 0.08) 25% 26%, transparent 26% 59%, rgba(16, 134, 123, 0.10) 59% 60%, transparent 60%),
-        rgba(255, 255, 255, 0.72) !important;
-    box-shadow: 0 18px 42px rgba(40, 88, 216, 0.08) !important;
-    transform: rotate(-4deg) !important;
-    pointer-events: none !important;
-}
-
+html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
 html body #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-    content: "数据 · 判断 · 行动" !important;
-    position: absolute !important;
-    right: clamp(32px, 5vw, 76px) !important;
-    bottom: clamp(48px, 8vw, 104px) !important;
-    z-index: 1 !important;
-    display: block !important;
-    padding: 11px 14px !important;
-    border: 1px solid rgba(40, 88, 216, 0.14) !important;
-    border-radius: 999px !important;
-    color: #3a5b9d !important;
-    background: rgba(255, 255, 255, 0.86) !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.08em !important;
-    pointer-events: none !important;
+    display: none !important;
+    content: none !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-brand,
 html body #login-overlay[data-login-skin="clean"] .login-clean-copy {
     position: relative !important;
-    z-index: 2 !important;
+    z-index: 1 !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-brand {
     display: flex !important;
     align-items: center !important;
-    gap: 12px !important;
+    gap: 11px !important;
     margin: 0 !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-mark {
-    width: 44px !important;
-    height: 44px !important;
+    width: 42px !important;
+    height: 42px !important;
     display: inline-grid !important;
     place-items: center !important;
     flex: 0 0 auto !important;
-    border-radius: 14px !important;
-    color: #ffffff !important;
-    background: var(--login-accent) !important;
-    box-shadow: 0 10px 22px rgba(40, 88, 216, 0.20) !important;
-    font-size: 17px !important;
-    font-weight: 900 !important;
+    overflow: hidden !important;
+    border: 1px solid #d6e2f5 !important;
+    border-radius: 12px !important;
+    color: var(--login-accent) !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-mark::before,
+html body #login-overlay[data-login-skin="clean"] .login-clean-mark::after {
+    content: none !important;
+}
+
+html body #login-overlay[data-login-skin="clean"] .login-clean-mark img {
+    width: 34px !important;
+    height: 34px !important;
+    object-fit: contain !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-brand strong {
     display: block !important;
     color: var(--login-ink) !important;
-    font-size: 17px !important;
+    font-size: 16px !important;
     line-height: 1.2 !important;
     letter-spacing: -0.02em !important;
 }
@@ -191,47 +154,49 @@ html body #login-overlay[data-login-skin="clean"] .login-clean-brand small {
     margin-top: 3px !important;
     color: var(--login-muted) !important;
     font-size: 11px !important;
-    letter-spacing: 0.04em !important;
+    letter-spacing: 0.02em !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-copy {
-    width: min(440px, 100%) !important;
+    width: min(420px, 100%) !important;
     margin: 0 !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-copy span {
     display: block !important;
-    margin: 0 0 14px !important;
-    color: var(--login-accent) !important;
-    font-size: 13px !important;
-    font-weight: 850 !important;
-    letter-spacing: 0.04em !important;
+    margin: 0 0 12px !important;
+    color: var(--login-accent-deep) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.06em !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    margin: 0 0 18px !important;
+    margin: 0 0 16px !important;
     color: var(--login-ink) !important;
-    font-size: clamp(52px, 6.6vw, 82px) !important;
-    font-weight: 900 !important;
-    line-height: 0.96 !important;
-    letter-spacing: -0.075em !important;
+    font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif !important;
+    font-size: clamp(40px, 4.2vw, 58px) !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    letter-spacing: -0.055em !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-copy p {
     max-width: 350px !important;
     margin: 0 !important;
     color: var(--login-muted) !important;
-    font-size: 15px !important;
-    line-height: 1.78 !important;
+    font-size: 14px !important;
+    line-height: 1.75 !important;
 }
 
+/* The action area is deliberately plain: one form, one primary action. */
 html body #login-overlay[data-login-skin="clean"] .login-clean-card {
     min-width: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: clamp(34px, 6vh, 70px) clamp(32px, 7vw, 104px) !important;
+    padding: clamp(32px, 6vh, 64px) clamp(30px, 6vw, 92px) !important;
     overflow: auto !important;
     border: 0 !important;
     border-radius: 0 !important;
@@ -242,34 +207,34 @@ html body #login-overlay[data-login-skin="clean"] .login-clean-card {
 html body #login-overlay[data-login-skin="clean"] .login-form-header,
 html body #login-overlay[data-login-skin="clean"] .login-clean-switch,
 html body #login-overlay[data-login-skin="clean"] .login-clean-form {
-    width: min(100%, 480px) !important;
+    width: min(100%, 450px) !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-form-header {
-    margin: 0 0 20px !important;
+    margin: 0 0 18px !important;
     text-align: left !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-portal-badge {
     display: inline-flex !important;
     align-items: center !important;
-    min-height: 26px !important;
-    padding: 0 10px !important;
-    border: 1px solid rgba(40, 88, 216, 0.16) !important;
+    min-height: 24px !important;
+    padding: 0 9px !important;
+    border: 1px solid #cfe0ff !important;
     border-radius: 999px !important;
-    color: var(--login-accent) !important;
+    color: var(--login-accent-deep) !important;
     background: var(--login-accent-soft) !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
     font-weight: 800 !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-form-header h2 {
-    margin: 12px 0 7px !important;
+    margin: 11px 0 6px !important;
     color: var(--login-ink) !important;
-    font-size: clamp(28px, 3vw, 36px) !important;
-    font-weight: 850 !important;
-    line-height: 1.1 !important;
-    letter-spacing: -0.045em !important;
+    font-size: 30px !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+    letter-spacing: -0.04em !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-form-header p,
@@ -284,76 +249,75 @@ html body #login-overlay[data-login-skin="clean"] .login-portal-helper {
 html body #login-overlay[data-login-skin="clean"] .login-clean-switch {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 4px !important;
-    margin: 0 0 18px !important;
-    padding: 4px !important;
+    gap: 3px !important;
+    margin: 0 0 16px !important;
+    padding: 3px !important;
     border: 1px solid var(--login-line) !important;
-    border-radius: 12px !important;
+    border-radius: 9px !important;
     background: var(--login-soft) !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .role-btn {
-    min-height: 42px !important;
+    min-height: 38px !important;
     border: 0 !important;
-    border-radius: 9px !important;
-    color: #56677d !important;
+    border-radius: 7px !important;
+    color: var(--login-muted) !important;
     background: transparent !important;
     box-shadow: none !important;
-    font-size: 14px !important;
-    font-weight: 800 !important;
-    transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease !important;
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    transition: color 140ms ease, background-color 140ms ease !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .role-btn.active {
     color: var(--login-ink) !important;
     background: #ffffff !important;
-    box-shadow: 0 1px 4px rgba(30, 53, 82, 0.10) !important;
+    box-shadow: 0 1px 3px rgba(24, 34, 48, 0.08) !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-form {
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
+    gap: 9px !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-label {
     margin: 3px 0 -2px !important;
-    color: #34455c !important;
-    font-size: 13px !important;
-    font-weight: 800 !important;
+    color: #3d4b60 !important;
+    font-size: 12px !important;
+    font-weight: 750 !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-entry-field {
-    min-height: 52px !important;
+    min-height: 50px !important;
     display: grid !important;
-    grid-template-columns: 78px minmax(0, 1fr) !important;
+    grid-template-columns: 72px minmax(0, 1fr) !important;
     align-items: center !important;
     overflow: hidden !important;
     border: 1px solid var(--login-line) !important;
-    border-radius: 12px !important;
-    background: #fbfcfe !important;
+    border-radius: 9px !important;
+    background: #ffffff !important;
     box-shadow: none !important;
-    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease !important;
+    transition: border-color 140ms ease, box-shadow 140ms ease !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-entry-field:focus-within {
-    border-color: rgba(40, 88, 216, 0.62) !important;
-    background: #ffffff !important;
-    box-shadow: 0 0 0 4px rgba(40, 88, 216, 0.10) !important;
+    border-color: #8fb5ff !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-entry-prefix {
-    padding-left: 16px !important;
-    color: #61738a !important;
+    padding-left: 15px !important;
+    color: #718198 !important;
     font-size: 12px !important;
-    font-weight: 800 !important;
+    font-weight: 750 !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-entry-field input,
 html body #login-overlay[data-login-skin="clean"] .login-entry-field select {
     min-width: 0 !important;
-    min-height: 50px !important;
-    padding: 0 15px !important;
+    min-height: 48px !important;
+    padding: 0 14px !important;
     border: 0 !important;
     outline: 0 !important;
     color: var(--login-ink) !important;
@@ -363,29 +327,29 @@ html body #login-overlay[data-login-skin="clean"] .login-entry-field select {
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-entry-field input::placeholder {
-    color: #93a2b5 !important;
+    color: #9aa7b8 !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-panel {
     margin-top: 3px !important;
-    padding: 12px !important;
-    border: 1px solid #eedba6 !important;
-    border-radius: 12px !important;
-    background: #fffaf0 !important;
+    padding: 10px !important;
+    border: 1px solid #dce6f6 !important;
+    border-radius: 10px !important;
+    background: #f8fbff !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-head {
-    margin-bottom: 8px !important;
+    margin-bottom: 7px !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-head span {
-    color: #564116 !important;
-    font-size: 13px !important;
-    font-weight: 850 !important;
+    color: #324767 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-head small {
-    color: #9b7c3f !important;
+    color: #7788a0 !important;
     font-size: 11px !important;
 }
 
@@ -396,25 +360,26 @@ html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-row {
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-row button {
-    min-width: 68px !important;
-    border: 1px solid #d9c17e !important;
-    border-radius: 10px !important;
-    color: #61491a !important;
+    min-width: 64px !important;
+    border: 1px solid #cbd9ed !important;
+    border-radius: 8px !important;
+    color: #31527e !important;
     background: #ffffff !important;
-    font-weight: 800 !important;
+    font-size: 12px !important;
+    font-weight: 750 !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-submit {
-    min-height: 52px !important;
-    margin-top: 6px !important;
+    min-height: 50px !important;
+    margin-top: 5px !important;
     border: 0 !important;
-    border-radius: 12px !important;
+    border-radius: 9px !important;
     color: #ffffff !important;
     background: var(--login-accent) !important;
-    box-shadow: 0 12px 22px rgba(40, 88, 216, 0.20) !important;
-    font-size: 16px !important;
-    font-weight: 850 !important;
-    transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease !important;
+    box-shadow: none !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    transition: background-color 140ms ease, transform 140ms ease !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] #login-submit-button.login-clean-submit {
@@ -423,23 +388,19 @@ html body #login-overlay[data-login-skin="clean"] #login-submit-button.login-cle
     background: var(--login-accent) !important;
 }
 
-html body #login-overlay[data-login-skin="clean"] #login-submit-button.login-clean-submit:hover {
-    border-color: var(--login-accent-deep) !important;
-    background: var(--login-accent-deep) !important;
-}
-
 html body #login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
     background: var(--login-accent-deep) !important;
-    box-shadow: 0 15px 26px rgba(40, 88, 216, 0.26) !important;
     transform: translateY(-1px) !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-clean-submit:active {
-    transform: translateY(0) scale(0.99) !important;
+    transform: translateY(0) !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .login-entry-transition {
-    border-radius: 12px !important;
+    border: 1px solid #cfe0ff !important;
+    border-radius: 9px !important;
+    background: #f4f8ff !important;
 }
 
 html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[data-login-sound-hidden="1"],
@@ -447,9 +408,6 @@ html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[hidden] 
     display: none !important;
 }
 
-/* The intermediate range deliberately stacks the form after a compact brand
- * band. It keeps the touch targets and archive selector readable at tablet
- * widths instead of squeezing a desktop split layout into the viewport. */
 @media (min-width: 769px) and (max-width: 1180px) {
     html body #login-overlay[data-login-skin="clean"] {
         align-items: flex-start !important;
@@ -467,29 +425,16 @@ html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[hidden] 
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-        min-height: 260px !important;
-        gap: 36px !important;
+        min-height: 236px !important;
+        gap: 30px !important;
         padding: 30px 34px !important;
         border-right: 0 !important;
         border-bottom: 1px solid var(--login-line) !important;
     }
 
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-        display: none !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-copy {
-        max-width: 460px !important;
-    }
-
     html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-        margin-bottom: 10px !important;
-        font-size: clamp(42px, 7vw, 60px) !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-copy p {
-        max-width: 420px !important;
+        margin-bottom: 9px !important;
+        font-size: 44px !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-card {
@@ -524,13 +469,23 @@ html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[hidden] 
 }
 
 @media (min-width: 1181px) and (max-height: 800px) {
+    html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        gap: 32px !important;
+        padding-top: 30px !important;
+        padding-bottom: 30px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        font-size: 42px !important;
+    }
+
     html body #login-overlay[data-login-skin="clean"] .login-clean-card {
-        padding-top: 22px !important;
-        padding-bottom: 22px !important;
+        padding-top: 20px !important;
+        padding-bottom: 20px !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-form-header {
-        margin-bottom: 12px !important;
+        margin-bottom: 10px !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-form-header p,
@@ -541,7 +496,7 @@ html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[hidden] 
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-switch {
-        margin-bottom: 12px !important;
+        margin-bottom: 10px !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-form {
@@ -566,7 +521,7 @@ html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[hidden] 
     }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 768px) {
     html body #login-overlay[data-login-skin="clean"] {
         align-items: flex-start !important;
         padding: 0 !important;
@@ -574,6 +529,7 @@ html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[hidden] 
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
         width: 100% !important;
+        min-height: 100vh !important;
         min-height: 100svh !important;
         min-height: 100dvh !important;
         display: flex !important;
@@ -585,50 +541,34 @@ html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[hidden] 
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-        min-height: 258px !important;
-        gap: 32px !important;
-        padding: max(24px, env(safe-area-inset-top)) 24px 26px !important;
+        min-height: 216px !important;
+        gap: 26px !important;
+        padding-top: max(24px, env(safe-area-inset-top, 0px)) !important;
+        padding-bottom: 26px !important;
+        padding-left: max(24px, env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(24px, env(safe-area-inset-right, 0px)) !important;
         border-right: 0 !important;
         border-bottom: 1px solid var(--login-line) !important;
     }
 
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-        right: 22px !important;
-        bottom: 18px !important;
-        width: 170px !important;
-        opacity: 0.62 !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-        right: 20px !important;
-        bottom: 31px !important;
-        padding: 8px 10px !important;
-        font-size: 10px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-copy {
-        max-width: 300px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-copy span {
-        margin-bottom: 8px !important;
-        font-size: 11px !important;
-    }
-
     html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-        margin-bottom: 10px !important;
-        font-size: clamp(42px, 13vw, 58px) !important;
+        margin-bottom: 8px !important;
+        font-size: 40px !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-copy p {
-        max-width: 286px !important;
+        max-width: 320px !important;
         font-size: 13px !important;
         line-height: 1.6 !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-card {
         display: block !important;
-        padding: 28px 24px max(34px, env(safe-area-inset-bottom)) !important;
+        padding-top: 28px !important;
+        padding-left: max(24px, env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(24px, env(safe-area-inset-right, 0px)) !important;
+        padding-bottom: 34px !important;
+        padding-bottom: max(34px, env(safe-area-inset-bottom, 0px)) !important;
         overflow: visible !important;
     }
 
@@ -642,293 +582,21 @@ html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[hidden] 
     }
 }
 
-@media (max-width: 768px) {
-    html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
-        min-height: 100vh !important;
-        min-height: 100svh !important;
-        min-height: 100dvh !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-        padding-left: max(24px, env(safe-area-inset-left, 0px)) !important;
-        padding-right: max(24px, env(safe-area-inset-right, 0px)) !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-card {
-        padding-left: max(24px, env(safe-area-inset-left, 0px)) !important;
-        padding-right: max(24px, env(safe-area-inset-right, 0px)) !important;
-        padding-bottom: 34px !important;
-        padding-bottom: max(34px, env(safe-area-inset-bottom, 0px)) !important;
-    }
-}
-
 @media (max-width: 440px) {
     html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-        min-height: 236px !important;
-        padding-right: 20px !important;
-        padding-left: 20px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-        display: none !important;
+        min-height: 204px !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-card {
-        padding-right: 18px !important;
-        padding-left: 18px !important;
+        padding-left: max(18px, env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(18px, env(safe-area-inset-right, 0px)) !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-entry-field {
-        grid-template-columns: 68px minmax(0, 1fr) !important;
+        grid-template-columns: 64px minmax(0, 1fr) !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-entry-prefix {
-        padding-left: 13px !important;
-    }
-}
-
-@media (min-width: 961px) and (max-height: 760px) {
-    html body #login-overlay[data-login-skin="clean"] {
-        padding-top: 18px !important;
-        padding-bottom: 18px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
-        min-height: calc(100dvh - 36px) !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-        gap: 34px !important;
-        padding-top: 30px !important;
-        padding-bottom: 30px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-        font-size: clamp(46px, 5.8vw, 68px) !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-card {
-        padding-top: 24px !important;
-        padding-bottom: 24px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-form-header {
-        margin-bottom: 12px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-form {
-        gap: 7px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-entry-field {
-        min-height: 46px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-entry-field input,
-    html body #login-overlay[data-login-skin="clean"] .login-entry-field select {
-        min-height: 44px !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-submit {
-        min-height: 46px !important;
-    }
-}
-
-/* Final light INS skin. Keep these rules last so previous compatibility
- * selectors cannot turn the current login screen back into a blue dashboard. */
-html body #login-overlay[data-login-skin="clean"] {
-    color: var(--login-ink) !important;
-    background: #faf7f4 !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-shell {
-    border-color: var(--login-line) !important;
-    background: var(--login-paper) !important;
-    box-shadow: none !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-    color: var(--login-ink) !important;
-    border-color: var(--login-line) !important;
-    background: #f6e9e7 !important;
-    background-image: none !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-    right: clamp(30px, 6vw, 86px) !important;
-    bottom: clamp(36px, 8vw, 100px) !important;
-    width: min(310px, 44%) !important;
-    aspect-ratio: 1 !important;
-    border: 0 !important;
-    border-radius: 50% 50% 42% 58% !important;
-    background: #eec7cf !important;
-    box-shadow: none !important;
-    transform: rotate(-12deg) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-    content: "" !important;
-    right: clamp(72px, 11vw, 164px) !important;
-    bottom: clamp(94px, 15vw, 178px) !important;
-    width: clamp(74px, 9vw, 118px) !important;
-    height: clamp(74px, 9vw, 118px) !important;
-    display: block !important;
-    padding: 0 !important;
-    border: 0 !important;
-    border-radius: 42% 58% 58% 42% !important;
-    background: #b8dbcf !important;
-    box-shadow: none !important;
-    font-size: 0 !important;
-    transform: rotate(18deg) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-mark {
-    border-radius: 50% !important;
-    color: #ffffff !important;
-    background: var(--login-accent) !important;
-    box-shadow: 0 10px 24px rgba(189, 93, 112, 0.17) !important;
-}
-
-/* The brand glyph now lives as a real text node in the markup
- * (index.html: <span class="login-clean-mark">校</span>). A legacy
- * compatibility sheet still injects the same character through
- * `.login-clean-mark::before { content: "校" }`, which doubled the glyph
- * once this final skin restored a non-zero font-size on the mark. Drop the
- * generated content so only the single HTML text node renders. */
-html body #login-overlay[data-login-skin="clean"] .login-clean-mark::before,
-html body #login-overlay[data-login-skin="clean"] .login-clean-mark::after {
-    content: none !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-brand strong,
-html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1,
-html body #login-overlay[data-login-skin="clean"] .login-form-header h2 {
-    color: var(--login-ink) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-brand small,
-html body #login-overlay[data-login-skin="clean"] .login-clean-copy p,
-html body #login-overlay[data-login-skin="clean"] .login-form-header p,
-html body #login-overlay[data-login-skin="clean"] .login-clean-helper,
-html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-helper,
-html body #login-overlay[data-login-skin="clean"] .login-portal-helper {
-    color: var(--login-muted) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-copy span {
-    color: var(--login-accent-deep) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-    font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif !important;
-    font-weight: 850 !important;
-    letter-spacing: -0.075em !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-card {
-    background: #ffffff !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-portal-badge {
-    border-color: #f1d4da !important;
-    color: var(--login-accent-deep) !important;
-    background: var(--login-accent-soft) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-switch {
-    border-color: var(--login-line) !important;
-    background: #f8f1f0 !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .role-btn {
-    color: #7c727b !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .role-btn.active {
-    color: var(--login-accent-deep) !important;
-    background: #ffffff !important;
-    box-shadow: 0 2px 7px rgba(91, 55, 63, 0.09) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-label {
-    color: #4d454d !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-entry-field {
-    border-color: var(--login-line) !important;
-    background: #fffdfc !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-entry-field:focus-within {
-    border-color: #e6acb7 !important;
-    background: #ffffff !important;
-    box-shadow: 0 0 0 4px rgba(217, 120, 135, 0.12) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-entry-prefix {
-    color: #947882 !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-entry-field input,
-html body #login-overlay[data-login-skin="clean"] .login-entry-field select {
-    color: var(--login-ink) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-entry-field input::placeholder {
-    color: #b3a4aa !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-panel {
-    border-color: #e5d8ef !important;
-    background: #f7f2fb !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-head span {
-    color: #5f4d74 !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-head small {
-    color: #8c789d !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-graduate-cohort-row button {
-    border-color: #ddcce9 !important;
-    color: #665077 !important;
-    background: #ffffff !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-submit {
-    background: var(--login-accent) !important;
-    box-shadow: 0 12px 24px rgba(189, 93, 112, 0.19) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
-    background: var(--login-accent-deep) !important;
-    box-shadow: 0 15px 28px rgba(189, 93, 112, 0.22) !important;
-}
-
-html body #login-overlay[data-login-skin="clean"] .login-entry-transition {
-    border-color: #f0dce0 !important;
-    background: #fff8f8 !important;
-}
-
-@media (max-width: 960px) {
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-        background: #f6e9e7 !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-        background: #eec7cf !important;
-    }
-
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-        background: #b8dbcf !important;
-    }
-}
-
-@media (max-width: 440px) {
-    html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-        min-height: 236px !important;
+        padding-left: 12px !important;
     }
 }

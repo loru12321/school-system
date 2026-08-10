@@ -713,3 +713,193 @@ html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summar
         border-radius: 14px !important;
     }
 }
+
+/* Final operational calibration: one blue state colour, quiet separators and
+ * compact controls. It deliberately comes after historic style sheets so the
+ * workspace no longer reads as a collage of theme experiments. */
+html body:not(.dark-mode) #app .shell-overview-card--dock {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+}
+
+html body:not(.dark-mode) #app .workflow-path {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    scrollbar-width: none;
+}
+
+html body:not(.dark-mode) #app .workflow-path::-webkit-scrollbar {
+    display: none;
+}
+
+html body:not(.dark-mode) #app .workflow-path__step {
+    flex: 0 0 auto !important;
+    min-height: 28px !important;
+    padding: 0 8px !important;
+    border: 0 !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--ins-muted) !important;
+    font-size: 11px !important;
+    font-weight: 750 !important;
+}
+
+html body:not(.dark-mode) #app .workflow-path__step.is-active {
+    border-bottom-color: var(--ins-coral) !important;
+    background: transparent !important;
+    color: var(--ins-coral-deep) !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-bar {
+    grid-template-columns: minmax(190px, 0.78fr) minmax(0, 1.22fr) !important;
+    gap: 12px !important;
+    padding: 9px 0 !important;
+    border-top: 1px solid var(--ins-line) !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--ins-line) !important;
+    border-left: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-summary {
+    padding-right: 12px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-title {
+    font-size: 13px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-statuses {
+    justify-content: flex-end !important;
+    gap: 5px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-status {
+    min-height: 24px !important;
+    padding: 0 7px !important;
+    border-color: transparent !important;
+    background: var(--ins-canvas-soft) !important;
+    font-size: 11px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-task-groups {
+    grid-column: 1 / -1 !important;
+    gap: 10px !important;
+    padding-top: 8px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-group {
+    align-items: center !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-group + .workspace-context-group {
+    padding-left: 10px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-group__label {
+    color: var(--ins-muted) !important;
+    font-size: 10px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module-list {
+    gap: 5px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module-entry {
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 28px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--ins-line) !important;
+    border-radius: 7px !important;
+    background: #ffffff !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module {
+    min-height: 26px !important;
+    padding: 0 7px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    color: #40506a !important;
+    font-size: 11px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module:hover,
+html body:not(.dark-mode) #app .workspace-context-module:focus-visible {
+    background: var(--ins-coral-soft) !important;
+    color: var(--ins-coral-deep) !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module.is-active {
+    background: var(--ins-coral) !important;
+    color: #ffffff !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module.is-active i {
+    color: #ffffff !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-pin {
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 26px !important;
+    border: 0 !important;
+    border-left: 1px solid var(--ins-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #8a97a9 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-pin:hover,
+html body:not(.dark-mode) #app .workspace-context-pin:focus-visible,
+html body:not(.dark-mode) #app .workspace-context-pin[aria-pressed="true"] {
+    background: var(--ins-coral-soft) !important;
+    color: var(--ins-coral-deep) !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-shell {
+    padding: 10px 0 12px !important;
+    border-top: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--ins-line) !important;
+    border-left: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip {
+    min-height: 56px !important;
+    padding: 9px 10px !important;
+    border-radius: 8px !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) {
+    border-color: var(--ins-coral) !important;
+    background: var(--ins-coral) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) * {
+    color: inherit !important;
+}
+
+@media (max-width: 900px) {
+    html body:not(.dark-mode) #app .workspace-context-bar {
+        grid-template-columns: 1fr !important;
+    }
+
+    html body:not(.dark-mode) #app .workspace-context-summary {
+        padding-right: 0 !important;
+        border-right: 0 !important;
+    }
+
+    html body:not(.dark-mode) #app .workspace-context-statuses {
+        justify-content: flex-start !important;
+    }
+}

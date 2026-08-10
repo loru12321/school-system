@@ -693,14 +693,31 @@
     // unavailable (compat mode, 501 on supabase-only deployments, network error)
     // so callers transparently fall back to the legacy multi-request path.
     async function fetchColdLoginBundle(params = {}) {
-        if (getBackendMode() !== 'api') return null;
+        const startedAt = nowMs();
+        const finish = (result, detail = {}) => {
+            const entry = rememberPerfTiming('CloudApi.fetchColdLoginBundle', startedAt, detail);
+            // Deliberately record only transport state and identifiers — never a
+            // workspace payload or student data. This makes a cold-login fallback
+            // diagnosable in production without turning browser storage into a
+            // second data source.
+            root.__COLD_LOGIN_BUNDLE_DIAGNOSTICS__ = {
+                at: entry.at,
+                durationMs: entry.durationMs,
+                ...detail
+            };
+            return result;
+        };
+        if (getBackendMode() !== 'api') {
+            finish(null, { outcome: 'skipped', reason: 'backend-not-api' });
+            return null;
+        }
         const apiUrl = getSystemDataApiUrl();
         const fetchImpl = getFetch();
-        if (!apiUrl || !fetchImpl) return null;
+        if (!apiUrl || !fetchImpl) return finish(null, { outcome: 'skipped', reason: 'transport-unavailable' });
         const cohortKey = normalizeText(params.cohortKey);
-        if (!cohortKey) return null;
+        if (!cohortKey) return finish(null, { outcome: 'skipped', reason: 'cohort-key-missing' });
         const bootstrapUrl = apiUrl.replace(/\/api\/system-data(?:\/+)?$/, '/api/system-data-bootstrap');
-        if (bootstrapUrl === apiUrl) return null;
+        if (bootstrapUrl === apiUrl) return finish(null, { outcome: 'skipped', reason: 'bootstrap-url-unavailable', cohortKey });
         const body = { cohortKey };
         const cohortId = normalizeText(params.cohortId);
         if (cohortId) body.cohortId = cohortId;
@@ -716,17 +733,42 @@
                 body: JSON.stringify(body)
             });
             if (!response.ok) {
+                let errorCode = '';
                 if (response.status === 401 || response.status === 403) {
                     const parsed = await parseJsonResponse(response).catch(() => null);
+                    errorCode = normalizeText(parsed && (parsed.error || parsed.message));
                     handleCloudSessionExpired(buildApiError(response, parsed), { requestHadSession: true });
                 }
-                return null;
+                return finish(null, {
+                    outcome: 'fallback',
+                    reason: `http-${response.status}`,
+                    errorCode,
+                    cohortKey
+                });
             }
             const parsed = await parseJsonResponse(response).catch(() => null);
-            if (!parsed || parsed.ok !== true) return null;
-            return parsed;
+            if (!parsed || parsed.ok !== true) {
+                return finish(null, {
+                    outcome: 'fallback',
+                    reason: 'invalid-response',
+                    errorCode: normalizeText(parsed && (parsed.error || parsed.message)),
+                    cohortKey
+                });
+            }
+            return finish(parsed, {
+                outcome: 'success',
+                cohortKey,
+                examMetaCount: Array.isArray(parsed.examMeta) ? parsed.examMeta.length : 0,
+                hasWorkspace: !!parsed.workspaceRow?.content,
+                hasShard: !!parsed.currentShard?.content
+            });
         } catch (error) {
-            return null;
+            return finish(null, {
+                outcome: 'fallback',
+                reason: 'network-error',
+                errorCode: normalizeText(error && (error.name || error.message)),
+                cohortKey
+            });
         }
     }
 

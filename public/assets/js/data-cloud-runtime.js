@@ -966,6 +966,33 @@
         return String(right && right.updated_at || '').localeCompare(String(left && left.updated_at || ''));
     }
 
+    function recordColdLoginDiagnostic(detail = {}) {
+        const previous = root.__COLD_LOGIN_BUNDLE_DIAGNOSTICS__ || {};
+        const entry = {
+            at: new Date().toISOString(),
+            ...previous,
+            ...detail
+        };
+        root.__COLD_LOGIN_DIAGNOSTICS__ = entry;
+        // This single concise line is intentionally retained for a user-facing
+        // console capture. It contains no score, teacher, or student payload.
+        root.console?.info?.('[perf] coldLoginBundle', entry);
+        return entry;
+    }
+
+    async function fetchSelectedBootstrapShard(examKey) {
+        const key = normalizeText(examKey);
+        const readSystemDataRecord = getReadSystemDataRecord();
+        if (!key || !readSystemDataRecord) return null;
+        const result = await readSystemDataRecord(key, 'content,updated_at').catch(() => null);
+        if (!result || result.error || !result.data || typeof result.data.content !== 'string' || !result.data.content) return null;
+        return {
+            key,
+            updated_at: normalizeText(result.data.updated_at),
+            content: result.data.content
+        };
+    }
+
     async function readSplitExamPayload(examKey, metaPayload) {
         const readSystemDataRecord = getReadSystemDataRecord();
         if (readSystemDataRecord && examKey) {
@@ -1983,9 +2010,15 @@
     // the caller simply proceeds down the normal (cold) path.
     async function warmColdLoginCaches(cohortKey, options = {}) {
         const key = normalizeText(cohortKey);
-        if (!key) return false;
+        if (!key) {
+            recordColdLoginDiagnostic({ outcome: 'skipped', reason: 'cohort-key-missing' });
+            return false;
+        }
         const api = root.CloudApi;
-        if (!api || typeof api.fetchColdLoginBundle !== 'function') return false;
+        if (!api || typeof api.fetchColdLoginBundle !== 'function') {
+            recordColdLoginDiagnostic({ outcome: 'skipped', reason: 'cloud-api-unavailable', cohortKey: key });
+            return false;
+        }
 
         const cohortId = extractSplitCohortId(key, null);
         const bundle = await api.fetchColdLoginBundle({
@@ -1993,19 +2026,29 @@
             cohortId,
             latestExamLimit: Number(options.latestExamLimit) || 24
         }).catch(() => null);
-        if (!bundle || bundle.ok !== true) return false;
+        if (!bundle || bundle.ok !== true) {
+            recordColdLoginDiagnostic({ outcome: 'fallback', reason: 'bundle-unavailable', cohortKey: key });
+            return false;
+        }
 
         const workspaceRow = bundle.workspaceRow;
-        if (!workspaceRow || typeof workspaceRow.content !== 'string' || !workspaceRow.content) return false;
+        if (!workspaceRow || typeof workspaceRow.content !== 'string' || !workspaceRow.content) {
+            recordColdLoginDiagnostic({ outcome: 'fallback', reason: 'workspace-missing', cohortKey: key });
+            return false;
+        }
 
         let payload;
         try {
             payload = parseCloudPayload(workspaceRow.content);
         } catch (error) {
+            recordColdLoginDiagnostic({ outcome: 'fallback', reason: 'workspace-parse-failed', cohortKey: key });
             return false;
         }
         // Cross-cohort cache guard — identical to dbSyncFromCloud's own check.
-        if (!workspacePayloadMatchesKey(key, payload)) return false;
+        if (!workspacePayloadMatchesKey(key, payload)) {
+            recordColdLoginDiagnostic({ outcome: 'blocked', reason: 'workspace-cohort-mismatch', cohortKey: key });
+            return false;
+        }
 
         // Reconstruct the hydrated workspace exactly as hydrateSplitWorkspacePayload
         // would, but source the current exam shard from the bundle instead of a
@@ -2016,7 +2059,7 @@
         let hydrated = null;
         const cachePrimeEntries = [];
         if (isSplitWorkspacePayload(payload)) {
-            const shard = bundle.currentShard;
+            let shard = bundle.currentShard;
             const metaRows = Array.isArray(bundle.examMeta)
                 ? bundle.examMeta
                     .map((row) => ({ key: normalizeText(row && row.key), updated_at: normalizeText(row && row.updated_at) }))
@@ -2025,17 +2068,34 @@
             const sorted = metaRows.slice().sort(compareWorkspaceExamRows);
             const fallbackExamKey = getSplitCurrentExamKey(payload);
             const selectedKey = normalizeText((sorted[0] && sorted[0].key) || fallbackExamKey);
-            const shardKey = normalizeText(shard && shard.key);
-            if (!shard || typeof shard.content !== 'string' || !shardKey) return false;
-            if (shardKey !== selectedKey) {
-                // The client would pick a different exam than the server prefetched
-                // — let the normal restore fetch the right shard (selection safety).
+            let shardKey = normalizeText(shard && shard.key);
+            if (!selectedKey) {
+                recordColdLoginDiagnostic({ outcome: 'fallback', reason: 'selected-exam-missing', cohortKey: key });
                 return false;
+            }
+            if (!shard || typeof shard.content !== 'string' || !shardKey || shardKey !== selectedKey) {
+                // The backend's hint is ordered by update time while the client
+                // owns the authoritative exam-selection rule. Fetch only the
+                // client-selected shard here instead of discarding the whole batch
+                // and regressing to 4–6 serial cloud reads.
+                shard = await fetchSelectedBootstrapShard(selectedKey);
+                shardKey = normalizeText(shard && shard.key);
+                if (!shard || typeof shard.content !== 'string' || shardKey !== selectedKey) {
+                    recordColdLoginDiagnostic({
+                        outcome: 'fallback',
+                        reason: 'selected-shard-unavailable',
+                        cohortKey: key,
+                        selectedKey,
+                        hintedShardKey: normalizeText(bundle.currentShard && bundle.currentShard.key)
+                    });
+                    return false;
+                }
             }
             let examPayload;
             try {
                 examPayload = parseCloudPayload(shard.content);
             } catch (error) {
+                recordColdLoginDiagnostic({ outcome: 'fallback', reason: 'selected-shard-parse-failed', cohortKey: key, selectedKey });
                 return false;
             }
             hydrated = normalizeWorkspacePayload(mergeSplitWorkspacePayload(payload, examPayload, shardKey));
@@ -2047,7 +2107,10 @@
             hydrated = normalizeWorkspacePayload(payload);
         }
 
-        if (!hydrated || !workspacePayloadMatchesKey(key, hydrated)) return false;
+        if (!hydrated || !workspacePayloadMatchesKey(key, hydrated)) {
+            recordColdLoginDiagnostic({ outcome: 'blocked', reason: 'hydrated-cohort-mismatch', cohortKey: key });
+            return false;
+        }
 
         // Best-effort local-cache prime (helps later reads). It is explicitly not
         // awaited: this login already bypasses IndexedDB by returning `hydrated`
@@ -2055,6 +2118,16 @@
         cachePrimeEntries.push({ key, value: hydrated, meta: { updatedAt: workspaceRow.updated_at } });
         scheduleColdLoginLocalCachePrime(cachePrimeEntries);
         const rawLen = hydrated && Array.isArray(hydrated.RAW_DATA) ? hydrated.RAW_DATA.length : 0;
+        recordColdLoginDiagnostic({
+            outcome: rawLen > 0 ? 'success' : 'fallback',
+            reason: rawLen > 0 ? 'preloaded-workspace' : 'workspace-empty',
+            cohortKey: key,
+            rawLen,
+            cohorts: cohortId ? [cohortId] : [],
+            selectedKey: isSplitWorkspacePayload(payload)
+                ? normalizeText(hydrated.CURRENT_EXAM_ID || hydrated.COHORT_DB?.currentExamId)
+                : ''
+        });
         // Return the hydrated payload so switchCohort consumes it directly as
         // preloadedData (idb-independent). Falls back to `true` if somehow empty.
         return rawLen > 0 ? hydrated : true;

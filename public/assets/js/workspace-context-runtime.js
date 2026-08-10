@@ -208,8 +208,13 @@
     function createModuleList(modules, state, activeId, withPins) {
         const list = createElement('div', 'workspace-context-module-list');
         modules.forEach((module) => {
-            list.appendChild(createModuleButton(module, { active: module.id === activeId }));
-            if (withPins) list.appendChild(createPinButton(module, state.pinned.includes(module.id)));
+            // Keep each shortcut and its optional pin control in one compact
+            // interaction unit. Rendering the pin as a separate tile created a
+            // row of unexplained empty boxes in dense workspaces.
+            const entry = createElement('div', 'workspace-context-module-entry');
+            entry.appendChild(createModuleButton(module, { active: module.id === activeId }));
+            if (withPins) entry.appendChild(createPinButton(module, state.pinned.includes(module.id)));
+            list.appendChild(entry);
         });
         return list;
     }
