@@ -6659,6 +6659,7 @@ function isIndicatorPromptAllowed() {
 function clearIndicatorRuntimeState() {
     window.INDICATOR_LAST_RESULT = [];
     window.__LAST_INDICATOR_CALC_DATA__ = [];
+    window.__LAST_INDICATOR_CALC_CONTEXT_KEY__ = '';
     window.INDICATOR_LAST_SUMMARY = {
         ok: false,
         count: 0,
@@ -6805,6 +6806,28 @@ function getIndicatorWorkspaceKey() {
     ].join('::');
 }
 
+function getIndicatorResultContextKey() {
+    return [
+        getIndicatorWorkspaceKey(),
+        String(window.__RAW_DATA_VERSION || 0),
+        Array.isArray(RAW_DATA) ? RAW_DATA.length : 0
+    ].join('::');
+}
+
+function isIndicatorWorkspaceHydrating() {
+    return !!IndicatorCloudInputState.promise
+        && IndicatorCloudInputState.key === getIndicatorWorkspaceKey();
+}
+
+function settleSummaryIndicatorLoadingCells(isReady) {
+    if (isReady) return;
+    document.querySelectorAll('#tb-summary td[data-indicator-state="loading"]').forEach((cell) => {
+        cell.dataset.indicatorState = 'missing';
+        cell.textContent = '待配置';
+        cell.title = '本届指标参数或目标人数尚未配置';
+    });
+}
+
 function setIndicatorSyncTip(text = '') {
     const tip = document.getElementById('dm-params-tip');
     if (!tip || !isIndicatorPromptAllowed()) return;
@@ -6823,39 +6846,54 @@ async function ensureIndicatorWorkspaceFromCloud(reason = 'indicator-refresh', t
     if (currentUser?.local_only) return false;
 
     const key = getIndicatorWorkspaceKey();
-    if (IndicatorCloudInputState.promise && IndicatorCloudInputState.key === key) {
-        return IndicatorCloudInputState.promise;
+    if (!IndicatorCloudInputState.promise || IndicatorCloudInputState.key !== key) {
+        setIndicatorSyncTip('正在从云端同步指标生参数和目标人数...');
+        IndicatorCloudInputState.key = key;
+        const loadPromise = Promise.resolve(window.loadIndicatorSupportFromCloud())
+            .then(() => {
+                syncRuntimeStateToWindow();
+                updateIndicatorUIState();
+                const ready = hasIndicatorCalcInputs() && isIndicatorCalcAllowed();
+                if (!ready) {
+                    console.warn(`[Indicator] cloud workspace still missing inputs after ${reason}`, {
+                        rawData: Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+                        targetCount: window.TARGETS && typeof window.TARGETS === 'object' ? Object.keys(window.TARGETS).length : 0,
+                        indicator: window.SYS_VARS?.indicator || {}
+                    });
+                }
+                return ready;
+            })
+            .catch((error) => {
+                console.warn(`[Indicator] 云端补载失败 (${reason}):`, error);
+                return false;
+            });
+        IndicatorCloudInputState.promise = loadPromise;
+
+        loadPromise
+            .then((ready) => {
+                if (key !== getIndicatorWorkspaceKey()) return;
+                if (ready && document.querySelector('#tb-summary tbody tr') && typeof calcSummary === 'function') {
+                    Promise.resolve(calcSummary(true)).catch((error) => {
+                        console.warn('[Indicator] 指标配置恢复后刷新综合评价失败:', error);
+                    });
+                } else {
+                    settleSummaryIndicatorLoadingCells(ready);
+                }
+            })
+            .finally(() => {
+                if (IndicatorCloudInputState.promise !== loadPromise) return;
+                IndicatorCloudInputState.promise = null;
+                IndicatorCloudInputState.key = '';
+                if (hasIndicatorCalcInputs() && isIndicatorCalcAllowed()) setIndicatorSyncTip('');
+            });
     }
 
-    setIndicatorSyncTip('正在从云端同步指标生参数和目标人数...');
-    IndicatorCloudInputState.key = key;
-    IndicatorCloudInputState.promise = Promise.race([
-        Promise.resolve(window.loadIndicatorSupportFromCloud()),
-        new Promise((resolve) => setTimeout(() => resolve(false), Math.max(3000, Number(timeoutMs) || 12000)))
-    ])
-        .then(() => {
-            syncRuntimeStateToWindow();
-            updateIndicatorUIState();
-            const ready = hasIndicatorCalcInputs() && isIndicatorCalcAllowed();
-            if (!ready) {
-                console.warn(`[Indicator] cloud workspace still missing inputs after ${reason}`, {
-                    rawData: Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
-                    targetCount: window.TARGETS && typeof window.TARGETS === 'object' ? Object.keys(window.TARGETS).length : 0,
-                    indicator: window.SYS_VARS?.indicator || {}
-                });
-            }
-            return ready;
-        })
-        .catch((error) => {
-            console.warn(`[Indicator] 云端补载失败 (${reason}):`, error);
-            return false;
-        })
-        .finally(() => {
-            IndicatorCloudInputState.promise = null;
-            IndicatorCloudInputState.key = '';
-            if (hasIndicatorCalcInputs() && isIndicatorCalcAllowed()) setIndicatorSyncTip('');
-        });
-    return IndicatorCloudInputState.promise;
+    const activeLoad = IndicatorCloudInputState.promise;
+    const waitMs = Math.max(3000, Number(timeoutMs) || 12000);
+    return Promise.race([
+        activeLoad,
+        new Promise((resolve) => setTimeout(() => resolve(false), waitMs))
+    ]);
 }
 
 function refreshIndicatorResults(isSilent = true, options = {}) {
@@ -6991,8 +7029,6 @@ function renderIndicatorTargetMatchPanel(calcData, line1, line2) {
 
 // Moved to target-gap-analysis-runtime.js (window.analyzeTargetGap / TargetGapAnalysisRuntime) —— 冲刺名单/目标缺口分析纯展示模块，DEFERRED 加载。
 
-const SummaryIndicatorHydrationState = { key: '', pending: false };
-
 async function calcSummary(isSilent = false) {
     const isGrade9 = isIndicatorPromptAllowed();
     let indicatorRowsForSummary = [];
@@ -7000,17 +7036,8 @@ async function calcSummary(isSilent = false) {
     if (!isGrade9) clearIndicatorRuntimeState();
 
     if (isGrade9 && !hasIndicatorCalcInputs() && typeof ensureIndicatorWorkspaceFromCloud === 'function') {
-        const hydrationKey = getIndicatorWorkspaceKey();
-        if (!SummaryIndicatorHydrationState.pending && SummaryIndicatorHydrationState.key !== hydrationKey) {
-            SummaryIndicatorHydrationState.key = hydrationKey;
-            SummaryIndicatorHydrationState.pending = true;
-            Promise.resolve(ensureIndicatorWorkspaceFromCloud('summary-background', 7000))
-                .then((ready) => {
-                    if (ready) calcSummary(true);
-                })
-                .catch((error) => console.warn('[calcSummary] 指标配置后台恢复失败:', error))
-                .finally(() => { SummaryIndicatorHydrationState.pending = false; });
-        }
+        Promise.resolve(ensureIndicatorWorkspaceFromCloud('summary-background', 7000))
+            .catch((error) => console.warn('[calcSummary] 指标配置后台恢复失败:', error));
     }
 
     if (isGrade9 && typeof refreshIndicatorResults === 'function') {
@@ -7034,7 +7061,8 @@ async function calcSummary(isSilent = false) {
             SummaryRefreshState.suppress = previousSuppress;
         }
     }
-    if (isGrade9 && !indicatorRowsForSummary.length && Array.isArray(window.INDICATOR_LAST_RESULT)) {
+    const indicatorResultMatchesContext = window.__LAST_INDICATOR_CALC_CONTEXT_KEY__ === getIndicatorResultContextKey();
+    if (isGrade9 && !indicatorRowsForSummary.length && indicatorResultMatchesContext && Array.isArray(window.INDICATOR_LAST_RESULT)) {
         indicatorRowsForSummary = window.INDICATOR_LAST_RESULT;
     }
     const indicatorScoreMap = new Map();
@@ -7106,10 +7134,13 @@ async function calcSummary(isSilent = false) {
         const safeSchoolArg = jsStringLiteral(d.name);
         let indicatorCell = '';
         if (isGrade9) {
-            const indicatorReady = hasIndicatorCalcInputs() && indicatorRowsForSummary.length > 0;
+            const indicatorReady = indicatorRowsForSummary.length > 0 && indicatorScoreMap.size > 0;
+            const indicatorLoading = !indicatorReady && isIndicatorWorkspaceHydrating();
             indicatorCell = indicatorReady
                 ? `<td data-label="指标生得分">${d.s3.toFixed(2)}</td>`
-                : '<td data-label="指标生得分" title="本届指标参数或目标人数尚未配置" style="color:#b45309;font-weight:600;">待配置</td>';
+                : indicatorLoading
+                    ? '<td data-label="指标生得分" data-indicator-state="loading" title="正在从云端同步本届指标参数和目标人数" style="color:#2563eb;font-weight:600;">同步中…</td>'
+                    : '<td data-label="指标生得分" data-indicator-state="missing" title="本届指标参数或目标人数尚未配置" style="color:#b45309;font-weight:600;">待配置</td>';
         }
         let highScoreCell = '';
         if (isGrade9) highScoreCell = `<td data-label="高分段赋分" style="color:#b45309; background:#fff7ed; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighClick(${safeSchoolArg})" title="点击查看高分段学生名单">${d.s4.toFixed(2)}</button></td>`;

@@ -1303,6 +1303,23 @@ async function runModuleDeepCheck(page, id) {
                 const summaryRows = Array.from(document.querySelectorAll('#tb-summary tbody tr'));
                 const summaryTable = document.getElementById('tb-summary');
                 const hasRenderedSummaryRows = summaryRows.length > 0;
+                const isGrade9 = String(window.CONFIG?.name || '').includes('9');
+                const indicatorRows = Array.isArray(window.INDICATOR_LAST_RESULT) ? window.INDICATOR_LAST_RESULT : [];
+                const indicatorRowsPositive = indicatorRows.filter((row) => Number(row?.finalScore) > 0).length;
+                const indicatorIndex = headers.findIndex((text) => /指标生得分/.test(text));
+                const summaryIndicatorTexts = indicatorIndex >= 0
+                    ? summaryRows.map((tr) => String(tr.querySelectorAll('td')[indicatorIndex]?.textContent || '').trim())
+                    : [];
+                const summaryIndicatorValues = summaryIndicatorTexts
+                    .filter((value) => /-?\d/.test(value))
+                    .map((value) => Number(value.replace(/[^\d.-]/g, '')))
+                    .filter(Number.isFinite);
+                const indicatorInputsReady = typeof window.hasIndicatorCalcInputs === 'function'
+                    && window.hasIndicatorCalcInputs();
+                const indicatorSummaryExpected = isGrade9 && hasRenderedSummaryRows
+                    && (indicatorRows.length > 0 || indicatorInputsReady);
+                const summaryIndicatorPendingCount = summaryIndicatorTexts
+                    .filter((value) => /待配置|同步中/.test(value)).length;
                 const checks = {
                     summaryTableReady: !!summaryTable,
                     summaryHeaderReady: headers.length > 0,
@@ -1313,8 +1330,10 @@ async function runModuleDeepCheck(page, id) {
                     schoolProfileClose: !!document.querySelector('#school-profile-modal .school-modal-close'),
                     examAnalysisPackageButton: !!document.querySelector('button[onclick="downloadExamAnalysisPackage()"]'),
                     summaryIndicatorColumnPresent: !hasRenderedSummaryRows
-                        || !String(window.CONFIG?.name || '').includes('9')
+                        || !isGrade9
                         || headers.some((text) => /指标生得分/.test(text)),
+                    summaryIndicatorColumnPopulated: !indicatorSummaryExpected
+                        || (summaryIndicatorValues.length === summaryRows.length && summaryIndicatorPendingCount === 0),
                     summaryHighScoreColumnPresent: !hasRenderedSummaryRows
                         || !String(window.CONFIG?.name || '').includes('9')
                         || headers.some((text) => /高分段/.test(text)),
@@ -1336,12 +1355,13 @@ async function runModuleDeepCheck(page, id) {
                     schoolProfileCellClickWorks: true,
                     summaryDirty: !!window.SummaryRefreshState?.dirty,
                     summaryIndicatorDiagnostics: {
-                        isGrade9: String(window.CONFIG?.name || '').includes('9'),
-                        indicatorRowsPositive: Array.isArray(window.INDICATOR_LAST_RESULT)
-                            ? window.INDICATOR_LAST_RESULT.filter((row) => Number(row?.finalScore) > 0).length
-                            : 0,
-                        summaryIndicatorPositive: 0,
-                        summaryIndicatorValues: []
+                        isGrade9,
+                        indicatorRowsPositive,
+                        indicatorRowsAvailable: indicatorRows.length,
+                        summaryIndicatorPositive: summaryIndicatorValues.filter((value) => value > 0).length,
+                        summaryIndicatorNumericCount: summaryIndicatorValues.length,
+                        summaryIndicatorPendingCount,
+                        summaryIndicatorValues: summaryIndicatorValues.slice(0, 8)
                     },
                     summaryHighScoreDiagnostics: {
                         isGrade9: String(window.CONFIG?.name || '').includes('9'),
@@ -1396,16 +1416,22 @@ async function runModuleDeepCheck(page, id) {
                 const headers = Array.from(document.querySelectorAll('#tb-summary thead th'))
                     .map((th) => String(th?.innerText || th?.textContent || '').trim());
                 const indicatorIndex = headers.findIndex((text) => /指标生得分/.test(text));
-                const summaryIndicatorValues = indicatorIndex >= 0
-                    ? Array.from(document.querySelectorAll('#tb-summary tbody tr')).map((tr) => {
-                        const cell = tr.querySelectorAll('td')[indicatorIndex];
-                        return Number(String(cell?.innerText || cell?.textContent || '').replace(/[^\d.-]/g, ''));
-                    }).filter(Number.isFinite)
+                const summaryIndicatorTexts = indicatorIndex >= 0
+                    ? Array.from(document.querySelectorAll('#tb-summary tbody tr')).map((tr) => (
+                        String(tr.querySelectorAll('td')[indicatorIndex]?.innerText || tr.querySelectorAll('td')[indicatorIndex]?.textContent || '').trim()
+                    ))
                     : [];
+                const summaryIndicatorValues = summaryIndicatorTexts
+                    .filter((value) => /-?\d/.test(value))
+                    .map((value) => Number(value.replace(/[^\d.-]/g, '')))
+                    .filter(Number.isFinite);
                 summaryIndicatorDiagnostics = {
                     isGrade9,
                     indicatorRowsPositive,
+                    indicatorRowsAvailable: indicatorRows.length,
                     summaryIndicatorPositive: summaryIndicatorValues.filter((value) => value > 0).length,
+                    summaryIndicatorNumericCount: summaryIndicatorValues.length,
+                    summaryIndicatorPendingCount: summaryIndicatorTexts.filter((value) => /待配置|同步中/.test(value)).length,
                     summaryIndicatorValues: summaryIndicatorValues.slice(0, 8)
                 };
                 const highScoreIndex = headers.findIndex((text) => /高分段/.test(text));
@@ -1474,8 +1500,9 @@ async function runModuleDeepCheck(page, id) {
                 examAnalysisPackageRuntime: typeof window.downloadExamAnalysisPackage === 'function',
                 examAnalysisPackageZipVendor: !!window.JSZip,
                 summaryIndicatorColumnPopulated: !summaryIndicatorDiagnostics.isGrade9
-                    || summaryIndicatorDiagnostics.indicatorRowsPositive === 0
-                    || summaryIndicatorDiagnostics.summaryIndicatorPositive > 0,
+                    || summaryIndicatorDiagnostics.indicatorRowsAvailable === 0
+                    || (summaryIndicatorDiagnostics.summaryIndicatorNumericCount === document.querySelectorAll('#tb-summary tbody tr').length
+                        && summaryIndicatorDiagnostics.summaryIndicatorPendingCount === 0),
                 summaryHighScoreMatchesFormula: summaryHighScoreDiagnostics.highScoreMatches,
                 summaryAdmissionZeroUnlessJulyZhongkao: summaryHighScoreDiagnostics.admissionAllZeroWhenDisallowed
             };

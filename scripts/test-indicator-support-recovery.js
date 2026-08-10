@@ -95,6 +95,34 @@ const context = {
 const source = fs.readFileSync(path.join(root, 'public/assets/js/cloud.js'), 'utf8');
 vm.runInNewContext(source, context, { filename: 'cloud.js' });
 
+const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const indicatorCalcSource = fs.readFileSync(path.join(root, 'public/assets/js/indicator-calc-runtime.js'), 'utf8');
+assert.ok(
+    !appSource.includes('SummaryIndicatorHydrationState'),
+    'summary indicator hydration must not permanently suppress retries after one timeout'
+);
+assert.ok(
+    appSource.includes('const activeLoad = IndicatorCloudInputState.promise;')
+        && appSource.includes('Promise.race([\n        activeLoad,'),
+    'the UI timeout must wrap the active cloud load instead of replacing or cancelling it'
+);
+assert.ok(
+    appSource.includes("if (ready && document.querySelector('#tb-summary tbody tr') && typeof calcSummary === 'function')"),
+    'a late successful support restore must refresh an already-rendered summary'
+);
+assert.ok(
+    appSource.includes('const indicatorReady = indicatorRowsForSummary.length > 0 && indicatorScoreMap.size > 0;'),
+    'computed indicator rows must render even if input controls are hydrating'
+);
+assert.ok(
+    appSource.includes("window.__LAST_INDICATOR_CALC_CONTEXT_KEY__ === getIndicatorResultContextKey()"),
+    'summary fallback rows must be scoped to the active cohort, exam and score version'
+);
+assert.ok(
+    indicatorCalcSource.includes('markIndicatorResultContext();'),
+    'indicator calculations must tag their result context before summary fallback'
+);
+
 (async () => {
     const changed = await cloudWindow.loadIndicatorSupportFromCloud();
 

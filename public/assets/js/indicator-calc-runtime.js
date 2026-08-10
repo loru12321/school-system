@@ -73,6 +73,17 @@
         ].join('::');
     }
 
+    function markIndicatorResultContext() {
+        root.__LAST_INDICATOR_CALC_CONTEXT_KEY__ = typeof root.getIndicatorResultContextKey === 'function'
+            ? root.getIndicatorResultContextKey()
+            : [
+                root.CURRENT_COHORT_ID || '',
+                root.CURRENT_EXAM_ID || '',
+                root.__RAW_DATA_VERSION || 0,
+                Array.isArray(root.RAW_DATA) ? root.RAW_DATA.length : 0
+            ].join('::');
+    }
+
     function calcIndicators(isSilent = false) {
         if (!root.isIndicatorPromptAllowed()) {
             clearCache();
@@ -127,6 +138,7 @@
             const cachedRows = cloneIndicatorCalcRows(IndicatorCalcPerfCache.rows);
             root.INDICATOR_LAST_RESULT = cachedRows;
             root.__LAST_INDICATOR_CALC_DATA__ = cachedRows;
+            markIndicatorResultContext();
             return cachedRows;
         }
 
@@ -298,6 +310,7 @@
         IndicatorCalcPerfCache.rows = cachedCalcData;
         root.INDICATOR_LAST_RESULT = cachedCalcData;
         root.__LAST_INDICATOR_CALC_DATA__ = cachedCalcData;
+        markIndicatorResultContext();
         root.markSummaryDataChangedIfDependencyChanged(
             'indicator',
             root.buildSummaryDependencySignature('indicator', calcData),
