@@ -58,17 +58,29 @@
         if (!targets.length) return;
 
         const keys = FLOW_CATEGORY_ORDER.filter((key) => nav[key]);
+        const signature = keys.map((key) => `${key}:${nav[key]?.title || key}`).join('|');
         targets.forEach((target) => {
-            target.innerHTML = keys.map((key, index) => {
-                const category = nav[key] || {};
-                const active = key === current ? ' is-active' : '';
-                const title = category.title || key;
-                return `
-                    <button type="button" class="workflow-path__step${active}" data-workflow-key="${key}" data-shell-tooltip="${category.summary || title}">
-                        <span class="workflow-path__index">${String(index + 1).padStart(2, '0')}</span>
-                        <span class="workflow-path__label">${title}</span>
-                    </button>`;
-            }).join('');
+            // This runtime is also watched by a document-level observer below.
+            // Replacing innerHTML on every unrelated content mutation made the
+            // observer schedule itself forever, keeping the main thread busy
+            // after login. Build only when the workflow itself changes; a
+            // category switch merely updates the existing active state.
+            if (target.dataset.workflowSignature !== signature) {
+                target.innerHTML = keys.map((key, index) => {
+                    const category = nav[key] || {};
+                    const active = key === current ? ' is-active' : '';
+                    const title = category.title || key;
+                    return `
+                        <button type="button" class="workflow-path__step${active}" data-workflow-key="${key}" data-shell-tooltip="${category.summary || title}">
+                            <span class="workflow-path__index">${String(index + 1).padStart(2, '0')}</span>
+                            <span class="workflow-path__label">${title}</span>
+                        </button>`;
+                }).join('');
+                target.dataset.workflowSignature = signature;
+            }
+            target.querySelectorAll('[data-workflow-key]').forEach((step) => {
+                step.classList.toggle('is-active', step.dataset.workflowKey === current);
+            });
         });
     }
 
@@ -140,12 +152,27 @@
         }
     }
 
+    function isRuntimeOwnedNode(node) {
+        if (!node || node.nodeType !== 1) return false;
+        return !!node.closest?.('.workflow-path, .calculation-policy-strip, #workspace-context-bar, #shell-module-rail-shell, #shell-module-rail-floating-shell');
+    }
+
+    function mutationNeedsWorkflowRefresh(mutation) {
+        if (!mutation.addedNodes || !mutation.addedNodes.length) return false;
+        return Array.from(mutation.addedNodes).some((node) => {
+            if (!node || node.nodeType !== 1 || isRuntimeOwnedNode(node)) return false;
+            if (node.matches?.('.section, .analysis-table-shell, .table-wrap, .analysis-shell-head')) return true;
+            if (node.closest?.('.section')) return true;
+            return !!node.querySelector?.('.section, .analysis-table-shell, .table-wrap, .analysis-shell-head');
+        });
+    }
+
     const observer = new MutationObserver((mutations) => {
-        if (!mutations.some((mutation) => mutation.addedNodes && mutation.addedNodes.length)) return;
+        if (!mutations.some(mutationNeedsWorkflowRefresh)) return;
         const roots = [];
         mutations.forEach((mutation) => {
             mutation.addedNodes && mutation.addedNodes.forEach((node) => {
-                if (node && node.nodeType === 1) roots.push(node);
+                if (node && node.nodeType === 1 && !isRuntimeOwnedNode(node)) roots.push(node);
             });
         });
         const root = roots.length === 1 ? roots[0] : document;

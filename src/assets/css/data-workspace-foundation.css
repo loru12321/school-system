@@ -1,0 +1,531 @@
+/*
+ * Data workspace foundation
+ *
+ * A light, disciplined operating surface for dense school data. This layer is
+ * intentionally limited to navigation and orientation chrome: analysis
+ * content and all calculation views keep their existing semantic styles.
+ */
+
+:root {
+    --dw-canvas: #f6f8fb;
+    --dw-surface: #ffffff;
+    --dw-surface-muted: #f8fafc;
+    --dw-ink: #172033;
+    --dw-muted: #64748b;
+    --dw-line: #e5eaf1;
+    --dw-line-strong: #d6deea;
+    --dw-accent: #2563eb;
+    --dw-accent-strong: #1d4ed8;
+    --dw-accent-soft: #eff6ff;
+    --dw-success: #0f8a5f;
+    --dw-success-soft: #ecfdf5;
+}
+
+html body:not(.dark-mode) {
+    background: var(--dw-canvas) !important;
+    color: var(--dw-ink) !important;
+}
+
+html body:not(.dark-mode) #app.app-layout {
+    grid-template-columns: 232px minmax(0, 1fr) !important;
+    min-height: 100vh;
+    background: var(--dw-canvas) !important;
+}
+
+/* Sidebar: labels always remain horizontal on desktop. Earlier collapsed-shell
+ * rules compressed Chinese labels to one glyph per line, even when the rail
+ * was visually wide. */
+@media (min-width: 901px) {
+    html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious,
+    html body:not(.dark-mode).shell-sidebar-collapsed #app > #app-sidebar.sidebar-spacious,
+    html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious.is-collapsed {
+        width: 232px !important;
+        min-width: 232px !important;
+        max-width: 232px !important;
+        padding: 18px 12px 24px !important;
+        border: 0 !important;
+        border-right: 1px solid var(--dw-line) !important;
+        background: var(--dw-surface) !important;
+        box-shadow: none !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-nav-container {
+        gap: 4px !important;
+        width: 100% !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item,
+    html body:not(.dark-mode).shell-sidebar-collapsed #app-sidebar .sidebar-menu-item {
+        display: block !important;
+        width: 100% !important;
+        min-height: 48px !important;
+        margin: 0 !important;
+        padding: 6px 8px !important;
+        border: 1px solid transparent !important;
+        border-radius: 9px !important;
+        background: transparent !important;
+        color: #526074 !important;
+        box-shadow: none !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__main {
+        display: grid !important;
+        grid-template-columns: 30px minmax(0, 1fr) !important;
+        align-items: center !important;
+        gap: 9px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__icon {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 30px !important;
+        min-width: 30px !important;
+        height: 30px !important;
+        border: 0 !important;
+        border-radius: 8px !important;
+        background: #f1f5f9 !important;
+        color: #64748b !important;
+        box-shadow: none !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__text,
+    html body:not(.dark-mode).shell-sidebar-collapsed #app-sidebar .sidebar-menu-item__text {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: auto !important;
+        min-width: 0 !important;
+        height: auto !important;
+        overflow: hidden !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        clip: auto !important;
+        position: static !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        writing-mode: horizontal-tb !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar :is(.sidebar-menu-item__title, .sidebar-menu-item__meta) {
+        display: block !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        writing-mode: horizontal-tb !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__title {
+        color: inherit !important;
+        font-size: 13px !important;
+        font-weight: 720 !important;
+        line-height: 1.25 !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__meta {
+        margin-top: 2px !important;
+        color: #94a3b8 !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        line-height: 1.2 !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item:hover {
+        background: #f8fafc !important;
+        color: var(--dw-ink) !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item:hover .sidebar-menu-item__icon {
+        background: var(--dw-accent-soft) !important;
+        color: var(--dw-accent) !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active,
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] {
+        border-color: #cfe0ff !important;
+        background: var(--dw-accent-soft) !important;
+        color: var(--dw-accent-strong) !important;
+        box-shadow: inset 3px 0 0 var(--dw-accent) !important;
+    }
+
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active .sidebar-menu-item__icon,
+    html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] .sidebar-menu-item__icon {
+        background: var(--dw-accent) !important;
+        color: #ffffff !important;
+    }
+}
+
+html body:not(.dark-mode) #app .app-main {
+    padding: 0 28px 40px !important;
+    background: var(--dw-canvas) !important;
+}
+
+/* Global controls form one quiet utility bar instead of a collection of
+ * raised widgets. */
+html body:not(.dark-mode) #main-header.shell-toolbar {
+    min-height: 64px !important;
+    margin: 0 -28px 8px !important;
+    padding: 10px 28px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--dw-line) !important;
+    border-radius: 0 !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    box-shadow: none !important;
+    backdrop-filter: saturate(140%) blur(12px) !important;
+}
+
+html body:not(.dark-mode) #main-header :is(button, .btn, select),
+html body:not(.dark-mode) #app .shell-overview-launcher,
+html body:not(.dark-mode) #app .shell-sync-chip {
+    min-height: 34px !important;
+    border: 1px solid var(--dw-line) !important;
+    border-radius: 8px !important;
+    background: var(--dw-surface) !important;
+    color: #435168 !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #main-header :is(button, .btn, select):hover,
+html body:not(.dark-mode) #app .shell-overview-launcher:hover,
+html body:not(.dark-mode) #app .shell-sync-chip:hover {
+    border-color: #bfd5ff !important;
+    background: var(--dw-accent-soft) !important;
+    color: var(--dw-accent-strong) !important;
+}
+
+html body:not(.dark-mode) #main-header #global-search-container {
+    border: 1px solid var(--dw-line) !important;
+    border-radius: 8px !important;
+    background: var(--dw-surface-muted) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #main-header #global-search-container:focus-within {
+    border-color: var(--dw-accent) !important;
+    background: var(--dw-surface) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.11) !important;
+}
+
+/* Orientation is a compact masthead: category at left, current scope at
+ * right. It should never consume the height of the working data surface. */
+html body:not(.dark-mode) #shell-overview {
+    margin: 0 !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-card--dock {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 24px !important;
+    min-height: 0 !important;
+    padding: 16px 0 14px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--dw-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-dock-main,
+html body:not(.dark-mode) #app .shell-overview-copy {
+    min-width: 0 !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-kicker {
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-heading {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-heading h2 {
+    color: var(--dw-ink) !important;
+    font-size: 22px !important;
+    font-weight: 760 !important;
+    letter-spacing: -0.025em !important;
+}
+
+html body:not(.dark-mode) #app #shell-module-count {
+    min-height: 24px !important;
+    padding: 0 8px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: #eef2f7 !important;
+    color: #64748b !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+}
+
+html body:not(.dark-mode) #app #shell-category-desc {
+    margin: 4px 0 0 !important;
+    color: var(--dw-muted) !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+}
+
+@media (min-width: 901px) {
+    html body:not(.dark-mode) #app #shell-workflow-path {
+        display: none !important;
+    }
+}
+
+html body:not(.dark-mode) #app .shell-overview-context-row,
+html body:not(.dark-mode) #app .shell-overview-dock-side.shell-overview-context-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    width: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-pills--dock {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-pills--dock > span,
+html body:not(.dark-mode) #app .shell-sync-chip {
+    min-height: 28px !important;
+    max-width: 250px !important;
+    padding: 0 9px !important;
+    border-color: var(--dw-line) !important;
+    border-radius: 999px !important;
+    background: var(--dw-surface) !important;
+    color: #58677c !important;
+    box-shadow: none !important;
+}
+
+/* One short row tells the operator exactly which cohort and data are active. */
+html body:not(.dark-mode) #app .workspace-context-bar {
+    display: grid !important;
+    grid-template-columns: minmax(250px, auto) minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 12px !important;
+    min-height: 52px !important;
+    margin: 0 !important;
+    padding: 9px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--dw-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-summary {
+    padding: 0 12px 0 0 !important;
+    border-right: 1px solid var(--dw-line) !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-kicker,
+html body:not(.dark-mode) #app .workspace-context-group__label {
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-title {
+    color: #334155 !important;
+    font-size: 12px !important;
+    font-weight: 720 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-statuses {
+    justify-content: flex-start !important;
+    gap: 5px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-status {
+    min-height: 26px !important;
+    padding: 0 8px !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    background: var(--dw-surface-muted) !important;
+    color: var(--dw-muted) !important;
+    font-size: 11px !important;
+    font-weight: 650 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-status.is-positive {
+    background: var(--dw-success-soft) !important;
+    color: #047857 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-status.is-warning {
+    background: #fffbeb !important;
+    color: #a16207 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-task-groups {
+    grid-column: auto !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-group,
+html body:not(.dark-mode) #app .workspace-context-group + .workspace-context-group {
+    gap: 4px !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module-entry {
+    min-height: 28px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--dw-line) !important;
+    border-radius: 6px !important;
+    background: var(--dw-surface) !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module {
+    min-height: 26px !important;
+    padding: 0 8px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    color: #526074 !important;
+    font-size: 11px !important;
+    font-weight: 680 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module:hover,
+html body:not(.dark-mode) #app .workspace-context-module:focus-visible {
+    background: var(--dw-accent-soft) !important;
+    color: var(--dw-accent-strong) !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module.is-active {
+    background: var(--dw-accent) !important;
+    color: #ffffff !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-pin {
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 26px !important;
+    border: 0 !important;
+    border-left: 1px solid var(--dw-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #94a3b8 !important;
+}
+
+/* The module switcher remains rich enough to explain each action, but reads as
+ * a compact action strip rather than a second dashboard. */
+html body:not(.dark-mode) #app .shell-module-rail-shell {
+    margin: 0 !important;
+    padding: 11px 0 13px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--dw-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-meta {
+    display: flex !important;
+    align-items: baseline !important;
+    justify-content: space-between !important;
+    margin: 0 0 8px !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-label {
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-copy strong {
+    color: #334155 !important;
+    font-size: 12px !important;
+    font-weight: 720 !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-status {
+    color: var(--dw-muted) !important;
+    font-size: 11px !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+    gap: 6px !important;
+    scrollbar-width: none;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail::-webkit-scrollbar {
+    display: none;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip {
+    min-height: 58px !important;
+    padding: 8px 10px !important;
+    border: 1px solid transparent !important;
+    border-radius: 8px !important;
+    background: var(--dw-surface-muted) !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:hover {
+    border-color: #cbdcff !important;
+    background: var(--dw-surface) !important;
+    color: var(--dw-accent-strong) !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) {
+    border-color: #bfd5ff !important;
+    background: var(--dw-accent-soft) !important;
+    color: var(--dw-accent-strong) !important;
+    box-shadow: inset 3px 0 0 var(--dw-accent) !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) * {
+    color: inherit !important;
+}
+
+@media (max-width: 900px) {
+    html body:not(.dark-mode) #app.app-layout {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    html body:not(.dark-mode) #app .app-main {
+        padding: 0 14px 28px !important;
+    }
+
+    html body:not(.dark-mode) #main-header.shell-toolbar {
+        margin: 0 -14px 8px !important;
+        padding: 8px 14px !important;
+    }
+
+    html body:not(.dark-mode) #app .shell-overview-card--dock,
+    html body:not(.dark-mode) #app .workspace-context-bar {
+        grid-template-columns: 1fr !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+
+    html body:not(.dark-mode) #app .shell-overview-context-row,
+    html body:not(.dark-mode) #app .shell-overview-pills--dock,
+    html body:not(.dark-mode) #app .workspace-context-statuses,
+    html body:not(.dark-mode) #app .workspace-context-task-groups {
+        justify-content: flex-start !important;
+    }
+
+    html body:not(.dark-mode) #app .workspace-context-summary {
+        padding: 0 !important;
+        border: 0 !important;
+    }
+
+    html body:not(.dark-mode) #app .shell-module-rail {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+}

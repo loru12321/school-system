@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-577cbf03013f';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-98b0a00cd0fe';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -262,8 +262,11 @@ var APP_MODULE_MAX_BATCH_SIZE = 6;
 // cloud-runtime prefix. Keep this as low-priority prefetch (not execution),
 // so authentication remains responsive while the post-login request waterfall
 // starts with a useful cache instead of waiting for every file after submit.
-var LOGIN_MODULE_PREFETCH_LIMIT = 24;
-var LOGIN_MODULE_PREFETCH_DELAY_MS = 600;
+// The login view must get first access to the network and main thread. Keep
+// its idle warmup intentionally small; after a successful submit the targeted
+// transition prewarm below still covers the hand-off modules that matter.
+var LOGIN_MODULE_PREFETCH_LIMIT = 8;
+var LOGIN_MODULE_PREFETCH_DELAY_MS = 2200;
 var LOGIN_TRANSITION_TAIL_MODULES = [
     'cohort-exam-hydration-runtime.js',
     'cohort-exam-meta-runtime.js',

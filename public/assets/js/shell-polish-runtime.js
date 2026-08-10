@@ -49,7 +49,16 @@
         if (!window.SystemRuntimeLoader || typeof window.SystemRuntimeLoader.load !== 'function') return false;
         if (isMobileViewport()) return false;
         if (getRuntimeLoadProfile() === 'lazy') return false;
-        return isAppVisible();
+        // GSAP, ScrollTrigger, Tippy and SimpleBar are purely decorative in
+        // this operational workspace. Loading all of them after every login
+        // competes with cloud restore and made the first usable screen feel
+        // stalled. Keep the optional polish available for deliberate testing,
+        // but ship the data workspace with its native browser controls.
+        try {
+            return isAppVisible() && window.localStorage?.getItem('SYSTEM_ENABLE_SHELL_ENHANCEMENTS') === 'true';
+        } catch (_) {
+            return false;
+        }
     }
 
     function requestIdleTask(task, timeoutMs) {

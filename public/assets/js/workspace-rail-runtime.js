@@ -1,8 +1,11 @@
 (function () {
     const DESKTOP_MEDIA_QUERY = '(min-width: 1100px)';
-    const DEFAULT_DESKTOP_COLLAPSED = true;
+    // Category names are part of the operator's orientation. Keep the main
+    // navigation readable by default; analysis-side rails remain compact.
+    const DEFAULT_DESKTOP_SIDEBAR_COLLAPSED = false;
+    const DEFAULT_ANALYSIS_RAIL_COLLAPSED = true;
     let refreshFrame = 0;
-    let desktopSidebarCollapsed = DEFAULT_DESKTOP_COLLAPSED;
+    let desktopSidebarCollapsed = DEFAULT_DESKTOP_SIDEBAR_COLLAPSED;
     const analysisRailStates = new Map();
     let moduleDockFrame = 0;
     let moduleDockBound = false;
@@ -92,7 +95,7 @@
     function getAnalysisRailState(layout) {
         const stateKey = resolveAnalysisLayoutId(layout);
         if (!analysisRailStates.has(stateKey)) {
-            analysisRailStates.set(stateKey, DEFAULT_DESKTOP_COLLAPSED);
+            analysisRailStates.set(stateKey, DEFAULT_ANALYSIS_RAIL_COLLAPSED);
         }
         return analysisRailStates.get(stateKey);
     }
