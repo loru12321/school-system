@@ -903,3 +903,228 @@ html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-curr
         justify-content: flex-start !important;
     }
 }
+
+/*
+ * Operations console pass
+ *
+ * One clear hierarchy: category navigation at left, global actions in the
+ * toolbar, task state in a compact line, then the current category's modules.
+ * This removes the former stack of overlapping cards without removing any
+ * module, pin, search or cloud action.
+ */
+html body:not(.dark-mode) #app .shell-overview {
+    margin: 0 !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-card--dock {
+    min-height: 0 !important;
+    padding: 18px 2px 14px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--ins-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-heading {
+    gap: 9px !important;
+}
+
+html body:not(.dark-mode) #app .shell-overview-heading h2 {
+    font-size: 22px !important;
+    font-weight: 760 !important;
+    letter-spacing: -0.02em !important;
+}
+
+html body:not(.dark-mode) #app #shell-module-count,
+html body:not(.dark-mode) #app .shell-overview-pills--dock > span,
+html body:not(.dark-mode) #app .shell-sync-chip {
+    min-height: 26px !important;
+    border-color: var(--ins-line) !important;
+    border-radius: 999px !important;
+    background: var(--ins-surface) !important;
+    box-shadow: none !important;
+}
+
+@media (min-width: 901px) {
+    html body:not(.dark-mode) #app #shell-workflow-path {
+        display: none !important;
+    }
+}
+
+html body:not(.dark-mode) #app .workspace-context-bar {
+    display: grid !important;
+    grid-template-columns: minmax(180px, auto) minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 46px !important;
+    margin: 0 !important;
+    padding: 8px 2px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--ins-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-summary {
+    gap: 2px !important;
+    padding: 0 12px 0 0 !important;
+    border-right: 1px solid var(--ins-line) !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-kicker {
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-title {
+    color: var(--ins-ink) !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-statuses {
+    justify-content: flex-start !important;
+    gap: 5px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-status {
+    min-height: 25px !important;
+    padding: 0 8px !important;
+    border: 0 !important;
+    border-radius: 5px !important;
+    background: var(--ins-surface-soft) !important;
+    color: var(--ins-muted) !important;
+    font-size: 11px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-task-groups {
+    grid-column: auto !important;
+    justify-content: flex-end !important;
+    gap: 7px !important;
+    padding: 0 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-group,
+html body:not(.dark-mode) #app .workspace-context-group + .workspace-context-group {
+    gap: 4px !important;
+    padding: 0 0 0 7px !important;
+    border: 0 !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-group__label {
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module-list {
+    gap: 4px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module-entry {
+    min-height: 26px !important;
+    border-color: var(--ins-line) !important;
+    border-radius: 5px !important;
+    background: #ffffff !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-module {
+    min-height: 24px !important;
+    padding: 0 7px !important;
+    font-size: 11px !important;
+}
+
+html body:not(.dark-mode) #app .workspace-context-pin {
+    width: 22px !important;
+    min-width: 22px !important;
+    height: 24px !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-shell {
+    margin: 0 !important;
+    padding: 10px 0 12px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--ins-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-meta {
+    display: flex !important;
+    align-items: baseline !important;
+    justify-content: space-between !important;
+    margin: 0 0 7px !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-copy {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 7px !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-label {
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-copy strong {
+    color: var(--ins-ink) !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-status {
+    color: var(--ins-muted) !important;
+    font-size: 11px !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail {
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)) !important;
+    gap: 5px !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip {
+    min-height: 40px !important;
+    padding: 6px 9px !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    background: var(--ins-surface-soft) !important;
+    color: #475467 !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:hover {
+    border-color: #c8d6f0 !important;
+    background: #ffffff !important;
+    color: var(--ins-coral-deep) !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) {
+    border-color: #bfd0fb !important;
+    background: var(--ins-coral-soft) !important;
+    color: var(--ins-coral-deep) !important;
+    box-shadow: inset 2px 0 0 var(--ins-coral) !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) * {
+    color: inherit !important;
+}
+
+@media (max-width: 900px) {
+    html body:not(.dark-mode) #app .shell-overview-card--dock {
+        padding: 14px 0 12px !important;
+    }
+
+    html body:not(.dark-mode) #app .workspace-context-bar {
+        grid-template-columns: 1fr !important;
+        align-items: flex-start !important;
+    }
+
+    html body:not(.dark-mode) #app .workspace-context-summary {
+        padding: 0 !important;
+        border-right: 0 !important;
+    }
+
+    html body:not(.dark-mode) #app .workspace-context-task-groups {
+        justify-content: flex-start !important;
+    }
+}

@@ -35,6 +35,33 @@
             || normalizeText(global.document?.getElementById('cohort-selector')?.value);
     }
 
+    function getCurrentExamId() {
+        const state = global.WorkspaceState;
+        if (state && typeof state.getCurrentExamId === 'function') {
+            const value = normalizeText(state.getCurrentExamId());
+            if (value) return value;
+        }
+        return normalizeText(global.CURRENT_EXAM_ID);
+    }
+
+    function getCohortDb() {
+        const state = global.WorkspaceState;
+        if (state && typeof state.getCohortDb === 'function') {
+            const value = state.getCohortDb();
+            if (value && typeof value === 'object') return value;
+        }
+        return global.COHORT_DB && typeof global.COHORT_DB === 'object' ? global.COHORT_DB : null;
+    }
+
+    function getScoreRows() {
+        const state = global.DataState;
+        if (state && typeof state.getRawData === 'function') {
+            const rows = state.getRawData();
+            if (Array.isArray(rows)) return rows;
+        }
+        return Array.isArray(global.RAW_DATA) ? global.RAW_DATA : [];
+    }
+
     function getStorageKey() {
         return `${STORAGE_PREFIX}:${getCurrentCohortId() || 'unselected'}`;
     }
@@ -117,9 +144,9 @@
     }
 
     function getExamLabel() {
-        const examId = normalizeText(global.CURRENT_EXAM_ID);
+        const examId = getCurrentExamId();
         if (!examId) return '未选择考试';
-        const entry = global.COHORT_DB?.exams?.[examId] || {};
+        const entry = getCohortDb()?.exams?.[examId] || {};
         const meta = entry?.meta && typeof entry.meta === 'object' ? entry.meta : entry;
         const title = normalizeText(meta?.name)
             || normalizeText(meta?.title)
@@ -155,7 +182,7 @@
     }
 
     function getScoreStatus() {
-        const count = Array.isArray(global.RAW_DATA) ? global.RAW_DATA.length : 0;
+        const count = getScoreRows().length;
         return { text: count ? `${count.toLocaleString('zh-CN')} 条成绩` : '成绩未恢复', tone: count ? 'positive' : 'warning' };
     }
 
@@ -260,9 +287,12 @@
         const activeId = getActiveModuleId();
         const categoryKey = getCurrentCategoryKey();
         const category = getNavigation()[categoryKey] || {};
-        const currentModules = getModules(categoryKey).slice(0, 5);
+        const activeModule = findModuleById(activeId);
         const pinnedModules = state.pinned.map(findModuleById).filter(Boolean);
-        const recentModules = state.recent.map(findModuleById).filter(Boolean).filter((item) => !state.pinned.includes(item.id));
+        const recentModules = state.recent
+            .map(findModuleById)
+            .filter(Boolean)
+            .filter((item) => item.id !== activeId && !state.pinned.includes(item.id));
 
         const summary = createElement('div', 'workspace-context-summary');
         summary.appendChild(createElement('span', 'workspace-context-kicker', category.title || '当前任务'));
@@ -279,7 +309,10 @@
         statuses.appendChild(createStatus(quality.text, 'ti-stethoscope', quality.tone));
 
         const groups = createElement('div', 'workspace-context-task-groups');
-        groups.appendChild(createGroup('当前工作区', currentModules, state, activeId, true));
+        // The category rail already owns full module navigation. Keep this bar
+        // focused on the user's live task and voluntary shortcuts so it never
+        // repeats a second navigation hierarchy above the data surface.
+        if (activeModule) groups.appendChild(createGroup('当前', [activeModule], state, activeId, true));
         if (pinnedModules.length) groups.appendChild(createGroup('固定', pinnedModules, state, activeId, true));
         if (recentModules.length) groups.appendChild(createGroup('最近访问', recentModules, state, activeId, false));
 
@@ -317,7 +350,13 @@
             recordModule(event?.detail?.id);
             scheduleRefresh();
         });
-        ['school:app-modules-ready', 'school:login-workbench-ready', 'cloud-load-state', 'cloud-sync-state'].forEach((eventName) => {
+        [
+            'school:app-modules-ready',
+            'school:login-workbench-ready',
+            'school:workspace-state-changed',
+            'cloud-load-state',
+            'cloud-sync-state'
+        ].forEach((eventName) => {
             global.addEventListener(eventName, scheduleRefresh);
         });
         global.addEventListener('storage', scheduleRefresh);

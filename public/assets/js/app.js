@@ -3046,6 +3046,19 @@ function syncRuntimeStateToWindow() {
     window.CONFIG = CONFIG;
     window.MY_SCHOOL = MY_SCHOOL;
     window.TEACHER_STATS = TEACHER_STATS;
+    // The compact shell context is rendered by its own runtime. Notify it only
+    // after every state facade has received the cloud-restored snapshot, so it
+    // cannot remain on an earlier "成绩未恢复 / 未选择考试" placeholder.
+    try {
+        window.dispatchEvent(new CustomEvent('school:workspace-state-changed', {
+            detail: {
+                cohortId: workspaceSnapshot?.currentCohortId || CURRENT_COHORT_ID || '',
+                examId: workspaceSnapshot?.currentExamId || CURRENT_EXAM_ID || '',
+                scoreCount: RAW_DATA.length
+            }
+        }));
+    } catch (_) {}
+    return workspaceSnapshot;
 }
 
 let TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {};

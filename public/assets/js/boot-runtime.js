@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-282e4bd562cb';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-577cbf03013f';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -258,8 +258,24 @@ var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
 var APP_MODULE_DESKTOP_BATCH_SIZE = 6;
 var APP_MODULE_MOBILE_BATCH_SIZE = 4;
 var APP_MODULE_MAX_BATCH_SIZE = 6;
-var LOGIN_MODULE_PREFETCH_LIMIT = 8;
-var LOGIN_MODULE_PREFETCH_DELAY_MS = 2200;
+// The login screen is normally visible long enough to warm the small state and
+// cloud-runtime prefix. Keep this as low-priority prefetch (not execution),
+// so authentication remains responsive while the post-login request waterfall
+// starts with a useful cache instead of waiting for every file after submit.
+var LOGIN_MODULE_PREFETCH_LIMIT = 24;
+var LOGIN_MODULE_PREFETCH_DELAY_MS = 600;
+var LOGIN_TRANSITION_TAIL_MODULES = [
+    'cohort-exam-hydration-runtime.js',
+    'cohort-exam-meta-runtime.js',
+    'auth-login-runtime.js',
+    'snapshot-system-runtime.js',
+    'data-processing-orchestrator-runtime.js',
+    'exam-selector-refresh-runtime.js',
+    'startup-hydration-runtime.js',
+    'workspace-ui-refresh-runtime.js',
+    'app.js',
+    'cohort-db-core-runtime.js'
+].map(bootJs);
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
 if (window.ReportInsightRuntime) {
@@ -463,15 +479,20 @@ window.__LOGIN_PREFETCH__ = true;
 scheduleIdleBootTask(() => {
     if (window.__APP_MODULES_LOADED__) return;
     if (!shouldPrefetchLoginModules()) return;
-    const limit = Math.min(getLoginModulePrefetchLimit(), 12, APP_MODULES.length);
+    const limit = Math.min(getLoginModulePrefetchLimit(), APP_MODULES.length);
     if (limit <= 0) return;
-    const firstBatchLimit = Math.min(LOGIN_MODULE_PREFETCH_LIMIT, limit);
+    const firstBatchLimit = Math.min(8, limit);
     prefetchAppModuleList(APP_MODULES.slice(0, firstBatchLimit), 'lh');
     if (limit <= firstBatchLimit) return;
-    scheduleIdleBootTask(() => {
-        if (window.__APP_MODULES_LOADED__) return;
-        prefetchAppModuleList(APP_MODULES.slice(firstBatchLimit, limit), 'lh2');
-    }, LOGIN_MODULE_PREFETCH_DELAY_MS);
+    let cursor = firstBatchLimit;
+    const prefetchNextChunk = () => {
+        if (window.__APP_MODULES_LOADED__ || cursor >= limit) return;
+        const next = Math.min(limit, cursor + 8);
+        prefetchAppModuleList(APP_MODULES.slice(cursor, next), 'lh2');
+        cursor = next;
+        if (cursor < limit) scheduleIdleBootTask(prefetchNextChunk, 500);
+    };
+    scheduleIdleBootTask(prefetchNextChunk, 500);
 }, LOGIN_MODULE_PREFETCH_DELAY_MS);
 }
 
@@ -482,6 +503,11 @@ const limit = Math.min(getAppModulePreloadLimit(), APP_MODULES.length);
 if (limit <= 0) return;
 window.__LOGIN_TRANSITION_PREFETCH_STARTED__ = true;
 prefetchAppModuleList(APP_MODULES.slice(0, limit), 'login-transition');
+// These files are at the end of the ordered list and otherwise create a
+// second visible wait after authentication. Preloading the small hand-off set
+// while the credential request is in flight keeps the six-file execution
+// batches intact without raising their responsiveness limit.
+preloadAppModuleList(LOGIN_TRANSITION_TAIL_MODULES, 'login-transition-tail');
 }
 
 function warmAppModuleCache() {
