@@ -73,13 +73,18 @@ async function enterWorkspace(page) {
 // 读报告卡片里以「注：」开头的可见行。用 innerText 而不是 innerHTML，
 // 这样被 display:none 隐藏的脚注不会被误判为通过。
 async function renderAndReadFootnote(page, name) {
-    await page.evaluate((studentName) => {
+    await page.waitForFunction(
+        () => !!document.getElementById('inp-name') && typeof window.doQuery === 'function',
+        { timeout: 60000 }
+    );
+    await page.evaluate(async (studentName) => {
         const input = document.getElementById('inp-name');
         if (input) {
             input.value = studentName;
             input.dispatchEvent(new Event('input', { bubbles: true }));
         }
-        if (typeof window.doQuery === 'function') window.doQuery();
+        const targetStudent = (window.RAW_DATA || []).find((row) => row?.name === studentName) || null;
+        if (typeof window.doQuery === 'function') await window.doQuery(targetStudent);
     }, name);
 
     await page.waitForFunction(() => {
