@@ -208,6 +208,57 @@ html body:not(.dark-mode) #main-header #global-search-container:focus-within {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.11) !important;
 }
 
+/* The header used to reserve a fixed narrow action column, then allowed its
+ * many controls to spill back over search. On common laptop widths this looked
+ * busy and made the search target hard to click. Treat utility controls as
+ * compact icons and reserve the flexible middle column for search. */
+@media (min-width: 901px) and (max-width: 1480px) {
+    html body:not(.dark-mode) #main-header.shell-toolbar {
+        grid-template-columns: 40px minmax(190px, 1fr) max-content !important;
+        gap: 8px !important;
+    }
+
+    html body:not(.dark-mode) #main-header .toolbar-right {
+        width: max-content !important;
+        min-width: 0 !important;
+        gap: 6px !important;
+        flex-wrap: nowrap !important;
+    }
+
+    html body:not(.dark-mode) #main-header :is(.shell-cloud-data-button, .shell-launcher-button) {
+        width: 38px !important;
+        min-width: 38px !important;
+        padding-inline: 0 !important;
+        justify-content: center !important;
+    }
+
+    html body:not(.dark-mode) #main-header :is(.shell-cloud-data-button, .shell-launcher-button) span {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        clip: rect(0 0 0 0) !important;
+        white-space: nowrap !important;
+    }
+
+    html body:not(.dark-mode) #main-header #admin-msg-btn {
+        width: 40px !important;
+        min-width: 40px !important;
+        height: 40px !important;
+    }
+
+    html body:not(.dark-mode) #main-header #admin-msg-btn .btn {
+        width: 40px !important;
+        min-width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+    }
+
+    html body:not(.dark-mode) #main-header #account-actions {
+        min-width: 40px !important;
+    }
+}
+
 /* Orientation is a compact masthead: category at left, current scope at
  * right. It should never consume the height of the working data surface. */
 html body:not(.dark-mode) #shell-overview {
@@ -456,8 +507,10 @@ html body:not(.dark-mode) #app .shell-module-rail-status {
 }
 
 html body:not(.dark-mode) #app .shell-module-rail {
+    display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
     gap: 6px !important;
+    overflow: hidden !important;
     scrollbar-width: none;
 }
 
@@ -466,7 +519,7 @@ html body:not(.dark-mode) #app .shell-module-rail::-webkit-scrollbar {
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-chip {
-    min-height: 58px !important;
+    min-height: 50px !important;
     padding: 8px 10px !important;
     border: 1px solid transparent !important;
     border-radius: 8px !important;
@@ -490,6 +543,75 @@ html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-curr
 
 html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) * {
     color: inherit !important;
+}
+
+/* Operational landing pages should make the next action obvious without
+ * competing decorative colors. Keep one primary command and let the rest
+ * remain quiet, as in current data-heavy desktop products. */
+html body:not(.dark-mode) #app #starter-hub .starter-card--entry .btn {
+    border: 1px solid var(--dw-line) !important;
+    border-radius: 8px !important;
+    background: var(--dw-surface) !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .starter-card--entry .btn:hover {
+    border-color: #bfd5ff !important;
+    background: var(--dw-accent-soft) !important;
+    color: var(--dw-accent-strong) !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .starter-card--entry .btn.btn-blue {
+    border-color: var(--dw-accent) !important;
+    background: var(--dw-accent) !important;
+    color: #ffffff !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .starter-card--entry .btn.btn-blue:hover {
+    border-color: var(--dw-accent-strong) !important;
+    background: var(--dw-accent-strong) !important;
+    color: #ffffff !important;
+}
+
+/* Feedback should not visually compete with the data surface. Replace the
+ * previous multi-color gradient notices with compact, legible system messages. */
+html body:not(.dark-mode) .toast-container {
+    top: 12px !important;
+    right: 16px !important;
+    left: auto !important;
+    width: min(320px, calc(100vw - 28px)) !important;
+    transform: none !important;
+}
+
+html body:not(.dark-mode) :is(.toast-msg, .toast, .toast-message, .toast-item, .notification, .notice) {
+    min-width: 0 !important;
+    max-width: 320px !important;
+    padding: 9px 12px !important;
+    border: 1px solid var(--dw-line-strong) !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12) !important;
+    backdrop-filter: none !important;
+}
+
+html body:not(.dark-mode) :is(.toast-msg.toast-success, .toast-success, .notice-success) {
+    border-left: 3px solid var(--dw-success) !important;
+    background: #f3fbf8 !important;
+    color: #166534 !important;
+}
+
+html body:not(.dark-mode) :is(.toast-msg.toast-info, .toast-info, .notice-info) {
+    border-left: 3px solid var(--dw-accent) !important;
+    background: #f5f9ff !important;
+    color: #1e3a8a !important;
+}
+
+html body:not(.dark-mode) :is(.toast-msg.toast-error, .toast-error, .notice-error) {
+    border-left: 3px solid #dc2626 !important;
+    background: #fff7f7 !important;
+    color: #991b1b !important;
 }
 
 @media (max-width: 900px) {

@@ -162,7 +162,6 @@
         return Array.from(mutation.addedNodes).some((node) => {
             if (!node || node.nodeType !== 1 || isRuntimeOwnedNode(node)) return false;
             if (node.matches?.('.section, .analysis-table-shell, .table-wrap, .analysis-shell-head')) return true;
-            if (node.closest?.('.section')) return true;
             return !!node.querySelector?.('.section, .analysis-table-shell, .table-wrap, .analysis-shell-head');
         });
     }
