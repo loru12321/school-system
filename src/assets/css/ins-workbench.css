@@ -1,30 +1,29 @@
 /*
- * INS-inspired system workspace
+ * Search-first system workspace
  *
- * The operational app stays dense and data-first. This file is deliberately
- * the final light-theme owner: warm canvas, quiet white surfaces, one coral
- * action colour and mint only for positive state. No runtime or data behaviour
- * belongs here.
+ * The operational app stays dense and data-first. This is the final light
+ * theme owner: a clear information-blue action colour, quiet white surfaces
+ * and compact content grouping. No runtime or data behaviour belongs here.
  */
 
 :root {
-    --ins-canvas: #faf7f4;
-    --ins-canvas-soft: #f5f0ed;
+    --ins-canvas: #f5f7fb;
+    --ins-canvas-soft: #f0f4fb;
     --ins-surface: #ffffff;
-    --ins-surface-soft: #fffaf8;
-    --ins-ink: #2a2830;
-    --ins-ink-strong: #1e1b22;
-    --ins-muted: #7e7780;
-    --ins-line: #ebe3e1;
-    --ins-line-strong: #ddd0d0;
-    --ins-coral: #d97887;
-    --ins-coral-deep: #bd5d70;
-    --ins-coral-soft: #fcebed;
-    --ins-mint: #4d9a89;
-    --ins-mint-soft: #e7f4ef;
-    --ins-lilac-soft: #f1edf8;
-    --ins-radius: 18px;
-    --ins-radius-small: 12px;
+    --ins-surface-soft: #f8faff;
+    --ins-ink: #1f2329;
+    --ins-ink-strong: #171a20;
+    --ins-muted: #687386;
+    --ins-line: #e4e9f2;
+    --ins-line-strong: #cbd5e1;
+    --ins-coral: #315efb;
+    --ins-coral-deep: #1746d8;
+    --ins-coral-soft: #eef4ff;
+    --ins-mint: #168b5b;
+    --ins-mint-soft: #eaf7ef;
+    --ins-lilac-soft: #f2f5ff;
+    --ins-radius: 10px;
+    --ins-radius-small: 7px;
 }
 
 html body:not(.dark-mode) {
@@ -46,20 +45,20 @@ html body:not(.dark-mode) #app .app-main {
  * an interaction state, not a reason to make the workspace difficult to scan. */
 @media (min-width: 901px) {
     html body:not(.dark-mode) #app.app-layout {
-        grid-template-columns: 232px minmax(0, 1fr) !important;
+        grid-template-columns: 220px minmax(0, 1fr) !important;
     }
 
     html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious,
     html body:not(.dark-mode).shell-sidebar-collapsed #app > #app-sidebar.sidebar-spacious,
     html body:not(.dark-mode) #app > #app-sidebar.sidebar-spacious.is-collapsed {
-        width: 232px !important;
-        min-width: 232px !important;
-        max-width: 232px !important;
-        padding: 18px 12px 26px !important;
+        width: 220px !important;
+        min-width: 220px !important;
+        max-width: 220px !important;
+        padding: 14px 10px 22px !important;
         border: 0 !important;
         border-right: 1px solid var(--ins-line) !important;
         border-radius: 0 !important;
-        background: #fffdfc !important;
+        background: #ffffff !important;
         box-shadow: none !important;
     }
 
@@ -84,32 +83,32 @@ html body:not(.dark-mode) #app-sidebar::after {
 }
 
 html body:not(.dark-mode) #app-sidebar .sidebar-nav-container {
-    gap: 4px !important;
+    gap: 3px !important;
 }
 
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item,
 html body:not(.dark-mode).shell-sidebar-collapsed #app-sidebar .sidebar-menu-item {
-    min-height: 42px !important;
+    min-height: 40px !important;
     margin: 0 !important;
-    padding: 8px 10px !important;
+    padding: 7px 9px !important;
     border: 1px solid transparent !important;
-    border-radius: 11px !important;
+    border-radius: 7px !important;
     background: transparent !important;
-    color: #6d6670 !important;
+    color: #586174 !important;
     box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item:hover {
-    background: var(--ins-coral-soft) !important;
+    background: #f5f8ff !important;
     color: var(--ins-ink-strong) !important;
 }
 
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active,
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] {
-    border-color: #f3d7dc !important;
+    border-color: #c9d9ff !important;
     background: var(--ins-coral-soft) !important;
     color: var(--ins-coral-deep) !important;
-    box-shadow: none !important;
+    box-shadow: inset 3px 0 0 var(--ins-coral) !important;
 }
 
 html body:not(.dark-mode) #app-sidebar :is(.sidebar-menu-item__icon, .sidebar-menu-item__text, .sidebar-menu-item__meta) {
@@ -124,24 +123,24 @@ html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__text {
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__count {
     border: 0 !important;
     border-radius: 999px !important;
-    color: #8a7c82 !important;
-    background: #f7f1ef !important;
+    color: #5f6f8f !important;
+    background: #edf3ff !important;
     box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #app .app-main {
-    padding: 0 28px 44px !important;
+    padding: 0 24px 36px !important;
 }
 
 /* A continuous top bar makes the workbench read as one calm canvas. */
 html body:not(.dark-mode) #main-header.shell-toolbar {
-    min-height: 66px !important;
-    margin: 0 -28px 22px !important;
-    padding: 11px 28px !important;
+    min-height: 60px !important;
+    margin: 0 -24px 16px !important;
+    padding: 9px 24px !important;
     border: 0 !important;
     border-bottom: 1px solid var(--ins-line) !important;
     border-radius: 0 !important;
-    background: rgba(250, 247, 244, 0.98) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
 }
@@ -151,7 +150,7 @@ html body:not(.dark-mode) #app .shell-overview-launcher,
 html body:not(.dark-mode) #app .shell-sync-chip {
     min-height: 34px !important;
     border: 1px solid var(--ins-line) !important;
-    border-radius: 10px !important;
+    border-radius: 7px !important;
     background: var(--ins-surface) !important;
     color: var(--ins-ink) !important;
     box-shadow: none !important;
@@ -161,35 +160,35 @@ html body:not(.dark-mode) #app .shell-sync-chip {
 html body:not(.dark-mode) #main-header :is(button, .btn):hover,
 html body:not(.dark-mode) #app .shell-overview-launcher:hover,
 html body:not(.dark-mode) #app .shell-sync-chip:hover {
-    border-color: #edc6cd !important;
+    border-color: #cbd9ff !important;
     background: var(--ins-coral-soft) !important;
     color: var(--ins-coral-deep) !important;
 }
 
 html body:not(.dark-mode) #main-header #global-search-container {
     border-color: var(--ins-line) !important;
-    border-radius: 12px !important;
+    border-radius: 8px !important;
     background: #ffffff !important;
     box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #main-header #global-search-container:focus-within {
-    border-color: #e6acb7 !important;
+    border-color: var(--ins-coral) !important;
     background: #ffffff !important;
-    box-shadow: 0 0 0 3px rgba(217, 120, 135, 0.12) !important;
+    box-shadow: 0 0 0 3px rgba(49, 94, 251, 0.12) !important;
 }
 
 /* Context sits in light layout blocks, not a stack of heavy dashboard cards. */
 html body:not(.dark-mode) #app :is(.shell-overview-card--dock, .shell-module-rail-shell) {
     border: 1px solid var(--ins-line) !important;
-    border-radius: var(--ins-radius) !important;
+    border-radius: var(--ins-radius-small) !important;
     background: var(--ins-surface) !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
 }
 
 html body:not(.dark-mode) #app .shell-overview-card--dock {
-    border-top: 3px solid var(--ins-coral) !important;
+    border-top: 2px solid var(--ins-coral) !important;
 }
 
 html body:not(.dark-mode) #app :is(.shell-overview-kicker, .shell-module-rail-label, .workspace-drawer-kicker) {
@@ -503,28 +502,28 @@ html body:not(.dark-mode) #spotlight-mask .spotlight-item.active {
 
 html body:not(.dark-mode) #app .shell-module-rail-chip {
     border: 1px solid transparent !important;
-    border-radius: 999px !important;
+    border-radius: 7px !important;
     background: transparent !important;
     color: var(--ins-muted) !important;
     box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-chip:hover {
-    background: #f8f2f0 !important;
+    background: #f4f7ff !important;
     color: var(--ins-ink) !important;
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) {
-    border-color: #f0d4da !important;
-    background: var(--ins-coral-soft) !important;
-    color: var(--ins-coral-deep) !important;
-    box-shadow: none !important;
+    border-color: var(--ins-coral) !important;
+    background: var(--ins-coral) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 5px rgba(49, 94, 251, 0.16) !important;
 }
 
 /* Modules retain clear boundaries for dense data and large tables. */
 html body:not(.dark-mode) #app .section.card-box,
 html body:not(.dark-mode) #app .section.card-box.analysis-workspace {
-    padding: 20px !important;
+    padding: 18px !important;
     border: 1px solid var(--ins-line) !important;
     border-radius: var(--ins-radius) !important;
     background: var(--ins-surface) !important;
@@ -578,8 +577,8 @@ html body:not(.dark-mode) #app :is(input, select, textarea, .form-control) {
 }
 
 html body:not(.dark-mode) #app :is(input, select, textarea, .form-control):focus {
-    border-color: #e7aab5 !important;
-    box-shadow: 0 0 0 3px rgba(217, 120, 135, 0.12) !important;
+    border-color: var(--ins-coral) !important;
+    box-shadow: 0 0 0 3px rgba(49, 94, 251, 0.12) !important;
 }
 
 html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-primary, .btn.btn-purple, .btn.btn-blue, .primary-btn, .analysis-action-btn.primary, button.primary) {
@@ -594,15 +593,15 @@ html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-primary, .btn.btn-purp
 }
 
 html body:not(.dark-mode) #app :is(.btn.btn-green, .btn-success, .status-success, .badge-success) {
-    border-color: #cbe8dd !important;
+    border-color: #c7e8d6 !important;
     background: var(--ins-mint-soft) !important;
-    color: #287260 !important;
+    color: #147448 !important;
 }
 
 html body:not(.dark-mode) #app .btn.btn-orange {
-    border-color: #f0d6bd !important;
-    background: #fff2e5 !important;
-    color: #a45b2c !important;
+    border-color: #f1d59f !important;
+    background: #fff7e7 !important;
+    color: #a15b08 !important;
 }
 
 html body:not(.dark-mode) .toast.success,
@@ -616,29 +615,29 @@ html body:not(.dark-mode) #app table {
 
 html body:not(.dark-mode) #app table thead th {
     border-color: var(--ins-line) !important;
-    background: #f8f4f3 !important;
-    color: #4a424b !important;
+    background: #f5f8ff !important;
+    color: #38455e !important;
     font-weight: 750 !important;
 }
 
 html body:not(.dark-mode) #app table :is(td, th) {
-    border-color: #f0e9e7 !important;
+    border-color: #edf1f7 !important;
 }
 
 html body:not(.dark-mode) #app table tbody tr:hover {
-    background: #fff6f5 !important;
+    background: #f6f9ff !important;
 }
 
 html body:not(.dark-mode) #app :is(.modal-content, .workspace-drawer-panel, .spotlight-box) {
     border-color: var(--ins-line) !important;
     border-radius: var(--ins-radius) !important;
     background: var(--ins-surface) !important;
-    box-shadow: 0 16px 42px rgba(77, 49, 56, 0.14) !important;
+    box-shadow: 0 16px 42px rgba(31, 46, 86, 0.14) !important;
     backdrop-filter: none !important;
 }
 
 html body:not(.dark-mode) #app .workspace-drawer-panel {
-    border-top: 3px solid var(--ins-coral) !important;
+    border-top: 2px solid var(--ins-coral) !important;
 }
 
 html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summary-card) {
@@ -649,8 +648,8 @@ html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summar
 }
 
 html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summary-card):hover {
-    border-color: #efd6da !important;
-    box-shadow: 0 8px 22px rgba(98, 59, 68, 0.07) !important;
+    border-color: #cfdcff !important;
+    box-shadow: 0 8px 22px rgba(49, 94, 251, 0.07) !important;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -659,7 +658,7 @@ html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summar
     }
 
     html body:not(.dark-mode) #app :is(.sidebar-menu-item, .shell-module-rail-chip, .btn, .shell-overview-launcher, .shell-sync-chip) {
-        transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease !important;
+        transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease !important;
     }
 }
 
@@ -683,13 +682,13 @@ html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summar
     }
 
     html body:not(.dark-mode) #app .app-main {
-        padding: 0 14px 30px !important;
+        padding: 0 12px 28px !important;
     }
 
     html body:not(.dark-mode) #main-header.shell-toolbar {
-        margin: 0 -14px 14px !important;
-        padding: 8px 14px !important;
-        background: var(--ins-canvas) !important;
+        margin: 0 -12px 12px !important;
+        padding: 8px 12px !important;
+        background: #ffffff !important;
     }
 
     html body:not(.dark-mode) #app .section.card-box,
