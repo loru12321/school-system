@@ -500,6 +500,22 @@ html body:not(.dark-mode) #spotlight-mask .spotlight-item.active {
     }
 }
 
+html body:not(.dark-mode) #shell-overview { display:block!important; margin:0 0 14px!important; }
+html body:not(.dark-mode) #app .shell-overview-card--dock {
+    display:grid!important; grid-template-columns:minmax(0,1fr) auto!important; gap:24px!important;
+    padding:3px 0 14px!important; border:0!important; border-bottom:1px solid var(--ins-line)!important;
+    border-radius:0!important; background:transparent!important; box-shadow:none!important;
+}
+html body:not(.dark-mode) #app .shell-overview-card--dock::before { display:none!important; }
+html body:not(.dark-mode) #app :is(.shell-overview-context-row,.workspace-context-bar,#shell-module-rail-shell) {
+    margin:0!important; padding:10px 0!important; border:0!important; border-bottom:1px solid var(--ins-line)!important;
+    border-radius:0!important; background:transparent!important;
+}
+html body:not(.dark-mode) #app .shell-overview-context-row { padding:0!important; }
+@media (max-width:900px) {
+    html body:not(.dark-mode) #app .shell-overview-card--dock { grid-template-columns:1fr!important; gap:10px!important; padding-bottom:10px!important; }
+}
+
 html body:not(.dark-mode) #app .shell-module-rail-chip {
     border: 1px solid transparent !important;
     border-radius: 7px !important;
