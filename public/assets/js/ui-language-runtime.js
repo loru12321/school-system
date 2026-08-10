@@ -15,7 +15,6 @@
             'starter-hub': { title: '准备状态', hint: '检查届别、考试、成绩和任课表是否齐全。' },
             upload: { title: '导入与设置', hint: '导入成绩并维护学校、科目和基础参数。' },
             'data-quality': { title: '数据检查', hint: '检查缺失、重复和异常数据。' },
-            'audio-debug': { title: '提示音设置', hint: '管理系统提示音。' },
             summary: { title: '综合评价', hint: '查看学校排名、梯队分布和整体表现。' },
             analysis: { title: '两率一分对比', hint: '比较重点率、及格率和平均分。' },
             'high-score': { title: '高分学生', hint: '查看高分学生规模、分布和变化。' },

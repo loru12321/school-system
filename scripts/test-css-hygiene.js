@@ -13,14 +13,9 @@ const activeThemeLayers = [
   ['mature-system-shell.css', 28_000, 280],
   ['workbench-design-language.css', 24_000, 340],
 ];
-const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
-const entranceAudioPath = path.join(root, 'public', 'assets', 'audio', 'entrance');
-const entranceManifestPath = path.join(entranceAudioPath, 'manifest.json');
 const source = fs.readFileSync(mobileLoginPath, 'utf8');
 const productRedesign = fs.readFileSync(productRedesignPath, 'utf8');
 const matureSystemShell = fs.readFileSync(path.join(root, 'src', 'assets', 'css', 'mature-system-shell.css'), 'utf8');
-const entranceSound = fs.readFileSync(entranceSoundPath, 'utf8');
-const entranceManifest = JSON.parse(fs.readFileSync(entranceManifestPath, 'utf8'));
 
 const removedBlocks = [
   'Login Poster Final Overrides',
@@ -74,7 +69,7 @@ const favoriteThemeMarkers = [
 ];
 
 for (const marker of favoriteThemeMarkers) {
-  if (!productRedesign.includes(marker) && !entranceSound.includes(marker)) {
+  if (!productRedesign.includes(marker)) {
     throw new Error(`Favorite-inspired UI marker is missing: ${marker}`);
   }
 }
@@ -91,71 +86,10 @@ for (const marker of favoriteThemeMarkers) {
   }
 });
 
-const audioFiles = fs.readdirSync(entranceAudioPath).filter((name) => name.endsWith('.wav'));
-if (audioFiles.length !== 0) {
-  throw new Error(`Legacy generated wav files should stay removed, found ${audioFiles.length} wav files`);
-}
-if (!Array.isArray(entranceManifest.tracks)) {
-  throw new Error('Entrance manifest should expose a tracks array');
-}
-if (entranceManifest.tracks.length !== 2) {
-  throw new Error(`Entrance manifest should expose the authorized intro and loop tracks, found ${entranceManifest.tracks.length}`);
-}
-if (!entranceManifest.note.includes('authorizedForEmbedding')) {
-  throw new Error('Entrance manifest should document that bundled tracks require embedding authorization');
-}
-for (const track of entranceManifest.tracks) {
-  if (!track.src || track.authorizedForEmbedding !== true || !track.license) {
-    throw new Error(`Bundled entrance track must include src, license, and authorizedForEmbedding=true: ${track.id || track.name || 'unnamed'}`);
-  }
-  const trackPath = path.join(entranceAudioPath, track.src);
-  if (!fs.existsSync(trackPath) || fs.statSync(trackPath).size < 100 * 1024) {
-    throw new Error(`Bundled entrance track file is missing or unexpectedly small: ${track.src}`);
-  }
-  if (fs.statSync(trackPath).size > 4 * 1024 * 1024) {
-    throw new Error(`Bundled entrance track exceeds the 4 MB web budget: ${track.src}`);
-  }
-}
-const introTrack = entranceManifest.tracks.find((track) => track.playAsIntro === true);
-const loopTrack = entranceManifest.tracks.find((track) => track.loopAfterIntro === true);
-if (!introTrack || !loopTrack || introTrack.id === loopTrack.id) {
-  throw new Error('Entrance manifest must declare one distinct intro track and one looping follow-up track');
-}
-if (!entranceSound.includes("activeAudio.preload = 'metadata'")) {
-  throw new Error('Entrance audio should preload metadata only so it does not compete with application modules');
-}
-if (!entranceSound.includes("const AUTOPLAY_KEY = 'SCHOOL_ENTRANCE_SOUND_AUTOPLAY_V1'")) {
-  throw new Error('Entrance sound should use an explicit autoplay opt-in flag');
-}
-if (!entranceSound.includes("const DEFAULT_MODE = 'custom'") || !entranceSound.includes('const DEFAULT_AUTOPLAY = true')) {
-  throw new Error('Owner-authorized entrance music should default to the AI track after the login gesture');
-}
-if (!entranceSound.includes("return saved === null ? DEFAULT_AUTOPLAY : saved === 'true'")) {
-  throw new Error('Entrance audio should retain an explicit per-browser autoplay preference');
-}
-if (entranceSound.includes('BUILTIN_TRACKS') || entranceSound.includes('playToneSequence') || entranceSound.includes('getAudioContext')) {
-  throw new Error('Entrance sound runtime should not include built-in tracks or generated fallback tones');
-}
-if (!entranceSound.includes('BUNDLED_PLAYLIST_MANIFEST') || !entranceSound.includes('authorizedForEmbedding')) {
-  throw new Error('Entrance sound runtime should load only manifest-authorized bundled audio/video tracks');
-}
-if (!entranceSound.includes("window.location.protocol === 'file:' ? 'https://schoolsystem.com.cn/' : './'")) {
-  throw new Error('Entrance sound runtime should use hosted audio assets for file:// lt.html');
-}
-if (!entranceSound.includes('https://schoolsystem.com.cn/api/entrance-audio-manifest')) {
-  throw new Error('Entrance sound runtime should read the bundled playlist through the Worker manifest API for file:// lt.html');
-}
-if (!entranceSound.includes("['assets', 'audio', 'entrance'].join('/')")) {
-  throw new Error('Entrance sound runtime should build audio paths dynamically so lt.html asset rewriting does not corrupt hosted URLs');
-}
-if (!entranceSound.includes('data-sound-choice="random"') || !entranceSound.includes('storeAuthorizedPlaylist')) {
-  throw new Error('Entrance sound runtime should expose random playback for authorized playlists');
-}
-if (!entranceSound.includes('onended') || !entranceSound.includes('autoAdvanceTimer')) {
-  throw new Error('Imported playlist playback should automatically advance to the next track');
-}
-if (!entranceSound.includes('multiple') && !entranceSound.includes('Array.from(files')) {
-  throw new Error('Entrance sound runtime should support importing more than one authorized track');
+const removedAudioDirectory = path.join(root, 'public', 'assets', 'audio', 'entrance');
+if (fs.existsSync(path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js'))
+  || (fs.existsSync(removedAudioDirectory) && fs.readdirSync(removedAudioDirectory).length > 0)) {
+  throw new Error('Entrance audio runtime and bundled sources must stay removed until a new source is explicitly requested');
 }
 
 console.log(`[css-hygiene] mobile-login.css ${byteLength} bytes`);

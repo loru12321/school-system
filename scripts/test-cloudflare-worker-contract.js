@@ -126,13 +126,13 @@ assert.ok(workerSystemData.includes("'POST', 'PUT', 'PATCH', 'DELETE'"), 'protec
 assert.ok(workerSystemData.includes('requireRestWriteSession(request, env)'), 'protected REST writes should enforce session validation before mutation');
 assert.ok(workerContractSource.includes("Authorization: `Bearer ${apikey}`"), 'Supabase proxy must forward bearer auth');
 assert.ok(workerContractSource.includes("return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);"), 'system data route must fail closed for unsupported methods');
-assert.ok(worker.includes("const ENTRANCE_AUDIO_MANIFEST_API_PATH = '/api/entrance-audio-manifest';"), 'file runtime should have a Worker-served entrance audio manifest route');
+assert.ok(!worker.includes('ENTRANCE_AUDIO_MANIFEST_API_PATH'), 'Worker must not retain the removed entrance audio manifest route');
 assert.ok(worker.includes("return new Response('Not Found', { status: 404 });"), 'asset fallback should return 404 instead of crashing');
 assert.ok(worker.includes('buildWorkerErrorBody(error, env)'), 'worker crash responses should use sanitized error bodies');
 assert.ok(workerContractSource.includes('WORKER_DEBUG_ERRORS'), 'worker crash stack traces should require an explicit debug flag');
 assert.ok(workerContractSource.includes('function getHtmlShellCacheControl()'), 'HTML shell cache policy should be centralized');
 assert.ok(workerContractSource.includes("return 'no-store, max-age=0, must-revalidate, no-transform';"), 'HTML responses should bypass CDN and browser storage');
-assert.ok(workerContractSource.includes("pathname.startsWith('/assets/audio/')"), 'hosted entrance audio should expose matching CORS for file:// lt.html');
+assert.ok(!workerContractSource.includes("pathname.startsWith('/assets/audio/')"), 'asset protection must not retain removed entrance-audio CORS handling');
 assert.ok(workerContractSource.includes("pathname.startsWith('/assets/js/')") && workerContractSource.includes('return getHtmlShellCacheControl();'), 'runtime JS should bypass CDN and browser storage');
 assert.ok(workerContractSource.includes("return 'public, max-age=31536000, immutable';"), 'hashed/vendor static assets should get immutable caching');
 assert.ok(workerContractSource.includes("return 'public, max-age=3600, stale-while-revalidate=86400';"), 'unversioned static assets should get short browser caching');

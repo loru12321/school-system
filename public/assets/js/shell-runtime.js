@@ -39,8 +39,7 @@
             items: [
                 { id: 'starter-hub', icon: 'ti-clipboard-check', text: '准备状态', hint: '检查当前届别、考试、成绩和任课表是否齐全。' },
                 { id: 'upload', icon: 'ti-database-import', text: '导入与设置', hint: '导入成绩，维护科目、学校映射和基础参数。' },
-                { id: 'data-quality', icon: 'ti-stethoscope', text: '数据检查', hint: '检查缺失字段、重复身份、异常分数和科目缺失。' },
-                { id: 'audio-debug', icon: 'ti-volume', text: '提示音设置', hint: '管理系统提示音和进入系统时的播放授权。' }
+                { id: 'data-quality', icon: 'ti-stethoscope', text: '数据检查', hint: '检查缺失字段、重复身份、异常分数和科目缺失。' }
             ]
         },
         town: {

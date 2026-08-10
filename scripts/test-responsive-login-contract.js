@@ -47,8 +47,11 @@ assert.ok(
 assert.ok(!html.includes('class="login-styleboard"'), 'login page should not ship decorative styleboard cards in the initial DOM');
 assert.ok(!fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'login-entry-runtime.js'), 'utf8').includes("dataset.loginSkin = 'passport'"), 'login runtime must not switch the page back to the heavy passport skin');
 assert.ok(
-    html.includes('id="audio-debug"') && html.includes('data-sound-import="1"') && html.includes('data-sound-preview="1"'),
-    'audio debug module must expose system sound preview/import controls'
+    !html.includes('id="audio-debug"')
+        && !html.includes('data-sound-import="1"')
+        && !html.includes('data-sound-preview="1"')
+        && !html.includes('entrance-sound-runtime.js'),
+    'login and workspace must stay free of entrance-audio controls and playback runtime'
 );
 
 const tabletQuery = /@media\s*\(min-width:\s*769px\)\s*and\s*\(max-width:\s*1180px\)/i;

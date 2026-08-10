@@ -30,7 +30,7 @@ assert.strictEqual(bootVersion, serviceWorkerVersion, 'boot runtime fallback sho
 assert.strictEqual(cacheVersion, `school-system-${serviceWorkerVersion}`, 'service worker cache should follow generated runtime version');
 assert.ok(!srcIndex.includes('runtimeRefresh'), 'HTML should not depend on runtimeRefresh query-cache churn');
 assert.ok(!srcIndex.includes('SCHOOL_RUNTIME_REFRESH_VERSION'), 'HTML should not depend on local runtime version stamps');
-assert.ok(srcIndex.includes('entrance-sound-runtime.js') && !srcIndex.includes('entrance-sound-runtime.js?v='), 'entrance sound runtime should not depend on query-versioned caching');
+assert.ok(!srcIndex.includes('entrance-sound-runtime.js'), 'HTML should not load an entrance sound runtime without an approved source');
 assert.ok(srcIndex.includes('runtime-loader-runtime.js') && !srcIndex.includes('runtime-loader-runtime.js?v='), 'runtime loader should not depend on query-versioned caching');
 assert.ok(srcIndex.includes(`boot-runtime-${serviceWorkerVersion}.js`), 'boot runtime should use a content-versioned pathname that bypasses stale CDN objects');
 assert.ok(srcIndex.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 'service worker runtime loader should use a content-versioned pathname');

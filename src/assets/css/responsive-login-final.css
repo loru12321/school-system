@@ -403,11 +403,6 @@ html body #login-overlay[data-login-skin="clean"] .login-entry-transition {
     background: #f4f8ff !important;
 }
 
-html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[data-login-sound-hidden="1"],
-html body #login-overlay[data-login-skin="clean"] .entrance-sound-panel[hidden] {
-    display: none !important;
-}
-
 @media (min-width: 769px) and (max-width: 1180px) {
     html body #login-overlay[data-login-skin="clean"] {
         align-items: flex-start !important;

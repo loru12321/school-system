@@ -1,5 +1,3 @@
-import { buildCorsHeaders } from './worker-http-helpers.js';
-
 // ---------------------------------------------------------------------------
 // HTML shell protection
 // ---------------------------------------------------------------------------
@@ -59,11 +57,6 @@ function getStaticAssetCacheControl(url) {
   return 'public, max-age=3600, stale-while-revalidate=86400';
 }
 
-function shouldExposeStaticAssetCors(url) {
-  const pathname = String(url.pathname || '');
-  return pathname.startsWith('/assets/audio/');
-}
-
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -72,7 +65,6 @@ function shouldExposeStaticAssetCors(url) {
  * Apply HTML and static asset protections to a response fetched from ASSETS.
  * - Forces no-store / CDN-no-store on HTML shell responses.
  * - Injects immutable / long-lived Cache-Control on versioned static assets.
- * - Adds CORS headers for audio assets.
  *
  * @param {Request} request  The original incoming request.
  * @param {Response} response  The response from env.ASSETS.fetch().
@@ -87,14 +79,10 @@ export function protectAssetResponse(request, response) {
   if (method !== 'GET' && method !== 'HEAD') return protectedHtml;
   const requestUrl = new URL(request.url);
   const cacheControl = getStaticAssetCacheControl(requestUrl);
-  const exposeCors = shouldExposeStaticAssetCors(requestUrl);
-  if (!cacheControl && !exposeCors) return protectedHtml;
+  if (!cacheControl) return protectedHtml;
   const headers = new Headers(protectedHtml.headers);
-  if (cacheControl) headers.set('Cache-Control', cacheControl);
+  headers.set('Cache-Control', cacheControl);
   headers.set('X-Content-Type-Options', 'nosniff');
-  if (exposeCors) {
-    Object.entries(buildCorsHeaders(request)).forEach(([key, value]) => headers.set(key, value));
-  }
   return new Response(protectedHtml.body, {
     status: protectedHtml.status,
     statusText: protectedHtml.statusText,

@@ -92,12 +92,6 @@
     box-shadow: none !important;
 }
 
-#login-overlay[data-login-skin="clean"] .entrance-sound-panel {
-    border-radius: 18px !important;
-    background: rgba(255, 255, 255, 0.66) !important;
-    border: 1px solid rgba(148, 163, 184, 0.22) !important;
-}
-
 html,
 body,
 body.dark-mode {
@@ -1700,8 +1694,7 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-switch,
-#login-overlay[data-login-skin="clean"] .login-entry-field,
-#login-overlay[data-login-skin="clean"] .entrance-sound-panel {
+#login-overlay[data-login-skin="clean"] .login-entry-field {
     border-radius: 10px !important;
     border: 1px solid var(--ds-line) !important;
     background: #ffffff !important;
@@ -3226,11 +3219,6 @@ tr.selected,
     min-width: 48px !important;
     color: #2563eb !important;
     letter-spacing: 0.04em !important;
-}
-
-#login-overlay[data-login-skin="clean"] .entrance-sound-panel small,
-#login-overlay[data-login-skin="clean"] .entrance-sound-option small {
-    letter-spacing: 0 !important;
 }
 
 @media (max-width: 1180px) {

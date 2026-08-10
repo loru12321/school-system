@@ -9,8 +9,6 @@ const authLoginPath = path.join(root, 'public', 'assets', 'js', 'auth-login-runt
 const authLoginJs = fs.readFileSync(authLoginPath, 'utf8');
 const cohortExamMetaPath = path.join(root, 'public', 'assets', 'js', 'cohort-exam-meta-runtime.js');
 const cohortExamMetaJs = fs.readFileSync(cohortExamMetaPath, 'utf8');
-const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
-const entranceSoundJs = fs.readFileSync(entranceSoundPath, 'utf8');
 const bootRuntimePath = path.join(root, 'public', 'assets', 'js', 'boot-runtime.js');
 const bootRuntimeJs = fs.readFileSync(bootRuntimePath, 'utf8');
 
@@ -97,30 +95,9 @@ assert.match(
   'school login must show a non-destructive cohort picker only when no selected cohort entry is pending'
 );
 
-assert.match(
-  entranceSoundJs,
-  /const AUTOPLAY_KEY = 'SCHOOL_ENTRANCE_SOUND_AUTOPLAY_V1';/,
-  'entrance audio must use an explicit autoplay opt-in flag'
-);
-assert.match(
-  entranceSoundJs,
-  /const DEFAULT_MODE = 'custom';\s*\n\s*const DEFAULT_AUTOPLAY = true;/,
-  'the project-selected entrance sequence must be enabled after the login gesture'
-);
-assert.match(
-  entranceSoundJs,
-  /function prewarmCustomAudio\(\)\s*\{[\s\S]*?!audioUnlocked\s*\|\|\s*!isAutoplayEnabled\(\)/,
-  'entrance audio must not fetch while the login screen is painting before a user gesture'
-);
-assert.match(
-  entranceSoundJs,
-  /function unlockCustomAudio\(\)\s*\{[\s\S]*?!isAutoplayEnabled\(\)/,
-  'login gestures must only unlock the selected entrance audio when it is enabled'
-);
-assert.match(
-  entranceSoundJs,
-  /lastOverlayVisible && !visible && !playedForSession && isAutoplayEnabled\(\)/,
-  'the post-login transition must start the selected entrance sequence when enabled'
+assert.ok(
+  !fs.existsSync(path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js')),
+  'login must not load an entrance-audio runtime until a new source is explicitly requested'
 );
 assert.match(
   bootRuntimeJs,

@@ -67,7 +67,6 @@ assert.ok(smoke.includes('activationMs: activationTiming.durationMs'), 'switch t
 assert.ok(smoke.includes('let switchMs = Number.isFinite(switchResult?.activationMs)'), 'strict performance budgets should use the real module activation time instead of Playwright RPC delay');
 assert.ok(
   smoke.includes("'starter-hub': 0")
-    && smoke.includes("'audio-debug': 0")
     && smoke.includes("'data-quality': 0"),
   'lightweight and deferred-render shells should not include the complex-module settle delay in switch timing'
 );

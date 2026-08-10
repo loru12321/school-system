@@ -77,16 +77,8 @@ assert.ok(
   'content-versioned dist boot runtime must exist before release'
 );
 assert.ok(exists('dist/assets/js/app.js'), 'dist app runtime must exist before release');
-const entranceManifest = parseJson('dist/assets/audio/entrance/manifest.json');
-assert.strictEqual(entranceManifest.tracks.length, 2, 'release should include the authorized AI intro and its looping background track');
-entranceManifest.tracks.forEach((track) => {
-  assert.ok(exists(`dist/assets/audio/entrance/${track.src}`), `release should include built-in entrance track ${track.src}`);
-});
-const introTrack = entranceManifest.tracks.find((track) => track.playAsIntro === true);
-const loopTrack = entranceManifest.tracks.find((track) => track.loopAfterIntro === true);
-assert.ok(introTrack, 'release entrance playlist should declare an intro track');
-assert.ok(loopTrack, 'release entrance playlist should declare a looping background track');
-assert.notStrictEqual(introTrack.id, loopTrack.id, 'entrance intro and loop track must remain distinct');
+assert.ok(!exists('dist/assets/audio/entrance'), 'release must not contain bundled entrance audio sources');
+assert.ok(!exists('dist/assets/js/entrance-sound-runtime.js'), 'release must not contain an entrance audio runtime');
 assert.ok(exists('src/worker-dummy.js'), 'Cloudflare Worker entry must exist');
 assert.strictEqual(wrangler.main, 'src/worker-dummy.js', 'Cloudflare Worker entry should stay on the static asset worker');
 assert.strictEqual(wrangler.assets && wrangler.assets.directory, './dist', 'Cloudflare assets directory should deploy ./dist');
@@ -131,7 +123,7 @@ assert.strictEqual(
 assert.ok(publicHeaders.includes('/style-*.css'), 'static asset headers should cover hashed Vite CSS');
 assert.ok(publicHeaders.includes('/assets/vendor/*'), 'static asset headers should cover vendored assets');
 assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should cover runtime JS assets');
-assert.ok(publicHeaders.includes('/assets/audio/*'), 'static asset headers should cover built-in entrance audio assets');
+assert.ok(!publicHeaders.includes('/assets/audio/*'), 'static headers should not retain a removed entrance-audio route');
 assert.ok(publicHeaders.includes('/assets/js/*') && publicHeaders.includes('Cache-Control: no-store, max-age=0, must-revalidate'), 'runtime JS should bypass browser and CDN storage');
 assert.ok(
   publicHeaders.includes('/assets/css/*\n  Cache-Control: public, max-age=31536000, immutable'),

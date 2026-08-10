@@ -25,7 +25,6 @@ function writeSmokeOutput(summary) {
 
 const DEFAULT_SWITCH_MODULE_IDS = [
     'starter-hub',
-    'audio-debug',
     'upload',
     'data-quality',
     'summary',
@@ -81,7 +80,6 @@ const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
 const SMOKE_HOTSPOT_PREWARM_TIMEOUT_MS = 4500;
 const MODULE_SWITCH_SETTLE_MS = {
     'starter-hub': 0,
-    'audio-debug': 0,
     'data-quality': 0,
     'student-details': 0,
     'mutual-aid': 0,
@@ -5369,7 +5367,6 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
 
     const summary = {
         login: await page.evaluate(() => {
-            const entrancePlaylistStatus = String(document.querySelector('[data-sound-status]')?.textContent || '').trim();
             const totalSubjects = typeof window.getTotalSubjectsForLabel === 'function'
                 ? window.getTotalSubjectsForLabel()
                 : [];
@@ -5427,8 +5424,8 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
             totalSubjectCount: totalSubjects.length,
             totalSubjectLabel,
             totalSubjectPresentationReady: !!expectedTotalSubjectLabel && totalSubjectLabel === expectedTotalSubjectLabel,
-            entrancePlaylistStatus,
-            entrancePlaylistReady: /已导入\s*2\s*首|播放：(抽离喧嚣城市 · AI 夜航版|任然 - 外婆桥)/.test(entrancePlaylistStatus),
+            entranceAudioRemoved: !document.querySelector('[data-sound-status], [data-sound-import], [data-sound-preview], [data-sound-choice]')
+                && !Array.from(document.scripts).some((script) => /entrance-sound-runtime\.js/.test(String(script.src || ''))),
             teacherMapCountBeforePrewarm: Object.keys(window.TEACHER_MAP || {}).length,
             teacherAutoRestoreReady: Object.keys(window.TEACHER_MAP || {}).length > 0
         });
@@ -5776,7 +5773,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     if (
         !summary.login.appVisible
         || !summary.login.schoolInternalRemoved
-        || !summary.login.entrancePlaylistReady
+        || !summary.login.entranceAudioRemoved
         || !summary.cohortStageLabels.ok
         || failedSwitch
         || failedDm

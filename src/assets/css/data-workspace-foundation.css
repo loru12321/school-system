@@ -2,18 +2,18 @@
  * Data workspace foundation
  *
  * A light, disciplined operating surface for dense school data. This layer is
- * intentionally limited to navigation and orientation chrome: analysis
- * content and all calculation views keep their existing semantic styles.
+ * intentionally limited to navigation, orientation and shared data-reading
+ * chrome: calculation views keep their existing semantic styles and formulas.
  */
 
 :root {
-    --dw-canvas: #f6f8fb;
+    --dw-canvas: #f7f8fa;
     --dw-surface: #ffffff;
-    --dw-surface-muted: #f8fafc;
-    --dw-ink: #172033;
-    --dw-muted: #64748b;
-    --dw-line: #e5eaf1;
-    --dw-line-strong: #d6deea;
+    --dw-surface-muted: #f5f7fa;
+    --dw-ink: #18212f;
+    --dw-muted: #58677c;
+    --dw-line: #e7ebf1;
+    --dw-line-strong: #d7dee8;
     --dw-accent: #2563eb;
     --dw-accent-strong: #1d4ed8;
     --dw-accent-soft: #eff6ff;
@@ -144,7 +144,7 @@ html body:not(.dark-mode) #app.app-layout {
 
     html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active,
     html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] {
-        border-color: #cfe0ff !important;
+        border-color: transparent !important;
         background: var(--dw-accent-soft) !important;
         color: var(--dw-accent-strong) !important;
         box-shadow: inset 3px 0 0 var(--dw-accent) !important;
@@ -152,8 +152,8 @@ html body:not(.dark-mode) #app.app-layout {
 
     html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active .sidebar-menu-item__icon,
     html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] .sidebar-menu-item__icon {
-        background: var(--dw-accent) !important;
-        color: #ffffff !important;
+        background: #dfeaff !important;
+        color: var(--dw-accent-strong) !important;
     }
 }
 
@@ -171,9 +171,9 @@ html body:not(.dark-mode) #main-header.shell-toolbar {
     border: 0 !important;
     border-bottom: 1px solid var(--dw-line) !important;
     border-radius: 0 !important;
-    background: rgba(255, 255, 255, 0.96) !important;
+    background: #ffffff !important;
     box-shadow: none !important;
-    backdrop-filter: saturate(140%) blur(12px) !important;
+    backdrop-filter: none !important;
 }
 
 html body:not(.dark-mode) #main-header :is(button, .btn, select),
@@ -398,22 +398,20 @@ html body:not(.dark-mode) #app .workspace-context-statuses {
 
 html body:not(.dark-mode) #app .workspace-context-status {
     min-height: 26px !important;
-    padding: 0 8px !important;
+    padding: 0 3px !important;
     border: 1px solid transparent !important;
-    border-radius: 6px !important;
-    background: var(--dw-surface-muted) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
     color: var(--dw-muted) !important;
     font-size: 11px !important;
     font-weight: 650 !important;
 }
 
 html body:not(.dark-mode) #app .workspace-context-status.is-positive {
-    background: var(--dw-success-soft) !important;
     color: #047857 !important;
 }
 
 html body:not(.dark-mode) #app .workspace-context-status.is-warning {
-    background: #fffbeb !important;
     color: #a16207 !important;
 }
 
@@ -435,16 +433,16 @@ html body:not(.dark-mode) #app .workspace-context-group + .workspace-context-gro
 html body:not(.dark-mode) #app .workspace-context-module-entry {
     min-height: 28px !important;
     overflow: hidden !important;
-    border: 1px solid var(--dw-line) !important;
-    border-radius: 6px !important;
-    background: var(--dw-surface) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
 }
 
 html body:not(.dark-mode) #app .workspace-context-module {
     min-height: 26px !important;
     padding: 0 8px !important;
     border: 0 !important;
-    border-radius: 0 !important;
+    border-radius: 6px !important;
     color: #526074 !important;
     font-size: 11px !important;
     font-weight: 680 !important;
@@ -457,8 +455,9 @@ html body:not(.dark-mode) #app .workspace-context-module:focus-visible {
 }
 
 html body:not(.dark-mode) #app .workspace-context-module.is-active {
-    background: var(--dw-accent) !important;
-    color: #ffffff !important;
+    background: var(--dw-accent-soft) !important;
+    color: var(--dw-accent-strong) !important;
+    box-shadow: inset 0 -2px 0 var(--dw-accent) !important;
 }
 
 html body:not(.dark-mode) #app .workspace-context-pin {
@@ -466,7 +465,7 @@ html body:not(.dark-mode) #app .workspace-context-pin {
     min-width: 24px !important;
     height: 26px !important;
     border: 0 !important;
-    border-left: 1px solid var(--dw-line) !important;
+    border-left: 0 !important;
     border-radius: 0 !important;
     background: transparent !important;
     color: #94a3b8 !important;
@@ -509,7 +508,7 @@ html body:not(.dark-mode) #app .shell-module-rail-status {
 html body:not(.dark-mode) #app .shell-module-rail {
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
-    gap: 6px !important;
+    gap: 14px !important;
     overflow: hidden !important;
     scrollbar-width: none;
 }
@@ -519,30 +518,114 @@ html body:not(.dark-mode) #app .shell-module-rail::-webkit-scrollbar {
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-chip {
-    min-height: 50px !important;
-    padding: 8px 10px !important;
-    border: 1px solid transparent !important;
-    border-radius: 8px !important;
-    background: var(--dw-surface-muted) !important;
+    min-height: 48px !important;
+    padding: 7px 4px 8px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--dw-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
     color: #475569 !important;
     box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-chip:hover {
-    border-color: #cbdcff !important;
-    background: var(--dw-surface) !important;
+    border-bottom-color: #bfd5ff !important;
+    background: var(--dw-accent-soft) !important;
     color: var(--dw-accent-strong) !important;
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) {
-    border-color: #bfd5ff !important;
+    border-bottom-color: var(--dw-accent) !important;
     background: var(--dw-accent-soft) !important;
     color: var(--dw-accent-strong) !important;
-    box-shadow: inset 3px 0 0 var(--dw-accent) !important;
+    box-shadow: inset 0 -2px 0 var(--dw-accent) !important;
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) * {
     color: inherit !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip::after {
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip-index {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 7px !important;
+    background: #eef2f7 !important;
+    color: #64748b !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) .shell-module-rail-chip-index {
+    background: #dbeafe !important;
+    color: var(--dw-accent-strong) !important;
+}
+
+/* The older studio skin left a decorative gradient marker in every status
+ * cell. A single grid boundary and whitespace are enough to separate these
+ * values, so keep the data itself as the visual anchor. */
+html body:not(.dark-mode) #app #starter-hub .status-item::before {
+    content: none !important;
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .status-item {
+    color: var(--dw-muted) !important;
+}
+
+html body:not(.dark-mode) #app #starter-hub .status-item strong {
+    color: var(--dw-ink) !important;
+}
+
+/* Shared reading rhythm for dense tables: stronger headers, quiet rules and
+ * stable number widths. No semantic colors or calculation output are changed. */
+html body:not(.dark-mode) #app table :is(th, td) {
+    font-variant-numeric: tabular-nums;
+}
+
+html body:not(.dark-mode) #app table thead th {
+    background: #f3f5f8 !important;
+    color: #334155 !important;
+    border-bottom-color: var(--dw-line-strong) !important;
+    font-weight: 720 !important;
+}
+
+html body:not(.dark-mode) #app table tbody td {
+    border-bottom-color: var(--dw-line) !important;
+}
+
+html body:not(.dark-mode) #app table tbody tr:hover td {
+    background: #f5f8fd !important;
+}
+
+html body #app :is(button, .btn, [role="button"], a, select, input, textarea) {
+    touch-action: manipulation;
+}
+
+html body #app :is(button, .btn, [role="button"], a, select, input, textarea):focus-visible {
+    outline: 2px solid var(--dw-accent) !important;
+    outline-offset: 2px !important;
+}
+
+html body:not(.dark-mode) #app :is(.sidebar-menu-item, .shell-module-rail-chip, .workspace-context-module) {
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease !important;
+}
+
+html body:not(.dark-mode) #app :is(h1, h2, h3, h4) {
+    text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html body #app *,
+    html body #app *::before,
+    html body #app *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }
 
 /* Operational landing pages should make the next action obvious without
