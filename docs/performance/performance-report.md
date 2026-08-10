@@ -4,13 +4,13 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `7d4a5e69aca7`
-- Recorded at: 2026-08-10T11:15:48.744Z
-- Total smoke time: 24730 ms (+45 ms vs previous)
-- Login: 3194 ms
-- App ready: 4 ms
+- Commit: `e79a53175bfe`
+- Recorded at: 2026-08-10T11:38:05.116Z
+- Total smoke time: 26355 ms (+1625 ms vs previous)
+- Login: 4657 ms
+- App ready: 8 ms
 - Native long tasks: 0, max 0 ms
-- Scheduled task samples: 56, max end-to-end 215.2 ms, max derived network wait 12.4 ms
+- Scheduled task samples: 50, max end-to-end 203.1 ms, max derived network wait 11.2 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -18,19 +18,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `progress-analysis` | 51 ms | 703 ms | 754 ms |
-| `grade-scheduler` | 25.5 ms | 673 ms | 698.5 ms |
-| `report-generator` | 12.5 ms | 629 ms | 641.5 ms |
-| `student-overview` | 34.30000000000291 ms | 580 ms | 614.3000000000029 ms |
-| `teacher-township-ranking` | 4.100000000005821 ms | 519 ms | 523.1000000000058 ms |
-| `subject-balance` | 26 ms | 425 ms | 451 ms |
-| `freshman-simulator` | 49.59999999999127 ms | 399 ms | 448.59999999999127 ms |
-| `teacher-analysis` | 59.5 ms | 337 ms | 396.5 ms |
+| `report-generator` | 19.80000000000291 ms | 1040 ms | 1059.800000000003 ms |
+| `progress-analysis` | 75 ms | 792 ms | 867 ms |
+| `grade-scheduler` | 23 ms | 718 ms | 741 ms |
+| `student-overview` | 36.30000000000291 ms | 646 ms | 682.3000000000029 ms |
+| `teacher-township-ranking` | 6.099999999991269 ms | 545 ms | 551.0999999999913 ms |
+| `subject-balance` | 35.80000000000291 ms | 481 ms | 516.8000000000029 ms |
+| `teacher-analysis` | 58.89999999999418 ms | 377 ms | 435.8999999999942 ms |
+| `cohort-growth` | 14.30000000000291 ms | 405 ms | 419.3000000000029 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Native long tasks | Scheduled tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `e79a53175bfe` | 26355 ms | 4657 ms | 8 ms | 0 | 50 | 0 | 0 |
 | `7d4a5e69aca7` | 24730 ms | 3194 ms | 4 ms | 0 | 56 | 0 | 0 |
 | `ba4249944228` | 24685 ms | 4281 ms | 5 ms | 0 | 42 | 0 | 0 |
 | `b70aeb427c61` | 24160 ms | 4036 ms | 14 ms | 0 | 51 | 0 | 0 |
@@ -45,7 +46,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `dff221e6c627` | 22536 ms | 3240 ms | 3 ms | 0 | 48 | 0 | 0 |
 | `e00fc5099dfa` | 21713 ms | 3699 ms | 16 ms | 0 | 54 | 0 | 0 |
 | `1f135b2caae4` | 25404 ms | 5125 ms | 13 ms | 0 | 51 | 0 | 0 |
-| `eb593c740fa7` | 29262 ms | 9712 ms | 4 ms | 0 | 56 | 0 | 0 |
 
 ## Data Files
 
