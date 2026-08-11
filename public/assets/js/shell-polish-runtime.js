@@ -312,14 +312,9 @@
         const activeSectionId = activeSection ? activeSection.id : '';
         if (!activeSection || !activeSectionId || activeSectionId === lastSectionId) return;
         lastSectionId = activeSectionId;
-        const sectionBlocks = Array.from(
-            activeSection.querySelectorAll('.module-desc-bar, .analysis-shell-head, .analysis-inline-panel, .card-box')
-        ).slice(0, 6);
-        animateNodes(
-            sectionBlocks,
-            { autoAlpha: 0, y: 20 },
-            { autoAlpha: 1, y: 0, duration: 0.42, ease: 'power2.out', stagger: 0.045, clearProps: 'opacity,transform' }
-        );
+        // Module switching is an operational action, so the result should be
+        // immediately readable. Earlier staggered GSAP reveals made a fast
+        // data switch feel roughly half a second slower than it was.
     }
 
     function bindObservers() {

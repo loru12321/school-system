@@ -62,7 +62,8 @@ assert.match(css, /flex-direction:\s*column/, 'tablet shell must use a stacked p
 assert.match(css, /border-radius:\s*28px/, 'tablet shell must remain a polished card');
 assert.match(css, phoneQuery, 'phone breakpoint must target widths up to 768px');
 assert.match(css, /\.login-styleboard,\s*[\s\S]*?display:\s*none\s*!important/, 'responsive rules must explicitly hide the legacy styleboard');
-assert.match(css, /#login-overlay\[data-login-skin="clean"\]\s*\{[^}]*background:\s*#f6f8fb\s*!important/s, 'single login theme must use the workspace background');
+assert.match(css, /--login-surface:\s*#f6f4f2\s*;/, 'single login theme must keep the canonical paper-neutral workspace background');
+assert.match(css, /#login-overlay\[data-login-skin="clean"\]\s*\{[^}]*background:\s*var\(--login-surface\)\s*!important/s, 'single login theme must use the canonical workspace background token');
 assert.match(css, /#login-overlay\[data-login-skin="clean"\]\s*\{[^}]*background-image:\s*none\s*!important/s, 'single login theme must clear inherited radial gradients');
 assert.match(css, /#login-overlay\[data-login-skin="clean"\]\s+\*[\s\S]*animation:\s*none\s*!important/, 'single login theme must disable login page animations');
 assert.doesNotMatch(css, /backdrop-filter:\s*blur\(/, 'responsive-login-final.css must not introduce login backdrop blur');

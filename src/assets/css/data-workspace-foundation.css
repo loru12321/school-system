@@ -1,22 +1,23 @@
 /*
- * Data workspace foundation
+ * Editorial data workspace
  *
- * A light, disciplined operating surface for dense school data. This layer is
- * intentionally limited to navigation, orientation and shared data-reading
- * chrome: calculation views keep their existing semantic styles and formulas.
+ * One final visual owner for the school data application: paper-like neutral
+ * surfaces, ink typography and a restrained lilac accent. Calculation views,
+ * semantic status colours and data structures remain unchanged.
  */
 
 :root {
-    --dw-canvas: #f7f8fa;
-    --dw-surface: #ffffff;
-    --dw-surface-muted: #f5f7fa;
-    --dw-ink: #18212f;
-    --dw-muted: #58677c;
-    --dw-line: #e7ebf1;
-    --dw-line-strong: #d7dee8;
-    --dw-accent: #2563eb;
-    --dw-accent-strong: #1d4ed8;
-    --dw-accent-soft: #eff6ff;
+    --dw-canvas: #f6f4f2;
+    --dw-surface: #fffefd;
+    --dw-surface-muted: #f2eff3;
+    --dw-ink: #272229;
+    --dw-muted: #756d78;
+    --dw-line: #e8e2e9;
+    --dw-line-strong: #d8d0db;
+    --dw-accent: #9f66c6;
+    --dw-accent-strong: #754094;
+    --dw-accent-soft: #f4ecf9;
+    --dw-accent-quiet: #eadcf3;
     --dw-success: #0f8a5f;
     --dw-success-soft: #ecfdf5;
 }
@@ -64,7 +65,7 @@ html body:not(.dark-mode) #app.app-layout {
         border: 1px solid transparent !important;
         border-radius: 9px !important;
         background: transparent !important;
-        color: #526074 !important;
+        color: #665f69 !important;
         box-shadow: none !important;
     }
 
@@ -86,8 +87,8 @@ html body:not(.dark-mode) #app.app-layout {
         height: 30px !important;
         border: 0 !important;
         border-radius: 8px !important;
-        background: #f1f5f9 !important;
-        color: #64748b !important;
+        background: #f1edf2 !important;
+        color: #776f79 !important;
         box-shadow: none !important;
     }
 
@@ -126,14 +127,14 @@ html body:not(.dark-mode) #app.app-layout {
 
     html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__meta {
         margin-top: 2px !important;
-        color: #94a3b8 !important;
+        color: #9b929d !important;
         font-size: 10px !important;
         font-weight: 600 !important;
         line-height: 1.2 !important;
     }
 
     html body:not(.dark-mode) #app-sidebar .sidebar-menu-item:hover {
-        background: #f8fafc !important;
+        background: #faf8fa !important;
         color: var(--dw-ink) !important;
     }
 
@@ -152,7 +153,7 @@ html body:not(.dark-mode) #app.app-layout {
 
     html body:not(.dark-mode) #app-sidebar .sidebar-menu-item.active .sidebar-menu-item__icon,
     html body:not(.dark-mode) #app-sidebar .sidebar-menu-item[aria-current="page"] .sidebar-menu-item__icon {
-        background: #dfeaff !important;
+        background: var(--dw-accent-quiet) !important;
         color: var(--dw-accent-strong) !important;
     }
 }
@@ -183,14 +184,14 @@ html body:not(.dark-mode) #app .shell-sync-chip {
     border: 1px solid var(--dw-line) !important;
     border-radius: 8px !important;
     background: var(--dw-surface) !important;
-    color: #435168 !important;
+    color: #5e5662 !important;
     box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #main-header :is(button, .btn, select):hover,
 html body:not(.dark-mode) #app .shell-overview-launcher:hover,
 html body:not(.dark-mode) #app .shell-sync-chip:hover {
-    border-color: #bfd5ff !important;
+    border-color: #d9c2e7 !important;
     background: var(--dw-accent-soft) !important;
     color: var(--dw-accent-strong) !important;
 }
@@ -205,7 +206,7 @@ html body:not(.dark-mode) #main-header #global-search-container {
 html body:not(.dark-mode) #main-header #global-search-container:focus-within {
     border-color: var(--dw-accent) !important;
     background: var(--dw-surface) !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.11) !important;
+    box-shadow: 0 0 0 3px rgba(159, 102, 198, 0.12) !important;
 }
 
 /* The header used to reserve a fixed narrow action column, then allowed its
@@ -306,8 +307,8 @@ html body:not(.dark-mode) #app #shell-module-count {
     padding: 0 8px !important;
     border: 0 !important;
     border-radius: 999px !important;
-    background: #eef2f7 !important;
-    color: #64748b !important;
+    background: #f0ecef !important;
+    color: #756d78 !important;
     font-size: 11px !important;
     font-weight: 700 !important;
 }
@@ -355,7 +356,7 @@ html body:not(.dark-mode) #app .shell-sync-chip {
     border-color: var(--dw-line) !important;
     border-radius: 999px !important;
     background: var(--dw-surface) !important;
-    color: #58677c !important;
+    color: #756d78 !important;
     box-shadow: none !important;
 }
 
@@ -386,7 +387,7 @@ html body:not(.dark-mode) #app .workspace-context-group__label {
 }
 
 html body:not(.dark-mode) #app .workspace-context-title {
-    color: #334155 !important;
+    color: #403942 !important;
     font-size: 12px !important;
     font-weight: 720 !important;
 }
@@ -443,7 +444,7 @@ html body:not(.dark-mode) #app .workspace-context-module {
     padding: 0 8px !important;
     border: 0 !important;
     border-radius: 6px !important;
-    color: #526074 !important;
+    color: #655d68 !important;
     font-size: 11px !important;
     font-weight: 680 !important;
 }
@@ -468,7 +469,7 @@ html body:not(.dark-mode) #app .workspace-context-pin {
     border-left: 0 !important;
     border-radius: 0 !important;
     background: transparent !important;
-    color: #94a3b8 !important;
+    color: #9b929d !important;
 }
 
 /* The module switcher remains rich enough to explain each action, but reads as
@@ -495,7 +496,7 @@ html body:not(.dark-mode) #app .shell-module-rail-label {
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-copy strong {
-    color: #334155 !important;
+    color: #403942 !important;
     font-size: 12px !important;
     font-weight: 720 !important;
 }
@@ -524,12 +525,12 @@ html body:not(.dark-mode) #app .shell-module-rail-chip {
     border-bottom: 1px solid var(--dw-line) !important;
     border-radius: 0 !important;
     background: transparent !important;
-    color: #475569 !important;
+    color: #625a65 !important;
     box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-chip:hover {
-    border-bottom-color: #bfd5ff !important;
+    border-bottom-color: #d9c2e7 !important;
     background: var(--dw-accent-soft) !important;
     color: var(--dw-accent-strong) !important;
 }
@@ -553,14 +554,191 @@ html body:not(.dark-mode) #app .shell-module-rail-chip-index {
     width: 28px !important;
     height: 28px !important;
     border-radius: 7px !important;
-    background: #eef2f7 !important;
-    color: #64748b !important;
+    background: #f0ecef !important;
+    color: #756d78 !important;
     box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) .shell-module-rail-chip-index {
-    background: #dbeafe !important;
+    background: var(--dw-accent-quiet) !important;
     color: var(--dw-accent-strong) !important;
+}
+
+/* Editorial module rhythm. The runtime removes duplicate descriptive mastheads,
+ * so the retained operational heading owns the page number and reading order. */
+html body:not(.dark-mode) #app .section.card-box {
+    counter-reset: editorial-subsection;
+    margin-top: 22px !important;
+    padding: 0 0 46px !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Modules without a descriptive masthead still receive the same opening
+ * number on their first operational heading. */
+html body:not(.dark-mode) #app .section[data-editorial-module="true"] > .analysis-shell-head {
+    position: relative !important;
+    min-height: 82px !important;
+    padding-left: 76px !important;
+}
+
+html body:not(.dark-mode) #app .section[data-editorial-module="true"] > .analysis-shell-head::before {
+    all: unset !important;
+    content: var(--editorial-module-index, "01") !important;
+    position: absolute !important;
+    inset: 17px auto auto 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    box-sizing: border-box !important;
+    width: 48px !important;
+    height: 30px !important;
+    border: 1px solid #ddcce7 !important;
+    border-radius: 999px !important;
+    background: var(--dw-accent-soft) !important;
+    color: var(--dw-accent-strong) !important;
+    font: 780 12px/1 sans-serif !important;
+    letter-spacing: 0.08em !important;
+}
+
+/* Section headings and operational panels -------------------------------- */
+html body:not(.dark-mode) #app .analysis-shell-head {
+    min-height: 58px !important;
+    margin: 0 0 14px !important;
+    padding: 12px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--dw-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .analysis-shell-head::before {
+    background: none !important;
+}
+
+html body:not(.dark-mode) #app .analysis-shell-head h2 {
+    color: var(--dw-ink) !important;
+    font-size: 18px !important;
+    font-weight: 760 !important;
+    line-height: 1.35 !important;
+    letter-spacing: -0.02em !important;
+}
+
+html body:not(.dark-mode) #app .analysis-shell-head h2::before {
+    content: none !important;
+    display: none !important;
+}
+
+html body:not(.dark-mode) #app .analysis-section-head {
+    counter-increment: editorial-subsection;
+    display: flex !important;
+    align-items: center !important;
+    gap: 11px !important;
+    min-height: 46px !important;
+    margin: 0 0 12px !important;
+    padding: 10px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--dw-line) !important;
+    background: transparent !important;
+    color: #3f3742 !important;
+    box-shadow: none !important;
+    font-size: 14px !important;
+    font-weight: 740 !important;
+}
+
+html body:not(.dark-mode) #app .analysis-section-head::before {
+    all: unset !important;
+    content: counter(editorial-subsection, decimal-leading-zero) !important;
+    color: var(--dw-accent-strong) !important;
+    font: 800 10px/1 sans-serif !important;
+    letter-spacing: 0.08em !important;
+}
+
+html body:not(.dark-mode) #app :is(.metric-card, .stat-card, .data-card, .summary-card) {
+    border: 0 !important;
+    border-top: 1px solid var(--dw-line) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Active states use one accent everywhere, including secondary module menus. */
+html body:not(.dark-mode) #app :is(.side-nav-link, .side-nav-sub-link, .nav-link, .login-tab) {
+    border-color: transparent !important;
+    border-radius: 6px !important;
+    color: #675f6a !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app :is(.side-nav-link, .side-nav-sub-link, .nav-link, .login-tab):hover {
+    background: #faf7fb !important;
+    color: var(--dw-accent-strong) !important;
+}
+
+html body:not(.dark-mode) #app :is(.side-nav-link.active, .side-nav-sub-link.active, .nav-link.active, .login-tab.active) {
+    border-color: #dfcfe8 !important;
+    background: var(--dw-accent-soft) !important;
+    color: var(--dw-accent-strong) !important;
+    box-shadow: inset 3px 0 0 var(--dw-accent) !important;
+}
+
+html body:not(.dark-mode) #app .shell-story-card {
+    min-height: 60px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--dw-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #625a65 !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app .shell-story-card:hover {
+    background: #faf7fb !important;
+    color: var(--dw-accent-strong) !important;
+}
+
+html body:not(.dark-mode) #app .shell-story-card.active {
+    background: var(--dw-accent-soft) !important;
+    color: var(--dw-accent-strong) !important;
+    box-shadow: inset 3px 0 0 var(--dw-accent) !important;
+}
+
+html body:not(.dark-mode) #app .shell-story-card.active :is(.shell-story-card__icon, .shell-story-card__title, .shell-story-card__desc, .shell-story-card__chevron) {
+    color: inherit !important;
+}
+
+html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-primary, .btn.btn-purple, .btn.btn-blue, .analysis-action-stack .btn-green, .primary-btn, .analysis-action-btn.primary, button.primary) {
+    border-color: var(--dw-accent) !important;
+    background: var(--dw-accent) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode) #app :is(.btn-primary, .btn.btn-primary, .btn.btn-purple, .btn.btn-blue, .analysis-action-stack .btn-green, .primary-btn, .analysis-action-btn.primary, button.primary):hover {
+    border-color: var(--dw-accent-strong) !important;
+    background: var(--dw-accent-strong) !important;
+    color: #ffffff !important;
+}
+
+html body:not(.dark-mode)[data-mobile-architecture="apk-v2"] {
+    --apk-shell-bg: var(--dw-canvas);
+    --apk-shell-card: rgba(255, 254, 253, 0.98);
+    --apk-shell-card-strong: var(--dw-surface);
+    --apk-shell-border: rgba(216, 208, 219, 0.94);
+    --apk-shell-text: var(--dw-ink);
+    --apk-shell-muted: var(--dw-muted);
+    --apk-shell-shadow: 0 12px 28px rgba(54, 40, 60, 0.09);
+}
+
+html body:not(.dark-mode)[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-rail-chip.is-active {
+    border-color: #d9c2e7 !important;
+    background: var(--dw-accent-soft) !important;
+    color: var(--dw-accent-strong) !important;
+    box-shadow: none !important;
+}
+
+html body:not(.dark-mode)[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-rail-chip {
+    flex: 0 0 auto !important;
 }
 
 /* The older studio skin left a decorative gradient marker in every status
@@ -586,8 +764,8 @@ html body:not(.dark-mode) #app table :is(th, td) {
 }
 
 html body:not(.dark-mode) #app table thead th {
-    background: #f3f5f8 !important;
-    color: #334155 !important;
+    background: #f2eff2 !important;
+    color: #423b45 !important;
     border-bottom-color: var(--dw-line-strong) !important;
     font-weight: 720 !important;
 }
@@ -597,7 +775,7 @@ html body:not(.dark-mode) #app table tbody td {
 }
 
 html body:not(.dark-mode) #app table tbody tr:hover td {
-    background: #f5f8fd !important;
+    background: #faf6fc !important;
 }
 
 html body #app :is(button, .btn, [role="button"], a, select, input, textarea) {
@@ -635,12 +813,12 @@ html body:not(.dark-mode) #app #starter-hub .starter-card--entry .btn {
     border: 1px solid var(--dw-line) !important;
     border-radius: 8px !important;
     background: var(--dw-surface) !important;
-    color: #475569 !important;
+    color: #625a65 !important;
     box-shadow: none !important;
 }
 
 html body:not(.dark-mode) #app #starter-hub .starter-card--entry .btn:hover {
-    border-color: #bfd5ff !important;
+    border-color: #d9c2e7 !important;
     background: var(--dw-accent-soft) !important;
     color: var(--dw-accent-strong) !important;
 }
@@ -674,8 +852,8 @@ html body:not(.dark-mode) :is(.toast-msg, .toast, .toast-message, .toast-item, .
     border: 1px solid var(--dw-line-strong) !important;
     border-radius: 8px !important;
     background: #ffffff !important;
-    color: #334155 !important;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12) !important;
+    color: #423b45 !important;
+    box-shadow: 0 10px 24px rgba(54, 40, 60, 0.12) !important;
     backdrop-filter: none !important;
 }
 
@@ -687,8 +865,8 @@ html body:not(.dark-mode) :is(.toast-msg.toast-success, .toast-success, .notice-
 
 html body:not(.dark-mode) :is(.toast-msg.toast-info, .toast-info, .notice-info) {
     border-left: 3px solid var(--dw-accent) !important;
-    background: #f5f9ff !important;
-    color: #1e3a8a !important;
+    background: #faf6fc !important;
+    color: #603778 !important;
 }
 
 html body:not(.dark-mode) :is(.toast-msg.toast-error, .toast-error, .notice-error) {
@@ -702,8 +880,14 @@ html body:not(.dark-mode) :is(.toast-msg.toast-error, .toast-error, .notice-erro
         grid-template-columns: minmax(0, 1fr) !important;
     }
 
-    html body:not(.dark-mode) #app .app-main {
+    html body:not(.dark-mode):not([data-mobile-architecture="apk-v2"]) #app .app-main {
         padding: 0 14px 28px !important;
+    }
+
+    html body:not(.dark-mode)[data-mobile-architecture="apk-v2"] #app .app-main {
+        padding: calc(var(--app-safe-top, 0px) + 148px) 10px calc(var(--app-safe-bottom, 0px) + 110px) !important;
+        scroll-padding-top: calc(var(--app-safe-top, 0px) + 148px) !important;
+        scroll-padding-bottom: calc(var(--app-safe-bottom, 0px) + 120px) !important;
     }
 
     html body:not(.dark-mode) #main-header.shell-toolbar {
@@ -731,6 +915,45 @@ html body:not(.dark-mode) :is(.toast-msg.toast-error, .toast-error, .notice-erro
     }
 
     html body:not(.dark-mode) #app .shell-module-rail {
-        grid-template-columns: minmax(0, 1fr) !important;
+        display: flex !important;
+        gap: 8px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
     }
+
+    html body:not(.dark-mode) #app .shell-module-rail-chip {
+        flex: 0 0 min(76vw, 210px) !important;
+        min-height: 46px !important;
+        scroll-snap-align: start;
+    }
+
+    html body:not(.dark-mode) #app .section.card-box,
+    html body:not(.dark-mode) #app .section.card-box.analysis-workspace {
+        margin-top: 14px !important;
+        padding-bottom: 30px !important;
+    }
+
+    html body:not(.dark-mode) #app .section[data-editorial-module="true"] > .analysis-shell-head {
+        min-height: 68px !important;
+        padding-left: 58px !important;
+    }
+
+    html body:not(.dark-mode) #app .section[data-editorial-module="true"] > .analysis-shell-head::before {
+        inset: 14px auto auto 0 !important;
+        width: 40px !important;
+        height: 26px !important;
+        font-size: 10px !important;
+    }
+
+    html body:not(.dark-mode) #app .analysis-shell-head {
+        align-items: flex-start !important;
+        gap: 9px !important;
+    }
+
+    html body:not(.dark-mode) #app .analysis-shell-head h2 > .badge {
+        display: none !important;
+    }
+
 }

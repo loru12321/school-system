@@ -765,7 +765,26 @@
             const isActive = button.getAttribute('data-module-id') === activeId;
             button.classList.toggle('is-active', isActive);
             button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            if (isActive) {
+                button.setAttribute('aria-current', 'page');
+            } else {
+                button.removeAttribute('aria-current');
+            }
         });
+    }
+
+    function syncEditorialModuleContext(activeItem, visibleItems, category) {
+        if (!activeItem || !activeItem.id) return;
+        const requestedSection = document.getElementById(activeItem.id);
+        const activeSection = requestedSection && requestedSection.classList.contains('section')
+            ? requestedSection
+            : document.querySelector('.section.active');
+        if (!activeSection) return;
+
+        const moduleIndex = Math.max(0, visibleItems.findIndex((item) => item.id === activeItem.id));
+        activeSection.style.setProperty('--editorial-module-index', `"${String(moduleIndex + 1).padStart(2, '0')}"`);
+        activeSection.setAttribute('data-editorial-module', 'true');
+        activeSection.setAttribute('data-editorial-category', category && category.title ? category.title : '当前工作区');
     }
 
     function bindModuleRailDelegatedClick(rail) {
@@ -818,6 +837,7 @@
                 data-shell-summary="${item.hint || item.text}"
                 data-shell-tooltip="${item.hint || item.text}"
                 aria-pressed="${item.id === activeId ? 'true' : 'false'}"
+                ${item.id === activeId ? 'aria-current="page"' : ''}
             >
                 <span class="shell-module-rail-chip-index">${String(visibleItems.indexOf(item) + 1).padStart(2, '0')}</span>
                 <span class="shell-module-rail-chip-copy">
@@ -905,6 +925,7 @@
                 data-shell-summary="${item.hint || item.text}"
                 data-shell-tooltip="${item.hint || item.text}"
                 aria-pressed="${item.id === activeId ? 'true' : 'false'}"
+                ${item.id === activeId ? 'aria-current="page"' : ''}
             >
                 <span class="shell-module-rail-chip-index">${String(visibleItems.indexOf(item) + 1).padStart(2, '0')}</span>
                 <span class="shell-module-rail-chip-copy">
@@ -941,6 +962,8 @@
         const activeTitle = activeItem ? activeItem.text : category.title;
         const activeHint = activeItem ? activeItem.hint : category.summary;
         const subtitle = activeItem ? `${category.title} / ${activeItem.text}` : `${category.title} / 模块导航`;
+
+        syncEditorialModuleContext(activeItem, visibleItems, category);
 
         setTextIfChanged(document.getElementById('app-subtitle'), subtitle);
 
