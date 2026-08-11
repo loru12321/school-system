@@ -94,6 +94,15 @@ async function run() {
     assert.strictEqual(manager.studentSelection.has(0), false);
     assert.strictEqual(manager.studentSelection.has(1), true);
     assert.ok(tbody.innerHTML.includes('李四'));
+    const cachedSearchIndexes = manager.__studentSearchCache.matchedIndexes;
+    runtime.renderStudents(manager, '李四');
+    assert.strictEqual(
+        manager.__studentSearchCache.matchedIndexes,
+        cachedSearchIndexes,
+        'student search pagination/render should reuse the matched index list instead of rescanning every row'
+    );
+    runtime.invalidateStudentSearchCache(manager);
+    assert.strictEqual(manager.__studentSearchCache, null, 'student edits should be able to invalidate the search index cache');
 
     currentBoxes = [
         { dataset: { idx: '0' }, checked: false },

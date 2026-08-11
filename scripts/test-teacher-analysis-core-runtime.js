@@ -6,13 +6,27 @@ const vm = require('vm');
 const runtimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-core-runtime.js');
 const pairingRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-pairing-runtime.js');
 const teacherUiRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-ui-runtime.js');
+const teacherMainRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-main-runtime.js');
 const source = fs.readFileSync(runtimePath, 'utf8');
 const pairingSource = fs.readFileSync(pairingRuntimePath, 'utf8');
 const teacherUiSource = fs.readFileSync(teacherUiRuntimePath, 'utf8');
+const teacherMainSource = fs.readFileSync(teacherMainRuntimePath, 'utf8');
 
 assert.ok(
     teacherUiSource.includes("container.dataset.teacherCardsSignature !== signature || !container.querySelector('.teacher-card')"),
     'teacher portrait cache must repaint when the card DOM was released by a module switch'
+);
+assert.ok(
+    source.includes("historyLimit: 0,\n                    teacherMetricScope: 'admin'"),
+    'township ranking should skip unused historical baseline work when it only needs avg/excellent/pass metrics'
+);
+assert.ok(
+    teacherMainSource.includes('buildTownshipSubjectIndex(rows, subjects'),
+    'township ranking should aggregate all visible subjects in one RAW_DATA pass'
+);
+assert.ok(
+    !source.includes('::${teacherStableObjectSignature(teacherStatsSource)}'),
+    'township ranking cache signatures should not recursively rescan the complete teacher stats graph'
 );
 
 function normalizeAliasSchool(value) {
@@ -102,6 +116,7 @@ context.window = context;
 
 vm.createContext(context);
 vm.runInContext(source, context, { filename: runtimePath });
+vm.runInContext(teacherMainSource, context, { filename: teacherMainRuntimePath });
 vm.runInContext(pairingSource, context, { filename: pairingRuntimePath });
 
 context.MY_SCHOOL = '甲校别名';

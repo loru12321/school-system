@@ -1194,6 +1194,9 @@ function setSchoolAliasState(list) {
         ? (SupportStateRuntime.setSchoolAliases(list) || [])
         : (Array.isArray(list) ? list : []);
     ensureSupportSysVars().schoolAliases = nextAliases;
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.clearSchoolNameCache === 'function') {
+        window.PermissionPolicy.clearSchoolNameCache();
+    }
     return nextAliases;
 }
 

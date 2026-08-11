@@ -107,6 +107,49 @@
         }).join('');
     }
 
+    function invalidateStudentSearchCache(manager) {
+        if (!manager) return;
+        manager.__studentSearchCache = null;
+    }
+
+    function getMatchedStudentIndexes(manager, rawData, normalizedKeyword) {
+        if (!normalizedKeyword) return null;
+        const rawDataVersion = Number(root.__RAW_DATA_VERSION || 0);
+        const cached = manager.__studentSearchCache;
+        if (cached
+            && cached.rawData === rawData
+            && cached.rawDataVersion === rawDataVersion
+            && cached.rawDataLength === rawData.length
+            && cached.keyword === normalizedKeyword
+            && Array.isArray(cached.matchedIndexes)) {
+            return cached.matchedIndexes;
+        }
+
+        const matchedIndexes = [];
+        for (let index = 0; index < rawData.length; index += 1) {
+            const student = rawData[index] || {};
+            const name = String(student.name != null ? student.name : '').toLowerCase();
+            const examId = String(student.id != null ? student.id : '');
+            const klass = String(student.class != null ? student.class : '').toLowerCase();
+            const school = String(student.school != null ? student.school : '').toLowerCase();
+            if (!name.includes(normalizedKeyword)
+                && !examId.includes(normalizedKeyword)
+                && !klass.includes(normalizedKeyword)
+                && !school.includes(normalizedKeyword)) {
+                continue;
+            }
+            matchedIndexes.push(index);
+        }
+        manager.__studentSearchCache = {
+            rawData,
+            rawDataVersion,
+            rawDataLength: rawData.length,
+            keyword: normalizedKeyword,
+            matchedIndexes
+        };
+        return matchedIndexes;
+    }
+
     function renderStudents(manager, keyword) {
         const rawData = getRawDataRef();
         if (!manager || !Array.isArray(rawData)) return;
@@ -117,23 +160,7 @@
         // The initial student tab is normally an unfiltered list.  Do not clone
         // every score row and build a full index set just to draw one page.
         // Keep matched indexes only when a search actually needs filtering.
-        const matchedIndexes = normalizedKeyword ? [] : null;
-        if (normalizedKeyword) {
-            for (let index = 0; index < rawData.length; index += 1) {
-                const student = rawData[index] || {};
-                const name = String(student.name != null ? student.name : '').toLowerCase();
-                const examId = String(student.id != null ? student.id : '');
-                const klass = String(student.class != null ? student.class : '').toLowerCase();
-                const school = String(student.school != null ? student.school : '').toLowerCase();
-                if (!name.includes(normalizedKeyword)
-                    && !examId.includes(normalizedKeyword)
-                    && !klass.includes(normalizedKeyword)
-                    && !school.includes(normalizedKeyword)) {
-                    continue;
-                }
-                matchedIndexes.push(index);
-            }
-        }
+        const matchedIndexes = getMatchedStudentIndexes(manager, rawData, normalizedKeyword);
 
         manager.pagination = manager.pagination || { page: 1, size: 20, total: 0 };
         if (!Number.isFinite(manager.pagination.size) || manager.pagination.size <= 0) {
@@ -285,6 +312,7 @@
             if (idx >= 0 && idx < rawData.length) rawData.splice(idx, 1);
         });
         syncRawDataRef(rawData);
+        invalidateStudentSearchCache(manager);
         selection.clear();
 
         if (typeof manager.renderCurrentTab === 'function') {
@@ -308,6 +336,7 @@
 
     return {
         renderStudents,
+        invalidateStudentSearchCache,
         toggleStudentSelection,
         toggleStudentSelectAll,
         updateStudentSelectionUI,

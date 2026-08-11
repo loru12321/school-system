@@ -1088,6 +1088,7 @@ assert.ok(!teacherEntrySource.includes('updateTeacherCompareExamSelects'), 'teac
 assert.ok(!teacherEntrySource.includes('inferTeacherSchoolIfNeeded'), 'teacher-analysis entry should not infer teacher school on switch');
 assert.ok(moduleEntryRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'module entry should schedule teaching overview refreshes after teacher analysis phases');
 assert.ok(moduleEntryRuntime.includes('historyLimit: 0'), 'teacher-analysis entry should use a fast no-history first render');
+assert.ok(moduleEntryRuntime.includes("['admin', 'director', 'grade_director'].some"), 'broad teacher-analysis roles should populate the reusable admin metric cache on first entry');
 assert.ok(moduleEntryRuntime.includes("function scheduleTeacherAnalysisRenderWork(delay = TEACHER_ANALYSIS_RENDER_DELAY_MS, moduleId = 'teacher-analysis')"), 'teacher analysis rendering should be scoped to the active teacher module');
 assert.ok(moduleEntryRuntime.includes("if (targetModuleId === 'teacher-detail-comparison') {"), 'teacher detail entry should render only its own computed table');
 assert.ok(moduleEntryRuntime.includes("function showTeacherAnalysisPendingState(moduleId = 'teacher-analysis')"), 'teacher pending states should be scoped to the active teacher module');
@@ -1415,7 +1416,7 @@ assert.ok(
 );
 assert.ok(
     teacherAnalysisCoreRuntime.includes('function getTeacherAnalysisDisplaySubjects')
-        && teacherAnalysisCoreRuntime.includes('getTeacherAnalysisDisplaySubjects().forEach((subject) =>'),
+        && teacherAnalysisCoreRuntime.includes('displaySubjects.forEach((subject) =>'),
     'teacher analysis should calculate display-only politics rankings without adding it to formal subjects'
 );
 assert.ok(

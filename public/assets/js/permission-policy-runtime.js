@@ -13,6 +13,7 @@ const MODULE_ACCESS_ALIASES = {
     'county-teacher-portrait': 'county-analysis',
     'county-school-horizontal': 'county-analysis'
 };
+const SCHOOL_NAME_EQUIVALENCE_CACHE = new Map();
 
 const PermissionPolicy = {
     isParentLikeRole(role) {
@@ -47,8 +48,16 @@ const PermissionPolicy = {
         const left = this.normalizeSchool(a);
         const right = this.normalizeSchool(b);
         if (!left || !right) return false;
-        if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(left, right);
-        return left === right;
+        if (left === right) return true;
+        const cacheKey = left < right ? `${left}\u0000${right}` : `${right}\u0000${left}`;
+        if (SCHOOL_NAME_EQUIVALENCE_CACHE.has(cacheKey)) return SCHOOL_NAME_EQUIVALENCE_CACHE.get(cacheKey);
+        const matched = typeof areSchoolNamesEquivalent === 'function' && areSchoolNamesEquivalent(left, right);
+        SCHOOL_NAME_EQUIVALENCE_CACHE.set(cacheKey, !!matched);
+        if (SCHOOL_NAME_EQUIVALENCE_CACHE.size > 500) SCHOOL_NAME_EQUIVALENCE_CACHE.delete(SCHOOL_NAME_EQUIVALENCE_CACHE.keys().next().value);
+        return !!matched;
+    },
+    clearSchoolNameCache() {
+        SCHOOL_NAME_EQUIVALENCE_CACHE.clear();
     },
     extractGrade(value) {
         const normalized = normalizeClass(value || '');

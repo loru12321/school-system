@@ -10,6 +10,20 @@ const fs = require('fs');
 const path = require('path');
 const SMOKE_OUTPUT_PATH = String(process.env.SMOKE_OUTPUT_PATH || '').trim();
 const REAL_MODULE_CLICKS = process.env.SMOKE_REAL_MODULE_CLICKS === 'true';
+const FUNCTION_PROFILE = process.env.SMOKE_FUNCTION_PROFILE === 'true';
+const PROFILE_FUNCTION_PATHS = String(process.env.SMOKE_PROFILE_FUNCTIONS || [
+    'analyzeTeachers',
+    'calculateTeacherTownshipRanking',
+    'renderTeacherTownshipRanking',
+    'renderTeacherCards',
+    'renderTeacherComparisonTable',
+    'renderStudentOverview',
+    'smScheduleStudentOverviewRender',
+    'SCHEDULER.renderTable'
+].join(','))
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
 
 function trace(message, extra = undefined) {
     if (!process.env.SMOKE_TRACE) return;
@@ -395,6 +409,100 @@ async function prewarmSmokeHotspots(page) {
         ...result,
         durationMs: Date.now() - started
     };
+}
+
+async function installSmokeFunctionProfiler(page) {
+    if (!FUNCTION_PROFILE || !PROFILE_FUNCTION_PATHS.length) return [];
+    return page.evaluate((paths) => {
+        window.__SMOKE_FUNCTION_TIMINGS__ = Array.isArray(window.__SMOKE_FUNCTION_TIMINGS__)
+            ? window.__SMOKE_FUNCTION_TIMINGS__
+            : [];
+        window.__SMOKE_PROFILE_TABLES__ = Array.isArray(window.__SMOKE_PROFILE_TABLES__)
+            ? window.__SMOKE_PROFILE_TABLES__
+            : [];
+        window.__TEACHER_ANALYSIS_PERF_DEBUG__ = true;
+        if (!console.table.__smokeFunctionProfileWrapped) {
+            const originalConsoleTable = console.table.bind(console);
+            const wrappedConsoleTable = (rows, ...args) => {
+                if (Array.isArray(rows) && rows.some((row) => row?.label === 'analyzeTeachersV2')) {
+                    window.__SMOKE_PROFILE_TABLES__.push(rows.map((row) => ({ ...row })));
+                    window.__SMOKE_PROFILE_TABLES__ = window.__SMOKE_PROFILE_TABLES__.slice(-20);
+                }
+                return originalConsoleTable(rows, ...args);
+            };
+            wrappedConsoleTable.__smokeFunctionProfileWrapped = true;
+            console.table = wrappedConsoleTable;
+        }
+        const installed = [];
+        const remember = (path, startedAt, handlerMs, status = 'ok') => {
+            window.__SMOKE_FUNCTION_TIMINGS__.push({
+                path,
+                durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
+                handlerMs: Math.round(handlerMs * 10) / 10,
+                status,
+                phase: typeof window.SystemPerformance?.currentPhase === 'function'
+                    ? window.SystemPerformance.currentPhase()
+                    : '',
+                time: new Date().toISOString()
+            });
+            window.__SMOKE_FUNCTION_TIMINGS__ = window.__SMOKE_FUNCTION_TIMINGS__.slice(-160);
+        };
+
+        paths.forEach((path) => {
+            const parts = String(path || '').split('.').filter(Boolean);
+            if (!parts.length) return;
+            let owner = window;
+            for (let index = 0; index < parts.length - 1; index += 1) {
+                owner = owner?.[parts[index]];
+                if (!owner) return;
+            }
+            const key = parts[parts.length - 1];
+            const original = owner?.[key];
+            if (typeof original !== 'function' || original.__smokeFunctionProfileWrapped) return;
+            const wrapped = function (...args) {
+                const startedAt = performance.now();
+                let result;
+                try {
+                    result = original.apply(this, args);
+                } catch (error) {
+                    remember(path, startedAt, performance.now() - startedAt, 'error');
+                    throw error;
+                }
+                const handlerMs = performance.now() - startedAt;
+                if (result && typeof result.then === 'function') {
+                    return Promise.resolve(result).then(
+                        (value) => {
+                            remember(path, startedAt, handlerMs, 'ok');
+                            return value;
+                        },
+                        (error) => {
+                            remember(path, startedAt, handlerMs, 'error');
+                            throw error;
+                        }
+                    );
+                }
+                remember(path, startedAt, handlerMs, 'ok');
+                return result;
+            };
+            wrapped.__smokeFunctionProfileWrapped = true;
+            wrapped.__smokeFunctionProfileOriginal = original;
+            owner[key] = wrapped;
+            installed.push(path);
+        });
+        return installed;
+    }, PROFILE_FUNCTION_PATHS);
+}
+
+async function readSmokeFunctionProfile(page) {
+    if (!FUNCTION_PROFILE) return [];
+    return page.evaluate(() => ({
+        functions: Array.isArray(window.__SMOKE_FUNCTION_TIMINGS__)
+            ? window.__SMOKE_FUNCTION_TIMINGS__.slice()
+            : [],
+        tables: Array.isArray(window.__SMOKE_PROFILE_TABLES__)
+            ? window.__SMOKE_PROFILE_TABLES__.slice()
+            : []
+    }));
 }
 
 async function waitForTeacherAutoRestore(page, timeoutMs = 8000) {
@@ -5613,6 +5721,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
     currentScope = 'hotspot-prewarm';
     trace('hotspot-prewarm:start');
     summary.performance.hotspotPrewarm = await prewarmSmokeHotspots(page);
+    summary.performance.functionProfilerInstalled = await installSmokeFunctionProfiler(page);
     trace('hotspot-prewarm:done', summary.performance.hotspotPrewarm);
     const performanceBudgetWindowStartedAt = Date.now();
     await page.waitForTimeout(800);
@@ -5620,6 +5729,7 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
 
     for (const id of SWITCH_MODULE_IDS) {
         currentScope = `switch:${id}`;
+        await installSmokeFunctionProfiler(page);
         trace('switch:start', { id });
         const switchMeasurement = await measureAsync(
             `switch:${id}`,
@@ -5802,6 +5912,13 @@ window.__resolveSmokeRuntimeTermId = resolveSmokeRuntimeTermId;`);
             const taskTime = Date.parse(String(item?.time || ''));
             return !Number.isFinite(taskTime) || taskTime >= performanceBudgetWindowStartedAt;
         });
+    const functionProfile = await readSmokeFunctionProfile(page);
+    summary.performance.functionTimings = functionProfile.functions || [];
+    summary.performance.functionStepTimings = functionProfile.tables || [];
+    summary.performance.slowestFunctions = summary.performance.functionTimings
+        .slice()
+        .sort((left, right) => Number(right.durationMs || 0) - Number(left.durationMs || 0))
+        .slice(0, 20);
     summary.performance.maxScheduledTaskMs = summary.performance.scheduledTasks
         .reduce((max, item) => Math.max(max, Number(item?.durationMs) || 0), 0);
     summary.performance.maxNetworkWaitMs = summary.performance.scheduledTasks

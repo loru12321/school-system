@@ -1908,6 +1908,9 @@ const DataManager = {
         if (!s) return;
         if (!confirm(`⚠️ 确定要永久删除学生【${s.school} ${s.class}班 ${s.name}】吗？`)) return;
         RAW_DATA.splice(index, 1);
+        if (window.DataManagerStudentRuntime && typeof window.DataManagerStudentRuntime.invalidateStudentSearchCache === 'function') {
+            window.DataManagerStudentRuntime.invalidateStudentSearchCache(this);
+        }
         this.studentSelection.clear();
         this.renderCurrentTab();
         UI.toast("已暂存删除 (请点击保存)", "info");
@@ -1955,6 +1958,9 @@ const DataManager = {
                 Object.assign(s, n);
                 if (s.uuid && COHORT_DB && COHORT_DB.students && COHORT_DB.students[s.uuid]) {
                     COHORT_DB.students[s.uuid].status = n.status || 'active';
+                }
+                if (window.DataManagerStudentRuntime && typeof window.DataManagerStudentRuntime.invalidateStudentSearchCache === 'function') {
+                    window.DataManagerStudentRuntime.invalidateStudentSearchCache(this);
                 }
                 this.renderCurrentTab();
                 UI.toast("已修改 (请点击保存)", "success");

@@ -488,7 +488,22 @@
 
                 const reusedTeacherAnalysisStats = canReuseTeacherAnalysisStats();
                 if (!reusedTeacherAnalysisStats) {
-                    window.analyzeTeachers({ render: false, township: false, historyLimit: 0 });
+                    const currentUser = typeof window.getCurrentUser === 'function'
+                        ? window.getCurrentUser()
+                        : window.Auth?.currentUser;
+                    const useAdminTeacherMetricScope = ['admin', 'director', 'grade_director'].some((role) => (
+                        window.PermissionPolicy && typeof window.PermissionPolicy.hasQueryRole === 'function'
+                            ? window.PermissionPolicy.hasQueryRole(currentUser, role)
+                            : (Array.isArray(currentUser?.roles)
+                                ? currentUser.roles.includes(role)
+                                : currentUser?.role === role)
+                    ));
+                    window.analyzeTeachers({
+                        render: false,
+                        township: false,
+                        historyLimit: 0,
+                        ...(useAdminTeacherMetricScope ? { teacherMetricScope: 'admin' } : {})
+                    });
                     markTeacherAnalysisStatsReusable();
                 }
                 ['teacherCardsContainer', 'teacherComparisonTable', 'teacher-township-ranking-container'].forEach((id) => {
