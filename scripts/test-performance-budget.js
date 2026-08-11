@@ -92,6 +92,7 @@ assert.ok(
 assert.ok(
   moduleEntryRuntime.includes("function renderReusableTeacherPairingNow(moduleId = 'teacher-analysis')")
     && moduleEntryRuntime.includes('renderReusableTeacherPairingNow(moduleId);')
+    && moduleEntryRuntime.includes("if (moduleId === 'teacher-pairing') renderReusableTeacherPairingNow(moduleId);")
     && moduleEntryRuntime.includes("section?.dataset.teacherSubmoduleRendered === '1'")
     && moduleEntryRuntime.includes('function buildTeacherMapReuseSignature(map)')
     && moduleEntryRuntime.includes('current.teacherMapSignature === teacherAnalysisReuseState.teacherMapSignature'),

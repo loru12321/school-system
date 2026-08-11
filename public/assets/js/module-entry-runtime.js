@@ -1445,5 +1445,9 @@
     window.renderSingleSchoolAnalysisHint = renderSingleSchoolAnalysisHint;
     window.releaseTeacherAnalysisHeavyDom = releaseTeacherAnalysisHeavyDom;
     window.renderTeacherAnalysisNow = renderTeacherAnalysisNow;
+    window.addEventListener('school:module-changed', (event) => {
+        const moduleId = String(event?.detail?.id || '').trim();
+        if (moduleId === 'teacher-pairing') renderReusableTeacherPairingNow(moduleId);
+    });
     window.__MODULE_ENTRY_RUNTIME_PATCHED__ = true;
 })();
