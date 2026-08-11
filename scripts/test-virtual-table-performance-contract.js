@@ -18,8 +18,9 @@ assert.ok(
 );
 assert.ok(
     source.includes('const pendingRoots = new Set()')
-        && source.includes('if (enhanceFrameId) return'),
-    'virtual table enhancement requests must be coalesced into one frame'
+        && source.includes('enhanceFrameId || enhanceTimerId || enhanceIdleId')
+        && source.includes('requestIdleCallback'),
+    'virtual table enhancement requests must be coalesced and deferred until after module paint'
 );
 
 console.log('virtual table performance contract passed');

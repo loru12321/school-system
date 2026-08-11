@@ -1086,6 +1086,9 @@ async function smokeSwitchModule(page, id) {
             ...result,
             ok: result.ok && selectionReady,
             activationMs: activationTiming.durationMs,
+            activationHandlerMs: Number.isFinite(activationTiming.handlerMs)
+                ? activationTiming.handlerMs
+                : activationTiming.durationMs,
             activationMode: activationTiming.mode || 'switchTab',
             immediateSelected: activationTiming.immediateSelected !== false,
             ...(selectionReady ? {} : { error: 'clicked submodule did not update its selected state immediately' })
@@ -1174,7 +1177,7 @@ async function smokeSwitchModule(page, id) {
                 wrap('releaseTeacherAnalysisHeavyDom');
             });
         }
-        activationTiming = await page.evaluate(({ moduleId, useRealClick }) => {
+        activationTiming = await page.evaluate(async ({ moduleId, useRealClick }) => {
             if (typeof window.switchTab !== 'function') {
                 throw new Error('switchTab is not available');
             }
@@ -1195,19 +1198,28 @@ async function smokeSwitchModule(page, id) {
                     }
                 }
                 clickTarget = document.querySelector(`#sub-nav-container .shell-story-card[data-module-id="${CSS.escape(moduleId)}"]`);
+                if (!clickTarget) throw new Error(`real click target is not available for ${moduleId}`);
             }
             const startedAt = performance.now();
             if (clickTarget) {
-                clickTarget.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                clickTarget.click();
             } else {
                 window.switchTab(moduleId);
             }
+            const handlerMs = performance.now() - startedAt;
+            if (clickTarget) {
+                await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            }
             const section = document.getElementById(moduleId);
             const style = section ? getComputedStyle(section) : null;
+            const currentClickTarget = clickTarget
+                ? document.querySelector(`#sub-nav-container .shell-story-card[data-module-id="${CSS.escape(moduleId)}"]`)
+                : null;
             return {
                 durationMs: performance.now() - startedAt,
+                handlerMs,
                 immediateReady: !!section && section.classList.contains('active') && style?.display !== 'none',
-                immediateSelected: !clickTarget || clickTarget.classList.contains('active'),
+                immediateSelected: !clickTarget || !!currentClickTarget?.classList.contains('active'),
                 mode: clickTarget ? 'real-click' : 'switchTab'
             };
         }, { moduleId: id, useRealClick: REAL_MODULE_CLICKS });

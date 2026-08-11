@@ -343,7 +343,9 @@
         ensureTooltips();
         ensurePulseTween();
         ensureScrollEffects();
-        if (typeof window.applyComparisonPanelCollapses === 'function') window.applyComparisonPanelCollapses();
+        if (typeof window.applyComparisonPanelCollapses === 'function') {
+            window.applyComparisonPanelCollapses(document.querySelector('.section.active') || document);
+        }
         animateShellChrome();
         if (window.ScrollTrigger && typeof window.ScrollTrigger.refresh === 'function') {
             window.ScrollTrigger.refresh();

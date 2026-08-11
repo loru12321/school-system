@@ -287,11 +287,14 @@
         if (typeof window.tmRenderTeachingModuleStateBars === 'function') {
             window.tmRenderTeachingModuleStateBars(moduleId === 'teacher-analysis' ? 'teacher-analysis' : '');
         }
+        // module-entry-runtime owns all teacher-module initialization. Running
+        // this legacy renderer as well caused the township table to rebuild in
+        // the first click frame, creating a 250ms+ long task and duplicate work.
+        if (typeof window.runModuleTabEnter === 'function') {
+            if (moduleId === 'teacher-analysis') window.setTimeout(relocateTeacherBlocks, 80);
+            return;
+        }
         if (moduleId === 'teacher-analysis') {
-            if (typeof window.runModuleTabEnter === 'function') {
-                window.setTimeout(relocateTeacherBlocks, 80);
-                return;
-            }
             window.setTimeout(refreshTeacherAnalysisPortrait, 80);
             window.setTimeout(refreshTeacherAnalysisPortrait, 260);
             return;

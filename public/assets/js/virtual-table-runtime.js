@@ -5,6 +5,8 @@
     const TABLE_SELECTOR = 'table[data-virtual-table], .analysis-generated-table, .student-detail-table';
     const pendingRoots = new Set();
     let enhanceFrameId = 0;
+    let enhanceTimerId = 0;
+    let enhanceIdleId = 0;
     let activeSectionObserver = null;
 
     function enhanceTable(table, options = {}) {
@@ -49,20 +51,37 @@
         return count;
     }
 
-    function scheduleEnhance(root) {
+    function scheduleEnhance(root, options = {}) {
         const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
         pendingRoots.add(scope);
-        if (enhanceFrameId) return;
+        if (enhanceFrameId || enhanceTimerId || enhanceIdleId) return;
 
         const flush = () => {
             enhanceFrameId = 0;
+            enhanceTimerId = 0;
+            enhanceIdleId = 0;
             const roots = Array.from(pendingRoots);
             pendingRoots.clear();
             roots.forEach((pendingRoot) => enhance(pendingRoot));
         };
-        enhanceFrameId = typeof window.requestAnimationFrame === 'function'
-            ? window.requestAnimationFrame(flush)
-            : window.setTimeout(flush, 16);
+        const queueFrame = () => {
+            enhanceTimerId = 0;
+            enhanceIdleId = 0;
+            enhanceFrameId = typeof window.requestAnimationFrame === 'function'
+                ? window.requestAnimationFrame(flush)
+                : window.setTimeout(flush, 16);
+        };
+        const arm = () => {
+            enhanceTimerId = 0;
+            if (options.idle !== false && typeof window.requestIdleCallback === 'function') {
+                enhanceIdleId = window.requestIdleCallback(queueFrame, { timeout: Number(options.timeout || 700) });
+                return;
+            }
+            queueFrame();
+        };
+        const delay = Math.max(0, Number(options.delay ?? 80));
+        if (delay) enhanceTimerId = window.setTimeout(arm, delay);
+        else arm();
     }
 
     function collectAffectedTables(mutations) {
@@ -78,7 +97,7 @@
                 node.querySelectorAll?.(TABLE_SELECTOR).forEach((table) => tables.add(table));
             });
         });
-        tables.forEach((table) => scheduleEnhance(table));
+        tables.forEach((table) => scheduleEnhance(table, { delay: 60, idle: true, timeout: 600 }));
     }
 
     function observeActiveSection(section) {
@@ -93,7 +112,9 @@
         const section = sectionId ? document.getElementById(sectionId) : document.querySelector('.section.active');
         if (!section) return;
         observeActiveSection(section);
-        scheduleEnhance(section);
+        // Existing tables are secondary to the module shell. Scan them after
+        // the selected section has painted; mutations remain observed meanwhile.
+        scheduleEnhance(section, { delay: 140, idle: true, timeout: 900 });
     }
 
     window.VirtualTableRuntime = {
@@ -109,5 +130,8 @@
     window.addEventListener('school:module-changed', (event) => {
         activateSection(String(event?.detail?.id || ''));
     });
-    document.addEventListener('DOMContentLoaded', () => activateSection(), { once: true });
+    document.addEventListener('DOMContentLoaded', () => {
+        observeActiveSection(document.querySelector('.section.active'));
+        scheduleEnhance(document, { delay: 220, idle: true, timeout: 1200 });
+    }, { once: true });
 })();

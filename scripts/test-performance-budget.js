@@ -20,6 +20,7 @@ const moduleEntryRuntime = read('public/assets/js/module-entry-runtime.js');
 const runtimeLoaderRuntime = read('public/assets/js/runtime-loader-runtime.js');
 const countyAnalysisRuntime = read('public/assets/js/county-analysis-runtime.js');
 const cohortGrowthRuntime = read('public/assets/js/cohort-growth-runtime.js');
+const blankScoreAuditRuntime = read('public/assets/js/blank-score-audit-runtime.js');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
 
 const requiredSmokeTokens = [
@@ -82,9 +83,28 @@ assert.ok(
   'module entry should cancel stale async initialization and coalesce rapid duplicate navigation'
 );
 assert.ok(
+  moduleEntryRuntime.includes("function isTeacherAnalysisModuleActive(moduleId = 'teacher-analysis')")
+    && moduleEntryRuntime.includes('if (!isTeacherAnalysisModuleActive(targetModuleId)) return;')
+    && moduleEntryRuntime.includes('window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true')
+    && moduleEntryRuntime.includes('window.__TEACHER_PAIRING_RUNTIME_PATCHED__ === true'),
+  'teacher submodules should ignore stale renders and await the real runtime instead of treating lazy proxy functions as loaded content'
+);
+assert.ok(
+  moduleEntryRuntime.includes("function renderReusableTeacherPairingNow(moduleId = 'teacher-analysis')")
+    && moduleEntryRuntime.includes('renderReusableTeacherPairingNow(moduleId);')
+    && moduleEntryRuntime.includes("section?.dataset.teacherSubmoduleRendered === '1'")
+    && moduleEntryRuntime.includes('function buildTeacherMapReuseSignature(map)')
+    && moduleEntryRuntime.includes('current.teacherMapSignature === teacherAnalysisReuseState.teacherMapSignature'),
+  'teacher pairing should paint reusable results during activation and skip the redundant deferred repaint'
+);
+assert.ok(
+  moduleEntryRuntime.includes('const renderDelay = TEACHER_ANALYSIS_RENDER_DELAY_MS;'),
+  'teacher detail, pairing, and township entries should schedule their real content in the first post-navigation frame'
+);
+assert.ok(
   moduleEntryRuntime.includes("scheduleActiveModuleTask('data-quality', 'data-quality-render'")
-    && moduleEntryRuntime.includes('{ delay: 1200, idle: true, timeout: 2000 }'),
-  'data-quality analysis should run after the navigation shell is ready and cancel when the user leaves'
+    && moduleEntryRuntime.includes('{ delay: 16, frame: true }'),
+  'data-quality analysis should render in the first post-navigation frame and cancel when the user leaves'
 );
 assert.ok(
   runtimeLoaderRuntime.includes('window.ensureFreshmanSimulatorRuntimeLoaded = function ()')
@@ -110,6 +130,22 @@ assert.ok(
     && cohortGrowthRuntime.includes('tbody.replaceChildren();')
     && moduleEntryRuntime.includes('window.CohortGrowth.cacheSignature'),
   'cohort growth should release inactive table DOM and restore it from calculation cache'
+);
+assert.ok(
+  blankScoreAuditRuntime.includes('BlankScoreAuditPerfCache.rowsRef === sourceRows')
+    && blankScoreAuditRuntime.includes('BlankScoreAuditPerfCache.inputSignature === inputSignature')
+    && blankScoreAuditRuntime.includes("renderBlankScoreAuditModule({ force: true })"),
+  'blank score audit should reuse unchanged rows in O(1) while keeping manual refresh able to force a full audit'
+);
+assert.ok(
+  blankScoreAuditRuntime.includes('scheduleBlankScoreAuditChunk(appendNext)')
+    && blankScoreAuditRuntime.includes('initialLimit = 80')
+    && blankScoreAuditRuntime.includes("insertAdjacentHTML('beforeend'"),
+  'blank score audit should progressively render its long table instead of blocking the activation frame with 500 rows'
+);
+assert.ok(
+  !blankScoreAuditRuntime.includes('function buildBlankScoreAuditSignature'),
+  'blank score audit cache lookup should not rescan every student before it can hit the cache'
 );
 
 assert.ok(scripts['test:performance-budget'] === 'node scripts/test-performance-budget.js', 'package script should expose performance budget test');

@@ -71,16 +71,25 @@
         header.appendChild(button);
     }
 
-    function applyComparisonPanelCollapses() {
-        document.querySelectorAll('.analysis-inline-panel, .town-submodule-compare-panel').forEach(bindPanel);
+    const PANEL_SELECTOR = '.analysis-inline-panel, .town-submodule-compare-panel';
+
+    function applyComparisonPanelCollapses(root = document) {
+        const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+        if (scope.matches?.(PANEL_SELECTOR)) bindPanel(scope);
+        scope.querySelectorAll(PANEL_SELECTOR).forEach(bindPanel);
     }
 
     let applyTimer = 0;
-    function scheduleComparisonPanelCollapses() {
+    const pendingRoots = new Set();
+    function scheduleComparisonPanelCollapses(root = document) {
+        const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+        pendingRoots.add(scope);
         if (applyTimer) return;
         applyTimer = window.setTimeout(() => {
             applyTimer = 0;
-            applyComparisonPanelCollapses();
+            const roots = Array.from(pendingRoots);
+            pendingRoots.clear();
+            roots.forEach(applyComparisonPanelCollapses);
         }, 80);
     }
 
@@ -93,14 +102,12 @@
     window.addEventListener('load', applyComparisonPanelCollapses, { once: true });
     if (window.MutationObserver) {
         const observer = new MutationObserver((mutations) => {
-            if (mutations.some((mutation) => Array.from(mutation.addedNodes || []).some((node) => (
-                node && node.nodeType === 1 && (
-                    node.matches?.('.analysis-inline-panel, .town-submodule-compare-panel')
-                    || node.querySelector?.('.analysis-inline-panel, .town-submodule-compare-panel')
-                )
-            )))) {
-                scheduleComparisonPanelCollapses();
-            }
+            mutations.forEach((mutation) => Array.from(mutation.addedNodes || []).forEach((node) => {
+                if (!node || node.nodeType !== 1) return;
+                if (node.matches?.(PANEL_SELECTOR) || node.querySelector?.(PANEL_SELECTOR)) {
+                    scheduleComparisonPanelCollapses(node);
+                }
+            }));
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
     }

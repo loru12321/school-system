@@ -32,6 +32,8 @@ assert.ok(
     'data-context-pin',
     'getCurrentCohortId',
     'getQualityStatus',
+    'scheduleContextPersistence',
+    'contextStateCache',
     'WorkspaceContextRuntime'
 ].forEach((token) => {
     assert.ok(runtime.includes(token), `workspace context runtime missing contract token: ${token}`);

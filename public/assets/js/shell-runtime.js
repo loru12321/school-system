@@ -1061,13 +1061,6 @@
         document.documentElement.style.setProperty('--primary', category.color);
         syncSubNavigationActiveState(item.id);
         if (typeof switchTab === 'function') switchTab(item.id);
-        const scrollToActiveSection = () => {
-            const section = document.getElementById(item.id);
-            if (section && section.classList.contains('active')) {
-                section.scrollIntoView({ block: 'start', behavior: 'smooth' });
-            }
-        };
-        window.setTimeout(scrollToActiveSection, 60);
         closeWorkspaceDrawer();
     }
 

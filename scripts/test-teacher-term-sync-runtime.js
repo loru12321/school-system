@@ -97,7 +97,7 @@ assert.ok(
 
 assert.ok(
   teachingManagementModules.includes('function renderTeachingManagementSubmodule(moduleId)')
-    && /if \(moduleId === 'teacher-analysis'\)[\s\S]*typeof window\.runModuleTabEnter === 'function'[\s\S]*window\.setTimeout\(relocateTeacherBlocks, 80\)/.test(teachingManagementModules)
+    && /typeof window\.runModuleTabEnter === 'function'[\s\S]*if \(moduleId === 'teacher-analysis'\) window\.setTimeout\(relocateTeacherBlocks, 80\);[\s\S]*return;/.test(teachingManagementModules)
     && /const render = \(\) => renderTeachingManagementSubmodule\(moduleId\);[\s\S]*window\.setTimeout\(render, 80\);[\s\S]*window\.setTimeout\(render, 650\)/.test(teachingManagementModules)
     && /if \(moduleId === 'teacher-township-ranking'\)[\s\S]*const renderOnce = \(\) => \{[\s\S]*window\.setTimeout\(renderOnce, 16\);[\s\S]*return;/.test(teachingManagementModules)
     && /if \(moduleId === 'teacher-detail-comparison'\)[\s\S]*tryAutoRestoreTeacherMap\(\{ startup: true, force: true \}\)[\s\S]*window\.analyzeTeachers\(\{ render: false, township: false, historyLimit: 0 \}\)[\s\S]*render\(\);/.test(teachingManagementModules)

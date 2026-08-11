@@ -147,14 +147,16 @@ function getCachedTownSubmoduleSchoolSummary(examId, rows) {
     return summary;
 }
 
-function scheduleTownSubmoduleCompareCollapseBinding() {
+function scheduleTownSubmoduleCompareCollapseBinding(submoduleId = '') {
     if (townSubmoduleCollapseBindTimer !== null) return;
     const schedule = typeof window.requestAnimationFrame === 'function'
         ? window.requestAnimationFrame
         : (callback) => window.setTimeout(callback, 0);
     townSubmoduleCollapseBindTimer = schedule(() => {
         townSubmoduleCollapseBindTimer = null;
-        if (typeof window.applyComparisonPanelCollapses === 'function') window.applyComparisonPanelCollapses();
+        if (typeof window.applyComparisonPanelCollapses === 'function') {
+            window.applyComparisonPanelCollapses(document.getElementById(submoduleId) || document);
+        }
     });
 }
 
@@ -220,9 +222,6 @@ function ensureTownSubmoduleCompareUIs(submoduleId = '') {
     if (!canShowTownSubmoduleMultiPeriodCompare()) {
         const panels = document.querySelectorAll('.town-submodule-compare-panel');
         panels.forEach((panel) => panel.remove());
-        if (panels.length) {
-            scheduleTownSubmoduleCompareCollapseBinding();
-        }
         return;
     }
     let didChange = false;
@@ -255,7 +254,7 @@ function ensureTownSubmoduleCompareUIs(submoduleId = '') {
         didChange = true;
     });
     if (didChange) {
-        scheduleTownSubmoduleCompareCollapseBinding();
+        scheduleTownSubmoduleCompareCollapseBinding(submoduleId);
     }
 }
 

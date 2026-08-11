@@ -10,6 +10,7 @@ const activateSource = source.slice(activateStart, activateEnd);
 assert.ok(activateSource.includes('syncSubNavigationActiveState(item.id)'), 'submodule click must update its selected state immediately');
 assert.ok(!activateSource.includes('renderSubNavigation();'), 'submodule click must not synchronously rebuild the full sub-navigation');
 assert.ok(!activateSource.includes('updateShellChrome(item.id);'), 'submodule click must not duplicate switchTab shell synchronization');
+assert.ok(!activateSource.includes('scrollIntoView'), 'submodule click must not start a delayed smooth scroll after activation');
 assert.ok(source.includes('globalScopeControlsCache.classesSignature'), 'global scope class options must be cached across module clicks');
 
 console.log('shell click performance contract passed');

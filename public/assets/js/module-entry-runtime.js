@@ -54,6 +54,14 @@
     let lastModuleEntry = { id: '', at: 0, promise: null };
     let teacherAnalysisReuseState = null;
 
+    function buildTeacherMapReuseSignature(map) {
+        if (!map || typeof map !== 'object') return '';
+        return Object.entries(map)
+            .map(([key, value]) => `${String(key)}:${String(value ?? '')}`)
+            .sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }))
+            .join('|');
+    }
+
     function readTeacherAnalysisReuseState() {
         const user = typeof window.getCurrentUser === 'function'
             ? window.getCurrentUser()
@@ -61,8 +69,8 @@
         return {
             rawData: window.RAW_DATA,
             rawDataVersion: Number(window.__RAW_DATA_VERSION || 0),
-            teacherMap: window.TEACHER_MAP,
-            teacherSchoolMap: window.TEACHER_SCHOOL_MAP,
+            teacherMapSignature: buildTeacherMapReuseSignature(window.TEACHER_MAP),
+            teacherSchoolMapSignature: buildTeacherMapReuseSignature(window.TEACHER_SCHOOL_MAP),
             examId: String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || ''),
             school: String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || ''),
             user: String(user?.username || user?.name || user?.role || '')
@@ -75,8 +83,8 @@
         const current = readTeacherAnalysisReuseState();
         return current.rawData === teacherAnalysisReuseState.rawData
             && current.rawDataVersion === teacherAnalysisReuseState.rawDataVersion
-            && current.teacherMap === teacherAnalysisReuseState.teacherMap
-            && current.teacherSchoolMap === teacherAnalysisReuseState.teacherSchoolMap
+            && current.teacherMapSignature === teacherAnalysisReuseState.teacherMapSignature
+            && current.teacherSchoolMapSignature === teacherAnalysisReuseState.teacherSchoolMapSignature
             && current.examId === teacherAnalysisReuseState.examId
             && current.school === teacherAnalysisReuseState.school
             && current.user === teacherAnalysisReuseState.user;
@@ -86,6 +94,24 @@
         if (window.TEACHER_STATS && Object.keys(window.TEACHER_STATS).length > 0) {
             teacherAnalysisReuseState = readTeacherAnalysisReuseState();
         }
+    }
+
+    function renderReusableTeacherPairingNow(moduleId = 'teacher-analysis') {
+        if (moduleId !== 'teacher-pairing'
+            || !isTeacherAnalysisModuleActive(moduleId)
+            || window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ !== true
+            || window.__TEACHER_PAIRING_RUNTIME_PATCHED__ !== true
+            || typeof window.analyzeTeachers !== 'function'
+            || typeof window.generateTeacherPairing !== 'function'
+            || !canReuseTeacherAnalysisStats()) return false;
+
+        if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') {
+            window.TeachingManagementModulesRuntime.relocateTeacherBlocks();
+        }
+        window.generateTeacherPairing();
+        const section = document.getElementById('teacher-pairing');
+        if (section) section.dataset.teacherSubmoduleRendered = '1';
+        return true;
     }
 
     function getModuleTaskKey(label) {
@@ -241,7 +267,9 @@
             }, { delay: 420, idle: true, timeout: 1800 });
         }
         if (typeof window.applyComparisonPanelCollapses === 'function') {
-            scheduleModuleTask('comparison-panel-collapse-enter', window.applyComparisonPanelCollapses, { delay: 120, idle: true, timeout: 800 });
+            scheduleModuleTask('comparison-panel-collapse-enter', () => {
+                window.applyComparisonPanelCollapses(document.getElementById(id) || document);
+            }, { delay: 120, idle: true, timeout: 800 });
         }
         // 前置条件状态条只读现有状态，不触发重算。摘要页随后会调度一次
         // calcSummary；若仍等到 idle 阶段，重算会先占住主线程，状态条可能在
@@ -263,6 +291,10 @@
             || document.getElementById('teacher-pairing')?.classList.contains('active')
             || document.getElementById('teacher-township-ranking')?.classList.contains('active')
         );
+    }
+
+    function isTeacherAnalysisModuleActive(moduleId = 'teacher-analysis') {
+        return !!document.getElementById(String(moduleId || 'teacher-analysis').trim())?.classList.contains('active');
     }
 
     function clearTeacherAnalysisDeferredRender() {
@@ -429,6 +461,7 @@
         showTeacherAnalysisPendingState(targetModuleId);
 
         scheduleModuleTask('teacher-analysis-render-work', () => {
+            if (!isTeacherAnalysisModuleActive(targetModuleId)) return;
             runTeacherAnalysisIfCurrent(token, () => {
                 const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
                 if (!teacherMapReady || typeof window.analyzeTeachers !== 'function') {
@@ -453,7 +486,8 @@
                     return;
                 }
 
-                if (!canReuseTeacherAnalysisStats()) {
+                const reusedTeacherAnalysisStats = canReuseTeacherAnalysisStats();
+                if (!reusedTeacherAnalysisStats) {
                     window.analyzeTeachers({ render: false, township: false, historyLimit: 0 });
                     markTeacherAnalysisStatsReusable();
                 }
@@ -466,8 +500,18 @@
                     if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
                 }, 0);
                 if (targetModuleId === 'teacher-pairing') {
+                    const section = document.getElementById('teacher-pairing');
+                    const container = document.getElementById('teacher-pairing-suggestions');
+                    const contentText = String(container?.textContent || '').trim();
+                    if (reusedTeacherAnalysisStats
+                        && section?.dataset.teacherSubmoduleRendered === '1'
+                        && contentText
+                        && !/^正在加载/.test(contentText)) return;
                     if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') window.TeachingManagementModulesRuntime.relocateTeacherBlocks();
-                    if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
+                    if (typeof window.generateTeacherPairing === 'function') {
+                        window.generateTeacherPairing();
+                        if (section) section.dataset.teacherSubmoduleRendered = '1';
+                    }
                 }
                 if (targetModuleId === 'teacher-analysis') scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-overview', () => {
                     if (typeof window.tmScheduleTeachingOverviewRender === 'function') {
@@ -482,7 +526,11 @@
                 if (targetModuleId === 'teacher-detail-comparison') {
                     const renderComparison = () => {
                         if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') window.TeachingManagementModulesRuntime.relocateTeacherBlocks();
-                        if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
+                        if (typeof window.renderTeacherComparisonTable === 'function') {
+                            window.renderTeacherComparisonTable();
+                            const section = document.getElementById('teacher-detail-comparison');
+                            if (section) section.dataset.teacherSubmoduleRendered = '1';
+                        }
                     };
                     renderComparison();
                     scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-comparison', renderComparison, 700);
@@ -549,17 +597,20 @@
     }
 
     function renderTeacherAnalysisAfterRuntimeReady(moduleId = 'teacher-analysis') {
+        const targetModuleId = String(moduleId || 'teacher-analysis').trim();
         const render = () => {
             ensureTeacherAnalysisSectionLoaded();
-            if (!isTeacherAnalysisActive()) return false;
+            if (!isTeacherAnalysisModuleActive(targetModuleId)) return false;
             if (typeof window.analyzeTeachers !== 'function') {
                 renderTeacherAnalysisEmptyState();
                 return false;
             }
-            scheduleTeacherAnalysisRenderWork(0, moduleId);
+            scheduleTeacherAnalysisRenderWork(0, targetModuleId);
             return true;
         };
-        if (typeof window.analyzeTeachers === 'function') return Promise.resolve(render());
+        const runtimeReady = window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true
+            && (targetModuleId !== 'teacher-pairing' || window.__TEACHER_PAIRING_RUNTIME_PATCHED__ === true);
+        if (runtimeReady && typeof window.analyzeTeachers === 'function') return Promise.resolve(render());
         if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
             return Promise.resolve(window.ensureTeacherAnalysisMainRuntimeLoaded())
                 .then(render)
@@ -866,6 +917,10 @@
     function initTeacherAnalysisEntry(moduleId = 'teacher-analysis') {
         clearTeacherAnalysisDeferredRender();
         ensureTeacherAnalysisSectionLoaded();
+        if (moduleId !== 'teacher-analysis') {
+            const section = document.getElementById(moduleId);
+            if (section) section.dataset.teacherSubmoduleScheduled = '1';
+        }
         if (typeof window.TeachingManagementModulesRuntime?.ensureTeacherTownshipRankingSlotReady === 'function') {
             window.TeachingManagementModulesRuntime.ensureTeacherTownshipRankingSlotReady();
         } else if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') {
@@ -889,15 +944,16 @@
 
         applyTeacherRoleVisibility();
         showTeacherAnalysisPendingState(moduleId);
+        renderReusableTeacherPairingNow(moduleId);
         if (moduleId === 'teacher-analysis') scheduleTeacherCompareAutoRender(16);
-        const renderDelay = moduleId === 'teacher-analysis' ? TEACHER_ANALYSIS_RENDER_DELAY_MS : 80;
+        const renderDelay = TEACHER_ANALYSIS_RENDER_DELAY_MS;
         scheduleModuleTask('teacher-analysis-auto-render', () => {
-            if (!isTeacherAnalysisActive()) return;
+            if (!isTeacherAnalysisModuleActive(moduleId)) return;
             applyTeacherRoleVisibility();
             const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
             if (!teacherMapReady) {
                 waitForTeacherMapReady({ timeoutMs: 5000 }).then((ready) => {
-                    if (!isTeacherAnalysisActive()) return;
+                    if (!isTeacherAnalysisModuleActive(moduleId)) return;
                     if (ready) {
                         renderTeacherAnalysisAfterRuntimeReady(moduleId);
                     } else {
@@ -992,7 +1048,18 @@
     }
 
     function initProgressAnalysisEntry() {
-        const runNow = () => {
+        const section = document.getElementById('progress-analysis');
+        const entrySignature = [
+            Number(window.__RAW_DATA_VERSION || 0),
+            Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            String(window.CURRENT_EXAM_ID || ''),
+            String(window.CURRENT_COHORT_ID || ''),
+            window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? Object.keys(window.TEACHER_MAP).length : 0
+        ].join('::');
+        if (section?.dataset.progressEntrySignature === entrySignature) return Promise.resolve(true);
+        if (section) section.dataset.progressEntrySignature = entrySignature;
+
+        const prepareControls = () => {
             if (!MY_SCHOOL && typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0 && typeof SCHOOLS !== 'undefined') {
                 const schoolCounts = {};
                 const schoolNames = (typeof window.listAvailableSchoolsForCompare === 'function')
@@ -1029,31 +1096,45 @@
             const progSel = document.getElementById('progressSchoolSelect');
             if (MY_SCHOOL && progSel) progSel.value = MY_SCHOOL;
 
-            Promise.resolve(ensureProgressBaselineData({
-                allowCloudSync: true,
-                rerenderReport: true,
-                rerenderAnalysis: !!(progSel && progSel.value)
-            })).catch((err) => {
-                console.warn('[progress] 自动加载历史基准失败:', err);
-                if (typeof setProgressBaselineStatus === 'function') {
-                    setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
-                }
+            scheduleActiveModuleTask('progress-analysis', 'progress-analysis-baseline', () => {
+                const activeSchool = document.getElementById('progressSchoolSelect');
+                Promise.resolve(ensureProgressBaselineData({
+                    allowCloudSync: true,
+                    rerenderReport: true,
+                    rerenderAnalysis: !!(activeSchool && activeSchool.value)
+                })).catch((err) => {
+                    console.warn('[progress] 自动加载历史基准失败:', err);
+                    if (typeof setProgressBaselineStatus === 'function') {
+                        setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
+                    }
+                });
+            }, { delay: 80, idle: true, timeout: 1200 });
+        };
+
+        const schedulePreparation = () => {
+            scheduleActiveModuleTask('progress-analysis', 'progress-analysis-controls', prepareControls, {
+                delay: 80,
+                idle: true,
+                timeout: 900
             });
+            return true;
         };
 
         if (typeof window.ensureProgressAnalysisRuntimeLoaded === 'function'
             && !window.__PROGRESS_ANALYSIS_RUNTIME_PATCHED__) {
             return window.ensureProgressAnalysisRuntimeLoaded()
                 .then(() => {
-                    if (document.getElementById('progress-analysis')?.classList.contains('active')) runNow();
+                    if (document.getElementById('progress-analysis')?.classList.contains('active')) return schedulePreparation();
+                    return false;
                 })
                 .catch((error) => {
                     console.warn('[progress] runtime load failed:', error);
+                    return false;
                 });
         }
 
-        runNow();
-        return Promise.resolve();
+        schedulePreparation();
+        return Promise.resolve(true);
     }
 
     function getCurrentSchoolCandidate() {
@@ -1299,7 +1380,7 @@
             if (runtime && typeof runtime.render === 'function') {
                 scheduleActiveModuleTask('data-quality', 'data-quality-render', () => {
                     runtime.render();
-                }, { delay: 1200, idle: true, timeout: 2000 });
+                }, { delay: 16, frame: true });
                 return Promise.resolve(true);
             }
             return Promise.resolve(false);

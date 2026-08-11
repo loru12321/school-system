@@ -696,7 +696,8 @@ assert.ok(!townCompareInsertLoop.includes('refreshShellEnhancements'), 'town sub
 assert.ok(!townCompareUiSource.includes('refreshShellEnhancements'), 'town submodule compare UI should not trigger a full shell enhancement refresh');
 assert.ok(!townCompareInsertLoop.includes('section.querySelector'), 'town submodule compare UI should not deep scan large module sections during entry');
 assert.ok(townSubmoduleCompareRuntime.includes('function getTownSubmoduleSecHead(section)'), 'town submodule compare UI should locate section headers with a shallow helper');
-assert.ok(townSubmoduleCompareRuntime.includes('function scheduleTownSubmoduleCompareCollapseBinding()'), 'town submodule compare collapse binding should be scheduled');
+assert.ok(townSubmoduleCompareRuntime.includes("function scheduleTownSubmoduleCompareCollapseBinding(submoduleId = '')"), 'town submodule compare collapse binding should support a targeted active-module scope');
+assert.ok(townSubmoduleCompareRuntime.includes('scheduleTownSubmoduleCompareCollapseBinding(submoduleId)'), 'town submodule compare UI should bind collapses only inside the active submodule');
 assert.ok(townSubmoduleCompareRuntime.includes('window.requestAnimationFrame'), 'town submodule compare collapse binding should defer DOM binding off the module-enter path');
 assert.ok(moduleEntryRuntime.includes("scheduleModuleTask('town-submodule-compare-ui'"), 'town submodule compare UI should be scheduled outside the synchronous module-enter path');
 assert.ok(moduleEntryRuntime.includes("{ delay: 420, idle: true, timeout: 1800 }"), 'town submodule compare UI should wait for idle time instead of competing with first-entry renders');
@@ -976,7 +977,11 @@ assert.ok(shellRuntime.includes('dataset.moduleRailDelegated'), 'module rail sho
 assert.ok(!shellRuntime.includes("rail.querySelectorAll('.shell-module-rail-chip').forEach((button) => {\n            button.addEventListener('click'"), 'module rail should avoid per-render chip click listeners');
 assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;'), 'teacher analysis should render real content on the first frame after activation');
 assert.ok(moduleEntryRuntime.includes('function canReuseTeacherAnalysisStats()'), 'teacher submodules should reuse the current teacher analysis instead of rescanning all students on every switch');
-assert.ok(moduleEntryRuntime.includes("const renderDelay = moduleId === 'teacher-analysis' ? TEACHER_ANALYSIS_RENDER_DELAY_MS : 80;"), 'teacher submodules should yield one paint before any required recalculation');
+assert.ok(
+    moduleEntryRuntime.includes('const renderDelay = TEACHER_ANALYSIS_RENDER_DELAY_MS;')
+        && moduleEntryRuntime.includes('renderReusableTeacherPairingNow(moduleId);'),
+    'teacher submodules should render on the first frame while cached pairing content paints during activation'
+);
 assert.ok(moduleEntryRuntime.includes('ensureTeacherAnalysisMainRuntimeLoaded()'), 'teacher portrait entry should load its runtime automatically');
 assert.ok(moduleEntryRuntime.includes('function scheduleTeacherCompareAutoRender'), 'teacher multi-period compare should auto-render from default selectors');
 assert.ok(moduleEntryRuntime.includes('function scheduleActiveModuleTask'), 'module entry should defer non-critical active-module work');

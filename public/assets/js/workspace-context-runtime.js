@@ -5,7 +5,14 @@
     const MAX_RECENT_MODULES = 5;
     const MAX_PINNED_MODULES = 6;
     let refreshFrame = 0;
+    let refreshTimer = 0;
+    let refreshIdle = 0;
+    let persistTimer = 0;
+    let persistIdle = 0;
     let initialized = false;
+    let lastRenderSignature = '';
+    const contextStateCache = new Map();
+    const pendingContextWrites = new Map();
 
     function normalizeText(value) {
         return String(value == null ? '' : value).trim();
@@ -67,15 +74,43 @@
     }
 
     function readContextState() {
+        const storageKey = getStorageKey();
+        const cached = contextStateCache.get(storageKey);
+        if (cached) {
+            return { recent: cached.recent.slice(), pinned: cached.pinned.slice() };
+        }
         try {
-            const value = JSON.parse(readStorage(getStorageKey()) || '{}');
-            return {
+            const value = JSON.parse(readStorage(storageKey) || '{}');
+            const state = {
                 recent: Array.isArray(value.recent) ? value.recent.map(normalizeText).filter(Boolean).slice(0, MAX_RECENT_MODULES) : [],
                 pinned: Array.isArray(value.pinned) ? value.pinned.map(normalizeText).filter(Boolean).slice(0, MAX_PINNED_MODULES) : []
             };
+            contextStateCache.set(storageKey, state);
+            return { recent: state.recent.slice(), pinned: state.pinned.slice() };
         } catch (_) {
             return { recent: [], pinned: [] };
         }
+    }
+
+    function flushContextWrites() {
+        persistTimer = 0;
+        persistIdle = 0;
+        const writes = Array.from(pendingContextWrites.entries());
+        pendingContextWrites.clear();
+        writes.forEach(([key, state]) => writeStorage(key, JSON.stringify(state)));
+    }
+
+    function scheduleContextPersistence() {
+        if (persistTimer || persistIdle) return;
+        const arm = () => {
+            persistTimer = 0;
+            if (typeof global.requestIdleCallback === 'function') {
+                persistIdle = global.requestIdleCallback(flushContextWrites, { timeout: 1200 });
+            } else {
+                persistIdle = global.setTimeout(flushContextWrites, 0);
+            }
+        };
+        persistTimer = global.setTimeout(arm, 360);
     }
 
     function writeContextState(next) {
@@ -83,8 +118,11 @@
             recent: Array.from(new Set(Array.isArray(next?.recent) ? next.recent : [])).slice(0, MAX_RECENT_MODULES),
             pinned: Array.from(new Set(Array.isArray(next?.pinned) ? next.pinned : [])).slice(0, MAX_PINNED_MODULES)
         };
-        writeStorage(getStorageKey(), JSON.stringify(state));
-        return state;
+        const storageKey = getStorageKey();
+        contextStateCache.set(storageKey, state);
+        pendingContextWrites.set(storageKey, state);
+        scheduleContextPersistence();
+        return { recent: state.recent.slice(), pinned: state.pinned.slice() };
     }
 
     function getNavigation() {
@@ -207,7 +245,22 @@
     }
 
     function findModuleById(id) {
-        return getModules().find((item) => item.id === id) || null;
+        const target = normalizeText(id);
+        if (!target || !canShowModule(target)) return null;
+        const navigation = getNavigation();
+        for (const [categoryKey, category] of Object.entries(navigation)) {
+            const item = (Array.isArray(category?.items) ? category.items : [])
+                .find((candidate) => normalizeText(candidate?.id) === target);
+            if (!item) continue;
+            return {
+                id: target,
+                text: normalizeText(item.text) || target,
+                hint: normalizeText(item.hint),
+                icon: normalizeText(item.icon) || 'ti-layout-grid',
+                categoryKey
+            };
+        }
+        return null;
     }
 
     function createModuleButton(module, options = {}) {
@@ -271,7 +324,7 @@
             state.pinned = [id, ...state.pinned.filter((item) => item !== id)].slice(0, MAX_PINNED_MODULES);
         }
         writeContextState(state);
-        scheduleRefresh();
+        scheduleRefresh({ urgent: true });
     }
 
     function activateModule(moduleId) {
@@ -294,18 +347,36 @@
             .filter(Boolean)
             .filter((item) => item.id !== activeId && !state.pinned.includes(item.id));
 
+        const cohortLabel = getCohortLabel();
+        const examLabel = getExamLabel();
+        const sync = getSyncStatus();
+        const score = getScoreStatus();
+        const teacher = getTeacherStatus();
+        const quality = getQualityStatus();
+        const renderSignature = JSON.stringify([
+            categoryKey,
+            activeId,
+            cohortLabel,
+            examLabel,
+            sync.text,
+            sync.tone,
+            score.text,
+            teacher.text,
+            quality.text,
+            state.recent,
+            state.pinned
+        ]);
+        if (renderSignature === lastRenderSignature && root.childElementCount) return;
+        lastRenderSignature = renderSignature;
+
         const summary = createElement('div', 'workspace-context-summary');
         summary.appendChild(createElement('span', 'workspace-context-kicker', category.title || '当前任务'));
-        summary.appendChild(createElement('strong', 'workspace-context-title', `${getCohortLabel()} · ${getExamLabel()}`));
+        summary.appendChild(createElement('strong', 'workspace-context-title', `${cohortLabel} · ${examLabel}`));
 
         const statuses = createElement('div', 'workspace-context-statuses');
-        const sync = getSyncStatus();
         statuses.appendChild(createStatus(sync.text, 'ti-cloud', sync.tone === 'synced' ? 'positive' : (sync.tone === 'error' ? 'warning' : '')));
-        const score = getScoreStatus();
         statuses.appendChild(createStatus(score.text, 'ti-database', score.tone));
-        const teacher = getTeacherStatus();
         statuses.appendChild(createStatus(teacher.text, 'ti-users', teacher.tone));
-        const quality = getQualityStatus();
         statuses.appendChild(createStatus(quality.text, 'ti-stethoscope', quality.tone));
 
         const groups = createElement('div', 'workspace-context-task-groups');
@@ -319,17 +390,37 @@
         root.replaceChildren(summary, statuses, groups);
     }
 
-    function scheduleRefresh() {
-        if (refreshFrame) return;
+    function cancelScheduledRefresh() {
+        if (refreshFrame && typeof global.cancelAnimationFrame === 'function') global.cancelAnimationFrame(refreshFrame);
+        if (refreshTimer) global.clearTimeout(refreshTimer);
+        if (refreshIdle && typeof global.cancelIdleCallback === 'function') global.cancelIdleCallback(refreshIdle);
+        refreshFrame = 0;
+        refreshTimer = 0;
+        refreshIdle = 0;
+    }
+
+    function scheduleRefresh(options = {}) {
+        const settings = options && typeof options === 'object' ? options : {};
+        if (settings.urgent) cancelScheduledRefresh();
+        if (refreshFrame || refreshTimer || refreshIdle) return;
         const run = () => {
             refreshFrame = 0;
+            refreshTimer = 0;
+            refreshIdle = 0;
             render();
         };
-        if (typeof global.requestAnimationFrame === 'function') {
-            refreshFrame = global.requestAnimationFrame(run);
-        } else {
-            refreshFrame = global.setTimeout(run, 40);
-        }
+        const arm = () => {
+            refreshTimer = 0;
+            if (settings.idle && typeof global.requestIdleCallback === 'function') {
+                refreshIdle = global.requestIdleCallback(run, { timeout: Number(settings.timeout || 700) });
+                return;
+            }
+            if (typeof global.requestAnimationFrame === 'function') refreshFrame = global.requestAnimationFrame(run);
+            else refreshFrame = global.setTimeout(run, 40);
+        };
+        const delay = Math.max(0, Number(settings.delay || 0));
+        if (delay) refreshTimer = global.setTimeout(arm, delay);
+        else arm();
     }
 
     function bind() {
@@ -348,7 +439,9 @@
         });
         global.addEventListener('school:module-changed', (event) => {
             recordModule(event?.detail?.id);
-            scheduleRefresh();
+            // This strip is secondary navigation. Let the selected module paint
+            // before updating recents and status chips.
+            scheduleRefresh({ delay: 140, idle: true, timeout: 700 });
         });
         [
             'school:app-modules-ready',
@@ -359,9 +452,15 @@
         ].forEach((eventName) => {
             global.addEventListener(eventName, scheduleRefresh);
         });
-        global.addEventListener('storage', scheduleRefresh);
-        global.setTimeout(scheduleRefresh, 0);
-        global.setTimeout(scheduleRefresh, 260);
+        global.addEventListener('storage', (event) => {
+            const key = normalizeText(event?.key);
+            if (key && key.startsWith(STORAGE_PREFIX)) contextStateCache.delete(key);
+            lastRenderSignature = '';
+            scheduleRefresh({ urgent: true });
+        });
+        global.addEventListener('pagehide', flushContextWrites);
+        global.setTimeout(() => scheduleRefresh({ urgent: true }), 0);
+        global.setTimeout(() => scheduleRefresh({ urgent: true }), 260);
     }
 
     if (global.document?.readyState === 'loading') {
