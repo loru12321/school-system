@@ -810,7 +810,6 @@ function buildProgressMultiPeriodRows(config) {
         const schoolRowsByKey = new Map();
         schoolRows.forEach((row) => {
             const key = cleanName(row?.name);
-            // Preserve first-row behavior for duplicate normalized names.
             if (key && !schoolRowsByKey.has(key)) schoolRowsByKey.set(key, row);
         });
         const rankTownMap = buildCompetitionRankMap(townshipRows, row => cleanName(row?.name), totalOf);
@@ -940,7 +939,7 @@ function renderMultiPeriodComparison() {
     setProgressMultiPeriodHint('⏳ 正在生成多期对比，请稍候...', 'loading');
 
     try {
-        const { rows, totalSubjects } = buildProgressMultiPeriodRows(config);
+        const{rows,totalSubjects}=window.ProgressMultiPeriodCache.get(config,()=>buildProgressMultiPeriodRows(config));
         if (!rows.length) {
             setProgressMultiPeriodHint('⚠️ 当前条件下没有可对比学生。', 'error');
             resultEl.innerHTML = '<div class="analysis-empty-state analysis-empty-state-compact">没有找到可对比学生。</div>';

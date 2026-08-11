@@ -7,6 +7,7 @@ const TARGETS = (process.env.PROFILE_MODULES || 'summary,correlation-analysis,re
   .split(',')
   .map((item) => item.trim())
   .filter(Boolean);
+const CPU_PROFILE = process.env.PROFILE_CPU === 'true';
 
 async function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -116,6 +117,10 @@ async function installProfiler(page) {
       'FB_renderBalanceTable',
       'ensureTeachingManagementRuntimeLoaded',
       'renderMultiPeriodComparison',
+      'getExamRowsForCompare',
+      'filterProgressCompareRowsToTownshipScope',
+      'filterRowsBySchool',
+      'buildCompetitionRankMap',
       'renderStudentOverview',
       'smScheduleStudentOverviewRender',
       'smBuildOverviewModel',
@@ -215,6 +220,47 @@ async function switchModule(page, id) {
   }, id, { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(120);
   await installProfiler(page);
+}
+
+async function startCpuProfile(page) {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Profiler.enable');
+  await session.send('Profiler.start');
+  return session;
+}
+
+async function stopCpuProfile(session) {
+  if (!session) return [];
+  const { profile } = await session.send('Profiler.stop');
+  await session.detach().catch(() => {});
+  const nodes = new Map((profile?.nodes || []).map((node) => [node.id, node]));
+  const totals = new Map();
+  const samples = Array.isArray(profile?.samples) ? profile.samples : [];
+  const deltas = Array.isArray(profile?.timeDeltas) ? profile.timeDeltas : [];
+  samples.forEach((nodeId, index) => {
+    const node = nodes.get(nodeId);
+    const frame = node?.callFrame || {};
+    const durationUs = Number(deltas[index] || 0);
+    if (!Number.isFinite(durationUs) || durationUs <= 0) return;
+    const name = String(frame.functionName || '(anonymous)');
+    const url = String(frame.url || '');
+    const line = Number(frame.lineNumber || 0) + 1;
+    const key = `${name}@@${url}@@${line}`;
+    const item = totals.get(key) || { name, url, line, totalUs: 0, samples: 0 };
+    item.totalUs += durationUs;
+    item.samples += 1;
+    totals.set(key, item);
+  });
+  return Array.from(totals.values())
+    .map((item) => ({
+      name: item.name,
+      url: item.url,
+      line: item.line,
+      totalMs: Number((item.totalUs / 1000).toFixed(2)),
+      samples: item.samples
+    }))
+    .sort((a, b) => b.totalMs - a.totalMs)
+    .slice(0, 24);
 }
 
 async function profileSummary(page) {
@@ -324,7 +370,16 @@ async function profileStudentOverview(page) {
     window.onStudentComparePeriodCountChange?.();
     window.updateProgressMultiExamSelects?.();
     window.onProgressComparePeriodCountChange?.();
+    const progressFirstStartedAt = performance.now();
     await Promise.resolve(window.renderMultiPeriodComparison?.()).catch(() => null);
+    const progressFirstMs = performance.now() - progressFirstStartedAt;
+    const progressRepeatStartedAt = performance.now();
+    await Promise.resolve(window.renderMultiPeriodComparison?.()).catch(() => null);
+    window.__PROD_PROFILE?.events?.push({
+      name: 'progress-multi-period-cache',
+      firstMs: Number(progressFirstMs.toFixed(2)),
+      repeatMs: Number((performance.now() - progressRepeatStartedAt).toFixed(2))
+    });
     window.renderStudentOverview?.();
     await new Promise((resolve) => setTimeout(resolve, 500));
   });
@@ -404,6 +459,7 @@ async function run() {
   await login(page);
   await installProfiler(page);
   const perModule = [];
+  const cpuProfiles = [];
   const actions = {
     summary: profileSummary,
     'correlation-analysis': profileCorrelation,
@@ -418,7 +474,9 @@ async function run() {
     const started = Date.now();
     try {
       await switchModule(page, id);
+      const cpuSession = CPU_PROFILE ? await startCpuProfile(page) : null;
       await actions[id]?.(page);
+      if (cpuSession) cpuProfiles.push({ id, topFunctions: await stopCpuProfile(cpuSession) });
       perModule.push({ id, durationMs: Date.now() - started, ok: true });
     } catch (error) {
       perModule.push({ id, durationMs: Date.now() - started, ok: false, error: error?.message || String(error) });
@@ -445,7 +503,7 @@ async function run() {
     };
   });
   await browser.close();
-  console.log(JSON.stringify({ url: URL, modules: perModule, ...profile }, null, 2));
+  console.log(JSON.stringify({ url: URL, modules: perModule, cpuProfiles, ...profile }, null, 2));
 }
 
 run().catch((error) => {

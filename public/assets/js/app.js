@@ -1197,6 +1197,9 @@ function setSchoolAliasState(list) {
     if (window.PermissionPolicy && typeof window.PermissionPolicy.clearSchoolNameCache === 'function') {
         window.PermissionPolicy.clearSchoolNameCache();
     }
+    if (typeof window.clearSchoolNormalizationCache === 'function') {
+        window.clearSchoolNormalizationCache();
+    }
     return nextAliases;
 }
 

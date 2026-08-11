@@ -94,6 +94,7 @@ assertContains(app, 'window.readPotentialStudentsCache = readPotentialStudentsCa
 [
     'ProgressBaselineExamPerfCache',
     'ProgressCompareSelectPerfCache',
+    'window.ProgressMultiPeriodCache.get',
     'ProgressBaselineExamPerfCache.signature === signature',
     'ProgressCompareSelectPerfCache.examOptionsHtml',
     'ProgressCompareSelectPerfCache.schoolOptionsHtml'
@@ -118,8 +119,28 @@ assertContains(app, 'window.readPotentialStudentsCache = readPotentialStudentsCa
 [
     'getSelectorSafeExamFingerprint',
     'fingerprint: getSelectorSafeExamFingerprint(ex)',
-    'fingerprint: getSelectorSafeExamFingerprint({'
+    'fingerprint: getSelectorSafeExamFingerprint({',
+    'CompareExamRowsPerfCache',
+    'getCompareExamRowsSignature',
+    'getCachedCompareExamRows',
+    'return cached.rows.slice();',
+    'ProgressMultiPeriodCache',
+    'getProgressMultiPeriodDataSignature',
+    'getProgressMultiPeriodExamSignature',
+    'getOrBuildProgressMultiPeriodModel'
 ].forEach((token) => assertContains(compareShared, token, compareSharedFile));
+
+[
+    'SchoolNormalizationPerfCache',
+    'setBoundedSchoolNormalizationCache',
+    'ensureSchoolAliasCacheIsCurrent',
+    'clearSchoolNormalizationCache',
+    'normalizedNameByText'
+].forEach((token) => assertContains(schoolNormalization, token, schoolNormalizationFile));
+
+[
+    'window.clearSchoolNormalizationCache();'
+].forEach((token) => assertContains(app, token, appFile));
 
 const listAvailableExamsStart = compareShared.indexOf('function listAvailableExamsForCompare()');
 const getSelectedReportStart = compareShared.indexOf('function getSelectedReportCompareExamIds()', listAvailableExamsStart);

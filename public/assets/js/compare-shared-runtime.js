@@ -48,8 +48,113 @@ const CompareExamListPerfCache = {
     fingerprintByRows: new WeakMap()
 };
 
+const CompareExamRowsPerfCache = {
+    bySourceRows: new WeakMap()
+};
+
+const ProgressMultiPeriodCompareCacheRuntime = {
+    signature: '',
+    model: null
+};
+
 function cloneCompareExamList(list) {
     return (Array.isArray(list) ? list : []).map(entry => ({ ...entry }));
+}
+
+function getCompareSubjectSignature(subjects) {
+    return (Array.isArray(subjects) ? subjects : [])
+        .map(subject => String(subject || '').trim())
+        .filter(Boolean)
+        .join('|');
+}
+
+function getCompareExamRowsSignature(examId, sourceType, sourceRows, metadata = {}, subjects = []) {
+    return [
+        String(sourceType || ''),
+        String(examId || ''),
+        String(metadata.examId || ''),
+        String(metadata.updatedAt || metadata.createdAt || ''),
+        String(metadata.fingerprint || ''),
+        String(window.__RAW_DATA_VERSION || 0),
+        Array.isArray(sourceRows) ? sourceRows.length : 0,
+        getCompareSubjectSignature(subjects)
+    ].join('::');
+}
+
+function getCachedCompareExamRows(sourceRows, signature, buildRows) {
+    const list = Array.isArray(sourceRows) ? sourceRows : null;
+    if (!list) return buildRows();
+    const cached = CompareExamRowsPerfCache.bySourceRows.get(list);
+    if (cached && cached.signature === signature && Array.isArray(cached.rows)) {
+        return cached.rows.slice();
+    }
+    const rows = buildRows();
+    CompareExamRowsPerfCache.bySourceRows.set(list, { signature, rows });
+    return rows.slice();
+}
+
+function getProgressMultiPeriodUserSignature() {
+    const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : (window.Auth?.currentUser || {});
+    return [
+        String(user?.username || user?.name || user?.id || ''),
+        String(user?.role || ''),
+        String(user?.school || ''),
+        String(user?.class || user?.class_name || ''),
+        Array.isArray(user?.roles) ? user.roles.join('|') : '',
+        Array.isArray(user?.classes) ? user.classes.join('|') : ''
+    ].join('::');
+}
+
+function getProgressMultiPeriodExamSignature(examId) {
+    const id = String(examId || '').trim();
+    if (!id) return '';
+    const currentExamId = String(window.CURRENT_EXAM_ID || '').trim();
+    if (currentExamId && isExamKeyEquivalentForCompare(id, currentExamId)) {
+        return [id, 'current', window.__RAW_DATA_VERSION || 0, Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0].join(':');
+    }
+    const db = window.CohortDB && typeof window.CohortDB.ensure === 'function'
+        ? window.CohortDB.ensure()
+        : null;
+    const exam = db?.exams?.[id] || Object.values(db?.exams || {}).find((item) => {
+        const storedId = String(item?.examId || item?.id || '').trim();
+        return storedId && isExamKeyEquivalentForCompare(storedId, id);
+    });
+    return [
+        id,
+        String(exam?.examId || exam?.id || ''),
+        String(exam?.updatedAt || exam?.createdAt || ''),
+        String(exam?.fingerprint || ''),
+        Array.isArray(exam?.data) ? exam.data.length : 0,
+        Array.isArray(exam?.subjects) ? exam.subjects.join('|') : ''
+    ].join(':');
+}
+
+function getProgressMultiPeriodDataSignature(config = {}) {
+    const examIds = Array.isArray(config.examIds) ? config.examIds.map((id) => String(id || '').trim()) : [];
+    const subjects = typeof window.getComparisonTotalSubjects === 'function'
+        ? window.getComparisonTotalSubjects()
+        : (Array.isArray(window.SUBJECTS) ? window.SUBJECTS : []);
+    return [
+        Number(config.periodCount || 2),
+        String(config.school || '').trim(),
+        examIds.join('|'),
+        examIds.map(getProgressMultiPeriodExamSignature).join('|'),
+        subjects.join('|'),
+        getProgressMultiPeriodUserSignature(),
+        window.__SCHOOL_NORMALIZATION_CACHE_VERSION || 0
+    ].join('::');
+}
+
+function getOrBuildProgressMultiPeriodModel(config, buildModel) {
+    const signature = getProgressMultiPeriodDataSignature(config);
+    if (ProgressMultiPeriodCompareCacheRuntime.signature === signature
+        && ProgressMultiPeriodCompareCacheRuntime.model) {
+        return ProgressMultiPeriodCompareCacheRuntime.model;
+    }
+    const model = typeof buildModel === 'function' ? buildModel() : null;
+    ProgressMultiPeriodCompareCacheRuntime.signature = signature;
+    ProgressMultiPeriodCompareCacheRuntime.model = model;
+    return model;
 }
 
 function getCompareExamListSignature(db, cohortId) {
@@ -545,10 +650,18 @@ function getSelectedReportCompareExamIds() {
 function getExamRowsForCompare(examId) {
     if (!examId) return [];
     if (!isExamSelectableForCompare(examId)) return [];
-    let rawRows = [];
+    let sourceRows = [];
+    let sourceType = '';
+    let sourceMetadata = {};
+    let examSubjects = [];
+    let buildRawRows = () => [];
 
     if (CURRENT_EXAM_ID && isExamKeyEquivalentForCompare(examId, CURRENT_EXAM_ID)) {
-        rawRows = (RAW_DATA || []).map(s => ({
+        sourceRows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+        sourceType = 'current';
+        sourceMetadata = { examId: CURRENT_EXAM_ID };
+        examSubjects = Array.isArray(SUBJECTS) ? SUBJECTS : [];
+        buildRawRows = () => sourceRows.map(s => ({
             name: s.name,
             school: s.school,
             class: normalizeClass(s.class),
@@ -564,11 +677,18 @@ function getExamRowsForCompare(examId) {
             if (isExamKeyEquivalentForCompare(storedId, examId)) return true;
             return getCompareExamIdentity({ id: storedId, label: item?.examLabel || '' }) === identity;
         });
-        const list = exam?.data || [];
-        const examSubjects = Array.isArray(exam?.subjects) && exam.subjects.length
+        sourceRows = Array.isArray(exam?.data) ? exam.data : [];
+        sourceType = 'archived';
+        sourceMetadata = {
+            examId: exam?.examId || exam?.id || examId,
+            updatedAt: exam?.updatedAt || '',
+            createdAt: exam?.createdAt || '',
+            fingerprint: exam?.fingerprint || ''
+        };
+        examSubjects = Array.isArray(exam?.subjects) && exam.subjects.length
             ? exam.subjects
             : (Array.isArray(SUBJECTS) ? SUBJECTS : []);
-        rawRows = list.map(s => {
+        buildRawRows = () => sourceRows.map(s => {
             const scores = s.scores || {};
             let total = s.total;
             if (!Number.isFinite(Number(total))) {
@@ -588,20 +708,29 @@ function getExamRowsForCompare(examId) {
         });
     }
 
-    const rows = rawRows.filter(r => r.name && r.school && typeof r.total === 'number' && !isNaN(r.total));
-    const bySchool = {};
-    rows.forEach(r => {
-        if (!bySchool[r.school]) bySchool[r.school] = [];
-        bySchool[r.school].push(r);
-    });
-    Object.values(bySchool).forEach(arr => {
-        arr.sort((a, b) => b.total - a.total);
-        arr.forEach((r, i) => {
-            if (i > 0 && Math.abs(r.total - arr[i - 1].total) < 0.001) r.rankSchool = arr[i - 1].rankSchool;
-            else r.rankSchool = i + 1;
+    const cacheSignature = getCompareExamRowsSignature(
+        examId,
+        sourceType,
+        sourceRows,
+        sourceMetadata,
+        examSubjects
+    );
+    return getCachedCompareExamRows(sourceRows, cacheSignature, () => {
+        const rows = buildRawRows().filter(r => r.name && r.school && typeof r.total === 'number' && !isNaN(r.total));
+        const bySchool = {};
+        rows.forEach(r => {
+            if (!bySchool[r.school]) bySchool[r.school] = [];
+            bySchool[r.school].push(r);
         });
+        Object.values(bySchool).forEach(arr => {
+            arr.sort((a, b) => b.total - a.total);
+            arr.forEach((r, i) => {
+                if (i > 0 && Math.abs(r.total - arr[i - 1].total) < 0.001) r.rankSchool = arr[i - 1].rankSchool;
+                else r.rankSchool = i + 1;
+            });
+        });
+        return rows;
     });
-    return rows;
 }
 
 function filterRowsBySchool(rows, school) {
@@ -683,6 +812,9 @@ function buildSchoolSummaryForExam(rows, scope = 'township') {
         assignCompetitionRanks,
         buildCompetitionRankMap,
         computeExamDataFingerprint,
+        ProgressMultiPeriodCache: {
+            get: getOrBuildProgressMultiPeriodModel
+        },
         pickPreferredExamEntry,
         warnIfDuplicateCompareSnapshots,
         extractCohortIdFromExamKey,

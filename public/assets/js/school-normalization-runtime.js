@@ -77,18 +77,76 @@ const IndicatorSchoolBucketPerfCache = {
     scoreNameMap: new Map()
 };
 
+const SchoolNormalizationPerfCache = {
+    displayNameByRaw: new Map(),
+    sanitizedTextByRaw: new Map(),
+    normalizedNameByText: new Map(),
+    mergedAliasCanonicalMap: null,
+    mergedBasekeyCanonicalMap: null,
+    aliasStore: null
+};
+
+function setBoundedSchoolNormalizationCache(cache, key, value, limit = 512) {
+    if (cache.has(key)) return cache.get(key);
+    if (cache.size >= limit) cache.clear();
+    cache.set(key, value);
+    return value;
+}
+
+function bumpSchoolNormalizationCacheVersion() {
+    window.__SCHOOL_NORMALIZATION_CACHE_VERSION = (Number(window.__SCHOOL_NORMALIZATION_CACHE_VERSION) || 0) + 1;
+    return window.__SCHOOL_NORMALIZATION_CACHE_VERSION;
+}
+
+function clearSchoolNormalizationCache() {
+    SchoolNormalizationPerfCache.normalizedNameByText.clear();
+    SchoolNormalizationPerfCache.mergedAliasCanonicalMap = null;
+    SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap = null;
+    SchoolNormalizationPerfCache.aliasStore = null;
+    SchoolCompareListPerfCache.allSignature = '';
+    SchoolCompareListPerfCache.townshipSignature = '';
+    SchoolCompareListPerfCache.allSchools = [];
+    SchoolCompareListPerfCache.townshipSchools = [];
+    IndicatorSchoolBucketPerfCache.signature = '';
+    IndicatorSchoolBucketPerfCache.buckets = [];
+    IndicatorSchoolBucketPerfCache.scoreMapSignature = '';
+    IndicatorSchoolBucketPerfCache.scoreNameMap.clear();
+    bumpSchoolNormalizationCacheVersion();
+}
+
+function ensureSchoolAliasCacheIsCurrent() {
+    const aliases = ensureSchoolAliasStore();
+    if (SchoolNormalizationPerfCache.aliasStore === aliases) return aliases;
+    SchoolNormalizationPerfCache.normalizedNameByText.clear();
+    SchoolNormalizationPerfCache.mergedAliasCanonicalMap = null;
+    SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap = null;
+    SchoolNormalizationPerfCache.aliasStore = aliases;
+    bumpSchoolNormalizationCacheVersion();
+    return aliases;
+}
+
 function normalizeSchoolDisplayName(name) {
-    return String(name || '')
+    const raw = String(name || '');
+    if (!raw) return '';
+    const cached = SchoolNormalizationPerfCache.displayNameByRaw.get(raw);
+    if (cached !== undefined) return cached;
+    const normalized = raw
         .normalize('NFKC')
         .replace(/[\u200B-\u200D\uFEFF\u2060\u00A0]/g, '')
         .trim();
+    return setBoundedSchoolNormalizationCache(SchoolNormalizationPerfCache.displayNameByRaw, raw, normalized);
 }
 
 function sanitizeSchoolText(name) {
-    return normalizeSchoolDisplayName(name)
+    const raw = String(name || '');
+    if (!raw) return '';
+    const cached = SchoolNormalizationPerfCache.sanitizedTextByRaw.get(raw);
+    if (cached !== undefined) return cached;
+    const sanitized = normalizeSchoolDisplayName(raw)
         .replace(/\s+/g, '')
         .replace(/[()（）\-—_·、,，.。]/g, '')
         .trim();
+    return setBoundedSchoolNormalizationCache(SchoolNormalizationPerfCache.sanitizedTextByRaw, raw, sanitized);
 }
 
 const SCHOOL_ORG_SUFFIX_RULES = [
@@ -216,6 +274,7 @@ function replaceCustomSchoolAliasStore(list) {
         : [];
     window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
     window.SYS_VARS.schoolAliases = next;
+    clearSchoolNormalizationCache();
     persistSchoolAliasSettingsLocal();
     return next;
 }
@@ -260,6 +319,10 @@ function getCustomSchoolAliasGroups() {
 }
 
 function getMergedSchoolAliasCanonicalMap() {
+    ensureSchoolAliasCacheIsCurrent();
+    if (SchoolNormalizationPerfCache.mergedAliasCanonicalMap) {
+        return SchoolNormalizationPerfCache.mergedAliasCanonicalMap;
+    }
     const map = Object.assign(Object.create(null), SCHOOL_ALIAS_CANONICAL_MAP);
     getCustomSchoolAliasGroups().forEach(group => {
         [group.canonical, ...(group.aliases || [])].forEach(name => {
@@ -267,10 +330,15 @@ function getMergedSchoolAliasCanonicalMap() {
             if (key) map[key] = group.canonical;
         });
     });
+    SchoolNormalizationPerfCache.mergedAliasCanonicalMap = map;
     return map;
 }
 
 function getMergedSchoolBasekeyCanonicalMap() {
+    ensureSchoolAliasCacheIsCurrent();
+    if (SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap) {
+        return SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap;
+    }
     const map = Object.assign(Object.create(null), SCHOOL_BASEKEY_CANONICAL_MAP);
     getCustomSchoolAliasGroups().forEach(group => {
         const keys = new Set(
@@ -282,6 +350,7 @@ function getMergedSchoolBasekeyCanonicalMap() {
             map[[...keys][0]] = group.canonical;
         }
     });
+    SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap = map;
     return map;
 }
 
@@ -371,12 +440,25 @@ function findBestFuzzySchoolNameMatch(collection, schoolName) {
 function normalizeSchoolName(name) {
     const text = sanitizeSchoolText(name);
     if (!text) return '';
+    ensureSchoolAliasCacheIsCurrent();
+    const cached = SchoolNormalizationPerfCache.normalizedNameByText.get(text);
+    if (cached !== undefined) return cached;
     const directCanonical = getMergedSchoolAliasCanonicalMap()[text];
-    if (directCanonical) return `canon:${directCanonical}`;
+    if (directCanonical) {
+        return setBoundedSchoolNormalizationCache(
+            SchoolNormalizationPerfCache.normalizedNameByText,
+            text,
+            `canon:${directCanonical}`
+        );
+    }
     const baseKey = computeSchoolBaseKey(text);
-    if (!baseKey) return text;
+    if (!baseKey) return setBoundedSchoolNormalizationCache(SchoolNormalizationPerfCache.normalizedNameByText, text, text);
     const mappedCanonical = getMergedSchoolBasekeyCanonicalMap()[baseKey];
-    return mappedCanonical ? `canon:${mappedCanonical}` : baseKey;
+    return setBoundedSchoolNormalizationCache(
+        SchoolNormalizationPerfCache.normalizedNameByText,
+        text,
+        mappedCanonical ? `canon:${mappedCanonical}` : baseKey
+    );
 }
 
 function areSchoolNamesEquivalent(a, b) {
@@ -945,6 +1027,7 @@ function inferDefaultSchoolFromContext() {
         stripSchoolAdministrativePrefix,
         stripSchoolOrganizationalSuffixes,
         computeSchoolBaseKey,
+        clearSchoolNormalizationCache,
         ensureSchoolAliasStore,
         persistSchoolAliasSettingsLocal,
         replaceCustomSchoolAliasStore,

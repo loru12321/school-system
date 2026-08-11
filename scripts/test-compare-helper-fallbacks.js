@@ -49,6 +49,48 @@ function runCompareSharedFallbackTest() {
     assert.strictEqual(toasts[0].type, 'warning');
 }
 
+function runCompareExamRowsCacheTest() {
+    const sharedPath = path.resolve(__dirname, '../public/assets/js/compare-shared-runtime.js');
+    const sharedCode = fs.readFileSync(sharedPath, 'utf8');
+    const rawRows = [
+        { name: '甲', school: '银山实验学校', class: '6.1', total: 90, scores: { 语文: 90 } },
+        { name: '乙', school: '银山实验学校', class: '6.1', total: 95, scores: { 语文: 95 } }
+    ];
+    const localStorage = { getItem: () => '' };
+    const context = {
+        console,
+        CURRENT_COHORT_ID: '2022',
+        CURRENT_EXAM_ID: '2022_6年级_期中_2025-11-20',
+        RAW_DATA: rawRows,
+        SUBJECTS: ['语文'],
+        normalizeClass: (value) => String(value || '').trim(),
+        localStorage,
+        document: { getElementById: () => null },
+        window: {
+            __RAW_DATA_VERSION: 1,
+            CURRENT_COHORT_ID: '2022',
+            CURRENT_EXAM_ID: '2022_6年级_期中_2025-11-20',
+            RAW_DATA: rawRows,
+            SUBJECTS: ['语文'],
+            localStorage,
+            normalizeClass: (value) => String(value || '').trim()
+        }
+    };
+    context.globalThis = context.window;
+
+    vm.runInNewContext(sharedCode, context, { filename: sharedPath });
+
+    const first = context.window.getExamRowsForCompare(context.CURRENT_EXAM_ID);
+    const second = context.window.getExamRowsForCompare(context.CURRENT_EXAM_ID);
+    assert.notStrictEqual(first, second);
+    assert.strictEqual(first.find((row) => row.name === '乙').rankSchool, 1);
+
+    rawRows[0].total = 99;
+    context.window.__RAW_DATA_VERSION = 2;
+    const refreshed = context.window.getExamRowsForCompare(context.CURRENT_EXAM_ID);
+    assert.strictEqual(refreshed.find((row) => row.name === '甲').rankSchool, 1);
+}
+
 function runCompareSelectorsFallbackTest() {
     const selectorsPath = path.resolve(__dirname, '../public/assets/js/compare-selectors-runtime.js');
     const selectorsCode = fs.readFileSync(selectorsPath, 'utf8');
@@ -160,10 +202,45 @@ function runProgressAnalysisFallbackTest() {
     assert.ok(syncState['2022'].lastAttempt > 0);
 }
 
+function runSchoolNormalizationCacheTest() {
+    const runtimePath = path.resolve(__dirname, '../public/assets/js/school-normalization-runtime.js');
+    const runtimeCode = fs.readFileSync(runtimePath, 'utf8');
+    const localStorageState = new Map();
+    const context = {
+        console,
+        localStorage: {
+            getItem: (key) => localStorageState.get(key) || null,
+            setItem: (key, value) => localStorageState.set(key, String(value))
+        },
+        SCHOOLS: {},
+        TARGETS: {},
+        MY_SCHOOL: '',
+        window: {
+            __SCHOOL_NORMALIZATION_RUNTIME_PATCHED__: false,
+            SYS_VARS: { schoolAliases: [] },
+            SCHOOLS: {},
+            TARGETS: {},
+            MY_SCHOOL: ''
+        }
+    };
+    context.globalThis = context.window;
+    context.window.localStorage = context.localStorage;
+
+    vm.runInNewContext(runtimeCode, context, { filename: runtimePath });
+
+    assert.strictEqual(context.window.normalizeSchoolName('银山实验学校'), 'canon:银山实验');
+    assert.strictEqual(context.window.areSchoolNamesEquivalent('银山实验学校', '银山实验'), true);
+    context.window.replaceCustomSchoolAliasStore([{ alias: '临时实验学校', canonical: '银山实验' }]);
+    assert.strictEqual(context.window.areSchoolNamesEquivalent('临时实验学校', '银山实验'), true);
+    assert.strictEqual(typeof context.window.clearSchoolNormalizationCache, 'function');
+}
+
 function run() {
     runCompareSharedFallbackTest();
+    runCompareExamRowsCacheTest();
     runCompareSelectorsFallbackTest();
     runProgressAnalysisFallbackTest();
+    runSchoolNormalizationCacheTest();
     console.log('compare helper fallback tests passed');
 }
 
