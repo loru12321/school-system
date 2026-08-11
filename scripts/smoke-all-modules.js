@@ -9,6 +9,7 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const SMOKE_OUTPUT_PATH = String(process.env.SMOKE_OUTPUT_PATH || '').trim();
+const REAL_MODULE_CLICKS = process.env.SMOKE_REAL_MODULE_CLICKS === 'true';
 
 function trace(message, extra = undefined) {
     if (!process.env.SMOKE_TRACE) return;
@@ -31,6 +32,7 @@ const DEFAULT_SWITCH_MODULE_IDS = [
     'analysis',
     'high-score',
     'county-teacher-portrait',
+    'county-school-horizontal',
     'teacher-analysis',
     'teacher-detail-comparison',
     'teacher-pairing',
@@ -1079,7 +1081,15 @@ async function smokeSwitchModule(page, id) {
     let activationTiming = null;
     const withActivationTiming = (result) => {
         if (!activationTiming?.immediateReady || !Number.isFinite(activationTiming.durationMs)) return result;
-        return { ...result, activationMs: activationTiming.durationMs };
+        const selectionReady = activationTiming.mode !== 'real-click' || activationTiming.immediateSelected === true;
+        return {
+            ...result,
+            ok: result.ok && selectionReady,
+            activationMs: activationTiming.durationMs,
+            activationMode: activationTiming.mode || 'switchTab',
+            immediateSelected: activationTiming.immediateSelected !== false,
+            ...(selectionReady ? {} : { error: 'clicked submodule did not update its selected state immediately' })
+        };
     };
     const collectState = async () => page.evaluate((moduleId) => {
         const section = document.getElementById(moduleId);
@@ -1164,19 +1174,43 @@ async function smokeSwitchModule(page, id) {
                 wrap('releaseTeacherAnalysisHeavyDom');
             });
         }
-        activationTiming = await page.evaluate((moduleId) => {
+        activationTiming = await page.evaluate(({ moduleId, useRealClick }) => {
             if (typeof window.switchTab !== 'function') {
                 throw new Error('switchTab is not available');
             }
+            let clickTarget = null;
+            if (useRealClick) {
+                const nav = window.NAV_STRUCTURE || {};
+                const currentKey = typeof window.getCurrentNavCategory === 'function'
+                    ? window.getCurrentNavCategory()
+                    : '';
+                const currentItems = Array.isArray(nav[currentKey]?.items) ? nav[currentKey].items : [];
+                if (!currentItems.some((item) => item?.id === moduleId)) {
+                    const owner = Object.entries(nav).find(([key, category]) => key !== 'core'
+                        && Array.isArray(category?.items)
+                        && category.items.some((item) => item?.id === moduleId));
+                    if (owner && typeof window.setCurrentNavCategorySilently === 'function') {
+                        window.setCurrentNavCategorySilently(owner[0]);
+                        if (typeof window.renderSubNavigation === 'function') window.renderSubNavigation();
+                    }
+                }
+                clickTarget = document.querySelector(`#sub-nav-container .shell-story-card[data-module-id="${CSS.escape(moduleId)}"]`);
+            }
             const startedAt = performance.now();
-            window.switchTab(moduleId);
+            if (clickTarget) {
+                clickTarget.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            } else {
+                window.switchTab(moduleId);
+            }
             const section = document.getElementById(moduleId);
             const style = section ? getComputedStyle(section) : null;
             return {
                 durationMs: performance.now() - startedAt,
-                immediateReady: !!section && section.classList.contains('active') && style?.display !== 'none'
+                immediateReady: !!section && section.classList.contains('active') && style?.display !== 'none',
+                immediateSelected: !clickTarget || clickTarget.classList.contains('active'),
+                mode: clickTarget ? 'real-click' : 'switchTab'
             };
-        }, id);
+        }, { moduleId: id, useRealClick: REAL_MODULE_CLICKS });
 
         const immediateState = await collectState();
         if (immediateState.ok) {

@@ -176,6 +176,11 @@
 
     let currentCategory = 'data';
     let moduleRailFloatingSyncFrame = 0;
+    const globalScopeControlsCache = {
+        schoolsSignature: '',
+        classesSignature: '',
+        rawDataRef: null
+    };
 
     function setWorkspaceDrawerState(isOpen) {
         const drawer = document.getElementById('workspace-drawer');
@@ -345,13 +350,31 @@
 
         const oldSchool = schoolSelect.value;
         const oldClass = classSelect.value;
-        setSelectOptions(schoolSelect, getGlobalScopeSchools(), '全部学校', oldSchool);
+        const schools = Array.from(new Set(getGlobalScopeSchools()
+            .map((value) => String(value || '').trim())
+            .filter(Boolean)));
+        const schoolsSignature = schools.join('|');
+        if (globalScopeControlsCache.schoolsSignature !== schoolsSignature) {
+            setSelectOptions(schoolSelect, schools, '全部学校', oldSchool);
+            globalScopeControlsCache.schoolsSignature = schoolsSignature;
+        }
 
-        const classes = getGlobalScopeRows(schoolSelect.value)
-            .map((row) => row?.class)
-            .filter(Boolean)
+        const rawDataRef = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : null;
+        const classesSignature = [
+            Number(window.__RAW_DATA_VERSION || 0),
+            rawDataRef?.length || 0,
+            schoolSelect.value || 'ALL'
+        ].join('::');
+        if (globalScopeControlsCache.rawDataRef === rawDataRef
+            && globalScopeControlsCache.classesSignature === classesSignature) return;
+
+        const classes = Array.from(new Set(getGlobalScopeRows(schoolSelect.value)
+            .map((row) => String(row?.class || '').trim())
+            .filter(Boolean)))
             .sort((a, b) => normalizeScopeClass(a).localeCompare(normalizeScopeClass(b), 'zh-Hans-CN', { numeric: true }));
         setSelectOptions(classSelect, classes, '全部班级', oldClass);
+        globalScopeControlsCache.rawDataRef = rawDataRef;
+        globalScopeControlsCache.classesSignature = classesSignature;
     }
 
     function applyGlobalScopeToModule() {
@@ -1036,6 +1059,7 @@
     function activateSubmodule(item, category) {
         if (!item || !item.id) return;
         document.documentElement.style.setProperty('--primary', category.color);
+        syncSubNavigationActiveState(item.id);
         if (typeof switchTab === 'function') switchTab(item.id);
         const scrollToActiveSection = () => {
             const section = document.getElementById(item.id);
@@ -1044,9 +1068,17 @@
             }
         };
         window.setTimeout(scrollToActiveSection, 60);
-        renderSubNavigation();
-        updateShellChrome(item.id);
         closeWorkspaceDrawer();
+    }
+
+    function syncSubNavigationActiveState(activeId) {
+        const subNavContainer = document.getElementById('sub-nav-container');
+        if (!subNavContainer) return;
+        subNavContainer.querySelectorAll('.shell-story-card[data-module-id]').forEach((card) => {
+            const isActive = card.getAttribute('data-module-id') === activeId;
+            card.classList.toggle('active', isActive);
+            card.setAttribute('aria-current', isActive ? 'page' : 'false');
+        });
     }
 
     function activateCurrentCategoryDefaultModule(key) {
