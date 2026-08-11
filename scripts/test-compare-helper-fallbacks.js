@@ -91,6 +91,48 @@ function runCompareExamRowsCacheTest() {
     assert.strictEqual(refreshed.find((row) => row.name === '甲').rankSchool, 1);
 }
 
+function runCompareExamReadinessTest() {
+    const sharedPath = path.resolve(__dirname, '../public/assets/js/compare-shared-runtime.js');
+    const sharedCode = fs.readFileSync(sharedPath, 'utf8');
+    const rawRows = [{ name: '当前学生', school: '银山实验学校', class: '9.1', total: 600, scores: { 语文: 120 } }];
+    const readyRows = [{ name: '历史学生', school: '银山实验学校', class: '9.1', total: 580, scores: { 语文: 118 } }];
+    const db = {
+        exams: {
+            '2022_9年级_一模_2026-04-16': { examId: '2022_9年级_一模_2026-04-16', data: [] },
+            '2022_9年级_二模_2026-05-27': { examId: '2022_9年级_二模_2026-05-27', data: readyRows }
+        }
+    };
+    const localStorage = { getItem: () => '' };
+    const context = {
+        console,
+        CURRENT_COHORT_ID: '2022',
+        CURRENT_EXAM_ID: '2022_9年级_中考_2026-07-28',
+        RAW_DATA: rawRows,
+        SUBJECTS: ['语文'],
+        CohortDB: { ensure: () => db },
+        normalizeClass: (value) => String(value || '').trim(),
+        localStorage,
+        document: { getElementById: () => null },
+        window: {
+            __RAW_DATA_VERSION: 1,
+            CURRENT_COHORT_ID: '2022',
+            CURRENT_EXAM_ID: '2022_9年级_中考_2026-07-28',
+            RAW_DATA: rawRows,
+            SUBJECTS: ['语文'],
+            CohortDB: { ensure: () => db },
+            normalizeClass: (value) => String(value || '').trim(),
+            localStorage
+        }
+    };
+    context.globalThis = context.window;
+
+    vm.runInNewContext(sharedCode, context, { filename: sharedPath });
+    const ids = context.window.listAvailableExamsForCompare().map((entry) => entry.id);
+    assert.ok(ids.includes('2022_9年级_中考_2026-07-28'));
+    assert.ok(ids.includes('2022_9年级_二模_2026-05-27'));
+    assert.ok(!ids.includes('2022_9年级_一模_2026-04-16'));
+}
+
 function runCompareSelectorsFallbackTest() {
     const selectorsPath = path.resolve(__dirname, '../public/assets/js/compare-selectors-runtime.js');
     const selectorsCode = fs.readFileSync(selectorsPath, 'utf8');
@@ -238,6 +280,7 @@ function runSchoolNormalizationCacheTest() {
 function run() {
     runCompareSharedFallbackTest();
     runCompareExamRowsCacheTest();
+    runCompareExamReadinessTest();
     runCompareSelectorsFallbackTest();
     runProgressAnalysisFallbackTest();
     runSchoolNormalizationCacheTest();

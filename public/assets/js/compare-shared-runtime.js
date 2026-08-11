@@ -511,6 +511,20 @@ function getSelectorSafeExamFingerprint(entry) {
     return [id, createdAt, rowCount].join(':');
 }
 
+// Cloud workspace restore deliberately creates lightweight exam metadata before
+// the (potentially large) score payload is hydrated.  Metadata is useful to
+// the restore flow, but it is not a valid comparison source: getExamRowsForCompare
+// can only calculate from a real data array.  Keeping those empty placeholders
+// out of selectors prevents a user from landing on a result shell while the
+// background hydration is still in progress.
+function hasComparableExamRows(entry) {
+    if (!entry || typeof entry !== 'object') return false;
+    if (String(entry.source || '') === 'current') {
+        return Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
+    }
+    return Array.isArray(entry.data) && entry.data.length > 0;
+}
+
 function warnIfDuplicateCompareSnapshots() {
     const groups = readDuplicateCompareExamsState();
     if (!groups.length) return;
@@ -557,6 +571,7 @@ function listAvailableExamsForCompare() {
     }
     const upsertExam = (entry) => {
         if (!entry?.id || !isRealExamIdForCompare(entry.id, cohortId)) return;
+        if (!hasComparableExamRows(entry)) return;
         const identity = getCompareExamIdentity(entry);
         const normalizedEntry = {
             ...entry,
@@ -592,6 +607,7 @@ function listAvailableExamsForCompare() {
                 createdAt: ex.createdAt || 0,
                 label: ex.examLabel || ex.examId,
                 source: 'local',
+                data: ex.data,
                 fingerprint: getSelectorSafeExamFingerprint(ex)
             });
         });
@@ -602,6 +618,7 @@ function listAvailableExamsForCompare() {
             createdAt: Date.now(),
             label: `${CURRENT_EXAM_ID.split('_').pop()} (当前)`,
             source: 'current',
+            data: RAW_DATA,
             fingerprint: getSelectorSafeExamFingerprint({
                 id: CURRENT_EXAM_ID,
                 rowCount: Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
@@ -618,6 +635,7 @@ function listAvailableExamsForCompare() {
                 createdAt: h.updatedAt ? new Date(h.updatedAt).getTime() : 0,
                 label: h.examLabel || hid,
                 source: 'cloud',
+                data: h.data,
                 fingerprint: h.fingerprint || ''
             });
         });
