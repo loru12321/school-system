@@ -33,6 +33,8 @@ export default defineConfig({
     // Lightning CSS preserves the existing cascade while producing a smaller,
     // standards-aware release stylesheet than the default minifier.
     cssMinify: 'lightningcss',
+    // Enable faster minification for better build performance
+    minify: 'esbuild',
   },
   server: {
     open: true,
