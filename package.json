@@ -10,7 +10,7 @@
     "build": "npm-run-all build:pre build:core build:post",
     "build:pre": "node scripts/build/subset-tabler-icons.mjs && node scripts/build/update-runtime-cache-version.mjs",
     "build:core": "vite build",
-    "build:post": "node scripts/build/sync-public-assets.mjs && node scripts/build/prune-dist-assets.mjs && node scripts/build/dedupe-dist-css.mjs && node scripts/build/optimize-dist-html.mjs && node scripts/build/inline-scripts.mjs",
+    "build:post": "node scripts/build/sync-public-assets.mjs && node scripts/build/prune-dist-assets.mjs && node scripts/build/dedupe-dist-css.mjs && node scripts/build/optimize-dist-html.mjs && node scripts/build/inline-scripts.mjs && node scripts/build/precompress-assets.mjs",
     "check:syntax": "node scripts/test-syntax.js",
     "test:auth-state": "node scripts/test-auth-state.js",
     "test:login-shell-state": "node scripts/test-login-shell-state-runtime.js",

@@ -4,7 +4,7 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-runtime-edbb93aa14a2';
+const CACHE_VERSION = 'school-system-runtime-dcf6d7a5d7ea';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -99,18 +99,29 @@ async function cacheFirstStatic(request) {
 }
 
 async function networkFirstRuntimeAsset(request) {
-    try {
-        const response = await fetch(new Request(request, { cache: 'reload' }));
-        if (isCacheable(response)) {
-            const cache = await caches.open(STATIC_CACHE);
-            cache.put(request, response.clone());
-        }
-        return response;
-    } catch (error) {
-        const cached = await caches.match(request);
-        if (cached) return cached;
-        return new Response('Runtime resource unavailable while offline', { status: 404 });
+    // Stale-while-revalidate for runtime assets
+    const cached = await caches.match(request);
+
+    const fetchPromise = fetch(new Request(request, { cache: 'reload' }))
+        .then(response => {
+            if (isCacheable(response)) {
+                const cache = caches.open(STATIC_CACHE);
+                cache.then(c => c.put(request, response.clone()));
+            }
+            return response;
+        })
+        .catch(() => null);
+
+    // Return cached immediately if available, fetch updates in background
+    if (cached) {
+        return cached;
     }
+
+    // If no cache, wait for network
+    const response = await fetchPromise;
+    if (response) return response;
+
+    return new Response('Runtime resource unavailable while offline', { status: 404 });
 }
 
 async function networkFirstApi(request, url) {
