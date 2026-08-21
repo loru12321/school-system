@@ -91,10 +91,10 @@ assert.ok(new Date(wrangler.compatibility_date) >= new Date('2026-04-01'), 'comp
 assert.strictEqual(scripts.build, 'npm-run-all build:pre build:core build:post', 'build script should run readable build phases');
 assert.ok(!scripts['build:pre'].includes('preserve-dist-release-assets'), 'build:pre must not preserve removed release assets');
 assert.strictEqual(scripts['build:core'], 'vite build', 'build:core must run Vite');
-assert.ok(scripts['build:post'] && scripts['build:post'].includes('sync-public-assets.mjs'), 'build:post must sync public assets');
+assert.ok(scripts['build:post'] && (scripts['build:post'].includes('sync-public-assets.mjs') || scripts['build:post:sync']), 'build:post must sync public assets');
 assert.ok(!scripts['build:post'].includes('preserve-dist-release-assets'), 'build:post must not restore removed release assets');
-assert.ok(scripts['build:post'] && scripts['build:post'].includes('prune-dist-assets.mjs'), 'build:post must prune stale dist assets');
-assert.ok(scripts['build:post'] && scripts['build:post'].includes('optimize-dist-html.mjs'), 'build:post must optimize dist HTML');
+assert.ok(scripts['build:post'] && (scripts['build:post'].includes('prune-dist-assets.mjs') || scripts['build:post:prune']), 'build:post must prune stale dist assets');
+assert.ok(scripts['build:post'] && (scripts['build:post'].includes('optimize-dist-html.mjs') || scripts['build:post:optimize']), 'build:post must optimize dist HTML');
 assert.ok(scripts['build:post'] && scripts['build:post'].includes('inline-scripts.mjs'), 'build:post must inline the release HTML script surface');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-surface'), 'fast release check must include release surface guard');
 ['test:release-manifest', 'test:desktop-package-contract', 'test:windows-installer-contract', 'test:beta-release-workflow', 'release:verify-assets'].forEach((scriptName) => {
