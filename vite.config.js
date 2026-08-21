@@ -35,6 +35,8 @@ export default defineConfig({
     cssMinify: 'lightningcss',
     // Enable faster minification for better build performance
     minify: 'esbuild',
+    // Optimize build performance
+    reportCompressedSize: false,
   },
   server: {
     open: true,
