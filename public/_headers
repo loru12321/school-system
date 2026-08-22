@@ -31,7 +31,22 @@
 /assets/css/*
   Cache-Control: public, max-age=31536000, immutable
 
-/assets/js/*runtime*.js
+/assets/js/boot-runtime-runtime-*.js
+  ! Cache-Control
+  ! CDN-Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/js/service-worker-runtime-runtime-*.js
+  ! Cache-Control
+  ! CDN-Cache-Control
+  ! Cloudflare-CDN-Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+/sw-runtime-*.js
+  ! Cache-Control
+  ! CDN-Cache-Control
+  ! Cloudflare-CDN-Cache-Control
   Cache-Control: public, max-age=31536000, immutable
 
 /assets/js/*
@@ -55,6 +70,3 @@
 
 /icon.svg
   Cache-Control: public, max-age=86400
-
-# Phase 6 cache-policy marker (inert comment; rotates runtime hash so
-# hashed bundles are re-served under the worker immutable policy)
