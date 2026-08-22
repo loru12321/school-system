@@ -78,6 +78,11 @@
             if (root.Swal && typeof root.Swal.fire === 'function') {
                 root.Swal.fire('成功', '数据已更新，并已同步到云端。', 'success');
             }
+
+            // 通知数据状态事件总线：数据已保存并同步
+            if (root.DataStateEventBus && typeof root.DataStateEventBus.notifyDataImported === 'function') {
+                root.DataStateEventBus.notifyDataImported('save-and-sync');
+            }
         } catch (error) {
             if (root.UI && typeof root.UI === 'object' && typeof root.UI.loading === 'function') {
                 root.UI.loading(false);
