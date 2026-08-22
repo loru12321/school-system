@@ -7,6 +7,7 @@
 // unversioned runtime JS must not swallow them. Unversioned app.js stays
 // no-store so deployments never serve stale app code behind the boot loader.
 import assert from 'assert';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -14,6 +15,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { protectAssetResponse } = await import(
   pathToFileURL(path.join(root, 'src', 'worker-asset-protection.js')).href
 );
+
+// Resolve the current runtime version from the build's own inputs so this test
+// survives hash rotations without edits: the generated boot bundle name embeds
+// the same version the hash-derivation produces.
+const bootBundle = fs.readdirSync(path.join(root, 'public', 'assets', 'js'))
+  .find((name) => /^boot-runtime-runtime-[0-9a-f]{12}\.js$/.test(name));
+assert.ok(bootBundle, 'generated boot-runtime-runtime-<hash>.js must exist in public/assets/js');
+const RUNTIME_VERSION = bootBundle.replace(/^boot-runtime-runtime-/, '').replace(/\.js$/, '');
 
 const NO_STORE = 'no-store, max-age=0, must-revalidate, no-transform';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -40,22 +49,22 @@ function assertCacheControl(assetPath, expected, label, contentType = 'applicati
 
 // Content-hashed boot shell bundles: immutable, URL changes when content changes.
 assertCacheControl(
-  '/assets/js/boot-runtime-runtime-dcf6d7a5d7ea.js',
+  `/assets/js/boot-runtime-runtime-${RUNTIME_VERSION}.js`,
   IMMUTABLE,
   'hashed boot runtime bundle should be immutable'
 );
 assertCacheControl(
-  '/assets/js/boot-runtime-runtime-dcf6d7a5d7ea.js.br',
+  `/assets/js/boot-runtime-runtime-${RUNTIME_VERSION}.js.br`,
   IMMUTABLE,
   'precompressed hashed boot runtime bundle should be immutable'
 );
 assertCacheControl(
-  '/assets/js/service-worker-runtime-runtime-dcf6d7a5d7ea.js',
+  `/assets/js/service-worker-runtime-runtime-${RUNTIME_VERSION}.js`,
   IMMUTABLE,
   'hashed service worker runtime bundle should be immutable'
 );
 assertCacheControl(
-  '/assets/js/service-worker-runtime-runtime-dcf6d7a5d7ea.js.br',
+  `/assets/js/service-worker-runtime-runtime-${RUNTIME_VERSION}.js.br`,
   IMMUTABLE,
   'precompressed hashed service worker runtime bundle should be immutable'
 );
@@ -70,7 +79,7 @@ assertCacheControl(
   'precompressed hashed CSS should stay immutable'
 );
 assertCacheControl(
-  '/sw-runtime-dcf6d7a5d7ea.js',
+  `/sw-runtime-${RUNTIME_VERSION}.js`,
   IMMUTABLE,
   'hashed sw-runtime bundle should stay immutable'
 );

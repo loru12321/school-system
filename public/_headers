@@ -55,3 +55,6 @@
 
 /icon.svg
   Cache-Control: public, max-age=86400
+
+# Phase 6 cache-policy marker (inert comment; rotates runtime hash so
+# hashed bundles are re-served under the worker immutable policy)
