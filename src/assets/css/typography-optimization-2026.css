@@ -1,420 +1,171 @@
 /**
- * Typography & Layout Optimization 2026 - Professional Edition
+ * Typography & Layout Optimization 2026 - 使用真实的 class 选择器
  *
- * 按照校长和设计师的专业视角优化：
- * - 清晰的信息层级
- * - 充足的呼吸空间
- * - 优秀的可读性
- * - 现代简洁的视觉体验
+ * 基于实际代码中的 class 名称优化排版
  */
 
 /* ============================================================================
-   左侧导航 - 优化文字排版和间距
+   左侧导航栏 - 使用真实的 class
    ========================================================================== */
 
-/* 侧边栏整体容器 */
-#app-sidebar,
-.sidebar-container {
-    padding: 16px 12px !important;
+/* 导航菜单项容器 */
+.sidebar-menu-item {
+    padding: 14px 16px !important;
+    margin-bottom: 10px !important;
+    line-height: 1.55 !important;
+    border-radius: 6px !important;
 }
 
-/* 侧边栏分类标题 - 更清晰的层级 */
-.sidebar-category-title {
-    line-height: 1.6 !important;
-    margin-bottom: 10px !important;
-    font-weight: 600 !important;
+/* 导航菜单主区域 */
+.sidebar-menu-item__main {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+}
+
+/* 导航菜单图标 */
+.sidebar-menu-item__icon {
+    margin-right: 4px !important;
+    flex-shrink: 0 !important;
+}
+
+/* 导航菜单文字容器 */
+.sidebar-menu-item__text {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    line-height: 1.55 !important;
+}
+
+/* 导航菜单标题 */
+.sidebar-menu-item__title {
     font-size: 14px !important;
+    line-height: 1.5 !important;
+    font-weight: 600 !important;
     letter-spacing: 0.3px !important;
 }
 
-/* 模块数量文字 - 单独一行，视觉轻量化 */
-.sidebar-category-count,
-.nav-category-count {
+/* 导航菜单模块数量 - 独立一行显示 */
+.sidebar-menu-item__meta {
     display: block !important;
-    margin-top: 6px !important;
     font-size: 11px !important;
-    opacity: 0.65 !important;
     line-height: 1.4 !important;
+    opacity: 0.65 !important;
     font-weight: 400 !important;
-}
-
-/* 侧边栏菜单项 - 卡片化设计 */
-.sidebar-menu-item,
-#app-sidebar .sidebar-menu-item,
-.nav-item {
-    padding: 14px 16px !important;
-    margin-bottom: 8px !important;
-    line-height: 1.55 !important;
-    border-radius: 6px !important;
-    transition: all 0.15s ease !important;
-}
-
-.sidebar-menu-item__text {
-    line-height: 1.55 !important;
-    letter-spacing: 0.2px !important;
-    font-size: 14px !important;
-}
-
-/* 侧边栏图标间距 */
-.sidebar-menu-item__icon,
-.nav-item-icon {
-    margin-right: 12px !important;
-}
-
-/* 侧边栏分组间距 */
-.sidebar-section,
-.nav-section {
-    margin-bottom: 28px !important;
+    margin-top: 2px !important;
 }
 
 /* ============================================================================
-   Spotlight 搜索面板 - 专业级排版优化
+   Spotlight 搜索面板 - 使用真实的 class
    ========================================================================== */
 
-/* 搜索面板主容器 - 宽敞的空间感 */
-.spotlight-box,
-#spotlight-panel,
-.spotlight-overlay .spotlight-container {
-    padding: 32px 28px !important;
-    max-width: 720px !important;
+/* Spotlight 遮罩层 */
+.spotlight-mask {
+    backdrop-filter: blur(4px) !important;
 }
 
-/* 搜索输入框 - 更突出的输入区 */
-.spotlight-search-input,
-#spotlight-panel input[type="text"],
-.spotlight-box input {
-    padding: 16px 20px !important;
+/* Spotlight 主容器 */
+.spotlight-box {
+    padding: 32px 28px !important;
+    max-width: 720px !important;
+    border-radius: 12px !important;
+}
+
+/* Spotlight 输入框容器 */
+.spotlight-input-wrap {
+    padding: 8px 16px !important;
+    margin-bottom: 24px !important;
+    border-radius: 8px !important;
+}
+
+/* Spotlight 输入框 */
+.spotlight-input {
+    padding: 12px 8px !important;
     font-size: 16px !important;
     line-height: 1.5 !important;
-    margin-bottom: 28px !important;
-    border-radius: 8px !important;
     letter-spacing: 0.2px !important;
 }
 
-/* 搜索结果区域整体 */
+/* Spotlight 结果容器 */
 .spotlight-results {
-    margin-top: 24px !important;
+    max-height: 480px !important;
+    overflow-y: auto !important;
 }
 
-/* 搜索结果项 - 卡片式布局 */
-.spotlight-item,
-.spotlight-result-item,
-#spotlight-panel .search-result {
-    padding: 18px 22px !important;
-    margin-bottom: 10px !important;
-    line-height: 1.7 !important;
+/* Spotlight 搜索结果项 - 卡片式设计 */
+.spotlight-item {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 16px 20px !important;
+    margin-bottom: 8px !important;
     border-radius: 6px !important;
+    line-height: 1.65 !important;
     transition: all 0.2s ease !important;
     background: rgba(0, 0, 0, 0.02) !important;
 }
 
 .spotlight-item:hover,
-.spotlight-result-item:hover {
+.spotlight-item.active {
     transform: translateX(3px) !important;
     background: rgba(0, 0, 0, 0.04) !important;
 }
 
-/* 分类标题 - 明显的视觉分隔 */
-.spotlight-category-title,
-.spotlight-section-title,
-#spotlight-panel .category-header {
-    margin-top: 32px !important;
-    margin-bottom: 14px !important;
-    padding-top: 16px !important;
-    padding-bottom: 10px !important;
-    border-top: 2px solid rgba(0, 0, 0, 0.12) !important;
-    font-weight: 700 !important;
-    font-size: 12px !important;
-    letter-spacing: 1px !important;
-    text-transform: uppercase !important;
-    line-height: 1.3 !important;
-    opacity: 0.7 !important;
+/* Spotlight 项目内容区 */
+.spotlight-item__copy {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
 }
 
-.spotlight-category-title:first-child,
-.spotlight-section-title:first-child {
-    margin-top: 0 !important;
-    border-top: none !important;
-    padding-top: 0 !important;
-}
-
-/* 搜索结果标题 - 清晰醒目 */
-.spotlight-item-text,
-.spotlight-item-title,
-#spotlight-panel .result-title {
-    line-height: 1.6 !important;
-    margin-bottom: 8px !important;
-    font-weight: 600 !important;
+/* Spotlight 项目标题 */
+.spotlight-item__title {
     font-size: 15px !important;
+    line-height: 1.6 !important;
+    font-weight: 600 !important;
     letter-spacing: 0.2px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
 }
 
-/* 搜索结果描述 - 优化可读性 */
-.spotlight-item-hint,
-.spotlight-item-desc,
-#spotlight-panel .result-description {
+/* Spotlight 项目描述/元信息 */
+.spotlight-item__meta {
     font-size: 13px !important;
-    color: #6b7280 !important;
     line-height: 1.75 !important;
-    margin-top: 6px !important;
+    color: #6b7280 !important;
+    opacity: 0.85 !important;
     letter-spacing: 0.3px !important;
     word-spacing: 1px !important;
-    opacity: 0.85 !important;
+    margin-top: 4px !important;
 }
 
-/* Spotlight 图标优化 */
-.spotlight-item-icon,
-#spotlight-panel .result-icon {
-    margin-right: 14px !important;
-    opacity: 0.8 !important;
-    flex-shrink: 0 !important;
-}
-
-/* 快捷键提示 */
-.spotlight-shortcut,
-.keyboard-hint {
-    font-size: 11px !important;
-    padding: 4px 8px !important;
-    letter-spacing: 0.5px !important;
-    border-radius: 4px !important;
-}
-
-/* ============================================================================
-   顶部状态栏 - 优化信息密度
-   ========================================================================== */
-
-/* 顶部状态栏容器 */
-.shell-header,
-.status-bar,
-.breadcrumb-bar {
-    padding: 14px 20px !important;
-    line-height: 1.6 !important;
-}
-
-/* 面包屑导航 - 增加间距 */
-.breadcrumb,
-.breadcrumb-item {
-    padding: 6px 0 !important;
-    margin-right: 8px !important;
-    line-height: 1.5 !important;
-}
-
-/* 状态信息 - 分段显示 */
-.status-info,
-.header-status {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-    flex-wrap: wrap !important;
-}
-
-/* 状态信息项 */
-.status-item,
-.header-info-item {
-    padding: 4px 10px !important;
-    margin-right: 8px !important;
-    line-height: 1.5 !important;
-    white-space: nowrap !important;
-}
-
-/* 分隔符优化 */
-.status-separator,
-.header-separator {
-    margin: 0 8px !important;
-    opacity: 0.3 !important;
-}
-
-/* ============================================================================
-   右侧内容区 - 优化文本密度
-   ========================================================================== */
-
-/* 工作区头部 */
-.shell-overview,
-.workspace-header {
-    padding: 24px 28px !important;
-}
-
-/* 工作区标题 - 清晰的层级 */
-.shell-overview-heading h2,
-.workspace-title {
-    line-height: 1.35 !important;
-    margin-bottom: 12px !important;
-    font-size: 28px !important;
-    letter-spacing: -0.02em !important;
-    font-weight: 700 !important;
-}
-
-/* 工作区描述 - 舒适的阅读体验 */
-.shell-overview-copy p,
-#shell-category-desc,
-.workspace-description {
-    line-height: 1.75 !important;
-    margin-top: 12px !important;
-    font-size: 15px !important;
-    letter-spacing: 0.2px !important;
-    color: #4b5563 !important;
-}
-
-/* 模块数量标签 - 轻量化显示 */
-#shell-module-count,
-.module-count-badge {
-    display: block !important;
-    margin-top: 10px !important;
-    font-size: 13px !important;
-    opacity: 0.7 !important;
-    font-weight: 500 !important;
-}
-
-/* ============================================================================
-   卡片内容 - 增加呼吸空间
-   ========================================================================== */
-
-/* 所有卡片 - 宽松的内边距 */
-.card,
-.data-card,
-.metric-card,
-.starter-card,
-.module-card {
-    padding: 24px !important;
-    margin-bottom: 20px !important;
-    border-radius: 8px !important;
-}
-
-/* 卡片标题 - 清晰的视觉层级 */
-.card h3,
-.card h4,
-.data-card h3,
-.starter-card h4 {
-    margin-bottom: 14px !important;
-    line-height: 1.4 !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.2px !important;
-}
-
-/* 卡片内文本 - 舒适的行距 */
-.card p,
-.data-card p,
-.starter-card p {
-    line-height: 1.7 !important;
-    margin-bottom: 14px !important;
-    letter-spacing: 0.2px !important;
-}
-
-/* 卡片列表项 */
-.card ul li,
-.card ol li {
-    line-height: 1.65 !important;
-    margin-bottom: 8px !important;
-    padding-left: 4px !important;
-}
-
-/* ============================================================================
-   列表和任务清单 - 增加间距
-   ========================================================================== */
-
-/* 任务列表项 - 清晰的分隔 */
-.task-list li,
-.task-item,
-.checklist-item {
-    padding: 12px 0 !important;
-    line-height: 1.65 !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-.task-list li:last-child,
-.task-item:last-child {
-    border-bottom: none !important;
-}
-
-/* 状态标签 - 精致的间距 */
-.status-badge,
-.status-chip,
-.tag {
+/* Spotlight 项目操作区 */
+.spotlight-item__action {
+    font-size: 12px !important;
     padding: 6px 12px !important;
-    margin-right: 8px !important;
-    line-height: 1.3 !important;
     border-radius: 4px !important;
-    font-size: 12px !important;
     letter-spacing: 0.3px !important;
+    flex-shrink: 0 !important;
+    margin-left: 12px !important;
 }
 
-/* ============================================================================
-   表格优化 - 提升可读性
-   ========================================================================== */
-
-/* 表格单元格 */
-table td,
-table th {
-    padding: 14px 16px !important;
-    line-height: 1.6 !important;
-}
-
-/* 表格标题行 */
-table thead th {
-    font-weight: 600 !important;
-    letter-spacing: 0.5px !important;
-    padding-bottom: 16px !important;
-}
-
-/* 表格行间距 */
-table tbody tr {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-/* ============================================================================
-   工作流步骤 - 优化排版
-   ========================================================================== */
-
-/* 工作流路径容器 */
-.workflow-path {
-    padding: 20px 0 !important;
-    margin-top: 20px !important;
-}
-
-/* 工作流步骤 */
-.workflow-path__step,
-.workflow-step {
-    padding: 12px 18px !important;
-    margin-right: 10px !important;
-    line-height: 1.5 !important;
-    border-radius: 6px !important;
-}
-
-/* ============================================================================
-   模块导航 - 优化间距
-   ========================================================================== */
-
-/* 模块导航标签 */
-.shell-module-rail-label {
-    font-size: 11px !important;
-    margin-bottom: 8px !important;
-    line-height: 1.4 !important;
-    letter-spacing: 0.5px !important;
-    text-transform: uppercase !important;
-    font-weight: 600 !important;
-}
-
-/* 模块导航标题 */
-.shell-module-rail-title {
-    line-height: 1.55 !important;
-    margin-bottom: 6px !important;
-    font-size: 15px !important;
-    font-weight: 600 !important;
-}
-
-/* 模块导航状态 */
-.shell-module-rail-status {
+/* Spotlight 提示文字 */
+.spotlight-hint {
+    margin-top: 16px !important;
+    padding-top: 16px !important;
     font-size: 12px !important;
-    line-height: 1.5 !important;
-    margin-top: 6px !important;
-    opacity: 0.75 !important;
+    line-height: 1.6 !important;
+    opacity: 0.6 !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
 /* ============================================================================
    全局文本优化
    ========================================================================== */
 
-/* 标题层次优化 */
+/* 标题层次 */
 h1 {
     line-height: 1.25 !important;
     letter-spacing: -0.03em !important;
@@ -435,39 +186,28 @@ h3 {
 
 h4, h5, h6 {
     line-height: 1.45 !important;
-    letter-spacing: 0 !important;
     font-weight: 600 !important;
 }
 
-/* 正文文本 - 舒适的阅读体验 */
+/* 正文文本 */
 p {
     line-height: 1.7 !important;
     letter-spacing: 0.2px !important;
 }
 
-/* 小字体文本 */
-small,
-.text-sm {
+/* 小字体 */
+small {
     line-height: 1.55 !important;
     letter-spacing: 0.2px !important;
 }
 
-/* 按钮文字 - 清晰易读 */
+/* 按钮 */
 button,
 .btn {
     letter-spacing: 0.3px !important;
     line-height: 1.4 !important;
     padding: 10px 18px !important;
 }
-
-/* 链接文字 */
-a {
-    letter-spacing: 0.1px !important;
-}
-
-/* ============================================================================
-   表单元素优化
-   ========================================================================== */
 
 /* 输入框 */
 input[type="text"],
@@ -482,7 +222,7 @@ select {
     letter-spacing: 0.2px !important;
 }
 
-/* 标签文字 */
+/* 标签 */
 label {
     line-height: 1.5 !important;
     margin-bottom: 8px !important;
@@ -491,21 +231,54 @@ label {
 }
 
 /* ============================================================================
-   响应式优化 - 移动端保持良好体验
+   卡片内容
+   ========================================================================== */
+
+.card,
+.data-card,
+.metric-card,
+.starter-card {
+    padding: 24px !important;
+    margin-bottom: 20px !important;
+    border-radius: 8px !important;
+}
+
+.card h3,
+.card h4,
+.data-card h3 {
+    margin-bottom: 14px !important;
+    line-height: 1.4 !important;
+    font-weight: 600 !important;
+}
+
+.card p,
+.data-card p {
+    line-height: 1.7 !important;
+    margin-bottom: 14px !important;
+    letter-spacing: 0.2px !important;
+}
+
+/* ============================================================================
+   表格优化
+   ========================================================================== */
+
+table td,
+table th {
+    padding: 14px 16px !important;
+    line-height: 1.6 !important;
+}
+
+table thead th {
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* ============================================================================
+   响应式 - 移动端
    ========================================================================== */
 
 @media (max-width: 768px) {
-    /* 卡片移动端间距 */
-    .card,
-    .data-card,
-    .starter-card {
-        padding: 18px !important;
-        margin-bottom: 16px !important;
-    }
-
-    /* Spotlight 移动端优化 */
-    .spotlight-box,
-    #spotlight-panel {
+    .spotlight-box {
         padding: 20px 16px !important;
     }
 
@@ -513,83 +286,12 @@ label {
         padding: 14px 16px !important;
     }
 
-    /* 侧边栏移动端 */
     .sidebar-menu-item {
         padding: 12px 14px !important;
     }
 
-    /* 标题移动端缩小 */
-    .shell-overview-heading h2,
-    .workspace-title {
-        font-size: 24px !important;
+    .card,
+    .data-card {
+        padding: 18px !important;
     }
-}
-
-/* ============================================================================
-   特殊场景优化
-   ========================================================================== */
-
-/* 空状态提示 */
-.empty-state,
-.no-data {
-    padding: 48px 24px !important;
-    line-height: 1.7 !important;
-    text-align: center !important;
-}
-
-/* 加载状态 */
-.loading-text {
-    line-height: 1.6 !important;
-    letter-spacing: 0.3px !important;
-}
-
-/* 错误提示 */
-.error-message,
-.alert {
-    padding: 16px 20px !important;
-    line-height: 1.65 !important;
-    border-radius: 6px !important;
-}
-
-/* 成功提示 */
-.success-message {
-    padding: 16px 20px !important;
-    line-height: 1.65 !important;
-    border-radius: 6px !important;
-}
-
-/* ============================================================================
-   微调细节 - 追求完美体验
-   ========================================================================== */
-
-/* 图标和文字对齐 */
-.icon-text-pair {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-}
-
-/* 数字显示优化 */
-.number,
-.count,
-.metric {
-    font-variant-numeric: tabular-nums !important;
-    letter-spacing: 0.5px !important;
-}
-
-/* 时间戳显示 */
-.timestamp,
-.datetime {
-    font-size: 12px !important;
-    opacity: 0.7 !important;
-    letter-spacing: 0.3px !important;
-}
-
-/* 徽章优化 */
-.badge {
-    padding: 4px 10px !important;
-    font-size: 11px !important;
-    line-height: 1.3 !important;
-    letter-spacing: 0.5px !important;
-    border-radius: 12px !important;
 }
