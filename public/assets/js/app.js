@@ -5549,7 +5549,7 @@ function calculateRankings() {
 function getRankHTML(rank, type = 'school') { let cls = 'rank-cell'; if (rank === 1) cls += ' r-1'; if (rank === 2) cls += ' r-2'; if (rank === 3) cls += ' r-3'; return `<td class="${cls}">${rank}</td>`; }
 function formatVal(val) {
     if (typeof val !== 'number' || isNaN(val)) return '-';
-    return '〰️' + val.toFixed(2);
+    return val.toFixed(2);
 }
 function escapeAppHtml(value) {
     const root = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : {});
@@ -7176,12 +7176,12 @@ async function calcSummary(isSilent = false) {
 
         html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td data-label="学校名称">${safeName}</td>
-                <td data-label="两率一分得分">〰️${d.s1.toFixed(2)}</td>
-                <td data-label="后1/3得分"><button type="button" class="summary-drill-link" onclick="handleExcludedClick(${safeSchoolArg})" title="点击查看后1/3核算剔除名单">〰️${d.s2.toFixed(2)}</button></td>
+                <td data-label="两率一分得分">${d.s1.toFixed(2)}</td>
+                <td data-label="后1/3得分"><button type="button" class="summary-drill-link" onclick="handleExcludedClick(${safeSchoolArg})" title="点击查看后1/3核算剔除名单">${d.s2.toFixed(2)}</button></td>
                 ${indicatorCell}
                 ${highScoreCell}
                 ${highSchoolAdmissionCell}
-                <td data-label="综合总分" class="text-red" style="font-size:16px; font-weight:bold;">〰️${d.total.toFixed(2)}</td>
+                <td data-label="综合总分" class="text-red" style="font-size:16px; font-weight:bold;">${d.total.toFixed(2)}</td>
                 <td data-label="总排名" class="${rankClass}">${d.rank}</td>
             </tr>`;
     });
