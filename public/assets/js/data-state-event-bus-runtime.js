@@ -5,33 +5,27 @@
 
     const listeners = new Map();
     let stateSnapshot = null;
-    let checkInterval = 3000;
+    let checkInterval = 10000; // 从 3 秒改为 10 秒，减少轮询频率
     let consecutiveNoChanges = 0;
     let intervalId = null;
 
     function buildMapSignature(map) {
         if (!map || typeof map !== 'object') return '';
         const keys = Object.keys(map);
-        return `${keys.length}:${keys.slice(0, 3).join(',')}`;
+        // 只比较长度，不序列化前 3 个键（避免不必要的字符串拼接）
+        return String(keys.length);
     }
 
     function captureCurrentState() {
-        const indicator = (typeof window.readIndicatorState === 'function')
-            ? window.readIndicatorState()
-            : ((window.SYS_VARS && window.SYS_VARS.indicator) || {});
-
+        // 避免每次都调用 readIndicatorState 和 JSON.stringify
+        // 只记录版本号和计数，不序列化内容
         return {
             rawDataVersion: Number(window.__RAW_DATA_VERSION || 0),
             rawDataCount: window.RAW_DATA?.length || 0,
-            teacherMapSignature: buildMapSignature(window.TEACHER_MAP),
-            schoolsSignature: buildMapSignature(window.SCHOOLS),
+            teacherMapCount: window.TEACHER_MAP ? Object.keys(window.TEACHER_MAP).length : 0,
+            schoolsCount: window.SCHOOLS ? Object.keys(window.SCHOOLS).length : 0,
             examId: String(window.CURRENT_EXAM_ID || ''),
             mySchool: String(window.MY_SCHOOL || ''),
-            indicatorSignature: JSON.stringify({
-                ind1: indicator.ind1 || '',
-                ind2: indicator.ind2 || '',
-                highSchoolLine: indicator.highSchoolLine || ''
-            }),
             timestamp: Date.now()
         };
     }
@@ -80,11 +74,11 @@
             changed.push('raw-data-changed');
         }
 
-        if (current.teacherMapSignature !== stateSnapshot.teacherMapSignature) {
+        if (current.teacherMapCount !== stateSnapshot.teacherMapCount) {
             changed.push('teacher-map-changed');
         }
 
-        if (current.schoolsSignature !== stateSnapshot.schoolsSignature) {
+        if (current.schoolsCount !== stateSnapshot.schoolsCount) {
             changed.push('schools-changed');
         }
 
@@ -96,14 +90,10 @@
             changed.push('my-school-changed');
         }
 
-        if (current.indicatorSignature !== stateSnapshot.indicatorSignature) {
-            changed.push('indicator-changed');
-        }
-
         if (changed.length > 0) {
             stateSnapshot = current;
             consecutiveNoChanges = 0;
-            checkInterval = 1000;
+            checkInterval = 5000; // 有变化时 5 秒检查一次
 
             changed.forEach(eventType => {
                 publish(eventType, { timestamp: current.timestamp });
@@ -115,8 +105,8 @@
             });
         } else {
             consecutiveNoChanges++;
-            if (consecutiveNoChanges > 5) {
-                checkInterval = Math.min(checkInterval * 1.5, 30000);
+            if (consecutiveNoChanges > 3) {
+                checkInterval = Math.min(checkInterval * 1.5, 60000); // 最多 60 秒
             }
         }
     }
@@ -156,8 +146,9 @@
         window.__RAW_DATA_VERSION = (window.__RAW_DATA_VERSION || 0) + 1;
 
         consecutiveNoChanges = 0;
-        checkInterval = 1000;
+        checkInterval = 5000; // 数据变化后 5 秒检查一次，不要太频繁
 
+        // 立即检查一次状态变化
         checkStateChanges();
     }
 
