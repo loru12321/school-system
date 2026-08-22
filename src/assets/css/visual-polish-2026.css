@@ -141,7 +141,7 @@
 }
 
 .nav-category-item[data-category="town"] .category-icon {
-    background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
     color: #9a3412;
 }
 
@@ -151,7 +151,7 @@
 }
 
 .nav-category-item[data-category="class"] .category-icon {
-    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+    background: linear-gradient(135deg, #e5e7eb 0%, #e5e7eb 100%);
     color: #991b1b;
 }
 

@@ -353,7 +353,7 @@
         .status-chip.warn {
             color: #9a3412;
             background: #ffedd5;
-            border-color: #fdba74;
+            border-color: #d1d5db;
         }
 
         .status-chip.info {
@@ -505,7 +505,7 @@
         }
 
         .tm-cloud-item.warning {
-            border-color: #fed7aa;
+            border-color: #e5e7eb;
             background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
         }
 
@@ -610,7 +610,7 @@
         }
 
         .tm-center-card.warning {
-            border-color: #fed7aa;
+            border-color: #e5e7eb;
             background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
         }
 
@@ -682,7 +682,7 @@
         .tm-version-diff-card {
             padding: 16px 18px;
             border-radius: 16px;
-            border: 1px solid #fed7aa;
+            border: 1px solid #e5e7eb;
             background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
             box-shadow: 0 8px 24px rgba(249, 115, 22, 0.08);
         }
@@ -728,7 +728,7 @@
         }
 
         .tm-version-diff-item.changed {
-            border-color: #fdba74;
+            border-color: #d1d5db;
             background: #fff7ed;
         }
 
@@ -804,15 +804,15 @@
         }
 
         .tm-module-state-item.is-interactive:hover {
-            border-color: #fdba74;
+            border-color: #d1d5db;
             box-shadow: 0 10px 22px rgba(249, 115, 22, 0.12);
             transform: translateY(-1px);
         }
 
         .tm-module-state-item.is-interactive:focus-visible {
-            outline: 2px solid #fb923c;
+            outline: 2px solid #9ca3af;
             outline-offset: 2px;
-            border-color: #fb923c;
+            border-color: #9ca3af;
         }
 
         .tm-module-state-item.tone-ok {
@@ -821,7 +821,7 @@
         }
 
         .tm-module-state-item.tone-warn {
-            border-color: #fed7aa;
+            border-color: #e5e7eb;
             background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
         }
 
@@ -860,7 +860,7 @@
 
         .tm-field-flash {
             box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18) !important;
-            border-color: #fb923c !important;
+            border-color: #9ca3af !important;
             transition: box-shadow 0.2s ease, border-color 0.2s ease;
         }
 
@@ -979,7 +979,7 @@
         }
 
         body.dark-mode .tm-module-state-action {
-            color: #fdba74 !important;
+            color: #d1d5db !important;
         }
 
         body.dark-mode .tm-field-flash {

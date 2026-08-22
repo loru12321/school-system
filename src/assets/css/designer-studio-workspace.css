@@ -261,7 +261,7 @@ body.dark-mode #app-sidebar.sidebar-spacious {
 
 #app .btn-orange,
 #app .btn-warning {
-    background: linear-gradient(135deg, #ff9b54, #f97316) !important;
+    background: linear-gradient(135deg, #ff9b54, #9ca3af) !important;
     border-color: transparent !important;
     color: #111827 !important;
 }

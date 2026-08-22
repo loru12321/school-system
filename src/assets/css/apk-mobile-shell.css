@@ -676,7 +676,7 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
     }
 
     #apk-mobile-shell .apk-sheet-card--action.is-danger {
-        border-color: #fecaca;
+        border-color: #e5e7eb;
     }
 
     #apk-mobile-shell .apk-account-role {

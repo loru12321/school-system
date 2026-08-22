@@ -46,7 +46,7 @@
             body.dark-mode tr.bg-highlight,
             body.dark-mode tr.bg-highlight td {
                 background: rgba(249, 115, 22, 0.15) !important;
-                color: #fdba74 !important;
+                color: #d1d5db !important;
             }
 
             /* UNIVERSAL: Strip ALL inline style backgrounds */

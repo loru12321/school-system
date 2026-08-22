@@ -798,7 +798,7 @@ body.shell-sidebar-collapsed .sidebar-footer-item {
 
 #mobile-query-shell .mq-module-card.is-active,
 #mobile-query-shell .mq-shortcut-card.is-active {
-    border-color: #fdba74;
+    border-color: #d1d5db;
     background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
 }
 
@@ -827,7 +827,7 @@ body.shell-sidebar-collapsed .sidebar-footer-item {
 #mobile-query-shell .mq-module-state {
     font-size: 11px;
     font-weight: 700;
-    color: #f97316;
+    color: #9ca3af;
 }
 
 #mobile-query-shell .mq-info-card,
@@ -885,7 +885,7 @@ body.shell-sidebar-collapsed .sidebar-footer-item {
 }
 
 #mobile-query-shell .mq-account-action.is-danger {
-    border-color: #fecaca;
+    border-color: #e5e7eb;
     background: linear-gradient(180deg, #ffffff 0%, #fef2f2 100%);
 }
 
@@ -1655,7 +1655,7 @@ body[data-mobile-query="true"] .student-detail-mobile-rank-grid {
 
     body[data-mobile-query="true"] .student-detail-mobile-info.is-accent {
         background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
-        border-color: #fdba74;
+        border-color: #d1d5db;
     }
 
     body[data-mobile-query="true"] .student-detail-mobile-info.is-accent strong {
