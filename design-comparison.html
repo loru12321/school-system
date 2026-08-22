@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排版方案对比 - 三种设计风格</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: 36px;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 16px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .option-card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+
+        .option-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .option-header {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #e0e0e0;
+            text-align: center;
+        }
+
+        .option-header h2 {
+            font-size: 24px;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+            font-weight: 700;
+        }
+
+        .option-header .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .option-header p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.7;
+        }
+
+        .demo-section {
+            margin-bottom: 28px;
+        }
+
+        .demo-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #999;
+            margin-bottom: 14px;
+            padding-left: 4px;
+        }
+
+        /* ========== 方案 A 样式 ========== */
+        .option-a .sidebar-menu-item {
+            background: #f8f9fa;
+            padding: 18px 20px;
+            margin-bottom: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-a .sidebar-menu-item:hover {
+            background: #e9ecef;
+            transform: translateX(2px);
+        }
+
+        .option-a .sidebar-menu-item__main {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .option-a .sidebar-menu-item__icon {
+            font-size: 22px;
+            opacity: 0.8;
+            flex-shrink: 0;
+        }
+
+        .option-a .sidebar-menu-item__text {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .option-a .sidebar-menu-item__title {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
+            letter-spacing: 0.3px;
+            color: #1a1a1a;
+        }
+
+        .option-a .sidebar-menu-item__meta {
+            font-size: 10px;
+            opacity: 0.5;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #666;
+        }
+
+        .option-a .spotlight-item {
+            background: rgba(0, 0, 0, 0.015);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            padding: 20px 24px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-a .spotlight-item:hover {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: rgba(0, 0, 0, 0.08);
+        }
+
+        .option-a .spotlight-item__title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+            line-height: 1.5;
+        }
+
+        .option-a .spotlight-item__meta {
+            font-size: 14px;
+            line-height: 1.8;
+            opacity: 0.7;
+            letter-spacing: 0.3px;
+            color: #555;
+        }
+
+        /* ========== 方案 B 样式 ========== */
+        .option-b .sidebar-menu-item {
+            background: white;
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-b .sidebar-menu-item:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .option-b .sidebar-menu-item__main {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .option-b .sidebar-menu-item__icon {
+            font-size: 22px;
+            opacity: 0.8;
+            flex-shrink: 0;
+        }
+
+        .option-b .sidebar-menu-item__text {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .option-b .sidebar-menu-item__title {
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.5;
+            letter-spacing: 0.2px;
+            color: #1a1a1a;
+        }
+
+        .option-b .sidebar-menu-item__meta {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 3px 8px;
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            width: fit-content;
+            color: #555;
+        }
+
+        .option-b .spotlight-item {
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            padding: 18px 22px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-b .spotlight-item:hover {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            border-color: rgba(0, 0, 0, 0.12);
+        }
+
+        .option-b .spotlight-item__title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #1a1a1a;
+            line-height: 1.5;
+        }
+
+        .option-b .spotlight-item__meta {
+            font-size: 13px;
+            line-height: 1.7;
+            opacity: 0.8;
+            color: #4a4a4a;
+        }
+
+        /* ========== 方案 C 样式 ========== */
+        .option-c .sidebar-menu-item {
+            background: #f8f9fa;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-c .sidebar-menu-item:hover {
+            background: #e9ecef;
+        }
+
+        .option-c .sidebar-menu-item__main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .option-c .sidebar-menu-item__icon {
+            font-size: 20px;
+            opacity: 0.8;
+            flex-shrink: 0;
+        }
+
+        .option-c .sidebar-menu-item__text {
+            display: flex;
+            flex-direction: row;
+            align-items: baseline;
+            gap: 12px;
+            flex: 1;
+            justify-content: space-between;
+        }
+
+        .option-c .sidebar-menu-item__title {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.5;
+            color: #1a1a1a;
+        }
+
+        .option-c .sidebar-menu-item__meta {
+            font-size: 11px;
+            opacity: 0.6;
+            font-weight: 400;
+            color: #666;
+        }
+
+        .option-c .spotlight-item {
+            background: rgba(0, 0, 0, 0.02);
+            border-left: 3px solid transparent;
+            padding: 14px 18px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-c .spotlight-item:hover {
+            background: rgba(0, 0, 0, 0.04);
+            border-left-color: #667eea;
+        }
+
+        .option-c .spotlight-item__title {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.5;
+            margin-bottom: 4px;
+            color: #1a1a1a;
+        }
+
+        .option-c .spotlight-item__meta {
+            font-size: 12px;
+            line-height: 1.6;
+            opacity: 0.75;
+            letter-spacing: 0.2px;
+            color: #555;
+        }
+
+        .selection-guide {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .selection-guide h3 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #1a1a1a;
+        }
+
+        .selection-guide p {
+            font-size: 15px;
+            color: #666;
+            line-height: 1.7;
+        }
+
+        @media (max-width: 1200px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 排版优化方案对比</h1>
+        <p class="subtitle">三种不同的设计风格，请选择你喜欢的一个</p>
+
+        <div class="options-grid">
+            <!-- 方案 A -->
+            <div class="option-card option-a">
+                <div class="option-header">
+                    <div class="badge">Option A</div>
+                    <h2>极简清爽</h2>
+                    <p>大量留白 · 轻量化设计 · 模块数量独立行小字号</p>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">左侧导航效果</div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">⭐</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">本次必看</span>
+                                <span class="sidebar-menu-item__meta">6 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">💾</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">数据准备</span>
+                                <span class="sidebar-menu-item__meta">3 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">🎯</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">联考评价</span>
+                                <span class="sidebar-menu-item__meta">5 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">Spotlight 搜索效果</div>
+
+                    <div class="spotlight-item">
+                        <div class="spotlight-item__title">📊 综合评价查看学校排名、学科分布和整体表现</div>
+                        <div class="spotlight-item__meta">进入后查看学校在区域的相对位置，及格率与平均分等核心指标。</div>
+                    </div>
+
+                    <div class="spotlight-item">
+                        <div class="spotlight-item__title">👨‍🏫 教师表现查看教师贡献、波动和结构性问题</div>
+                        <div class="spotlight-item__meta">进入查看明细指标、校内排序和明细数据。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案 B -->
+            <div class="option-card option-b">
+                <div class="option-header">
+                    <div class="badge">Option B</div>
+                    <h2>卡片层次</h2>
+                    <p>明显卡片效果 · 清晰层级 · 模块数量有背景标签</p>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">左侧导航效果</div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">⭐</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">本次必看</span>
+                                <span class="sidebar-menu-item__meta">6 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">💾</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">数据准备</span>
+                                <span class="sidebar-menu-item__meta">3 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">🎯</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">联考评价</span>
+                                <span class="sidebar-menu-item__meta">5 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">Spotlight 搜索效果</div>
+
+                    <div class="spotlight-item">
+                        <div class="spotlight-item__title">📊 综合评价查看学校排名、学科分布和整体表现</div>
+                        <div class="spotlight-item__meta">进入后查看学校在区域的相对位置，及格率与平均分等核心指标。</div>
+                    </div>
+
+                    <div class="spotlight-item">
+                        <div class="spotlight-item__title">👨‍🏫 教师表现查看教师贡献、波动和结构性问题</div>
+                        <div class="spotlight-item__meta">进入查看明细指标、校内排序和明细数据。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案 C -->
+            <div class="option-card option-c">
+                <div class="option-header">
+                    <div class="badge">Option C</div>
+                    <h2>紧凑专业</h2>
+                    <p>适度间距 · 专业感 · 模块数量右对齐同行显示</p>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">左侧导航效果</div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">⭐</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">本次必看</span>
+                                <span class="sidebar-menu-item__meta">6 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">💾</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">数据准备</span>
+                                <span class="sidebar-menu-item__meta">3 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">🎯</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">联考评价</span>
+                                <span class="sidebar-menu-item__meta">5 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">Spotlight 搜索效果</div>
+
+                    <div class="spotlight-item">
+                        <div class="spotlight-item__title">📊 综合评价查看学校排名、学科分布和整体表现</div>
+                        <div class="spotlight-item__meta">进入后查看学校在区域的相对位置，及格率与平均分等核心指标。</div>
+                    </div>
+
+                    <div class="spotlight-item">
+                        <div class="spotlight-item__title">👨‍🏫 教师表现查看教师贡献、波动和结构性问题</div>
+                        <div class="spotlight-item__meta">进入查看明细指标、校内排序和明细数据。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="selection-guide">
+            <h3>📝 请告诉我你的选择</h3>
+            <p>回复 <strong>A</strong>、<strong>B</strong> 或 <strong>C</strong>，我会将对应的方案应用到系统中</p>
+        </div>
+    </div>
+</body>
+</html>

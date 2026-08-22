@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排版方案对比</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f5f5;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 32px;
+            color: #333;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .option-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .option-header {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .option-header h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        .option-header p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .demo-section {
+            margin-bottom: 32px;
+        }
+
+        .demo-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
+            margin-bottom: 12px;
+        }
+
+        /* 通用基础样式 */
+        .sidebar-menu-item {
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: block;
+        }
+
+        .sidebar-menu-item:hover {
+            background: #e9ecef;
+        }
+
+        .sidebar-menu-item__main {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .sidebar-menu-item__icon {
+            font-size: 20px;
+            opacity: 0.8;
+        }
+
+        .spotlight-item {
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .spotlight-item__copy {
+            flex: 1;
+        }
+
+        .spotlight-item__action {
+            background: #e9ecef;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #666;
+        }
+
+        @media (max-width: 1400px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>排版优化方案对比</h1>
+
+        <div class="options-grid">
+            <!-- 方案 A -->
+            <div class="option-card">
+                <div class="option-header">
+                    <h2>方案 A：极简清爽</h2>
+                    <p>特点：大量留白、轻量化设计、模块数量独立一行且很小字号、字母大写</p>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">左侧导航示例</div>
+                    <link rel="stylesheet" href="./assets/css/typography-option-A.css">
+
+                    <div class="sidebar-menu-item" style="margin-bottom: 14px;">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">⭐</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">本次必看</span>
+                                <span class="sidebar-menu-item__meta">6 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item" style="margin-bottom: 14px;">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">💾</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">数据准备</span>
+                                <span class="sidebar-menu-item__meta">3 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">🎯</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">联考评价</span>
+                                <span class="sidebar-menu-item__meta">5 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">Spotlight 搜索示例</div>
+
+                    <div class="spotlight-item" style="margin-bottom: 12px;">
+                        <div class="spotlight-item__copy">
+                            <div class="spotlight-item__title">📊 综合评价查看学校排名、学科分布和整体表现</div>
+                            <div class="spotlight-item__meta">进入后查看学校在区域的相对位置，及格率与平均分等核心指标。</div>
+                        </div>
+                        <span class="spotlight-item__action">进入</span>
+                    </div>
+
+                    <div class="spotlight-item">
+                        <div class="spotlight-item__copy">
+                            <div class="spotlight-item__title">👨‍🏫 教师表现查看教师贡献、波动和结构性问题</div>
+                            <div class="spotlight-item__meta">进入查看明细指标、校内排序和期明细数据。</div>
+                        </div>
+                        <span class="spotlight-item__action">进入</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案 B -->
+            <div class="option-card">
+                <div class="option-header">
+                    <h2>方案 B：卡片层次</h2>
+                    <p>特点：明显的卡片效果、清晰的层级、模块数量有背景色标签、阴影效果</p>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">左侧导航示例</div>
+                    <link rel="stylesheet" href="./assets/css/typography-option-B.css">
+
+                    <div class="sidebar-menu-item" style="margin-bottom: 12px;">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">⭐</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">本次必看</span>
+                                <span class="sidebar-menu-item__meta">6 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item" style="margin-bottom: 12px;">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">💾</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">数据准备</span>
+                                <span class="sidebar-menu-item__meta">3 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">🎯</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">联考评价</span>
+                                <span class="sidebar-menu-item__meta">5 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">Spotlight 搜索示例</div>
+
+                    <div class="spotlight-item" style="margin-bottom: 10px;">
+                        <div class="spotlight-item__copy">
+                            <div class="spotlight-item__title">📊 综合评价查看学校排名、学科分布和整体表现</div>
+                            <div class="spotlight-item__meta">进入后查看学校在区域的相对位置，及格率与平均分等核心指标。</div>
+                        </div>
+                        <span class="spotlight-item__action">进入</span>
+                    </div>
+
+                    <div class="spotlight-item">
+                        <div class="spotlight-item__copy">
+                            <div class="spotlight-item__title">👨‍🏫 教师表现查看教师贡献、波动和结构性问题</div>
+                            <div class="spotlight-item__meta">进入查看明细指标、校内排序和期明细数据。</div>
+                        </div>
+                        <span class="spotlight-item__action">进入</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案 C -->
+            <div class="option-card">
+                <div class="option-header">
+                    <h2>方案 C：紧凑专业</h2>
+                    <p>特点：适度间距、专业感、模块数量右对齐同行显示、左边框高亮</p>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">左侧导航示例</div>
+                    <link rel="stylesheet" href="./assets/css/typography-option-C.css">
+
+                    <div class="sidebar-menu-item" style="margin-bottom: 8px;">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">⭐</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">本次必看</span>
+                                <span class="sidebar-menu-item__meta">6 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item" style="margin-bottom: 8px;">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">💾</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">数据准备</span>
+                                <span class="sidebar-menu-item__meta">3 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-menu-item">
+                        <div class="sidebar-menu-item__main">
+                            <span class="sidebar-menu-item__icon">🎯</span>
+                            <span class="sidebar-menu-item__text">
+                                <span class="sidebar-menu-item__title">联考评价</span>
+                                <span class="sidebar-menu-item__meta">5 个模块</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-section">
+                    <div class="demo-title">Spotlight 搜索示例</div>
+
+                    <div class="spotlight-item" style="margin-bottom: 6px;">
+                        <div class="spotlight-item__copy">
+                            <div class="spotlight-item__title">📊 综合评价查看学校排名、学科分布和整体表现</div>
+                            <div class="spotlight-item__meta">进入后查看学校在区域的相对位置，及格率与平均分等核心指标。</div>
+                        </div>
+                        <span class="spotlight-item__action">进入</span>
+                    </div>
+
+                    <div class="spotlight-item">
+                        <div class="spotlight-item__copy">
+                            <div class="spotlight-item__title">👨‍🏫 教师表现查看教师贡献、波动和结构性问题</div>
+                            <div class="spotlight-item__meta">进入查看明细指标、校内排序和期明细数据。</div>
+                        </div>
+                        <span class="spotlight-item__action">进入</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; color: #666; font-size: 14px;">
+            <p>请选择你喜欢的方案：A（极简清爽）、B（卡片层次）、C（紧凑专业）</p>
+        </div>
+    </div>
+</body>
+</html>

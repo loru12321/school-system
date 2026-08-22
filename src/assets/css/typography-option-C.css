@@ -1,0 +1,90 @@
+/**
+ * 方案 C：紧凑专业 - 保持信息密度但优化可读性
+ * 特点：适度间距、专业感、模块数量右对齐显示
+ */
+
+/* 左侧导航 */
+.sidebar-menu-item {
+    padding: 14px 16px !important;
+    margin-bottom: 8px !important;
+    border-radius: 6px !important;
+}
+
+.sidebar-menu-item__main {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.sidebar-menu-item__text {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    gap: 12px !important;
+    flex: 1 !important;
+}
+
+.sidebar-menu-item__title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+}
+
+.sidebar-menu-item__meta {
+    display: inline !important;
+    font-size: 11px !important;
+    opacity: 0.6 !important;
+    font-weight: 400 !important;
+    margin-left: auto !important;
+}
+
+/* Spotlight 搜索 */
+.spotlight-box {
+    padding: 28px 24px !important;
+    max-width: 700px !important;
+}
+
+.spotlight-item {
+    padding: 14px 18px !important;
+    margin-bottom: 6px !important;
+    border-radius: 4px !important;
+    background: rgba(0, 0, 0, 0.02) !important;
+    border-left: 3px solid transparent !important;
+}
+
+.spotlight-item:hover,
+.spotlight-item.active {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border-left-color: var(--primary, #4f46e5) !important;
+}
+
+.spotlight-item__copy {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+}
+
+.spotlight-item__title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+}
+
+.spotlight-item__meta {
+    font-size: 12px !important;
+    line-height: 1.6 !important;
+    opacity: 0.75 !important;
+    letter-spacing: 0.2px !important;
+}
+
+/* 输入框 */
+.spotlight-input {
+    padding: 12px 16px !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+}
+
+.spotlight-input-wrap {
+    margin-bottom: 20px !important;
+    padding: 8px 12px !important;
+}
