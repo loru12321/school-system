@@ -4,9 +4,9 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `a914350a1bf3`
-- Recorded at: 2026-08-22T13:39:47.125Z
-- Total smoke time: 18517 ms (-2552 ms vs previous)
+- Commit: `46e9dfb`
+- Recorded at: 2026-08-22T13:46:25.788Z
+- Total smoke time: 18517 ms (0 ms vs previous)
 - Login: 3502 ms
 - App ready: 7 ms
 - Native long tasks: 0, max 0 ms
@@ -31,6 +31,7 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Commit | Total | Login | App ready | Native long tasks | Scheduled tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `46e9dfb` | 18517 ms | 3502 ms | 7 ms | 0 | 67 | 0 | 0 |
 | `a914350a1bf3` | 18517 ms | 3502 ms | 7 ms | 0 | 67 | 0 | 0 |
 | `20fe677e1e15` | 21069 ms | 3400 ms | 3 ms | 0 | 65 | 0 | 0 |
 | `e62037e7242a` | 20369 ms | 4191 ms | 7 ms | 0 | 63 | 0 | 0 |
@@ -45,7 +46,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `721a51c8d56e` | 20885 ms | 4700 ms | 8 ms | 0 | 69 | 0 | 0 |
 | `e7f5c31e2ab0` | 24697 ms | 4949 ms | 12 ms | 0 | 66 | 0 | 0 |
 | `d3a0e64607cf` | 22850 ms | 3202 ms | 3 ms | 0 | 70 | 0 | 0 |
-| `df408db5e1df` | 24457 ms | 4236 ms | 351 ms | 0 | 65 | 0 | 0 |
 
 ## Data Files
 
