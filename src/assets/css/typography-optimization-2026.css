@@ -1,249 +1,27 @@
-/**
- * 全面排版优化 - 基于系统功能分析
- *
- * 优化区域：
- * 1. 左侧导航栏（7个分类模块）
- * 2. 顶部状态栏（数据准备信息）
- * 3. Spotlight 搜索面板
- * 4. 右侧内容区域
- */
+/* 左侧导航栏 */
+#sidebar-nav { padding: 16px 12px !important; }
+.sidebar-menu-item { background: white !important; padding: 16px 18px !important; margin-bottom: 12px !important; border-radius: 8px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important; border: 1px solid rgba(0,0,0,0.06) !important; transition: all 0.25s ease !important; }
+.sidebar-menu-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important; transform: translateY(-2px) !important; }
+.sidebar-menu-item__main { display: flex !important; gap: 14px !important; }
+.sidebar-menu-item__icon { font-size: 22px !important; }
+.sidebar-menu-item__text { display: flex !important; flex-direction: column !important; gap: 10px !important; }
+.sidebar-menu-item__title { font-size: 15px !important; font-weight: 700 !important; }
+.sidebar-menu-item__meta { display: inline-block !important; font-size: 11px !important; font-weight: 600 !important; padding: 4px 10px !important; background: rgba(0,0,0,0.08) !important; border-radius: 12px !important; width: fit-content !important; }
 
-/* ============================================================================
-   左侧导航栏 - 卡片层次设计强化版
-   ========================================================================== */
+/* Spotlight 搜索 */
+.spotlight-box { padding: 36px 32px !important; max-width: 750px !important; border-radius: 16px !important; background: #fafafa !important; }
+.spotlight-item { display: flex !important; background: white !important; border: 1px solid rgba(0,0,0,0.08) !important; padding: 18px 22px !important; margin-bottom: 10px !important; border-radius: 8px !important; }
+.spotlight-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important; }
+.spotlight-item__title { font-size: 15px !important; font-weight: 700 !important; }
 
-#sidebar-nav {
-    padding: 16px 12px !important;
-}
-
-.sidebar-menu-item {
-    background: white !important;
-    padding: 16px 18px !important;
-    margin-bottom: 12px !important;
-    border-radius: 8px !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
-    border: 1px solid rgba(0, 0, 0, 0.06) !important;
-    cursor: pointer !important;
-    transition: all 0.25s ease !important;
-}
-
-.sidebar-menu-item:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-    transform: translateY(-2px) !important;
-    border-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-.sidebar-menu-item.active {
-    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.2) !important;
-    border-color: rgba(79, 70, 229, 0.3) !important;
-}
-
-.sidebar-menu-item__main {
-    display: flex !important;
-    align-items: flex-start !important;
-    gap: 14px !important;
-}
-
-.sidebar-menu-item__icon {
-    font-size: 22px !important;
-    opacity: 0.85 !important;
-    flex-shrink: 0 !important;
-    margin-top: 2px !important;
-}
-
-.sidebar-menu-item__text {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 10px !important;
-    flex: 1 !important;
-}
-
-.sidebar-menu-item__title {
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    line-height: 1.4 !important;
-    letter-spacing: 0.3px !important;
-    color: #1a1a1a !important;
-}
-
-.sidebar-menu-item__meta {
-    display: inline-block !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    padding: 4px 10px !important;
-    background: rgba(0, 0, 0, 0.08) !important;
-    border-radius: 12px !important;
-    width: fit-content !important;
-    color: #555 !important;
-    letter-spacing: 0.3px !important;
-}
-
-/* ============================================================================
-   Spotlight 搜索面板
-   ========================================================================== */
-
-.spotlight-mask {
-    backdrop-filter: blur(8px) !important;
-    background: rgba(0, 0, 0, 0.4) !important;
-}
-
-.spotlight-box {
-    padding: 36px 32px !important;
-    max-width: 750px !important;
-    border-radius: 16px !important;
-    background: #fafafa !important;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
-}
-
-.spotlight-input-wrap {
-    padding: 10px 16px !important;
-    margin-bottom: 28px !important;
-    border-radius: 10px !important;
-    background: white !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-    border: 2px solid rgba(0, 0, 0, 0.06) !important;
-    transition: all 0.2s !important;
-}
-
-.spotlight-input-wrap:focus-within {
-    border-color: rgba(79, 70, 229, 0.4) !important;
-    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.15) !important;
-}
-
-.spotlight-input {
-    padding: 8px 12px !important;
-    font-size: 16px !important;
-    line-height: 1.5 !important;
-    letter-spacing: 0.2px !important;
-}
-
-.spotlight-results {
-    max-height: 500px !important;
-    overflow-y: auto !important;
-    padding-right: 8px !important;
-}
-
-.spotlight-results::-webkit-scrollbar {
-    width: 6px !important;
-}
-
-.spotlight-results::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.04) !important;
-    border-radius: 3px !important;
-}
-
-.spotlight-results::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15) !important;
-    border-radius: 3px !important;
-}
-
-.spotlight-item {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 16px !important;
-    background: white !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
-    padding: 18px 22px !important;
-    margin-bottom: 10px !important;
-    border-radius: 8px !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-}
-
-.spotlight-item:hover,
-.spotlight-item.active {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-    border-color: rgba(79, 70, 229, 0.3) !important;
-    transform: translateY(-1px) !important;
-}
-
-.spotlight-item__copy {
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 6px !important;
-}
-
-.spotlight-item__title {
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    line-height: 1.5 !important;
-    color: #1a1a1a !important;
-}
-
-.spotlight-item__meta {
-    font-size: 13px !important;
-    line-height: 1.75 !important;
-    color: #666 !important;
-    opacity: 0.9 !important;
-}
-
-.spotlight-item__action {
-    flex-shrink: 0 !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    padding: 6px 14px !important;
-    background: rgba(0, 0, 0, 0.06) !important;
-    border-radius: 6px !important;
-    color: #555 !important;
-}
-
-.spotlight-item:hover .spotlight-item__action {
-    background: rgba(79, 70, 229, 0.1) !important;
-    color: #4f46e5 !important;
-}
-
-.spotlight-hint {
-    margin-top: 20px !important;
-    padding-top: 16px !important;
-    border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
-    font-size: 12px !important;
-    text-align: center !important;
-    color: #999 !important;
-}
-
-/* ============================================================================
-   全局优化
-   ========================================================================== */
-
-h1, h2, h3 {
-    font-weight: 700 !important;
-    color: #1a1a1a !important;
-}
-
-p {
-    line-height: 1.7 !important;
-    letter-spacing: 0.2px !important;
-}
-
-button, .btn {
-    padding: 10px 18px !important;
-    font-weight: 600 !important;
-    border-radius: 6px !important;
-}
-
-.card, .data-card {
-    padding: 24px !important;
-    border-radius: 10px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
-}
-
-table th {
-    padding: 14px 16px !important;
-    font-weight: 700 !important;
-}
-
-table td {
-    padding: 14px 16px !important;
-}
-
-@media (max-width: 768px) {
-    .sidebar-menu-item {
-        padding: 14px 16px !important;
-    }
-    .spotlight-box {
-        padding: 24px 20px !important;
-    }
-}
+/* 钻取弹窗 - 彩色横排标签 */
+.drill-stu-list { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; padding: 16px !important; }
+.drill-stu-tag { display: inline-flex !important; align-items: center !important; gap: 8px !important; padding: 8px 14px !important; border-radius: 8px !important; font-size: 14px !important; font-weight: 600 !important; border: 2px solid !important; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; color: white !important; box-shadow: 0 2px 8px rgba(102,126,234,0.3) !important; }
+.drill-stu-tag:nth-child(3n+1) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important; }
+.drill-stu-tag:nth-child(3n+2) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important; }
+.drill-stu-tag:nth-child(3n+3) { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important; }
+.drill-stu-tag:hover { transform: translateY(-2px) scale(1.05) !important; }
+.drill-stu-tag span { color: white !important; font-weight: 600 !important; }
+.drill-stu-score { color: white !important; font-weight: 700 !important; background: rgba(255,255,255,0.25) !important; padding: 3px 8px !important; border-radius: 4px !important; }
+.drill-class-card { background: white !important; border: 2px solid #e2e8f0 !important; border-radius: 12px !important; padding: 16px !important; }
+.drill-class-card:hover { transform: translateY(-4px) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important; }
