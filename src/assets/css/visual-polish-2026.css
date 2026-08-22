@@ -251,6 +251,82 @@
     color: #3b82f6;
 }
 
+/* ====== 全局红框清除 - 最高优先级 ====== */
+
+/* 禁用所有红色边框 */
+html body:not(.dark-mode) #app .workspace-drawer-panel,
+html body:not(.dark-mode) #app .spotlight-box,
+html body #app .workspace-drawer-panel,
+html body #app .spotlight-box,
+html body #app #workspace-drawer,
+html body #app #spotlight-mask .spotlight-box,
+.workspace-drawer-panel,
+.spotlight-box,
+#workspace-drawer,
+#spotlight-mask .spotlight-box {
+    border: none !important;
+    border-color: transparent !important;
+    border-top: none !important;
+    border-top-color: transparent !important;
+    outline: none !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
+                0 0 0 1px rgba(226, 232, 240, 0.6) !important;
+    border-radius: 20px !important;
+}
+
+/* 数据准备模块 - 移除所有红框 */
+html body:not(.dark-mode) #app .starter-tier,
+html body:not(.dark-mode) #app .starter-card,
+html body:not(.dark-mode) #app #starter-hub,
+html body:not(.dark-mode) #app .module-section,
+html body #app .starter-tier,
+html body #app .starter-card,
+html body #app #starter-hub,
+html body #app .module-section,
+.starter-tier,
+.starter-card,
+#starter-hub,
+.module-section {
+    border-color: #e2e8f0 !important;
+}
+
+/* 侧边导航 - 移除红框 */
+html body:not(.dark-mode) #app .nav-category-item,
+html body:not(.dark-mode) #app .category-nav-item,
+html body:not(.dark-mode) #app .shell-nav-category,
+html body #app .nav-category-item,
+html body #app .category-nav-item,
+html body #app .shell-nav-category,
+.nav-category-item,
+.category-nav-item,
+.shell-nav-category {
+    border: none !important;
+    border-color: transparent !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04),
+                0 0 0 1px rgba(148, 163, 184, 0.1) !important;
+}
+
+/* 强制覆盖红色边框 - 使用高优先级选择器 */
+html body:not(.dark-mode) #app .workspace-drawer-panel,
+html body:not(.dark-mode) #app .spotlight-box,
+html body #app .workspace-drawer-panel,
+html body #app .spotlight-box,
+.workspace-drawer-panel,
+.spotlight-box {
+    border: none !important;
+    border-color: transparent !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
+                0 0 0 1px rgba(148, 163, 184, 0.1) !important;
+    border-radius: 20px !important;
+}
+
+/* 工作区抽屉面板内容 */
+html body:not(.dark-mode) #app :is(.modal-content, .workspace-drawer-panel, .spotlight-box),
+html body #app :is(.modal-content, .workspace-drawer-panel, .spotlight-box),
+:is(.modal-content, .workspace-drawer-panel, .spotlight-box) {
+    border-color: transparent !important;
+}
+
 /* Spotlight 搜索面板优化 */
 .spotlight-panel,
 .workspace-drawer,
