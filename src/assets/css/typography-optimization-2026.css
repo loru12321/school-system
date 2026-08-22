@@ -1,0 +1,239 @@
+/**
+ * Typography & Layout Optimization 2026
+ *
+ * 优化文本排版、间距和视觉层次
+ */
+
+/* ============================================================================
+   左侧导航 - 优化文字排版和间距
+   ========================================================================== */
+
+/* 侧边栏分类标题 - 增加行高和间距 */
+.sidebar-category-title {
+    line-height: 1.6 !important;
+    margin-bottom: 8px !important;
+}
+
+/* 模块数量文字 - 单独一行，减少视觉拥挤 */
+.sidebar-category-count {
+    display: block !important;
+    margin-top: 4px !important;
+    font-size: 11px !important;
+    opacity: 0.7 !important;
+    line-height: 1.4 !important;
+}
+
+/* 侧边栏菜单项 - 增加内边距 */
+.sidebar-menu-item,
+#app-sidebar .sidebar-menu-item {
+    padding: 12px 14px !important;
+    margin-bottom: 6px !important;
+    line-height: 1.5 !important;
+}
+
+.sidebar-menu-item__text {
+    line-height: 1.5 !important;
+    letter-spacing: 0.01em !important;
+}
+
+/* ============================================================================
+   Spotlight 搜索面板 - 优化内容排版
+   ========================================================================== */
+
+/* 搜索面板主容器 - 增加内边距 */
+.spotlight-box {
+    padding: 24px !important;
+}
+
+/* 搜索结果项 - 增加间距和行高 */
+.spotlight-item {
+    padding: 16px 20px !important;
+    margin-bottom: 8px !important;
+    line-height: 1.6 !important;
+}
+
+/* 分类标题 - 增加上边距 */
+.spotlight-category-title {
+    margin-top: 16px !important;
+    margin-bottom: 12px !important;
+    padding-top: 12px !important;
+    border-top: 1px solid #e5e7eb !important;
+    font-weight: 600 !important;
+}
+
+/* 搜索结果文本 - 增加行高 */
+.spotlight-item-text,
+.spotlight-item-title {
+    line-height: 1.6 !important;
+    margin-bottom: 4px !important;
+}
+
+/* 搜索结果描述 - 灰色小字 */
+.spotlight-item-hint,
+.spotlight-item-desc {
+    font-size: 12px !important;
+    color: #6b7280 !important;
+    line-height: 1.5 !important;
+    margin-top: 4px !important;
+}
+
+/* ============================================================================
+   右侧内容区 - 优化文本密度
+   ========================================================================== */
+
+/* 工作区标题 - 增加行高 */
+.shell-overview-heading h2 {
+    line-height: 1.4 !important;
+    margin-bottom: 8px !important;
+}
+
+/* 工作区描述 - 增加行高和间距 */
+.shell-overview-copy p,
+#shell-category-desc {
+    line-height: 1.7 !important;
+    margin-top: 8px !important;
+}
+
+/* 模块数量标签 - 单独一行 */
+#shell-module-count {
+    display: block !important;
+    margin-top: 6px !important;
+    font-size: 12px !important;
+    opacity: 0.7 !important;
+}
+
+/* ============================================================================
+   卡片内容 - 增加呼吸空间
+   ========================================================================== */
+
+/* 所有卡片 - 增加内边距 */
+.card,
+.data-card,
+.metric-card,
+.starter-card {
+    padding: 20px !important;
+}
+
+/* 卡片标题 - 增加下边距 */
+.card h3,
+.card h4,
+.data-card h3,
+.starter-card h4 {
+    margin-bottom: 12px !important;
+    line-height: 1.4 !important;
+}
+
+/* 卡片内文本 - 增加行高 */
+.card p,
+.data-card p,
+.starter-card p {
+    line-height: 1.6 !important;
+    margin-bottom: 12px !important;
+}
+
+/* ============================================================================
+   列表和任务清单 - 增加间距
+   ========================================================================== */
+
+/* 任务列表项 - 增加垂直间距 */
+.task-list li,
+.task-item {
+    padding: 10px 0 !important;
+    line-height: 1.6 !important;
+}
+
+/* 状态标签 - 增加间距 */
+.status-badge,
+.status-chip {
+    padding: 6px 12px !important;
+    margin-right: 8px !important;
+    line-height: 1.4 !important;
+}
+
+/* ============================================================================
+   工作流步骤 - 优化排版
+   ========================================================================== */
+
+/* 工作流路径 - 增加间距 */
+.workflow-path {
+    padding: 16px 0 !important;
+    margin-top: 16px !important;
+}
+
+.workflow-path__step {
+    padding: 10px 16px !important;
+    margin-right: 8px !important;
+    line-height: 1.5 !important;
+}
+
+/* ============================================================================
+   模块导航 - 优化间距
+   ========================================================================== */
+
+/* 模块导航标签 */
+.shell-module-rail-label {
+    font-size: 11px !important;
+    margin-bottom: 6px !important;
+    line-height: 1.4 !important;
+}
+
+/* 模块导航标题 */
+.shell-module-rail-title {
+    line-height: 1.5 !important;
+    margin-bottom: 4px !important;
+}
+
+/* 模块导航状态 */
+.shell-module-rail-status {
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    margin-top: 4px !important;
+}
+
+/* ============================================================================
+   全局文本优化
+   ========================================================================== */
+
+/* 标题层次优化 */
+h1, h2, h3, h4 {
+    line-height: 1.4 !important;
+    letter-spacing: -0.01em !important;
+}
+
+/* 正文文本 */
+p {
+    line-height: 1.6 !important;
+}
+
+/* 小字体文本 */
+small,
+.text-sm {
+    line-height: 1.5 !important;
+}
+
+/* 按钮文字 - 增加字间距 */
+button,
+.btn {
+    letter-spacing: 0.01em !important;
+    line-height: 1.4 !important;
+}
+
+/* ============================================================================
+   响应式优化 - 移动端增加更多间距
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .card,
+    .data-card,
+    .starter-card {
+        padding: 16px !important;
+    }
+
+    .spotlight-box {
+        padding: 16px !important;
+    }
+
+    .spotlight-item {
+        padding: 14px 16px !important;
+    }
+}
