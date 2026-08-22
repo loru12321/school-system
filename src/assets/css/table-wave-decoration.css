@@ -1,0 +1,25 @@
+/* 表格数值波浪线装饰 */
+table td:not(.no-wave) {
+    position: relative;
+}
+
+/* 为数值单元格添加波浪线背景 */
+table td[data-label*="得分"]::before,
+table td[data-label*="总分"]::before,
+table td[data-label*="均分"]::before,
+table td[data-label*="赋分"]::before,
+table td[data-label*="段"]::before {
+    content: "〰️";
+    position: absolute;
+    left: 2px;
+    font-size: 10px;
+    opacity: 0.3;
+}
+
+/* 或者更简洁的方案：直接在数字前添加波浪线 */
+table td[data-label]::before {
+    content: "〰️ ";
+    font-size: 12px;
+    opacity: 0.5;
+    margin-right: 4px;
+}

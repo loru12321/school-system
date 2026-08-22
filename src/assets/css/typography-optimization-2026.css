@@ -25,3 +25,20 @@
 .drill-stu-score { color: white !important; font-weight: 700 !important; background: rgba(255,255,255,0.25) !important; padding: 3px 8px !important; border-radius: 4px !important; }
 .drill-class-card { background: white !important; border: 2px solid #e2e8f0 !important; border-radius: 12px !important; padding: 16px !important; }
 .drill-class-card:hover { transform: translateY(-4px) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important; }
+
+/* ============================================================================
+   表格数值波浪线装饰
+   ========================================================================== */
+
+/* 为所有包含数值的表格单元格添加波浪线 */
+table td[data-label*="得分"]::before,
+table td[data-label*="总分"]::before,
+table td[data-label*="均分"]::before,
+table td[data-label*="赋分"]::before,
+table td[data-label*="率"]::before {
+    content: "〰️ " !important;
+}
+
+table button.summary-drill-link::before {
+    content: "〰️ " !important;
+}
