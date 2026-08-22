@@ -165,6 +165,41 @@
         Object.keys(PILOT_MODULES).forEach(refresh);
     }
 
+    function initAutoRefresh() {
+        if (!window.DataStateEventBus) return;
+
+        DataStateEventBus.subscribe('schools-changed', () => {
+            Object.keys(PILOT_MODULES).forEach(moduleId => {
+                if (PILOT_MODULES[moduleId].includes('schoolAlias')) {
+                    refresh(moduleId);
+                }
+            });
+        });
+
+        DataStateEventBus.subscribe('my-school-changed', () => {
+            Object.keys(PILOT_MODULES).forEach(moduleId => {
+                if (PILOT_MODULES[moduleId].includes('mySchool')) {
+                    refresh(moduleId);
+                }
+            });
+        });
+
+        DataStateEventBus.subscribe('indicator-changed', () => {
+            refresh('summary');
+        });
+
+        DataStateEventBus.subscribe('teacher-map-changed', () => {
+            refresh('teacher-analysis');
+        });
+    }
+
     window.PrerequisiteStatus = { refresh, refreshAll, modules: Object.keys(PILOT_MODULES) };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAutoRefresh);
+    } else {
+        initAutoRefresh();
+    }
+
     window.__PREREQUISITE_STATUS_RUNTIME_PATCHED__ = true;
 })();

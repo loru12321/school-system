@@ -1456,6 +1456,42 @@
         return entryPromise;
     };
 
+    // 核心工作流预热：admin/director 角色在数据就绪后后台预计算 TEACHER_STATS，
+    // 避免首次进入 teacher-analysis 时的 700ms 阻塞计算。
+    function maybePreheatCoreWorkflow() {
+        const user = typeof window.getCurrentUser === 'function'
+            ? window.getCurrentUser()
+            : window.Auth?.currentUser;
+        if (!user) return;
+        const role = String(user.role || '').trim();
+        if (role !== 'admin' && role !== 'director') return;
+
+        if (!window.RAW_DATA || !window.TEACHER_MAP) return;
+        if (canReuseTeacherAnalysisStats()) return;
+
+        scheduleModuleTask('core-workflow-preheat', () => {
+            if (typeof window.analyzeTeachers !== 'function') return;
+            if (!window.RAW_DATA || !window.TEACHER_MAP) return;
+            if (canReuseTeacherAnalysisStats()) return;
+            try {
+                window.analyzeTeachers();
+                markTeacherAnalysisStatsReusable();
+            } catch (err) {
+                console.warn('[module-entry] 核心工作流预热失败:', err);
+            }
+        }, { delay: 2500, idle: true, timeout: 8000 });
+    }
+
+    // 数据变化时尝试预热（复用 DataStateEventBus 若已加载）
+    function initCoreWorkflowPreheat() {
+        if (window.DataStateEventBus) {
+            window.DataStateEventBus.subscribe('raw-data-changed', maybePreheatCoreWorkflow);
+            window.DataStateEventBus.subscribe('teacher-map-changed', maybePreheatCoreWorkflow);
+        }
+        // 启动时也尝试一次（数据可能已就绪）
+        scheduleModuleTask('core-workflow-preheat-initial', maybePreheatCoreWorkflow, { delay: 3000, idle: true, timeout: 10000 });
+    }
+
     window.activateTeachingManagementModule = activateTeachingManagementModule;
     window.renderSingleSchoolAnalysisHint = renderSingleSchoolAnalysisHint;
     window.releaseTeacherAnalysisHeavyDom = releaseTeacherAnalysisHeavyDom;
@@ -1464,5 +1500,12 @@
         const moduleId = String(event?.detail?.id || '').trim();
         if (moduleId === 'teacher-pairing') renderReusableTeacherPairingNow(moduleId);
     });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCoreWorkflowPreheat);
+    } else {
+        initCoreWorkflowPreheat();
+    }
+
     window.__MODULE_ENTRY_RUNTIME_PATCHED__ = true;
 })();

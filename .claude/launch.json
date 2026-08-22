@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "schoolsystem-local",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "dist", "-l", "3333", "--no-clipboard"],
+      "port": 3333
+    },
+    {
+      "name": "schoolsystem-prod",
+      "url": "https://schoolsystem.com.cn"
+    }
+  ]
+}
