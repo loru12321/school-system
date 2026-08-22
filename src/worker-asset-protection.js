@@ -35,24 +35,47 @@ function isStaticAssetPath(pathname) {
   return /\.(?:js|css|png|jpg|jpeg|gif|svg|webp|avif|woff2?|ttf|eot|ico)$/i.test(pathname);
 }
 
-function isVersionedStaticAsset(url) {
-  const pathname = String(url.pathname || '');
+function isVersionedStaticAsset(pathname) {
   if (/\/assets\/vendor\//.test(pathname)) return true;
   if (/\.(?:woff2?|ttf|eot)$/i.test(pathname)) return true;
-  return /-[A-Za-z0-9_-]{6,}\.(?:js|css|png|jpg|jpeg|gif|svg|webp|avif)$/i.test(pathname);
+  // Content-derived hash marker: the last hyphen-delimited segment of the
+  // filename is a Vite-style base64url hash (e.g. `style-DKN0ss9n.css`,
+  // `boot-runtime-runtime-dcf6d7a5d7ea.js`) containing at least one digit.
+  // `-(?!.*-)` anchors the match on the *last* hyphen so the prefix may itself
+  // contain hyphens (boot-runtime-runtime-<hash>) without ambiguity.
+  // The digit requirement is deliberate — convention names like
+  // `auth-state-runtime.js` end in `-runtime.js` but are NOT content-hashed,
+  // and caching them immutable would serve stale code after a deploy.
+  return /-(?!.*-)[A-Za-z0-9_]*[0-9][A-Za-z0-9_]*\.(?:js|css|png|jpg|jpeg|gif|svg|webp|avif)$/i.test(pathname);
 }
 
 function getStaticAssetCacheControl(url) {
-  const pathname = String(url.pathname || '');
+  let pathname = String(url.pathname || '');
+  // Precompressed twins (asset.js.br) are served for br-capable clients and
+  // must inherit the policy of their source asset — never an independent one.
+  if (pathname.endsWith('.br')) {
+    pathname = pathname.slice(0, -3);
+  }
   if (pathname === '/sw.js' || pathname.endsWith('/sw.js')) {
     return getHtmlShellCacheControl();
   }
+  // Content-hashed bundles (boot-runtime-runtime-<hash>.js, style-<hash>.css,
+  // vendor files) are immutable by URL: a new hash means new content, and the
+  // old URL never changes. They must win over the /assets/js/ catch-all below,
+  // or the no-store rule would force a fresh origin fetch on every page load.
+  if (isStaticAssetPath(pathname) && isVersionedStaticAsset(pathname)) {
+    return 'public, max-age=31536000, immutable';
+  }
+  // Unversioned runtime JS (app.js and friends) is served no-store so a
+  // deployment can never serve stale app code behind the boot loader.
   if (pathname.startsWith('/assets/js/')) {
     return getHtmlShellCacheControl();
   }
-  if (!isStaticAssetPath(pathname)) return '';
-  if (isVersionedStaticAsset(url)) {
-    return 'public, max-age=31536000, immutable';
+  // Everything else that is a static asset gets a short browser cache; truly
+  // non-static paths (robots.txt, sitemap.xml, site.webmanifest) are left
+  // untouched so the public/_headers rules for them keep applying.
+  if (!isStaticAssetPath(pathname)) {
+    return '';
   }
   return 'public, max-age=3600, stale-while-revalidate=86400';
 }

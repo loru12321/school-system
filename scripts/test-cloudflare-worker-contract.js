@@ -136,6 +136,16 @@ assert.ok(!workerContractSource.includes("pathname.startsWith('/assets/audio/')"
 assert.ok(workerContractSource.includes("pathname.startsWith('/assets/js/')") && workerContractSource.includes('return getHtmlShellCacheControl();'), 'runtime JS should bypass CDN and browser storage');
 assert.ok(workerContractSource.includes("return 'public, max-age=31536000, immutable';"), 'hashed/vendor static assets should get immutable caching');
 assert.ok(workerContractSource.includes("return 'public, max-age=3600, stale-while-revalidate=86400';"), 'unversioned static assets should get short browser caching');
+// Content-hashed bundles under /assets/js/ (boot-runtime-runtime-<hash>.js etc.)
+// are immutable by URL and must win over the no-store catch-all. If the
+// versioned check ever falls below the catch-all again, every page load pays a
+// fresh origin fetch for the boot shell. The release-hardening contract keeps
+// the /assets/js/* no-store _headers rule for unversioned files, so ordering
+// here is the only thing separating the two classes.
+assert.ok(
+  workerAssetProtection.indexOf("isVersionedStaticAsset(pathname)") < workerAssetProtection.indexOf("pathname.startsWith('/assets/js/')"),
+  'versioned static asset check must run before the /assets/js/ no-store catch-all'
+);
 assert.ok(workerContractSource.includes("pathname === '/sw.js'") && workerContractSource.includes('return getHtmlShellCacheControl();'), 'service worker script should bypass CDN and browser storage');
 assert.ok(workerContractSource.includes('buildWorkerErrorHeaders()'), 'worker crash responses should use hardened headers');
 assert.ok(workerContractSource.includes("if (method === 'GET' || method === 'HEAD') return null;"), 'GET/HEAD proxy requests should not attach a body');
