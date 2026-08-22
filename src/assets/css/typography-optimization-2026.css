@@ -14,31 +14,35 @@
 .spotlight-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important; }
 .spotlight-item__title { font-size: 15px !important; font-weight: 700 !important; }
 
-/* 钻取弹窗 - 彩色横排标签 */
+/* 钻取弹窗 - 彩色横排标签（修复） */
 .drill-stu-list { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; padding: 16px !important; }
-.drill-stu-tag { display: inline-flex !important; align-items: center !important; gap: 8px !important; padding: 8px 14px !important; border-radius: 8px !important; font-size: 14px !important; font-weight: 600 !important; border: 2px solid !important; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; color: white !important; box-shadow: 0 2px 8px rgba(102,126,234,0.3) !important; }
-.drill-stu-tag:nth-child(3n+1) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important; }
-.drill-stu-tag:nth-child(3n+2) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important; }
-.drill-stu-tag:nth-child(3n+3) { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important; }
-.drill-stu-tag:hover { transform: translateY(-2px) scale(1.05) !important; }
+.drill-stu-tag { display: inline-flex !important; align-items: center !important; gap: 8px !important; padding: 8px 14px !important; border-radius: 8px !important; font-size: 14px !important; font-weight: 600 !important; cursor: pointer !important; transition: all 0.2s ease !important; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; color: white !important; border: none !important; box-shadow: 0 2px 8px rgba(102,126,234,0.3) !important; }
+.drill-stu-tag:nth-child(4n+1) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important; box-shadow: 0 2px 8px rgba(245,87,108,0.3) !important; }
+.drill-stu-tag:nth-child(4n+2) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important; box-shadow: 0 2px 8px rgba(79,172,254,0.3) !important; }
+.drill-stu-tag:nth-child(4n+3) { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important; box-shadow: 0 2px 8px rgba(67,233,123,0.3) !important; }
+.drill-stu-tag:nth-child(4n+4) { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important; box-shadow: 0 2px 8px rgba(250,112,154,0.3) !important; }
+.drill-stu-tag:hover { transform: translateY(-2px) scale(1.05) !important; box-shadow: 0 4px 16px rgba(102,126,234,0.5) !important; }
 .drill-stu-tag span { color: white !important; font-weight: 600 !important; }
 .drill-stu-score { color: white !important; font-weight: 700 !important; background: rgba(255,255,255,0.25) !important; padding: 3px 8px !important; border-radius: 4px !important; }
-.drill-class-card { background: white !important; border: 2px solid #e2e8f0 !important; border-radius: 12px !important; padding: 16px !important; }
-.drill-class-card:hover { transform: translateY(-4px) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important; }
 
-/* ============================================================================
-   表格数值波浪线装饰
-   ========================================================================== */
-
-/* 为所有包含数值的表格单元格添加波浪线 */
-table td[data-label*="得分"]::before,
-table td[data-label*="总分"]::before,
-table td[data-label*="均分"]::before,
-table td[data-label*="赋分"]::before,
-table td[data-label*="率"]::before {
-    content: "〰️ " !important;
+/* 可点击数字的波浪线下划线（只在下方） */
+button.summary-drill-link,
+button.clickable-num,
+.clickable-num {
+    position: relative !important;
+    text-decoration: none !important;
+    border-bottom: 2px solid transparent !important;
 }
 
-table button.summary-drill-link::before {
-    content: "〰️ " !important;
+button.summary-drill-link::after,
+button.clickable-num::after,
+.clickable-num::after {
+    content: "〰️〰️〰️" !important;
+    position: absolute !important;
+    bottom: -8px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 10px !important;
+    opacity: 0.6 !important;
+    white-space: nowrap !important;
 }
