@@ -1,61 +1,98 @@
 # SmartEdu Analytics
 
-SmartEdu Analytics 是运行在生产环境的学校教务与质量分析工作台。当前唯一正式发布面是 Web 系统：
+> 面向学校教务团队的成绩管理、横向评价与教学决策工作台。
 
-- 正式站点：[https://schoolsystem.com.cn/](https://schoolsystem.com.cn/)
+<p align="center">
+  <a href="https://schoolsystem.com.cn/"><strong>打开生产站点 →</strong></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/production-Cloudflare%20Worker-f38020?style=flat-square" alt="Production: Cloudflare Worker">
+  <img src="https://img.shields.io/badge/data-Supabase%20%2B%20D1-3ecf8e?style=flat-square" alt="Data: Supabase and D1">
+  <img src="https://img.shields.io/badge/status-web%20only-2563eb?style=flat-square" alt="Web only">
+</p>
+
+SmartEdu Analytics 是一个面向真实学校场景的 Web 工作台，覆盖登录、学段与考试管理、成绩分析、教师与班级对比、报告生成和教学支持。系统当前唯一正式发布面为 Web：
+
+- 正式站点：[schoolsystem.com.cn](https://schoolsystem.com.cn/)
 - 生产分支：`main`
-- 部署平台：Cloudflare Worker + Assets
-- 数据与网关：Supabase / Cloudflare D1 / `/api/edu-gateway`
+- 运行平台：Cloudflare Worker + Assets
+- 数据与网关：Supabase、Cloudflare D1、`/api/edu-gateway`
 
 Windows、Android 与 iOS 安装包链路均已移除。仓库不再维护本地安装包、下载清单、分片文件、安装器源码、桌面客户端壳或 native app 发布 workflow。
 
-## 本地运行
+## 产品工作区
+
+| 工作区 | 解决的问题 | 典型输出 |
+| --- | --- | --- |
+| 数据中心 | 统一维护学校、教师、学生与考试数据 | 可追溯的基础数据 |
+| 成绩分析 | 识别学科、班级和学生层面的变化 | 分布、排名、趋势与差异 |
+| 横向评价 | 支持学校、年级、班级和教师多维比较 | 对比结论与教学线索 |
+| 教学决策 | 把结果转化为可执行的跟进任务 | 报告、重点学生与行动建议 |
+
+## 技术架构
+
+```mermaid
+flowchart LR
+    U[浏览器工作台] --> W[Cloudflare Worker]
+    W --> A[静态 Assets]
+    W --> G[edu-gateway API]
+    G --> S[(Supabase)]
+    G --> D[(Cloudflare D1)]
+```
+
+## 快速开始
+
+环境要求：Node.js 18+、npm 9+。
 
 ```bash
 npm install
 npm run dev
 ```
 
-生产构建：
+本地开发服务器启动后，按终端提示打开地址即可。生产构建：
 
 ```bash
 npm run build
 ```
 
-常用验证：
+## 验证与发布
+
+提交前建议至少执行快速发布闸门：
 
 ```bash
 npm run check:release-fast
-npm run smoke:modules:local
-npm run smoke:modules:prod
 ```
 
-完整回归：
+常用本地与生产验证：
+
+```bash
+npm run smoke:modules:local
+npm run verify:prod-minimal
+npm run smoke:prod-minimal
+```
+
+完整基线验证：
 
 ```bash
 npm run validate
 ```
 
-## 发布链路
+### 发布流程
 
 ```mermaid
 flowchart TD
-    A["修改代码"] --> B["npm run build"]
-    B --> C["npm run check:release-fast"]
-    C --> D["git commit + push main"]
-    D --> E["Cloudflare Deploy workflow 或 npx wrangler deploy"]
-    E --> F["npm run smoke:prod-minimal"]
-    F --> G["生产站点验证完成"]
+    A[修改代码] --> B[npm run build]
+    B --> C[npm run check:release-fast]
+    C --> D[提交并推送 main]
+    D --> E{选择发布方式}
+    E -->|GitHub Actions| F[deploy-cloudflare.yml]
+    E -->|手动| G[npx wrangler deploy]
+    F --> H[npm run verify:prod-minimal]
+    G --> H
 ```
 
-手动部署：
-
-```powershell
-$env:npm_config_cache = "$PWD\.npm-cache"
-npx wrangler deploy
-```
-
-推荐发布命令：
+手动发布命令：
 
 ```bash
 npm run build
@@ -64,54 +101,47 @@ npx wrangler deploy
 npm run verify:prod-minimal
 ```
 
+## 自动化工作流
+
+- `.github/workflows/deploy-cloudflare.yml`：`main` 推送或手动触发后构建、执行快速守卫、部署 Cloudflare，并运行生产 smoke。
+- `.github/workflows/performance-trend.yml`：记录性能趋势，输出到 `docs/performance/`，并通过阈值检查阻止明显回归。
+- `.github/workflows/ci.yml`：执行 P0 快速通道、release guards、浏览器 smoke 和完整验证。
+
 Legacy OSS、DNS、证书和 direct-deploy 辅助脚本已归档在 `scripts/legacy/`。除非恢复说明明确要求，否则新发布保持在 Wrangler 路径。
 
-## 自动化
+## 目录导航
 
-- `.github/workflows/deploy-cloudflare.yml`：`main` 推送或手动触发后构建、运行快速守卫、部署 Cloudflare，并执行生产 smoke。
-- `.github/workflows/performance-trend.yml`：记录性能趋势，输出到 `docs/performance/`，并通过阈值检查阻止明显回归。
-- `.github/workflows/ci.yml`：保留 P0 快速通道、release guards、浏览器 smoke 和完整验证。
+```text
+src/                       页面入口与模板
+public/assets/js/          前端运行时模块
+public/assets/css/         样式资源
+scripts/                   构建、验证、烟测与部署脚本
+supabase/                  Edge Functions、SQL 与迁移脚本
+cloudflare/                D1 SQL 与 Worker 资源
+dist/                      Vite 构建产物
+lt.html                    构建生成的单文件版本
+wrangler.jsonc             Cloudflare Worker 配置
+docs/performance/          性能趋势输出
+scripts/legacy/            已归档的历史发布脚本
+```
 
-已删除的 native 发布面：
+## 质量与维护
 
-- `.github/workflows/build-apps-beta.yml`
-- `.github/workflows/release-apps.yml`
-- 公开下载目录、安装包清单、分片文件和 Worker 下载代理
-- Windows 桌面壳、安装器源码、本地共享盘客户端更新脚本和相关校验脚本
+系统优先保护登录、关键数据、报告、教学管理和生产部署链路：
 
-## 质量保护
-
-这个仓库优先保护真实可用性：登录、数据、报告、教学管理、生产部署和 smoke 验证。
-
-- `npm run check:p0`：生产正确性和数据安全。
-- `npm run check:p1`：发布质量、HTML/service worker/runtime/CSS 体验。
-- `npm run check:p2`：文档、自动化、性能趋势和维护守卫。
+- `npm run check:p0`：生产正确性与数据安全。
+- `npm run check:p1`：发布质量、运行时、HTML、Service Worker 与 CSS 体验。
+- `npm run check:p2`：文档、自动化、性能趋势与维护守卫。
 - `npm run check:release-fast`：部署前共享快速闸门。
-- `npm run verify:prod-minimal`：最小生产验证。
-- `npm run smoke:prod-minimal`：生产 smoke 别名。
 
 维护分级见 [`docs/maintenance-runbook.md`](docs/maintenance-runbook.md)，持续优化清单见 [`docs/optimization-backlog.md`](docs/optimization-backlog.md)。
 
-## 项目结构
+每次发布前确认：
 
-```text
-src/                       页面入口和模板
-public/assets/js/          前端运行时模块
-public/assets/css/         样式资源
-scripts/                   构建、验证、烟测、部署辅助脚本
-supabase/                  Edge Functions、SQL、迁移脚本
-cloudflare/                D1 SQL 和 Worker 相关资源
-dist/                      Vite 构建产物
-lt.html                    构建时生成的单文件离线版本，不提交 Git
-wrangler.jsonc             Cloudflare Worker 部署配置
-docs/performance/          性能趋势输出
-scripts/legacy/            已归档的历史 OSS/DNS/证书/direct deploy 脚本
-```
+1. 登录、数据、报告和教学管理主路径可正常完成。
+2. 计算口径与关键数据未被意外改变。
+3. 线上站点已通过真实浏览器或生产 smoke 验证。
 
-## 维护提醒
+## 贡献与问题反馈
 
-修改系统时，把它当作真实学校正在使用的生产工作台：先保证登录、关键数据、报告和教学管理可用，再做重构和美化。每次发布都应回答三件事：
-
-1. 用户最常用路径还能不能走通？
-2. 关键数据有没有被错误覆盖或错口径展示？
-3. 线上站点是否已经用真实浏览器验证过？
+请在提交 Issue 或 Pull Request 时说明复现路径、预期行为、实际行为及验证命令。涉及数据口径或权限变更时，同时补充影响范围和回滚方案。
