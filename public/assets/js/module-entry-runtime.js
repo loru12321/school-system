@@ -1404,10 +1404,34 @@
         if (id === 'potential-analysis') updatePotentialSchoolSelect();
         if (id === 'correlation-analysis') return initCorrelationAnalysisEntry();
         if (id === 'cohort-growth') return initCohortGrowthEntry();
-        if (id === 'seat-adjustment') updateSeatAdjSelects();
+        if (id === 'seat-adjustment') {
+            if (typeof updateSeatAdjSelects === 'function') {
+                updateSeatAdjSelects();
+                return Promise.resolve(true);
+            }
+            if (typeof window.loadDeferredAppModules === 'function') {
+                return Promise.resolve(window.loadDeferredAppModules()).then(() => {
+                    if (typeof updateSeatAdjSelects === 'function') updateSeatAdjSelects();
+                    return typeof updateSeatAdjSelects === 'function';
+                });
+            }
+            return Promise.resolve(false);
+        }
         if (id === 'subject-balance') updateSubjectBalanceSelects();
         if (id === 'progress-analysis') return initProgressAnalysisEntry();
-        if (id === 'mutual-aid') updateMutualAidSelects();
+        if (id === 'mutual-aid') {
+            if (typeof updateMutualAidSelects === 'function') {
+                updateMutualAidSelects();
+                return Promise.resolve(true);
+            }
+            if (typeof window.loadDeferredAppModules === 'function') {
+                return Promise.resolve(window.loadDeferredAppModules()).then(() => {
+                    if (typeof updateMutualAidSelects === 'function') updateMutualAidSelects();
+                    return typeof updateMutualAidSelects === 'function';
+                });
+            }
+            return Promise.resolve(false);
+        }
         if (id === 'marginal-push') {
             if (typeof updateMpSchoolSelect === 'function') {
                 updateMpSchoolSelect();
