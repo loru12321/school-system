@@ -389,13 +389,13 @@
                         <td data-label="类型"><span class="${badgeClass}">${typeText}</span></td>
                         <td data-label="平均分">${formatRankDisplayFn(item.avg, item.rankAvg, 'teacher')}</td>
                         <td data-label="与镇均比" class="${comparisonClassName(avgComparison)}">${teacherEscapeHtml(avgComparison.text)}</td>
-                        <td data-label="镇排">${teacherEscapeHtml(item.rankAvg)}</td>
+                        <td data-label="镇排"><span class="teacher-rank-badge" aria-label="均分镇排 ${teacherEscapeHtml(item.rankAvg)}">${teacherEscapeHtml(item.rankAvg)}</span></td>
                         <td data-label="优秀率">${formatRankDisplayFn(item.excellentRate, item.rankExc, 'teacher', true)}</td>
                         <td data-label="与镇均比" class="${comparisonClassName(excComparison)}">${teacherEscapeHtml(excComparison.text)}</td>
-                        <td data-label="镇排">${teacherEscapeHtml(item.rankExc)}</td>
+                        <td data-label="镇排"><span class="teacher-rank-badge" aria-label="优秀率镇排 ${teacherEscapeHtml(item.rankExc)}">${teacherEscapeHtml(item.rankExc)}</span></td>
                         <td data-label="及格率">${formatRankDisplayFn(item.passRate, item.rankPass, 'teacher', true)}</td>
                         <td data-label="与镇均比" class="${comparisonClassName(passComparison)}">${teacherEscapeHtml(passComparison.text)}</td>
-                        <td data-label="镇排">${teacherEscapeHtml(item.rankPass)}</td>
+                        <td data-label="镇排"><span class="teacher-rank-badge" aria-label="及格率镇排 ${teacherEscapeHtml(item.rankPass)}">${teacherEscapeHtml(item.rankPass)}</span></td>
                     </tr>
                 `;
             });

@@ -89,6 +89,44 @@
     font-size: 12px;
 }
 
+/* Ranking values must live inside their badge. The legacy empty pseudo-element
+ * created a circle beside the number, which made the rank look detached. */
+.comparison-table td.teacher-rank-cell::before,
+.comparison-table td.teacher-rank-cell::after,
+.comparison-table td:has(> .teacher-rank-badge)::before,
+.comparison-table td:has(> .teacher-rank-badge)::after,
+.summary-table td:has(> .teacher-rank-badge)::before,
+.summary-table td:has(> .teacher-rank-badge)::after {
+    content: none !important;
+    display: none !important;
+}
+
+.comparison-table td:has(> .teacher-rank-badge),
+.summary-table td:has(> .teacher-rank-badge) {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+.teacher-rank-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    border-radius: 50% !important;
+    background: #e2e8f0 !important;
+    color: #475569 !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.teacher-rank-badge:is(:first-child) {
+    box-shadow: 0 0 0 1px rgba(148, 163, 184, .28), 0 2px 5px rgba(15, 23, 42, .08) !important;
+}
+
 /* 侧边导航优化 - 移除红框，增加卡片感 */
 .nav-category-item,
 .category-nav-item {
