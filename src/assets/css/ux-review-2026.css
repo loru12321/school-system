@@ -552,6 +552,19 @@ html body:not(.dark-mode) #app.app-layout #app-sidebar .sidebar-nav-container > 
     border-left-color: var(--nav-accent, #64748b) !important;
 }
 
+html body:not(.dark-mode).shell-sidebar-collapsed #app.app-layout #app-sidebar .sidebar-nav-container > .sidebar-menu-item {
+    min-height: 52px !important;
+    border: 1px solid color-mix(in srgb, var(--nav-accent, #64748b) 28%, #e5e7eb) !important;
+    border-left: 5px solid var(--nav-accent, #64748b) !important;
+    border-radius: 12px !important;
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 9%, #ffffff) !important;
+}
+
+html body:not(.dark-mode).shell-sidebar-collapsed #app.app-layout #app-sidebar .sidebar-nav-container > .sidebar-menu-item .sidebar-menu-item__icon {
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 16%, #ffffff) !important;
+    color: var(--nav-accent, #64748b) !important;
+}
+
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__icon {
     background: color-mix(in srgb, var(--nav-accent, #64748b) 16%, #ffffff) !important;
     color: var(--nav-accent, #64748b) !important;
