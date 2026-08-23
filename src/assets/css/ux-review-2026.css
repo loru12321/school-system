@@ -1,0 +1,387 @@
+/* UX review pass for the teacher-facing workbench.
+ * Visual-only: no data, calculation, or navigation behavior is changed here.
+ */
+
+:root {
+    --ux-ink: #243044;
+    --ux-muted: #68758a;
+    --ux-line: #e6eaf0;
+    --ux-surface: #ffffff;
+    --ux-cyan: #0891b2;
+    --ux-violet: #7c3aed;
+}
+
+/* ① The context sentence repeats the page title and pushes the useful work
+ * below the fold. Keep it in the DOM for assistive/runtime consumers, but do
+ * not render the redundant strip. */
+#app #workspace-context-bar {
+    display: none !important;
+}
+
+/* ② Fill the navigation column with the parent workspaces. Each category gets
+ * its own accent, a quieter tint, and a consistent hit area instead of a long
+ * empty rail with unrelated pills. */
+#app-sidebar .sidebar-nav-container {
+    flex: 1 1 auto !important;
+    max-height: none !important;
+    display: grid !important;
+    grid-template-rows: repeat(auto-fit, minmax(72px, 1fr)) !important;
+    align-content: stretch !important;
+    gap: 10px !important;
+    padding: 16px 12px 18px !important;
+}
+
+#app-sidebar .sidebar-menu-item {
+    min-height: 72px !important;
+    margin: 0 !important;
+    padding: 12px 14px !important;
+    align-items: center !important;
+    border: 1px solid color-mix(in srgb, var(--nav-accent, #64748b) 15%, #e5e7eb) !important;
+    border-left: 4px solid var(--nav-accent, #64748b) !important;
+    border-radius: 16px !important;
+    background: linear-gradient(110deg,
+        color-mix(in srgb, var(--nav-accent, #64748b) 10%, #ffffff),
+        #ffffff 72%) !important;
+    box-shadow: 0 5px 14px rgba(31, 41, 55, 0.045) !important;
+    transform: none !important;
+}
+
+#app-sidebar .sidebar-menu-item:hover,
+#app-sidebar .sidebar-menu-item.active {
+    border-color: color-mix(in srgb, var(--nav-accent, #64748b) 36%, #dbe2ea) !important;
+    border-left-color: var(--nav-accent, #64748b) !important;
+    background: linear-gradient(110deg,
+        color-mix(in srgb, var(--nav-accent, #64748b) 18%, #ffffff),
+        color-mix(in srgb, var(--nav-accent, #64748b) 5%, #ffffff) 72%) !important;
+    box-shadow: 0 10px 22px color-mix(in srgb, var(--nav-accent, #64748b) 13%, transparent) !important;
+}
+
+#app-sidebar .sidebar-menu-item__icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 12px !important;
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 13%, #ffffff) !important;
+    color: var(--nav-accent, #64748b) !important;
+}
+
+#app-sidebar .sidebar-menu-item__title {
+    color: var(--ux-ink) !important;
+    font-size: 14px !important;
+    letter-spacing: 0.01em !important;
+}
+
+#app-sidebar .sidebar-menu-item__meta {
+    color: var(--ux-muted) !important;
+    font-size: 11px !important;
+}
+
+#app-sidebar .sidebar-menu-item__count {
+    color: var(--nav-accent, #64748b) !important;
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 10%, #ffffff) !important;
+    border-color: color-mix(in srgb, var(--nav-accent, #64748b) 24%, #e5e7eb) !important;
+}
+
+/* ③ Values are readable as values, not as little input controls. Preserve
+ * the click target while replacing boxes with a colored wavy underline. */
+#app table.analysis-table-dense tbody td {
+    background-image: none !important;
+    border-radius: 0 !important;
+}
+
+#app table.analysis-table-dense tbody td:nth-child(n+3):not(.no-wave) {
+    text-decoration-line: underline !important;
+    text-decoration-style: wavy !important;
+    text-decoration-thickness: 1.5px !important;
+    text-decoration-color: color-mix(in srgb, var(--ux-cyan) 72%, transparent) !important;
+    text-underline-offset: 6px !important;
+}
+
+#app table.analysis-table-dense tbody td:nth-child(4n+3):not(.no-wave) {
+    text-decoration-color: color-mix(in srgb, #7c3aed 72%, transparent) !important;
+}
+
+#app table.analysis-table-dense tbody td:nth-child(4n+4):not(.no-wave) {
+    text-decoration-color: color-mix(in srgb, #f59e0b 76%, transparent) !important;
+}
+
+#app table.analysis-table-dense tbody td:nth-child(4n+5):not(.no-wave) {
+    text-decoration-color: color-mix(in srgb, #10b981 76%, transparent) !important;
+}
+
+#app table.analysis-table-dense tbody td > button,
+#app table.analysis-table-dense tbody td > .summary-drill-link,
+#app table.analysis-table-dense tbody td > [role="button"] {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 2px 4px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    font: inherit !important;
+    text-decoration: inherit !important;
+    text-underline-offset: inherit !important;
+}
+
+#app table.analysis-table-dense tbody td > button::after,
+#app table.analysis-table-dense tbody td > .summary-drill-link::after {
+    content: none !important;
+}
+
+#app table.analysis-table-dense tbody tr:nth-child(-n+3) td:not(:first-child) {
+    color: var(--ux-ink) !important;
+}
+
+/* ④ The search panel is a command launcher, not a second navigation page:
+ * one compact row per result and no repeated explanatory paragraphs. */
+#app .spotlight-box {
+    max-width: 680px !important;
+    padding: 0 !important;
+    border: 1px solid #dce3ec !important;
+    border-radius: 20px !important;
+    background: var(--ux-surface) !important;
+}
+
+#app .spotlight-input-wrap {
+    padding: 16px 20px !important;
+    border-bottom: 1px solid var(--ux-line) !important;
+}
+
+#app .spotlight-input {
+    font-size: 16px !important;
+}
+
+#app .spotlight-group-label,
+#app .spotlight-hint,
+#app .spotlight-box::after {
+    display: none !important;
+}
+
+#app .spotlight-results {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    max-height: min(58vh, 440px) !important;
+}
+
+#app .spotlight-item {
+    min-width: 0 !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+    border: 1px solid var(--ux-line) !important;
+    border-radius: 12px !important;
+    background: #fbfcfe !important;
+}
+
+#app .spotlight-item:hover,
+#app .spotlight-item.active {
+    border-color: #a5b4fc !important;
+    background: #f5f3ff !important;
+    color: #4f46e5 !important;
+}
+
+#app .spotlight-item__copy {
+    min-width: 0 !important;
+}
+
+#app .spotlight-item__title {
+    gap: 8px !important;
+    min-width: 0 !important;
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+#app .spotlight-item__meta {
+    display: none !important;
+}
+
+#app .spotlight-item__action {
+    flex: 0 0 auto !important;
+    color: #94a3b8 !important;
+    font-size: 11px !important;
+}
+
+/* ⑤ A 12-module workbench needs a repeatable grid, not a long row of tiny
+ * tabs. The same component also powers the 5/6-module workspaces. */
+#app #sub-nav-container {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    gap: 10px !important;
+    overflow: visible !important;
+    padding: 10px 0 14px !important;
+}
+
+#app #sub-nav-container .shell-story-card {
+    min-height: 82px !important;
+    display: grid !important;
+    grid-template-columns: auto 34px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 9px !important;
+    padding: 12px 13px !important;
+    border: 1px solid color-mix(in srgb, var(--nav-accent, #64748b) 18%, #e4e8ef) !important;
+    border-left: 3px solid var(--nav-accent, #64748b) !important;
+    border-radius: 14px !important;
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--nav-accent, #64748b) 8%, #ffffff),
+        #ffffff 72%) !important;
+    box-shadow: 0 5px 14px rgba(31, 41, 55, 0.045) !important;
+}
+
+#app #sub-nav-container .shell-story-card:hover,
+#app #sub-nav-container .shell-story-card.active {
+    border-color: color-mix(in srgb, var(--nav-accent, #64748b) 42%, #d8dee8) !important;
+    border-left-color: var(--nav-accent, #64748b) !important;
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 12%, #ffffff) !important;
+    box-shadow: 0 10px 20px color-mix(in srgb, var(--nav-accent, #64748b) 13%, transparent) !important;
+    transform: translateY(-1px) !important;
+}
+
+#app #sub-nav-container .shell-story-card__step {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 8px !important;
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 12%, #ffffff) !important;
+    color: var(--nav-accent, #64748b) !important;
+    font-size: 11px !important;
+}
+
+#app #sub-nav-container .shell-story-card__icon {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 10px !important;
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 13%, #ffffff) !important;
+    color: var(--nav-accent, #64748b) !important;
+}
+
+#app #sub-nav-container .shell-story-card__body {
+    min-width: 0 !important;
+    gap: 3px !important;
+}
+
+#app #sub-nav-container .shell-story-card__title {
+    color: var(--ux-ink) !important;
+    font-size: 13px !important;
+    font-weight: 780 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+#app #sub-nav-container .shell-story-card__desc {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    overflow: hidden !important;
+    color: var(--ux-muted) !important;
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+}
+
+#app #sub-nav-container .shell-story-card__chevron {
+    color: #a3adbd !important;
+    font-size: 14px !important;
+}
+
+#app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    gap: 10px !important;
+    overflow: visible !important;
+    padding: 10px 0 14px !important;
+}
+
+#app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail-chip {
+    min-width: 0 !important;
+    min-height: 82px !important;
+    display: grid !important;
+    grid-template-columns: 28px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 9px !important;
+    padding: 12px 13px !important;
+    border: 1px solid color-mix(in srgb, var(--rail-accent, #64748b) 18%, #e4e8ef) !important;
+    border-left: 3px solid var(--rail-accent, #64748b) !important;
+    border-radius: 14px !important;
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--rail-accent, #64748b) 8%, #ffffff),
+        #ffffff 72%) !important;
+    box-shadow: 0 5px 14px rgba(31, 41, 55, 0.045) !important;
+}
+
+#app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail-chip:hover,
+#app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail-chip.is-active {
+    border-color: color-mix(in srgb, var(--rail-accent, #64748b) 42%, #d8dee8) !important;
+    border-left-color: var(--rail-accent, #64748b) !important;
+    background: color-mix(in srgb, var(--rail-accent, #64748b) 12%, #ffffff) !important;
+    box-shadow: 0 10px 20px color-mix(in srgb, var(--rail-accent, #64748b) 13%, transparent) !important;
+    transform: translateY(-1px) !important;
+}
+
+#app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail-chip-index {
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 8px !important;
+    background: color-mix(in srgb, var(--rail-accent, #64748b) 12%, #ffffff) !important;
+    color: var(--rail-accent, #64748b) !important;
+}
+
+#app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail-chip-copy {
+    min-width: 0 !important;
+    display: grid !important;
+    gap: 3px !important;
+}
+
+#app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail-chip-title {
+    min-width: 0 !important;
+    color: var(--ux-ink) !important;
+    font-size: 13px !important;
+    font-weight: 780 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+#app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail-chip-hint {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    overflow: hidden !important;
+    color: var(--ux-muted) !important;
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+}
+
+@media (max-width: 900px) {
+    #app .spotlight-results {
+        grid-template-columns: 1fr !important;
+    }
+
+    #app #sub-nav-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    #app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 620px) {
+    #app-sidebar .sidebar-nav-container {
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-y: auto !important;
+    }
+
+    #app #sub-nav-container {
+        grid-template-columns: 1fr !important;
+    }
+
+    #app #shell-module-rail-shell:not(.shell-module-rail-shell--floating) .shell-module-rail {
+        grid-template-columns: 1fr !important;
+    }
+}
