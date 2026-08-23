@@ -51,7 +51,9 @@ const safelist = {
     /^report-/,       // Report module classes
     /^tm-/,           // Teaching management classes
     /^pairing-/,      // Pairing classes
-    /^loader-/        // Loader classes
+    /^loader-/,       // Loader classes
+    /^drill-/,        // Dynamic drill modal and class-card surfaces
+    /^clickable-num$/ // Dynamic number drill controls
   ]
 };
 
