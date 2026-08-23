@@ -3210,6 +3210,30 @@ function getModuleSectionById(id) {
     return ModuleSwitchPerfCache.sectionById.get(key) || document.getElementById(key);
 }
 
+// The seating/subject-aid markup is kept near the lazy templates in index.html,
+// which places it after the closing app-main tag in some production builds.  If
+// left there, the rail highlights correctly but the app-main viewport remains
+// blank because the active section is rendered below the application shell.
+// Normalize the two execution modules back into the scrollable main region
+// before any module lookup or visibility isolation occurs.
+function ensureExecutionModulesInMain() {
+    const appMain = document.querySelector('.app-main');
+    if (!appMain) return false;
+    let moved = false;
+    ['seat-adjustment', 'mutual-aid'].forEach((id) => {
+        const section = document.getElementById(id);
+        if (section && section.parentElement !== appMain) {
+            appMain.appendChild(section);
+            moved = true;
+        }
+    });
+    if (moved) {
+        ModuleSwitchPerfCache.sections = null;
+        ModuleSwitchPerfCache.sectionById = new Map();
+    }
+    return moved;
+}
+
 function getModuleCategoryKeyCached(id) {
     const navSignature = Object.keys(NAV_STRUCTURE).map(catKey => {
         const items = Array.isArray(NAV_STRUCTURE[catKey]?.items) ? NAV_STRUCTURE[catKey].items : [];
@@ -3965,6 +3989,7 @@ function closeBlockingModalsBeforeModuleSwitch() {
 }
 
 function switchTab(id) {
+    ensureExecutionModulesInMain();
     const previousModuleId = ModuleSwitchPerfCache.activeId;
     if (id === 'school-internal-grades') {
         console.warn('school-internal-grades has been removed; redirecting to exam-arranger');
