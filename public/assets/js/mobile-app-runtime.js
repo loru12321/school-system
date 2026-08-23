@@ -1847,6 +1847,25 @@
     window.addEventListener('resize', scheduleRefresh);
     window.addEventListener('orientationchange', scheduleRefresh);
     window.addEventListener('load', scheduleRefresh);
+
+    // Remove mobile skeleton screen after app loads
+    function removeMobileSkeleton() {
+        const skeleton = document.getElementById('mobile-skeleton');
+        if (skeleton) {
+            skeleton.classList.add('hidden');
+            setTimeout(() => {
+                skeleton.remove();
+            }, 300);
+        }
+    }
+
+    if (document.readyState === 'complete') {
+        setTimeout(removeMobileSkeleton, 150);
+    } else {
+        window.addEventListener('load', () => {
+            setTimeout(removeMobileSkeleton, 150);
+        });
+    }
     window.addEventListener('pageshow', scheduleRefresh);
     window.addEventListener('focus', scheduleRefresh);
     document.addEventListener('touchstart', handleShellTouchStart, { passive: true });

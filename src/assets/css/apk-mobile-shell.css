@@ -176,8 +176,8 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
     }
 
     #apk-mobile-shell .apk-shell-icon.is-compact {
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
         border-radius: 12px;
     }
 
@@ -246,8 +246,8 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
     }
 
     #apk-mobile-shell .apk-rail-chip {
-        min-height: 38px;
-        padding: 0 14px;
+        min-height: 44px;
+        padding: 0 16px;
         border: 1px solid var(--apk-shell-border);
         border-radius: 999px;
         background: var(--apk-shell-card);
@@ -749,6 +749,74 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
     #apk-mobile-shell .apk-shell-tab.is-active {
         color: var(--apk-accent, #2563eb);
         background: var(--apk-shell-card-strong);
+    }
+
+    /* Table horizontal scroll indicators */
+    body[data-mobile-architecture="apk-v2"] .table-wrap {
+        position: relative;
+    }
+
+    body[data-mobile-architecture="apk-v2"] .table-wrap::before,
+    body[data-mobile-architecture="apk-v2"] .table-wrap::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 24px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 2;
+    }
+
+    body[data-mobile-architecture="apk-v2"] .table-wrap::before {
+        left: 0;
+        background: linear-gradient(to right, var(--apk-shell-card), transparent);
+    }
+
+    body[data-mobile-architecture="apk-v2"] .table-wrap::after {
+        right: 0;
+        background: linear-gradient(to left, var(--apk-shell-card), transparent);
+    }
+
+    body[data-mobile-architecture="apk-v2"] .table-wrap[data-scroll-left="true"]::before {
+        opacity: 1;
+    }
+
+    body[data-mobile-architecture="apk-v2"] .table-wrap[data-scroll-right="true"]::after {
+        opacity: 1;
+    }
+
+    /* Scroll hint badge */
+    body[data-mobile-architecture="apk-v2"] .table-wrap[data-scroll-hint="true"]::after {
+        content: '← 滑动查看更多';
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        padding: 6px 12px;
+        background: rgba(37, 99, 235, 0.9);
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 999px;
+        pointer-events: none;
+        z-index: 3;
+        animation: scroll-hint-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes scroll-hint-pulse {
+        0%, 100% {
+            opacity: 0.9;
+            transform: translateX(0);
+        }
+        50% {
+            opacity: 1;
+            transform: translateX(-4px);
+        }
+    }
+
+    body[data-mobile-architecture="apk-v2"] .table-wrap[data-scroll-hint="false"]::after {
+        display: none;
     }
 }
 

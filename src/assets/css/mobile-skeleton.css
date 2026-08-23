@@ -1,0 +1,232 @@
+/**
+ * Mobile Skeleton Screens
+ * Improves perceived performance on first paint
+ */
+
+/* Skeleton animation */
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton-loader {
+    background: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.08) 0%,
+        rgba(148, 163, 184, 0.18) 50%,
+        rgba(148, 163, 184, 0.08) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 8px;
+}
+
+body.dark-mode .skeleton-loader {
+    background: linear-gradient(
+        90deg,
+        rgba(71, 85, 105, 0.08) 0%,
+        rgba(71, 85, 105, 0.18) 50%,
+        rgba(71, 85, 105, 0.08) 100%
+    );
+}
+
+/* Mobile shell skeleton */
+#mobile-skeleton {
+    position: fixed;
+    inset: 0;
+    z-index: 16000;
+    background: var(--apk-shell-bg, #eef3f8);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
+}
+
+#mobile-skeleton.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.skeleton-topbar {
+    position: absolute;
+    top: calc(var(--app-safe-top, 0px) + 10px);
+    left: 12px;
+    right: 12px;
+    height: 66px;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 22px;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    gap: 10px;
+    align-items: center;
+}
+
+body.dark-mode .skeleton-topbar {
+    background: rgba(11, 21, 35, 0.98);
+}
+
+.skeleton-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+}
+
+.skeleton-text {
+    display: grid;
+    gap: 8px;
+}
+
+.skeleton-text-line {
+    height: 14px;
+    border-radius: 7px;
+}
+
+.skeleton-text-line.short {
+    width: 60%;
+}
+
+.skeleton-rail {
+    position: absolute;
+    top: calc(var(--app-safe-top, 0px) + 86px);
+    left: 12px;
+    right: 12px;
+    height: 48px;
+    display: flex;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.skeleton-chip {
+    min-width: 100px;
+    height: 44px;
+    border-radius: 999px;
+}
+
+.skeleton-content {
+    position: absolute;
+    top: calc(var(--app-safe-top, 0px) + 150px);
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--app-safe-bottom, 0px) + 94px);
+    padding: 16px;
+    overflow: hidden;
+}
+
+.skeleton-card {
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+body.dark-mode .skeleton-card {
+    background: rgba(11, 21, 35, 0.98);
+}
+
+.skeleton-card-header {
+    height: 24px;
+    width: 50%;
+    margin-bottom: 16px;
+    border-radius: 12px;
+}
+
+.skeleton-card-body {
+    display: grid;
+    gap: 12px;
+}
+
+.skeleton-card-row {
+    height: 16px;
+    border-radius: 8px;
+}
+
+.skeleton-card-row:last-child {
+    width: 75%;
+}
+
+.skeleton-tabs {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--app-safe-bottom, 0px) + 10px);
+    height: 76px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+body.dark-mode .skeleton-tabs {
+    background: rgba(11, 21, 35, 0.98);
+}
+
+.skeleton-tab {
+    border-radius: 18px;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 8px;
+}
+
+.skeleton-tab-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+}
+
+.skeleton-tab-label {
+    width: 40px;
+    height: 10px;
+    border-radius: 5px;
+}
+
+/* Table skeleton */
+.skeleton-table {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+}
+
+.skeleton-table-row {
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 16px;
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+}
+
+body.dark-mode .skeleton-table-row {
+    background: rgba(11, 21, 35, 0.98);
+}
+
+.skeleton-table-cell {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 10px;
+    align-items: center;
+}
+
+.skeleton-table-label {
+    height: 12px;
+    border-radius: 6px;
+}
+
+.skeleton-table-value {
+    height: 14px;
+    border-radius: 7px;
+}
+
+/* Hide skeleton on desktop */
+@media screen and (min-width: 961px) {
+    #mobile-skeleton {
+        display: none !important;
+    }
+}
