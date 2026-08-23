@@ -584,7 +584,11 @@
                     scroll-padding-bottom: calc(var(--app-safe-bottom, 0px) + 120px);
                 }
                 body[data-mobile-architecture="apk-v2"] .section.active {
+                    width: 100% !important;
                     max-width: 100%;
+                    min-width: 0 !important;
+                    align-self: stretch !important;
+                    box-sizing: border-box !important;
                     overflow: visible;
                 }
                 body[data-mobile-architecture="apk-v2"] .module-desc-bar,
