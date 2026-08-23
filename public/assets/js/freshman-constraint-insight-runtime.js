@@ -28,12 +28,23 @@
         const classCount = Math.max(0, Number(read('fb_cls_num')?.value) || 0);
         const requestedExamCount = Math.max(1, Number(read('fb_exam_count')?.value) || 2);
         const status = getRuntimeStatus();
+        const fixedAssignments = window.FreshmanExamRuntime?.getFixedAssignments?.() || {};
         const errors = [];
         const warnings = [];
 
         if (!classCount) errors.push('请填写拟分班级数。');
         if (classCount > 30) errors.push('拟分班级数不能超过 30 个。');
         if (classCount === 1) warnings.push('当前仅设置 1 个班级，不会形成“均衡分班”的比较结果。');
+        if (Object.keys(fixedAssignments).length) {
+            const capacity = status.studentCount && classCount ? Math.ceil(status.studentCount / classCount) : 0;
+            const counts = Object.values(fixedAssignments).reduce((map, classIdx) => {
+                map[classIdx] = (map[classIdx] || 0) + 1;
+                return map;
+            }, {});
+            const overloaded = Object.entries(counts).filter(([classIdx, count]) => Number(classIdx) >= classCount || (capacity && count > capacity));
+            if (overloaded.length) errors.push('指定班级中的锁定学生超过当前班额上限，请先调整指定项。');
+            else warnings.push(`已锁定 ${Object.keys(fixedAssignments).length} 名学生；生成方案时会优先满足这些指定班级。`);
+        }
 
         if (source === 'manual') {
             if (!status.studentCount) errors.push('手动数据源尚未导入学生名单。');
@@ -57,6 +68,7 @@
             ['名次', optionText('fb_rule_rank')],
             ['算法', optionText('fb_algorithm')]
         ];
+        if (Object.keys(fixedAssignments).length) rules.push(['指定', `${Object.keys(fixedAssignments).length} 人锁定`]);
         return {
             ok: errors.length === 0,
             errors,

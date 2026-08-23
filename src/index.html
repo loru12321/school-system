@@ -259,8 +259,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-da67c994550d.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-da67c994550d.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-16402b6cf8f9.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-16402b6cf8f9.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         // 设计优化脚本 - 通过JavaScript和事件监听确保所有优化生效
@@ -2532,11 +2532,31 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div id="fb_constraint_rules" class="freshman-rule-chips"></div>
                         <div id="fb_constraint_issues" class="freshman-review-notes"></div>
                     </div>
+                    <div class="freshman-fixed-panel" aria-labelledby="fb_fixed_title">
+                        <div class="freshman-fixed-head">
+                            <div>
+                                <span class="freshman-review-eyebrow">HUMAN OVERRIDE</span>
+                                <strong id="fb_fixed_title">指定学生班级</strong>
+                                <p>先锁定必须进入具体班级的学生，再生成方案；其余学生继续按当前规则均衡分配。</p>
+                            </div>
+                            <span class="freshman-fixed-badge"><i class="ti ti-lock"></i> 锁定优先</span>
+                        </div>
+                        <div class="freshman-fixed-form">
+                            <label>学生<select id="fb_fixed_student"><option value="">请先载入学生</option></select></label>
+                            <label>具体班级<select id="fb_fixed_class"><option value="0">1班</option></select></label>
+                            <button type="button" class="btn btn-primary" data-fb-action="add-fixed"><i class="ti ti-lock"></i> 锁定到该班</button>
+                            <button type="button" class="btn btn-gray" data-fb-action="clear-fixed">清空指定</button>
+                        </div>
+                        <div id="fb_fixed_assignment_list" class="freshman-fixed-list" aria-live="polite">
+                            <div class="freshman-fixed-empty">暂未指定学生，系统将按均衡算法自动分班。</div>
+                        </div>
+                        <div class="freshman-fixed-note"><i class="ti ti-info-circle"></i> 锁定项只作用于本次分班方案；重新生成、切换算法或比较方案时都会保留。若锁定人数使某班超过平均班额，系统会在生成前提示调整。</div>
+                    </div>
                     <div style="border-bottom:1px dashed #cbd5e1; padding-bottom:15px; margin-bottom:15px;">
                         <div
                             style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:15px;">
                             <div><label class="stat-label">拟分班级数</label><input type="number" id="fb_cls_num" value="6"
-                                    min="1" max="30" style="width:100%;"></div>
+                                    min="1" max="30" style="width:100%;" data-fb-change="FB_refreshFixedAssignmentUI"></div>
                             <div><label class="stat-label">班额微调</label><select id="fb_cls_size" style="width:100%;">
                                     <option value="0">自动平均</option>
                                     <option value="auto">允许±2人</option>

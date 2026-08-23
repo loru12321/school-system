@@ -4513,6 +4513,10 @@ async function runModuleDeepCheck(page, id) {
                 divisionReady: typeof window.FB_runDivision === 'function'
                     && typeof window.FB_generateSingleScheme === 'function'
                     && typeof window.FB_applyScheme === 'function',
+                fixedAssignmentReady: typeof window.FB_addFixedAssignment === 'function'
+                    && typeof window.FB_getFixedAssignments === 'function'
+                    && !!document.getElementById('fb_fixed_student')
+                    && !!document.getElementById('fb_fixed_class'),
                 seatReady: typeof window.FB_openSeatMap === 'function'
                     && typeof window.FB_autoSeatAlgo === 'function'
                     && typeof window.FB_renderSeatMap === 'function'
@@ -4610,8 +4614,17 @@ async function runModuleDeepCheck(page, id) {
                 const algorithmSelect = document.getElementById('fb_algorithm');
                 const diffSelect = document.getElementById('fb_rule_diff');
                 if (classInput) classInput.value = '4';
+                classInput?.dispatchEvent(new Event('change', { bubbles: true }));
                 if (algorithmSelect) algorithmSelect.value = 'snake';
                 if (diffSelect) diffSelect.value = 'spread';
+                const fixedStudentSelect = document.getElementById('fb_fixed_student');
+                const fixedClassSelect = document.getElementById('fb_fixed_class');
+                const fixedButton = document.querySelector('[data-fb-action="add-fixed"]');
+                if (fixedStudentSelect && fixedClassSelect && fixedButton) {
+                    fixedStudentSelect.value = fixedStudentSelect.options[1]?.value || '';
+                    fixedClassSelect.value = '2';
+                    fixedButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                }
                 const review = window.FB_preflight({ silent: true });
                 if (!review.ok) throw new Error('freshman assignment review rejected valid smoke data');
 
@@ -4634,6 +4647,8 @@ async function runModuleDeepCheck(page, id) {
             const totalCount = classes.reduce((sum, cls) => sum + Number(cls.stats?.count || cls.students?.length || 0), 0);
             const expectedTotal = sampleRows.length;
             const expectedMale = sampleRows.filter(row => row.性别 === '男').length;
+            const fixedAssignments = runtime.getFixedAssignments ? runtime.getFixedAssignments() : {};
+            const fixedTargetStudent = allStudents.find(student => String(student.name || '') === '烟测新生01');
             const dashboardText = document.getElementById('balanceTableContainer')?.textContent || '';
             const simulatedDataCount = Object.values(runtime.simulatedData || {})
                 .reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
@@ -4662,7 +4677,10 @@ async function runModuleDeepCheck(page, id) {
                 persistedStateSynced: persistedCount === expectedTotal,
                 importSucceeded: alerts.some(message => message.includes(String(expectedTotal))),
                 constraintReviewRendered: !document.getElementById('fb_constraint_review')?.classList.contains('hidden')
-                    && document.getElementById('fb_constraint_summary')?.textContent.includes('条件可执行')
+                    && document.getElementById('fb_constraint_summary')?.textContent.includes('条件可执行'),
+                fixedAssignmentApplied: Object.keys(fixedAssignments).length === 1
+                    && fixedTargetStudent?.classIdx === 2
+                    && fixedTargetStudent?.isFixedAssignment === true
             };
 
             return {
