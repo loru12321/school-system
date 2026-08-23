@@ -402,6 +402,16 @@
     background-image: none !important;
 }
 
+/* The legacy accent selectors carry equal !important weight, so explicitly
+ * neutralize each value-column variant for cells without a real control. */
+#app table.analysis-table-dense tbody td:nth-child(n+3):not(.no-wave):not(:has(> button, > a[href], > [role="button"])),
+#app table.analysis-table-dense tbody td:nth-child(4n+3):not(.no-wave):not(:has(> button, > a[href], > [role="button"])),
+#app table.analysis-table-dense tbody td:nth-child(4n+4):not(.no-wave):not(:has(> button, > a[href], > [role="button"])),
+#app table.analysis-table-dense tbody td:nth-child(4n+5):not(.no-wave):not(:has(> button, > a[href], > [role="button"])) {
+    text-decoration: none !important;
+    background-image: none !important;
+}
+
 #app table.analysis-table-dense tbody td > button:not([disabled]),
 #app table.analysis-table-dense tbody td > a[href],
 #app table.analysis-table-dense tbody td > [role="button"] {
