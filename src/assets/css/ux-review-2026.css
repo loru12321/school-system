@@ -395,7 +395,7 @@
     cursor: default !important;
 }
 
-#app table.analysis-table-dense tbody td > button.summary-drill-link,
+#app table.analysis-table-dense tbody td > button:not([disabled]),
 #app table.analysis-table-dense tbody td > a[href],
 #app table.analysis-table-dense tbody td > [role="button"] {
     cursor: pointer !important;
@@ -407,7 +407,7 @@
     transition: color .16s ease, background-color .16s ease, transform .16s ease, text-decoration-color .16s ease !important;
 }
 
-#app table.analysis-table-dense tbody td > button.summary-drill-link:hover,
+#app table.analysis-table-dense tbody td > button:not([disabled]):hover,
 #app table.analysis-table-dense tbody td > a[href]:hover,
 #app table.analysis-table-dense tbody td > [role="button"]:hover {
     color: #1d4ed8 !important;
@@ -415,13 +415,13 @@
     background: rgba(219, 234, 254, .72) !important;
 }
 
-#app table.analysis-table-dense tbody td > button.summary-drill-link:active,
+#app table.analysis-table-dense tbody td > button:not([disabled]):active,
 #app table.analysis-table-dense tbody td > a[href]:active,
 #app table.analysis-table-dense tbody td > [role="button"]:active {
     transform: translateY(1px) scale(.98) !important;
 }
 
-#app table.analysis-table-dense tbody td > button.summary-drill-link:focus-visible,
+#app table.analysis-table-dense tbody td > button:not([disabled]):focus-visible,
 #app table.analysis-table-dense tbody td > a[href]:focus-visible,
 #app table.analysis-table-dense tbody td > [role="button"]:focus-visible {
     outline: 3px solid rgba(59, 130, 246, .32) !important;
