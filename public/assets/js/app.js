@@ -4149,11 +4149,11 @@ const DrillSystem = {
         classes.forEach(cls => {
             const count = classMap[cls].length;
             html += `
-                    <div class="drill-class-card" onclick="DrillSystem.renderStudentView(${jsStringLiteral(cls)})">
+                    <button type="button" class="drill-class-card" onclick="DrillSystem.renderStudentView(${jsStringLiteral(cls)})" aria-label="查看${escapeAppHtml(cls)}班${count}名学生名单">
                         <div class="drill-label">${escapeAppHtml(cls)}</div>
                         <div class="drill-val">${count} 人</div>
                         <div class="drill-label" style="font-size:10px;">点击查看名单 &gt;</div>
-                    </div>`;
+                    </button>`;
         });
         html += `</div>`;
 
@@ -4175,10 +4175,10 @@ const DrillSystem = {
         let html = `<div class="drill-stu-list">`;
         students.forEach(s => {
             html += `
-                    <div class="drill-stu-tag">
-                        <span style="cursor:pointer;" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)}); document.getElementById('drill-modal').style.display='none';">${escapeAppHtml(s.name)}</span>
+                    <button type="button" class="drill-stu-tag" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)}); document.getElementById('drill-modal').style.display='none';" aria-label="查看${escapeAppHtml(s.name)}学生详情">
+                        <span>${escapeAppHtml(s.name)}</span>
                         <span class="drill-stu-score">${escapeAppHtml(s.total)}</span>
-                    </div>`;
+                    </button>`;
         });
         html += `</div>`;
 

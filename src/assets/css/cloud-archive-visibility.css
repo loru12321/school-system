@@ -73,8 +73,9 @@ body.cloud-manager-open {
 }
 
 #dm-cloud-table {
-    width: 100%;
-    min-width: 760px;
+    width: 100% !important;
+    min-width: 760px !important;
+    max-width: 100% !important;
     margin: 0;
     table-layout: fixed;
     border-collapse: separate;
@@ -85,8 +86,10 @@ body.cloud-manager-open {
     position: sticky;
     top: 0;
     z-index: 2;
-    background: #edf4fa;
-    box-shadow: 0 1px 0 #cbd7e3;
+    background: #f8fafc !important;
+    color: #475569 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 0 #cbd5e1 !important;
 }
 
 #dm-cloud-table th,

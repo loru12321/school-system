@@ -16,14 +16,14 @@
 
 /* 钻取弹窗 - 彩色横排标签（修复） */
 .drill-stu-list { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; padding: 16px !important; }
-.drill-stu-tag { display: inline-flex !important; align-items: center !important; gap: 8px !important; padding: 8px 14px !important; border-radius: 8px !important; font-size: 14px !important; font-weight: 600 !important; cursor: pointer !important; transition: all 0.2s ease !important; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; color: white !important; border: none !important; box-shadow: 0 2px 8px rgba(102,126,234,0.3) !important; }
-.drill-stu-tag:nth-child(4n+1) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important; box-shadow: 0 2px 8px rgba(245,87,108,0.3) !important; }
-.drill-stu-tag:nth-child(4n+2) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important; box-shadow: 0 2px 8px rgba(79,172,254,0.3) !important; }
-.drill-stu-tag:nth-child(4n+3) { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important; box-shadow: 0 2px 8px rgba(67,233,123,0.3) !important; }
-.drill-stu-tag:nth-child(4n+4) { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important; box-shadow: 0 2px 8px rgba(250,112,154,0.3) !important; }
-.drill-stu-tag:hover { transform: translateY(-2px) scale(1.05) !important; box-shadow: 0 4px 16px rgba(102,126,234,0.5) !important; }
-.drill-stu-tag span { color: white !important; font-weight: 600 !important; }
-.drill-stu-score { color: white !important; font-weight: 700 !important; background: rgba(255,255,255,0.25) !important; padding: 3px 8px !important; border-radius: 4px !important; }
+.drill-stu-tag { display: inline-flex !important; align-items: center !important; gap: 8px !important; padding: 8px 14px !important; border-radius: 8px !important; font-size: 14px !important; font-weight: 600 !important; cursor: pointer !important; transition: all 0.2s ease !important; background: #f8fafc !important; color: #334155 !important; border: 1px solid #cbd5e1 !important; box-shadow: 0 2px 8px rgba(15,23,42,0.08) !important; }
+.drill-stu-tag:nth-child(4n+1) { background: #fff7ed !important; border-color: #fdba74 !important; }
+.drill-stu-tag:nth-child(4n+2) { background: #ecfdf5 !important; border-color: #86efac !important; }
+.drill-stu-tag:nth-child(4n+3) { background: #f5f3ff !important; border-color: #c4b5fd !important; }
+.drill-stu-tag:nth-child(4n+4) { background: #fdf2f8 !important; border-color: #f9a8d4 !important; }
+.drill-stu-tag:hover, .drill-stu-tag:focus-visible { transform: translateY(-2px) !important; box-shadow: 0 6px 14px rgba(15,23,42,0.14) !important; }
+.drill-stu-tag span { color: #334155 !important; font-weight: 650 !important; }
+.drill-stu-score { color: #7c2d12 !important; font-weight: 750 !important; background: rgba(255,255,255,0.72) !important; padding: 3px 8px !important; border-radius: 4px !important; }
 
 /* 可点击数字的波浪线下划线（只在下方） */
 button.summary-drill-link,

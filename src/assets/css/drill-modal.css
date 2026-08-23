@@ -1,31 +1,44 @@
 /* 钻取弹窗专用样式 */
         .drill-class-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 10px;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: stretch;
+            gap: 12px;
+            padding: 6px;
         }
 
         .drill-class-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 10px;
+            flex: 1 1 150px;
+            min-width: 150px;
+            min-height: 108px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-left: 5px solid #ea580c;
+            border-radius: 12px;
+            padding: 14px 12px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
             text-align: center;
+            font: inherit;
         }
 
         .drill-class-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            border-color: var(--primary);
-            background: #eff6ff;
+            box-shadow: 0 8px 18px rgba(234, 88, 12, 0.16);
+            border-color: #fb923c;
+            background: #ffedd5;
+        }
+
+        .drill-class-card:focus-visible {
+            outline: 3px solid rgba(234, 88, 12, 0.28);
+            outline-offset: 2px;
         }
 
         .drill-val {
             font-size: 18px;
             font-weight: 800;
-            color: var(--primary);
+            color: #c2410c;
             margin: 5px 0;
         }
 
@@ -49,6 +62,8 @@
             display: flex;
             align-items: center;
             gap: 5px;
+            cursor: pointer;
+            font: inherit;
         }
 
         .drill-stu-score {
@@ -66,4 +81,8 @@
 
         .clickable-num:hover {
             color: #d97706;
+        }
+
+        @media (max-width: 640px) {
+            .drill-class-card { flex-basis: 132px; min-width: 132px; }
         }
