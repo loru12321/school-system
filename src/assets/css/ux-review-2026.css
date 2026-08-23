@@ -532,6 +532,26 @@ html body:not(.dark-mode) #app-sidebar .sidebar-menu-item {
     background: color-mix(in srgb, var(--nav-accent, #64748b) 9%, #ffffff) !important;
 }
 
+/* Some legacy workspace skins are loaded after the base sidebar rules. Keep
+ * the category accents authoritative with a more specific final selector. */
+html body:not(.dark-mode) #app.app-layout #app-sidebar .sidebar-nav-container > .sidebar-menu-item {
+    border: 1px solid color-mix(in srgb, var(--nav-accent, #64748b) 28%, #e5e7eb) !important;
+    border-left: 5px solid var(--nav-accent, #64748b) !important;
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 9%, #ffffff) !important;
+}
+
+html body:not(.dark-mode) #app.app-layout #app-sidebar .sidebar-nav-container > .sidebar-menu-item .sidebar-menu-item__icon {
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 16%, #ffffff) !important;
+    color: var(--nav-accent, #64748b) !important;
+}
+
+html body:not(.dark-mode) #app.app-layout #app-sidebar .sidebar-nav-container > .sidebar-menu-item:hover,
+html body:not(.dark-mode) #app.app-layout #app-sidebar .sidebar-nav-container > .sidebar-menu-item.active,
+html body:not(.dark-mode) #app.app-layout #app-sidebar .sidebar-nav-container > .sidebar-menu-item[aria-current="page"] {
+    background: color-mix(in srgb, var(--nav-accent, #64748b) 16%, #ffffff) !important;
+    border-left-color: var(--nav-accent, #64748b) !important;
+}
+
 html body:not(.dark-mode) #app-sidebar .sidebar-menu-item__icon {
     background: color-mix(in srgb, var(--nav-accent, #64748b) 16%, #ffffff) !important;
     color: var(--nav-accent, #64748b) !important;
