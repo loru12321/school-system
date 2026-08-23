@@ -579,14 +579,18 @@
                     width: 100%;
                     max-width: 100vw;
                     padding: calc(var(--app-safe-top, 0px) + 148px) 10px calc(var(--app-safe-bottom, 0px) + 110px) !important;
+                    padding-left: 0 !important;
+                    padding-right: 0 !important;
                     -webkit-overflow-scrolling: touch;
                     scroll-padding-top: calc(var(--app-safe-top, 0px) + 148px);
                     scroll-padding-bottom: calc(var(--app-safe-bottom, 0px) + 120px);
                 }
                 body[data-mobile-architecture="apk-v2"] .section.active {
                     width: 100% !important;
-                    max-width: 100%;
+                    max-width: none !important;
                     min-width: 0 !important;
+                    margin-left: 0 !important;
+                    margin-right: 0 !important;
                     align-self: stretch !important;
                     box-sizing: border-box !important;
                     overflow: visible;
