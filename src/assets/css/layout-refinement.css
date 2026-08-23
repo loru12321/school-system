@@ -2240,6 +2240,11 @@ body.dark-mode #dm-cloud-summary {
     }
 
     body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .app-main>.section {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        align-self: stretch !important;
+        box-sizing: border-box !important;
         padding: 12px 12px 22px !important;
     }
 
