@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-3c37b31131b0';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-b33226504440';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -128,6 +128,7 @@ var BOOT_JS_BASE='./assets/js/';
 var BOOT_VENDOR_BASE='./assets/vendor/';
 var BOOT_VENDOR_MODULES = [BOOT_VENDOR_BASE + 'alpinejs/cdn.min.js'];
 var DEFERRED_APP_MODULES = [
+'teaching-assessment-sync-runtime.js',
 'support-metrics-runtime.js',
 // 「本次要点」：只读已算好的结果生成提示，属辅助信息，故走延迟加载不占首屏。
 'summary-highlights-runtime.js',
@@ -167,7 +168,6 @@ var APP_MODULES = [
 'dialog-runtime.js',
 'auth-state-runtime.js',
 'login-entry-runtime.js',
-'teaching-assessment-sync-runtime.js',
 'workspace-state-runtime.js',
 'exam-state-runtime.js',
 'school-state-runtime.js',
