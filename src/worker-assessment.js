@@ -306,8 +306,20 @@ export async function handleAssessmentSyncSettingsGet(request, env, session, pay
       message: 'Set ASSESSMENT_SUPABASE_URL and ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY on the Worker.'
     }, request);
   }
-  const settings = await fetchAssessmentSyncSettingsForYear(env, academicYear);
-  return jsonResponse(200, { ok: true, settings }, request);
+  try {
+    const settings = await fetchAssessmentSyncSettingsForYear(env, academicYear);
+    return jsonResponse(200, { ok: true, settings }, request);
+  } catch (error) {
+    // Assessment is an auxiliary integration. Keep the school-system gateway
+    // healthy when the external service is temporarily unavailable; callers
+    // retain the safe local defaults and can retry explicitly later.
+    return jsonResponse(200, {
+      ok: true,
+      degraded: true,
+      settings: { academic_year: academicYear, grade6_growth_baseline: 'first_term_final', unavailable: true },
+      warning: normalizeText(error?.message || error || 'ASSESSMENT_SYNC_UNAVAILABLE')
+    }, request);
+  }
 }
 
 export async function handleAssessmentScoreSync(request, env, session, payload) {
@@ -333,10 +345,21 @@ export async function handleAssessmentScoreSync(request, env, session, payload) 
   // remain opt-in so the existing checkbox still controls their overwrite scope.
   const overwriteManual = payload?.automatic === true || payload?.overwrite_manual === true;
   const dryRun = payload?.dry_run === true;
-  const [teachers, existingScores] = await Promise.all([
-    fetchAssessmentTeachersForYear(env, academicYear),
-    fetchAssessmentScoresForYear(env, academicYear)
-  ]);
+  let teachers;
+  let existingScores;
+  try {
+    [teachers, existingScores] = await Promise.all([
+      fetchAssessmentTeachersForYear(env, academicYear),
+      fetchAssessmentScoresForYear(env, academicYear)
+    ]);
+  } catch (error) {
+    return jsonResponse(200, {
+      ok: true,
+      degraded: true,
+      written: 0,
+      skipped: [{ reason: normalizeText(error?.message || error || 'ASSESSMENT_SYNC_UNAVAILABLE') }]
+    }, request);
+  }
 
   const now = new Date().toISOString();
   const rowByKey = new Map();
