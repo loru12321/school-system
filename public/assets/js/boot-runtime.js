@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-00c336150785';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-3c37b31131b0';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -586,8 +586,11 @@ return new Promise((resolve) => {
 
 function getAppModuleTimeoutMs(src) {
 const moduleSrc = String(src || '');
-if (isRuntimeMobileViewport()) return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 20000 : 15000;
-return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 15000 : 8000;
+// A stalled optional runtime must not serialize the entire login transition.
+// The script continues loading in the background after this watchdog fires;
+// the shorter bound keeps the shell responsive on slow school networks.
+if (isRuntimeMobileViewport()) return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 6000 : 2500;
+return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 5000 : 1800;
 }
 
 function getBootScriptBatchSize() {

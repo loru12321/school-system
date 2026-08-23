@@ -1,7 +1,9 @@
 (function (root) {
     if (!root || root.CloudSyncIndicator) return;
 
-    const CLOUD_STARTUP_LOAD_TIMEOUT_MS = 25000;
+    // Keep login responsive when the gateway is degraded; the caller retries
+    // cloud hydration in the background after this deadline.
+    const CLOUD_STARTUP_LOAD_TIMEOUT_MS = 10000;
     const SYSTEM_DATA_READ_TTL_MS = 5 * 60 * 1000;
     const SYSTEM_DATA_SELECT_TTL_MS = 2 * 60 * 1000;
     const SYSTEM_DATA_MAX_CACHE_SIZE = 120;
