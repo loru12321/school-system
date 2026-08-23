@@ -275,95 +275,146 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-875e01c37cdd.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-875e01c37cdd.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-eead084415e9.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-eead084415e9.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
-        // 设计优化脚本 - 通过JavaScript确保所有优化生效
+        // 设计优化脚本 - 通过JavaScript和事件监听确保所有优化生效
         (function() {
+            let observerInstance = null;
+
             function applyDesignOptimizations() {
                 // ① 移除所有圆形红点通知标记
-                document.querySelectorAll('.notification-badge, .badge-circle, #msg-badge').forEach(el => {
+                document.querySelectorAll('.notification-badge, .badge-circle, #msg-badge, .shell-overview-card .notification-badge').forEach(el => {
                     el.style.display = 'none';
                 });
 
                 // ② 为模块描述栏的badge添加彩色渐变背景
-                const badgeStyles = {
-                    '#upload .module-desc-bar.analysis-hero h3 .badge': {
-                        background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
-                        color: '#166534',
-                        border: '1px solid #86efac',
-                        padding: '6px 14px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        borderRadius: '8px',
-                        marginLeft: '12px'
-                    },
-                    '#analysis .module-desc-bar.analysis-hero h3 .badge': {
-                        background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)',
-                        color: '#1e40af',
-                        border: '1px solid #93c5fd',
-                        padding: '6px 14px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        borderRadius: '8px',
-                        marginLeft: '12px'
-                    },
-                    '#progress-analysis .module-desc-bar.analysis-hero h3 .badge': {
-                        background: 'linear-gradient(135deg, #fed7aa, #fdba74)',
-                        color: '#9a3412',
-                        border: '1px solid #fb923c',
-                        padding: '6px 14px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        borderRadius: '8px',
-                        marginLeft: '12px'
-                    },
-                    '#report-generator .module-desc-bar.analysis-hero h3 .badge, #student-overview .module-desc-bar.analysis-hero h3 .badge': {
-                        background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)',
-                        color: '#5b21b6',
-                        border: '1px solid #c4b5fd',
-                        padding: '6px 14px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        borderRadius: '8px',
-                        marginLeft: '12px'
-                    }
-                };
-
-                Object.keys(badgeStyles).forEach(selector => {
-                    document.querySelectorAll(selector).forEach(badge => {
-                        Object.assign(badge.style, badgeStyles[selector]);
-                    });
+                // 通用样式应用到所有badge
+                document.querySelectorAll('.module-desc-bar.analysis-hero h3 .badge').forEach(badge => {
+                    badge.style.padding = '6px 14px';
+                    badge.style.fontSize = '11px';
+                    badge.style.fontWeight = '700';
+                    badge.style.borderRadius = '8px';
+                    badge.style.marginLeft = '12px';
+                    badge.style.display = 'inline-block';
                 });
 
-                // ③ 为表格数字添加波浪下划线
-                document.querySelectorAll('table.analysis-table-dense tbody td:not(:first-child):not(:nth-child(2)):not(.no-wave)').forEach(td => {
-                    td.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg width='100' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 Q 2.5 0, 5 2 T 10 2 T 15 2 T 20 2 T 25 2 T 30 2 T 35 2 T 40 2 T 45 2 T 50 2 T 55 2 T 60 2 T 65 2 T 70 2 T 75 2 T 80 2 T 85 2 T 90 2 T 95 2 T 100 2' stroke='%2306b6d4' stroke-width='1.5' fill='none' opacity='0.3'/%3E%3C/svg%3E\")";
-                    td.style.backgroundRepeat = 'repeat-x';
-                    td.style.backgroundPosition = 'bottom 2px left 0';
-                    td.style.backgroundSize = '10px 4px';
-                    td.style.paddingBottom = '8px';
+                // 特定模块的彩色样式
+                document.querySelectorAll('#upload .module-desc-bar.analysis-hero h3 .badge').forEach(badge => {
+                    badge.style.background = 'linear-gradient(135deg, #dcfce7, #bbf7d0)';
+                    badge.style.color = '#166534';
+                    badge.style.border = '1px solid #86efac';
+                });
+
+                document.querySelectorAll('#analysis .module-desc-bar.analysis-hero h3 .badge').forEach(badge => {
+                    badge.style.background = 'linear-gradient(135deg, #dbeafe, #bfdbfe)';
+                    badge.style.color = '#1e40af';
+                    badge.style.border = '1px solid #93c5fd';
+                });
+
+                document.querySelectorAll('#progress-analysis .module-desc-bar.analysis-hero h3 .badge').forEach(badge => {
+                    badge.style.background = 'linear-gradient(135deg, #fed7aa, #fdba74)';
+                    badge.style.color = '#9a3412';
+                    badge.style.border = '1px solid #fb923c';
+                });
+
+                document.querySelectorAll('#report-generator .module-desc-bar.analysis-hero h3 .badge, #student-overview .module-desc-bar.analysis-hero h3 .badge').forEach(badge => {
+                    badge.style.background = 'linear-gradient(135deg, #ede9fe, #ddd6fe)';
+                    badge.style.color = '#5b21b6';
+                    badge.style.border = '1px solid #c4b5fd';
+                });
+
+                // ③ 为表格数字添加波浪下划线 - 使用更通用的选择器
+                document.querySelectorAll('table.analysis-table-dense tbody td').forEach(td => {
+                    // 获取单元格在行中的索引
+                    const cellIndex = Array.from(td.parentElement.children).indexOf(td);
+                    // 跳过前两列（学校名称和排名）
+                    if (cellIndex > 1 && !td.classList.contains('no-wave')) {
+                        td.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg width='100' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 Q 2.5 0, 5 2 T 10 2 T 15 2 T 20 2 T 25 2 T 30 2 T 35 2 T 40 2 T 45 2 T 50 2 T 55 2 T 60 2 T 65 2 T 70 2 T 75 2 T 80 2 T 85 2 T 90 2 T 95 2 T 100 2' stroke='%2306b6d4' stroke-width='1.5' fill='none' opacity='0.3'/%3E%3C/svg%3E\")";
+                        td.style.backgroundRepeat = 'repeat-x';
+                        td.style.backgroundPosition = 'bottom 2px left 0';
+                        td.style.backgroundSize = '10px 4px';
+                        td.style.paddingBottom = '8px';
+                    }
+                });
+
+                // 为表格添加hover效果
+                document.querySelectorAll('table.analysis-table-dense tbody tr').forEach(tr => {
+                    tr.addEventListener('mouseenter', function() {
+                        this.querySelectorAll('td').forEach((td, index) => {
+                            if (index > 1 && !td.classList.contains('no-wave')) {
+                                td.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg width='100' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 Q 2.5 0, 5 2 T 10 2 T 15 2 T 20 2 T 25 2 T 30 2 T 35 2 T 40 2 T 45 2 T 50 2 T 55 2 T 60 2 T 65 2 T 70 2 T 75 2 T 80 2 T 85 2 T 90 2 T 95 2 T 100 2' stroke='%23ec4899' stroke-width='2' fill='none' opacity='0.6'/%3E%3C/svg%3E\")";
+                            }
+                        });
+                    });
+                    tr.addEventListener('mouseleave', function() {
+                        this.querySelectorAll('td').forEach((td, index) => {
+                            if (index > 1 && !td.classList.contains('no-wave')) {
+                                td.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg width='100' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 Q 2.5 0, 5 2 T 10 2 T 15 2 T 20 2 T 25 2 T 30 2 T 35 2 T 40 2 T 45 2 T 50 2 T 55 2 T 60 2 T 65 2 T 70 2 T 75 2 T 80 2 T 85 2 T 90 2 T 95 2 T 100 2' stroke='%2306b6d4' stroke-width='1.5' fill='none' opacity='0.3'/%3E%3C/svg%3E\")";
+                            }
+                        });
+                    });
                 });
 
                 // ④ 搜索框提示已通过HTML直接修改
 
-                // ⑤ 优化模块卡片网格布局（懒加载内容）
-                const observer = new MutationObserver(() => {
-                    applyDesignOptimizations();
-                });
-                observer.observe(document.body, { childList: true, subtree: true });
+                // ⑤ 优化模块卡片网格布局
+                // 暂时不实现，因为需要具体分析HTML结构
             }
 
-            // DOMContentLoaded 和 延迟执行确保捕获所有元素
+            // 启动MutationObserver监听DOM变化
+            function startObserver() {
+                if (observerInstance) return;
+
+                observerInstance = new MutationObserver((mutations) => {
+                    // 检查是否有表格或badge被添加
+                    let shouldReapply = false;
+                    mutations.forEach(mutation => {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === 1) {
+                                if (node.matches && (
+                                    node.matches('table.analysis-table-dense') ||
+                                    node.matches('.module-desc-bar') ||
+                                    node.querySelector && (
+                                        node.querySelector('table.analysis-table-dense') ||
+                                        node.querySelector('.module-desc-bar')
+                                    )
+                                )) {
+                                    shouldReapply = true;
+                                }
+                            }
+                        });
+                    });
+
+                    if (shouldReapply) {
+                        setTimeout(applyDesignOptimizations, 100);
+                    }
+                });
+
+                observerInstance.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+
+            // 初始化
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', applyDesignOptimizations);
+                document.addEventListener('DOMContentLoaded', function() {
+                    applyDesignOptimizations();
+                    startObserver();
+                });
             } else {
                 applyDesignOptimizations();
+                startObserver();
             }
 
-            // 再延迟3秒执行一次，确保懒加载内容也被处理
+            // 延迟执行以捕获懒加载内容
             setTimeout(applyDesignOptimizations, 3000);
+            setTimeout(applyDesignOptimizations, 5000);
+
+            // 暴露到全局，方便手动触发
+            window.applyDesignOptimizations = applyDesignOptimizations;
         })();
     </script>
 
