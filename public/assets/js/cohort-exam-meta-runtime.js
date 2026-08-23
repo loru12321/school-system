@@ -439,7 +439,17 @@ function getPreferredTeacherTermId() {
 }
 
 function syncTeacherTermStorage(termId) {
-    return syncTeacherTermRuntimeState(termId);
+    // This runtime can execute before app.js during parallel boot. Keep the
+    // storage bridge self-contained so teacher auto-restore never throws a
+    // ReferenceError while the main entry bundle is still arriving.
+    if (typeof syncTeacherTermRuntimeState === 'function') {
+        return syncTeacherTermRuntimeState(termId);
+    }
+    const runtime = window.ExamStateRuntime;
+    if (runtime && typeof runtime.syncTeacherTerm === 'function') {
+        return runtime.syncTeacherTerm(termId);
+    }
+    return { termId: String(termId || ''), deferred: true };
 }
 
 function getTeacherTermCandidates(termId) {

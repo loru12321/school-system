@@ -2608,9 +2608,14 @@
         const tick = () => {
             attempts += 1;
             runAutomaticAssessmentSync().catch((error) => {
-                console.warn('[assessment-sync] automatic sync skipped:', error?.message || error);
+                root.__TM_ASSESSMENT_AUTO_SYNC_FAILURES__ = (root.__TM_ASSESSMENT_AUTO_SYNC_FAILURES__ || 0) + 1;
+                if (root.__TM_ASSESSMENT_AUTO_SYNC_FAILURES__ <= 2) {
+                    console.warn('[assessment-sync] automatic sync skipped:', error?.message || error);
+                }
             });
-            if (attempts < 40) setTimeout(tick, attempts < 8 ? 2500 : 10000);
+            if (attempts < 3 && (root.__TM_ASSESSMENT_AUTO_SYNC_FAILURES__ || 0) < 3) {
+                setTimeout(tick, attempts === 1 ? 4000 : 30000);
+            }
         };
         setTimeout(tick, 2500);
         ['cloud-sync-state', 'cohort-exam-hydrated', 'teacher-sync-complete', 'tm-teacher-analysis-ready'].forEach((eventName) => {

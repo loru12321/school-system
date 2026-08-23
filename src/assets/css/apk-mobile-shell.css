@@ -63,8 +63,18 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
     }
 
     body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .app-main > .section {
+        width: 100% !important;
         max-width: none !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
         padding: 16px 14px 28px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .app-main > .section > * {
+        max-width: 100% !important;
+        min-width: 0 !important;
     }
 
     body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .section.card-box,
