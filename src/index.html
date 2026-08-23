@@ -259,8 +259,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-8b63b29ee049.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-8b63b29ee049.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-42fe755f9e6b.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-42fe755f9e6b.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         // 设计优化脚本 - 通过JavaScript和事件监听确保所有优化生效
@@ -1016,7 +1016,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="starter-card starter-card--entry">
                         <h4><i class="ti ti-link"></i> 快速入口</h4>
                         <div class="starter-entry-grid">
-                            <button class="starter-entry-btn" onclick="switchTab('upload')">
+                            <button class="starter-entry-btn" onclick="if(typeof switchTab==='function'){switchTab('upload')}">
                                 <i class="ti ti-file-upload"></i>
                                 <span>数据导入</span>
                             </button>
@@ -1024,11 +1024,11 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <i class="ti ti-users"></i>
                                 <span>任课表</span>
                             </button>
-                            <button class="starter-entry-btn" onclick="switchTab('teacher-analysis')">
+                            <button class="starter-entry-btn" onclick="if(typeof switchTab==='function'){switchTab('teacher-analysis')}">
                                 <i class="ti ti-school"></i>
                                 <span>教师画像</span>
                             </button>
-                            <button class="starter-entry-btn" onclick="switchTab('zhongkao-countdown')">
+                            <button class="starter-entry-btn" onclick="if(typeof switchTab==='function'){switchTab('zhongkao-countdown')}">
                                 <i class="ti ti-calendar-event"></i>
                                 <span>中考倒计时</span>
                             </button>

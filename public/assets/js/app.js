@@ -8224,6 +8224,10 @@ window.addEventListener('load', () => {
 });
 window.DataManager = DataManager;
 window.DrillSystem = DrillSystem;
+// Inline starter buttons and legacy integrations call this entry point by
+// name. Keep the module switcher on window even when the boot loader evaluates
+// app.js inside a deferred runtime bundle.
+window.switchTab = switchTab;
 if (!window.CohortGrowth) {
     console.warn('[cohort-growth] runtime unavailable; cohort growth module will lazy-load via boot runtime.');
 }

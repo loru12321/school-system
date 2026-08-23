@@ -4,7 +4,7 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-runtime-8b63b29ee049';
+const CACHE_VERSION = 'school-system-runtime-42fe755f9e6b';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -90,7 +90,7 @@ async function cacheFirstStatic(request) {
         const response = await fetch(request);
         if (isCacheable(response)) {
             const cache = await caches.open(STATIC_CACHE);
-            cache.put(request, response.clone());
+            await cache.put(request, response.clone());
         }
         return response;
     } catch (error) {
@@ -106,7 +106,10 @@ async function networkFirstRuntimeAsset(request) {
         .then(response => {
             if (isCacheable(response)) {
                 const cache = caches.open(STATIC_CACHE);
-                cache.then(c => c.put(request, response.clone()));
+                // Clone before returning the live response. The browser may
+                // consume the returned body before the cache promise runs.
+                const cacheResponse = response.clone();
+                cache.then(c => c.put(request, cacheResponse)).catch(() => {});
             }
             return response;
         })
@@ -130,7 +133,11 @@ async function networkFirstApi(request, url) {
         const cache = await caches.open(API_CACHE);
         const cached = await cache.match(request);
         if (cached) {
-            fetch(request).then((r) => { if (r.ok) cache.put(request, r.clone()); }).catch(() => {});
+            fetch(request).then((r) => {
+                if (!r.ok) return;
+                const cacheResponse = r.clone();
+                return cache.put(request, cacheResponse);
+            }).catch(() => {});
             return cached;
         }
     }
@@ -138,7 +145,7 @@ async function networkFirstApi(request, url) {
         const response = await fetch(request);
         if (isCacheable(response) && eligible) {
             const cache = await caches.open(API_CACHE);
-            cache.put(request, response.clone());
+            await cache.put(request, response.clone());
         }
         return response;
     } catch (error) {
@@ -159,7 +166,7 @@ async function networkFirstHtml(request) {
         const response = await fetch(new Request(request, { cache: 'reload' }));
         if (isCacheable(response)) {
             const cache = await caches.open(DYNAMIC_CACHE);
-            cache.put(request, response.clone());
+            await cache.put(request, response.clone());
         }
         return response;
     } catch (error) {
