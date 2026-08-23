@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-7b28e476273b';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-576a539882aa';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -255,9 +255,9 @@ var APP_MODULE_PRELOAD_LIMIT = 36;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 4;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 34;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
-var APP_MODULE_DESKTOP_BATCH_SIZE = 96;
-var APP_MODULE_MOBILE_BATCH_SIZE = 24;
-var APP_MODULE_MAX_BATCH_SIZE = 96;
+var APP_MODULE_DESKTOP_BATCH_SIZE = 6;
+var APP_MODULE_MOBILE_BATCH_SIZE = 4;
+var APP_MODULE_MAX_BATCH_SIZE = 6;
 // The login screen is normally visible long enough to warm the small state and
 // cloud-runtime prefix. Keep this as low-priority prefetch (not execution),
 // so authentication remains responsive while the post-login request waterfall
@@ -626,7 +626,14 @@ if (!list.length) return;
 
 let settledCount = 0;
 const onProgress = typeof options.onProgress === 'function' ? options.onProgress : function () { };
-const batchSize = Math.min(getBootScriptBatchSize(), list.length);
+// Desktop asset requests are cheap and execution order is still preserved by
+// async=false; request the full list together so slow hosts do not create
+// seven or more sequential timeout waves. Mobile keeps the bounded batches.
+const configuredBatchSize = getBootScriptBatchSize();
+const batchSize = Math.min(
+    list.length,
+    isRuntimeMobileViewport() ? configuredBatchSize : Math.max(configuredBatchSize, 96)
+);
 
 for (let index = 0; index < list.length; index += batchSize) {
     const batch = list.slice(index, index + batchSize);
