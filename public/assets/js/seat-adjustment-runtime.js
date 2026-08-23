@@ -45,6 +45,16 @@
         return Object.keys(schools).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
     }
 
+    function getPreferredSchool(schoolNames) {
+        const names = Array.isArray(schoolNames) ? schoolNames : [];
+        const candidates = [];
+        try { candidates.push(root.MY_SCHOOL, root.readCurrentSchool?.()); } catch (_) {}
+        const selectedSchool = root.document?.getElementById('mySchoolSelect')?.value;
+        if (selectedSchool) candidates.push(selectedSchool);
+        const current = candidates.map(value => String(value || '').trim()).find(value => names.includes(value));
+        return current || (names.length === 1 ? names[0] : '');
+    }
+
     function toFiniteNumber(value, fallback = 0) {
         const number = Number(value);
         return Number.isFinite(number) ? number : fallback;
@@ -280,10 +290,12 @@
         const schoolSelect = root.document?.getElementById('seatAdjSchoolSelect');
         const classSelect = root.document?.getElementById('seatAdjClassSelect');
         if (!schoolSelect || !classSelect) return;
-        const previousSchool = schoolSelect.value;
+        const schoolNames = getSchoolNames();
+        const previousSchool = schoolSelect.value || getPreferredSchool(schoolNames);
         const previousClass = classSelect.value;
-        setSelectOptions(schoolSelect, getSchoolNames(), '--请选择学校--', previousSchool);
-        setSelectOptions(classSelect, getClassOptions(schoolSelect.value), '--请选择班级--', previousClass);
+        setSelectOptions(schoolSelect, schoolNames, '--请选择学校--', previousSchool);
+        const classOptions = getClassOptions(schoolSelect.value);
+        setSelectOptions(classSelect, classOptions, '--请选择班级--', previousClass || classOptions[0]);
         schoolSelect.onchange = () => {
             setSelectOptions(classSelect, getClassOptions(schoolSelect.value), '--请选择班级--', '');
             writeContextStudents([]);

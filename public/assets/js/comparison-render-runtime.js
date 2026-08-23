@@ -61,7 +61,12 @@ function updateMutualAidSelects() {
     const subSel = document.getElementById('aidSubjectSelect');
     if (!sourceEl || !schSel || !clsSel || !subSel) return;
     const source = sourceEl.value;
-    const prevSchool = schSel.value;
+    const schoolNames = Object.keys(SCHOOLS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
+    const preferredSchools = [window.MY_SCHOOL, typeof window.readCurrentSchool === 'function' ? window.readCurrentSchool() : '', document.getElementById('mySchoolSelect')?.value]
+        .map(value => String(value || '').trim())
+        .filter(Boolean);
+    const preferredSchool = preferredSchools.find(value => schoolNames.includes(value)) || (schoolNames.length === 1 ? schoolNames[0] : '');
+    const prevSchool = schSel.value || preferredSchool;
     const prevClass = clsSel.value;
     const prevSubject = subSel.value;
     if (source === 'freshman') {
@@ -72,7 +77,7 @@ function updateMutualAidSelects() {
 
         const classes = Object.keys(FB_SIMULATED_DATA || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
         clsSel.disabled = classes.length === 0;
-        setSingleSelectOptions(clsSel, classes, classes.length ? '--班级--' : '(暂无数据)', prevClass);
+        setSingleSelectOptions(clsSel, classes, classes.length ? '--班级--' : '(暂无数据)', prevClass || classes[0]);
 
         subSel.disabled = true;
         subSel.innerHTML = '<option value="total">入学总分</option>';
@@ -84,13 +89,14 @@ function updateMutualAidSelects() {
     clsSel.disabled = false;
     setSingleSelectOptions(
         schSel,
-        Object.keys(SCHOOLS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true })),
+        schoolNames,
         '--请选择学校--',
         prevSchool
     );
 
     const syncAidClasses = (preferredClass) => {
-        setSingleSelectOptions(clsSel, getSchoolClassOptions(schSel.value), '--班级--', preferredClass);
+        const classes = getSchoolClassOptions(schSel.value);
+        setSingleSelectOptions(clsSel, classes, '--班级--', preferredClass || classes[0]);
     };
 
     schSel.onchange = () => syncAidClasses(clsSel.value);
