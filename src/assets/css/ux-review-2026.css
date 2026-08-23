@@ -395,6 +395,13 @@
     cursor: default !important;
 }
 
+/* Beat the legacy nth-column accent rules that shipped before this contract. */
+#app table.analysis-table-dense tbody td:nth-child(n+1),
+#app table.analysis-table-dense tbody tr:hover td:nth-child(n+1) {
+    text-decoration: none !important;
+    background-image: none !important;
+}
+
 #app table.analysis-table-dense tbody td > button:not([disabled]),
 #app table.analysis-table-dense tbody td > a[href],
 #app table.analysis-table-dense tbody td > [role="button"] {
