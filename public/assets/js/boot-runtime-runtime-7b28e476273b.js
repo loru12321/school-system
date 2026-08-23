@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-e12c63f92f50';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-7b28e476273b';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -255,9 +255,9 @@ var APP_MODULE_PRELOAD_LIMIT = 36;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 4;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 34;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
-var APP_MODULE_DESKTOP_BATCH_SIZE = 12;
-var APP_MODULE_MOBILE_BATCH_SIZE = 6;
-var APP_MODULE_MAX_BATCH_SIZE = 12;
+var APP_MODULE_DESKTOP_BATCH_SIZE = 96;
+var APP_MODULE_MOBILE_BATCH_SIZE = 24;
+var APP_MODULE_MAX_BATCH_SIZE = 96;
 // The login screen is normally visible long enough to warm the small state and
 // cloud-runtime prefix. Keep this as low-priority prefetch (not execution),
 // so authentication remains responsive while the post-login request waterfall
