@@ -80,9 +80,9 @@ ${f}`);return}const s=i.entries.filter(f=>Number.isFinite(Number(f.total))&&Numb
                 <td>${a.bottom3?a.bottom3.totalN:""}</td>
                 <td>${a.bottom3?a.bottom3.bottomN:""}</td>
                 <td>
-                    <span class="clickable-num" onclick="handleExcludedClick(${c})" title="点击查看被剔除的低分学生">
+                    <button type="button" class="clickable-num" onclick="handleExcludedClick(${c})" title="点击查看被剔除的低分学生" aria-label="查看${s}被剔除的低分学生名单">
                         ${a.bottom3?a.bottom3.excN:""}
-                    </span>
+                    </button>
                 </td>
                 <td>${a.bottom3?a.bottom3.avg.toFixed(2):""}</td>
                 <td class="text-red">${a.scoreBottom?a.scoreBottom.toFixed(2):""}</td>

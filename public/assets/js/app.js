@@ -5673,9 +5673,9 @@ function renderBottom3TableBody(summarySignature = getSummaryRenderSignature(), 
                 <td>${s.bottom3 ? s.bottom3.totalN : ''}</td>
                 <td>${s.bottom3 ? s.bottom3.bottomN : ''}</td>
                 <td>
-                    <span class="clickable-num" onclick="handleExcludedClick(${safeNameArg})" title="点击查看被剔除的低分学生">
+                    <button type="button" class="clickable-num" onclick="handleExcludedClick(${safeNameArg})" title="点击查看被剔除的低分学生" aria-label="查看${safeName}被剔除的低分学生名单">
                         ${s.bottom3 ? s.bottom3.excN : ''}
-                    </span>
+                    </button>
                 </td>
                 <td>${s.bottom3 ? s.bottom3.avg.toFixed(2) : ''}</td>
                 <td class="text-red">${s.scoreBottom ? s.scoreBottom.toFixed(2) : ''}</td>
