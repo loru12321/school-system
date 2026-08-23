@@ -8,6 +8,102 @@ body[data-mobile-architecture="apk-v2"] {
     --apk-shell-shadow: 0 16px 34px rgba(15, 23, 42, 0.1);
 }
 
+/* Mobile reading pass: keep the first workbench card readable on narrow
+   screens. The legacy starter layout was designed for desktop flex widths and
+   could collapse Chinese labels into one-character columns. */
+@media screen and (max-width: 600px) {
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .app-main {
+        padding-top: calc(var(--app-safe-top) + 104px) !important;
+        padding-bottom: calc(var(--app-safe-bottom) + 92px) !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .app-main > .section,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding: 12px 12px 24px !important;
+        box-sizing: border-box !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-header {
+        align-items: flex-start !important;
+        gap: 10px !important;
+        margin-bottom: 12px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-header-text,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-header-text h3,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-header-text p {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        white-space: normal !important;
+        word-break: keep-all !important;
+        writing-mode: horizontal-tb !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-tier--status {
+        display: block !important;
+        padding: 12px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-status-strip,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .status-strip {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .status-strip .status-item {
+        display: flex !important;
+        flex: none !important;
+        min-width: 0 !important;
+        min-height: 72px !important;
+        padding: 10px !important;
+        overflow: hidden !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .status-strip .status-item strong,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .status-strip .status-item > *:last-child {
+        max-width: 100% !important;
+        writing-mode: horizontal-tb !important;
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+        white-space: normal !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-tier--primary,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-tier--tools {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-card {
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: 14px !important;
+        border-radius: 16px !important;
+        box-sizing: border-box !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-entry-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-entry-btn {
+        min-width: 0 !important;
+        min-height: 68px !important;
+        padding: 10px 6px !important;
+        white-space: normal !important;
+        word-break: keep-all !important;
+    }
+}
+
 body.dark-mode[data-mobile-architecture="apk-v2"] {
     --apk-shell-bg: #040b16;
     --apk-shell-card: #0b1523;
