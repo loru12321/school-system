@@ -38,12 +38,17 @@ body.dark-mode .skeleton-loader {
 #mobile-skeleton {
     position: fixed;
     inset: 0;
-    z-index: 16000;
+    z-index: 9999;
     background: var(--apk-shell-bg, #eef3f8);
     opacity: 1;
     visibility: visible;
     transition: opacity 0.3s ease, visibility 0.3s ease;
     pointer-events: none;
+    display: none;
+}
+
+body[data-mobile-architecture="apk-v2"] #mobile-skeleton {
+    display: block;
 }
 
 #mobile-skeleton.hidden {

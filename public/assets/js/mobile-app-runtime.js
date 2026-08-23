@@ -1851,20 +1851,25 @@
     // Remove mobile skeleton screen after app loads
     function removeMobileSkeleton() {
         const skeleton = document.getElementById('mobile-skeleton');
-        if (skeleton) {
+        if (skeleton && isMobileViewport()) {
             skeleton.classList.add('hidden');
             setTimeout(() => {
                 skeleton.remove();
-            }, 300);
+            }, 350);
         }
     }
 
-    if (document.readyState === 'complete') {
-        setTimeout(removeMobileSkeleton, 150);
+    // Remove skeleton after mobile architecture is ready
+    function init() {
+        if (isMobileViewport()) {
+            setTimeout(removeMobileSkeleton, 200);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        window.addEventListener('load', () => {
-            setTimeout(removeMobileSkeleton, 150);
-        });
+        init();
     }
     window.addEventListener('pageshow', scheduleRefresh);
     window.addEventListener('focus', scheduleRefresh);
