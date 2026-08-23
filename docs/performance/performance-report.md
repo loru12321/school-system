@@ -4,13 +4,13 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `469589f5bb52`
-- Recorded at: 2026-08-23T04:46:33.273Z
-- Total smoke time: 21692 ms (-182 ms vs previous)
-- Login: 3375 ms
-- App ready: 3 ms
+- Commit: `9c11ce05d94b`
+- Recorded at: 2026-08-23T04:54:11.571Z
+- Total smoke time: 21677 ms (-15 ms vs previous)
+- Login: 5038 ms
+- App ready: 8 ms
 - Native long tasks: 0, max 0 ms
-- Scheduled task samples: 67, max end-to-end 181.9 ms, max derived network wait 10.4 ms
+- Scheduled task samples: 62, max end-to-end 82.4 ms, max derived network wait 7.8 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -18,19 +18,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `grade-scheduler` | 29.39999999999418 ms | 687 ms | 716.3999999999942 ms |
-| `student-overview` | 33.20000000001164 ms | 611 ms | 644.2000000000116 ms |
-| `subject-balance` | 26.90000000000873 ms | 471 ms | 497.90000000000873 ms |
-| `freshman-simulator` | 76.40000000000873 ms | 319 ms | 395.40000000000873 ms |
-| `report-generator` | 10.80000000000291 ms | 376 ms | 386.8000000000029 ms |
-| `exam-arranger` | 1 ms | 354 ms | 355 ms |
-| `cohort-growth` | 13.799999999988358 ms | 317 ms | 330.79999999998836 ms |
-| `progress-analysis` | 67.5 ms | 191 ms | 258.5 ms |
+| `grade-scheduler` | 23.30000000000291 ms | 663 ms | 686.3000000000029 ms |
+| `student-overview` | 28.80000000000291 ms | 480 ms | 508.8000000000029 ms |
+| `subject-balance` | 29.79999999998836 ms | 364 ms | 393.79999999998836 ms |
+| `freshman-simulator` | 47.80000000000291 ms | 329 ms | 376.8000000000029 ms |
+| `report-generator` | 9.69999999999709 ms | 354 ms | 363.6999999999971 ms |
+| `cohort-growth` | 11 ms | 346 ms | 357 ms |
+| `exam-arranger` | 7.099999999991269 ms | 348 ms | 355.09999999999127 ms |
+| `teacher-analysis` | 33.20000000001164 ms | 204 ms | 237.20000000001164 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Native long tasks | Scheduled tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `9c11ce05d94b` | 21677 ms | 5038 ms | 8 ms | 0 | 62 | 0 | 0 |
 | `469589f5bb52` | 21692 ms | 3375 ms | 3 ms | 0 | 67 | 0 | 0 |
 | `515a7d3ac601` | 21874 ms | 3533 ms | 4 ms | 0 | 67 | 0 | 0 |
 | `304cbb3bf011` | 22194 ms | 4542 ms | 150 ms | 0 | 67 | 0 | 0 |
@@ -45,7 +46,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `867098129319` | 21856 ms | 3098 ms | 7 ms | 0 | 71 | 0 | 0 |
 | `2f24b55344cd` | 22617 ms | 3599 ms | 4 ms | 0 | 70 | 0 | 0 |
 | `4742340a8122` | 20982 ms | 3421 ms | 3 ms | 0 | 69 | 0 | 0 |
-| `d5c6012cd4cd` | 21196 ms | 3831 ms | 10 ms | 0 | 65 | 0 | 0 |
 
 ## Data Files
 
