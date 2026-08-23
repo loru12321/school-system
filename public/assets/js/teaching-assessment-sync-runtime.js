@@ -1,6 +1,20 @@
 // Sync schoolsystem teaching-analysis scores into the independent teacher assessment system.
 (function () {
     const root = window;
+    function isAssessmentSyncSeason(date = new Date()) {
+        const month = date.getMonth() + 1;
+        return month === 7 || month === 8;
+    }
+
+    function applyAssessmentSyncSeasonVisibility(panel) {
+        if (!panel) return false;
+        const visible = isAssessmentSyncSeason();
+        panel.hidden = !visible;
+        panel.dataset.seasonalHidden = visible ? 'false' : 'true';
+        if (visible) panel.style.removeProperty('display');
+        else panel.style.display = 'none';
+        return visible;
+    }
     const PROJECTS = {
         twoRates: 'teacher_two_rates_one_score',
         classCollaboration: 'teacher_class_collaboration',
@@ -3011,6 +3025,7 @@
     function renderPanel() {
         const existingPanel = document.getElementById('tmAssessmentSyncPanel');
         if (existingPanel) {
+            applyAssessmentSyncSeasonVisibility(existingPanel);
             if (!existingPanel.dataset.assessmentSyncBound) {
                 bindPanel(existingPanel);
                 existingPanel.dataset.assessmentSyncBound = 'true';
@@ -3022,6 +3037,7 @@
         const panel = document.createElement('div');
         panel.id = 'tmAssessmentSyncPanel';
         panel.className = 'tm-next-card tm-assessment-sync-panel';
+        panel.dataset.seasonal = 'july-august';
         panel.innerHTML = `
             <div class="tm-assessment-sync-copy">
                 <div class="tm-next-title"><i class="ti ti-cloud-upload"></i> 同步到教师教学质量考核系统</div>
@@ -3047,6 +3063,7 @@
             <div id="tmAssessmentSyncResult" class="tm-assessment-sync-result"></div>
         `;
         container.insertAdjacentElement('afterend', panel);
+        applyAssessmentSyncSeasonVisibility(panel);
         bindPanel(panel);
         panel.dataset.assessmentSyncBound = 'true';
     }
@@ -3163,6 +3180,7 @@
     root.tmBuildTeacherAssessmentSyncAudit = buildAssessmentSyncAudit;
     root.tmApplyCrossGradeAssessmentRule = applyCrossGradeAssessmentRule;
     root.tmRenderAssessmentSyncPanel = installAssessmentSyncPanel;
+    root.isAssessmentSyncSeason = isAssessmentSyncSeason;
     root.tmRunAutomaticAssessmentSync = runAutomaticAssessmentSync;
     root.AssessmentRosterCore = {
         lockCurrentRoster: lockAssessmentRosters,

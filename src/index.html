@@ -175,25 +175,7 @@
     border: 1px solid #fb923c !important;
 }
 
-/* ③ 表格数字波浪下划线 - 替代圆形框 */
-table.analysis-table-dense tbody td {
-    position: relative;
-}
-
-/* 为数值列添加波浪下划线 */
-table.analysis-table-dense tbody td:not(:first-child):not(:nth-child(2)):not(.no-wave) {
-    border-bottom: 2px solid transparent;
-    background-image: url("data:image/svg+xml,%3Csvg width='100' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 Q 2.5 0, 5 2 T 10 2 T 15 2 T 20 2 T 25 2 T 30 2 T 35 2 T 40 2 T 45 2 T 50 2 T 55 2 T 60 2 T 65 2 T 70 2 T 75 2 T 80 2 T 85 2 T 90 2 T 95 2 T 100 2' stroke='%2306b6d4' stroke-width='1.5' fill='none' opacity='0.3'/%3E%3C/svg%3E");
-    background-repeat: repeat-x;
-    background-position: bottom 2px left 0;
-    background-size: 10px 4px;
-    padding-bottom: 8px !important;
-}
-
-/* hover时波浪线更明显 */
-table.analysis-table-dense tbody tr:hover td:not(:first-child):not(:nth-child(2)) {
-    background-image: url("data:image/svg+xml,%3Csvg width='100' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 Q 2.5 0, 5 2 T 10 2 T 15 2 T 20 2 T 25 2 T 30 2 T 35 2 T 40 2 T 45 2 T 50 2 T 55 2 T 60 2 T 65 2 T 70 2 T 75 2 T 80 2 T 85 2 T 90 2 T 95 2 T 100 2' stroke='%23ec4899' stroke-width='2' fill='none' opacity='0.6'/%3E%3C/svg%3E");
-}
+/* ③ 表格静态数值保持干净；真实交互控件的波浪线由 ux-review-2026.css 统一管理。 */
 
 /* 排名前三的特殊颜色 */
 table.analysis-table-dense tbody tr:nth-child(1) td:not(:first-child) {
@@ -276,8 +258,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-e7f656c202fd.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-e7f656c202fd.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-adbcf46806c5.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-adbcf46806c5.js"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         // 设计优化脚本 - 通过JavaScript和事件监听确保所有优化生效
@@ -326,37 +308,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     badge.style.border = '1px solid #c4b5fd';
                 });
 
-                // ③ 为表格数字添加波浪下划线 - 使用更通用的选择器
-                document.querySelectorAll('table.analysis-table-dense tbody td').forEach(td => {
-                    // 获取单元格在行中的索引
-                    const cellIndex = Array.from(td.parentElement.children).indexOf(td);
-                    // 跳过前两列（学校名称和排名）
-                    if (cellIndex > 1 && !td.classList.contains('no-wave')) {
-                        td.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg width='100' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 Q 2.5 0, 5 2 T 10 2 T 15 2 T 20 2 T 25 2 T 30 2 T 35 2 T 40 2 T 45 2 T 50 2 T 55 2 T 60 2 T 65 2 T 70 2 T 75 2 T 80 2 T 85 2 T 90 2 T 95 2 T 100 2' stroke='%2306b6d4' stroke-width='1.5' fill='none' opacity='0.3'/%3E%3C/svg%3E\")";
-                        td.style.backgroundRepeat = 'repeat-x';
-                        td.style.backgroundPosition = 'bottom 2px left 0';
-                        td.style.backgroundSize = '10px 4px';
-                        td.style.paddingBottom = '8px';
-                    }
-                });
-
-                // 为表格添加hover效果
-                document.querySelectorAll('table.analysis-table-dense tbody tr').forEach(tr => {
-                    tr.addEventListener('mouseenter', function() {
-                        this.querySelectorAll('td').forEach((td, index) => {
-                            if (index > 1 && !td.classList.contains('no-wave')) {
-                                td.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg width='100' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 Q 2.5 0, 5 2 T 10 2 T 15 2 T 20 2 T 25 2 T 30 2 T 35 2 T 40 2 T 45 2 T 50 2 T 55 2 T 60 2 T 65 2 T 70 2 T 75 2 T 80 2 T 85 2 T 90 2 T 95 2 T 100 2' stroke='%23ec4899' stroke-width='2' fill='none' opacity='0.6'/%3E%3C/svg%3E\")";
-                            }
-                        });
-                    });
-                    tr.addEventListener('mouseleave', function() {
-                        this.querySelectorAll('td').forEach((td, index) => {
-                            if (index > 1 && !td.classList.contains('no-wave')) {
-                                td.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg width='100' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 Q 2.5 0, 5 2 T 10 2 T 15 2 T 20 2 T 25 2 T 30 2 T 35 2 T 40 2 T 45 2 T 50 2 T 55 2 T 60 2 T 65 2 T 70 2 T 75 2 T 80 2 T 85 2 T 90 2 T 95 2 T 100 2' stroke='%2306b6d4' stroke-width='1.5' fill='none' opacity='0.3'/%3E%3C/svg%3E\")";
-                            }
-                        });
-                    });
-                });
+                // 波浪线只由最终 CSS 应用于真实交互控件；静态数值保持干净，避免误导。
 
                 // ④ 搜索框提示已通过HTML直接修改
 
@@ -5355,7 +5307,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <button id="teacher-sync-cta" class="btn btn-orange" style="display:none; white-space:nowrap;"
                         onclick="openTeacherSync()">去同步任课表</button>
                 </div>
-                <div id="tmAssessmentSyncPanel" class="tm-next-card tm-assessment-sync-panel" data-role-allow="admin,director,grade_director">
+                <div id="tmAssessmentSyncPanel" class="tm-next-card tm-assessment-sync-panel" data-seasonal="july-august" data-role-allow="admin,director,grade_director" style="display:none">
                     <div class="tm-assessment-sync-copy">
                         <div class="tm-next-title"><i class="ti ti-cloud-upload"></i> 考核同步对账</div>
                         <div class="tm-next-desc">

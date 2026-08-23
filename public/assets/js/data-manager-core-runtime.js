@@ -214,9 +214,9 @@ const DataManager = {
         if (cloudArea) cloudArea.style.display = showOverview ? 'none' : 'flex';
 
         const activeStyle = {
-            background: 'linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%)',
-            color: '#ffffff',
-            boxShadow: '0 10px 24px rgba(37,99,235,0.18)'
+            background: '#dbeafe',
+            color: '#1d4ed8',
+            boxShadow: 'inset 0 0 0 1px rgba(37,99,235,0.12)'
         };
         const idleStyle = {
             background: '#ffffff',
@@ -229,6 +229,8 @@ const DataManager = {
         });
         if (overviewBtn) Object.assign(overviewBtn.style, showOverview ? activeStyle : idleStyle);
         if (listBtn) Object.assign(listBtn.style, showOverview ? idleStyle : activeStyle);
+        if (overviewBtn) overviewBtn.setAttribute('aria-pressed', showOverview ? 'true' : 'false');
+        if (listBtn) listBtn.setAttribute('aria-pressed', showOverview ? 'false' : 'true');
     },
 
     scheduleDataManagerStatusRender: function (options = {}) {
