@@ -575,7 +575,7 @@
                     max-width: 100vw;
                     overflow-x: hidden;
                 }
-                body[data-mobile-architecture="apk-v2"] main.app-main {
+                body[data-mobile-architecture="apk-v2"] #app main.app-main {
                     width: 100%;
                     max-width: 100vw;
                     padding: calc(var(--app-safe-top, 0px) + 148px) 10px calc(var(--app-safe-bottom, 0px) + 110px) !important;
@@ -585,7 +585,7 @@
                     scroll-padding-top: calc(var(--app-safe-top, 0px) + 148px);
                     scroll-padding-bottom: calc(var(--app-safe-bottom, 0px) + 120px);
                 }
-                body[data-mobile-architecture="apk-v2"] .section.active {
+                body[data-mobile-architecture="apk-v2"] #app .app-main > .section.active {
                     width: 100% !important;
                     max-width: none !important;
                     min-width: 0 !important;
