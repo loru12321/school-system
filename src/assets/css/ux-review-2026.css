@@ -46,6 +46,20 @@
     transform: none !important;
 }
 
+#app-sidebar .sidebar-menu-item__main {
+    position: relative !important;
+}
+
+#app-sidebar .sidebar-menu-item__main::before {
+    content: "" !important;
+    flex: 0 0 4px !important;
+    width: 4px !important;
+    height: 30px !important;
+    border-radius: 999px !important;
+    background: var(--nav-accent, #64748b) !important;
+    opacity: 0.9 !important;
+}
+
 #app-sidebar .sidebar-menu-item:hover,
 #app-sidebar .sidebar-menu-item.active {
     border-color: color-mix(in srgb, var(--nav-accent, #64748b) 36%, #dbe2ea) !important;
@@ -65,14 +79,22 @@
 }
 
 #app-sidebar .sidebar-menu-item__title {
-    color: var(--ux-ink) !important;
-    font-size: 14px !important;
+    color: var(--nav-accent, var(--ux-ink)) !important;
+    font-size: 15px !important;
+    font-weight: 760 !important;
     letter-spacing: 0.01em !important;
+    line-height: 1.25 !important;
 }
 
 #app-sidebar .sidebar-menu-item__meta {
-    color: var(--ux-muted) !important;
+    color: color-mix(in srgb, var(--nav-accent, var(--ux-muted)) 72%, #64748b) !important;
     font-size: 11px !important;
+    font-weight: 650 !important;
+}
+
+#app-sidebar .sidebar-menu-item__icon i {
+    color: var(--nav-accent, var(--ux-ink)) !important;
+    font-size: 19px !important;
 }
 
 #app-sidebar .sidebar-menu-item__count {

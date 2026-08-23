@@ -2,8 +2,8 @@
     const root = window;
     const nav = root.navigator;
     const loc = root.location;
-    const SERVICE_WORKER_VERSION = 'runtime-b5e24a9d286a';
-    const SERVICE_WORKER_PATH = './sw-runtime-b5e24a9d286a.js';
+    const SERVICE_WORKER_VERSION = 'runtime-da67c994550d';
+    const SERVICE_WORKER_PATH = './sw-runtime-da67c994550d.js';
     const ALLOWED_HOSTS = new Set([
         'schoolsystem.com.cn',
         'www.schoolsystem.com.cn',

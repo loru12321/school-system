@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-b5e24a9d286a';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-da67c994550d';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -527,6 +527,10 @@ if (getRuntimeLoadProfile() === 'lazy') return;
 if (!DEFERRED_APP_MODULES.length && !getRuntimeWarmupSkillIds(getRuntimeLoadProfile()).length) return;
 window.__APP_MODULE_WARMUP_SCHEDULED__ = true;
 const runWarmup = () => {
+    // Keep the first interactive frame quiet. Deferred modules are useful after
+    // the workbench is usable, but fetching/initializing them immediately after
+    // auth competes with the first paint on slower school-office machines.
+    if (document.visibilityState === 'hidden') return;
     warmAppModuleCache();
     window.setTimeout(() => {
         if (typeof loadDeferredAppModules === 'function') {
@@ -534,13 +538,13 @@ const runWarmup = () => {
                 console.warn('[boot-runtime] hydration failed:', error);
             });
         }
-    }, 1200);
+    }, 3500);
 };
 if (typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(runWarmup, { timeout: 1800 });
+    window.requestIdleCallback(runWarmup, { timeout: 4200 });
     return;
 }
-window.setTimeout(runWarmup, 1200);
+window.setTimeout(runWarmup, 4200);
 }
 
 function loadBootScript(src, timeoutMs) {
