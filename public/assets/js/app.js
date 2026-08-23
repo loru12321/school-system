@@ -2102,6 +2102,7 @@ async function switchCohort(cohortId, options = {}) {
             sync: false
         }) || '';
         syncRuntimeStateToWindow();
+        syncVisibleCohortSelector();
 
         if (COHORT_DB && COHORT_DB.currentExamId && cohortDbRuntime.applyExamToWorkspace(COHORT_DB.currentExamId, {
             renderTables: false,
@@ -2509,6 +2510,30 @@ function runExamSelectorRefresh(options = {}) {
 window.scheduleExamSelectorRefresh = scheduleExamSelectorRefresh;
 window.runExamSelectorRefresh = runExamSelectorRefresh;
 
+// Reconcile the visible selector after auth/cloud hydration. The workspace can
+// be restored correctly while the shell still displays “请选择届别”.
+function syncVisibleCohortSelector() {
+    const selector = document.getElementById('cohort-selector');
+    if (!selector) return '';
+    const cohortId = String(
+        readWorkspaceCohortId()
+        || window.CURRENT_COHORT_ID
+        || ''
+    ).trim();
+    if (!cohortId) return '';
+    if (typeof CohortManager !== 'undefined'
+        && Array.isArray(CohortManager.list)
+        && !Array.from(selector.options || []).some(option => String(option.value) === cohortId)
+        && typeof CohortManager.renderSelector === 'function') {
+        CohortManager.renderSelector();
+    }
+    if (String(selector.value || '') !== cohortId) selector.value = cohortId;
+    selector.dataset.restoredCohort = cohortId;
+    if (typeof window.syncShellChromeBridge === 'function') window.syncShellChromeBridge();
+    return cohortId;
+}
+window.syncVisibleCohortSelector = syncVisibleCohortSelector;
+
 const CohortExamHydrationScheduler = window.CohortExamHydrationScheduler;
 
 const getLegacyDbSaveOptionsForKey=k=>/^cohort::/i.test(k||'')?{cloud:!1}:{deferCloud:!0,deferMs:9e3};
@@ -2529,6 +2554,8 @@ async function initializeAppStartup() {
         // Auth.init waits for an authenticated cloud cohort restore.  Do not let
         // the generic startup restore race it with an old browser snapshot.
         await Auth.init();
+        syncVisibleCohortSelector();
+        window.setTimeout(syncVisibleCohortSelector, 0);
     }
 
     if (typeof HelpSystem !== 'undefined') {
@@ -2654,6 +2681,7 @@ async function initializeAppStartup() {
                 if (backup.FB_CLASSES) setFbClassesState(backup.FB_CLASSES);
                 if (backup.MP_SNAPSHOTS) setMpSnapshotsState(backup.MP_SNAPSHOTS);
                 syncRuntimeStateToWindow();
+                syncVisibleCohortSelector();
                 tryAutoRestoreWorkspaceExam({
                     preferredExamId: backup.CURRENT_EXAM_ID || COHORT_DB?.currentExamId || '',
                     cohortId: CURRENT_COHORT_ID
