@@ -581,6 +581,12 @@
         style.id = 'mobile-experience-styles';
         style.textContent = `
             @media screen and (max-width: 960px) {
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 15000;
+                    pointer-events: none;
+                }
                 body[data-mobile-architecture="apk-v2"] {
                     overflow: hidden;
                     overscroll-behavior-y: contain;
@@ -596,6 +602,10 @@
                     right: 0;
                     top: calc(var(--app-safe-top, 0px) + 136px);
                     bottom: calc(var(--app-safe-bottom, 0px) + 70px);
+                    opacity: 1;
+                    visibility: visible;
+                    transform: none;
+                    pointer-events: auto;
                     overflow-y: auto;
                     -webkit-overflow-scrolling: touch;
                     overscroll-behavior-y: contain;
@@ -891,7 +901,7 @@
             return;
         }
 
-        if (isParentLikeRole()) {
+        if (!isParentLikeRole()) {
             app.classList.remove('hidden');
             app.style.display = '';
         }
@@ -1725,7 +1735,7 @@
     }
 
     function handleShellTouchStart(event) {
-        if (!isMobileViewport() || !isLoggedIn() || !isParentLikeRole() || isBlockingDialogVisible()) return;
+        if (!isMobileViewport() || !isLoggedIn() || isParentLikeRole() || isBlockingDialogVisible()) return;
         const touch = event.touches?.[0];
         if (!touch) return;
         shellGesture = {
@@ -1851,7 +1861,7 @@
         syncSystemTheme();
 
         const isMobile = isMobileViewport();
-        const shouldUseShell = isMobile && isLoggedIn() && isParentLikeRole();
+        const shouldUseShell = isMobile && isLoggedIn() && !isParentLikeRole();
 
         document.body.dataset.mobileQuery = isMobile ? 'true' : 'false';
         if (shouldUseShell) {
