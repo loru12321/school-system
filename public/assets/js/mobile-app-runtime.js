@@ -587,6 +587,40 @@
                     z-index: 15000;
                     pointer-events: none;
                 }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-top {
+                    position: absolute !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-topbar,
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-meta,
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-rail,
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-tabs {
+                    pointer-events: auto !important;
+                }
+                body[data-mobile-architecture="apk-v2"] #starter-hub .starter-status-strip,
+                body[data-mobile-architecture="apk-v2"] #starter-hub .status-strip {
+                    display: grid !important;
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                    width: 100% !important;
+                    gap: 8px !important;
+                }
+                body[data-mobile-architecture="apk-v2"] #starter-hub .status-strip .status-item {
+                    display: flex !important;
+                    min-width: 0 !important;
+                    width: auto !important;
+                    min-height: 72px !important;
+                    padding: 10px !important;
+                    writing-mode: horizontal-tb !important;
+                }
+                body[data-mobile-architecture="apk-v2"] #starter-hub .status-strip .status-item > *,
+                body[data-mobile-architecture="apk-v2"] #starter-hub .status-strip .status-item strong {
+                    writing-mode: horizontal-tb !important;
+                    max-width: 100% !important;
+                    white-space: normal !important;
+                    word-break: keep-all !important;
+                }
                 body[data-mobile-architecture="apk-v2"] {
                     overflow: hidden;
                     overscroll-behavior-y: contain;

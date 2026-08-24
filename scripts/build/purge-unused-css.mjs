@@ -55,6 +55,10 @@ const safelist = {
     /^drill-/,        // Dynamic drill modal and class-card surfaces
     /^apk-/,          // APK v2 mobile shell is created entirely at runtime
     /^clickable-num$/ // Dynamic number drill controls
+  ],
+  deep: [
+    /data-mobile-architecture/, // Attribute-gated mobile layout selectors
+    /data-mobile-query/          // Legacy responsive mobile selectors
   ]
 };
 
