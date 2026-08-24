@@ -53,6 +53,7 @@ const safelist = {
     /^pairing-/,      // Pairing classes
     /^loader-/,       // Loader classes
     /^drill-/,        // Dynamic drill modal and class-card surfaces
+    /^apk-/,          // APK v2 mobile shell is created entirely at runtime
     /^clickable-num$/ // Dynamic number drill controls
   ]
 };
