@@ -1,3 +1,4 @@
+/* 2026-08-24 mobile shell cache-bust: keep runtime-generated APK shell styles fresh. */
 body[data-mobile-architecture="apk-v2"] {
     --apk-shell-bg: #eef3f8;
     --apk-shell-card: rgba(255, 255, 255, 0.98);
