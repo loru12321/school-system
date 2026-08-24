@@ -560,6 +560,21 @@
         });
     }
 
+    function attachTableScrollIndicators(scope = document) {
+        if (!isMobileViewport()) return;
+        const tableWraps = scope.querySelectorAll('.table-wrap');
+        tableWraps.forEach((wrap) => {
+            if (wrap.__scrollListenerAttached__) return;
+            const updateScrollState = () => {
+                const isAtEnd = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 2;
+                wrap.classList.toggle('scrolled-end', isAtEnd);
+            };
+            wrap.addEventListener('scroll', updateScrollState, { passive: true });
+            wrap.__scrollListenerAttached__ = true;
+            updateScrollState();
+        });
+    }
+
     function ensureMobileExperienceStyles() {
         if (document.getElementById('mobile-experience-styles')) return;
         const style = document.createElement('style');
@@ -567,30 +582,40 @@
         style.textContent = `
             @media screen and (max-width: 960px) {
                 body[data-mobile-architecture="apk-v2"] {
-                    overflow-x: hidden;
+                    overflow: hidden;
                     overscroll-behavior-y: contain;
                     touch-action: manipulation;
                 }
                 body[data-mobile-architecture="apk-v2"] #app {
                     max-width: 100vw;
-                    overflow-x: hidden;
+                    overflow: hidden;
                 }
-                body[data-mobile-architecture="apk-v2"] #app main.app-main {
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-sheet {
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    top: calc(var(--app-safe-top, 0px) + 136px);
+                    bottom: calc(var(--app-safe-bottom, 0px) + 70px);
+                    overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    overscroll-behavior-y: contain;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-sheet main.app-main {
                     width: 100%;
                     max-width: 100vw;
-                    padding: calc(var(--app-safe-top, 0px) + 148px) 10px calc(var(--app-safe-bottom, 0px) + 110px) !important;
-                    padding-left: 0 !important;
-                    padding-right: 0 !important;
-                    -webkit-overflow-scrolling: touch;
-                    scroll-padding-top: calc(var(--app-safe-top, 0px) + 148px);
-                    scroll-padding-bottom: calc(var(--app-safe-bottom, 0px) + 120px);
+                    min-height: 100%;
+                    padding: 16px 10px 20px !important;
+                    margin: 0 !important;
+                    box-sizing: border-box;
+                    display: flex;
+                    flex-direction: column;
                 }
-                body[data-mobile-architecture="apk-v2"] #app .app-main > .section.active {
+                body[data-mobile-architecture="apk-v2"] main.app-main > .section.active {
                     width: 100% !important;
                     max-width: none !important;
                     min-width: 0 !important;
-                    margin-left: 0 !important;
-                    margin-right: 0 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
                     align-self: stretch !important;
                     box-sizing: border-box !important;
                     overflow: visible;
@@ -602,7 +627,33 @@
                 body[data-mobile-architecture="apk-v2"] .card-box {
                     margin-left: 0 !important;
                     margin-right: 0 !important;
-                    border-radius: 18px !important;
+                    border-radius: 16px !important;
+                }
+                body[data-mobile-architecture="apk-v2"] .table-wrap {
+                    position: relative;
+                    width: 100%;
+                    max-width: 100%;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    overscroll-behavior-x: contain;
+                }
+                body[data-mobile-architecture="apk-v2"] .table-wrap::after {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    bottom: 0;
+                    width: 40px;
+                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95));
+                    pointer-events: none;
+                    opacity: 0;
+                    transition: opacity 0.2s;
+                }
+                body[data-mobile-architecture="apk-v2"] .table-wrap:not(.scrolled-end)::after {
+                    opacity: 1;
+                }
+                body.dark-mode[data-mobile-architecture="apk-v2"] .table-wrap::after {
+                    background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.95));
                 }
                 body[data-mobile-architecture="apk-v2"] input,
                 body[data-mobile-architecture="apk-v2"] select,
@@ -667,11 +718,28 @@
                     text-align: left;
                     line-height: 1.45;
                 }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-topbar {
+                    height: 64px;
+                    padding: 10px 12px;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-meta {
+                    height: 40px;
+                    padding: 0 12px 8px;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-rail {
+                    min-height: 44px;
+                    padding: 0 12px 8px;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-tabs {
+                    height: 62px;
+                    padding: 8px 12px calc(var(--app-safe-bottom, 0px) + 8px);
+                }
                 body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-title,
                 body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-subtitle,
                 body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-rail-chip {
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    white-space: nowrap;
                 }
                 body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-rail-chip {
                     max-width: 56vw;
@@ -714,6 +782,7 @@
         scheduleResponsiveTableRefresh(scope);
         installResponsiveTableObserver(scope);
         markFlexibleRows(scope);
+        attachTableScrollIndicators(scope);
     }
 
     function isVisiblyRendered(node) {
@@ -751,10 +820,26 @@
     function dismissPassiveSwal() {
         const container = document.querySelector('.swal2-container.swal2-backdrop-show');
         if (!isMobileViewport() || !container) return false;
+
+        // 有输入框或多个按钮的弹窗不自动关闭
         if (container.querySelector('input,textarea,select,.swal2-cancel,.swal2-deny')) return false;
+
+        // 错误/警告/问号图标的弹窗不自动关闭
         if (container.querySelector('.swal2-icon-error,.swal2-icon-warning,.swal2-icon-question')) return false;
+
         const text = String(container.innerText || '');
-        if (/(安全|警告|失败|错误|确认|请确认|未完成|必须|需要完成|删除|覆盖|退出|清空)/.test(text)) return false;
+
+        // 关键词黑名单：包含这些词的弹窗不自动关闭
+        const criticalKeywords = [
+            '安全', '警告', '失败', '错误', '确认', '请确认',
+            '未完成', '必须', '需要完成', '删除', '覆盖',
+            '退出', '清空', '重置', '取消', '放弃', '丢失',
+            '不可恢复', '永久', '移除', '注销'
+        ];
+
+        if (criticalKeywords.some(keyword => text.includes(keyword))) return false;
+
+        // 通过所有检查，自动关闭纯信息提示弹窗
         if (window.Swal && typeof window.Swal.close === 'function') window.Swal.close();
         else container.remove();
         return true;
@@ -806,7 +891,7 @@
             return;
         }
 
-        if (!isParentLikeRole()) {
+        if (isParentLikeRole()) {
             app.classList.remove('hidden');
             app.style.display = '';
         }
@@ -1640,7 +1725,7 @@
     }
 
     function handleShellTouchStart(event) {
-        if (!isMobileViewport() || !isLoggedIn() || isParentLikeRole() || isBlockingDialogVisible()) return;
+        if (!isMobileViewport() || !isLoggedIn() || !isParentLikeRole() || isBlockingDialogVisible()) return;
         const touch = event.touches?.[0];
         if (!touch) return;
         shellGesture = {
@@ -1728,13 +1813,45 @@
         hookSwalLifecycle();
     }
 
+    function moveMainIntoShell(root) {
+        const main = document.querySelector('main.app-main');
+        const app = document.getElementById('app');
+        const shellSheet = root.querySelector('.apk-shell-sheet');
+
+        if (!main || !shellSheet) return;
+
+        // 如果 main 已经在 shell 内，跳过
+        if (root.contains(main)) return;
+
+        // 标记原始父容器，以便恢复
+        if (!main.dataset.originalParent) {
+            main.dataset.originalParent = 'app';
+        }
+
+        // 将 main 移入 shell 的 sheet 容器
+        shellSheet.appendChild(main);
+    }
+
+    function restoreMainToApp() {
+        const main = document.querySelector('main.app-main');
+        const app = document.getElementById('app');
+        const shell = document.getElementById('apk-mobile-shell');
+
+        if (!main || !app) return;
+
+        // 如果 main 在 shell 内，移回 app
+        if (shell && shell.contains(main)) {
+            app.appendChild(main);
+        }
+    }
+
     function refreshMobileArchitecture() {
         resetMobileNavCache();
         ensureHooks();
         syncSystemTheme();
 
         const isMobile = isMobileViewport();
-        const shouldUseShell = isMobile && isLoggedIn() && !isParentLikeRole();
+        const shouldUseShell = isMobile && isLoggedIn() && isParentLikeRole();
 
         document.body.dataset.mobileQuery = isMobile ? 'true' : 'false';
         if (shouldUseShell) {
@@ -1758,9 +1875,11 @@
             root.dataset.sheetMode = '';
             root.dataset.libraryOpen = 'false';
             root.dataset.modalOpen = 'false';
+            restoreMainToApp();
             return;
         }
 
+        moveMainIntoShell(root);
         refreshContentEnhancements();
         renderShell();
     }
