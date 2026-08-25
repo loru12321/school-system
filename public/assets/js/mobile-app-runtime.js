@@ -599,20 +599,25 @@
                 body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-tabs {
                     pointer-events: auto !important;
                 }
-                body[data-mobile-architecture="apk-v2"] #starter-hub .starter-status-strip {
+                body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-status-strip {
                     display: block !important;
                     width: 100% !important;
+                    max-width: none !important;
+                    min-width: 0 !important;
+                    grid-template-columns: none !important;
+                    flex: none !important;
                 }
-                body[data-mobile-architecture="apk-v2"] #starter-hub .starter-status-strip > #starter-status-panel {
+                body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-status-strip > #starter-status-panel {
                     display: grid !important;
                     grid-template-columns: minmax(0, 1fr) !important;
                     width: 100% !important;
                     max-width: none !important;
                     min-width: 0 !important;
                     flex: 0 0 auto !important;
+                    grid-column: 1 / -1 !important;
                     gap: 0 !important;
                 }
-                body[data-mobile-architecture="apk-v2"] #starter-hub .starter-status-strip .status-item {
+                body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-status-strip .status-item {
                     display: grid !important;
                     grid-template-columns: minmax(88px, 1fr) minmax(108px, 1.35fr) auto !important;
                     align-items: center !important;
@@ -623,8 +628,8 @@
                     padding: 12px 14px !important;
                     writing-mode: horizontal-tb !important;
                 }
-                body[data-mobile-architecture="apk-v2"] #starter-hub .starter-status-strip .status-item > *,
-                body[data-mobile-architecture="apk-v2"] #starter-hub .starter-status-strip .status-item strong {
+                body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-status-strip .status-item > *,
+                body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #starter-hub .starter-status-strip .status-item strong {
                     writing-mode: horizontal-tb !important;
                     max-width: 100% !important;
                     white-space: normal !important;
