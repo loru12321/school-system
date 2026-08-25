@@ -196,6 +196,8 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
     inset: 0;
     z-index: 15000;
     pointer-events: none;
+    transform: none;
+    transform-origin: 0 0;
 }
 
 #apk-mobile-shell .apk-shell-content {

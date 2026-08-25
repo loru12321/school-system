@@ -108,6 +108,17 @@
         return true;
     }
 
+    function syncShellViewport(root = document.getElementById('apk-mobile-shell')) {
+        if (!root || !isMobileViewport()) return;
+        const viewport = window.visualViewport;
+        const left = Number(viewport?.offsetLeft || 0);
+        const top = Number(viewport?.offsetTop || 0);
+        const transform = (left || top) ? `translate3d(${left}px, ${top}px, 0)` : 'none';
+        if (root.style.transform !== transform) root.style.transform = transform;
+        root.style.setProperty('--apk-viewport-left', `${left}px`);
+        root.style.setProperty('--apk-viewport-top', `${top}px`);
+    }
+
     function toggleClassIfChanged(node, className, force) {
         if (!node?.classList) return false;
         const nextValue = !!force;
@@ -1939,6 +1950,7 @@
         hideLegacyMobileShells();
 
         const root = ensureShellRoot();
+        syncShellViewport(root);
         root.style.display = shouldUseShell ? 'block' : 'none';
         root.setAttribute('aria-hidden', shouldUseShell ? 'false' : 'true');
 
@@ -2040,6 +2052,10 @@
     window.addEventListener('cloud-load-state', scheduleRefresh);
     window.addEventListener('resize', scheduleRefresh);
     window.addEventListener('orientationchange', scheduleRefresh);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', scheduleRefresh, { passive: true });
+        window.visualViewport.addEventListener('scroll', () => syncShellViewport(), { passive: true });
+    }
     window.addEventListener('load', scheduleRefresh);
 
     // Remove mobile skeleton screen after app loads
