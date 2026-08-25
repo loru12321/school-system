@@ -1,4 +1,8 @@
+# robots.txt for schoolsystem.com.cn
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /sb/
+Disallow: /assets/js/
 
 Sitemap: https://schoolsystem.com.cn/sitemap.xml

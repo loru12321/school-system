@@ -1,9 +1,14 @@
 /*
+  # Security Headers
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-XSS-Protection: 1; mode=block
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+
+  # Content Security Policy (CSP)
+  # Note: unsafe-inline and unsafe-eval are temporary - see memory for migration roadmap
   Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self' https://schoolsystem.com.cn https://www.schoolsystem.com.cn https://*.supabase.co https://timor.tech; worker-src 'self' blob:; manifest-src 'self'; report-uri /api/csp-report
   Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self' https://schoolsystem.com.cn https://www.schoolsystem.com.cn https://*.supabase.co https://timor.tech; worker-src 'self' blob:; manifest-src 'self'; report-uri /api/csp-report
 

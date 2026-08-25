@@ -9,7 +9,7 @@
     "dev": "vite",
     "build": "npm-run-all build:pre build:core build:post",
     "build:pre": "node scripts/build/subset-tabler-icons.mjs && node scripts/build/update-runtime-cache-version.mjs",
-    "build:core": "vite build",
+    "build:core": "vite build --mode production",
     "build:post": "npm-run-all --parallel build:post:group1 && npm-run-all --parallel build:post:group2 && node scripts/build/purge-unused-css.mjs && node scripts/build/inline-scripts.mjs && node scripts/build/optimize-images.mjs && node scripts/build/precompress-assets.mjs",
     "build:post:group1": "npm-run-all --parallel build:post:sync build:post:dedupe",
     "build:post:group2": "npm-run-all --parallel build:post:prune build:post:optimize",

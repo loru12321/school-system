@@ -37,6 +37,11 @@ export default defineConfig({
     minify: 'esbuild',
     // Optimize build performance
     reportCompressedSize: false,
+    // Remove console statements in production
+    esbuild: {
+      drop: ['console', 'debugger'],
+      legalComments: 'none'
+    }
   },
   server: {
     open: true,

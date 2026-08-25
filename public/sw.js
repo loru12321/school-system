@@ -4,18 +4,21 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-runtime-8213717844b1';
+const CACHE_VERSION = 'school-system-runtime-ffb0df7f633d';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 // Only precache deterministic app shell assets to avoid install failures.
+// Keep this list minimal to ensure fast SW installation
 const APP_SHELL_ASSETS = [
     './favicon.ico',
     './icon.svg',
     './site.webmanifest',
     './robots.txt',
-    './sitemap.xml'
+    './sitemap.xml',
+    './assets/fonts/manrope/manrope-latin-400-normal.woff2',
+    './assets/vendor/tabler-icons/fonts/tabler-icons.woff2'
 ];
 
 self.addEventListener('install', event => {
@@ -78,7 +81,7 @@ async function precacheAsset(cache, asset) {
     try {
         await cache.add(new Request(asset, { cache: 'reload' }));
     } catch (error) {
-        console.warn('[SW] precache skipped:', asset, error);
+        // Silently skip failed precache attempts in production
     }
 }
 
