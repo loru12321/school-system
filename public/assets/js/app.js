@@ -8229,7 +8229,10 @@ window.DrillSystem = DrillSystem;
 // app.js inside a deferred runtime bundle.
 window.switchTab = switchTab;
 if (!window.CohortGrowth) {
-    console.warn('[cohort-growth] runtime unavailable; cohort growth module will lazy-load via boot runtime.');
+    // Cohort growth is intentionally deferred. Keep the expected cold-start
+    // state out of the browser console; module-entry-runtime will load it when
+    // the section is activated.
+    appDebug('[cohort-growth] deferred runtime; will load on module activation.');
 }
 if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
 
