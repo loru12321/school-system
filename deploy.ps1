@@ -67,6 +67,7 @@ if (Test-Path "dist") {
 }
 
 $status = git status --porcelain
+if ($LASTEXITCODE -ne 0) { throw "git status failed with exit code $LASTEXITCODE" }
 
 if (-not $status) {
     Write-Host "No changes to commit." -ForegroundColor Cyan
