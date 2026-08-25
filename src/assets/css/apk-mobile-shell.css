@@ -225,6 +225,7 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
         right: 0;
         padding: calc(var(--app-safe-top) + 10px) 12px 0;
     pointer-events: none;
+    z-index: 20;
 }
 
 #apk-mobile-shell .apk-shell-top,
@@ -411,6 +412,14 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
         border-radius: 28px;
         overflow: auto;
         transform: translateX(-28px);
+    }
+
+    #apk-mobile-shell .apk-shell-library,
+    #apk-mobile-shell .apk-shell-library-backdrop,
+    #apk-mobile-shell .apk-shell-sheet,
+    #apk-mobile-shell .apk-shell-backdrop,
+    #apk-mobile-shell .apk-shell-tabs {
+        z-index: 20;
     }
 
     #apk-mobile-shell .apk-shell-sheet {
