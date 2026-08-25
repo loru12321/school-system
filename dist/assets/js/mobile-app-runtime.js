@@ -69,13 +69,19 @@
                     right: 0;
                     top: calc(var(--app-safe-top, 0px) + 136px);
                     bottom: calc(var(--app-safe-bottom, 0px) + 70px);
+                    opacity: 0;
+                    visibility: hidden;
+                    transform: translateY(24px);
+                    pointer-events: none;
+                    overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    overscroll-behavior-y: contain;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell[data-sheet-open="true"] .apk-shell-sheet {
                     opacity: 1;
                     visibility: visible;
                     transform: none;
                     pointer-events: auto;
-                    overflow-y: auto;
-                    -webkit-overflow-scrolling: touch;
-                    overscroll-behavior-y: contain;
                 }
                 body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-sheet main.app-main {
                     width: 100%;
