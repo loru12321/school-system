@@ -202,8 +202,12 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
     position: absolute;
     inset: 0;
     overflow: hidden;
-    pointer-events: auto;
+    pointer-events: none;
     visibility: visible;
+}
+
+#apk-mobile-shell .apk-shell-content .app-main {
+    pointer-events: auto;
 }
 
     #apk-mobile-shell .apk-shell-surface {

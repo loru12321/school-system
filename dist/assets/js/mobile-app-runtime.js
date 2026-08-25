@@ -81,8 +81,11 @@
                     position: absolute;
                     inset: 0;
                     overflow: hidden;
-                    pointer-events: auto;
+                    pointer-events: none;
                     visibility: visible;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-content .app-main {
+                    pointer-events: auto;
                 }
                 body[data-mobile-architecture="apk-v2"] #apk-mobile-shell[data-sheet-open="true"] .apk-shell-sheet {
                     opacity: 1;
