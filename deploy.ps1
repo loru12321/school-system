@@ -36,6 +36,10 @@ function Invoke-Git {
     }
 }
 
+# dist 新鲜度检查：防止 "忘了 build 就 push" 把旧 dist 推上去（已犯三次）。
+node scripts/check-dist-fresh.js
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 # 新增路径要挡住：漏了会静默少发布一整个目录。
 $missingPaths = @($sourcePaths | Where-Object { -not (Test-Path $_) })
 if ($missingPaths.Count -gt 0) {
