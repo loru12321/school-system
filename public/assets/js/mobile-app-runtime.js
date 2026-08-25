@@ -658,6 +658,13 @@
                     -webkit-overflow-scrolling: touch;
                     overscroll-behavior-y: contain;
                 }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-content {
+                    position: absolute;
+                    inset: 0;
+                    overflow: hidden;
+                    pointer-events: auto;
+                    visibility: visible;
+                }
                 body[data-mobile-architecture="apk-v2"] #apk-mobile-shell[data-sheet-open="true"] .apk-shell-sheet {
                     opacity: 1;
                     visibility: visible;
@@ -1313,6 +1320,7 @@
                 </div>
                 <div class="apk-shell-rail" data-apk-rail></div>
             </div>
+            <div class="apk-shell-content" data-apk-content></div>
             <button type="button" class="apk-shell-library-backdrop" data-apk-action="close-library" aria-label="${escapeHtml(copy.closeLibrary)}"></button>
             <div class="apk-shell-library">
                 <div class="apk-shell-library-panel apk-shell-surface" data-apk-library-panel></div>
@@ -1880,9 +1888,9 @@
     function moveMainIntoShell(root) {
         const main = document.querySelector('main.app-main');
         const app = document.getElementById('app');
-        const shellSheet = root.querySelector('.apk-shell-sheet');
+        const shellContent = root.querySelector('[data-apk-content]');
 
-        if (!main || !shellSheet) return;
+        if (!main || !shellContent) return;
 
         // 如果 main 已经在 shell 内，跳过
         if (root.contains(main)) return;
@@ -1893,7 +1901,7 @@
         }
 
         // 将 main 移入 shell 的 sheet 容器
-        shellSheet.appendChild(main);
+        shellContent.appendChild(main);
     }
 
     function restoreMainToApp() {
