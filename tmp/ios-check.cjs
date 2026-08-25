@@ -1,6 +1,0 @@
-const WebSocket = require('ws');
-const ws = new WebSocket('ws://localhost:9000/ios_00008101-001D09863601001E/ws://127.0.0.1:9101/devtools/page/2');
-let id = 0;
-function send(method, params = {}) { const n = ++id; ws.send(JSON.stringify({ id: n, method, params })); }
-ws.on('open', () => setTimeout(() => send('Runtime.evaluate', { returnByValue: true, expression: `JSON.stringify((()=>{const pts=[[350,650],[350,82],[350,142],[100,185],[200,185],[300,185]];return {url:location.href,arch:document.body?.dataset.mobileArchitecture,shell:document.querySelector('#apk-mobile-shell')?.dataset.sheetOpen,style:{opacity:getComputedStyle(document.querySelector('#apk-mobile-shell .apk-shell-sheet')).opacity,visibility:getComputedStyle(document.querySelector('#apk-mobile-shell .apk-shell-sheet')).visibility,pointerEvents:getComputedStyle(document.querySelector('#apk-mobile-shell .apk-shell-sheet')).pointerEvents},hits:pts.map(([x,y])=>({p:[x,y],tag:document.elementFromPoint(x,y)?.tagName,cls:document.elementFromPoint(x,y)?.className,id:document.elementFromPoint(x,y)?.id}))}})())` }), 1000));
-ws.on('message', m => { console.log(m.toString()); if (m.toString().includes('"id":1')) setTimeout(() => ws.close(), 300); });
