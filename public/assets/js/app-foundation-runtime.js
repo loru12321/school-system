@@ -9,7 +9,11 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
     // 仅静默已知的启动加载顺序竞态，其他启动错误仍弹出，避免把真实故障藏起来。
     const isKnownStartupRace = window.__APP_MODULES_LOADED__ !== true
         && /renderNavigation is not defined/i.test(message);
-    if (isKnownStartupRace) {
+    // Safari/WebKit reports a benign layout notification as a window error
+    // when ResizeObserver callbacks settle during a reflow. It is not an
+    // application failure and must not open the global error dialog.
+    const isResizeObserverNoise = /ResizeObserver loop (completed with undelivered notifications|limit exceeded)/i.test(message);
+    if (isKnownStartupRace || isResizeObserverNoise) {
         return true;
     }
 

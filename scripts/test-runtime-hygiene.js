@@ -93,6 +93,7 @@ assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(schoolName)'), 
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(maxSub)'), 'school profile should escape dynamic advantage subject names');
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(minSub)'), 'school profile should escape dynamic weak subject names');
 const appRuntime = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const appFoundationRuntime = fs.readFileSync(path.join(root, 'public/assets/js/app-foundation-runtime.js'), 'utf8');
 const indicatorCalcRuntime = fs.readFileSync(path.join(root, 'public/assets/js/indicator-calc-runtime.js'), 'utf8');
 const reportHistoryRuntime = fs.readFileSync(path.join(root, 'public/assets/js/report-history-runtime.js'), 'utf8');
 const analyticsKernelRuntime = fs.readFileSync(path.join(root, 'public/assets/js/analytics-kernel-runtime.js'), 'utf8');
@@ -123,6 +124,11 @@ assert.ok(appRuntime.includes("buildSummaryDependencySignature('highScore', list
 assert.ok(!appRuntime.includes("markSummaryDataChanged('两率一分或后1/3结果已更新，请重新生成总排名。');"), 'two-rate/bottom3 refresh should not always mark summary stale');
 assert.ok(!appRuntime.includes("markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');") && !indicatorCalcRuntime.includes("markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');"), 'indicator refresh should not always mark summary stale');
 assert.ok(!appRuntime.includes("markSummaryDataChanged('高分段赋分已更新，请重新生成总排名。');"), 'high-score refresh should not always mark summary stale');
+assert.match(
+    appFoundationRuntime,
+    /isResizeObserverNoise[\s\S]*ResizeObserver loop \(completed with undelivered notifications\|limit exceeded\)[\s\S]*isKnownStartupRace \|\| isResizeObserverNoise/,
+    'Safari ResizeObserver loop notifications must not trigger the global error dialog'
+);
 assert.ok(smokeAllModulesRuntime.includes('summaryStalePromptAbsent'), 'summary smoke should fail if unchanged data shows a stale regeneration prompt');
 assert.ok(smokeAllModulesRuntime.includes('/数据已变更|请重新生成/'), 'summary smoke should inspect stale prompt text directly');
 const archiveRuntime = fs.readFileSync(path.join(root, 'public/assets/js/data-manager-archive-runtime.js'), 'utf8');
