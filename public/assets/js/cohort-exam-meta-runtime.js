@@ -358,6 +358,25 @@ function buildTeacherTermId(meta) {
     return grade ? `${year}_${term}_${grade}年级` : `${year}_${term}`;
 }
 
+function parseTeacherTermContext(termId) {
+    const text = String(termId || '').trim();
+    return {
+        year: (text.match(/(?:^|_)(\d{4}-\d{4})(?:_|$)/) || [])[1] || '',
+        grade: (text.match(/(?:^|_)(\d{1,2})年级(?:_|$)/) || [])[1] || '',
+        term: (text.match(/(?:^|_)(上学期|下学期)(?:_|$)/) || [])[1] || ''
+    };
+}
+
+function isTeacherTermCompatibleWithCurrentExam(termId, meta = getTeacherTermMetaFromRuntime()) {
+    const candidate = parseTeacherTermContext(termId);
+    if (!candidate.year && !candidate.grade) return true;
+    const expectedYear = String(meta?.year || '').trim();
+    const expectedGrade = String(getEffectiveGrade(meta) || '').trim().replace(/年级$/, '');
+    if (candidate.year && expectedYear && candidate.year !== expectedYear) return false;
+    if (candidate.grade && expectedGrade && candidate.grade !== expectedGrade) return false;
+    return true;
+}
+
 function readArchiveExamMetaForTeacherTerm() {
     const archiveMeta = (() => {
         if (typeof readArchiveMeta === 'function') return readArchiveMeta();
@@ -425,12 +444,15 @@ function getPreferredTeacherTermId() {
     const uiTeacherTermId = buildTeacherTermId(uiMeta);
     const termSel = document.getElementById('dm-teacher-term-select');
     const selectedTeacherTermId = isTeacherTermSelectActive(termSel) ? String(termSel?.value || '').trim() : '';
+    const compatibleSelectedTeacherTermId = isTeacherTermCompatibleWithCurrentExam(selectedTeacherTermId, uiMeta)
+        ? selectedTeacherTermId
+        : '';
     // Pure preferred term: active DataManager select / current exam-derived term /
     // saved teacher term / saved base term. This is the AUTHORITATIVE current-exam
     // teacher term semantic — it must NOT be widened with teachingHistory fallbacks,
     // or a compatible old-semester 任课表 would pollute the current exam term.
     return String(
-        selectedTeacherTermId
+        compatibleSelectedTeacherTermId
         || uiTeacherTermId
         || readCurrentTeacherTermId()
         || readCurrentTermId()

@@ -147,6 +147,14 @@ assert.ok(
     && /const termId = explicitTermId[\s\S]*\|\| selectedTeacherTermId[\s\S]*\|\| preferredTeacherTermId[\s\S]*\|\| exactUiTeacherTerm[\s\S]*\|\| getCurrentTeacherTermId\(\)/.test(cloud),
   'CloudManager teacher keys should prefer the current exam teacher term before stale saved terms'
 );
+
+assert.ok(
+  cohortExamMeta.includes('function isTeacherTermCompatibleWithCurrentExam')
+    && cohortExamMeta.includes('const compatibleSelectedTeacherTermId')
+    && cloud.includes('window.isTeacherTermCompatibleWithCurrentExam')
+    && cloud.includes('((desiredYG.year || desiredYG.grade) ? null : rows?.[0])'),
+  'teacher restore must reject stale term selections from another exam year/grade instead of loading the wrong cohort roster'
+);
 assert.ok(
   cloud.includes('const explicitTermId = options && typeof options === \'object\' ? String(options.termId || \'\').trim() : \'\'')
     && /const termId = explicitTermId[\s\S]*\|\| selectedTeacherTermId[\s\S]*\|\| preferredTeacherTermId/.test(cloud)

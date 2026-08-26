@@ -1686,9 +1686,13 @@
                     const exactUiTeacherTerm = meta.year && meta.term
                         ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
                         : '';
-                    const selectedTeacherTermId = isTeacherTermSelectActive(termSel)
+                    const rawSelectedTeacherTermId = isTeacherTermSelectActive(termSel)
                         ? String(termSel.value || '').trim()
                         : '';
+                    const selectedTeacherTermId = typeof window.isTeacherTermCompatibleWithCurrentExam === 'function'
+                        && !window.isTeacherTermCompatibleWithCurrentExam(rawSelectedTeacherTermId, meta)
+                        ? ''
+                        : rawSelectedTeacherTermId;
                     const preferredTeacherTermId = typeof window.getPreferredTeacherTermId === 'function'
                         ? String(window.getPreferredTeacherTermId() || '').trim()
                         : '';
@@ -1781,7 +1785,7 @@
                                     return yearOk && gradeOk;
                                 })
                                 : null)
-                            || rows?.[0] || null;
+                            || ((desiredYG.year || desiredYG.grade) ? null : rows?.[0]) || null;
                         key = metaRow?.key || key;
                     }
 
