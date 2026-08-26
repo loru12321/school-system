@@ -42,6 +42,15 @@ assert.ok(scripts['validate:build']?.includes('test:mobile-workflow'), 'validate
 assert.ok(scripts['check:release-fast']?.includes('test:mobile-workflow'), 'release fast check should include mobile workflow contract');
 assert.ok(scripts['check:performance']?.includes('test:performance-thresholds'), 'performance check should include trend threshold guard');
 assert.match(
+  runtime,
+  /Prefer layout viewport measurements[\s\S]*window\.visualViewport\?\.width[\s\S]*Screen dimensions are a last-resort fallback/s,
+  'mobile viewport detection must prefer layout viewport measurements over stale iPad screen dimensions'
+);
+assert.ok(
+  !runtime.slice(runtime.indexOf('const candidates = ['), runtime.indexOf('if (candidates.length)')).match(/Number\(window\.screen\?\.width/),
+  'screen.width must not participate in the primary mobile viewport minimum'
+);
+assert.match(
   workbenchCss,
   /@media \(max-width: 820px\)[\s\S]*?#app\.app-layout\.hidden\s*\{\s*display:\s*none\s*!important;/,
   'mobile workbench CSS must keep the hidden app from intercepting login interactions'

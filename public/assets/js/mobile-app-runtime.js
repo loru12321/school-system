@@ -128,14 +128,26 @@
     }
 
     function getViewportWidth() {
+        // Prefer layout viewport measurements. On iPad Safari in landscape,
+        // `screen.width` can remain the portrait CSS width (for example 768)
+        // while `innerWidth`/`clientWidth` correctly report 1024. Including
+        // that stale screen value in the minimum incorrectly activates the
+        // phone shell on a tablet.
         const candidates = [
             Number(window.innerWidth || 0),
             Number(document.documentElement?.clientWidth || 0),
+            Number(window.visualViewport?.width || 0),
             Number(window.outerWidth || 0),
+        ].filter((value) => Number.isFinite(value) && value > 0);
+        if (candidates.length) return Math.min(...candidates);
+
+        // Screen dimensions are a last-resort fallback only when no layout
+        // viewport measurement is available.
+        const screenCandidates = [
             Number(window.screen?.width || 0),
             Number(window.screen?.availWidth || 0)
         ].filter((value) => Number.isFinite(value) && value > 0);
-        return candidates.length ? Math.min(...candidates) : 0;
+        return screenCandidates.length ? Math.min(...screenCandidates) : 0;
     }
 
     function isMobileViewport() {
