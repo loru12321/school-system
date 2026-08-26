@@ -619,9 +619,77 @@ return loadOptionalRuntime(key, src).then(() => {
 });
 }
 
+// The ordered boot queue uses a watchdog so a slow asset cannot block the
+// shell indefinitely.  A watchdog timeout does not cancel the underlying
+// script request, however, so blindly injecting the same classic script from
+// a demand loader can execute it twice and trigger top-level const collisions
+// (for example, "CohortDB has already been declared").  Reuse any boot script
+// that is still loading and wait for its eventual load/error event first.
+function findBootScriptForRuntime(src) {
+    const normalized = String(src || '').trim();
+    if (!normalized) return null;
+    let pathname = normalized;
+    try {
+        pathname = new URL(normalized, window.location.href).pathname;
+    } catch (_) {}
+    pathname = pathname.replace(/^\/+/, '').replace(/^\.\//, '');
+    const scripts = Array.from(document.scripts || []);
+    return scripts.find((script) => {
+        const bootKey = String(script.dataset?.bootKey || '').trim().replace(/^\/+/, '').replace(/^\.\//, '');
+        if (bootKey && bootKey === pathname) return true;
+        let candidate = String(script.getAttribute('src') || script.src || '').trim();
+        if (!candidate) return false;
+        try {
+            candidate = new URL(candidate, window.location.href).pathname;
+        } catch (_) {}
+        return candidate.replace(/^\/+/, '').replace(/^\.\//, '') === pathname;
+    }) || null;
+}
+
+function waitForExistingBootScript(src, timeoutMs = 15000) {
+    const script = findBootScriptForRuntime(src);
+    if (!script) return Promise.resolve(false);
+    const key = String(script.dataset?.bootKey || '').trim();
+    const state = key && window.__BOOT_SCRIPT_REGISTRY__
+        ? String(window.__BOOT_SCRIPT_REGISTRY__[key] || '').trim()
+        : '';
+    if (state === 'loaded' || script.dataset?.bootLoaded === 'true') return Promise.resolve(true);
+    if (state === 'error') return Promise.resolve(false);
+    return new Promise((resolve) => {
+        let settled = false;
+        const finish = (loaded) => {
+            if (settled) return;
+            settled = true;
+            if (timer) window.clearTimeout(timer);
+            resolve(loaded);
+        };
+        const timer = window.setTimeout(() => finish(false), Math.max(1000, Number(timeoutMs) || 15000));
+        script.addEventListener('load', () => finish(true), { once: true });
+        script.addEventListener('error', () => finish(false), { once: true });
+    });
+}
+
 window.ensureCohortDbRuntime = function () {
 const existing = window.CohortDB;
 if (existing && typeof existing.ensure === 'function') return Promise.resolve(existing);
+
+const finish = () => {
+    const loaded = window.CohortDB;
+    if (loaded && typeof loaded.ensure === 'function') return Promise.resolve(loaded);
+    return ensureOptionalGlobalRuntime(
+        () => window.CohortDB,
+        'cohort-db-core',
+        './assets/js/cohort-db-core-runtime.js',
+        'CohortDB'
+    );
+};
+
+// Always honor an already-created ordered boot script, including one whose
+// watchdog has fired but whose network request is still in flight.
+const pendingBoot = findBootScriptForRuntime('./assets/js/cohort-db-core-runtime.js');
+if (pendingBoot) {
+    return waitForExistingBootScript('./assets/js/cohort-db-core-runtime.js').then(() => finish());
+}
 
 // CohortDB is the final core boot module. A cohort switch can be requested
 // immediately after login while that ordered boot queue is still finishing.
@@ -631,18 +699,11 @@ if (existing && typeof existing.ensure === 'function') return Promise.resolve(ex
 const bootPromise = window.__APP_MODULES_LOAD_PROMISE__;
 if (bootPromise && window.__APP_MODULES_LOADED__ === 'loading') {
     return Promise.resolve(bootPromise).catch(() => null).then(() => {
-        const loaded = window.CohortDB;
-        if (loaded && typeof loaded.ensure === 'function') return loaded;
-        return ensureOptionalGlobalRuntime(
-            () => window.CohortDB,
-            'cohort-db-core',
-            './assets/js/cohort-db-core-runtime.js',
-            'CohortDB'
-        );
+        return finish();
     });
 }
 
-return ensureOptionalGlobalRuntime(() => window.CohortDB, 'cohort-db-core', './assets/js/cohort-db-core-runtime.js', 'CohortDB');
+return finish();
 };
 
 window.ensureCryptoJsVendorLoaded = function () {
