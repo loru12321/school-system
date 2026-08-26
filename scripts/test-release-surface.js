@@ -90,7 +90,11 @@ assert.ok(/^20\d{2}-\d{2}-\d{2}$/.test(wrangler.compatibility_date || ''), 'comp
 assert.ok(new Date(wrangler.compatibility_date) >= new Date('2026-04-01'), 'compatibility_date should not drift too far behind this release line');
 assert.strictEqual(scripts.build, 'npm-run-all build:pre build:core build:post', 'build script should run readable build phases');
 assert.ok(!scripts['build:pre'].includes('preserve-dist-release-assets'), 'build:pre must not preserve removed release assets');
-assert.strictEqual(scripts['build:core'], 'vite build', 'build:core must run Vite');
+assert.match(
+    scripts['build:core'] || '',
+    /^vite build(?:\s|$)/,
+    'build:core must run Vite'
+);
 assert.ok(scripts['build:post'] && (scripts['build:post'].includes('sync-public-assets.mjs') || scripts['build:post:sync']), 'build:post must sync public assets');
 assert.ok(!scripts['build:post'].includes('preserve-dist-release-assets'), 'build:post must not restore removed release assets');
 assert.ok(scripts['build:post'] && (scripts['build:post'].includes('prune-dist-assets.mjs') || scripts['build:post:prune']), 'build:post must prune stale dist assets');

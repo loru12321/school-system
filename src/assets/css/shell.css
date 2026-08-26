@@ -428,7 +428,7 @@ body.shell-sidebar-collapsed .sidebar-footer-item {
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
     user-select: none;
     display: flex;
     align-items: center;

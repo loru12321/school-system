@@ -110,6 +110,36 @@ async function downloadCertificate() {
     };
 
     const actionHandlers = {
+        'mobile-open-upload': () => {
+            document.getElementById('mobile-manager-app')?.style.setProperty('display', 'none');
+            document.getElementById('app')?.classList.remove('hidden');
+            callGlobal('switchTab', 'upload');
+        },
+        'open-starter-guide': () => callGlobal('openStarterGuide'),
+        'load-cloud-data': () => callGlobal('loadCloudData'),
+        'toggle-dark-mode': () => callGlobal('toggleDarkMode'),
+        'logout': () => window.Auth?.logout?.(),
+        'confirm-logout': () => {
+            if (window.confirm('确定退出登录吗？')) window.Auth?.logout?.();
+        },
+        'mobile-switch-tab': (target) => window.MobMgr?.switchTab?.(target?.dataset?.uiValue || 'home'),
+        'mobile-scroll-target': (target) => {
+            const id = String(target?.dataset?.uiTarget || '').trim();
+            document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const message = String(target?.dataset?.uiToast || '').trim();
+            if (message) window.MobDashboardMgr?.showToast?.(message);
+        },
+        'mobile-scroll-top': () => window.scrollTo({ top: 0, behavior: 'smooth' }),
+        'open-cloud-backups': () => {
+            window.DataManager?.renderCloudBackups?.();
+            document.getElementById('dm-cloud-modal')?.classList.remove('hidden');
+        },
+        'open-skin-modal': () => callGlobal('openSkinModal'),
+        'toggle-sub-nav': (target) => callGlobal('toggleSubNav', target),
+        'exam-switch-view': (target) => callGlobal('EXAM_switchView', target?.dataset?.uiValue || 'overview', target),
+        'voice-toggle': () => window.VoiceControl?.toggle?.(),
+        'voice-stop': () => window.VoiceControl?.stop?.(),
+        'set-theme-color': (target) => callGlobal('setThemeColor', target?.dataset?.uiValue || ''),
         'export-student-details': () => callGlobal('exportStudentDetails'),
         'render-student-details': () => callGlobal('renderStudentDetails'),
         'generate-mobile-long-image': () => callGlobal('generateMobileLongImage'),
@@ -154,6 +184,14 @@ async function downloadCertificate() {
     });
 
     document.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            const actionTarget = event.target?.closest?.('[role="button"][data-ui-action]');
+            const action = actionTarget?.dataset?.uiAction;
+            if (action && runAction(actionTarget, action)) {
+                event.preventDefault();
+                return;
+            }
+        }
         if (event.key !== 'Enter') return;
         const target = event.target?.closest?.('[data-ui-enter]');
         if (!target) return;

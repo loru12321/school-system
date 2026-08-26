@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-3df8cf0cadf0';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-9130974e32db';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -241,6 +241,7 @@ var APP_MODULES = [
 'permission-policy-runtime.js',
 'teacher-card-store-runtime.js',
 'ui-actions-runtime.js',
+'module-url-state-runtime.js',
 'runtime-accessors-runtime.js',
 'teacher-visibility-runtime.js',
 'skin-settings-runtime.js',

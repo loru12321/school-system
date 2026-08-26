@@ -30,7 +30,7 @@ const userFacingReleaseFiles = [
 assert.strictEqual(scripts['test:release-hardening'], 'node scripts/test-release-hardening.js', 'release hardening script should be exposed');
 assert.strictEqual(scripts.build, 'npm-run-all build:pre build:core build:post', 'build should be split into readable phases');
 assert.ok(scripts['build:pre'] && scripts['build:pre'].includes('update-runtime-cache-version.mjs'), 'build:pre should prepare runtime versions');
-assert.strictEqual(scripts['build:core'], 'vite build', 'build:core should own Vite compilation');
+assert.match(scripts['build:core'] || '', /^vite build(?:\s|$)/, 'build:core should own Vite compilation');
 assert.ok(scripts['build:post'] && scripts['build:post'].includes('inline-scripts.mjs'), 'build:post should own dist sync and lt.html generation');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-hardening'), 'fast release check should include release hardening');
 

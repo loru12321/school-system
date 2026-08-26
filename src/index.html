@@ -262,8 +262,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-3df8cf0cadf0.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-3df8cf0cadf0.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-9130974e32db.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-9130974e32db.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -442,7 +442,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <!-- 全局加载遮罩 -->
     <div id="global-loader" class="hidden">
         <div class="loader-spinner"></div>
-        <div class="loader-text" id="loader-text">系统正在处理数据，请稍候...</div>
+        <div class="loader-text" id="loader-text">系统正在处理数据，请稍候…</div>
     </div>
 
     <!-- 📱 Mobile Manager App (YouTube-style) -->
@@ -472,49 +472,48 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <div
                 style="background:white; border-radius:16px; padding:20px 10px; box-shadow:0 2px 12px rgba(0,0,0,0.04); margin-top:-15px; position:relative; z-index:5;">
                 <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:15px 10px; text-align:center;">
-                    <div class="mob-grid-item"
-                        onclick="if(typeof switchTab==='function'){document.getElementById('mobile-manager-app').style.display='none';document.getElementById('app').classList.remove('hidden');switchTab('upload');}">
+                    <button type="button" class="mob-grid-item" data-ui-action="mobile-open-upload">
                         <div
                             style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(37,99,235,0.3);margin:0 auto;">
                             <i class="ti ti-file-upload"></i>
                         </div>
                         <div style="font-size:11px;color:#64748b;margin-top:6px;">导入数据</div>
-                    </div>
-                    <div class="mob-grid-item" onclick="if(typeof openStarterGuide==='function')openStarterGuide();">
+                    </button>
+                    <button type="button" class="mob-grid-item" data-ui-action="open-starter-guide">
                         <div
                             style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(5,150,105,0.3);margin:0 auto;">
                             <i class="ti ti-compass"></i>
                         </div>
                         <div style="font-size:11px;color:#64748b;margin-top:6px;">新手向导</div>
-                    </div>
-                    <div class="mob-grid-item" onclick="if(typeof loadCloudData==='function')loadCloudData();">
+                    </button>
+                    <button type="button" class="mob-grid-item" data-ui-action="load-cloud-data">
                         <div
                             style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(217,119,6,0.3);margin:0 auto;">
                             <i class="ti ti-cloud-download"></i>
                         </div>
                         <div style="font-size:11px;color:#64748b;margin-top:6px;">云端回滚</div>
-                    </div>
-                    <div class="mob-grid-item" onclick="document.body.classList.toggle('dark-mode');">
+                    </button>
+                    <button type="button" class="mob-grid-item" data-ui-action="open-skin-modal">
                         <div
                             style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(124,58,237,0.3);margin:0 auto;">
                             <i class="ti ti-palette"></i>
                         </div>
                         <div style="font-size:11px;color:#64748b;margin-top:6px;">外观设置</div>
-                    </div>
-                    <div class="mob-grid-item" onclick="document.body.classList.toggle('dark-mode');">
+                    </button>
+                    <button type="button" class="mob-grid-item" data-ui-action="toggle-dark-mode">
                         <div
                             style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#475569,#1e293b);box-shadow:0 4px 10px rgba(30,41,59,0.3);margin:0 auto;">
                             <i class="ti ti-moon"></i>
                         </div>
                         <div style="font-size:11px;color:#64748b;margin-top:6px;">深色模式</div>
-                    </div>
-                    <div class="mob-grid-item" onclick="if(typeof Auth!=='undefined')Auth.logout();">
+                    </button>
+                    <button type="button" class="mob-grid-item" data-ui-action="confirm-logout">
                         <div
                             style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 10px rgba(220,38,38,0.3);margin:0 auto;">
                             <i class="ti ti-logout"></i>
                         </div>
                         <div style="font-size:11px;color:#64748b;margin-top:6px;">退出登录</div>
-                    </div>
+                    </button>
                 </div>
             </div>
 
@@ -548,7 +547,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
         <!-- ===== Tab View: 通讯录 (Students) ===== -->
         <div id="mob-view-students" class="mob-view" style="padding:15px;">
             <div style="margin-bottom:12px;">
-                <input id="mob-search-input" type="text" placeholder="🔍 搜索学生姓名或考号..."
+                <input id="mob-search-input" type="search" name="mobile-student-search" aria-label="搜索学生姓名或考号" autocomplete="off" placeholder="搜索学生姓名或考号…"
                     style="width:100%; padding:12px 16px; border:1px solid #e2e8f0; border-radius:12px; font-size:14px; background:white; outline:none; box-sizing:border-box;"
                     oninput="MobMgr.renderStudentList()">
             </div>
@@ -601,22 +600,22 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
         <!-- 底部导航 (YouTube-style fixed bottom) -->
         <div
             style="position:fixed; bottom:0; left:0; width:100%; background:white; border-top:1px solid #f0f0f0; display:flex; justify-content:space-around; align-items:center; padding:8px 0; padding-bottom:max(8px, env(safe-area-inset-bottom)); z-index:99999; box-shadow:0 -2px 10px rgba(0,0,0,0.04);">
-            <div class="mob-nav-btn active" onclick="MobMgr.switchTab('home')"
+            <button type="button" class="mob-nav-btn active" data-ui-action="mobile-switch-tab" data-ui-value="home"
                 style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;cursor:pointer;color:#94a3b8;font-size:10px;transition:color 0.2s;">
                 <i class="ti ti-home" style="font-size:22px;"></i>工作台
-            </div>
-            <div class="mob-nav-btn" onclick="MobMgr.switchTab('students')"
+            </button>
+            <button type="button" class="mob-nav-btn" data-ui-action="mobile-switch-tab" data-ui-value="students"
                 style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;cursor:pointer;color:#94a3b8;font-size:10px;transition:color 0.2s;">
                 <i class="ti ti-address-book" style="font-size:22px;"></i>通讯录
-            </div>
-            <div class="mob-nav-btn" onclick="MobMgr.switchTab('analysis')"
+            </button>
+            <button type="button" class="mob-nav-btn" data-ui-action="mobile-switch-tab" data-ui-value="analysis"
                 style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;cursor:pointer;color:#94a3b8;font-size:10px;transition:color 0.2s;">
                 <i class="ti ti-report-analytics" style="font-size:22px;"></i>分析报表
-            </div>
-            <div class="mob-nav-btn" onclick="MobMgr.switchTab('me')"
+            </button>
+            <button type="button" class="mob-nav-btn" data-ui-action="mobile-switch-tab" data-ui-value="me"
                 style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;cursor:pointer;color:#94a3b8;font-size:10px;transition:color 0.2s;">
                 <i class="ti ti-user" style="font-size:22px;"></i>我的
-            </div>
+            </button>
         </div>
     </div>
 
@@ -739,9 +738,9 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
         <div class="mob-dash-header">
             <div class="mob-dash-top">
                 <div class="mob-school-name"><i class="ti ti-building-arch"></i> 澄见</div>
-                <div class="mob-user-info" onclick="Auth.logout()">
+                <button type="button" class="mob-user-info" data-ui-action="confirm-logout" aria-label="退出当前账号">
                     <i class="ti ti-user-circle"></i> <span id="mob-dash-user">老师</span>
-                </div>
+                </button>
             </div>
             <div style="font-size: 24px; font-weight: bold;">工作台</div>
             <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">今天是 <span
@@ -750,44 +749,42 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
         <!-- 金刚区导航 (Grid Nav) -->
         <div class="mob-grid-nav-card">
-            <div class="mob-grid-item"
-                onclick="document.getElementById('upload').scrollIntoView({behavior:'smooth'}); MobDashboardMgr.showToast('请在下方上传数据')">
+            <button type="button" class="mob-grid-item" data-ui-action="mobile-scroll-target" data-ui-target="upload" data-ui-toast="请在下方上传数据">
                 <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #10b981, #34d399);">
                     <i class="ti ti-file-import"></i>
                 </div>
                 <span>导入数据</span>
-            </div>
-            <div class="mob-grid-item" data-module-help="starter-hub">
+            </button>
+            <button type="button" class="mob-grid-item" data-module-help="starter-hub">
                 <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
                     <i class="ti ti-compass"></i>
                 </div>
                 <span>新手向导</span>
-            </div>
-            <div class="mob-grid-item"
-                onclick="DataManager.renderCloudBackups(); document.getElementById('dm-cloud-modal').classList.remove('hidden')">
+            </button>
+            <button type="button" class="mob-grid-item" data-ui-action="open-cloud-backups">
                 <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
                     <i class="ti ti-cloud"></i>
                 </div>
                 <span>云端回滚</span>
-            </div>
-            <div class="mob-grid-item" onclick="openSkinModal()">
+            </button>
+            <button type="button" class="mob-grid-item" data-ui-action="open-skin-modal">
                 <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #6366f1, #818cf8);">
                     <i class="ti ti-palette"></i>
                 </div>
                 <span>外观设置</span>
-            </div>
-            <div class="mob-grid-item" onclick="toggleDarkMode()">
+            </button>
+            <button type="button" class="mob-grid-item" data-ui-action="toggle-dark-mode">
                 <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #475569, #64748b);">
                     <i class="ti ti-moon"></i>
                 </div>
                 <span>深色模式</span>
-            </div>
-            <div class="mob-grid-item" onclick="if(confirm('确定退出登录吗？')) Auth.logout()">
+            </button>
+            <button type="button" class="mob-grid-item" data-ui-action="confirm-logout">
                 <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #ef4444, #f87171);">
                     <i class="ti ti-logout"></i>
                 </div>
                 <span>退出登录</span>
-            </div>
+            </button>
         </div>
 
         <!-- 数据概览卡片 -->
@@ -814,24 +811,22 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
         <!-- 底部导航 -->
         <div class="mob-bottom-tabs">
-            <div class="mob-tab-item active" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+            <button type="button" class="mob-tab-item active" data-ui-action="mobile-scroll-top">
                 <i class="ti ti-smart-home"></i>
                 <span>工作台</span>
-            </div>
-            <div class="mob-tab-item"
-                onclick="document.getElementById('dm-student-list').scrollIntoView({behavior:'smooth'})">
+            </button>
+            <button type="button" class="mob-tab-item" data-ui-action="mobile-scroll-target" data-ui-target="dm-student-list">
                 <i class="ti ti-address-book"></i>
                 <span>通讯录</span>
-            </div>
-            <div class="mob-tab-item"
-                onclick="document.getElementById('analysis-output').scrollIntoView({behavior:'smooth'})">
+            </button>
+            <button type="button" class="mob-tab-item" data-ui-action="mobile-scroll-target" data-ui-target="analysis-output">
                 <i class="ti ti-chart-pie"></i>
                 <span>分析报表</span>
-            </div>
-            <div class="mob-tab-item" onclick="Auth.logout()">
+            </button>
+            <button type="button" class="mob-tab-item" data-ui-action="confirm-logout">
                 <i class="ti ti-user"></i>
                 <span>我的</span>
-            </div>
+            </button>
         </div>
     </div>
 
@@ -1214,7 +1209,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     </div>
                 </div>
                 <div id="upload-summary-strip" class="upload-summary-strip"></div>
-                <div id="upload-flow-notice" class="upload-flow-notice">正在汇总当前上传进度...</div>
+                <div id="upload-flow-notice" class="upload-flow-notice" aria-live="polite">正在汇总当前上传进度…</div>
                 <div class="upload-box upload-box--quick" id="uploadBox" data-upload-box data-pick-file="fileInput"
                     tabindex="0" role="button" aria-label="上传成绩文件，按回车键可打开文件选择器">
                     <div class="upload-icon"><i class="ti ti-cloud-upload"></i></div>
@@ -1532,8 +1527,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div class="side-nav-title">快速定位</div>
                         <div class="analysis-side-note">先从总览判断站位，再切换到学科明细和横向对比。</div>
                         <div class="side-nav-link active" data-scroll-anchor="anchor-total">🏆 综合总表</div>
-                        <div class="side-nav-link" onclick="toggleSubNav(this)"><span>📘 各科详情</span><i
-                                class="ti ti-chevron-right nav-caret"></i></div>
+                        <button type="button" class="side-nav-link" data-ui-action="toggle-sub-nav"><span>📘 各科详情</span><i
+                                class="ti ti-chevron-right nav-caret" aria-hidden="true"></i></button>
                         <div id="side-nav-subjects-container" class="side-nav-sub-container"></div>
                         <div class="side-nav-link" data-scroll-anchor="horizontal-box">↔️ 横向对比</div>
                     </div>
@@ -2700,19 +2695,19 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <div style="font-size:12px; display:flex; flex-direction:column; gap:8px;">
                                     <div><label>😡 难管:</label><input type="hidden" id="fb_c_diff">
                                         <div id="widget_fb_diff" class="tag-widget-container"><input type="text"
-                                                class="tag-input-field" placeholder="输入姓名...">
+                                                class="tag-input-field" aria-label="搜索难管学生姓名" autocomplete="off" placeholder="输入姓名…">
                                             <div class="suggestion-dropdown"></div>
                                         </div>
                                     </div>
                                     <div><label>👓 视力:</label><input type="hidden" id="fb_c_vision">
                                         <div id="widget_fb_vision" class="tag-widget-container"><input type="text"
-                                                class="tag-input-field" placeholder="输入姓名...">
+                                                class="tag-input-field" aria-label="搜索视力关注学生姓名" autocomplete="off" placeholder="输入姓名…">
                                             <div class="suggestion-dropdown"></div>
                                         </div>
                                     </div>
                                     <div><label>🗣️ 说话:</label><input type="hidden" id="fb_c_talk">
                                         <div id="widget_fb_talk" class="tag-widget-container"><input type="text"
-                                                class="tag-input-field" placeholder="输入姓名...">
+                                                class="tag-input-field" aria-label="搜索爱说话学生姓名" autocomplete="off" placeholder="输入姓名…">
                                             <div class="suggestion-dropdown"></div>
                                         </div>
                                     </div>
@@ -2900,10 +2895,10 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         </div>
                         <div class="nav-sub-items"
                             style="margin-bottom:15px; background:#f1f5f9; border-radius:6px; border:none;">
-                            <div class="nav-link active" onclick="EXAM_switchView('overview', this)">👀 考场概览</div>
-                            <div class="nav-link" onclick="EXAM_switchView('setup', this)">👨‍🏫 人员配置</div>
-                            <div class="nav-link" onclick="EXAM_switchView('students', this)">📋 考生查询表</div>
-                            <div class="nav-link" onclick="EXAM_switchView('proctor', this)">👮 监考汇总表</div>
+                            <button type="button" class="nav-link active" data-ui-action="exam-switch-view" data-ui-value="overview">👀 考场概览</button>
+                            <button type="button" class="nav-link" data-ui-action="exam-switch-view" data-ui-value="setup">👨‍🏫 人员配置</button>
+                            <button type="button" class="nav-link" data-ui-action="exam-switch-view" data-ui-value="students">📋 考生查询表</button>
+                            <button type="button" class="nav-link" data-ui-action="exam-switch-view" data-ui-value="proctor">👮 监考汇总表</button>
                         </div>
                         <div id="exam-view-overview">
                             <div class="info-bar">💡 点击考场卡片可查看该考场的详细座次表。打印时会自动分页。</div>
@@ -2934,7 +2929,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <span class="role-label"><i class="ti ti-user-x"></i> 1. 排除不参加监考的人员 (勾选)</span>
                                     <div id="proctor-teacher-pool" class="teacher-scroll-list">
                                         <!-- 动态加载教师 -->
-                                        <div style="color:#999; padding:20px; grid-column: 1/-1;">请先导入教师信息...</div>
+                                        <div style="color:#999; padding:20px; grid-column: 1/-1;">请先导入教师信息…</div>
                                     </div>
                                 </div>
                                 <!-- 角色分配 -->
@@ -3096,7 +3091,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     class="ti ti-download"></i> 下载联合模板与说明</button>
                         </div>
                         <div id="sch_resource_preview" style="margin-top:10px; font-size:12px; color:#666;">
-                            请先上传 Excel 文件...
+                            请先上传 Excel 文件…
                         </div>
                     </div>
                 </div>
@@ -3317,12 +3312,12 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
 
     <!-- 语音控制入口 -->
-    <div id="voice-fab" class="voice-fab" onclick="VoiceControl.toggle()" title="点击开启语音控制">
-        <i class="ti ti-microphone"></i>
-    </div>
+    <button type="button" id="voice-fab" class="voice-fab" data-ui-action="voice-toggle" aria-label="开启语音控制" title="点击开启语音控制">
+        <i class="ti ti-microphone" aria-hidden="true"></i>
+    </button>
 
     <!-- 全屏语音 HUD -->
-    <div id="voice-hud" class="voice-hud" onclick="VoiceControl.stop()">
+    <div id="voice-hud" class="voice-hud" role="button" tabindex="0" data-ui-action="voice-stop" aria-label="停止语音控制">
         <div class="voice-wave">
             <div class="voice-bar"></div>
             <div class="voice-bar"></div>
@@ -3330,7 +3325,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <div class="voice-bar"></div>
             <div class="voice-bar"></div>
         </div>
-        <div id="voice-status" class="voice-text-main">正在聆听...</div>
+        <div id="voice-status" class="voice-text-main" aria-live="polite">正在聆听…</div>
         <div id="voice-result" class="voice-text-sub">请说出指令，例如：“打开全科总表”</div>
 
         <div class="voice-cmd-list">
@@ -3388,7 +3383,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
         <div class="spotlight-box" role="dialog" aria-modal="true" aria-label="全局快捷搜索" onclick="event.stopPropagation()">
             <div class="spotlight-input-wrap">
                 <i class="ti ti-search" style="font-size:24px; color:var(--primary); margin-right:10px;"></i>
-                <input type="text" id="spotlight-input" class="spotlight-input" placeholder="搜索功能模块或学生姓名、学校、班级..."
+                <input type="search" id="spotlight-input" name="spotlight-search" class="spotlight-input" aria-label="搜索功能模块或学生信息" autocomplete="off" placeholder="搜索功能模块或学生姓名、学校、班级…"
                     oninput="doSpotlightSearch()">
             </div>
             <div id="spotlight-results" class="spotlight-results" role="listbox" aria-label="搜索结果"></div>
@@ -3538,7 +3533,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
                     <div class="info-bar" style="font-size:12px;">
                         💡 <strong>诊断建议：</strong><br>
-                        <span id="sp-diagnosis">点击学校查看分析...</span>
+                        <span id="sp-diagnosis" aria-live="polite">点击学校查看分析…</span>
                     </div>
                 </div>
             </div>
@@ -3579,24 +3574,18 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 <h4 style="margin-bottom:10px; color:#333;">1. 选择主色调</h4>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
                     <!-- 预设颜色 -->
-                    <div onclick="setThemeColor('#4f46e5')"
-                        style="width:30px; height:30px; background:#4f46e5; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="默认紫"></div>
-                    <div onclick="setThemeColor('#2563eb')"
-                        style="width:30px; height:30px; background:#2563eb; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="科技蓝"></div>
-                    <div onclick="setThemeColor('#059669')"
-                        style="width:30px; height:30px; background:#059669; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="护眼绿"></div>
-                    <div onclick="setThemeColor('#dc2626')"
-                        style="width:30px; height:30px; background:#dc2626; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="中国红"></div>
-                    <div onclick="setThemeColor('#b45309')"
-                        style="width:30px; height:30px; background:#b45309; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="尊贵金"></div>
-                    <div onclick="setThemeColor('#0f172a')"
-                        style="width:30px; height:30px; background:#0f172a; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="深邃黑"></div>
+                    <button type="button" class="theme-color-choice" data-ui-action="set-theme-color" data-ui-value="#4f46e5"
+                        style="background:#4f46e5;" aria-label="使用默认紫主题" title="默认紫"></button>
+                    <button type="button" class="theme-color-choice" data-ui-action="set-theme-color" data-ui-value="#2563eb"
+                        style="background:#2563eb;" aria-label="使用科技蓝主题" title="科技蓝"></button>
+                    <button type="button" class="theme-color-choice" data-ui-action="set-theme-color" data-ui-value="#059669"
+                        style="background:#059669;" aria-label="使用护眼绿主题" title="护眼绿"></button>
+                    <button type="button" class="theme-color-choice" data-ui-action="set-theme-color" data-ui-value="#dc2626"
+                        style="background:#dc2626;" aria-label="使用中国红主题" title="中国红"></button>
+                    <button type="button" class="theme-color-choice" data-ui-action="set-theme-color" data-ui-value="#b45309"
+                        style="background:#b45309;" aria-label="使用尊贵金主题" title="尊贵金"></button>
+                    <button type="button" class="theme-color-choice" data-ui-action="set-theme-color" data-ui-value="#0f172a"
+                        style="background:#0f172a;" aria-label="使用深邃黑主题" title="深邃黑"></button>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <input type="color" id="custom-color-input" onchange="setThemeColor(this.value)"
@@ -3620,7 +3609,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <!-- 3. 标题设置 -->
             <div style="margin-bottom: 10px;">
                 <h4 style="margin-bottom:10px; color:#333;">3. 系统名称</h4>
-                <input type="text" id="custom-title-input" placeholder="默认为：乡镇学校成绩分析..."
+                <input type="text" id="custom-title-input" name="custom-report-title" aria-label="自定义系统标题" autocomplete="off" placeholder="例如：乡镇学校成绩分析…"
                     style="width:100%; margin-bottom:5px;" oninput="updateTitlePreview(this.value)">
                 <button class="btn btn-primary" style="width:100%; margin-top:15px;" onclick="saveSkinSettings()">💾
                     保存并应用</button>
@@ -4091,7 +4080,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <div
                 style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;">
                 <div style="display:flex; gap:10px;">
-                    <input type="text" id="acc-search-input" placeholder="输入姓名或账号进行查找..."
+                    <input type="search" id="acc-search-input" name="account-search" aria-label="搜索姓名或账号" autocomplete="off" placeholder="输入姓名或账号进行查找…"
                         style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:6px;"
                         onkeydown="if(event.key==='Enter') AccountManager.search()">
                     <button class="btn btn-primary" onclick="AccountManager.search()">
@@ -4250,7 +4239,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
             <div id="dm-search-bar"
                 style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px; display:flex; gap:10px;">
-                <input type="text" id="dm-search-input" placeholder="输入姓名/班级/考号筛选..."
+                <input type="search" id="dm-search-input" name="data-manager-student-search" aria-label="按姓名、班级或考号筛选学生" autocomplete="off" placeholder="输入姓名、班级或考号筛选…"
                     style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:4px;"
                     data-dm-input="renderCurrentTab">
                 <button class="btn btn-sm btn-primary" data-dm-click="renderCurrentTab">搜索</button>
@@ -4286,7 +4275,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     </div>
                     <div
                         style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; font-size:12px; color:#475569;">
-                        <input type="text" id="dm-exams-search" placeholder="按批次、学年、学期、考试名称筛选..."
+                        <input type="search" id="dm-exams-search" name="data-manager-exam-search" aria-label="筛选考试批次" autocomplete="off" placeholder="按批次、学年、学期或考试名称筛选…"
                             style="flex:1; min-width:260px; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px;"
                             data-dm-input="renderExamBatches">
                         <select id="dm-exams-filter"
@@ -4622,7 +4611,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <!-- SQL 输入框 -->
                     <textarea id="dm-sql-input"
                         style="width:100%; height:120px; background:#1e293b; color:#a5b4fc; font-family:'Consolas', monospace; padding:10px; border-radius:6px; font-size:14px; border:1px solid #475569; resize:none;"
-                        placeholder="在此输入 SQL 语句..."></textarea>
+                        aria-label="SQL 查询语句" placeholder="在此输入 SQL 语句…"></textarea>
 
                     <!-- 操作栏 -->
                     <div style="margin:10px 0; display:flex; justify-content:space-between;">
@@ -4853,7 +4842,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
                         <div id="smInsights" class="anchor-target analysis-anchor-panel" style="margin-bottom:14px;">
                             <div class="sub-header analysis-section-head">🧭 学情提示</div>
-                            <div id="smInsightList">正在汇总当前学情提示...</div>
+                            <div id="smInsightList" aria-live="polite">正在汇总当前学情提示…</div>
                         </div>
 
                         <div id="smQuickEntry" class="anchor-target analysis-anchor-panel" style="margin-bottom:14px;">
@@ -5488,8 +5477,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div class="side-nav-link active" data-scroll-anchor="anchor-cards">📇 教师概况卡片</div>
                         <div class="side-nav-link" data-scroll-anchor="anchor-detail">📊 详细数据对比</div>
                         <div class="side-nav-link" data-scroll-anchor="anchor-pair">🤝 结对子建议</div>
-                        <div class="side-nav-link" onclick="toggleSubNav(this)"><span>🏅 乡镇排名</span><i
-                                class="ti ti-chevron-right nav-caret"></i></div>
+                        <button type="button" class="side-nav-link" data-ui-action="toggle-sub-nav"><span>🏅 乡镇排名</span><i
+                                class="ti ti-chevron-right nav-caret" aria-hidden="true"></i></button>
                         <div id="side-nav-teacher-ranks-container" class="side-nav-sub-container"></div>
                     </div>
                     <div class="content-area analysis-content-stack">
@@ -6052,25 +6041,25 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div class="constraints-grid seat-constraint-grid">
                         <div class="seat-constraint-field"><label>难管/调皮</label><input type="hidden" id="adj_c_diff">
                             <div id="widget_adj_diff" class="tag-widget-container"><input type="text"
-                                    class="tag-input-field" placeholder="搜姓名...">
+                                    class="tag-input-field" aria-label="搜索难管学生姓名" autocomplete="off" placeholder="搜姓名…">
                                 <div class="suggestion-dropdown"></div>
                             </div>
                         </div>
                         <div class="seat-constraint-field"><label>视力不好 (前排)</label><input type="hidden" id="adj_c_vision">
                             <div id="widget_adj_vision" class="tag-widget-container"><input type="text"
-                                    class="tag-input-field" placeholder="搜姓名...">
+                                    class="tag-input-field" aria-label="搜索视力关注学生姓名" autocomplete="off" placeholder="搜姓名…">
                                 <div class="suggestion-dropdown"></div>
                             </div>
                         </div>
                         <div class="seat-constraint-field"><label>心理关注</label><input type="hidden" id="adj_c_psy">
                             <div id="widget_adj_psy" class="tag-widget-container"><input type="text"
-                                    class="tag-input-field" placeholder="搜姓名...">
+                                    class="tag-input-field" aria-label="搜索心理关注学生姓名" autocomplete="off" placeholder="搜姓名…">
                                 <div class="suggestion-dropdown"></div>
                             </div>
                         </div>
                         <div class="seat-constraint-field"><label>爱说话</label><input type="hidden" id="adj_c_talk">
                             <div id="widget_adj_talk" class="tag-widget-container"><input type="text"
-                                    class="tag-input-field" placeholder="搜姓名...">
+                                    class="tag-input-field" aria-label="搜索爱说话学生姓名" autocomplete="off" placeholder="搜姓名…">
                                 <div class="suggestion-dropdown"></div>
                             </div>
                         </div>
@@ -6092,7 +6081,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div class="seat-tool-section">
                             <h4>策略说明</h4>
                         <div id="seat-strategy-desc" class="seat-strategy-desc">
-                            选择策略后查看详细说明...
+                            选择策略后查看详细说明…
                         </div>
                         </div>
                         <div class="seat-tool-section">

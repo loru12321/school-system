@@ -11,6 +11,7 @@
 // 注意 dist/ 整目录在 .gitignore 里，所以 dist 下任何文件（哪怕已跟踪、只是改动）
 // 显式 git add 都必须带 -f。这条测试顺带把「不该被 -f 加进来」这件事变成硬约束。
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
@@ -32,7 +33,6 @@ assert.ok(tracked.length > 0, 'git ls-files should report tracked files');
 
 const trackedHashedBundles = tracked.filter((file) => HASHED_BUNDLE_PATTERN.test(file));
 const trackedInDist = trackedHashedBundles.filter((file) => file.startsWith('dist/'));
-const trackedInPublic = trackedHashedBundles.filter((file) => file.startsWith('public/'));
 
 assert.deepStrictEqual(
     trackedInDist, [],
@@ -40,18 +40,27 @@ assert.deepStrictEqual(
     + 'Remove them with: git rm --cached <paths>'
 );
 
-// public 侧必须是跟踪的，否则部署缺文件。这一半同样要锁，不然「保持一致」会被
-// 误读成两边都不跟踪。
+function listFilesRecursive(directory, prefix = '') {
+    return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const relative = path.posix.join(prefix, entry.name);
+        const absolute = path.join(directory, entry.name);
+        return entry.isDirectory() ? listFilesRecursive(absolute, relative) : [relative];
+    });
+}
+
+// 构建会先删除旧哈希文件、再生成新文件；validate 应能在 git add 之前运行，
+// 因此这里校验工作区中实际待发布的 public 产物，而不是仍指向旧版本的 Git 索引。
+const publicHashedBundles = listFilesRecursive(path.join(projectRoot, 'public'), 'public')
+    .filter((file) => HASHED_BUNDLE_PATTERN.test(file));
 assert.ok(
-    trackedInPublic.length > 0,
-    'public hashed bundles must be tracked; index.html references them directly, '
-    + 'so an untracked bundle means a broken deploy'
+    publicHashedBundles.length > 0,
+    'public hashed bundles must exist; index.html references them directly'
 );
 
 // 同一类产物只应存在一个版本。旧版本残留会让 index.html 指向的版本和仓库里
 // 存在的版本对不上，也是 9bae1ce0 那次漂移的根因之一。
 const versionsByFamily = new Map();
-trackedInPublic.forEach((file) => {
+publicHashedBundles.forEach((file) => {
     const match = file.match(/^(.*?)-?runtime-([0-9a-f]{12})\.js$/);
     if (!match) return;
     const family = match[1].replace(/-runtime$/, '');
@@ -74,8 +83,6 @@ assert.strictEqual(
     `all tracked hashed bundles should share one asset version, found: ${[...allVersions].join(', ')}`
 );
 
-const fs = require('fs');
-
 function readVersions(relativePath) {
     const source = fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
     return new Set((source.match(/runtime-[0-9a-f]{12}/g) || []).map((ref) => ref.replace('runtime-', '')));
@@ -91,11 +98,11 @@ function assertSingleVersion(relativePath) {
 }
 
 const srcVersion = assertSingleVersion('src/index.html');
-const trackedVersion = [...allVersions][0];
+const publicVersion = [...allVersions][0];
 assert.strictEqual(
-    srcVersion, trackedVersion,
-    `src/index.html references asset version ${srcVersion} but the tracked bundles are ${trackedVersion}; `
-    + 'run npm run build before git add'
+    srcVersion, publicVersion,
+    `src/index.html references asset version ${srcVersion} but public bundles are ${publicVersion}; `
+    + 'run npm run build'
 );
 
 // ── 构建后校验 ────────────────────────────────────────────────────────────────
@@ -146,7 +153,7 @@ distReferencedFiles.forEach((relative) => {
 
 // public 侧被跟踪的哈希产物必须在 dist 里有对应文件，否则发布出去的版本和仓库
 // 记录的版本不是同一套。
-trackedInPublic
+publicHashedBundles
     .filter((file) => file.startsWith('public/assets/js/'))
     .forEach((file) => {
         const distTwin = path.join(projectRoot, file.replace(/^public\//, 'dist/'));

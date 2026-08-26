@@ -257,7 +257,7 @@ body {
     padding: 2px 8px;
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
     font-weight: normal;
     margin-left: 10px;
     vertical-align: middle;
@@ -4312,7 +4312,7 @@ body.dark-mode #contributionChartContainer > div > div {
     color: #334155;
     background: rgba(248, 250, 252, 0.7);
     border: 1px solid transparent;
-    transition: all 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .starter-card--tasks .task-item .dot {
@@ -4355,7 +4355,7 @@ body.dark-mode #contributionChartContainer > div > div {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .starter-entry-btn:hover {
@@ -5254,7 +5254,7 @@ h1 {
     cursor: pointer;
     font-weight: 500;
     font-size: 15px;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
     border-bottom: 3px solid transparent;
     display: flex;
     align-items: center;
@@ -5291,7 +5291,7 @@ h1 {
     opacity: 0;
     visibility: hidden;
     transform: translateY(10px);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1050;
 }
 
@@ -5307,7 +5307,7 @@ h1 {
     font-size: 14px;
     border-radius: 6px;
     text-align: left;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, transform 0.2s;
     display: block;
     line-height: 1.4;
     border: none;
@@ -5353,7 +5353,7 @@ h1 {
     font-weight: 500;
     color: var(--secondary);
     font-size: 13px;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
     border: 1px solid transparent;
     background: #f8fafc;
     display: flex;
@@ -5444,7 +5444,7 @@ h1 {
     border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
     border-left: 3px solid transparent;
     cursor: pointer;
 }
@@ -5502,7 +5502,7 @@ h1 {
     font-size: 12px;
     border-radius: 4px;
     text-decoration: none;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
     position: relative;
     cursor: pointer;
 }
@@ -5942,7 +5942,7 @@ select:focus {
     margin-left: 8px;
     vertical-align: middle;
     border: 1px solid rgba(0, 0, 0, 0.1);
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 
 .help-icon:hover {
@@ -7018,7 +7018,7 @@ table.mobile-card-table tr {
     color: white;
     font-size: 28px;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .voice-fab:hover {
@@ -7897,7 +7897,7 @@ input[type="radio"] {
     border-radius: 50px;
     font-size: 16px;
     outline: none;
-    transition: 0.3s;
+    transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
     -webkit-appearance: none;
     appearance: none;
 }

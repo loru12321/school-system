@@ -113,7 +113,7 @@
             border-bottom: 1px solid var(--border) !important;
             border-radius: 9999px !important;
             /* 胶囊输入框 */
-            transition: all 0.2s !important;
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s !important;
             color: #0f1419 !important;
             padding: 10px 16px !important;
             box-shadow: none !important;
@@ -1306,7 +1306,7 @@
             }
 
             .mob-nav-item {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 opacity: 0.6;
                 padding-top: 8px;
             }

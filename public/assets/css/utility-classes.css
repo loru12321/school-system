@@ -88,3 +88,54 @@
     padding: 20px 10px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
+
+/* Semantic action reset: retain existing component visuals on native buttons. */
+button.mob-grid-item,
+button.mob-nav-btn,
+button.mob-tab-item,
+button.mob-user-info,
+button.side-nav-link,
+button.nav-link,
+button.voice-fab,
+button.theme-color-choice {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    font: inherit;
+    text-align: inherit;
+}
+
+button.mob-grid-item,
+button.mob-tab-item,
+button.mob-user-info,
+button.side-nav-link,
+button.nav-link,
+button.theme-color-choice {
+    background: transparent;
+}
+
+:is(button, [href], input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.72) !important;
+    outline-offset: 3px !important;
+}
+
+button.mob-grid-item,
+button.mob-nav-btn,
+button.mob-tab-item,
+button.mob-user-info,
+button.side-nav-link,
+button.nav-link,
+button.voice-fab,
+button.theme-color-choice {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(37, 99, 235, 0.14);
+}
+
+.theme-color-choice {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 2px solid #d1d5db !important;
+    border-radius: 50%;
+    cursor: pointer;
+}

@@ -46,7 +46,15 @@ const distVersionedSw = read(`dist/sw-${serviceWorkerVersion}.js`);
 const cacheVersion = extractSingleQuotedConst(publicSw, 'CACHE_VERSION');
 
 assert.deepStrictEqual(distSw, publicSw, 'dist service worker should match public service worker after build');
-assert.deepStrictEqual(publicAppShellAssets, ['./favicon.ico', './icon.svg', './site.webmanifest', './robots.txt', './sitemap.xml'], 'service worker should not precache HTML and should only precache stable public metadata');
+assert.deepStrictEqual(publicAppShellAssets, [
+  './favicon.ico',
+  './icon.svg',
+  './site.webmanifest',
+  './robots.txt',
+  './sitemap.xml',
+  './assets/fonts/manrope/manrope-latin-400-normal.woff2',
+  './assets/vendor/tabler-icons/fonts/tabler-icons.woff2'
+], 'service worker should not precache HTML and should only precache stable metadata and critical fonts');
 assert.deepStrictEqual(distAppShellAssets, publicAppShellAssets, 'dist service worker app shell assets should match source');
 assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker runtime version should be generated from runtime content');
 assert.strictEqual(cacheVersion, `school-system-${serviceWorkerVersion}`, 'service worker cache version should follow the generated runtime version');

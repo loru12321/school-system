@@ -1,5 +1,4 @@
-// Runtime skill manifest and optional loader helpers are split from boot-runtime.js
-// so the boot path can stay focused on login, gateway setup, and core app modules.
+// Optional runtime manifest and loaders stay outside the first-screen boot path.
 var BOOT_JS_BASE = window.BOOT_JS_BASE || './assets/js/';
 var BOOT_VENDOR_BASE = window.BOOT_VENDOR_BASE || './assets/vendor/';
 function bootJs(name) { return BOOT_JS_BASE + name; }
@@ -93,9 +92,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('county-analysis', bootJs('county-analysis-runtime.js'))
 ]),
 'macro-analysis-compat': bootSkill('demand', 'demand', ['analysis', 'renderHorizontalTable', 'exportHorizontalExcel', 'exportMacroTables'], [
-    // The analysis shell exposes the heatmap action immediately.  Keep its
-    // implementation in the same demand-loaded boundary so a slow deferred
-    // queue cannot leave the button as an empty shell on first entry.
+    // Keep the immediately visible heatmap action in this demand boundary.
     bootEntry('table-heatmap', bootJs('table-heatmap-runtime.js')),
     bootEntry('macro-analysis-compat', bootJs('macro-analysis-compat-runtime.js'))
 ]),
@@ -619,12 +616,7 @@ return loadOptionalRuntime(key, src).then(() => {
 });
 }
 
-// The ordered boot queue uses a watchdog so a slow asset cannot block the
-// shell indefinitely.  A watchdog timeout does not cancel the underlying
-// script request, however, so blindly injecting the same classic script from
-// a demand loader can execute it twice and trigger top-level const collisions
-// (for example, "CohortDB has already been declared").  Reuse any boot script
-// that is still loading and wait for its eventual load/error event first.
+// Reuse ordered-boot scripts still loading after the watchdog to avoid duplicate execution.
 function findBootScriptForRuntime(src) {
     const normalized = String(src || '').trim();
     if (!normalized) return null;
