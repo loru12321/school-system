@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-b3b596e6c849';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-b2fa5ea0d913';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -170,6 +170,11 @@ var DEFERRED_APP_MODULES = [
 'compare-selectors-runtime.js',
 'town-submodule-compare-state-runtime.js'
 ].map(bootJs);
+var DEFERRED_APP_MODULE_KEYS = {
+[bootJs('subject-balance-runtime.js')]: 'subject-balance',
+[bootJs('segment-analysis-runtime.js')]: 'segment-analysis',
+[bootJs('potential-analysis-runtime.js')]: 'potential-analysis'
+};
 
 function bootJs(name) { return BOOT_JS_BASE + name; }
 // These scripts execute from index.html before this boot runtime. Keep them out
@@ -714,7 +719,7 @@ const runtimeWarmupPromise = window.SystemRuntimeLoader && typeof window.SystemR
     : Promise.resolve();
 const deferredModulesPromise = DEFERRED_APP_MODULES.length && typeof loadOptionalRuntimeBundle === 'function'
     ? loadOptionalRuntimeBundle('deferred-app-modules', DEFERRED_APP_MODULES.map((src, index) => ({
-        key: `deferred-app-module-${index}`,
+        key: DEFERRED_APP_MODULE_KEYS[src] || `deferred-app-module-${index}`,
         src
     })))
     : Promise.resolve();

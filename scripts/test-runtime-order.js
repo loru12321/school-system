@@ -632,6 +632,9 @@ assert.ok(moduleEntryRuntimeIndex >= 0, 'index.html should load module-entry-run
 assert.ok(moduleEntryRuntime.includes("initDeferredSelectorEntry(id, 'updateSegmentSelects')"), 'segment analysis entry should wait for its deferred runtime');
 assert.ok(moduleEntryRuntime.includes("initDeferredSelectorEntry(id, 'updatePotentialSchoolSelect')"), 'potential analysis entry should wait for its deferred runtime');
 assert.ok(moduleEntryRuntime.includes("initDeferredSelectorEntry(id, 'updateSubjectBalanceSelects')"), 'subject balance entry should wait for its deferred runtime');
+assert.ok(runtimeLoaderRuntime.includes("['SegmentAnalysis', 'segment-analysis']"), 'segment analysis should expose a demand loader');
+assert.ok(runtimeLoaderRuntime.includes("['PotentialAnalysis', 'potential-analysis']"), 'potential analysis should expose a demand loader');
+assert.ok(runtimeLoaderRuntime.includes("['SubjectBalance', 'subject-balance']"), 'subject balance should expose a demand loader');
 assert.ok(runtimeAccessorsIndex >= 0, 'index.html should load runtime-accessors-runtime.js');
 assert.ok(rankingDataServiceIndex >= 0, 'index.html should load ranking-data-service-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');

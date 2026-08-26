@@ -1294,6 +1294,20 @@
             return true;
         };
         if (run()) return Promise.resolve(true);
+        const specificLoaderName = {
+            'segment-analysis': 'ensureSegmentAnalysisRuntimeLoaded',
+            'potential-analysis': 'ensurePotentialAnalysisRuntimeLoaded',
+            'subject-balance': 'ensureSubjectBalanceRuntimeLoaded'
+        }[moduleId];
+        const specificLoader = specificLoaderName && window[specificLoaderName];
+        if (typeof specificLoader === 'function') {
+            return Promise.resolve(specificLoader())
+                .then(run)
+                .catch((error) => {
+                    console.warn(`[${moduleId}] selector runtime failed:`, error);
+                    return false;
+                });
+        }
         if (typeof window.loadDeferredAppModules !== 'function') return Promise.resolve(false);
         return Promise.resolve(window.loadDeferredAppModules())
             .then(run)

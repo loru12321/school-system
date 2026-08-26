@@ -405,6 +405,9 @@ switch (String(key || '').trim()) {
         return window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__ ? true : null;
     case 'cohort-growth':
         return window.CohortGrowth || null;
+    case 'subject-balance': return window.SubjectBalanceRuntime || null;
+    case 'segment-analysis': return window.SegmentAnalysisRuntime || null;
+    case 'potential-analysis': return window.PotentialAnalysisRuntime || null;
     case 'chart-vendor':
         return window.Chart || null;
     case 'sweetalert-vendor':
@@ -774,6 +777,14 @@ window.ensureTableHeatmapRuntimeLoaded = function () {
 return loadOptionalRuntime('table-heatmap', bootJs('table-heatmap-runtime.js'));
 };
 
+[
+['SubjectBalance', 'subject-balance'],
+['SegmentAnalysis', 'segment-analysis'],
+['PotentialAnalysis', 'potential-analysis']
+].forEach(([name, key]) => {
+window[`ensure${name}RuntimeLoaded`] = () => loadOptionalRuntime(key, bootJs(`${key}-runtime.js`));
+});
+
 window.ensureProgressAnalysisRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('progress-analysis');
 };
@@ -805,9 +816,6 @@ window.ensureFreshmanExamRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('freshman-exam');
 };
 
-// 新生分班首次导入会同时用到运行时、Excel 解析和结果图表。把三者并行
-// 发起，避免用户刚进入模块后又按串行链路等待两个大体积 vendor；该函数仅
-// 由对应模块入口调用，不会扩大登录首屏下载量。
 window.ensureFreshmanSimulatorRuntimeLoaded = function () {
 return Promise.all([
     window.ensureFreshmanExamRuntimeLoaded(),
@@ -816,7 +824,6 @@ return Promise.all([
 ]).then((result) => result[0]);
 };
 
-// 考务编排同样需要导入 Excel，但不绘制分班均衡图，故不加载 Chart。
 window.ensureExamArrangerRuntimeLoaded = function () {
 return Promise.all([
     window.ensureFreshmanExamRuntimeLoaded(),
@@ -1008,6 +1015,14 @@ installOptionalRuntimeMethod(name, window.ensureSchoolProfileRuntimeLoaded);
 });
 
 [
+[window.ensureSubjectBalanceRuntimeLoaded, ['updateSubjectBalanceSelects', 'SB_renderTable', 'SB_runCluster', 'SB_exportExcel']],
+[window.ensureSegmentAnalysisRuntimeLoaded, ['updateSegmentSelects', 'updateSegmentClassSelect', 'renderSegmentAnalysis', 'exportSegmentExcel']],
+[window.ensurePotentialAnalysisRuntimeLoaded, ['updatePotentialSchoolSelect', 'updatePotentialClassSelect', 'renderPotentialAnalysis', 'exportPotentialAnalysis']]
+].forEach(([loader, names]) => {
+names.forEach((name) => installOptionalRuntimeMethod(name, loader));
+});
+
+[
 'analyzeTeachers',
 'generateTeacherPairing',
 'renderTeacherCards',
@@ -1043,9 +1058,6 @@ installOptionalRuntimeMethod(name, window.ensureCountyAnalysisRuntimeLoaded);
     installOptionalRuntimeMethod(name, window.ensureMacroAnalysisCompatRuntimeLoaded);
 });
 
-// The analysis button is rendered before its small display runtime arrives on
-// slow connections.  The proxy makes that very first click load and replay
-// the action instead of becoming a no-op while the module finishes loading.
 installOptionalRuntimeMethod('toggleTableHeatmap', window.ensureTableHeatmapRuntimeLoaded);
 
 [
@@ -1282,8 +1294,7 @@ prioritySteps.concat(deferredSteps).forEach((step) => {
 const skill = SYSTEM_RUNTIME_SKILLS[step.label];
 if (skill && Array.isArray(skill.entries)) {
 const modules = skill.entries.map((entry) => entry.src);
-// Report runtimes are demand-loaded. Keep this as a low-priority network hint
-// so login and current-cohort restoration retain the available bandwidth.
+// Report runtimes are demand-loaded.
 prefetchAppModuleList(modules, `hotspot-runtime-${step.label}`);
 }
 });
@@ -1346,10 +1357,6 @@ const wrapped = async function (...args) {
     } else {
         window.setTimeout(syncCompareTargetIfReady, 80);
     }
-    // Keep this lightweight hook stable.  The previous self-reassignment
-    // could select the wrapper itself on a later call, recurse until the
-    // report stayed on its loading skeleton, and hide an otherwise completed
-    // cloud-history render.
     return base.apply(this, args);
 };
 window.doQuery = wrapped;
