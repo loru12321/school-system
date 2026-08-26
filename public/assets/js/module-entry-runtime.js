@@ -1286,6 +1286,23 @@
         return Promise.resolve(true);
     }
 
+    function initDeferredSelectorEntry(moduleId, globalName) {
+        const run = () => {
+            const updater = window[globalName];
+            if (typeof updater !== 'function') return false;
+            updater();
+            return true;
+        };
+        if (run()) return Promise.resolve(true);
+        if (typeof window.loadDeferredAppModules !== 'function') return Promise.resolve(false);
+        return Promise.resolve(window.loadDeferredAppModules())
+            .then(run)
+            .catch((error) => {
+                console.warn(`[${moduleId}] deferred selector runtime failed:`, error);
+                return false;
+            });
+    }
+
     function runModuleSpecificInit(id) {
         prewarmStudentDiagnosisRuntimes(id);
         if (id === 'student-details') return initStudentDetailsEntry();
@@ -1400,8 +1417,8 @@
             }
             return Promise.resolve(false);
         }
-        if (id === 'segment-analysis') updateSegmentSelects();
-        if (id === 'potential-analysis') updatePotentialSchoolSelect();
+        if (id === 'segment-analysis') return initDeferredSelectorEntry(id, 'updateSegmentSelects');
+        if (id === 'potential-analysis') return initDeferredSelectorEntry(id, 'updatePotentialSchoolSelect');
         if (id === 'correlation-analysis') return initCorrelationAnalysisEntry();
         if (id === 'cohort-growth') return initCohortGrowthEntry();
         if (id === 'seat-adjustment') {
@@ -1417,7 +1434,7 @@
             }
             return Promise.resolve(false);
         }
-        if (id === 'subject-balance') updateSubjectBalanceSelects();
+        if (id === 'subject-balance') return initDeferredSelectorEntry(id, 'updateSubjectBalanceSelects');
         if (id === 'progress-analysis') return initProgressAnalysisEntry();
         if (id === 'mutual-aid') {
             if (typeof updateMutualAidSelects === 'function') {

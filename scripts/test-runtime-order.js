@@ -629,6 +629,9 @@ assert.ok(dataManagerTabIndex < appIndex, 'data-manager-tab-runtime.js should lo
 assert.ok(shellRuntimeIndex >= 0, 'index.html should load shell-runtime.js');
 assert.strictEqual(shellPolishRuntimeIndex, -1, 'shell-polish-runtime.js should be idle-loaded instead of blocking core app boot');
 assert.ok(moduleEntryRuntimeIndex >= 0, 'index.html should load module-entry-runtime.js');
+assert.ok(moduleEntryRuntime.includes("initDeferredSelectorEntry(id, 'updateSegmentSelects')"), 'segment analysis entry should wait for its deferred runtime');
+assert.ok(moduleEntryRuntime.includes("initDeferredSelectorEntry(id, 'updatePotentialSchoolSelect')"), 'potential analysis entry should wait for its deferred runtime');
+assert.ok(moduleEntryRuntime.includes("initDeferredSelectorEntry(id, 'updateSubjectBalanceSelects')"), 'subject balance entry should wait for its deferred runtime');
 assert.ok(runtimeAccessorsIndex >= 0, 'index.html should load runtime-accessors-runtime.js');
 assert.ok(rankingDataServiceIndex >= 0, 'index.html should load ranking-data-service-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
