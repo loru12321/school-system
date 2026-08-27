@@ -97,17 +97,22 @@ function loadCloudStudentCompareForCurrentStudent(key) {
         getPreviousExamSubjectScores,
         viewCloudStudentComparesForCurrentStudent,
         loadCloudStudentCompareForCurrentStudent,
-        doQuery,
-        getComparisonTotalSubjects,
-        getComparisonStudentView,
-        getComparisonStudentList,
-        formatComparisonExamLabel,
-        getLatestHistoryExamEntry,
-        getComparisonTotalValue,
-        createComparisonStudentView,
-        recalcPrevTotal,
-        findPreviousRecord,
-        getStudentExamHistory
+        // `doQuery` belongs to report-history-runtime.js and may arrive later
+        // when the boot loader is recovering from a slow/failed core request.
+        // Do not dereference the bare binding here; report-history publishes it
+        // on window as soon as its own script executes.
+        // These comparison-render exports may also arrive late; reading them
+        // from window keeps this bridge load-order safe on slow connections.
+        getComparisonTotalSubjects: window.getComparisonTotalSubjects,
+        getComparisonStudentView: window.getComparisonStudentView,
+        getComparisonStudentList: window.getComparisonStudentList,
+        formatComparisonExamLabel: window.formatComparisonExamLabel,
+        getLatestHistoryExamEntry: window.getLatestHistoryExamEntry,
+        getComparisonTotalValue: window.getComparisonTotalValue,
+        createComparisonStudentView: window.createComparisonStudentView,
+        recalcPrevTotal: window.recalcPrevTotal,
+        findPreviousRecord: window.findPreviousRecord,
+        getStudentExamHistory: window.getStudentExamHistory
     });
 
     window.__REPORT_COMPARE_RUNTIME_PATCHED__ = true;

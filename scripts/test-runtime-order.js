@@ -59,6 +59,7 @@ const appFoundationRuntimePath = path.resolve(__dirname, '../public/assets/js/ap
 const studentDetailsRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/student-details-render-runtime.js');
 const comparisonRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/comparison-render-runtime.js');
 const reportHistoryRuntimePath = path.resolve(__dirname, '../public/assets/js/report-history-runtime.js');
+const reportCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/report-compare-runtime.js');
 const runtimeLoaderRuntimePath = path.resolve(__dirname, '../public/assets/js/runtime-loader-runtime.js');
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
@@ -223,6 +224,7 @@ const spotlightContextRuntime = fs.readFileSync(spotlightContextRuntimePath, 'ut
 const edgeGatewaySource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/edge-gateway-runtime.js'), 'utf8');
 const appFoundationRuntime = fs.readFileSync(appFoundationRuntimePath, 'utf8');
 const reportHistoryRuntime = fs.readFileSync(reportHistoryRuntimePath, 'utf8');
+const reportCompareRuntime = fs.readFileSync(reportCompareRuntimePath, 'utf8');
 const reportRenderRuntime = fs.readFileSync(reportRenderRuntimePath, 'utf8');
 const townSubmoduleCompareRuntime = fs.readFileSync(townSubmoduleCompareRuntimePath, 'utf8');
 const macroAnalysisCompatRuntime = fs.readFileSync(macroAnalysisCompatRuntimePath, 'utf8');
@@ -477,6 +479,9 @@ assert.ok(
     /function loadDeferredAppModules\(\)[\s\S]*runtimeWarmupPromise[\s\S]*loadOptionalRuntimeBundle\('deferred-app-modules'[\s\S]*Promise\.all\(\[runtimeWarmupPromise, deferredModulesPromise\]\)/.test(bootRuntime),
     'deferred app module hydration should run explicit deferred modules even when SystemRuntimeLoader warmup is available'
 );
+assert.ok(bootRuntime.includes('waitForReportHistoryRuntime'), 'deferred app modules should wait for report history before compare runtimes');
+assert.ok(!/\n\s*doQuery,\s*\n/.test(reportCompareRuntime), 'report compare runtime should not dereference a late report-history binding');
+assert.ok(reportCompareRuntime.includes('getComparisonTotalSubjects: window.getComparisonTotalSubjects'), 'report compare bridge should read late comparison exports from window');
 const authStateIndex = moduleOrderManifest.indexOf(authStateRef);
 const edgeGatewayIndex = moduleOrderManifest.indexOf(edgeGatewayRef);
 const workspaceStateIndex = moduleOrderManifest.indexOf(workspaceStateRef);

@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-d1d120203ee9';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-93c15ad0a52a';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -717,11 +717,18 @@ function loadDeferredAppModules() {
 const runtimeWarmupPromise = window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.warmup === 'function'
     ? window.SystemRuntimeLoader.warmup()
     : Promise.resolve();
+const waitForReportHistoryRuntime = async (timeoutMs = 12000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (typeof window.doQuery !== 'function' && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return typeof window.doQuery === 'function';
+};
 const deferredModulesPromise = DEFERRED_APP_MODULES.length && typeof loadOptionalRuntimeBundle === 'function'
-    ? loadOptionalRuntimeBundle('deferred-app-modules', DEFERRED_APP_MODULES.map((src, index) => ({
+    ? waitForReportHistoryRuntime().then(() => loadOptionalRuntimeBundle('deferred-app-modules', DEFERRED_APP_MODULES.map((src, index) => ({
         key: DEFERRED_APP_MODULE_KEYS[src] || `deferred-app-module-${index}`,
         src
-    })))
+    }))))
     : Promise.resolve();
 return Promise.all([runtimeWarmupPromise, deferredModulesPromise]).then((result) => {
     window.dispatchEvent(new CustomEvent('school:deferred-vendors-ready'));
