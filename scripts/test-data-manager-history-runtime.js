@@ -75,8 +75,10 @@ async function run() {
             cloudSyncCalls += 1;
             return Promise.resolve(true);
         },
-        alert(text) {
-            alerts.push(String(text || ''));
+        UI: {
+            alert(text) {
+                alerts.push(String(text || ''));
+            }
         }
     };
     root.AuthState = createAuthStateRuntime(root);

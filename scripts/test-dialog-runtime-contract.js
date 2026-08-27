@@ -38,6 +38,7 @@ const assessmentRoster = read('public/assets/js/assessment-roster-runtime.js');
 const schoolAlias = read('public/assets/js/data-manager-school-alias-runtime.js');
 const targetsRuntime = read('public/assets/js/data-manager-targets-runtime.js');
 const archiveRuntime = read('public/assets/js/data-manager-archive-runtime.js');
+const historyRuntime = read('public/assets/js/data-manager-history-runtime.js');
 
 assert.ok(bootRuntime.includes("'dialog-runtime.js'"), 'dialog runtime should load before app.js');
 assert.ok(bootRuntime.indexOf("'dialog-runtime.js'") < bootRuntime.indexOf("'app.js'"), 'dialog runtime should precede app.js in the boot module list');
@@ -91,7 +92,8 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['targets delete confirm', targetsRuntime, "await confirmAction('确定删除？')"],
   ['targets alert', targetsRuntime, 'root.UI.alert(text)'],
   ['archive delete confirm', archiveRuntime, 'await confirmAction(`⚠️ 确定要删除【${target}】吗？`)'],
-  ['archive rename prompt', archiveRuntime, "await promptAction('重命名为：', sourceName)"]
+  ['archive rename prompt', archiveRuntime, "await promptAction('重命名为：', sourceName)"],
+  ['history import alerts', historyRuntime, 'root.UI.alert(String(text || \'\'))']
 ].forEach(([label, source, token]) => {
   assert.ok(source.includes(token), `${label} should prefer the shared UI dialog API`);
 });
@@ -121,7 +123,8 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['assessment-roster-runtime.js', assessmentRoster],
   ['data-manager-school-alias-runtime.js', schoolAlias],
   ['data-manager-targets-runtime.js', targetsRuntime],
-  ['data-manager-archive-runtime.js', archiveRuntime]
+  ['data-manager-archive-runtime.js', archiveRuntime],
+  ['data-manager-history-runtime.js', historyRuntime]
 ].forEach(([file, source]) => {
   assert.ok(!/(^|[^\w$.])prompt\s*\(/.test(source), `${file} should not call bare prompt()`);
   assert.ok(!/(^|[^\w$.])confirm\s*\(/.test(source), `${file} should not call bare confirm()`);
@@ -132,5 +135,5 @@ assert.ok(scripts['check:release-fast']?.includes('test:dialog-runtime-contract'
 
 console.log(JSON.stringify({
   ok: true,
-  guardedRuntimes: 26
+  guardedRuntimes: 27
 }, null, 2));

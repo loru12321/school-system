@@ -13,7 +13,9 @@
     root.DataManagerHistoryRuntime = runtime;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createDataManagerHistoryRuntime(root) {
     function safeAlert(text) {
-        if (typeof root.alert === 'function') root.alert(String(text || ''));
+        if (root.UI && typeof root.UI === 'object' && typeof root.UI.alert === 'function') {
+            return root.UI.alert(String(text || ''));
+        }
     }
 
     function readSubjectsRef() {
