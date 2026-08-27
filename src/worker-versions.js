@@ -10,6 +10,13 @@ import {
 // Row normalizer
 // ---------------------------------------------------------------------------
 
+const VERSION_SELECT = [
+  'id', 'version_name', 'project_key', 'cohort_id', 'snapshot_key',
+  'exam_scope', 'score_hash', 'teacher_hash', 'target_hash', 'alias_hash',
+  'config_hash', 'summary_json', 'is_stable', 'created_by', 'created_at',
+  'updated_at', 'version'
+].join(', ');
+
 function normalizeVersionRow(row) {
   return {
     ...row,
@@ -39,7 +46,7 @@ export async function handleVersionList(request, db, session, payload) {
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const limit = Math.max(1, Math.min(Number(payload.limit ?? 100) || 100, 500));
   const rows = await queryRows(db, `
-    SELECT * FROM snapshot_versions
+    SELECT ${VERSION_SELECT} FROM snapshot_versions
     ${where}
     ORDER BY created_at DESC
     LIMIT ?
@@ -93,7 +100,7 @@ export async function handleVersionCreate(request, db, session, payload) {
   } else {
     await insertStmt.run();
   }
-  const created = await querySingleRow(db, 'SELECT * FROM snapshot_versions WHERE id = ? LIMIT 1', [row.id], normalizeVersionRow);
+  const created = await querySingleRow(db, `SELECT ${VERSION_SELECT} FROM snapshot_versions WHERE id = ? LIMIT 1`, [row.id], normalizeVersionRow);
   return jsonResponse(200, { ok: true, record: created }, request);
 }
 
@@ -101,7 +108,7 @@ export async function handleVersionUpdate(request, db, session, payload) {
   if (!isAdminLike(session)) return forbidden(request, 'Only admin or director can update versions');
   const id = normalizeText(payload.id);
   if (!id) return badRequest(request, 'id is required');
-  const existing = await querySingleRow(db, 'SELECT * FROM snapshot_versions WHERE id = ? LIMIT 1', [id], normalizeVersionRow);
+  const existing = await querySingleRow(db, `SELECT ${VERSION_SELECT} FROM snapshot_versions WHERE id = ? LIMIT 1`, [id], normalizeVersionRow);
   if (!existing) return badRequest(request, 'snapshot version not found');
 
   const nowIso = new Date().toISOString();
@@ -150,7 +157,7 @@ export async function handleVersionUpdate(request, db, session, payload) {
     ).bind(...bindings, id).run();
   }
 
-  const updated = await querySingleRow(db, 'SELECT * FROM snapshot_versions WHERE id = ? LIMIT 1', [id], normalizeVersionRow);
+  const updated = await querySingleRow(db, `SELECT ${VERSION_SELECT} FROM snapshot_versions WHERE id = ? LIMIT 1`, [id], normalizeVersionRow);
   return jsonResponse(200, { ok: true, record: updated }, request);
 }
 
@@ -158,7 +165,7 @@ export async function handleVersionDelete(request, db, session, payload) {
   if (!isAdminLike(session)) return forbidden(request, 'Only admin or director can delete versions');
   const id = normalizeText(payload.id);
   if (!id) return badRequest(request, 'id is required');
-  const existing = await querySingleRow(db, 'SELECT * FROM snapshot_versions WHERE id = ? LIMIT 1', [id], normalizeVersionRow);
+  const existing = await querySingleRow(db, `SELECT ${VERSION_SELECT} FROM snapshot_versions WHERE id = ? LIMIT 1`, [id], normalizeVersionRow);
   if (!existing) return badRequest(request, 'snapshot version not found');
   await db.prepare('DELETE FROM snapshot_versions WHERE id = ?').bind(id).run();
   return jsonResponse(200, {

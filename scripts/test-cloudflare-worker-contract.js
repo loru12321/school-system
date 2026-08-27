@@ -98,6 +98,9 @@ assert.ok(!gatewayContractSource.includes('proxyGatewayActionToLegacyGateway'), 
 assert.ok(worker.includes("error: 'CLOUDFLARE_GATEWAY_ACTION_NOT_SUPPORTED'"), 'unsupported gateway actions should fail closed instead of proxying to legacy Edge Functions');
 assert.ok(worker.includes("from './worker-http-helpers.js'"), 'worker should import shared HTTP helpers');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should import shared HTTP helpers');
+assert.ok(gatewayVersions.includes("const VERSION_SELECT = ["), 'snapshot version handlers should define an explicit column projection');
+assert.ok(gatewayVersions.includes('SELECT ${VERSION_SELECT} FROM snapshot_versions'), 'snapshot version handlers should avoid SELECT * payloads');
+assert.ok(!gatewayVersions.includes('SELECT * FROM snapshot_versions'), 'snapshot version handlers must not read every column from D1');
 assert.ok(helpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared helpers must keep explicit CORS allowlist usage');
 assert.ok(helpers.includes('DEFAULT_ALLOWED_CORS_HEADERS'), 'shared helpers must use a fixed CORS request-header allowlist');
 assert.ok(!helpers.includes("request.headers.get('Access-Control-Request-Headers')"), 'shared helpers must not reflect arbitrary request headers in CORS responses');
