@@ -18,6 +18,13 @@
         }
     }
 
+    async function confirmAction(message) {
+        if (root.UI && typeof root.UI === 'object' && typeof root.UI.confirm === 'function') {
+            return !!(await root.UI.confirm(message));
+        }
+        return true;
+    }
+
     function getCustomAliasRows() {
         if (typeof root.ensureSchoolAliasStore !== 'function') return [];
         return root.ensureSchoolAliasStore()
@@ -207,7 +214,7 @@
         const current = list[index];
         if (!current) return;
 
-        if (typeof root.confirm === 'function' && !root.confirm(`确定删除对应：${current.alias} → ${current.canonical} 吗？`)) return;
+        if (!await confirmAction(`确定删除对应：${current.alias} → ${current.canonical} 吗？`)) return;
         list.splice(index, 1);
         if (typeof root.setSchoolAliasState === 'function') root.setSchoolAliasState(list);
         if (manager && typeof manager.renderSchoolAliasMappings === 'function') manager.renderSchoolAliasMappings();

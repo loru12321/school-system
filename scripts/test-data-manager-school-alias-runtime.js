@@ -16,6 +16,7 @@ async function run() {
     let renderAliasCalls = 0;
     let renderStatusCalls = 0;
     const toasts = [];
+    const confirms = [];
 
     const defaultTbody = { innerHTML: '' };
     const customTbody = { innerHTML: '' };
@@ -72,6 +73,10 @@ async function run() {
         UI: {
             toast(text, type) {
                 toasts.push({ text, type });
+            },
+            confirm(message) {
+                confirms.push(message);
+                return Promise.resolve(true);
             }
         },
         document: {
@@ -136,6 +141,7 @@ async function run() {
     aliasStore = [{ canonical: '丁学校', alias: '丁校' }];
     await runtime.deleteSchoolAliasMapping(manager, 0);
     assert.deepStrictEqual(aliasStore, []);
+    assert.strictEqual(confirms.length, 1);
     assert.strictEqual(toasts.filter((item) => item.type === 'success').length >= 2, true);
 
     root.getCurrentUser = () => ({ role: 'teacher' });
