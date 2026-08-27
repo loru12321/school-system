@@ -1,1 +1,307 @@
-(()=>{if(typeof window=="undefined"||window.__STUDENT_COMPARE_GENERATE_RUNTIME_PATCHED__)return;const K=typeof window.setStudentCompareCacheState=="function"?window.setStudentCompareCacheState:(a=>{const t=a&&typeof a=="object"&&!Array.isArray(a)?a:null;return window.STUDENT_MULTI_PERIOD_COMPARE_CACHE=t,t});function S(...a){window.DEBUG_STUDENT_COMPARE&&window.console&&typeof window.console.debug=="function"&&window.console.debug(...a)}function Q(){var w;const a=typeof window.getCurrentUser=="function"?window.getCurrentUser():((w=window.Auth)==null?void 0:w.currentUser)||null,t=String((a==null?void 0:a.role)||"").trim();return t==="admin"||t==="director"||t==="grade_director"}function W(){if(!Q())return;const a=document.getElementById("studentCompareSchool"),t=document.getElementById("studentCompareHint"),w=document.getElementById("studentCompareSummary"),f=document.getElementById("studentCompareResult"),I=document.getElementById("studentComparePeriodCount"),R=document.getElementById("studentCompareExam1"),k=document.getElementById("studentCompareExam2"),H=document.getElementById("studentCompareExam3");if(!a||!t||!f||!I||!R||!k||!H)return;const M=parseInt(I.value||"2"),y=a.value,u=M===3?[R.value,k.value,H.value]:[R.value,k.value];if(t.innerHTML="⏳ 正在生成对比数据，请稍候...",t.style.color="#3b82f6",f.innerHTML="",w&&(w.innerHTML=""),!y){t.innerHTML="❌ 请先选择学校。",t.style.color="#dc2626",f.innerHTML="";return}if(u.some(e=>!e)){t.innerHTML="❌ 请完整选择所有考试期次。",t.style.color="#dc2626",f.innerHTML="";return}if(new Set(u).size!==u.length){t.innerHTML="❌ 期次不能重复，请选择不同考试。",t.style.color="#dc2626",f.innerHTML="";return}M>=2&&(R.value=u[0]||"",k.value=u[1]||"",M===3&&(H.value=u[2]||""));const L=[];for(const e of u){const n=getExamRowsForCompare(e),o=filterRowsBySchool(n,y);if(o.length===0){t.innerHTML=`❌ 在 "${e}" 中找不到 "${y}" 的数据。`,t.style.color="#dc2626",f.innerHTML="";return}L.push({examId:e,allRows:n,schoolRows:o})}const me=CONFIG.name==="9年级"?"五科总":"全科总",b=typeof CohortDB!="undefined"&&typeof CohortDB.ensure=="function"?CohortDB.ensure():null;let E=[];u.forEach(e=>{var n,o;e===CURRENT_EXAM_ID?SUBJECTS&&SUBJECTS.length>0&&(E=[...E,...SUBJECTS]):(o=(n=b==null?void 0:b.exams)==null?void 0:n[e])!=null&&o.subjects&&(E=[...E,...b.exams[e].subjects])}),E=[...new Set(E)].filter(e=>e);const T=e=>String(e||"").replace(/\s+/g,"").replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g,""),v=new Set;L.forEach(({schoolRows:e})=>{e.forEach(n=>{const o=T(n.name);o&&v.add(o)})});let l=[];v.forEach(e=>{var O;const n=[];let o=e,_="";L.forEach(({examId:p,allRows:C,schoolRows:U})=>{var $,j,F,G;const h=U.find(D=>T(D.name)===e);if(h){o=h.name,_=h.class||"";const D=U.filter(s=>isClassEquivalent(s.class||"",_||"")),x=getComparisonTotalSubjects(),B=s=>getComparisonTotalValue(s,x)||0,N=getComparisonTotalValue(h,x),Y=buildCompetitionRankMap(C,s=>T(s.name),B),ee=buildCompetitionRankMap(U,s=>T(s.name),B),te=buildCompetitionRankMap(D,s=>T(s.name),B),ne=($=Y.get(e))!=null?$:null,oe=(j=ee.get(e))!=null?j:null,se=(F=te.get(e))!=null?F:null,z={};E.forEach(s=>{var V,q,X,Z;const J=parseFloat((V=h.scores)==null?void 0:V[s]);if(!isNaN(J)){const P=r=>{var c;return parseFloat((c=r.scores)==null?void 0:c[s])||0},ae=C.filter(r=>{var c;return!isNaN(parseFloat((c=r.scores)==null?void 0:c[s]))}),re=U.filter(r=>{var c;return!isNaN(parseFloat((c=r.scores)==null?void 0:c[s]))}),le=D.filter(r=>{var c;return!isNaN(parseFloat((c=r.scores)==null?void 0:c[s]))}),ie=buildCompetitionRankMap(ae,r=>T(r.name),P),ce=buildCompetitionRankMap(re,r=>T(r.name),P),ue=buildCompetitionRankMap(le,r=>T(r.name),P);z[s]={score:J,rankClass:(q=ue.get(e))!=null?q:null,rankTown:(X=ie.get(e))!=null?X:null,rankSchool:(Z=ce.get(e))!=null?Z:null}}}),n.push({examId:p,total:(G=N!=null?N:h.total)!=null?G:0,rankClass:se,rankTown:ne,rankSchool:oe,subjects:z})}else n.push({examId:p,total:null,rankClass:null,rankTown:null,rankSchool:null,subjects:{}})});let d=0,m=0,i=0;if(n.length>=2){const p=n[0],C=n[n.length-1];p.total!==null&&C.total!==null&&(d=C.total-p.total),p.rankSchool!==null&&C.rankSchool!==null&&(m=p.rankSchool-C.rankSchool),p.rankTown!==null&&C.rankTown!==null&&(i=p.rankTown-C.rankTown)}let A="stable";i>0||i===0&&m>0||i===0&&m===0&&d>1?A="improve":(i<0||i===0&&m<0||i===0&&m===0&&d<-1)&&(A="decline"),l.push({name:o,cleanName:e,class:_,periods:n,scoreDiff:d,rankSchoolDiff:m,rankTownDiff:i,latestTotal:((O=n[n.length-1])==null?void 0:O.total)||0,progressType:A})});const g=getCurrentUser();if(S("[学生对比] 当前用户:",g),g&&RoleManager.hasAnyRole(g,["teacher","class_teacher"])&&!RoleManager.hasAnyRole(g,["admin","director","grade_director"])){S("[学生对比] 检测到教师角色，启用权限过滤");const n=getTeacherScopeForUser(g).classes;if(n.size>0){const o=l.length;S(`[学生对比] 过滤前学生数: ${o}`),S("[学生对比] 数据中的班级:",[...new Set(l.map(d=>d.class))]),l=l.filter(d=>{const m=normalizeClass(d.class),i=n.has(m);return i||S(`[学生对比] 过滤掉班级 ${d.class} (规范化: ${m})`),i});const _=RoleManager.getUserRoles(g).join(", ");if(S(`权限筛选：${_} ${g.name} 只能查看 ${n.size} 个班级，筛选前${o}人，筛选后${l.length}人`),l.length===0){t.innerHTML="⚠️ 您没有权限查看该校学生数据，或您任教的班级不在此学校。",t.style.color="#f59e0b",f.innerHTML="";return}}else{t.innerHTML="⚠️ 未找到您的任课信息，请先在【数据管理 - 教师任课】中配置。",t.style.color="#dc2626",f.innerHTML="";return}}else S("[学生对比] 管理员或非教师角色，不过滤数据");l.sort((e,n)=>{const o=(e.class||"").localeCompare(n.class||"","zh-CN");return o!==0?o:(e.name||"").localeCompare(n.name||"","zh-CN")}),setTimeout(()=>{STUDENT_MULTI_PERIOD_COMPARE_CACHE={school:y,examIds:u,periodCount:M,studentsCompareData:l,subjects:E,currentPage:1,pageSize:20,originalStudentsCompareData:[...l],activeNameFilters:[],activeProgressFilter:"",activeClassFilter:""},K(STUDENT_MULTI_PERIOD_COMPARE_CACHE),updateClassGroupOptions(),updateStudentCompareSummary(),renderStudentComparePage(1),t.innerHTML=`✅ 已生成 ${y} 的 ${l.length} 名学生 ${M} 期对比`,t.style.color="#16a34a"},100)}Object.assign(window,{renderStudentMultiPeriodComparison:W}),window.__STUDENT_COMPARE_GENERATE_RUNTIME_PATCHED__=!0})();
+(() => {
+    if (typeof window === 'undefined' || window.__STUDENT_COMPARE_GENERATE_RUNTIME_PATCHED__) return;
+
+const setStudentCompareCacheState = typeof window.setStudentCompareCacheState === 'function'
+    ? window.setStudentCompareCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    });
+
+function debugStudentCompareGenerate(...args) {
+    if (window.DEBUG_STUDENT_COMPARE && window.console && typeof window.console.debug === 'function') {
+        window.console.debug(...args);
+    }
+}
+
+function canUseStudentMultiPeriodCompare() {
+    const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : (window.Auth?.currentUser || null);
+    const role = String(user?.role || '').trim();
+    return role === 'admin' || role === 'director' || role === 'grade_director';
+}
+
+function renderStudentMultiPeriodComparison() {
+    if (!canUseStudentMultiPeriodCompare()) return;
+    const schoolEl = document.getElementById('studentCompareSchool');
+    const hintEl = document.getElementById('studentCompareHint');
+    const summaryEl = document.getElementById('studentCompareSummary');
+    const resultEl = document.getElementById('studentCompareResult');
+    const countEl = document.getElementById('studentComparePeriodCount');
+    const e1El = document.getElementById('studentCompareExam1');
+    const e2El = document.getElementById('studentCompareExam2');
+    const e3El = document.getElementById('studentCompareExam3');
+
+    if (!schoolEl || !hintEl || !resultEl || !countEl || !e1El || !e2El || !e3El) return;
+
+    const periodCount = parseInt(countEl.value || '2');
+    const school = schoolEl.value;
+    const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
+
+    // 显示加载状态
+    hintEl.innerHTML = '⏳ 正在生成对比数据，请稍候...';
+    hintEl.style.color = '#3b82f6';
+    resultEl.innerHTML = '';
+    if (summaryEl) summaryEl.innerHTML = '';
+
+    if (!school) {
+        hintEl.innerHTML = '❌ 请先选择学校。';
+        hintEl.style.color = '#dc2626';
+        resultEl.innerHTML = '';
+        return;
+    }
+
+    if (examIds.some(x => !x)) {
+        hintEl.innerHTML = '❌ 请完整选择所有考试期次。';
+        hintEl.style.color = '#dc2626';
+        resultEl.innerHTML = '';
+        return;
+    }
+
+    if (new Set(examIds).size !== examIds.length) {
+        hintEl.innerHTML = '❌ 期次不能重复，请选择不同考试。';
+        hintEl.style.color = '#dc2626';
+        resultEl.innerHTML = '';
+        return;
+    }
+
+    if (periodCount >= 2) {
+        e1El.value = examIds[0] || '';
+        e2El.value = examIds[1] || '';
+        if (periodCount === 3) e3El.value = examIds[2] || '';
+    }
+
+    // 获取各期数据
+    const examDataList = [];
+    for (const examId of examIds) {
+        const allRows = getExamRowsForCompare(examId);
+        const schoolRows = filterRowsBySchool(allRows, school);
+
+        if (schoolRows.length === 0) {
+            hintEl.innerHTML = `❌ 在 "${examId}" 中找不到 "${school}" 的数据。`;
+            hintEl.style.color = '#dc2626';
+            resultEl.innerHTML = '';
+            return;
+        }
+
+        examDataList.push({ examId, allRows, schoolRows });
+    }
+
+    // 判断是6-8年级还是9年级模式
+    const is9thGrade = CONFIG.name === '9年级';
+    const totalLabel = is9thGrade ? '五科总' : '全科总';
+
+    // 获取科目列表
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    let allSubjects = [];
+    examIds.forEach(examId => {
+        if (examId === CURRENT_EXAM_ID) {
+            if (SUBJECTS && SUBJECTS.length > 0) {
+                allSubjects = [...allSubjects, ...SUBJECTS];
+            }
+        } else if (db?.exams?.[examId]?.subjects) {
+            allSubjects = [...allSubjects, ...db.exams[examId].subjects];
+        }
+    });
+    allSubjects = [...new Set(allSubjects)].filter(s => s);
+
+    // 收集所有学生姓名（跨期合并）
+    const cleanName = n => String(n || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
+    const allStudentNames = new Set();
+    examDataList.forEach(({ schoolRows }) => {
+        schoolRows.forEach(row => {
+            const name = cleanName(row.name);
+            if (name) allStudentNames.add(name);
+        });
+    });
+
+    // 构建每个学生的多期数据
+    let studentsCompareData = [];
+    allStudentNames.forEach(cleanedName => {
+        const studentPeriods = [];
+        let displayName = cleanedName;
+        let studentClass = '';
+
+        examDataList.forEach(({ examId, allRows, schoolRows }) => {
+            const studentRow = schoolRows.find(r => cleanName(r.name) === cleanedName);
+
+            if (studentRow) {
+                displayName = studentRow.name; // 使用原始姓名
+                studentClass = studentRow.class || '';
+
+                const classRows = schoolRows.filter(r => isClassEquivalent(r.class || '', studentClass || ''));
+                const comparisonTotalSubjects = getComparisonTotalSubjects();
+                const totalOf = (row) => getComparisonTotalValue(row, comparisonTotalSubjects) || 0;
+                const normalizedTotal = getComparisonTotalValue(studentRow, comparisonTotalSubjects);
+                const rankTownMap = buildCompetitionRankMap(allRows, r => cleanName(r.name), totalOf);
+                const rankSchoolMap = buildCompetitionRankMap(schoolRows, r => cleanName(r.name), totalOf);
+                const rankClassMap = buildCompetitionRankMap(classRows, r => cleanName(r.name), totalOf);
+
+                const rankTown = rankTownMap.get(cleanedName) ?? null;
+                const rankSchool = rankSchoolMap.get(cleanedName) ?? null;
+                const rankClass = rankClassMap.get(cleanedName) ?? null;
+
+                // 各科排名
+                const subjectRanks = {};
+                allSubjects.forEach(subject => {
+                    const subScore = parseFloat(studentRow.scores?.[subject]);
+                    if (!isNaN(subScore)) {
+                        const getSubjectScore = row => parseFloat(row.scores?.[subject]) || 0;
+                        const sortedBySub = allRows.filter(r => !isNaN(parseFloat(r.scores?.[subject])));
+                        const sortedBySubSchool = schoolRows.filter(r => !isNaN(parseFloat(r.scores?.[subject])));
+                        const sortedBySubClass = classRows.filter(r => !isNaN(parseFloat(r.scores?.[subject])));
+                        const subjectTownMap = buildCompetitionRankMap(sortedBySub, r => cleanName(r.name), getSubjectScore);
+                        const subjectSchoolMap = buildCompetitionRankMap(sortedBySubSchool, r => cleanName(r.name), getSubjectScore);
+                        const subjectClassMap = buildCompetitionRankMap(sortedBySubClass, r => cleanName(r.name), getSubjectScore);
+
+                        subjectRanks[subject] = {
+                            score: subScore,
+                            rankClass: subjectClassMap.get(cleanedName) ?? null,
+                            rankTown: subjectTownMap.get(cleanedName) ?? null,
+                            rankSchool: subjectSchoolMap.get(cleanedName) ?? null
+                        };
+                    }
+                });
+
+                studentPeriods.push({
+                    examId,
+                    total: normalizedTotal ?? studentRow.total ?? 0,
+                    rankClass,
+                    rankTown,
+                    rankSchool,
+                    subjects: subjectRanks
+                });
+            } else {
+                // 该学生在此期次中不存在
+                studentPeriods.push({
+                    examId,
+                    total: null,
+                    rankClass: null,
+                    rankTown: null,
+                    rankSchool: null,
+                    subjects: {}
+                });
+            }
+        });
+
+        // 计算进步幅度等元数据
+        let scoreDiff = 0;
+        let rankSchoolDiff = 0;
+        let rankTownDiff = 0;
+        if (studentPeriods.length >= 2) {
+            const first = studentPeriods[0];
+            const last = studentPeriods[studentPeriods.length - 1];
+            if (first.total !== null && last.total !== null) {
+                scoreDiff = last.total - first.total;
+            }
+            if (first.rankSchool !== null && last.rankSchool !== null) {
+                rankSchoolDiff = first.rankSchool - last.rankSchool;
+            }
+            if (first.rankTown !== null && last.rankTown !== null) {
+                rankTownDiff = first.rankTown - last.rankTown;
+            }
+        }
+
+        // 判断进步类型：优先看镇排名，再看校排名，最后看总分
+        let progressType = 'stable';
+        if (rankTownDiff > 0 || (rankTownDiff === 0 && rankSchoolDiff > 0) || (rankTownDiff === 0 && rankSchoolDiff === 0 && scoreDiff > 1)) {
+            progressType = 'improve';
+        } else if (rankTownDiff < 0 || (rankTownDiff === 0 && rankSchoolDiff < 0) || (rankTownDiff === 0 && rankSchoolDiff === 0 && scoreDiff < -1)) {
+            progressType = 'decline';
+        }
+
+        studentsCompareData.push({
+            name: displayName,
+            cleanName: cleanedName,
+            class: studentClass,
+            periods: studentPeriods,
+            // 元数据
+            scoreDiff,
+            rankSchoolDiff,
+            rankTownDiff,
+            latestTotal: studentPeriods[studentPeriods.length - 1]?.total || 0,
+            progressType
+        });
+    });
+
+    // 🔐 权限控制：根据角色筛选班级
+    const user = getCurrentUser();
+    debugStudentCompareGenerate('[学生对比] 当前用户:', user);
+
+    // 🆕 使用多角色检查
+    if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
+        !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
+        // 纯教师或班主任角色（不含管理员权限）：只能看自己任教的班级
+        debugStudentCompareGenerate('[学生对比] 检测到教师角色，启用权限过滤');
+        const scope = getTeacherScopeForUser(user);
+        const allowedClasses = scope.classes;
+
+        if (allowedClasses.size > 0) {
+            const originalCount = studentsCompareData.length;
+            debugStudentCompareGenerate(`[学生对比] 过滤前学生数: ${originalCount}`);
+            debugStudentCompareGenerate('[学生对比] 数据中的班级:', [...new Set(studentsCompareData.map(s => s.class))]);
+
+            studentsCompareData = studentsCompareData.filter(s => {
+                const cls = normalizeClass(s.class);
+                const hasPermission = allowedClasses.has(cls);
+                if (!hasPermission) debugStudentCompareGenerate(`[学生对比] 过滤掉班级 ${s.class} (规范化: ${cls})`);
+                return hasPermission;
+            });
+
+            const roles = RoleManager.getUserRoles(user).join(', ');
+            debugStudentCompareGenerate(`权限筛选：${roles} ${user.name} 只能查看 ${allowedClasses.size} 个班级，筛选前${originalCount}人，筛选后${studentsCompareData.length}人`);
+
+            if (studentsCompareData.length === 0) {
+                hintEl.innerHTML = `⚠️ 您没有权限查看该校学生数据，或您任教的班级不在此学校。`;
+                hintEl.style.color = '#f59e0b';
+                resultEl.innerHTML = '';
+                return;
+            }
+        } else {
+            hintEl.innerHTML = `⚠️ 未找到您的任课信息，请先在【数据管理 - 教师任课】中配置。`;
+            hintEl.style.color = '#dc2626';
+            resultEl.innerHTML = '';
+            return;
+        }
+    } else {
+        debugStudentCompareGenerate('[学生对比] 管理员或非教师角色，不过滤数据');
+    }
+
+    // 按班级和姓名排序（默认）
+    studentsCompareData.sort((a, b) => {
+        const classCompare = (a.class || '').localeCompare(b.class || '', 'zh-CN');
+        if (classCompare !== 0) return classCompare;
+        return (a.name || '').localeCompare(b.name || '', 'zh-CN');
+    });
+
+    // 延迟渲染避免阻塞UI
+    setTimeout(() => {
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE = {
+            school, examIds, periodCount, studentsCompareData, subjects: allSubjects,
+            currentPage: 1,
+            pageSize: 20,
+            originalStudentsCompareData: [...studentsCompareData],
+            activeNameFilters: [],
+            activeProgressFilter: '',
+            activeClassFilter: ''
+        };
+        setStudentCompareCacheState(STUDENT_MULTI_PERIOD_COMPARE_CACHE);
+
+        // 🟢 [新增]：更新班级下拉选项
+        updateClassGroupOptions();
+
+        // 生成统计概览
+        updateStudentCompareSummary();
+
+        renderStudentComparePage(1);
+        hintEl.innerHTML = `✅ 已生成 ${school} 的 ${studentsCompareData.length} 名学生 ${periodCount} 期对比`;
+        hintEl.style.color = '#16a34a';
+    }, 100);
+}
+
+    Object.assign(window, {
+        renderStudentMultiPeriodComparison
+    });
+
+    window.__STUDENT_COMPARE_GENERATE_RUNTIME_PATCHED__ = true;
+})();

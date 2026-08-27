@@ -1,1 +1,121 @@
-(function(c,n){const r=n(c||{});if(typeof module=="object"&&module.exports){const a=function(o){return n(o||c||{})};a.runtime=r,module.exports=a}!c||c.TeacherState||(c.TeacherState=r,r.syncTeacherState(r.snapshotTeacherState()))})(typeof globalThis!="undefined"?globalThis:this,function(n){function r(t){return!t||typeof t!="object"||Array.isArray(t)?{}:{...t}}function a(t,e){if(t==null)return e;try{return JSON.parse(JSON.stringify(t))}catch(l){return e}}function o(){n.AnalyticsKernel&&typeof n.AnalyticsKernel.invalidate=="function"&&n.AnalyticsKernel.invalidate({keepProcessCache:!0})}function s(){return r(n.TEACHER_MAP)}function p(t){const e=r(t);return n.TEACHER_MAP=e,o(),e}function h(){return r(n.TEACHER_SCHOOL_MAP)}function i(t){const e=r(t);return n.TEACHER_SCHOOL_MAP=e,o(),e}function T(){return a(A(),{})}function A(){return n.TEACHER_STATS&&typeof n.TEACHER_STATS=="object"&&!Array.isArray(n.TEACHER_STATS)?n.TEACHER_STATS:{}}function u(t){const e=a(t,{});return n.TEACHER_STATS=e,o(),e}function S(){return{teacherMap:s(),teacherSchoolMap:h(),teacherStats:T()}}function E(t={}){const e=t&&typeof t=="object"?t:{},l=Object.prototype.hasOwnProperty.call(e,"teacherMap")?e.teacherMap:Object.prototype.hasOwnProperty.call(e,"TEACHER_MAP")?e.TEACHER_MAP:s(),y=Object.prototype.hasOwnProperty.call(e,"teacherSchoolMap")?e.teacherSchoolMap:Object.prototype.hasOwnProperty.call(e,"TEACHER_SCHOOL_MAP")?e.TEACHER_SCHOOL_MAP:h(),M=Object.prototype.hasOwnProperty.call(e,"teacherStats")?e.teacherStats:Object.prototype.hasOwnProperty.call(e,"TEACHER_STATS")?e.TEACHER_STATS:T();return p(l),i(y),u(M),S()}function f(t={}){return p({}),i({}),t.keepStats||u({}),S()}return{getTeacherMap:s,setTeacherMap:p,getTeacherSchoolMap:h,setTeacherSchoolMap:i,getTeacherStats:T,peekTeacherStats:A,setTeacherStats:u,snapshotTeacherState:S,syncTeacherState:E,clearTeacherState:f}});
+(function (root, factory) {
+    const runtime = factory(root || {});
+
+    if (typeof module === 'object' && module.exports) {
+        const createRuntime = function (overrideRoot) {
+            return factory(overrideRoot || root || {});
+        };
+        createRuntime.runtime = runtime;
+        module.exports = createRuntime;
+    }
+
+    if (!root || root.TeacherState) return;
+    root.TeacherState = runtime;
+    runtime.syncTeacherState(runtime.snapshotTeacherState());
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createTeacherStateRuntime(root) {
+    function normalizeRecordMap(value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+        return { ...value };
+    }
+
+    function cloneJson(value, fallbackValue) {
+        if (value == null) return fallbackValue;
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch {
+            return fallbackValue;
+        }
+    }
+
+    function invalidateAnalyticsKernel() {
+        if (root.AnalyticsKernel && typeof root.AnalyticsKernel.invalidate === 'function') {
+            root.AnalyticsKernel.invalidate({ keepProcessCache: true });
+        }
+    }
+
+    function getTeacherMap() {
+        return normalizeRecordMap(root.TEACHER_MAP);
+    }
+
+    function setTeacherMap(map) {
+        const nextMap = normalizeRecordMap(map);
+        root.TEACHER_MAP = nextMap;
+        invalidateAnalyticsKernel();
+        return nextMap;
+    }
+
+    function getTeacherSchoolMap() {
+        return normalizeRecordMap(root.TEACHER_SCHOOL_MAP);
+    }
+
+    function setTeacherSchoolMap(map) {
+        const nextMap = normalizeRecordMap(map);
+        root.TEACHER_SCHOOL_MAP = nextMap;
+        invalidateAnalyticsKernel();
+        return nextMap;
+    }
+
+    function getTeacherStats() {
+        return cloneJson(peekTeacherStats(), {});
+    }
+
+    function peekTeacherStats() {
+        return root.TEACHER_STATS && typeof root.TEACHER_STATS === 'object' && !Array.isArray(root.TEACHER_STATS)
+            ? root.TEACHER_STATS
+            : {};
+    }
+
+    function setTeacherStats(stats) {
+        const nextStats = cloneJson(stats, {});
+        root.TEACHER_STATS = nextStats;
+        invalidateAnalyticsKernel();
+        return nextStats;
+    }
+
+    function snapshotTeacherState() {
+        return {
+            teacherMap: getTeacherMap(),
+            teacherSchoolMap: getTeacherSchoolMap(),
+            teacherStats: getTeacherStats()
+        };
+    }
+
+    function syncTeacherState(nextState = {}) {
+        const source = nextState && typeof nextState === 'object' ? nextState : {};
+        const teacherMap = Object.prototype.hasOwnProperty.call(source, 'teacherMap')
+            ? source.teacherMap
+            : (Object.prototype.hasOwnProperty.call(source, 'TEACHER_MAP') ? source.TEACHER_MAP : getTeacherMap());
+        const teacherSchoolMap = Object.prototype.hasOwnProperty.call(source, 'teacherSchoolMap')
+            ? source.teacherSchoolMap
+            : (Object.prototype.hasOwnProperty.call(source, 'TEACHER_SCHOOL_MAP') ? source.TEACHER_SCHOOL_MAP : getTeacherSchoolMap());
+        const teacherStats = Object.prototype.hasOwnProperty.call(source, 'teacherStats')
+            ? source.teacherStats
+            : (Object.prototype.hasOwnProperty.call(source, 'TEACHER_STATS') ? source.TEACHER_STATS : getTeacherStats());
+
+        setTeacherMap(teacherMap);
+        setTeacherSchoolMap(teacherSchoolMap);
+        setTeacherStats(teacherStats);
+
+        return snapshotTeacherState();
+    }
+
+    function clearTeacherState(options = {}) {
+        setTeacherMap({});
+        setTeacherSchoolMap({});
+        if (!options.keepStats) setTeacherStats({});
+        return snapshotTeacherState();
+    }
+
+    return {
+        getTeacherMap,
+        setTeacherMap,
+        getTeacherSchoolMap,
+        setTeacherSchoolMap,
+        getTeacherStats,
+        peekTeacherStats,
+        setTeacherStats,
+        snapshotTeacherState,
+        syncTeacherState,
+        clearTeacherState
+    };
+});

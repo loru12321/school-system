@@ -1,1 +1,26 @@
-typeof window=="undefined"||window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__||(window.TeacherAnalysisPerformanceRuntime={buildTownshipSubjectIndex(a,r,_,f,u){const t=new Map((r||[]).map(e=>[e,{rows:[],scores:[],count:0,total:0}]));return(a||[]).forEach(e=>{const i=String((e==null?void 0:e.school)||"").trim();(i?!_(i):f)||(r||[]).forEach(s=>{var c;const o=u((c=e==null?void 0:e.scores)==null?void 0:c[s],NaN);if(!Number.isFinite(o))return;const n=t.get(s);n.rows.push(e),n.scores.push(o),n.count+=1,n.total+=o})}),t}},typeof window.refreshTeacherPerformanceCopy=="function"&&window.refreshTeacherPerformanceCopy(),window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__=!0);
+(() => {
+    if (typeof window === 'undefined' || window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) return;
+    window.TeacherAnalysisPerformanceRuntime = {
+        buildTownshipSubjectIndex(rows, subjects, isTownshipSchoolName, hasTownshipSchoolHelper, toNumber) {
+            const result = new Map((subjects || []).map((subject) => [subject, { rows: [], scores: [], count: 0, total: 0 }]));
+            (rows || []).forEach((row) => {
+                const schoolName = String(row?.school || '').trim();
+                if (schoolName ? !isTownshipSchoolName(schoolName) : hasTownshipSchoolHelper) return;
+                (subjects || []).forEach((subject) => {
+                    const score = toNumber(row?.scores?.[subject], NaN);
+                    if (!Number.isFinite(score)) return;
+                    const aggregate = result.get(subject);
+                    aggregate.rows.push(row);
+                    aggregate.scores.push(score);
+                    aggregate.count += 1;
+                    aggregate.total += score;
+                });
+            });
+            return result;
+        }
+    };
+    if (typeof window.refreshTeacherPerformanceCopy === 'function') {
+        window.refreshTeacherPerformanceCopy();
+    }
+    window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ = true;
+})();

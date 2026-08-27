@@ -1,8 +1,265 @@
-const QUERY_MODULE_ACCESS={admin:["*"],director:["starter-hub","upload","data-quality","summary","analysis","high-score","indicator","bottom3","county-analysis","teacher-analysis","teacher-detail-comparison","teacher-pairing","teacher-township-ranking","marginal-push","progress-analysis","report-generator","freshman-simulator","exam-arranger","grade-scheduler","seat-adjustment","mutual-aid","student-overview","student-details","blank-score-audit","subject-balance","potential-analysis","segment-analysis","correlation-analysis","cohort-growth","zhongkao-countdown"],grade_director:["summary","analysis","high-score","indicator","bottom3","teacher-analysis","teacher-detail-comparison","teacher-pairing","teacher-township-ranking","marginal-push","progress-analysis","report-generator","student-overview","student-details","blank-score-audit","subject-balance","potential-analysis","segment-analysis","correlation-analysis","cohort-growth","zhongkao-countdown"],class_teacher:["summary","analysis","high-score","indicator","bottom3","teacher-analysis","teacher-detail-comparison","teacher-pairing","teacher-township-ranking","student-details","blank-score-audit"],teacher:["summary","analysis","high-score","indicator","bottom3","teacher-analysis","teacher-detail-comparison","teacher-pairing","teacher-township-ranking","student-details","blank-score-audit"],parent:["report-generator"],student:["report-generator"],guest:["starter-hub"]},MODULE_ACCESS_ALIASES={"county-teacher-portrait":"county-analysis","county-school-horizontal":"county-analysis"},SCHOOL_NAME_EQUIVALENCE_CACHE=new Map,PermissionPolicy={isParentLikeRole(e){const t=String(e||"").trim();return t==="parent"||t==="student"},isParentLikeUser(e){return!e||typeof e!="object"?!1:(Array.isArray(e.roles)&&e.roles.length?e.roles:[e.role].filter(Boolean)).some(a=>this.isParentLikeRole(a))},applyRoleAllowVisibility(e=document){var o,n,s;const t=typeof getCurrentUser=="function"?getCurrentUser():((o=window.Auth)==null?void 0:o.currentUser)||null,a=((s=(n=window.RoleManager)==null?void 0:n.getUserRoles)==null?void 0:s.call(n,t))||(Array.isArray(t==null?void 0:t.roles)&&t.roles.length?t.roles:[t==null?void 0:t.role]),r=new Set((a||[]).map(i=>String(i||"").trim()).filter(Boolean));(e||document).querySelectorAll("[data-role-allow]").forEach(i=>{const l=String(i.dataset.roleAllow||"").split(",").map(h=>h.trim()).filter(Boolean),c=l.length===0||l.some(h=>r.has(h));i.hidden=!c,i.style.display=c?"":"none",i.setAttribute("aria-hidden",c?"false":"true")})},normalizeName(e){return String(e||"").trim().replace(/\s+/g,"").toLowerCase()},normalizeSchool(e){return String(e||"").trim()},sameSchoolName(e,t){const a=this.normalizeSchool(e),r=this.normalizeSchool(t);if(!a||!r)return!1;if(a===r)return!0;const o=a<r?`${a}\0${r}`:`${r}\0${a}`;if(SCHOOL_NAME_EQUIVALENCE_CACHE.has(o))return SCHOOL_NAME_EQUIVALENCE_CACHE.get(o);const n=typeof areSchoolNamesEquivalent=="function"&&areSchoolNamesEquivalent(a,r);return SCHOOL_NAME_EQUIVALENCE_CACHE.set(o,!!n),SCHOOL_NAME_EQUIVALENCE_CACHE.size>500&&SCHOOL_NAME_EQUIVALENCE_CACHE.delete(SCHOOL_NAME_EQUIVALENCE_CACHE.keys().next().value),!!n},clearSchoolNameCache(){SCHOOL_NAME_EQUIVALENCE_CACHE.clear()},extractGrade(e){const t=normalizeClass(e||""),a=String(t||"").match(/^(\d{1,2})/);return a?a[1]:""},parseClasses(e){return String(e||"").split(/[,\uff0c\u3001/|]/).map(t=>normalizeClass(t)).filter(Boolean)},getPrimaryRole(e=getCurrentUser()){return e?typeof RoleManager!="undefined"&&typeof RoleManager.getPrimaryRole=="function"?RoleManager.getPrimaryRole(e):e.role||"guest":"guest"},getQueryRoles(e=getCurrentUser()){if(!e)return["guest"];if(typeof RoleManager!="undefined"&&typeof RoleManager.getUserRoles=="function"){const t=RoleManager.getUserRoles(e).filter(Boolean);return t.length?t:["guest"]}return Array.isArray(e.roles)&&e.roles.length?e.roles.filter(Boolean):[e.role||"guest"]},hasQueryRole(e,t){return this.getQueryRoles(e).includes(t)},isAdmin(e=getCurrentUser()){return this.getPrimaryRole(e)==="admin"},isDirector(e=getCurrentUser()){return this.getPrimaryRole(e)==="director"},isGradeDirector(e=getCurrentUser()){return this.getPrimaryRole(e)==="grade_director"},isClassTeacher(e=getCurrentUser()){return this.hasQueryRole(e,"class_teacher")},isTeacher(e=getCurrentUser()){return this.hasQueryRole(e,"teacher")},isParentLike(e=getCurrentUser()){const t=this.getPrimaryRole(e);return t==="parent"||t==="student"},getBoundSchool(e=getCurrentUser()){const t=this.normalizeSchool((e==null?void 0:e.school)||"");return t||(this.hasQueryRole(e,"admin")?"":this.normalizeSchool(readCurrentSchool()||""))},getBoundGrade(e=getCurrentUser()){return this.extractGrade((e==null?void 0:e.grade_name)||(e==null?void 0:e.class_name)||(e==null?void 0:e.class)||"")},getHomeroomClass(e=getCurrentUser()){return normalizeClass((e==null?void 0:e.class_name)||(e==null?void 0:e.class)||"")},getTeachingScope(e=getCurrentUser()){return this.hasQueryRole(e,"teacher")||this.hasQueryRole(e,"class_teacher")?getTeacherScopeForUser(e):{classes:new Set,subjects:new Set}},getAllowedModules(e=getCurrentUser()){const t=this.getPrimaryRole(e);return(QUERY_MODULE_ACCESS[t]||QUERY_MODULE_ACCESS.guest||[]).slice()},canAccessModule(e,t){t=MODULE_ACCESS_ALIASES[t]||t;const a=this.getAllowedModules(e);return a.includes("*")||a.includes(t)},canQuerySchool(e,t){return e?this.hasQueryRole(e,"admin")?!0:this.hasQueryRole(e,"director")||this.hasQueryRole(e,"grade_director")||this.hasQueryRole(e,"class_teacher")||this.hasQueryRole(e,"teacher")||this.hasQueryRole(e,"parent")||this.hasQueryRole(e,"student")?this.sameSchoolName(this.getBoundSchool(e),t):!1:!1},canQueryClass(e,t,a,r={}){if(!e)return!1;if(this.hasQueryRole(e,"admin"))return!0;if(!this.canQuerySchool(e,t))return!1;const o=normalizeClass(a||"");if(!o)return!1;if(this.hasQueryRole(e,"director"))return!0;const n=[];if(this.hasQueryRole(e,"grade_director")){const s=this.getBoundGrade(e);n.push(!!s&&this.extractGrade(o)===s)}if(this.hasQueryRole(e,"class_teacher")){const s=r.mode||"either",i=this.getHomeroomClass(e),l=this.getTeachingScope(e),c=!!i&&o===i,h=l.classes.has(o);s==="homeroom"?n.push(c):n.push(c||h)}return this.hasQueryRole(e,"teacher")&&!(this.hasQueryRole(e,"class_teacher")&&r.mode==="homeroom")&&n.push(this.getTeachingScope(e).classes.has(o)),(this.hasQueryRole(e,"parent")||this.hasQueryRole(e,"student"))&&n.push(normalizeClass((e==null?void 0:e.class_name)||(e==null?void 0:e.class)||"")===o),n.some(Boolean)},canQueryStudent(e,t,a={}){if(!e||!t)return!1;const r=this.canQueryClass(e,t==null?void 0:t.school,t==null?void 0:t.class,a),o=(this.hasQueryRole(e,"parent")||this.hasQueryRole(e,"student"))&&this.sameSchoolName(e==null?void 0:e.school,t==null?void 0:t.school)&&normalizeClass((e==null?void 0:e.class_name)||(e==null?void 0:e.class)||"")===normalizeClass((t==null?void 0:t.class)||"")&&this.normalizeName((e==null?void 0:e.name)||(e==null?void 0:e.username))===this.normalizeName(t==null?void 0:t.name);return r||o},filterStudentRows(e,t,a={}){return e?this.hasQueryRole(e,"admin")?Array.isArray(t)?t.slice():[]:(Array.isArray(t)?t:[]).filter(r=>this.canQueryStudent(e,r,a)):[]},getAccessibleSchoolNames(e,t){const a=Array.from(new Set((Array.isArray(t)?t:[]).map(r=>String(r||"").trim()).filter(Boolean)));return this.isAdmin(e)?a:e?a.filter(r=>this.canQuerySchool(e,r)):[]},getAccessibleClassNames(e,t,a,r={}){const o=Array.from(new Set((Array.isArray(t)?t:[]).map(n=>String(n||"").trim()).filter(Boolean)));return e?o.filter(n=>this.canQueryClass(e,a,n,r)):[]},canQueryTeacherMetric(e,t,a,r,o=""){if(!e||!this.canQuerySchool(e,r))return!1;if(this.hasQueryRole(e,"admin")||this.hasQueryRole(e,"director"))return!0;const n=this.parseClasses(a==null?void 0:a.classes),s=[];if(this.hasQueryRole(e,"teacher")){const i=this.normalizeName(t)===this.normalizeName((e==null?void 0:e.teacher_name)||(e==null?void 0:e.name)||(e==null?void 0:e.username)),l=this.getTeachingScope(e),c=normalizeSubject(o||(a==null?void 0:a.subject)||"");s.push(i||!!c&&l.subjects.has(c))}if(this.hasQueryRole(e,"grade_director")){const i=this.getBoundGrade(e);s.push(!!i&&n.some(l=>this.extractGrade(l)===i))}if(this.hasQueryRole(e,"class_teacher")){const i=this.getHomeroomClass(e),l=this.normalizeName(t)===this.normalizeName((e==null?void 0:e.teacher_name)||(e==null?void 0:e.name)||(e==null?void 0:e.username));s.push(l||!!i&&n.some(c=>normalizeClass(c)===i))}return s.some(Boolean)},filterTeacherStats(e,t,a){if(!e)return{};const r={};return Object.entries(t||{}).forEach(([o,n])=>{const s={};Object.entries(n||{}).forEach(([i,l])=>{this.canQueryTeacherMetric(e,o,l,a,i)&&(s[i]=l)}),Object.keys(s).length>0&&(r[o]=s)}),r},permissions:{title:"权限说明",fit:"用于<strong>查看当前角色的模块访问与数据查询边界</strong>，便于系统培训、审核和账号配置。",when:"新增/调整角色，或需要解释多角色可查范围时使用。",use:`<ul>
+const QUERY_MODULE_ACCESS = {
+    admin: ['*'],
+    director: ['starter-hub', 'upload', 'data-quality', 'summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'county-analysis', 'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'grade-scheduler', 'seat-adjustment', 'mutual-aid', 'student-overview', 'student-details', 'blank-score-audit', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'cohort-growth', 'zhongkao-countdown'],
+    grade_director: ['summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking', 'marginal-push', 'progress-analysis', 'report-generator', 'student-overview', 'student-details', 'blank-score-audit', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'cohort-growth', 'zhongkao-countdown'],
+    class_teacher: ['summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking', 'student-details', 'blank-score-audit'],
+    teacher: ['summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking', 'student-details', 'blank-score-audit'],
+    parent: ['report-generator'],
+    student: ['report-generator'],
+    guest: ['starter-hub']
+};
+
+const MODULE_ACCESS_ALIASES = {
+    'county-teacher-portrait': 'county-analysis',
+    'county-school-horizontal': 'county-analysis'
+};
+const SCHOOL_NAME_EQUIVALENCE_CACHE = new Map();
+
+const PermissionPolicy = {
+    isParentLikeRole(role) {
+        const normalizedRole = String(role || '').trim();
+        return normalizedRole === 'parent' || normalizedRole === 'student';
+    },
+    isParentLikeUser(user) {
+        if (!user || typeof user !== 'object') return false;
+        const roles = Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role].filter(Boolean);
+        return roles.some(role => this.isParentLikeRole(role));
+    },
+    applyRoleAllowVisibility(root = document) {
+        const user = typeof getCurrentUser === 'function' ? getCurrentUser() : (window.Auth?.currentUser || null);
+        const roles = window.RoleManager?.getUserRoles?.(user)
+            || (Array.isArray(user?.roles) && user.roles.length ? user.roles : [user?.role]);
+        const roleSet = new Set((roles || []).map(role => String(role || '').trim()).filter(Boolean));
+        (root || document).querySelectorAll('[data-role-allow]').forEach(node => {
+            const allowed = String(node.dataset.roleAllow || '').split(',').map(role => role.trim()).filter(Boolean);
+            const visible = allowed.length === 0 || allowed.some(role => roleSet.has(role));
+            node.hidden = !visible;
+            node.style.display = visible ? '' : 'none';
+            node.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        });
+    },
+    normalizeName(value) {
+        return String(value || '').trim().replace(/\s+/g, '').toLowerCase();
+    },
+    normalizeSchool(value) {
+        return String(value || '').trim();
+    },
+    sameSchoolName(a, b) {
+        const left = this.normalizeSchool(a);
+        const right = this.normalizeSchool(b);
+        if (!left || !right) return false;
+        if (left === right) return true;
+        const cacheKey = left < right ? `${left}\u0000${right}` : `${right}\u0000${left}`;
+        if (SCHOOL_NAME_EQUIVALENCE_CACHE.has(cacheKey)) return SCHOOL_NAME_EQUIVALENCE_CACHE.get(cacheKey);
+        const matched = typeof areSchoolNamesEquivalent === 'function' && areSchoolNamesEquivalent(left, right);
+        SCHOOL_NAME_EQUIVALENCE_CACHE.set(cacheKey, !!matched);
+        if (SCHOOL_NAME_EQUIVALENCE_CACHE.size > 500) SCHOOL_NAME_EQUIVALENCE_CACHE.delete(SCHOOL_NAME_EQUIVALENCE_CACHE.keys().next().value);
+        return !!matched;
+    },
+    clearSchoolNameCache() {
+        SCHOOL_NAME_EQUIVALENCE_CACHE.clear();
+    },
+    extractGrade(value) {
+        const normalized = normalizeClass(value || '');
+        const match = String(normalized || '').match(/^(\d{1,2})/);
+        return match ? match[1] : '';
+    },
+    parseClasses(value) {
+        return String(value || '').split(/[,\uff0c\u3001/|]/).map(item => normalizeClass(item)).filter(Boolean);
+    },
+    getPrimaryRole(user = getCurrentUser()) {
+        if (!user) return 'guest';
+        return typeof RoleManager !== 'undefined' && typeof RoleManager.getPrimaryRole === 'function'
+            ? RoleManager.getPrimaryRole(user)
+            : (user.role || 'guest');
+    },
+    getQueryRoles(user = getCurrentUser()) {
+        if (!user) return ['guest'];
+        if (typeof RoleManager !== 'undefined' && typeof RoleManager.getUserRoles === 'function') {
+            const roles = RoleManager.getUserRoles(user).filter(Boolean);
+            return roles.length ? roles : ['guest'];
+        }
+        if (Array.isArray(user.roles) && user.roles.length) return user.roles.filter(Boolean);
+        return [user.role || 'guest'];
+    },
+    hasQueryRole(user, roleName) {
+        return this.getQueryRoles(user).includes(roleName);
+    },
+    isAdmin(user = getCurrentUser()) {
+        return this.getPrimaryRole(user) === 'admin';
+    },
+    isDirector(user = getCurrentUser()) {
+        return this.getPrimaryRole(user) === 'director';
+    },
+    isGradeDirector(user = getCurrentUser()) {
+        return this.getPrimaryRole(user) === 'grade_director';
+    },
+    isClassTeacher(user = getCurrentUser()) {
+        return this.hasQueryRole(user, 'class_teacher');
+    },
+    isTeacher(user = getCurrentUser()) {
+        return this.hasQueryRole(user, 'teacher');
+    },
+    isParentLike(user = getCurrentUser()) {
+        const role = this.getPrimaryRole(user);
+        return role === 'parent' || role === 'student';
+    },
+    getBoundSchool(user = getCurrentUser()) {
+        const bound = this.normalizeSchool(user?.school || '');
+        if (bound) return bound;
+        if (this.hasQueryRole(user, 'admin')) return '';
+        return this.normalizeSchool(readCurrentSchool() || '');
+    },
+    getBoundGrade(user = getCurrentUser()) {
+        return this.extractGrade(user?.grade_name || user?.class_name || user?.class || '');
+    },
+    getHomeroomClass(user = getCurrentUser()) {
+        return normalizeClass(user?.class_name || user?.class || '');
+    },
+    getTeachingScope(user = getCurrentUser()) {
+        if (!(this.hasQueryRole(user, 'teacher') || this.hasQueryRole(user, 'class_teacher'))) {
+            return { classes: new Set(), subjects: new Set() };
+        }
+        return getTeacherScopeForUser(user);
+    },
+    getAllowedModules(user = getCurrentUser()) {
+        const role = this.getPrimaryRole(user);
+        const allow = QUERY_MODULE_ACCESS[role] || QUERY_MODULE_ACCESS.guest || [];
+        return allow.slice();
+    },
+    canAccessModule(user, moduleId) {
+        moduleId = MODULE_ACCESS_ALIASES[moduleId] || moduleId;
+        const allow = this.getAllowedModules(user);
+        return allow.includes('*') || allow.includes(moduleId);
+    },
+    canQuerySchool(user, schoolName) {
+        if (!user) return false;
+        if (this.hasQueryRole(user, 'admin')) return true;
+        if (this.hasQueryRole(user, 'director')
+            || this.hasQueryRole(user, 'grade_director')
+            || this.hasQueryRole(user, 'class_teacher')
+            || this.hasQueryRole(user, 'teacher')
+            || this.hasQueryRole(user, 'parent')
+            || this.hasQueryRole(user, 'student')) {
+            return this.sameSchoolName(this.getBoundSchool(user), schoolName);
+        }
+        return false;
+    },
+    canQueryClass(user, schoolName, className, options = {}) {
+        if (!user) return false;
+        if (this.hasQueryRole(user, 'admin')) return true;
+        if (!this.canQuerySchool(user, schoolName)) return false;
+        const normalizedClass = normalizeClass(className || '');
+        if (!normalizedClass) return false;
+        if (this.hasQueryRole(user, 'director')) return true;
+
+        const roleChecks = [];
+
+        if (this.hasQueryRole(user, 'grade_director')) {
+            const boundGrade = this.getBoundGrade(user);
+            roleChecks.push(!!boundGrade && this.extractGrade(normalizedClass) === boundGrade);
+        }
+
+        if (this.hasQueryRole(user, 'class_teacher')) {
+            const mode = options.mode || 'either';
+            const homeroomClass = this.getHomeroomClass(user);
+            const teachingScope = this.getTeachingScope(user);
+            const homeroomMatch = !!homeroomClass && normalizedClass === homeroomClass;
+            const teachingMatch = teachingScope.classes.has(normalizedClass);
+            if (mode === 'homeroom') roleChecks.push(homeroomMatch);
+            else if (mode === 'teaching') roleChecks.push(homeroomMatch || teachingMatch);
+            else roleChecks.push(homeroomMatch || teachingMatch);
+        }
+
+        if (this.hasQueryRole(user, 'teacher')
+            && !(this.hasQueryRole(user, 'class_teacher') && options.mode === 'homeroom')) {
+            roleChecks.push(this.getTeachingScope(user).classes.has(normalizedClass));
+        }
+
+        if (this.hasQueryRole(user, 'parent') || this.hasQueryRole(user, 'student')) {
+            roleChecks.push(normalizeClass(user?.class_name || user?.class || '') === normalizedClass);
+        }
+
+        return roleChecks.some(Boolean);
+    },
+    canQueryStudent(user, row, options = {}) {
+        if (!user) return false;
+        if (!row) return false;
+        const canByClassScope = this.canQueryClass(user, row?.school, row?.class, options);
+        const canBySelf = (this.hasQueryRole(user, 'parent') || this.hasQueryRole(user, 'student'))
+            && this.sameSchoolName(user?.school, row?.school)
+            && normalizeClass(user?.class_name || user?.class || '') === normalizeClass(row?.class || '')
+            && this.normalizeName(user?.name || user?.username) === this.normalizeName(row?.name);
+        return canByClassScope || canBySelf;
+    },
+    filterStudentRows(user, rows, options = {}) {
+        if (!user) return [];
+        if (this.hasQueryRole(user, 'admin')) return Array.isArray(rows) ? rows.slice() : [];
+        return (Array.isArray(rows) ? rows : []).filter(row => this.canQueryStudent(user, row, options));
+    },
+    getAccessibleSchoolNames(user, schoolNames) {
+        const names = Array.from(new Set((Array.isArray(schoolNames) ? schoolNames : []).map(name => String(name || '').trim()).filter(Boolean)));
+        if (this.isAdmin(user)) return names;
+        if (!user) return [];
+        return names.filter(name => this.canQuerySchool(user, name));
+    },
+    getAccessibleClassNames(user, classNames, schoolName, options = {}) {
+        const names = Array.from(new Set((Array.isArray(classNames) ? classNames : []).map(name => String(name || '').trim()).filter(Boolean)));
+        if (!user) return [];
+        return names.filter(name => this.canQueryClass(user, schoolName, name, options));
+    },
+    canQueryTeacherMetric(user, teacherName, statItem, schoolName, subjectName = '') {
+        if (!user) return false;
+        if (!this.canQuerySchool(user, schoolName)) return false;
+        if (this.hasQueryRole(user, 'admin')) return true;
+        if (this.hasQueryRole(user, 'director')) return true;
+        const classes = this.parseClasses(statItem?.classes);
+        const roleChecks = [];
+
+        if (this.hasQueryRole(user, 'teacher')) {
+            const ownTeacherMetric = this.normalizeName(teacherName) === this.normalizeName(user?.teacher_name || user?.name || user?.username);
+            const teachingScope = this.getTeachingScope(user);
+            const normalizedSubject = normalizeSubject(subjectName || statItem?.subject || '');
+            roleChecks.push(ownTeacherMetric || (!!normalizedSubject && teachingScope.subjects.has(normalizedSubject)));
+        }
+
+        if (this.hasQueryRole(user, 'grade_director')) {
+            const boundGrade = this.getBoundGrade(user);
+            roleChecks.push(!!boundGrade && classes.some(cls => this.extractGrade(cls) === boundGrade));
+        }
+
+        if (this.hasQueryRole(user, 'class_teacher')) {
+            const homeroomClass = this.getHomeroomClass(user);
+            const ownTeacherMetric = this.normalizeName(teacherName) === this.normalizeName(user?.teacher_name || user?.name || user?.username);
+            roleChecks.push(ownTeacherMetric || (!!homeroomClass && classes.some(cls => normalizeClass(cls) === homeroomClass)));
+        }
+
+        return roleChecks.some(Boolean);
+    },
+    filterTeacherStats(user, stats, schoolName) {
+        if (!user) return {};
+        const filtered = {};
+        Object.entries(stats || {}).forEach(([teacherName, subjectMap]) => {
+            const scopedSubjects = {};
+            Object.entries(subjectMap || {}).forEach(([subject, statItem]) => {
+                if (this.canQueryTeacherMetric(user, teacherName, statItem, schoolName, subject)) {
+                    scopedSubjects[subject] = statItem;
+                }
+            });
+            if (Object.keys(scopedSubjects).length > 0) filtered[teacherName] = scopedSubjects;
+        });
+        return filtered;
+    },
+    'permissions': {
+        title: '权限说明',
+        fit: `用于<strong>查看当前角色的模块访问与数据查询边界</strong>，便于系统培训、审核和账号配置。`,
+        when: `新增/调整角色，或需要解释多角色可查范围时使用。`,
+        use: `<ul>
                 <li><strong>模块访问：</strong>只按主角色展示，不能看的模块不出现在侧栏、快捷入口和搜索结果。</li>
                 <li><strong>数据查询：</strong>按所有角色查询范围的并集决定，但必须同时满足学校/级部/班级边界。</li>
                 <li><strong>优先级：</strong>admin > director > grade_director > class_teacher > teacher > parent > student > guest。</li>
-              </ul>`,calc:`<div class="formula-box">
+              </ul>`,
+        calc: `<div class="formula-box">
                 <strong>当前权限核心：</strong><br>
                 模块展示 = 主角色白名单<br>
                 数据查询 = 角色范围并集 + 学校/级部/班级边界
@@ -15,4 +272,13 @@ const QUERY_MODULE_ACCESS={admin:["*"],director:["starter-hub","upload","data-qu
                   <li>director：本校全量；admin：全局。</li>
                   <li>parent/student：仅本人学生报告。</li>
                 </ul>
-              </div>`}};window.PermissionPolicy=PermissionPolicy;function canAccessModule(e){const t=getCurrentUser();return PermissionPolicy.canAccessModule(t,e)}
+              </div>`
+    }
+};
+
+window.PermissionPolicy = PermissionPolicy;
+
+function canAccessModule(id) {
+    const user = getCurrentUser();
+    return PermissionPolicy.canAccessModule(user, id);
+}

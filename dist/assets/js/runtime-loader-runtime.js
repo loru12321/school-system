@@ -1,1 +1,1477 @@
-var BOOT_JS_BASE=window.BOOT_JS_BASE||"./assets/js/",BOOT_VENDOR_BASE=window.BOOT_VENDOR_BASE||"./assets/vendor/";function bootJs(e){return BOOT_JS_BASE+e}function bootVend(e){return BOOT_VENDOR_BASE+e}function bootEntry(e,n){return{key:e,src:n}}function bootSkill(e,n,t,o){return{mode:e,warmup:n,triggers:t,entries:o}}var SYSTEM_RUNTIME_SKILLS={"crypto-vendor":bootSkill("demand","demand",["CryptoJS","freshman-simulator","inquiry-package"],[bootEntry("crypto-vendor",bootVend("crypto-js/crypto-js.min.js"))]),"shell-polish":bootSkill("idle","demand",["shell-polish","refreshShellEnhancements"],[bootEntry("shell-polish",bootJs("shell-polish-runtime.js"))]),"sweetalert-vendor":bootSkill("idle","demand",["Swal","uiAlert","modal-alert"],[bootEntry("sweetalert-vendor",bootVend("sweetalert2/sweetalert2.all.min.js"))]),"chart-vendor":bootSkill("demand","demand",["Chart","chart-render"],[bootEntry("chart-vendor",bootVend("chart.js/chart.umd.min.js"))]),"shell-enhancements":bootSkill("idle","demand",["app-shell","hover-tooltips","scroll-effects"],[bootEntry("gsap-vendor",bootVend("gsap/gsap.min.js")),bootEntry("scroll-trigger-vendor",bootVend("gsap/ScrollTrigger.min.js")),bootEntry("popper-vendor",bootVend("popperjs/popper.min.js")),bootEntry("tippy-vendor",bootVend("tippyjs/tippy.umd.min.js")),bootEntry("simplebar-vendor",bootVend("simplebar/simplebar.min.js"))]),"pdf-export":bootSkill("demand","full",["downloadSingleReportPDF","batchGeneratePDF"],[bootEntry("jspdf-vendor",bootVend("jspdf/jspdf.umd.min.js")),bootEntry("html2canvas-vendor",bootVend("html2canvas/html2canvas.min.js"))]),"report-render":bootSkill("demand","demand",["report-generator","renderSingleReportCardHTML"],[bootEntry("compare-cloud-context",bootJs("compare-cloud-context-runtime.js")),bootEntry("report-insight",bootJs("report-insight-runtime.js")),bootEntry("report-render",bootJs("report-render-runtime.js"))]),"report-chart":bootSkill("demand","demand",["renderRadarChart","renderVarianceChart","analyzeStrengthsAndWeaknesses"],[bootEntry("chart-vendor",bootVend("chart.js/chart.umd.min.js")),bootEntry("report-chart",bootJs("report-chart-runtime.js"))]),"report-export":bootSkill("demand","demand",["printSingleReport","copyReport"],[bootEntry("report-export",bootJs("report-export-runtime.js"))]),"teacher-analysis":bootSkill("demand","demand",["teacher-analysis"],[bootEntry("teacher-analysis-core",bootJs("teacher-analysis-core-runtime.js")),bootEntry("teacher-pairing",bootJs("teacher-pairing-runtime.js")),bootEntry("teacher-analysis-ui",bootJs("teacher-analysis-ui-runtime.js")),bootEntry("teacher-analysis-bridge",bootJs("teacher-analysis-bridge-runtime.js")),bootEntry("teacher-analysis-main",bootJs("teacher-analysis-main-runtime.js")),bootEntry("teaching-assessment-sync",bootJs("teaching-assessment-sync-runtime.js"))]),"cohort-growth":bootSkill("demand","balanced",["cohort-growth"],[bootEntry("cohort-growth",bootJs("cohort-growth-runtime.js"))]),"teacher-correlation":bootSkill("demand","demand",["correlation-analysis","renderCorrelationAnalysis","updateCorrelationSchoolSelect"],[bootEntry("teacher-analysis-bridge",bootJs("teacher-analysis-bridge-runtime.js"))]),"student-overview":bootSkill("demand","demand",["student-overview"],[bootEntry("student-overview",bootJs("student-overview-runtime.js"))]),"teaching-management":bootSkill("demand","full",["teaching-overview","teaching-issue-board","teaching-warning-center","teaching-rectify-center","teaching-version-center"],[bootEntry("teaching-management",bootJs("teaching-management-runtime.js")),bootEntry("teaching-management-cloud",bootJs("teaching-management-cloud-runtime.js")),bootEntry("teaching-management-overview",bootJs("teaching-management-overview-runtime.js")),bootEntry("teaching-assessment-sync",bootJs("teaching-assessment-sync-runtime.js")),bootEntry("teaching-management-version",bootJs("teaching-management-version-runtime.js"))]),"student-compare":bootSkill("demand","demand",["renderStudentMultiPeriodComparison","saveStudentCompareToCloud","viewCloudStudentCompares"],[bootEntry("student-compare-result",bootJs("student-compare-result-runtime.js")),bootEntry("student-compare-generate",bootJs("student-compare-generate-runtime.js")),bootEntry("student-compare-cloud",bootJs("student-compare-cloud-runtime.js"))]),"town-submodule-compare":bootSkill("demand","demand",["summary","town-submodule-compare","renderTownSubmoduleMultiPeriodComparison"],[bootEntry("town-submodule-compare",bootJs("town-submodule-compare-runtime.js"))]),"teacher-compare":bootSkill("demand","full",["renderTeacherMultiPeriodComparison"],[bootEntry("teacher-compare-result",bootJs("teacher-compare-result-runtime.js")),bootEntry("teacher-compare-cloud",bootJs("teacher-compare-cloud-runtime.js"))]),"macro-compare":bootSkill("demand","full",["renderMacroMultiPeriodComparison"],[bootEntry("macro-compare-result",bootJs("macro-compare-result-runtime.js")),bootEntry("macro-compare-cloud",bootJs("macro-compare-cloud-runtime.js"))]),"school-profile":bootSkill("demand","demand",["summary","showSchoolProfile"],[bootEntry("chart-vendor",bootVend("chart.js/chart.umd.min.js")),bootEntry("school-profile",bootJs("school-profile-runtime.js"))]),"county-analysis":bootSkill("demand","demand",["county-analysis","county-teacher-portrait","county-school-horizontal"],[bootEntry("county-school-horizontal",bootJs("county-school-horizontal-runtime.js")),bootEntry("county-analysis",bootJs("county-analysis-runtime.js"))]),"macro-analysis-compat":bootSkill("demand","demand",["analysis","renderHorizontalTable","exportHorizontalExcel","exportMacroTables"],[bootEntry("table-heatmap",bootJs("table-heatmap-runtime.js")),bootEntry("macro-analysis-compat",bootJs("macro-analysis-compat-runtime.js"))]),"progress-analysis":bootSkill("demand","full",["progress-analysis"],[bootEntry("progress-analysis",bootJs("progress-analysis-runtime.js"))]),"data-manager-sql":bootSkill("demand","full",["data-manager-sql","talkToData"],[bootEntry("data-manager-sql",bootJs("data-manager-sql.js"))]),"assessment-roster":bootSkill("demand","full",["assessment-roster","AssessmentRoster"],[bootEntry("teaching-assessment-sync",bootJs("teaching-assessment-sync-runtime.js")),bootEntry("assessment-roster",bootJs("assessment-roster-runtime.js"))]),"mobile-manager":bootSkill("conditional","mobile",["mobile-layout"],[bootEntry("mobile-manager",bootJs("mobile-app-runtime.js"))]),"account-admin":bootSkill("demand","full",["account-admin","AccountExcel"],[bootEntry("account-admin",bootJs("account-admin-runtime.js"))]),"history-compare":bootSkill("demand","full",["history-compare"],[bootEntry("chart-vendor",bootVend("chart.js/chart.umd.min.js")),bootEntry("history-compare",bootJs("history-compare-runtime.js"))]),"zhongkao-countdown":bootSkill("demand","demand",["zhongkao-countdown"],[bootEntry("zhongkao-countdown",bootJs("zhongkao-countdown-runtime.js"))]),"freshman-exam":bootSkill("demand","demand",["freshman-simulator","exam-arranger"],[bootEntry("freshman-exam",bootJs("freshman-exam-runtime.js")),bootEntry("freshman-constraint-insight",bootJs("freshman-constraint-insight-runtime.js"))]),"grade-scheduler":bootSkill("demand","demand",["grade-scheduler"],[bootEntry("grade-scheduler",bootJs("grade-scheduler-runtime.js"))]),"voice-control":bootSkill("idle","demand",["voice-control","voice-fab","VoiceControl.toggle"],[bootEntry("voice-control",bootJs("voice-control-runtime.js"))]),"module-help":bootSkill("demand","demand",["showModuleHelp","ensureModuleHelpButton","module-help"],[bootEntry("module-help",bootJs("module-help-runtime.js"))]),packager:bootSkill("demand","demand",["exportDistributableHTML"],[bootEntry("packager",bootJs("packager-runtime.js"))]),"exam-analysis-package":bootSkill("demand","demand",["downloadExamAnalysisPackage"],[bootEntry("jszip-vendor",bootVend("jszip/jszip.min.js")),bootEntry("xlsx-js-style-vendor",bootVend("xlsx-js-style/xlsx.min.js")),bootEntry("exam-analysis-package",bootJs("exam-analysis-package-runtime.js"))]),"worker-api":bootSkill("demand","demand",["WorkerAPI.run"],[bootEntry("worker-api",bootJs("worker-api-runtime.js"))])};window.SchoolRuntime&&typeof window.SchoolRuntime.registerSkill=="function"&&Object.keys(SYSTEM_RUNTIME_SKILLS).forEach(function(e){window.SchoolRuntime.registerSkill(e,SYSTEM_RUNTIME_SKILLS[e])});function getLoadedSweetAlertVendor(){const e=window.Swal;return e&&!e.__schoolLazyProxy&&typeof e.fire=="function"?e:null}function buildLazySweetAlertFallbackResult(){return{isConfirmed:!1,isDenied:!1,isDismissed:!0,dismiss:"loader-error"}}function showLazySweetAlertFallback(e,n){console.warn("[boot-runtime] SweetAlert2 lazy load failed:",n);try{const t=e&&e[0],o=typeof t=="string"?t:t&&(t.title||t.text||t.html);o&&typeof window.alert=="function"&&window.alert(String(o).replace(/<[^>]+>/g," "))}catch(t){}return buildLazySweetAlertFallbackResult()}function installLazySweetAlertProxy(){const e=getLoadedSweetAlertVendor();if(e)return e;if(window.Swal&&window.Swal.__schoolLazyProxy)return window.Swal;const n={closeRequested:!1},t={__schoolLazyProxy:!0,fire(...o){return n.closeRequested=!1,window.ensureSweetAlertVendorLoaded().then(r=>n.closeRequested?(n.closeRequested=!1,r&&typeof r.close=="function"&&r.close(),buildLazySweetAlertFallbackResult()):r.fire(...o)).catch(r=>showLazySweetAlertFallback(o,r))},close(...o){const r=getLoadedSweetAlertVendor();if(r&&typeof r.close=="function")return r.close(...o);n.closeRequested=!0},isVisible(){const o=getLoadedSweetAlertVendor();return!!(o&&typeof o.isVisible=="function"&&o.isVisible())},getTitle(){const o=getLoadedSweetAlertVendor();return o&&typeof o.getTitle=="function"?o.getTitle():null},showValidationMessage(o){const r=getLoadedSweetAlertVendor();if(r&&typeof r.showValidationMessage=="function")return r.showValidationMessage(o)}};return window.Swal=t,t}installLazySweetAlertProxy(),window.__optionalRuntimeLoaders=window.__optionalRuntimeLoaders||{},window.__optionalStylesheetLoaders=window.__optionalStylesheetLoaders||{};function getOptionalAssetCandidates(e,n=[]){const t=String(e||"").trim(),o=[],r=t.replace(/^(\.\/|\/)/,""),a=r.replace(/^(?:dist|public)\//,""),d=String(window.location&&window.location.pathname||"").replace(/\\/g,"/").replace(/[^/]*$/,""),s=/\/dist\/$/i.test(d),u=/\/public\/$/i.test(d),c=(Array.isArray(n)?n.map(w=>String(w||"").trim().replace(/^(\.\/|\/)/,"")).filter(Boolean):[]).some(w=>{const p=w.replace(/^(?:dist|public)\//,"");return r.startsWith(w)||a.startsWith(w)||a.startsWith(p)}),m=/(^|\/)assets\//.test(r);return window.location&&window.location.protocol==="file:"&&(c||m)&&(o.push(`./${a}`),s||o.push(`./dist/${a}`),!u&&!s&&o.push(`./public/${a}`)),o.push(t),Array.from(new Set(o.filter(Boolean)))}function getOptionalRuntimeCandidates(e){return getOptionalAssetCandidates(e,["./assets/js/","./assets/vendor/"])}function getRuntimeRetryCandidate(e){const n=String(e||"");return`${n}${n.includes("?")?"&":"?"}runtime_retry=${Date.now()}`}function getOptionalStylesheetCandidates(e){return getOptionalAssetCandidates(e,["./assets/css/","./assets/vendor/"])}function getInlineOptionalRuntimeSource(e){const n=String(e||"").trim();if(!window.__INLINE_RUNTIME_SOURCES||typeof window.__INLINE_RUNTIME_SOURCES!="object")return"";if(typeof window.__INLINE_RUNTIME_SOURCES[n]=="string")return window.__INLINE_RUNTIME_SOURCES[n];const t=n.replace(/^\.\/dist\/assets\/js\//,"./assets/js/").replace(/^\.\/public\/assets\/js\//,"./assets/js/");return typeof window.__INLINE_RUNTIME_SOURCES[t]=="string"?window.__INLINE_RUNTIME_SOURCES[t]:""}function injectOptionalRuntimeScript(e,n){return new Promise((t,o)=>{const r=getInlineOptionalRuntimeSource(n);if(r){try{const i=document.createElement("script");if(i.async=!0,i.dataset.runtime=e,i.dataset.runtimeCandidate=n,typeof Blob=="function"&&window.URL&&typeof window.URL.createObjectURL=="function"){const d=window.URL.createObjectURL(new Blob([r],{type:"application/javascript"}));i.src=d,i.onload=()=>{i.dataset.runtimeLoaded="true",window.setTimeout(()=>window.URL.revokeObjectURL(d),0),typeof window.wrapXlsxRuntimeExports=="function"&&window.wrapXlsxRuntimeExports(),t()},i.onerror=()=>{window.URL.revokeObjectURL(d),i.remove(),o(new Error(`Failed to load inline runtime: ${n}`))}}else i.dataset.runtimeLoaded="true",i.text=r;document.head.appendChild(i),i.src||(typeof window.wrapXlsxRuntimeExports=="function"&&window.wrapXlsxRuntimeExports(),t())}catch(i){o(i)}return}const a=document.createElement("script");a.src=n,a.async=!0,a.dataset.runtime=e,a.dataset.runtimeCandidate=n,a.onload=()=>{a.dataset.runtimeLoaded="true",typeof window.wrapXlsxRuntimeExports=="function"&&window.wrapXlsxRuntimeExports(),t()},a.onerror=()=>{a.remove(),o(new Error(`Failed to load runtime: ${n}`))},document.head.appendChild(a)})}function loadOptionalRuntime(e,n){if(window.__optionalRuntimeLoaders[e])return window.__optionalRuntimeLoaders[e];const t=getOptionalRuntimeReadyValue(e);return t?(window.__optionalRuntimeLoaders[e]=Promise.resolve(t),window.__optionalRuntimeLoaders[e]):document.querySelector(`script[data-runtime="${e}"][data-runtime-loaded="true"]`)?(window.__optionalRuntimeLoaders[e]=Promise.resolve(),window.__optionalRuntimeLoaders[e]):(window.__optionalRuntimeLoaders[e]=(async()=>{let r=null;for(const a of getOptionalRuntimeCandidates(n))try{await injectOptionalRuntimeScript(e,a);return}catch(i){r=i;try{await injectOptionalRuntimeScript(e,getRuntimeRetryCandidate(a));return}catch(d){r=d}}throw r||new Error(`Failed to load runtime: ${n}`)})().catch(r=>{throw delete window.__optionalRuntimeLoaders[e],r}),window.__optionalRuntimeLoaders[e])}function getOptionalRuntimeReadyValue(e){switch(String(e||"").trim()){case"report-insight":return window.ReportInsightRuntime||null;case"report-render":return window.__REPORT_RENDER_RUNTIME_PATCHED__?!0:null;case"town-submodule-compare":return window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__?!0:null;case"teacher-analysis-core":return window.__TEACHER_ANALYSIS_CORE_RUNTIME_PATCHED__?!0:null;case"teacher-pairing":return window.__TEACHER_PAIRING_RUNTIME_PATCHED__?!0:null;case"teacher-analysis-bridge":return window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__?!0:null;case"cohort-growth":return window.CohortGrowth||null;case"subject-balance":return window.SubjectBalanceRuntime||null;case"segment-analysis":return window.SegmentAnalysisRuntime||null;case"potential-analysis":return window.PotentialAnalysisRuntime||null;case"chart-vendor":return window.Chart||null;case"sweetalert-vendor":return getLoadedSweetAlertVendor();case"crypto-vendor":return window.CryptoJS||null;case"xlsx-vendor":return window.XLSX&&window.XLSX.utils?window.XLSX:null;default:return null}}function injectOptionalStylesheet(e,n){return new Promise((t,o)=>{const r=document.createElement("link");r.rel="stylesheet",r.href=n,r.dataset.optionalStylesheet=e,r.dataset.optionalStylesheetCandidate=n,r.onload=()=>{r.dataset.optionalStylesheetLoaded="true",t()},r.onerror=()=>{r.remove(),o(new Error(`Failed to load stylesheet: ${n}`))},document.head.appendChild(r)})}function loadOptionalStylesheet(e,n){if(window.__optionalStylesheetLoaders[e])return window.__optionalStylesheetLoaders[e];const t=document.querySelector(`link[data-optional-stylesheet="${e}"][data-optional-stylesheet-loaded="true"]`);return t?(window.__optionalStylesheetLoaders[e]=Promise.resolve(t),window.__optionalStylesheetLoaders[e]):(window.__optionalStylesheetLoaders[e]=(async()=>{let o=null;for(const r of getOptionalStylesheetCandidates(n))try{return await injectOptionalStylesheet(e,r),document.querySelector(`link[data-optional-stylesheet="${e}"][data-optional-stylesheet-loaded="true"]`)}catch(a){o=a}throw o||new Error(`Failed to load stylesheet: ${n}`)})().catch(o=>{throw delete window.__optionalStylesheetLoaders[e],o}),window.__optionalStylesheetLoaders[e])}function loadOptionalRuntimeBundle(e,n){return window.__optionalRuntimeLoaders[e]||(window.__optionalRuntimeLoaders[e]=n.reduce((t,o)=>t.then(()=>loadOptionalRuntime(o.key,o.src)),Promise.resolve()).catch(t=>{throw delete window.__optionalRuntimeLoaders[e],t})),window.__optionalRuntimeLoaders[e]}function yieldRuntimeWarmupFrame(){return new Promise(e=>{if(typeof window.requestIdleCallback=="function"){window.requestIdleCallback(e,{timeout:220});return}if(typeof window.requestAnimationFrame=="function"){window.requestAnimationFrame(()=>e());return}window.setTimeout(e,0)})}function isRuntimeMobileViewport(){return typeof window.matchMedia=="function"&&window.matchMedia("(max-width: 768px)").matches}function getRuntimeLoadProfile(){try{const e=String(localStorage.getItem("SYSTEM_LOAD_PROFILE")||"").trim().toLowerCase();if(e==="full"||e==="lazy"||e==="balanced")return e}catch(e){}try{const e=navigator.connection||navigator.mozConnection||navigator.webkitConnection||null,n=!!(e!=null&&e.saveData),t=String((e==null?void 0:e.effectiveType)||"").toLowerCase(),o=t==="slow-2g"||t==="2g",r=Number(navigator.deviceMemory||0)>0&&Number(navigator.deviceMemory||0)<=2,a=Number(navigator.hardwareConcurrency||0)>0&&Number(navigator.hardwareConcurrency||0)<=4;if(n||o||r||isRuntimeMobileViewport()&&a)return"lazy"}catch(e){}return"balanced"}function getRuntimeSkillEntries(e){const n=SYSTEM_RUNTIME_SKILLS[e];return n&&Array.isArray(n.entries)?n.entries.slice():[]}function shouldWarmRuntimeSkill(e,n){return!e||n==="lazy"?!1:n==="full"?e.warmup!=="mobile":isRuntimeMobileViewport()?e.warmup==="mobile":e.warmup==="balanced"}function getRuntimeWarmupSkillIds(e=getRuntimeLoadProfile()){return Object.keys(SYSTEM_RUNTIME_SKILLS).filter(n=>shouldWarmRuntimeSkill(SYSTEM_RUNTIME_SKILLS[n],e))}function createSystemRuntimeLoader(){const e=function(r){const a=String(r||"").trim();return SYSTEM_RUNTIME_SKILLS[a]?loadOptionalRuntimeBundle(`runtime-skill:${a}`,getRuntimeSkillEntries(a)):Promise.reject(new Error(`Unknown runtime skill: ${a}`))},n=function(r){return(Array.isArray(r)?r:[]).reduce((a,i,d)=>a.then(()=>d>0?yieldRuntimeWarmupFrame():void 0).then(()=>e(i)),Promise.resolve())},t=function(r){const a=getRuntimeSkillEntries(r);return prefetchAppModuleList(a.map(i=>i.src),`runtime-skill-${String(r||"").replace(/[^a-z0-9-]/gi,"-")}`),Promise.resolve(!0)},o=function(r=getRuntimeLoadProfile()){if(window.__RUNTIME_SKILL_WARMUP_PROMISE__)return window.__RUNTIME_SKILL_WARMUP_PROMISE__;const a=getRuntimeWarmupSkillIds(r);return a.forEach(t),window.__RUNTIME_SKILL_WARMUP_PROMISE__=n(a).then(i=>(window.dispatchEvent(new CustomEvent("school:runtime-skills-ready",{detail:{profile:r,skillIds:a}})),window.dispatchEvent(new CustomEvent("school:deferred-vendors-ready")),i)).catch(i=>{throw delete window.__RUNTIME_SKILL_WARMUP_PROMISE__,i}),window.__RUNTIME_SKILL_WARMUP_PROMISE__};return{manifest:SYSTEM_RUNTIME_SKILLS,profile:getRuntimeLoadProfile,load:e,loadMany:n,preload:t,warmup:o,loadAll(){return o("full")}}}window.SystemRuntimeLoader=window.SystemRuntimeLoader||createSystemRuntimeLoader(),window.ensureAccountAdminRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("account-admin")},window.ensureHistoryCompareRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("history-compare")},window.ensurePerfMobileRuntimeLoaded=function(){return loadOptionalRuntime("perf-mobile","./assets/js/perf-mobile-runtime.js")},window.ensureShellPolishRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("shell-polish")},window.ensureMobileManagerRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("mobile-manager")},window.ensureDataManagerSqlRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("data-manager-sql")},window.ensureAlasqlVendorLoaded=function(){return loadOptionalRuntime("alasql-vendor","./assets/vendor/alasql/alasql.min.js")};function ensureOptionalGlobalRuntime(e,n,t,o){const r=e();return r?Promise.resolve(r):loadOptionalRuntime(n,t).then(()=>{const a=e();if(!a)throw new Error(`${o} runtime unavailable`);return a})}function findBootScriptForRuntime(e){const n=String(e||"").trim();if(!n)return null;let t=n;try{t=new URL(n,window.location.href).pathname}catch(r){}return t=t.replace(/^\/+/,"").replace(/^\.\//,""),Array.from(document.scripts||[]).find(r=>{var d;const a=String(((d=r.dataset)==null?void 0:d.bootKey)||"").trim().replace(/^\/+/,"").replace(/^\.\//,"");if(a&&a===t)return!0;let i=String(r.getAttribute("src")||r.src||"").trim();if(!i)return!1;try{i=new URL(i,window.location.href).pathname}catch(s){}return i.replace(/^\/+/,"").replace(/^\.\//,"")===t})||null}function waitForExistingBootScript(e,n=15e3){var a,i;const t=findBootScriptForRuntime(e);if(!t)return Promise.resolve(!1);const o=String(((a=t.dataset)==null?void 0:a.bootKey)||"").trim(),r=o&&window.__BOOT_SCRIPT_REGISTRY__?String(window.__BOOT_SCRIPT_REGISTRY__[o]||"").trim():"";return r==="loaded"||((i=t.dataset)==null?void 0:i.bootLoaded)==="true"?Promise.resolve(!0):r==="error"?Promise.resolve(!1):new Promise(d=>{let s=!1;const u=c=>{s||(s=!0,l&&window.clearTimeout(l),d(c))},l=window.setTimeout(()=>u(!1),Math.max(1e3,Number(n)||15e3));t.addEventListener("load",()=>u(!0),{once:!0}),t.addEventListener("error",()=>u(!1),{once:!0})})}window.ensureCohortDbRuntime=function(){const e=window.CohortDB;if(e&&typeof e.ensure=="function")return Promise.resolve(e);const n=()=>{const r=window.CohortDB;return r&&typeof r.ensure=="function"?Promise.resolve(r):ensureOptionalGlobalRuntime(()=>window.CohortDB,"cohort-db-core","./assets/js/cohort-db-core-runtime.js","CohortDB")};if(findBootScriptForRuntime("./assets/js/cohort-db-core-runtime.js"))return waitForExistingBootScript("./assets/js/cohort-db-core-runtime.js").then(()=>n());const o=window.__APP_MODULES_LOAD_PROMISE__;return o&&window.__APP_MODULES_LOADED__==="loading"?Promise.resolve(o).catch(()=>null).then(()=>n()):n()},window.ensureCryptoJsVendorLoaded=function(){return ensureOptionalGlobalRuntime(()=>window.CryptoJS,"crypto-vendor","./assets/vendor/crypto-js/crypto-js.min.js","CryptoJS")},window.ensureSweetAlertVendorLoaded=function(){return ensureOptionalGlobalRuntime(getLoadedSweetAlertVendor,"sweetalert-vendor","./assets/vendor/sweetalert2/sweetalert2.all.min.js","SweetAlert2")},window.ensureGsapVendorLoaded=function(){return ensureOptionalGlobalRuntime(()=>window.gsap,"gsap-vendor","./assets/vendor/gsap/gsap.min.js","GSAP")},window.ensureChartVendorLoaded=function(){return ensureOptionalGlobalRuntime(()=>window.Chart,"chart-vendor","./assets/vendor/chart.js/chart.umd.min.js","Chart")},window.ensureXlsxVendorLoaded=function(){return ensureOptionalGlobalRuntime(()=>window.XLSX&&window.XLSX.utils&&window.XLSX,"xlsx-vendor","./assets/vendor/xlsx/xlsx.full.min.js","XLSX")},window.ensurePdfExportVendorsLoaded=function(){return window.SystemRuntimeLoader.load("pdf-export")},window.ensureReportRenderRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("report-render")},window.ensureReportChartRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("report-chart")},window.ensureReportExportRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("report-export")},window.ensureOptionalStylesheetLoaded=function(e,n){return loadOptionalStylesheet(e,n)},window.ensureSchoolProfileRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("school-profile")},window.ensureTeachingManagementRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("teaching-management")},window.ensureStudentOverviewRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("student-overview")},window.ensureTeacherAnalysisMainRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("teacher-analysis")},window.ensureCohortGrowthRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("cohort-growth")},window.ensureTeacherCorrelationRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("teacher-correlation")},window.ensureCountyAnalysisRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("county-analysis")},window.ensureMacroAnalysisCompatRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("macro-analysis-compat")},window.ensureTableHeatmapRuntimeLoaded=function(){return loadOptionalRuntime("table-heatmap",bootJs("table-heatmap-runtime.js"))},[["SubjectBalance","subject-balance"],["SegmentAnalysis","segment-analysis"],["PotentialAnalysis","potential-analysis"]].forEach(([e,n])=>{window[`ensure${e}RuntimeLoaded`]=()=>loadOptionalRuntime(n,bootJs(`${n}-runtime.js`))}),window.ensureProgressAnalysisRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("progress-analysis")},window.ensureStudentCompareRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("student-compare")},window.ensureTownSubmoduleCompareRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("town-submodule-compare").then(e=>(typeof window.wrapXlsxRuntimeExports=="function"&&window.wrapXlsxRuntimeExports(),e))},window.ensureTeacherCompareRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("teacher-compare")},window.ensureMacroCompareRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("macro-compare")},window.ensureZhongkaoCountdownRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("zhongkao-countdown")},window.ensureFreshmanExamRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("freshman-exam")},window.ensureFreshmanSimulatorRuntimeLoaded=function(){return Promise.all([window.ensureFreshmanExamRuntimeLoaded(),window.ensureXlsxVendorLoaded(),window.ensureChartVendorLoaded()]).then(e=>e[0])},window.ensureExamArrangerRuntimeLoaded=function(){return Promise.all([window.ensureFreshmanExamRuntimeLoaded(),window.ensureXlsxVendorLoaded()]).then(e=>e[0])},window.ensureGradeSchedulerRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("grade-scheduler")},window.ensureVoiceControlRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("voice-control")},window.ensureModuleHelpRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("module-help")},window.ensurePackagerRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("packager")},window.ensureExamAnalysisPackageRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("exam-analysis-package")},window.ensureWorkerApiRuntimeLoaded=function(){return window.SystemRuntimeLoader.load("worker-api")};function installOptionalRuntimeMethod(e,n){typeof window[e]!="function"&&(window[e]=function(...t){const o=window[e];return n().then(()=>{const r=window[e];if(typeof r=="function"&&r!==o)return r.apply(this,t);throw new Error(`${e} runtime not loaded`)})})}function installOptionalRuntimePlaceholder(e,n){typeof window[e]!="function"&&(window[e]=function(){throw new Error(n||`${e} runtime not loaded`)})}const XLSX_RUNTIME_FUNCTIONS=["exportHighScoreExcel","exportStudentDetails","importTeacherExcel","exportMutualAidGroups","exportSummaryTable","exportSegmentExcel","exportHorizontalExcel","exportMacroTables","SB_exportExcel","exportPotentialAnalysis","exportCorrelationExcel","exportExcel","downloadTemplate","exportMarginalTasks","exportCountyAnalysisSection","SSE_export","exportValueAddedExcel","exportMultiPeriodComparison","exportProgressAnalysis","exportStudentMultiPeriodComparison","exportAllTeachersMultiPeriodDiff","exportTeacherMultiPeriodComparison","exportMacroMultiPeriodComparison","exportTownSubmoduleCompare","exportTeacherComparisonExcel","exportTeacherComparisonExcelV2","exportTeacherTownshipRankExcel","downloadExamAnalysisPackage","FB_loadData","FB_exportResult","EXAM_loadData","EXAM_exportResult"],XLSX_RUNTIME_OBJECT_METHODS=[{owner:"Auth",methods:["exportAccounts","exportAllCloudAccounts"]},{owner:"DataManager",methods:["handleHistoryUpload","handleTeacherUpload","handleTargetUpload","exportSQLResult"]},{owner:"AccountExcel",methods:["downloadTemplate","upload"]},{owner:"SCHEDULER",methods:["downloadTemplate","loadData","exportResult","importExisting"]},{owner:"GradeSchedulerRuntime",methods:["downloadTemplate","loadData","exportResult","importExisting"]},{owner:"DrillSystem",methods:["exportExcel"]},{owner:"CohortGrowth",methods:["exportVolatility"]}];function isXlsxRuntimeReady(){return!!(window.XLSX&&window.XLSX.utils)}function reportXlsxLoadFailure(e){console.warn("[boot-runtime] XLSX runtime load failed:",e);const n=`Excel 组件加载失败：${e&&e.message?e.message:e}`;if(window.UI&&typeof window.UI.toast=="function"){window.UI.toast(n,"error");return}typeof window.alert=="function"&&window.alert(n)}function wrapXlsxRuntimeFunction(e,n){if(!e||typeof e[n]!="function")return;const t=e[n];if(t.__xlsxRuntimeWrapped)return;const o=function(...r){return isXlsxRuntimeReady()?t.apply(this,r):window.ensureXlsxVendorLoaded().then(()=>t.apply(this,r)).catch(a=>{throw reportXlsxLoadFailure(a),a})};o.__xlsxRuntimeWrapped=!0,o.__xlsxRuntimeOriginal=t,e[n]=o}window.wrapXlsxRuntimeExports=function(){XLSX_RUNTIME_FUNCTIONS.forEach(e=>wrapXlsxRuntimeFunction(window,e)),XLSX_RUNTIME_OBJECT_METHODS.forEach(e=>{const n=window[e.owner];n&&e.methods.forEach(t=>wrapXlsxRuntimeFunction(n,t))})};function warmOptionalRuntimeAfterLoad(e,n,t=1200){if(typeof n!="function")return;const o=()=>{e&&window[e]||n().catch(r=>{console.warn(r)})};if(document.readyState==="complete"){window.setTimeout(o,t);return}window.addEventListener("load",()=>{window.setTimeout(o,t)},{once:!0})}const accountAdminStub={downloadTemplate(...e){return window.ensureAccountAdminRuntimeLoaded().then(()=>{var n;if(window.AccountExcel!==accountAdminStub&&typeof((n=window.AccountExcel)==null?void 0:n.downloadTemplate)=="function")return window.AccountExcel.downloadTemplate(...e);throw new Error("AccountExcel runtime not loaded")})},upload(...e){return window.ensureAccountAdminRuntimeLoaded().then(()=>{var n;if(window.AccountExcel!==accountAdminStub&&typeof((n=window.AccountExcel)==null?void 0:n.upload)=="function")return window.AccountExcel.upload(...e);throw new Error("AccountExcel runtime not loaded")})}};if(window.AccountExcel||(window.AccountExcel=accountAdminStub),["toggleAdminManualInput","changeAdminPass","openUserPasswordModal","submitUserPasswordChange"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureAccountAdminRuntimeLoaded)}),["printSingleReport","downloadSingleReportPDF","batchGeneratePDF","copyReport"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureReportExportRuntimeLoaded)}),["showSchoolProfile","jumpToModule"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureSchoolProfileRuntimeLoaded)}),[[window.ensureSubjectBalanceRuntimeLoaded,["updateSubjectBalanceSelects","SB_renderTable","SB_runCluster","SB_exportExcel"]],[window.ensureSegmentAnalysisRuntimeLoaded,["updateSegmentSelects","updateSegmentClassSelect","renderSegmentAnalysis","exportSegmentExcel"]],[window.ensurePotentialAnalysisRuntimeLoaded,["updatePotentialSchoolSelect","updatePotentialClassSelect","renderPotentialAnalysis","exportPotentialAnalysis"]]].forEach(([e,n])=>{n.forEach(t=>installOptionalRuntimeMethod(t,e))}),["analyzeTeachers","generateTeacherPairing","renderTeacherCards","showTeacherDetails","renderTeacherComparisonTable","renderTeacherTownshipRanking","updateCorrelationSchoolSelect","renderCorrelationAnalysis","exportTeacherComparisonExcel","exportTeacherTownshipRankExcel"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureTeacherAnalysisMainRuntimeLoaded)}),["updateSSESchoolSelect","SSE_calculate","SSE_export"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureSingleSchoolEvalRuntimeLoaded)}),["renderCountyAnalysis","exportCountyAnalysisSection","setCountyAnalysisSchoolNameFromInput","generateCountySchoolHorizontalTable"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureCountyAnalysisRuntimeLoaded)}),["renderHorizontalTable","exportHorizontalExcel","exportMacroTables"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureMacroAnalysisCompatRuntimeLoaded)}),installOptionalRuntimeMethod("toggleTableHeatmap",window.ensureTableHeatmapRuntimeLoaded),["switchValueAddedView","exportValueAddedExcel","updateProgressSchoolSelect","updateProgressBaselineSelect","onProgressComparePeriodCountChange","renderMultiPeriodComparison","exportMultiPeriodComparison","setProgressBaselineStatus","ensureProgressBaselineData","renderValueAddedReport","performSilentMatching","exportProgressAnalysis","setProgressQuickFilter","renderProgressAnalysis","applyProgressFilter","resetProgressFilter"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureProgressAnalysisRuntimeLoaded)}),["renderStudentMultiPeriodComparison","saveStudentCompareToCloud","viewCloudStudentCompares","exportStudentMultiPeriodComparison","loadCloudStudentCompare"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureStudentCompareRuntimeLoaded)}),["ensureTownSubmoduleCompareUIs","getTownSubmoduleSeries","openTownSubmoduleCompareDialog","renderTownSubmoduleMultiPeriodComparison","exportTownSubmoduleCompare","saveTownSubmoduleCompareToCloud","viewCloudTownSubmoduleCompares","loadCloudTownSubmoduleCompare"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureTownSubmoduleCompareRuntimeLoaded)}),["renderTeacherMultiPeriodComparison","renderAllTeachersMultiPeriodComparison","exportAllTeachersMultiPeriodDiff","exportTeacherMultiPeriodComparison","saveTeacherMultiPeriodCompareToCloud","viewCloudTeacherCompares","loadCloudTeacherCompare"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureTeacherCompareRuntimeLoaded)}),["renderMacroMultiPeriodComparison","exportMacroMultiPeriodComparison","saveMacroMultiPeriodCompareToCloud","viewCloudMacroCompares","loadCloudMacroCompare"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureMacroCompareRuntimeLoaded)}),["renderSingleReportCardHTML"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureReportRenderRuntimeLoaded)}),["renderRadarChart","renderVarianceChart","analyzeStrengthsAndWeaknesses"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureReportChartRuntimeLoaded)}),["FB_loadData","FB_runDivision","FB_applyScheme","FB_openSeatMap","FB_autoSeatAlgo","FB_renderSeatMap","FB_toggleLock","FB_toggleViewRotation","FB_saveToLocal","FB_exportResult","addBindPair","FB_initScenarioSelect","FB_saveScenario","FB_loadScenario","FB_deleteScenario","EXAM_loadData","EXAM_generate","EXAM_switchView","EXAM_generateDeskLabels","EXAM_initProctorUI","EXAM_assignProctors","EXAM_exportResult"].forEach(e=>{installOptionalRuntimeMethod(e,window.ensureFreshmanExamRuntimeLoaded)}),!window.SCHEDULER){const e={};["addConstraint","removeConstraint","downloadTemplate","loadData","run","auditFatigue","renderTable","exportResult","importExisting"].forEach(n=>{e[n]=function(...t){const o=window.SCHEDULER&&window.SCHEDULER!==e?window.SCHEDULER:null;return o&&typeof o[n]=="function"?o[n](...t):window.ensureGradeSchedulerRuntimeLoaded().then(()=>{const r=window.SCHEDULER;if(r&&r!==e&&typeof r[n]=="function")return r[n](...t);throw new Error(`SCHEDULER.${n} runtime not loaded`)})}}),window.SCHEDULER=e}if(!window.VoiceControl){const e={};["init","toggle","stop","processCommand","toggleFullScreen"].forEach(n=>{e[n]=function(...t){const o=window.VoiceControl&&window.VoiceControl!==e?window.VoiceControl:null;return o&&typeof o[n]=="function"?o[n](...t):window.ensureVoiceControlRuntimeLoaded().then(()=>{const r=window.VoiceControl;if(r&&r!==e&&typeof r[n]=="function")return r[n](...t);throw new Error(`VoiceControl.${n} runtime not loaded`)})}}),window.VoiceControl=e}installOptionalRuntimeMethod("showModuleHelp",window.ensureModuleHelpRuntimeLoaded),installOptionalRuntimeMethod("downloadExamAnalysisPackage",window.ensureExamAnalysisPackageRuntimeLoaded),window.wrapXlsxRuntimeExports(),typeof window.ensureModuleHelpButton!="function"&&(window.ensureModuleHelpButton=function(e){const n=document.getElementById(e);if(!n)return;const t=n.querySelector(".sec-head h2")||n.querySelector(".module-desc-bar h3");if(!t||t.querySelector(".module-help-btn"))return;const o=document.createElement("button");o.type="button",o.className="module-help-btn",o.innerHTML='<i class="ti ti-info-circle"></i><span>口径说明</span>',o.onclick=()=>window.showModuleHelp(e),t.appendChild(o)});function runAfterAppModulesReady(e){if(typeof e!="function")return;if(window.__APP_MODULES_LOADED__===!0){e();return}let n=!1;const t=()=>{n||(n=!0,e())};window.__APP_MODULES_LOAD_PROMISE__&&typeof window.__APP_MODULES_LOAD_PROMISE__.then=="function"&&window.__APP_MODULES_LOAD_PROMISE__.then(t).catch(t),window.addEventListener("school:app-modules-ready",t,{once:!0})}function scheduleMobileRuntimeBootstrap(e={}){const n=Number(e.maxWidth||960),t=!!e.includePerf,o=Number(e.delayMs||0),r=localStorage.getItem("DEV_MODE")==="true",a=t&&r;if(!(window.innerWidth<=n||r))return;const i=a?"__MOBILE_PERF_BOOTSTRAP_SCHEDULED__":"__MOBILE_RUNTIME_BOOTSTRAP_SCHEDULED__";window[i]||(window[i]=!0,runAfterAppModulesReady(()=>{const d=()=>{window.ensureMobileManagerRuntimeLoaded().then(()=>a?window.ensurePerfMobileRuntimeLoaded():void 0).catch(u=>{console.warn(u)})},s=()=>{if(window.SystemPerformance&&typeof window.SystemPerformance.scheduleIdle=="function"){window.SystemPerformance.scheduleIdle(d,{label:"mobile-runtime-bootstrap",delay:o,timeout:1800});return}if(typeof window.requestIdleCallback=="function"){window.requestIdleCallback(d,{timeout:1800});return}window.setTimeout(d,o)};window.setTimeout(s,o)}))}scheduleMobileRuntimeBootstrap({maxWidth:960,delayMs:120}),scheduleMobileRuntimeBootstrap({maxWidth:768,includePerf:!0,delayMs:480});function scheduleDataManagerSqlIdleWarmup(){window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__||window.__DATA_MANAGER_SQL_IDLE_WARMUP__||(window.__DATA_MANAGER_SQL_IDLE_WARMUP__=!0,runAfterAppModulesReady(()=>{const e=()=>{const n=SYSTEM_RUNTIME_SKILLS["data-manager-sql"];n&&Array.isArray(n.entries)&&prefetchAppModuleList(n.entries.map(t=>t.src),"data-manager-sql-prefetch")};window.setTimeout(e,8e3)}))}scheduleDataManagerSqlIdleWarmup();function scheduleHotspotRuntimeWarmup(){if(window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__||window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__||getRuntimeLoadProfile()==="lazy"||isRuntimeMobileViewport())return;window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__=!0;const e=2200,n=[{label:"report-render",loader:()=>{var s;return(s=window.ensureReportRenderRuntimeLoaded)==null?void 0:s.call(window)}},{label:"school-profile",loader:()=>{var s;return(s=window.ensureSchoolProfileRuntimeLoaded)==null?void 0:s.call(window)}},{label:"town-submodule-compare",loader:()=>{var s;return(s=window.ensureTownSubmoduleCompareRuntimeLoaded)==null?void 0:s.call(window)}}],t=[],o=()=>{n.concat(t).forEach(s=>{const u=SYSTEM_RUNTIME_SKILLS[s.label];if(u&&Array.isArray(u.entries)){const l=u.entries.map(c=>c.src);prefetchAppModuleList(l,`hotspot-runtime-${s.label}`)}})},r=s=>Promise.resolve(s.loader()).catch(()=>{}),a=(s,u)=>{window.SystemPerformance&&typeof window.SystemPerformance.scheduleIdle=="function"?window.SystemPerformance.scheduleIdle(u,{label:s,delay:120,timeout:2200}):typeof window.requestIdleCallback=="function"?window.requestIdleCallback(u,{timeout:2200}):window.setTimeout(u,120)},i=(s,u=0,l)=>{if(u>=s.length){typeof l=="function"&&l();return}a(`hotspot-runtime:${s[u].label}`,()=>r(s[u]).finally(()=>window.setTimeout(()=>i(s,u+1,l),650)))},d=()=>i(n,0,()=>window.setTimeout(()=>i(t),650));runAfterAppModulesReady(()=>{window.setTimeout(o,240),window.setTimeout(()=>{try{if(localStorage.getItem("SCHOOL_RUNTIME_HOTSPOT_HYDRATE")!=="true")return}catch(s){return}a("hotspot-runtime:priority",d)},e)})}scheduleHotspotRuntimeWarmup();function scheduleTeachingManagementFastWarmup(){window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__||window.__TEACHING_FAST_WARMUP_SCHEDULED__||(window.__TEACHING_FAST_WARMUP_SCHEDULED__=!0,runAfterAppModulesReady(()=>{const e=()=>{const t=SYSTEM_RUNTIME_SKILLS["teaching-management"];t&&Array.isArray(t.entries)&&prefetchAppModuleList(t.entries.map(o=>o.src),"teaching-management-fast-prefetch")};window.setTimeout(e,520);try{if(localStorage.getItem("SCHOOL_RUNTIME_HOTSPOT_HYDRATE")!=="true")return}catch(t){return}const n=()=>{var t;return(t=window.ensureTeacherAnalysisMainRuntimeLoaded)==null?void 0:t.call(window)};window.SystemPerformance&&typeof window.SystemPerformance.scheduleIdle=="function"?window.SystemPerformance.scheduleIdle(n,{label:"teacher-analysis-fast-warmup",delay:12e3,timeout:1800}):typeof window.requestIdleCallback=="function"?window.setTimeout(()=>window.requestIdleCallback(n,{timeout:1800}),12e3):window.setTimeout(n,12e3)}))}scheduleTeachingManagementFastWarmup();function installHistoryDoQueryWrapper(){if(window.__historyDoQueryWrapped||typeof window.doQuery!="function")return!1;const e=window.doQuery,n=async function(...t){const o=()=>{if(typeof window.setCloudCompareTarget!="function")return;const r=typeof window.readCurrentReportStudentState=="function"?window.readCurrentReportStudentState():null;r&&window.setCloudCompareTarget(r)};return window.SystemPerformance&&typeof window.SystemPerformance.scheduleIdle=="function"?window.SystemPerformance.scheduleIdle(o,{label:"report-history-compare-target-sync",delay:80,timeout:1500}):window.setTimeout(o,80),e.apply(this,t)};return window.doQuery=n,window.__historyDoQueryWrapped=!0,!0}function installDataManagerSqlHooks(){if(window.__dataManagerSqlHooksInstalled||!window.DataManager||typeof window.DataManager!="object")return!1;if(["renderSQLHistory","applySQLHistory","saveNamedSQL","clearSQLHistory","setQuickSQL","runSQL","exportSQLResult"].forEach(e=>{typeof window.DataManager[e]!="function"&&(window.DataManager[e]=function(...n){const t=window.DataManager[e];return window.ensureDataManagerSqlRuntimeLoaded().then(()=>{const o=window.DataManager[e];if(typeof o=="function"&&o!==t)return o.apply(window.DataManager,n);throw new Error(`${e} runtime not loaded`)})})}),typeof window.talkToData!="function"&&(window.talkToData=function(...e){const n=window.talkToData;return window.ensureDataManagerSqlRuntimeLoaded().then(()=>{const t=window.talkToData;if(typeof t=="function"&&t!==n)return t.apply(window,e);throw new Error("talkToData runtime not loaded")})}),!window.__dataManagerSqlSwitchWrapped&&typeof window.DataManager.switchTab=="function"){const e=window.DataManager.switchTab;window.DataManager.switchTab=async function(n,...t){if(n==="sql")try{await window.ensureDataManagerSqlRuntimeLoaded()}catch(o){console.warn(o)}return e.call(this,n,...t)},window.__dataManagerSqlSwitchWrapped=!0}return window.__dataManagerSqlHooksInstalled=!0,!0}function retryInstallLateHook(e,n){const t=n||{},o=Number(t.maxTries||480),r=Number(t.intervalMs||250),a=typeof t.onExhausted=="function"?t.onExhausted:null;try{if(e())return}catch(s){console.warn("[boot-runtime] Hook install error (initial):",s)}let i=0;const d=setInterval(()=>{i+=1;try{const s=e();(s||i>=o)&&(clearInterval(d),i>=o&&!s&&a&&a())}catch(s){console.warn("[boot-runtime] Hook install error (retry):",s),i>=o&&(clearInterval(d),a&&a())}},r);if(typeof window.addEventListener=="function"){const s=()=>{try{e()}catch(u){}};window.addEventListener("load",s,{once:!0}),window.addEventListener("focus",s,{once:!0})}}runAfterAppModulesReady(function(){retryInstallLateHook(installHistoryDoQueryWrapper,{onExhausted:function(){console.warn("[boot-runtime] history compare hook install timed out")}}),retryInstallLateHook(installDataManagerSqlHooks,{onExhausted:function(){console.warn("[boot-runtime] SQL hook timeout")}})});
+// Optional runtime manifest and loaders stay outside the first-screen boot path.
+var BOOT_JS_BASE = window.BOOT_JS_BASE || './assets/js/';
+var BOOT_VENDOR_BASE = window.BOOT_VENDOR_BASE || './assets/vendor/';
+function bootJs(name) { return BOOT_JS_BASE + name; }
+function bootVend(name) { return BOOT_VENDOR_BASE + name; }
+
+function bootEntry(key, src) { return { key, src }; }
+function bootSkill(mode, warmup, triggers, entries) { return { mode, warmup, triggers, entries }; }
+
+var SYSTEM_RUNTIME_SKILLS = {
+'crypto-vendor': bootSkill('demand', 'demand', ['CryptoJS', 'freshman-simulator', 'inquiry-package'], [
+    bootEntry('crypto-vendor', bootVend('crypto-js/crypto-js.min.js'))
+]),
+'shell-polish': bootSkill('idle', 'demand', ['shell-polish', 'refreshShellEnhancements'], [
+    bootEntry('shell-polish', bootJs('shell-polish-runtime.js'))
+]),
+'sweetalert-vendor': bootSkill('idle', 'demand', ['Swal', 'uiAlert', 'modal-alert'], [
+    bootEntry('sweetalert-vendor', bootVend('sweetalert2/sweetalert2.all.min.js'))
+]),
+'chart-vendor': bootSkill('demand', 'demand', ['Chart', 'chart-render'], [
+    bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js'))
+]),
+'shell-enhancements': bootSkill('idle', 'demand', ['app-shell', 'hover-tooltips', 'scroll-effects'], [
+    bootEntry('gsap-vendor', bootVend('gsap/gsap.min.js')),
+    bootEntry('scroll-trigger-vendor', bootVend('gsap/ScrollTrigger.min.js')),
+    bootEntry('popper-vendor', bootVend('popperjs/popper.min.js')),
+    bootEntry('tippy-vendor', bootVend('tippyjs/tippy.umd.min.js')),
+    bootEntry('simplebar-vendor', bootVend('simplebar/simplebar.min.js'))
+]),
+'pdf-export': bootSkill('demand', 'full', ['downloadSingleReportPDF', 'batchGeneratePDF'], [
+    bootEntry('jspdf-vendor', bootVend('jspdf/jspdf.umd.min.js')),
+    bootEntry('html2canvas-vendor', bootVend('html2canvas/html2canvas.min.js'))
+]),
+'report-render': bootSkill('demand', 'demand', ['report-generator', 'renderSingleReportCardHTML'], [
+    bootEntry('compare-cloud-context', bootJs('compare-cloud-context-runtime.js')),
+    bootEntry('report-insight', bootJs('report-insight-runtime.js')),
+    bootEntry('report-render', bootJs('report-render-runtime.js'))
+]),
+'report-chart': bootSkill('demand', 'demand', ['renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses'], [
+    bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
+    bootEntry('report-chart', bootJs('report-chart-runtime.js'))
+]),
+'report-export': bootSkill('demand', 'demand', ['printSingleReport', 'copyReport'], [
+    bootEntry('report-export', bootJs('report-export-runtime.js'))
+]),
+'teacher-analysis': bootSkill('demand', 'demand', ['teacher-analysis'], [
+    bootEntry('teacher-analysis-core', bootJs('teacher-analysis-core-runtime.js')),
+    bootEntry('teacher-pairing', bootJs('teacher-pairing-runtime.js')),
+    bootEntry('teacher-analysis-ui', bootJs('teacher-analysis-ui-runtime.js')),
+    bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js')),
+    bootEntry('teacher-analysis-main', bootJs('teacher-analysis-main-runtime.js')),
+    bootEntry('teaching-assessment-sync', bootJs('teaching-assessment-sync-runtime.js'))
+]),
+'cohort-growth': bootSkill('demand', 'balanced', ['cohort-growth'], [
+    bootEntry('cohort-growth', bootJs('cohort-growth-runtime.js'))
+]),
+    'teacher-correlation': bootSkill('demand', 'demand', ['correlation-analysis', 'renderCorrelationAnalysis', 'updateCorrelationSchoolSelect'], [
+        bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js'))
+    ]),
+'student-overview': bootSkill('demand', 'demand', ['student-overview'], [
+    bootEntry('student-overview', bootJs('student-overview-runtime.js'))
+]),
+'teaching-management': bootSkill('demand', 'full', ['teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center'], [
+    bootEntry('teaching-management', bootJs('teaching-management-runtime.js')),
+    bootEntry('teaching-management-cloud', bootJs('teaching-management-cloud-runtime.js')),
+    bootEntry('teaching-management-overview', bootJs('teaching-management-overview-runtime.js')),
+    bootEntry('teaching-assessment-sync', bootJs('teaching-assessment-sync-runtime.js')),
+    bootEntry('teaching-management-version', bootJs('teaching-management-version-runtime.js'))
+]),
+'student-compare': bootSkill('demand', 'demand', ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares'], [
+    bootEntry('student-compare-result', bootJs('student-compare-result-runtime.js')),
+    bootEntry('student-compare-generate', bootJs('student-compare-generate-runtime.js')),
+    bootEntry('student-compare-cloud', bootJs('student-compare-cloud-runtime.js'))
+]),
+'town-submodule-compare': bootSkill('demand', 'demand', ['summary', 'town-submodule-compare', 'renderTownSubmoduleMultiPeriodComparison'], [
+    bootEntry('town-submodule-compare', bootJs('town-submodule-compare-runtime.js'))
+]),
+'teacher-compare': bootSkill('demand', 'full', ['renderTeacherMultiPeriodComparison'], [
+    bootEntry('teacher-compare-result', bootJs('teacher-compare-result-runtime.js')),
+    bootEntry('teacher-compare-cloud', bootJs('teacher-compare-cloud-runtime.js'))
+]),
+'macro-compare': bootSkill('demand', 'full', ['renderMacroMultiPeriodComparison'], [
+    bootEntry('macro-compare-result', bootJs('macro-compare-result-runtime.js')),
+    bootEntry('macro-compare-cloud', bootJs('macro-compare-cloud-runtime.js'))
+]),
+'school-profile': bootSkill('demand', 'demand', ['summary', 'showSchoolProfile'], [
+    bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
+    bootEntry('school-profile', bootJs('school-profile-runtime.js'))
+]),
+'county-analysis': bootSkill('demand', 'demand', ['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'], [
+    bootEntry('county-school-horizontal', bootJs('county-school-horizontal-runtime.js')),
+    bootEntry('county-analysis', bootJs('county-analysis-runtime.js'))
+]),
+'macro-analysis-compat': bootSkill('demand', 'demand', ['analysis', 'renderHorizontalTable', 'exportHorizontalExcel', 'exportMacroTables'], [
+    // Keep the immediately visible heatmap action in this demand boundary.
+    bootEntry('table-heatmap', bootJs('table-heatmap-runtime.js')),
+    bootEntry('macro-analysis-compat', bootJs('macro-analysis-compat-runtime.js'))
+]),
+'progress-analysis': bootSkill('demand', 'full', ['progress-analysis'], [
+    bootEntry('progress-analysis', bootJs('progress-analysis-runtime.js'))
+]),
+'data-manager-sql': bootSkill('demand', 'full', ['data-manager-sql', 'talkToData'], [
+    bootEntry('data-manager-sql', bootJs('data-manager-sql.js'))
+]),
+'assessment-roster': bootSkill('demand', 'full', ['assessment-roster', 'AssessmentRoster'], [
+    bootEntry('teaching-assessment-sync', bootJs('teaching-assessment-sync-runtime.js')),
+    bootEntry('assessment-roster', bootJs('assessment-roster-runtime.js'))
+]),
+'mobile-manager': bootSkill('conditional', 'mobile', ['mobile-layout'], [
+    bootEntry('mobile-manager', bootJs('mobile-app-runtime.js'))
+]),
+'account-admin': bootSkill('demand', 'full', ['account-admin', 'AccountExcel'], [
+    bootEntry('account-admin', bootJs('account-admin-runtime.js'))
+]),
+'history-compare': bootSkill('demand', 'full', ['history-compare'], [
+    bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
+    bootEntry('history-compare', bootJs('history-compare-runtime.js'))
+]),
+'zhongkao-countdown': bootSkill('demand', 'demand', ['zhongkao-countdown'], [
+    bootEntry('zhongkao-countdown', bootJs('zhongkao-countdown-runtime.js'))
+]),
+'freshman-exam': bootSkill('demand', 'demand', ['freshman-simulator', 'exam-arranger'], [
+    bootEntry('freshman-exam', bootJs('freshman-exam-runtime.js')),
+    bootEntry('freshman-constraint-insight', bootJs('freshman-constraint-insight-runtime.js'))
+]),
+'grade-scheduler': bootSkill('demand', 'demand', ['grade-scheduler'], [
+    bootEntry('grade-scheduler', bootJs('grade-scheduler-runtime.js'))
+]),
+'voice-control': bootSkill('idle', 'demand', ['voice-control', 'voice-fab', 'VoiceControl.toggle'], [
+    bootEntry('voice-control', bootJs('voice-control-runtime.js'))
+]),
+'module-help': bootSkill('demand', 'demand', ['showModuleHelp', 'ensureModuleHelpButton', 'module-help'], [
+    bootEntry('module-help', bootJs('module-help-runtime.js'))
+]),
+'packager': bootSkill('demand', 'demand', ['exportDistributableHTML'], [
+    bootEntry('packager', bootJs('packager-runtime.js'))
+]),
+'exam-analysis-package': bootSkill('demand', 'demand', ['downloadExamAnalysisPackage'], [
+    bootEntry('jszip-vendor', bootVend('jszip/jszip.min.js')),
+    bootEntry('xlsx-js-style-vendor', bootVend('xlsx-js-style/xlsx.min.js')),
+    bootEntry('exam-analysis-package', bootJs('exam-analysis-package-runtime.js'))
+]),
+'worker-api': bootSkill('demand', 'demand', ['WorkerAPI.run'], [
+    bootEntry('worker-api', bootJs('worker-api-runtime.js'))
+])
+};
+
+if (window.SchoolRuntime && typeof window.SchoolRuntime.registerSkill === 'function') {
+Object.keys(SYSTEM_RUNTIME_SKILLS).forEach(function (skillId) {
+    window.SchoolRuntime.registerSkill(skillId, SYSTEM_RUNTIME_SKILLS[skillId]);
+});
+}
+
+function getLoadedSweetAlertVendor() {
+const swal = window.Swal;
+return swal && !swal.__schoolLazyProxy && typeof swal.fire === 'function' ? swal : null;
+}
+
+function buildLazySweetAlertFallbackResult() {
+return {
+    isConfirmed: false,
+    isDenied: false,
+    isDismissed: true,
+    dismiss: 'loader-error'
+};
+}
+
+function showLazySweetAlertFallback(args, error) {
+console.warn('[boot-runtime] SweetAlert2 lazy load failed:', error);
+try {
+    const first = args && args[0];
+    const title = typeof first === 'string' ? first : (first && (first.title || first.text || first.html));
+    if (title && typeof window.alert === 'function') {
+        window.alert(String(title).replace(/<[^>]+>/g, ' '));
+    }
+} catch (_) {}
+return buildLazySweetAlertFallbackResult();
+}
+
+function installLazySweetAlertProxy() {
+const current = getLoadedSweetAlertVendor();
+if (current) return current;
+if (window.Swal && window.Swal.__schoolLazyProxy) return window.Swal;
+
+const state = { closeRequested: false };
+const proxy = {
+    __schoolLazyProxy: true,
+    fire(...args) {
+        state.closeRequested = false;
+        return window.ensureSweetAlertVendorLoaded()
+            .then((swal) => {
+                if (state.closeRequested) {
+                    state.closeRequested = false;
+                    if (swal && typeof swal.close === 'function') swal.close();
+                    return buildLazySweetAlertFallbackResult();
+                }
+                return swal.fire(...args);
+            })
+            .catch((error) => showLazySweetAlertFallback(args, error));
+    },
+    close(...args) {
+        const swal = getLoadedSweetAlertVendor();
+        if (swal && typeof swal.close === 'function') return swal.close(...args);
+        state.closeRequested = true;
+        return undefined;
+    },
+    isVisible() {
+        const swal = getLoadedSweetAlertVendor();
+        return !!(swal && typeof swal.isVisible === 'function' && swal.isVisible());
+    },
+    getTitle() {
+        const swal = getLoadedSweetAlertVendor();
+        return swal && typeof swal.getTitle === 'function' ? swal.getTitle() : null;
+    },
+    showValidationMessage(message) {
+        const swal = getLoadedSweetAlertVendor();
+        if (swal && typeof swal.showValidationMessage === 'function') {
+            return swal.showValidationMessage(message);
+        }
+        return undefined;
+    }
+};
+
+window.Swal = proxy;
+return proxy;
+}
+
+installLazySweetAlertProxy();
+
+window.__optionalRuntimeLoaders = window.__optionalRuntimeLoaders || {};
+window.__optionalStylesheetLoaders = window.__optionalStylesheetLoaders || {};
+function getOptionalAssetCandidates(src, localPrefixes = []) {
+const normalized = String(src || '').trim();
+const candidates = [];
+const relativePath = normalized.replace(/^(\.\/|\/)/, '');
+const assetRelativePath = relativePath.replace(/^(?:dist|public)\//, '');
+const currentPath = String(window.location && window.location.pathname || '').replace(/\\/g, '/');
+const currentDir = currentPath.replace(/[^/]*$/, '');
+const isDistDocument = /\/dist\/$/i.test(currentDir);
+const isPublicDocument = /\/public\/$/i.test(currentDir);
+const normalizedPrefixes = Array.isArray(localPrefixes)
+    ? localPrefixes
+        .map((prefix) => String(prefix || '').trim().replace(/^(\.\/|\/)/, ''))
+        .filter(Boolean)
+    : [];
+const matchesLocalPrefix = normalizedPrefixes.some((prefix) => {
+    const assetPrefix = prefix.replace(/^(?:dist|public)\//, '');
+    return relativePath.startsWith(prefix)
+        || assetRelativePath.startsWith(prefix)
+        || assetRelativePath.startsWith(assetPrefix);
+});
+const referencesLocalAsset = /(^|\/)assets\//.test(relativePath);
+if (window.location
+    && window.location.protocol === 'file:'
+    && (matchesLocalPrefix || referencesLocalAsset)) {
+    candidates.push(`./${assetRelativePath}`);
+    if (!isDistDocument) {
+        candidates.push(`./dist/${assetRelativePath}`);
+    }
+    if (!isPublicDocument && !isDistDocument) {
+        candidates.push(`./public/${assetRelativePath}`);
+    }
+}
+candidates.push(normalized);
+return Array.from(new Set(candidates.filter(Boolean)));
+}
+
+function getOptionalRuntimeCandidates(src) {
+return getOptionalAssetCandidates(src, ['./assets/js/', './assets/vendor/']);
+}
+
+function getRuntimeRetryCandidate(src) {
+const value = String(src || '');
+return `${value}${value.includes('?') ? '&' : '?'}runtime_retry=${Date.now()}`;
+}
+
+function getOptionalStylesheetCandidates(href) {
+return getOptionalAssetCandidates(href, ['./assets/css/', './assets/vendor/']);
+}
+
+function getInlineOptionalRuntimeSource(src) {
+const normalized = String(src || '').trim();
+if (!window.__INLINE_RUNTIME_SOURCES || typeof window.__INLINE_RUNTIME_SOURCES !== 'object') {
+    return '';
+}
+if (typeof window.__INLINE_RUNTIME_SOURCES[normalized] === 'string') {
+    return window.__INLINE_RUNTIME_SOURCES[normalized];
+}
+const relativePath = normalized
+    .replace(/^\.\/dist\/assets\/js\//, './assets/js/')
+    .replace(/^\.\/public\/assets\/js\//, './assets/js/');
+return typeof window.__INLINE_RUNTIME_SOURCES[relativePath] === 'string'
+    ? window.__INLINE_RUNTIME_SOURCES[relativePath]
+    : '';
+}
+
+function injectOptionalRuntimeScript(key, src) {
+return new Promise((resolve, reject) => {
+    const inlineSource = getInlineOptionalRuntimeSource(src);
+    if (inlineSource) {
+        try {
+            const inlineScript = document.createElement('script');
+                inlineScript.async = true;
+            inlineScript.dataset.runtime = key;
+            inlineScript.dataset.runtimeCandidate = src;
+            if (typeof Blob === 'function' && window.URL && typeof window.URL.createObjectURL === 'function') {
+                const blobUrl = window.URL.createObjectURL(new Blob([inlineSource], { type: 'application/javascript' }));
+                inlineScript.src = blobUrl;
+                inlineScript.onload = () => {
+                    inlineScript.dataset.runtimeLoaded = 'true';
+                    window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 0);
+                    if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
+                    resolve();
+                };
+                inlineScript.onerror = () => {
+                    window.URL.revokeObjectURL(blobUrl);
+                    inlineScript.remove();
+                    reject(new Error(`Failed to load inline runtime: ${src}`));
+                };
+            } else {
+            inlineScript.dataset.runtimeLoaded = 'true';
+            inlineScript.text = inlineSource;
+        }
+        document.head.appendChild(inlineScript);
+        if (!inlineScript.src) {
+            if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
+            resolve();
+        }
+        } catch (error) {
+            reject(error);
+        }
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.dataset.runtime = key;
+    script.dataset.runtimeCandidate = src;
+    script.onload = () => {
+        script.dataset.runtimeLoaded = 'true';
+        if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
+        resolve();
+    };
+    script.onerror = () => {
+        script.remove();
+        reject(new Error(`Failed to load runtime: ${src}`));
+    };
+    document.head.appendChild(script);
+});
+}
+
+function loadOptionalRuntime(key, src) {
+if (window.__optionalRuntimeLoaders[key]) return window.__optionalRuntimeLoaders[key];
+
+const readyValue = getOptionalRuntimeReadyValue(key);
+if (readyValue) {
+    window.__optionalRuntimeLoaders[key] = Promise.resolve(readyValue);
+    return window.__optionalRuntimeLoaders[key];
+}
+
+const existing = document.querySelector(`script[data-runtime="${key}"][data-runtime-loaded="true"]`);
+if (existing) {
+    window.__optionalRuntimeLoaders[key] = Promise.resolve();
+    return window.__optionalRuntimeLoaders[key];
+}
+
+window.__optionalRuntimeLoaders[key] = (async () => {
+    let lastError = null;
+    for (const candidate of getOptionalRuntimeCandidates(src)) {
+        try {
+            await injectOptionalRuntimeScript(key, candidate);
+            return;
+        } catch (error) {
+            lastError = error;
+            try {
+                await injectOptionalRuntimeScript(key, getRuntimeRetryCandidate(candidate));
+                return;
+            } catch (retryError) {
+                lastError = retryError;
+            }
+        }
+    }
+    throw lastError || new Error(`Failed to load runtime: ${src}`);
+})().catch((error) => {
+    delete window.__optionalRuntimeLoaders[key];
+    throw error;
+});
+return window.__optionalRuntimeLoaders[key];
+}
+
+function getOptionalRuntimeReadyValue(key) {
+switch (String(key || '').trim()) {
+    case 'report-insight':
+        return window.ReportInsightRuntime || null;
+    case 'report-render':
+        return window.__REPORT_RENDER_RUNTIME_PATCHED__ ? true : null;
+    case 'town-submodule-compare':
+        return window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__ ? true : null;
+    case 'teacher-analysis-core':
+        return window.__TEACHER_ANALYSIS_CORE_RUNTIME_PATCHED__ ? true : null;
+    case 'teacher-pairing':
+        return window.__TEACHER_PAIRING_RUNTIME_PATCHED__ ? true : null;
+    case 'teacher-analysis-bridge':
+        return window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__ ? true : null;
+    case 'cohort-growth':
+        return window.CohortGrowth || null;
+    case 'subject-balance': return window.SubjectBalanceRuntime || null;
+    case 'segment-analysis': return window.SegmentAnalysisRuntime || null;
+    case 'potential-analysis': return window.PotentialAnalysisRuntime || null;
+    case 'chart-vendor':
+        return window.Chart || null;
+    case 'sweetalert-vendor':
+        return getLoadedSweetAlertVendor();
+    case 'crypto-vendor':
+        return window.CryptoJS || null;
+    case 'xlsx-vendor':
+        return window.XLSX && window.XLSX.utils ? window.XLSX : null;
+    default:
+        return null;
+}
+}
+
+function injectOptionalStylesheet(key, href) {
+return new Promise((resolve, reject) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.dataset.optionalStylesheet = key;
+    link.dataset.optionalStylesheetCandidate = href;
+    link.onload = () => {
+        link.dataset.optionalStylesheetLoaded = 'true';
+        resolve();
+    };
+    link.onerror = () => {
+        link.remove();
+        reject(new Error(`Failed to load stylesheet: ${href}`));
+    };
+    document.head.appendChild(link);
+});
+}
+
+function loadOptionalStylesheet(key, href) {
+if (window.__optionalStylesheetLoaders[key]) return window.__optionalStylesheetLoaders[key];
+
+const existing = document.querySelector(`link[data-optional-stylesheet="${key}"][data-optional-stylesheet-loaded="true"]`);
+if (existing) {
+    window.__optionalStylesheetLoaders[key] = Promise.resolve(existing);
+    return window.__optionalStylesheetLoaders[key];
+}
+
+window.__optionalStylesheetLoaders[key] = (async () => {
+    let lastError = null;
+    for (const candidate of getOptionalStylesheetCandidates(href)) {
+        try {
+            await injectOptionalStylesheet(key, candidate);
+            return document.querySelector(`link[data-optional-stylesheet="${key}"][data-optional-stylesheet-loaded="true"]`);
+        } catch (error) {
+            lastError = error;
+        }
+    }
+    throw lastError || new Error(`Failed to load stylesheet: ${href}`);
+})().catch((error) => {
+    delete window.__optionalStylesheetLoaders[key];
+    throw error;
+});
+return window.__optionalStylesheetLoaders[key];
+}
+
+function loadOptionalRuntimeBundle(key, entries) {
+if (window.__optionalRuntimeLoaders[key]) return window.__optionalRuntimeLoaders[key];
+window.__optionalRuntimeLoaders[key] = entries.reduce((chain, entry) => {
+    return chain.then(() => loadOptionalRuntime(entry.key, entry.src));
+}, Promise.resolve()).catch((error) => {
+    delete window.__optionalRuntimeLoaders[key];
+    throw error;
+});
+return window.__optionalRuntimeLoaders[key];
+}
+
+function yieldRuntimeWarmupFrame() {
+return new Promise((resolve) => {
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(resolve, { timeout: 220 });
+        return;
+    }
+    if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => resolve());
+        return;
+    }
+    window.setTimeout(resolve, 0);
+});
+}
+
+function isRuntimeMobileViewport() {
+return typeof window.matchMedia === 'function'
+    && window.matchMedia('(max-width: 768px)').matches;
+}
+
+function getRuntimeLoadProfile() {
+try {
+    const stored = String(localStorage.getItem('SYSTEM_LOAD_PROFILE') || '').trim().toLowerCase();
+    if (stored === 'full' || stored === 'lazy' || stored === 'balanced') return stored;
+} catch (_) {}
+try {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+    const saveData = !!connection?.saveData;
+    const effectiveType = String(connection?.effectiveType || '').toLowerCase();
+    const slowNetwork = effectiveType === 'slow-2g' || effectiveType === '2g';
+    const lowMemory = Number(navigator.deviceMemory || 0) > 0 && Number(navigator.deviceMemory || 0) <= 2;
+    const lowCpu = Number(navigator.hardwareConcurrency || 0) > 0 && Number(navigator.hardwareConcurrency || 0) <= 4;
+    if (saveData || slowNetwork || lowMemory || (isRuntimeMobileViewport() && lowCpu)) return 'lazy';
+} catch (_) {}
+return 'balanced';
+}
+
+function getRuntimeSkillEntries(skillId) {
+const skill = SYSTEM_RUNTIME_SKILLS[skillId];
+return skill && Array.isArray(skill.entries) ? skill.entries.slice() : [];
+}
+
+function shouldWarmRuntimeSkill(skill, profile) {
+if (!skill) return false;
+if (profile === 'lazy') return false;
+if (profile === 'full') return skill.warmup !== 'mobile';
+if (isRuntimeMobileViewport()) return skill.warmup === 'mobile';
+return skill.warmup === 'balanced';
+}
+
+function getRuntimeWarmupSkillIds(profile = getRuntimeLoadProfile()) {
+return Object.keys(SYSTEM_RUNTIME_SKILLS)
+    .filter((skillId) => shouldWarmRuntimeSkill(SYSTEM_RUNTIME_SKILLS[skillId], profile));
+}
+
+function createSystemRuntimeLoader() {
+const loadSkill = function (skillId) {
+    const id = String(skillId || '').trim();
+    const skill = SYSTEM_RUNTIME_SKILLS[id];
+    if (!skill) return Promise.reject(new Error(`Unknown runtime skill: ${id}`));
+    return loadOptionalRuntimeBundle(`runtime-skill:${id}`, getRuntimeSkillEntries(id));
+};
+const loadMany = function (skillIds) {
+    return (Array.isArray(skillIds) ? skillIds : [])
+        .reduce((chain, skillId, index) => chain
+            .then(() => (index > 0 ? yieldRuntimeWarmupFrame() : undefined))
+            .then(() => loadSkill(skillId)), Promise.resolve());
+};
+const preloadSkill = function (skillId) {
+    const entries = getRuntimeSkillEntries(skillId);
+    prefetchAppModuleList(entries.map((entry) => entry.src), `runtime-skill-${String(skillId || '').replace(/[^a-z0-9-]/gi, '-')}`);
+    return Promise.resolve(true);
+};
+const warmup = function (profile = getRuntimeLoadProfile()) {
+    if (window.__RUNTIME_SKILL_WARMUP_PROMISE__) return window.__RUNTIME_SKILL_WARMUP_PROMISE__;
+    const skillIds = getRuntimeWarmupSkillIds(profile);
+    skillIds.forEach(preloadSkill);
+    window.__RUNTIME_SKILL_WARMUP_PROMISE__ = loadMany(skillIds).then((result) => {
+        window.dispatchEvent(new CustomEvent('school:runtime-skills-ready', {
+            detail: { profile, skillIds }
+        }));
+        window.dispatchEvent(new CustomEvent('school:deferred-vendors-ready'));
+        return result;
+    }).catch((error) => {
+        delete window.__RUNTIME_SKILL_WARMUP_PROMISE__;
+        throw error;
+    });
+    return window.__RUNTIME_SKILL_WARMUP_PROMISE__;
+};
+return {
+    manifest: SYSTEM_RUNTIME_SKILLS,
+    profile: getRuntimeLoadProfile,
+    load: loadSkill,
+    loadMany,
+    preload: preloadSkill,
+    warmup,
+    loadAll() {
+        return warmup('full');
+    }
+};
+}
+
+window.SystemRuntimeLoader = window.SystemRuntimeLoader || createSystemRuntimeLoader();
+
+window.ensureAccountAdminRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('account-admin');
+};
+
+window.ensureHistoryCompareRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('history-compare');
+};
+
+window.ensurePerfMobileRuntimeLoaded = function () {
+return loadOptionalRuntime('perf-mobile', './assets/js/perf-mobile-runtime.js');
+};
+
+window.ensureShellPolishRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('shell-polish');
+};
+
+window.ensureMobileManagerRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('mobile-manager');
+};
+
+window.ensureDataManagerSqlRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('data-manager-sql');
+};
+
+window.ensureAlasqlVendorLoaded = function () {
+return loadOptionalRuntime('alasql-vendor', './assets/vendor/alasql/alasql.min.js');
+};
+
+function ensureOptionalGlobalRuntime(readValue, key, src, label) {
+const current = readValue();
+if (current) return Promise.resolve(current);
+return loadOptionalRuntime(key, src).then(() => {
+    const loaded = readValue();
+    if (!loaded) throw new Error(`${label} runtime unavailable`);
+    return loaded;
+});
+}
+
+// Reuse ordered-boot scripts still loading after the watchdog to avoid duplicate execution.
+function findBootScriptForRuntime(src) {
+    const normalized = String(src || '').trim();
+    if (!normalized) return null;
+    let pathname = normalized;
+    try {
+        pathname = new URL(normalized, window.location.href).pathname;
+    } catch (_) {}
+    pathname = pathname.replace(/^\/+/, '').replace(/^\.\//, '');
+    const scripts = Array.from(document.scripts || []);
+    return scripts.find((script) => {
+        const bootKey = String(script.dataset?.bootKey || '').trim().replace(/^\/+/, '').replace(/^\.\//, '');
+        if (bootKey && bootKey === pathname) return true;
+        let candidate = String(script.getAttribute('src') || script.src || '').trim();
+        if (!candidate) return false;
+        try {
+            candidate = new URL(candidate, window.location.href).pathname;
+        } catch (_) {}
+        return candidate.replace(/^\/+/, '').replace(/^\.\//, '') === pathname;
+    }) || null;
+}
+
+function waitForExistingBootScript(src, timeoutMs = 15000) {
+    const script = findBootScriptForRuntime(src);
+    if (!script) return Promise.resolve(false);
+    const key = String(script.dataset?.bootKey || '').trim();
+    const state = key && window.__BOOT_SCRIPT_REGISTRY__
+        ? String(window.__BOOT_SCRIPT_REGISTRY__[key] || '').trim()
+        : '';
+    if (state === 'loaded' || script.dataset?.bootLoaded === 'true') return Promise.resolve(true);
+    if (state === 'error') return Promise.resolve(false);
+    return new Promise((resolve) => {
+        let settled = false;
+        const finish = (loaded) => {
+            if (settled) return;
+            settled = true;
+            if (timer) window.clearTimeout(timer);
+            resolve(loaded);
+        };
+        const timer = window.setTimeout(() => finish(false), Math.max(1000, Number(timeoutMs) || 15000));
+        script.addEventListener('load', () => finish(true), { once: true });
+        script.addEventListener('error', () => finish(false), { once: true });
+    });
+}
+
+window.ensureCohortDbRuntime = function () {
+const existing = window.CohortDB;
+if (existing && typeof existing.ensure === 'function') return Promise.resolve(existing);
+
+const finish = () => {
+    const loaded = window.CohortDB;
+    if (loaded && typeof loaded.ensure === 'function') return Promise.resolve(loaded);
+    return ensureOptionalGlobalRuntime(
+        () => window.CohortDB,
+        'cohort-db-core',
+        './assets/js/cohort-db-core-runtime.js',
+        'CohortDB'
+    );
+};
+
+// Always honor an already-created ordered boot script, including one whose
+// watchdog has fired but whose network request is still in flight.
+const pendingBoot = findBootScriptForRuntime('./assets/js/cohort-db-core-runtime.js');
+if (pendingBoot) {
+    return waitForExistingBootScript('./assets/js/cohort-db-core-runtime.js').then(() => finish());
+}
+
+// CohortDB is the final core boot module. A cohort switch can be requested
+// immediately after login while that ordered boot queue is still finishing.
+// Waiting for that queue avoids injecting the same classic script a second
+// time (which redeclares its top-level `const CohortDB` and blocks the first
+// potential-analysis render).
+const bootPromise = window.__APP_MODULES_LOAD_PROMISE__;
+if (bootPromise && window.__APP_MODULES_LOADED__ === 'loading') {
+    return Promise.resolve(bootPromise).catch(() => null).then(() => {
+        return finish();
+    });
+}
+
+return finish();
+};
+
+window.ensureCryptoJsVendorLoaded = function () {
+return ensureOptionalGlobalRuntime(() => window.CryptoJS, 'crypto-vendor', './assets/vendor/crypto-js/crypto-js.min.js', 'CryptoJS');
+};
+
+window.ensureSweetAlertVendorLoaded = function () {
+return ensureOptionalGlobalRuntime(getLoadedSweetAlertVendor, 'sweetalert-vendor', './assets/vendor/sweetalert2/sweetalert2.all.min.js', 'SweetAlert2');
+};
+
+window.ensureGsapVendorLoaded = function () {
+return ensureOptionalGlobalRuntime(() => window.gsap, 'gsap-vendor', './assets/vendor/gsap/gsap.min.js', 'GSAP');
+};
+
+window.ensureChartVendorLoaded = function () {
+return ensureOptionalGlobalRuntime(() => window.Chart, 'chart-vendor', './assets/vendor/chart.js/chart.umd.min.js', 'Chart');
+};
+
+window.ensureXlsxVendorLoaded = function () {
+return ensureOptionalGlobalRuntime(() => window.XLSX && window.XLSX.utils && window.XLSX, 'xlsx-vendor', './assets/vendor/xlsx/xlsx.full.min.js', 'XLSX');
+};
+
+window.ensurePdfExportVendorsLoaded = function () {
+return window.SystemRuntimeLoader.load('pdf-export');
+};
+
+window.ensureReportRenderRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('report-render');
+};
+
+window.ensureReportChartRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('report-chart');
+};
+
+window.ensureReportExportRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('report-export');
+};
+
+window.ensureOptionalStylesheetLoaded = function (key, href) {
+return loadOptionalStylesheet(key, href);
+};
+
+window.ensureSchoolProfileRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('school-profile');
+};
+
+window.ensureTeachingManagementRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('teaching-management');
+};
+
+window.ensureStudentOverviewRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('student-overview');
+};
+
+window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('teacher-analysis');
+};
+
+window.ensureCohortGrowthRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('cohort-growth');
+};
+
+window.ensureTeacherCorrelationRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('teacher-correlation');
+};
+
+window.ensureCountyAnalysisRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('county-analysis');
+};
+
+window.ensureMacroAnalysisCompatRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('macro-analysis-compat');
+};
+
+window.ensureTableHeatmapRuntimeLoaded = function () {
+return loadOptionalRuntime('table-heatmap', bootJs('table-heatmap-runtime.js'));
+};
+
+[
+['SubjectBalance', 'subject-balance'],
+['SegmentAnalysis', 'segment-analysis'],
+['PotentialAnalysis', 'potential-analysis']
+].forEach(([name, key]) => {
+window[`ensure${name}RuntimeLoaded`] = () => loadOptionalRuntime(key, bootJs(`${key}-runtime.js`));
+});
+
+window.ensureProgressAnalysisRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('progress-analysis');
+};
+
+window.ensureStudentCompareRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('student-compare');
+};
+
+window.ensureTownSubmoduleCompareRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('town-submodule-compare').then((result) => {
+    if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
+    return result;
+});
+};
+
+window.ensureTeacherCompareRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('teacher-compare');
+};
+
+window.ensureMacroCompareRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('macro-compare');
+};
+
+window.ensureZhongkaoCountdownRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('zhongkao-countdown');
+};
+
+window.ensureFreshmanExamRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('freshman-exam');
+};
+
+window.ensureFreshmanSimulatorRuntimeLoaded = function () {
+return Promise.all([
+    window.ensureFreshmanExamRuntimeLoaded(),
+    window.ensureXlsxVendorLoaded(),
+    window.ensureChartVendorLoaded()
+]).then((result) => result[0]);
+};
+
+window.ensureExamArrangerRuntimeLoaded = function () {
+return Promise.all([
+    window.ensureFreshmanExamRuntimeLoaded(),
+    window.ensureXlsxVendorLoaded()
+]).then((result) => result[0]);
+};
+
+window.ensureGradeSchedulerRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('grade-scheduler');
+};
+
+window.ensureVoiceControlRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('voice-control');
+};
+
+window.ensureModuleHelpRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('module-help');
+};
+
+window.ensurePackagerRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('packager');
+};
+
+window.ensureExamAnalysisPackageRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('exam-analysis-package');
+};
+
+window.ensureWorkerApiRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('worker-api');
+};
+
+function installOptionalRuntimeMethod(name, loader) {
+if (typeof window[name] === 'function') return;
+window[name] = function (...args) {
+    const current = window[name];
+    return loader().then(() => {
+        const next = window[name];
+        if (typeof next === 'function' && next !== current) {
+            return next.apply(this, args);
+        }
+        throw new Error(`${name} runtime not loaded`);
+    });
+};
+}
+
+function installOptionalRuntimePlaceholder(name, message) {
+if (typeof window[name] === 'function') return;
+window[name] = function () {
+    throw new Error(message || `${name} runtime not loaded`);
+};
+}
+
+const XLSX_RUNTIME_FUNCTIONS = [
+'exportHighScoreExcel',
+'exportStudentDetails',
+'importTeacherExcel',
+'exportMutualAidGroups',
+'exportSummaryTable',
+'exportSegmentExcel',
+'exportHorizontalExcel',
+'exportMacroTables',
+'SB_exportExcel',
+'exportPotentialAnalysis',
+'exportCorrelationExcel',
+'exportExcel',
+'downloadTemplate',
+'exportMarginalTasks',
+'exportCountyAnalysisSection',
+'SSE_export',
+'exportValueAddedExcel',
+'exportMultiPeriodComparison',
+'exportProgressAnalysis',
+'exportStudentMultiPeriodComparison',
+'exportAllTeachersMultiPeriodDiff',
+'exportTeacherMultiPeriodComparison',
+'exportMacroMultiPeriodComparison',
+'exportTownSubmoduleCompare',
+'exportTeacherComparisonExcel',
+'exportTeacherComparisonExcelV2',
+'exportTeacherTownshipRankExcel',
+'downloadExamAnalysisPackage',
+'FB_loadData',
+'FB_exportResult',
+'EXAM_loadData',
+'EXAM_exportResult'
+];
+
+const XLSX_RUNTIME_OBJECT_METHODS = [
+{ owner: 'Auth', methods: ['exportAccounts', 'exportAllCloudAccounts'] },
+{ owner: 'DataManager', methods: ['handleHistoryUpload', 'handleTeacherUpload', 'handleTargetUpload', 'exportSQLResult'] },
+{ owner: 'AccountExcel', methods: ['downloadTemplate', 'upload'] },
+{ owner: 'SCHEDULER', methods: ['downloadTemplate', 'loadData', 'exportResult', 'importExisting'] },
+{ owner: 'GradeSchedulerRuntime', methods: ['downloadTemplate', 'loadData', 'exportResult', 'importExisting'] },
+{ owner: 'DrillSystem', methods: ['exportExcel'] },
+{ owner: 'CohortGrowth', methods: ['exportVolatility'] }
+];
+
+function isXlsxRuntimeReady() {
+return !!(window.XLSX && window.XLSX.utils);
+}
+
+function reportXlsxLoadFailure(error) {
+console.warn('[boot-runtime] XLSX runtime load failed:', error);
+const message = `Excel 组件加载失败：${error && error.message ? error.message : error}`;
+if (window.UI && typeof window.UI.toast === 'function') {
+    window.UI.toast(message, 'error');
+    return;
+}
+if (typeof window.alert === 'function') window.alert(message);
+}
+
+function wrapXlsxRuntimeFunction(owner, name) {
+if (!owner || typeof owner[name] !== 'function') return;
+const original = owner[name];
+if (original.__xlsxRuntimeWrapped) return;
+const wrapped = function (...args) {
+    if (isXlsxRuntimeReady()) return original.apply(this, args);
+    return window.ensureXlsxVendorLoaded()
+        .then(() => original.apply(this, args))
+        .catch((error) => {
+            reportXlsxLoadFailure(error);
+            throw error;
+        });
+};
+wrapped.__xlsxRuntimeWrapped = true;
+wrapped.__xlsxRuntimeOriginal = original;
+owner[name] = wrapped;
+}
+
+window.wrapXlsxRuntimeExports = function () {
+XLSX_RUNTIME_FUNCTIONS.forEach((name) => wrapXlsxRuntimeFunction(window, name));
+XLSX_RUNTIME_OBJECT_METHODS.forEach((group) => {
+    const owner = window[group.owner];
+    if (!owner) return;
+    group.methods.forEach((name) => wrapXlsxRuntimeFunction(owner, name));
+});
+};
+
+function warmOptionalRuntimeAfterLoad(flagName, loader, delayMs = 1200) {
+if (typeof loader !== 'function') return;
+const run = () => {
+    if (flagName && window[flagName]) return;
+    loader().catch((error) => {
+        console.warn(error);
+    });
+};
+if (document.readyState === 'complete') {
+    window.setTimeout(run, delayMs);
+    return;
+}
+window.addEventListener('load', () => {
+    window.setTimeout(run, delayMs);
+}, { once: true });
+}
+
+const accountAdminStub = {
+downloadTemplate(...args) {
+    return window.ensureAccountAdminRuntimeLoaded().then(() => {
+        if (window.AccountExcel !== accountAdminStub && typeof window.AccountExcel?.downloadTemplate === 'function') {
+            return window.AccountExcel.downloadTemplate(...args);
+        }
+        throw new Error('AccountExcel runtime not loaded');
+    });
+},
+upload(...args) {
+    return window.ensureAccountAdminRuntimeLoaded().then(() => {
+        if (window.AccountExcel !== accountAdminStub && typeof window.AccountExcel?.upload === 'function') {
+            return window.AccountExcel.upload(...args);
+        }
+        throw new Error('AccountExcel runtime not loaded');
+    });
+}
+};
+
+if (!window.AccountExcel) {
+window.AccountExcel = accountAdminStub;
+}
+
+['toggleAdminManualInput', 'changeAdminPass', 'openUserPasswordModal', 'submitUserPasswordChange'].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureAccountAdminRuntimeLoaded);
+});
+
+['printSingleReport', 'downloadSingleReportPDF', 'batchGeneratePDF', 'copyReport'].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureReportExportRuntimeLoaded);
+});
+
+['showSchoolProfile', 'jumpToModule'].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureSchoolProfileRuntimeLoaded);
+});
+
+[
+[window.ensureSubjectBalanceRuntimeLoaded, ['updateSubjectBalanceSelects', 'SB_renderTable', 'SB_runCluster', 'SB_exportExcel']],
+[window.ensureSegmentAnalysisRuntimeLoaded, ['updateSegmentSelects', 'updateSegmentClassSelect', 'renderSegmentAnalysis', 'exportSegmentExcel']],
+[window.ensurePotentialAnalysisRuntimeLoaded, ['updatePotentialSchoolSelect', 'updatePotentialClassSelect', 'renderPotentialAnalysis', 'exportPotentialAnalysis']]
+].forEach(([loader, names]) => {
+names.forEach((name) => installOptionalRuntimeMethod(name, loader));
+});
+
+[
+'analyzeTeachers',
+'generateTeacherPairing',
+'renderTeacherCards',
+'showTeacherDetails',
+'renderTeacherComparisonTable',
+'renderTeacherTownshipRanking',
+'updateCorrelationSchoolSelect',
+'renderCorrelationAnalysis',
+'exportTeacherComparisonExcel',
+'exportTeacherTownshipRankExcel'
+].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureTeacherAnalysisMainRuntimeLoaded);
+});
+
+[
+'updateSSESchoolSelect',
+'SSE_calculate',
+'SSE_export'
+].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureSingleSchoolEvalRuntimeLoaded);
+});
+
+[
+    'renderCountyAnalysis',
+    'exportCountyAnalysisSection',
+    'setCountyAnalysisSchoolNameFromInput',
+    'generateCountySchoolHorizontalTable'
+].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureCountyAnalysisRuntimeLoaded);
+});
+
+['renderHorizontalTable', 'exportHorizontalExcel', 'exportMacroTables'].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureMacroAnalysisCompatRuntimeLoaded);
+});
+
+installOptionalRuntimeMethod('toggleTableHeatmap', window.ensureTableHeatmapRuntimeLoaded);
+
+[
+'switchValueAddedView',
+'exportValueAddedExcel',
+'updateProgressSchoolSelect',
+'updateProgressBaselineSelect',
+'onProgressComparePeriodCountChange',
+'renderMultiPeriodComparison',
+'exportMultiPeriodComparison',
+'setProgressBaselineStatus',
+'ensureProgressBaselineData',
+'renderValueAddedReport',
+'performSilentMatching',
+'exportProgressAnalysis',
+'setProgressQuickFilter',
+'renderProgressAnalysis',
+'applyProgressFilter',
+'resetProgressFilter'
+].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureProgressAnalysisRuntimeLoaded);
+});
+
+['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares', 'exportStudentMultiPeriodComparison', 'loadCloudStudentCompare'].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureStudentCompareRuntimeLoaded);
+});
+
+[
+'ensureTownSubmoduleCompareUIs',
+'getTownSubmoduleSeries',
+'openTownSubmoduleCompareDialog',
+'renderTownSubmoduleMultiPeriodComparison',
+'exportTownSubmoduleCompare',
+'saveTownSubmoduleCompareToCloud',
+'viewCloudTownSubmoduleCompares',
+'loadCloudTownSubmoduleCompare'
+].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureTownSubmoduleCompareRuntimeLoaded);
+});
+
+['renderTeacherMultiPeriodComparison', 'renderAllTeachersMultiPeriodComparison', 'exportAllTeachersMultiPeriodDiff', 'exportTeacherMultiPeriodComparison', 'saveTeacherMultiPeriodCompareToCloud', 'viewCloudTeacherCompares', 'loadCloudTeacherCompare'].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureTeacherCompareRuntimeLoaded);
+});
+
+['renderMacroMultiPeriodComparison', 'exportMacroMultiPeriodComparison', 'saveMacroMultiPeriodCompareToCloud', 'viewCloudMacroCompares', 'loadCloudMacroCompare'].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureMacroCompareRuntimeLoaded);
+});
+
+['renderSingleReportCardHTML'].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureReportRenderRuntimeLoaded);
+});
+
+['renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses'].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureReportChartRuntimeLoaded);
+});
+
+[
+'FB_loadData',
+'FB_runDivision',
+'FB_applyScheme',
+'FB_openSeatMap',
+'FB_autoSeatAlgo',
+'FB_renderSeatMap',
+'FB_toggleLock',
+'FB_toggleViewRotation',
+'FB_saveToLocal',
+'FB_exportResult',
+'addBindPair',
+'FB_initScenarioSelect',
+'FB_saveScenario',
+'FB_loadScenario',
+'FB_deleteScenario',
+'EXAM_loadData',
+'EXAM_generate',
+'EXAM_switchView',
+'EXAM_generateDeskLabels',
+'EXAM_initProctorUI',
+'EXAM_assignProctors',
+'EXAM_exportResult'
+].forEach((name) => {
+installOptionalRuntimeMethod(name, window.ensureFreshmanExamRuntimeLoaded);
+});
+
+if (!window.SCHEDULER) {
+const schedulerStub = {};
+[
+    'addConstraint',
+    'removeConstraint',
+    'downloadTemplate',
+    'loadData',
+    'run',
+    'auditFatigue',
+    'renderTable',
+    'exportResult',
+    'importExisting'
+].forEach((name) => {
+    schedulerStub[name] = function (...args) {
+        const current = window.SCHEDULER && window.SCHEDULER !== schedulerStub ? window.SCHEDULER : null;
+        if (current && typeof current[name] === 'function') return current[name](...args);
+        return window.ensureGradeSchedulerRuntimeLoaded().then(() => {
+            const next = window.SCHEDULER;
+            if (next && next !== schedulerStub && typeof next[name] === 'function') {
+                return next[name](...args);
+            }
+            throw new Error(`SCHEDULER.${name} runtime not loaded`);
+        });
+    };
+});
+window.SCHEDULER = schedulerStub;
+}
+
+if (!window.VoiceControl) {
+const voiceControlStub = {};
+['init', 'toggle', 'stop', 'processCommand', 'toggleFullScreen'].forEach((name) => {
+    voiceControlStub[name] = function (...args) {
+        const current = window.VoiceControl && window.VoiceControl !== voiceControlStub ? window.VoiceControl : null;
+        if (current && typeof current[name] === 'function') return current[name](...args);
+        return window.ensureVoiceControlRuntimeLoaded().then(() => {
+            const next = window.VoiceControl;
+            if (next && next !== voiceControlStub && typeof next[name] === 'function') {
+                return next[name](...args);
+            }
+            throw new Error(`VoiceControl.${name} runtime not loaded`);
+        });
+    };
+});
+window.VoiceControl = voiceControlStub;
+}
+
+installOptionalRuntimeMethod('showModuleHelp', window.ensureModuleHelpRuntimeLoaded);
+installOptionalRuntimeMethod('downloadExamAnalysisPackage', window.ensureExamAnalysisPackageRuntimeLoaded);
+window.wrapXlsxRuntimeExports();
+
+if (typeof window.ensureModuleHelpButton !== 'function') {
+window.ensureModuleHelpButton = function (sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    const titleEl = section.querySelector('.sec-head h2') || section.querySelector('.module-desc-bar h3');
+    if (!titleEl || titleEl.querySelector('.module-help-btn')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'module-help-btn';
+    btn.innerHTML = '<i class="ti ti-info-circle"></i><span>口径说明</span>';
+    btn.onclick = () => window.showModuleHelp(sectionId);
+    titleEl.appendChild(btn);
+};
+}
+
+function runAfterAppModulesReady(task) {
+if (typeof task !== 'function') return;
+if (window.__APP_MODULES_LOADED__ === true) {
+    task();
+    return;
+}
+let done = false;
+const run = () => {
+    if (done) return;
+    done = true;
+    task();
+};
+if (window.__APP_MODULES_LOAD_PROMISE__ && typeof window.__APP_MODULES_LOAD_PROMISE__.then === 'function') {
+    window.__APP_MODULES_LOAD_PROMISE__.then(run).catch(run);
+}
+window.addEventListener('school:app-modules-ready', run, { once: true });
+}
+
+function scheduleMobileRuntimeBootstrap(options = {}) {
+const maxWidth = Number(options.maxWidth || 960);
+const includePerf = !!options.includePerf;
+const delayMs = Number(options.delayMs || 0);
+const devMode = localStorage.getItem('DEV_MODE') === 'true';
+const shouldIncludePerf = includePerf && devMode;
+if (!(window.innerWidth <= maxWidth || devMode)) return;
+const flagName = shouldIncludePerf ? '__MOBILE_PERF_BOOTSTRAP_SCHEDULED__' : '__MOBILE_RUNTIME_BOOTSTRAP_SCHEDULED__';
+if (window[flagName]) return;
+window[flagName] = true;
+
+runAfterAppModulesReady(() => {
+    const load = () => {
+        window.ensureMobileManagerRuntimeLoaded()
+            .then(() => (shouldIncludePerf ? window.ensurePerfMobileRuntimeLoaded() : undefined))
+            .catch((error) => {
+                console.warn(error);
+            });
+    };
+    const run = () => {
+        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+            window.SystemPerformance.scheduleIdle(load, { label: 'mobile-runtime-bootstrap', delay: delayMs, timeout: 1800 });
+            return;
+        }
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(load, { timeout: 1800 });
+            return;
+        }
+        window.setTimeout(load, delayMs);
+    };
+    window.setTimeout(run, delayMs);
+});
+}
+
+scheduleMobileRuntimeBootstrap({ maxWidth: 960, delayMs: 120 });
+scheduleMobileRuntimeBootstrap({ maxWidth: 768, includePerf: true, delayMs: 480 });
+
+function scheduleDataManagerSqlIdleWarmup() {
+if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) return;
+if (window.__DATA_MANAGER_SQL_IDLE_WARMUP__) return;
+window.__DATA_MANAGER_SQL_IDLE_WARMUP__ = true;
+runAfterAppModulesReady(() => {
+    const prefetch = () => {
+        const skill = SYSTEM_RUNTIME_SKILLS['data-manager-sql'];
+        if (skill && Array.isArray(skill.entries)) {
+            prefetchAppModuleList(skill.entries.map((entry) => entry.src), 'data-manager-sql-prefetch');
+        }
+    };
+    window.setTimeout(prefetch, 8000);
+});
+}
+
+scheduleDataManagerSqlIdleWarmup();
+
+function scheduleHotspotRuntimeWarmup() {
+if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) return;
+if (window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ || getRuntimeLoadProfile() === 'lazy' || isRuntimeMobileViewport()) return;
+window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ = true;
+const HOTSPOT_RUNTIME_HYDRATE_DELAY_MS = 2200;
+const prioritySteps = [
+{ label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
+{ label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
+{ label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() }
+];
+const deferredSteps = [];
+const preload = () => {
+prioritySteps.concat(deferredSteps).forEach((step) => {
+const skill = SYSTEM_RUNTIME_SKILLS[step.label];
+if (skill && Array.isArray(skill.entries)) {
+const modules = skill.entries.map((entry) => entry.src);
+// Report runtimes are demand-loaded.
+prefetchAppModuleList(modules, `hotspot-runtime-${step.label}`);
+}
+});
+};
+const warmStep = (step) => Promise.resolve(step.loader()).catch(() => {});
+const scheduleWarmup = (label, run) => {
+if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') window.SystemPerformance.scheduleIdle(run, { label, delay: 120, timeout: 2200 });
+else if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run, { timeout: 2200 });
+else window.setTimeout(run, 120);
+};
+const runStepsSequentially = (queue, index = 0, done) => {
+if (index >= queue.length) { if (typeof done === 'function') done(); return; }
+scheduleWarmup(`hotspot-runtime:${queue[index].label}`, () => warmStep(queue[index]).finally(() => window.setTimeout(() => runStepsSequentially(queue, index + 1, done), 650)));
+};
+const runPrioritySteps = () => runStepsSequentially(prioritySteps, 0, () => window.setTimeout(() => runStepsSequentially(deferredSteps), 650));
+runAfterAppModulesReady(() => {
+window.setTimeout(preload, 240);
+window.setTimeout(() => {
+try { if (localStorage.getItem('SCHOOL_RUNTIME_HOTSPOT_HYDRATE') !== 'true') return; } catch (_) { return; }
+scheduleWarmup('hotspot-runtime:priority', runPrioritySteps);
+}, HOTSPOT_RUNTIME_HYDRATE_DELAY_MS);
+});
+}
+
+scheduleHotspotRuntimeWarmup();
+
+function scheduleTeachingManagementFastWarmup() {
+if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) return;
+if (window.__TEACHING_FAST_WARMUP_SCHEDULED__) return;
+window.__TEACHING_FAST_WARMUP_SCHEDULED__ = true;
+runAfterAppModulesReady(() => {
+const preload = () => {
+const skill = SYSTEM_RUNTIME_SKILLS['teaching-management'];
+if (skill && Array.isArray(skill.entries)) prefetchAppModuleList(skill.entries.map((entry) => entry.src), 'teaching-management-fast-prefetch');
+};
+window.setTimeout(preload, 520);
+try { if (localStorage.getItem('SCHOOL_RUNTIME_HOTSPOT_HYDRATE') !== 'true') return; } catch (_) { return; }
+const run = () => window.ensureTeacherAnalysisMainRuntimeLoaded?.();
+if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') window.SystemPerformance.scheduleIdle(run, { label: 'teacher-analysis-fast-warmup', delay: 12000, timeout: 1800 });
+else if (typeof window.requestIdleCallback === 'function') window.setTimeout(() => window.requestIdleCallback(run, { timeout: 1800 }), 12000);
+else window.setTimeout(run, 12000);
+});
+}
+
+scheduleTeachingManagementFastWarmup();
+
+function installHistoryDoQueryWrapper() {
+if (window.__historyDoQueryWrapped || typeof window.doQuery !== 'function') return false;
+const base = window.doQuery;
+const wrapped = async function (...args) {
+    const syncCompareTargetIfReady = () => {
+        if (typeof window.setCloudCompareTarget !== 'function') return;
+        const currentStudent = typeof window.readCurrentReportStudentState === 'function'
+            ? window.readCurrentReportStudentState()
+            : null;
+        if (currentStudent) window.setCloudCompareTarget(currentStudent);
+    };
+    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+        window.SystemPerformance.scheduleIdle(syncCompareTargetIfReady, { label: 'report-history-compare-target-sync', delay: 80, timeout: 1500 });
+    } else {
+        window.setTimeout(syncCompareTargetIfReady, 80);
+    }
+    return base.apply(this, args);
+};
+window.doQuery = wrapped;
+window.__historyDoQueryWrapped = true;
+return true;
+}
+
+function installDataManagerSqlHooks() {
+if (window.__dataManagerSqlHooksInstalled || !window.DataManager || typeof window.DataManager !== 'object') return false;
+
+[
+    'renderSQLHistory',
+    'applySQLHistory',
+    'saveNamedSQL',
+    'clearSQLHistory',
+    'setQuickSQL',
+    'runSQL',
+    'exportSQLResult'
+].forEach((name) => {
+    if (typeof window.DataManager[name] === 'function') return;
+    window.DataManager[name] = function (...args) {
+        const current = window.DataManager[name];
+        return window.ensureDataManagerSqlRuntimeLoaded().then(() => {
+            const next = window.DataManager[name];
+            if (typeof next === 'function' && next !== current) {
+                return next.apply(window.DataManager, args);
+            }
+            throw new Error(`${name} runtime not loaded`);
+        });
+    };
+});
+
+if (typeof window.talkToData !== 'function') {
+    window.talkToData = function (...args) {
+        const current = window.talkToData;
+        return window.ensureDataManagerSqlRuntimeLoaded().then(() => {
+            const next = window.talkToData;
+            if (typeof next === 'function' && next !== current) {
+                return next.apply(window, args);
+            }
+            throw new Error('talkToData runtime not loaded');
+        });
+    };
+}
+
+if (!window.__dataManagerSqlSwitchWrapped && typeof window.DataManager.switchTab === 'function') {
+    const baseSwitchTab = window.DataManager.switchTab;
+    window.DataManager.switchTab = async function (tab, ...args) {
+        if (tab === 'sql') {
+            try {
+                await window.ensureDataManagerSqlRuntimeLoaded();
+            } catch (error) {
+                console.warn(error);
+            }
+        }
+        return baseSwitchTab.call(this, tab, ...args);
+    };
+    window.__dataManagerSqlSwitchWrapped = true;
+}
+
+window.__dataManagerSqlHooksInstalled = true;
+return true;
+}
+
+function retryInstallLateHook(installer, options) {
+const opts = options || {};
+const maxTries = Number(opts.maxTries || 480);
+const intervalMs = Number(opts.intervalMs || 250);
+const onExhausted = typeof opts.onExhausted === 'function' ? opts.onExhausted : null;
+
+try {
+    if (installer()) return;
+} catch (e) {
+    console.warn('[boot-runtime] Hook install error (initial):', e);
+}
+
+let tries = 0;
+const timer = setInterval(() => {
+    tries += 1;
+    try {
+        const success = installer();
+        if (success || tries >= maxTries) {
+            clearInterval(timer);
+            if (tries >= maxTries && !success && onExhausted) onExhausted();
+        }
+    } catch (e) {
+        console.warn('[boot-runtime] Hook install error (retry):', e);
+        if (tries >= maxTries) {
+            clearInterval(timer);
+            if (onExhausted) onExhausted();
+        }
+    }
+}, intervalMs);
+
+if (typeof window.addEventListener === 'function') {
+    const runOnce = () => {
+        try {
+            installer();
+        } catch (e) {}
+    };
+    window.addEventListener('load', runOnce, { once: true });
+    window.addEventListener('focus', runOnce, { once: true });
+}
+}
+
+runAfterAppModulesReady(function () {
+    retryInstallLateHook(installHistoryDoQueryWrapper, {
+    onExhausted: function () {
+        console.warn('[boot-runtime] history compare hook install timed out');
+    }
+});
+
+retryInstallLateHook(installDataManagerSqlHooks, {
+    onExhausted: function () {
+        console.warn('[boot-runtime] SQL hook timeout');
+    }
+});
+});

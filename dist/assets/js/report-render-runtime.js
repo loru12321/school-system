@@ -1,18 +1,483 @@
-(()=>{if(typeof window=="undefined"||window.__REPORT_RENDER_RUNTIME_PATCHED__)return;function vt(){try{return localStorage.getItem("PARENT_REPORT_SHOW_RANK")==="1"}catch(e){return!1}}window.shouldShowParentReportRank=vt;const V=window.CompareSessionState||null,pt=window.ReportSessionState||null,Gt=typeof window.readCloudStudentCompareContextState=="function"?window.readCloudStudentCompareContextState:(()=>V&&typeof V.getCloudStudentCompareContext=="function"&&V.getCloudStudentCompareContext()||null),ue=typeof window.readCurrentReportStudentState=="function"?window.readCurrentReportStudentState:(()=>pt&&typeof pt.getCurrentReportStudent=="function"?pt.getCurrentReportStudent()||null:window.CURRENT_REPORT_STUDENT&&typeof window.CURRENT_REPORT_STUDENT=="object"?window.CURRENT_REPORT_STUDENT:null),Vt=typeof window.readDuplicateCompareExamsState=="function"?window.readDuplicateCompareExamsState:(()=>V&&typeof V.getDuplicateCompareExams=="function"?V.getDuplicateCompareExams()||[]:[]),o={signature:"",html:new Map,comparisonStudent:new WeakMap,comparisonStudentByKey:new Map,cloudHint:new WeakMap,cloudHintByKey:new Map,previousRecord:new WeakMap,previousRecordByKey:new Map,examHistory:new WeakMap,examHistoryByKey:new Map,im:new Map,scopeMapRaw:"",scopeMap:{},schoolCandidatesSignature:"",schoolCandidates:[],townshipRank:new Map,countyRank:new Map,countyDirect:new WeakMap};function I(){const e=[window.CURRENT_EXAM_ID||"",window.__REPORT_HISTORY_VERSION||0,window.__RAW_DATA_VERSION||0,Array.isArray(window.RAW_DATA)?window.RAW_DATA.length:0,Array.isArray(window.SUBJECTS)?window.SUBJECTS.join("|"):"",Object.keys(window.SCHOOLS||{}).join("|")].join("::");return o.signature!==e&&(o.signature=e,o.html.clear(),o.comparisonStudent=new WeakMap,o.comparisonStudentByKey.clear(),o.cloudHint=new WeakMap,o.cloudHintByKey.clear(),o.previousRecord=new WeakMap,o.previousRecordByKey.clear(),o.examHistory=new WeakMap,o.examHistoryByKey.clear(),o.townshipRank.clear(),o.countyRank.clear(),o.countyDirect=new WeakMap),e}function U(e){return[String((e==null?void 0:e.school)||"").trim(),String((e==null?void 0:e.class)||"").trim(),String((e==null?void 0:e.name)||"").trim(),String((e==null?void 0:e.id)||(e==null?void 0:e.examNo)||"").trim()].join("::")}function Ut(e,r){if(!Array.isArray(e)||!e.length)return null;for(let s=e.length-1;s>=0;s--){const a=e[s],g=(a==null?void 0:a.examFullKey)||(a==null?void 0:a.examId);if(!r||!isExamKeyEquivalentForCompare(g,r)&&!isExamKeyEquivalentForCompare(a==null?void 0:a.examId,r))return a||null}return null}function ft(e){if(!e||typeof e!="object")return e;if(I(),o.comparisonStudent.has(e))return o.comparisonStudent.get(e);const r=U(e);if(o.comparisonStudentByKey.has(r)){const a=o.comparisonStudentByKey.get(r);return o.comparisonStudent.set(e,a),a}const s=typeof getComparisonStudentView=="function"?getComparisonStudentView(e,RAW_DATA):e;return o.comparisonStudent.set(e,s),o.comparisonStudentByKey.set(r,s),s}function St(e){if(!e||typeof e!="object")return null;if(I(),o.cloudHint.has(e))return o.cloudHint.get(e);const r=U(e);if(o.cloudHintByKey.has(r)){const a=o.cloudHintByKey.get(r);return o.cloudHint.set(e,a),a}const s=ee(e);return o.cloudHint.set(e,s||null),o.cloudHintByKey.set(r,s||null),s||null}function qt(e){if(!e||typeof e!="object")return null;if(I(),o.previousRecord.has(e))return o.previousRecord.get(e);const r=U(e);if(o.previousRecordByKey.has(r)){const a=o.previousRecordByKey.get(r);return o.previousRecord.set(e,a),a}const s=typeof findPreviousRecord=="function"?findPreviousRecord(e):null;return o.previousRecord.set(e,s||null),o.previousRecordByKey.set(r,s||null),s||null}function Rt(e){if(!e||typeof e!="object")return[];if(I(),o.examHistory.has(e))return o.examHistory.get(e);const r=U(e);if(o.examHistoryByKey.has(r)){const g=o.examHistoryByKey.get(r);return o.examHistory.set(e,g),g}const s=typeof getStudentExamHistory=="function"?getStudentExamHistory(e):[],a=Array.isArray(s)?s:[];return o.examHistory.set(e,a),o.examHistoryByKey.set(r,a),a}function Jt(e,r=null){const s=Array.isArray(r)?r:[],a=s[s.length-1]||{},g=`${I()}::${U(e)}::${s.length}:${a.examFullKey||a.examId||""}`;if(o.im.has(g))return o.im.get(g);const q=window.ReportInsightRuntime.buildStudentInsightModel(e,r,{getCachedComparisonStudentView:ft,getCachedStudentExamHistory:Rt});return o.im.set(g,q),q}function Yt(e){return window.ReportInsightRuntime.renderStudentInsightOverview(e)}function Zt(e){return window.ReportInsightRuntime.renderStudentActionPlan(e)}function Xt(e){return window.ReportInsightRuntime.renderStudentSubjectBoard(e)}function Qt(e){return window.ReportInsightRuntime.renderStudentRealityNote(e)}function at(e,r){const s=`${I()}::${e}::${(r||[]).join("|")}`,a=e==="township"?o.townshipRank:o.countyRank;if(a.has(s))return a.get(s);const g=e==="township"?typeof hasStudentTownshipRankData=="function"?hasStudentTownshipRankData(RAW_DATA,r):Object.keys(SCHOOLS).length>1:typeof hasStudentCountyRankData=="function"?hasStudentCountyRankData(RAW_DATA,r):null;return a.set(s,g),g}function Lt(){let e="";try{e=localStorage.getItem("COUNTY_ANALYSIS_SCOPE_V1")||""}catch(r){e=""}if(o.scopeMapRaw!==e){o.scopeMapRaw=e;try{o.scopeMap=e?JSON.parse(e):{}}catch(r){o.scopeMap={}}}return o.scopeMap}function te(){const e=I();return o.schoolCandidatesSignature===e||(o.schoolCandidatesSignature=e,o.schoolCandidates=Array.from(new Set([...Object.keys(SCHOOLS||{}),...(RAW_DATA||[]).map(r=>r==null?void 0:r.school)].map(r=>String(r||"").trim()).filter(Boolean)))),o.schoolCandidates}function ee(e){var r,s;return typeof getCloudCompareHint=="function"?getCloudCompareHint(e):(r=window.isCloudContextMatchStudent)!=null&&r.call(window,e)||(s=window.isCloudContextLikelyCurrentTarget)!=null&&s.call(window,e)?Gt():null}function Ct(e,r,s="score"){return window.ReportInsightRuntime.getTrendBadge(e,r,s)}function $t(e,r,s={}){var _t,It,Mt,Ot,Kt,Ft,Bt,Pt,Wt;if(navigator.userAgent.toLowerCase().includes("android")&&window.innerWidth<=768&&!window.Chart)return console.warn("⚠️ Android Canvas 异常，强制切换 PC 模式"),$t(e,"PC",s);const gt=window.innerWidth<=768,ot=r==="FULL",it=r==="A4"||r==="PC"||ot,j=it,J=j?`${I()}::${U(e)}::${r||""}::${new Date().toLocaleDateString()}`:"";if(j&&o.html.has(J))return o.html.get(J);if(!it&&gt||r==="IG"){const t=Tt(e);return setTimeout(()=>{typeof renderIGCharts=="function"&&renderIGCharts(e)},50),t}const Ht=RAW_DATA.length,At=new Date().toLocaleDateString(),p=ft(e),z=St(p),M=Array.isArray(s.reportExamHistory)?s.reportExamHistory:Rt(p),kt=getEffectiveCurrentExamId(),k=Ut(M,kt),C=k?k.student||k:null,st=!!(C&&C.scores&&C.ranks),u=(z==null?void 0:z.previousRecord)||(st?null:qt(p)),m=C&&C.scores?C:u,b=t=>typeof t=="number"&&Number.isFinite(t)?t:t&&typeof t=="object"&&typeof t.score=="number"&&Number.isFinite(t.score)?t.score:"-",Dt=t=>String(t!=null?t:"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"),f=(t,n,l="")=>`<td data-label="${Dt(t)}"${l?` style="${l}"`:""}>${n}</td>`,Y=t=>{var n,l,i,y,d,w,R,h;return{class:(l=(n=t==null?void 0:t.class)!=null?n:t==null?void 0:t.rankClass)!=null?l:"-",school:(y=(i=t==null?void 0:t.school)!=null?i:t==null?void 0:t.rankSchool)!=null?y:"-",township:(w=(d=t==null?void 0:t.township)!=null?d:t==null?void 0:t.rankTown)!=null?w:"-",county:(h=(R=t==null?void 0:t.county)!=null?R:t==null?void 0:t.rankCounty)!=null?h:"-"}},Z=((_t=m==null?void 0:m.ranks)==null?void 0:_t.total)||{},X=(t,n,l="total",i="county")=>{var w,R,h,D,B,E,N,_;const y=l==="total"?((w=n==null?void 0:n.ranks)==null?void 0:w.total)||n||t||{}:((R=n==null?void 0:n.ranks)==null?void 0:R[l])||((h=n==null?void 0:n.subjectRanks)==null?void 0:h[l])||((D=t==null?void 0:t.subjectRanks)==null?void 0:D[l])||{},d=Y(y)[i];return d!=null&&d!==""?d:i==="county"&&l==="total"&&(_=(N=(E=(B=n==null?void 0:n.rankCounty)!=null?B:n==null?void 0:n.countyRank)!=null?E:t==null?void 0:t.rankCounty)!=null?N:t==null?void 0:t.countyRank)!=null?_:"-"},jt=(t,n=null)=>{const l=String((t==null?void 0:t.examFullKey)||(t==null?void 0:t.examId)||(n==null?void 0:n._sourceExam)||(n==null?void 0:n.examFullKey)||(n==null?void 0:n.examId)||"").trim();if(!l)return null;const i=Lt();return(i==null?void 0:i[l])||null},nt=(t,n="total",l=null)=>{var d,w,R,h,D,B,E,N,_;if(!t||typeof t!="object")return!1;const i=n==="total"?(h=(R=(w=(d=t==null?void 0:t.ranks)==null?void 0:d.total)==null?void 0:w.county)!=null?R:t==null?void 0:t.rankCounty)!=null?h:t==null?void 0:t.countyRank:(_=(B=(D=t==null?void 0:t.ranks)==null?void 0:D[n])==null?void 0:B.county)!=null?_:(N=(E=t==null?void 0:t.subjectRanks)==null?void 0:E[n])==null?void 0:N.county;if(i!=null&&i!==""&&i!=="-")return!0;const y=jt(l,t);return!y||y.includesCounty!==!0?!1:i!=null&&i!==""},lt=t=>{var i;const n=String((i=t==null?void 0:t.class)!=null?i:"").trim(),l=typeof normalizeClass=="function"?normalizeClass(n):n;return!l||l==="-"?!1:!/^(?:无|未分班|无班级|暂无|undefined|null|nan)$/i.test(l)},O=t=>{if(typeof isCountyDirectStudentForRank=="function")return isCountyDirectStudentForRank(t);const n=String((t==null?void 0:t.school)||"").trim();if(!n||typeof getCountyDirectSchoolNames!="function"||typeof getTownshipManagedSchoolNames!="function")return!1;if(o.countyDirect.has(t))return o.countyDirect.get(t);const l=te();if(!getTownshipManagedSchoolNames(l).length)return o.countyDirect.set(t,!1),!1;const y=getCountyDirectSchoolNames(l).some(d=>d===n||typeof areSchoolNamesEquivalent=="function"&&areSchoolNamesEquivalent(d,n)||typeof areSchoolNamesMatched=="function"&&areSchoolNamesMatched(d,n,!0));return o.countyDirect.set(t,y),y},$=(t,n=!0)=>n?t==null||t===""?"-":t:"-",v=window.ReportInsightRuntime.renderMetricComparison,Q=p&&typeof p=="object"&&p.scores&&typeof p.scores=="object"?p.scores:{},P=((It=window.getConfiguredReadOnlyDisplaySubjects)==null?void 0:It.call(window))||SUBJECTS,L=((Mt=window.RankingDataService)==null?void 0:Mt.buildStudentRankSnapshot(RAW_DATA,p,P))||null,T=(t,n)=>{var i;const l=safeGet(p,`ranks.${t}.${n}`,"-");return l!=null&&l!==""&&l!=="-"&&l!=="—"?l:(i=L==null?void 0:L.getRank(p,t,n,"-"))!=null?i:"-"},c=at("township",P),x=at("county",P),K=x===null?getStudentCountyRankValue(p,"total")!=="-":x,H=lt(p),tt=c&&!O(p),S=K,ut=$(T("total","township"),tt),mt=$((Kt=(Ot=Z.township)!=null?Ot:u==null?void 0:u.townRank)!=null?Kt:"-",tt),et=$(T("total","class"),H),W=$((Bt=(Ft=Z.class)!=null?Ft:u==null?void 0:u.classRank)!=null?Bt:"-",H),ct=T("total","school"),xt=(Wt=(Pt=Z.school)!=null?Pt:u==null?void 0:u.schoolRank)!=null?Wt:"-",ht=$(T("total","county"),S),rt=nt(m,"total",k)?X(k,m,"total","county"):"-",G=c?"":"display:none !important;",A=S?"":"display:none !important;",F=getComparisonTotalSubjects(),oe=getComparisonTotalValue(p,F),bt=typeof window.getTotalSubjectLabel=="function"?window.getTotalSubjectLabel({subjects:F,withScoreUnit:!0}):CONFIG.name==="9年级"&&F.length?"五科总分":CONFIG.label,ne=m?recalcPrevTotal(m):"-";let zt=`<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
-            ${f("科目",`🏆 ${bt}`,"font-weight:bold; color:#1e3a8a;")}
-            ${f("成绩对比",v(oe,ne,"score",2),"font-weight:800; color:#1e40af;")}
-            ${f("班排对比",v(et,W,"rank"),"font-weight:bold; color:#334155;")}
-            ${f("校排对比",v(ct,xt,"rank"),"font-weight:bold; color:#334155;")}
-            ${f("镇排对比",v(ut,mt,"rank"),`${G} font-weight:bold; color:#334155;`)}
-            ${f("县排对比",v(ht,rt,"rank"),`${A} font-weight:bold; color:#334155;`)}
-        </tr>`;P.forEach(t=>{var n;if(Q[t]!==void 0){const l=((n=window.getConfiguredDisplaySubjectLabel)==null?void 0:n.call(window,t))||t,i=m&&m.scores?b(m.scores[t]):"-",y=Ct(Q[t],i,"score");let d=Y(m&&m.ranks?m.ranks[t]:null);d.class==="-"&&d.school==="-"&&d.township==="-"&&u&&u.ranks&&u.ranks[t]&&(d=Y(u.ranks[t]));const w=$(T(t,"class"),H),R=T(t,"school"),h=$(T(t,"township"),tt),D=$(T(t,"county"),S),B=X(k,m,t,"county"),E=d.class||"-",N=d.school||"-",_=d.township||"-",wt=S&&nt(m,t,k)?B:"-";zt+=`<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
-                    ${f("科目",tmEscapeHtml(l),"font-weight:600; color:#475569;")}
-                    ${f("成绩对比",v(Q[t],i,"score"),"font-weight:bold;color:#334155;")}
-                    ${f("班排对比",v(w,E,"rank"),"color:#64748b;")}
-                    ${f("校排对比",v(R,N,"rank"),"color:#64748b;")}
-                    ${f("镇排对比",v(h,_,"rank"),`color:#64748b; ${G}`)}
-                    ${f("县排对比",v(D,wt,"rank"),`color:#64748b; ${A}`)}
-                </tr>`}});const re=typeof window.buildDisplayOnlySubjectFootnote=="function"?window.buildDisplayOnlySubjectFootnote(P,t=>Q[t]!==void 0):"",ae=`
+(() => {
+    if (typeof window === 'undefined' || window.__REPORT_RENDER_RUNTIME_PATCHED__) return;
+
+// 家长端是否披露具体排名。默认关闭（多地要求不得向家长公布学生排名）；学校确认当地
+// 政策允许后把 localStorage 的 PARENT_REPORT_SHOW_RANK 置为 '1' 恢复。
+// 仅影响家长成绩卡片，不改变排名计算、校内分析与导出口径。localStorage 不可用时取保守侧。
+function shouldShowParentRank() {
+    try { return localStorage.getItem('PARENT_REPORT_SHOW_RANK') === '1'; } catch (_) { return false; }
+}
+window.shouldShowParentReportRank = shouldShowParentRank;
+
+const CompareSessionStateRuntime = window.CompareSessionState || null;
+const ReportSessionStateRuntime = window.ReportSessionState || null;
+const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
+    ? window.readCloudStudentCompareContextState
+    : (() => {
+        if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudStudentCompareContext === 'function') {
+            return CompareSessionStateRuntime.getCloudStudentCompareContext() || null;
+        }
+        return null;
+    });
+const readCurrentReportStudentSessionState = typeof window.readCurrentReportStudentState === 'function'
+    ? window.readCurrentReportStudentState
+    : (() => {
+        if (ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getCurrentReportStudent === 'function') {
+            return ReportSessionStateRuntime.getCurrentReportStudent() || null;
+        }
+        return window.CURRENT_REPORT_STUDENT && typeof window.CURRENT_REPORT_STUDENT === 'object'
+            ? window.CURRENT_REPORT_STUDENT
+            : null;
+    });
+const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsState === 'function'
+    ? window.readDuplicateCompareExamsState
+    : (() => {
+        if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getDuplicateCompareExams === 'function') {
+            return CompareSessionStateRuntime.getDuplicateCompareExams() || [];
+        }
+        return [];
+    });
+
+const ReportRenderPerfCache = {
+    signature: '',
+    html: new Map(),
+    comparisonStudent: new WeakMap(),
+    comparisonStudentByKey: new Map(),
+    cloudHint: new WeakMap(),
+    cloudHintByKey: new Map(),
+    previousRecord: new WeakMap(),
+    previousRecordByKey: new Map(),
+    examHistory: new WeakMap(),
+    examHistoryByKey: new Map(),
+    im: new Map(),
+    scopeMapRaw: '',
+    scopeMap: {},
+    schoolCandidatesSignature: '',
+    schoolCandidates: [],
+    townshipRank: new Map(),
+    countyRank: new Map(),
+    countyDirect: new WeakMap()
+};
+
+function getReportRenderSignature() {
+    const signature = [
+        window.CURRENT_EXAM_ID || '',
+        window.__REPORT_HISTORY_VERSION || 0,
+        window.__RAW_DATA_VERSION || 0,
+        Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+        Array.isArray(window.SUBJECTS) ? window.SUBJECTS.join('|') : '',
+        Object.keys(window.SCHOOLS || {}).join('|')
+    ].join('::');
+    if (ReportRenderPerfCache.signature !== signature) {
+        ReportRenderPerfCache.signature = signature;
+        ReportRenderPerfCache.html.clear();
+        ReportRenderPerfCache.comparisonStudent = new WeakMap();
+        ReportRenderPerfCache.comparisonStudentByKey.clear();
+        ReportRenderPerfCache.cloudHint = new WeakMap();
+        ReportRenderPerfCache.cloudHintByKey.clear();
+        ReportRenderPerfCache.previousRecord = new WeakMap();
+        ReportRenderPerfCache.previousRecordByKey.clear();
+        ReportRenderPerfCache.examHistory = new WeakMap();
+        ReportRenderPerfCache.examHistoryByKey.clear();
+        ReportRenderPerfCache.townshipRank.clear();
+        ReportRenderPerfCache.countyRank.clear();
+        ReportRenderPerfCache.countyDirect = new WeakMap();
+    }
+    return signature;
+}
+
+function getReportStudentCacheKey(student) {
+    return [
+        String(student?.school || '').trim(),
+        String(student?.class || '').trim(),
+        String(student?.name || '').trim(),
+        String(student?.id || student?.examNo || '').trim()
+    ].join('::');
+}
+
+
+function getPreviousHistoryEntryForReport(reportExamHistory, currentExamId) {
+    if (!Array.isArray(reportExamHistory) || !reportExamHistory.length) return null;
+    for (let i = reportExamHistory.length - 1; i >= 0; i--) {
+        const historyEntry = reportExamHistory[i];
+        const matchKey = historyEntry?.examFullKey || historyEntry?.examId;
+        if (!currentExamId || (!isExamKeyEquivalentForCompare(matchKey, currentExamId) && !isExamKeyEquivalentForCompare(historyEntry?.examId, currentExamId))) {
+            return historyEntry || null;
+        }
+    }
+    return null;
+}
+
+function getCachedComparisonStudentView(student) {
+    if (!student || typeof student !== 'object') return student;
+    getReportRenderSignature();
+    if (ReportRenderPerfCache.comparisonStudent.has(student)) return ReportRenderPerfCache.comparisonStudent.get(student);
+    const studentKey = getReportStudentCacheKey(student);
+    if (ReportRenderPerfCache.comparisonStudentByKey.has(studentKey)) {
+        const cached = ReportRenderPerfCache.comparisonStudentByKey.get(studentKey);
+        ReportRenderPerfCache.comparisonStudent.set(student, cached);
+        return cached;
+    }
+    const view = typeof getComparisonStudentView === 'function'
+        ? getComparisonStudentView(student, RAW_DATA)
+        : student;
+    ReportRenderPerfCache.comparisonStudent.set(student, view);
+    ReportRenderPerfCache.comparisonStudentByKey.set(studentKey, view);
+    return view;
+}
+
+function getCachedCloudCompareHint(student) {
+    if (!student || typeof student !== 'object') return null;
+    getReportRenderSignature();
+    if (ReportRenderPerfCache.cloudHint.has(student)) return ReportRenderPerfCache.cloudHint.get(student);
+    const studentKey = getReportStudentCacheKey(student);
+    if (ReportRenderPerfCache.cloudHintByKey.has(studentKey)) {
+        const cached = ReportRenderPerfCache.cloudHintByKey.get(studentKey);
+        ReportRenderPerfCache.cloudHint.set(student, cached);
+        return cached;
+    }
+    const hint = resolveCloudCompareHint(student);
+    ReportRenderPerfCache.cloudHint.set(student, hint || null);
+    ReportRenderPerfCache.cloudHintByKey.set(studentKey, hint || null);
+    return hint || null;
+}
+
+function getCachedPreviousRecord(student) {
+    if (!student || typeof student !== 'object') return null;
+    getReportRenderSignature();
+    if (ReportRenderPerfCache.previousRecord.has(student)) return ReportRenderPerfCache.previousRecord.get(student);
+    const studentKey = getReportStudentCacheKey(student);
+    if (ReportRenderPerfCache.previousRecordByKey.has(studentKey)) {
+        const cached = ReportRenderPerfCache.previousRecordByKey.get(studentKey);
+        ReportRenderPerfCache.previousRecord.set(student, cached);
+        return cached;
+    }
+    const previous = typeof findPreviousRecord === 'function' ? findPreviousRecord(student) : null;
+    ReportRenderPerfCache.previousRecord.set(student, previous || null);
+    ReportRenderPerfCache.previousRecordByKey.set(studentKey, previous || null);
+    return previous || null;
+}
+
+function getCachedStudentExamHistory(student) {
+    if (!student || typeof student !== 'object') return [];
+    getReportRenderSignature();
+    if (ReportRenderPerfCache.examHistory.has(student)) return ReportRenderPerfCache.examHistory.get(student);
+    const studentKey = getReportStudentCacheKey(student);
+    if (ReportRenderPerfCache.examHistoryByKey.has(studentKey)) {
+        const cached = ReportRenderPerfCache.examHistoryByKey.get(studentKey);
+        ReportRenderPerfCache.examHistory.set(student, cached);
+        return cached;
+    }
+    const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(student) : [];
+    const list = Array.isArray(history) ? history : [];
+    ReportRenderPerfCache.examHistory.set(student, list);
+    ReportRenderPerfCache.examHistoryByKey.set(studentKey, list);
+    return list;
+}
+
+function buildStudentInsightModel(student, passedHistory = null) {
+    const h = Array.isArray(passedHistory) ? passedHistory : [];
+    const last = h[h.length - 1] || {};
+    const cacheKey = `${getReportRenderSignature()}::${getReportStudentCacheKey(student)}::${h.length}:${last.examFullKey || last.examId || ''}`;
+    if (ReportRenderPerfCache.im.has(cacheKey)) return ReportRenderPerfCache.im.get(cacheKey);
+    const model = window.ReportInsightRuntime.buildStudentInsightModel(student, passedHistory, {
+        getCachedComparisonStudentView,
+        getCachedStudentExamHistory
+    });
+    ReportRenderPerfCache.im.set(cacheKey, model);
+    return model;
+}
+
+function renderStudentInsightOverview(model) {
+    return window.ReportInsightRuntime.renderStudentInsightOverview(model);
+}
+
+function renderStudentActionPlan(model) {
+    return window.ReportInsightRuntime.renderStudentActionPlan(model);
+}
+
+function renderStudentSubjectBoard(model) {
+    return window.ReportInsightRuntime.renderStudentSubjectBoard(model);
+}
+
+function renderStudentRealityNote(model) {
+    return window.ReportInsightRuntime.renderStudentRealityNote(model);
+}
+function getCachedRankScope(kind, subjects) {
+    const key = `${getReportRenderSignature()}::${kind}::${(subjects || []).join('|')}`;
+    const cache = kind === 'township' ? ReportRenderPerfCache.townshipRank : ReportRenderPerfCache.countyRank;
+    if (cache.has(key)) return cache.get(key);
+    const value = kind === 'township'
+        ? (typeof hasStudentTownshipRankData === 'function'
+            ? hasStudentTownshipRankData(RAW_DATA, subjects)
+            : Object.keys(SCHOOLS).length > 1)
+        : (typeof hasStudentCountyRankData === 'function'
+            ? hasStudentCountyRankData(RAW_DATA, subjects)
+            : null);
+    cache.set(key, value);
+    return value;
+}
+
+function getCachedCountyScopeMap() {
+    let raw = '';
+    try { raw = localStorage.getItem('COUNTY_ANALYSIS_SCOPE_V1') || ''; } catch (_) { raw = ''; }
+    if (ReportRenderPerfCache.scopeMapRaw !== raw) {
+        ReportRenderPerfCache.scopeMapRaw = raw;
+        try { ReportRenderPerfCache.scopeMap = raw ? JSON.parse(raw) : {}; } catch (_) { ReportRenderPerfCache.scopeMap = {}; }
+    }
+    return ReportRenderPerfCache.scopeMap;
+}
+
+function getCachedSchoolCandidates() {
+    const signature = getReportRenderSignature();
+    if (ReportRenderPerfCache.schoolCandidatesSignature === signature) return ReportRenderPerfCache.schoolCandidates;
+    ReportRenderPerfCache.schoolCandidatesSignature = signature;
+    ReportRenderPerfCache.schoolCandidates = Array.from(new Set([
+        ...Object.keys(SCHOOLS || {}),
+        ...(RAW_DATA || []).map(row => row?.school)
+    ].map(name => String(name || '').trim()).filter(Boolean)));
+    return ReportRenderPerfCache.schoolCandidates;
+}
+
+function resolveCloudCompareHint(student) {
+    if (typeof getCloudCompareHint === 'function') {
+        return getCloudCompareHint(student);
+    }
+    return (window.isCloudContextMatchStudent?.(student) || window.isCloudContextLikelyCurrentTarget?.(student))
+        ? readCloudStudentCompareContextSessionState()
+        : null;
+}
+
+function getTrendBadge(current, previous, type = 'score') {
+    return window.ReportInsightRuntime.getTrendBadge(current, previous, type);
+}
+// 1. 综合渲染入口：根据设备类型自动选择模板
+function renderSingleReportCardHTML(stu, mode, options = {}) {
+    // 1. 安卓 Canvas 兼容性兜底 (部分低版本安卓 WebView 无法渲染 Chart.js)
+    // 如果是安卓且屏幕小，且没有 window.Chart 对象(极少数情况)，强制回退到 PC 版 HTML 表格
+    const ua = navigator.userAgent.toLowerCase();
+    const isAndroid = ua.includes('android');
+    const isProblemAndroid = isAndroid && window.innerWidth <= 768 && !window.Chart;
+
+    if (isProblemAndroid) {
+        console.warn('⚠️ Android Canvas 异常，强制切换 PC 模式');
+        // 递归调用自己，传入 'PC' 模式以跳过下方的 Mobile 判断
+        return renderSingleReportCardHTML(stu, 'PC', options);
+    }
+
+    // 2. 判断是否为手机端 (或显式请求 IG 模式)
+    const isMobile = window.innerWidth <= 768;
+
+    const isFullScreenReport = mode === 'FULL';
+    const forceFullLayout = mode === 'A4' || mode === 'PC' || isFullScreenReport;
+    const cacheableReportHtml = forceFullLayout;
+    const htmlCacheKey = cacheableReportHtml
+        ? `${getReportRenderSignature()}::${getReportStudentCacheKey(stu)}::${mode || ''}::${new Date().toLocaleDateString()}`
+        : '';
+    if (cacheableReportHtml && ReportRenderPerfCache.html.has(htmlCacheKey)) {
+        return ReportRenderPerfCache.html.get(htmlCacheKey);
+    }
+    if ((!forceFullLayout && isMobile) || mode === 'IG') {
+        // A. 获取 HTML 字符串
+        const html = renderInstagramCard(stu);
+
+        // B. 关键：设置延时回调，在 HTML 插入 DOM 后绘制 Canvas 图表
+        // 必须使用 setTimeout，否则此时 canvas 元素还不存在于页面上
+        setTimeout(() => {
+            if (typeof renderIGCharts === 'function') {
+                renderIGCharts(stu);
+            }
+        }, 50);
+
+        // C. 返回 HTML 字符串
+        return html;
+    }
+
+    // --- 否则：渲染原有的 PC 端 Fluent Design 风格 (A4打印版) ---
+    const totalStudentsCount = RAW_DATA.length;
+    const genDate = new Date().toLocaleDateString();
+    const reportStu = getCachedComparisonStudentView(stu);
+
+    // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
+    const cloudHint = getCachedCloudCompareHint(reportStu);
+    const reportExamHistory = Array.isArray(options.reportExamHistory)
+        ? options.reportExamHistory
+        : getCachedStudentExamHistory(reportStu);
+    const currentExamId = getEffectiveCurrentExamId();
+    const prevHistoryEntry = getPreviousHistoryEntryForReport(reportExamHistory, currentExamId);
+    const prevHistoryStu = prevHistoryEntry ? (prevHistoryEntry.student || prevHistoryEntry) : null;
+    const hasUsablePrevHistoryStudent = !!(prevHistoryStu && prevHistoryStu.scores && prevHistoryStu.ranks);
+    const prevStu = cloudHint?.previousRecord || (hasUsablePrevHistoryStudent ? null : getCachedPreviousRecord(reportStu));
+    const compareStu = (prevHistoryStu && prevHistoryStu.scores) ? prevHistoryStu : prevStu;
+    const readScoreValue = (scoreLike) => {
+        if (typeof scoreLike === 'number' && Number.isFinite(scoreLike)) return scoreLike;
+        if (scoreLike && typeof scoreLike === 'object' && typeof scoreLike.score === 'number' && Number.isFinite(scoreLike.score)) return scoreLike.score;
+        return '-';
+    };
+    const escapeTableDataLabel = (label) => String(label ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    const renderResponsiveTableCell = (label, content, style = '') => `<td data-label="${escapeTableDataLabel(label)}"${style ? ` style="${style}"` : ''}>${content}</td>`;
+    const normalizeRankInfo = (rankLike) => ({
+        class: rankLike?.class ?? rankLike?.rankClass ?? '-',
+        school: rankLike?.school ?? rankLike?.rankSchool ?? '-',
+        township: rankLike?.township ?? rankLike?.rankTown ?? '-',
+        county: rankLike?.county ?? rankLike?.rankCounty ?? '-'
+    });
+    const compareTotalRanks = compareStu?.ranks?.total || {};
+    const readHistoricalRankValue = (h, s, subject = 'total', scope = 'county') => {
+        const rankLike = subject === 'total'
+            ? (s?.ranks?.total || s || h || {})
+            : (s?.ranks?.[subject] || s?.subjectRanks?.[subject] || h?.subjectRanks?.[subject] || {});
+        const value = normalizeRankInfo(rankLike)[scope];
+        if (value !== undefined && value !== null && value !== '') return value;
+        return scope === 'county' && subject === 'total' ? (s?.rankCounty ?? s?.countyRank ?? h?.rankCounty ?? h?.countyRank ?? '-') : '-';
+    };
+    const getCountyScopeForHistoryEntry = (historyEntry, studentLike = null) => {
+        const historyKey = String(
+            historyEntry?.examFullKey
+            || historyEntry?.examId
+            || studentLike?._sourceExam
+            || studentLike?.examFullKey
+            || studentLike?.examId
+            || ''
+        ).trim();
+        if (!historyKey) return null;
+        const map = getCachedCountyScopeMap();
+        return map?.[historyKey] || null;
+    };
+    const hasHistoricalCountyRank = (studentLike, subject = 'total', historyEntry = null) => {
+        if (!studentLike || typeof studentLike !== 'object') return false;
+        const rankValue = subject === 'total'
+            ? (studentLike?.ranks?.total?.county ?? studentLike?.rankCounty ?? studentLike?.countyRank)
+            : (studentLike?.ranks?.[subject]?.county ?? studentLike?.subjectRanks?.[subject]?.county);
+        if (rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-') return true;
+        const scope = getCountyScopeForHistoryEntry(historyEntry, studentLike);
+        if (!scope || scope.includesCounty !== true) return false;
+        return rankValue !== undefined && rankValue !== null && rankValue !== '';
+    };
+    const hasClassRankScope = (studentLike) => {
+        const rawClass = String(studentLike?.class ?? '').trim();
+        const normalizedClass = typeof normalizeClass === 'function' ? normalizeClass(rawClass) : rawClass;
+        if (!normalizedClass || normalizedClass === '-') return false;
+        return !/^(?:无|未分班|无班级|暂无|undefined|null|nan)$/i.test(normalizedClass);
+    };
+    const isCountyDirectStudent = (studentLike) => {
+        if (typeof isCountyDirectStudentForRank === 'function') return isCountyDirectStudentForRank(studentLike);
+        const schoolName = String(studentLike?.school || '').trim();
+        if (!schoolName || typeof getCountyDirectSchoolNames !== 'function' || typeof getTownshipManagedSchoolNames !== 'function') return false;
+        if (ReportRenderPerfCache.countyDirect.has(studentLike)) return ReportRenderPerfCache.countyDirect.get(studentLike);
+        const candidateNames = getCachedSchoolCandidates();
+        const townshipNames = getTownshipManagedSchoolNames(candidateNames);
+        if (!townshipNames.length) {
+            ReportRenderPerfCache.countyDirect.set(studentLike, false);
+            return false;
+        }
+        const result = getCountyDirectSchoolNames(candidateNames).some(name => (
+            name === schoolName
+            || (typeof areSchoolNamesEquivalent === 'function' && areSchoolNamesEquivalent(name, schoolName))
+            || (typeof areSchoolNamesMatched === 'function' && areSchoolNamesMatched(name, schoolName, true))
+        ));
+        ReportRenderPerfCache.countyDirect.set(studentLike, result);
+        return result;
+    };
+    const displayRankValue = (value, shouldShow = true) => {
+        if (!shouldShow) return '-';
+        return value == null || value === '' ? '-' : value;
+    };
+    const renderMetricComparison = window.ReportInsightRuntime.renderMetricComparison;
+
+    const stuScores = (reportStu && typeof reportStu === 'object' && reportStu.scores && typeof reportStu.scores === 'object') ? reportStu.scores : {};
+
+    const reportSubjectsForRank=window.getConfiguredReadOnlyDisplaySubjects?.()||SUBJECTS;
+    const reportRankIndex = window.RankingDataService?.buildStudentRankSnapshot(RAW_DATA, reportStu, reportSubjectsForRank) || null;
+    const readCurrentRank = (subject, scope) => {
+        const stored = safeGet(reportStu, `ranks.${subject}.${scope}`, '-');
+        return stored != null && stored !== '' && stored !== '-' && stored !== '—'
+            ? stored
+            : (reportRankIndex?.getRank(reportStu, subject, scope, '-') ?? '-');
+    };
+    const hasTownshipRankData = getCachedRankScope('township', reportSubjectsForRank);
+    const cachedCountyRankData = getCachedRankScope('county', reportSubjectsForRank);
+    const hasCountyRankData = cachedCountyRankData === null
+        ? getStudentCountyRankValue(reportStu, 'total') !== '-'
+        : cachedCountyRankData;
+    const showClassRank = hasClassRankScope(reportStu);
+    const showTownRank = hasTownshipRankData && !isCountyDirectStudent(reportStu);
+    const showCountyRank = hasCountyRankData;
+    const curTownRank = displayRankValue(readCurrentRank('total', 'township'), showTownRank);
+    const prevTownRank = displayRankValue(compareTotalRanks.township ?? prevStu?.townRank ?? '-', showTownRank);
+    const curClassRank = displayRankValue(readCurrentRank('total', 'class'), showClassRank);
+    const prevClassRank = displayRankValue(compareTotalRanks.class ?? prevStu?.classRank ?? '-', showClassRank);
+    const curSchoolRank = readCurrentRank('total', 'school');
+    const prevSchoolRank = compareTotalRanks.school ?? prevStu?.schoolRank ?? '-';
+    const curCountyRank = displayRankValue(readCurrentRank('total', 'county'), showCountyRank);
+    const prevCountyRank = hasHistoricalCountyRank(compareStu, 'total', prevHistoryEntry)
+        ? readHistoricalRankValue(prevHistoryEntry, compareStu, 'total', 'county')
+        : '-';
+
+    const townColStyle = hasTownshipRankData ? '' : 'display:none !important;';
+    const countyColStyle = showCountyRank ? '' : 'display:none !important;';
+
+    const comparisonTotalSubjects = getComparisonTotalSubjects();
+    const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
+    const totalLabel = typeof window.getTotalSubjectLabel === 'function'
+        ? window.getTotalSubjectLabel({ subjects: comparisonTotalSubjects, withScoreUnit: true })
+        : ((CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label);
+    const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
+
+    let tableRows = `<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
+            ${renderResponsiveTableCell('科目', `🏆 ${totalLabel}`, 'font-weight:bold; color:#1e3a8a;')}
+            ${renderResponsiveTableCell('成绩对比', renderMetricComparison(currentTotal, prevTotal, 'score', 2), 'font-weight:800; color:#1e40af;')}
+            ${renderResponsiveTableCell('班排对比', renderMetricComparison(curClassRank, prevClassRank, 'rank'), 'font-weight:bold; color:#334155;')}
+            ${renderResponsiveTableCell('校排对比', renderMetricComparison(curSchoolRank, prevSchoolRank, 'rank'), 'font-weight:bold; color:#334155;')}
+            ${renderResponsiveTableCell('镇排对比', renderMetricComparison(curTownRank, prevTownRank, 'rank'), `${townColStyle} font-weight:bold; color:#334155;`)}
+            ${renderResponsiveTableCell('县排对比', renderMetricComparison(curCountyRank, prevCountyRank, 'rank'), `${countyColStyle} font-weight:bold; color:#334155;`)}
+        </tr>`;
+
+    reportSubjectsForRank.forEach(sub => {
+        if (stuScores[sub] !== undefined) {
+            const subjectLabel=window.getConfiguredDisplaySubjectLabel?.(sub)||sub;
+            const prevSubScore = compareStu && compareStu.scores ? readScoreValue(compareStu.scores[sub]) : '-';
+            const subTrend = getTrendBadge(stuScores[sub], prevSubScore, 'score');
+
+            let prevRanks = normalizeRankInfo(compareStu && compareStu.ranks ? compareStu.ranks[sub] : null);
+            if (prevRanks.class === '-' && prevRanks.school === '-' && prevRanks.township === '-' && prevStu && prevStu.ranks && prevStu.ranks[sub]) {
+                prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
+            }
+
+            const curClassR = displayRankValue(readCurrentRank(sub, 'class'), showClassRank);
+            const curSR = readCurrentRank(sub, 'school');
+            const curTR = displayRankValue(readCurrentRank(sub, 'township'), showTownRank);
+            const curCountyR = displayRankValue(readCurrentRank(sub, 'county'), showCountyRank);
+            const prevCountyR = readHistoricalRankValue(prevHistoryEntry, compareStu, sub, 'county');
+            const prevClassR = prevRanks.class || '-';
+            const prevSchoolR = prevRanks.school || '-';
+            const prevTownR = prevRanks.township || '-';
+            const historicalCountyRank = showCountyRank && hasHistoricalCountyRank(compareStu, sub, prevHistoryEntry)
+                ? prevCountyR
+                : '-';
+
+            tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
+                    ${renderResponsiveTableCell('科目', tmEscapeHtml(subjectLabel), 'font-weight:600; color:#475569;')}
+                    ${renderResponsiveTableCell('成绩对比', renderMetricComparison(stuScores[sub], prevSubScore, 'score'), 'font-weight:bold;color:#334155;')}
+                    ${renderResponsiveTableCell('班排对比', renderMetricComparison(curClassR, prevClassR, 'rank'), 'color:#64748b;')}
+                    ${renderResponsiveTableCell('校排对比', renderMetricComparison(curSR, prevSchoolR, 'rank'), 'color:#64748b;')}
+                    ${renderResponsiveTableCell('镇排对比', renderMetricComparison(curTR, prevTownR, 'rank'), `color:#64748b; ${townColStyle}`)}
+                    ${renderResponsiveTableCell('县排对比', renderMetricComparison(curCountyR, historicalCountyRank, 'rank'), `color:#64748b; ${countyColStyle}`)}
+                </tr>`;
+        }
+    });
+
+    // 政治等展示类科目的可见脚注（打印给家长时 tooltip 不存在）。构造在 app.js，
+    // 因为本文件贴着体积预算，且文案口径归那边统一。
+    const displayOnlyFootnote = typeof window.buildDisplayOnlySubjectFootnote === 'function'
+        ? window.buildDisplayOnlySubjectFootnote(reportSubjectsForRank, (sub) => stuScores[sub] !== undefined)
+        : '';
+
+    const fluentStyle = `
             <style>
                 .fluent-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.05); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
                 .fluent-header { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
@@ -193,97 +658,201 @@
                 @media print { .fluent-card { box-shadow: none; border: 1px solid #ccc; backdrop-filter: none; }
                     .report-display-note { break-inside:avoid; } }
             </style>
-        `,ie=typeof buildChartNarrative=="function"?buildChartNarrative(p):"",dt=Jt(p,M),se=Yt(dt),le=Zt(dt),ce=Xt(dt),de=Qt(dt),pe=z?`
+        `;
+
+    const chartNarrativeHtml = typeof buildChartNarrative === 'function' ? buildChartNarrative(reportStu) : '';
+    const insightModel = buildStudentInsightModel(reportStu, reportExamHistory);
+    const insightOverviewHtml = renderStudentInsightOverview(insightModel);
+    const actionPlanHtml = renderStudentActionPlan(insightModel);
+    const subjectBoardHtml = renderStudentSubjectBoard(insightModel);
+    const realityNoteHtml = renderStudentRealityNote(insightModel);
+    const cloudCompareHintHtml = cloudHint ? `
         <div class="fluent-card" style="padding:10px 14px; margin-bottom:12px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3;">
             <div style="display:flex; align-items:center; gap:8px; font-size:12px; flex-wrap:wrap;">
                 <span style="font-weight:700;">状态：☁️ 云端对比已启用</span>
-                <span>当前对比：${z.prevExamId||"上次"} → ${z.latestExamId||"本次"}</span>
-                <span style="color:#6366f1;">来源：${z.title||"云端记录"}</span>
+                <span>当前对比：${cloudHint.prevExamId || '上次'} → ${cloudHint.latestExamId || '本次'}</span>
+                <span style="color:#6366f1;">来源：${cloudHint.title || '云端记录'}</span>
             </div>
-        </div>`:"",fe=Vt().length>0?`
+        </div>` : '';
+
+    const duplicateCompareGroups = readDuplicateCompareExamsState();
+    const duplicateCompareHintHtml = duplicateCompareGroups.length > 0 ? `
         <div class="fluent-card" style="padding:10px 14px; margin-bottom:12px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">
             <div style="font-size:12px; line-height:1.7;">
                 检测到重复考试快照，系统已自动去重，避免把同一份数据误判为持平。
                 如需恢复真实趋势，请重新封存对应考试期数。
             </div>
-        </div>`:"",ge=`
-        ${ae}
-        <div class="${ot?"student-report-shell student-report-shell-full":"student-report-shell"}">
+        </div>` : '';
+
+    const shellClass = isFullScreenReport ? 'student-report-shell student-report-shell-full' : 'student-report-shell';
+    const baseHtml = `
+        ${fluentStyle}
+        <div class="${shellClass}">
         <div class="report-header" style="border-bottom:none; margin-bottom:10px; text-align:center;">
-            <h3 style="font-family:'Microsoft YaHei', sans-serif; font-weight:800; color:#1e293b; letter-spacing:1px; margin:0;">${tmEscapeHtml(e.school)} 学生学业发展报告</h3>
-            <p style="color:#94a3b8; font-size:12px; margin-top:5px;">生成日期: ${At}</p>
+            <h3 style="font-family:'Microsoft YaHei', sans-serif; font-weight:800; color:#1e293b; letter-spacing:1px; margin:0;">${tmEscapeHtml(stu.school)} 学生学业发展报告</h3>
+            <p style="color:#94a3b8; font-size:12px; margin-top:5px;">生成日期: ${genDate}</p>
         </div>
-        ${pe}
-        ${fe}
+        ${cloudCompareHintHtml}
+        ${duplicateCompareHintHtml}
         <div class="fluent-card report-student-strip" style="padding:15px 25px; background:linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div style="display:flex; align-items:baseline; gap:15px;">
-                    <span style="font-size:24px; font-weight:800; color:#1e3a8a;">${tmEscapeHtml(e.name)}</span>
-                    <span style="font-size:14px; color:#475569; background:#fff; padding:2px 8px; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">${tmEscapeHtml(e.class)}</span>
+                    <span style="font-size:24px; font-weight:800; color:#1e3a8a;">${tmEscapeHtml(stu.name)}</span>
+                    <span style="font-size:14px; color:#475569; background:#fff; padding:2px 8px; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">${tmEscapeHtml(stu.class)}</span>
                 </div>
-                <div style="font-size:13px; color:#64748b; font-family:monospace;">考号: ${e.id}</div>
+                <div style="font-size:13px; color:#64748b; font-family:monospace;">考号: ${stu.id}</div>
             </div>
         </div>
         <div class="student-report-main-grid">
         <div class="fluent-card student-report-hero-card" style="padding:18px 20px;">
             <div class="fluent-header"><i class="ti ti-badge-4k" style="color:#2563eb;"></i><span class="fluent-title">成绩快照与真实定位</span></div>
-            ${se}
-            ${le}
-            ${ce}
-            ${de}
+            ${insightOverviewHtml}
+            ${actionPlanHtml}
+            ${subjectBoardHtml}
+            ${realityNoteHtml}
         </div>
         <div class="fluent-card student-report-table-card" style="padding:0; overflow:hidden;">
             <table class="fluent-table" id="tb-query">
-                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩对比</th><th>班排对比</th><th>校排对比</th><th style="${G}">镇排对比</th><th style="${A}">县排对比</th></tr></thead>
-                <tbody>${zt}</tbody>
+                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩对比</th><th>班排对比</th><th>校排对比</th><th style="${townColStyle}">镇排对比</th><th style="${countyColStyle}">县排对比</th></tr></thead>
+                <tbody>${tableRows}</tbody>
             </table>
-            ${re}
+            ${displayOnlyFootnote}
         </div>
-        </div>`,yt=M;let Et="";if(yt.length>1){let t="",n=`<th style="text-align:left; padding-left:20px;">考试名称</th><th>${bt}</th><th>校排</th>`;c&&(n+="<th>镇排</th>"),S&&(n+="<th>县排</th>");for(let l=yt.length-1;l>=0;l--){const i=yt[l],y=i.examFullKey||i.examId,d=getEffectiveCurrentExamId(),w=!!d&&(isExamKeyEquivalentForCompare(y,d)||isExamKeyEquivalentForCompare(i.examId,d)),R=w?"background:rgba(239,246,255,0.7); font-weight:bold;":"",h=i.student||i,D=getComparisonTotalValue(h,F),E=Number.isFinite(D)?D.toFixed(1):"-",N=safeGet(h,"ranks.total.school",i.rankSchool||"-"),_=safeGet(h,"ranks.total.township",i.rankTown||"-"),wt=X(i,h,"total","county");t+=`<tr style="${R}">
-                ${f("考试名称",`${w?"⭐ ":""}${i.examLabel||i.examId||i.examFullKey||"-"}`,"text-align:left; padding-left:20px; color:#475569;")}
-                ${f(bt,E,"color:#2563eb;")}
-                ${f("校级排名",N,"color:#64748b;")}
-                ${c?f("全镇排名",_,"color:#64748b;"):""}
-                ${S?f("全县排名",wt,"color:#64748b;"):""}
-            </tr>`}Et=`
+        </div>`;
+
+    // 🟢 [Bug #5 修复] 补充渲染多期考试趋势表格 (如果是多期数据可用)
+    const examHistory = reportExamHistory;
+    let historyHtml = '';
+    if (examHistory.length > 1) {
+        let historyRows = '';
+        let thHtml = `<th style="text-align:left; padding-left:20px;">考试名称</th><th>${totalLabel}</th><th>校排</th>`;
+        if (hasTownshipRankData) thHtml += `<th>镇排</th>`;
+        if (showCountyRank) thHtml += `<th>县排</th>`;
+
+        for (let i = examHistory.length - 1; i >= 0; i--) {
+            const h = examHistory[i];
+            const matchKey = h.examFullKey || h.examId;
+            const currentExamId = getEffectiveCurrentExamId();
+            const isCurrent = !!currentExamId && (isExamKeyEquivalentForCompare(matchKey, currentExamId) || isExamKeyEquivalentForCompare(h.examId, currentExamId));
+            const bgStyle = isCurrent ? 'background:rgba(239,246,255,0.7); font-weight:bold;' : '';
+
+            // 安全读取学生对象和成绩（兼容旧结构和不同来源）
+            const stuObj = h.student || h;
+            const normalizedDisplayTotal = getComparisonTotalValue(stuObj, comparisonTotalSubjects);
+            const displayTotal = Number.isFinite(normalizedDisplayTotal) ? normalizedDisplayTotal.toFixed(1) : '-';
+            const tScore = displayTotal;
+            const sRank = safeGet(stuObj, 'ranks.total.school', h.rankSchool || '-');
+            const tRank = safeGet(stuObj, 'ranks.total.township', h.rankTown || '-');
+            const cRank = readHistoricalRankValue(h, stuObj, 'total', 'county');
+
+            historyRows += `<tr style="${bgStyle}">
+                ${renderResponsiveTableCell('考试名称', `${isCurrent ? '⭐ ' : ''}${h.examLabel || h.examId || h.examFullKey || '-'}`, 'text-align:left; padding-left:20px; color:#475569;')}
+                ${renderResponsiveTableCell(totalLabel, tScore, 'color:#2563eb;')}
+                ${renderResponsiveTableCell('校级排名', sRank, 'color:#64748b;')}
+                ${hasTownshipRankData ? renderResponsiveTableCell('全镇排名', tRank, 'color:#64748b;') : ''}
+                ${showCountyRank ? renderResponsiveTableCell('全县排名', cRank, 'color:#64748b;') : ''}
+            </tr>`;
+        }
+
+        historyHtml = `
         <div class="fluent-card" style="padding:0; overflow:hidden; margin-top:20px;">
             <div class="fluent-header" style="padding: 15px 20px 5px; border-bottom: none;"><i class="ti ti-chart-line" style="color:#f97316;"></i><span class="fluent-title">历次考试趋势记录</span></div>
             <table class="fluent-table">
-                <thead><tr>${n}</tr></thead>
-                <tbody>${t}</tbody>
+                <thead><tr>${thHtml}</tr></thead>
+                <tbody>${historyRows}</tbody>
             </table>
-        </div>`}const Nt=`
-        ${ge}
-        ${Et}
+        </div>`;
+    }
+
+    const finalHtml = `
+        ${baseHtml}
+        ${historyHtml}
         <div class="student-report-chart-grid" style="display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap; margin-top:20px;">
             <div class="fluent-card" style="flex:1; min-width:300px; margin-bottom:0; display:flex; flex-direction:column;">
-                <div class="fluent-header"><i class="ti ti-radar" style="color:#2563eb;"></i><span class="fluent-title">${CONFIG.name==="9年级"?"五科综合素质评价":"综合素质评价"} (百分位)</span></div>
+                <div class="fluent-header"><i class="ti ti-radar" style="color:#2563eb;"></i><span class="fluent-title">${CONFIG.name === '9年级' ? '五科综合素质评价' : '综合素质评价'} (百分位)</span></div>
                 <div style="flex:1; position:relative; min-height:220px;"><canvas id="radarChart"></canvas></div>
             </div>            
             <div class="fluent-card" style="flex:1; min-width:300px; margin-bottom:0; display:flex; flex-direction:column;">
-                <div class="fluent-header"><i class="ti ti-scale" style="color:#059669;"></i><span class="fluent-title">${CONFIG.name==="9年级"?"五科学科均衡度诊断":"学科均衡度诊断"}</span></div>
+                <div class="fluent-header"><i class="ti ti-scale" style="color:#059669;"></i><span class="fluent-title">${CONFIG.name === '9年级' ? '五科学科均衡度诊断' : '学科均衡度诊断'}</span></div>
                 <div style="flex:1; position:relative; min-height:220px;"><canvas id="varianceChart"></canvas></div>
             </div> 
         </div>
-        ${ie}
+        ${chartNarrativeHtml}
         <div style="text-align:center; font-size:11px; color:#cbd5e1; margin-top:20px;">系统自动生成 · 仅供家校沟通参考</div>
-        </div>`;return j&&o.html.set(J,Nt),Nt}function Tt(e){var L,T;const r=new Date().toLocaleDateString(),s=RAW_DATA.length,a=ft(e),g=getComparisonTotalSubjects(),q=getComparisonTotalValue(a,g),gt=at("township",g),ot=at("county",g),it=ot===null?getStudentCountyRankValue(a,"total")!=="-":ot,j=gt&&!isCountyDirectStudent(a),J=j?safeGet(a,"ranks.total.township","-"):safeGet(a,"ranks.total.school","-"),Ht=(a==null?void 0:a.school)&&((T=(L=SCHOOLS==null?void 0:SCHOOLS[a.school])==null?void 0:L.students)==null?void 0:T.length)||s||1,p=typeof J=="number"?((1-J/(j?s||1:Ht))*100).toFixed(0):"-",z=e.name.charAt(0),M=St(a),k=Object.keys(SCHOOLS).length<=1?"全校":j?"全镇":"本校";let C="";p>=90?C="🌟 卓越之星":p>=75?C="🔥 进步飞速":C="📚 持续努力";let st="";g.forEach(c=>{if(a.scores[c]!==void 0){const x=a.scores[c],K=safeGet(a,`ranks.${c}.school`,"-"),H=j?safeGet(a,`ranks.${c}.township`,"-"):"-",tt=getStudentCountyRankValue(a,c),S=[`级#${K}`];j&&S.push(`镇#${H}`),it&&S.push(`县#${tt}`),st+=`
+        </div>`;
+
+    if (cacheableReportHtml) {
+        ReportRenderPerfCache.html.set(htmlCacheKey, finalHtml);
+    }
+    return finalHtml;
+}
+
+// 2. 🟢 新增：生成 Instagram 风格卡片的函数 (Mobile Only)
+function renderInstagramCard(stu) {
+    const genDate = new Date().toLocaleDateString();
+    const totalStudents = RAW_DATA.length;
+    const reportStu = getCachedComparisonStudentView(stu);
+    const comparisonTotalSubjects = getComparisonTotalSubjects();
+    const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
+    const hasTownshipRankData = getCachedRankScope('township', comparisonTotalSubjects);
+    const cachedCountyRankData = getCachedRankScope('county', comparisonTotalSubjects);
+    const hasCountyRankData = cachedCountyRankData === null
+        ? getStudentCountyRankValue(reportStu, 'total') !== '-'
+        : cachedCountyRankData;
+    const showTownRank = hasTownshipRankData && !isCountyDirectStudent(reportStu);
+    const rank = showTownRank ? safeGet(reportStu, 'ranks.total.township', '-') : safeGet(reportStu, 'ranks.total.school', '-');
+    const schoolTotalStudents = (reportStu?.school && SCHOOLS?.[reportStu.school]?.students?.length) || totalStudents || 1;
+    const scopeTotalStudents = showTownRank ? (totalStudents || 1) : schoolTotalStudents;
+    const pct = (typeof rank === 'number') ? ((1 - rank / scopeTotalStudents) * 100).toFixed(0) : '-';
+    const avatarLetter = stu.name.charAt(0); // 头像取首字
+    const cloudHint = getCachedCloudCompareHint(reportStu);
+
+    // 判断是否为单校模式
+    const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
+    const scopeText = isSingleSchool ? "全校" : (showTownRank ? "全镇" : "本校");
+
+    let statusTag = '';
+    if (pct >= 90) statusTag = '🌟 卓越之星';
+    else if (pct >= 75) statusTag = '🔥 进步飞速';
+    else statusTag = '📚 持续努力';
+
+    // 3. 构建单科评论行
+    let commentsHtml = '';
+    comparisonTotalSubjects.forEach(sub => {
+        if (reportStu.scores[sub] !== undefined) {
+            const score = reportStu.scores[sub];
+
+            // 修改点 1：获取校内排名 (即年级排名/级排) 而不是班级排名 (.class)
+            const subRank = safeGet(reportStu, `ranks.${sub}.school`, '-');
+            const townRank = showTownRank ? safeGet(reportStu, `ranks.${sub}.township`, '-') : '-';
+            const countyRank = getStudentCountyRankValue(reportStu, sub);
+            const rankParts = [`级#${subRank}`];
+            if (showTownRank) rankParts.push(`镇#${townRank}`);
+            if (hasCountyRankData) rankParts.push(`县#${countyRank}`);
+
+            commentsHtml += `
                     <div class="insta-comment-row">
                         <div>
-                            <span class="insta-comm-user">${c}</span>
+                            <span class="insta-comm-user">${sub}</span>
                             <span class="insta-comm-text">成绩单</span>
                         </div>
                         <div>
-                            <span class="insta-comm-score">${x}</span>
-                            <span class="insta-comm-rank">${S.join(" | ")}</span>
+                            <span class="insta-comm-score">${score}</span>
+                            <span class="insta-comm-rank">${rankParts.join(' | ')}</span>
                         </div>
                     </div>
-                `}});const u=`
+                `;
+        }
+    });
+
+    // 新增：雷达图和均衡度图表的 Canvas 容器
+    // 注意：这里只是占位，具体的图表将在 renderIGCharts 函数中绘制
+    const chartsHtml = `
             <div style="margin-top: 20px; padding: 0 14px;">
                 <!-- 雷达图容器 -->
                 <div style="background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
                     <div style="font-size: 13px; font-weight: bold; color: #475569; margin-bottom: 10px; border-left: 4px solid #2563eb; padding-left: 8px;">
-                        📊 ${CONFIG.name==="9年级"?"五科能力雷达图":"学科能力雷达图"}
+                        📊 ${CONFIG.name === '9年级' ? '五科能力雷达图' : '学科能力雷达图'}
                     </div>
                     <div style="height: 250px; position: relative;">
                         <canvas id="igRadarChart"></canvas>
@@ -293,7 +862,7 @@
                 <!-- 均衡度容器 -->
                 <div style="background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0;">
                     <div style="font-size: 13px; font-weight: bold; color: #475569; margin-bottom: 10px; border-left: 4px solid #059669; padding-left: 8px;">
-                        ⚖️ ${CONFIG.name==="9年级"?"五科学科均衡度诊断":"学科均衡度诊断"}
+                        ⚖️ ${CONFIG.name === '9年级' ? '五科学科均衡度诊断' : '学科均衡度诊断'}
                     </div>
                     <div style="height: 200px; position: relative;">
                         <canvas id="igVarianceChart"></canvas>
@@ -303,83 +872,207 @@
                     </div>
                 </div>
             </div>
-        `,b=(()=>{let c=[],x=[],K=[],H=[];getComparisonTotalSubjects().forEach(et=>{if(e.scores[et]!==void 0){const W=RAW_DATA.map(A=>A.scores[et]).filter(A=>typeof A=="number");if(W.length<2)return;const ct=W.reduce((A,F)=>A+F,0)/W.length,xt=W.reduce((A,F)=>A+Math.pow(F-ct,2),0)/W.length,ht=Math.sqrt(xt)||1,rt=(e.scores[et]-ct)/ht;H.push(rt);const G=`${et}`;rt>=.8?c.push(G):rt<=-.8?x.push(G):K.push(G)}});const S=H.length?Math.max(...H):0,ut=H.length?Math.min(...H):0,mt=S-ut;return{strong:c,weak:x,mid:K,range:mt}})(),f=(c=>c>=2.5?{tag:"⚠️ 严重偏科",color:"#b91c1c",bg:"#fee2e2",text:"不同学科成绩差异极大，存在明显优势科目与薄弱科目，需要针对性调整学习重心，补齐短板。"}:c>=1.2?{tag:"⚖️ 相对均衡",color:"#0369a1",bg:"#e0f2fe",text:"各学科成绩整体较为均衡，个别学科略有波动，保持稳定发挥是关键。"}:{tag:"🌟 结构优秀",color:"#15803d",bg:"#dcfce7",text:"各学科发展极其均衡，无明显短板，心理素质稳定，是冲刺更高目标的理想状态。"})(b.range),Y=`
+        `;
+
+    // 1. 定义一个内部函数，用于按相对位置对科目进行分层 (强/中/弱)
+    // 目的：为后续的“一句话诊断”、“优势清单”、“家长建议”提供数据支撑
+    const getSubjectLevels = () => {
+        let strong = [], weak = [], mid = [], zScores = [];
+        const linkedSubjects = getComparisonTotalSubjects();
+
+        linkedSubjects.forEach(sub => {
+            if (stu.scores[sub] !== undefined) {
+                // A. 获取该科同届样本数据 (用于判断相对强弱)
+                const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
+                if (allScores.length < 2) return;
+
+                // B. 计算均值与标准差 (Standard Deviation)
+                const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+                const variance = allScores.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / allScores.length;
+                const sd = Math.sqrt(variance) || 1; // 防止除以0
+
+                // C. 计算相对位置差异 (仅用于强弱分层，不在界面展示)
+                const z = (stu.scores[sub] - avg) / sd;
+                zScores.push(z);
+
+                // D. 分类 (阈值 0.8，约等于前20%和后20%)
+                const item = `${sub}`; // 仅存科目名
+                if (z >= 0.8) strong.push(item);      // 强科
+                else if (z <= -0.8) weak.push(item);  // 弱科
+                else mid.push(item);                  // 中等
+            }
+        });
+
+        // 计算极差 (Range)，用于判断整体结构是“均衡”还是“偏科”
+        const maxZ = zScores.length ? Math.max(...zScores) : 0;
+        const minZ = zScores.length ? Math.min(...zScores) : 0;
+        const range = maxZ - minZ;
+
+        return { strong, weak, mid, range };
+    };
+
+    // 2. 执行计算，获取分层结果
+    const levels = getSubjectLevels();
+
+    // 3. 生成【模块④】一句话诊断文案
+    const getDiagnosisText = (range) => {
+        if (range >= 2.5) {
+            // 极差大：严重偏科
+            return {
+                tag: '⚠️ 严重偏科',
+                color: '#b91c1c', bg: '#fee2e2',
+                text: '不同学科成绩差异极大，存在明显优势科目与薄弱科目，需要针对性调整学习重心，补齐短板。'
+            };
+        } else if (range >= 1.2) {
+            // 极差中：相对均衡
+            return {
+                tag: '⚖️ 相对均衡',
+                color: '#0369a1', bg: '#e0f2fe',
+                text: '各学科成绩整体较为均衡，个别学科略有波动，保持稳定发挥是关键。'
+            };
+        } else {
+            // 极差小：结构优秀
+            return {
+                tag: '🌟 结构优秀',
+                color: '#15803d', bg: '#dcfce7',
+                text: '各学科发展极其均衡，无明显短板，心理素质稳定，是冲刺更高目标的理想状态。'
+            };
+        }
+    };
+
+    const diag = getDiagnosisText(levels.range);
+
+    // --- 生成【模块④】HTML：一句话诊断 ---
+    const igDiagnosisHtml = `
             <div style="margin: 15px 14px 0 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-weight:bold; color:#334155; font-size:14px;">🧠 学情结构诊断</span>
-                    <span style="font-size:12px; background:${f.bg}; color:${f.color}; padding:2px 8px; border-radius:12px; font-weight:bold;">
-                        ${f.tag}
+                    <span style="font-size:12px; background:${diag.bg}; color:${diag.color}; padding:2px 8px; border-radius:12px; font-weight:bold;">
+                        ${diag.tag}
                     </span>
                 </div>
                 <div style="font-size:13px; color:#64748b; line-height:1.5;">
-                    ${f.text}
+                    ${diag.text}
                 </div>
             </div>
-        `,Z=(c,x)=>!c||c.length===0?`<div style="font-size:12px; color:#ccc; padding:5px;">${x}</div>`:c.map(K=>`<span style="display:inline-block; background:#f1f5f9; color:#334155; font-size:12px; padding:4px 10px; border-radius:4px; margin:0 5px 5px 0;">${K}</span>`).join(""),X=`
+        `;
+
+    // --- 生成【模块⑤】HTML：优势/短板折叠清单 ---
+    // 辅助函数：生成列表项
+    const renderListItems = (arr, emptyText) => {
+        if (!arr || arr.length === 0) return `<div style="font-size:12px; color:#ccc; padding:5px;">${emptyText}</div>`;
+        return arr.map(sub =>
+            `<span style="display:inline-block; background:#f1f5f9; color:#334155; font-size:12px; padding:4px 10px; border-radius:4px; margin:0 5px 5px 0;">${sub}</span>`
+        ).join('');
+    };
+
+    const igSubjectListHtml = `
             <div style="margin: 15px 14px 0 14px;">
                 <!-- 优势科目 -->
                 <details open style="margin-bottom:10px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                     <summary style="padding:10px 15px; font-size:13px; font-weight:bold; color:#333; cursor:pointer; background:#f8fafc; list-style:none; display:flex; align-items:center;">
                         <span style="margin-right:8px;">☀️</span> 优势学科
-                        <span style="margin-left:auto; font-size:10px; color:#999;">${b.strong.length}科</span>
+                        <span style="margin-left:auto; font-size:10px; color:#999;">${levels.strong.length}科</span>
                     </summary>
                     <div style="padding:15px;">
-                        ${Z(b.strong,"暂无明显优势学科，继续加油")}
+                        ${renderListItems(levels.strong, '暂无明显优势学科，继续加油')}
                     </div>
                 </details>
 
                 <!-- 薄弱科目 -->
-                <details ${b.weak.length>0?"open":""} style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                <details ${levels.weak.length > 0 ? 'open' : ''} style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                     <summary style="padding:10px 15px; font-size:13px; font-weight:bold; color:#333; cursor:pointer; background:#fff1f2; list-style:none; display:flex; align-items:center;">
                         <span style="margin-right:8px;">🌧️</span> 需关注学科
-                        <span style="margin-left:auto; font-size:10px; color:#dc2626;">${b.weak.length}科</span>
+                        <span style="margin-left:auto; font-size:10px; color:#dc2626;">${levels.weak.length}科</span>
                     </summary>
                     <div style="padding:15px;">
-                        ${Z(b.weak,"暂无明显短板，保持均衡")}
+                        ${renderListItems(levels.weak, '暂无明显短板，保持均衡')}
                     </div>
                 </details>
             </div>
-        `,nt=`
+        `;
+
+    // --- 生成【模块⑥】HTML：家长执行建议 ---
+    const getParentAdvice = () => {
+        const adv = [];
+        // 策略1：有弱科
+        if (levels.weak.length > 0) {
+            const subStr = levels.weak.join('、');
+            adv.push(`🎯 <strong>精准攻坚：</strong>针对 ${subStr}，建议每天安排 15 分钟回归课本基础概念，不盲目刷题。`);
+        }
+        // 策略2：有强科
+        if (levels.strong.length > 0) {
+            const subStr = levels.strong.join('、');
+            adv.push(`🛡️ <strong>保持自信：</strong>${subStr} 是孩子的信心来源，请多给予具体表扬，稳住优势。`);
+        }
+        // 策略3：全是中间 (均衡)
+        if (levels.strong.length === 0 && levels.weak.length === 0) {
+            adv.push(`🚀 <strong>寻找突破：</strong>目前成绩非常稳定。建议选定一门孩子最感兴趣的学科，尝试增加 5% 的投入，培养成优势学科。`);
+        }
+        // 通用建议
+        adv.push(`📅 <strong>习惯养成：</strong>检查孩子是否养成了“先复习，后作业”的习惯。`);
+
+        return adv.map(t => `<li style="margin-bottom:8px; line-height:1.5;">${t}</li>`).join('');
+    };
+
+    const igAdviceHtml = `
             <div style="margin: 15px 14px 20px 14px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 15px;">
                 <div style="font-size:13px; font-weight:bold; color:#b45309; margin-bottom:10px; display:flex; align-items:center;">
                     <i class="ti ti-bulb" style="margin-right:5px; font-size:16px;"></i> 家长行动指南
                 </div>
                 <ul style="padding-left:15px; margin:0; font-size:12px; color:#78350f;">
-                    ${(()=>{const c=[];if(b.weak.length>0){const x=b.weak.join("、");c.push(`🎯 <strong>精准攻坚：</strong>针对 ${x}，建议每天安排 15 分钟回归课本基础概念，不盲目刷题。`)}if(b.strong.length>0){const x=b.strong.join("、");c.push(`🛡️ <strong>保持自信：</strong>${x} 是孩子的信心来源，请多给予具体表扬，稳住优势。`)}return b.strong.length===0&&b.weak.length===0&&c.push("🚀 <strong>寻找突破：</strong>目前成绩非常稳定。建议选定一门孩子最感兴趣的学科，尝试增加 5% 的投入，培养成优势学科。"),c.push("📅 <strong>习惯养成：</strong>检查孩子是否养成了“先复习，后作业”的习惯。"),c.map(x=>`<li style="margin-bottom:8px; line-height:1.5;">${x}</li>`).join("")})()}
+                    ${getParentAdvice()}
                 </ul>
             </div>
-        `,lt="margin-top:10px; font-size:18px; font-weight:bold; background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:20px;",O=Number(p),$=Number.isFinite(O)?O>=90?"年级前 10%":O>=80?"年级前 20%":O>=70?"年级前 30%":O>=50?"年级前 50%":O>=30?"年级中游":"仍有提升空间":"",v=vt()?`<div style="${lt}">${k}排名: ${safeGet(a,"ranks.total.school","-")}</div>
-                    <div style="margin-top:20px; font-size:12px; opacity:0.8;">击败了${k} ${p}% 的考生</div>`:$?`<div style="${lt}">${$}</div>`:"",Q=`
+        `;
+
+    // 默认以区间替代具体名次与"击败了 x%"，见 shouldShowParentRank 说明。
+    const bandStyle = 'margin-top:10px; font-size:18px; font-weight:bold; background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:20px;';
+    const pctNum = Number(pct);
+    const parentRankBand = !Number.isFinite(pctNum) ? ''
+        : (pctNum >= 90 ? '年级前 10%' : pctNum >= 80 ? '年级前 20%' : pctNum >= 70 ? '年级前 30%'
+            : pctNum >= 50 ? '年级前 50%' : pctNum >= 30 ? '年级中游' : '仍有提升空间');
+    const rankBadgeHtml = shouldShowParentRank()
+        ? `<div style="${bandStyle}">${scopeText}排名: ${safeGet(reportStu, 'ranks.total.school', '-')}</div>
+                    <div style="margin-top:20px; font-size:12px; opacity:0.8;">击败了${scopeText} ${pct}% 的考生</div>`
+        : (parentRankBand ? `<div style="${bandStyle}">${parentRankBand}</div>` : '');
+
+    // 模拟图表区域 (使用CSS渐变背景代替 Canvas，确保渲染稳定)
+    const visualAreaHtml = `
             <div class="insta-visual-area">
                 <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; background:linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); border-radius:8px; color:white; padding:40px 0;">
                     <div style="font-size:16px; opacity:0.9; text-transform:uppercase; letter-spacing:2px;">Total Score</div>
-                    <div style="font-size:64px; font-weight:800; text-shadow:0 4px 10px rgba(0,0,0,0.2);">${Number.isFinite(q)?q.toFixed(1):"-"}</div>
-                    ${v}
+                    <div style="font-size:64px; font-weight:800; text-shadow:0 4px 10px rgba(0,0,0,0.2);">${Number.isFinite(currentTotal) ? currentTotal.toFixed(1) : '-'}</div>
+                    ${rankBadgeHtml}
                 </div>
             </div>
-        `,P=M?`
+        `;
+
+    const igCloudCompareHintHtml = cloudHint ? `
             <div style="margin:12px 14px 0 14px; background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:10px 12px;">
                 <div style="font-size:12px; color:#3730a3; line-height:1.5;">
                     <strong>状态：☁️ 云端对比已启用</strong><br>
-                    当前对比：${M.prevExamId||"上次"} → ${M.latestExamId||"本次"}
+                    当前对比：${cloudHint.prevExamId || '上次'} → ${cloudHint.latestExamId || '本次'}
                 </div>
-                <div style="font-size:11px; color:#6366f1; margin-top:4px;">来源：${M.title||"云端记录"}</div>
+                <div style="font-size:11px; color:#6366f1; margin-top:4px;">来源：${cloudHint.title || '云端记录'}</div>
             </div>
-        `:"";return`
+        ` : '';
+
+    return `
             <div class="insta-view-container" style="background:#fafafa; padding-top:20px;">
                 <div class="insta-card">
                     <!-- Header -->
                     <div class="insta-header">
-                        <div class="insta-avatar-ring"><div class="insta-avatar">${z}</div></div>
+                        <div class="insta-avatar-ring"><div class="insta-avatar">${avatarLetter}</div></div>
                         <div class="insta-user-info">
-                            <div class="insta-username">${tmEscapeHtml(e.name)} <i class="ti ti-discount-check insta-verified"></i></div>
-                            <div class="insta-location">${tmEscapeHtml(e.school)} · ${tmEscapeHtml(e.class)}</div>
+                            <div class="insta-username">${tmEscapeHtml(stu.name)} <i class="ti ti-discount-check insta-verified"></i></div>
+                            <div class="insta-location">${tmEscapeHtml(stu.school)} · ${tmEscapeHtml(stu.class)}</div>
                         </div>
                         <i class="ti ti-dots"></i>
                     </div>
                     
                     <!-- 1. 核心总分大卡片 (Visual Area - 旧模块) -->
-                    ${Q}
+                    ${visualAreaHtml}
                     ${igInsightHtml}
                     
                     <!-- Actions (点赞栏 - 旧模块) -->
@@ -393,36 +1086,36 @@
                     </div>
                     
                     <!-- Likes -->
-                    <div class="insta-likes">${(Math.random()*100+50).toFixed(0)} likes</div>
+                    <div class="insta-likes">${(Math.random() * 100 + 50).toFixed(0)} likes</div>
                     
                     <!-- Caption (文案 - 旧模块) -->
                     <div class="insta-caption">
                         <span class="insta-caption-name">${CONFIG.name}教务处</span>
-                        本次考试成绩已出炉！${C}，请查收您的学习报告。
-                        <span class="insta-tags">#期末考试 #${tmEscapeHtml(e.school)} #学习报告</span>
+                        本次考试成绩已出炉！${statusTag}，请查收您的学习报告。
+                        <span class="insta-tags">#期末考试 #${tmEscapeHtml(stu.school)} #学习报告</span>
                     </div>
 
                     <!-- 2. 🟢 新增：模块④ 学情结构一句话诊断 -->
-                    ${typeof Y!="undefined"?Y:""}
+                    ${typeof igDiagnosisHtml !== 'undefined' ? igDiagnosisHtml : ''}
 
                     <!-- 3. 🟢 新增：模块⑤ 优势/短板学科折叠清单 -->
-                    ${typeof X!="undefined"?X:""}
+                    ${typeof igSubjectListHtml !== 'undefined' ? igSubjectListHtml : ''}
 
                     <!-- 4. 🟢 新增：图表容器 (雷达图/均衡度 - 之前定义的 chartsHtml) -->
-                    ${P}
-                    ${u}
+                    ${igCloudCompareHintHtml}
+                    ${chartsHtml}
 
                     <!-- 5. 单科成绩列表 (旧模块) -->
                     <div class="insta-comments" style="margin-top:15px;">
                         <div style="color:#8e8e8e; margin-bottom:5px; font-size:12px; font-weight:bold;">📄 单科成绩详情</div>
-                        ${st}
+                        ${commentsHtml}
                     </div>
 
                     <!-- 6. 🟢 新增：模块⑥ 家长执行建议 -->
-                    ${typeof nt!="undefined"?nt:""}
+                    ${typeof igAdviceHtml !== 'undefined' ? igAdviceHtml : ''}
 
                     <!-- Timestamp -->
-                    <div class="insta-timestamp">${r}</div>
+                    <div class="insta-timestamp">${genDate}</div>
                 </div>
                 
                 <div style="text-align:center; padding:20px; color:#999; font-size:12px;">
@@ -430,4 +1123,16 @@
                     <button class="btn btn-sm btn-gray" onclick="Auth.logout()">退出登录</button>
                 </div>
             </div>
-        `}Object.assign(window,{getTrendBadge:Ct,renderSingleReportCardHTML:$t,renderInstagramCard:Tt}),window.__REPORT_RENDER_RUNTIME_PATCHED__=!0})();
+        `;
+}
+
+// 3. 🟢 新增：专门用于渲染 IG 风格卡片内 Canvas 的函数 (手机端图表核心逻辑)
+
+    Object.assign(window, {
+        getTrendBadge,
+        renderSingleReportCardHTML,
+        renderInstagramCard
+    });
+
+    window.__REPORT_RENDER_RUNTIME_PATCHED__ = true;
+})();

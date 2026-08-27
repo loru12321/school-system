@@ -1,1 +1,117 @@
-(function(l,r){const a=r(l||{});if(typeof module=="object"&&module.exports){const p=function(k){return r(k||l||{})};p.runtime=a,module.exports=p}!l||l.WorkerApiRuntime||(l.WorkerApiRuntime=a)})(typeof globalThis!="undefined"?globalThis:this,function(r){function a(){return typeof r.Blob=="function"?r.Blob:typeof Blob=="function"?Blob:null}function p(){return typeof r.Worker=="function"?r.Worker:typeof Worker=="function"?Worker:null}function k(){return r.URL&&typeof r.URL.createObjectURL=="function"?r.URL:null}function w(t){const i=t&&t.SCHOOLS&&typeof t.SCHOOLS=="object"?t.SCHOOLS:{},f={};return Object.keys(i).forEach(u=>{const s=i[u]||{},e={};Object.keys(s).forEach(o=>{o!=="students"&&(e[o]=s[o])}),f[u]=e}),f}function S(){return r&&r.AnalyticsKernel&&typeof r.AnalyticsKernel=="object"?r.AnalyticsKernel:null}function y(t,i,f){if(!t)throw new Error("WorkerAPI manager unavailable");if(t.worker)return t.worker;const u=p();if(!u)throw new Error("Worker runtime unavailable");const s=String(f||"").trim();if(s)return t.worker=new u(s),t.worker;const e=a(),o=k();if(!e||!o)throw new Error("Worker runtime unavailable");const c=String(i||""),b=new e([c],{type:"application/javascript"});return t.worker=new u(o.createObjectURL(b)),t.worker}function L(t,i,f,u){const s=y(t,f,u),e=S(),o=e&&typeof e.buildProcessSignature=="function"?e.buildProcessSignature(i||{}):"";if(o&&typeof e.getProcessResult=="function"){const c=e.getProcessResult(o);if(c&&c.status==="ok")return Promise.resolve(c)}return new Promise((c,b)=>{s.onmessage=n=>{n&&n.data&&n.data.status==="ok"?(o&&typeof(e==null?void 0:e.setProcessResult)=="function"&&e.setProcessResult(o,n.data),c(n.data)):b(n&&n.data?n.data.msg:"worker-error")},s.onerror=n=>b(n&&n.message?n.message:"worker-error");const O=w(i||{}),m=Object.assign({},i||{},{SCHOOLS:void 0,SCHOOLS_LITE:O});s.postMessage({cmd:"PROCESS_ALL",data:m})})}return{init:y,run:L,buildSchoolsLite:w}});
+(function (root, factory) {
+    const runtime = factory(root || {});
+
+    if (typeof module === 'object' && module.exports) {
+        const createRuntime = function (overrideRoot) {
+            return factory(overrideRoot || root || {});
+        };
+        createRuntime.runtime = runtime;
+        module.exports = createRuntime;
+    }
+
+    if (!root || root.WorkerApiRuntime) return;
+    root.WorkerApiRuntime = runtime;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createWorkerApiRuntime(root) {
+    function getBlobCtor() {
+        if (typeof root.Blob === 'function') return root.Blob;
+        if (typeof Blob === 'function') return Blob;
+        return null;
+    }
+
+    function getWorkerCtor() {
+        if (typeof root.Worker === 'function') return root.Worker;
+        if (typeof Worker === 'function') return Worker;
+        return null;
+    }
+
+    function getUrlApi() {
+        return root.URL && typeof root.URL.createObjectURL === 'function' ? root.URL : null;
+    }
+
+    function buildSchoolsLite(data) {
+        const schools = data && data.SCHOOLS && typeof data.SCHOOLS === 'object' ? data.SCHOOLS : {};
+        const schoolsLite = {};
+        Object.keys(schools).forEach((key) => {
+            const item = schools[key] || {};
+            const next = {};
+            Object.keys(item).forEach((field) => {
+                if (field === 'students') return;
+                next[field] = item[field];
+            });
+            schoolsLite[key] = next;
+        });
+        return schoolsLite;
+    }
+
+    function getAnalyticsKernel() {
+        return root && root.AnalyticsKernel && typeof root.AnalyticsKernel === 'object'
+            ? root.AnalyticsKernel
+            : null;
+    }
+
+    function init(manager, workerSource, workerScriptUrl) {
+        if (!manager) throw new Error('WorkerAPI manager unavailable');
+        if (manager.worker) return manager.worker;
+
+        const WorkerCtor = getWorkerCtor();
+        if (!WorkerCtor) {
+            throw new Error('Worker runtime unavailable');
+        }
+
+        const scriptUrl = String(workerScriptUrl || '').trim();
+        if (scriptUrl) {
+            manager.worker = new WorkerCtor(scriptUrl);
+            return manager.worker;
+        }
+
+        const BlobCtor = getBlobCtor();
+        const urlApi = getUrlApi();
+        if (!BlobCtor || !urlApi) {
+            throw new Error('Worker runtime unavailable');
+        }
+
+        const source = String(workerSource || '');
+        const blob = new BlobCtor([source], { type: 'application/javascript' });
+        manager.worker = new WorkerCtor(urlApi.createObjectURL(blob));
+        return manager.worker;
+    }
+
+    function run(manager, data, workerSource, workerScriptUrl) {
+        const worker = init(manager, workerSource, workerScriptUrl);
+        const kernel = getAnalyticsKernel();
+        const signature = kernel && typeof kernel.buildProcessSignature === 'function'
+            ? kernel.buildProcessSignature(data || {})
+            : '';
+        if (signature && typeof kernel.getProcessResult === 'function') {
+            const cached = kernel.getProcessResult(signature);
+            if (cached && cached.status === 'ok') return Promise.resolve(cached);
+        }
+        return new Promise((resolve, reject) => {
+            worker.onmessage = (event) => {
+                if (event && event.data && event.data.status === 'ok') {
+                    if (signature && typeof kernel?.setProcessResult === 'function') {
+                        kernel.setProcessResult(signature, event.data);
+                    }
+                    resolve(event.data);
+                } else reject(event && event.data ? event.data.msg : 'worker-error');
+            };
+            worker.onerror = (event) => reject(event && event.message ? event.message : 'worker-error');
+
+            const schoolsLite = buildSchoolsLite(data || {});
+            const payload = Object.assign({}, data || {}, {
+                SCHOOLS: undefined,
+                SCHOOLS_LITE: schoolsLite
+            });
+            worker.postMessage({
+                cmd: 'PROCESS_ALL',
+                data: payload
+            });
+        });
+    }
+
+    return {
+        init,
+        run,
+        buildSchoolsLite
+    };
+});

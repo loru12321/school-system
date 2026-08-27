@@ -1,42 +1,696 @@
-(()=>{if(typeof window=="undefined"||window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__)return;const M=typeof window.readTownSubmoduleCompareEntryState=="function"?window.readTownSubmoduleCompareEntryState:(e=>{const t=window.TOWN_SUBMODULE_COMPARE_CACHE&&typeof window.TOWN_SUBMODULE_COMPARE_CACHE=="object"?window.TOWN_SUBMODULE_COMPARE_CACHE:{};return e&&Object.prototype.hasOwnProperty.call(t,e)?t[e]:null}),O=typeof window.setTownSubmoduleCompareEntryState=="function"?window.setTownSubmoduleCompareEntryState:((e,t)=>{const o=window.TOWN_SUBMODULE_COMPARE_CACHE&&typeof window.TOWN_SUBMODULE_COMPARE_CACHE=="object"?{...window.TOWN_SUBMODULE_COMPARE_CACHE}:{};return e?(t&&typeof t=="object"&&!Array.isArray(t)?o[e]=t:delete o[e],window.TOWN_SUBMODULE_COMPARE_CACHE=o,Object.prototype.hasOwnProperty.call(o,e)?o[e]:null):null});async function B(e={}){if(window.CloudDataService&&typeof window.CloudDataService.selectSystemData=="function")return window.CloudDataService.selectSystemData(e);if(window.CloudApi&&typeof window.CloudApi.selectSystemData=="function")return window.CloudApi.selectSystemData(e);if(!window.sbClient)return{data:[],error:new Error("CLOUD_CLIENT_MISSING")};let t=window.sbClient.from("system_data").select(e.select||"*");return e.keyEq&&(t=t.eq("key",e.keyEq)),e.keyLike&&(t=t.like("key",e.keyLike)),e.order&&(t=t.order(e.order,{ascending:e.ascending!==!1})),e.limit&&(t=t.limit(e.limit)),e.maybeSingle&&typeof t.maybeSingle=="function"&&(t=t.maybeSingle()),t}function $(){return!!(window.CloudApi||window.cloudClient||window.sbClient)}function R(){var o;const e=typeof window.getCurrentUser=="function"?window.getCurrentUser():((o=window.Auth)==null?void 0:o.currentUser)||null,t=String((e==null?void 0:e.role)||"").trim();return t==="admin"||t==="director"||t==="grade_director"}async function F(e){return window.CloudDataService&&typeof window.CloudDataService.upsertSystemDataRecord=="function"?window.CloudDataService.upsertSystemDataRecord(e):window.CloudApi&&typeof window.CloudApi.upsertSystemData=="function"?window.CloudApi.upsertSystemData(e):typeof window.upsertSystemDataRecord=="function"?window.upsertSystemDataRecord(e):!window.sbClient||typeof window.sbClient.from!="function"?{data:null,error:new Error("CLOUD_CLIENT_MISSING")}:window.sbClient.from("system_data").upsert(e,{onConflict:"key"})}const x={summary:"综合评价总榜",analysis:"两率一分(横向)","high-score":"高分段/尖子生",indicator:"指标生达标核算",bottom3:"低分率/后1/3核算"};let N=null;const h={signature:"",examRows:new Map,schoolRows:new Map,schoolSummary:new Map,renderedHtml:new Map};function A(){let e="";try{const o=typeof CohortDB!="undefined"&&typeof CohortDB.ensure=="function"?CohortDB.ensure():null;e=Object.entries((o==null?void 0:o.exams)||{}).map(([a,r])=>`${a}:${Array.isArray(r==null?void 0:r.data)?r.data.length:0}:${(r==null?void 0:r.createdAt)||0}:${(r==null?void 0:r.fingerprint)||""}`).sort().join("|")}catch(o){e="cohort-db-unavailable"}const t=[window.CURRENT_EXAM_ID||"",window.CURRENT_COHORT_ID||"",window.__RAW_DATA_VERSION||0,Array.isArray(window.RAW_DATA)?window.RAW_DATA.length:0,Array.isArray(window.SUBJECTS)?window.SUBJECTS.join("|"):"",Object.keys(window.SCHOOLS||{}).sort().join("|"),e].join("::");return h.signature!==t&&(h.signature=t,h.examRows.clear(),h.schoolRows.clear(),h.schoolSummary.clear(),h.renderedHtml.clear()),t}function D(e){const o=`${A()}::rows::${e||""}`;if(h.examRows.has(o))return h.examRows.get(o);const a=getExamRowsForCompare(e);return h.examRows.set(o,a),a}function I(e,t,o){const r=`${A()}::school-rows::${e||""}::${T(o)}`;if(h.schoolRows.has(r))return h.schoolRows.get(r);const s=filterRowsBySchool(t,o);return h.schoolRows.set(r,s),s}function L(e,t){const a=`${A()}::summary::${e||""}`;if(h.schoolSummary.has(a))return h.schoolSummary.get(a);const r=buildSchoolSummaryForExam(t);return h.schoolSummary.set(a,r),r}function W(e=""){if(N!==null)return;N=(typeof window.requestAnimationFrame=="function"?window.requestAnimationFrame:o=>window.setTimeout(o,0))(()=>{N=null,typeof window.applyComparisonPanelCollapses=="function"&&window.applyComparisonPanelCollapses(document.getElementById(e)||document)})}function q(e){if(!e)return null;let t=e.firstElementChild,o=0;for(;t&&o<8;){if(t.classList&&t.classList.contains("sec-head"))return t;t=t.nextElementSibling,o+=1}return null}function T(e){return String(e||"").trim()}function z(){return T(window.MY_SCHOOL||(typeof MY_SCHOOL!="undefined"?MY_SCHOOL:"")||(window.localStorage&&typeof window.localStorage.getItem=="function"?window.localStorage.getItem("MY_SCHOOL"):""))}function J(e,t){const o=T(e),a=T(t);return!o||!a?!1:window.PermissionPolicy&&typeof window.PermissionPolicy.sameSchoolName=="function"?window.PermissionPolicy.sameSchoolName(o,a):typeof window.areSchoolNamesEquivalent=="function"?window.areSchoolNamesEquivalent(o,a):typeof areSchoolNamesEquivalent=="function"?areSchoolNamesEquivalent(o,a):o===a}function H(e,t=z()){const o=T(t),a=(e||[]).map(T).filter(Boolean);if(!a.length)return"";if(o){if(a.includes(o))return o;const r=a.find(s=>J(s,o));if(r)return r}return a[0]}function X(e=""){const t=String(e||"").trim();return t&&Object.prototype.hasOwnProperty.call(x,t)?[[t,x[t]]]:Object.entries(x)}function V(e=""){if(!R()){document.querySelectorAll(".town-submodule-compare-panel").forEach(a=>a.remove());return}let t=!1;X(e).forEach(([o,a])=>{const r=document.getElementById(o);if(!r||document.getElementById(`town-submodule-compare-result-${o}`))return;const s=document.createElement("div");s.className="town-submodule-compare-panel",s.setAttribute("data-submodule",o),s.style.cssText="margin:10px 0 14px 0; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;",s.innerHTML=`
+(() => {
+    if (typeof window === 'undefined' || window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__) return;
+
+    const readTownSubmoduleCompareEntryState = typeof window.readTownSubmoduleCompareEntryState === 'function'
+        ? window.readTownSubmoduleCompareEntryState
+        : ((submoduleId) => {
+            const cache = window.TOWN_SUBMODULE_COMPARE_CACHE && typeof window.TOWN_SUBMODULE_COMPARE_CACHE === 'object'
+                ? window.TOWN_SUBMODULE_COMPARE_CACHE
+                : {};
+            return submoduleId && Object.prototype.hasOwnProperty.call(cache, submoduleId)
+                ? cache[submoduleId]
+                : null;
+        });
+    const setTownSubmoduleCompareEntryState = typeof window.setTownSubmoduleCompareEntryState === 'function'
+        ? window.setTownSubmoduleCompareEntryState
+        : ((submoduleId, entry) => {
+            const cache = window.TOWN_SUBMODULE_COMPARE_CACHE && typeof window.TOWN_SUBMODULE_COMPARE_CACHE === 'object'
+                ? { ...window.TOWN_SUBMODULE_COMPARE_CACHE }
+                : {};
+            if (!submoduleId) return null;
+            if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+                cache[submoduleId] = entry;
+            } else {
+                delete cache[submoduleId];
+            }
+            window.TOWN_SUBMODULE_COMPARE_CACHE = cache;
+            return Object.prototype.hasOwnProperty.call(cache, submoduleId) ? cache[submoduleId] : null;
+        });
+
+async function selectCloudTownSubmoduleCompareRows(options = {}) {
+    if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
+        return window.CloudDataService.selectSystemData(options);
+    }
+    if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
+        return window.CloudApi.selectSystemData(options);
+    }
+    if (!window.sbClient) return { data: [], error: new Error('CLOUD_CLIENT_MISSING') };
+    let query = window.sbClient.from('system_data').select(options.select || '*');
+    if (options.keyEq) query = query.eq('key', options.keyEq);
+    if (options.keyLike) query = query.like('key', options.keyLike);
+    if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
+    if (options.limit) query = query.limit(options.limit);
+    if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
+    return query;
+}
+
+function hasCloudCompareAccess() {
+    return !!(
+        window.CloudApi
+        || window.cloudClient
+        || window.sbClient
+    );
+}
+
+function canShowTownSubmoduleMultiPeriodCompare() {
+    const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : (window.Auth?.currentUser || null);
+    const role = String(user?.role || '').trim();
+    return role === 'admin' || role === 'director' || role === 'grade_director';
+}
+
+async function upsertCloudTownSubmoduleCompareRow(row) {
+    if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
+        return window.CloudDataService.upsertSystemDataRecord(row);
+    }
+    if (window.CloudApi && typeof window.CloudApi.upsertSystemData === 'function') {
+        return window.CloudApi.upsertSystemData(row);
+    }
+    if (typeof window.upsertSystemDataRecord === 'function') {
+        return window.upsertSystemDataRecord(row);
+    }
+    if (!window.sbClient || typeof window.sbClient.from !== 'function') {
+        return { data: null, error: new Error('CLOUD_CLIENT_MISSING') };
+    }
+    return window.sbClient.from('system_data').upsert(row, { onConflict: 'key' });
+}
+
+    const TOWN_SUBMODULE_META = {
+    summary: '综合评价总榜',
+    analysis: '两率一分(横向)',
+    'high-score': '高分段/尖子生',
+    indicator: '指标生达标核算',
+    bottom3: '低分率/后1/3核算'
+};
+let townSubmoduleCollapseBindTimer = null;
+const TownSubmoduleComparePerfCache = {
+    signature: '',
+    examRows: new Map(),
+    schoolRows: new Map(),
+    schoolSummary: new Map(),
+    renderedHtml: new Map()
+};
+
+function getTownSubmoduleCompareDataSignature() {
+    let dbSignature = '';
+    try {
+        const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+        dbSignature = Object.entries(db?.exams || {})
+            .map(([key, exam]) => `${key}:${Array.isArray(exam?.data) ? exam.data.length : 0}:${exam?.createdAt || 0}:${exam?.fingerprint || ''}`)
+            .sort()
+            .join('|');
+    } catch (_) {
+        dbSignature = 'cohort-db-unavailable';
+    }
+    const signature = [
+        window.CURRENT_EXAM_ID || '',
+        window.CURRENT_COHORT_ID || '',
+        window.__RAW_DATA_VERSION || 0,
+        Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+        Array.isArray(window.SUBJECTS) ? window.SUBJECTS.join('|') : '',
+        Object.keys(window.SCHOOLS || {}).sort().join('|'),
+        dbSignature
+    ].join('::');
+    if (TownSubmoduleComparePerfCache.signature !== signature) {
+        TownSubmoduleComparePerfCache.signature = signature;
+        TownSubmoduleComparePerfCache.examRows.clear();
+        TownSubmoduleComparePerfCache.schoolRows.clear();
+        TownSubmoduleComparePerfCache.schoolSummary.clear();
+        TownSubmoduleComparePerfCache.renderedHtml.clear();
+    }
+    return signature;
+}
+
+function getCachedTownSubmoduleExamRows(examId) {
+    const signature = getTownSubmoduleCompareDataSignature();
+    const cacheKey = `${signature}::rows::${examId || ''}`;
+    if (TownSubmoduleComparePerfCache.examRows.has(cacheKey)) return TownSubmoduleComparePerfCache.examRows.get(cacheKey);
+    const rows = getExamRowsForCompare(examId);
+    TownSubmoduleComparePerfCache.examRows.set(cacheKey, rows);
+    return rows;
+}
+
+function getCachedTownSubmoduleSchoolRows(examId, rows, school) {
+    const signature = getTownSubmoduleCompareDataSignature();
+    const cacheKey = `${signature}::school-rows::${examId || ''}::${townNormalizeSchoolName(school)}`;
+    if (TownSubmoduleComparePerfCache.schoolRows.has(cacheKey)) return TownSubmoduleComparePerfCache.schoolRows.get(cacheKey);
+    const schoolRows = filterRowsBySchool(rows, school);
+    TownSubmoduleComparePerfCache.schoolRows.set(cacheKey, schoolRows);
+    return schoolRows;
+}
+
+function getCachedTownSubmoduleSchoolSummary(examId, rows) {
+    const signature = getTownSubmoduleCompareDataSignature();
+    const cacheKey = `${signature}::summary::${examId || ''}`;
+    if (TownSubmoduleComparePerfCache.schoolSummary.has(cacheKey)) return TownSubmoduleComparePerfCache.schoolSummary.get(cacheKey);
+    const summary = buildSchoolSummaryForExam(rows);
+    TownSubmoduleComparePerfCache.schoolSummary.set(cacheKey, summary);
+    return summary;
+}
+
+function scheduleTownSubmoduleCompareCollapseBinding(submoduleId = '') {
+    if (townSubmoduleCollapseBindTimer !== null) return;
+    const schedule = typeof window.requestAnimationFrame === 'function'
+        ? window.requestAnimationFrame
+        : (callback) => window.setTimeout(callback, 0);
+    townSubmoduleCollapseBindTimer = schedule(() => {
+        townSubmoduleCollapseBindTimer = null;
+        if (typeof window.applyComparisonPanelCollapses === 'function') {
+            window.applyComparisonPanelCollapses(document.getElementById(submoduleId) || document);
+        }
+    });
+}
+
+function getTownSubmoduleSecHead(section) {
+    if (!section) return null;
+    let child = section.firstElementChild;
+    let inspected = 0;
+    while (child && inspected < 8) {
+        if (child.classList && child.classList.contains('sec-head')) return child;
+        child = child.nextElementSibling;
+        inspected += 1;
+    }
+    return null;
+}
+
+function townNormalizeSchoolName(value) {
+    return String(value || '').trim();
+}
+
+function townGetCurrentSchoolName() {
+    return townNormalizeSchoolName(
+        window.MY_SCHOOL
+        || (typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '')
+        || (window.localStorage && typeof window.localStorage.getItem === 'function' ? window.localStorage.getItem('MY_SCHOOL') : '')
+    );
+}
+
+function townSameSchoolName(left, right) {
+    const leftName = townNormalizeSchoolName(left);
+    const rightName = townNormalizeSchoolName(right);
+    if (!leftName || !rightName) return false;
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+        return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+    }
+    if (typeof window.areSchoolNamesEquivalent === 'function') {
+        return window.areSchoolNamesEquivalent(leftName, rightName);
+    }
+    if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(leftName, rightName);
+    return leftName === rightName;
+}
+
+function resolveTownSubmoduleDefaultSchool(schoolList, preferredSchool = townGetCurrentSchoolName()) {
+    const preferred = townNormalizeSchoolName(preferredSchool);
+    const list = (schoolList || []).map(townNormalizeSchoolName).filter(Boolean);
+    if (!list.length) return '';
+    if (preferred) {
+        if (list.includes(preferred)) return preferred;
+        const matched = list.find((school) => townSameSchoolName(school, preferred));
+        if (matched) return matched;
+    }
+    return list[0];
+}
+
+function getTownSubmoduleCompareEntries(submoduleId = '') {
+    const target = String(submoduleId || '').trim();
+    if (target && Object.prototype.hasOwnProperty.call(TOWN_SUBMODULE_META, target)) {
+        return [[target, TOWN_SUBMODULE_META[target]]];
+    }
+    return Object.entries(TOWN_SUBMODULE_META);
+}
+
+function ensureTownSubmoduleCompareUIs(submoduleId = '') {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) {
+        const panels = document.querySelectorAll('.town-submodule-compare-panel');
+        panels.forEach((panel) => panel.remove());
+        return;
+    }
+    let didChange = false;
+    getTownSubmoduleCompareEntries(submoduleId).forEach(([entryId, title]) => {
+        const section = document.getElementById(entryId);
+        if (!section) return;
+        if (document.getElementById(`town-submodule-compare-result-${entryId}`)) return;
+
+        const panel = document.createElement('div');
+        panel.className = 'town-submodule-compare-panel';
+        panel.setAttribute('data-submodule', entryId);
+        panel.style.cssText = 'margin:10px 0 14px 0; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;';
+        panel.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <div style="font-weight:600; color:#334155;">🧭 ${a} 多期对比（2期/3期）</div>
+                    <div style="font-weight:600; color:#334155;">🧭 ${title} 多期对比（2期/3期）</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn btn-sm btn-blue" onclick="openTownSubmoduleCompareDialog('${o}')">生成多期对比</button>
-                        <button class="btn btn-sm btn-green" onclick="exportTownSubmoduleCompare('${o}')">导出多期对比</button>
-                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;" onclick="saveTownSubmoduleCompareToCloud('${o}')">☁️ 保存云端对比</button>
-                        <button class="btn btn-sm" style="background:#06b6d4; color:white;" onclick="viewCloudTownSubmoduleCompares('${o}')">📋 查看云端对比</button>
+                        <button class="btn btn-sm btn-blue" onclick="openTownSubmoduleCompareDialog('${entryId}')">生成多期对比</button>
+                        <button class="btn btn-sm btn-green" onclick="exportTownSubmoduleCompare('${entryId}')">导出多期对比</button>
+                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;" onclick="saveTownSubmoduleCompareToCloud('${entryId}')">☁️ 保存云端对比</button>
+                        <button class="btn btn-sm" style="background:#06b6d4; color:white;" onclick="viewCloudTownSubmoduleCompares('${entryId}')">📋 查看云端对比</button>
                     </div>
                 </div>
-                <div id="town-submodule-compare-hint-${o}" style="margin-top:6px; font-size:12px; color:#64748b;">请选择学校与考试期次后生成。</div>
-                <div id="town-submodule-compare-result-${o}" style="margin-top:10px;"></div>
-            `;const u=q(r);u&&u.parentNode?u.parentNode.insertBefore(s,u.nextSibling):r.insertBefore(s,r.firstChild),t=!0}),t&&W(e)}function k(e,t,o,a){const r=n=>{const i=(n||[]).map(b=>Number(b.total)).filter(b=>Number.isFinite(b)).sort((b,v)=>v-b);if(!i.length)return{avg:0,lowRate:0,lowCount:0,totalN:0};const c=i.length,l=Math.ceil(c/3),d=Math.ceil(l*((CONFIG==null?void 0:CONFIG.excRate)||0)),f=i.slice(-l),m=f.slice(0,Math.max(0,f.length-d)),y=m.length?m.reduce((b,v)=>b+v,0)/m.length:0,S=(SUBJECTS&&SUBJECTS.length?SUBJECTS.length:1)*72*.6,C=i.filter(b=>b<S).length,U=C/c;return{avg:y,lowRate:U,lowCount:C,totalN:c}};function s(n){return String(n!=null?n:"").replace(/[&<>"']/g,i=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[i])}function u(n){const i=document.createElement("template");return i.innerHTML=String(n||""),i.content.querySelectorAll("script,iframe,object,embed,base,meta,link,form").forEach(c=>c.remove()),i.content.querySelectorAll("*").forEach(c=>{Array.from(c.attributes||[]).forEach(l=>{const d=String(l.name||"").toLowerCase(),f=String(l.value||"");if(d.startsWith("on")||["src","srcset","href","xlink:href","action","formaction"].includes(d)){c.removeAttribute(l.name);return}d==="style"&&/(?:url\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding)/i.test(f)&&c.removeAttribute(l.name)})}),i.innerHTML}function w(n,i){const c=Array.isArray(i==null?void 0:i.headers)?i.headers:[],l=Array.isArray(i==null?void 0:i.rows)?i.rows:[];if(c.length){const d=s((i==null?void 0:i.title)||"多期对比"),f=s((i==null?void 0:i.school)||""),m=c.map(S=>`<th>${s(S)}</th>`).join(""),y=l.map(S=>`<tr>${(Array.isArray(S)?S:[]).map(C=>`<td>${s(C)}</td>`).join("")}</tr>`).join(""),E=`<tr><td colspan="${c.length}" style="text-align:center;color:#94a3b8;">暂无数据</td></tr>`;n.innerHTML=`<div class="sub-header">📊 ${d}${f?`（${f}）`:""}</div><div class="table-wrap"><table class="mobile-card-table"><thead><tr>${m}</tr></thead><tbody>${y||E}</tbody></table></div><div style="margin-top:6px; font-size:12px; color:#64748b;">${s((i==null?void 0:i.note)||"")}</div>`;return}n.innerHTML=u(i==null?void 0:i.html)||'<div style="color:#94a3b8;">云端记录缺少可安全呈现的结构化内容</div>'}const p=n=>{const i=(n||[]).map(m=>Number(m.total)).filter(m=>Number.isFinite(m)),c=i.length;if(!c)return{highCount:0,highRate:0,threshold:0};const d=(SUBJECTS&&SUBJECTS.length?SUBJECTS.length:1)*90,f=i.filter(m=>m>=d).length;return{highCount:f,highRate:f/c,threshold:d}},_=n=>{var m,y,E,S;const i=(n||[]).map(C=>Number(C.total)).filter(C=>Number.isFinite(C)),c=i.length;if(!c)return{indicatorCount:0,indicatorRate:0,label:"未设置"};const l=Number((y=(m=window.SYS_VARS)==null?void 0:m.indicator)==null?void 0:y.ind1),d=Number((S=(E=window.SYS_VARS)==null?void 0:E.indicator)==null?void 0:S.ind2);if(Number.isFinite(l)&&Number.isFinite(d)){const C=Math.min(l,d),U=Math.max(l,d),b=i.filter(v=>v>=C&&v<=U).length;return{indicatorCount:b,indicatorRate:b/c,label:`${C}-${U}`}}const f=p(n);return{indicatorCount:f.highCount,indicatorRate:f.highRate,label:"未设置(回退高分段)"}},g=t.map((n,i)=>{var E;const c=getSummaryEntryBySchool((E=o[i])==null?void 0:E.summary,a),l=calcSchoolMetricsFromRows(n.rows),d=r(n.rows),f=p(n.rows),m=_(n.rows),y=l.passRate<.6?"红色预警":l.passRate<.75||l.excRate<.15?"黄色关注":"绿色稳定";return{examId:n.examId,count:l.count,avg:l.avg,excRate:l.excRate,passRate:l.passRate,rankAvg:(c==null?void 0:c.rankAvg)||"-",riskLevel:y,highCount:f.highCount,highRate:f.highRate,highThreshold:f.threshold,indicatorCount:m.indicatorCount,indicatorRate:m.indicatorRate,indicatorLabel:m.label,bottom3Avg:d.avg,lowRate:d.lowRate,lowCount:d.lowCount}});return e==="summary"||e==="analysis"?{headers:["期次","人数","总分均分","优秀率","及格率","校际均分排位"],rows:g.map(n=>[n.examId,n.count,n.avg.toFixed(2),`${(n.excRate*100).toFixed(1)}%`,`${(n.passRate*100).toFixed(1)}%`,n.rankAvg]),note:"口径：综合评价总榜 / 两率一分"}:e==="high-score"?{headers:["期次","高分段阈值","高分段人数","高分段占比"],rows:g.map(n=>[n.examId,n.highThreshold,n.highCount,`${(n.highRate*100).toFixed(1)}%`]),note:"口径：高分段/尖子生"}:e==="indicator"?{headers:["期次","指标区间","指标生人数","指标生占比"],rows:g.map(n=>[n.examId,n.indicatorLabel,n.indicatorCount,`${(n.indicatorRate*100).toFixed(1)}%`]),note:"口径：指标生达标核算"}:{headers:["期次","后1/3均分","低分人数","低分率"],rows:g.map(n=>[n.examId,n.bottom3Avg.toFixed(2),n.lowCount,`${(n.lowRate*100).toFixed(1)}%`]),note:"口径：低分率/后1/3核算"}}async function G(e){if(!R())return;const t=listAvailableSchoolsForCompare(),o=listAvailableExamsForCompare();if(t.length===0)return window.UI.alert("暂无可选学校");if(o.length<2)return window.UI.alert("考试数量不足，至少2期");const a=x[e]||e,r=t.map(d=>`<option value="${d}">${d}</option>`).join(""),s=o.map(d=>`<option value="${d.id}">${d.label}</option>`).join(""),u=getDefaultCompareExamIds(o,o.length>=3?3:2,CURRENT_EXAM_ID),w=H(t),p=u[0]||"",_=u[1]||u[0]||"",g=u[2]||u[u.length-1]||"";if(typeof Swal=="undefined")return window.UI.alert("当前环境不支持弹窗，请升级页面依赖后重试");const n=await Swal.fire({title:`🧭 ${a} 多期对比`,html:`
+                <div id="town-submodule-compare-hint-${entryId}" style="margin-top:6px; font-size:12px; color:#64748b;">请选择学校与考试期次后生成。</div>
+                <div id="town-submodule-compare-result-${entryId}" style="margin-top:10px;"></div>
+            `;
+
+        const secHead = getTownSubmoduleSecHead(section);
+        if (secHead && secHead.parentNode) secHead.parentNode.insertBefore(panel, secHead.nextSibling);
+        else section.insertBefore(panel, section.firstChild);
+        didChange = true;
+    });
+    if (didChange) {
+        scheduleTownSubmoduleCompareCollapseBinding(submoduleId);
+    }
+}
+
+function getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, school) {
+    const calcBottom3Avg = (rows) => {
+        const totals = (rows || []).map(r => Number(r.total)).filter(v => Number.isFinite(v)).sort((a, b) => b - a);
+        if (!totals.length) return { avg: 0, lowRate: 0, lowCount: 0, totalN: 0 };
+        const totalN = totals.length;
+        const bottomN = Math.ceil(totalN / 3);
+        const excN = Math.ceil(bottomN * (CONFIG?.excRate || 0));
+        const bottomGroup = totals.slice(-bottomN);
+        const validGroup = bottomGroup.slice(0, Math.max(0, bottomGroup.length - excN));
+        const avg = validGroup.length ? validGroup.reduce((a, b) => a + b, 0) / validGroup.length : 0;
+
+        const subjectCount = (SUBJECTS && SUBJECTS.length) ? SUBJECTS.length : 1;
+        const lowThreshold = subjectCount * 72 * 0.6;
+        const lowCount = totals.filter(v => v < lowThreshold).length;
+        const lowRate = lowCount / totalN;
+        return { avg, lowRate, lowCount, totalN };
+    };
+
+    function townEscapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+    }
+
+    function sanitizeLegacyTownCompareHtml(value) {
+        const template = document.createElement('template');
+        template.innerHTML = String(value || '');
+        template.content.querySelectorAll('script,iframe,object,embed,base,meta,link,form').forEach((node) => node.remove());
+        template.content.querySelectorAll('*').forEach((node) => {
+            Array.from(node.attributes || []).forEach((attribute) => {
+                const name = String(attribute.name || '').toLowerCase();
+                const rawValue = String(attribute.value || '');
+                if (name.startsWith('on') || ['src', 'srcset', 'href', 'xlink:href', 'action', 'formaction'].includes(name)) {
+                    node.removeAttribute(attribute.name);
+                    return;
+                }
+                if (name === 'style' && /(?:url\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding)/i.test(rawValue)) {
+                    node.removeAttribute(attribute.name);
+                }
+            });
+        });
+        return template.innerHTML;
+    }
+
+    function renderTownSubmoduleComparePayload(resultEl, payload) {
+        const headers = Array.isArray(payload?.headers) ? payload.headers : [];
+        const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+        if (headers.length) {
+            const title = townEscapeHtml(payload?.title || '多期对比');
+            const school = townEscapeHtml(payload?.school || '');
+            const headerHtml = headers.map((header) => `<th>${townEscapeHtml(header)}</th>`).join('');
+            const rowsHtml = rows.map((row) => `<tr>${(Array.isArray(row) ? row : []).map((cell) => `<td>${townEscapeHtml(cell)}</td>`).join('')}</tr>`).join('');
+            const emptyHtml = `<tr><td colspan="${headers.length}" style="text-align:center;color:#94a3b8;">暂无数据</td></tr>`;
+            resultEl.innerHTML = `<div class="sub-header">📊 ${title}${school ? `（${school}）` : ''}</div><div class="table-wrap"><table class="mobile-card-table"><thead><tr>${headerHtml}</tr></thead><tbody>${rowsHtml || emptyHtml}</tbody></table></div><div style="margin-top:6px; font-size:12px; color:#64748b;">${townEscapeHtml(payload?.note || '')}</div>`;
+            return;
+        }
+        resultEl.innerHTML = sanitizeLegacyTownCompareHtml(payload?.html)
+            || '<div style="color:#94a3b8;">云端记录缺少可安全呈现的结构化内容</div>';
+    }
+
+    const calcHighScore = (rows) => {
+        const totals = (rows || []).map(r => Number(r.total)).filter(v => Number.isFinite(v));
+        const count = totals.length;
+        if (!count) return { highCount: 0, highRate: 0, threshold: 0 };
+        const subjectCount = (SUBJECTS && SUBJECTS.length) ? SUBJECTS.length : 1;
+        const threshold = subjectCount * 90;
+        const highCount = totals.filter(v => v >= threshold).length;
+        return { highCount, highRate: highCount / count, threshold };
+    };
+
+    const calcIndicator = (rows) => {
+        const totals = (rows || []).map(r => Number(r.total)).filter(v => Number.isFinite(v));
+        const count = totals.length;
+        if (!count) return { indicatorCount: 0, indicatorRate: 0, label: '未设置' };
+        const ind1 = Number(window.SYS_VARS?.indicator?.ind1);
+        const ind2 = Number(window.SYS_VARS?.indicator?.ind2);
+        if (Number.isFinite(ind1) && Number.isFinite(ind2)) {
+            const minV = Math.min(ind1, ind2);
+            const maxV = Math.max(ind1, ind2);
+            const indicatorCount = totals.filter(v => v >= minV && v <= maxV).length;
+            return { indicatorCount, indicatorRate: indicatorCount / count, label: `${minV}-${maxV}` };
+        }
+        const high = calcHighScore(rows);
+        return { indicatorCount: high.highCount, indicatorRate: high.highRate, label: '未设置(回退高分段)' };
+    };
+
+    const series = selectedByExam.map((x, idx) => {
+        const schoolSummary = getSummaryEntryBySchool(summaryByExam[idx]?.summary, school);
+        const metrics = calcSchoolMetricsFromRows(x.rows);
+        const bottom3 = calcBottom3Avg(x.rows);
+        const high = calcHighScore(x.rows);
+        const indicator = calcIndicator(x.rows);
+        const riskLevel = metrics.passRate < 0.6
+            ? '红色预警'
+            : (metrics.passRate < 0.75 || metrics.excRate < 0.15 ? '黄色关注' : '绿色稳定');
+        return {
+            examId: x.examId,
+            count: metrics.count,
+            avg: metrics.avg,
+            excRate: metrics.excRate,
+            passRate: metrics.passRate,
+            rankAvg: schoolSummary?.rankAvg || '-',
+            riskLevel,
+            highCount: high.highCount,
+            highRate: high.highRate,
+            highThreshold: high.threshold,
+            indicatorCount: indicator.indicatorCount,
+            indicatorRate: indicator.indicatorRate,
+            indicatorLabel: indicator.label,
+            bottom3Avg: bottom3.avg,
+            lowRate: bottom3.lowRate,
+            lowCount: bottom3.lowCount
+        };
+    });
+
+    if (submoduleId === 'summary' || submoduleId === 'analysis') {
+        return {
+            headers: ['期次', '人数', '总分均分', '优秀率', '及格率', '校际均分排位'],
+            rows: series.map(s => [s.examId, s.count, s.avg.toFixed(2), `${(s.excRate * 100).toFixed(1)}%`, `${(s.passRate * 100).toFixed(1)}%`, s.rankAvg]),
+            note: '口径：综合评价总榜 / 两率一分'
+        };
+    }
+    if (submoduleId === 'high-score') {
+        return {
+            headers: ['期次', '高分段阈值', '高分段人数', '高分段占比'],
+            rows: series.map(s => [s.examId, s.highThreshold, s.highCount, `${(s.highRate * 100).toFixed(1)}%`]),
+            note: '口径：高分段/尖子生'
+        };
+    }
+    if (submoduleId === 'indicator') {
+        return {
+            headers: ['期次', '指标区间', '指标生人数', '指标生占比'],
+            rows: series.map(s => [s.examId, s.indicatorLabel, s.indicatorCount, `${(s.indicatorRate * 100).toFixed(1)}%`]),
+            note: '口径：指标生达标核算'
+        };
+    }
+    return {
+        headers: ['期次', '后1/3均分', '低分人数', '低分率'],
+        rows: series.map(s => [s.examId, s.bottom3Avg.toFixed(2), s.lowCount, `${(s.lowRate * 100).toFixed(1)}%`]),
+        note: '口径：低分率/后1/3核算'
+    };
+}
+
+async function openTownSubmoduleCompareDialog(submoduleId) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return;
+    const schoolList = listAvailableSchoolsForCompare();
+    const examList = listAvailableExamsForCompare();
+    if (schoolList.length === 0) return window.UI.alert('暂无可选学校');
+    if (examList.length < 2) return window.UI.alert('考试数量不足，至少2期');
+
+    const title = TOWN_SUBMODULE_META[submoduleId] || submoduleId;
+    const schoolOptions = schoolList.map(s => `<option value="${s}">${s}</option>`).join('');
+    const examOptions = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
+
+    const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
+    const schoolDefault = resolveTownSubmoduleDefaultSchool(schoolList);
+    const exam1Default = defaultIds[0] || '';
+    const exam2Default = defaultIds[1] || defaultIds[0] || '';
+    const exam3Default = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
+
+    if (typeof Swal === 'undefined') {
+        return window.UI.alert('当前环境不支持弹窗，请升级页面依赖后重试');
+    }
+
+    const res = await Swal.fire({
+        title: `🧭 ${title} 多期对比`,
+        html: `
                 <div style="text-align:left; display:flex; flex-direction:column; gap:8px;">
-                    <label>学校：<select id="townSubSchool" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${r}</select></label>
+                    <label>学校：<select id="townSubSchool" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${schoolOptions}</select></label>
                     <label>期数：
                         <select id="townSubPeriod" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;" onchange="document.getElementById('townSubExam3Wrap').style.display=this.value==='3'?'block':'none'">
                             <option value="2">2期</option>
                             <option value="3">3期</option>
                         </select>
                     </label>
-                    <label>第1期：<select id="townSubExam1" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${s}</select></label>
-                    <label>第2期：<select id="townSubExam2" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${s}</select></label>
+                    <label>第1期：<select id="townSubExam1" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${examOptions}</select></label>
+                    <label>第2期：<select id="townSubExam2" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${examOptions}</select></label>
                     <div id="townSubExam3Wrap" style="display:none;">
-                        <label>第3期：<select id="townSubExam3" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${s}</select></label>
+                        <label>第3期：<select id="townSubExam3" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${examOptions}</select></label>
                     </div>
                 </div>
-            `,showCancelButton:!0,confirmButtonText:"生成对比",cancelButtonText:"取消",didOpen:()=>{document.getElementById("townSubSchool").value=w,document.getElementById("townSubExam1").value=p,document.getElementById("townSubExam2").value=_,document.getElementById("townSubExam3").value=g},preConfirm:()=>{const d=document.getElementById("townSubSchool").value,f=parseInt(document.getElementById("townSubPeriod").value||"2"),m=document.getElementById("townSubExam1").value,y=document.getElementById("townSubExam2").value,E=document.getElementById("townSubExam3").value,S=f===3?[m,y,E]:[m,y];return!d||S.some(C=>!C)?(Swal.showValidationMessage("请完整选择学校和考试期次"),!1):new Set(S).size!==S.length?(Swal.showValidationMessage("期次不能重复"),!1):{school:d,periodCount:f,examIds:S}}});if(!n.isConfirmed)return;const{school:i,periodCount:c,examIds:l}=n.value;P(e,i,l,c)}function P(e,t,o,a){if(!R())return;const r=document.getElementById(`town-submodule-compare-hint-${e}`),s=document.getElementById(`town-submodule-compare-result-${e}`);if(!r||!s)return;const u=`${A()}::render::${e}::${T(t)}::${(o||[]).join("|")}::${a}`,w=h.renderedHtml.get(u);if(w&&s.dataset.townSubmoduleCompareRenderSig===u){r.textContent=w.hint,r.style.color=w.hintColor,s.innerHTML!==w.html&&renderTownSubmoduleComparePayload(s,w.entry||{}),O(e,w.entry);return}const p=o.map(l=>({examId:l,rows:D(l)}));if(p.some(l=>!l.rows.length)){r.innerHTML="❌ 某些期次没有可用数据，请检查考试数据。",r.style.color="#dc2626",s.innerHTML="";return}const _=p.map(l=>({examId:l.examId,summary:L(l.examId,l.rows)})),g=p.map(l=>({examId:l.examId,rows:I(l.examId,l.rows,t)}));if(!g.every(l=>l.rows.length>0)){r.innerHTML="❌ 所选学校在某些期次中无数据，无法对比。",r.style.color="#dc2626",s.innerHTML="";return}const n=k(e,g,_,t),i=x[e]||e,c={submoduleId:e,title:i,school:t,examIds:o,periodCount:a,headers:n.headers,rows:n.rows,note:n.note};renderTownSubmoduleComparePayload(s,c),r.textContent=`✅ 已完成 ${a} 期对比：${o.join(" → ")}`,r.style.color="#16a34a",s.dataset.townSubmoduleCompareRenderSig=u,h.renderedHtml.set(u,{html:s.innerHTML,hint:r.textContent,hintColor:r.style.color,entry:c}),O(e,c)}function Y(e){if(!R())return window.UI.alert("权限不足：该多期对比仅管理员、教务主任、级部主任可用");const t=M(e);if(!t)return window.UI.alert("请先生成多期对比结果");const o=XLSX.utils.book_new(),a=[t.headers,...t.rows];XLSX.utils.book_append_sheet(o,XLSX.utils.aoa_to_sheet(a),"多期对比"),XLSX.writeFile(o,`${t.title}_多期对比_${t.school}_${t.examIds.join("_")}.xlsx`)}async function K(e){var g,n,i;if(!R())return window.UI.alert("权限不足：该多期对比仅管理员、教务主任、级部主任可用");const t=M(e);if(!t)return window.UI.alert("请先生成多期对比结果");if(!$())return window.UI.alert("☁️ 云端服务未连接，无法保存");const o=window.CURRENT_COHORT_ID||localStorage.getItem("CURRENT_COHORT_ID")||"unknown",a=new Date().toISOString().split("T")[0],r=Date.now().toString().slice(-4),s=String(t.school||"").replace(/[^\w\u4e00-\u9fa5]/g,""),u=`TOWN_SUB_COMPARE_${e}_${o}级_${s}_${a}_${r}`,{html:w,...p}=t,_={...p,createdAt:new Date().toISOString(),createdBy:((g=Auth==null?void 0:Auth.currentUser)==null?void 0:g.username)||((n=Auth==null?void 0:Auth.currentUser)==null?void 0:n.name)||((i=Auth==null?void 0:Auth.currentUser)==null?void 0:i.email)||"unknown"};try{window.UI&&UI.loading(!0,"☁️ 正在保存云端对比...");const c="LZ|"+LZString.compressToUTF16(JSON.stringify(_)),{error:l}=await F({key:u,content:c,updated_at:new Date().toISOString()});if(l)throw l;window.UI&&UI.toast("✅ 云端保存成功","success")}catch(c){console.error(c),window.UI.alert("保存失败: "+c.message)}finally{window.UI&&UI.loading(!1)}}async function Z(e){if(!R())return window.UI.alert("权限不足：该多期对比仅管理员、教务主任、级部主任可用");if(!$())return window.UI.alert("☁️ 云端服务未连接");try{window.UI&&UI.loading(!0,"☁️ 正在加载云端列表...");const t=getCurrentUser(),o=RoleManager.hasAnyRole(t,["admin","director"]),a=window.CURRENT_COHORT_ID||localStorage.getItem("CURRENT_COHORT_ID")||"",{data:r,error:s}=await B({select:"key, updated_at",keyLike:!o&&a?`TOWN_SUB_COMPARE_${e}_${a}级_%`:`TOWN_SUB_COMPARE_${e}_%`,order:"updated_at",ascending:!1,limit:50});if(s)throw s;if(window.UI&&UI.loading(!1),!r||r.length===0)return window.UI.alert("☁️ 云端暂无记录");const u=r.map(w=>{const p=w.key.replace(`TOWN_SUB_COMPARE_${e}_`,"").split("_"),_=p[0]||"未知届别",g=p[1]||"未知学校";return`
-                <button type="button" data-town-submodule-compare-key="${townEscapeHtml(w.key)}" style="width:100%; border:0; padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:#fff; text-align:left;">
+            `,
+        showCancelButton: true,
+        confirmButtonText: '生成对比',
+        cancelButtonText: '取消',
+        didOpen: () => {
+            document.getElementById('townSubSchool').value = schoolDefault;
+            document.getElementById('townSubExam1').value = exam1Default;
+            document.getElementById('townSubExam2').value = exam2Default;
+            document.getElementById('townSubExam3').value = exam3Default;
+        },
+        preConfirm: () => {
+            const school = document.getElementById('townSubSchool').value;
+            const periodCount = parseInt(document.getElementById('townSubPeriod').value || '2');
+            const e1 = document.getElementById('townSubExam1').value;
+            const e2 = document.getElementById('townSubExam2').value;
+            const e3 = document.getElementById('townSubExam3').value;
+            const examIds = periodCount === 3 ? [e1, e2, e3] : [e1, e2];
+            if (!school || examIds.some(x => !x)) {
+                Swal.showValidationMessage('请完整选择学校和考试期次');
+                return false;
+            }
+            if (new Set(examIds).size !== examIds.length) {
+                Swal.showValidationMessage('期次不能重复');
+                return false;
+            }
+            return { school, periodCount, examIds };
+        }
+    });
+
+    if (!res.isConfirmed) return;
+    const { school, periodCount, examIds } = res.value;
+    renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, periodCount);
+}
+
+function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, periodCount) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return;
+    const hintEl = document.getElementById(`town-submodule-compare-hint-${submoduleId}`);
+    const resultEl = document.getElementById(`town-submodule-compare-result-${submoduleId}`);
+    if (!hintEl || !resultEl) return;
+
+    const renderCacheKey = `${getTownSubmoduleCompareDataSignature()}::render::${submoduleId}::${townNormalizeSchoolName(school)}::${(examIds || []).join('|')}::${periodCount}`;
+    const cachedRender = TownSubmoduleComparePerfCache.renderedHtml.get(renderCacheKey);
+    if (cachedRender && resultEl.dataset.townSubmoduleCompareRenderSig === renderCacheKey) {
+        hintEl.textContent = cachedRender.hint;
+        hintEl.style.color = cachedRender.hintColor;
+        if (resultEl.innerHTML !== cachedRender.html) renderTownSubmoduleComparePayload(resultEl, cachedRender.entry || {});
+        setTownSubmoduleCompareEntryState(submoduleId, cachedRender.entry);
+        return;
+    }
+
+    const rowsByExam = examIds.map(id => ({ examId: id, rows: getCachedTownSubmoduleExamRows(id) }));
+    if (rowsByExam.some(x => !x.rows.length)) {
+        hintEl.innerHTML = '❌ 某些期次没有可用数据，请检查考试数据。';
+        hintEl.style.color = '#dc2626';
+        resultEl.innerHTML = '';
+        return;
+    }
+
+    const summaryByExam = rowsByExam.map(x => ({ examId: x.examId, summary: getCachedTownSubmoduleSchoolSummary(x.examId, x.rows) }));
+    const selectedByExam = rowsByExam.map(x => ({ examId: x.examId, rows: getCachedTownSubmoduleSchoolRows(x.examId, x.rows, school) }));
+    if (!selectedByExam.every(x => x.rows.length > 0)) {
+        hintEl.innerHTML = '❌ 所选学校在某些期次中无数据，无法对比。';
+        hintEl.style.color = '#dc2626';
+        resultEl.innerHTML = '';
+        return;
+    }
+
+    const data = getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, school);
+    const title = TOWN_SUBMODULE_META[submoduleId] || submoduleId;
+
+    const entry = {
+        submoduleId,
+        title,
+        school,
+        examIds,
+        periodCount,
+        headers: data.headers,
+        rows: data.rows,
+        note: data.note
+    };
+    renderTownSubmoduleComparePayload(resultEl, entry);
+    hintEl.textContent = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
+    hintEl.style.color = '#16a34a';
+    resultEl.dataset.townSubmoduleCompareRenderSig = renderCacheKey;
+    TownSubmoduleComparePerfCache.renderedHtml.set(renderCacheKey, {
+        html: resultEl.innerHTML,
+        hint: hintEl.textContent,
+        hintColor: hintEl.style.color,
+        entry
+    });
+    setTownSubmoduleCompareEntryState(submoduleId, entry);
+}
+
+function exportTownSubmoduleCompare(submoduleId) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return window.UI.alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
+    const cache = readTownSubmoduleCompareEntryState(submoduleId);
+    if (!cache) return window.UI.alert('请先生成多期对比结果');
+    const wb = XLSX.utils.book_new();
+    const aoa = [cache.headers, ...cache.rows];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '多期对比');
+    XLSX.writeFile(wb, `${cache.title}_多期对比_${cache.school}_${cache.examIds.join('_')}.xlsx`);
+}
+
+async function saveTownSubmoduleCompareToCloud(submoduleId) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return window.UI.alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
+    const cache = readTownSubmoduleCompareEntryState(submoduleId);
+    if (!cache) return window.UI.alert('请先生成多期对比结果');
+    if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接，无法保存');
+
+    const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
+    const stamp = new Date().toISOString().split('T')[0];
+    const rand = Date.now().toString().slice(-4);
+    const safeSchool = String(cache.school || '').replace(/[^\w\u4e00-\u9fa5]/g, '');
+    const key = `TOWN_SUB_COMPARE_${submoduleId}_${cohortId}级_${safeSchool}_${stamp}_${rand}`;
+
+    const { html, ...structuredCache } = cache;
+    const payload = {
+        ...structuredCache,
+        createdAt: new Date().toISOString(),
+        createdBy: Auth?.currentUser?.username || Auth?.currentUser?.name || Auth?.currentUser?.email || 'unknown'
+    };
+
+    try {
+        if (window.UI) UI.loading(true, '☁️ 正在保存云端对比...');
+        const compressed = 'LZ|' + LZString.compressToUTF16(JSON.stringify(payload));
+        const { error } = await upsertCloudTownSubmoduleCompareRow({ key, content: compressed, updated_at: new Date().toISOString() });
+        if (error) throw error;
+        if (window.UI) UI.toast('✅ 云端保存成功', 'success');
+    } catch (e) {
+        console.error(e);
+        window.UI.alert('保存失败: ' + e.message);
+    } finally {
+        if (window.UI) UI.loading(false);
+    }
+}
+
+async function viewCloudTownSubmoduleCompares(submoduleId) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return window.UI.alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
+    if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
+    try {
+        if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');
+
+        const user = getCurrentUser();
+        const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
+        const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
+
+        const { data, error } = await selectCloudTownSubmoduleCompareRows({
+            select: 'key, updated_at',
+            keyLike: (!isAdmin && cohortId)
+                ? `TOWN_SUB_COMPARE_${submoduleId}_${cohortId}级_%`
+                : `TOWN_SUB_COMPARE_${submoduleId}_%`,
+            order: 'updated_at',
+            ascending: false,
+            limit: 50
+        });
+        if (error) throw error;
+        if (window.UI) UI.loading(false);
+        if (!data || data.length === 0) return window.UI.alert('☁️ 云端暂无记录');
+
+        const html = data.map((item) => {
+            const keyParts = item.key.replace(`TOWN_SUB_COMPARE_${submoduleId}_`, '').split('_');
+            const cohort = keyParts[0] || '未知届别';
+            const school = keyParts[1] || '未知学校';
+            return `
+                <button type="button" data-town-submodule-compare-key="${townEscapeHtml(item.key)}" style="width:100%; border:0; padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:#fff; text-align:left;">
                     <div style="flex:1;">
                         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${townEscapeHtml(_)}</span>
-                            <span style="font-weight:600; color:#334155;">${townEscapeHtml(g)}</span>
+                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${townEscapeHtml(cohort)}</span>
+                            <span style="font-weight:600; color:#334155;">${townEscapeHtml(school)}</span>
                         </div>
-                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${townEscapeHtml(w.key)}</div>
+                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${townEscapeHtml(item.key)}</div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-size:12px; color:#64748b;">${new Date(w.updated_at).toLocaleString("zh-CN")}</div>
+                        <div style="font-size:12px; color:#64748b;">${new Date(item.updated_at).toLocaleString('zh-CN')}</div>
                         <div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击加载 &gt;</div>
                     </div>
                 </button>
-            `}).join("");typeof Swal!="undefined"&&Swal.fire({title:`☁️ ${x[e]||e} 云端对比记录`,html:`<div style="max-height:400px; overflow-y:auto; text-align:left;">${u}</div>`,width:650,showCloseButton:!0,showConfirmButton:!1,didOpen:w=>{w.querySelectorAll("[data-town-submodule-compare-key]").forEach(p=>{p.addEventListener("click",()=>{j(e,String(p.dataset.townSubmoduleCompareKey||""))})})}})}catch(t){window.UI&&UI.loading(!1),console.error(t),window.UI.alert("加载失败: "+t.message)}}async function j(e,t){if(!$())return window.UI.alert("☁️ 云端服务未连接");const o=document.getElementById(`town-submodule-compare-hint-${e}`),a=document.getElementById(`town-submodule-compare-result-${e}`);if(!(!o||!a))try{typeof Swal!="undefined"&&Swal.close(),window.UI&&UI.loading(!0,"☁️ 正在加载详情...");const{data:r,error:s}=await B({select:"content",keyEq:t,maybeSingle:!0});if(s)throw s;let u=r.content;typeof u=="string"&&u.startsWith("LZ|")&&(u=LZString.decompressFromUTF16(u.substring(3)));const w=typeof u=="string"?JSON.parse(u):u;renderTownSubmoduleComparePayload(a,w||{}),o.textContent=`✅ 已加载云端记录：${(w==null?void 0:w.title)||t}`,o.style.color="#7c3aed",O(e,w)}catch(r){console.error(r),window.UI.alert("加载失败: "+r.message)}finally{window.UI&&UI.loading(!1)}}Object.assign(window,{TOWN_SUBMODULE_META:x,TownSubmoduleComparePerfCache:h,ensureTownSubmoduleCompareUIs:V,getTownSubmoduleCompareDataSignature:A,getCachedTownSubmoduleExamRows:D,getCachedTownSubmoduleSchoolRows:I,getCachedTownSubmoduleSchoolSummary:L,getTownSubmoduleSeries:k,resolveTownSubmoduleDefaultSchool:H,openTownSubmoduleCompareDialog:G,renderTownSubmoduleMultiPeriodComparison:P,exportTownSubmoduleCompare:Y,saveTownSubmoduleCompareToCloud:K,viewCloudTownSubmoduleCompares:Z,loadCloudTownSubmoduleCompare:j}),window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__=!0})();
+            `;
+        }).join('');
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: `☁️ ${TOWN_SUBMODULE_META[submoduleId] || submoduleId} 云端对比记录`,
+                html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${html}</div>`,
+                width: 650,
+                showCloseButton: true,
+                showConfirmButton: false,
+                didOpen: (popup) => {
+                    popup.querySelectorAll('[data-town-submodule-compare-key]').forEach((button) => {
+                        button.addEventListener('click', () => {
+                            loadCloudTownSubmoduleCompare(submoduleId, String(button.dataset.townSubmoduleCompareKey || ''));
+                        });
+                    });
+                }
+            });
+        }
+    } catch (e) {
+        if (window.UI) UI.loading(false);
+        console.error(e);
+        window.UI.alert('加载失败: ' + e.message);
+    }
+}
+
+async function loadCloudTownSubmoduleCompare(submoduleId, key) {
+    if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
+    const hintEl = document.getElementById(`town-submodule-compare-hint-${submoduleId}`);
+    const resultEl = document.getElementById(`town-submodule-compare-result-${submoduleId}`);
+    if (!hintEl || !resultEl) return;
+
+    try {
+        if (typeof Swal !== 'undefined') Swal.close();
+        if (window.UI) UI.loading(true, '☁️ 正在加载详情...');
+        const { data, error } = await selectCloudTownSubmoduleCompareRows({
+            select: 'content',
+            keyEq: key,
+            maybeSingle: true
+        });
+        if (error) throw error;
+        let content = data.content;
+        if (typeof content === 'string' && content.startsWith('LZ|')) {
+            content = LZString.decompressFromUTF16(content.substring(3));
+        }
+        const payload = typeof content === 'string' ? JSON.parse(content) : content;
+        renderTownSubmoduleComparePayload(resultEl, payload || {});
+        hintEl.textContent = `✅ 已加载云端记录：${payload?.title || key}`;
+        hintEl.style.color = '#7c3aed';
+        setTownSubmoduleCompareEntryState(submoduleId, payload);
+    } catch (e) {
+        console.error(e);
+        window.UI.alert('加载失败: ' + e.message);
+    } finally {
+        if (window.UI) UI.loading(false);
+    }
+}
+
+    Object.assign(window, {
+        TOWN_SUBMODULE_META,
+        TownSubmoduleComparePerfCache,
+        ensureTownSubmoduleCompareUIs,
+        getTownSubmoduleCompareDataSignature,
+        getCachedTownSubmoduleExamRows,
+        getCachedTownSubmoduleSchoolRows,
+        getCachedTownSubmoduleSchoolSummary,
+        getTownSubmoduleSeries,
+        resolveTownSubmoduleDefaultSchool,
+        openTownSubmoduleCompareDialog,
+        renderTownSubmoduleMultiPeriodComparison,
+        exportTownSubmoduleCompare,
+        saveTownSubmoduleCompareToCloud,
+        viewCloudTownSubmoduleCompares,
+        loadCloudTownSubmoduleCompare
+    });
+
+    window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__ = true;
+})();

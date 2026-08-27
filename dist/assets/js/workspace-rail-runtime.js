@@ -1,4 +1,174 @@
-(function(){const T="(min-width: 1100px)";let v=0,_=!1;const b=new Map;let g=0,x=!1,m="";function f(){return window.matchMedia(T).matches}function w(){return document.getElementById("app-sidebar")}function I(){return Array.from(document.querySelectorAll('[data-sidebar-toggle="true"]'))}function q(e){I().forEach(t=>{const n=!!e,s=n?"展开左侧工作区":"收起左侧工作区";t.setAttribute("aria-label",s),t.setAttribute("title",s),t.setAttribute("aria-pressed",n?"true":"false");const o=t.querySelector('[data-sidebar-toggle-icon="true"]');o&&(o.className="ti "+(n?"ti-chevrons-right":"ti-chevrons-left"))})}function y(e,t){const n=w();if(!n)return;const s=!t||t.rememberState!==!1,o=!!e,a=o&&f();s&&(_=o),n.classList.toggle("is-collapsed",a),document.body.classList.toggle("shell-sidebar-collapsed",a),f()||(n.classList.remove("is-collapsed"),document.body.classList.remove("shell-sidebar-collapsed")),q(a),typeof window.refreshShellEnhancements=="function"&&window.refreshShellEnhancements()}function M(e){const t=w();if(!t)return;if(!f()){t.classList.toggle("show-mobile");return}const n=typeof e=="boolean"?!!e:!t.classList.contains("is-collapsed");y(n)}function S(){y(_,{rememberState:!1})}function A(e){const t=e.closest(".section[id]");return t&&t.id?t.id:e.id?e.id:"analysis-layout-"+Array.from(document.querySelectorAll(".analysis-results-layout")).indexOf(e)}function $(e){const t=A(e);return b.has(t)||b.set(t,!0),b.get(t)}function N(e){return e?e.querySelectorAll(".side-nav-link").length:0}function E(e){const t=e.__analysisSideNav,n=e.__analysisCollapseButton,s=e.__analysisRevealButton;if(!t||!n||!s)return;const o=e.__analysisRailTitle||"功能导航",a=N(t),i=e.classList.contains("is-side-collapsed"),l=n.querySelector('[data-rail-label="true"]');l&&(l.textContent="收起"+o);const d=s.querySelector('[data-rail-label="true"]');d&&(d.textContent="展开"+o);const r=n.querySelector('[data-rail-count="true"]');r&&(r.textContent=String(a));const p=s.querySelector('[data-rail-count="true"]');p&&(p.textContent=String(a)),n.setAttribute("aria-pressed",i?"true":"false"),s.setAttribute("aria-pressed",i?"true":"false")}function h(e,t,n){if(!e)return;const s=!n||n.rememberState!==!1,o=!!t,a=o&&f(),i=A(e);s&&b.set(i,o),e.classList.toggle("is-side-collapsed",a),E(e)}function L(e,t,n){const s=document.createElement("button");return s.type="button",s.className=e,s.innerHTML='<i class="ti '+n+'"></i><span data-rail-label="true">'+t+'</span><span class="'+(e.indexOf("reveal")>=0?"analysis-side-reveal__count":"analysis-side-toggle__count")+'" data-rail-count="true">0</span>',s}function C(){const e=document.querySelector(".section.active[id]");return e?e.id:""}function O(){if(document.getElementById("module-subnav-dock-style"))return;const e=document.createElement("style");e.id="module-subnav-dock-style",e.textContent=`
+(function () {
+    const DESKTOP_MEDIA_QUERY = '(min-width: 1100px)';
+    // Category names are part of the operator's orientation. Keep the main
+    // navigation readable by default; analysis-side rails remain compact.
+    const DEFAULT_DESKTOP_SIDEBAR_COLLAPSED = false;
+    const DEFAULT_ANALYSIS_RAIL_COLLAPSED = true;
+    let refreshFrame = 0;
+    let desktopSidebarCollapsed = DEFAULT_DESKTOP_SIDEBAR_COLLAPSED;
+    const analysisRailStates = new Map();
+    let moduleDockFrame = 0;
+    let moduleDockBound = false;
+    let moduleDockLastSignature = '';
+
+    function isDesktopViewport() {
+        return window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
+    }
+
+    function getSidebar() {
+        return document.getElementById('app-sidebar');
+    }
+
+    function getSidebarToggleButtons() {
+        return Array.from(document.querySelectorAll('[data-sidebar-toggle="true"]'));
+    }
+
+    function syncSidebarToggleButtons(collapsed) {
+        getSidebarToggleButtons().forEach((button) => {
+            const isCollapsed = !!collapsed;
+            const label = isCollapsed ? '展开左侧工作区' : '收起左侧工作区';
+            button.setAttribute('aria-label', label);
+            button.setAttribute('title', label);
+            button.setAttribute('aria-pressed', isCollapsed ? 'true' : 'false');
+
+            const icon = button.querySelector('[data-sidebar-toggle-icon="true"]');
+            if (icon) {
+                icon.className = 'ti ' + (isCollapsed ? 'ti-chevrons-right' : 'ti-chevrons-left');
+            }
+        });
+    }
+
+    function setAppSidebarCollapsed(collapsed, options) {
+        const sidebar = getSidebar();
+        if (!sidebar) return;
+
+        const rememberState = !options || options.rememberState !== false;
+        const desiredCollapsed = !!collapsed;
+        const shouldCollapse = desiredCollapsed && isDesktopViewport();
+
+        if (rememberState) {
+            desktopSidebarCollapsed = desiredCollapsed;
+        }
+
+        sidebar.classList.toggle('is-collapsed', shouldCollapse);
+        document.body.classList.toggle('shell-sidebar-collapsed', shouldCollapse);
+
+        if (!isDesktopViewport()) {
+            sidebar.classList.remove('is-collapsed');
+            document.body.classList.remove('shell-sidebar-collapsed');
+        }
+
+        syncSidebarToggleButtons(shouldCollapse);
+
+        if (typeof window.refreshShellEnhancements === 'function') {
+            window.refreshShellEnhancements();
+        }
+    }
+
+    function toggleAppSidebar(force) {
+        const sidebar = getSidebar();
+        if (!sidebar) return;
+
+        if (!isDesktopViewport()) {
+            sidebar.classList.toggle('show-mobile');
+            return;
+        }
+
+        const nextState = typeof force === 'boolean'
+            ? !!force
+            : !sidebar.classList.contains('is-collapsed');
+
+        setAppSidebarCollapsed(nextState);
+    }
+
+    function restoreAppSidebar() {
+        setAppSidebarCollapsed(desktopSidebarCollapsed, { rememberState: false });
+    }
+
+    function resolveAnalysisLayoutId(layout) {
+        const owner = layout.closest('.section[id]');
+        if (owner && owner.id) return owner.id;
+        if (layout.id) return layout.id;
+        return 'analysis-layout-' + Array.from(document.querySelectorAll('.analysis-results-layout')).indexOf(layout);
+    }
+
+    function getAnalysisRailState(layout) {
+        const stateKey = resolveAnalysisLayoutId(layout);
+        if (!analysisRailStates.has(stateKey)) {
+            analysisRailStates.set(stateKey, DEFAULT_ANALYSIS_RAIL_COLLAPSED);
+        }
+        return analysisRailStates.get(stateKey);
+    }
+
+    function countAnalysisEntries(sideNav) {
+        return sideNav ? sideNav.querySelectorAll('.side-nav-link').length : 0;
+    }
+
+    function syncAnalysisRailUi(layout) {
+        const sideNav = layout.__analysisSideNav;
+        const collapseButton = layout.__analysisCollapseButton;
+        const revealButton = layout.__analysisRevealButton;
+        if (!sideNav || !collapseButton || !revealButton) return;
+
+        const titleText = layout.__analysisRailTitle || '功能导航';
+        const count = countAnalysisEntries(sideNav);
+        const collapsed = layout.classList.contains('is-side-collapsed');
+
+        const collapseLabel = collapseButton.querySelector('[data-rail-label="true"]');
+        if (collapseLabel) collapseLabel.textContent = '收起' + titleText;
+
+        const revealLabel = revealButton.querySelector('[data-rail-label="true"]');
+        if (revealLabel) revealLabel.textContent = '展开' + titleText;
+
+        const collapseCount = collapseButton.querySelector('[data-rail-count="true"]');
+        if (collapseCount) collapseCount.textContent = String(count);
+
+        const revealCount = revealButton.querySelector('[data-rail-count="true"]');
+        if (revealCount) revealCount.textContent = String(count);
+
+        collapseButton.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+        revealButton.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+    }
+
+    function setAnalysisRailCollapsed(layout, collapsed, options) {
+        if (!layout) return;
+
+        const rememberState = !options || options.rememberState !== false;
+        const desiredCollapsed = !!collapsed;
+        const shouldCollapse = desiredCollapsed && isDesktopViewport();
+        const stateKey = resolveAnalysisLayoutId(layout);
+
+        if (rememberState) {
+            analysisRailStates.set(stateKey, desiredCollapsed);
+        }
+
+        layout.classList.toggle('is-side-collapsed', shouldCollapse);
+        syncAnalysisRailUi(layout);
+    }
+
+    function createRailButton(className, labelText, iconName) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = className;
+        button.innerHTML =
+            '<i class="ti ' + iconName + '"></i>' +
+            '<span data-rail-label="true">' + labelText + '</span>' +
+            '<span class="' +
+            (className.indexOf('reveal') >= 0 ? 'analysis-side-reveal__count' : 'analysis-side-toggle__count') +
+            '" data-rail-count="true">0</span>';
+        return button;
+    }
+
+    function getActiveModuleId() {
+        const activeSection = document.querySelector('.section.active[id]');
+        return activeSection ? activeSection.id : '';
+    }
+
+    function ensureModuleDockStyles() {
+        if (document.getElementById('module-subnav-dock-style')) return;
+        const style = document.createElement('style');
+        style.id = 'module-subnav-dock-style';
+        style.textContent = `
             .module-subnav-dock {
                 position:fixed;
                 right:18px;
@@ -161,4 +331,232 @@
             @media print {
                 .module-subnav-dock { display:none !important; }
             }
-        `,document.head.appendChild(e)}function P(){const e=window.NAV_STRUCTURE||{},t=typeof window.getCurrentNavCategory=="function"?window.getCurrentNavCategory():"",n=C();if(t&&e[t])return{key:t,category:e[t]};const s=Object.entries(e).find(([,o])=>Array.isArray(o.items)&&o.items.some(a=>a.id===n));return s?{key:s[0],category:s[1]}:null}function F(e,t,n){const s=(e==null?void 0:e.key)||"",o=t.map(a=>a.id).join("|");return[s,n,o].join("::")}function U(e,t){e&&e.querySelectorAll("[data-dock-module-id]").forEach(n=>{const s=n.getAttribute("data-dock-module-id")===t;n.classList.toggle("is-active",s),n.setAttribute("aria-current",s?"page":"false")})}function j(e){!e||e.dataset.clickBound==="true"||(e.dataset.clickBound="true",e.addEventListener("click",t=>{var o,a;const n=(a=(o=t.target)==null?void 0:o.closest)==null?void 0:a.call(o,"[data-dock-module-id]");if(!n||!e.contains(n))return;const s=n.getAttribute("data-dock-module-id");s&&(typeof window.switchTab=="function"&&window.switchTab(s),window.setTimeout(()=>{const i=document.getElementById(s);i&&i.scrollIntoView({block:"start",behavior:"smooth"}),u()},80))}))}function D(){let e=document.getElementById("module-subnav-dock");const t=document.getElementById("module-subnav-dock-style");e&&e.remove(),t&&t.remove(),m=""}function u(){g||(g=window.requestAnimationFrame(()=>{g=0,D()}))}function z(){x||(x=!0,document.addEventListener("cloud-load-state",u),window.addEventListener("hashchange",u),window.addEventListener("popstate",u))}function K(e){var r;if(!e||e.dataset.analysisRailReady==="true")return;const t=e.querySelector(".analysis-side-nav"),n=e.querySelector(".content-area");if(!t||!n)return;const s=(((r=t.querySelector(".side-nav-title"))==null?void 0:r.textContent)||"功能导航").trim(),o=document.createElement("div");o.className="analysis-side-toolbar";const a=L("analysis-side-toggle","收起"+s,"ti-chevrons-left");a.addEventListener("click",function(){h(e,!0)}),o.appendChild(a),t.prepend(o);const i=n.querySelector(".analysis-content-stack")||n,l=document.createElement("div");l.className="analysis-side-reveal";const d=L("analysis-side-reveal-btn","展开"+s,"ti-chevrons-right");d.addEventListener("click",function(){h(e,!1)}),l.appendChild(d),i.prepend(l),e.__analysisSideNav=t,e.__analysisCollapseButton=a,e.__analysisRevealButton=d,e.__analysisRailTitle=s,e.dataset.analysisRailReady="true",E(e)}function k(){Array.from(document.querySelectorAll(".analysis-results-layout")).forEach(t=>{K(t),h(t,$(t),{rememberState:!1})}),u()}function R(){v||(v=window.requestAnimationFrame(function(){v=0,k()}))}function H(){S(),k()}function V(e){var n,s;const t=e.target;return(s=(n=t==null?void 0:t.classList)==null?void 0:n.contains)!=null&&s.call(n,"analysis-results-layout")||(t==null?void 0:t.id)==="app"||(t==null?void 0:t.id)==="sub-nav-container"?!0:Array.from(e.addedNodes||[]).some(o=>{var a,i;return!o||o.nodeType!==1?!1:(a=o.matches)!=null&&a.call(o,".analysis-results-layout, .analysis-side-nav, .content-area")?!0:!!((i=o.querySelector)!=null&&i.call(o,".analysis-results-layout, .analysis-side-nav, .content-area"))})}window.toggleAppSidebar=M,window.setAppSidebarCollapsed=y,window.refreshAnalysisSideRails=R,window.refreshModuleSubnavDock=u,document.addEventListener("DOMContentLoaded",function(){z(),S(),k(),D(),new MutationObserver(t=>{t.some(V)&&R()}).observe(document.body,{childList:!0,subtree:!0})}),window.addEventListener("resize",H)})();
+        `;
+        document.head.appendChild(style);
+    }
+
+    function getCurrentDockCategory() {
+        const nav = window.NAV_STRUCTURE || {};
+        const currentKey = typeof window.getCurrentNavCategory === 'function' ? window.getCurrentNavCategory() : '';
+        const activeId = getActiveModuleId();
+        if (currentKey && nav[currentKey]) return { key: currentKey, category: nav[currentKey] };
+        const found = Object.entries(nav).find(([, category]) => {
+            return Array.isArray(category.items) && category.items.some((item) => item.id === activeId);
+        });
+        return found ? { key: found[0], category: found[1] } : null;
+    }
+
+    function getModuleDockSignature(context, items, activeId) {
+        const key = context?.key || '';
+        const ids = items.map((item) => item.id).join('|');
+        return [key, activeId, ids].join('::');
+    }
+
+    function syncModuleDockActiveState(dock, activeId) {
+        if (!dock) return;
+        dock.querySelectorAll('[data-dock-module-id]').forEach((button) => {
+            const isActive = button.getAttribute('data-dock-module-id') === activeId;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-current', isActive ? 'page' : 'false');
+        });
+    }
+
+    function bindModuleDockClick(dock) {
+        if (!dock || dock.dataset.clickBound === 'true') return;
+        dock.dataset.clickBound = 'true';
+        dock.addEventListener('click', (event) => {
+            const button = event.target?.closest?.('[data-dock-module-id]');
+            if (!button || !dock.contains(button)) return;
+            const moduleId = button.getAttribute('data-dock-module-id');
+            if (!moduleId) return;
+            if (typeof window.switchTab === 'function') window.switchTab(moduleId);
+            window.setTimeout(() => {
+                const section = document.getElementById(moduleId);
+                if (section) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                scheduleModuleSubnavDockSync();
+            }, 80);
+        });
+    }
+
+    function syncModuleSubnavDock() {
+        let dock = document.getElementById('module-subnav-dock');
+        const dockStyle = document.getElementById('module-subnav-dock-style');
+        if (dock) dock.remove();
+        if (dockStyle) dockStyle.remove();
+        moduleDockLastSignature = '';
+        return;
+
+        ensureModuleDockStyles();
+        const app = document.getElementById('app');
+        const modeMask = document.getElementById('mode-mask');
+        const context = getCurrentDockCategory();
+        const category = context && context.category;
+        const items = Array.isArray(category?.items) ? category.items : [];
+        const maskHidden = !modeMask || getComputedStyle(modeMask).display === 'none';
+        const shouldShow = !!app && getComputedStyle(app).display !== 'none' && maskHidden && items.length > 1;
+
+        if (!shouldShow) {
+            if (dock) dock.remove();
+            moduleDockLastSignature = '';
+            return;
+        }
+
+        if (!dock) {
+            dock = document.createElement('nav');
+            dock.id = 'module-subnav-dock';
+            dock.className = 'module-subnav-dock';
+            dock.setAttribute('aria-label', '当前母模块子模块导航');
+            document.body.appendChild(dock);
+            moduleDockLastSignature = '';
+        }
+        bindModuleDockClick(dock);
+
+        const activeId = getActiveModuleId();
+        const nextSignature = getModuleDockSignature(context, items, activeId);
+        if (moduleDockLastSignature === nextSignature) {
+            syncModuleDockActiveState(dock, activeId);
+            return;
+        }
+        moduleDockLastSignature = nextSignature;
+
+        const accent = category.color || '#2563eb';
+        dock.style.setProperty('--dock-accent', accent);
+        dock.style.setProperty('--dock-soft', `color-mix(in srgb, ${accent} 14%, white)`);
+        dock.innerHTML = `
+            <div class="module-subnav-dock__head">
+                <i class="ti ${category.icon || 'ti-layout-grid'}"></i>
+                <span class="module-subnav-dock__title">
+                    <strong>${category.title || '模块导航'}</strong>
+                    <span>${items.length} 个子模块</span>
+                </span>
+            </div>
+            <div class="module-subnav-dock__list">
+                ${items.map((item, index) => `
+                    <button type="button"
+                        class="module-subnav-dock__item${item.id === activeId ? ' is-active' : ''}"
+                        data-dock-module-id="${item.id}"
+                        title="${item.text || ''}"
+                        aria-label="${item.text || ''}"
+                        aria-current="${item.id === activeId ? 'page' : 'false'}">
+                        <span class="module-subnav-dock__icon"><i class="ti ${item.icon || 'ti-circle'}"></i></span>
+                        <span class="module-subnav-dock__label">
+                            <strong>${String(item.text || `子模块 ${index + 1}`)}</strong>
+                            <span>${String(item.hint || '点击切换')}</span>
+                        </span>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function scheduleModuleSubnavDockSync() {
+        if (moduleDockFrame) return;
+        moduleDockFrame = window.requestAnimationFrame(() => {
+            moduleDockFrame = 0;
+            syncModuleSubnavDock();
+        });
+    }
+
+    function bindModuleDockSyncEvents() {
+        if (moduleDockBound) return;
+        moduleDockBound = true;
+        document.addEventListener('cloud-load-state', scheduleModuleSubnavDockSync);
+        window.addEventListener('hashchange', scheduleModuleSubnavDockSync);
+        window.addEventListener('popstate', scheduleModuleSubnavDockSync);
+    }
+
+    function enhanceAnalysisLayout(layout) {
+        if (!layout || layout.dataset.analysisRailReady === 'true') return;
+
+        const sideNav = layout.querySelector('.analysis-side-nav');
+        const contentArea = layout.querySelector('.content-area');
+        if (!sideNav || !contentArea) return;
+
+        const titleText = (sideNav.querySelector('.side-nav-title')?.textContent || '功能导航').trim();
+        const toolbar = document.createElement('div');
+        toolbar.className = 'analysis-side-toolbar';
+
+        const collapseButton = createRailButton('analysis-side-toggle', '收起' + titleText, 'ti-chevrons-left');
+        collapseButton.addEventListener('click', function () {
+            setAnalysisRailCollapsed(layout, true);
+        });
+        toolbar.appendChild(collapseButton);
+        sideNav.prepend(toolbar);
+
+        const revealHost = contentArea.querySelector('.analysis-content-stack') || contentArea;
+        const revealWrap = document.createElement('div');
+        revealWrap.className = 'analysis-side-reveal';
+
+        const revealButton = createRailButton('analysis-side-reveal-btn', '展开' + titleText, 'ti-chevrons-right');
+        revealButton.addEventListener('click', function () {
+            setAnalysisRailCollapsed(layout, false);
+        });
+        revealWrap.appendChild(revealButton);
+        revealHost.prepend(revealWrap);
+
+        layout.__analysisSideNav = sideNav;
+        layout.__analysisCollapseButton = collapseButton;
+        layout.__analysisRevealButton = revealButton;
+        layout.__analysisRailTitle = titleText;
+        layout.dataset.analysisRailReady = 'true';
+
+        syncAnalysisRailUi(layout);
+    }
+
+    function refreshAnalysisSideRails() {
+        const layouts = Array.from(document.querySelectorAll('.analysis-results-layout'));
+        layouts.forEach((layout) => {
+            enhanceAnalysisLayout(layout);
+            setAnalysisRailCollapsed(layout, getAnalysisRailState(layout), { rememberState: false });
+        });
+        scheduleModuleSubnavDockSync();
+    }
+
+    function scheduleAnalysisRailRefresh() {
+        if (refreshFrame) return;
+        refreshFrame = window.requestAnimationFrame(function () {
+            refreshFrame = 0;
+            refreshAnalysisSideRails();
+        });
+    }
+
+    function handleViewportChange() {
+        restoreAppSidebar();
+        refreshAnalysisSideRails();
+    }
+
+    function mutationTouchesRailSkeleton(mutation) {
+        const target = mutation.target;
+        if (target?.classList?.contains?.('analysis-results-layout')) return true;
+        if (target?.id === 'app' || target?.id === 'sub-nav-container') return true;
+        return Array.from(mutation.addedNodes || []).some((node) => {
+            if (!node || node.nodeType !== 1) return false;
+            if (node.matches?.('.analysis-results-layout, .analysis-side-nav, .content-area')) return true;
+            return !!node.querySelector?.('.analysis-results-layout, .analysis-side-nav, .content-area');
+        });
+    }
+
+    window.toggleAppSidebar = toggleAppSidebar;
+    window.setAppSidebarCollapsed = setAppSidebarCollapsed;
+    window.refreshAnalysisSideRails = scheduleAnalysisRailRefresh;
+    window.refreshModuleSubnavDock = scheduleModuleSubnavDockSync;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        bindModuleDockSyncEvents();
+        restoreAppSidebar();
+        refreshAnalysisSideRails();
+        syncModuleSubnavDock();
+
+        const observer = new MutationObserver((mutations) => {
+            if (mutations.some(mutationTouchesRailSkeleton)) {
+                scheduleAnalysisRailRefresh();
+            }
+        });
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    });
+
+    window.addEventListener('resize', handleViewportChange);
+})();

@@ -1,22 +1,395 @@
-(()=>{if(typeof window=="undefined"||window.TeachingManagementModulesRuntime)return;const p={portrait:["teacher-analysis"],detail:["teacher-detail-comparison"],pairing:["teacher-pairing"],township:["teacher-township-ranking"]},u={"teacher-detail-comparison":{title:"教师教学详细数据对比表",icon:"ti-table",desc:"独立查看教师明细指标、校内排序和导出结果。"},"teacher-pairing":{title:"校内教师结对子建议",icon:"ti-users-group",desc:"基于数据分析生成同校教师互助建议。"},"teacher-township-ranking":{title:"教师乡镇排名",icon:"ti-trophy",desc:"查看本校教师在镇域同学科中的相对站位。"}},h=Object.keys(u);function m(e){var t;const n=String(e||"").trim();return((t=Object.entries(p).find(([,i])=>i.includes(n)))==null?void 0:t[0])||"portrait"}function g(e){const n=m(e);return document.body.dataset.teachingManagementGroup=n,n}function s(e){const n=window.SchoolRuntime&&typeof window.SchoolRuntime.escapeHtml=="function"?window.SchoolRuntime.escapeHtml:null;return n?n(e):String(e!=null?e:"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}function b(e){const n=u[e],t=document.createElement("div");return t.id=e,t.className="section card-box analysis-workspace analysis-workspace-teacher analysis-workspace-management",t.dataset.teachingTeacherSubmodule="true",t.innerHTML=`
+(() => {
+    if (typeof window === 'undefined' || window.TeachingManagementModulesRuntime) return;
+
+    const MODULE_GROUPS = {
+        portrait: ['teacher-analysis'],
+        detail: ['teacher-detail-comparison'],
+        pairing: ['teacher-pairing'],
+        township: ['teacher-township-ranking']
+    };
+
+    const MODULE_META = {
+        'teacher-detail-comparison': {
+            title: '教师教学详细数据对比表',
+            icon: 'ti-table',
+            desc: '独立查看教师明细指标、校内排序和导出结果。'
+        },
+        'teacher-pairing': {
+            title: '校内教师结对子建议',
+            icon: 'ti-users-group',
+            desc: '基于数据分析生成同校教师互助建议。'
+        },
+        'teacher-township-ranking': {
+            title: '教师乡镇排名',
+            icon: 'ti-trophy',
+            desc: '查看本校教师在镇域同学科中的相对站位。'
+        }
+    };
+
+    const SUBMODULE_IDS = Object.keys(MODULE_META);
+
+    function getGroupForModule(id) {
+        const moduleId = String(id || '').trim();
+        return Object.entries(MODULE_GROUPS).find(([, ids]) => ids.includes(moduleId))?.[0] || 'portrait';
+    }
+
+    function markActiveGroup(id) {
+        const group = getGroupForModule(id);
+        document.body.dataset.teachingManagementGroup = group;
+        return group;
+    }
+
+    // 复用 runtime-registry 的规范实现（与 account-manager / data-manager-* 同一委托模式）；
+    // 本地实现仅作加载顺序兜底，行为与规范版一致。
+    function escapeHtml(value) {
+        const shared = window.SchoolRuntime && typeof window.SchoolRuntime.escapeHtml === 'function'
+            ? window.SchoolRuntime.escapeHtml
+            : null;
+        if (shared) return shared(value);
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function buildSection(id) {
+        const meta = MODULE_META[id];
+        const section = document.createElement('div');
+        section.id = id;
+        section.className = 'section card-box analysis-workspace analysis-workspace-teacher analysis-workspace-management';
+        section.dataset.teachingTeacherSubmodule = 'true';
+        section.innerHTML = `
             <div class="module-desc-bar analysis-hero" style="border-color:#dc2626;">
-                <h3><i class="ti ${s(n.icon)}"></i> ${s(n.title)}</h3>
-                <p>${s(n.desc)}</p>
+                <h3><i class="ti ${escapeHtml(meta.icon)}"></i> ${escapeHtml(meta.title)}</h3>
+                <p>${escapeHtml(meta.desc)}</p>
                 <div class="analysis-actions">
                     <button type="button" class="btn btn-secondary" onclick="switchTab('teacher-analysis')">回到教师概况</button>
                 </div>
             </div>
             <div class="sec-head analysis-shell-head">
-                <h2><i class="ti ${s(n.icon)}"></i> ${s(n.title)}</h2>
+                <h2><i class="ti ${escapeHtml(meta.icon)}"></i> ${escapeHtml(meta.title)}</h2>
             </div>
-            <div id="${e}-slot" class="analysis-content-stack">
-                <div class="analysis-empty-state">正在加载${s(n.title)}...</div>
+            <div id="${id}-slot" class="analysis-content-stack">
+                <div class="analysis-empty-state">正在加载${escapeHtml(meta.title)}...</div>
             </div>
-        `,t}function k(){return document.getElementById("teacher-analysis")||document.querySelector(".section")}function l(){const e=k();if(!e||!e.parentNode)return!1;let n=e;return h.forEach(t=>{let i=document.getElementById(t);i||(i=b(t),n.parentNode.insertBefore(i,n.nextSibling)),n=i}),!0}function w(e,n){const t=document.getElementById(n);return!e||!t?!1:(e.parentElement===t||(t.innerHTML="",t.appendChild(e)),!0)}function A(){var t,i;const e=document.getElementById("teacher-analysis");if(!e||e.dataset.teacherSubmodulesCleaned==="1")return;e.dataset.teacherSubmodulesCleaned="1",(t=e.querySelector(".side-nav.analysis-side-nav"))==null||t.remove(),(i=e.querySelector(".analysis-flow-banner"))==null||i.remove();const n=e.querySelector(".module-desc-bar p:nth-of-type(2)");n&&(n.innerHTML="<strong>推荐顺序：</strong>先同步任课表，在本模块查看教师概况；明细表、结对子建议和乡镇排名请从教学管理子模块进入。"),e.querySelectorAll(".analysis-scan-item").forEach(a=>{String(a.textContent||"").includes("多期")&&a.remove()})}function M(){const e=document.getElementById("teacher-township-ranking-slot"),n=Array.from(document.querySelectorAll(".analysis-ranking-panel"));return n.find(t=>!t.classList.contains("teacher-split-placeholder")&&t.querySelector("#teacher-township-ranking-container"))||n.find(t=>t.parentElement===e&&t.querySelector("#teacher-township-ranking-container"))||null}function T(){var i,a;const e=document.getElementById("anchor-detail"),n=document.getElementById("anchor-pair"),t=document.getElementById("teacher-township-ranking-container");return!!e&&((i=e.parentElement)==null?void 0:i.id)==="teacher-detail-comparison-slot"&&!!n&&((a=n.parentElement)==null?void 0:a.id)==="teacher-pairing-slot"&&!!t&&!!t.closest("#teacher-township-ranking-slot")}function r(){l();const e=document.getElementById("teacher-analysis");if(!e||e.dataset.lazySectionPlaceholder==="1")return!1;if(e.dataset.teacherSubmodulesCleaned==="1"&&T())return!0;A();const n=e.querySelector(".analysis-content-stack"),t=e.querySelector(".analysis-results-layout-teacher");return t&&n&&t.parentElement!==e&&(e.appendChild(n),t.remove()),w(document.getElementById("anchor-detail"),"teacher-detail-comparison-slot"),w(document.getElementById("anchor-pair"),"teacher-pairing-slot"),w(M(),"teacher-township-ranking-slot"),v(e),typeof window.refreshResponsiveMobileTables=="function"&&h.forEach(i=>window.refreshResponsiveMobileTables(document.getElementById(i))),typeof window.applyRoleAllowVisibility=="function"&&(window.applyRoleAllowVisibility(e),h.forEach(i=>window.applyRoleAllowVisibility(document.getElementById(i)||e))),!0}function y(e=0){let n=document.getElementById("teacher-township-ranking-slot"),t=n==null?void 0:n.querySelector(".analysis-ranking-panel"),i=t==null?void 0:t.querySelector("#teacher-township-ranking-container");if(t&&i&&!t.classList.contains("teacher-split-placeholder"))return i.hidden=!1,i.style.display="block",!0;const a=r();return n=document.getElementById("teacher-township-ranking-slot"),t=n==null?void 0:n.querySelector(".analysis-ranking-panel"),i=t==null?void 0:t.querySelector("#teacher-township-ranking-container"),a&&t&&i&&!t.classList.contains("teacher-split-placeholder")?(i.hidden=!1,i.style.display="block",!0):(e>=8||window.setTimeout(()=>y(e+1),120),!1)}function v(e){if(!e||e.querySelector(".analysis-ranking-panel"))return;const n=e.querySelector(".analysis-content-stack")||e,t=document.createElement("div");t.className="analysis-anchor-panel analysis-ranking-panel teacher-split-placeholder";const i=!document.getElementById("teacher-township-ranking-container");t.innerHTML=`
+        `;
+        return section;
+    }
+
+    function findAnchor() {
+        return document.getElementById('teacher-analysis') || document.querySelector('.section');
+    }
+
+    function ensureTeachingManagementSections() {
+        const anchor = findAnchor();
+        if (!anchor || !anchor.parentNode) return false;
+        let previous = anchor;
+        SUBMODULE_IDS.forEach((id) => {
+            let section = document.getElementById(id);
+            if (!section) {
+                section = buildSection(id);
+                previous.parentNode.insertBefore(section, previous.nextSibling);
+            }
+            previous = section;
+        });
+        return true;
+    }
+
+    function moveNodeToSlot(node, slotId) {
+        const slot = document.getElementById(slotId);
+        if (!node || !slot) return false;
+        if (node.parentElement === slot) return true;
+        slot.innerHTML = '';
+        slot.appendChild(node);
+        return true;
+    }
+
+    function removeTeacherAnalysisOldNavigation() {
+        const teacherSection = document.getElementById('teacher-analysis');
+        if (!teacherSection || teacherSection.dataset.teacherSubmodulesCleaned === '1') return;
+        teacherSection.dataset.teacherSubmodulesCleaned = '1';
+        teacherSection.querySelector('.side-nav.analysis-side-nav')?.remove();
+        teacherSection.querySelector('.analysis-flow-banner')?.remove();
+        const desc = teacherSection.querySelector('.module-desc-bar p:nth-of-type(2)');
+        if (desc) desc.innerHTML = '<strong>推荐顺序：</strong>先同步任课表，在本模块查看教师概况；明细表、结对子建议和乡镇排名请从教学管理子模块进入。';
+        teacherSection.querySelectorAll('.analysis-scan-item').forEach((item) => {
+            if (String(item.textContent || '').includes('多期')) item.remove();
+        });
+    }
+
+    function findTeacherTownshipRankingPanel() {
+        const slot = document.getElementById('teacher-township-ranking-slot');
+        const panels = Array.from(document.querySelectorAll('.analysis-ranking-panel'));
+        return panels.find((panel) => (
+            !panel.classList.contains('teacher-split-placeholder')
+            && panel.querySelector('#teacher-township-ranking-container')
+        )) || panels.find((panel) => (
+            panel.parentElement === slot
+            && panel.querySelector('#teacher-township-ranking-container')
+        )) || null;
+    }
+
+    function teacherBlocksAreRelocated() {
+        const detail = document.getElementById('anchor-detail');
+        const pairing = document.getElementById('anchor-pair');
+        const rankingContainer = document.getElementById('teacher-township-ranking-container');
+        return !!detail
+            && detail.parentElement?.id === 'teacher-detail-comparison-slot'
+            && !!pairing
+            && pairing.parentElement?.id === 'teacher-pairing-slot'
+            && !!rankingContainer
+            && !!rankingContainer.closest('#teacher-township-ranking-slot');
+    }
+
+    function relocateTeacherBlocks() {
+        ensureTeachingManagementSections();
+        const teacherSection = document.getElementById('teacher-analysis');
+        if (!teacherSection || teacherSection.dataset.lazySectionPlaceholder === '1') return false;
+        if (teacherSection.dataset.teacherSubmodulesCleaned === '1' && teacherBlocksAreRelocated()) return true;
+
+        removeTeacherAnalysisOldNavigation();
+        const contentArea = teacherSection.querySelector('.analysis-content-stack');
+        const resultsLayout = teacherSection.querySelector('.analysis-results-layout-teacher');
+        if (resultsLayout && contentArea && resultsLayout.parentElement !== teacherSection) {
+            teacherSection.appendChild(contentArea);
+            resultsLayout.remove();
+        }
+
+        moveNodeToSlot(document.getElementById('anchor-detail'), 'teacher-detail-comparison-slot');
+        moveNodeToSlot(document.getElementById('anchor-pair'), 'teacher-pairing-slot');
+        moveNodeToSlot(findTeacherTownshipRankingPanel(), 'teacher-township-ranking-slot');
+        ensureTeacherAnalysisSplitPlaceholder(teacherSection);
+
+        if (typeof window.refreshResponsiveMobileTables === 'function') {
+            SUBMODULE_IDS.forEach((id) => window.refreshResponsiveMobileTables(document.getElementById(id)));
+        }
+        if (typeof window.applyRoleAllowVisibility === 'function') {
+            window.applyRoleAllowVisibility(teacherSection);
+            SUBMODULE_IDS.forEach((id) => window.applyRoleAllowVisibility(document.getElementById(id) || teacherSection));
+        }
+        return true;
+    }
+
+    function ensureTeacherTownshipRankingSlotReady(attempt = 0) {
+        let slot = document.getElementById('teacher-township-ranking-slot');
+        let panel = slot?.querySelector('.analysis-ranking-panel');
+        let container = panel?.querySelector('#teacher-township-ranking-container');
+        if (panel && container && !panel.classList.contains('teacher-split-placeholder')) {
+            container.hidden = false;
+            container.style.display = 'block';
+            return true;
+        }
+        const relocated = relocateTeacherBlocks();
+        slot = document.getElementById('teacher-township-ranking-slot');
+        panel = slot?.querySelector('.analysis-ranking-panel');
+        container = panel?.querySelector('#teacher-township-ranking-container');
+        if (relocated && panel && container && !panel.classList.contains('teacher-split-placeholder')) {
+            container.hidden = false;
+            container.style.display = 'block';
+            return true;
+        }
+        if (attempt >= 8) return false;
+        window.setTimeout(() => ensureTeacherTownshipRankingSlotReady(attempt + 1), 120);
+        return false;
+    }
+
+    function ensureTeacherAnalysisSplitPlaceholder(teacherSection) {
+        if (!teacherSection || teacherSection.querySelector('.analysis-ranking-panel')) return;
+        const contentArea = teacherSection.querySelector('.analysis-content-stack') || teacherSection;
+        const placeholder = document.createElement('div');
+        placeholder.className = 'analysis-anchor-panel analysis-ranking-panel teacher-split-placeholder';
+        const needsRankingContainer = !document.getElementById('teacher-township-ranking-container');
+        placeholder.innerHTML = `
             <div class="analysis-section-head">
                 <span>教师乡镇排名已拆分为独立子模块</span>
                 <button type="button" class="btn btn-secondary" onclick="switchTab('teacher-township-ranking')">打开乡镇排名</button>
             </div>
-            ${i?'<div id="teacher-township-ranking-container" hidden></div>':""}
+            ${needsRankingContainer ? '<div id="teacher-township-ranking-container" hidden></div>' : ''}
             <div class="analysis-generated-note">教师画像页只保留概况入口，完整乡镇排名、导出和快速学科定位请进入“教师乡镇排名”子模块。</div>
-        `,n.appendChild(t)}function S(){const e=document.getElementById("teacher-analysis");let n=null;(e==null?void 0:e.dataset.lazySectionPlaceholder)==="1"&&typeof window.ensureLazySectionLoaded=="function"&&(n=window.ensureLazySectionLoaded("teacher-analysis"));const t=n||document.getElementById("teacher-analysis")||null;return T()||r(),t}function f(){const e=S();return!e||e.dataset.lazySectionPlaceholder==="1"?!1:(typeof window.syncTeacherAnalysisSchoolContext=="function"&&window.syncTeacherAnalysisSchoolContext(),typeof window.hydrateTeacherDataStore=="function"?window.hydrateTeacherDataStore():typeof window.ensureTeacherDataStore=="function"&&window.ensureTeacherDataStore(),typeof window.renderTeacherAnalysisState=="function"?window.renderTeacherAnalysisState():typeof window.analyzeTeachers=="function"&&window.analyzeTeachers(),typeof window.renderTeacherCards=="function"&&window.renderTeacherCards(),typeof window.updateTeacherMultiExamSelects=="function"&&window.updateTeacherMultiExamSelects(),typeof window.updateTeacherCompareTeacherSelect=="function"&&window.updateTeacherCompareTeacherSelect(),typeof window.applyRoleAllowVisibility=="function"&&window.applyRoleAllowVisibility(e),!0)}function E(e){const n=document.getElementById(e);if(!(n!=null&&n.classList.contains("active")))return!1;e==="teacher-township-ranking"?y():r();const i={"teacher-detail-comparison":window.renderTeacherComparisonTable,"teacher-pairing":window.generateTeacherPairing,"teacher-township-ranking":window.renderTeacherTownshipRanking}[e];return typeof i!="function"?!1:(i(),n.dataset.teacherSubmoduleRendered="1",typeof window.applyRoleAllowVisibility=="function"&&window.applyRoleAllowVisibility(n),!0)}function L(e){if(g(e),S(),typeof window.tmRenderTeachingModuleStateBars=="function"&&window.tmRenderTeachingModuleStateBars(e==="teacher-analysis"?"teacher-analysis":""),typeof window.runModuleTabEnter=="function"){e==="teacher-analysis"&&window.setTimeout(r,80);return}if(e==="teacher-analysis"){window.setTimeout(f,80),window.setTimeout(f,260);return}const n=()=>E(e),t=document.getElementById(e);if(t&&(t.dataset.teacherSubmoduleScheduled="1"),e==="teacher-township-ranking"){let a=!1;const o=()=>a?!0:(a=n(),a),c=typeof window.ensureTeacherAnalysisMainRuntimeLoaded=="function"?window.ensureTeacherAnalysisMainRuntimeLoaded():Promise.resolve(!0);window.setTimeout(o,16),Promise.resolve(c).then(()=>{window.setTimeout(o,16)}).catch(R=>{console.warn("[teaching-management] teacher township runtime load failed:",R),window.setTimeout(o,16)});return}e==="teacher-detail-comparison"&&window.setTimeout(async()=>{var a,o;if((a=document.getElementById(e))!=null&&a.classList.contains("active")){if(Object.keys(window.TEACHER_MAP||{}).length===0&&typeof window.tryAutoRestoreTeacherMap=="function")try{await window.tryAutoRestoreTeacherMap({startup:!0,force:!0})}catch(c){console.warn("[teaching-management] teacher detail map restore failed:",c)}(o=document.getElementById(e))!=null&&o.classList.contains("active")&&(Object.keys(window.TEACHER_MAP||{}).length>0&&typeof window.analyzeTeachers=="function"&&window.analyzeTeachers({render:!1,township:!1,historyLimit:0}),n())}},1100),window.setTimeout(n,80),window.setTimeout(n,650);const i=typeof window.ensureTeacherAnalysisMainRuntimeLoaded=="function"?window.ensureTeacherAnalysisMainRuntimeLoaded():Promise.resolve(!0);Promise.resolve(i).then(()=>{window.setTimeout(n,0)}).catch(a=>{console.warn("[teaching-management] teacher submodule runtime load failed:",a),window.setTimeout(n,0)})}function d(e=0){if(l(),window.__TEACHING_MANAGEMENT_MODULES_INSTALLED__)return;const n=window.switchTab;if(typeof n!="function"){e<40&&window.setTimeout(()=>d(e+1),100);return}window.__TEACHING_MANAGEMENT_MODULES_INSTALLED__=!0,window.switchTab=function(i,...a){const o=String(i||"").trim();l();const c=n.call(this,i,...a);return(o==="teacher-analysis"||u[o])&&L(o),c},document.addEventListener("lazy-section-loaded",r),window.setTimeout(r,300)}window.TeachingManagementModulesRuntime={MODULE_GROUPS:p,getGroupForModule:m,markActiveGroup:g,ensureTeachingManagementSections:l,relocateTeacherBlocks:r,ensureTeacherTownshipRankingSlotReady:y,refreshTeacherAnalysisPortrait:f,renderTeachingManagementSubmodule:E,install:d},document.readyState==="loading"?document.addEventListener("DOMContentLoaded",d,{once:!0}):d()})();
+        `;
+        contentArea.appendChild(placeholder);
+    }
+
+    function ensureTeacherAnalysisLoaded() {
+        const before = document.getElementById('teacher-analysis');
+        let loaded = null;
+        if (before?.dataset.lazySectionPlaceholder === '1' && typeof window.ensureLazySectionLoaded === 'function') {
+            loaded = window.ensureLazySectionLoaded('teacher-analysis');
+        }
+        const section = loaded || document.getElementById('teacher-analysis') || null;
+        if (!teacherBlocksAreRelocated()) relocateTeacherBlocks();
+        return section;
+    }
+
+    function refreshTeacherAnalysisPortrait() {
+        const section = ensureTeacherAnalysisLoaded();
+        if (!section || section.dataset.lazySectionPlaceholder === '1') return false;
+
+        if (typeof window.syncTeacherAnalysisSchoolContext === 'function') {
+            window.syncTeacherAnalysisSchoolContext();
+        }
+        if (typeof window.hydrateTeacherDataStore === 'function') {
+            window.hydrateTeacherDataStore();
+        } else if (typeof window.ensureTeacherDataStore === 'function') {
+            window.ensureTeacherDataStore();
+        }
+
+        if (typeof window.renderTeacherAnalysisState === 'function') {
+            window.renderTeacherAnalysisState();
+        } else if (typeof window.analyzeTeachers === 'function') {
+            window.analyzeTeachers();
+        }
+        if (typeof window.renderTeacherCards === 'function') {
+            window.renderTeacherCards();
+        }
+        if (typeof window.updateTeacherMultiExamSelects === 'function') {
+            window.updateTeacherMultiExamSelects();
+        }
+        if (typeof window.updateTeacherCompareTeacherSelect === 'function') {
+            window.updateTeacherCompareTeacherSelect();
+        }
+        if (typeof window.applyRoleAllowVisibility === 'function') {
+            window.applyRoleAllowVisibility(section);
+        }
+        return true;
+    }
+
+    function renderTeachingManagementSubmodule(moduleId) {
+        const section = document.getElementById(moduleId);
+        if (!section?.classList.contains('active')) return false;
+        if (moduleId === 'teacher-township-ranking') {
+            ensureTeacherTownshipRankingSlotReady();
+        } else {
+            relocateTeacherBlocks();
+        }
+
+        const renderers = {
+            'teacher-detail-comparison': window.renderTeacherComparisonTable,
+            'teacher-pairing': window.generateTeacherPairing,
+            'teacher-township-ranking': window.renderTeacherTownshipRanking
+        };
+        const renderer = renderers[moduleId];
+        if (typeof renderer !== 'function') return false;
+        renderer();
+        section.dataset.teacherSubmoduleRendered = '1';
+        if (typeof window.applyRoleAllowVisibility === 'function') {
+            window.applyRoleAllowVisibility(section);
+        }
+        return true;
+    }
+
+    function refreshTeachingManagementAfterSwitch(moduleId) {
+        markActiveGroup(moduleId);
+        ensureTeacherAnalysisLoaded();
+        if (typeof window.tmRenderTeachingModuleStateBars === 'function') {
+            window.tmRenderTeachingModuleStateBars(moduleId === 'teacher-analysis' ? 'teacher-analysis' : '');
+        }
+        // module-entry-runtime owns all teacher-module initialization. Running
+        // this legacy renderer as well caused the township table to rebuild in
+        // the first click frame, creating a 250ms+ long task and duplicate work.
+        if (typeof window.runModuleTabEnter === 'function') {
+            if (moduleId === 'teacher-analysis') window.setTimeout(relocateTeacherBlocks, 80);
+            return;
+        }
+        if (moduleId === 'teacher-analysis') {
+            window.setTimeout(refreshTeacherAnalysisPortrait, 80);
+            window.setTimeout(refreshTeacherAnalysisPortrait, 260);
+            return;
+        }
+        const render = () => renderTeachingManagementSubmodule(moduleId);
+        const section = document.getElementById(moduleId);
+        if (section) section.dataset.teacherSubmoduleScheduled = '1';
+        if (moduleId === 'teacher-township-ranking') {
+            let rendered = false;
+            const renderOnce = () => {
+                if (rendered) return true;
+                rendered = render();
+                return rendered;
+            };
+            const loadTask = typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
+                ? window.ensureTeacherAnalysisMainRuntimeLoaded()
+                : Promise.resolve(true);
+            window.setTimeout(renderOnce, 16);
+            Promise.resolve(loadTask).then(() => {
+                window.setTimeout(renderOnce, 16);
+            }).catch((error) => {
+                console.warn('[teaching-management] teacher township runtime load failed:', error);
+                window.setTimeout(renderOnce, 16);
+            });
+            return;
+        }
+        if (moduleId === 'teacher-detail-comparison') {
+            window.setTimeout(async () => {
+                if (!document.getElementById(moduleId)?.classList.contains('active')) return;
+                if (Object.keys(window.TEACHER_MAP || {}).length === 0
+                    && typeof window.tryAutoRestoreTeacherMap === 'function') {
+                    try {
+                        await window.tryAutoRestoreTeacherMap({ startup: true, force: true });
+                    } catch (error) {
+                        console.warn('[teaching-management] teacher detail map restore failed:', error);
+                    }
+                }
+                if (!document.getElementById(moduleId)?.classList.contains('active')) return;
+                if (Object.keys(window.TEACHER_MAP || {}).length > 0
+                    && typeof window.analyzeTeachers === 'function') {
+                    window.analyzeTeachers({ render: false, township: false, historyLimit: 0 });
+                }
+                render();
+            }, 1100);
+        }
+        window.setTimeout(render, 80);
+        window.setTimeout(render, 650);
+        const loadTask = typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
+            ? window.ensureTeacherAnalysisMainRuntimeLoaded()
+            : Promise.resolve(true);
+        Promise.resolve(loadTask).then(() => {
+            window.setTimeout(render, 0);
+        }).catch((error) => {
+            console.warn('[teaching-management] teacher submodule runtime load failed:', error);
+            window.setTimeout(render, 0);
+        });
+    }
+
+    function install(attempt = 0) {
+        ensureTeachingManagementSections();
+        if (window.__TEACHING_MANAGEMENT_MODULES_INSTALLED__) return;
+        const originalSwitchTab = window.switchTab;
+        if (typeof originalSwitchTab !== 'function') {
+            if (attempt < 40) window.setTimeout(() => install(attempt + 1), 100);
+            return;
+        }
+        window.__TEACHING_MANAGEMENT_MODULES_INSTALLED__ = true;
+        window.switchTab = function patchedTeachingSwitchTab(id, ...rest) {
+            const moduleId = String(id || '').trim();
+            ensureTeachingManagementSections();
+            const result = originalSwitchTab.call(this, id, ...rest);
+            if (moduleId === 'teacher-analysis' || MODULE_META[moduleId]) {
+                refreshTeachingManagementAfterSwitch(moduleId);
+            }
+            return result;
+        };
+        document.addEventListener('lazy-section-loaded', relocateTeacherBlocks);
+        window.setTimeout(relocateTeacherBlocks, 300);
+    }
+
+    window.TeachingManagementModulesRuntime = {
+        MODULE_GROUPS,
+        getGroupForModule,
+        markActiveGroup,
+        ensureTeachingManagementSections,
+        relocateTeacherBlocks,
+        ensureTeacherTownshipRankingSlotReady,
+        refreshTeacherAnalysisPortrait,
+        renderTeachingManagementSubmodule,
+        install
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', install, { once: true });
+    } else {
+        install();
+    }
+})();

@@ -1,5 +1,720 @@
-(()=>{var ne;if(typeof window=="undefined"||window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__)return;const p=window.CompareSessionState||null,y=window.CompareCloudContext||null,D=window.ReportSessionState||null,ie=typeof window.readStudentCompareCacheState=="function"?window.readStudentCompareCacheState:(()=>window.STUDENT_MULTI_PERIOD_COMPARE_CACHE&&typeof window.STUDENT_MULTI_PERIOD_COMPARE_CACHE=="object"?window.STUDENT_MULTI_PERIOD_COMPARE_CACHE:null),le=typeof window.setStudentCompareCacheState=="function"?window.setStudentCompareCacheState:(e=>{const t=e&&typeof e=="object"&&!Array.isArray(e)?e:null;return window.STUDENT_MULTI_PERIOD_COMPARE_CACHE=t,t});function v(e){return String(e!=null?e:"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}async function j(e={}){if(window.CloudDataService&&typeof window.CloudDataService.selectSystemData=="function")return window.CloudDataService.selectSystemData(e);if(window.CloudApi&&typeof window.CloudApi.selectSystemData=="function")return window.CloudApi.selectSystemData(e);if(!window.sbClient)return{data:[],error:new Error("CLOUD_CLIENT_MISSING")};let t=window.sbClient.from("system_data").select(e.select||"*");return e.keyEq&&(t=t.eq("key",e.keyEq)),e.keyLike&&(t=t.like("key",e.keyLike)),e.order&&(t=t.order(e.order,{ascending:e.ascending!==!1})),e.limit&&(t=t.limit(e.limit)),e.maybeSingle&&typeof t.maybeSingle=="function"&&(t=t.maybeSingle()),t}function b(){return!!(window.CloudApi||window.cloudClient||window.sbClient)}async function se(e){return window.CloudDataService&&typeof window.CloudDataService.upsertSystemDataRecord=="function"?window.CloudDataService.upsertSystemDataRecord(e):window.CloudApi&&typeof window.CloudApi.upsertSystemData=="function"?window.CloudApi.upsertSystemData(e):typeof window.upsertSystemDataRecord=="function"?window.upsertSystemDataRecord(e):!window.sbClient||typeof window.sbClient.from!="function"?{data:null,error:new Error("CLOUD_CLIENT_MISSING")}:window.sbClient.from("system_data").upsert(e,{onConflict:"key"})}const $=typeof window.readCloudCompareTargetState=="function"?window.readCloudCompareTargetState:(()=>p&&typeof p.getCloudCompareTarget=="function"?p.getCloudCompareTarget()||null:window.CLOUD_COMPARE_TARGET&&typeof window.CLOUD_COMPARE_TARGET=="object"?window.CLOUD_COMPARE_TARGET:null),ce=typeof window.setCloudCompareTargetState=="function"?window.setCloudCompareTargetState:(e=>{const t=e&&typeof e=="object"&&!Array.isArray(e)?e:null;return p&&typeof p.setCloudCompareTarget=="function"?p.setCloudCompareTarget(t)||null:(window.CLOUD_COMPARE_TARGET=t,t)}),q=typeof window.readCloudStudentCompareContextState=="function"?window.readCloudStudentCompareContextState:(()=>p&&typeof p.getCloudStudentCompareContext=="function"?p.getCloudStudentCompareContext()||null:window.CLOUD_STUDENT_COMPARE_CONTEXT&&typeof window.CLOUD_STUDENT_COMPARE_CONTEXT=="object"?window.CLOUD_STUDENT_COMPARE_CONTEXT:null),ue=typeof window.setCloudStudentCompareContextState=="function"?window.setCloudStudentCompareContextState:(e=>{const t=e&&typeof e=="object"&&!Array.isArray(e)?e:null;return p&&typeof p.setCloudStudentCompareContext=="function"?p.setCloudStudentCompareContext(t)||null:(window.CLOUD_STUDENT_COMPARE_CONTEXT=t,t)}),V=typeof window.readCloudComparePrevDataBackupState=="function"?window.readCloudComparePrevDataBackupState:(()=>{var e,t;return p&&typeof p.getCloudComparePrevDataBackup=="function"?(e=p.getCloudComparePrevDataBackup())!=null?e:null:(t=window.CLOUD_COMPARE_PREV_DATA_BACKUP)!=null?t:null}),de=typeof window.setCloudComparePrevDataBackupState=="function"?window.setCloudComparePrevDataBackupState:(e=>{var t;return p&&typeof p.setCloudComparePrevDataBackup=="function"?(t=p.setCloudComparePrevDataBackup(e))!=null?t:null:(window.CLOUD_COMPARE_PREV_DATA_BACKUP=e!=null?e:null,window.CLOUD_COMPARE_PREV_DATA_BACKUP)}),J=typeof window.readCurrentReportStudentState=="function"?window.readCurrentReportStudentState:(()=>D&&typeof D.getCurrentReportStudent=="function"?D.getCurrentReportStudent()||null:CURRENT_REPORT_STUDENT&&typeof CURRENT_REPORT_STUDENT=="object"?CURRENT_REPORT_STUDENT:null),G=typeof window.setCurrentReportStudentState=="function"?window.setCurrentReportStudentState:(e=>{const t=e&&typeof e=="object"&&!Array.isArray(e)?e:null;return D&&typeof D.setCurrentReportStudent=="function"?D.setCurrentReportStudent(t)||null:(CURRENT_REPORT_STUDENT=t,t)});let E=null,g=null,T=null;function Ce(e={},t={}){var n;return E=e.cloudCompareTarget||null,g=e.cloudStudentCompareContext||null,T=(n=e.cloudComparePrevDataBackup)!=null?n:null,t.syncSession!==!1&&(ce(E),ue(g),de(T)),e}function L(e={}){var n,o;const t=p&&typeof p.syncCompareSessionState=="function"?p.syncCompareSessionState(e):{cloudCompareTarget:Object.prototype.hasOwnProperty.call(e,"cloudCompareTarget")?e.cloudCompareTarget:Object.prototype.hasOwnProperty.call(e,"CLOUD_COMPARE_TARGET")?e.CLOUD_COMPARE_TARGET:$()||E||null,cloudStudentCompareContext:Object.prototype.hasOwnProperty.call(e,"cloudStudentCompareContext")?e.cloudStudentCompareContext:Object.prototype.hasOwnProperty.call(e,"CLOUD_STUDENT_COMPARE_CONTEXT")?e.CLOUD_STUDENT_COMPARE_CONTEXT:q()||g||null,cloudComparePrevDataBackup:Object.prototype.hasOwnProperty.call(e,"cloudComparePrevDataBackup")?e.cloudComparePrevDataBackup:Object.prototype.hasOwnProperty.call(e,"CLOUD_COMPARE_PREV_DATA_BACKUP")?e.CLOUD_COMPARE_PREV_DATA_BACKUP:(o=(n=V())!=null?n:T)!=null?o:null};return Ce(t)}function A(){return L({cloudCompareTarget:E,cloudStudentCompareContext:g,cloudComparePrevDataBackup:T})}L({cloudCompareTarget:$()||null,cloudStudentCompareContext:q()||null,cloudComparePrevDataBackup:(ne=V())!=null?ne:null});function f(e){return y&&typeof y.normalizeCompareName=="function"?y.normalizeCompareName(e):String(e||"").trim().replace(/\s+/g,"").toLowerCase()}function k(e,t){const n=String(e||"").trim(),o=String(t||"").trim();return!n||!o?!1:n===o?!0:window.PermissionPolicy&&typeof window.PermissionPolicy.sameSchoolName=="function"?window.PermissionPolicy.sameSchoolName(n,o):typeof window.areSchoolNamesEquivalent=="function"?window.areSchoolNamesEquivalent(n,o):typeof areSchoolNamesEquivalent=="function"?areSchoolNamesEquivalent(n,o):typeof window.normalizeSchoolName=="function"?window.normalizeSchoolName(n)===window.normalizeSchoolName(o):n===o}function B(e,t,n){return e?typeof e=="object"?(E={name:String(e.name||"").trim(),class:String(e.class||"").trim(),school:String(e.school||"").trim()},A(),E):(E={name:String(e||"").trim(),class:String(t||"").trim(),school:String(n||"").trim()},A(),E):(E=null,A(),null)}function h(e,t){if(y&&typeof y.isClassEquivalent=="function")return y.isClassEquivalent(e,t,{normalizeClass});const n=normalizeClass(e||""),o=normalizeClass(t||"");if(!n||!o)return!1;if(n===o)return!0;const r=n.replace(/0/g,""),a=o.replace(/0/g,"");return r.length>0&&r===a}function F(e){if(!e||!Array.isArray(RAW_DATA)||RAW_DATA.length===0)return null;const t=f(e.name||""),n=String(e.class||"").trim(),o=String(e.school||"").trim();return RAW_DATA.find(r=>!(f((r==null?void 0:r.name)||"")!==t||n&&!h((r==null?void 0:r.class)||"",n)||o&&String((r==null?void 0:r.school)||"").trim()&&!k(r==null?void 0:r.school,o)))||null}function O(e){if(E&&E.name)return E;const t=J();if(t)return{name:String(t.name||"").trim(),class:String(t.class||"").trim(),school:String(t.school||"").trim()};const n=F(e);return n?{name:String(n.name||"").trim(),class:String(n.class||"").trim(),school:String(n.school||"").trim()}:{name:String((e==null?void 0:e.name)||"").trim(),class:String((e==null?void 0:e.class)||"").trim(),school:String((e==null?void 0:e.school)||"").trim()}}function z(){if(T!==null&&(PREV_DATA=JSON.parse(JSON.stringify(T)),T=null,A(),typeof performSilentMatching=="function"))try{performSilentMatching()}catch(e){console.warn("restore prev compare context failed:",e)}}function K(){var o,r,a,u,i,s,l,C,c;const e=g,t=e==null?void 0:e.previousRecord;if(!t)return!1;T===null&&(T=JSON.parse(JSON.stringify(PREV_DATA||[])));const n={examId:String((e==null?void 0:e.prevExamId)||""),examFullKey:String((e==null?void 0:e.prevExamId)||""),examLabel:String((e==null?void 0:e.prevExamId)||"").replace(/_/g," "),school:String(t.school||((o=e==null?void 0:e.owner)==null?void 0:o.school)||""),class:String(t.class||((r=e==null?void 0:e.owner)==null?void 0:r.class)||""),name:String(t.name||((a=e==null?void 0:e.owner)==null?void 0:a.name)||""),total:Number(t.total)||0,classRank:(u=t.classRank)!=null?u:"-",schoolRank:(i=t.schoolRank)!=null?i:"-",townRank:(s=t.townRank)!=null?s:"-",ranks:JSON.parse(JSON.stringify(t.ranks||{})),scores:JSON.parse(JSON.stringify(t.scores||{})),student:{school:String(t.school||((l=e==null?void 0:e.owner)==null?void 0:l.school)||""),class:String(t.class||((C=e==null?void 0:e.owner)==null?void 0:C.class)||""),name:String(t.name||((c=e==null?void 0:e.owner)==null?void 0:c.name)||""),total:Number(t.total)||0,ranks:JSON.parse(JSON.stringify(t.ranks||{})),scores:JSON.parse(JSON.stringify(t.scores||{}))}};if(n.ranks.total||(n.ranks.total={class:n.classRank,school:n.schoolRank,township:n.townRank}),PREV_DATA=[n],A(),typeof performSilentMatching=="function")try{performSilentMatching()}catch(d){console.warn("sync cloud compare context failed:",d)}return!0}function x(){g=null,A(),z()}function W(e,t,n){var R,S,U,P,oe,re;if(!t||!Array.isArray(t.periods)||t.periods.length<2)return x(),null;const o=t.periods,r=String(getEffectiveCurrentExamId()||"").trim();let a=o.length-1;if(r){const _=o.findIndex(m=>isExamKeyEquivalentForCompare(m==null?void 0:m.examId,r));_>=0&&(a=_)}if(a<0&&Array.isArray(e==null?void 0:e.examIds)&&e.examIds.length>0){const _=e.examIds[e.examIds.length-1],m=o.findIndex(w=>isExamKeyEquivalentForCompare(w==null?void 0:w.examId,_));m>=0&&(a=m)}let u=a-1;u<0&&(u=a+1<o.length?a+1:-1),(u<0||u>=o.length||u===a)&&(u=o.findIndex((_,m)=>m!==a));const i=o[u]||null,s=o[a]||null;if(!i||!s)return x(),null;const l={},C={total:{class:(R=i.rankClass)!=null?R:"-",school:(S=i.rankSchool)!=null?S:"-",township:(U=i.rankTown)!=null?U:"-"}};Object.entries(i.subjects||{}).forEach(([_,m])=>{var I,N,ae;const w=Number(m==null?void 0:m.score);Number.isFinite(w)&&(l[_]=w),C[_]={class:(I=m==null?void 0:m.rankClass)!=null?I:"-",school:(N=m==null?void 0:m.rankSchool)!=null?N:"-",township:(ae=m==null?void 0:m.rankTown)!=null?ae:"-"}});const c={};(n||[]).forEach(_=>{const m=((_==null?void 0:_.periods)||[]).find(w=>isExamKeyEquivalentForCompare(w==null?void 0:w.examId,i.examId));m&&Object.entries(m.subjects||{}).forEach(([w,I])=>{const N=Number(I==null?void 0:I.score);Number.isFinite(N)&&(c[w]||(c[w]=[]),c[w].push(N))})});const d={key:(e==null?void 0:e.key)||"",title:(e==null?void 0:e.title)||"",owner:{name:String(t.name||"").trim(),class:normalizeClass(t.class||""),school:String((e==null?void 0:e.school)||"").trim()},prevExamId:i.examId||"",latestExamId:s.examId||"",previousSubjectScores:c,previousRecord:{name:t.name,class:t.class,school:(e==null?void 0:e.school)||"",total:Number(i.total)||0,classRank:(P=i.rankClass)!=null?P:"-",schoolRank:(oe=i.rankSchool)!=null?oe:"-",townRank:(re=i.rankTown)!=null?re:"-",scores:l,ranks:C,_sourceExam:i.examId||""}};return L({cloudStudentCompareContext:d}).cloudStudentCompareContext||null}function me(e){if(y&&typeof y.isContextMatchStudent=="function")return y.isContextMatchStudent(g,e,{normalizeCompareName:f,isClassEquivalent:h});if(!g||!e)return!1;const t=g.owner||{},n=f(e.name||""),o=String(e.class||""),r=f(t.name||""),a=String(t.class||"");return n===r&&h(o,a)}function pe(e){const t=O(getCurrentUser());if(y&&typeof y.isLikelyCurrentTarget=="function")return y.isLikelyCurrentTarget(g,e,t,{normalizeCompareName:f,isClassEquivalent:h});if(!g||!e)return!1;const n=g.owner||{},o=f((e==null?void 0:e.name)||""),r=f((n==null?void 0:n.name)||""),a=f((t==null?void 0:t.name)||""),u=String((n==null?void 0:n.class)||""),i=String((t==null?void 0:t.class)||""),s=String((e==null?void 0:e.class)||""),l=!!r&&o===r,C=!!a&&o===a,c=!!u&&h(s,u),d=!!i&&h(s,i);return l&&(c||!u)||C&&(d||!i)?!0:l||C}async function fe(){const e=ie();if(window.STUDENT_MULTI_PERIOD_COMPARE_CACHE=e,!window.STUDENT_MULTI_PERIOD_COMPARE_CACHE)return window.UI.alert("请先生成学生多期对比结果");if(!b())return window.UI.alert("☁️ 云端服务未连接，无法保存");const t=Auth.currentUser;if(!t||!RoleManager.hasAnyRole(t,["admin","director","grade_director"]))return window.UI.alert("⛔ 权限不足：只有管理员、教务主任或级部主任可以保存对比结果到云端");const{school:n,examIds:o,periodCount:r,studentsCompareData:a,subjects:u}=window.STUDENT_MULTI_PERIOD_COMPARE_CACHE,i=window.CURRENT_COHORT_ID||localStorage.getItem("CURRENT_COHORT_ID")||"unknown",s=new Date().toISOString().split("T")[0],l=`STUDENT_COMPARE_${i}级_${n}_${o.join("_")}_${s}`,C=`${n} ${r}期对比 (${o.join(" vs ")})`;try{window.UI&&UI.loading(!0,"☁️ 正在保存到云端...");const c={school:n,examIds:o,periodCount:r,subjects:u,title:C,studentCount:a.length,studentsCompareData:a.map(S=>({name:S.name,class:S.class,periods:S.periods,scoreDiff:S.scoreDiff,rankSchoolDiff:S.rankSchoolDiff,rankTownDiff:S.rankTownDiff,latestTotal:S.latestTotal,progressType:S.progressType})),createdBy:t.username||t.email,createdAt:new Date().toISOString()},d="LZ|"+LZString.compressToUTF16(JSON.stringify(c)),{error:R}=await se({key:l,content:d,updated_at:new Date().toISOString()});if(R)throw R;window.UI&&UI.loading(!1),window.UI&&UI.toast(`✅ 已保存到云端 (${C})`,"success")}catch(c){window.UI&&UI.loading(!1),console.error("保存失败:",c),window.UI.alert("保存失败: "+c.message)}}function X(e,t){return{name:f((e==null?void 0:e.name)||(t==null?void 0:t.name)||""),class:String((e==null?void 0:e.class)||(t==null?void 0:t.class)||"").trim(),school:String((e==null?void 0:e.school)||(t==null?void 0:t.school)||"").trim()}}function Z(e,t){const n=Array.isArray(e)?e:[],o=f((t==null?void 0:t.name)||""),r=String((t==null?void 0:t.class)||"").trim(),a=String((t==null?void 0:t.school)||"").trim(),u=n.filter(l=>{if(!a)return!0;const C=String((l==null?void 0:l.school)||"").trim();return C?k(C,a):!0}),i=u.filter(l=>f((l==null?void 0:l.name)||"")===o&&r&&h((l==null?void 0:l.class)||"",r));if(i.length>0)return{student:i[0],strategy:"name+class",candidates:i};const s=u.filter(l=>f((l==null?void 0:l.name)||"")===o);return s.length===1?{student:s[0],strategy:"name-only-unique",candidates:s}:s.length>1?{student:s[0],strategy:"name-only-collision",candidates:s}:{student:null,strategy:"none",candidates:[]}}function Q(){document.activeElement&&typeof document.activeElement.blur=="function"&&document.activeElement.blur(),typeof Swal!="undefined"&&Swal.close();const e=document.querySelector(".fixed");e&&e.remove();const t=document.getElementById("parent-view-container");t&&t.getAttribute("aria-hidden")==="true"&&t.removeAttribute("aria-hidden")}function M(){const e=document.getElementById("parent-view-container"),t=document.activeElement;if(t&&typeof t.blur=="function"&&t.blur(),e&&t&&e.contains(t)){let n=document.getElementById("modal-focus-sink");n||(n=document.createElement("button"),n.id="modal-focus-sink",n.type="button",n.tabIndex=-1,n.style.position="fixed",n.style.left="-9999px",n.style.top="-9999px",n.style.width="1px",n.style.height="1px",n.style.opacity="0",n.style.pointerEvents="none",document.body.appendChild(n));try{n.focus({preventScroll:!0})}catch(o){n.focus()}n.blur()}e&&e.getAttribute("aria-hidden")==="true"&&e.removeAttribute("aria-hidden")}function Y(e,t){const n=document.getElementById("studentCompareHint");n&&(n.textContent=`☁️ 已加载云端对比：${e.title} (共${t}人，保存于${new Date(e.createdAt).toLocaleString("zh-CN")})`,n.style.color="#16a34a")}function ee(e,t){var s,l,C;if(!e||!t||!(RoleManager.hasAnyRole(e,["parent","student"])&&!RoleManager.hasAnyRole(e,["admin","director","grade_director","teacher","class_teacher"])))return;const o=String((t==null?void 0:t.school)||(e==null?void 0:e.school)||"").trim(),r=F(e)||(Array.isArray(RAW_DATA)?RAW_DATA.find(c=>f((c==null?void 0:c.name)||"")===f((t==null?void 0:t.name)||(e==null?void 0:e.name)||"")&&(!(t!=null&&t.class)||h((c==null?void 0:c.class)||"",t.class||""))&&(!o||!String((c==null?void 0:c.school)||"").trim()||k(c==null?void 0:c.school,o))):null);if(r&&r.scores)G(r);else{const c=Array.isArray(t.periods)?t.periods:[],d=c.length>0?c[c.length-1]:null,R={};Object.entries((d==null?void 0:d.subjects)||{}).forEach(([S,U])=>{const P=Number(U==null?void 0:U.score);Number.isFinite(P)&&(R[S]=P)}),G({name:t.name||e.name||"",class:t.class||e.class||"",school:t.school||e.school||"",id:t.id||e.username||"",total:Number.isFinite(Number(d==null?void 0:d.total))?Number(d.total):Number(t.latestTotal)||0,scores:R,ranks:{total:{class:(s=d==null?void 0:d.rankClass)!=null?s:"-",school:(l=d==null?void 0:d.rankSchool)!=null?l:"-",township:(C=d==null?void 0:d.rankTown)!=null?C:"-"}}})}const a=J();if(typeof Auth!="undefined"&&typeof Auth.renderParentView=="function"){Auth.renderParentView();return}const u=document.getElementById("single-report-result"),i=document.getElementById("report-card-capture-area");a&&u&&i&&typeof renderSingleReportCardHTML=="function"&&(u.classList.remove("hidden"),i.classList.add("student-report-canvas-full"),i.innerHTML=renderSingleReportCardHTML(a,"FULL"),setTimeout(()=>{typeof renderRadarChart=="function"&&renderRadarChart(a),typeof renderVarianceChart=="function"&&renderVarianceChart(a)},100),typeof analyzeStrengthsAndWeaknesses=="function"&&analyzeStrengthsAndWeaknesses(a))}async function te(e=!1){if(!b())return window.UI.alert("☁️ 云端服务未连接");try{window.UI&&UI.loading(!0,"☁️ 正在加载云端对比列表...");const t=getCurrentUser(),n=RoleManager.hasAnyRole(t,["admin","director"]),o=window.CURRENT_COHORT_ID||localStorage.getItem("CURRENT_COHORT_ID")||"";let r="STUDENT_COMPARE_%";if(e){const s=O(t);s.name&&s.class&&s.school?r=`STUDENT_COMPARE_${o}级_${s.school}_%`:o&&(r=`STUDENT_COMPARE_${o}级_%`)}else!n&&o&&(r=`STUDENT_COMPARE_${o}级_%`);const{data:a,error:u}=await j({select:"key, updated_at",keyLike:r,order:"updated_at",ascending:!1,limit:50});if(u)throw u;if(window.UI&&UI.loading(!1),!a||a.length===0){if(e){const l=O(t).name||"您本人";return typeof Swal!="undefined"?Swal.fire({title:"☁️ 暂无个人对比数据",html:`<div style="text-align: left; line-height: 1.6;">
-                                <p>云端未找到 <strong>${l}</strong> 的对比数据。</p>
+(() => {
+    if (typeof window === 'undefined' || window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
+
+    const CompareSessionStateRuntime = window.CompareSessionState || null;
+    const CompareCloudContextRuntime = window.CompareCloudContext || null;
+    const ReportSessionStateRuntime = window.ReportSessionState || null;
+    const readStudentCompareCacheState = typeof window.readStudentCompareCacheState === 'function'
+        ? window.readStudentCompareCacheState
+        : (() => (window.STUDENT_MULTI_PERIOD_COMPARE_CACHE && typeof window.STUDENT_MULTI_PERIOD_COMPARE_CACHE === 'object'
+            ? window.STUDENT_MULTI_PERIOD_COMPARE_CACHE
+            : null));
+    const setStudentCompareCacheState = typeof window.setStudentCompareCacheState === 'function'
+        ? window.setStudentCompareCacheState
+        : ((cache) => {
+            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+            window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+            return nextCache;
+        });
+
+    function studentCloudEscapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+    }
+
+    async function selectCloudStudentCompareRows(options = {}) {
+        if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
+            return window.CloudDataService.selectSystemData(options);
+        }
+        if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
+            return window.CloudApi.selectSystemData(options);
+        }
+        if (!window.sbClient) return { data: [], error: new Error('CLOUD_CLIENT_MISSING') };
+        let query = window.sbClient.from('system_data').select(options.select || '*');
+        if (options.keyEq) query = query.eq('key', options.keyEq);
+        if (options.keyLike) query = query.like('key', options.keyLike);
+        if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
+        if (options.limit) query = query.limit(options.limit);
+        if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
+        return query;
+    }
+
+    function hasCloudCompareAccess() {
+        return !!(
+            window.CloudApi
+            || window.cloudClient
+            || window.sbClient
+        );
+    }
+
+    async function upsertCloudStudentCompareRow(row) {
+        if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
+            return window.CloudDataService.upsertSystemDataRecord(row);
+        }
+        if (window.CloudApi && typeof window.CloudApi.upsertSystemData === 'function') {
+            return window.CloudApi.upsertSystemData(row);
+        }
+        if (typeof window.upsertSystemDataRecord === 'function') {
+            return window.upsertSystemDataRecord(row);
+        }
+        if (!window.sbClient || typeof window.sbClient.from !== 'function') {
+            return { data: null, error: new Error('CLOUD_CLIENT_MISSING') };
+        }
+        return window.sbClient.from('system_data').upsert(row, { onConflict: 'key' });
+    }
+    const readCloudCompareTargetSessionState = typeof window.readCloudCompareTargetState === 'function'
+        ? window.readCloudCompareTargetState
+        : (() => {
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudCompareTarget === 'function') {
+                return CompareSessionStateRuntime.getCloudCompareTarget() || null;
+            }
+            return window.CLOUD_COMPARE_TARGET && typeof window.CLOUD_COMPARE_TARGET === 'object'
+                ? window.CLOUD_COMPARE_TARGET
+                : null;
+        });
+    const setCloudCompareTargetSessionState = typeof window.setCloudCompareTargetState === 'function'
+        ? window.setCloudCompareTargetState
+        : ((target) => {
+            const nextTarget = target && typeof target === 'object' && !Array.isArray(target) ? target : null;
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCloudCompareTarget === 'function') {
+                return CompareSessionStateRuntime.setCloudCompareTarget(nextTarget) || null;
+            }
+            window.CLOUD_COMPARE_TARGET = nextTarget;
+            return nextTarget;
+        });
+    const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
+        ? window.readCloudStudentCompareContextState
+        : (() => {
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudStudentCompareContext === 'function') {
+                return CompareSessionStateRuntime.getCloudStudentCompareContext() || null;
+            }
+            return window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
+                ? window.CLOUD_STUDENT_COMPARE_CONTEXT
+                : null;
+        });
+    const setCloudStudentCompareContextSessionState = typeof window.setCloudStudentCompareContextState === 'function'
+        ? window.setCloudStudentCompareContextState
+        : ((context) => {
+            const nextContext = context && typeof context === 'object' && !Array.isArray(context) ? context : null;
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCloudStudentCompareContext === 'function') {
+                return CompareSessionStateRuntime.setCloudStudentCompareContext(nextContext) || null;
+            }
+            window.CLOUD_STUDENT_COMPARE_CONTEXT = nextContext;
+            return nextContext;
+        });
+    const readCloudComparePrevDataBackupSessionState = typeof window.readCloudComparePrevDataBackupState === 'function'
+        ? window.readCloudComparePrevDataBackupState
+        : (() => {
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudComparePrevDataBackup === 'function') {
+                return CompareSessionStateRuntime.getCloudComparePrevDataBackup() ?? null;
+            }
+            return window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null;
+        });
+    const setCloudComparePrevDataBackupSessionState = typeof window.setCloudComparePrevDataBackupState === 'function'
+        ? window.setCloudComparePrevDataBackupState
+        : ((rows) => {
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCloudComparePrevDataBackup === 'function') {
+                return CompareSessionStateRuntime.setCloudComparePrevDataBackup(rows) ?? null;
+            }
+            window.CLOUD_COMPARE_PREV_DATA_BACKUP = rows ?? null;
+            return window.CLOUD_COMPARE_PREV_DATA_BACKUP;
+        });
+    const readCurrentReportStudentState = typeof window.readCurrentReportStudentState === 'function'
+        ? window.readCurrentReportStudentState
+        : (() => {
+            if (ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getCurrentReportStudent === 'function') {
+                return ReportSessionStateRuntime.getCurrentReportStudent() || null;
+            }
+            return CURRENT_REPORT_STUDENT && typeof CURRENT_REPORT_STUDENT === 'object'
+                ? CURRENT_REPORT_STUDENT
+                : null;
+        });
+    const setCurrentReportStudentState = typeof window.setCurrentReportStudentState === 'function'
+        ? window.setCurrentReportStudentState
+        : ((student) => {
+            const nextStudent = student && typeof student === 'object' && !Array.isArray(student) ? student : null;
+            if (ReportSessionStateRuntime && typeof ReportSessionStateRuntime.setCurrentReportStudent === 'function') {
+                return ReportSessionStateRuntime.setCurrentReportStudent(nextStudent) || null;
+            }
+            CURRENT_REPORT_STUDENT = nextStudent;
+            return nextStudent;
+        });
+
+    let CLOUD_COMPARE_TARGET = null;
+    let CLOUD_STUDENT_COMPARE_CONTEXT = null;
+    let CLOUD_COMPARE_PREV_DATA_BACKUP = null;
+
+    function applyLocalCompareSessionSnapshot(snapshot = {}, options = {}) {
+        CLOUD_COMPARE_TARGET = snapshot.cloudCompareTarget || null;
+        CLOUD_STUDENT_COMPARE_CONTEXT = snapshot.cloudStudentCompareContext || null;
+        CLOUD_COMPARE_PREV_DATA_BACKUP = snapshot.cloudComparePrevDataBackup ?? null;
+        if (options.syncSession !== false) {
+            setCloudCompareTargetSessionState(CLOUD_COMPARE_TARGET);
+            setCloudStudentCompareContextSessionState(CLOUD_STUDENT_COMPARE_CONTEXT);
+            setCloudComparePrevDataBackupSessionState(CLOUD_COMPARE_PREV_DATA_BACKUP);
+        }
+        return snapshot;
+    }
+
+    function syncLocalCompareSessionState(patch = {}) {
+        const snapshot = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.syncCompareSessionState === 'function'
+            ? CompareSessionStateRuntime.syncCompareSessionState(patch)
+            : {
+                cloudCompareTarget: Object.prototype.hasOwnProperty.call(patch, 'cloudCompareTarget') ? patch.cloudCompareTarget : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_TARGET') ? patch.CLOUD_COMPARE_TARGET : (readCloudCompareTargetSessionState() || CLOUD_COMPARE_TARGET || null)),
+                cloudStudentCompareContext: Object.prototype.hasOwnProperty.call(patch, 'cloudStudentCompareContext') ? patch.cloudStudentCompareContext : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_STUDENT_COMPARE_CONTEXT') ? patch.CLOUD_STUDENT_COMPARE_CONTEXT : (readCloudStudentCompareContextSessionState() || CLOUD_STUDENT_COMPARE_CONTEXT || null)),
+                cloudComparePrevDataBackup: Object.prototype.hasOwnProperty.call(patch, 'cloudComparePrevDataBackup') ? patch.cloudComparePrevDataBackup : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_PREV_DATA_BACKUP') ? patch.CLOUD_COMPARE_PREV_DATA_BACKUP : (readCloudComparePrevDataBackupSessionState() ?? CLOUD_COMPARE_PREV_DATA_BACKUP ?? null))
+            };
+        return applyLocalCompareSessionSnapshot(snapshot);
+    }
+
+    function syncCloudCompareGlobals() {
+        return syncLocalCompareSessionState({
+            cloudCompareTarget: CLOUD_COMPARE_TARGET,
+            cloudStudentCompareContext: CLOUD_STUDENT_COMPARE_CONTEXT,
+            cloudComparePrevDataBackup: CLOUD_COMPARE_PREV_DATA_BACKUP
+        });
+    }
+
+    syncLocalCompareSessionState({
+        cloudCompareTarget: readCloudCompareTargetSessionState() || null,
+        cloudStudentCompareContext: readCloudStudentCompareContextSessionState() || null,
+        cloudComparePrevDataBackup: readCloudComparePrevDataBackupSessionState() ?? null
+    });
+
+    function normalizeCompareName(name) {
+        if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.normalizeCompareName === 'function') {
+            return CompareCloudContextRuntime.normalizeCompareName(name);
+        }
+        return String(name || '').trim().replace(/\s+/g, '').toLowerCase();
+    }
+
+    function sameCloudCompareSchoolName(left, right) {
+        const leftName = String(left || '').trim();
+        const rightName = String(right || '').trim();
+        if (!leftName || !rightName) return false;
+        if (leftName === rightName) return true;
+        if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+            return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+        }
+        if (typeof window.areSchoolNamesEquivalent === 'function') {
+            return window.areSchoolNamesEquivalent(leftName, rightName);
+        }
+        if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(leftName, rightName);
+        if (typeof window.normalizeSchoolName === 'function') {
+            return window.normalizeSchoolName(leftName) === window.normalizeSchoolName(rightName);
+        }
+        return leftName === rightName;
+    }
+
+    function setCloudCompareTarget(targetOrName, className, schoolName) {
+        if (!targetOrName) {
+            CLOUD_COMPARE_TARGET = null;
+            syncCloudCompareGlobals();
+            return null;
+        }
+        if (typeof targetOrName === 'object') {
+            CLOUD_COMPARE_TARGET = {
+                name: String(targetOrName.name || '').trim(),
+                class: String(targetOrName.class || '').trim(),
+                school: String(targetOrName.school || '').trim()
+            };
+            syncCloudCompareGlobals();
+            return CLOUD_COMPARE_TARGET;
+        }
+        CLOUD_COMPARE_TARGET = {
+            name: String(targetOrName || '').trim(),
+            class: String(className || '').trim(),
+            school: String(schoolName || '').trim()
+        };
+        syncCloudCompareGlobals();
+        return CLOUD_COMPARE_TARGET;
+    }
+
+    function isClassEquivalent(a, b) {
+        if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.isClassEquivalent === 'function') {
+            return CompareCloudContextRuntime.isClassEquivalent(a, b, { normalizeClass });
+        }
+        const c1 = normalizeClass(a || '');
+        const c2 = normalizeClass(b || '');
+        if (!c1 || !c2) return false;
+        if (c1 === c2) return true;
+        const n1 = c1.replace(/0/g, '');
+        const n2 = c2.replace(/0/g, '');
+        return n1.length > 0 && n1 === n2;
+    }
+
+    function getCurrentBoundStudentFromUser(user) {
+        if (!user || !Array.isArray(RAW_DATA) || RAW_DATA.length === 0) return null;
+        const targetName = normalizeCompareName(user.name || '');
+        const targetClass = String(user.class || '').trim();
+        const targetSchool = String(user.school || '').trim();
+        return RAW_DATA.find((student) => {
+            if (normalizeCompareName(student?.name || '') !== targetName) return false;
+            if (targetClass && !isClassEquivalent(student?.class || '', targetClass)) return false;
+            if (targetSchool && String(student?.school || '').trim() && !sameCloudCompareSchoolName(student?.school, targetSchool)) return false;
+            return true;
+        }) || null;
+    }
+
+    function resolveCloudCompareTarget(user) {
+        if (CLOUD_COMPARE_TARGET && CLOUD_COMPARE_TARGET.name) return CLOUD_COMPARE_TARGET;
+        const currentReportStudent = readCurrentReportStudentState();
+        if (currentReportStudent) {
+            return {
+                name: String(currentReportStudent.name || '').trim(),
+                class: String(currentReportStudent.class || '').trim(),
+                school: String(currentReportStudent.school || '').trim()
+            };
+        }
+        const bound = getCurrentBoundStudentFromUser(user);
+        if (bound) {
+            return {
+                name: String(bound.name || '').trim(),
+                class: String(bound.class || '').trim(),
+                school: String(bound.school || '').trim()
+            };
+        }
+        return {
+            name: String(user?.name || '').trim(),
+            class: String(user?.class || '').trim(),
+            school: String(user?.school || '').trim()
+        };
+    }
+
+    function restorePrevDataFromCloudCompare() {
+        if (CLOUD_COMPARE_PREV_DATA_BACKUP !== null) {
+            PREV_DATA = JSON.parse(JSON.stringify(CLOUD_COMPARE_PREV_DATA_BACKUP));
+            CLOUD_COMPARE_PREV_DATA_BACKUP = null;
+            syncCloudCompareGlobals();
+            if (typeof performSilentMatching === 'function') {
+                try { performSilentMatching(); } catch (e) { console.warn('restore prev compare context failed:', e); }
+            }
+        }
+    }
+
+    function syncCloudContextToPrevData() {
+        const ctx = CLOUD_STUDENT_COMPARE_CONTEXT;
+        const prev = ctx?.previousRecord;
+        if (!prev) return false;
+
+        if (CLOUD_COMPARE_PREV_DATA_BACKUP === null) {
+            CLOUD_COMPARE_PREV_DATA_BACKUP = JSON.parse(JSON.stringify(PREV_DATA || []));
+        }
+
+        const historyRow = {
+            examId: String(ctx?.prevExamId || ''),
+            examFullKey: String(ctx?.prevExamId || ''),
+            examLabel: String(ctx?.prevExamId || '').replace(/_/g, ' '),
+            school: String(prev.school || ctx?.owner?.school || ''),
+            class: String(prev.class || ctx?.owner?.class || ''),
+            name: String(prev.name || ctx?.owner?.name || ''),
+            total: Number(prev.total) || 0,
+            classRank: prev.classRank ?? '-',
+            schoolRank: prev.schoolRank ?? '-',
+            townRank: prev.townRank ?? '-',
+            ranks: JSON.parse(JSON.stringify(prev.ranks || {})),
+            scores: JSON.parse(JSON.stringify(prev.scores || {})),
+            student: {
+                school: String(prev.school || ctx?.owner?.school || ''),
+                class: String(prev.class || ctx?.owner?.class || ''),
+                name: String(prev.name || ctx?.owner?.name || ''),
+                total: Number(prev.total) || 0,
+                ranks: JSON.parse(JSON.stringify(prev.ranks || {})),
+                scores: JSON.parse(JSON.stringify(prev.scores || {}))
+            }
+        };
+
+        if (!historyRow.ranks.total) {
+            historyRow.ranks.total = {
+                class: historyRow.classRank,
+                school: historyRow.schoolRank,
+                township: historyRow.townRank
+            };
+        }
+
+        PREV_DATA = [historyRow];
+        syncCloudCompareGlobals();
+        if (typeof performSilentMatching === 'function') {
+            try { performSilentMatching(); } catch (e) { console.warn('sync cloud compare context failed:', e); }
+        }
+        return true;
+    }
+
+    function clearCloudStudentCompareContext() {
+        CLOUD_STUDENT_COMPARE_CONTEXT = null;
+        syncCloudCompareGlobals();
+        restorePrevDataFromCloudCompare();
+    }
+
+    function applyCloudStudentCompareContext(payload, compareStudent, allCompareStudents) {
+        if (!compareStudent || !Array.isArray(compareStudent.periods) || compareStudent.periods.length < 2) {
+            clearCloudStudentCompareContext();
+            return null;
+        }
+
+        const periods = compareStudent.periods;
+        const currentExamId = String(getEffectiveCurrentExamId() || '').trim();
+        let latestIndex = periods.length - 1;
+        if (currentExamId) {
+            const idx = periods.findIndex((period) => isExamKeyEquivalentForCompare(period?.examId, currentExamId));
+            if (idx >= 0) latestIndex = idx;
+        }
+        if (latestIndex < 0 && Array.isArray(payload?.examIds) && payload.examIds.length > 0) {
+            const expectedLatest = payload.examIds[payload.examIds.length - 1];
+            const idx = periods.findIndex((period) => isExamKeyEquivalentForCompare(period?.examId, expectedLatest));
+            if (idx >= 0) latestIndex = idx;
+        }
+
+        let prevIndex = latestIndex - 1;
+        if (prevIndex < 0) prevIndex = (latestIndex + 1 < periods.length) ? latestIndex + 1 : -1;
+        if (prevIndex < 0 || prevIndex >= periods.length || prevIndex === latestIndex) {
+            prevIndex = periods.findIndex((_, index) => index !== latestIndex);
+        }
+
+        const prevPeriod = periods[prevIndex] || null;
+        const latestPeriod = periods[latestIndex] || null;
+        if (!prevPeriod || !latestPeriod) {
+            clearCloudStudentCompareContext();
+            return null;
+        }
+
+        const prevScores = {};
+        const prevRanks = {
+            total: {
+                class: prevPeriod.rankClass ?? '-',
+                school: prevPeriod.rankSchool ?? '-',
+                township: prevPeriod.rankTown ?? '-'
+            }
+        };
+        Object.entries(prevPeriod.subjects || {}).forEach(([subject, info]) => {
+            const score = Number(info?.score);
+            if (Number.isFinite(score)) prevScores[subject] = score;
+            prevRanks[subject] = {
+                class: info?.rankClass ?? '-',
+                school: info?.rankSchool ?? '-',
+                township: info?.rankTown ?? '-'
+            };
+        });
+
+        const previousSubjectScores = {};
+        (allCompareStudents || []).forEach((student) => {
+            const period = (student?.periods || []).find((item) => isExamKeyEquivalentForCompare(item?.examId, prevPeriod.examId));
+            if (!period) return;
+            Object.entries(period.subjects || {}).forEach(([subject, info]) => {
+                const score = Number(info?.score);
+                if (!Number.isFinite(score)) return;
+                if (!previousSubjectScores[subject]) previousSubjectScores[subject] = [];
+                previousSubjectScores[subject].push(score);
+            });
+        });
+
+        const nextContext = {
+            key: payload?.key || '',
+            title: payload?.title || '',
+            owner: {
+                name: String(compareStudent.name || '').trim(),
+                class: normalizeClass(compareStudent.class || ''),
+                school: String(payload?.school || '').trim()
+            },
+            prevExamId: prevPeriod.examId || '',
+            latestExamId: latestPeriod.examId || '',
+            previousSubjectScores,
+            previousRecord: {
+                name: compareStudent.name,
+                class: compareStudent.class,
+                school: payload?.school || '',
+                total: Number(prevPeriod.total) || 0,
+                classRank: prevPeriod.rankClass ?? '-',
+                schoolRank: prevPeriod.rankSchool ?? '-',
+                townRank: prevPeriod.rankTown ?? '-',
+                scores: prevScores,
+                ranks: prevRanks,
+                _sourceExam: prevPeriod.examId || ''
+            }
+        };
+        return syncLocalCompareSessionState({ cloudStudentCompareContext: nextContext }).cloudStudentCompareContext || null;
+    }
+
+    function isCloudContextMatchStudent(student) {
+        if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.isContextMatchStudent === 'function') {
+            return CompareCloudContextRuntime.isContextMatchStudent(CLOUD_STUDENT_COMPARE_CONTEXT, student, {
+                normalizeCompareName,
+                isClassEquivalent
+            });
+        }
+        if (!CLOUD_STUDENT_COMPARE_CONTEXT || !student) return false;
+
+        const owner = CLOUD_STUDENT_COMPARE_CONTEXT.owner || {};
+        const targetName = normalizeCompareName(student.name || '');
+        const targetClass = String(student.class || '');
+        const ownerName = normalizeCompareName(owner.name || '');
+        const ownerClass = String(owner.class || '');
+
+        return targetName === ownerName && isClassEquivalent(targetClass, ownerClass);
+    }
+
+    function isCloudContextLikelyCurrentTarget(student) {
+        const target = resolveCloudCompareTarget(getCurrentUser());
+        if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.isLikelyCurrentTarget === 'function') {
+            return CompareCloudContextRuntime.isLikelyCurrentTarget(CLOUD_STUDENT_COMPARE_CONTEXT, student, target, {
+                normalizeCompareName,
+                isClassEquivalent
+            });
+        }
+        if (!CLOUD_STUDENT_COMPARE_CONTEXT || !student) return false;
+        const owner = CLOUD_STUDENT_COMPARE_CONTEXT.owner || {};
+        const studentName = normalizeCompareName(student?.name || '');
+        const ownerName = normalizeCompareName(owner?.name || '');
+        const targetName = normalizeCompareName(target?.name || '');
+        const ownerClass = String(owner?.class || '');
+        const targetClass = String(target?.class || '');
+        const studentClass = String(student?.class || '');
+
+        const nameMatchByOwner = !!ownerName && studentName === ownerName;
+        const nameMatchByTarget = !!targetName && studentName === targetName;
+        const classMatchByOwner = !!ownerClass && isClassEquivalent(studentClass, ownerClass);
+        const classMatchByTarget = !!targetClass && isClassEquivalent(studentClass, targetClass);
+
+        if (nameMatchByOwner && (classMatchByOwner || !ownerClass)) return true;
+        if (nameMatchByTarget && (classMatchByTarget || !targetClass)) return true;
+        return nameMatchByOwner || nameMatchByTarget;
+    }
+
+    async function saveStudentCompareToCloud() {
+        const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
+        window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+        if (!window.STUDENT_MULTI_PERIOD_COMPARE_CACHE) return window.UI.alert('请先生成学生多期对比结果');
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接，无法保存');
+
+        const user = Auth.currentUser;
+        if (!user || !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
+            return window.UI.alert('⛔ 权限不足：只有管理员、教务主任或级部主任可以保存对比结果到云端');
+        }
+
+        const { school, examIds, periodCount, studentsCompareData, subjects } = window.STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+        const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
+        const timestamp = new Date().toISOString().split('T')[0];
+        const key = `STUDENT_COMPARE_${cohortId}级_${school}_${examIds.join('_')}_${timestamp}`;
+        const title = `${school} ${periodCount}期对比 (${examIds.join(' vs ')})`;
+
+        try {
+            if (window.UI) UI.loading(true, '☁️ 正在保存到云端...');
+            const payload = {
+                school,
+                examIds,
+                periodCount,
+                subjects,
+                title,
+                studentCount: studentsCompareData.length,
+                studentsCompareData: studentsCompareData.map(s => ({
+                    name: s.name,
+                    class: s.class,
+                    periods: s.periods,
+                    scoreDiff: s.scoreDiff,
+                    rankSchoolDiff: s.rankSchoolDiff,
+                    rankTownDiff: s.rankTownDiff,
+                    latestTotal: s.latestTotal,
+                    progressType: s.progressType
+                })),
+                createdBy: user.username || user.email,
+                createdAt: new Date().toISOString()
+            };
+
+            const compressed = 'LZ|' + LZString.compressToUTF16(JSON.stringify(payload));
+            const { error } = await upsertCloudStudentCompareRow({
+                key,
+                content: compressed,
+                updated_at: new Date().toISOString()
+            });
+            if (error) throw error;
+            if (window.UI) UI.loading(false);
+            if (window.UI) UI.toast(`✅ 已保存到云端 (${title})`, 'success');
+        } catch (e) {
+            if (window.UI) UI.loading(false);
+            console.error('保存失败:', e);
+            window.UI.alert('保存失败: ' + e.message);
+        }
+    }
+
+    function normalizeCloudCompareTarget(target, user) {
+        return {
+            name: normalizeCompareName(target?.name || user?.name || ''),
+            class: String(target?.class || user?.class || '').trim(),
+            school: String(target?.school || user?.school || '').trim()
+        };
+    }
+
+    function pickSelfStudentFromCloudRows(rows, normalizedTarget) {
+        const sourceRows = Array.isArray(rows) ? rows : [];
+        const targetName = normalizeCompareName(normalizedTarget?.name || '');
+        const targetClass = String(normalizedTarget?.class || '').trim();
+        const targetSchool = String(normalizedTarget?.school || '').trim();
+
+        const withSchool = sourceRows.filter(s => {
+            if (!targetSchool) return true;
+            const school = String(s?.school || '').trim();
+            if (!school) return true;
+            return sameCloudCompareSchoolName(school, targetSchool);
+        });
+
+        const exactMatches = withSchool.filter(s => normalizeCompareName(s?.name || '') === targetName && targetClass && isClassEquivalent(s?.class || '', targetClass));
+        if (exactMatches.length > 0) return { student: exactMatches[0], strategy: 'name+class', candidates: exactMatches };
+
+        const nameOnlyMatches = withSchool.filter(s => normalizeCompareName(s?.name || '') === targetName);
+        if (nameOnlyMatches.length === 1) return { student: nameOnlyMatches[0], strategy: 'name-only-unique', candidates: nameOnlyMatches };
+        if (nameOnlyMatches.length > 1) return { student: nameOnlyMatches[0], strategy: 'name-only-collision', candidates: nameOnlyMatches };
+
+        return { student: null, strategy: 'none', candidates: [] };
+    }
+
+    function sanitizeCloudCompareFocusAndModal() {
+        if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+        if (typeof Swal !== 'undefined') Swal.close();
+        const fixedEl = document.querySelector('.fixed');
+        if (fixedEl) fixedEl.remove();
+        const parentContainer = document.getElementById('parent-view-container');
+        if (parentContainer && parentContainer.getAttribute('aria-hidden') === 'true') {
+            parentContainer.removeAttribute('aria-hidden');
+        }
+    }
+
+    function moveFocusOutOfParentView() {
+        const parentContainer = document.getElementById('parent-view-container');
+        const activeEl = document.activeElement;
+        if (activeEl && typeof activeEl.blur === 'function') activeEl.blur();
+
+        if (parentContainer && activeEl && parentContainer.contains(activeEl)) {
+            let sink = document.getElementById('modal-focus-sink');
+            if (!sink) {
+                sink = document.createElement('button');
+                sink.id = 'modal-focus-sink';
+                sink.type = 'button';
+                sink.tabIndex = -1;
+                sink.style.position = 'fixed';
+                sink.style.left = '-9999px';
+                sink.style.top = '-9999px';
+                sink.style.width = '1px';
+                sink.style.height = '1px';
+                sink.style.opacity = '0';
+                sink.style.pointerEvents = 'none';
+                document.body.appendChild(sink);
+            }
+            try { sink.focus({ preventScroll: true }); } catch (e) { sink.focus(); }
+            sink.blur();
+        }
+
+        if (parentContainer && parentContainer.getAttribute('aria-hidden') === 'true') {
+            parentContainer.removeAttribute('aria-hidden');
+        }
+    }
+
+    function renderCloudCompareResultHint(payload, displayCount) {
+        const hintEl = document.getElementById('studentCompareHint');
+        if (!hintEl) return;
+        hintEl.textContent = `☁️ 已加载云端对比：${payload.title} (共${displayCount}人，保存于${new Date(payload.createdAt).toLocaleString('zh-CN')})`;
+        hintEl.style.color = '#16a34a';
+    }
+
+    function rerenderStudentSideReportAfterCloudCompare(user, selfStudent) {
+        if (!user || !selfStudent) return;
+        const isParentOrStudent = RoleManager.hasAnyRole(user, ['parent', 'student']) &&
+            !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
+        if (!isParentOrStudent) return;
+
+        const fallbackSchool = String(selfStudent?.school || user?.school || '').trim();
+        const bound = getCurrentBoundStudentFromUser(user) || (Array.isArray(RAW_DATA) ? RAW_DATA.find(s =>
+            normalizeCompareName(s?.name || '') === normalizeCompareName(selfStudent?.name || user?.name || '') &&
+            (!selfStudent?.class || isClassEquivalent(s?.class || '', selfStudent.class || '')) &&
+            (!fallbackSchool || !String(s?.school || '').trim() || sameCloudCompareSchoolName(s?.school, fallbackSchool))
+        ) : null);
+
+        if (bound && bound.scores) {
+            setCurrentReportStudentState(bound);
+        } else {
+            const periods = Array.isArray(selfStudent.periods) ? selfStudent.periods : [];
+            const latestPeriod = periods.length > 0 ? periods[periods.length - 1] : null;
+            const synthesizedScores = {};
+            Object.entries(latestPeriod?.subjects || {}).forEach(([subject, info]) => {
+                const score = Number(info?.score);
+                if (Number.isFinite(score)) synthesizedScores[subject] = score;
+            });
+
+            setCurrentReportStudentState({
+                name: selfStudent.name || user.name || '',
+                class: selfStudent.class || user.class || '',
+                school: selfStudent.school || user.school || '',
+                id: selfStudent.id || user.username || '',
+                total: Number.isFinite(Number(latestPeriod?.total)) ? Number(latestPeriod.total) : (Number(selfStudent.latestTotal) || 0),
+                scores: synthesizedScores,
+                ranks: {
+                    total: {
+                        class: latestPeriod?.rankClass ?? '-',
+                        school: latestPeriod?.rankSchool ?? '-',
+                        township: latestPeriod?.rankTown ?? '-'
+                    }
+                }
+            });
+        }
+
+        const currentReportStudent = readCurrentReportStudentState();
+
+        if (typeof Auth !== 'undefined' && typeof Auth.renderParentView === 'function') {
+            Auth.renderParentView();
+            return;
+        }
+
+        const reportWrap = document.getElementById('single-report-result');
+        const reportArea = document.getElementById('report-card-capture-area');
+        if (currentReportStudent && reportWrap && reportArea && typeof renderSingleReportCardHTML === 'function') {
+            reportWrap.classList.remove('hidden');
+            reportArea.classList.add('student-report-canvas-full');
+            reportArea.innerHTML = renderSingleReportCardHTML(currentReportStudent, 'FULL');
+            setTimeout(() => {
+                if (typeof renderRadarChart === 'function') renderRadarChart(currentReportStudent);
+                if (typeof renderVarianceChart === 'function') renderVarianceChart(currentReportStudent);
+            }, 100);
+            if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(currentReportStudent);
+        }
+    }
+
+    async function viewCloudStudentCompares(selfOnly = false) {
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
+        try {
+            if (window.UI) UI.loading(true, '☁️ 正在加载云端对比列表...');
+
+            const user = getCurrentUser();
+            const isAdminOrDirector = RoleManager.hasAnyRole(user, ['admin', 'director']);
+            const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
+            let keyLike = 'STUDENT_COMPARE_%';
+
+            if (selfOnly) {
+                const target = resolveCloudCompareTarget(user);
+                if (target.name && target.class && target.school) keyLike = `STUDENT_COMPARE_${cohortId}级_${target.school}_%`;
+                else if (cohortId) keyLike = `STUDENT_COMPARE_${cohortId}级_%`;
+            } else if (!isAdminOrDirector && cohortId) {
+                keyLike = `STUDENT_COMPARE_${cohortId}级_%`;
+            }
+
+            const { data, error } = await selectCloudStudentCompareRows({
+                select: 'key, updated_at',
+                keyLike,
+                order: 'updated_at',
+                ascending: false,
+                limit: 50
+            });
+            if (error) throw error;
+            if (window.UI) UI.loading(false);
+
+            if (!data || data.length === 0) {
+                if (selfOnly) {
+                    const target = resolveCloudCompareTarget(user);
+                    const readableName = target.name || '您本人';
+                    if (typeof Swal !== 'undefined') {
+                        return Swal.fire({
+                            title: '☁️ 暂无个人对比数据',
+                            html: `<div style="text-align: left; line-height: 1.6;">
+                                <p>云端未找到 <strong>${readableName}</strong> 的对比数据。</p>
                                 <p style="margin-top: 10px;">可能原因：</p>
                                 <ul style="margin: 8px 0; padding-left: 20px;">
                                     <li>您还没有生成过多期成绩对比</li>
@@ -7,18 +722,172 @@
                                     <li>您的数据在其他学校或届别中</li>
                                 </ul>
                                 <p style="margin-top: 10px; color: #3b82f6;">建议：请联系班主任或教务老师生成对比数据。</p>
-                            </div>`,icon:"info",confirmButtonText:"我知道了",width:500}):window.UI.alert(`☁️ 云端暂无${l}的对比数据
+                            </div>`,
+                            icon: 'info',
+                            confirmButtonText: '我知道了',
+                            width: 500
+                        });
+                    }
+                    return window.UI.alert(`☁️ 云端暂无${readableName}的对比数据\n\n建议联系班主任或教务老师生成对比数据。`);
+                }
+                return window.UI.alert('☁️ 云端暂无已保存的对比结果');
+            }
 
-建议联系班主任或教务老师生成对比数据。`)}return window.UI.alert("☁️ 云端暂无已保存的对比结果")}if(e&&a.length===1)return loadCloudStudentCompareForCurrentStudent(a[0].key);const i=a.map(s=>{const l=s.key.split("_"),C=l[1]||"未知届别",c=l[2]||"未知学校",d=new Date(s.updated_at).toLocaleString("zh-CN");return`<button type="button" data-student-compare-key="${v(s.key)}" style="width:100%; border:0; padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:#fff; text-align:left;">
+            if (selfOnly && data.length === 1) return loadCloudStudentCompareForCurrentStudent(data[0].key);
+
+            const listHtml = data.map(item => {
+                const keyParts = item.key.split('_');
+                const cohort = keyParts[1] || '未知届别';
+                const school = keyParts[2] || '未知学校';
+                const date = new Date(item.updated_at).toLocaleString('zh-CN');
+                return `<button type="button" data-student-compare-key="${studentCloudEscapeHtml(item.key)}" style="width:100%; border:0; padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:#fff; text-align:left;">
                         <div style="flex:1;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                                <span style="background:#f0fdf4; color:#16a34a; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${v(C)}</span>
-                                <span style="font-weight:600; color:#334155;">${v(c)}</span>
+                                <span style="background:#f0fdf4; color:#16a34a; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${studentCloudEscapeHtml(cohort)}</span>
+                                <span style="font-weight:600; color:#334155;">${studentCloudEscapeHtml(school)}</span>
                             </div>
-                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${v(s.key)}</div>
+                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${studentCloudEscapeHtml(item.key)}</div>
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-size:12px; color:#64748b;">${d}</div>
+                            <div style="font-size:12px; color:#64748b;">${date}</div>
                             <div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击解析 &gt;</div>
                         </div>
-                    </button>`}).join("");typeof Swal!="undefined"&&(M(),Swal.fire({title:e?"☁️ 选择本人对比记录":"☁️ 已保存的对比结果",html:`<div style="max-height:400px; overflow-y:auto; text-align:left;">${i}</div>`,width:800,showCloseButton:!0,showConfirmButton:!1,returnFocus:!1,didOpen:s=>{s.querySelectorAll("[data-student-compare-key]").forEach(l=>{l.addEventListener("click",()=>{const C=String(l.dataset.studentCompareKey||"");e?loadCloudStudentCompareForCurrentStudent(C):H(C)})})}}))}catch(t){window.UI&&UI.loading(!1),console.error("加载失败:",t),window.UI.alert("加载失败: "+t.message)}}async function H(e,t=!1){if(Q(),!b())return window.UI.alert("☁️ 云端服务未连接");try{window.UI&&UI.loading(!0,"☁️ 正在加载云端对比详情...");const{data:n,error:o}=await j({select:"content",keyEq:e,maybeSingle:!0});if(o)throw o;let r=n.content;typeof r=="string"&&r.startsWith("LZ|")&&(r=LZString.decompressFromUTF16(r.substring(3)));const a=typeof r=="string"?JSON.parse(r):r;a.key=e;const u=Array.isArray(a.studentsCompareData)?a.studentsCompareData:[];STUDENT_MULTI_PERIOD_COMPARE_CACHE={school:a.school,examIds:a.examIds||[],periodCount:Number(a.periodCount||2),studentsCompareData:Array.isArray(u)?[...u]:[],originalStudentsCompareData:Array.isArray(u)?[...u]:[],subjects:a.subjects||[],currentPage:1,pageSize:20,activeNameFilters:[],activeProgressFilter:"",activeClassFilter:""},le(STUDENT_MULTI_PERIOD_COMPARE_CACHE);let i=null;if(t){const l=getCurrentUser(),C=X(O(l),l);if(i=Z(STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData,C),!(i!=null&&i.student))return window.UI&&UI.loading(!1),window.UI.alert("☁️ 云端记录中未匹配到您的个人数据");STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData=[i.student],STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData=[i.student]}typeof updateClassGroupOptions=="function"&&updateClassGroupOptions(),typeof updateStudentCompareSummary=="function"&&updateStudentCompareSummary(),typeof renderStudentComparePage=="function"&&renderStudentComparePage(1),Y(a,STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData.length);const s=getCurrentUser();t&&(i!=null&&i.student)?(W(a,i.student,u),K(),ee(s,i.student)):x(),window.UI&&(UI.loading(!1),UI.toast("✅ 已加载云端对比数据","success"))}catch(n){window.UI&&UI.loading(!1),console.error("加载失败:",n),window.UI.alert("加载失败: "+n.message)}}window.saveStudentCompareToCloud=fe,window.normalizeCompareName=f,window.sameCloudCompareSchoolName=k,window.setCloudCompareTarget=B,window.resolveCloudCompareTarget=O,window.isClassEquivalent=h,window.getCurrentBoundStudentFromUser=F,window.restorePrevDataFromCloudCompare=z,window.syncCloudContextToPrevData=K,window.clearCloudStudentCompareContext=x,window.applyCloudStudentCompareContext=W,window.isCloudContextMatchStudent=me,window.isCloudContextLikelyCurrentTarget=pe,window.viewCloudStudentCompares=te,window.normalizeCloudCompareTarget=X,window.pickSelfStudentFromCloudRows=Z,window.sanitizeCloudCompareFocusAndModal=Q,window.moveFocusOutOfParentView=M,window.renderCloudCompareResultHint=Y,window.rerenderStudentSideReportAfterCloudCompare=ee,window.loadCloudStudentCompare=H,window.viewCloudStudentComparesForCurrentStudent=async function(e,t,n){return e||t||n?B(e,t,n):B(O(getCurrentUser())),typeof M=="function"?M():document.activeElement&&typeof document.activeElement.blur=="function"&&document.activeElement.blur(),await new Promise(o=>setTimeout(o,16)),te(!0)},window.loadCloudStudentCompareForCurrentStudent=function(e){return H(e,!0)},A(),window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__=!0})();
+                    </button>`;
+            }).join('');
+
+            if (typeof Swal !== 'undefined') {
+                moveFocusOutOfParentView();
+                Swal.fire({
+                    title: selfOnly ? '☁️ 选择本人对比记录' : '☁️ 已保存的对比结果',
+                    html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${listHtml}</div>`,
+                    width: 800,
+                    showCloseButton: true,
+                    showConfirmButton: false,
+                    returnFocus: false,
+                    didOpen: (popup) => {
+                        popup.querySelectorAll('[data-student-compare-key]').forEach((button) => {
+                            button.addEventListener('click', () => {
+                                const key = String(button.dataset.studentCompareKey || '');
+                                if (selfOnly) loadCloudStudentCompareForCurrentStudent(key);
+                                else loadCloudStudentCompare(key);
+                            });
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            if (window.UI) UI.loading(false);
+            console.error('加载失败:', e);
+            window.UI.alert('加载失败: ' + e.message);
+        }
+    }
+
+    async function loadCloudStudentCompare(key, selfOnly = false) {
+        sanitizeCloudCompareFocusAndModal();
+        if (!hasCloudCompareAccess()) return window.UI.alert('☁️ 云端服务未连接');
+        try {
+            if (window.UI) UI.loading(true, '☁️ 正在加载云端对比详情...');
+            const { data, error } = await selectCloudStudentCompareRows({
+                select: 'content',
+                keyEq: key,
+                maybeSingle: true
+            });
+            if (error) throw error;
+
+            let content = data.content;
+            if (typeof content === 'string' && content.startsWith('LZ|')) {
+                content = LZString.decompressFromUTF16(content.substring(3));
+            }
+            const payload = typeof content === 'string' ? JSON.parse(content) : content;
+            payload.key = key;
+
+            const allRows = Array.isArray(payload.studentsCompareData) ? payload.studentsCompareData : [];
+            STUDENT_MULTI_PERIOD_COMPARE_CACHE = {
+                school: payload.school,
+                examIds: payload.examIds || [],
+                periodCount: Number(payload.periodCount || 2),
+                studentsCompareData: Array.isArray(allRows) ? [...allRows] : [],
+                originalStudentsCompareData: Array.isArray(allRows) ? [...allRows] : [],
+                subjects: payload.subjects || [],
+                currentPage: 1,
+                pageSize: 20,
+                activeNameFilters: [],
+                activeProgressFilter: '',
+                activeClassFilter: ''
+            };
+            setStudentCompareCacheState(STUDENT_MULTI_PERIOD_COMPARE_CACHE);
+
+            let picked = null;
+            if (selfOnly) {
+                const user = getCurrentUser();
+                const target = normalizeCloudCompareTarget(resolveCloudCompareTarget(user), user);
+                picked = pickSelfStudentFromCloudRows(STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData, target);
+                if (!picked?.student) {
+                    if (window.UI) UI.loading(false);
+                    return window.UI.alert('☁️ 云端记录中未匹配到您的个人数据');
+                }
+                STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = [picked.student];
+                STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData = [picked.student];
+            }
+
+            if (typeof updateClassGroupOptions === 'function') updateClassGroupOptions();
+            if (typeof updateStudentCompareSummary === 'function') updateStudentCompareSummary();
+            if (typeof renderStudentComparePage === 'function') renderStudentComparePage(1);
+            renderCloudCompareResultHint(payload, STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData.length);
+
+            const user = getCurrentUser();
+            if (selfOnly && picked?.student) {
+                applyCloudStudentCompareContext(payload, picked.student, allRows);
+                syncCloudContextToPrevData();
+                rerenderStudentSideReportAfterCloudCompare(user, picked.student);
+            } else {
+                clearCloudStudentCompareContext();
+            }
+
+            if (window.UI) {
+                UI.loading(false);
+                UI.toast('✅ 已加载云端对比数据', 'success');
+            }
+        } catch (e) {
+            if (window.UI) UI.loading(false);
+            console.error('加载失败:', e);
+            window.UI.alert('加载失败: ' + e.message);
+        }
+    }
+
+    window.saveStudentCompareToCloud = saveStudentCompareToCloud;
+    window.normalizeCompareName = normalizeCompareName;
+    window.sameCloudCompareSchoolName = sameCloudCompareSchoolName;
+    window.setCloudCompareTarget = setCloudCompareTarget;
+    window.resolveCloudCompareTarget = resolveCloudCompareTarget;
+    window.isClassEquivalent = isClassEquivalent;
+    window.getCurrentBoundStudentFromUser = getCurrentBoundStudentFromUser;
+    window.restorePrevDataFromCloudCompare = restorePrevDataFromCloudCompare;
+    window.syncCloudContextToPrevData = syncCloudContextToPrevData;
+    window.clearCloudStudentCompareContext = clearCloudStudentCompareContext;
+    window.applyCloudStudentCompareContext = applyCloudStudentCompareContext;
+    window.isCloudContextMatchStudent = isCloudContextMatchStudent;
+    window.isCloudContextLikelyCurrentTarget = isCloudContextLikelyCurrentTarget;
+    window.viewCloudStudentCompares = viewCloudStudentCompares;
+    window.normalizeCloudCompareTarget = normalizeCloudCompareTarget;
+    window.pickSelfStudentFromCloudRows = pickSelfStudentFromCloudRows;
+    window.sanitizeCloudCompareFocusAndModal = sanitizeCloudCompareFocusAndModal;
+    window.moveFocusOutOfParentView = moveFocusOutOfParentView;
+    window.renderCloudCompareResultHint = renderCloudCompareResultHint;
+    window.rerenderStudentSideReportAfterCloudCompare = rerenderStudentSideReportAfterCloudCompare;
+    window.loadCloudStudentCompare = loadCloudStudentCompare;
+    window.viewCloudStudentComparesForCurrentStudent = async function (name, className, schoolName) {
+        if (name || className || schoolName) setCloudCompareTarget(name, className, schoolName);
+        else setCloudCompareTarget(resolveCloudCompareTarget(getCurrentUser()));
+        if (typeof moveFocusOutOfParentView === 'function') moveFocusOutOfParentView();
+        else if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+        await new Promise(r => setTimeout(r, 16));
+        return viewCloudStudentCompares(true);
+    };
+    window.loadCloudStudentCompareForCurrentStudent = function (key) {
+        return loadCloudStudentCompare(key, true);
+    };
+
+    syncCloudCompareGlobals();
+    window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__ = true;
+})();

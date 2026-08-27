@@ -1,1 +1,250 @@
-(function(s,n){const a=n(s||{});if(typeof module=="object"&&module.exports){const S=function(r){return n(r||s||{})};S.runtime=a,module.exports=S}!s||s.SupportState||(s.SupportState=a,a.syncSupportState(a.snapshotSupportState()))})(typeof globalThis!="undefined"?globalThis:this,function(n){function a(){return(!n.SYS_VARS||typeof n.SYS_VARS!="object"||Array.isArray(n.SYS_VARS))&&(n.SYS_VARS={}),(!n.SYS_VARS.indicator||typeof n.SYS_VARS.indicator!="object"||Array.isArray(n.SYS_VARS.indicator))&&(n.SYS_VARS.indicator={ind1:"",ind2:"",highSchoolLine:""}),(!n.SYS_VARS.targets||typeof n.SYS_VARS.targets!="object"||Array.isArray(n.SYS_VARS.targets))&&(n.SYS_VARS.targets={}),Array.isArray(n.SYS_VARS.schoolAliases)||(n.SYS_VARS.schoolAliases=[]),(!n.SYS_VARS.dataManagerSyncState||typeof n.SYS_VARS.dataManagerSyncState!="object"||Array.isArray(n.SYS_VARS.dataManagerSyncState))&&(n.SYS_VARS.dataManagerSyncState={}),n.SYS_VARS}function S(e){return Array.isArray(e)?e:[]}function r(e){return e&&typeof e=="object"&&!Array.isArray(e)?e:{}}function b(e){const t=e&&typeof e=="object"?e:{};return{ind1:String(t.ind1||"").trim(),ind2:String(t.ind2||"").trim(),highSchoolLine:String(t.highSchoolLine||t.graduateHighSchoolLine||t.highSchoolAdmissionLine||t.highSchoolScoreLine||t.中考高中过线分数||"").trim()}}function c(){return b(a().indicator)}function i(e){const t=b(e),Y=a();return Y.indicator=t,t}function o(){const e=r(n.TARGETS);return n.TARGETS=e,a().targets=e,e}function p(e){const t=r(e);return n.TARGETS=t,a().targets=t,t}function A(){const e=a();return e.schoolAliases=S(e.schoolAliases),e.schoolAliases}function y(e){const t=S(e);return a().schoolAliases=t,t}function l(){return r(a().dataManagerSyncState)}function h(e){const t=r(e);return a().dataManagerSyncState=t,t}function u(){const e=S(n.PREV_DATA);return n.PREV_DATA=e,e}function f(e){const t=S(e);return n.PREV_DATA=t,t}function O(){const e=r(n.HISTORY_ARCHIVE);return n.HISTORY_ARCHIVE=e,e}function R(e){const t=r(e);return n.HISTORY_ARCHIVE=t,t}function g(){const e=S(n.FB_CLASSES);return n.FB_CLASSES=e,e}function _(e){const t=S(e);return n.FB_CLASSES=t,t}function d(){const e=r(n.MP_SNAPSHOTS);return n.MP_SNAPSHOTS=e,e}function T(e){const t=r(e);return n.MP_SNAPSHOTS=t,t}function P(){return{indicator:c(),targets:o(),schoolAliases:A(),dataManagerSyncState:l(),prevData:u(),historyArchive:O(),fbClasses:g(),mpSnapshots:d()}}function V(e={}){const t=e&&typeof e=="object"?e:{};return i(Object.prototype.hasOwnProperty.call(t,"indicator")?t.indicator:Object.prototype.hasOwnProperty.call(t,"INDICATOR_PARAMS")?t.INDICATOR_PARAMS:c()),p(Object.prototype.hasOwnProperty.call(t,"targets")?t.targets:Object.prototype.hasOwnProperty.call(t,"TARGETS")?t.TARGETS:o()),y(Object.prototype.hasOwnProperty.call(t,"schoolAliases")?t.schoolAliases:Object.prototype.hasOwnProperty.call(t,"SCHOOL_ALIAS_SETTINGS")?t.SCHOOL_ALIAS_SETTINGS:A()),h(Object.prototype.hasOwnProperty.call(t,"dataManagerSyncState")?t.dataManagerSyncState:l()),f(Object.prototype.hasOwnProperty.call(t,"prevData")?t.prevData:Object.prototype.hasOwnProperty.call(t,"PREV_DATA")?t.PREV_DATA:u()),R(Object.prototype.hasOwnProperty.call(t,"historyArchive")?t.historyArchive:Object.prototype.hasOwnProperty.call(t,"HISTORY_ARCHIVE")?t.HISTORY_ARCHIVE:O()),_(Object.prototype.hasOwnProperty.call(t,"fbClasses")?t.fbClasses:Object.prototype.hasOwnProperty.call(t,"FB_CLASSES")?t.FB_CLASSES:g()),T(Object.prototype.hasOwnProperty.call(t,"mpSnapshots")?t.mpSnapshots:Object.prototype.hasOwnProperty.call(t,"MP_SNAPSHOTS")?t.MP_SNAPSHOTS:d()),P()}function j(e={}){return i({ind1:"",ind2:"",highSchoolLine:""}),p({}),y([]),e.keepSyncState||h({}),f([]),e.keepHistoryArchive||R({}),e.keepFbClasses||_([]),e.keepMpSnapshots||T({}),P()}return{ensureSysVars:a,getIndicator:c,setIndicator:i,getTargets:o,setTargets:p,getSchoolAliases:A,setSchoolAliases:y,getDataManagerSyncState:l,setDataManagerSyncState:h,getPrevData:u,setPrevData:f,getHistoryArchive:O,setHistoryArchive:R,getFbClasses:g,setFbClasses:_,getMpSnapshots:d,setMpSnapshots:T,snapshotSupportState:P,syncSupportState:V,clearSupportState:j}});
+(function (root, factory) {
+    const runtime = factory(root || {});
+
+    if (typeof module === 'object' && module.exports) {
+        const createRuntime = function (overrideRoot) {
+            return factory(overrideRoot || root || {});
+        };
+        createRuntime.runtime = runtime;
+        module.exports = createRuntime;
+    }
+
+    if (!root || root.SupportState) return;
+    root.SupportState = runtime;
+    runtime.syncSupportState(runtime.snapshotSupportState());
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createSupportStateRuntime(root) {
+    function ensureSysVars() {
+        if (!root.SYS_VARS || typeof root.SYS_VARS !== 'object' || Array.isArray(root.SYS_VARS)) {
+            root.SYS_VARS = {};
+        }
+        if (!root.SYS_VARS.indicator || typeof root.SYS_VARS.indicator !== 'object' || Array.isArray(root.SYS_VARS.indicator)) {
+            root.SYS_VARS.indicator = { ind1: '', ind2: '', highSchoolLine: '' };
+        }
+        if (!root.SYS_VARS.targets || typeof root.SYS_VARS.targets !== 'object' || Array.isArray(root.SYS_VARS.targets)) {
+            root.SYS_VARS.targets = {};
+        }
+        if (!Array.isArray(root.SYS_VARS.schoolAliases)) {
+            root.SYS_VARS.schoolAliases = [];
+        }
+        if (!root.SYS_VARS.dataManagerSyncState || typeof root.SYS_VARS.dataManagerSyncState !== 'object' || Array.isArray(root.SYS_VARS.dataManagerSyncState)) {
+            root.SYS_VARS.dataManagerSyncState = {};
+        }
+        return root.SYS_VARS;
+    }
+
+    function normalizeArray(value) {
+        return Array.isArray(value) ? value : [];
+    }
+
+    function normalizeObject(value) {
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    }
+
+    function normalizeIndicator(value) {
+        const source = value && typeof value === 'object' ? value : {};
+        return {
+            ind1: String(source.ind1 || '').trim(),
+            ind2: String(source.ind2 || '').trim(),
+            // Standard field: highSchoolLine. Backwards-compat aliases:
+            // graduateHighSchoolLine, highSchoolAdmissionLine, highSchoolScoreLine,
+            // and the Chinese import/export label.
+            highSchoolLine: String(
+                source.highSchoolLine
+                || source.graduateHighSchoolLine
+                || source.highSchoolAdmissionLine
+                || source.highSchoolScoreLine
+                || source['中考高中过线分数']
+                || ''
+            ).trim()
+        };
+    }
+
+    function getIndicator() {
+        return normalizeIndicator(ensureSysVars().indicator);
+    }
+
+    function setIndicator(indicator) {
+        const nextIndicator = normalizeIndicator(indicator);
+        const sysVars = ensureSysVars();
+        sysVars.indicator = nextIndicator;
+        return nextIndicator;
+    }
+
+    function getTargets() {
+        const targets = normalizeObject(root.TARGETS);
+        root.TARGETS = targets;
+        ensureSysVars().targets = targets;
+        return targets;
+    }
+
+    function setTargets(targets) {
+        const nextTargets = normalizeObject(targets);
+        root.TARGETS = nextTargets;
+        ensureSysVars().targets = nextTargets;
+        return nextTargets;
+    }
+
+    function getSchoolAliases() {
+        const sysVars = ensureSysVars();
+        sysVars.schoolAliases = normalizeArray(sysVars.schoolAliases);
+        return sysVars.schoolAliases;
+    }
+
+    function setSchoolAliases(list) {
+        const nextList = normalizeArray(list);
+        ensureSysVars().schoolAliases = nextList;
+        return nextList;
+    }
+
+    function getDataManagerSyncState() {
+        return normalizeObject(ensureSysVars().dataManagerSyncState);
+    }
+
+    function setDataManagerSyncState(syncState) {
+        const nextSyncState = normalizeObject(syncState);
+        ensureSysVars().dataManagerSyncState = nextSyncState;
+        return nextSyncState;
+    }
+
+    function getPrevData() {
+        const prevData = normalizeArray(root.PREV_DATA);
+        root.PREV_DATA = prevData;
+        return prevData;
+    }
+
+    function setPrevData(rows) {
+        const nextRows = normalizeArray(rows);
+        root.PREV_DATA = nextRows;
+        return nextRows;
+    }
+
+    function getHistoryArchive() {
+        const archive = normalizeObject(root.HISTORY_ARCHIVE);
+        root.HISTORY_ARCHIVE = archive;
+        return archive;
+    }
+
+    function setHistoryArchive(archive) {
+        const nextArchive = normalizeObject(archive);
+        root.HISTORY_ARCHIVE = nextArchive;
+        return nextArchive;
+    }
+
+    function getFbClasses() {
+        const classes = normalizeArray(root.FB_CLASSES);
+        root.FB_CLASSES = classes;
+        return classes;
+    }
+
+    function setFbClasses(classes) {
+        const nextClasses = normalizeArray(classes);
+        root.FB_CLASSES = nextClasses;
+        return nextClasses;
+    }
+
+    function getMpSnapshots() {
+        const snapshots = normalizeObject(root.MP_SNAPSHOTS);
+        root.MP_SNAPSHOTS = snapshots;
+        return snapshots;
+    }
+
+    function setMpSnapshots(snapshots) {
+        const nextSnapshots = normalizeObject(snapshots);
+        root.MP_SNAPSHOTS = nextSnapshots;
+        return nextSnapshots;
+    }
+
+    function snapshotSupportState() {
+        return {
+            indicator: getIndicator(),
+            targets: getTargets(),
+            schoolAliases: getSchoolAliases(),
+            dataManagerSyncState: getDataManagerSyncState(),
+            prevData: getPrevData(),
+            historyArchive: getHistoryArchive(),
+            fbClasses: getFbClasses(),
+            mpSnapshots: getMpSnapshots()
+        };
+    }
+
+    function syncSupportState(nextState = {}) {
+        const source = nextState && typeof nextState === 'object' ? nextState : {};
+        setIndicator(
+            Object.prototype.hasOwnProperty.call(source, 'indicator')
+                ? source.indicator
+                : (Object.prototype.hasOwnProperty.call(source, 'INDICATOR_PARAMS') ? source.INDICATOR_PARAMS : getIndicator())
+        );
+        setTargets(
+            Object.prototype.hasOwnProperty.call(source, 'targets')
+                ? source.targets
+                : (Object.prototype.hasOwnProperty.call(source, 'TARGETS') ? source.TARGETS : getTargets())
+        );
+        setSchoolAliases(
+            Object.prototype.hasOwnProperty.call(source, 'schoolAliases')
+                ? source.schoolAliases
+                : (Object.prototype.hasOwnProperty.call(source, 'SCHOOL_ALIAS_SETTINGS') ? source.SCHOOL_ALIAS_SETTINGS : getSchoolAliases())
+        );
+        setDataManagerSyncState(
+            Object.prototype.hasOwnProperty.call(source, 'dataManagerSyncState')
+                ? source.dataManagerSyncState
+                : getDataManagerSyncState()
+        );
+        setPrevData(
+            Object.prototype.hasOwnProperty.call(source, 'prevData')
+                ? source.prevData
+                : (Object.prototype.hasOwnProperty.call(source, 'PREV_DATA') ? source.PREV_DATA : getPrevData())
+        );
+        setHistoryArchive(
+            Object.prototype.hasOwnProperty.call(source, 'historyArchive')
+                ? source.historyArchive
+                : (Object.prototype.hasOwnProperty.call(source, 'HISTORY_ARCHIVE') ? source.HISTORY_ARCHIVE : getHistoryArchive())
+        );
+        setFbClasses(
+            Object.prototype.hasOwnProperty.call(source, 'fbClasses')
+                ? source.fbClasses
+                : (Object.prototype.hasOwnProperty.call(source, 'FB_CLASSES') ? source.FB_CLASSES : getFbClasses())
+        );
+        setMpSnapshots(
+            Object.prototype.hasOwnProperty.call(source, 'mpSnapshots')
+                ? source.mpSnapshots
+                : (Object.prototype.hasOwnProperty.call(source, 'MP_SNAPSHOTS') ? source.MP_SNAPSHOTS : getMpSnapshots())
+        );
+
+        return snapshotSupportState();
+    }
+
+    function clearSupportState(options = {}) {
+        setIndicator({ ind1: '', ind2: '', highSchoolLine: '' });
+        setTargets({});
+        setSchoolAliases([]);
+        if (!options.keepSyncState) setDataManagerSyncState({});
+        setPrevData([]);
+        if (!options.keepHistoryArchive) setHistoryArchive({});
+        if (!options.keepFbClasses) setFbClasses([]);
+        if (!options.keepMpSnapshots) setMpSnapshots({});
+        return snapshotSupportState();
+    }
+
+    return {
+        ensureSysVars,
+        getIndicator,
+        setIndicator,
+        getTargets,
+        setTargets,
+        getSchoolAliases,
+        setSchoolAliases,
+        getDataManagerSyncState,
+        setDataManagerSyncState,
+        getPrevData,
+        setPrevData,
+        getHistoryArchive,
+        setHistoryArchive,
+        getFbClasses,
+        setFbClasses,
+        getMpSnapshots,
+        setMpSnapshots,
+        snapshotSupportState,
+        syncSupportState,
+        clearSupportState
+    };
+});

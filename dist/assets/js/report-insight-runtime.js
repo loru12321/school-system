@@ -1,7 +1,246 @@
-(()=>{if(typeof window=="undefined"||window.ReportInsightRuntime)return;let M="";const S=new Map;function W(t){if(!Array.isArray(t)||!t.length)return"0";const e=String(window.__RAW_DATA_VERSION__||window.RAW_DATA_VERSION||"").trim(),s=t[0]||{},n=t[t.length-1]||{};return[e,t.length,s.id||s.examNo||s.name||"",n.id||n.examNo||n.name||""].join("|")}function B(t){const e=Array.isArray(window.RAW_DATA)?window.RAW_DATA:[],s=W(e);s!==M&&(M=s,S.clear());const n=String(t||"");if(S.has(n))return S.get(n);const r=e.map(c=>{var l;return(l=c==null?void 0:c.scores)==null?void 0:l[t]}).filter(c=>typeof c=="number").sort((c,l)=>l-c),o=r.length,a=o?r.reduce((c,l)=>c+l,0)/o:0,p=o?r.reduce((c,l)=>c+Math.pow(l-a,2),0)/o:0,u=new Map;r.forEach((c,l)=>{u.has(c)||u.set(c,l+1)});const d={scores:r,count:o,mean:a,sd:Math.sqrt(p)||1,rankByScore:u};return S.set(n,d),d}function H(t,e){if(!e||!e.count)return null;const s=e.rankByScore&&e.rankByScore.has(t)?e.rankByScore.get(t):e.scores.indexOf(t)+1;return s>0?(1-s/e.count)*100:null}function P(t,e=null,s={}){var V,L;const n=typeof s.getCachedComparisonStudentView=="function"?s.getCachedComparisonStudentView(t):t,r=typeof getComparisonTotalSubjects=="function"?getComparisonTotalSubjects():Array.isArray(window.SUBJECTS)?window.SUBJECTS:[],o=typeof getComparisonTotalValue=="function"?getComparisonTotalValue(n,r):Number((n==null?void 0:n.total)||0),a=Object.keys(window.SCHOOLS||{}).length<=1,p=typeof hasStudentTownshipRankData=="function"?hasStudentTownshipRankData(window.RAW_DATA||[],r):!a,u=typeof isCountyDirectStudentForRank=="function"?isCountyDirectStudentForRank(n):!1,d=p&&!u,c=a?"全校":d?"全镇":"本校",l=d?safeGet(n,"ranks.total.township",safeGet(n,"ranks.total.school","-")):safeGet(n,"ranks.total.school","-"),D=(n==null?void 0:n.school)&&((L=(V=window.SCHOOLS)==null?void 0:V[n.school])==null?void 0:L.students),v=d?(Array.isArray(window.RAW_DATA)?window.RAW_DATA.length:1)||1:Array.isArray(D)&&D.length||(Array.isArray(window.RAW_DATA)?window.RAW_DATA.length:1)||1,Z=typeof l=="number"&&v>0?(1-l/v)*100:null,f=Array.isArray(e)?e:typeof s.getCachedStudentExamHistory=="function"?s.getCachedStudentExamHistory(n):[],m=typeof getLatestHistoryExamEntry=="function"?getLatestHistoryExamEntry(n,f):Array.isArray(f)&&f.length?f[f.length-1]:null,x=m?m.student||m:null,T=x?typeof recalcPrevTotal=="function"?recalcPrevTotal(x):Number(x.total):null,h=Number.isFinite(o)&&Number.isFinite(T)?o-T:null,b=[];r.forEach(i=>{var O;const g=(O=n==null?void 0:n.scores)==null?void 0:O[i];if(typeof g!="number")return;const y=B(i);if(!y.count)return;const Y=H(g,y),tt=y.sd>0?(g-y.mean)/y.sd:0;b.push({subject:i,score:g,percentile:Y,zScore:tt,schoolRank:safeGet(n,`ranks.${i}.school`,"-"),townshipRank:safeGet(n,`ranks.${i}.township`,"-")})});const _=b.filter(i=>i.zScore>=.8).sort((i,g)=>g.zScore-i.zScore),I=b.filter(i=>i.zScore<=-.8).sort((i,g)=>i.zScore-g.zScore),R=b.map(i=>i.zScore),E=R.length?Math.max(...R)-Math.min(...R):0;let k="结构均衡",j="ok";E>=2.6?(k="偏科明显",j="warn"):E>=1.4&&(k="有波动",j="info");let w="首次生成",$="neutral";typeof h=="number"&&(h>=.5?(w=`较上次提升 ${h.toFixed(1)} 分`,$="up"):h<=-.5?(w=`较上次回落 ${Math.abs(h).toFixed(1)} 分`,$="down"):(w="与上次基本持平",$="steady"));const A=I.slice(0,2),C=_.slice(0,2),F=Number.isFinite(o)?o+Math.max(4,Math.min(12,(A.length||1)*3)):null,N=typeof l=="number"?Math.max(1,l-Math.max(1,Math.round(l*.08))):null,Q=[A.length?{tone:"warn",title:`优先补弱：${A.map(i=>i.subject).join("、")}`,detail:"先做基础概念回顾，再做近两次错题复盘；每天固定 15 到 20 分钟，先稳住容易失分点。"}:{tone:"ok",title:"当前没有明显短板",detail:"整体结构比较稳定，可以把更多精力放在提速、审题和规范表达上。"},C.length?{tone:"info",title:`继续守住优势：${C.map(i=>i.subject).join("、")}`,detail:"优势科目重点保持错题复盘和阶段总结，让强项持续稳定输出。"}:{tone:"info",title:"建立稳定优势科目",detail:"从最有把握的一门学科开始，把基础题和中档题做稳。"},{tone:"goal",title:"下一次目标建议",detail:`${F!==null?`建议先把总分稳定到 ${F.toFixed(1)} 分左右；`:""}${N!==null?`争取 ${c}排名提升到前 ${N} 名。`:"先把当前优势延续到下一次考试。"}`}],X=[`本次解读基于当前成绩库中的 ${v} 名同届样本和 ${Math.max(f.length,1)} 次考试记录。`,"分数、排名、百分位均按已导入的真实成绩计算，不做估高处理。","如果学校还没有导入最新一次考试或历史考试，趋势结论会更保守。"];return{reportStudent:n,totalScore:o,totalCount:v,scopeText:c,effectiveRank:l,percentile:Z,previousTotal:T,totalDelta:h,balanceLabel:k,balanceTone:j,trendLabel:w,trendTone:$,focusSubjects:A,guardSubjects:C,actionPlans:Q,realityNotes:X,targetScore:F,targetRank:N,subjectInsights:b,strongSubjects:_,weakSubjects:I}}function G(t){const e=t.percentile!==null?`${t.percentile.toFixed(0)}%`:"-",s=Number.isFinite(t.totalScore)?t.totalScore.toFixed(1):"-",n=typeof t.effectiveRank=="number"?`${t.effectiveRank}`:"-",r=Number.isFinite(t.previousTotal)?t.previousTotal.toFixed(1):"-",o=t.trendTone==="up"?"report-pill up":t.trendTone==="down"?"report-pill down":"report-pill",a=t.balanceTone==="warn"?"report-pill warn":t.balanceTone==="info"?"report-pill info":"report-pill ok",p=t.focusSubjects.length?t.focusSubjects.map(d=>d.subject).join("、"):"暂无明显短板",u=t.guardSubjects.length?t.guardSubjects.map(d=>d.subject).join("、"):"建议先培养一门稳定优势科目";return`<div class="report-insight-grid"><div class="report-insight-card tone-score"><span class="report-insight-label">本次总分</span><strong class="report-insight-value">${s}</strong><span class="report-insight-sub">上次对比：${r}</span></div><div class="report-insight-card tone-rank"><span class="report-insight-label">${t.scopeText}定位</span><strong class="report-insight-value">第 ${n} 名</strong><span class="report-insight-sub">综合百分位：${e}</span></div><div class="report-insight-card tone-balance"><span class="report-insight-label">结构状态</span><strong class="report-insight-value">${t.balanceLabel}</strong><span class="${a}">${t.balanceLabel}</span></div><div class="report-insight-card tone-trend"><span class="report-insight-label">阶段走势</span><strong class="report-insight-value">${t.trendLabel}</strong><span class="${o}">${t.trendLabel}</span></div></div><div class="report-chip-row"><span class="report-chip report-chip-focus">当前优先调整：${p}</span><span class="report-chip report-chip-guard">继续守住优势：${u}</span></div>`}function J(t){return`<div class="report-action-grid">${t.actionPlans.map(e=>`<div class="report-action-card tone-${e.tone}"><div class="report-action-title">${e.title}</div><div class="report-action-text">${e.detail}</div></div>`).join("")}</div>`}function U(t){const e=Array.isArray(t.subjectInsights)?t.subjectInsights:[];return e.length?`<div class="report-subject-board">${e.map(s=>{const n=s.percentile!==null?Math.max(0,Math.min(100,s.percentile)):0,r=s.zScore>=.8?"strong":s.zScore<=-.8?"weak":"steady",o=r==="strong"?"优势科目":r==="weak"?"优先补弱":"保持稳定",a=Number.isFinite(s.zScore)?s.zScore.toFixed(2):"-";return`<div class="report-subject-item tone-${r}"><div class="report-subject-head"><strong>${s.subject}</strong><span>${o}</span></div><div class="report-subject-meta"><span>成绩 ${s.score}</span><span>百分位 ${s.percentile!==null?s.percentile.toFixed(0)+"%":"-"}</span><span>Z ${a}</span></div><div class="report-progress-track"><div class="report-progress-bar tone-${r}" style="width:${n}%;"></div></div></div>`}).join("")}</div>`:""}function q(t){return`<div class="report-reality-note"><div class="report-reality-title">真实成绩说明</div><ul class="report-reality-list">${t.realityNotes.map(e=>`<li>${e}</li>`).join("")}</ul></div>`}function K(t,e,s="score",n=null){const r=a=>{if(a==null||a===""||a==="-")return"-";const p=Number(a);return n!==null&&Number.isFinite(p)?p.toFixed(n):String(a)},o=z(t,e,s);return`<div class="report-metric-compare">
-        <div class="report-metric-current"><span>本次</span><strong>${r(t)}</strong></div>
-        <div class="report-metric-previous"><span>上次</span><span>${r(e)}</span></div>
-        <div class="report-metric-change"><span>变化</span>${o||'<span class="report-metric-empty">暂无对比</span>'}</div>
-    </div>`}function z(t,e,s="score"){if(e==null||e==="-"||e==="")return"";const n=parseFloat(t),r=parseFloat(e);if(isNaN(n)||isNaN(r))return"";const o=n-r;if(Math.abs(o)<.01)return'<span style="color:#94a3b8; font-size:11px; margin-left:4px; font-weight:normal;">(持平)</span>';let a="",p="",u="";s==="score"?o>0?(a="#15803d",u="#dcfce7",p="▲"):(a="#b91c1c",u="#fee2e2",p="▼"):o<0?(a="#15803d",u="#dcfce7",p="▲"):(a="#b91c1c",u="#fee2e2",p="▼");const d=Math.abs(o);return`<span style="display:inline-flex; align-items:center; background:${u}; color:${a}; padding:1px 6px; border-radius:10px; font-size:11px; font-weight:bold; margin-left:5px; vertical-align:middle;">
-            ${p} ${s==="score"?d.toFixed(1):d}
-        </span>`}window.ReportInsightRuntime={buildStudentInsightModel:P,renderStudentInsightOverview:G,renderStudentActionPlan:J,renderStudentSubjectBoard:U,renderStudentRealityNote:q,renderMetricComparison:K,getTrendBadge:z}})();
+(() => {
+    if (typeof window === 'undefined' || window.ReportInsightRuntime) return;
+
+let reportInsightStatsCacheSignature = '';
+const reportInsightStatsCache = new Map();
+
+function getReportInsightRowsSignature(rows) {
+    if (!Array.isArray(rows) || !rows.length) return '0';
+    const version = String(window.__RAW_DATA_VERSION__ || window.RAW_DATA_VERSION || '').trim();
+    const first = rows[0] || {};
+    const last = rows[rows.length - 1] || {};
+    return [
+        version,
+        rows.length,
+        first.id || first.examNo || first.name || '',
+        last.id || last.examNo || last.name || ''
+    ].join('|');
+}
+
+function getReportInsightScoreStats(subject) {
+    const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
+    const signature = getReportInsightRowsSignature(rows);
+    if (signature !== reportInsightStatsCacheSignature) {
+        reportInsightStatsCacheSignature = signature;
+        reportInsightStatsCache.clear();
+    }
+    const cacheKey = String(subject || '');
+    if (reportInsightStatsCache.has(cacheKey)) return reportInsightStatsCache.get(cacheKey);
+    const scores = rows
+        .map(row => row?.scores?.[subject])
+        .filter(value => typeof value === 'number')
+        .sort((a, b) => b - a);
+    const count = scores.length;
+    const mean = count ? scores.reduce((sum, value) => sum + value, 0) / count : 0;
+    const variance = count ? scores.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / count : 0;
+    const rankByScore = new Map();
+    scores.forEach((value, index) => {
+        if (!rankByScore.has(value)) rankByScore.set(value, index + 1);
+    });
+    const stats = { scores, count, mean, sd: Math.sqrt(variance) || 1, rankByScore };
+    reportInsightStatsCache.set(cacheKey, stats);
+    return stats;
+}
+
+function getReportInsightPercentile(score, stats) {
+    if (!stats || !stats.count) return null;
+    const rank = stats.rankByScore && stats.rankByScore.has(score)
+        ? stats.rankByScore.get(score)
+        : stats.scores.indexOf(score) + 1;
+    return rank > 0 ? ((1 - rank / stats.count) * 100) : null;
+}
+
+function buildStudentInsightModel(student, passedHistory = null, helpers = {}) {
+    const reportStudent = typeof helpers.getCachedComparisonStudentView === 'function' ? helpers.getCachedComparisonStudentView(student) : student;
+    const totalSubjects = typeof getComparisonTotalSubjects === 'function'
+        ? getComparisonTotalSubjects()
+        : (Array.isArray(window.SUBJECTS) ? window.SUBJECTS : []);
+    const totalScore = typeof getComparisonTotalValue === 'function'
+        ? getComparisonTotalValue(reportStudent, totalSubjects)
+        : Number(reportStudent?.total || 0);
+    const isSingleSchool = Object.keys(window.SCHOOLS || {}).length <= 1;
+    const hasTownshipRankData = typeof hasStudentTownshipRankData === 'function'
+        ? hasStudentTownshipRankData(window.RAW_DATA || [], totalSubjects)
+        : !isSingleSchool;
+    const isCountyDirect = typeof isCountyDirectStudentForRank === 'function'
+        ? isCountyDirectStudentForRank(reportStudent)
+        : false;
+    const useTownshipRank = hasTownshipRankData && !isCountyDirect;
+    const scopeText = isSingleSchool ? '全校' : (useTownshipRank ? '全镇' : '本校');
+    const effectiveRank = !useTownshipRank
+        ? safeGet(reportStudent, 'ranks.total.school', '-')
+        : safeGet(reportStudent, 'ranks.total.township', safeGet(reportStudent, 'ranks.total.school', '-'));
+    const schoolRows = reportStudent?.school && window.SCHOOLS?.[reportStudent.school]?.students;
+    const totalCount = !useTownshipRank
+        ? ((Array.isArray(schoolRows) && schoolRows.length) || (Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 1) || 1)
+        : ((Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 1) || 1);
+    const percentile = (typeof effectiveRank === 'number' && totalCount > 0)
+        ? ((1 - effectiveRank / totalCount) * 100)
+        : null;
+    const history = Array.isArray(passedHistory) ? passedHistory : (typeof helpers.getCachedStudentExamHistory === 'function' ? helpers.getCachedStudentExamHistory(reportStudent) : []);
+    const latestHistoryEntry = typeof getLatestHistoryExamEntry === 'function'
+        ? getLatestHistoryExamEntry(reportStudent, history)
+        : (Array.isArray(history) && history.length ? history[history.length - 1] : null);
+    const previousStudent = latestHistoryEntry ? (latestHistoryEntry.student || latestHistoryEntry) : null;
+    const previousTotal = previousStudent
+        ? (typeof recalcPrevTotal === 'function' ? recalcPrevTotal(previousStudent) : Number(previousStudent.total))
+        : null;
+    const totalDelta = (Number.isFinite(totalScore) && Number.isFinite(previousTotal)) ? (totalScore - previousTotal) : null;
+    const subjectInsights = [];
+    totalSubjects.forEach(subject => {
+        const score = reportStudent?.scores?.[subject];
+        if (typeof score !== 'number') return;
+        const stats = getReportInsightScoreStats(subject);
+        if (!stats.count) return;
+        const percentileValue = getReportInsightPercentile(score, stats);
+        const zScore = stats.sd > 0 ? (score - stats.mean) / stats.sd : 0;
+        subjectInsights.push({
+            subject,
+            score,
+            percentile: percentileValue,
+            zScore,
+            schoolRank: safeGet(reportStudent, `ranks.${subject}.school`, '-'),
+            townshipRank: safeGet(reportStudent, `ranks.${subject}.township`, '-')
+        });
+    });
+    const strongSubjects = subjectInsights.filter(item => item.zScore >= 0.8).sort((a, b) => b.zScore - a.zScore);
+    const weakSubjects = subjectInsights.filter(item => item.zScore <= -0.8).sort((a, b) => a.zScore - b.zScore);
+    const zValues = subjectInsights.map(item => item.zScore);
+    const zRange = zValues.length ? (Math.max(...zValues) - Math.min(...zValues)) : 0;
+    let balanceLabel = '结构均衡';
+    let balanceTone = 'ok';
+    if (zRange >= 2.6) {
+        balanceLabel = '偏科明显';
+        balanceTone = 'warn';
+    } else if (zRange >= 1.4) {
+        balanceLabel = '有波动';
+        balanceTone = 'info';
+    }
+    let trendLabel = '首次生成';
+    let trendTone = 'neutral';
+    if (typeof totalDelta === 'number') {
+        if (totalDelta >= 0.5) {
+            trendLabel = `较上次提升 ${totalDelta.toFixed(1)} 分`;
+            trendTone = 'up';
+        } else if (totalDelta <= -0.5) {
+            trendLabel = `较上次回落 ${Math.abs(totalDelta).toFixed(1)} 分`;
+            trendTone = 'down';
+        } else {
+            trendLabel = '与上次基本持平';
+            trendTone = 'steady';
+        }
+    }
+    const focusSubjects = weakSubjects.slice(0, 2);
+    const guardSubjects = strongSubjects.slice(0, 2);
+    const targetScore = Number.isFinite(totalScore)
+        ? totalScore + Math.max(4, Math.min(12, (focusSubjects.length || 1) * 3))
+        : null;
+    const targetRank = (typeof effectiveRank === 'number')
+        ? Math.max(1, effectiveRank - Math.max(1, Math.round(effectiveRank * 0.08)))
+        : null;
+    const actionPlans = [
+        focusSubjects.length
+            ? { tone: 'warn', title: `优先补弱：${focusSubjects.map(item => item.subject).join('、')}`, detail: '先做基础概念回顾，再做近两次错题复盘；每天固定 15 到 20 分钟，先稳住容易失分点。' }
+            : { tone: 'ok', title: '当前没有明显短板', detail: '整体结构比较稳定，可以把更多精力放在提速、审题和规范表达上。' },
+        guardSubjects.length
+            ? { tone: 'info', title: `继续守住优势：${guardSubjects.map(item => item.subject).join('、')}`, detail: '优势科目重点保持错题复盘和阶段总结，让强项持续稳定输出。' }
+            : { tone: 'info', title: '建立稳定优势科目', detail: '从最有把握的一门学科开始，把基础题和中档题做稳。' },
+        { tone: 'goal', title: '下一次目标建议', detail: `${targetScore !== null ? `建议先把总分稳定到 ${targetScore.toFixed(1)} 分左右；` : ''}${targetRank !== null ? `争取 ${scopeText}排名提升到前 ${targetRank} 名。` : '先把当前优势延续到下一次考试。'}` }
+    ];
+    const realityNotes = [
+        `本次解读基于当前成绩库中的 ${totalCount} 名同届样本和 ${Math.max(history.length, 1)} 次考试记录。`,
+        '分数、排名、百分位均按已导入的真实成绩计算，不做估高处理。',
+        '如果学校还没有导入最新一次考试或历史考试，趋势结论会更保守。'
+    ];
+    return { reportStudent, totalScore, totalCount, scopeText, effectiveRank, percentile, previousTotal, totalDelta, balanceLabel, balanceTone, trendLabel, trendTone, focusSubjects, guardSubjects, actionPlans, realityNotes, targetScore, targetRank, subjectInsights, strongSubjects, weakSubjects };
+}
+
+function renderStudentInsightOverview(model) {
+    const pctText = model.percentile !== null ? `${model.percentile.toFixed(0)}%` : '-';
+    const totalText = Number.isFinite(model.totalScore) ? model.totalScore.toFixed(1) : '-';
+    const rankText = typeof model.effectiveRank === 'number' ? `${model.effectiveRank}` : '-';
+    const prevText = Number.isFinite(model.previousTotal) ? model.previousTotal.toFixed(1) : '-';
+    const trendClass = model.trendTone === 'up' ? 'report-pill up' : model.trendTone === 'down' ? 'report-pill down' : 'report-pill';
+    const balanceClass = model.balanceTone === 'warn' ? 'report-pill warn' : model.balanceTone === 'info' ? 'report-pill info' : 'report-pill ok';
+    const focusText = model.focusSubjects.length ? model.focusSubjects.map(item => item.subject).join('、') : '暂无明显短板';
+    const guardText = model.guardSubjects.length ? model.guardSubjects.map(item => item.subject).join('、') : '建议先培养一门稳定优势科目';
+    return `<div class="report-insight-grid"><div class="report-insight-card tone-score"><span class="report-insight-label">本次总分</span><strong class="report-insight-value">${totalText}</strong><span class="report-insight-sub">上次对比：${prevText}</span></div><div class="report-insight-card tone-rank"><span class="report-insight-label">${model.scopeText}定位</span><strong class="report-insight-value">第 ${rankText} 名</strong><span class="report-insight-sub">综合百分位：${pctText}</span></div><div class="report-insight-card tone-balance"><span class="report-insight-label">结构状态</span><strong class="report-insight-value">${model.balanceLabel}</strong><span class="${balanceClass}">${model.balanceLabel}</span></div><div class="report-insight-card tone-trend"><span class="report-insight-label">阶段走势</span><strong class="report-insight-value">${model.trendLabel}</strong><span class="${trendClass}">${model.trendLabel}</span></div></div><div class="report-chip-row"><span class="report-chip report-chip-focus">当前优先调整：${focusText}</span><span class="report-chip report-chip-guard">继续守住优势：${guardText}</span></div>`;
+}
+
+function renderStudentActionPlan(model) {
+    return `<div class="report-action-grid">${model.actionPlans.map(plan => `<div class="report-action-card tone-${plan.tone}"><div class="report-action-title">${plan.title}</div><div class="report-action-text">${plan.detail}</div></div>`).join('')}</div>`;
+}
+
+function renderStudentSubjectBoard(model) {
+    const items = Array.isArray(model.subjectInsights) ? model.subjectInsights : [];
+    if (!items.length) return '';
+    return `<div class="report-subject-board">${items.map(item => {
+        const percentile = item.percentile !== null ? Math.max(0, Math.min(100, item.percentile)) : 0;
+        const tone = item.zScore >= 0.8 ? 'strong' : item.zScore <= -0.8 ? 'weak' : 'steady';
+        const label = tone === 'strong' ? '优势科目' : tone === 'weak' ? '优先补弱' : '保持稳定';
+        const zText = Number.isFinite(item.zScore) ? item.zScore.toFixed(2) : '-';
+        return `<div class="report-subject-item tone-${tone}"><div class="report-subject-head"><strong>${item.subject}</strong><span>${label}</span></div><div class="report-subject-meta"><span>成绩 ${item.score}</span><span>百分位 ${item.percentile !== null ? item.percentile.toFixed(0) + '%' : '-'}</span><span>Z ${zText}</span></div><div class="report-progress-track"><div class="report-progress-bar tone-${tone}" style="width:${percentile}%;"></div></div></div>`;
+    }).join('')}</div>`;
+}
+
+function renderStudentRealityNote(model) {
+    return `<div class="report-reality-note"><div class="report-reality-title">真实成绩说明</div><ul class="report-reality-list">${model.realityNotes.map(note => `<li>${note}</li>`).join('')}</ul></div>`;
+}
+
+function renderMetricComparison(current, previous, type = 'score', digits = null) {
+    const formatValue = (value) => {
+        if (value === undefined || value === null || value === '' || value === '-') return '-';
+        const numeric = Number(value);
+        if (digits !== null && Number.isFinite(numeric)) return numeric.toFixed(digits);
+        return String(value);
+    };
+    const trend = getTrendBadge(current, previous, type);
+    return `<div class="report-metric-compare">
+        <div class="report-metric-current"><span>本次</span><strong>${formatValue(current)}</strong></div>
+        <div class="report-metric-previous"><span>上次</span><span>${formatValue(previous)}</span></div>
+        <div class="report-metric-change"><span>变化</span>${trend || '<span class="report-metric-empty">暂无对比</span>'}</div>
+    </div>`;
+}
+
+function getTrendBadge(current, previous, type = 'score') {
+    if (previous === undefined || previous === null || previous === '-' || previous === '') return '';
+
+    // 确保数值类型
+    const currVal = parseFloat(current);
+    const prevVal = parseFloat(previous);
+    if (isNaN(currVal) || isNaN(prevVal)) return '';
+
+    const diff = currVal - prevVal;
+    if (Math.abs(diff) < 0.01) return `<span style="color:#94a3b8; font-size:11px; margin-left:4px; font-weight:normal;">(持平)</span>`;
+
+    let color = '';
+    let icon = '';
+    let bg = '';
+
+    if (type === 'score') {
+        // 分数：正数=进步(绿), 负数=退步(红/橙)
+        if (diff > 0) { color = '#15803d'; bg = '#dcfce7'; icon = '▲'; }
+        else { color = '#b91c1c'; bg = '#fee2e2'; icon = '▼'; }
+    } else {
+        // 排名：负数=进步(名次变小), 正数=退步(名次变大)
+        if (diff < 0) { color = '#15803d'; bg = '#dcfce7'; icon = '▲'; } // 排名上升
+        else { color = '#b91c1c'; bg = '#fee2e2'; icon = '▼'; }          // 排名下降
+    }
+
+    const absDiff = Math.abs(diff);
+    // Windows 11 风格圆角胶囊
+    return `<span style="display:inline-flex; align-items:center; background:${bg}; color:${color}; padding:1px 6px; border-radius:10px; font-size:11px; font-weight:bold; margin-left:5px; vertical-align:middle;">
+            ${icon} ${type === 'score' ? absDiff.toFixed(1) : absDiff}
+        </span>`;
+}
+
+    window.ReportInsightRuntime = {
+        buildStudentInsightModel,
+        renderStudentInsightOverview,
+        renderStudentActionPlan,
+        renderStudentSubjectBoard,
+        renderStudentRealityNote,
+        renderMetricComparison,
+        getTrendBadge
+    };
+})();

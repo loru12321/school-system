@@ -1,1 +1,52 @@
-(function(l){if(!l||l.SchoolRuntime)return;const c=Object.create(null),i=Object.create(null);function r(t){return String(t||"").trim()}function o(t,n){const e=r(t);return e&&(c[e]=n),n}function u(t){return c[r(t)]}function s(t,n){const e=r(t);return e?(i[e]=Object.freeze({...n||{}}),i[e]):null}function f(t){return i[r(t)]||null}function g(t){return String(t!=null?t:"").replace(/[&<>"']/g,n=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[n])}l.SchoolRuntime={expose:o,get:u,has:t=>Object.prototype.hasOwnProperty.call(c,r(t)),registerSkill:s,getSkill:f,listSkills:()=>Object.keys(i),escapeHtml:g}})(typeof globalThis!="undefined"?globalThis:this);
+(function (root) {
+    if (!root || root.SchoolRuntime) return;
+
+    const values = Object.create(null);
+    const skills = Object.create(null);
+
+    function normalizeKey(key) {
+        return String(key || '').trim();
+    }
+
+    function expose(key, value) {
+        const normalized = normalizeKey(key);
+        if (!normalized) return value;
+        values[normalized] = value;
+        return value;
+    }
+
+    function get(key) {
+        return values[normalizeKey(key)];
+    }
+
+    function registerSkill(key, definition) {
+        const normalized = normalizeKey(key);
+        if (!normalized) return null;
+        skills[normalized] = Object.freeze({ ...(definition || {}) });
+        return skills[normalized];
+    }
+
+    function getSkill(key) {
+        return skills[normalizeKey(key)] || null;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    root.SchoolRuntime = {
+        expose,
+        get,
+        has: (key) => Object.prototype.hasOwnProperty.call(values, normalizeKey(key)),
+        registerSkill,
+        getSkill,
+        listSkills: () => Object.keys(skills),
+        escapeHtml
+    };
+})(typeof globalThis !== 'undefined' ? globalThis : this);

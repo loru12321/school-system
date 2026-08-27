@@ -1,8 +1,223 @@
-(function(e){if(!e||e.__SUMMARY_HIGHLIGHTS_RUNTIME__)return;e.__SUMMARY_HIGHLIGHTS_RUNTIME__=!0;const S="summary-highlights",H=5,p=t=>e.SchoolRuntime&&typeof e.SchoolRuntime.escapeHtml=="function"?e.SchoolRuntime.escapeHtml(t):String(t!=null?t:"").replace(/[&<>"']/g,n=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[n]),c=t=>{const n=Number(t);return Number.isFinite(n)?n:null};function k(){const t=e.SCHOOLS&&typeof e.SCHOOLS=="object"?e.SCHOOLS:{},n=String(e.MY_SCHOOL||"").trim();return n&&t[n]?{name:n,record:t[n]}:null}const $=["avg","excRate","passRate"];function _(t){const l=(typeof e.getTownAnalysisVisibleSubjectsForCurrentUser=="function"?(e.getTownAnalysisVisibleSubjectsForCurrentUser()||[]).filter(Boolean):[]).map(a=>{var f,u;if(!c((u=(f=t==null?void 0:t.metrics)==null?void 0:f[a])==null?void 0:u.count))return null;const g=$.map(i=>{var m,y;return c((y=(m=t==null?void 0:t.rankings)==null?void 0:m[a])==null?void 0:y[i])}).filter(i=>i!==null);return g.length!==$.length?null:{subject:a,mean:g.reduce((i,m)=>i+m,0)/g.length,ranks:g}}).filter(Boolean);if(l.length<2)return null;l.sort((a,o)=>a.mean-o.mean);const s=l[l.length-1],r=l[0];return s.mean===r.mean?null:{text:`三项（均分/优秀率/及格率）校际名次综合看，最弱是 <strong>${p(s.subject)}</strong>（第 ${s.ranks[0]}/${s.ranks[1]}/${s.ranks[2]} 名），最强是 <strong>${p(r.subject)}</strong>（第 ${r.ranks[0]}/${r.ranks[1]}/${r.ranks[2]} 名）`,source:"两率一分三项名次"}}function x(t){var f;const n=(f=e.document)==null?void 0:f.getElementById("tb-summary"),l=n?Array.from(n.querySelectorAll("tbody tr")):[];if(l.length<2)return null;const s=u=>{const i=Array.from(u.querySelectorAll("td")).map(m=>String(m.innerText||"").trim());return i.length<3?null:{name:i[0],total:c(i[i.length-2]),rank:c(i[i.length-1])}},r=l.map(s).filter(u=>u&&u.name&&u.rank!==null);if(r.length<2)return null;const a=r.find(u=>u.name===t.name);if(!a)return null;r.sort((u,i)=>u.rank-i.rank);const o=r[0];if(a.rank===o.rank)return{text:`综合总分 ${a.total===null?"-":a.total.toFixed(1)}，在 ${r.length} 所参评学校中<strong>排第 1</strong>`,source:"综合评价总排名"};const g=a.total!==null&&o.total!==null?`，距第 1 名（${p(o.name)}）差 ${(o.total-a.total).toFixed(1)} 分`:`，第 1 名是 ${p(o.name)}`;return{text:`综合总分 ${a.total===null?"-":a.total.toFixed(1)}，在 ${r.length} 所参评学校中排第 <strong>${a.rank}</strong>${g}`,source:"综合评价总排名"}}function I(t){const n=t==null?void 0:t.bottom3,l=c(n==null?void 0:n.bottomN),s=c(n==null?void 0:n.totalN),r=c(n==null?void 0:n.avg);return!l||!s?null:{text:`后 1/3 共 <strong>${l}</strong> 人（参评 ${s} 人）`+(r!==null?`，平均分 ${r.toFixed(1)}`:"")+"，是下阶段补弱的主要对象",source:"后段学生"}}function R(t){var u,i,m,y;const n=Array.isArray(t==null?void 0:t.students)?t.students:[];if(!n.length)return null;const l=n.map(h=>c(h==null?void 0:h.total)).filter(h=>h!==null);if(!l.length)return null;const s=c((i=(u=e.THRESHOLDS)==null?void 0:u.total)==null?void 0:i.exc);if(s===null||s<=0)return null;const r=c((y=(m=e.document)==null?void 0:m.getElementById("mpGap"))==null?void 0:y.value),a=r===null,o=Math.max(.1,a?5:r),g=l.filter(h=>h<s&&h>=s-o).length;if(!g)return null;const f=a?`默认口径 ${o} 分内`:`当前设定 ${o} 分内`;return{text:`距优秀线（${s.toFixed(1)}）<strong>${f}</strong>有 <strong>${g}</strong> 人，属于提分性价比较高的一批`,source:"临界学生（分值可在该模块调整）"}}function d(){if(!(Array.isArray(e.RAW_DATA)?e.RAW_DATA:[]).length)return[];const n=k();if(!n)return[];const l=n.record;return[x(n),_(l),I(l),R(l)].filter(Boolean).slice(0,H)}function A(){var l;const t=(l=e.document)==null?void 0:l.getElementById(S);if(!t)return{ok:!1,reason:"missing-container",count:0};let n=[];try{n=d()}catch(s){console.warn("[summary-highlights] 生成要点失败:",s),n=[]}return n.length?(t.innerHTML=`
+// 本次要点：把综合评价页已经算好的结果，翻译成教务能直接照着说的几句话。
+//
+// 设计约束（重要）：
+// 1. **只读已算好的结果**，不做任何新计算、不引入新阈值口径。均分/优秀率/及格率取自
+//    SCHOOLS[x].metrics（worker 产出），后 1/3 取自 bottom3，优秀/及格线取自 CONFIG。
+// 2. 结论只描述**可从数据直接读出的事实**（谁最低、差多少、多少人），不做因果归因，
+//    不评价教师。教学归因需要人结合生源判断，系统不越位。
+// 3. 条件不足（无数据、单校、缺科目）时**整块隐藏**，绝不输出半句没依据的话。
+// 4. 每条都标注来源模块，方便点进去核对；整块顶部标注"自动生成，供参考"。
+(function (root) {
+    if (!root || root.__SUMMARY_HIGHLIGHTS_RUNTIME__) return;
+    root.__SUMMARY_HIGHLIGHTS_RUNTIME__ = true;
+
+    const CONTAINER_ID = 'summary-highlights';
+    // 显示上限：要点是给人念的，多了就没人看。
+    const MAX_ITEMS = 5;
+
+    const escapeHtml = (value) => (root.SchoolRuntime && typeof root.SchoolRuntime.escapeHtml === 'function'
+        ? root.SchoolRuntime.escapeHtml(value)
+        : String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char])));
+
+    const num = (value) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    function getMySchoolRecord() {
+        const schools = root.SCHOOLS && typeof root.SCHOOLS === 'object' ? root.SCHOOLS : {};
+        const mine = String(root.MY_SCHOOL || '').trim();
+        if (mine && schools[mine]) return { name: mine, record: schools[mine] };
+        // 未识别本校时不猜：返回空，让调用方隐藏整块。
+        return null;
+    }
+
+    // ── 规则 1：本校最弱学科 ──────────────────────────────────────────────────────
+    // 系统正式口径是「两率一分」= 均分 + 优秀率 + 及格率三项加权，且**优秀率权重最高**
+    // （9年级 50/80/50，6-8年级 60/70/70）。只看及格率或只看均分都会给出不完整的判断，
+    // 因此取三项**校际名次的平均**——跨科不能直接比数值（满分与难度不同），但各科各自
+    // 的校际名次是同一量纲，可以横向比较。
+    const RATE_RANK_KEYS = ['avg', 'excRate', 'passRate'];
+
+    function weakestSubjectItem(record) {
+        // 学科范围与两率一分主表一致（含任课教师的学科可见性过滤）；函数缺失时保守取空。
+        const subjects = typeof root.getTownAnalysisVisibleSubjectsForCurrentUser === 'function'
+            ? (root.getTownAnalysisVisibleSubjectsForCurrentUser() || []).filter(Boolean)
+            : [];
+        const rows = subjects.map((subject) => {
+            const count = num(record?.metrics?.[subject]?.count);
+            if (!count) return null;
+            const ranks = RATE_RANK_KEYS
+                .map((key) => num(record?.rankings?.[subject]?.[key]))
+                .filter((rank) => rank !== null);
+            // 三项名次不齐时不参与比较，避免用不同项数算出的均值互相比。
+            if (ranks.length !== RATE_RANK_KEYS.length) return null;
+            return { subject, mean: ranks.reduce((sum, rank) => sum + rank, 0) / ranks.length, ranks };
+        }).filter(Boolean);
+        if (rows.length < 2) return null;
+        rows.sort((a, b) => a.mean - b.mean);
+        const worst = rows[rows.length - 1];
+        const best = rows[0];
+        if (worst.mean === best.mean) return null;
+        return {
+            text: `三项（均分/优秀率/及格率）校际名次综合看，最弱是 <strong>${escapeHtml(worst.subject)}</strong>`
+                + `（第 ${worst.ranks[0]}/${worst.ranks[1]}/${worst.ranks[2]} 名），`
+                + `最强是 <strong>${escapeHtml(best.subject)}</strong>`
+                + `（第 ${best.ranks[0]}/${best.ranks[1]}/${best.ranks[2]} 名）`,
+            source: '两率一分三项名次'
+        };
+    }
+
+    // ── 规则 2：本校在参评学校中的位置 ────────────────────────────────────────────
+    // 本页的正式结论是「综合总分 / 总排名」——由两率一分 + 后1/3 + 指标生 + 高分段 +
+    // 上线率合计而来（见 app.js calcSummary 里的 s1..s5）。它既不等于总分均分排名，
+    // 也不等于两率一分单项的 rank2Rate（实测本校 rank2Rate=3 而总排名=2）。
+    //
+    // 因此这里**直接从已渲染的 #tb-summary 主表读取**本校的综合总分与总排名：
+    // 用户看到的要点与同一页表格必然一致，也天然遵循「只读已算好的结果」。
+    // 自己重排任何一种口径都会造成两个数字打架。
+    function schoolPositionItem(mine) {
+        const table = root.document?.getElementById('tb-summary');
+        const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
+        if (rows.length < 2) return null;
+
+        const parse = (tr) => {
+            const cells = Array.from(tr.querySelectorAll('td')).map((td) => String(td.innerText || '').trim());
+            if (cells.length < 3) return null;
+            // 学校名在首列，综合总分与总排名固定在最后两列（列数随年级变化，故从末尾取）。
+            return {
+                name: cells[0],
+                total: num(cells[cells.length - 2]),
+                rank: num(cells[cells.length - 1])
+            };
+        };
+        const parsed = rows.map(parse).filter((row) => row && row.name && row.rank !== null);
+        if (parsed.length < 2) return null;
+
+        const self = parsed.find((row) => row.name === mine.name);
+        if (!self) return null;
+        parsed.sort((a, b) => a.rank - b.rank);
+        const top = parsed[0];
+
+        if (self.rank === top.rank) {
+            return {
+                text: `综合总分 ${self.total === null ? '-' : self.total.toFixed(1)}，`
+                    + `在 ${parsed.length} 所参评学校中<strong>排第 1</strong>`,
+                source: '综合评价总排名'
+            };
+        }
+        const gapText = (self.total !== null && top.total !== null)
+            ? `，距第 1 名（${escapeHtml(top.name)}）差 ${(top.total - self.total).toFixed(1)} 分`
+            : `，第 1 名是 ${escapeHtml(top.name)}`;
+        return {
+            text: `综合总分 ${self.total === null ? '-' : self.total.toFixed(1)}，`
+                + `在 ${parsed.length} 所参评学校中排第 <strong>${self.rank}</strong>${gapText}`,
+            source: '综合评价总排名'
+        };
+    }
+
+    // ── 规则 3：后 1/3 学生规模 ──────────────────────────────────────────────────
+    function bottomGroupItem(record) {
+        const bottom = record?.bottom3;
+        const bottomN = num(bottom?.bottomN);
+        const totalN = num(bottom?.totalN);
+        const avg = num(bottom?.avg);
+        if (!bottomN || !totalN) return null;
+        return {
+            text: `后 1/3 共 <strong>${bottomN}</strong> 人（参评 ${totalN} 人）`
+                + (avg !== null ? `，平均分 ${avg.toFixed(1)}` : '')
+                + '，是下阶段补弱的主要对象',
+            source: '后段学生'
+        };
+    }
+
+    // ── 规则 4：临界生提示（只提示存在与规模，具体名单由模块给出）──────────────────
+    function marginalHintItem(record) {
+        const students = Array.isArray(record?.students) ? record.students : [];
+        if (!students.length) return null;
+        const totals = students.map((student) => num(student?.total)).filter((value) => value !== null);
+        if (!totals.length) return null;
+        // 优秀线直接取系统已划好的 THRESHOLDS（可能是分位线，随数据变化），不自行推算。
+        const excLine = num(root.THRESHOLDS?.total?.exc);
+        if (excLine === null || excLine <= 0) return null;
+        // 临界分值与「临界学生」模块保持同源：该模块读 #mpGap，为空时默认 5 分
+        // （marginal-push-runtime.js getMarginalConfig）。此前这里硬编码 10 分，与模块
+        // 默认值不一致，用户对着两处会看到不同人数。
+        //
+        // 注意：临界学生模块是懒加载的，用户没进过该模块时 #mpGap 尚未渲染，这里必然
+        // 取到默认值 5。因此文案只说「默认口径」，不谎称「按模块当前设置」——真正的
+        // 精确名单仍以该模块为准，用户在那里调分值后看到的数字可以与此处不同。
+        const rawGap = num(root.document?.getElementById('mpGap')?.value);
+        const usingDefault = rawGap === null;
+        const gap = Math.max(0.1, usingDefault ? 5 : rawGap);
+        const nearly = totals.filter((total) => total < excLine && total >= excLine - gap).length;
+        if (!nearly) return null;
+        // 措辞区分数据来源：未进过临界模块时 #mpGap 不存在、用的是默认 5 分；
+        // 进过并设过值则跟随该设置。谎称哪一种都会让用户对不上数。
+        const scopeText = usingDefault ? `默认口径 ${gap} 分内` : `当前设定 ${gap} 分内`;
+        return {
+            text: `距优秀线（${excLine.toFixed(1)}）<strong>${scopeText}</strong>有 `
+                + `<strong>${nearly}</strong> 人，属于提分性价比较高的一批`,
+            source: '临界学生（分值可在该模块调整）'
+        };
+    }
+
+    function buildItems() {
+        // 切到无数据的届别时，系统按设计保留上一届已生成的综合评价表（避免自动重算），
+        // 且不会自动标记「需重新生成」。若不加这道守卫，要点会把上一届的排名当成本届结论
+        // 复述出来——教务看到「2026 届排第 1」而该届其实一条成绩都没有，是严重误导。
+        // 因此：当前届别没有成绩数据时，一条都不产出（整块隐藏）。
+        const rawData = Array.isArray(root.RAW_DATA) ? root.RAW_DATA : [];
+        if (!rawData.length) return [];
+
+        const mine = getMySchoolRecord();
+        if (!mine) return [];
+        const record = mine.record;
+        return [
+            schoolPositionItem(mine),
+            weakestSubjectItem(record),
+            bottomGroupItem(record),
+            marginalHintItem(record)
+        ].filter(Boolean).slice(0, MAX_ITEMS);
+    }
+
+    function renderSummaryHighlights() {
+        const container = root.document?.getElementById(CONTAINER_ID);
+        if (!container) return { ok: false, reason: 'missing-container', count: 0 };
+
+        let items = [];
+        try {
+            items = buildItems();
+        } catch (error) {
+            // 要点是辅助信息，生成失败绝不能影响综合评价主表。
+            console.warn('[summary-highlights] 生成要点失败:', error);
+            items = [];
+        }
+
+        if (!items.length) {
+            container.hidden = true;
+            container.innerHTML = '';
+            return { ok: true, count: 0 };
+        }
+
+        container.innerHTML = `
             <div class="summary-highlights-head">
                 <strong>本次决策摘要</strong>
                 <span class="summary-highlights-note">结论、依据与核对入口都来自当前已生成结果</span>
             </div>
             <ul class="summary-highlights-list">
-                ${n.map(s=>`<li class="summary-highlights-item" data-insight-source="${p(s.source)}"><span class="summary-highlights-copy">${s.text}</span><span class="summary-highlights-meta"><span class="summary-highlights-src">来源：${p(s.source)}</span></span></li>`).join("")}
-            </ul>`,t.hidden=!1,typeof e.CustomEvent=="function"&&e.dispatchEvent(new e.CustomEvent("school:decision-brief-render",{detail:{containerId:S}})),{ok:!0,count:n.length}):(t.hidden=!0,t.innerHTML="",{ok:!0,count:0})}e.renderSummaryHighlights=A,e.SummaryHighlightsRuntime={render:A,buildItems:d}})(typeof window!="undefined"?window:null);
+                ${items.map((item) => `<li class="summary-highlights-item" data-insight-source="${escapeHtml(item.source)}"><span class="summary-highlights-copy">${item.text}</span><span class="summary-highlights-meta"><span class="summary-highlights-src">来源：${escapeHtml(item.source)}</span></span></li>`).join('')}
+            </ul>`;
+        container.hidden = false;
+        // 只通知展示层补充「核对」入口；不改变本页任何计算、排序或数据状态。
+        if (typeof root.CustomEvent === 'function') {
+            root.dispatchEvent(new root.CustomEvent('school:decision-brief-render', { detail: { containerId: CONTAINER_ID } }));
+        }
+        return { ok: true, count: items.length };
+    }
+
+    root.renderSummaryHighlights = renderSummaryHighlights;
+    root.SummaryHighlightsRuntime = { render: renderSummaryHighlights, buildItems };
+})(typeof window !== 'undefined' ? window : null);

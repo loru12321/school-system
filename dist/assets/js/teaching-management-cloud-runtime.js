@@ -1,89 +1,841 @@
-const TM_CLOUD_OPS_FRESH_MS=9e4,TM_CLOUD_OPS_STALE_MS=6e5,TM_CLOUD_OPS_STORAGE_KEY="schoolSystemTeachingCloudOpsCacheV2";async function tmPromptInput(t,e="",n={}){return window.UI&&typeof UI.prompt=="function"?UI.prompt(t,e,n):window.prompt(String(t||""),String(e||""))}function tmGetCurrentGatewayScope(){const t=tmGetSelectDisplayValue(["teacherCompareSchool","mySchoolSelect","studentSchoolSelect"],readCurrentSchool()||"");return{project_key:readWorkspaceProjectKey()||"cohort::2022",cohort_id:readWorkspaceCohortId()||"2022",school_name:t&&!tmLooksLikePendingValue(t)?t:""}}function tmGetCurrentGatewayRole(){var e;const t=typeof getCurrentUser=="function"?getCurrentUser():((e=window.Auth)==null?void 0:e.currentUser)||null;return String((t==null?void 0:t.role)||"").trim()||"guest"}function tmCanManageCloudOps(){return["admin","director","grade_director"].includes(tmGetCurrentGatewayRole())}function tmNormalizeWarningLevel(t){const e=String(t||"").trim().toLowerCase();return e==="critical"?{text:"严重预警",tone:"warn"}:e==="high"?{text:"高风险",tone:"warn"}:e==="medium"?{text:"中风险",tone:"info"}:e==="low"?{text:"低风险",tone:"neutral"}:{text:"待评估",tone:"neutral"}}function tmNormalizeTaskStatus(t){const e=String(t||"").trim().toLowerCase();return e==="doing"?{text:"进行中",tone:"info"}:e==="done"?{text:"已完成",tone:"ok"}:e==="closed"?{text:"已关闭",tone:"neutral"}:{text:"待处理",tone:"warn"}}function tmFilterCloudRecordsByScope(t,e,n){const r=Array.isArray(t)?t:[];return e.school_name?r.filter(s=>String((s==null?void 0:s[n])||"").trim()===e.school_name):r}function tmNormalizeCloudOpsSnapshot(t,e,n=6e5){if(!t||typeof t!="object"||String(t.key||"")!==String(e||""))return null;const r=Number(t.fetchedAt||0);return!Number.isFinite(r)||r<=0||Date.now()-r>n?null:{key:String(t.key||""),fetchedAt:r,warnings:Array.isArray(t.warnings)?t.warnings:[],tasks:Array.isArray(t.tasks)?t.tasks:[],authState:String(t.authState||"ready"),error:String(t.error||"")}}function tmReadCloudOpsSnapshot(t){var e;try{const n=(e=window.sessionStorage)==null?void 0:e.getItem(TM_CLOUD_OPS_STORAGE_KEY);return n?tmNormalizeCloudOpsSnapshot(JSON.parse(n),t):null}catch(n){return null}}function tmWriteCloudOpsSnapshot(t){var e;try{const n=tmNormalizeCloudOpsSnapshot(t,t==null?void 0:t.key,6e5);if(!n||n.authState!=="ready")return;(e=window.sessionStorage)==null||e.setItem(TM_CLOUD_OPS_STORAGE_KEY,JSON.stringify(n))}catch(n){}}function tmRenderCloudOpsState(t){tmRenderCloudOpsPanels(t),typeof tmRenderCloudManagementSections=="function"&&tmRenderCloudManagementSections()}function tmBuildCloudWarningTitle(t){const e=[t.school_name,t.subject_name,t.teacher_name,t.class_name].map(n=>String(n||"").trim()).filter(Boolean);return e.length?e.join(" / "):String(t.warning_code||t.warning_type||"云端预警").trim()}function tmBuildCloudWarningDesc(t){const e=String(t.description||"").trim();if(e)return e;const n=String(t.metric_name||"").trim(),r=t.metric_value!==void 0&&t.metric_value!==null?String(t.metric_value):"",s=t.threshold_value!==void 0&&t.threshold_value!==null?String(t.threshold_value):"";return n&&r?s?`${n} 当前 ${r}，阈值 ${s}`:`${n} 当前 ${r}`:"该预警来自云端结构化记录，可转为整改任务继续跟进。"}function tmBuildCloudTaskDesc(t){return String(t.problem_desc||t.action_plan||"").trim()||"该整改任务已进入云端台账，可继续更新责任人、进度和复盘结果。"}function tmRenderCloudOpsPanels(t){const n=(Array.isArray(t==null?void 0:t.warnings)?t.warnings:[]).filter(a=>!["ignored","resolved"].includes(String(a.status||"").trim().toLowerCase())),r=Array.isArray(t==null?void 0:t.tasks)?t.tasks:[],s=n.filter(a=>["high","critical"].includes(String(a.warning_level||"").trim().toLowerCase())).length,i=r.filter(a=>!["done","closed"].includes(String(a.status||"").trim().toLowerCase())).length,m=r.filter(a=>String(a.status||"").trim().toLowerCase()==="doing").length,c=String((t==null?void 0:t.authState)||"unknown");if(c==="missing_token"){tmSetHtml("tmWarningCount",tmBuildMiniCard("云端预警","请重新登录后查看")),tmSetHtml("tmWarningHigh",tmBuildMiniCard("高风险预警","待重新登录")),tmSetHtml("tmTaskCount",tmBuildMiniCard("整改任务","请重新登录后查看")),tmSetHtml("tmTaskDoing",tmBuildMiniCard("进行中任务","待重新登录")),tmSetHtml("tmCloudOpsList",`
+// Teaching management runtime: cloud warning and rectify task panels.
+const TM_CLOUD_OPS_FRESH_MS = 90 * 1000;
+const TM_CLOUD_OPS_STALE_MS = 10 * 60 * 1000;
+const TM_CLOUD_OPS_STORAGE_KEY = 'schoolSystemTeachingCloudOpsCacheV2';
+
+async function tmPromptInput(message, defaultValue = '', options = {}) {
+    if (window.UI && typeof UI.prompt === 'function') {
+        return UI.prompt(message, defaultValue, options);
+    }
+    return window.prompt(String(message || ''), String(defaultValue || ''));
+}
+
+function tmGetCurrentGatewayScope() {
+    const school = tmGetSelectDisplayValue(
+        ['teacherCompareSchool', 'mySchoolSelect', 'studentSchoolSelect'],
+        readCurrentSchool() || ''
+    );
+    return {
+        project_key: readWorkspaceProjectKey() || 'cohort::2022',
+        cohort_id: readWorkspaceCohortId() || '2022',
+        school_name: school && !tmLooksLikePendingValue(school) ? school : ''
+    };
+}
+
+function tmGetCurrentGatewayRole() {
+    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : (window.Auth?.currentUser || null);
+    return String(user?.role || '').trim() || 'guest';
+}
+
+function tmCanManageCloudOps() {
+    return ['admin', 'director', 'grade_director'].includes(tmGetCurrentGatewayRole());
+}
+
+function tmNormalizeWarningLevel(level) {
+    const raw = String(level || '').trim().toLowerCase();
+    if (raw === 'critical') return { text: '严重预警', tone: 'warn' };
+    if (raw === 'high') return { text: '高风险', tone: 'warn' };
+    if (raw === 'medium') return { text: '中风险', tone: 'info' };
+    if (raw === 'low') return { text: '低风险', tone: 'neutral' };
+    return { text: '待评估', tone: 'neutral' };
+}
+
+function tmNormalizeTaskStatus(status) {
+    const raw = String(status || '').trim().toLowerCase();
+    if (raw === 'doing') return { text: '进行中', tone: 'info' };
+    if (raw === 'done') return { text: '已完成', tone: 'ok' };
+    if (raw === 'closed') return { text: '已关闭', tone: 'neutral' };
+    return { text: '待处理', tone: 'warn' };
+}
+
+function tmFilterCloudRecordsByScope(records, scope, pickSchoolField) {
+    const list = Array.isArray(records) ? records : [];
+    if (!scope.school_name) return list;
+    return list.filter((row) => String(row?.[pickSchoolField] || '').trim() === scope.school_name);
+}
+
+function tmNormalizeCloudOpsSnapshot(value, cacheKey, maxAgeMs = TM_CLOUD_OPS_STALE_MS) {
+    if (!value || typeof value !== 'object') return null;
+    if (String(value.key || '') !== String(cacheKey || '')) return null;
+    const fetchedAt = Number(value.fetchedAt || 0);
+    if (!Number.isFinite(fetchedAt) || fetchedAt <= 0 || Date.now() - fetchedAt > maxAgeMs) return null;
+    return {
+        key: String(value.key || ''),
+        fetchedAt,
+        warnings: Array.isArray(value.warnings) ? value.warnings : [],
+        tasks: Array.isArray(value.tasks) ? value.tasks : [],
+        authState: String(value.authState || 'ready'),
+        error: String(value.error || '')
+    };
+}
+
+function tmReadCloudOpsSnapshot(cacheKey) {
+    try {
+        const raw = window.sessionStorage?.getItem(TM_CLOUD_OPS_STORAGE_KEY);
+        if (!raw) return null;
+        return tmNormalizeCloudOpsSnapshot(JSON.parse(raw), cacheKey);
+    } catch (error) {
+        return null;
+    }
+}
+
+function tmWriteCloudOpsSnapshot(snapshot) {
+    try {
+        const normalized = tmNormalizeCloudOpsSnapshot(snapshot, snapshot?.key, TM_CLOUD_OPS_STALE_MS);
+        if (!normalized || normalized.authState !== 'ready') return;
+        window.sessionStorage?.setItem(TM_CLOUD_OPS_STORAGE_KEY, JSON.stringify(normalized));
+    } catch (error) {
+        // Snapshot cache is only a speed path; cloud data remains the source of truth.
+    }
+}
+
+function tmRenderCloudOpsState(state) {
+    tmRenderCloudOpsPanels(state);
+    if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
+}
+
+function tmBuildCloudWarningTitle(row) {
+    const parts = [
+        row.school_name,
+        row.subject_name,
+        row.teacher_name,
+        row.class_name
+    ].map((item) => String(item || '').trim()).filter(Boolean);
+    return parts.length ? parts.join(' / ') : String(row.warning_code || row.warning_type || '云端预警').trim();
+}
+
+function tmBuildCloudWarningDesc(row) {
+    const desc = String(row.description || '').trim();
+    if (desc) return desc;
+    const metricName = String(row.metric_name || '').trim();
+    const metricValue = row.metric_value !== undefined && row.metric_value !== null ? String(row.metric_value) : '';
+    const thresholdValue = row.threshold_value !== undefined && row.threshold_value !== null ? String(row.threshold_value) : '';
+    if (metricName && metricValue) {
+        return thresholdValue
+            ? `${metricName} 当前 ${metricValue}，阈值 ${thresholdValue}`
+            : `${metricName} 当前 ${metricValue}`;
+    }
+    return '该预警来自云端结构化记录，可转为整改任务继续跟进。';
+}
+
+function tmBuildCloudTaskDesc(row) {
+    const desc = String(row.problem_desc || row.action_plan || '').trim();
+    return desc || '该整改任务已进入云端台账，可继续更新责任人、进度和复盘结果。';
+}
+
+function tmRenderCloudOpsPanels(state) {
+    const allWarnings = Array.isArray(state?.warnings) ? state.warnings : [];
+    const warningList = allWarnings.filter((row) => !['ignored', 'resolved'].includes(String(row.status || '').trim().toLowerCase()));
+    const taskList = Array.isArray(state?.tasks) ? state.tasks : [];
+    const highRiskCount = warningList.filter((row) => ['high', 'critical'].includes(String(row.warning_level || '').trim().toLowerCase())).length;
+    const openTaskCount = taskList.filter((row) => !['done', 'closed'].includes(String(row.status || '').trim().toLowerCase())).length;
+    const doingTaskCount = taskList.filter((row) => String(row.status || '').trim().toLowerCase() === 'doing').length;
+    const authState = String(state?.authState || 'unknown');
+
+    if (authState === 'missing_token') {
+        tmSetHtml('tmWarningCount', tmBuildMiniCard('云端预警', '请重新登录后查看'));
+        tmSetHtml('tmWarningHigh', tmBuildMiniCard('高风险预警', '待重新登录'));
+        tmSetHtml('tmTaskCount', tmBuildMiniCard('整改任务', '请重新登录后查看'));
+        tmSetHtml('tmTaskDoing', tmBuildMiniCard('进行中任务', '待重新登录'));
+        tmSetHtml('tmCloudOpsList', `
             <div class="tm-cloud-empty" style="grid-column:1/-1;">
                 当前浏览器还没有云端网关会话。请重新登录一次系统，随后这里会直接显示云端预警与整改任务。
             </div>
-        `);return}if(c==="error"){tmSetHtml("tmWarningCount",tmBuildMiniCard("云端预警","读取失败")),tmSetHtml("tmWarningHigh",tmBuildMiniCard("高风险预警","待重试")),tmSetHtml("tmTaskCount",tmBuildMiniCard("整改任务","读取失败")),tmSetHtml("tmTaskDoing",tmBuildMiniCard("进行中任务","待重试")),tmSetHtml("tmCloudOpsList",`
+        `);
+        return;
+    }
+
+    if (authState === 'error') {
+        tmSetHtml('tmWarningCount', tmBuildMiniCard('云端预警', '读取失败'));
+        tmSetHtml('tmWarningHigh', tmBuildMiniCard('高风险预警', '待重试'));
+        tmSetHtml('tmTaskCount', tmBuildMiniCard('整改任务', '读取失败'));
+        tmSetHtml('tmTaskDoing', tmBuildMiniCard('进行中任务', '待重试'));
+        tmSetHtml('tmCloudOpsList', `
             <div class="tm-cloud-empty" style="grid-column:1/-1;">
-                云端预警与整改任务读取失败：${tmEscapeHtml(String((t==null?void 0:t.error)||"未知错误"))}
+                云端预警与整改任务读取失败：${tmEscapeHtml(String(state?.error || '未知错误'))}
             </div>
-        `);return}if(c==="loading"){tmSetHtml("tmWarningCount",tmBuildMiniCard("云端预警","正在拉取")),tmSetHtml("tmWarningHigh",tmBuildMiniCard("高风险预警","正在拉取")),tmSetHtml("tmTaskCount",tmBuildMiniCard("整改任务","正在拉取")),tmSetHtml("tmTaskDoing",tmBuildMiniCard("进行中任务","正在拉取")),tmSetHtml("tmCloudOpsList",`
+        `);
+        return;
+    }
+
+    if (authState === 'loading') {
+        tmSetHtml('tmWarningCount', tmBuildMiniCard('云端预警', '正在拉取'));
+        tmSetHtml('tmWarningHigh', tmBuildMiniCard('高风险预警', '正在拉取'));
+        tmSetHtml('tmTaskCount', tmBuildMiniCard('整改任务', '正在拉取'));
+        tmSetHtml('tmTaskDoing', tmBuildMiniCard('进行中任务', '正在拉取'));
+        tmSetHtml('tmCloudOpsList', `
             <div class="tm-cloud-empty" style="grid-column:1/-1;">
                 正在同步云端预警与整改任务，请稍候...
             </div>
-        `);return}tmSetHtml("tmWarningCount",tmBuildMiniCard("云端预警",n.length?`${n.length} 条待处理`:"当前无待处理")),tmSetHtml("tmWarningHigh",tmBuildMiniCard("高风险预警",s?`${s} 条高风险`:"当前无高风险")),tmSetHtml("tmTaskCount",tmBuildMiniCard("整改任务",i?`${i} 项未完成`:"当前无未完成")),tmSetHtml("tmTaskDoing",tmBuildMiniCard("进行中任务",m?`${m} 项推进中`:"当前无进行中"));const l=n.length?n.slice(0,4).map(a=>{const d=tmNormalizeWarningLevel(a.warning_level);return`
+        `);
+        return;
+    }
+
+    tmSetHtml('tmWarningCount', tmBuildMiniCard('云端预警', warningList.length ? `${warningList.length} 条待处理` : '当前无待处理'));
+    tmSetHtml('tmWarningHigh', tmBuildMiniCard('高风险预警', highRiskCount ? `${highRiskCount} 条高风险` : '当前无高风险'));
+    tmSetHtml('tmTaskCount', tmBuildMiniCard('整改任务', openTaskCount ? `${openTaskCount} 项未完成` : '当前无未完成'));
+    tmSetHtml('tmTaskDoing', tmBuildMiniCard('进行中任务', doingTaskCount ? `${doingTaskCount} 项推进中` : '当前无进行中'));
+
+    const warningHtml = warningList.length
+        ? warningList.slice(0, 4).map((row) => {
+            const level = tmNormalizeWarningLevel(row.warning_level);
+            return `
                 <div class="tm-cloud-item warning">
                     <div class="tm-cloud-item-head">
-                        <div class="tm-cloud-item-title">${tmEscapeHtml(tmBuildCloudWarningTitle(a))}</div>
-                        ${tmBuildStatusChip(d.text,d.tone)}
+                        <div class="tm-cloud-item-title">${tmEscapeHtml(tmBuildCloudWarningTitle(row))}</div>
+                        ${tmBuildStatusChip(level.text, level.tone)}
                     </div>
-                    <div class="tm-cloud-item-desc">${tmEscapeHtml(tmBuildCloudWarningDesc(a))}</div>
+                    <div class="tm-cloud-item-desc">${tmEscapeHtml(tmBuildCloudWarningDesc(row))}</div>
                     <div class="tm-cloud-item-meta">
-                        来源：${tmEscapeHtml(String(a.source_module||a.warning_type||"云端记录"))}
-                        ${a.created_at?` | 时间：${tmEscapeHtml(String(a.created_at).replace("T"," ").slice(0,16))}`:""}
+                        来源：${tmEscapeHtml(String(row.source_module || row.warning_type || '云端记录'))}
+                        ${row.created_at ? ` | 时间：${tmEscapeHtml(String(row.created_at).replace('T', ' ').slice(0, 16))}` : ''}
                     </div>
-                    ${tmCanManageCloudOps()?`
+                    ${tmCanManageCloudOps() ? `
                         <div class="tm-cloud-item-actions">
-                            <button type="button" class="btn btn-orange" data-tm-warning-rectify="${tmEscapeHtml(String(a.id||""))}">生成整改</button>
-                            <button type="button" class="btn btn-secondary" data-tm-warning-ignore="${tmEscapeHtml(String(a.id||""))}">忽略预警</button>
+                            <button type="button" class="btn btn-orange" data-tm-warning-rectify="${tmEscapeHtml(String(row.id || ''))}">生成整改</button>
+                            <button type="button" class="btn btn-secondary" data-tm-warning-ignore="${tmEscapeHtml(String(row.id || ''))}">忽略预警</button>
                         </div>
-                    `:""}
+                    ` : ''}
                 </div>
-            `}).join(""):'<div class="tm-cloud-empty">当前范围没有云端预警，说明结构化管理层面暂未发现需要单独挂牌跟进的问题。</div>',o=r.length?r.slice(0,4).map(a=>{const d=tmNormalizeTaskStatus(a.status);return`
+            `;
+        }).join('')
+        : `<div class="tm-cloud-empty">当前范围没有云端预警，说明结构化管理层面暂未发现需要单独挂牌跟进的问题。</div>`;
+
+    const taskHtml = taskList.length
+        ? taskList.slice(0, 4).map((row) => {
+            const taskState = tmNormalizeTaskStatus(row.status);
+            return `
                 <div class="tm-cloud-item task">
                     <div class="tm-cloud-item-head">
-                        <div class="tm-cloud-item-title">${tmEscapeHtml(String(a.title||"整改任务"))}</div>
-                        ${tmBuildStatusChip(d.text,d.tone)}
+                        <div class="tm-cloud-item-title">${tmEscapeHtml(String(row.title || '整改任务'))}</div>
+                        ${tmBuildStatusChip(taskState.text, taskState.tone)}
                     </div>
-                    <div class="tm-cloud-item-desc">${tmEscapeHtml(tmBuildCloudTaskDesc(a))}</div>
+                    <div class="tm-cloud-item-desc">${tmEscapeHtml(tmBuildCloudTaskDesc(row))}</div>
                     <div class="tm-cloud-item-meta">
-                        负责人：${tmEscapeHtml(String(a.owner_name||"未指派"))}
-                        ${a.due_date?` | 截止：${tmEscapeHtml(String(a.due_date))}`:""}
+                        负责人：${tmEscapeHtml(String(row.owner_name || '未指派'))}
+                        ${row.due_date ? ` | 截止：${tmEscapeHtml(String(row.due_date))}` : ''}
                     </div>
                 </div>
-            `}).join(""):'<div class="tm-cloud-empty">当前范围还没有整改任务，后续可以直接从云端预警一键生成。</div>';tmSetHtml("tmCloudOpsList",`
+            `;
+        }).join('')
+        : `<div class="tm-cloud-empty">当前范围还没有整改任务，后续可以直接从云端预警一键生成。</div>`;
+
+    tmSetHtml('tmCloudOpsList', `
         <div class="tm-cloud-group">
             <h5>待跟进预警</h5>
-            <div class="tm-cloud-stack">${l}</div>
+            <div class="tm-cloud-stack">${warningHtml}</div>
         </div>
         <div class="tm-cloud-group">
             <h5>整改任务台账</h5>
-            <div class="tm-cloud-stack">${o}</div>
+            <div class="tm-cloud-stack">${taskHtml}</div>
         </div>
-    `),document.querySelectorAll("[data-tm-warning-ignore]").forEach(a=>{a.dataset.tmBoundIgnore!=="1"&&(a.dataset.tmBoundIgnore="1",a.addEventListener("click",async()=>{await tmIgnoreCloudWarning(a.dataset.tmWarningIgnore||"")}))}),document.querySelectorAll("[data-tm-warning-rectify]").forEach(a=>{a.dataset.tmBoundRectify!=="1"&&(a.dataset.tmBoundRectify="1",a.addEventListener("click",async()=>{await tmCreateRectifyTaskFromWarning(a.dataset.tmWarningRectify||"")}))})}async function tmRefreshCloudOps(t=!1){const e=tmGetCurrentGatewayScope(),n=JSON.stringify(e),r=Date.now();if(!!!(window.EdgeGateway&&typeof EdgeGateway.canUseAuthorizedRequests=="function"&&EdgeGateway.canUseAuthorizedRequests())){TM_CLOUD_OPS_CACHE={key:n,fetchedAt:Date.now(),warnings:[],tasks:[],authState:"missing_token",error:""},tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);return}let i=!1;const m=tmNormalizeCloudOpsSnapshot(TM_CLOUD_OPS_CACHE,n);if(!t&&m){if(TM_CLOUD_OPS_CACHE=m,tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE),r-m.fetchedAt<9e4)return TM_CLOUD_OPS_CACHE;i=!0}else if(!t){const o=tmReadCloudOpsSnapshot(n);if(o){if(TM_CLOUD_OPS_CACHE=o,tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE),r-o.fetchedAt<9e4)return TM_CLOUD_OPS_CACHE;i=!0}}if(!t&&TM_CLOUD_OPS_INFLIGHT&&TM_CLOUD_OPS_INFLIGHT_KEY===n)return TM_CLOUD_OPS_INFLIGHT;const c=++TM_CLOUD_OPS_REQUEST_ID;i||tmRenderCloudOpsState({authState:"loading"});const l=(async()=>{const[o,a]=await Promise.all([EdgeGateway.listWarnings({project_key:e.project_key,cohort_id:e.cohort_id,limit:100}),EdgeGateway.listRectifyTasks({project_key:e.project_key,cohort_id:e.cohort_id,limit:50})]);if(c!==TM_CLOUD_OPS_REQUEST_ID)return;const d=tmFilterCloudRecordsByScope(o==null?void 0:o.records,e,"school_name"),u=tmFilterCloudRecordsByScope(a==null?void 0:a.records,e,"school_name");TM_CLOUD_OPS_CACHE={key:n,fetchedAt:Date.now(),warnings:d,tasks:u,authState:"ready",error:""},tmWriteCloudOpsSnapshot(TM_CLOUD_OPS_CACHE),tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE)})().catch(o=>{if(c===TM_CLOUD_OPS_REQUEST_ID){if(i&&TM_CLOUD_OPS_CACHE.key===n){TM_CLOUD_OPS_CACHE=Object.assign({},TM_CLOUD_OPS_CACHE,{authState:"ready",error:o instanceof Error?o.message:String(o)}),tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);return}TM_CLOUD_OPS_CACHE={key:n,fetchedAt:Date.now(),warnings:[],tasks:[],authState:"error",error:o instanceof Error?o.message:String(o)},tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE)}}).finally(()=>{TM_CLOUD_OPS_INFLIGHT===l&&(TM_CLOUD_OPS_INFLIGHT=null,TM_CLOUD_OPS_INFLIGHT_KEY="")});return TM_CLOUD_OPS_INFLIGHT=l,TM_CLOUD_OPS_INFLIGHT_KEY=n,l}async function tmCreateRectifyTaskFromWarning(t){if(!tmCanManageCloudOps())return;const e=(TM_CLOUD_OPS_CACHE.warnings||[]).find(i=>String(i.id||"")===String(t||""));if(!e||!window.EdgeGateway||typeof EdgeGateway.saveRectifyTask!="function")return;const n="请结合当前预警内容制定整改措施，明确责任人、完成时限和复盘节点。";let r=n;if(window.Swal&&typeof Swal.fire=="function"){const i=await Swal.fire({title:"生成整改任务",input:"textarea",inputLabel:"整改建议",inputValue:n,inputPlaceholder:"可直接修改整改建议后生成任务",showCancelButton:!0,confirmButtonText:"生成任务",cancelButtonText:"取消"});if(!i.isConfirmed)return;r=String(i.value||"").trim()||n}const s={task_type:String(e.warning_type||"teacher").trim()||"teacher",title:`[预警整改] ${tmBuildCloudWarningTitle(e)}`,source_warning_id:String(e.id||"").trim()||null,project_key:e.project_key||tmGetCurrentGatewayScope().project_key,cohort_id:e.cohort_id||tmGetCurrentGatewayScope().cohort_id,exam_id:e.exam_id||null,school_name:e.school_name||tmGetCurrentGatewayScope().school_name||null,grade_name:e.grade_name||null,class_name:e.class_name||null,subject_name:e.subject_name||null,teacher_name:e.teacher_name||null,student_name:e.student_name||null,problem_desc:tmBuildCloudWarningDesc(e),action_plan:r,owner_name:e.teacher_name||null,priority:["critical","high"].includes(String(e.warning_level||"").trim().toLowerCase())?"high":"medium",status:"todo",progress:0};try{await EdgeGateway.saveRectifyTask(s),window.UI&&UI.toast("已生成整改任务","success"),await tmRefreshCloudOps(!0)}catch(i){window.UI&&UI.toast(`生成整改任务失败：${i instanceof Error?i.message:String(i)}`,"warning")}}async function tmIgnoreCloudWarning(t){if(!(!tmCanManageCloudOps()||!t||!window.EdgeGateway||typeof EdgeGateway.ignoreWarning!="function"))try{await EdgeGateway.ignoreWarning(t),window.UI&&UI.toast("已忽略该条云端预警","success"),await tmRefreshCloudOps(!0)}catch(e){window.UI&&UI.toast(`忽略预警失败：${e instanceof Error?e.message:String(e)}`,"warning")}}function tmGetGatewayActorNames(){var n,r;const t=typeof getCurrentUser=="function"?getCurrentUser():((n=window.Auth)==null?void 0:n.currentUser)||null,e=new Set;[t==null?void 0:t.name,t==null?void 0:t.teacher_name,t==null?void 0:t.realName,t==null?void 0:t.username,t==null?void 0:t.userName].forEach(s=>{const i=String(s||"").trim();i&&e.add(i)});try{const s=sessionStorage.getItem(((r=window.EdgeGateway)==null?void 0:r.userStorageKey)||"EDGE_GATEWAY_USER_V1"),i=s?JSON.parse(s):null;[i==null?void 0:i.teacher_name,i==null?void 0:i.name,i==null?void 0:i.username].forEach(m=>{const c=String(m||"").trim();c&&e.add(c)})}catch(s){}return Array.from(e)}function tmGetCloudScopeText(){const t=tmGetCurrentGatewayScope();return`当前范围：${t.school_name||"当前届别全部学校"} · 届别 ${t.cohort_id||"未识别"} · 项目 ${t.project_key||"未识别"}`}function tmBuildCloudObjectScope(t){const e=[t.school_name,t.grade_name,t.class_name,t.subject_name,t.teacher_name,t.student_name].map(n=>String(n||"").trim()).filter(Boolean);return e.length?e.join(" / "):"当前范围未细分到具体对象"}function tmBuildTaskOwnerMeta(t){var m;const e=[],n=String(t.owner_name||"").trim(),r=String(t.priority||"").trim(),s=String(t.due_date||"").trim(),i=Number((m=t.progress)!=null?m:0);return n&&e.push(`负责人：${n}`),r&&e.push(`优先级：${r}`),s&&e.push(`截止：${s}`),e.push(`进度：${Number.isFinite(i)?i:0}%`),e}function tmGetWarningCenterFilters(){var t,e,n;return{level:String(((t=document.getElementById("tmWarningLevelFilter"))==null?void 0:t.value)||"all").trim(),status:String(((e=document.getElementById("tmWarningStatusFilter"))==null?void 0:e.value)||"open").trim(),type:String(((n=document.getElementById("tmWarningTypeFilter"))==null?void 0:n.value)||"all").trim()}}function tmGetRectifyCenterFilters(){var t,e,n;return{status:String(((t=document.getElementById("tmRectifyStatusFilter"))==null?void 0:t.value)||"open").trim(),priority:String(((e=document.getElementById("tmRectifyPriorityFilter"))==null?void 0:e.value)||"all").trim(),owner:String(((n=document.getElementById("tmRectifyOwnerFilter"))==null?void 0:n.value)||"all").trim()}}function tmFilterWarningsForCenter(t){const{level:e,status:n,type:r}=tmGetWarningCenterFilters();return(Array.isArray(t)?t:[]).filter(s=>{const i=String(s.warning_level||"").trim().toLowerCase(),m=String(s.status||"open").trim().toLowerCase(),c=String(s.warning_type||"").trim().toLowerCase();return!(e!=="all"&&i!==e||n!=="all"&&m!==n||r!=="all"&&c!==r)})}function tmFilterRectifyTasksForCenter(t){const{status:e,priority:n,owner:r}=tmGetRectifyCenterFilters(),s=tmGetGatewayActorNames();return(Array.isArray(t)?t:[]).filter(i=>{const m=String(i.status||"todo").trim().toLowerCase(),c=String(i.priority||"medium").trim().toLowerCase(),l=String(i.owner_name||"").trim(),o=Array.isArray(i.assist_users)?i.assist_users.map(d=>String(d||"").trim()):[],a=s.some(d=>d&&(d===l||o.includes(d)));return!(e==="open"&&["done","closed"].includes(m)||e!=="all"&&e!=="open"&&m!==e||n!=="all"&&c!==n||r==="assigned"&&!l||r==="unassigned"&&l||r==="mine"&&!a)})}function tmBuildWarningCenterCard(t){const e=tmNormalizeWarningLevel(t.warning_level),n=tmBuildCloudObjectScope(t),r=[`类型：${String(t.warning_type||t.warning_code||"预警").trim()||"预警"}`,t.source_module?`来源：${String(t.source_module).trim()}`:"",t.created_at?`时间：${String(t.created_at).replace("T"," ").slice(0,16)}`:""].filter(Boolean);return`
+    `);
+
+    document.querySelectorAll('[data-tm-warning-ignore]').forEach((btn) => {
+        if (btn.dataset.tmBoundIgnore === '1') return;
+        btn.dataset.tmBoundIgnore = '1';
+        btn.addEventListener('click', async () => {
+            await tmIgnoreCloudWarning(btn.dataset.tmWarningIgnore || '');
+        });
+    });
+
+    document.querySelectorAll('[data-tm-warning-rectify]').forEach((btn) => {
+        if (btn.dataset.tmBoundRectify === '1') return;
+        btn.dataset.tmBoundRectify = '1';
+        btn.addEventListener('click', async () => {
+            await tmCreateRectifyTaskFromWarning(btn.dataset.tmWarningRectify || '');
+        });
+    });
+}
+
+async function tmRefreshCloudOps(force = false) {
+    const scope = tmGetCurrentGatewayScope();
+    const cacheKey = JSON.stringify(scope);
+    const now = Date.now();
+    const hasAuthorizedGateway = !!(window.EdgeGateway && typeof EdgeGateway.canUseAuthorizedRequests === 'function' && EdgeGateway.canUseAuthorizedRequests());
+
+    if (!hasAuthorizedGateway) {
+        TM_CLOUD_OPS_CACHE = {
+            key: cacheKey,
+            fetchedAt: Date.now(),
+            warnings: [],
+            tasks: [],
+            authState: 'missing_token',
+            error: ''
+        };
+        tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
+        return;
+    }
+
+    let renderedSnapshot = false;
+    const memorySnapshot = tmNormalizeCloudOpsSnapshot(TM_CLOUD_OPS_CACHE, cacheKey);
+    if (!force && memorySnapshot) {
+        TM_CLOUD_OPS_CACHE = memorySnapshot;
+        tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
+        if (now - memorySnapshot.fetchedAt < TM_CLOUD_OPS_FRESH_MS) return TM_CLOUD_OPS_CACHE;
+        renderedSnapshot = true;
+    } else if (!force) {
+        const storedSnapshot = tmReadCloudOpsSnapshot(cacheKey);
+        if (storedSnapshot) {
+            TM_CLOUD_OPS_CACHE = storedSnapshot;
+            tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
+            if (now - storedSnapshot.fetchedAt < TM_CLOUD_OPS_FRESH_MS) return TM_CLOUD_OPS_CACHE;
+            renderedSnapshot = true;
+        }
+    }
+
+    if (!force && TM_CLOUD_OPS_INFLIGHT && TM_CLOUD_OPS_INFLIGHT_KEY === cacheKey) {
+        return TM_CLOUD_OPS_INFLIGHT;
+    }
+
+    const requestId = ++TM_CLOUD_OPS_REQUEST_ID;
+    if (!renderedSnapshot) tmRenderCloudOpsState({ authState: 'loading' });
+
+    const task = (async () => {
+        const [warningRes, taskRes] = await Promise.all([
+            EdgeGateway.listWarnings({ project_key: scope.project_key, cohort_id: scope.cohort_id, limit: 100 }),
+            EdgeGateway.listRectifyTasks({ project_key: scope.project_key, cohort_id: scope.cohort_id, limit: 50 })
+        ]);
+
+        if (requestId !== TM_CLOUD_OPS_REQUEST_ID) return;
+
+        const warnings = tmFilterCloudRecordsByScope(warningRes?.records, scope, 'school_name');
+        const tasks = tmFilterCloudRecordsByScope(taskRes?.records, scope, 'school_name');
+
+        TM_CLOUD_OPS_CACHE = {
+            key: cacheKey,
+            fetchedAt: Date.now(),
+            warnings,
+            tasks,
+            authState: 'ready',
+            error: ''
+        };
+        tmWriteCloudOpsSnapshot(TM_CLOUD_OPS_CACHE);
+        tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
+    })()
+        .catch((error) => {
+            if (requestId !== TM_CLOUD_OPS_REQUEST_ID) return;
+            if (renderedSnapshot && TM_CLOUD_OPS_CACHE.key === cacheKey) {
+                TM_CLOUD_OPS_CACHE = Object.assign({}, TM_CLOUD_OPS_CACHE, {
+                    authState: 'ready',
+                    error: error instanceof Error ? error.message : String(error)
+                });
+                tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
+                return;
+            }
+            TM_CLOUD_OPS_CACHE = {
+                key: cacheKey,
+                fetchedAt: Date.now(),
+                warnings: [],
+                tasks: [],
+                authState: 'error',
+                error: error instanceof Error ? error.message : String(error)
+            };
+            tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
+        })
+        .finally(() => {
+            if (TM_CLOUD_OPS_INFLIGHT === task) {
+                TM_CLOUD_OPS_INFLIGHT = null;
+                TM_CLOUD_OPS_INFLIGHT_KEY = '';
+            }
+        });
+
+    TM_CLOUD_OPS_INFLIGHT = task;
+    TM_CLOUD_OPS_INFLIGHT_KEY = cacheKey;
+    return task;
+}
+
+async function tmCreateRectifyTaskFromWarning(warningId) {
+    if (!tmCanManageCloudOps()) return;
+    const warning = (TM_CLOUD_OPS_CACHE.warnings || []).find((item) => String(item.id || '') === String(warningId || ''));
+    if (!warning || !window.EdgeGateway || typeof EdgeGateway.saveRectifyTask !== 'function') return;
+
+    const defaultPlan = '请结合当前预警内容制定整改措施，明确责任人、完成时限和复盘节点。';
+    let actionPlan = defaultPlan;
+    if (window.Swal && typeof Swal.fire === 'function') {
+        const result = await Swal.fire({
+            title: '生成整改任务',
+            input: 'textarea',
+            inputLabel: '整改建议',
+            inputValue: defaultPlan,
+            inputPlaceholder: '可直接修改整改建议后生成任务',
+            showCancelButton: true,
+            confirmButtonText: '生成任务',
+            cancelButtonText: '取消'
+        });
+        if (!result.isConfirmed) return;
+        actionPlan = String(result.value || '').trim() || defaultPlan;
+    }
+
+    const payload = {
+        task_type: String(warning.warning_type || 'teacher').trim() || 'teacher',
+        title: `[预警整改] ${tmBuildCloudWarningTitle(warning)}`,
+        source_warning_id: String(warning.id || '').trim() || null,
+        project_key: warning.project_key || tmGetCurrentGatewayScope().project_key,
+        cohort_id: warning.cohort_id || tmGetCurrentGatewayScope().cohort_id,
+        exam_id: warning.exam_id || null,
+        school_name: warning.school_name || tmGetCurrentGatewayScope().school_name || null,
+        grade_name: warning.grade_name || null,
+        class_name: warning.class_name || null,
+        subject_name: warning.subject_name || null,
+        teacher_name: warning.teacher_name || null,
+        student_name: warning.student_name || null,
+        problem_desc: tmBuildCloudWarningDesc(warning),
+        action_plan: actionPlan,
+        owner_name: warning.teacher_name || null,
+        priority: ['critical', 'high'].includes(String(warning.warning_level || '').trim().toLowerCase()) ? 'high' : 'medium',
+        status: 'todo',
+        progress: 0
+    };
+
+    try {
+        await EdgeGateway.saveRectifyTask(payload);
+        if (window.UI) UI.toast('已生成整改任务', 'success');
+        await tmRefreshCloudOps(true);
+    } catch (error) {
+        if (window.UI) UI.toast(`生成整改任务失败：${error instanceof Error ? error.message : String(error)}`, 'warning');
+    }
+}
+
+async function tmIgnoreCloudWarning(warningId) {
+    if (!tmCanManageCloudOps() || !warningId || !window.EdgeGateway || typeof EdgeGateway.ignoreWarning !== 'function') return;
+    try {
+        await EdgeGateway.ignoreWarning(warningId);
+        if (window.UI) UI.toast('已忽略该条云端预警', 'success');
+        await tmRefreshCloudOps(true);
+    } catch (error) {
+        if (window.UI) UI.toast(`忽略预警失败：${error instanceof Error ? error.message : String(error)}`, 'warning');
+    }
+}
+
+function tmGetGatewayActorNames() {
+    const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : (window.Auth?.currentUser || null);
+    const names = new Set();
+    [
+        currentUser?.name,
+        currentUser?.teacher_name,
+        currentUser?.realName,
+        currentUser?.username,
+        currentUser?.userName
+    ].forEach((value) => {
+        const text = String(value || '').trim();
+        if (text) names.add(text);
+    });
+    try {
+        const raw = sessionStorage.getItem(window.EdgeGateway?.userStorageKey || 'EDGE_GATEWAY_USER_V1');
+        const sessionUser = raw ? JSON.parse(raw) : null;
+        [sessionUser?.teacher_name, sessionUser?.name, sessionUser?.username].forEach((value) => {
+            const text = String(value || '').trim();
+            if (text) names.add(text);
+        });
+    } catch (_) { }
+    return Array.from(names);
+}
+
+function tmGetCloudScopeText() {
+    const scope = tmGetCurrentGatewayScope();
+    const schoolText = scope.school_name || '当前届别全部学校';
+    return `当前范围：${schoolText} · 届别 ${scope.cohort_id || '未识别'} · 项目 ${scope.project_key || '未识别'}`;
+}
+
+function tmBuildCloudObjectScope(row) {
+    const parts = [
+        row.school_name,
+        row.grade_name,
+        row.class_name,
+        row.subject_name,
+        row.teacher_name,
+        row.student_name
+    ].map((item) => String(item || '').trim()).filter(Boolean);
+    return parts.length ? parts.join(' / ') : '当前范围未细分到具体对象';
+}
+
+function tmBuildTaskOwnerMeta(row) {
+    const parts = [];
+    const owner = String(row.owner_name || '').trim();
+    const priority = String(row.priority || '').trim();
+    const dueDate = String(row.due_date || '').trim();
+    const progress = Number(row.progress ?? 0);
+    if (owner) parts.push(`负责人：${owner}`);
+    if (priority) parts.push(`优先级：${priority}`);
+    if (dueDate) parts.push(`截止：${dueDate}`);
+    parts.push(`进度：${Number.isFinite(progress) ? progress : 0}%`);
+    return parts;
+}
+
+function tmGetWarningCenterFilters() {
+    return {
+        level: String(document.getElementById('tmWarningLevelFilter')?.value || 'all').trim(),
+        status: String(document.getElementById('tmWarningStatusFilter')?.value || 'open').trim(),
+        type: String(document.getElementById('tmWarningTypeFilter')?.value || 'all').trim()
+    };
+}
+
+function tmGetRectifyCenterFilters() {
+    return {
+        status: String(document.getElementById('tmRectifyStatusFilter')?.value || 'open').trim(),
+        priority: String(document.getElementById('tmRectifyPriorityFilter')?.value || 'all').trim(),
+        owner: String(document.getElementById('tmRectifyOwnerFilter')?.value || 'all').trim()
+    };
+}
+
+function tmFilterWarningsForCenter(rows) {
+    const { level, status, type } = tmGetWarningCenterFilters();
+    return (Array.isArray(rows) ? rows : []).filter((row) => {
+        const rowLevel = String(row.warning_level || '').trim().toLowerCase();
+        const rowStatus = String(row.status || 'open').trim().toLowerCase();
+        const rowType = String(row.warning_type || '').trim().toLowerCase();
+        if (level !== 'all' && rowLevel !== level) return false;
+        if (status !== 'all' && rowStatus !== status) return false;
+        if (type !== 'all' && rowType !== type) return false;
+        return true;
+    });
+}
+
+function tmFilterRectifyTasksForCenter(rows) {
+    const { status, priority, owner } = tmGetRectifyCenterFilters();
+    const actorNames = tmGetGatewayActorNames();
+    return (Array.isArray(rows) ? rows : []).filter((row) => {
+        const rowStatus = String(row.status || 'todo').trim().toLowerCase();
+        const rowPriority = String(row.priority || 'medium').trim().toLowerCase();
+        const ownerName = String(row.owner_name || '').trim();
+        const assistUsers = Array.isArray(row.assist_users) ? row.assist_users.map((item) => String(item || '').trim()) : [];
+        const isMine = actorNames.some((name) => name && (name === ownerName || assistUsers.includes(name)));
+        if (status === 'open' && ['done', 'closed'].includes(rowStatus)) return false;
+        if (status !== 'all' && status !== 'open' && rowStatus !== status) return false;
+        if (priority !== 'all' && rowPriority !== priority) return false;
+        if (owner === 'assigned' && !ownerName) return false;
+        if (owner === 'unassigned' && ownerName) return false;
+        if (owner === 'mine' && !isMine) return false;
+        return true;
+    });
+}
+
+function tmBuildWarningCenterCard(row) {
+    const level = tmNormalizeWarningLevel(row.warning_level);
+    const scopeText = tmBuildCloudObjectScope(row);
+    const meta = [
+        `类型：${String(row.warning_type || row.warning_code || '预警').trim() || '预警'}`,
+        row.source_module ? `来源：${String(row.source_module).trim()}` : '',
+        row.created_at ? `时间：${String(row.created_at).replace('T', ' ').slice(0, 16)}` : ''
+    ].filter(Boolean);
+    return `
         <div class="tm-center-card warning">
             <div class="tm-center-card-head">
-                <div class="tm-center-card-title">${tmEscapeHtml(tmBuildCloudWarningTitle(t))}</div>
-                ${tmBuildStatusChip(e.text,e.tone)}
+                <div class="tm-center-card-title">${tmEscapeHtml(tmBuildCloudWarningTitle(row))}</div>
+                ${tmBuildStatusChip(level.text, level.tone)}
             </div>
-            <div class="tm-center-card-scope">${tmEscapeHtml(n)}</div>
-            <div class="tm-center-card-desc">${tmEscapeHtml(tmBuildCloudWarningDesc(t))}</div>
+            <div class="tm-center-card-scope">${tmEscapeHtml(scopeText)}</div>
+            <div class="tm-center-card-desc">${tmEscapeHtml(tmBuildCloudWarningDesc(row))}</div>
             <div class="tm-center-card-meta">
-                ${r.map(s=>`<span class="tm-inline-chip">${tmEscapeHtml(s)}</span>`).join("")}
+                ${meta.map((item) => `<span class="tm-inline-chip">${tmEscapeHtml(item)}</span>`).join('')}
             </div>
-            ${tmCanManageCloudOps()?`
+            ${tmCanManageCloudOps() ? `
                 <div class="tm-center-card-actions">
-                    <button type="button" class="btn btn-orange" data-tm-warning-rectify="${tmEscapeHtml(String(t.id||""))}">生成整改</button>
-                    <button type="button" class="btn btn-secondary" data-tm-warning-ignore="${tmEscapeHtml(String(t.id||""))}">忽略预警</button>
+                    <button type="button" class="btn btn-orange" data-tm-warning-rectify="${tmEscapeHtml(String(row.id || ''))}">生成整改</button>
+                    <button type="button" class="btn btn-secondary" data-tm-warning-ignore="${tmEscapeHtml(String(row.id || ''))}">忽略预警</button>
                 </div>
-            `:""}
+            ` : ''}
         </div>
-    `}function tmBuildRectifyCenterCard(t){const e=tmNormalizeTaskStatus(t.status),n=tmBuildCloudObjectScope(t),r=tmBuildTaskOwnerMeta(t),s=tmEscapeHtml(String(t.id||"")),i=String(t.status||"todo").trim().toLowerCase(),m=tmCanManageCloudOps()&&i!=="doing"&&i!=="done"&&i!=="closed",c=tmCanManageCloudOps()&&i!=="done"&&i!=="closed",l=tmCanManageCloudOps();return`
+    `;
+}
+
+function tmBuildRectifyCenterCard(row) {
+    const state = tmNormalizeTaskStatus(row.status);
+    const scopeText = tmBuildCloudObjectScope(row);
+    const meta = tmBuildTaskOwnerMeta(row);
+    const taskId = tmEscapeHtml(String(row.id || ''));
+    const status = String(row.status || 'todo').trim().toLowerCase();
+    const canAdvance = tmCanManageCloudOps() && status !== 'doing' && status !== 'done' && status !== 'closed';
+    const canFinish = tmCanManageCloudOps() && status !== 'done' && status !== 'closed';
+    const canEdit = tmCanManageCloudOps();
+    return `
         <div class="tm-center-card task">
             <div class="tm-center-card-head">
-                <div class="tm-center-card-title">${tmEscapeHtml(String(t.title||"整改任务"))}</div>
-                ${tmBuildStatusChip(e.text,e.tone)}
+                <div class="tm-center-card-title">${tmEscapeHtml(String(row.title || '整改任务'))}</div>
+                ${tmBuildStatusChip(state.text, state.tone)}
             </div>
-            <div class="tm-center-card-scope">${tmEscapeHtml(n)}</div>
-            <div class="tm-center-card-desc">${tmEscapeHtml(tmBuildCloudTaskDesc(t))}</div>
+            <div class="tm-center-card-scope">${tmEscapeHtml(scopeText)}</div>
+            <div class="tm-center-card-desc">${tmEscapeHtml(tmBuildCloudTaskDesc(row))}</div>
             <div class="tm-center-card-meta">
-                ${r.map(o=>`<span class="tm-inline-chip">${tmEscapeHtml(o)}</span>`).join("")}
+                ${meta.map((item) => `<span class="tm-inline-chip">${tmEscapeHtml(item)}</span>`).join('')}
             </div>
-            ${m||c||l?`
+            ${canAdvance || canFinish || canEdit ? `
                 <div class="tm-center-card-actions">
-                    ${m?`<button type="button" class="btn btn-orange" data-tm-task-status="${s}" data-status="doing">推进到进行中</button>`:""}
-                    ${c?`<button type="button" class="btn btn-green" data-tm-task-status="${s}" data-status="done">标记完成</button>`:""}
-                    ${l?`<button type="button" class="btn btn-secondary" data-tm-task-progress="${s}">更新进度</button>`:""}
+                    ${canAdvance ? `<button type="button" class="btn btn-orange" data-tm-task-status="${taskId}" data-status="doing">推进到进行中</button>` : ''}
+                    ${canFinish ? `<button type="button" class="btn btn-green" data-tm-task-status="${taskId}" data-status="done">标记完成</button>` : ''}
+                    ${canEdit ? `<button type="button" class="btn btn-secondary" data-tm-task-progress="${taskId}">更新进度</button>` : ''}
                 </div>
-            `:""}
+            ` : ''}
         </div>
-    `}function tmRenderWarningCenter(){const t=document.getElementById("tmWarningCenterList");if(!t)return;const e=TM_CLOUD_OPS_CACHE||{authState:"unknown",warnings:[]},n=document.getElementById("tmWarningScopeMeta");if(n&&(n.textContent=tmGetCloudScopeText()),String(e.authState||"")==="missing_token"){tmSetHtml("tmWarningSummaryOpen",tmBuildMiniCard("待处理预警","请重新登录")),tmSetHtml("tmWarningSummaryCritical",tmBuildMiniCard("高风险预警","请重新登录")),tmSetHtml("tmWarningSummaryTeacher",tmBuildMiniCard("教师类预警","请重新登录")),tmSetHtml("tmWarningSummaryClass",tmBuildMiniCard("班级类预警","请重新登录")),t.innerHTML='<div class="tm-cloud-empty">当前浏览器还没有云端网关会话，请重新登录一次系统后再查看异常预警中心。</div>';return}if(String(e.authState||"")==="loading"){tmSetHtml("tmWarningSummaryOpen",tmBuildMiniCard("待处理预警","正在同步")),tmSetHtml("tmWarningSummaryCritical",tmBuildMiniCard("高风险预警","正在同步")),tmSetHtml("tmWarningSummaryTeacher",tmBuildMiniCard("教师类预警","正在同步")),tmSetHtml("tmWarningSummaryClass",tmBuildMiniCard("班级类预警","正在同步")),t.innerHTML='<div class="tm-cloud-empty">正在同步云端预警数据，请稍候...</div>';return}if(String(e.authState||"")==="error"){tmSetHtml("tmWarningSummaryOpen",tmBuildMiniCard("待处理预警","读取失败")),tmSetHtml("tmWarningSummaryCritical",tmBuildMiniCard("高风险预警","读取失败")),tmSetHtml("tmWarningSummaryTeacher",tmBuildMiniCard("教师类预警","读取失败")),tmSetHtml("tmWarningSummaryClass",tmBuildMiniCard("班级类预警","读取失败")),t.innerHTML=`<div class="tm-cloud-empty">云端预警读取失败：${tmEscapeHtml(String(e.error||"未知错误"))}</div>`;return}const r=Array.isArray(e.warnings)?e.warnings:[],s=tmFilterWarningsForCenter(r),i=s.filter(o=>!["ignored","resolved"].includes(String(o.status||"").trim().toLowerCase())),m=s.filter(o=>["high","critical"].includes(String(o.warning_level||"").trim().toLowerCase())).length,c=s.filter(o=>String(o.warning_type||"").trim().toLowerCase()==="teacher").length,l=s.filter(o=>String(o.warning_type||"").trim().toLowerCase()==="class").length;tmSetHtml("tmWarningSummaryOpen",tmBuildMiniCard("待处理预警",`${i.length} 条`)),tmSetHtml("tmWarningSummaryCritical",tmBuildMiniCard("高风险预警",`${m} 条`)),tmSetHtml("tmWarningSummaryTeacher",tmBuildMiniCard("教师类预警",`${c} 条`)),tmSetHtml("tmWarningSummaryClass",tmBuildMiniCard("班级类预警",`${l} 条`)),t.innerHTML=s.length?s.map(tmBuildWarningCenterCard).join(""):'<div class="tm-cloud-empty">当前筛选条件下没有匹配的预警记录。</div>',t.querySelectorAll("[data-tm-warning-ignore]").forEach(o=>{o.dataset.tmBoundIgnore!=="1"&&(o.dataset.tmBoundIgnore="1",o.addEventListener("click",async()=>{await tmIgnoreCloudWarning(o.dataset.tmWarningIgnore||"")}))}),t.querySelectorAll("[data-tm-warning-rectify]").forEach(o=>{o.dataset.tmBoundRectify!=="1"&&(o.dataset.tmBoundRectify="1",o.addEventListener("click",async()=>{await tmCreateRectifyTaskFromWarning(o.dataset.tmWarningRectify||"")}))})}function tmRenderRectifyCenter(){const t=document.getElementById("tmRectifyCenterList");if(!t)return;const e=TM_CLOUD_OPS_CACHE||{authState:"unknown",tasks:[]},n=document.getElementById("tmRectifyScopeMeta");if(n&&(n.textContent=tmGetCloudScopeText()),String(e.authState||"")==="missing_token"){tmSetHtml("tmRectifySummaryOpen",tmBuildMiniCard("未完成任务","请重新登录")),tmSetHtml("tmRectifySummaryDoing",tmBuildMiniCard("进行中任务","请重新登录")),tmSetHtml("tmRectifySummaryDone",tmBuildMiniCard("已完成任务","请重新登录")),tmSetHtml("tmRectifySummaryOverdue",tmBuildMiniCard("临近截止","请重新登录")),t.innerHTML='<div class="tm-cloud-empty">当前浏览器还没有云端网关会话，请重新登录一次系统后再查看整改任务。</div>';return}if(String(e.authState||"")==="loading"){tmSetHtml("tmRectifySummaryOpen",tmBuildMiniCard("未完成任务","正在同步")),tmSetHtml("tmRectifySummaryDoing",tmBuildMiniCard("进行中任务","正在同步")),tmSetHtml("tmRectifySummaryDone",tmBuildMiniCard("已完成任务","正在同步")),tmSetHtml("tmRectifySummaryOverdue",tmBuildMiniCard("临近截止","正在同步")),t.innerHTML='<div class="tm-cloud-empty">正在同步整改任务数据，请稍候...</div>';return}if(String(e.authState||"")==="error"){tmSetHtml("tmRectifySummaryOpen",tmBuildMiniCard("未完成任务","读取失败")),tmSetHtml("tmRectifySummaryDoing",tmBuildMiniCard("进行中任务","读取失败")),tmSetHtml("tmRectifySummaryDone",tmBuildMiniCard("已完成任务","读取失败")),tmSetHtml("tmRectifySummaryOverdue",tmBuildMiniCard("临近截止","读取失败")),t.innerHTML=`<div class="tm-cloud-empty">云端整改任务读取失败：${tmEscapeHtml(String(e.error||"未知错误"))}</div>`;return}const r=Array.isArray(e.tasks)?e.tasks:[],s=tmFilterRectifyTasksForCenter(r),i=s.filter(a=>!["done","closed"].includes(String(a.status||"").trim().toLowerCase())).length,m=s.filter(a=>String(a.status||"").trim().toLowerCase()==="doing").length,c=s.filter(a=>String(a.status||"").trim().toLowerCase()==="done").length,l=new Date,o=s.filter(a=>{const d=String(a.due_date||"").trim();if(!d)return!1;const u=new Date(`${d}T23:59:59`);return!Number.isNaN(u.getTime())&&u<l&&!["done","closed"].includes(String(a.status||"").trim().toLowerCase())}).length;tmSetHtml("tmRectifySummaryOpen",tmBuildMiniCard("未完成任务",`${i} 项`)),tmSetHtml("tmRectifySummaryDoing",tmBuildMiniCard("进行中任务",`${m} 项`)),tmSetHtml("tmRectifySummaryDone",tmBuildMiniCard("已完成任务",`${c} 项`)),tmSetHtml("tmRectifySummaryOverdue",tmBuildMiniCard("临近截止",`${o} 项`)),t.innerHTML=s.length?s.map(tmBuildRectifyCenterCard).join(""):'<div class="tm-cloud-empty">当前筛选条件下没有整改任务记录。</div>',t.querySelectorAll("[data-tm-task-status]").forEach(a=>{a.dataset.tmBoundTaskStatus!=="1"&&(a.dataset.tmBoundTaskStatus="1",a.addEventListener("click",async()=>{await tmUpdateRectifyTaskStatus(a.dataset.tmTaskStatus||"",a.dataset.status||"")}))}),t.querySelectorAll("[data-tm-task-progress]").forEach(a=>{a.dataset.tmBoundTaskProgress!=="1"&&(a.dataset.tmBoundTaskProgress="1",a.addEventListener("click",async()=>{await tmPromptRectifyProgress(a.dataset.tmTaskProgress||"")}))})}function tmRenderCloudManagementSections(){tmRenderWarningCenter(),tmRenderRectifyCenter(),tmRenderIssueBoard()}async function tmUpdateRectifyTaskStatus(t,e){if(!t||!window.EdgeGateway||typeof EdgeGateway.updateRectifyTask!="function")return;const n=String(e||"").trim();if(n)try{const r={id:t,status:n};n==="done"&&(r.progress=100),await EdgeGateway.updateRectifyTask(r),window.UI&&UI.toast("整改任务状态已更新","success"),await tmRefreshCloudOps(!0)}catch(r){window.UI&&UI.toast(`更新整改任务失败：${r instanceof Error?r.message:String(r)}`,"warning")}}async function tmPromptRectifyProgress(t){var r,s;if(!t||!window.EdgeGateway||typeof EdgeGateway.updateRectifyTask!="function")return;const e=(TM_CLOUD_OPS_CACHE.tasks||[]).find(i=>String(i.id||"")===String(t));if(!e)return;let n=Number((r=e.progress)!=null?r:0);if(window.Swal&&typeof Swal.fire=="function"){const i=await Swal.fire({title:"更新整改进度",input:"range",inputAttributes:{min:0,max:100,step:5},inputValue:String(n),showCancelButton:!0,confirmButtonText:"保存进度",cancelButtonText:"取消"});if(!i.isConfirmed)return;n=Number((s=i.value)!=null?s:n)}else{const i=await tmPromptInput("请输入整改进度（0-100）",String(n),{title:"更新整改进度",input:"number",inputAttributes:{min:0,max:100,step:5}});if(i===null)return;n=Number(i)}n=Math.max(0,Math.min(100,Number.isFinite(n)?n:0));try{await EdgeGateway.updateRectifyTask({id:t,progress:n,status:n>=100?"done":String(e.status||"").trim()==="todo"?"doing":e.status}),window.UI&&UI.toast("整改进度已更新","success"),await tmRefreshCloudOps(!0)}catch(i){window.UI&&UI.toast(`更新整改进度失败：${i instanceof Error?i.message:String(i)}`,"warning")}}async function tmCreateManualRectifyTask(){if(!tmCanManageCloudOps()||!window.EdgeGateway||typeof EdgeGateway.saveRectifyTask!="function")return;let t="",e="";if(window.Swal&&typeof Swal.fire=="function"){const r=await Swal.fire({title:"新建整改任务",input:"text",inputLabel:"任务标题",inputPlaceholder:"例如：九年级语文薄弱班级整改",showCancelButton:!0,confirmButtonText:"下一步",cancelButtonText:"取消"});if(!r.isConfirmed||(t=String(r.value||"").trim(),!t))return;const s=await Swal.fire({title:"整改计划",input:"textarea",inputLabel:"整改建议",inputPlaceholder:"填写整改措施、责任人和复盘节点",inputValue:"请结合当前问题制定整改措施，明确责任人、推进节奏和复盘时间。",showCancelButton:!0,confirmButtonText:"保存任务",cancelButtonText:"取消"});if(!s.isConfirmed)return;e=String(s.value||"").trim()}else{if(t=String(await tmPromptInput("请输入整改任务标题","",{title:"新建整改任务"})||"").trim(),!t)return;e=String(await tmPromptInput("请输入整改计划","请结合当前问题制定整改措施，明确责任人、推进节奏和复盘时间。",{title:"整改计划",input:"textarea"})||"").trim()}const n=tmGetCurrentGatewayScope();try{await EdgeGateway.saveRectifyTask({title:t,task_type:"teaching",project_key:n.project_key,cohort_id:n.cohort_id,school_name:n.school_name||null,action_plan:e||null,status:"todo",progress:0}),window.UI&&UI.toast("已新建整改任务","success"),await tmRefreshCloudOps(!0),typeof switchTab=="function"&&switchTab("teaching-rectify-center")}catch(r){window.UI&&UI.toast(`新建整改任务失败：${r instanceof Error?r.message:String(r)}`,"warning")}}window.tmRefreshCloudOps=tmRefreshCloudOps,window.tmCreateRectifyTaskFromWarning=tmCreateRectifyTaskFromWarning,window.tmIgnoreCloudWarning=tmIgnoreCloudWarning,window.tmRenderWarningCenter=tmRenderWarningCenter,window.tmRenderRectifyCenter=tmRenderRectifyCenter,window.tmCreateManualRectifyTask=tmCreateManualRectifyTask,window.tmScheduleTeachingOverviewRender=tmScheduleTeachingOverviewRender;
+    `;
+}
+
+function tmRenderWarningCenter() {
+    const container = document.getElementById('tmWarningCenterList');
+    if (!container) return;
+    const state = TM_CLOUD_OPS_CACHE || { authState: 'unknown', warnings: [] };
+    const scopeMeta = document.getElementById('tmWarningScopeMeta');
+    if (scopeMeta) scopeMeta.textContent = tmGetCloudScopeText();
+
+    if (String(state.authState || '') === 'missing_token') {
+        tmSetHtml('tmWarningSummaryOpen', tmBuildMiniCard('待处理预警', '请重新登录'));
+        tmSetHtml('tmWarningSummaryCritical', tmBuildMiniCard('高风险预警', '请重新登录'));
+        tmSetHtml('tmWarningSummaryTeacher', tmBuildMiniCard('教师类预警', '请重新登录'));
+        tmSetHtml('tmWarningSummaryClass', tmBuildMiniCard('班级类预警', '请重新登录'));
+        container.innerHTML = '<div class="tm-cloud-empty">当前浏览器还没有云端网关会话，请重新登录一次系统后再查看异常预警中心。</div>';
+        return;
+    }
+
+    if (String(state.authState || '') === 'loading') {
+        tmSetHtml('tmWarningSummaryOpen', tmBuildMiniCard('待处理预警', '正在同步'));
+        tmSetHtml('tmWarningSummaryCritical', tmBuildMiniCard('高风险预警', '正在同步'));
+        tmSetHtml('tmWarningSummaryTeacher', tmBuildMiniCard('教师类预警', '正在同步'));
+        tmSetHtml('tmWarningSummaryClass', tmBuildMiniCard('班级类预警', '正在同步'));
+        container.innerHTML = '<div class="tm-cloud-empty">正在同步云端预警数据，请稍候...</div>';
+        return;
+    }
+
+    if (String(state.authState || '') === 'error') {
+        tmSetHtml('tmWarningSummaryOpen', tmBuildMiniCard('待处理预警', '读取失败'));
+        tmSetHtml('tmWarningSummaryCritical', tmBuildMiniCard('高风险预警', '读取失败'));
+        tmSetHtml('tmWarningSummaryTeacher', tmBuildMiniCard('教师类预警', '读取失败'));
+        tmSetHtml('tmWarningSummaryClass', tmBuildMiniCard('班级类预警', '读取失败'));
+        container.innerHTML = `<div class="tm-cloud-empty">云端预警读取失败：${tmEscapeHtml(String(state.error || '未知错误'))}</div>`;
+        return;
+    }
+
+    const warnings = Array.isArray(state.warnings) ? state.warnings : [];
+    const filtered = tmFilterWarningsForCenter(warnings);
+    const active = filtered.filter((row) => !['ignored', 'resolved'].includes(String(row.status || '').trim().toLowerCase()));
+    const highRisk = filtered.filter((row) => ['high', 'critical'].includes(String(row.warning_level || '').trim().toLowerCase())).length;
+    const teacherCount = filtered.filter((row) => String(row.warning_type || '').trim().toLowerCase() === 'teacher').length;
+    const classCount = filtered.filter((row) => String(row.warning_type || '').trim().toLowerCase() === 'class').length;
+
+    tmSetHtml('tmWarningSummaryOpen', tmBuildMiniCard('待处理预警', `${active.length} 条`));
+    tmSetHtml('tmWarningSummaryCritical', tmBuildMiniCard('高风险预警', `${highRisk} 条`));
+    tmSetHtml('tmWarningSummaryTeacher', tmBuildMiniCard('教师类预警', `${teacherCount} 条`));
+    tmSetHtml('tmWarningSummaryClass', tmBuildMiniCard('班级类预警', `${classCount} 条`));
+
+    container.innerHTML = filtered.length
+        ? filtered.map(tmBuildWarningCenterCard).join('')
+        : '<div class="tm-cloud-empty">当前筛选条件下没有匹配的预警记录。</div>';
+
+    container.querySelectorAll('[data-tm-warning-ignore]').forEach((btn) => {
+        if (btn.dataset.tmBoundIgnore === '1') return;
+        btn.dataset.tmBoundIgnore = '1';
+        btn.addEventListener('click', async () => {
+            await tmIgnoreCloudWarning(btn.dataset.tmWarningIgnore || '');
+        });
+    });
+
+    container.querySelectorAll('[data-tm-warning-rectify]').forEach((btn) => {
+        if (btn.dataset.tmBoundRectify === '1') return;
+        btn.dataset.tmBoundRectify = '1';
+        btn.addEventListener('click', async () => {
+            await tmCreateRectifyTaskFromWarning(btn.dataset.tmWarningRectify || '');
+        });
+    });
+}
+
+function tmRenderRectifyCenter() {
+    const container = document.getElementById('tmRectifyCenterList');
+    if (!container) return;
+    const state = TM_CLOUD_OPS_CACHE || { authState: 'unknown', tasks: [] };
+    const scopeMeta = document.getElementById('tmRectifyScopeMeta');
+    if (scopeMeta) scopeMeta.textContent = tmGetCloudScopeText();
+
+    if (String(state.authState || '') === 'missing_token') {
+        tmSetHtml('tmRectifySummaryOpen', tmBuildMiniCard('未完成任务', '请重新登录'));
+        tmSetHtml('tmRectifySummaryDoing', tmBuildMiniCard('进行中任务', '请重新登录'));
+        tmSetHtml('tmRectifySummaryDone', tmBuildMiniCard('已完成任务', '请重新登录'));
+        tmSetHtml('tmRectifySummaryOverdue', tmBuildMiniCard('临近截止', '请重新登录'));
+        container.innerHTML = '<div class="tm-cloud-empty">当前浏览器还没有云端网关会话，请重新登录一次系统后再查看整改任务。</div>';
+        return;
+    }
+
+    if (String(state.authState || '') === 'loading') {
+        tmSetHtml('tmRectifySummaryOpen', tmBuildMiniCard('未完成任务', '正在同步'));
+        tmSetHtml('tmRectifySummaryDoing', tmBuildMiniCard('进行中任务', '正在同步'));
+        tmSetHtml('tmRectifySummaryDone', tmBuildMiniCard('已完成任务', '正在同步'));
+        tmSetHtml('tmRectifySummaryOverdue', tmBuildMiniCard('临近截止', '正在同步'));
+        container.innerHTML = '<div class="tm-cloud-empty">正在同步整改任务数据，请稍候...</div>';
+        return;
+    }
+
+    if (String(state.authState || '') === 'error') {
+        tmSetHtml('tmRectifySummaryOpen', tmBuildMiniCard('未完成任务', '读取失败'));
+        tmSetHtml('tmRectifySummaryDoing', tmBuildMiniCard('进行中任务', '读取失败'));
+        tmSetHtml('tmRectifySummaryDone', tmBuildMiniCard('已完成任务', '读取失败'));
+        tmSetHtml('tmRectifySummaryOverdue', tmBuildMiniCard('临近截止', '读取失败'));
+        container.innerHTML = `<div class="tm-cloud-empty">云端整改任务读取失败：${tmEscapeHtml(String(state.error || '未知错误'))}</div>`;
+        return;
+    }
+
+    const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+    const filtered = tmFilterRectifyTasksForCenter(tasks);
+    const openCount = filtered.filter((row) => !['done', 'closed'].includes(String(row.status || '').trim().toLowerCase())).length;
+    const doingCount = filtered.filter((row) => String(row.status || '').trim().toLowerCase() === 'doing').length;
+    const doneCount = filtered.filter((row) => String(row.status || '').trim().toLowerCase() === 'done').length;
+    const today = new Date();
+    const overdueCount = filtered.filter((row) => {
+        const dueDate = String(row.due_date || '').trim();
+        if (!dueDate) return false;
+        const parsed = new Date(`${dueDate}T23:59:59`);
+        return !Number.isNaN(parsed.getTime()) && parsed < today && !['done', 'closed'].includes(String(row.status || '').trim().toLowerCase());
+    }).length;
+
+    tmSetHtml('tmRectifySummaryOpen', tmBuildMiniCard('未完成任务', `${openCount} 项`));
+    tmSetHtml('tmRectifySummaryDoing', tmBuildMiniCard('进行中任务', `${doingCount} 项`));
+    tmSetHtml('tmRectifySummaryDone', tmBuildMiniCard('已完成任务', `${doneCount} 项`));
+    tmSetHtml('tmRectifySummaryOverdue', tmBuildMiniCard('临近截止', `${overdueCount} 项`));
+
+    container.innerHTML = filtered.length
+        ? filtered.map(tmBuildRectifyCenterCard).join('')
+        : '<div class="tm-cloud-empty">当前筛选条件下没有整改任务记录。</div>';
+
+    container.querySelectorAll('[data-tm-task-status]').forEach((btn) => {
+        if (btn.dataset.tmBoundTaskStatus === '1') return;
+        btn.dataset.tmBoundTaskStatus = '1';
+        btn.addEventListener('click', async () => {
+            await tmUpdateRectifyTaskStatus(btn.dataset.tmTaskStatus || '', btn.dataset.status || '');
+        });
+    });
+
+    container.querySelectorAll('[data-tm-task-progress]').forEach((btn) => {
+        if (btn.dataset.tmBoundTaskProgress === '1') return;
+        btn.dataset.tmBoundTaskProgress = '1';
+        btn.addEventListener('click', async () => {
+            await tmPromptRectifyProgress(btn.dataset.tmTaskProgress || '');
+        });
+    });
+}
+
+function tmRenderCloudManagementSections() {
+    tmRenderWarningCenter();
+    tmRenderRectifyCenter();
+    tmRenderIssueBoard();
+}
+
+async function tmUpdateRectifyTaskStatus(taskId, status) {
+    if (!taskId || !window.EdgeGateway || typeof EdgeGateway.updateRectifyTask !== 'function') return;
+    const nextStatus = String(status || '').trim();
+    if (!nextStatus) return;
+    try {
+        const patch = { id: taskId, status: nextStatus };
+        if (nextStatus === 'done') patch.progress = 100;
+        await EdgeGateway.updateRectifyTask(patch);
+        if (window.UI) UI.toast('整改任务状态已更新', 'success');
+        await tmRefreshCloudOps(true);
+    } catch (error) {
+        if (window.UI) UI.toast(`更新整改任务失败：${error instanceof Error ? error.message : String(error)}`, 'warning');
+    }
+}
+
+async function tmPromptRectifyProgress(taskId) {
+    if (!taskId || !window.EdgeGateway || typeof EdgeGateway.updateRectifyTask !== 'function') return;
+    const task = (TM_CLOUD_OPS_CACHE.tasks || []).find((item) => String(item.id || '') === String(taskId));
+    if (!task) return;
+    let nextProgress = Number(task.progress ?? 0);
+    if (window.Swal && typeof Swal.fire === 'function') {
+        const result = await Swal.fire({
+            title: '更新整改进度',
+            input: 'range',
+            inputAttributes: { min: 0, max: 100, step: 5 },
+            inputValue: String(nextProgress),
+            showCancelButton: true,
+            confirmButtonText: '保存进度',
+            cancelButtonText: '取消'
+        });
+        if (!result.isConfirmed) return;
+        nextProgress = Number(result.value ?? nextProgress);
+    } else {
+        const raw = await tmPromptInput('请输入整改进度（0-100）', String(nextProgress), {
+            title: '更新整改进度',
+            input: 'number',
+            inputAttributes: { min: 0, max: 100, step: 5 }
+        });
+        if (raw === null) return;
+        nextProgress = Number(raw);
+    }
+    nextProgress = Math.max(0, Math.min(100, Number.isFinite(nextProgress) ? nextProgress : 0));
+    try {
+        await EdgeGateway.updateRectifyTask({
+            id: taskId,
+            progress: nextProgress,
+            status: nextProgress >= 100 ? 'done' : (String(task.status || '').trim() === 'todo' ? 'doing' : task.status)
+        });
+        if (window.UI) UI.toast('整改进度已更新', 'success');
+        await tmRefreshCloudOps(true);
+    } catch (error) {
+        if (window.UI) UI.toast(`更新整改进度失败：${error instanceof Error ? error.message : String(error)}`, 'warning');
+    }
+}
+
+async function tmCreateManualRectifyTask() {
+    if (!tmCanManageCloudOps() || !window.EdgeGateway || typeof EdgeGateway.saveRectifyTask !== 'function') return;
+    let title = '';
+    let actionPlan = '';
+    if (window.Swal && typeof Swal.fire === 'function') {
+        const titleResult = await Swal.fire({
+            title: '新建整改任务',
+            input: 'text',
+            inputLabel: '任务标题',
+            inputPlaceholder: '例如：九年级语文薄弱班级整改',
+            showCancelButton: true,
+            confirmButtonText: '下一步',
+            cancelButtonText: '取消'
+        });
+        if (!titleResult.isConfirmed) return;
+        title = String(titleResult.value || '').trim();
+        if (!title) return;
+        const planResult = await Swal.fire({
+            title: '整改计划',
+            input: 'textarea',
+            inputLabel: '整改建议',
+            inputPlaceholder: '填写整改措施、责任人和复盘节点',
+            inputValue: '请结合当前问题制定整改措施，明确责任人、推进节奏和复盘时间。',
+            showCancelButton: true,
+            confirmButtonText: '保存任务',
+            cancelButtonText: '取消'
+        });
+        if (!planResult.isConfirmed) return;
+        actionPlan = String(planResult.value || '').trim();
+    } else {
+        title = String(await tmPromptInput('请输入整改任务标题', '', {
+            title: '新建整改任务'
+        }) || '').trim();
+        if (!title) return;
+        actionPlan = String(await tmPromptInput('请输入整改计划', '请结合当前问题制定整改措施，明确责任人、推进节奏和复盘时间。', {
+            title: '整改计划',
+            input: 'textarea'
+        }) || '').trim();
+    }
+
+    const scope = tmGetCurrentGatewayScope();
+    try {
+        await EdgeGateway.saveRectifyTask({
+            title,
+            task_type: 'teaching',
+            project_key: scope.project_key,
+            cohort_id: scope.cohort_id,
+            school_name: scope.school_name || null,
+            action_plan: actionPlan || null,
+            status: 'todo',
+            progress: 0
+        });
+        if (window.UI) UI.toast('已新建整改任务', 'success');
+        await tmRefreshCloudOps(true);
+        if (typeof switchTab === 'function') switchTab('teaching-rectify-center');
+    } catch (error) {
+        if (window.UI) UI.toast(`新建整改任务失败：${error instanceof Error ? error.message : String(error)}`, 'warning');
+    }
+}
+
+window.tmRefreshCloudOps = tmRefreshCloudOps;
+window.tmCreateRectifyTaskFromWarning = tmCreateRectifyTaskFromWarning;
+window.tmIgnoreCloudWarning = tmIgnoreCloudWarning;
+window.tmRenderWarningCenter = tmRenderWarningCenter;
+window.tmRenderRectifyCenter = tmRenderRectifyCenter;
+window.tmCreateManualRectifyTask = tmCreateManualRectifyTask;
+window.tmScheduleTeachingOverviewRender = tmScheduleTeachingOverviewRender;

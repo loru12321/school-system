@@ -1,1 +1,1068 @@
-(()=>{if(typeof window=="undefined"||window.__SCHOOL_NORMALIZATION_RUNTIME_PATCHED__)return;const j=[{canonical:"银山中学",aliases:["银山镇中学"]},{canonical:"老湖中学",aliases:["老湖"]},{canonical:"梯门中学",aliases:["梯门"]},{canonical:"商老庄中学",aliases:["商老庄","商老庄实验学校"]},{canonical:"彭集中学",aliases:["彭集","彭集街道中学"]},{canonical:"接山中学",aliases:["接山","接山镇中学"]},{canonical:"州城中学",aliases:["州城","州城街道","州城街道中学","州城一中","州城二中","州城镇一中","州城镇二中"]},{canonical:"新湖中学",aliases:["新湖","新湖镇中学"]},{canonical:"大羊中学",aliases:["大羊"]},{canonical:"沙河站中学",aliases:["沙河站","沙河站镇中学"]},{canonical:"银山实验",aliases:["银山实验学校","东平银山实验学校","银山镇实验学校","银山实验中学","银山镇实验中学","实验完全中学"]},{canonical:"旧县中学",aliases:["旧县","旧县乡中心学校","旧县中心学校","旧县中心小学"]},{canonical:"斑鸠店镇中",aliases:["斑鸠店中学","斑鸠店镇中学","斑鸠店中"]},{canonical:"戴庙中学",aliases:["戴庙","戴庙镇中学"]},{canonical:"东平县实验中学",aliases:["东平实验中学","泰安市东平实验中学"]},{canonical:"东平县佛山中学",aliases:["东平佛山中学","泰安市东平佛山中学"]},{canonical:"东平明湖中学",aliases:["东平县明湖中学"]},{canonical:"东平县江河实验学校",aliases:["东平江河实验学校"]},{canonical:"东平县东原实验学校",aliases:["东平东原实验学校"]},{canonical:"东平县清河实验学校",aliases:["东平清河实验学校"]},{canonical:"东平县青峰山实验学校",aliases:["东平实验中学青峰山校区","青峰山校区"]},{canonical:"东平县嘉和实验学校",aliases:["东平嘉和实验学校"]},{canonical:"东平县第二实验中学",aliases:["东平第二实验中学"]},{canonical:"东平县第一中学",aliases:["东平一中"]}],G=["银山中学","老湖中学","梯门中学","商老庄中学","彭集中学","接山中学","州城中学","新湖中学","大羊中学","沙河站中学","银山实验","旧县中学","斑鸠店镇中","戴庙中学"],v=["东平县实验中学","东平县佛山中学","东平明湖中学","东平县江河实验学校","东平县东原实验学校","东平县清河实验学校","东平县青峰山实验学校","东平县嘉和实验学校","东平县第二实验中学","东平县第一中学"],te=[...G,...v],O={allSignature:"",townshipSignature:"",allSchools:[],townshipSchools:[]},g={signature:"",buckets:[],scoreMapSignature:"",scoreNameMap:new Map},d={displayNameByRaw:new Map,sanitizedTextByRaw:new Map,normalizedNameByText:new Map,mergedAliasCanonicalMap:null,mergedBasekeyCanonicalMap:null,aliasStore:null};function E(t,e,n,a=512){return t.has(e)?t.get(e):(t.size>=a&&t.clear(),t.set(e,n),n)}function W(){return window.__SCHOOL_NORMALIZATION_CACHE_VERSION=(Number(window.__SCHOOL_NORMALIZATION_CACHE_VERSION)||0)+1,window.__SCHOOL_NORMALIZATION_CACHE_VERSION}function U(){d.normalizedNameByText.clear(),d.mergedAliasCanonicalMap=null,d.mergedBasekeyCanonicalMap=null,d.aliasStore=null,O.allSignature="",O.townshipSignature="",O.allSchools=[],O.townshipSchools=[],g.signature="",g.buckets=[],g.scoreMapSignature="",g.scoreNameMap.clear(),W()}function F(){const t=N();return d.aliasStore===t||(d.normalizedNameByText.clear(),d.mergedAliasCanonicalMap=null,d.mergedBasekeyCanonicalMap=null,d.aliasStore=t,W()),t}function m(t){const e=String(t||"");if(!e)return"";const n=d.displayNameByRaw.get(e);if(n!==void 0)return n;const a=e.normalize("NFKC").replace(/[\u200B-\u200D\uFEFF\u2060\u00A0]/g,"").trim();return E(d.displayNameByRaw,e,a)}function y(t){const e=String(t||"");if(!e)return"";const n=d.sanitizedTextByRaw.get(e);if(n!==void 0)return n;const a=m(e).replace(/\s+/g,"").replace(/[()（）\-—_·、,，.。]/g,"").trim();return E(d.sanitizedTextByRaw,e,a)}const ne=[[/(\u5b66\u6821|\u4e2d\u5b66)\u6559\u80b2\u96c6\u56e2$/u,"$1"],[/(\u5b66\u6821|\u4e2d\u5b66)\u96c6\u56e2$/u,"$1"],[/(\u5b66\u6821|\u4e2d\u5b66)(?:\u521d\u4e2d\u90e8|\u9ad8\u4e2d\u90e8|\u5c0f\u5b66\u90e8|\u672c\u90e8|\u6821\u672c\u90e8|\u5206\u6821|\u6821\u533a|\u603b\u6821)$/u,"$1"],[/\u4e5d\u5e74\u4e00\u8d2f\u5236\u5b66\u6821$/u,"学校"],[/\u4e5d\u5e74\u4e00\u8d2f\u5236$/u,""],[/\u5b8c\u5168\u4e2d\u5b66$/u,"中学"],[/\u9644\u5c5e\u5b66\u6821$/u,"学校"],[/\u9644\u5c5e\u4e2d\u5b66$/u,"中学"],[/\u6559\u80b2\u8054\u76df$/u,""],[/\u76f4\u5c5e\u6821\u533a$/u,""],[/\u6821\u533a$/u,""],[/\u5206\u6821$/u,""],[/\u6559\u5b66\u70b9$/u,""],[/\u672c\u90e8$/u,""],[/\u6821\u672c\u90e8$/u,""],[/\u603b\u6821$/u,""]];function Z(t){let e=y(t);if(!e)return"";let n="";for(;e&&e!==n;)n=e,e=e.replace(/^[\u4e00-\u9fa5]{2,7}?(?:\u7701|\u5e02|\u53bf|\u533a)(?=[\u4e00-\u9fa5]*(?:\u5b9e\u9a8c\u4e2d\u5b66|\u5b9e\u9a8c\u5b66\u6821|\u4e2d\u5b66|\u5b66\u6821))/u,"");return e}function $(t){let e=Z(t);if(!e)return"";let n="";for(;e&&e!==n;)n=e,ne.forEach(([a,r])=>{e=e.replace(a,r)});return e}function k(t){let e=$(t);return e?(e=e.replace(/镇实验学校$/u,"实验").replace(/街道实验学校$/u,"实验").replace(/乡实验学校$/u,"实验").replace(/实验学校$/u,"实验").replace(/实验中学$/u,"实验").replace(/镇中学$/u,"").replace(/街道中学$/u,"").replace(/乡中心学校$/u,"").replace(/中心学校$/u,"").replace(/中学$/u,"").replace(/学校$/u,"").replace(/街道$/u,"").replace(/乡$/u,"").replace(/镇$/u,""),e||$(t)||y(t)):""}const ae=(()=>{const t=Object.create(null);return j.forEach(e=>{[e.canonical,...e.aliases||[]].forEach(n=>{const a=y(n);a&&(t[a]=e.canonical)})}),t})(),re=(()=>{const t=Object.create(null);return j.forEach(e=>{const n=new Set([e.canonical,...e.aliases||[]].map(a=>k(a)).filter(Boolean));n.size===1&&(t[[...n][0]]=e.canonical)}),t})(),J="CUSTOM_SCHOOL_ALIAS_SETTINGS";function N(){if(window.SYS_VARS=window.SYS_VARS||{indicator:{ind1:"",ind2:""},targets:{}},!Array.isArray(window.SYS_VARS.schoolAliases))try{const t=localStorage.getItem(J),e=t?JSON.parse(t):[];window.SYS_VARS.schoolAliases=Array.isArray(e)?e:[]}catch(t){window.SYS_VARS.schoolAliases=[]}return window.SYS_VARS.schoolAliases}function q(){const t=N();localStorage.setItem(J,JSON.stringify(t))}function se(t){const e=Array.isArray(t)?t.map(n=>({canonical:String((n==null?void 0:n.canonical)||"").trim(),alias:String((n==null?void 0:n.alias)||"").trim()})).filter(n=>n.canonical&&n.alias):[];return window.SYS_VARS=window.SYS_VARS||{indicator:{ind1:"",ind2:""},targets:{},schoolAliases:[]},window.SYS_VARS.schoolAliases=e,U(),q(),e}function ie(){return N().map(t=>({rule_type:"school",standard_name:String((t==null?void 0:t.canonical)||"").trim(),alias_name:String((t==null?void 0:t.alias)||"").trim(),scope:"global",project_key:"",cohort_id:"",is_active:!0})).filter(t=>t.standard_name&&t.alias_name)}function oe(t){return(Array.isArray(t)?t:[]).filter(e=>String((e==null?void 0:e.rule_type)||"")==="school").map(e=>({canonical:String((e==null?void 0:e.standard_name)||"").trim(),alias:String((e==null?void 0:e.alias_name)||"").trim()})).filter(e=>e.canonical&&e.alias)}function V(){const t=new Map;return N().forEach(e=>{const n=String((e==null?void 0:e.canonical)||"").trim(),a=String((e==null?void 0:e.alias)||"").trim();!n||!a||(t.has(n)||t.set(n,new Set),a!==n&&t.get(n).add(a))}),Array.from(t.entries()).map(([e,n])=>({canonical:e,aliases:Array.from(n)}))}function D(){if(F(),d.mergedAliasCanonicalMap)return d.mergedAliasCanonicalMap;const t=Object.assign(Object.create(null),ae);return V().forEach(e=>{[e.canonical,...e.aliases||[]].forEach(n=>{const a=y(n);a&&(t[a]=e.canonical)})}),d.mergedAliasCanonicalMap=t,t}function X(){if(F(),d.mergedBasekeyCanonicalMap)return d.mergedBasekeyCanonicalMap;const t=Object.assign(Object.create(null),re);return V().forEach(e=>{const n=new Set([e.canonical,...e.aliases||[]].map(a=>k(a)).filter(Boolean));n.size===1&&(t[[...n][0]]=e.canonical)}),d.mergedBasekeyCanonicalMap=t,t}function R(t,e){const n=String(t||"").trim(),a=String(e||"").trim();if(!n)return a;if(!a)return n;const r=D(),i=l=>{const s=y(l);if(!s)return Number.NEGATIVE_INFINITY;let c=0;const o=r[s];return o&&s===y(o)&&(c+=100),/实验学校|实验中学/u.test(s)?c+=25:/中学|学校/u.test(s)&&(c+=15),/未知|Sheet/i.test(s)&&(c-=100),c+=Math.min(s.length,20),c};return i(a)>i(n)?a:n}function L(t){return $(t)}function K(t,e){const n=String(t||"").trim(),a=String(e||"").trim();if(!n||!a)return 0;const r=L(n),i=L(a);if(!r||!i)return 0;const l=/实验/u.test(r),s=/实验/u.test(i);if(l!==s)return 0;const c=r.length<=i.length?r:i,o=c===r?i:r;if(c.length<4||!o.includes(c))return 0;let u=400+c.length;const h=y(n),A=y(a);return(h===r||A===i)&&(u+=20),o.startsWith(c)&&(u+=10),o.endsWith(c)&&(u+=5),u}function Q(t,e){const n=String(e||"").trim();if(!n)return"";const a=Array.isArray(t)?t:Object.keys(t||{}),i=Array.from(new Set(a.map(o=>m(o)).filter(Boolean))).map(o=>({name:o,score:K(n,o)})).filter(o=>o.score>0);if(!i.length)return"";const l=i.reduce((o,u)=>Math.max(o,u.score),0),s=i.filter(o=>o.score===l).map(o=>o.name);return s.length===1?s[0]:Array.from(new Set(s.map(o=>p(o)).filter(Boolean))).length!==1?"":s.reduce((o,u)=>R(o,u),"")}function p(t){const e=y(t);if(!e)return"";F();const n=d.normalizedNameByText.get(e);if(n!==void 0)return n;const a=D()[e];if(a)return E(d.normalizedNameByText,e,`canon:${a}`);const r=k(e);if(!r)return E(d.normalizedNameByText,e,e);const i=X()[r];return E(d.normalizedNameByText,e,i?`canon:${i}`:r)}function z(t,e){const n=p(t),a=p(e);return!!n&&!!a&&n===a}function B(t,e,n=!1){if(z(t,e))return!0;if(!n)return!1;const a=L(t),r=L(e);return!a||!r||/实验/u.test(a)!==/实验/u.test(r)?!1:a===r}function I(t,e){const n=Array.isArray(t)?t:Object.keys(t||{}),a=m(e);if(!a)return[];const r=Array.from(new Set(n.map(c=>m(c)).filter(Boolean))),i=r.filter(c=>c===a);if(i.length)return i;const l=p(a);if(l){const c=r.filter(o=>p(o)===l);if(c.length)return c}const s=Q(r,a);return s?[s]:[]}function x(t,e){const n=I(t,e);return n.length?n.reduce((a,r)=>R(a,r),""):""}function _(t,e=[]){const n=m(t);if(!n)return"";const a=D()[y(n)];if(a)return a;const r=x(e,n);if(r)return r;const i=p(n);return typeof i=="string"&&i.startsWith("canon:")?i.slice(6):n}function ee(t){const e=t&&typeof t=="object"?t:{},n={},a={},r=[...Object.keys(e),...Object.keys(SCHOOLS||{})],i={};Object.values(SCHOOLS||{}).forEach(s=>{const c=_(s==null?void 0:s.name,[...Object.keys(e),...Object.keys(SCHOOLS||{}),s==null?void 0:s.name]);c&&(i[c]=Math.max(i[c]||0,Array.isArray(s==null?void 0:s.students)?s.students.length:0))});function l(s,c,o){const u=parseInt(o==null?void 0:o.t1,10)||0,h=parseInt(o==null?void 0:o.t2,10)||0,A=u+h,C=i[c]||0;let S=0;if(String(s||"").trim()===c&&(S+=100),p(s)===p(c)?S+=50:K(s,c)>0&&(S+=35),u>0||h>0?S+=80:S-=120,C>0){const f=Math.max(0,u-C)+Math.max(0,h-C);f===0?S+=60:S-=Math.min(80,f),S-=Math.max(0,A-C)*.01}else S-=A*.001;return S}return Object.entries(e).forEach(([s,c])=>{const o=_(s,[...r,s]);if(!o)return;const u={t1:parseInt(c==null?void 0:c.t1,10)||0,t2:parseInt(c==null?void 0:c.t2,10)||0},h=l(s,o,u);(!a[o]||h>=a[o].score)&&(n[o]=u,a[o]={score:h,sourceKey:s})}),n}function Y(){const t=ee(window.TARGETS||{});return JSON.stringify(window.TARGETS||{})!==JSON.stringify(t)&&(window.TARGETS=t),TARGETS=window.TARGETS||{},window.SYS_VARS&&(window.SYS_VARS.targets=window.TARGETS),window.TARGETS}function ce(t){Y();const e=x(window.TARGETS||{},t)||_(t,Object.keys(window.TARGETS||{}));return{key:e,value:e&&window.TARGETS[e]||null}}function le(t){const e=filterRowsBySchool(RAW_DATA||[],t);if(e.length)return e.slice();const n=new Set(I(Object.values(SCHOOLS||{}).map(a=>a==null?void 0:a.name),t));return Object.values(SCHOOLS||{}).filter(a=>n.has(String((a==null?void 0:a.name)||"").trim())).flatMap(a=>Array.isArray(a==null?void 0:a.students)?a.students:[])}function ue(){Y();const t=Object.values(SCHOOLS||{}).map(n=>{const a=String((n==null?void 0:n.name)||"").trim(),r=Array.isArray(n==null?void 0:n.students)?n.students.length:0;return`${a}:${r}`}).sort((n,a)=>n.localeCompare(a,"zh-CN")).join("|"),e=Object.keys(window.TARGETS||{}).sort((n,a)=>String(n).localeCompare(String(a),"zh-CN")).map(n=>{var r;const a=((r=window.TARGETS)==null?void 0:r[n])||{};return`${String(n).trim()}:${parseInt(a.t1,10)||0}:${parseInt(a.t2,10)||0}`}).join("|");return[typeof CURRENT_EXAM_ID!="undefined"&&CURRENT_EXAM_ID||"",window.__RAW_DATA_VERSION||0,typeof RAW_DATA!="undefined"&&Array.isArray(RAW_DATA)?RAW_DATA.length:0,t,e].join("::")}function P(t){return Array.isArray(t)?t.map(e=>({name:e.name,rawNames:Array.isArray(e.rawNames)?e.rawNames.slice():[],students:Array.isArray(e.students)?e.students.slice():[]})):[]}function Se(){const t=ue();if(g.signature===t&&Array.isArray(g.buckets)&&g.buckets.length)return P(g.buckets);const e=new Map;Object.values(SCHOOLS||{}).forEach(a=>{const r=String((a==null?void 0:a.name)||"").trim(),i=x(window.TARGETS||{},r)||_(r,[...Object.keys(window.TARGETS||{}),r])||r;if(!i)return;e.has(i)||e.set(i,{name:i,rawNames:[],students:[]});const l=e.get(i);r&&!l.rawNames.includes(r)&&l.rawNames.push(r),Array.isArray(a==null?void 0:a.students)&&a.students.length&&l.students.push(...a.students)});const n=Array.from(e.values());return g.signature=t,g.buckets=P(n),P(n)}function fe(){return Object.values(SCHOOLS||{}).map(t=>String((t==null?void 0:t.name)||"").trim()).filter(Boolean).sort((t,e)=>t.localeCompare(e,"zh-CN")).join("|")}function de(t,e){const n=fe();g.scoreMapSignature!==n&&(g.scoreMapSignature=n,g.scoreNameMap=new Map);const a=p(t)||String(t||"").trim();let r=g.scoreNameMap.get(a);r||(r=new Set(I(Object.values(SCHOOLS||{}).map(i=>i==null?void 0:i.name),t)),g.scoreNameMap.set(a,r)),Object.values(SCHOOLS||{}).forEach(i=>{r.has(String((i==null?void 0:i.name)||"").trim())&&(i.scoreInd=e)})}function he(){return M("all")}function T(t){const e=m(t);return e?/^(?:\u6574\u4f53|\u5168\u90e8|\u6c47\u603b|\u603b\u8868|\u5408\u8ba1|\u5168\u53bf|\u53bf\u57df|Sheet\d*|\u5de5\u4f5c\u8868\d*)$/i.test(e):!0}function Ae(t){const e=m(t);return!e||T(e)?!1:/(镇|乡|街道|办事处|中心校|学区)/.test(e)?!0:j.some(n=>{const a=[n==null?void 0:n.canonical,...(n==null?void 0:n.aliases)||[]].map(r=>m(r)).filter(Boolean);return a.some(r=>r===e)?a.some(r=>/(镇|乡|街道|办事处|中心校|学区)/.test(r)):!1})}function H(t=[]){Y();const e=Array.from(new Set((Array.isArray(t)&&t.length?t:M("all")).map(s=>m(s)).filter(s=>s&&!T(s))));if(!e.length)return[];const n=Object.keys(window.TARGETS&&typeof window.TARGETS=="object"?window.TARGETS:{}),a=G.slice(),r=[String(MY_SCHOOL||"").trim(),String(localStorage.getItem("MY_SCHOOL")||"").trim(),String(window.DEFAULT_MY_SCHOOL_NAME||"").trim()].filter(Boolean),l=Array.from(new Set([...n,...a,...r])).flatMap(s=>{const c=I(e,s);if(c.length)return c;const o=_(s,e);if(o&&e.includes(o))return[o];const u=_(s);if(u){const h=e.filter(A=>_(A)===u);if(h.length)return h}return e.filter(h=>B(h,s,!0))});return Array.from(new Set(l)).sort((s,c)=>s.localeCompare(c,"zh-CN"))}function ge(t=[]){const e=Array.from(new Set((Array.isArray(t)&&t.length?t:M("all")).map(r=>m(r)).filter(r=>r&&!T(r))));if(!e.length)return[];const n=H(e),a=new Set(n);return e.filter(r=>!a.has(r)&&!n.some(i=>z(i,r)||B(i,r,!0))).sort((r,i)=>r.localeCompare(i,"zh-CN"))}function me(t,e=[]){const n=m(t);if(!n||T(n))return!1;const a=new Set(H(e));return a.has(n)?!0:Array.from(a).some(r=>z(r,n)||B(r,n,!0))}function Oe(t,e=null){const n=Array.isArray(t)?t:[];if(!n.length)return[];const a=typeof e=="function"?e:(o=>o==null?void 0:o.school),r=Array.from(new Set(n.map(o=>m(a(o))).filter(Boolean))),i=H(r);if(!i.length)return[];const l=new Set(i),s=new Map,c=o=>{const u=m(o);if(!u)return!1;if(s.has(u))return s.get(u);const h=l.has(u)||i.some(A=>z(A,u)||B(A,u,!0));return s.set(u,h),h};return n.filter(o=>c(a(o)))}function M(t="township"){const e=String(t||"").toLowerCase(),n=Array.isArray(RAW_DATA)?RAW_DATA:[],a=e!=="all"||!n.length,i=(()=>{var C,S;const c=Object.keys(SCHOOLS||{}).sort().join("|"),o=Object.entries(window.TEACHER_SCHOOL_MAP||{}).map(([f,b])=>`${f}:${b}`).sort().join("|"),u=((C=n[0])==null?void 0:C.school)||"",h=((S=n[n.length-1])==null?void 0:S.school)||"";let A="";try{const f=typeof CohortDB!="undefined"&&typeof CohortDB.ensure=="function"?CohortDB.ensure():null;A=a?Object.entries((f==null?void 0:f.exams)||{}).map(([b,w])=>`${b}:${Array.isArray(w==null?void 0:w.data)?w.data.length:0}`).sort().join("|"):""}catch(f){A="cohort-db-unavailable"}return[c,o,n.length,u,h,String(localStorage.getItem("MY_SCHOOL")||"").trim(),String(MY_SCHOOL||"").trim(),A].join("::")})();if(e==="all"&&O.allSignature===i)return O.allSchools.slice();if(e!=="all"&&O.townshipSignature===i)return O.townshipSchools.slice();const l=(()=>{const c=new Map,o=S=>{const f=m(S);if(!f)return;const b=p(f)||f,w=c.get(b);c.set(b,w?R(w,f):f)};Object.keys(SCHOOLS||{}).forEach(o),(RAW_DATA||[]).forEach(S=>o(S==null?void 0:S.school)),Object.values(window.TEACHER_SCHOOL_MAP||{}).forEach(o);const u=String(localStorage.getItem("MY_SCHOOL")||"").trim(),h=String(MY_SCHOOL||"").trim();u&&o(u),h&&o(h);const A=a&&typeof CohortDB!="undefined"&&typeof CohortDB.ensure=="function"?CohortDB.ensure():null;A!=null&&A.exams&&Object.values(A.exams).forEach(S=>{((S==null?void 0:S.data)||[]).forEach(f=>o(f==null?void 0:f.school))});const C=["鏁欒偛灞€","鏁欎綋灞€","甯傚眬","鍖哄眬","甯傜洿灞€","鍖虹洿灞€","admin","娴嬭瘯","榛樿"];return[...c.values()].filter(S=>!S||/^Sheet\d+$/i.test(S)||T(S)?!1:!C.some(f=>S.includes(f)||S.toLowerCase()===f)).sort((S,f)=>S.localeCompare(f,"zh-CN"))})();if(O.allSignature=i,O.allSchools=l.slice(),e==="all")return l.slice();const s=H(l);return(s.length>0||!n.length)&&(O.townshipSignature=i,O.townshipSchools=s.slice()),s.slice()}function pe(){const t={},e={},n=(r,i)=>{const l=normalizeClass(r),s=String(i||"").trim();!l||!s||t[l]||(e[l]||(e[l]=new Set),e[l].add(s))};Object.entries(window.TEACHER_SCHOOL_MAP||{}).forEach(([r,i])=>{const l=normalizeClass(String(r||"").split("_")[0]),s=String(i||"").trim();l&&s&&(t[l]=s)}),Object.entries(SCHOOLS||{}).forEach(([r,i])=>{((i==null?void 0:i.students)||[]).forEach(l=>{n(l==null?void 0:l.class,r)})}),(RAW_DATA||[]).forEach(r=>{n(r==null?void 0:r.class,r==null?void 0:r.school)});const a=typeof CohortDB!="undefined"&&typeof CohortDB.ensure=="function"?CohortDB.ensure():null;return a!=null&&a.exams&&Object.values(a.exams).forEach(r=>{((r==null?void 0:r.data)||[]).forEach(i=>{n(i==null?void 0:i.class,i==null?void 0:i.school)})}),Object.entries(e).forEach(([r,i])=>{!t[r]&&i.size===1&&(t[r]=Array.from(i)[0])}),t}function ye(){const t=String(window.DEFAULT_MY_SCHOOL_NAME||"银山实验").trim(),e=String(MY_SCHOOL||localStorage.getItem("MY_SCHOOL")||t).trim();if(e)return e;const n=M();return n.length===1?n[0]:t}Object.assign(window,{SCHOOL_ALIAS_GROUPS:j,TOWNSHIP_STANDARD_SCHOOL_NAMES:G,COUNTY_DIRECT_STANDARD_SCHOOL_NAMES:v,COUNTY_STANDARD_SCHOOL_NAMES:te,sanitizeSchoolText:y,stripSchoolAdministrativePrefix:Z,stripSchoolOrganizationalSuffixes:$,computeSchoolBaseKey:k,clearSchoolNormalizationCache:U,ensureSchoolAliasStore:N,persistSchoolAliasSettingsLocal:q,replaceCustomSchoolAliasStore:se,buildSchoolAliasGatewayRows:ie,mapGatewaySchoolAliasRows:oe,getCustomSchoolAliasGroups:V,getMergedSchoolAliasCanonicalMap:D,getMergedSchoolBasekeyCanonicalMap:X,pickPreferredSchoolDisplayName:R,normalizeSchoolFuzzyText:L,getSchoolFuzzyMatchScore:K,findBestFuzzySchoolNameMatch:Q,normalizeSchoolName:p,areSchoolNamesEquivalent:z,areSchoolNamesMatched:B,getMatchedSchoolNamesFromCollection:I,resolveSchoolNameFromCollection:x,getCanonicalSchoolName:_,normalizeTargetsMap:ee,ensureNormalizedTargets:Y,getTargetConfigBySchool:ce,getEquivalentSchoolStudents:le,buildIndicatorSchoolBuckets:Se,syncIndicatorScoreToSchools:de,collectAvailableCompareSchools:he,isAggregateCompareSchoolName:T,isLikelyTownshipSchoolName:Ae,getTownshipManagedSchoolNames:H,getCountyDirectSchoolNames:ge,isTownshipManagedSchool:me,filterRowsToTownshipSchools:Oe,listAvailableSchoolsForCompare:M,getClassSchoolMapForAllData:pe,inferDefaultSchoolFromContext:ye}),window.__SCHOOL_NORMALIZATION_RUNTIME_PATCHED__=!0})();
+(() => {
+    if (typeof window === 'undefined' || window.__SCHOOL_NORMALIZATION_RUNTIME_PATCHED__) return;
+
+const SCHOOL_ALIAS_GROUPS = [
+    { canonical: '银山中学', aliases: ['银山镇中学'] },
+    { canonical: '老湖中学', aliases: ['老湖'] },
+    { canonical: '梯门中学', aliases: ['梯门'] },
+    { canonical: '商老庄中学', aliases: ['商老庄', '商老庄实验学校'] },
+    { canonical: '彭集中学', aliases: ['彭集', '彭集街道中学'] },
+    { canonical: '接山中学', aliases: ['接山', '接山镇中学'] },
+    { canonical: '州城中学', aliases: ['州城', '州城街道', '州城街道中学', '州城一中', '州城二中', '州城镇一中', '州城镇二中'] },
+    { canonical: '新湖中学', aliases: ['新湖', '新湖镇中学'] },
+    { canonical: '大羊中学', aliases: ['大羊'] },
+    { canonical: '沙河站中学', aliases: ['沙河站', '沙河站镇中学'] },
+    { canonical: '银山实验', aliases: ['银山实验学校', '东平银山实验学校', '银山镇实验学校', '银山实验中学', '银山镇实验中学', '实验完全中学'] },
+    { canonical: '旧县中学', aliases: ['旧县', '旧县乡中心学校', '旧县中心学校', '旧县中心小学'] },
+    { canonical: '斑鸠店镇中', aliases: ['斑鸠店中学', '斑鸠店镇中学', '斑鸠店中'] },
+    { canonical: '戴庙中学', aliases: ['戴庙', '戴庙镇中学'] },
+    { canonical: '东平县实验中学', aliases: ['东平实验中学', '泰安市东平实验中学'] },
+    { canonical: '东平县佛山中学', aliases: ['东平佛山中学', '泰安市东平佛山中学'] },
+    { canonical: '东平明湖中学', aliases: ['东平县明湖中学'] },
+    { canonical: '东平县江河实验学校', aliases: ['东平江河实验学校'] },
+    { canonical: '东平县东原实验学校', aliases: ['东平东原实验学校'] },
+    { canonical: '东平县清河实验学校', aliases: ['东平清河实验学校'] },
+    { canonical: '东平县青峰山实验学校', aliases: ['东平实验中学青峰山校区', '青峰山校区'] },
+    { canonical: '东平县嘉和实验学校', aliases: ['东平嘉和实验学校'] },
+    { canonical: '东平县第二实验中学', aliases: ['东平第二实验中学'] },
+    { canonical: '东平县第一中学', aliases: ['东平一中'] }
+];
+
+const TOWNSHIP_STANDARD_SCHOOL_NAMES = [
+    '银山中学',
+    '老湖中学',
+    '梯门中学',
+    '商老庄中学',
+    '彭集中学',
+    '接山中学',
+    '州城中学',
+    '新湖中学',
+    '大羊中学',
+    '沙河站中学',
+    '银山实验',
+    '旧县中学',
+    '斑鸠店镇中',
+    '戴庙中学'
+];
+
+const COUNTY_DIRECT_STANDARD_SCHOOL_NAMES = [
+    '东平县实验中学',
+    '东平县佛山中学',
+    '东平明湖中学',
+    '东平县江河实验学校',
+    '东平县东原实验学校',
+    '东平县清河实验学校',
+    '东平县青峰山实验学校',
+    '东平县嘉和实验学校',
+    '东平县第二实验中学',
+    '东平县第一中学'
+];
+
+const COUNTY_STANDARD_SCHOOL_NAMES = [
+    ...TOWNSHIP_STANDARD_SCHOOL_NAMES,
+    ...COUNTY_DIRECT_STANDARD_SCHOOL_NAMES
+];
+
+const SchoolCompareListPerfCache = {
+    allSignature: '',
+    townshipSignature: '',
+    allSchools: [],
+    townshipSchools: []
+};
+
+const IndicatorSchoolBucketPerfCache = {
+    signature: '',
+    buckets: [],
+    scoreMapSignature: '',
+    scoreNameMap: new Map()
+};
+
+const SchoolNormalizationPerfCache = {
+    displayNameByRaw: new Map(),
+    sanitizedTextByRaw: new Map(),
+    normalizedNameByText: new Map(),
+    mergedAliasCanonicalMap: null,
+    mergedBasekeyCanonicalMap: null,
+    aliasStore: null
+};
+
+function setBoundedSchoolNormalizationCache(cache, key, value, limit = 512) {
+    if (cache.has(key)) return cache.get(key);
+    if (cache.size >= limit) cache.clear();
+    cache.set(key, value);
+    return value;
+}
+
+function bumpSchoolNormalizationCacheVersion() {
+    window.__SCHOOL_NORMALIZATION_CACHE_VERSION = (Number(window.__SCHOOL_NORMALIZATION_CACHE_VERSION) || 0) + 1;
+    return window.__SCHOOL_NORMALIZATION_CACHE_VERSION;
+}
+
+function clearSchoolNormalizationCache() {
+    SchoolNormalizationPerfCache.normalizedNameByText.clear();
+    SchoolNormalizationPerfCache.mergedAliasCanonicalMap = null;
+    SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap = null;
+    SchoolNormalizationPerfCache.aliasStore = null;
+    SchoolCompareListPerfCache.allSignature = '';
+    SchoolCompareListPerfCache.townshipSignature = '';
+    SchoolCompareListPerfCache.allSchools = [];
+    SchoolCompareListPerfCache.townshipSchools = [];
+    IndicatorSchoolBucketPerfCache.signature = '';
+    IndicatorSchoolBucketPerfCache.buckets = [];
+    IndicatorSchoolBucketPerfCache.scoreMapSignature = '';
+    IndicatorSchoolBucketPerfCache.scoreNameMap.clear();
+    bumpSchoolNormalizationCacheVersion();
+}
+
+function ensureSchoolAliasCacheIsCurrent() {
+    const aliases = ensureSchoolAliasStore();
+    if (SchoolNormalizationPerfCache.aliasStore === aliases) return aliases;
+    SchoolNormalizationPerfCache.normalizedNameByText.clear();
+    SchoolNormalizationPerfCache.mergedAliasCanonicalMap = null;
+    SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap = null;
+    SchoolNormalizationPerfCache.aliasStore = aliases;
+    bumpSchoolNormalizationCacheVersion();
+    return aliases;
+}
+
+function normalizeSchoolDisplayName(name) {
+    const raw = String(name || '');
+    if (!raw) return '';
+    const cached = SchoolNormalizationPerfCache.displayNameByRaw.get(raw);
+    if (cached !== undefined) return cached;
+    const normalized = raw
+        .normalize('NFKC')
+        .replace(/[\u200B-\u200D\uFEFF\u2060\u00A0]/g, '')
+        .trim();
+    return setBoundedSchoolNormalizationCache(SchoolNormalizationPerfCache.displayNameByRaw, raw, normalized);
+}
+
+function sanitizeSchoolText(name) {
+    const raw = String(name || '');
+    if (!raw) return '';
+    const cached = SchoolNormalizationPerfCache.sanitizedTextByRaw.get(raw);
+    if (cached !== undefined) return cached;
+    const sanitized = normalizeSchoolDisplayName(raw)
+        .replace(/\s+/g, '')
+        .replace(/[()（）\-—_·、,，.。]/g, '')
+        .trim();
+    return setBoundedSchoolNormalizationCache(SchoolNormalizationPerfCache.sanitizedTextByRaw, raw, sanitized);
+}
+
+const SCHOOL_ORG_SUFFIX_RULES = [
+    [/(\u5b66\u6821|\u4e2d\u5b66)\u6559\u80b2\u96c6\u56e2$/u, '$1'],
+    [/(\u5b66\u6821|\u4e2d\u5b66)\u96c6\u56e2$/u, '$1'],
+    [/(\u5b66\u6821|\u4e2d\u5b66)(?:\u521d\u4e2d\u90e8|\u9ad8\u4e2d\u90e8|\u5c0f\u5b66\u90e8|\u672c\u90e8|\u6821\u672c\u90e8|\u5206\u6821|\u6821\u533a|\u603b\u6821)$/u, '$1'],
+    [/\u4e5d\u5e74\u4e00\u8d2f\u5236\u5b66\u6821$/u, '\u5b66\u6821'],
+    [/\u4e5d\u5e74\u4e00\u8d2f\u5236$/u, ''],
+    [/\u5b8c\u5168\u4e2d\u5b66$/u, '\u4e2d\u5b66'],
+    [/\u9644\u5c5e\u5b66\u6821$/u, '\u5b66\u6821'],
+    [/\u9644\u5c5e\u4e2d\u5b66$/u, '\u4e2d\u5b66'],
+    [/\u6559\u80b2\u8054\u76df$/u, ''],
+    [/\u76f4\u5c5e\u6821\u533a$/u, ''],
+    [/\u6821\u533a$/u, ''],
+    [/\u5206\u6821$/u, ''],
+    [/\u6559\u5b66\u70b9$/u, ''],
+    [/\u672c\u90e8$/u, ''],
+    [/\u6821\u672c\u90e8$/u, ''],
+    [/\u603b\u6821$/u, '']
+];
+
+function stripSchoolAdministrativePrefix(name) {
+    let text = sanitizeSchoolText(name);
+    if (!text) return '';
+    let prev = '';
+    while (text && text !== prev) {
+        prev = text;
+        text = text.replace(
+            /^[\u4e00-\u9fa5]{2,7}?(?:\u7701|\u5e02|\u53bf|\u533a)(?=[\u4e00-\u9fa5]*(?:\u5b9e\u9a8c\u4e2d\u5b66|\u5b9e\u9a8c\u5b66\u6821|\u4e2d\u5b66|\u5b66\u6821))/u,
+            ''
+        );
+    }
+    return text;
+}
+
+function stripSchoolOrganizationalSuffixes(name) {
+    let text = stripSchoolAdministrativePrefix(name);
+    if (!text) return '';
+    let prev = '';
+    while (text && text !== prev) {
+        prev = text;
+        SCHOOL_ORG_SUFFIX_RULES.forEach(([pattern, replacement]) => {
+            text = text.replace(pattern, replacement);
+        });
+    }
+    return text;
+}
+
+function computeSchoolBaseKey(name) {
+    let text = stripSchoolOrganizationalSuffixes(name);
+    if (!text) return '';
+    text = text
+        .replace(/镇实验学校$/u, '实验')
+        .replace(/街道实验学校$/u, '实验')
+        .replace(/乡实验学校$/u, '实验')
+        .replace(/实验学校$/u, '实验')
+        .replace(/实验中学$/u, '实验')
+        .replace(/镇中学$/u, '')
+        .replace(/街道中学$/u, '')
+        .replace(/乡中心学校$/u, '')
+        .replace(/中心学校$/u, '')
+        .replace(/中学$/u, '')
+        .replace(/学校$/u, '')
+        .replace(/街道$/u, '')
+        .replace(/乡$/u, '')
+        .replace(/镇$/u, '');
+    return text || stripSchoolOrganizationalSuffixes(name) || sanitizeSchoolText(name);
+}
+
+const SCHOOL_ALIAS_CANONICAL_MAP = (() => {
+    const map = Object.create(null);
+    SCHOOL_ALIAS_GROUPS.forEach(group => {
+        [group.canonical, ...(group.aliases || [])].forEach(name => {
+            const key = sanitizeSchoolText(name);
+            if (key) map[key] = group.canonical;
+        });
+    });
+    return map;
+})();
+
+const SCHOOL_BASEKEY_CANONICAL_MAP = (() => {
+    const map = Object.create(null);
+    SCHOOL_ALIAS_GROUPS.forEach(group => {
+        const keys = new Set(
+            [group.canonical, ...(group.aliases || [])]
+                .map(name => computeSchoolBaseKey(name))
+                .filter(Boolean)
+        );
+        if (keys.size === 1) {
+            map[[...keys][0]] = group.canonical;
+        }
+    });
+    return map;
+})();
+
+const SCHOOL_ALIAS_STORAGE_KEY = 'CUSTOM_SCHOOL_ALIAS_SETTINGS';
+
+function ensureSchoolAliasStore() {
+    window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {} };
+    if (!Array.isArray(window.SYS_VARS.schoolAliases)) {
+        try {
+            const raw = localStorage.getItem(SCHOOL_ALIAS_STORAGE_KEY);
+            const saved = raw ? JSON.parse(raw) : [];
+            window.SYS_VARS.schoolAliases = Array.isArray(saved) ? saved : [];
+        } catch (e) {
+            window.SYS_VARS.schoolAliases = [];
+        }
+    }
+    return window.SYS_VARS.schoolAliases;
+}
+
+function persistSchoolAliasSettingsLocal() {
+    const list = ensureSchoolAliasStore();
+    localStorage.setItem(SCHOOL_ALIAS_STORAGE_KEY, JSON.stringify(list));
+}
+
+function replaceCustomSchoolAliasStore(list) {
+    const next = Array.isArray(list)
+        ? list
+            .map(item => ({
+                canonical: String(item?.canonical || '').trim(),
+                alias: String(item?.alias || '').trim()
+            }))
+            .filter(item => item.canonical && item.alias)
+        : [];
+    window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
+    window.SYS_VARS.schoolAliases = next;
+    clearSchoolNormalizationCache();
+    persistSchoolAliasSettingsLocal();
+    return next;
+}
+
+function buildSchoolAliasGatewayRows() {
+    return ensureSchoolAliasStore()
+        .map(item => ({
+            rule_type: 'school',
+            standard_name: String(item?.canonical || '').trim(),
+            alias_name: String(item?.alias || '').trim(),
+            scope: 'global',
+            project_key: '',
+            cohort_id: '',
+            is_active: true
+        }))
+        .filter(item => item.standard_name && item.alias_name);
+}
+
+function mapGatewaySchoolAliasRows(records) {
+    return (Array.isArray(records) ? records : [])
+        .filter(row => String(row?.rule_type || '') === 'school')
+        .map(row => ({
+            canonical: String(row?.standard_name || '').trim(),
+            alias: String(row?.alias_name || '').trim()
+        }))
+        .filter(row => row.canonical && row.alias);
+}
+
+function getCustomSchoolAliasGroups() {
+    const groups = new Map();
+    ensureSchoolAliasStore().forEach(item => {
+        const canonical = String(item?.canonical || '').trim();
+        const alias = String(item?.alias || '').trim();
+        if (!canonical || !alias) return;
+        if (!groups.has(canonical)) groups.set(canonical, new Set());
+        if (alias !== canonical) groups.get(canonical).add(alias);
+    });
+    return Array.from(groups.entries()).map(([canonical, aliases]) => ({
+        canonical,
+        aliases: Array.from(aliases)
+    }));
+}
+
+function getMergedSchoolAliasCanonicalMap() {
+    ensureSchoolAliasCacheIsCurrent();
+    if (SchoolNormalizationPerfCache.mergedAliasCanonicalMap) {
+        return SchoolNormalizationPerfCache.mergedAliasCanonicalMap;
+    }
+    const map = Object.assign(Object.create(null), SCHOOL_ALIAS_CANONICAL_MAP);
+    getCustomSchoolAliasGroups().forEach(group => {
+        [group.canonical, ...(group.aliases || [])].forEach(name => {
+            const key = sanitizeSchoolText(name);
+            if (key) map[key] = group.canonical;
+        });
+    });
+    SchoolNormalizationPerfCache.mergedAliasCanonicalMap = map;
+    return map;
+}
+
+function getMergedSchoolBasekeyCanonicalMap() {
+    ensureSchoolAliasCacheIsCurrent();
+    if (SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap) {
+        return SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap;
+    }
+    const map = Object.assign(Object.create(null), SCHOOL_BASEKEY_CANONICAL_MAP);
+    getCustomSchoolAliasGroups().forEach(group => {
+        const keys = new Set(
+            [group.canonical, ...(group.aliases || [])]
+                .map(name => computeSchoolBaseKey(name))
+                .filter(Boolean)
+        );
+        if (keys.size === 1) {
+            map[[...keys][0]] = group.canonical;
+        }
+    });
+    SchoolNormalizationPerfCache.mergedBasekeyCanonicalMap = map;
+    return map;
+}
+
+function pickPreferredSchoolDisplayName(existing, candidate) {
+    const a = String(existing || '').trim();
+    const b = String(candidate || '').trim();
+    if (!a) return b;
+    if (!b) return a;
+    const canonicalMap = getMergedSchoolAliasCanonicalMap();
+    const score = (raw) => {
+        const text = sanitizeSchoolText(raw);
+        if (!text) return Number.NEGATIVE_INFINITY;
+        let value = 0;
+        const canonical = canonicalMap[text];
+        if (canonical && text === sanitizeSchoolText(canonical)) value += 100;
+        if (/实验学校|实验中学/u.test(text)) value += 25;
+        else if (/中学|学校/u.test(text)) value += 15;
+        if (/未知|Sheet/i.test(text)) value -= 100;
+        value += Math.min(text.length, 20);
+        return value;
+    };
+    return score(b) > score(a) ? b : a;
+}
+
+function normalizeSchoolFuzzyText(name) {
+    return stripSchoolOrganizationalSuffixes(name);
+}
+
+function getSchoolFuzzyMatchScore(sourceName, candidateName) {
+    const rawSource = String(sourceName || '').trim();
+    const rawCandidate = String(candidateName || '').trim();
+    if (!rawSource || !rawCandidate) return 0;
+
+    const sourceText = normalizeSchoolFuzzyText(rawSource);
+    const candidateText = normalizeSchoolFuzzyText(rawCandidate);
+    if (!sourceText || !candidateText) return 0;
+
+    const sourceIsExperiment = /实验/u.test(sourceText);
+    const candidateIsExperiment = /实验/u.test(candidateText);
+    if (sourceIsExperiment !== candidateIsExperiment) return 0;
+
+    const shorter = sourceText.length <= candidateText.length ? sourceText : candidateText;
+    const longer = shorter === sourceText ? candidateText : sourceText;
+    if (shorter.length < 4 || !longer.includes(shorter)) return 0;
+
+    let score = 400 + shorter.length;
+    const sourceRawText = sanitizeSchoolText(rawSource);
+    const candidateRawText = sanitizeSchoolText(rawCandidate);
+    if (sourceRawText === sourceText || candidateRawText === candidateText) score += 20;
+    if (longer.startsWith(shorter)) score += 10;
+    if (longer.endsWith(shorter)) score += 5;
+    return score;
+}
+
+function findBestFuzzySchoolNameMatch(collection, schoolName) {
+    const raw = String(schoolName || '').trim();
+    if (!raw) return '';
+    const candidates = Array.isArray(collection) ? collection : Object.keys(collection || {});
+    const names = Array.from(new Set(
+        candidates
+            .map(name => normalizeSchoolDisplayName(name))
+            .filter(Boolean)
+    ));
+    const scoredMatches = names
+        .map((name) => ({
+            name,
+            score: getSchoolFuzzyMatchScore(raw, name)
+        }))
+        .filter(item => item.score > 0);
+    if (!scoredMatches.length) return '';
+
+    const bestScore = scoredMatches.reduce((max, item) => Math.max(max, item.score), 0);
+    const bestMatches = scoredMatches
+        .filter(item => item.score === bestScore)
+        .map(item => item.name);
+    if (bestMatches.length === 1) return bestMatches[0];
+
+    const normalizedKeys = Array.from(new Set(
+        bestMatches
+            .map(name => normalizeSchoolName(name))
+            .filter(Boolean)
+    ));
+    if (normalizedKeys.length !== 1) return '';
+    return bestMatches.reduce((best, item) => pickPreferredSchoolDisplayName(best, item), '');
+}
+
+function normalizeSchoolName(name) {
+    const text = sanitizeSchoolText(name);
+    if (!text) return '';
+    ensureSchoolAliasCacheIsCurrent();
+    const cached = SchoolNormalizationPerfCache.normalizedNameByText.get(text);
+    if (cached !== undefined) return cached;
+    const directCanonical = getMergedSchoolAliasCanonicalMap()[text];
+    if (directCanonical) {
+        return setBoundedSchoolNormalizationCache(
+            SchoolNormalizationPerfCache.normalizedNameByText,
+            text,
+            `canon:${directCanonical}`
+        );
+    }
+    const baseKey = computeSchoolBaseKey(text);
+    if (!baseKey) return setBoundedSchoolNormalizationCache(SchoolNormalizationPerfCache.normalizedNameByText, text, text);
+    const mappedCanonical = getMergedSchoolBasekeyCanonicalMap()[baseKey];
+    return setBoundedSchoolNormalizationCache(
+        SchoolNormalizationPerfCache.normalizedNameByText,
+        text,
+        mappedCanonical ? `canon:${mappedCanonical}` : baseKey
+    );
+}
+
+function areSchoolNamesEquivalent(a, b) {
+    const keyA = normalizeSchoolName(a);
+    const keyB = normalizeSchoolName(b);
+    return !!keyA && !!keyB && keyA === keyB;
+}
+
+function areSchoolNamesMatched(a, b, allowFuzzy = false) {
+    if (areSchoolNamesEquivalent(a, b)) return true;
+    if (!allowFuzzy) return false;
+    const fuzzyA = normalizeSchoolFuzzyText(a);
+    const fuzzyB = normalizeSchoolFuzzyText(b);
+    if (!fuzzyA || !fuzzyB) return false;
+    if (/实验/u.test(fuzzyA) !== /实验/u.test(fuzzyB)) return false;
+    return fuzzyA === fuzzyB;
+}
+
+function getMatchedSchoolNamesFromCollection(collection, schoolName) {
+    const candidates = Array.isArray(collection) ? collection : Object.keys(collection || {});
+    const raw = normalizeSchoolDisplayName(schoolName);
+    if (!raw) return [];
+    const names = Array.from(new Set(
+        candidates
+            .map(name => normalizeSchoolDisplayName(name))
+            .filter(Boolean)
+    ));
+    const exact = names.filter(name => name === raw);
+    if (exact.length) return exact;
+
+    const targetKey = normalizeSchoolName(raw);
+    if (targetKey) {
+        const strictMatches = names.filter(name => normalizeSchoolName(name) === targetKey);
+        if (strictMatches.length) return strictMatches;
+    }
+
+    const fuzzyMatch = findBestFuzzySchoolNameMatch(names, raw);
+    return fuzzyMatch ? [fuzzyMatch] : [];
+}
+
+function resolveSchoolNameFromCollection(collection, schoolName) {
+    const matches = getMatchedSchoolNamesFromCollection(collection, schoolName);
+    if (!matches.length) return '';
+    return matches.reduce((best, item) => pickPreferredSchoolDisplayName(best, item), '');
+}
+
+function getCanonicalSchoolName(name, candidateNames = []) {
+    const raw = normalizeSchoolDisplayName(name);
+    if (!raw) return '';
+    const directCanonical = getMergedSchoolAliasCanonicalMap()[sanitizeSchoolText(raw)];
+    if (directCanonical) return directCanonical;
+    const resolved = resolveSchoolNameFromCollection(candidateNames, raw);
+    if (resolved) return resolved;
+    const key = normalizeSchoolName(raw);
+    return typeof key === 'string' && key.startsWith('canon:') ? key.slice(6) : raw;
+}
+
+function normalizeTargetsMap(targets) {
+    const source = (targets && typeof targets === 'object') ? targets : {};
+    const normalized = {};
+    const pickedMeta = {};
+    const candidates = [...Object.keys(source), ...Object.keys(SCHOOLS || {})];
+    const schoolSizes = {};
+    Object.values(SCHOOLS || {}).forEach(school => {
+        const canonicalSchool = getCanonicalSchoolName(school?.name, [...Object.keys(source), ...Object.keys(SCHOOLS || {}), school?.name]);
+        if (!canonicalSchool) return;
+        schoolSizes[canonicalSchool] = Math.max(
+            schoolSizes[canonicalSchool] || 0,
+            Array.isArray(school?.students) ? school.students.length : 0
+        );
+    });
+
+    function scoreTargetCandidate(rawKey, canonicalSchool, value) {
+        const t1 = parseInt(value?.t1, 10) || 0;
+        const t2 = parseInt(value?.t2, 10) || 0;
+        const total = t1 + t2;
+        const schoolSize = schoolSizes[canonicalSchool] || 0;
+        let score = 0;
+
+        if (String(rawKey || '').trim() === canonicalSchool) score += 100;
+        if (normalizeSchoolName(rawKey) === normalizeSchoolName(canonicalSchool)) score += 50;
+        else if (getSchoolFuzzyMatchScore(rawKey, canonicalSchool) > 0) score += 35;
+        if (t1 > 0 || t2 > 0) score += 80;
+        else score -= 120;
+
+        if (schoolSize > 0) {
+            const overflow = Math.max(0, t1 - schoolSize) + Math.max(0, t2 - schoolSize);
+            if (overflow === 0) score += 60;
+            else score -= Math.min(80, overflow);
+            score -= Math.max(0, total - schoolSize) * 0.01;
+        } else {
+            score -= total * 0.001;
+        }
+
+        return score;
+    }
+
+    Object.entries(source).forEach(([schoolName, value]) => {
+        const canonicalSchool = getCanonicalSchoolName(schoolName, [...candidates, schoolName]);
+        if (!canonicalSchool) return;
+        const nextValue = {
+            t1: parseInt(value?.t1, 10) || 0,
+            t2: parseInt(value?.t2, 10) || 0
+        };
+        const nextScore = scoreTargetCandidate(schoolName, canonicalSchool, nextValue);
+        if (!pickedMeta[canonicalSchool] || nextScore >= pickedMeta[canonicalSchool].score) {
+            normalized[canonicalSchool] = nextValue;
+            pickedMeta[canonicalSchool] = { score: nextScore, sourceKey: schoolName };
+        }
+    });
+    return normalized;
+}
+
+function ensureNormalizedTargets() {
+    const normalized = normalizeTargetsMap(window.TARGETS || {});
+    if (JSON.stringify(window.TARGETS || {}) !== JSON.stringify(normalized)) {
+        window.TARGETS = normalized;
+    }
+    TARGETS = window.TARGETS || {};
+    if (window.SYS_VARS) window.SYS_VARS.targets = window.TARGETS;
+    return window.TARGETS;
+}
+
+function getTargetConfigBySchool(schoolName) {
+    ensureNormalizedTargets();
+    const key = resolveSchoolNameFromCollection(window.TARGETS || {}, schoolName)
+        || getCanonicalSchoolName(schoolName, Object.keys(window.TARGETS || {}));
+    return {
+        key,
+        value: key ? (window.TARGETS[key] || null) : null
+    };
+}
+
+function getEquivalentSchoolStudents(schoolName) {
+    const rows = filterRowsBySchool(RAW_DATA || [], schoolName);
+    if (rows.length) return rows.slice();
+    const matchedNames = new Set(
+        getMatchedSchoolNamesFromCollection(
+            Object.values(SCHOOLS || {}).map(item => item?.name),
+            schoolName
+        )
+    );
+    return Object.values(SCHOOLS || {})
+        .filter(item => matchedNames.has(String(item?.name || '').trim()))
+        .flatMap(item => Array.isArray(item?.students) ? item.students : []);
+}
+
+function getIndicatorSchoolBucketSignature() {
+    ensureNormalizedTargets();
+    const schoolSignature = Object.values(SCHOOLS || {})
+        .map((school) => {
+            const name = String(school?.name || '').trim();
+            const count = Array.isArray(school?.students) ? school.students.length : 0;
+            return `${name}:${count}`;
+        })
+        .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+        .join('|');
+    const targetSignature = Object.keys(window.TARGETS || {})
+        .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
+        .map((name) => {
+            const target = window.TARGETS?.[name] || {};
+            return `${String(name).trim()}:${parseInt(target.t1, 10) || 0}:${parseInt(target.t2, 10) || 0}`;
+        })
+        .join('|');
+    return [
+        typeof CURRENT_EXAM_ID !== 'undefined' ? CURRENT_EXAM_ID || '' : '',
+        window.__RAW_DATA_VERSION || 0,
+        (typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA)) ? RAW_DATA.length : 0,
+        schoolSignature,
+        targetSignature
+    ].join('::');
+}
+
+function cloneIndicatorSchoolBuckets(buckets) {
+    return Array.isArray(buckets)
+        ? buckets.map((bucket) => ({
+            name: bucket.name,
+            rawNames: Array.isArray(bucket.rawNames) ? bucket.rawNames.slice() : [],
+            students: Array.isArray(bucket.students) ? bucket.students.slice() : []
+        }))
+        : [];
+}
+
+function buildIndicatorSchoolBuckets() {
+    const signature = getIndicatorSchoolBucketSignature();
+    if (
+        IndicatorSchoolBucketPerfCache.signature === signature
+        && Array.isArray(IndicatorSchoolBucketPerfCache.buckets)
+        && IndicatorSchoolBucketPerfCache.buckets.length
+    ) {
+        return cloneIndicatorSchoolBuckets(IndicatorSchoolBucketPerfCache.buckets);
+    }
+
+    const buckets = new Map();
+    Object.values(SCHOOLS || {}).forEach((school) => {
+        const rawName = String(school?.name || '').trim();
+        const canonicalName = resolveSchoolNameFromCollection(window.TARGETS || {}, rawName)
+            || getCanonicalSchoolName(rawName, [
+                ...Object.keys(window.TARGETS || {}),
+                rawName
+            ])
+            || rawName;
+        if (!canonicalName) return;
+        if (!buckets.has(canonicalName)) {
+            buckets.set(canonicalName, {
+                name: canonicalName,
+                rawNames: [],
+                students: []
+            });
+        }
+        const bucket = buckets.get(canonicalName);
+        if (rawName && !bucket.rawNames.includes(rawName)) bucket.rawNames.push(rawName);
+        if (Array.isArray(school?.students) && school.students.length) {
+            bucket.students.push(...school.students);
+        }
+    });
+    const nextBuckets = Array.from(buckets.values());
+    IndicatorSchoolBucketPerfCache.signature = signature;
+    IndicatorSchoolBucketPerfCache.buckets = cloneIndicatorSchoolBuckets(nextBuckets);
+    return cloneIndicatorSchoolBuckets(nextBuckets);
+}
+
+function getIndicatorScoreSchoolMapSignature() {
+    return Object.values(SCHOOLS || {})
+        .map((school) => String(school?.name || '').trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+        .join('|');
+}
+
+function syncIndicatorScoreToSchools(schoolName, score) {
+    const signature = getIndicatorScoreSchoolMapSignature();
+    if (IndicatorSchoolBucketPerfCache.scoreMapSignature !== signature) {
+        IndicatorSchoolBucketPerfCache.scoreMapSignature = signature;
+        IndicatorSchoolBucketPerfCache.scoreNameMap = new Map();
+    }
+    const cacheKey = normalizeSchoolName(schoolName) || String(schoolName || '').trim();
+    let matchedNames = IndicatorSchoolBucketPerfCache.scoreNameMap.get(cacheKey);
+    if (!matchedNames) {
+        matchedNames = new Set(
+            getMatchedSchoolNamesFromCollection(
+                Object.values(SCHOOLS || {}).map(item => item?.name),
+                schoolName
+            )
+        );
+        IndicatorSchoolBucketPerfCache.scoreNameMap.set(cacheKey, matchedNames);
+    }
+    Object.values(SCHOOLS || {}).forEach((school) => {
+        if (matchedNames.has(String(school?.name || '').trim())) {
+            school.scoreInd = score;
+        }
+    });
+}
+
+function listAvailableSchoolsForCompare() {
+    const names = new Map();
+    const collectName = (rawName) => {
+        const school = String(rawName || '').trim();
+        if (!school) return;
+        const key = normalizeSchoolName(school) || school;
+        const existing = names.get(key);
+        names.set(key, existing ? pickPreferredSchoolDisplayName(existing, school) : school);
+    };
+
+    Object.keys(SCHOOLS || {}).forEach(collectName);
+
+    (RAW_DATA || []).forEach((row) => {
+        collectName(row?.school);
+    });
+
+    Object.values(window.TEACHER_SCHOOL_MAP || {}).forEach(collectName);
+
+    const persistedSchool = String(localStorage.getItem('MY_SCHOOL') || '').trim();
+    const runtimeSchool = String(MY_SCHOOL || '').trim();
+    if (persistedSchool) collectName(persistedSchool);
+    if (runtimeSchool) collectName(runtimeSchool);
+
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    if (db?.exams) {
+        Object.values(db.exams).forEach((exam) => {
+            (exam?.data || []).forEach((row) => {
+                collectName(row?.school);
+            });
+        });
+    }
+
+    const blockList = ['教育局', '教体局', '市局', '区局', '市直局', '区直局', 'admin', '测试', '默认'];
+    return [...names.values()]
+        .filter((name) => {
+            if (!name || /^Sheet\d+$/i.test(name)) return false;
+            return !blockList.some((blocked) => name.includes(blocked) || name.toLowerCase() === blocked);
+        })
+        .sort((a, b) => a.localeCompare(b, 'zh-CN'));
+}
+
+function collectAvailableCompareSchools() {
+    return listAvailableSchoolsForCompare('all');
+}
+
+function isAggregateCompareSchoolName(name) {
+    const text = normalizeSchoolDisplayName(name);
+    if (!text) return true;
+    return /^(?:\u6574\u4f53|\u5168\u90e8|\u6c47\u603b|\u603b\u8868|\u5408\u8ba1|\u5168\u53bf|\u53bf\u57df|Sheet\d*|\u5de5\u4f5c\u8868\d*)$/i.test(text);
+}
+
+function isLikelyTownshipSchoolName(name) {
+    const text = normalizeSchoolDisplayName(name);
+    if (!text || isAggregateCompareSchoolName(text)) return false;
+    if (/(镇|乡|街道|办事处|中心校|学区)/.test(text)) return true;
+    return SCHOOL_ALIAS_GROUPS.some((group) => {
+        const names = [group?.canonical, ...(group?.aliases || [])].map((item) => normalizeSchoolDisplayName(item)).filter(Boolean);
+        if (!names.some((item) => item === text)) return false;
+        return names.some((item) => /(镇|乡|街道|办事处|中心校|学区)/.test(item));
+    });
+}
+
+function getTownshipManagedSchoolNames(candidateNames = []) {
+    ensureNormalizedTargets();
+    const currentNames = Array.from(new Set(
+        (Array.isArray(candidateNames) && candidateNames.length ? candidateNames : listAvailableSchoolsForCompare('all'))
+            .map((name) => normalizeSchoolDisplayName(name))
+            .filter((name) => name && !isAggregateCompareSchoolName(name))
+    ));
+    if (!currentNames.length) return [];
+
+    const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {});
+    const knownTownshipKeys = TOWNSHIP_STANDARD_SCHOOL_NAMES.slice();
+    const currentSchoolKeys = [
+        String(MY_SCHOOL || '').trim(),
+        String(localStorage.getItem('MY_SCHOOL') || '').trim(),
+        String(window.DEFAULT_MY_SCHOOL_NAME || '').trim()
+    ].filter(Boolean);
+    const managedSchoolKeys = Array.from(new Set([...targetKeys, ...knownTownshipKeys, ...currentSchoolKeys]));
+
+    // Without indicator targets, fall back to known township schools rather than showing a blank analysis.
+    // Always keep the logged-in school visible while configuration is incomplete.
+    // Retain the uploaded display name when a target or current-school key uses an alias.
+    const matched = managedSchoolKeys.flatMap((rawName) => {
+        const directMatches = getMatchedSchoolNamesFromCollection(currentNames, rawName);
+        if (directMatches.length) return directMatches;
+        const canonical = getCanonicalSchoolName(rawName, currentNames);
+        if (canonical && currentNames.includes(canonical)) return [canonical];
+        const canonicalKey = getCanonicalSchoolName(rawName);
+        if (canonicalKey) {
+            const aliasMatches = currentNames.filter((name) => getCanonicalSchoolName(name) === canonicalKey);
+            if (aliasMatches.length) return aliasMatches;
+        }
+        return currentNames.filter((name) => areSchoolNamesMatched(name, rawName, true));
+    });
+
+    return Array.from(new Set(matched)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+}
+
+function getCountyDirectSchoolNames(candidateNames = []) {
+    const currentNames = Array.from(new Set(
+        (Array.isArray(candidateNames) && candidateNames.length ? candidateNames : listAvailableSchoolsForCompare('all'))
+            .map((name) => normalizeSchoolDisplayName(name))
+            .filter((name) => name && !isAggregateCompareSchoolName(name))
+    ));
+    if (!currentNames.length) return [];
+    const townshipSchools = getTownshipManagedSchoolNames(currentNames);
+    const townshipSet = new Set(townshipSchools);
+    return currentNames.filter((name) => (
+        !townshipSet.has(name)
+        && !townshipSchools.some((item) => areSchoolNamesEquivalent(item, name) || areSchoolNamesMatched(item, name, true))
+    )).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+}
+
+function isTownshipManagedSchool(name, candidateNames = []) {
+    const school = normalizeSchoolDisplayName(name);
+    if (!school || isAggregateCompareSchoolName(school)) return false;
+    const townshipSet = new Set(getTownshipManagedSchoolNames(candidateNames));
+    if (townshipSet.has(school)) return true;
+    return Array.from(townshipSet).some((item) => (
+        areSchoolNamesEquivalent(item, school) || areSchoolNamesMatched(item, school, true)
+    ));
+}
+
+function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return [];
+    const resolver = typeof schoolNameResolver === 'function'
+        ? schoolNameResolver
+        : ((row) => row?.school);
+    const candidateNames = Array.from(new Set(
+        list.map((row) => normalizeSchoolDisplayName(resolver(row))).filter(Boolean)
+    ));
+    const townshipSchools = getTownshipManagedSchoolNames(candidateNames);
+    if (!townshipSchools.length) return [];
+    const townshipSet = new Set(townshipSchools);
+    const townshipEligibilityCache = new Map();
+    const isTownshipSchool = (schoolName) => {
+        const school = normalizeSchoolDisplayName(schoolName);
+        if (!school) return false;
+        if (townshipEligibilityCache.has(school)) return townshipEligibilityCache.get(school);
+        const matched = townshipSet.has(school) || townshipSchools.some((item) => (
+            areSchoolNamesEquivalent(item, school) || areSchoolNamesMatched(item, school, true)
+        ));
+        townshipEligibilityCache.set(school, matched);
+        return matched;
+    };
+    return list.filter((row) => {
+        return isTownshipSchool(resolver(row));
+    });
+}
+
+function listAvailableSchoolsForCompare(scope = 'township') {
+    const requestedScope = String(scope || '').toLowerCase();
+    const rawRows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+    const includeCohortExamSchools = requestedScope !== 'all' || !rawRows.length;
+    const buildSignature = () => {
+        const schoolKeys = Object.keys(SCHOOLS || {}).sort().join('|');
+        const teacherKeys = Object.entries(window.TEACHER_SCHOOL_MAP || {})
+            .map(([key, value]) => `${key}:${value}`)
+            .sort()
+            .join('|');
+        const rawFirst = rawRows[0]?.school || '';
+        const rawLast = rawRows[rawRows.length - 1]?.school || '';
+        let examSig = '';
+        try {
+            const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+            examSig = includeCohortExamSchools
+                ? Object.entries(db?.exams || {})
+                    .map(([key, exam]) => `${key}:${Array.isArray(exam?.data) ? exam.data.length : 0}`)
+                    .sort()
+                    .join('|')
+                : '';
+        } catch (error) {
+            examSig = 'cohort-db-unavailable';
+        }
+        return [
+            schoolKeys,
+            teacherKeys,
+            rawRows.length,
+            rawFirst,
+            rawLast,
+            String(localStorage.getItem('MY_SCHOOL') || '').trim(),
+            String(MY_SCHOOL || '').trim(),
+            examSig
+        ].join('::');
+    };
+
+    const signature = buildSignature();
+    if (requestedScope === 'all' && SchoolCompareListPerfCache.allSignature === signature) {
+        return SchoolCompareListPerfCache.allSchools.slice();
+    }
+    if (requestedScope !== 'all' && SchoolCompareListPerfCache.townshipSignature === signature) {
+        return SchoolCompareListPerfCache.townshipSchools.slice();
+    }
+
+    const allSchools = (() => {
+        const names = new Map();
+        const collectName = (rawName) => {
+            const school = normalizeSchoolDisplayName(rawName);
+            if (!school) return;
+            const key = normalizeSchoolName(school) || school;
+            const existing = names.get(key);
+            names.set(key, existing ? pickPreferredSchoolDisplayName(existing, school) : school);
+        };
+
+        Object.keys(SCHOOLS || {}).forEach(collectName);
+        (RAW_DATA || []).forEach((row) => collectName(row?.school));
+        Object.values(window.TEACHER_SCHOOL_MAP || {}).forEach(collectName);
+
+        const persistedSchool = String(localStorage.getItem('MY_SCHOOL') || '').trim();
+        const runtimeSchool = String(MY_SCHOOL || '').trim();
+        if (persistedSchool) collectName(persistedSchool);
+        if (runtimeSchool) collectName(runtimeSchool);
+
+        const db = includeCohortExamSchools && (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+        if (db?.exams) {
+            Object.values(db.exams).forEach((exam) => {
+                (exam?.data || []).forEach((row) => collectName(row?.school));
+            });
+        }
+
+        const blockList = ['鏁欒偛灞€', '鏁欎綋灞€', '甯傚眬', '鍖哄眬', '甯傜洿灞€', '鍖虹洿灞€', 'admin', '娴嬭瘯', '榛樿'];
+        return [...names.values()]
+            .filter((name) => {
+                if (!name || /^Sheet\d+$/i.test(name)) return false;
+                if (isAggregateCompareSchoolName(name)) return false;
+                return !blockList.some((blocked) => name.includes(blocked) || name.toLowerCase() === blocked);
+            })
+            .sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    })();
+
+    SchoolCompareListPerfCache.allSignature = signature;
+    SchoolCompareListPerfCache.allSchools = allSchools.slice();
+
+    if (requestedScope === 'all') {
+        return allSchools.slice();
+    }
+
+    const townshipSchools = getTownshipManagedSchoolNames(allSchools);
+    if (townshipSchools.length > 0 || !rawRows.length) {
+        SchoolCompareListPerfCache.townshipSignature = signature;
+        SchoolCompareListPerfCache.townshipSchools = townshipSchools.slice();
+    }
+
+    return townshipSchools.slice();
+}
+
+function getClassSchoolMapForAllData() {
+    const map = {};
+    const candidates = {};
+    const collectCandidate = (className, schoolName) => {
+        const cls = normalizeClass(className);
+        const school = String(schoolName || '').trim();
+        if (!cls || !school || map[cls]) return;
+        if (!candidates[cls]) candidates[cls] = new Set();
+        candidates[cls].add(school);
+    };
+
+    Object.entries(window.TEACHER_SCHOOL_MAP || {}).forEach(([key, school]) => {
+        const cls = normalizeClass(String(key || '').split('_')[0]);
+        const normalizedSchool = String(school || '').trim();
+        if (cls && normalizedSchool) map[cls] = normalizedSchool;
+    });
+
+    Object.entries(SCHOOLS || {}).forEach(([school, payload]) => {
+        (payload?.students || []).forEach((stu) => {
+            collectCandidate(stu?.class, school);
+        });
+    });
+
+    (RAW_DATA || []).forEach((row) => {
+        collectCandidate(row?.class, row?.school);
+    });
+
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    if (db?.exams) {
+        Object.values(db.exams).forEach((exam) => {
+            (exam?.data || []).forEach((row) => {
+                collectCandidate(row?.class, row?.school);
+            });
+        });
+    }
+
+    Object.entries(candidates).forEach(([cls, schools]) => {
+        if (!map[cls] && schools.size === 1) {
+            map[cls] = Array.from(schools)[0];
+        }
+    });
+
+    return map;
+}
+
+function inferDefaultSchoolFromContext() {
+    const fallbackSchool = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验').trim();
+    const saved = String(MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || fallbackSchool).trim();
+    if (saved) return saved;
+    const list = listAvailableSchoolsForCompare();
+    return list.length === 1 ? list[0] : fallbackSchool;
+}
+
+// Compare school summary runtime moved to public/assets/js/compare-shared-runtime.js
+
+// Town submodule compare runtime moved to public/assets/js/town-submodule-compare-runtime.js
+
+    Object.assign(window, {
+        SCHOOL_ALIAS_GROUPS,
+        TOWNSHIP_STANDARD_SCHOOL_NAMES,
+        COUNTY_DIRECT_STANDARD_SCHOOL_NAMES,
+        COUNTY_STANDARD_SCHOOL_NAMES,
+        sanitizeSchoolText,
+        stripSchoolAdministrativePrefix,
+        stripSchoolOrganizationalSuffixes,
+        computeSchoolBaseKey,
+        clearSchoolNormalizationCache,
+        ensureSchoolAliasStore,
+        persistSchoolAliasSettingsLocal,
+        replaceCustomSchoolAliasStore,
+        buildSchoolAliasGatewayRows,
+        mapGatewaySchoolAliasRows,
+        getCustomSchoolAliasGroups,
+        getMergedSchoolAliasCanonicalMap,
+        getMergedSchoolBasekeyCanonicalMap,
+        pickPreferredSchoolDisplayName,
+        normalizeSchoolFuzzyText,
+        getSchoolFuzzyMatchScore,
+        findBestFuzzySchoolNameMatch,
+        normalizeSchoolName,
+        areSchoolNamesEquivalent,
+        areSchoolNamesMatched,
+        getMatchedSchoolNamesFromCollection,
+        resolveSchoolNameFromCollection,
+        getCanonicalSchoolName,
+        normalizeTargetsMap,
+        ensureNormalizedTargets,
+        getTargetConfigBySchool,
+        getEquivalentSchoolStudents,
+        buildIndicatorSchoolBuckets,
+        syncIndicatorScoreToSchools,
+        collectAvailableCompareSchools,
+        isAggregateCompareSchoolName,
+        isLikelyTownshipSchoolName,
+        getTownshipManagedSchoolNames,
+        getCountyDirectSchoolNames,
+        isTownshipManagedSchool,
+        filterRowsToTownshipSchools,
+        listAvailableSchoolsForCompare,
+        getClassSchoolMapForAllData,
+        inferDefaultSchoolFromContext
+    });
+
+    window.__SCHOOL_NORMALIZATION_RUNTIME_PATCHED__ = true;
+})();
