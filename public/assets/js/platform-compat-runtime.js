@@ -44,10 +44,11 @@
             window.navigator?.standalone ||
             window.matchMedia?.('(display-mode: standalone)').matches
         );
+        const isChromeIOS = /CriOS/i.test(userAgent);
         const isWebView = Boolean(
             window.Capacitor ||
             /\bwv\b/i.test(userAgent) ||
-            (isIOS && /applewebkit/i.test(userAgent) && !/safari/i.test(userAgent))
+            (isIOS && /applewebkit/i.test(userAgent) && !/safari/i.test(userAgent) && !isChromeIOS)
         );
         const platformOs = isIOS ? 'ios' : isAndroid ? 'android' : 'desktop';
         const platformFormFactor = Math.min(
