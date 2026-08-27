@@ -13,7 +13,16 @@
     root.DataManagerSaveSyncRuntime = runtime;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createDataManagerSaveSyncRuntime(root) {
     function safeAlert(text) {
-        if (typeof root.alert === 'function') root.alert(String(text || ''));
+        if (root.UI && typeof root.UI === 'object' && typeof root.UI.alert === 'function') {
+            return root.UI.alert(String(text || ''));
+        }
+    }
+
+    async function confirmAction(message) {
+        if (root.UI && typeof root.UI === 'object' && typeof root.UI.confirm === 'function') {
+            return Boolean(await root.UI.confirm(message));
+        }
+        return true;
     }
 
     function withSaveTimeout(promise) {
@@ -29,13 +38,11 @@
         if (!manager) return;
 
         if (typeof root.isArchiveLocked === 'function' && root.isArchiveLocked()) {
-            safeAlert('⛔ 当前考试已封存，仅支持只读查看');
+            await safeAlert('⛔ 当前考试已封存，仅支持只读查看');
             return;
         }
-        if (typeof root.confirm === 'function') {
-            const confirmed = root.confirm('⚠️ 确定要应用所有修改并同步到云端吗？\n\n1. 系统将重算排名\n2. 目标/参数将被保存');
-            if (!confirmed) return;
-        }
+        const confirmed = await confirmAction('⚠️ 确定要应用所有修改并同步到云端吗？\n\n1. 系统将重算排名\n2. 目标/参数将被保存');
+        if (!confirmed) return;
 
         if (root.UI && typeof root.UI === 'object' && typeof root.UI.loading === 'function') {
             root.UI.loading(true, '正在保存...');
@@ -87,7 +94,7 @@
             if (root.UI && typeof root.UI === 'object' && typeof root.UI.loading === 'function') {
                 root.UI.loading(false);
             }
-            safeAlert(`保存失败: ${error && error.message ? error.message : String(error)}`);
+            await safeAlert(`保存失败: ${error && error.message ? error.message : String(error)}`);
         }
     }
 

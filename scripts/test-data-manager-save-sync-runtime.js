@@ -21,14 +21,14 @@ async function run() {
         isArchiveLocked() {
             return false;
         },
-        confirm(message) {
-            confirms.push(String(message || ''));
-            return true;
-        },
-        alert(message) {
-            alerts.push(String(message || ''));
-        },
         UI: {
+            async confirm(message) {
+                confirms.push(String(message || ''));
+                return true;
+            },
+            async alert(message) {
+                alerts.push(String(message || ''));
+            },
             loading(show, text) {
                 loadingCalls.push({ show, text });
             }
@@ -89,12 +89,12 @@ async function run() {
     assert.strictEqual(loadingCalls[loadingCalls.length - 1].show, false);
     assert.strictEqual(swalCalls.length, 1);
 
-    root.confirm = () => false;
+    root.UI.confirm = async () => false;
     const cloudBeforeCancel = cloudCalls;
     await runtime.saveAndSync(manager);
     assert.strictEqual(cloudCalls, cloudBeforeCancel);
 
-    root.confirm = () => true;
+    root.UI.confirm = async () => true;
     root.isArchiveLocked = () => true;
     await runtime.saveAndSync(manager);
     assert.strictEqual(alerts.some((msg) => msg.includes('已封存')), true);
