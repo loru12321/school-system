@@ -33,6 +33,19 @@ const edgeGateway = Object.assign(root.EdgeGateway || {}, {
             return candidates;
         }
 
+        // The login shell can become interactive while the boot runtime is
+        // still being restored from a stale Service Worker cache. In that
+        // window the boot script may not have populated EDGE_GATEWAY_URL (or
+        // the direct Supabase fallback constants). Always derive a same-origin
+        // route from the current page as a final, keyless-safe fallback.
+        try {
+            const protocol = String(window.location?.protocol || '').trim().toLowerCase();
+            const origin = String(window.location?.origin || '').trim().replace(/\/$/, '');
+            if (/^https?:$/.test(protocol) && origin) {
+                pushCandidate(`${origin}/api/edu-gateway`);
+            }
+        } catch (_) {}
+
         pushCandidate(this.resolvedGatewayUrl);
         pushCandidate(window.EDGE_GATEWAY_URL);
 
