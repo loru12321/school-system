@@ -312,7 +312,7 @@ assert.ok(
 );
 
 assert.ok(
-    /const payload = parsePayload\(row\.content\);[\s\S]*writeCachedWorkspaceSnapshot\(row\.key, payload, \{ updatedAt: row\.updated_at \}\)/.test(cloudWorkspaceSource),
+    /const payload = await parsePayloadOffMainThread\(row\.content\);[\s\S]*writeCachedWorkspaceSnapshot\(row\.key, payload, \{ updatedAt: row\.updated_at \}\)/.test(cloudWorkspaceSource),
     'cohort exam background sync should persist downloaded exam shards into the shared local cache'
 );
 

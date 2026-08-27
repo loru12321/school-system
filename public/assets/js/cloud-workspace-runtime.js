@@ -55,6 +55,82 @@
         return new Promise((resolve) => window.setTimeout(resolve, 0));
     }
 
+    // Large cohort snapshots can spend hundreds of milliseconds in
+    // LZString decompression + JSON.parse. Keep the synchronous path for
+    // small payloads and browsers without Worker support, but move large
+    // payload parsing off the UI thread when possible.
+    let payloadParseWorkerState = null;
+    let payloadParseRequestId = 0;
+
+    function getPayloadParseWorkerState() {
+        if (payloadParseWorkerState) return payloadParseWorkerState;
+        if (typeof window.Worker !== 'function' || typeof window.Blob !== 'function'
+            || !window.URL || typeof window.URL.createObjectURL !== 'function') return null;
+        try {
+            const lzUrl = new URL('./assets/vendor/lz-string/lz-string.min.js', document.baseURI).href;
+            const source = `
+                importScripts(${JSON.stringify(lzUrl)});
+                self.onmessage = function (event) {
+                    try {
+                        let raw = event.data && event.data.content;
+                        if (typeof raw === 'string' && raw.indexOf('LZB64|') === 0) {
+                            raw = LZString.decompressFromBase64(raw.slice(6));
+                        } else if (typeof raw === 'string' && raw.indexOf('LZ|') === 0) {
+                            raw = LZString.decompressFromUTF16(raw.slice(3));
+                        }
+                        const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                        self.postMessage({ id: event.data.id, ok: true, payload });
+                    } catch (error) {
+                        self.postMessage({ id: event.data.id, ok: false, error: String(error && error.message || error) });
+                    }
+                };
+            `;
+            const blobUrl = window.URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+            const worker = new window.Worker(blobUrl);
+            const pending = new Map();
+            worker.onmessage = (event) => {
+                const id = Number(event?.data?.id || 0);
+                const task = pending.get(id);
+                if (!task) return;
+                pending.delete(id);
+                if (event.data.ok) task.resolve(event.data.payload);
+                else task.reject(new Error(event.data.error || 'PAYLOAD_PARSE_WORKER_FAILED'));
+            };
+            worker.onerror = (error) => {
+                pending.forEach((task) => task.reject(error instanceof Error ? error : new Error('PAYLOAD_PARSE_WORKER_FAILED')));
+                pending.clear();
+                worker.terminate();
+                window.URL.revokeObjectURL(blobUrl);
+                payloadParseWorkerState = null;
+            };
+            payloadParseWorkerState = { worker, pending, blobUrl };
+            return payloadParseWorkerState;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async function parsePayloadOffMainThread(content) {
+        const raw = typeof content === 'string' ? content : '';
+        // Avoid worker startup/message overhead for small snapshots.
+        if (raw.length < 100000) return parsePayload(content);
+        const state = getPayloadParseWorkerState();
+        if (!state) return parsePayload(content);
+        const id = ++payloadParseRequestId;
+        try {
+            const parsed = await new Promise((resolve, reject) => {
+                state.pending.set(id, { resolve, reject });
+                state.worker.postMessage({ id, content: raw });
+            });
+            // `parsePayload` also inflates compact rows and rebuilds school
+            // links; only decompression/JSON.parse runs in the worker.
+            return parsePayload(parsed);
+        } catch (_) {
+            state.pending.delete(id);
+            return parsePayload(content);
+        }
+    }
+
     function normalizeWorkspacePayload(payload) {
         if (typeof normalizeCloudWorkspacePayload === 'function') {
             return normalizeCloudWorkspacePayload(payload);
@@ -1113,7 +1189,7 @@
         if (remoteWorkspaceRow?.content) {
             let remotePayload = null;
             try {
-                remotePayload = parsePayload(remoteWorkspaceRow.content);
+                remotePayload = await parsePayloadOffMainThread(remoteWorkspaceRow.content);
             } catch (error) {
                 console.warn('[CloudSync] remote workspace guard skipped:', error?.message || error);
             }
@@ -1138,7 +1214,7 @@
         if (latestExamRow?.content) {
             let latestPayload = null;
             try {
-                latestPayload = parsePayload(latestExamRow.content);
+                latestPayload = await parsePayloadOffMainThread(latestExamRow.content);
             } catch (error) {
                 console.warn('[CloudSync] latest exam guard skipped:', error?.message || error);
             }
@@ -1225,7 +1301,7 @@
             examRow = await fetchLatestCohortExamRow(metaPayload?.CURRENT_COHORT_ID || getCurrentCohortId());
         }
         if (!examRow?.content && !examRow?.payload) return normalizeWorkspacePayload(metaPayload);
-        const examPayload = examRow.payload || parsePayload(examRow.content);
+        const examPayload = examRow.payload || await parsePayloadOffMainThread(examRow.content);
         if (!examRow.cached && examRow.key && examPayload) {
             scheduleCachedWorkspaceSnapshotWrite(examRow.key, examPayload, { updatedAt: examRow.updated_at });
         }
@@ -1650,7 +1726,7 @@
         const snapshotRow = row && typeof row === 'object' ? row : await fetchWorkspaceSnapshotRow(key);
         if (!snapshotRow || !snapshotRow.content) return false;
 
-        let payload = parsePayload(snapshotRow.content);
+        let payload = await parsePayloadOffMainThread(snapshotRow.content);
         payload = isSplitWorkspacePayload(payload)
             ? await hydrateSplitWorkspacePayload(key, payload)
             : normalizeWorkspacePayload(payload);
@@ -1808,7 +1884,7 @@
                 if (error) throw error;
                 if (!data) return false;
 
-                let payload = parsePayload(data.content);
+                let payload = await parsePayloadOffMainThread(data.content);
                 payload = isSplitWorkspacePayload(payload)
                     ? await hydrateSplitWorkspacePayload(key, payload)
                     : normalizeWorkspacePayload(payload);
@@ -1971,7 +2047,7 @@
                             return { success: false, skipped: true, staleCohort: true, cohortId: cid, currentCohortId: cohortDuringApply };
                         }
                         try {
-                            const payload = parsePayload(row.content);
+                            const payload = await parsePayloadOffMainThread(row.content);
                             if (!payload) continue;
                             if (options.background === true) {
                                 scheduleCachedWorkspaceSnapshotWrite(row.key, payload, { updatedAt: row.updated_at });
