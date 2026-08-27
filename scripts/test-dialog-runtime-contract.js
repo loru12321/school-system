@@ -34,6 +34,7 @@ const gradeScheduler = read('public/assets/js/grade-scheduler-runtime.js');
 const progressAnalysis = read('public/assets/js/progress-analysis-runtime.js');
 const skinSettings = read('public/assets/js/skin-settings-runtime.js');
 const freshmanExam = read('public/assets/js/freshman-exam-runtime.js');
+const assessmentRoster = read('public/assets/js/assessment-roster-runtime.js');
 
 assert.ok(bootRuntime.includes("'dialog-runtime.js'"), 'dialog runtime should load before app.js');
 assert.ok(bootRuntime.indexOf("'dialog-runtime.js'") < bootRuntime.indexOf("'app.js'"), 'dialog runtime should precede app.js in the boot module list');
@@ -80,7 +81,9 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['skin settings logo alert', skinSettings, 'window.UI.alert("Logo 图片过大，请使用 500KB 以内的图片")'],
   ['freshman scenario prompt', freshmanExam, "await window.UI.prompt(\"请输入方案名称"],
   ['freshman scenario confirm', freshmanExam, "await window.UI.confirm(`确定要加载 [${name}] 方案吗？"],
-  ['freshman standalone notify wrapper', freshmanExam, 'const notify = (message) => window.alert(message);']
+  ['freshman standalone notify wrapper', freshmanExam, 'const notify = (message) => window.alert(message);'],
+  ['assessment roster lock confirm', assessmentRoster, 'await confirmAction(`确认锁定 ${state.academicYear} ${state.grade} 的考核名册吗？'],
+  ['assessment roster failure alert', assessmentRoster, 'await showAlert(`锁定失败：${error?.message || error}`)']
 ].forEach(([label, source, token]) => {
   assert.ok(source.includes(token), `${label} should prefer the shared UI dialog API`);
 });
@@ -106,7 +109,8 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['grade-scheduler-runtime.js', gradeScheduler],
   ['progress-analysis-runtime.js', progressAnalysis],
   ['skin-settings-runtime.js', skinSettings],
-  ['freshman-exam-runtime.js', freshmanExam]
+  ['freshman-exam-runtime.js', freshmanExam],
+  ['assessment-roster-runtime.js', assessmentRoster]
 ].forEach(([file, source]) => {
   assert.ok(!/(^|[^\w$.])prompt\s*\(/.test(source), `${file} should not call bare prompt()`);
   assert.ok(!/(^|[^\w$.])confirm\s*\(/.test(source), `${file} should not call bare confirm()`);
@@ -117,5 +121,5 @@ assert.ok(scripts['check:release-fast']?.includes('test:dialog-runtime-contract'
 
 console.log(JSON.stringify({
   ok: true,
-  guardedRuntimes: 22
+  guardedRuntimes: 23
 }, null, 2));

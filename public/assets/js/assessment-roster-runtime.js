@@ -5,6 +5,19 @@
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[char]));
 
+    async function confirmAction(message) {
+        const ui = root.UI;
+        if (ui && typeof ui.confirm === 'function') return !!(await ui.confirm(message));
+        return true;
+    }
+
+    async function showAlert(message) {
+        const ui = root.UI;
+        if (ui && typeof ui.alert === 'function') return ui.alert(message);
+        if (root.console && typeof root.console.warn === 'function') root.console.warn(message);
+        return undefined;
+    }
+
     function renderDataManagerPanel() {
         const panel = document.getElementById('dm-assessment-roster-area');
         const core = root.AssessmentRosterCore;
@@ -27,13 +40,13 @@
             <div class="table-wrap analysis-table-shell"><table class="analysis-table-dense"><thead><tr><th>班级</th><th>初始人数</th><th>95%目标</th><th>有效实考</th><th>补零</th><th>学生状态</th><th>锁定状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         const lockButton = panel.querySelector('#dmAssessmentRosterLockBtn');
         if (lockButton) lockButton.onclick = async () => {
-            if (!confirm(`确认锁定 ${state.academicYear} ${state.grade} 的考核名册吗？锁定后教师自动分将按此95%人数和补零规则计算。`)) return;
+            if (!await confirmAction(`确认锁定 ${state.academicYear} ${state.grade} 的考核名册吗？锁定后教师自动分将按此95%人数和补零规则计算。`)) return;
             try {
                 lockButton.disabled = true;
                 await core.lockCurrentRoster();
                 renderDataManagerPanel();
             } catch (error) {
-                alert(`锁定失败：${error?.message || error}`);
+                await showAlert(`锁定失败：${error?.message || error}`);
             } finally {
                 lockButton.disabled = false;
             }
@@ -41,7 +54,7 @@
         panel.querySelectorAll('[data-assessment-roster-unlock]').forEach((button) => {
             button.onclick = async () => {
                 const className = button.dataset.assessmentRosterUnlock;
-                if (!confirm(`确认解锁 ${className} 的考核名册吗？解锁后该班不会参与新的教师自动同步。`)) return;
+                if (!await confirmAction(`确认解锁 ${className} 的考核名册吗？解锁后该班不会参与新的教师自动同步。`)) return;
                 await core.unlockRoster(className);
                 renderDataManagerPanel();
             };
