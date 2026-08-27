@@ -20,14 +20,14 @@ async function run() {
         UI: {
             toast(text, type) {
                 toasts.push({ text, type });
+            },
+            async confirm(message) {
+                confirms.push(String(message || ''));
+                return true;
+            },
+            async prompt() {
+                return promptValue;
             }
-        },
-        confirm(message) {
-            confirms.push(String(message || ''));
-            return true;
-        },
-        prompt() {
-            return promptValue;
         },
         readHistoryArchiveState() {
             return archiveState;
@@ -65,19 +65,19 @@ async function run() {
     assert.ok(tbody.innerHTML.includes('data-history-exam-action="rename"'));
     assert.strictEqual(loadCloudSnapshotsCalls, 1);
 
-    runtime.deleteHistoryExam(manager, '一模');
+    await runtime.deleteHistoryExam(manager, '一模');
     assert.strictEqual(Object.keys(archiveState).includes('stu_2'), false);
     assert.strictEqual(archiveState.stu_1.length, 1);
     assert.strictEqual(archiveState.stu_1[0].exam, '二模');
     assert.strictEqual(toasts.length > 0, true);
     assert.strictEqual(confirms.length, 1);
 
-    runtime.renameHistoryExam(manager, '二模');
+    await runtime.renameHistoryExam(manager, '二模');
     assert.strictEqual(archiveState.stu_1[0].exam, '期末联考');
     assert.ok(tbody.innerHTML.includes('期末联考'));
 
     promptValue = '';
-    runtime.renameHistoryExam(manager, '期末联考');
+    await runtime.renameHistoryExam(manager, '期末联考');
     assert.strictEqual(archiveState.stu_1[0].exam, '期末联考');
 
     archiveState = {};

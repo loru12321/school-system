@@ -44,6 +44,20 @@
         }
     }
 
+    async function confirmAction(message) {
+        if (root.UI && typeof root.UI.confirm === 'function') {
+            return Boolean(await root.UI.confirm(message));
+        }
+        return true;
+    }
+
+    async function promptAction(message, defaultValue) {
+        if (root.UI && typeof root.UI.prompt === 'function') {
+            return await root.UI.prompt(message, defaultValue);
+        }
+        return '';
+    }
+
     function escapeHtml(value) {
         const runtimeEscape = root.SchoolRuntime && typeof root.SchoolRuntime.escapeHtml === 'function'
             ? root.SchoolRuntime.escapeHtml
@@ -63,12 +77,12 @@
     function bindArchiveRowActions(manager, tbody) {
         if (!tbody || typeof tbody.querySelectorAll !== 'function') return;
         tbody.querySelectorAll('[data-history-exam-action]').forEach((button) => {
-            button.addEventListener('click', () => {
+            button.addEventListener('click', async () => {
                 const examName = button.dataset.historyExamName || '';
                 if (button.dataset.historyExamAction === 'rename') {
-                    renameHistoryExam(manager, examName);
+                    await renameHistoryExam(manager, examName);
                 } else if (button.dataset.historyExamAction === 'delete') {
-                    deleteHistoryExam(manager, examName);
+                    await deleteHistoryExam(manager, examName);
                 }
             });
         });
@@ -112,15 +126,13 @@
         }
     }
 
-    function deleteHistoryExam(manager, examName) {
+    async function deleteHistoryExam(manager, examName) {
         if (!manager) return;
         const target = String(examName || '').trim();
         if (!target) return;
 
-        if (typeof root.confirm === 'function') {
-            const confirmed = root.confirm(`⚠️ 确定要删除【${target}】吗？`);
-            if (!confirmed) return;
-        }
+        const confirmed = await confirmAction(`⚠️ 确定要删除【${target}】吗？`);
+        if (!confirmed) return;
 
         const archive = readHistoryArchiveRef();
         Object.keys(archive).forEach((key) => {
@@ -134,12 +146,12 @@
         safeToast('已删除', 'success');
     }
 
-    function renameHistoryExam(manager, oldName) {
+    async function renameHistoryExam(manager, oldName) {
         if (!manager) return;
         const sourceName = String(oldName || '').trim();
         if (!sourceName) return;
 
-        const nextName = typeof root.prompt === 'function' ? root.prompt('重命名为：', sourceName) : '';
+        const nextName = await promptAction('重命名为：', sourceName);
         if (!nextName) return;
 
         const archive = readHistoryArchiveRef();
