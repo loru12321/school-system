@@ -1,608 +1,4 @@
-(() => {
-    if (typeof window === 'undefined' || window.__MOBILE_APP_RUNTIME_PATCHED__) return;
-
-    const MOBILE_BREAKPOINT = 960;
-    const REFRESH_DELAYS = [80, 260, 900];
-    const MODULE_FOCUS_DELAYS = [140, 420, 980, 1600];
-    const HOME_BY_ROLE = {
-        admin: 'starter-hub',
-        director: 'starter-hub',
-        grade_director: 'teacher-analysis',
-        class_teacher: 'student-details',
-        teacher: 'teacher-analysis'
-    };
-    const QUICK_MODULE_IDS = [
-        'student-details',
-        'summary',
-        'teacher-analysis',
-        'report-generator',
-        'progress-analysis',
-        'analysis'
-    ];
-    const ROLE_QUICK_MODULE_IDS = {
-        admin: ['upload', 'summary', 'data-manager', 'report-generator', 'teacher-analysis', 'cohort-growth'],
-        director: ['summary', 'county-analysis', 'teacher-analysis', 'report-generator', 'progress-analysis', 'cohort-growth'],
-        grade_director: ['teacher-analysis', 'summary', 'progress-analysis', 'student-overview', 'cohort-growth', 'report-generator'],
-        class_teacher: ['student-details', 'student-overview', 'progress-analysis', 'marginal-push', 'report-generator', 'summary'],
-        teacher: ['teacher-analysis', 'student-details', 'student-overview', 'summary', 'report-generator', 'progress-analysis']
-    };
-    const RECENT_MODULE_STORAGE_KEY = 'apk-recent-modules-v1';
-    const RECENT_MODULE_LIMIT = 8;
-    const QUICK_MODULE_LIMIT = 6;
-    const ROLE_LABELS = {
-        admin: '管理员',
-        director: '校级管理',
-        grade_director: '级部主任',
-        class_teacher: '班主任',
-        teacher: '教师',
-        parent: '家长',
-        student: '学生',
-        guest: '访客'
-    };
-
-    const isNativeApp = !!(
-        window.Capacitor
-        && (
-            (typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform())
-            || (typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() !== 'web')
-        )
-    );
-
-    let refreshHandle = 0;
-    let sheetMode = '';
-    let libraryOpen = false;
-    let libraryQuery = '';
-    let shellGesture = null;
-    let themeMedia = null;
-    let responsiveObserverRoot = null;
-    let allowedCategoriesCacheKey = '';
-    let allowedCategoriesCache = null;
-    let allowedItemCache = new Map();
-
-    // 复用 runtime-registry 的规范实现（与 account-manager / data-manager-* 同一委托模式）；
-    // 本地实现仅作加载顺序兜底，行为与规范版一致。
-    function escapeHtml(value) {
-        const shared = window.SchoolRuntime && typeof window.SchoolRuntime.escapeHtml === 'function'
-            ? window.SchoolRuntime.escapeHtml
-            : null;
-        if (shared) return shared(value);
-        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        }[char]));
-    }
-
-    function setTextIfChanged(node, value) {
-        if (!node) return false;
-        const nextValue = String(value ?? '');
-        if (node.textContent === nextValue) return false;
-        node.textContent = nextValue;
-        return true;
-    }
-
-    function setHtmlIfChanged(node, html) {
-        if (!node) return false;
-        const nextHtml = String(html ?? '');
-        if (node.__apkLastHtml === nextHtml) return false;
-        node.innerHTML = nextHtml;
-        node.__apkLastHtml = nextHtml;
-        return true;
-    }
-
-    function setDatasetIfChanged(node, key, value) {
-        if (!node?.dataset) return false;
-        const nextValue = String(value ?? '');
-        if (node.dataset[key] === nextValue) return false;
-        node.dataset[key] = nextValue;
-        return true;
-    }
-
-    function setStylePropertyIfChanged(node, key, value) {
-        if (!node?.style) return false;
-        const nextValue = String(value ?? '');
-        if (node.style.getPropertyValue(key) === nextValue) return false;
-        node.style.setProperty(key, nextValue);
-        return true;
-    }
-
-    function syncShellViewport(root = document.getElementById('apk-mobile-shell')) {
-        if (!root || !isMobileViewport()) return;
-        const viewport = window.visualViewport;
-        const left = Number(viewport?.offsetLeft || 0);
-        const top = Number(viewport?.offsetTop || 0);
-        const transform = (left || top) ? `translate3d(${left}px, ${top}px, 0)` : 'none';
-        if (root.style.transform !== transform) root.style.transform = transform;
-        root.style.setProperty('--apk-viewport-left', `${left}px`);
-        root.style.setProperty('--apk-viewport-top', `${top}px`);
-    }
-
-    function toggleClassIfChanged(node, className, force) {
-        if (!node?.classList) return false;
-        const nextValue = !!force;
-        if (node.classList.contains(className) === nextValue) return false;
-        node.classList.toggle(className, nextValue);
-        return true;
-    }
-
-    function getViewportWidth() {
-        // Prefer layout viewport measurements. On iPad Safari in landscape,
-        // `screen.width` can remain the portrait CSS width (for example 768)
-        // while `innerWidth`/`clientWidth` correctly report 1024. Including
-        // that stale screen value in the minimum incorrectly activates the
-        // phone shell on a tablet.
-        const candidates = [
-            Number(window.innerWidth || 0),
-            Number(document.documentElement?.clientWidth || 0),
-            Number(window.visualViewport?.width || 0),
-            Number(window.outerWidth || 0),
-        ].filter((value) => Number.isFinite(value) && value > 0);
-        if (candidates.length) return Math.min(...candidates);
-
-        // Screen dimensions are a last-resort fallback only when no layout
-        // viewport measurement is available.
-        const screenCandidates = [
-            Number(window.screen?.width || 0),
-            Number(window.screen?.availWidth || 0)
-        ].filter((value) => Number.isFinite(value) && value > 0);
-        return screenCandidates.length ? Math.min(...screenCandidates) : 0;
-    }
-
-    function isMobileViewport() {
-        return getViewportWidth() <= MOBILE_BREAKPOINT;
-    }
-
-    function isCompactViewport() {
-        if (window.matchMedia) return window.matchMedia('(max-width: 900px)').matches;
-        return getViewportWidth() <= 900;
-    }
-
-    function syncCompactState(scope = document) {
-        document.documentElement.classList.toggle('is-compact-viewport', isCompactViewport());
-        const targetScope = scope && typeof scope.querySelectorAll === 'function'
-            ? scope
-            : document;
-        targetScope.querySelectorAll('.analysis-table-shell, .table-wrap').forEach((shell) => {
-            if (!shell.dataset.mobileHint) shell.dataset.mobileHint = '可横向滑动查看完整表格';
-        });
-    }
-
-    function installMobileExperienceRuntime() {
-        syncCompactState(document);
-    }
-
-    function scrollActiveRailChipIntoView(root) {
-        const rail = root?.querySelector?.('[data-apk-rail]');
-        if (!rail) return;
-        const activeChip = rail.querySelector('.apk-rail-chip.is-active');
-        if (!activeChip || typeof activeChip.scrollIntoView !== 'function') return;
-        activeChip.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
-    }
-
-    function getCurrentUser() {
-        if (window.AuthState && typeof window.AuthState.getCurrentUser === 'function') {
-            return window.AuthState.getCurrentUser();
-        }
-        if (window.Auth && window.Auth.currentUser) return window.Auth.currentUser;
-        return null;
-    }
-
-    function getCurrentRole() {
-        if (window.AuthState && typeof window.AuthState.getCurrentRole === 'function') {
-            return window.AuthState.getCurrentRole();
-        }
-        return String(getCurrentUser()?.role || document.body?.dataset?.role || 'guest').trim() || 'guest';
-    }
-
-    function getCurrentRoles() {
-        if (window.AuthState && typeof window.AuthState.getCurrentRoles === 'function') {
-            return window.AuthState.getCurrentRoles();
-        }
-        const user = getCurrentUser();
-        const rawRoles = Array.isArray(user?.roles) && user.roles.length
-            ? user.roles
-            : [user?.role].filter(Boolean);
-        return rawRoles.map((role) => String(role || '').trim()).filter(Boolean);
-    }
-
-    function hasRole(expectedRoles) {
-        const roleSet = new Set(getCurrentRoles());
-        return expectedRoles.some((role) => roleSet.has(role));
-    }
-
-    function isParentLikeRole(role = getCurrentRole()) {
-        const normalizedRole = String(role || '').trim();
-        return normalizedRole === 'parent' || normalizedRole === 'student';
-    }
-
-    function humanizeRole(role = getCurrentRole()) {
-        return ROLE_LABELS[String(role || '').trim()] || String(role || '访客');
-    }
-
-    function getCurrentSchool() {
-        if (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function') {
-            return String(
-                getCurrentUser()?.school
-                || window.SchoolState.getCurrentSchool()
-                || ''
-            ).trim();
-        }
-        return String(
-            getCurrentUser()?.school
-            || window.MY_SCHOOL
-            || localStorage.getItem('MY_SCHOOL')
-            || ''
-        ).trim();
-    }
-
-    function isLoggedIn() {
-        const overlay = document.getElementById('login-overlay');
-        const overlayVisible = !!(overlay && getComputedStyle(overlay).display !== 'none');
-        return !!getCurrentUser() && !overlayVisible;
-    }
-
-    function getNavStructure() {
-        if (window.NAV_STRUCTURE) return window.NAV_STRUCTURE;
-        try {
-            return NAV_STRUCTURE;
-        } catch {
-            return null;
-        }
-    }
-
-    function resetMobileNavCache() {
-        allowedCategoriesCacheKey = '';
-        allowedCategoriesCache = null;
-        allowedItemCache = new Map();
-    }
-
-    function getAllowedCategoriesCacheKey(nav, role) {
-        const roles = getCurrentRoles().join('|');
-        const navKeys = nav ? Object.keys(nav).join('|') : '';
-        const reportVisible = window.CONFIG && window.CONFIG.showQuery ? 'report:1' : 'report:0';
-        return [role, roles, navKeys, reportVisible].join('::');
-    }
-
-    function canUseModule(id) {
-        if (typeof window.canAccessModule === 'function' && !window.canAccessModule(id)) {
-            return false;
-        }
-        if (id === 'indicator'
-            && typeof window.isIndicatorModuleVisible === 'function'
-            && !window.isIndicatorModuleVisible()) {
-            return false;
-        }
-        if (id === 'report-generator' && typeof window.CONFIG !== 'undefined' && window.CONFIG && !window.CONFIG.showQuery) {
-            return false;
-        }
-        return true;
-    }
-
-    function getAllowedCategories() {
-        const nav = getNavStructure();
-        if (!nav) return [];
-
-        const role = getCurrentRole();
-        const cacheKey = getAllowedCategoriesCacheKey(nav, role);
-        if (allowedCategoriesCache && allowedCategoriesCacheKey === cacheKey) {
-            return allowedCategoriesCache;
-        }
-
-        const categories = Object.keys(nav)
-            .map((key) => {
-                const category = nav[key];
-                return {
-                    ...category,
-                    key,
-                    items: Array.isArray(category?.items)
-                        ? category.items.filter((item) => canUseModule(item.id))
-                        : []
-                };
-            })
-            .filter((category) => category.items.length > 0);
-
-        allowedCategoriesCacheKey = cacheKey;
-        allowedCategoriesCache = categories;
-        allowedItemCache = new Map();
-        return categories;
-    }
-
-    function findAllowedItem(moduleId) {
-        if (!moduleId) return null;
-        if (allowedItemCache.has(moduleId)) return allowedItemCache.get(moduleId);
-        const categories = getAllowedCategories();
-        for (const category of categories) {
-            const match = category.items.find((item) => item.id === moduleId);
-            if (match) {
-                const item = {
-                    ...match,
-                    categoryKey: category.key,
-                    categoryTitle: category.title,
-                    categoryColor: category.color
-                };
-                allowedItemCache.set(moduleId, item);
-                return item;
-            }
-        }
-        allowedItemCache.set(moduleId, null);
-        return null;
-    }
-
-    function getHomeModuleId() {
-        const preferred = HOME_BY_ROLE[getCurrentRole()] || 'starter-hub';
-        const preferredItem = findAllowedItem(preferred);
-        if (preferredItem) return preferredItem.id;
-        return getAllowedCategories()[0]?.items?.[0]?.id || 'starter-hub';
-    }
-
-    function getActiveModuleId() {
-        return document.querySelector('.section.active')?.id || getHomeModuleId();
-    }
-
-    function getActiveItem() {
-        return findAllowedItem(getActiveModuleId()) || findAllowedItem(getHomeModuleId()) || null;
-    }
-
-    function getCurrentCategory() {
-        const categories = getAllowedCategories();
-        const activeItem = getActiveItem();
-        if (activeItem) {
-            const match = categories.find((category) => category.key === activeItem.categoryKey);
-            if (match) return match;
-        }
-        const currentKey = typeof window.getCurrentNavCategory === 'function'
-            ? String(window.getCurrentNavCategory() || '').trim()
-            : '';
-        return categories.find((category) => category.key === currentKey) || categories[0] || null;
-    }
-
-    function uniqueItems(items) {
-        const seen = new Set();
-        return items.filter((item) => {
-            if (!item || !item.id || seen.has(item.id)) return false;
-            seen.add(item.id);
-            return true;
-        });
-    }
-
-    function readRecentModuleIds() {
-        try {
-            const parsed = JSON.parse(localStorage.getItem(RECENT_MODULE_STORAGE_KEY) || '[]');
-            if (!Array.isArray(parsed)) return [];
-            return parsed
-                .map((value) => String(value || '').trim())
-                .filter(Boolean);
-        } catch {
-            return [];
-        }
-    }
-
-    function writeRecentModuleIds(moduleIds) {
-        try {
-            localStorage.setItem(
-                RECENT_MODULE_STORAGE_KEY,
-                JSON.stringify(
-                    moduleIds
-                        .map((value) => String(value || '').trim())
-                        .filter(Boolean)
-                        .slice(0, RECENT_MODULE_LIMIT)
-                )
-            );
-        } catch {}
-    }
-
-    function rememberRecentModule(moduleId) {
-        const item = findAllowedItem(moduleId);
-        if (!item) return;
-        writeRecentModuleIds([
-            item.id,
-            ...readRecentModuleIds().filter((id) => id !== item.id)
-        ]);
-    }
-
-    function getRecentModules(limit = RECENT_MODULE_LIMIT) {
-        return uniqueItems(
-            readRecentModuleIds()
-                .map((moduleId) => findAllowedItem(moduleId))
-                .filter(Boolean)
-        ).slice(0, limit);
-    }
-
-    function getQuickModules(limit = QUICK_MODULE_LIMIT) {
-        const roleQuickModules = ROLE_QUICK_MODULE_IDS[getCurrentRole()] || [];
-        const modules = [
-            ...getRecentModules(limit),
-            getActiveItem(),
-            findAllowedItem(getHomeModuleId()),
-            ...roleQuickModules.map((moduleId) => findAllowedItem(moduleId)),
-            ...QUICK_MODULE_IDS.map((moduleId) => findAllowedItem(moduleId))
-        ];
-        return uniqueItems(modules).slice(0, limit);
-    }
-
-    function getModeLabel() {
-        const badge = document.getElementById('mode-badge');
-        const badgeText = String(badge?.textContent || '').trim();
-        if (badgeText) return badgeText;
-        return String(window.CONFIG?.name || '学校工作台').trim();
-    }
-
-    function getCurrentCohortLabel() {
-        const select = document.getElementById('cohort-selector');
-        if (!select?.selectedOptions?.[0]) return '届别未选择';
-        return String(select.selectedOptions[0].textContent || select.value || '届别未选择').trim() || '届别未选择';
-    }
-
-    function getCohortOptions() {
-        const select = document.getElementById('cohort-selector');
-        if (!select) return [];
-        return Array.from(select.options || [])
-            .filter((option) => String(option.value || '').trim())
-            .map((option) => ({
-                value: String(option.value || '').trim(),
-                label: String(option.textContent || option.value || '').trim()
-            }));
-    }
-
-    function getAppMain() {
-        return document.querySelector('main.app-main');
-    }
-
-    function scrollPrimaryViewportToTop() {
-        const appMain = getAppMain();
-        if (appMain && typeof appMain.scrollTo === 'function') {
-            appMain.scrollTo({ top: 0, behavior: 'auto' });
-            return;
-        }
-        const scrollingEl = document.scrollingElement || document.documentElement || document.body;
-        if (scrollingEl && typeof scrollingEl.scrollTo === 'function') {
-            scrollingEl.scrollTo({ top: 0, behavior: 'auto' });
-            return;
-        }
-        if (typeof window.scrollTo === 'function') {
-            window.scrollTo({ top: 0, behavior: 'auto' });
-        }
-    }
-
-    function markResponsiveTables(scope = document) {
-        if (!isMobileViewport()) return;
-        const tables = scope.querySelectorAll('.table-wrap table, table.comparison-table, table.fluent-table, #tb-query, #studentDetailTable');
-        tables.forEach((table) => {
-            const columns = extractResponsiveTableHeaders(table);
-            if (!columns.length) return;
-            table.classList.add('mobile-card-table');
-            Array.from(table.querySelectorAll('tbody tr')).forEach((row) => {
-                let title = String(row.getAttribute('data-mobile-card-title') || '').trim();
-                Array.from(row.children).forEach((cell, index) => {
-                    if (!(cell instanceof HTMLElement) || cell.hasAttribute('colspan')) return;
-                    const label = String(columns[index] || `字段${index + 1}`).replace(/\s+/g, ' ').trim();
-                    const value = String(cell.textContent || '').replace(/\s+/g, ' ').trim();
-                    if (!title && value && index <= 1) title = value;
-                    cell.setAttribute('data-label', label);
-                });
-                if (title) row.setAttribute('data-mobile-card-title', title);
-            });
-        });
-    }
-
-    function extractResponsiveTableHeaders(table) {
-        const headerRows = Array.from(table.querySelectorAll('thead tr'));
-        if (!headerRows.length) return [];
-        const grid = [];
-        let maxColumns = 0;
-        headerRows.forEach((row, rowIndex) => {
-            if (!grid[rowIndex]) grid[rowIndex] = [];
-            let columnIndex = 0;
-            Array.from(row.children).forEach((cell) => {
-                while (grid[rowIndex][columnIndex]) columnIndex += 1;
-                const colspan = Math.max(parseInt(cell.getAttribute('colspan') || '1', 10) || 1, 1);
-                const rowspan = Math.max(parseInt(cell.getAttribute('rowspan') || '1', 10) || 1, 1);
-                const text = String(cell.textContent || '').replace(/\s+/g, ' ').trim();
-                for (let r = 0; r < rowspan; r += 1) {
-                    if (!grid[rowIndex + r]) grid[rowIndex + r] = [];
-                    for (let c = 0; c < colspan; c += 1) {
-                        grid[rowIndex + r][columnIndex + c] = text;
-                    }
-                }
-                columnIndex += colspan;
-                if (columnIndex > maxColumns) maxColumns = columnIndex;
-            });
-        });
-        return Array.from({ length: maxColumns }, (_, columnIndex) => {
-            const parts = [];
-            grid.forEach((row) => {
-                const text = String(row?.[columnIndex] || '').trim();
-                if (!text || parts[parts.length - 1] === text) return;
-                parts.push(text);
-            });
-            return parts.join(' / ');
-        });
-    }
-
-    function refreshResponsiveTablesNow(scope = document) {
-        if (!isMobileViewport()) return;
-        const targetScope = scope && typeof scope.querySelectorAll === 'function'
-            ? scope
-            : (document.querySelector('.section.active') || document);
-        markResponsiveTables(targetScope);
-    }
-
-    function scheduleResponsiveTableRefresh(scope = document) {
-        if (!isMobileViewport()) return;
-        const targetScope = scope && typeof scope.querySelectorAll === 'function'
-            ? scope
-            : (document.querySelector('.section.active') || document);
-        clearTimeout(window.__RESPONSIVE_TABLE_REFRESH_TIMER__ || 0);
-        window.__RESPONSIVE_TABLE_REFRESH_TIMER__ = window.setTimeout(() => {
-            refreshResponsiveTablesNow(targetScope);
-        }, 60);
-    }
-
-    function installResponsiveTableObserver(scope = document.querySelector('.section.active') || document.getElementById('app') || document.body) {
-        if (typeof MutationObserver !== 'function') return;
-        const root = scope instanceof HTMLElement
-            ? scope
-            : (document.querySelector('.section.active') || document.getElementById('app') || document.body || document.documentElement);
-        if (!root) return;
-        if (window.__RESPONSIVE_TABLE_OBSERVER__ && responsiveObserverRoot === root) return;
-        if (window.__RESPONSIVE_TABLE_OBSERVER__ && typeof window.__RESPONSIVE_TABLE_OBSERVER__.disconnect === 'function') {
-            window.__RESPONSIVE_TABLE_OBSERVER__.disconnect();
-        }
-        const observer = new MutationObserver((mutations) => {
-            if (!isMobileViewport()) return;
-            const shouldRefresh = mutations.some((mutation) => {
-                return Array.from(mutation.addedNodes || []).some((node) => {
-                    if (!(node instanceof HTMLElement)) return false;
-                    return node.matches('table, tbody, tr, td, .table-wrap, .comparison-table, .fluent-table, .section, #parent-view-container')
-                        || !!node.querySelector?.('table, tbody, tr, td, .table-wrap, .comparison-table, .fluent-table');
-                });
-            });
-            if (shouldRefresh) scheduleResponsiveTableRefresh(root);
-        });
-        observer.observe(root, {
-            childList: true,
-            subtree: true
-        });
-        window.__RESPONSIVE_TABLE_OBSERVER__ = observer;
-        responsiveObserverRoot = root;
-    }
-    window.refreshResponsiveMobileTables = refreshResponsiveTablesNow;
-
-    function markFlexibleRows(scope = document) {
-        if (!isMobileViewport()) return;
-        scope.querySelectorAll('.section [style*="grid-template-columns"]').forEach((element) => {
-            if (element.closest('#parent-view-container')) return;
-            element.classList.add('mobile-stack-grid');
-        });
-        scope.querySelectorAll('.section [style*="display:flex"]').forEach((element) => {
-            if (element.closest('#parent-view-container') || element.closest('#apk-mobile-shell')) return;
-            if (element.children.length < 2) return;
-            element.classList.add('mobile-wrap-row');
-        });
-    }
-
-    function attachTableScrollIndicators(scope = document) {
-        if (!isMobileViewport()) return;
-        const tableWraps = scope.querySelectorAll('.table-wrap');
-        tableWraps.forEach((wrap) => {
-            if (wrap.__scrollListenerAttached__) return;
-            const updateScrollState = () => {
-                const isAtEnd = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 2;
-                wrap.classList.toggle('scrolled-end', isAtEnd);
-            };
-            wrap.addEventListener('scroll', updateScrollState, { passive: true });
-            wrap.__scrollListenerAttached__ = true;
-            updateScrollState();
-        });
-    }
-
-    function ensureMobileExperienceStyles() {
-        if (document.getElementById('mobile-experience-styles')) return;
-        const style = document.createElement('style');
-        style.id = 'mobile-experience-styles';
-        style.textContent = `
+(()=>{if(typeof window=="undefined"||window.__MOBILE_APP_RUNTIME_PATCHED__)return;const xt=960,T=[80,260,900],Tt=[140,420,980,1600],_t={admin:"starter-hub",director:"starter-hub",grade_director:"teacher-analysis",class_teacher:"student-details",teacher:"teacher-analysis"},Lt=["student-details","summary","teacher-analysis","report-generator","progress-analysis","analysis"],Mt={admin:["upload","summary","data-manager","report-generator","teacher-analysis","cohort-growth"],director:["summary","county-analysis","teacher-analysis","report-generator","progress-analysis","cohort-growth"],grade_director:["teacher-analysis","summary","progress-analysis","student-overview","cohort-growth","report-generator"],class_teacher:["student-details","student-overview","progress-analysis","marginal-push","report-generator","summary"],teacher:["teacher-analysis","student-details","student-overview","summary","report-generator","progress-analysis"]},at="apk-recent-modules-v1",D=8,j=6,$t={admin:"管理员",director:"校级管理",grade_director:"级部主任",class_teacher:"班主任",teacher:"教师",parent:"家长",student:"学生",guest:"访客"},ot=!!(window.Capacitor&&(typeof window.Capacitor.isNativePlatform=="function"&&window.Capacitor.isNativePlatform()||typeof window.Capacitor.getPlatform=="function"&&window.Capacitor.getPlatform()!=="web"));let it=0,d="",u=!1,y="",w=null,v=null,nt=null,F="",H=null,_=new Map;function n(t){const e=window.SchoolRuntime&&typeof window.SchoolRuntime.escapeHtml=="function"?window.SchoolRuntime.escapeHtml:null;return e?e(t):String(t!=null?t:"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[a])}function At(t,e){if(!t)return!1;const a=String(e!=null?e:"");return t.textContent===a?!1:(t.textContent=a,!0)}function S(t,e){if(!t)return!1;const a=String(e!=null?e:"");return t.__apkLastHtml===a?!1:(t.innerHTML=a,t.__apkLastHtml=a,!0)}function W(t,e,a){if(!(t!=null&&t.dataset))return!1;const o=String(a!=null?a:"");return t.dataset[e]===o?!1:(t.dataset[e]=o,!0)}function Rt(t,e,a){if(!(t!=null&&t.style))return!1;const o=String(a!=null?a:"");return t.style.getPropertyValue(e)===o?!1:(t.style.setProperty(e,o),!0)}function rt(t=document.getElementById("apk-mobile-shell")){if(!t||!b())return;const e=window.visualViewport,a=Number((e==null?void 0:e.offsetLeft)||0),o=Number((e==null?void 0:e.offsetTop)||0),i=a||o?`translate3d(${a}px, ${o}px, 0)`:"none";t.style.transform!==i&&(t.style.transform=i),t.style.setProperty("--apk-viewport-left",`${a}px`),t.style.setProperty("--apk-viewport-top",`${o}px`)}function It(t,e,a){if(!(t!=null&&t.classList))return!1;const o=!!a;return t.classList.contains(e)===o?!1:(t.classList.toggle(e,o),!0)}function st(){var a,o,i,r;const t=[Number(window.innerWidth||0),Number(((a=document.documentElement)==null?void 0:a.clientWidth)||0),Number(((o=window.visualViewport)==null?void 0:o.width)||0),Number(window.outerWidth||0)].filter(s=>Number.isFinite(s)&&s>0);if(t.length)return Math.min(...t);const e=[Number(((i=window.screen)==null?void 0:i.width)||0),Number(((r=window.screen)==null?void 0:r.availWidth)||0)].filter(s=>Number.isFinite(s)&&s>0);return e.length?Math.min(...e):0}function b(){return st()<=xt}function lt(){return window.matchMedia?window.matchMedia("(max-width: 900px)").matches:st()<=900}function K(t=document){document.documentElement.classList.toggle("is-compact-viewport",lt()),(t&&typeof t.querySelectorAll=="function"?t:document).querySelectorAll(".analysis-table-shell, .table-wrap").forEach(a=>{a.dataset.mobileHint||(a.dataset.mobileHint="可横向滑动查看完整表格")})}function ct(){K(document)}function Ot(t){var o;const e=(o=t==null?void 0:t.querySelector)==null?void 0:o.call(t,"[data-apk-rail]");if(!e)return;const a=e.querySelector(".apk-rail-chip.is-active");!a||typeof a.scrollIntoView!="function"||a.scrollIntoView({inline:"center",block:"nearest",behavior:"auto"})}function L(){return window.AuthState&&typeof window.AuthState.getCurrentUser=="function"?window.AuthState.getCurrentUser():window.Auth&&window.Auth.currentUser?window.Auth.currentUser:null}function q(){var t,e,a;return window.AuthState&&typeof window.AuthState.getCurrentRole=="function"?window.AuthState.getCurrentRole():String(((t=L())==null?void 0:t.role)||((a=(e=document.body)==null?void 0:e.dataset)==null?void 0:a.role)||"guest").trim()||"guest"}function dt(){if(window.AuthState&&typeof window.AuthState.getCurrentRoles=="function")return window.AuthState.getCurrentRoles();const t=L();return(Array.isArray(t==null?void 0:t.roles)&&t.roles.length?t.roles:[t==null?void 0:t.role].filter(Boolean)).map(a=>String(a||"").trim()).filter(Boolean)}function $e(t){const e=new Set(dt());return t.some(a=>e.has(a))}function z(t=q()){const e=String(t||"").trim();return e==="parent"||e==="student"}function ut(t=q()){return $t[String(t||"").trim()]||String(t||"访客")}function pt(){var t,e;return window.SchoolState&&typeof window.SchoolState.getCurrentSchool=="function"?String(((t=L())==null?void 0:t.school)||window.SchoolState.getCurrentSchool()||"").trim():String(((e=L())==null?void 0:e.school)||window.MY_SCHOOL||localStorage.getItem("MY_SCHOOL")||"").trim()}function Q(){const t=document.getElementById("login-overlay"),e=!!(t&&getComputedStyle(t).display!=="none");return!!L()&&!e}function qt(){if(window.NAV_STRUCTURE)return window.NAV_STRUCTURE;try{return NAV_STRUCTURE}catch(t){return null}}function Nt(){F="",H=null,_=new Map}function Bt(t,e){const a=dt().join("|"),o=t?Object.keys(t).join("|"):"",i=window.CONFIG&&window.CONFIG.showQuery?"report:1":"report:0";return[e,a,o,i].join("::")}function Vt(t){return!(typeof window.canAccessModule=="function"&&!window.canAccessModule(t)||t==="indicator"&&typeof window.isIndicatorModuleVisible=="function"&&!window.isIndicatorModuleVisible()||t==="report-generator"&&typeof window.CONFIG!="undefined"&&window.CONFIG&&!window.CONFIG.showQuery)}function M(){const t=qt();if(!t)return[];const e=q(),a=Bt(t,e);if(H&&F===a)return H;const o=Object.keys(t).map(i=>{const r=t[i];return{...r,key:i,items:Array.isArray(r==null?void 0:r.items)?r.items.filter(s=>Vt(s.id)):[]}}).filter(i=>i.items.length>0);return F=a,H=o,_=new Map,o}function E(t){if(!t)return null;if(_.has(t))return _.get(t);const e=M();for(const a of e){const o=a.items.find(i=>i.id===t);if(o){const i={...o,categoryKey:a.key,categoryTitle:a.title,categoryColor:a.color};return _.set(t,i),i}}return _.set(t,null),null}function $(){var a,o,i;const t=_t[q()]||"starter-hub",e=E(t);return e?e.id:((i=(o=(a=M()[0])==null?void 0:a.items)==null?void 0:o[0])==null?void 0:i.id)||"starter-hub"}function A(){var t;return((t=document.querySelector(".section.active"))==null?void 0:t.id)||$()}function N(){return E(A())||E($())||null}function Y(){const t=M(),e=N();if(e){const o=t.find(i=>i.key===e.categoryKey);if(o)return o}const a=typeof window.getCurrentNavCategory=="function"?String(window.getCurrentNavCategory()||"").trim():"";return t.find(o=>o.key===a)||t[0]||null}function B(t){const e=new Set;return t.filter(a=>!a||!a.id||e.has(a.id)?!1:(e.add(a.id),!0))}function ht(){try{const t=JSON.parse(localStorage.getItem(at)||"[]");return Array.isArray(t)?t.map(e=>String(e||"").trim()).filter(Boolean):[]}catch(t){return[]}}function Pt(t){try{localStorage.setItem(at,JSON.stringify(t.map(e=>String(e||"").trim()).filter(Boolean).slice(0,D)))}catch(e){}}function Ht(t){const e=E(t);e&&Pt([e.id,...ht().filter(a=>a!==e.id)])}function G(t=D){return B(ht().map(e=>E(e)).filter(Boolean)).slice(0,t)}function bt(t=j){const e=Mt[q()]||[],a=[...G(t),N(),E($()),...e.map(o=>E(o)),...Lt.map(o=>E(o))];return B(a).slice(0,t)}function Ae(){var a;const t=document.getElementById("mode-badge"),e=String((t==null?void 0:t.textContent)||"").trim();return e||String(((a=window.CONFIG)==null?void 0:a.name)||"学校工作台").trim()}function X(){var e;const t=document.getElementById("cohort-selector");return(e=t==null?void 0:t.selectedOptions)!=null&&e[0]&&String(t.selectedOptions[0].textContent||t.value||"届别未选择").trim()||"届别未选择"}function Ut(){const t=document.getElementById("cohort-selector");return t?Array.from(t.options||[]).filter(e=>String(e.value||"").trim()).map(e=>({value:String(e.value||"").trim(),label:String(e.textContent||e.value||"").trim()})):[]}function Dt(){return document.querySelector("main.app-main")}function mt(){const t=Dt();if(t&&typeof t.scrollTo=="function"){t.scrollTo({top:0,behavior:"auto"});return}const e=document.scrollingElement||document.documentElement||document.body;if(e&&typeof e.scrollTo=="function"){e.scrollTo({top:0,behavior:"auto"});return}typeof window.scrollTo=="function"&&window.scrollTo({top:0,behavior:"auto"})}function jt(t=document){if(!b())return;t.querySelectorAll(".table-wrap table, table.comparison-table, table.fluent-table, #tb-query, #studentDetailTable").forEach(a=>{const o=Ft(a);o.length&&(a.classList.add("mobile-card-table"),Array.from(a.querySelectorAll("tbody tr")).forEach(i=>{let r=String(i.getAttribute("data-mobile-card-title")||"").trim();Array.from(i.children).forEach((s,c)=>{if(!(s instanceof HTMLElement)||s.hasAttribute("colspan"))return;const f=String(o[c]||`字段${c+1}`).replace(/\s+/g," ").trim(),x=String(s.textContent||"").replace(/\s+/g," ").trim();!r&&x&&c<=1&&(r=x),s.setAttribute("data-label",f)}),r&&i.setAttribute("data-mobile-card-title",r)}))})}function Ft(t){const e=Array.from(t.querySelectorAll("thead tr"));if(!e.length)return[];const a=[];let o=0;return e.forEach((i,r)=>{a[r]||(a[r]=[]);let s=0;Array.from(i.children).forEach(c=>{for(;a[r][s];)s+=1;const f=Math.max(parseInt(c.getAttribute("colspan")||"1",10)||1,1),x=Math.max(parseInt(c.getAttribute("rowspan")||"1",10)||1,1),h=String(c.textContent||"").replace(/\s+/g," ").trim();for(let P=0;P<x;P+=1){a[r+P]||(a[r+P]=[]);for(let et=0;et<f;et+=1)a[r+P][s+et]=h}s+=f,s>o&&(o=s)})}),Array.from({length:o},(i,r)=>{const s=[];return a.forEach(c=>{const f=String((c==null?void 0:c[r])||"").trim();!f||s[s.length-1]===f||s.push(f)}),s.join(" / ")})}function J(t=document){if(!b())return;const e=t&&typeof t.querySelectorAll=="function"?t:document.querySelector(".section.active")||document;jt(e)}function ft(t=document){if(!b())return;const e=t&&typeof t.querySelectorAll=="function"?t:document.querySelector(".section.active")||document;clearTimeout(window.__RESPONSIVE_TABLE_REFRESH_TIMER__||0),window.__RESPONSIVE_TABLE_REFRESH_TIMER__=window.setTimeout(()=>{J(e)},60)}function Wt(t=document.querySelector(".section.active")||document.getElementById("app")||document.body){if(typeof MutationObserver!="function")return;const e=t instanceof HTMLElement?t:document.querySelector(".section.active")||document.getElementById("app")||document.body||document.documentElement;if(!e||window.__RESPONSIVE_TABLE_OBSERVER__&&nt===e)return;window.__RESPONSIVE_TABLE_OBSERVER__&&typeof window.__RESPONSIVE_TABLE_OBSERVER__.disconnect=="function"&&window.__RESPONSIVE_TABLE_OBSERVER__.disconnect();const a=new MutationObserver(o=>{if(!b())return;o.some(r=>Array.from(r.addedNodes||[]).some(s=>{var c;return s instanceof HTMLElement?s.matches("table, tbody, tr, td, .table-wrap, .comparison-table, .fluent-table, .section, #parent-view-container")||!!((c=s.querySelector)!=null&&c.call(s,"table, tbody, tr, td, .table-wrap, .comparison-table, .fluent-table")):!1}))&&ft(e)});a.observe(e,{childList:!0,subtree:!0}),window.__RESPONSIVE_TABLE_OBSERVER__=a,nt=e}window.refreshResponsiveMobileTables=J;function Kt(t=document){b()&&(t.querySelectorAll('.section [style*="grid-template-columns"]').forEach(e=>{e.closest("#parent-view-container")||e.classList.add("mobile-stack-grid")}),t.querySelectorAll('.section [style*="display:flex"]').forEach(e=>{e.closest("#parent-view-container")||e.closest("#apk-mobile-shell")||e.children.length<2||e.classList.add("mobile-wrap-row")}))}function zt(t=document){if(!b())return;t.querySelectorAll(".table-wrap").forEach(a=>{if(a.__scrollListenerAttached__)return;const o=()=>{const i=a.scrollLeft+a.clientWidth>=a.scrollWidth-2;a.classList.toggle("scrolled-end",i)};a.addEventListener("scroll",o,{passive:!0}),a.__scrollListenerAttached__=!0,o()})}function Qt(){if(document.getElementById("mobile-experience-styles"))return;const t=document.createElement("style");t.id="mobile-experience-styles",t.textContent=`
             @media screen and (max-width: 960px) {
                 body[data-mobile-architecture="apk-v2"] #apk-mobile-shell {
                     position: fixed;
@@ -867,1249 +263,258 @@
                     height: 40px;
                 }
             }
-        `;
-        document.head.appendChild(style);
-    }
-
-    function refreshContentEnhancements() {
-        const scope = document.querySelector('.section.active') || document;
-        ensureMobileExperienceStyles();
-        syncCompactState(scope);
-        refreshResponsiveTablesNow(scope);
-        scheduleResponsiveTableRefresh(scope);
-        installResponsiveTableObserver(scope);
-        markFlexibleRows(scope);
-        attachTableScrollIndicators(scope);
-    }
-
-    function isVisiblyRendered(node) {
-        if (!(node instanceof HTMLElement)) return false;
-        const style = window.getComputedStyle(node);
-        if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity || 1) === 0) {
-            return false;
-        }
-        if (node.getAttribute('aria-hidden') === 'true' || node.hidden) return false;
-        return node.getClientRects().length > 0;
-    }
-
-    function isBlockingDialogVisible() {
-        dismissPassiveSwal();
-        if (window.Swal && typeof window.Swal.isVisible === 'function' && window.Swal.isVisible()) {
-            return true;
-        }
-        const selectors = [
-            '.swal2-container',
-            '.modal',
-            '[role="dialog"]',
-            '[aria-modal="true"]',
-            '.dialog-overlay',
-            '.dialog-backdrop'
-        ];
-        return Array.from(document.querySelectorAll(selectors.join(','))).some((node) => {
-            if (!(node instanceof HTMLElement) || node.closest('#apk-mobile-shell')) return false;
-            if (!isVisiblyRendered(node)) return false;
-            const style = window.getComputedStyle(node);
-            const zIndex = Number(style.zIndex || 0);
-            return style.position === 'fixed' || zIndex >= 1000;
-        });
-    }
-
-    function dismissPassiveSwal() {
-        const container = document.querySelector('.swal2-container.swal2-backdrop-show');
-        if (!isMobileViewport() || !container) return false;
-
-        // 有输入框或多个按钮的弹窗不自动关闭
-        if (container.querySelector('input,textarea,select,.swal2-cancel,.swal2-deny')) return false;
-
-        // 错误/警告/问号图标的弹窗不自动关闭
-        if (container.querySelector('.swal2-icon-error,.swal2-icon-warning,.swal2-icon-question')) return false;
-
-        const text = String(container.innerText || '');
-
-        // 关键词黑名单：包含这些词的弹窗不自动关闭
-        const criticalKeywords = [
-            '安全', '警告', '失败', '错误', '确认', '请确认',
-            '未完成', '必须', '需要完成', '删除', '覆盖',
-            '退出', '清空', '重置', '取消', '放弃', '丢失',
-            '不可恢复', '永久', '移除', '注销'
-        ];
-
-        if (criticalKeywords.some(keyword => text.includes(keyword))) return false;
-
-        // 通过所有检查，自动关闭纯信息提示弹窗
-        if (window.Swal && typeof window.Swal.close === 'function') window.Swal.close();
-        else container.remove();
-        return true;
-    }
-
-    function syncShellModalState(root = document.getElementById('apk-mobile-shell')) {
-        if (!root) return;
-        root.dataset.modalOpen = isBlockingDialogVisible() ? 'true' : 'false';
-    }
-
-    function scheduleStudentDetailsModuleFocus() {
-        MODULE_FOCUS_DELAYS.forEach((delay, index) => {
-            window.setTimeout(() => {
-                const section = document.getElementById('student-details');
-                if (!section || !section.classList.contains('active')) return;
-                if (typeof window.requestStudentDetailsPrimaryFocus === 'function') {
-                    window.requestStudentDetailsPrimaryFocus(index);
-                    return;
-                }
-                if (typeof window.focusStudentDetailsPrimaryFlow === 'function') {
-                    window.focusStudentDetailsPrimaryFlow();
-                }
-            }, delay);
-        });
-    }
-
-    function hideLegacyMobileShells() {
-        ['mobile-manager-app', 'mobile-query-shell'].forEach((id) => {
-            const node = document.getElementById(id);
-            if (!node) return;
-            node.setAttribute('aria-hidden', 'true');
-            node.style.display = 'none';
-        });
-    }
-
-    function syncDesktopAppVisibility() {
-        const app = document.getElementById('app');
-        if (!app) return;
-
-        if (!isMobileViewport()) {
-            app.classList.remove('hidden');
-            app.style.display = '';
-            return;
-        }
-
-        if (!isLoggedIn()) {
-            app.classList.add('hidden');
-            app.style.display = 'none';
-            return;
-        }
-
-        if (!isParentLikeRole()) {
-            app.classList.remove('hidden');
-            app.style.display = '';
-        }
-    }
-
-    function syncThemeColorMeta() {
-        const meta = document.querySelector('meta[name="theme-color"]');
-        if (!meta) return;
-        meta.setAttribute('content', document.body.classList.contains('dark-mode') ? '#08111d' : '#eef3f8');
-    }
-
-    function syncSystemTheme() {
-        const isDark = !!themeMedia?.matches;
-        document.body.dataset.nativeApp = isNativeApp ? 'true' : 'false';
-        document.body.dataset.systemTheme = isDark ? 'dark' : 'light';
-        if (isNativeApp && isMobileViewport()) {
-            document.body.classList.toggle('dark-mode', isDark);
-            localStorage.setItem('theme-dark', isDark ? 'true' : 'false');
-        }
-        document.documentElement.style.colorScheme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
-        syncThemeColorMeta();
-    }
-
-    function switchCohort(value) {
-        const selector = document.getElementById('cohort-selector');
-        if (!selector || !value) return;
-        selector.value = value;
-        selector.dispatchEvent(new Event('change', { bubbles: true }));
-        setSheetMode('');
-        REFRESH_DELAYS.forEach((delay) => {
-            window.setTimeout(() => {
-                scrollPrimaryViewportToTop();
-                scheduleRefresh();
-            }, delay);
-        });
-    }
-    function getShellCopy() {
-        return {
-            workbench: '学校工作台',
-            mobileWorkbench: '移动工作台',
-            mobilePreparing: '移动工作台正在准备中',
-            openLibrary: '打开模块资源库',
-            openSearch: '打开全局搜索',
-            closeSheet: '关闭面板',
-            closeLibrary: '关闭模块资源库',
-            cohortPlaceholder: '届别未选择',
-            home: '工作台',
-            modules: '模块',
-            recent: '最近',
-            account: '我的',
-            openModule: '打开该模块',
-            currentCategoryEmpty: '当前分类暂无可用模块',
-            current: '当前',
-            open: '打开',
-            workspaceNote: 'Workspace',
-            moduleOverviewTitle: '模块总览',
-            moduleOverviewCopy: '按分类切换工作模块，减少手机端来回翻找入口的次数。',
-            noModules: '当前账号还没有可切换的模块入口。',
-            quickTitle: '最近与常用',
-            quickCopy: '先给你最近用过的模块，再补高频入口，减少反复进出分类面板。',
-            quickHeroTitle: '跨分类切换先看这里',
-            quickHeroCopy: '默认优先展示最近使用，同时保留完整模块资源库入口。',
-            recentModulesTitle: '最近使用',
-            recentModulesNote: 'Recent Modules',
-            suggestedTitle: '高频推荐',
-            suggestedNote: 'Suggested',
-            utilitiesTitle: '系统动作',
-            utilitiesNote: 'Utilities',
-            noRecent: '还没有可回跳的最近模块，可以先从当前分类或全部模块进入。',
-            appLibraryTitle: '模块资源库',
-            appLibraryCopy: '像 App 资源库一样集中浏览全部模块，支持最近使用、当前分类和快速搜索。',
-            appLibrarySearch: '搜索模块、功能或分类',
-            appLibrarySearchTitle: '搜索结果',
-            appLibrarySearchNote: 'Results',
-            appLibrarySearchEmpty: '没有匹配的模块，试试更短的关键词。',
-            appLibraryCurrentTitle: '当前分类',
-            appLibraryCurrentNote: 'Now Browsing',
-            appLibraryAllTitle: '全部分类',
-            appLibraryAllNote: 'App Library',
-            allModulesTitle: '全部模块',
-            allModulesCopy: '找不到所需功能时，直接打开完整模块总览。',
-            searchTitle: '全局搜索',
-            searchCopy: '快速搜索学生、模块和常用入口。',
-            cohortsTitle: '切换届别',
-            cohortsCopy: '在不同届别工作区之间快速跳转。',
-            passwordTitle: '修改密码',
-            passwordCopy: '直接打开当前账号的密码修改入口。',
-            logoutTitle: '退出登录',
-            logoutCopy: '返回登录页，重新选择账号进入。',
-            accountTitle: '账号与设置',
-            accountCopy: 'APK 默认跟随系统主题，并把常用设置集中到这一层。',
-            currentSchool: '当前学校',
-            currentCohort: '当前届别',
-            themeMode: '主题模式',
-            themeDark: '深色',
-            themeLight: '浅色',
-            followSystem: '跟随系统',
-            runtimeEnv: '运行环境',
-            mobileBrowser: '移动浏览器',
-            notLoggedIn: '未登录',
-            unknownSchool: '未识别学校',
-            switchCohortTitle: '切换届别',
-            switchCohortCopy: '统一从这里切届别，避免手机端入口与工作区状态脱节。',
-            noCohorts: '暂无可切换届别。',
-            noCohortChoices: '当前没有可切换的届别，请先完成数据恢复。',
-            usingCurrentCohort: '当前正在使用的届别。',
-            switchToThisCohort: '点击切换到这个届别。'
-        };
-    }
-
-    function getThemeLabel() {
-        return document.body.dataset.systemTheme === 'dark' ? getShellCopy().themeDark : getShellCopy().themeLight;
-    }
-
-    function getModuleSearchText(item, category = null) {
-        return [
-            item?.text,
-            item?.hint,
-            item?.id,
-            category?.title,
-            category?.eyebrow
-        ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-    }
-
-    function getLibrarySearchResults() {
-        const needle = String(libraryQuery || '').trim().toLowerCase();
-        if (!needle) return [];
-
-        return uniqueItems(
-            getAllowedCategories().flatMap((category) => category.items
-                .filter((item) => getModuleSearchText(item, category).includes(needle))
-                .map((item) => ({
-                    ...item,
-                    categoryTitle: category.title,
-                    categoryKey: category.key,
-                    categoryColor: category.color
-                })))
-        );
-    }
-
-    function buildSheetHeader(title, copy) {
-        return `
+        `,document.head.appendChild(t)}function yt(){const t=document.querySelector(".section.active")||document;Qt(),K(t),J(t),ft(t),Wt(t),Kt(t),zt(t)}function Yt(t){if(!(t instanceof HTMLElement))return!1;const e=window.getComputedStyle(t);return e.display==="none"||e.visibility==="hidden"||Number(e.opacity||1)===0||t.getAttribute("aria-hidden")==="true"||t.hidden?!1:t.getClientRects().length>0}function wt(){if(gt(),window.Swal&&typeof window.Swal.isVisible=="function"&&window.Swal.isVisible())return!0;const t=[".swal2-container",".modal",'[role="dialog"]','[aria-modal="true"]',".dialog-overlay",".dialog-backdrop"];return Array.from(document.querySelectorAll(t.join(","))).some(e=>{if(!(e instanceof HTMLElement)||e.closest("#apk-mobile-shell")||!Yt(e))return!1;const a=window.getComputedStyle(e),o=Number(a.zIndex||0);return a.position==="fixed"||o>=1e3})}function gt(){const t=document.querySelector(".swal2-container.swal2-backdrop-show");if(!b()||!t||t.querySelector("input,textarea,select,.swal2-cancel,.swal2-deny")||t.querySelector(".swal2-icon-error,.swal2-icon-warning,.swal2-icon-question"))return!1;const e=String(t.innerText||"");return["安全","警告","失败","错误","确认","请确认","未完成","必须","需要完成","删除","覆盖","退出","清空","重置","取消","放弃","丢失","不可恢复","永久","移除","注销"].some(o=>e.includes(o))?!1:(window.Swal&&typeof window.Swal.close=="function"?window.Swal.close():t.remove(),!0)}function Gt(t=document.getElementById("apk-mobile-shell")){t&&(t.dataset.modalOpen=wt()?"true":"false")}function Xt(){Tt.forEach((t,e)=>{window.setTimeout(()=>{const a=document.getElementById("student-details");if(!(!a||!a.classList.contains("active"))){if(typeof window.requestStudentDetailsPrimaryFocus=="function"){window.requestStudentDetailsPrimaryFocus(e);return}typeof window.focusStudentDetailsPrimaryFlow=="function"&&window.focusStudentDetailsPrimaryFlow()}},t)})}function Jt(){["mobile-manager-app","mobile-query-shell"].forEach(t=>{const e=document.getElementById(t);e&&(e.setAttribute("aria-hidden","true"),e.style.display="none")})}function Zt(){const t=document.getElementById("app");if(t){if(!b()){t.classList.remove("hidden"),t.style.display="";return}if(!Q()){t.classList.add("hidden"),t.style.display="none";return}z()||(t.classList.remove("hidden"),t.style.display="")}}function te(){const t=document.querySelector('meta[name="theme-color"]');t&&t.setAttribute("content",document.body.classList.contains("dark-mode")?"#08111d":"#eef3f8")}function ee(){const t=!!(v!=null&&v.matches);document.body.dataset.nativeApp=ot?"true":"false",document.body.dataset.systemTheme=t?"dark":"light",ot&&b()&&(document.body.classList.toggle("dark-mode",t),localStorage.setItem("theme-dark",t?"true":"false")),document.documentElement.style.colorScheme=document.body.classList.contains("dark-mode")?"dark":"light",te()}function ae(t){const e=document.getElementById("cohort-selector");!e||!t||(e.value=t,e.dispatchEvent(new Event("change",{bubbles:!0})),p(""),T.forEach(a=>{window.setTimeout(()=>{mt(),l()},a)}))}function m(){return{workbench:"学校工作台",mobileWorkbench:"移动工作台",mobilePreparing:"移动工作台正在准备中",openLibrary:"打开模块资源库",openSearch:"打开全局搜索",closeSheet:"关闭面板",closeLibrary:"关闭模块资源库",cohortPlaceholder:"届别未选择",home:"工作台",modules:"模块",recent:"最近",account:"我的",openModule:"打开该模块",currentCategoryEmpty:"当前分类暂无可用模块",current:"当前",open:"打开",workspaceNote:"Workspace",moduleOverviewTitle:"模块总览",moduleOverviewCopy:"按分类切换工作模块，减少手机端来回翻找入口的次数。",noModules:"当前账号还没有可切换的模块入口。",quickTitle:"最近与常用",quickCopy:"先给你最近用过的模块，再补高频入口，减少反复进出分类面板。",quickHeroTitle:"跨分类切换先看这里",quickHeroCopy:"默认优先展示最近使用，同时保留完整模块资源库入口。",recentModulesTitle:"最近使用",recentModulesNote:"Recent Modules",suggestedTitle:"高频推荐",suggestedNote:"Suggested",utilitiesTitle:"系统动作",utilitiesNote:"Utilities",noRecent:"还没有可回跳的最近模块，可以先从当前分类或全部模块进入。",appLibraryTitle:"模块资源库",appLibraryCopy:"像 App 资源库一样集中浏览全部模块，支持最近使用、当前分类和快速搜索。",appLibrarySearch:"搜索模块、功能或分类",appLibrarySearchTitle:"搜索结果",appLibrarySearchNote:"Results",appLibrarySearchEmpty:"没有匹配的模块，试试更短的关键词。",appLibraryCurrentTitle:"当前分类",appLibraryCurrentNote:"Now Browsing",appLibraryAllTitle:"全部分类",appLibraryAllNote:"App Library",allModulesTitle:"全部模块",allModulesCopy:"找不到所需功能时，直接打开完整模块总览。",searchTitle:"全局搜索",searchCopy:"快速搜索学生、模块和常用入口。",cohortsTitle:"切换届别",cohortsCopy:"在不同届别工作区之间快速跳转。",passwordTitle:"修改密码",passwordCopy:"直接打开当前账号的密码修改入口。",logoutTitle:"退出登录",logoutCopy:"返回登录页，重新选择账号进入。",accountTitle:"账号与设置",accountCopy:"APK 默认跟随系统主题，并把常用设置集中到这一层。",currentSchool:"当前学校",currentCohort:"当前届别",themeMode:"主题模式",themeDark:"深色",themeLight:"浅色",followSystem:"跟随系统",runtimeEnv:"运行环境",mobileBrowser:"移动浏览器",notLoggedIn:"未登录",unknownSchool:"未识别学校",switchCohortTitle:"切换届别",switchCohortCopy:"统一从这里切届别，避免手机端入口与工作区状态脱节。",noCohorts:"暂无可切换届别。",noCohortChoices:"当前没有可切换的届别，请先完成数据恢复。",usingCurrentCohort:"当前正在使用的届别。",switchToThisCohort:"点击切换到这个届别。"}}function oe(){return document.body.dataset.systemTheme==="dark"?m().themeDark:m().themeLight}function ie(t,e=null){return[t==null?void 0:t.text,t==null?void 0:t.hint,t==null?void 0:t.id,e==null?void 0:e.title,e==null?void 0:e.eyebrow].filter(Boolean).join(" ").toLowerCase()}function ne(){const t=String(y||"").trim().toLowerCase();return t?B(M().flatMap(e=>e.items.filter(a=>ie(a,e).includes(t)).map(a=>({...a,categoryTitle:e.title,categoryKey:e.key,categoryColor:e.color})))):[]}function R(t,e){return`
             <div class="apk-sheet-header">
                 <div>
-                    <strong>${escapeHtml(title)}</strong>
-                    <span>${escapeHtml(copy)}</span>
+                    <strong>${n(t)}</strong>
+                    <span>${n(e)}</span>
                 </div>
-                <button type="button" class="apk-shell-icon is-compact" data-apk-action="close-sheet" aria-label="${escapeHtml(getShellCopy().closeSheet)}">
+                <button type="button" class="apk-shell-icon is-compact" data-apk-action="close-sheet" aria-label="${n(m().closeSheet)}">
                     <i class="ti ti-x"></i>
                 </button>
             </div>
-        `;
-    }
-
-    function buildSectionHead(title, note) {
-        return `
+        `}function k(t,e){return`
             <div class="apk-sheet-section-head">
-                <span class="apk-sheet-section-title">${escapeHtml(title)}</span>
-                <span class="apk-sheet-section-note">${escapeHtml(note)}</span>
+                <span class="apk-sheet-section-title">${n(t)}</span>
+                <span class="apk-sheet-section-note">${n(e)}</span>
             </div>
-        `;
-    }
-
-    function buildModuleCard(item, activeId) {
-        const copy = getShellCopy();
-        const active = item.id === activeId ? ' is-active' : '';
-        return `
-            <button type="button" class="apk-sheet-card${active}" data-apk-module="${escapeHtml(item.id)}">
-                <strong>${escapeHtml(item.text || item.id)}</strong>
-                <span>${escapeHtml(item.hint || item.categoryTitle || copy.openModule)}</span>
+        `}function U(t,e){const a=m();return`
+            <button type="button" class="apk-sheet-card${t.id===e?" is-active":""}" data-apk-module="${n(t.id)}">
+                <strong>${n(t.text||t.id)}</strong>
+                <span>${n(t.hint||t.categoryTitle||a.openModule)}</span>
             </button>
-        `;
-    }
-
-    function buildActionCard(action, title, copy, icon, extraClass = '') {
-        return `
-            <button type="button" class="apk-sheet-card apk-sheet-card--action${extraClass ? ` ${extraClass}` : ''}" data-apk-action="${escapeHtml(action)}">
-                <i class="${escapeHtml(icon)}"></i>
-                <strong>${escapeHtml(title)}</strong>
-                <span>${escapeHtml(copy)}</span>
+        `}function g(t,e,a,o,i=""){return`
+            <button type="button" class="apk-sheet-card apk-sheet-card--action${i?` ${i}`:""}" data-apk-action="${n(t)}">
+                <i class="${n(o)}"></i>
+                <strong>${n(e)}</strong>
+                <span>${n(a)}</span>
             </button>
-        `;
-    }
-
-    function buildSwitchRow(item, activeId) {
-        const copy = getShellCopy();
-        const active = item.id === activeId;
-        return `
-            <button type="button" class="apk-switch-row${active ? ' is-active' : ''}" data-apk-module="${escapeHtml(item.id)}">
+        `}function kt(t,e){const a=m(),o=t.id===e;return`
+            <button type="button" class="apk-switch-row${o?" is-active":""}" data-apk-module="${n(t.id)}">
                 <span class="apk-switch-row-copy">
-                    <strong>${escapeHtml(item.text || item.id)}</strong>
-                    <span>${escapeHtml(item.hint || item.categoryTitle || '跨分类快速直达')}</span>
+                    <strong>${n(t.text||t.id)}</strong>
+                    <span>${n(t.hint||t.categoryTitle||"跨分类快速直达")}</span>
                 </span>
-                <span class="apk-switch-row-meta">${active ? copy.current : copy.open}</span>
+                <span class="apk-switch-row-meta">${o?a.current:a.open}</span>
             </button>
-        `;
-    }
-
-    function buildLibraryMiniTile(item, activeId) {
-        const badge = String(item.text || item.id || '').trim().slice(0, 2) || '模块';
-        return `
-            <button type="button" class="apk-library-mini${item.id === activeId ? ' is-active' : ''}" data-apk-module="${escapeHtml(item.id)}">
-                <span class="apk-library-mini-badge">${escapeHtml(badge)}</span>
+        `}function vt(t,e){const a=String(t.text||t.id||"").trim().slice(0,2)||"模块";return`
+            <button type="button" class="apk-library-mini${t.id===e?" is-active":""}" data-apk-module="${n(t.id)}">
+                <span class="apk-library-mini-badge">${n(a)}</span>
                 <span class="apk-library-mini-copy">
-                    <strong>${escapeHtml(item.text || item.id)}</strong>
-                    <span>${escapeHtml(item.hint || item.categoryTitle || '模块')}</span>
+                    <strong>${n(t.text||t.id)}</strong>
+                    <span>${n(t.hint||t.categoryTitle||"模块")}</span>
                 </span>
             </button>
-        `;
-    }
-
-    function buildLibraryCategoryCard(category, activeId) {
-        return `
-            <article class="apk-library-card" style="--apk-library-accent:${escapeHtml(category.color || '#2563eb')}">
+        `}function re(t,e){return`
+            <article class="apk-library-card" style="--apk-library-accent:${n(t.color||"#2563eb")}">
                 <div class="apk-library-card-head">
                     <div>
-                        <strong>${escapeHtml(category.title)}</strong>
-                        <span>${escapeHtml(`${category.items.length} 个模块`)}</span>
+                        <strong>${n(t.title)}</strong>
+                        <span>${n(`${t.items.length} 个模块`)}</span>
                     </div>
-                    <span class="apk-library-card-count">${escapeHtml(String(category.items.length).padStart(2, '0'))}</span>
+                    <span class="apk-library-card-count">${n(String(t.items.length).padStart(2,"0"))}</span>
                 </div>
                 <div class="apk-library-mini-grid">
-                    ${category.items.slice(0, 4).map((item) => buildLibraryMiniTile({
-                        ...item,
-                        categoryTitle: category.title
-                    }, activeId)).join('')}
+                    ${t.items.slice(0,4).map(a=>vt({...a,categoryTitle:t.title},e)).join("")}
                 </div>
             </article>
-        `;
-    }
-
-    function buildLibraryHtml() {
-        const copy = getShellCopy();
-        const activeId = getActiveModuleId();
-        const searchValue = String(libraryQuery || '').trim();
-        const searchResults = getLibrarySearchResults();
-        const currentCategory = getCurrentCategory();
-        const recentModules = uniqueItems([
-            ...getRecentModules(6),
-            getActiveItem()
-        ]).slice(0, 6);
-        const recentIds = new Set(recentModules.map((item) => item.id));
-        const suggestedModules = getQuickModules(6 + recentIds.size)
-            .filter((item) => !recentIds.has(item.id))
-            .slice(0, 6);
-        const categories = getAllowedCategories();
-
-        return `
+        `}function se(){var x;const t=m(),e=A(),a=String(y||"").trim(),o=ne(),i=Y(),r=B([...G(6),N()]).slice(0,6),s=new Set(r.map(h=>h.id)),c=bt(6+s.size).filter(h=>!s.has(h.id)).slice(0,6),f=M();return`
             <div class="apk-library-head">
                 <div class="apk-library-head-copy">
-                    <strong>${escapeHtml(copy.appLibraryTitle)}</strong>
-                    <span>${escapeHtml(copy.appLibraryCopy)}</span>
+                    <strong>${n(t.appLibraryTitle)}</strong>
+                    <span>${n(t.appLibraryCopy)}</span>
                 </div>
-                <button type="button" class="apk-shell-icon is-compact" data-apk-action="close-library" aria-label="${escapeHtml(copy.closeLibrary)}">
+                <button type="button" class="apk-shell-icon is-compact" data-apk-action="close-library" aria-label="${n(t.closeLibrary)}">
                     <i class="ti ti-arrow-left"></i>
                 </button>
             </div>
             <label class="apk-library-search">
                 <i class="ti ti-search"></i>
-                <input type="search" data-apk-library-search value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(copy.appLibrarySearch)}" autocomplete="off" />
+                <input type="search" data-apk-library-search value="${n(a)}" placeholder="${n(t.appLibrarySearch)}" autocomplete="off" />
             </label>
-            ${searchValue
-                ? `
+            ${a?`
                     <section class="apk-library-section">
-                        ${buildSectionHead(copy.appLibrarySearchTitle, copy.appLibrarySearchNote)}
-                        ${searchResults.length
-                            ? `<div class="apk-sheet-grid apk-library-results">${searchResults.map((item) => buildModuleCard(item, activeId)).join('')}</div>`
-                            : `<div class="apk-sheet-empty">${escapeHtml(copy.appLibrarySearchEmpty)}</div>`}
+                        ${k(t.appLibrarySearchTitle,t.appLibrarySearchNote)}
+                        ${o.length?`<div class="apk-sheet-grid apk-library-results">${o.map(h=>U(h,e)).join("")}</div>`:`<div class="apk-sheet-empty">${n(t.appLibrarySearchEmpty)}</div>`}
                     </section>
-                `
-                : `
+                `:`
                     <section class="apk-library-section">
-                        ${buildSectionHead(copy.recentModulesTitle, copy.recentModulesNote)}
-                        ${recentModules.length
-                            ? `<div class="apk-switch-list">${recentModules.map((item) => buildSwitchRow(item, activeId)).join('')}</div>`
-                            : `<div class="apk-sheet-empty">${escapeHtml(copy.noRecent)}</div>`}
+                        ${k(t.recentModulesTitle,t.recentModulesNote)}
+                        ${r.length?`<div class="apk-switch-list">${r.map(h=>kt(h,e)).join("")}</div>`:`<div class="apk-sheet-empty">${n(t.noRecent)}</div>`}
                     </section>
-                    ${suggestedModules.length
-                        ? `
+                    ${c.length?`
                             <section class="apk-library-section">
-                                ${buildSectionHead(copy.suggestedTitle, copy.suggestedNote)}
+                                ${k(t.suggestedTitle,t.suggestedNote)}
                                 <div class="apk-sheet-grid apk-library-results">
-                                    ${suggestedModules.map((item) => buildModuleCard(item, activeId)).join('')}
+                                    ${c.map(h=>U(h,e)).join("")}
                                 </div>
                             </section>
-                        `
-                        : ''}
-                    ${currentCategory?.items?.length
-                        ? `
+                        `:""}
+                    ${(x=i==null?void 0:i.items)!=null&&x.length?`
                             <section class="apk-library-section">
-                                ${buildSectionHead(copy.appLibraryCurrentTitle, copy.appLibraryCurrentNote)}
-                                <article class="apk-library-spotlight" style="--apk-library-accent:${escapeHtml(currentCategory.color || '#2563eb')}">
+                                ${k(t.appLibraryCurrentTitle,t.appLibraryCurrentNote)}
+                                <article class="apk-library-spotlight" style="--apk-library-accent:${n(i.color||"#2563eb")}">
                                     <div class="apk-library-card-head">
                                         <div>
-                                            <strong>${escapeHtml(currentCategory.title)}</strong>
-                                            <span>${escapeHtml(`${currentCategory.items.length} 个模块`)}</span>
+                                            <strong>${n(i.title)}</strong>
+                                            <span>${n(`${i.items.length} 个模块`)}</span>
                                         </div>
-                                        <span class="apk-library-card-count">${escapeHtml(String(currentCategory.items.length).padStart(2, '0'))}</span>
+                                        <span class="apk-library-card-count">${n(String(i.items.length).padStart(2,"0"))}</span>
                                     </div>
                                     <div class="apk-library-mini-grid">
-                                        ${currentCategory.items.slice(0, 4).map((item) => buildLibraryMiniTile({
-                                            ...item,
-                                            categoryTitle: currentCategory.title
-                                        }, activeId)).join('')}
+                                        ${i.items.slice(0,4).map(h=>vt({...h,categoryTitle:i.title},e)).join("")}
                                     </div>
                                 </article>
                             </section>
-                        `
-                        : ''}
+                        `:""}
                     <section class="apk-library-section">
-                        ${buildSectionHead(copy.appLibraryAllTitle, copy.appLibraryAllNote)}
+                        ${k(t.appLibraryAllTitle,t.appLibraryAllNote)}
                         <div class="apk-library-clusters">
-                            ${categories.map((category) => buildLibraryCategoryCard(category, activeId)).join('')}
+                            ${f.map(h=>re(h,e)).join("")}
                         </div>
                     </section>
                 `}
-        `;
-    }
-
-    function ensureShellRoot() {
-        let root = document.getElementById('apk-mobile-shell');
-        if (root) return root;
-
-        const copy = getShellCopy();
-        root = document.createElement('div');
-        root.id = 'apk-mobile-shell';
-        root.setAttribute('aria-hidden', 'true');
-        root.innerHTML = `
+        `}function Z(){let t=document.getElementById("apk-mobile-shell");if(t)return t;const e=m();return t=document.createElement("div"),t.id="apk-mobile-shell",t.setAttribute("aria-hidden","true"),t.innerHTML=`
             <div class="apk-shell-top">
                 <div class="apk-shell-topbar apk-shell-surface">
-                    <button type="button" class="apk-shell-icon" data-apk-action="library" aria-label="${escapeHtml(copy.openLibrary)}">
+                    <button type="button" class="apk-shell-icon" data-apk-action="library" aria-label="${n(e.openLibrary)}">
                         <i class="ti ti-layout-sidebar-left-expand"></i>
                     </button>
                     <div class="apk-shell-copy">
-                        <span class="apk-shell-kicker" data-apk-field="role">${escapeHtml(copy.workbench)}</span>
+                        <span class="apk-shell-kicker" data-apk-field="role">${n(e.workbench)}</span>
                         <strong class="apk-shell-title" data-apk-field="title">澄见</strong>
-                        <span class="apk-shell-subtitle" data-apk-field="subtitle">${escapeHtml(copy.mobilePreparing)}</span>
+                        <span class="apk-shell-subtitle" data-apk-field="subtitle">${n(e.mobilePreparing)}</span>
                     </div>
-                    <button type="button" class="apk-shell-icon" data-apk-action="search" aria-label="${escapeHtml(copy.openSearch)}">
+                    <button type="button" class="apk-shell-icon" data-apk-action="search" aria-label="${n(e.openSearch)}">
                         <i class="ti ti-search"></i>
                     </button>
                 </div>
                 <div class="apk-shell-meta">
                     <button type="button" class="apk-shell-pill apk-shell-surface" data-apk-action="cohorts">
                         <i class="ti ti-id-badge-2"></i>
-                        <span data-apk-field="cohort">${escapeHtml(copy.cohortPlaceholder)}</span>
+                        <span data-apk-field="cohort">${n(e.cohortPlaceholder)}</span>
                     </button>
                     <div class="apk-shell-pill apk-shell-surface is-static">
                         <i class="ti ti-device-imac"></i>
-                        <span data-apk-field="mode">${escapeHtml(copy.workbench)}</span>
+                        <span data-apk-field="mode">${n(e.workbench)}</span>
                     </div>
                 </div>
                 <div class="apk-shell-rail" data-apk-rail></div>
             </div>
             <div class="apk-shell-content" data-apk-content></div>
-            <button type="button" class="apk-shell-library-backdrop" data-apk-action="close-library" aria-label="${escapeHtml(copy.closeLibrary)}"></button>
+            <button type="button" class="apk-shell-library-backdrop" data-apk-action="close-library" aria-label="${n(e.closeLibrary)}"></button>
             <div class="apk-shell-library">
                 <div class="apk-shell-library-panel apk-shell-surface" data-apk-library-panel></div>
             </div>
-            <button type="button" class="apk-shell-backdrop" data-apk-action="close-sheet" aria-label="${escapeHtml(copy.closeSheet)}"></button>
+            <button type="button" class="apk-shell-backdrop" data-apk-action="close-sheet" aria-label="${n(e.closeSheet)}"></button>
             <div class="apk-shell-sheet">
                 <div class="apk-shell-sheet-panel apk-shell-surface" data-apk-sheet-panel></div>
             </div>
             <div class="apk-shell-tabs apk-shell-surface">
                 <button type="button" class="apk-shell-tab" data-apk-tab="home">
                     <i class="ti ti-home"></i>
-                    <span>${escapeHtml(copy.home)}</span>
+                    <span>${n(e.home)}</span>
                 </button>
                 <button type="button" class="apk-shell-tab" data-apk-tab="modules">
                     <i class="ti ti-layout-grid"></i>
-                    <span>${escapeHtml(copy.modules)}</span>
+                    <span>${n(e.modules)}</span>
                 </button>
                 <button type="button" class="apk-shell-tab" data-apk-tab="quick">
                     <i class="ti ti-history"></i>
-                    <span>${escapeHtml(copy.recent)}</span>
+                    <span>${n(e.recent)}</span>
                 </button>
                 <button type="button" class="apk-shell-tab" data-apk-tab="account">
                     <i class="ti ti-user-circle"></i>
-                    <span>${escapeHtml(copy.account)}</span>
+                    <span>${n(e.account)}</span>
                 </button>
             </div>
-        `;
-
-        root.addEventListener('click', handleShellClick);
-        root.addEventListener('input', handleShellInput);
-        document.body.appendChild(root);
-        return root;
-    }
-
-    function buildModulesSheetHtml() {
-        const copy = getShellCopy();
-        const categories = getAllowedCategories();
-        const activeId = getActiveModuleId();
-
-        if (!categories.length) {
-            return `${buildSheetHeader(copy.moduleOverviewTitle, copy.noModules)}
-                <div class="apk-sheet-empty">${escapeHtml(copy.noModules)}</div>`;
-        }
-
-        return [
-            buildSheetHeader(copy.moduleOverviewTitle, copy.moduleOverviewCopy),
-            ...categories.map((category) => `
+        `,t.addEventListener("click",ve),t.addEventListener("input",ke),document.body.appendChild(t),t}function le(){const t=m(),e=M(),a=A();return e.length?[R(t.moduleOverviewTitle,t.moduleOverviewCopy),...e.map(o=>`
                 <section class="apk-sheet-section">
-                    ${buildSectionHead(category.title, category.eyebrow || copy.workspaceNote)}
+                    ${k(o.title,o.eyebrow||t.workspaceNote)}
                     <div class="apk-sheet-grid">
-                        ${category.items.map((item) => buildModuleCard({
-                            ...item,
-                            categoryTitle: category.title
-                        }, activeId)).join('')}
+                        ${o.items.map(i=>U({...i,categoryTitle:o.title},a)).join("")}
                     </div>
                 </section>
-            `)
-        ].join('');
-    }
-
-    function buildRecentQuickSheetHtml() {
-        const copy = getShellCopy();
-        const activeId = getActiveModuleId();
-        const recentModules = uniqueItems([
-            ...getRecentModules(RECENT_MODULE_LIMIT),
-            getActiveItem()
-        ]).slice(0, 4);
-        const recentIds = new Set(recentModules.map((item) => item.id));
-        const quickModules = getQuickModules(QUICK_MODULE_LIMIT + recentIds.size)
-            .filter((item) => !recentIds.has(item.id))
-            .slice(0, QUICK_MODULE_LIMIT);
-        const quickActions = [
-            buildActionCard('library', copy.allModulesTitle, copy.allModulesCopy, 'ti ti-layout-sidebar-left-expand'),
-            buildActionCard('search', copy.searchTitle, copy.searchCopy, 'ti ti-search'),
-            buildActionCard('cohorts', copy.cohortsTitle, copy.cohortsCopy, 'ti ti-id-badge-2'),
-            typeof window.openUserPasswordModal === 'function'
-                ? buildActionCard('password', copy.passwordTitle, copy.passwordCopy, 'ti ti-lock')
-                : '',
-            buildActionCard('logout', copy.logoutTitle, copy.logoutCopy, 'ti ti-logout', 'is-danger')
-        ].filter(Boolean);
-
-        return `
-            ${buildSheetHeader(copy.quickTitle, copy.quickCopy)}
+            `)].join(""):`${R(t.moduleOverviewTitle,t.noModules)}
+                <div class="apk-sheet-empty">${n(t.noModules)}</div>`}function ce(){const t=m(),e=A(),a=B([...G(D),N()]).slice(0,4),o=new Set(a.map(s=>s.id)),i=bt(j+o.size).filter(s=>!o.has(s.id)).slice(0,j),r=[g("library",t.allModulesTitle,t.allModulesCopy,"ti ti-layout-sidebar-left-expand"),g("search",t.searchTitle,t.searchCopy,"ti ti-search"),g("cohorts",t.cohortsTitle,t.cohortsCopy,"ti ti-id-badge-2"),typeof window.openUserPasswordModal=="function"?g("password",t.passwordTitle,t.passwordCopy,"ti ti-lock"):"",g("logout",t.logoutTitle,t.logoutCopy,"ti ti-logout","is-danger")].filter(Boolean);return`
+            ${R(t.quickTitle,t.quickCopy)}
             <section class="apk-quick-hero">
                 <div class="apk-quick-hero-copy">
-                    <strong>${escapeHtml(copy.quickHeroTitle)}</strong>
-                    <span>${escapeHtml(copy.quickHeroCopy)}</span>
+                    <strong>${n(t.quickHeroTitle)}</strong>
+                    <span>${n(t.quickHeroCopy)}</span>
                 </div>
-                <button type="button" class="apk-shell-icon is-compact" data-apk-action="library" aria-label="${escapeHtml(copy.openLibrary)}">
+                <button type="button" class="apk-shell-icon is-compact" data-apk-action="library" aria-label="${n(t.openLibrary)}">
                     <i class="ti ti-layout-sidebar-left-expand"></i>
                 </button>
             </section>
             <section class="apk-sheet-section">
-                ${buildSectionHead(copy.recentModulesTitle, copy.recentModulesNote)}
-                ${recentModules.length
-                    ? `<div class="apk-switch-list">${recentModules.map((item) => buildSwitchRow(item, activeId)).join('')}</div>`
-                    : `<div class="apk-sheet-empty">${escapeHtml(copy.noRecent)}</div>`}
+                ${k(t.recentModulesTitle,t.recentModulesNote)}
+                ${a.length?`<div class="apk-switch-list">${a.map(s=>kt(s,e)).join("")}</div>`:`<div class="apk-sheet-empty">${n(t.noRecent)}</div>`}
             </section>
-            ${quickModules.length
-                ? `
+            ${i.length?`
                     <section class="apk-sheet-section">
-                        ${buildSectionHead(copy.suggestedTitle, copy.suggestedNote)}
+                        ${k(t.suggestedTitle,t.suggestedNote)}
                         <div class="apk-sheet-grid">
-                            ${quickModules.map((item) => buildModuleCard(item, activeId)).join('')}
+                            ${i.map(s=>U(s,e)).join("")}
                         </div>
                     </section>
-                `
-                : ''}
+                `:""}
             <section class="apk-sheet-section">
-                ${buildSectionHead(copy.utilitiesTitle, copy.utilitiesNote)}
+                ${k(t.utilitiesTitle,t.utilitiesNote)}
                 <div class="apk-sheet-grid">
-                    ${quickActions.join('')}
+                    ${r.join("")}
                 </div>
             </section>
-        `;
-    }
-
-    function buildAccountSheetHtml() {
-        const copy = getShellCopy();
-        const user = getCurrentUser();
-
-        return `
-            ${buildSheetHeader(copy.accountTitle, copy.accountCopy)}
+        `}function de(){const t=m(),e=L();return`
+            ${R(t.accountTitle,t.accountCopy)}
             <section class="apk-sheet-section">
                 <div class="apk-account-card">
-                    <div class="apk-account-name">${escapeHtml(user?.name || copy.notLoggedIn)}</div>
-                    <div class="apk-account-role">${escapeHtml(humanizeRole())}</div>
+                    <div class="apk-account-name">${n((e==null?void 0:e.name)||t.notLoggedIn)}</div>
+                    <div class="apk-account-role">${n(ut())}</div>
                     <div class="apk-account-grid">
                         <div class="apk-account-row">
-                            <span>${escapeHtml(copy.currentSchool)}</span>
-                            <strong>${escapeHtml(getCurrentSchool() || copy.unknownSchool)}</strong>
+                            <span>${n(t.currentSchool)}</span>
+                            <strong>${n(pt()||t.unknownSchool)}</strong>
                         </div>
                         <div class="apk-account-row">
-                            <span>${escapeHtml(copy.currentCohort)}</span>
-                            <strong>${escapeHtml(getCurrentCohortLabel())}</strong>
+                            <span>${n(t.currentCohort)}</span>
+                            <strong>${n(X())}</strong>
                         </div>
                         <div class="apk-account-row">
-                            <span>${escapeHtml(copy.themeMode)}</span>
-                            <strong>${escapeHtml(`${copy.followSystem} · ${getThemeLabel()}`)}</strong>
+                            <span>${n(t.themeMode)}</span>
+                            <strong>${n(`${t.followSystem} · ${oe()}`)}</strong>
                         </div>
                         <div class="apk-account-row">
-                            <span>${escapeHtml(copy.runtimeEnv)}</span>
-                            <strong>${escapeHtml(copy.mobileBrowser)}</strong>
+                            <span>${n(t.runtimeEnv)}</span>
+                            <strong>${n(t.mobileBrowser)}</strong>
                         </div>
                     </div>
                 </div>
             </section>
             <section class="apk-sheet-section">
                 <div class="apk-sheet-grid">
-                    ${buildActionCard('cohorts', copy.cohortsTitle, copy.cohortsCopy, 'ti ti-id-badge-2')}
-                    ${buildActionCard('search', copy.searchTitle, copy.searchCopy, 'ti ti-search')}
-                    ${buildActionCard('library', copy.allModulesTitle, copy.allModulesCopy, 'ti ti-layout-sidebar-left-expand')}
-                    ${typeof window.openUserPasswordModal === 'function'
-                        ? buildActionCard('password', copy.passwordTitle, copy.passwordCopy, 'ti ti-lock')
-                        : ''}
-                    ${buildActionCard('logout', copy.logoutTitle, copy.logoutCopy, 'ti ti-logout', 'is-danger')}
+                    ${g("cohorts",t.cohortsTitle,t.cohortsCopy,"ti ti-id-badge-2")}
+                    ${g("search",t.searchTitle,t.searchCopy,"ti ti-search")}
+                    ${g("library",t.allModulesTitle,t.allModulesCopy,"ti ti-layout-sidebar-left-expand")}
+                    ${typeof window.openUserPasswordModal=="function"?g("password",t.passwordTitle,t.passwordCopy,"ti ti-lock"):""}
+                    ${g("logout",t.logoutTitle,t.logoutCopy,"ti ti-logout","is-danger")}
                 </div>
             </section>
-        `;
-    }
-
-    function buildCohortsSheetHtml() {
-        const copy = getShellCopy();
-        const options = getCohortOptions();
-        const currentValue = document.getElementById('cohort-selector')?.value || '';
-
-        if (!options.length) {
-            return `${buildSheetHeader(copy.switchCohortTitle, copy.noCohortChoices)}
-                <div class="apk-sheet-empty">${escapeHtml(copy.noCohorts)}</div>`;
-        }
-
-        return `
-            ${buildSheetHeader(copy.switchCohortTitle, copy.switchCohortCopy)}
+        `}function ue(){var o;const t=m(),e=Ut(),a=((o=document.getElementById("cohort-selector"))==null?void 0:o.value)||"";return e.length?`
+            ${R(t.switchCohortTitle,t.switchCohortCopy)}
             <section class="apk-sheet-section">
                 <div class="apk-sheet-grid">
-                    ${options.map((option) => `
-                        <button type="button" class="apk-sheet-card${option.value === currentValue ? ' is-active' : ''}" data-apk-cohort="${escapeHtml(option.value)}">
-                            <strong>${escapeHtml(option.label)}</strong>
-                            <span>${escapeHtml(option.value === currentValue ? copy.usingCurrentCohort : copy.switchToThisCohort)}</span>
+                    ${e.map(i=>`
+                        <button type="button" class="apk-sheet-card${i.value===a?" is-active":""}" data-apk-cohort="${n(i.value)}">
+                            <strong>${n(i.label)}</strong>
+                            <span>${n(i.value===a?t.usingCurrentCohort:t.switchToThisCohort)}</span>
                         </button>
-                    `).join('')}
+                    `).join("")}
                 </div>
             </section>
-        `;
-    }
-
-    function renderLibrary(root) {
-        const panel = root.querySelector('[data-apk-library-panel]');
-        if (!panel) return;
-        setHtmlIfChanged(panel, libraryOpen ? buildLibraryHtml() : '');
-    }
-
-    function renderSheet() {
-        const root = ensureShellRoot();
-        const panel = root.querySelector('[data-apk-sheet-panel]');
-        if (!panel) return;
-
-        if (!sheetMode) {
-            setHtmlIfChanged(panel, '');
-            return;
-        }
-        if (sheetMode === 'modules') {
-            setHtmlIfChanged(panel, buildModulesSheetHtml());
-            return;
-        }
-        if (sheetMode === 'quick') {
-            setHtmlIfChanged(panel, buildRecentQuickSheetHtml());
-            return;
-        }
-        if (sheetMode === 'account') {
-            setHtmlIfChanged(panel, buildAccountSheetHtml());
-            return;
-        }
-        if (sheetMode === 'cohorts') {
-            setHtmlIfChanged(panel, buildCohortsSheetHtml());
-        }
-    }
-
-    function renderRail(root) {
-        const copy = getShellCopy();
-        const rail = root.querySelector('[data-apk-rail]');
-        if (!rail) return;
-
-        const currentCategory = getCurrentCategory();
-        const activeId = getActiveModuleId();
-
-        if (!currentCategory?.items?.length) {
-            setHtmlIfChanged(rail, `<div class="apk-rail-empty">${escapeHtml(copy.currentCategoryEmpty)}</div>`);
-            return;
-        }
-
-        const railHtml = currentCategory.items.map((item) => `
-            <button type="button" class="apk-rail-chip${item.id === activeId ? ' is-active' : ''}" data-apk-module="${escapeHtml(item.id)}">
-                ${escapeHtml(item.text || item.id)}
+        `:`${R(t.switchCohortTitle,t.noCohortChoices)}
+                <div class="apk-sheet-empty">${n(t.noCohorts)}</div>`}function pe(t){const e=t.querySelector("[data-apk-library-panel]");e&&S(e,u?se():"")}function he(){const e=Z().querySelector("[data-apk-sheet-panel]");if(e){if(!d){S(e,"");return}if(d==="modules"){S(e,le());return}if(d==="quick"){S(e,ce());return}if(d==="account"){S(e,de());return}d==="cohorts"&&S(e,ue())}}function be(t){var s;const e=m(),a=t.querySelector("[data-apk-rail]");if(!a)return;const o=Y(),i=A();if(!((s=o==null?void 0:o.items)!=null&&s.length)){S(a,`<div class="apk-rail-empty">${n(e.currentCategoryEmpty)}</div>`);return}const r=o.items.map(c=>`
+            <button type="button" class="apk-rail-chip${c.id===i?" is-active":""}" data-apk-module="${n(c.id)}">
+                ${n(c.text||c.id)}
             </button>
-        `).join('');
-
-        if (setHtmlIfChanged(rail, railHtml)) {
-            window.requestAnimationFrame(() => scrollActiveRailChipIntoView(root));
-        }
-    }
-
-    function renderTabs(root) {
-        const activeId = getActiveModuleId();
-        const homeId = getHomeModuleId();
-        root.querySelectorAll('.apk-shell-tab').forEach((button) => {
-            const tab = button.getAttribute('data-apk-tab');
-            const active = (
-                !libraryOpen
-                && (
-                    (tab === 'home' && !sheetMode && activeId === homeId)
-                    || (tab === 'modules' && sheetMode === 'modules')
-                    || (tab === 'quick' && sheetMode === 'quick')
-                    || (tab === 'account' && sheetMode === 'account')
-                )
-            );
-            toggleClassIfChanged(button, 'is-active', active);
-        });
-    }
-
-    function renderShell() {
-        const copy = getShellCopy();
-        const root = ensureShellRoot();
-        const activeItem = getActiveItem();
-        const currentCategory = getCurrentCategory();
-        const subtitle = [
-            getCurrentSchool() || copy.unknownSchool,
-            currentCategory?.title || copy.workbench,
-            getCurrentCohortLabel()
-        ].filter(Boolean).join(' · ');
-
-        setStylePropertyIfChanged(root, '--apk-accent', activeItem?.categoryColor || currentCategory?.color || '#2563eb');
-        root.setAttribute('aria-hidden', 'false');
-        setDatasetIfChanged(root, 'sheetOpen', sheetMode ? 'true' : 'false');
-        setDatasetIfChanged(root, 'sheetMode', sheetMode || '');
-        setDatasetIfChanged(root, 'libraryOpen', libraryOpen ? 'true' : 'false');
-
-        const fields = {
-            role: `${humanizeRole()}工作台`,
-            title: activeItem?.text || '澄见',
-            subtitle,
-            cohort: getCurrentCohortLabel(),
-            mode: copy.workbench
-        };
-
-        Object.entries(fields).forEach(([key, value]) => {
-            const node = root.querySelector(`[data-apk-field="${key}"]`);
-            setTextIfChanged(node, value);
-        });
-
-        syncShellModalState(root);
-        renderRail(root);
-        renderSheet();
-        renderLibrary(root);
-        renderTabs(root);
-    }
-
-    function setLibraryOpen(nextOpen, options = {}) {
-        libraryOpen = !!nextOpen;
-        if (libraryOpen) {
-            sheetMode = '';
-        }
-        if (!libraryOpen && options.resetQuery !== false) {
-            libraryQuery = '';
-        }
-        renderShell();
-    }
-
-    function toggleLibrary(forceOpen) {
-        const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !libraryOpen;
-        setLibraryOpen(nextOpen);
-    }
-
-    function setSheetMode(mode = '') {
-        sheetMode = mode;
-        if (mode) {
-            libraryOpen = false;
-            libraryQuery = '';
-        }
-        renderShell();
-    }
-
-    function toggleSheet(mode) {
-        setSheetMode(sheetMode === mode ? '' : mode);
-    }
-
-    function activateModule(moduleId) {
-        if (!moduleId || typeof window.switchTab !== 'function') return;
-        sheetMode = '';
-        libraryOpen = false;
-        libraryQuery = '';
-        renderShell();
-        scrollPrimaryViewportToTop();
-        window.switchTab(moduleId);
-        rememberRecentModule(moduleId);
-        if (moduleId === 'student-details') {
-            scheduleStudentDetailsModuleFocus();
-        }
-        REFRESH_DELAYS.forEach((delay) => {
-            window.setTimeout(() => {
-                if (document.getElementById(moduleId)?.classList.contains('active')) {
-                    refreshContentEnhancements();
-                    if (moduleId === 'student-details' && typeof window.requestStudentDetailsPrimaryFocus === 'function') {
-                        window.requestStudentDetailsPrimaryFocus();
-                    }
-                }
-                scheduleRefresh();
-            }, delay);
-        });
-    }
-
-    function openSpotlightSearch() {
-        libraryOpen = false;
-        libraryQuery = '';
-        setSheetMode('');
-        if (typeof window.openSpotlight === 'function') {
-            window.openSpotlight();
-        }
-    }
-
-    function openPasswordModal() {
-        libraryOpen = false;
-        libraryQuery = '';
-        setSheetMode('');
-        if (typeof window.openUserPasswordModal === 'function') {
-            window.openUserPasswordModal();
-        }
-    }
-
-    function handleTab(tabName) {
-        if (tabName === 'home') {
-            activateModule(getHomeModuleId());
-            return;
-        }
-        if (tabName === 'modules') {
-            toggleSheet('modules');
-            return;
-        }
-        if (tabName === 'quick') {
-            toggleSheet('quick');
-            return;
-        }
-        if (tabName === 'account') {
-            toggleSheet('account');
-        }
-    }
-
-    function handleShellInput(event) {
-        const searchInput = event.target.closest('[data-apk-library-search]');
-        if (!searchInput) return;
-        const caret = typeof searchInput.selectionStart === 'number'
-            ? searchInput.selectionStart
-            : String(searchInput.value || '').length;
-        libraryQuery = String(searchInput.value || '');
-        renderShell();
-        if (!libraryOpen) return;
-        const nextInput = document.querySelector('[data-apk-library-search]');
-        if (!nextInput) return;
-        if (typeof nextInput.focus === 'function') {
-            nextInput.focus({ preventScroll: true });
-        }
-        if (typeof nextInput.setSelectionRange === 'function') {
-            nextInput.setSelectionRange(caret, caret);
-        }
-    }
-
-    function handleShellClick(event) {
-        const trigger = event.target.closest('[data-apk-action], [data-apk-module], [data-apk-cohort], [data-apk-tab]');
-        if (!trigger) return;
-
-        event.preventDefault();
-
-        const moduleId = trigger.getAttribute('data-apk-module');
-        if (moduleId) {
-            activateModule(moduleId);
-            return;
-        }
-
-        const cohortValue = trigger.getAttribute('data-apk-cohort');
-        if (cohortValue) {
-            switchCohort(cohortValue);
-            return;
-        }
-
-        const tabName = trigger.getAttribute('data-apk-tab');
-        if (tabName) {
-            handleTab(tabName);
-            return;
-        }
-
-        const action = trigger.getAttribute('data-apk-action');
-        if (action === 'close-sheet') {
-            setSheetMode('');
-            return;
-        }
-        if (action === 'library') {
-            toggleLibrary();
-            return;
-        }
-        if (action === 'close-library') {
-            toggleLibrary(false);
-            return;
-        }
-        if (action === 'modules') {
-            toggleSheet('modules');
-            return;
-        }
-        if (action === 'quick') {
-            toggleSheet('quick');
-            return;
-        }
-        if (action === 'account') {
-            toggleSheet('account');
-            return;
-        }
-        if (action === 'cohorts') {
-            toggleSheet('cohorts');
-            return;
-        }
-        if (action === 'search') {
-            openSpotlightSearch();
-            return;
-        }
-        if (action === 'password') {
-            openPasswordModal();
-            return;
-        }
-        if (action === 'logout' && window.Auth && typeof window.Auth.logout === 'function') {
-            libraryOpen = false;
-            libraryQuery = '';
-            setSheetMode('');
-            window.Auth.logout();
-        }
-    }
-
-    function handleShellTouchStart(event) {
-        if (!isMobileViewport() || !isLoggedIn() || isParentLikeRole() || isBlockingDialogVisible()) return;
-        const touch = event.touches?.[0];
-        if (!touch) return;
-        shellGesture = {
-            startX: touch.clientX,
-            startY: touch.clientY,
-            canOpenLibrary: !libraryOpen && !sheetMode && touch.clientX <= 28,
-            canCloseLibrary: libraryOpen
-        };
-    }
-
-    function handleShellTouchMove(event) {
-        if (!shellGesture) return;
-        const touch = event.touches?.[0];
-        if (!touch) return;
-        const deltaX = touch.clientX - shellGesture.startX;
-        const deltaY = touch.clientY - shellGesture.startY;
-        if (Math.abs(deltaY) > 42) {
-            shellGesture = null;
-            return;
-        }
-        if (shellGesture.canOpenLibrary && deltaX >= 80) {
-            toggleLibrary(true);
-            shellGesture = null;
-            return;
-        }
-        if (shellGesture.canCloseLibrary && deltaX <= -80) {
-            toggleLibrary(false);
-            shellGesture = null;
-        }
-    }
-
-    function handleShellTouchEnd() {
-        shellGesture = null;
-    }
-
-    function wrapMethod(target, methodName, marker) {
-        if (!target || typeof target[methodName] !== 'function' || target[methodName][marker]) return;
-        const original = target[methodName];
-        const wrapped = function () {
-            const result = original.apply(this, arguments);
-            scheduleRefresh();
-            REFRESH_DELAYS.forEach((delay) => {
-                window.setTimeout(scheduleRefresh, delay);
-            });
-            return result;
-        };
-        wrapped[marker] = true;
-        target[methodName] = wrapped;
-    }
-
-    function hookSwalLifecycle() {
-        if (!window.Swal) return;
-        wrapMethod(window.Swal, 'close', '__apkMobileWrapped__');
-        if (typeof window.Swal.fire === 'function' && !window.Swal.fire.__apkMobileWrapped__) {
-            const originalFire = window.Swal.fire;
-            const wrappedFire = function () {
-                const result = originalFire.apply(window.Swal, arguments);
-                scheduleRefresh();
-                window.setTimeout(dismissPassiveSwal, 1200);
-                REFRESH_DELAYS.forEach((delay) => {
-                    window.setTimeout(scheduleRefresh, delay);
-                });
-                if (result && typeof result.finally === 'function') {
-                    result.finally(() => {
-                        REFRESH_DELAYS.forEach((delay) => {
-                            window.setTimeout(scheduleRefresh, delay);
-                        });
-                    });
-                }
-                return result;
-            };
-            wrappedFire.__apkMobileWrapped__ = true;
-            window.Swal.fire = wrappedFire;
-        }
-    }
-
-    function ensureHooks() {
-        wrapMethod(window, 'switchTab', '__apkMobileWrapped__');
-        wrapMethod(window, 'renderNavigation', '__apkMobileWrapped__');
-        wrapMethod(window, 'switchNavCategory', '__apkMobileWrapped__');
-        if (window.Auth) {
-            wrapMethod(window.Auth, 'applyRoleView', '__apkMobileWrapped__');
-            wrapMethod(window.Auth, 'renderParentView', '__apkMobileWrapped__');
-        }
-        hookSwalLifecycle();
-    }
-
-    function moveMainIntoShell(root) {
-        const main = document.querySelector('main.app-main');
-        const app = document.getElementById('app');
-        const shellContent = root.querySelector('[data-apk-content]');
-
-        if (!main || !shellContent) return;
-
-        // 如果 main 已经在 shell 内，跳过
-        if (root.contains(main)) return;
-
-        // 标记原始父容器，以便恢复
-        if (!main.dataset.originalParent) {
-            main.dataset.originalParent = 'app';
-        }
-
-        // 将 main 移入 shell 的 sheet 容器
-        shellContent.appendChild(main);
-    }
-
-    function restoreMainToApp() {
-        const main = document.querySelector('main.app-main');
-        const app = document.getElementById('app');
-        const shell = document.getElementById('apk-mobile-shell');
-
-        if (!main || !app) return;
-
-        // 如果 main 在 shell 内，移回 app
-        if (shell && shell.contains(main)) {
-            app.appendChild(main);
-        }
-    }
-
-    function refreshMobileArchitecture() {
-        resetMobileNavCache();
-        ensureHooks();
-        syncSystemTheme();
-
-        const isMobile = isMobileViewport();
-        const shouldUseShell = isMobile && isLoggedIn() && !isParentLikeRole();
-
-        document.body.dataset.mobileQuery = isMobile ? 'true' : 'false';
-        if (shouldUseShell) {
-            document.body.dataset.mobileArchitecture = 'apk-v2';
-        } else {
-            delete document.body.dataset.mobileArchitecture;
-        }
-
-        syncDesktopAppVisibility();
-        hideLegacyMobileShells();
-
-        const root = ensureShellRoot();
-        syncShellViewport(root);
-        root.style.display = shouldUseShell ? 'block' : 'none';
-        root.setAttribute('aria-hidden', shouldUseShell ? 'false' : 'true');
-
-        if (!shouldUseShell) {
-            sheetMode = '';
-            libraryOpen = false;
-            libraryQuery = '';
-            root.dataset.sheetOpen = 'false';
-            root.dataset.sheetMode = '';
-            root.dataset.libraryOpen = 'false';
-            root.dataset.modalOpen = 'false';
-            restoreMainToApp();
-            return;
-        }
-
-        moveMainIntoShell(root);
-        refreshContentEnhancements();
-        renderShell();
-    }
-
-    function scheduleRefresh() {
-        clearTimeout(refreshHandle);
-        refreshHandle = window.setTimeout(refreshMobileArchitecture, 60);
-    }
-
-    const MobMgr = {
-        switchTab(tabName) {
-            const map = {
-                home: getHomeModuleId(),
-                students: 'student-details',
-                analysis: 'summary'
-            };
-            if (tabName === 'me') {
-                setSheetMode('account');
-                return;
-            }
-            const moduleId = map[tabName] || tabName;
-            activateModule(moduleId);
-        },
-        renderStudentList() {
-            scheduleRefresh();
-        },
-        showStudentDetail() {
-            scheduleRefresh();
-        },
-        renderAnalysis() {
-            scheduleRefresh();
-        },
-        openModules() {
-            setSheetMode('modules');
-        },
-        openLibrary() {
-            toggleLibrary(true);
-        },
-        openQuickActions() {
-            setSheetMode('quick');
-        },
-        openAccountSheet() {
-            setSheetMode('account');
-        },
-        openCohortSheet() {
-            setSheetMode('cohorts');
-        },
-        refresh: scheduleRefresh
-    };
-
-    window.MobMgr = MobMgr;
-    window.MobileQueryUI = {
-        refresh: scheduleRefresh,
-        openLibrary: () => toggleLibrary(true),
-        openModules: () => setSheetMode('modules'),
-        openQuick: () => setSheetMode('quick'),
-        openAccount: () => setSheetMode('account'),
-        openCohorts: () => setSheetMode('cohorts')
-    };
-    window.MobileExperienceRuntime = window.MobileExperienceRuntime || {
-        install: installMobileExperienceRuntime,
-        syncCompactState,
-        isCompactViewport
-    };
-    window.MobDashboardMgr = window.MobDashboardMgr || {
-        showToast(msg) {
-            if (window.UI && typeof window.UI.toast === 'function') window.UI.toast(msg, 'info');
-            else if (typeof window.showToast === 'function') window.showToast(msg);
-            else window.alert(msg);
-        }
-    };
-    window.switchMobileTab = (tabName) => MobMgr.switchTab(tabName);
-
-    if (window.matchMedia) {
-        themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
-        if (typeof themeMedia.addEventListener === 'function') {
-            themeMedia.addEventListener('change', scheduleRefresh);
-        } else if (typeof themeMedia.addListener === 'function') {
-            themeMedia.addListener(scheduleRefresh);
-        }
-    }
-
-    window.addEventListener('cloud-load-state', scheduleRefresh);
-    window.addEventListener('resize', scheduleRefresh);
-    window.addEventListener('orientationchange', scheduleRefresh);
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', scheduleRefresh, { passive: true });
-        window.visualViewport.addEventListener('scroll', () => syncShellViewport(), { passive: true });
-    }
-    window.addEventListener('load', scheduleRefresh);
-
-    // Remove mobile skeleton screen after app loads
-    function removeMobileSkeleton() {
-        const skeleton = document.getElementById('mobile-skeleton');
-        if (skeleton && isMobileViewport()) {
-            skeleton.classList.add('hidden');
-            setTimeout(() => {
-                skeleton.remove();
-            }, 350);
-        }
-    }
-
-    // Remove skeleton after mobile architecture is ready
-    function init() {
-        if (isMobileViewport()) {
-            setTimeout(removeMobileSkeleton, 200);
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-    window.addEventListener('pageshow', scheduleRefresh);
-    window.addEventListener('focus', scheduleRefresh);
-    document.addEventListener('touchstart', handleShellTouchStart, { passive: true });
-    document.addEventListener('touchmove', handleShellTouchMove, { passive: true });
-    document.addEventListener('touchend', handleShellTouchEnd, { passive: true });
-    document.addEventListener('touchcancel', handleShellTouchEnd, { passive: true });
-    document.addEventListener('resume', scheduleRefresh, false);
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) scheduleRefresh();
-    });
-
-    installMobileExperienceRuntime();
-    REFRESH_DELAYS.forEach((delay) => {
-        window.setTimeout(scheduleRefresh, delay);
-    });
-
-    scheduleRefresh();
-    window.__MOBILE_MANAGER_PATCHED__ = true;
-    window.__MOBILE_APP_RUNTIME_PATCHED__ = true;
-})();
+        `).join("");S(a,r)&&window.requestAnimationFrame(()=>Ot(t))}function me(t){const e=A(),a=$();t.querySelectorAll(".apk-shell-tab").forEach(o=>{const i=o.getAttribute("data-apk-tab");It(o,"is-active",!u&&(i==="home"&&!d&&e===a||i==="modules"&&d==="modules"||i==="quick"&&d==="quick"||i==="account"&&d==="account"))})}function V(){const t=m(),e=Z(),a=N(),o=Y(),i=[pt()||t.unknownSchool,(o==null?void 0:o.title)||t.workbench,X()].filter(Boolean).join(" · ");Rt(e,"--apk-accent",(a==null?void 0:a.categoryColor)||(o==null?void 0:o.color)||"#2563eb"),e.setAttribute("aria-hidden","false"),W(e,"sheetOpen",d?"true":"false"),W(e,"sheetMode",d||""),W(e,"libraryOpen",u?"true":"false");const r={role:`${ut()}工作台`,title:(a==null?void 0:a.text)||"澄见",subtitle:i,cohort:X(),mode:t.workbench};Object.entries(r).forEach(([s,c])=>{const f=e.querySelector(`[data-apk-field="${s}"]`);At(f,c)}),Gt(e),be(e),he(),pe(e),me(e)}function fe(t,e={}){u=!!t,u&&(d=""),!u&&e.resetQuery!==!1&&(y=""),V()}function I(t){fe(typeof t=="boolean"?t:!u)}function p(t=""){d=t,t&&(u=!1,y=""),V()}function C(t){p(d===t?"":t)}function tt(t){!t||typeof window.switchTab!="function"||(d="",u=!1,y="",V(),mt(),window.switchTab(t),Ht(t),t==="student-details"&&Xt(),T.forEach(e=>{window.setTimeout(()=>{var a;(a=document.getElementById(t))!=null&&a.classList.contains("active")&&(yt(),t==="student-details"&&typeof window.requestStudentDetailsPrimaryFocus=="function"&&window.requestStudentDetailsPrimaryFocus()),l()},e)}))}function ye(){u=!1,y="",p(""),typeof window.openSpotlight=="function"&&window.openSpotlight()}function we(){u=!1,y="",p(""),typeof window.openUserPasswordModal=="function"&&window.openUserPasswordModal()}function ge(t){if(t==="home"){tt($());return}if(t==="modules"){C("modules");return}if(t==="quick"){C("quick");return}t==="account"&&C("account")}function ke(t){const e=t.target.closest("[data-apk-library-search]");if(!e)return;const a=typeof e.selectionStart=="number"?e.selectionStart:String(e.value||"").length;if(y=String(e.value||""),V(),!u)return;const o=document.querySelector("[data-apk-library-search]");o&&(typeof o.focus=="function"&&o.focus({preventScroll:!0}),typeof o.setSelectionRange=="function"&&o.setSelectionRange(a,a))}function ve(t){const e=t.target.closest("[data-apk-action], [data-apk-module], [data-apk-cohort], [data-apk-tab]");if(!e)return;t.preventDefault();const a=e.getAttribute("data-apk-module");if(a){tt(a);return}const o=e.getAttribute("data-apk-cohort");if(o){ae(o);return}const i=e.getAttribute("data-apk-tab");if(i){ge(i);return}const r=e.getAttribute("data-apk-action");if(r==="close-sheet"){p("");return}if(r==="library"){I();return}if(r==="close-library"){I(!1);return}if(r==="modules"){C("modules");return}if(r==="quick"){C("quick");return}if(r==="account"){C("account");return}if(r==="cohorts"){C("cohorts");return}if(r==="search"){ye();return}if(r==="password"){we();return}r==="logout"&&window.Auth&&typeof window.Auth.logout=="function"&&(u=!1,y="",p(""),window.Auth.logout())}function Se(t){var a;if(!b()||!Q()||z()||wt())return;const e=(a=t.touches)==null?void 0:a[0];e&&(w={startX:e.clientX,startY:e.clientY,canOpenLibrary:!u&&!d&&e.clientX<=28,canCloseLibrary:u})}function Ee(t){var i;if(!w)return;const e=(i=t.touches)==null?void 0:i[0];if(!e)return;const a=e.clientX-w.startX,o=e.clientY-w.startY;if(Math.abs(o)>42){w=null;return}if(w.canOpenLibrary&&a>=80){I(!0),w=null;return}w.canCloseLibrary&&a<=-80&&(I(!1),w=null)}function St(){w=null}function O(t,e,a){if(!t||typeof t[e]!="function"||t[e][a])return;const o=t[e],i=function(){const r=o.apply(this,arguments);return l(),T.forEach(s=>{window.setTimeout(l,s)}),r};i[a]=!0,t[e]=i}function Ce(){if(window.Swal&&(O(window.Swal,"close","__apkMobileWrapped__"),typeof window.Swal.fire=="function"&&!window.Swal.fire.__apkMobileWrapped__)){const t=window.Swal.fire,e=function(){const a=t.apply(window.Swal,arguments);return l(),window.setTimeout(gt,1200),T.forEach(o=>{window.setTimeout(l,o)}),a&&typeof a.finally=="function"&&a.finally(()=>{T.forEach(o=>{window.setTimeout(l,o)})}),a};e.__apkMobileWrapped__=!0,window.Swal.fire=e}}function xe(){O(window,"switchTab","__apkMobileWrapped__"),O(window,"renderNavigation","__apkMobileWrapped__"),O(window,"switchNavCategory","__apkMobileWrapped__"),window.Auth&&(O(window.Auth,"applyRoleView","__apkMobileWrapped__"),O(window.Auth,"renderParentView","__apkMobileWrapped__")),Ce()}function Te(t){const e=document.querySelector("main.app-main"),a=document.getElementById("app"),o=t.querySelector("[data-apk-content]");!e||!o||t.contains(e)||(e.dataset.originalParent||(e.dataset.originalParent="app"),o.appendChild(e))}function _e(){const t=document.querySelector("main.app-main"),e=document.getElementById("app"),a=document.getElementById("apk-mobile-shell");!t||!e||a&&a.contains(t)&&e.appendChild(t)}function Le(){Nt(),xe(),ee();const t=b(),e=t&&Q()&&!z();document.body.dataset.mobileQuery=t?"true":"false",e?document.body.dataset.mobileArchitecture="apk-v2":delete document.body.dataset.mobileArchitecture,Zt(),Jt();const a=Z();if(rt(a),a.style.display=e?"block":"none",a.setAttribute("aria-hidden",e?"false":"true"),!e){d="",u=!1,y="",a.dataset.sheetOpen="false",a.dataset.sheetMode="",a.dataset.libraryOpen="false",a.dataset.modalOpen="false",_e();return}Te(a),yt(),V()}function l(){clearTimeout(it),it=window.setTimeout(Le,60)}const Et={switchTab(t){const e={home:$(),students:"student-details",analysis:"summary"};if(t==="me"){p("account");return}const a=e[t]||t;tt(a)},renderStudentList(){l()},showStudentDetail(){l()},renderAnalysis(){l()},openModules(){p("modules")},openLibrary(){I(!0)},openQuickActions(){p("quick")},openAccountSheet(){p("account")},openCohortSheet(){p("cohorts")},refresh:l};window.MobMgr=Et,window.MobileQueryUI={refresh:l,openLibrary:()=>I(!0),openModules:()=>p("modules"),openQuick:()=>p("quick"),openAccount:()=>p("account"),openCohorts:()=>p("cohorts")},window.MobileExperienceRuntime=window.MobileExperienceRuntime||{install:ct,syncCompactState:K,isCompactViewport:lt},window.MobDashboardMgr=window.MobDashboardMgr||{showToast(t){window.UI&&typeof window.UI.toast=="function"?window.UI.toast(t,"info"):typeof window.showToast=="function"?window.showToast(t):window.alert(t)}},window.switchMobileTab=t=>Et.switchTab(t),window.matchMedia&&(v=window.matchMedia("(prefers-color-scheme: dark)"),typeof v.addEventListener=="function"?v.addEventListener("change",l):typeof v.addListener=="function"&&v.addListener(l)),window.addEventListener("cloud-load-state",l),window.addEventListener("resize",l),window.addEventListener("orientationchange",l),window.visualViewport&&(window.visualViewport.addEventListener("resize",l,{passive:!0}),window.visualViewport.addEventListener("scroll",()=>rt(),{passive:!0})),window.addEventListener("load",l);function Me(){const t=document.getElementById("mobile-skeleton");t&&b()&&(t.classList.add("hidden"),setTimeout(()=>{t.remove()},350))}function Ct(){b()&&setTimeout(Me,200)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",Ct):Ct(),window.addEventListener("pageshow",l),window.addEventListener("focus",l),document.addEventListener("touchstart",Se,{passive:!0}),document.addEventListener("touchmove",Ee,{passive:!0}),document.addEventListener("touchend",St,{passive:!0}),document.addEventListener("touchcancel",St,{passive:!0}),document.addEventListener("resume",l,!1),document.addEventListener("visibilitychange",()=>{document.hidden||l()}),ct(),T.forEach(t=>{window.setTimeout(l,t)}),l(),window.__MOBILE_MANAGER_PATCHED__=!0,window.__MOBILE_APP_RUNTIME_PATCHED__=!0})();

@@ -5,15 +5,28 @@
 
     const listeners = new Map();
     let stateSnapshot = null;
+    // The monitor uses a self-rescheduling timeout instead of a fixed
+    // setInterval. This lets the adaptive delay below actually take effect.
     let checkInterval = 10000; // 从 3 秒改为 10 秒，减少轮询频率
     let consecutiveNoChanges = 0;
     let intervalId = null;
 
     function buildMapSignature(map) {
         if (!map || typeof map !== 'object') return '';
-        const keys = Object.keys(map);
-        // 只比较长度，不序列化前 3 个键（避免不必要的字符串拼接）
-        return String(keys.length);
+        const keys = Object.keys(map).sort();
+        // Comparing only the count misses replacements where the map size is
+        // unchanged. A small stable hash catches key/value edits without
+        // retaining the full map in the state snapshot.
+        let hash = 2166136261;
+        for (const key of keys) {
+            const value = map[key];
+            const token = `${key}:${typeof value === 'string' ? value : JSON.stringify(value)}`;
+            for (let index = 0; index < token.length; index += 1) {
+                hash ^= token.charCodeAt(index);
+                hash = Math.imul(hash, 16777619);
+            }
+        }
+        return `${keys.length}:${hash >>> 0}`;
     }
 
     function captureCurrentState() {
@@ -111,6 +124,15 @@
         }
     }
 
+    function scheduleCheck(delay = checkInterval) {
+        if (intervalId) clearTimeout(intervalId);
+        intervalId = setTimeout(() => {
+            intervalId = null;
+            checkStateChanges();
+            scheduleCheck(checkInterval);
+        }, Math.max(250, delay));
+    }
+
     function startMonitoring() {
         if (intervalId) return;
 
@@ -125,14 +147,12 @@
 
         if (isTestEnv) return;
 
-        intervalId = setInterval(() => {
-            checkStateChanges();
-        }, checkInterval);
+        scheduleCheck(checkInterval);
     }
 
     function stopMonitoring() {
         if (intervalId) {
-            clearInterval(intervalId);
+            clearTimeout(intervalId);
             intervalId = null;
         }
     }
@@ -150,6 +170,7 @@
 
         // 立即检查一次状态变化
         checkStateChanges();
+        if (intervalId) scheduleCheck(checkInterval);
     }
 
     window.DataStateEventBus = {

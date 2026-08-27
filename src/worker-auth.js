@@ -619,9 +619,14 @@ export async function getSystemUserRow(db, username, options = {}) {
   const normalizedUsername = normalizeText(username);
   if (!normalizedUsername) return null;
   const includeInactive = options.includeInactive === true;
+  const accountColumns = [
+    'username', 'role', 'roles_json', 'school', 'class_name', 'teacher_name',
+    'password_hash', 'password_scheme', 'password_source', 'has_password',
+    'is_active', 'last_login_at', 'created_at', 'updated_at'
+  ].join(', ');
   const sql = includeInactive
-    ? 'SELECT * FROM system_users WHERE username = ? LIMIT 1'
-    : 'SELECT * FROM system_users WHERE username = ? AND is_active = 1 LIMIT 1';
+    ? `SELECT ${accountColumns} FROM system_users WHERE username = ? LIMIT 1`
+    : `SELECT ${accountColumns} FROM system_users WHERE username = ? AND is_active = 1 LIMIT 1`;
   const row = await db.prepare(sql).bind(normalizedUsername).first();
   return row ? normalizeDbAccountRow(row) : null;
 }

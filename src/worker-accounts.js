@@ -18,6 +18,17 @@ import {
 // Maximum number of accounts per batch.  Keeps PBKDF2 hashing within
 // Cloudflare Worker CPU limits (~50 ms budget).
 const ACCOUNT_UPSERT_BATCH_LIMIT = 50;
+const ACCOUNT_LIST_COLUMNS = [
+  'username', 'role', 'roles_json', 'school', 'class_name', 'teacher_name',
+  'password_hash', 'password_scheme', 'password_source', 'has_password',
+  'is_active', 'last_login_at', 'created_at', 'updated_at'
+].join(', ');
+const LOGIN_SESSION_LIST_COLUMNS = [
+  'id', 'username', 'role', 'school', 'class_name', 'session_id',
+  'device_label', 'device_type', 'browser', 'os', 'platform', 'language',
+  'timezone', 'screen', 'user_agent', 'ip_address', 'login_at',
+  'last_seen_at', 'session_expires_at', 'status'
+].join(', ');
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -25,7 +36,7 @@ const ACCOUNT_UPSERT_BATCH_LIMIT = 50;
 
 async function searchAccountsRows(db, keyword, session, limit) {
   let sql = `
-    SELECT * FROM system_users
+    SELECT ${ACCOUNT_LIST_COLUMNS} FROM system_users
     WHERE is_active = 1
       AND LOWER(username) LIKE LOWER(?)
   `;
@@ -58,7 +69,7 @@ export async function handleLoginSessionList(request, db, session, payload) {
   const mode = normalizeText(payload.mode) || 'self';
   const limit = Math.max(1, Math.min(Number(payload.limit ?? 50) || 50, 200));
   const bindings = [];
-  let sql = 'SELECT * FROM login_sessions';
+  let sql = `SELECT ${LOGIN_SESSION_LIST_COLUMNS} FROM login_sessions`;
   if (mode === 'all') {
     if (!isAdmin(session)) return forbidden(request, 'Only admin can view all login sessions');
   } else {
@@ -174,7 +185,7 @@ export async function handleAccountChangePassword(request, db, session, payload)
 
 export async function handleAccountExport(request, db, session) {
   if (!canBulkManageAccounts(session)) return forbidden(request, 'No permission to export accounts');
-  let sql = 'SELECT * FROM system_users WHERE is_active = 1';
+  let sql = `SELECT ${ACCOUNT_LIST_COLUMNS} FROM system_users WHERE is_active = 1`;
   const bindings = [];
   if (!isAdmin(session)) {
     sql += ' AND school = ?';

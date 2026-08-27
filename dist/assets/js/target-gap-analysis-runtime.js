@@ -1,155 +1,8 @@
-/*
- * 冲刺名单/目标缺口分析（target-gap-analysis）运行时模块
- *
- * 从 app.js 抽出的 analyzeTargetGap：点击指标表某校的划线分数，弹出该校针对指标一/
- * 指标二的「冲刺名单」——按总分排序取线下最接近目标的潜力生，标注建议补救学科
- * （带任课老师姓氏）、与年级均分差、达成率进度条，写入抽屉弹窗并暂存导出数据。
- *
- * 纯只读展示 + DOM——只读 RAW_DATA/SUBJECTS/CONFIG/TEACHER_MAP 与各校学生（经
- * getEquivalentSchoolStudents/getTargetConfigBySchool，均由 school-normalization-runtime
- * 于 app.js 前 Object.assign 到 window），只写抽屉 DOM 与 DrillSystem.exportData
- * （展示/导出缓存，非口径字段）。不写任何 SCHOOLS/RAW_DATA 记录、不参与总分/排名。
- *
- * 调用点不变：指标表内联 onclick（app.js:7001/7015，点击期解析 window.analyzeTargetGap，
- * DEFERRED 加载容错）。抽屉 DOM 懒加载沿用 window.ensureLazySectionLoaded('drill-modal')
- * （原 ensureDrillModalDom 仍留在 app.js，本模块内联等价逻辑，不依赖它）。
- */
-(function (root) {
-    if (!root) return;
-
-    function ensureDrillModalDom() {
-        if (typeof root.ensureLazySectionLoaded === 'function') {
-            root.ensureLazySectionLoaded('drill-modal');
-        }
-        return root.document.getElementById('drill-modal');
-    }
-
-    function analyzeTargetGap(schoolName, type, lineScore) {
-        const RAW_DATA = Array.isArray(root.RAW_DATA) ? root.RAW_DATA : [];
-        const SUBJECTS = Array.isArray(root.SUBJECTS) ? root.SUBJECTS : [];
-        const CONFIG = root.CONFIG || {};
-        const TEACHER_MAP = (root.TEACHER_MAP && typeof root.TEACHER_MAP === 'object') ? root.TEACHER_MAP : {};
-
-        const schoolStudents = root.getEquivalentSchoolStudents(schoolName);
-        if (!schoolStudents.length) return;
-
-        const targetConfig = root.getTargetConfigBySchool(schoolName).value || { t1: 0, t2: 0 };
-        const targetCount = type === 'ind1' ? parseInt(targetConfig.t1) : parseInt(targetConfig.t2);
-
-        if (!targetCount) return root.alert(`未找到 ${schoolName} 的目标设定，请先导入目标人数Excel。`);
-
-        const allStudents = [...schoolStudents].sort((a, b) => b.total - a.total);
-        const reached = allStudents.filter(s => s.total >= lineScore);
-        const below = allStudents.filter(s => s.total < lineScore);
-
-        const currentCount = reached.length;
-        const gap = targetCount - currentCount; // 缺口人数
-
-        const buffer = Math.ceil(targetCount * 0.1) || 5;
-
-        let countToFetch = 0;
-        let strategyText = "";
-
-        if (gap > 0) {
-            countToFetch = gap + buffer;
-            strategyText = `当前差 <strong style="color:red">${gap}</strong> 人达标。已为您筛选最接近目标的 <strong>${countToFetch}</strong> 名潜力生（含 ${buffer} 名保险备份）。`;
-        } else {
-            countToFetch = buffer;
-            strategyText = `当前已达标 (超 ${Math.abs(gap)} 人)。建议继续关注线下前 <strong>${countToFetch}</strong> 名学生，防止上线生波动下滑。`;
-        }
-
-        let candidates = below.slice(0, countToFetch);
-
-        if (candidates.length === 0) {
-            return root.alert("线下没有更多学生可供挖掘了。");
-        }
-
-        const gradeStatsRows = (typeof root.filterRowsToTownshipSchools === 'function')
-            ? root.filterRowsToTownshipSchools(RAW_DATA || [])
-            : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
-        const gradeStats = {};
-        SUBJECTS.forEach(sub => {
-            const allScores = gradeStatsRows.map(s => s.scores[sub]).filter(v => typeof v === 'number');
-            gradeStats[sub] = allScores.reduce((a, b) => a + b, 0) / (allScores.length || 1);
-        });
-
-        candidates = candidates.map(s => {
-            const scoreGap = lineScore - s.total;
-
-            let validSubjects = SUBJECTS;
-            if (CONFIG && Array.isArray(CONFIG.totalSubs)) {
-                validSubjects = CONFIG.totalSubs;
-            }
-
-            const getSubWithTeacher = (sub) => {
-                const teacherKey = `${s.class}_${sub}`;
-                let teacher = TEACHER_MAP[teacherKey];
-                if (teacher) {
-                    const surname = teacher.charAt(0);
-                    return `${sub}<small style="color:#666; font-size:0.9em;">(${surname}师)</small>`;
-                }
-                return sub;
-            };
-
-            let allDiffs = [];  // 存储所有科目差值 (用于挖掘潜力)
-            let hardWeakness = []; // 存储明显弱项 (低于均分5分)
-
-            validSubjects.forEach(sub => {
-                if (s.scores[sub] !== undefined) {
-                    const diff = s.scores[sub] - gradeStats[sub];
-                    const item = { name: sub, diff: diff };
-
-                    allDiffs.push(item);
-
-                    if (diff < -5) {
-                        hardWeakness.push(item);
-                    }
-                }
-            });
-
-            allDiffs.sort((a, b) => a.diff - b.diff);
-            hardWeakness.sort((a, b) => a.diff - b.diff);
-
-            let worstSubName = "";
-            let worstSubDiff = "";
-
-            if (hardWeakness.length > 0) {
-                const targets = hardWeakness.slice(0, 2);
-
-                worstSubName = targets.map(t => getSubWithTeacher(t.name)).join("、");
-                worstSubDiff = targets.map(t => t.diff.toFixed(1)).join(" / ");
-            } else {
-                const targets = allDiffs.slice(0, 2);
-
-                if (targets.length > 0) {
-                    worstSubName = "<span style='font-size:10px; color:#666; border:1px solid #ccc; padding:0 2px; border-radius:2px; margin-right:2px;'>潜力</span>" +
-                        targets.map(t => getSubWithTeacher(t.name)).join("、");
-
-                    worstSubDiff = targets.map(t => (t.diff > 0 ? '+' : '') + t.diff.toFixed(1)).join(" / ");
-                } else {
-                    worstSubName = "数据不足";
-                    worstSubDiff = "-";
-                }
-            }
-
-            return {
-                name: s.name,
-                class: s.class,
-                total: s.total,
-                scoreGap: scoreGap, // 距离目标的总分差距
-                worstSub: worstSubName, // 建议学科 (已带老师名)
-                worstDiff: worstSubDiff // 与年级均分差
-            };
-        });
-
-        const typeName = type === 'ind1' ? '指标一' : '指标二';
-        const title = `${schoolName} - ${typeName} 冲刺名单 (目标:${targetCount}人)`;
-
-        let html = `
+(function(e){if(!e)return;function M(){return typeof e.ensureLazySectionLoaded=="function"&&e.ensureLazySectionLoaded("drill-modal"),e.document.getElementById("drill-modal")}function w(m,T,d){const b=Array.isArray(e.RAW_DATA)?e.RAW_DATA:[],E=Array.isArray(e.SUBJECTS)?e.SUBJECTS:[],$=e.CONFIG||{},G=e.TEACHER_MAP&&typeof e.TEACHER_MAP=="object"?e.TEACHER_MAP:{},C=e.getEquivalentSchoolStudents(m);if(!C.length)return;const B=e.getTargetConfigBySchool(m).value||{t1:0,t2:0},f=parseInt(T==="ind1"?B.t1:B.t2);if(!f)return e.alert(`未找到 ${m} 的目标设定，请先导入目标人数Excel。`);const D=[...C].sort((t,s)=>s.total-t.total),_=D.filter(t=>t.total>=d),F=D.filter(t=>t.total<d),z=_.length,y=f-z,x=Math.ceil(f*.1)||5;let p=0,v="";y>0?(p=y+x,v=`当前差 <strong style="color:red">${y}</strong> 人达标。已为您筛选最接近目标的 <strong>${p}</strong> 名潜力生（含 ${x} 名保险备份）。`):(p=x,v=`当前已达标 (超 ${Math.abs(y)} 人)。建议继续关注线下前 <strong>${p}</strong> 名学生，防止上线生波动下滑。`);let o=F.slice(0,p);if(o.length===0)return e.alert("线下没有更多学生可供挖掘了。");const L=typeof e.filterRowsToTownshipSchools=="function"?e.filterRowsToTownshipSchools(b||[]):Array.isArray(b)?b:[],I={};E.forEach(t=>{const s=L.map(a=>a.scores[t]).filter(a=>typeof a=="number");I[t]=s.reduce((a,r)=>a+r,0)/(s.length||1)}),o=o.map(t=>{const s=d-t.total;let a=E;$&&Array.isArray($.totalSubs)&&(a=$.totalSubs);const r=n=>{const l=`${t.class}_${n}`;let g=G[l];if(g){const H=g.charAt(0);return`${n}<small style="color:#666; font-size:0.9em;">(${H}师)</small>`}return n};let i=[],c=[];a.forEach(n=>{if(t.scores[n]!==void 0){const l=t.scores[n]-I[n],g={name:n,diff:l};i.push(g),l<-5&&c.push(g)}}),i.sort((n,l)=>n.diff-l.diff),c.sort((n,l)=>n.diff-l.diff);let h="",u="";if(c.length>0){const n=c.slice(0,2);h=n.map(l=>r(l.name)).join("、"),u=n.map(l=>l.diff.toFixed(1)).join(" / ")}else{const n=i.slice(0,2);n.length>0?(h="<span style='font-size:10px; color:#666; border:1px solid #ccc; padding:0 2px; border-radius:2px; margin-right:2px;'>潜力</span>"+n.map(l=>r(l.name)).join("、"),u=n.map(l=>(l.diff>0?"+":"")+l.diff.toFixed(1)).join(" / ")):(h="数据不足",u="-")}return{name:t.name,class:t.class,total:t.total,scoreGap:s,worstSub:h,worstDiff:u}});const R=`${m} - ${T==="ind1"?"指标一":"指标二"} 冲刺名单 (目标:${f}人)`;let A=`
             <div class="info-bar">
-                <div>🎯 <strong>划线分数：${lineScore} 分</strong></div>
-                <div style="margin-top:4px;">📊 现状：已达标 ${currentCount} 人 / 目标 ${targetCount} 人。</div>
-                <div style="margin-top:4px; color:#0369a1;">💡 策略：${strategyText}</div>
+                <div>🎯 <strong>划线分数：${d} 分</strong></div>
+                <div style="margin-top:4px;">📊 现状：已达标 ${z} 人 / 目标 ${f} 人。</div>
+                <div style="margin-top:4px; color:#0369a1;">💡 策略：${v}</div>
             </div>
             <div class="table-wrap">
                 <table class="comparison-table">
@@ -164,82 +17,36 @@
                         </tr>
                     </thead>
                     <tbody>
-        `;
-
-        candidates.forEach(c => {
-            const isBalanced = c.worstSub.includes("潜力"); // 匹配"潜力"关键字
-            const subStyle = isBalanced ? "color:#64748b; font-size:12px;" : "color:#b91c1c; font-weight:bold;";
-            const diffStyle = isBalanced ? "color:#64748b;" : "color:#b91c1c; font-weight:bold;";
-
-            const percent = Math.min(100, (c.total / lineScore) * 100).toFixed(1);
-
-            const barColor = percent >= 98 ? '#f59e0b' : '#3b82f6';
-
-            html += `
+        `;o.forEach(t=>{const s=t.worstSub.includes("潜力"),a=s?"color:#64748b; font-size:12px;":"color:#b91c1c; font-weight:bold;",r=s?"color:#64748b;":"color:#b91c1c; font-weight:bold;",i=Math.min(100,t.total/d*100).toFixed(1),c=i>=98?"#f59e0b":"#3b82f6";A+=`
                 <tr>
-                    <td style="vertical-align:middle;">${c.class}</td>
+                    <td style="vertical-align:middle;">${t.class}</td>
                     <td style="vertical-align:middle;">
-                        <div style="font-weight:bold; font-size:14px;">${c.name}</div>
+                        <div style="font-weight:bold; font-size:14px;">${t.name}</div>
                     </td>
 
                     <!-- 🟢 改造：当前总分 + 可视化进度条 -->
                     <td style="vertical-align:middle;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-end; font-size:12px; margin-bottom:2px;">
-                            <span style="font-weight:800; font-size:15px; color:#333;">${c.total}</span>
-                            <span style="color:#94a3b8; transform:scale(0.9);">目标:${lineScore}</span>
+                            <span style="font-weight:800; font-size:15px; color:#333;">${t.total}</span>
+                            <span style="color:#94a3b8; transform:scale(0.9);">目标:${d}</span>
                         </div>
-                        <div style="width:100%; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;" title="达成率: ${percent}%">
-                            <div style="width:${percent}%; height:100%; background:${barColor}; border-radius:3px;"></div>
+                        <div style="width:100%; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;" title="达成率: ${i}%">
+                            <div style="width:${i}%; height:100%; background:${c}; border-radius:3px;"></div>
                         </div>
                     </td>
 
                     <td style="vertical-align:middle;">
                         <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #dbeafe; font-size:12px;">
-                            -${c.scoreGap.toFixed(1)}
+                            -${t.scoreGap.toFixed(1)}
                         </span>
                     </td>
 
-                    <td style="vertical-align:middle; ${subStyle}">
-                        ${c.worstSub}
+                    <td style="vertical-align:middle; ${a}">
+                        ${t.worstSub}
                     </td>
 
-                    <td style="vertical-align:middle; ${diffStyle}">
-                        ${c.worstDiff}
+                    <td style="vertical-align:middle; ${r}">
+                        ${t.worstDiff}
                     </td>
                 </tr>
-            `;
-        });
-
-        html += `</tbody></table></div>`;
-
-        ensureDrillModalDom();
-        root.document.getElementById('drill-title').innerText = title;
-        root.document.getElementById('drill-back-btn').classList.add('hidden');
-        root.document.getElementById('drill-content').innerHTML = html;
-
-        const classCount = {};
-        candidates.forEach(c => { classCount[c.class] = (classCount[c.class] || 0) + 1; });
-        const classSummary = Object.entries(classCount)
-            .map(([cls, cnt]) => `${cls}班:${cnt}人`)
-            .join('， ');
-
-        root.document.getElementById('drill-footer').innerText = `各班潜力生分布：${classSummary} (请平衡各班指标压力)`;
-
-        if (root.DrillSystem) {
-            root.DrillSystem.exportData = {
-                type: 'gap',
-                fileName: title, // 使用弹窗标题作为文件名
-                data: candidates
-            };
-        }
-
-        const exportBtn = root.document.getElementById('drill-export-btn');
-        if (exportBtn) exportBtn.classList.remove('hidden');
-
-        root.document.getElementById('drill-modal').style.display = 'flex';
-    }
-
-    // 回挂到 window，供指标表内联 onclick（app.js:7001/7015）调用。
-    root.analyzeTargetGap = analyzeTargetGap;
-    root.TargetGapAnalysisRuntime = { analyzeTargetGap };
-})(typeof window !== 'undefined' ? window : globalThis);
+            `}),A+="</tbody></table></div>",M(),e.document.getElementById("drill-title").innerText=R,e.document.getElementById("drill-back-btn").classList.add("hidden"),e.document.getElementById("drill-content").innerHTML=A;const S={};o.forEach(t=>{S[t.class]=(S[t.class]||0)+1});const k=Object.entries(S).map(([t,s])=>`${t}班:${s}人`).join("， ");e.document.getElementById("drill-footer").innerText=`各班潜力生分布：${k} (请平衡各班指标压力)`,e.DrillSystem&&(e.DrillSystem.exportData={type:"gap",fileName:R,data:o});const j=e.document.getElementById("drill-export-btn");j&&j.classList.remove("hidden"),e.document.getElementById("drill-modal").style.display="flex"}e.analyzeTargetGap=w,e.TargetGapAnalysisRuntime={analyzeTargetGap:w}})(typeof window!="undefined"?window:globalThis);
