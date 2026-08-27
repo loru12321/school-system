@@ -44,11 +44,13 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('report-export', bootJs('report-export-runtime.js'))
 ]),
 'teacher-analysis': bootSkill('demand', 'demand', ['teacher-analysis'], [
+    // The core analyzer calls TeacherAnalysisPerformanceRuntime during warmup.
+    // Load its small helper facade first so background preheat cannot race it.
+    bootEntry('teacher-analysis-main', bootJs('teacher-analysis-main-runtime.js')),
     bootEntry('teacher-analysis-core', bootJs('teacher-analysis-core-runtime.js')),
     bootEntry('teacher-pairing', bootJs('teacher-pairing-runtime.js')),
     bootEntry('teacher-analysis-ui', bootJs('teacher-analysis-ui-runtime.js')),
     bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js')),
-    bootEntry('teacher-analysis-main', bootJs('teacher-analysis-main-runtime.js')),
     bootEntry('teaching-assessment-sync', bootJs('teaching-assessment-sync-runtime.js'))
 ]),
 'cohort-growth': bootSkill('demand', 'balanced', ['cohort-growth'], [

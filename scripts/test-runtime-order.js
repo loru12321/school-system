@@ -646,6 +646,8 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
 assert.ok(bootRuntimeReferences(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
 assert.ok(bootRuntimeReferences(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
 assert.ok(bootRuntimeReferences(teacherAnalysisCoreRef), 'boot-runtime.js should reference teacher-analysis-core-runtime.js for lazy loading');
+const teacherAnalysisSkill = runtimeLoaderRuntime.match(/'teacher-analysis': bootSkill\([\s\S]*?\n\]\),\n'cohort-growth'/)?.[0] || '';
+assert.ok(teacherAnalysisSkill.indexOf("bootEntry('teacher-analysis-main'") < teacherAnalysisSkill.indexOf("bootEntry('teacher-analysis-core'"), 'teacher analysis main helper should load before core analyzer');
 assert.ok(bootRuntimeReferences(teacherAnalysisUiRef), 'boot-runtime.js should reference teacher-analysis-ui-runtime.js for lazy loading');
 assert.ok(bootRuntimeReferences(teacherAnalysisBridgeRef), 'boot-runtime.js should reference teacher-analysis-bridge-runtime.js for lazy loading');
 assert.ok(bootRuntimeReferences(schoolProfileRef), 'boot-runtime.js should reference school-profile-runtime.js for lazy loading');
