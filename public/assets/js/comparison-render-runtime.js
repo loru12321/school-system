@@ -1,5 +1,12 @@
 // comparison-render-runtime.js — Comparison views, mutual aid groups, findPreviousRecord, getStudentExamHistory (extracted from app.js)
 
+function comparisonSafeAlert(message) {
+    const text = String(message || '');
+    if (window.UI && typeof window.UI === 'object' && typeof window.UI.alert === 'function') {
+        return window.UI.alert(text);
+    }
+}
+
 const comparisonEscapeHtml = typeof window.tmEscapeHtml === 'function'
     ? window.tmEscapeHtml
     : (value) => String(value ?? '')
@@ -119,14 +126,14 @@ function renderMutualAidGroups() {
     }
     let students = [];
     if (source === 'freshman') {
-        if (!cls || !FB_SIMULATED_DATA[cls]) return alert("无分班数据");
+        if (!cls || !FB_SIMULATED_DATA[cls]) return comparisonSafeAlert("无分班数据");
         students = FB_SIMULATED_DATA[cls].map(s => ({ ...s, class: cls, total: s.score, scores: { total: s.score }, ranks: { total: { class: 0 } } }));
     } else {
-        if (!sch || !cls) return alert("请选择学校和班级");
+        if (!sch || !cls) return comparisonSafeAlert("请选择学校和班级");
         const schoolRecord = getAppSchoolRecord(sch);
         students = JSON.parse(JSON.stringify((schoolRecord?.students || []).filter(s => s.class === cls)));
     }
-    if (students.length < groupSize) return alert("班级人数不足以分组");
+    if (students.length < groupSize) return comparisonSafeAlert("班级人数不足以分组");
     const getScore = (s) => (sub === 'total' ? s.total : (s.scores[sub] || 0));
     students.sort((a, b) => getScore(b) - getScore(a));
     students.forEach((s, i) => s._subRankPct = (i + 1) / students.length);
@@ -168,7 +175,7 @@ function renderAidGroupsHTML(groups, sub) {
 }
 
 function exportMutualAidGroups() {
-    if (AID_GROUPS_CACHE.length === 0) return alert("请先生成分组");
+    if (AID_GROUPS_CACHE.length === 0) return comparisonSafeAlert("请先生成分组");
     const wb = XLSX.utils.book_new(); const data = [['组号', '角色', '姓名', '参考分数']];
     AID_GROUPS_CACHE.forEach(g => {
         const sub = document.getElementById('aidSubjectSelect').value; const getS = (s) => sub === 'total' ? s.total : (s.scores[sub] || 0);
