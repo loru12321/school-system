@@ -1,4 +1,11 @@
 // Report history query runtime split from app.js.
+function reportHistorySafeAlert(message) {
+    const text = String(message || '');
+    if (window.UI && typeof window.UI === 'object' && typeof window.UI.alert === 'function') {
+        return window.UI.alert(text);
+    }
+}
+
 function examKeyEq(a, b) {
     const fn = window.isExamKeyEquivalentForCompare;
     if (typeof fn === 'function') return fn(a, b);
@@ -303,10 +310,10 @@ async function doQuery(targetStudent = null) {
     if (!stu && name) {
         stu = findStudentForJump(name, sch, cls);
     }
-    if (!stu) return alert("未找到该学生");
+    if (!stu) return reportHistorySafeAlert("未找到该学生");
     syncReportControlsToStudent(stu);
     const reportQueryMode = PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
-    if (!PermissionPolicy.canQueryStudent(user, stu, { mode: reportQueryMode })) return alert("当前角色没有权限查询该学生");
+    if (!PermissionPolicy.canQueryStudent(user, stu, { mode: reportQueryMode })) return reportHistorySafeAlert("当前角色没有权限查询该学生");
 
     const selectedReportExamIds = getSelectedReportCompareExamIds();
     const effectiveCurrentExamId = selectedReportExamIds[selectedReportExamIds.length - 1] || getEffectiveCurrentExamId();

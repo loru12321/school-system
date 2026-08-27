@@ -42,6 +42,7 @@ const historyRuntime = read('public/assets/js/data-manager-history-runtime.js');
 const saveSyncRuntime = read('public/assets/js/data-manager-save-sync-runtime.js');
 const studentRuntime = read('public/assets/js/data-manager-student-runtime.js');
 const comparisonRender = read('public/assets/js/comparison-render-runtime.js');
+const reportHistory = read('public/assets/js/report-history-runtime.js');
 
 assert.ok(bootRuntime.includes("'dialog-runtime.js'"), 'dialog runtime should load before app.js');
 assert.ok(bootRuntime.indexOf("'dialog-runtime.js'") < bootRuntime.indexOf("'app.js'"), 'dialog runtime should precede app.js in the boot module list');
@@ -101,7 +102,8 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['save sync alerts', saveSyncRuntime, 'root.UI.alert(String(text || \'\'))'],
   ['student batch delete confirm', studentRuntime, 'await confirmAction(`⚠️ 确定删除选中的 ${indexes.length} 名学生吗？`)'],
   ['student batch delete alert', studentRuntime, "await safeAlert('请先勾选要删除的学生')"],
-  ['comparison mutual aid alerts', comparisonRender, 'comparisonSafeAlert("班级人数不足以分组")']
+  ['comparison mutual aid alerts', comparisonRender, 'comparisonSafeAlert("班级人数不足以分组")'],
+  ['report history alerts', reportHistory, 'reportHistorySafeAlert("未找到该学生")']
 ].forEach(([label, source, token]) => {
   assert.ok(source.includes(token), `${label} should prefer the shared UI dialog API`);
 });
@@ -135,7 +137,8 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['data-manager-history-runtime.js', historyRuntime],
   ['data-manager-save-sync-runtime.js', saveSyncRuntime],
   ['data-manager-student-runtime.js', studentRuntime],
-  ['comparison-render-runtime.js', comparisonRender]
+  ['comparison-render-runtime.js', comparisonRender],
+  ['report-history-runtime.js', reportHistory]
 ].forEach(([file, source]) => {
   assert.ok(!/(^|[^\w$.])prompt\s*\(/.test(source), `${file} should not call bare prompt()`);
   assert.ok(!/(^|[^\w$.])confirm\s*\(/.test(source), `${file} should not call bare confirm()`);
@@ -146,5 +149,5 @@ assert.ok(scripts['check:release-fast']?.includes('test:dialog-runtime-contract'
 
 console.log(JSON.stringify({
   ok: true,
-  guardedRuntimes: 30
+  guardedRuntimes: 31
 }, null, 2));
