@@ -112,6 +112,21 @@
         manager.__studentSearchCache = null;
     }
 
+    function safeAlert(message) {
+        const text = String(message || '');
+        if (root.UI && typeof root.UI === 'object' && typeof root.UI.alert === 'function') {
+            return root.UI.alert(text);
+        }
+        return undefined;
+    }
+
+    async function confirmAction(message) {
+        if (root.UI && typeof root.UI === 'object' && typeof root.UI.confirm === 'function') {
+            return Boolean(await root.UI.confirm(message));
+        }
+        return true;
+    }
+
     function getMatchedStudentIndexes(manager, rawData, normalizedKeyword) {
         if (!normalizedKeyword) return null;
         const rawDataVersion = Number(root.__RAW_DATA_VERSION || 0);
@@ -291,7 +306,7 @@
         }
     }
 
-    function deleteSelectedStudents(manager) {
+    async function deleteSelectedStudents(manager) {
         if (!manager) return;
         const rawData = getRawDataRef();
         if (!Array.isArray(rawData)) return;
@@ -299,14 +314,12 @@
         const selection = ensureStudentSelection(manager);
         const indexes = Array.from(selection).filter((idx) => Number.isInteger(idx));
         if (!indexes.length) {
-            if (typeof root.alert === 'function') root.alert('请先勾选要删除的学生');
+            await safeAlert('请先勾选要删除的学生');
             return;
         }
 
-        if (typeof root.confirm === 'function') {
-            const confirmed = root.confirm(`⚠️ 确定删除选中的 ${indexes.length} 名学生吗？`);
-            if (!confirmed) return;
-        }
+        const confirmed = await confirmAction(`⚠️ 确定删除选中的 ${indexes.length} 名学生吗？`);
+        if (!confirmed) return;
 
         indexes.sort((a, b) => b - a).forEach((idx) => {
             if (idx >= 0 && idx < rawData.length) rawData.splice(idx, 1);

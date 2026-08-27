@@ -11,6 +11,7 @@ async function run() {
     const toasts = [];
     const alerts = [];
     const confirms = [];
+    let confirmResult = true;
     let currentBoxes = [];
 
     const root = {
@@ -22,14 +23,14 @@ async function run() {
         UI: {
             toast(text, type) {
                 toasts.push({ text, type });
+            },
+            alert(message) {
+                alerts.push(String(message || ''));
+            },
+            confirm(message) {
+                confirms.push(String(message || ''));
+                return confirmResult;
             }
-        },
-        alert(message) {
-            alerts.push(String(message || ''));
-        },
-        confirm(message) {
-            confirms.push(String(message || ''));
-            return true;
         },
         document: {
             querySelector(selector) {
@@ -115,19 +116,27 @@ async function run() {
     assert.strictEqual(manager.studentSelection.size, 0);
 
     manager.studentSelection = new Set([0, 2]);
-    runtime.deleteSelectedStudents(manager);
+    await runtime.deleteSelectedStudents(manager);
     assert.strictEqual(root.RAW_DATA.length, 1);
     assert.strictEqual(root.RAW_DATA[0].name, '李四');
     assert.strictEqual(renderCurrentTabCalls > 0, true);
     assert.strictEqual(toasts.length > 0, true);
     assert.strictEqual(confirms.length, 1);
 
+    const beforeCancelLength = root.RAW_DATA.length;
+    manager.studentSelection = new Set([0]);
+    confirmResult = false;
+    await runtime.deleteSelectedStudents(manager);
+    assert.strictEqual(root.RAW_DATA.length, beforeCancelLength, 'cancelled batch deletion must leave raw data unchanged');
+    assert.strictEqual(manager.studentSelection.has(0), true, 'cancelled batch deletion must preserve selection');
+    confirmResult = true;
+
     manager.pagination.page = 1;
     runtime.changePage(manager, 1);
     assert.strictEqual(manager.pagination.page, 2);
 
     manager.studentSelection.clear();
-    runtime.deleteSelectedStudents(manager);
+    await runtime.deleteSelectedStudents(manager);
     assert.strictEqual(alerts.length > 0, true);
 
     console.log('data-manager-student-runtime tests passed');

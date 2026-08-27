@@ -40,6 +40,7 @@ const targetsRuntime = read('public/assets/js/data-manager-targets-runtime.js');
 const archiveRuntime = read('public/assets/js/data-manager-archive-runtime.js');
 const historyRuntime = read('public/assets/js/data-manager-history-runtime.js');
 const saveSyncRuntime = read('public/assets/js/data-manager-save-sync-runtime.js');
+const studentRuntime = read('public/assets/js/data-manager-student-runtime.js');
 
 assert.ok(bootRuntime.includes("'dialog-runtime.js'"), 'dialog runtime should load before app.js');
 assert.ok(bootRuntime.indexOf("'dialog-runtime.js'") < bootRuntime.indexOf("'app.js'"), 'dialog runtime should precede app.js in the boot module list');
@@ -96,7 +97,9 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['archive rename prompt', archiveRuntime, "await promptAction('重命名为：', sourceName)"],
   ['history import alerts', historyRuntime, 'root.UI.alert(String(text || \'\'))'],
   ['save sync confirm', saveSyncRuntime, 'await confirmAction(\'⚠️ 确定要应用所有修改并同步到云端吗？'],
-  ['save sync alerts', saveSyncRuntime, 'root.UI.alert(String(text || \'\'))']
+  ['save sync alerts', saveSyncRuntime, 'root.UI.alert(String(text || \'\'))'],
+  ['student batch delete confirm', studentRuntime, 'await confirmAction(`⚠️ 确定删除选中的 ${indexes.length} 名学生吗？`)'],
+  ['student batch delete alert', studentRuntime, "await safeAlert('请先勾选要删除的学生')"]
 ].forEach(([label, source, token]) => {
   assert.ok(source.includes(token), `${label} should prefer the shared UI dialog API`);
 });
@@ -128,7 +131,8 @@ assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading
   ['data-manager-targets-runtime.js', targetsRuntime],
   ['data-manager-archive-runtime.js', archiveRuntime],
   ['data-manager-history-runtime.js', historyRuntime],
-  ['data-manager-save-sync-runtime.js', saveSyncRuntime]
+  ['data-manager-save-sync-runtime.js', saveSyncRuntime],
+  ['data-manager-student-runtime.js', studentRuntime]
 ].forEach(([file, source]) => {
   assert.ok(!/(^|[^\w$.])prompt\s*\(/.test(source), `${file} should not call bare prompt()`);
   assert.ok(!/(^|[^\w$.])confirm\s*\(/.test(source), `${file} should not call bare confirm()`);
@@ -139,5 +143,5 @@ assert.ok(scripts['check:release-fast']?.includes('test:dialog-runtime-contract'
 
 console.log(JSON.stringify({
   ok: true,
-  guardedRuntimes: 28
+  guardedRuntimes: 29
 }, null, 2));
