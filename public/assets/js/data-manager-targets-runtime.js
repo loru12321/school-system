@@ -39,7 +39,19 @@
     }
 
     function safeAlert(message) {
-        if (typeof root.alert === 'function') root.alert(String(message || ''));
+        const text = String(message || '');
+        if (root.UI && typeof root.UI === 'object' && typeof root.UI.alert === 'function') {
+            return root.UI.alert(text);
+        }
+        if (root.console && typeof root.console.warn === 'function') root.console.warn(text);
+        return undefined;
+    }
+
+    async function confirmAction(message) {
+        if (root.UI && typeof root.UI === 'object' && typeof root.UI.confirm === 'function') {
+            return !!(await root.UI.confirm(message));
+        }
+        return true;
     }
 
     function isIndicatorWorkspaceAllowed() {
@@ -167,7 +179,7 @@
             safeToast('指标目标人数仅可在 9 年级维护', 'info');
             return;
         }
-        if (typeof root.confirm === 'function' && !root.confirm('确定删除？')) return;
+        if (!await confirmAction('确定删除？')) return;
 
         const targets = readTargetsStateSafe();
         delete targets[schoolName];

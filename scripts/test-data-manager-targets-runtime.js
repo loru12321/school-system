@@ -94,6 +94,12 @@ async function run() {
         UI: {
             toast(text, type) {
                 toasts.push({ text, type });
+            },
+            alert(message) {
+                alerts.push(String(message || ''));
+            },
+            confirm() {
+                return Promise.resolve(true);
             }
         },
         alert(message) {
@@ -107,9 +113,6 @@ async function run() {
                 }
                 return Promise.resolve(true);
             }
-        },
-        confirm() {
-            return true;
         },
         saveCloudData() {
             saveCloudCalls += 1;
