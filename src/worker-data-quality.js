@@ -14,6 +14,28 @@ import {
 // 取 500：别名规则是纯文本行（无 PBKDF2 之类重计算），远宽于账号批量，但仍为有界值。
 const ALIAS_SAVE_BATCH_LIMIT = 500;
 
+const ALIAS_SELECT = [
+  'id', 'rule_type', 'standard_name', 'alias_name', 'scope', 'project_key',
+  'cohort_id', 'school_name', 'grade_range', 'priority', 'is_active', 'remark',
+  'created_by', 'created_at', 'updated_at'
+].join(', ');
+
+const WARNING_SELECT = [
+  'id', 'warning_type', 'warning_code', 'warning_level', 'project_key',
+  'cohort_id', 'snapshot_key', 'exam_id', 'school_name', 'grade_name',
+  'class_name', 'subject_name', 'teacher_name', 'student_name', 'source_module',
+  'metric_name', 'metric_value', 'threshold_value', 'description', 'status',
+  'created_at', 'updated_at'
+].join(', ');
+
+const RECTIFY_SELECT = [
+  'id', 'source_warning_id', 'task_type', 'title', 'project_key', 'cohort_id',
+  'exam_id', 'school_name', 'grade_name', 'class_name', 'subject_name',
+  'teacher_name', 'student_name', 'problem_desc', 'action_plan', 'owner_name',
+  'assist_users_json', 'due_date', 'priority', 'status', 'progress',
+  'review_result', 'created_by', 'created_at', 'updated_at'
+].join(', ');
+
 // ---------------------------------------------------------------------------
 // Row normalizers
 // ---------------------------------------------------------------------------
@@ -64,7 +86,7 @@ export async function handleAliasList(request, db, session, payload) {
   const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? Math.floor(requestedLimit) : 500, 500));
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const rows = await queryRows(db, `
-    SELECT * FROM config_alias_rules
+    SELECT ${ALIAS_SELECT} FROM config_alias_rules
     ${where}
     ORDER BY priority ASC, created_at DESC
     LIMIT ?
@@ -179,7 +201,7 @@ export async function handleWarningList(request, db, session, payload) {
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const limit = Math.max(1, Math.min(Number(payload.limit ?? 100) || 100, 500));
   const rows = await queryRows(db, `
-    SELECT * FROM warning_records
+    SELECT ${WARNING_SELECT} FROM warning_records
     ${where}
     ORDER BY created_at DESC
     LIMIT ?
@@ -194,11 +216,11 @@ export async function handleWarningIgnore(request, db, session, payload) {
   }
   const id = normalizeText(payload.id);
   if (!id) return badRequest(request, 'id is required');
-  const existing = await querySingleRow(db, 'SELECT * FROM warning_records WHERE id = ? LIMIT 1', [id], normalizeWarningRow);
+  const existing = await querySingleRow(db, `SELECT ${WARNING_SELECT} FROM warning_records WHERE id = ? LIMIT 1`, [id], normalizeWarningRow);
   if (!existing) return badRequest(request, 'warning record not found');
   if (!warningVisible(session, existing)) return forbidden(request, 'Out of scope');
   await db.prepare('UPDATE warning_records SET status = ?, updated_at = ? WHERE id = ?').bind('ignored', new Date().toISOString(), id).run();
-  const updated = await querySingleRow(db, 'SELECT * FROM warning_records WHERE id = ? LIMIT 1', [id], normalizeWarningRow);
+  const updated = await querySingleRow(db, `SELECT ${WARNING_SELECT} FROM warning_records WHERE id = ? LIMIT 1`, [id], normalizeWarningRow);
   return jsonResponse(200, { ok: true, record: updated }, request);
 }
 
@@ -232,7 +254,7 @@ export async function handleRectifyList(request, db, session, payload) {
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const limit = Math.max(1, Math.min(Number(payload.limit ?? 100) || 100, 500));
   const rows = await queryRows(db, `
-    SELECT * FROM rectify_tasks
+    SELECT ${RECTIFY_SELECT} FROM rectify_tasks
     ${where}
     ORDER BY created_at DESC
     LIMIT ?
@@ -287,14 +309,14 @@ export async function handleRectifySave(request, db, session, payload) {
     row.problem_desc, row.action_plan, row.owner_name, row.assist_users_json, row.due_date, row.priority,
     row.status, row.progress, row.review_result, row.created_by, row.created_at, row.updated_at
   ).run();
-  const created = await querySingleRow(db, 'SELECT * FROM rectify_tasks WHERE id = ? LIMIT 1', [row.id], normalizeRectifyRow);
+  const created = await querySingleRow(db, `SELECT ${RECTIFY_SELECT} FROM rectify_tasks WHERE id = ? LIMIT 1`, [row.id], normalizeRectifyRow);
   return jsonResponse(200, { ok: true, record: created }, request);
 }
 
 export async function handleRectifyUpdate(request, db, session, payload) {
   const id = normalizeText(payload.id);
   if (!id) return badRequest(request, 'id is required');
-  const existing = await querySingleRow(db, 'SELECT * FROM rectify_tasks WHERE id = ? LIMIT 1', [id], normalizeRectifyRow);
+  const existing = await querySingleRow(db, `SELECT ${RECTIFY_SELECT} FROM rectify_tasks WHERE id = ? LIMIT 1`, [id], normalizeRectifyRow);
   if (!existing) return badRequest(request, 'rectify task not found');
   if (!rectifyVisible(session, existing)) return forbidden(request, 'Out of scope');
   const allowedFields = ['status', 'progress', 'review_result', 'action_plan', 'owner_name', 'assist_users', 'due_date', 'priority'];
@@ -309,6 +331,6 @@ export async function handleRectifyUpdate(request, db, session, payload) {
   patchColumns.push('updated_at = ?');
   bindings.push(new Date().toISOString(), id);
   await db.prepare(`UPDATE rectify_tasks SET ${patchColumns.join(', ')} WHERE id = ?`).bind(...bindings).run();
-  const updated = await querySingleRow(db, 'SELECT * FROM rectify_tasks WHERE id = ? LIMIT 1', [id], normalizeRectifyRow);
+  const updated = await querySingleRow(db, `SELECT ${RECTIFY_SELECT} FROM rectify_tasks WHERE id = ? LIMIT 1`, [id], normalizeRectifyRow);
   return jsonResponse(200, { ok: true, record: updated }, request);
 }
