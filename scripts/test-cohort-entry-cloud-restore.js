@@ -531,4 +531,13 @@ assert.ok(
     'CohortManager.init should trigger cloud cohort discovery asynchronously without blocking init'
 );
 
+assert.ok(
+    appSource.includes("function getCloudRestoreSummary(cohortId = '')")
+        && appSource.includes('rowCount: rows.length')
+        && appSource.includes('subjectCount: subjectSet.size')
+        && appSource.includes('formatCloudRestoreSummary(getCloudRestoreSummary(cohortId))')
+        && fs.readFileSync(path.join(root, 'public/assets/js/cohort-sync-status-runtime.js'), 'utf8').includes('云端数据同步完成${summaryText}'),
+    'cloud restore success feedback should expose cohort, exam, row count, subject count, and school context'
+);
+
 console.log('cohort entry cloud restore tests passed');

@@ -1,0 +1,239 @@
+/**
+ * Service Worker (PWA offline support)
+ * Keeps registration stable, caches the app shell, and provides predictable
+ * fallbacks when the network is unavailable.
+ */
+
+const CACHE_VERSION = 'school-system-runtime-a6b9d9e6312c';
+const STATIC_CACHE = `${CACHE_VERSION}-static`;
+const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
+const API_CACHE = `${CACHE_VERSION}-api`;
+
+// Only precache deterministic app shell assets to avoid install failures.
+// Keep this list minimal to ensure fast SW installation
+const APP_SHELL_ASSETS = [
+    './favicon.ico',
+    './icon.svg',
+    './site.webmanifest',
+    './robots.txt',
+    './sitemap.xml',
+    './assets/fonts/manrope/manrope-latin-400-normal.woff2',
+    './assets/vendor/tabler-icons/fonts/tabler-icons.woff2'
+];
+
+self.addEventListener('install', event => {
+    event.waitUntil((async () => {
+        const cache = await caches.open(STATIC_CACHE);
+        await Promise.all(APP_SHELL_ASSETS.map(asset => precacheAsset(cache, asset)));
+        await self.skipWaiting();
+    })());
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil((async () => {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+            cacheNames
+                .filter(name => ![STATIC_CACHE, DYNAMIC_CACHE, API_CACHE].includes(name))
+                .map(name => caches.delete(name))
+        );
+        await self.clients.claim();
+    })());
+});
+
+self.addEventListener('fetch', event => {
+    const { request } = event;
+
+    const url = new URL(request.url);
+    if (url.protocol === 'chrome-extension:') return;
+
+    if (request.method !== 'GET') {
+        if (isApiRequest(url.pathname)) {
+            event.waitUntil(clearApiCacheAfterMutation(url));
+        }
+        return;
+    }
+
+    if (request.mode === 'navigate' || acceptsHtml(request)) {
+        event.respondWith(networkFirstHtml(request));
+        return;
+    }
+
+    if (isApiRequest(url.pathname)) {
+        event.respondWith(networkFirstApi(request, url));
+        return;
+    }
+
+    if (isRuntimeAsset(url.pathname)) {
+        event.respondWith(networkFirstRuntimeAsset(request));
+        return;
+    }
+
+    if (isStaticAsset(url.pathname)) {
+        event.respondWith(cacheFirstStatic(request));
+        return;
+    }
+
+    event.respondWith(fetch(request));
+});
+
+async function precacheAsset(cache, asset) {
+    try {
+        await cache.add(new Request(asset, { cache: 'reload' }));
+    } catch (error) {
+        // Silently skip failed precache attempts in production
+    }
+}
+
+async function cacheFirstStatic(request) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    try {
+        const response = await fetch(request);
+        if (isCacheable(response)) {
+            const cache = await caches.open(STATIC_CACHE);
+            await cache.put(request, response.clone());
+        }
+        return response;
+    } catch (error) {
+        return new Response('Resource unavailable while offline', { status: 404 });
+    }
+}
+
+async function networkFirstRuntimeAsset(request) {
+    // Stale-while-revalidate for runtime assets
+    const cached = await caches.match(request);
+
+    const fetchPromise = fetch(new Request(request, { cache: 'reload' }))
+        .then(response => {
+            if (isCacheable(response)) {
+                const cache = caches.open(STATIC_CACHE);
+                // Clone before returning the live response. The browser may
+                // consume the returned body before the cache promise runs.
+                const cacheResponse = response.clone();
+                cache.then(c => c.put(request, cacheResponse)).catch(() => {});
+            }
+            return response;
+        })
+        .catch(() => null);
+
+    // Return cached immediately if available, fetch updates in background
+    if (cached) {
+        return cached;
+    }
+
+    // If no cache, wait for network
+    const response = await fetchPromise;
+    if (response) return response;
+
+    return new Response('Runtime resource unavailable while offline', { status: 404 });
+}
+
+async function networkFirstApi(request, url) {
+    const eligible = isApiCacheEligible(url);
+    if (eligible) {
+        const cache = await caches.open(API_CACHE);
+        const cached = await cache.match(request);
+        if (cached) {
+            fetch(request).then((r) => {
+                if (!r.ok) return;
+                const cacheResponse = r.clone();
+                return cache.put(request, cacheResponse);
+            }).catch(() => {});
+            return cached;
+        }
+    }
+    try {
+        const response = await fetch(request);
+        if (isCacheable(response) && eligible) {
+            const cache = await caches.open(API_CACHE);
+            await cache.put(request, response.clone());
+        }
+        return response;
+    } catch (error) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return new Response(
+            JSON.stringify({ error: 'Network unavailable and no cached data exists' }),
+            {
+                status: 503,
+                headers: buildOfflineHeaders('application/json; charset=utf-8')
+            }
+        );
+    }
+}
+
+async function networkFirstHtml(request) {
+    try {
+        const response = await fetch(new Request(request, { cache: 'reload' }));
+        if (isCacheable(response)) {
+            const cache = await caches.open(DYNAMIC_CACHE);
+            await cache.put(request, response.clone());
+        }
+        return response;
+    } catch (error) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+
+        return new Response(
+            '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>离线模式</title><body><h1>离线模式</h1><p>网络恢复后请刷新页面。</p></body></html>',
+            {
+                status: 503,
+                headers: buildOfflineHeaders('text/html; charset=utf-8')
+            }
+        );
+    }
+}
+
+function buildOfflineHeaders(contentType) {
+    return {
+        'Content-Type': contentType,
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff'
+    };
+}
+
+function isCacheable(response) {
+    return !!response && response.ok;
+}
+
+function acceptsHtml(request) {
+    const accept = request.headers.get('accept') || '';
+    return accept.includes('text/html');
+}
+
+function isStaticAsset(pathname) {
+    return /\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico)$/i.test(pathname);
+}
+
+function isRuntimeAsset(pathname) {
+    return /\.(js|css)$/i.test(pathname) && !pathname.includes('/assets/vendor/');
+}
+
+function isApiRequest(pathname) {
+    return pathname.includes('/api/') || pathname.includes('/rest/');
+}
+
+function isApiCacheEligible(url) {
+    const pathname = String(url && url.pathname || '');
+    if (pathname === '/api/health') return true;
+    if (pathname === '/api/system-data') {
+        const searchParams = url && url.searchParams;
+        return !!searchParams
+            && searchParams.has('select')
+            && (searchParams.has('key') || searchParams.has('limit'));
+    }
+    return false;
+}
+
+async function clearApiCacheAfterMutation(url) {
+    if (!url || !isApiRequest(url.pathname)) return;
+    await caches.delete(API_CACHE);
+}
+
+self.addEventListener('sync', event => {
+    if (event.tag === 'sync-data') {
+        event.waitUntil(Promise.resolve());
+    }
+});

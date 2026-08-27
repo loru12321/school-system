@@ -146,7 +146,16 @@
             options.restore?.();
             const hasData = options.hasData?.() === true;
             setStatus(hasData ? 'synced' : 'local', { cohortId });
-            options.toast?.(hasData ? '云端数据同步完成' : '已连接云端，当前使用本地数据', hasData ? 'success' : 'info');
+            const summary = typeof global.getCloudRestoreSummary === 'function'
+                ? global.getCloudRestoreSummary(cohortId)
+                : null;
+            const summaryText = summary && typeof global.formatCloudRestoreSummary === 'function'
+                ? `：${global.formatCloudRestoreSummary(summary)}`
+                : '';
+            options.toast?.(
+                hasData ? `云端数据同步完成${summaryText}` : '已连接云端，当前使用本地数据',
+                hasData ? 'success' : 'info'
+            );
             return hasData;
         } catch (error) {
             setStatus('error', { cohortId, detail: String(error?.message || '云端同步失败，点击重试') });
