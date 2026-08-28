@@ -130,6 +130,7 @@ var SYSTEM_RUNTIME_SKILLS = {
 'grade-scheduler': bootSkill('demand', 'demand', ['grade-scheduler'], [
     bootEntry('grade-scheduler', bootJs('grade-scheduler-runtime.js'))
 ]),
+'mutual-aid':bootSkill('demand','demand',['mutual-aid'],[bootEntry('comparison-render',bootJs('comparison-render-runtime.js'))]),
 'voice-control': bootSkill('idle', 'demand', ['voice-control', 'voice-fab', 'VoiceControl.toggle'], [
     bootEntry('voice-control', bootJs('voice-control-runtime.js'))
 ]),
@@ -683,18 +684,11 @@ const finish = () => {
     );
 };
 
-// Always honor an already-created ordered boot script, including one whose
-// watchdog has fired but whose network request is still in flight.
 const pendingBoot = findBootScriptForRuntime('./assets/js/cohort-db-core-runtime.js');
 if (pendingBoot) {
     return waitForExistingBootScript('./assets/js/cohort-db-core-runtime.js').then(() => finish());
 }
 
-// CohortDB is the final core boot module. A cohort switch can be requested
-// immediately after login while that ordered boot queue is still finishing.
-// Waiting for that queue avoids injecting the same classic script a second
-// time (which redeclares its top-level `const CohortDB` and blocks the first
-// potential-analysis render).
 const bootPromise = window.__APP_MODULES_LOAD_PROMISE__;
 if (bootPromise && window.__APP_MODULES_LOADED__ === 'loading') {
     return Promise.resolve(bootPromise).catch(() => null).then(() => {
@@ -837,6 +831,7 @@ return Promise.all([
 window.ensureGradeSchedulerRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('grade-scheduler');
 };
+
 
 window.ensureVoiceControlRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('voice-control');

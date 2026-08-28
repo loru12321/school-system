@@ -5,6 +5,8 @@ function comparisonSafeAlert(message) {
     if (window.UI && typeof window.UI === 'object' && typeof window.UI.alert === 'function') {
         return window.UI.alert(text);
     }
+    if (typeof window.alert === 'function') return window.alert(text);
+    return undefined;
 }
 
 const comparisonEscapeHtml = typeof window.tmEscapeHtml === 'function'
@@ -72,7 +74,9 @@ function updateMutualAidSelects() {
     const subSel = document.getElementById('aidSubjectSelect');
     if (!sourceEl || !schSel || !clsSel || !subSel) return;
     const source = sourceEl.value;
-    const schoolNames = Object.keys(SCHOOLS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
+    const schoolNames = Object.keys(window.SCHOOLS || {})
+        .filter((schoolName) => getSchoolClassOptions(schoolName).length > 0)
+        .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
     const preferredSchools = [window.MY_SCHOOL, typeof window.readCurrentSchool === 'function' ? window.readCurrentSchool() : '', document.getElementById('mySchoolSelect')?.value]
         .map(value => String(value || '').trim())
         .filter(Boolean);

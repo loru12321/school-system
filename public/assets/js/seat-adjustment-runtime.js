@@ -21,6 +21,13 @@
     let lastContextSignature = '';
     let lastContextStudents = [];
 
+    function safeAlert(message) {
+        const text = String(message || '');
+        if (root.UI && typeof root.UI.alert === 'function') return root.UI.alert(text);
+        if (typeof root.alert === 'function') return root.alert(text);
+        return undefined;
+    }
+
     function isSeatWidget(wrapperId, hiddenInputId) {
         return String(wrapperId || '').startsWith('widget_adj_')
             || String(hiddenInputId || '').startsWith('adj_c_');
@@ -38,11 +45,14 @@
         const schools = getSchools();
         if (typeof root.listAvailableSchoolsForCompare === 'function') {
             try {
-                const names = root.listAvailableSchoolsForCompare().filter((name) => schools[name]);
+                const names = root.listAvailableSchoolsForCompare()
+                    .filter((name) => schools[name] && getClassOptions(name).length > 0);
                 if (names.length) return names;
             } catch (_) {}
         }
-        return Object.keys(schools).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
+        return Object.keys(schools)
+            .filter((name) => getClassOptions(name).length > 0)
+            .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
     }
 
     function getPreferredSchool(schoolNames) {
@@ -506,12 +516,12 @@
         const schoolName = schoolSelect?.value || '';
         const className = classSelect?.value || '';
         if (!schoolName || !className) {
-            root.alert?.('请先选择学校和班级');
+            safeAlert('请先选择学校和班级');
             return { ok: false, count: 0, deskCount: 0, reason: 'missing_scope' };
         }
         const rawStudents = getSelectedStudents();
         if (!rawStudents.length) {
-            root.alert?.('该班级无学生数据');
+            safeAlert('该班级无学生数据');
             return { ok: false, count: 0, deskCount: 0, reason: 'empty_class' };
         }
         const groupsCount = clampInteger(groupsInput?.value, 1, 4, 2);
@@ -595,8 +605,8 @@
         const selectA = root.document?.getElementById('conflict_sel_a');
         const selectB = root.document?.getElementById('conflict_sel_b');
         if (!selectA || !selectB) return;
-        if (!selectA.value || !selectB.value) return root.alert?.('请先选择两个学生');
-        if (selectA.value === selectB.value) return root.alert?.('不能选择同一个学生');
+        if (!selectA.value || !selectB.value) return safeAlert('请先选择两个学生');
+        if (selectA.value === selectB.value) return safeAlert('不能选择同一个学生');
         addTagToWidget('widget_adj_conflict', 'adj_c_conflict', `${selectA.value}&${selectB.value}`);
         selectA.value = '';
         selectB.value = '';

@@ -1444,6 +1444,20 @@
                 updateMutualAidSelects();
                 return Promise.resolve(true);
             }
+            if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+                return Promise.resolve(window.SystemRuntimeLoader.load('mutual-aid'))
+                    .then(() => {
+                        if (document.getElementById('mutual-aid')?.classList.contains('active')
+                            && typeof updateMutualAidSelects === 'function') {
+                            updateMutualAidSelects();
+                        }
+                        return typeof updateMutualAidSelects === 'function';
+                    })
+                    .catch((error) => {
+                        console.warn('[mutual-aid] runtime load failed:', error);
+                        return false;
+                    });
+            }
             if (typeof window.loadDeferredAppModules === 'function') {
                 return Promise.resolve(window.loadDeferredAppModules()).then(() => {
                     if (typeof updateMutualAidSelects === 'function') updateMutualAidSelects();
