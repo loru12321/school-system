@@ -3,7 +3,25 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-8f0b640c0c15';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-701961ee5737';
+
+// 每次重新进入系统都要求重新验证账号、密码并选择届别。
+// 仅清除“当前登录/当前工作区身份”，不删除各届别的云端或本地业务数据。
+// 这样浏览器刷新、重新打开站点时不会自动恢复上次届别。
+(function forceFreshLoginEntry() {
+    if (window.EMBEDDED_DB) return;
+    try {
+        ['CURRENT_USER', 'CURRENT_ROLE', 'CURRENT_ROLES', 'EDGE_GATEWAY_TOKEN_V1', 'edu:session:token', 'LOCKED_LOGIN_COHORT_ID', 'BOOT_LOGIN_GRADUATE_COHORT_YEAR', 'LOGIN_GRADUATE_COHORT_TARGET_V1', 'LOGIN_SELECTED_COHORT_TARGET_V1'].forEach((key) => sessionStorage.removeItem(key));
+        ['CURRENT_PROJECT_KEY', 'CURRENT_COHORT_ID', 'CURRENT_COHORT_META', 'CURRENT_EXAM_ID'].forEach((key) => localStorage.removeItem(key));
+        // 届别偏好按用户单独保存；本次入口不允许它参与自动选届。
+        Object.keys(localStorage).filter((key) => /^LAST_COHORT_/.test(key)).forEach((key) => localStorage.removeItem(key));
+    } catch (_) { }
+    window.COHORT_DB = null;
+    window.CURRENT_COHORT_ID = '';
+    window.CURRENT_COHORT_META = null;
+    window.CURRENT_EXAM_ID = '';
+    window.__FRESH_LOGIN_ENTRY__ = true;
+})();
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
