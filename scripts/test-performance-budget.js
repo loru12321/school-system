@@ -21,6 +21,7 @@ const runtimeLoaderRuntime = read('public/assets/js/runtime-loader-runtime.js');
 const countyAnalysisRuntime = read('public/assets/js/county-analysis-runtime.js');
 const cohortGrowthRuntime = read('public/assets/js/cohort-growth-runtime.js');
 const blankScoreAuditRuntime = read('public/assets/js/blank-score-audit-runtime.js');
+const gradeSchedulerRuntime = read('public/assets/js/grade-scheduler-runtime.js');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
 
 const requiredSmokeTokens = [
@@ -143,6 +144,13 @@ assert.ok(
     && blankScoreAuditRuntime.includes('initialLimit = 80')
     && blankScoreAuditRuntime.includes("insertAdjacentHTML('beforeend'"),
   'blank score audit should progressively render its long table instead of blocking the activation frame with 500 rows'
+);
+assert.ok(
+  gradeSchedulerRuntime.includes('scheduleRenderVersion: 0')
+    && gradeSchedulerRuntime.includes('invalidateTableRenderCache')
+    && gradeSchedulerRuntime.includes('tableRenderCache.signature === tableSignature')
+    && gradeSchedulerRuntime.includes('table.dataset.schedulerRenderSignature = tableSignature'),
+  'grade scheduler should reuse unchanged timetable DOM while invalidating after schedule edits'
 );
 assert.ok(
   !blankScoreAuditRuntime.includes('function buildBlankScoreAuditSignature'),

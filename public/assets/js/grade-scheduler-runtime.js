@@ -17,6 +17,8 @@ const SCHEDULER = {
     manualSelection: null,
     manualHistory: [],
     lastPreflight: null,
+    scheduleRenderVersion: 0,
+    tableRenderCache: { signature: '', html: '' },
 
     // 存储动态添加的规则
     rules: {
@@ -446,6 +448,7 @@ const SCHEDULER = {
             this.importWarnings = parsed.warnings;
             this.lockedSchedule = Object.create(null);
             this.schedule = {};
+            this.invalidateTableRenderCache();
             this.rebuildProjectFromDemands();
 
             this.manualSelection = null;
@@ -828,6 +831,7 @@ const SCHEDULER = {
                 const config = this.getSlotConfig();
                 const allSlots = this.getAllSlots(config);
                 this.schedule = this.cloneLockedSchedule();
+                this.invalidateTableRenderCache();
                 this.resetTeacherSlotIndex();
                 this.resetVenueSlotIndex();
                 this.applyBaseConstraints(config);
@@ -1101,6 +1105,11 @@ const SCHEDULER = {
         this.venueSlotIndex = Object.create(null);
     },
 
+    invalidateTableRenderCache: function () {
+        this.scheduleRenderVersion += 1;
+        this.tableRenderCache = { signature: '', html: '' };
+    },
+
     markTeacherBusy: function (teacherName, slotId) {
         const normalizedTeacher = this.normalizeTeacherName(teacherName);
         if (!normalizedTeacher || !slotId) return;
@@ -1269,6 +1278,7 @@ const SCHEDULER = {
         else delete this.schedule[className][firstSlotId];
         if (first) this.schedule[className][secondSlotId] = first;
         else delete this.schedule[className][secondSlotId];
+        this.invalidateTableRenderCache();
         this.manualSelection = null;
         this.rebuildTeacherSlotIndex();
         this.rebuildVenueSlotIndex();
@@ -1286,6 +1296,7 @@ const SCHEDULER = {
         else delete target[entry.firstSlotId];
         if (entry.second) target[entry.secondSlotId] = entry.second;
         else delete target[entry.secondSlotId];
+        this.invalidateTableRenderCache();
         this.manualSelection = null;
         this.rebuildTeacherSlotIndex();
         this.rebuildVenueSlotIndex();
@@ -1342,6 +1353,28 @@ const SCHEDULER = {
         const am = parseInt(document.getElementById('sch_am_count').value);
         const pm = parseInt(document.getElementById('sch_pm_count').value);
         const eve = parseInt(document.getElementById('sch_eve_count').value);
+        const tableSignature = [
+            this.scheduleRenderVersion,
+            mode,
+            target,
+            am,
+            pm,
+            eve,
+            document.getElementById('sch_rule_morning_read').checked ? 1 : 0,
+            document.getElementById('sch_rule_noon_write').checked ? 1 : 0,
+            document.getElementById('sch_rule_fri_pm').checked ? 1 : 0,
+            document.getElementById('sch_fri_pm_val').value,
+            document.getElementById('sch_rule_fri_eve').checked ? 1 : 0,
+            document.getElementById('sch_big_break_pos').value,
+            this.manualSelection?.className || '',
+            this.manualSelection?.slotId || ''
+        ].join('|');
+        if (this.tableRenderCache.signature === tableSignature
+            && this.tableRenderCache.html
+            && table.dataset.schedulerRenderSignature === tableSignature) {
+            this.updateManualControls();
+            return;
+        }
         const days = ['周一', '周二', '周三', '周四', '周五'];
 
         let html = `<thead><tr><th style="width:80px;background:#f3f4f6;">节次</th>${days.map(d => `<th>${d}</th>`).join('')}</tr></thead><tbody>`;
@@ -1425,6 +1458,8 @@ const SCHEDULER = {
 
         html += `</tbody>`;
         table.innerHTML = html;
+        table.dataset.schedulerRenderSignature = tableSignature;
+        this.tableRenderCache = { signature: tableSignature, html };
         this.updateManualControls();
     },
 
@@ -1651,6 +1686,7 @@ const SCHEDULER = {
             }
 
             this.schedule = parsed.schedule;
+            this.invalidateTableRenderCache();
             this.classes = Object.keys(parsed.schedule);
             this.lockedSchedule = Object.create(null);
             this.importWarnings = parsed.warnings;
@@ -1709,6 +1745,7 @@ const SCHEDULER = {
             this.importWarnings = [...this.importWarnings, ...parsed.warnings, ...warnings];
             this.rebuildProjectFromDemands();
             this.schedule = this.cloneLockedSchedule();
+            this.invalidateTableRenderCache();
             this.rebuildTeacherSlotIndex();
             this.rebuildVenueSlotIndex();
             this.manualSelection = null;
