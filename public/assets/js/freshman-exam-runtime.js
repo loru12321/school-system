@@ -306,7 +306,9 @@ function fbGetRecentExams(limit = 3, targetGrade = '') {
     const targetAcademicYear = cohortYear + (grade - 6);
     const eligible = list.filter((exam) => {
         const academicYear = fbAcademicYearStart(exam.dateStr || exam.meta?.year);
-        return academicYear === targetAcademicYear || academicYear === targetAcademicYear - 1;
+        const examCohort = String(exam.meta?.cohortId || exam.meta?.cohort || exam.meta?.entryYear || '').match(/\d{4}/)?.[0];
+        return (!examCohort || examCohort === String(cohortYear))
+            && (academicYear === targetAcademicYear || academicYear === targetAcademicYear - 1);
     });
     return eligible.slice(0, Math.max(1, Math.min(limit, 3)));
 }
@@ -353,6 +355,17 @@ function fbRosterRow(raw) {
     return { name, gender, id };
 }
 function fbRosterIdentity(row) { return row?.id ? `id:${row.id}` : `name:${row?.name || ''}|${row?.gender || ''}`; }
+function fbCurrentSchoolName() {
+    return String((typeof window.readCurrentSchool === 'function' ? window.readCurrentSchool() : '')
+        || window.MY_SCHOOL || window.CONFIG?.name || '').trim();
+}
+function fbExamBelongsToCurrentSchool(raw) {
+    const school = String(raw?.school || raw?.学校 || raw?.学校名称 || raw?.schoolName || '').trim();
+    const current = fbCurrentSchoolName();
+    if (!school || !current) return true;
+    if (typeof window.sameAppSchoolName === 'function') return window.sameAppSchoolName(school, current);
+    return school === current || school.replace(/学校$/, '') === current.replace(/学校$/, '');
+}
 function fbFindRosterMatch(row, candidates) {
     return candidates.find(item => row.id && item.id && row.id === item.id)
         || candidates.find(item => item.name === row.name && (!row.gender || !item.gender || row.gender === item.gender));
@@ -469,6 +482,7 @@ function fbExamRosterRows(exams) {
     exams.forEach(ex => {
         const perExam = new Map();
         (ex.data || []).forEach(raw => {
+            if (!fbExamBelongsToCurrentSchool(raw)) return;
             const row = fbRosterRow(raw); if (!row) return;
             const key = `${row.name}|${row.gender || ''}`;
             const list = perExam.get(key) || [];
@@ -541,6 +555,7 @@ async function FB_assembleFromCloud(options = {}) {
     exams.forEach((ex, ei) => {
         const w = weights[ei] || 0;
         ex.data.forEach((row) => {
+            if (!fbExamBelongsToCurrentSchool(row)) return;
             const rosterRow = fbRosterRow(row);
             if (rosterRow && (fbIsDropout(rosterRow) || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || fbIsTransferred(rosterRow))) return;
             const nm = fbNormalizeName(row.name);
