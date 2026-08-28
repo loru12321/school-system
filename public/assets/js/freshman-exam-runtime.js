@@ -371,10 +371,25 @@ function fbCurrentSchoolName() {
     return String((typeof window.readCurrentSchool === 'function' ? window.readCurrentSchool() : '')
         || window.MY_SCHOOL || window.CONFIG?.name || '').trim();
 }
-function fbExamBelongsToCurrentSchool(raw) {
-    const school = String(raw?.school || raw?.学校 || raw?.学校名称 || raw?.schoolName || '').trim();
+function fbExamBelongsToCurrentSchool(raw, context = {}) {
+    // 云端考试常把学校放在考试 meta，而不是每一行；两处都要参与本校过滤。
+    const school = String(raw?.school || raw?.学校 || raw?.学校名称 || raw?.schoolName
+        || context?.school || context?.学校 || context?.schoolName || context?.学校名称
+        || context?.meta?.school || context?.meta?.schoolName || context?.meta?.学校 || '').trim();
     const current = fbCurrentSchoolName();
-    if (!school || !current) return true;
+    if (!current) return false;
+    // 没有学校字段时，仅允许后续通过已上传学籍/人工名单匹配的学生；
+    // 不能把整场考试的其他学校数据默认当成本校。
+    if (!school) {
+        const roster = fbRosterRow(raw);
+        if (!roster) return false;
+        return FB_ROSTER_ROWS.length > 0
+            ? !!fbFindRosterMatch(roster, FB_ROSTER_ROWS)
+                || FB_TRANSFER_STUDENTS.some(student => fbFindRosterMatch(roster, [student]))
+                || FB_DROPOUT_STUDENTS.some(student => fbFindRosterMatch(roster, [student]))
+                || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(roster, [student]))
+            : false;
+    }
     if (typeof window.sameAppSchoolName === 'function') return window.sameAppSchoolName(school, current);
     return school === current || school.replace(/学校$/, '') === current.replace(/学校$/, '');
 }
@@ -494,7 +509,7 @@ function fbExamRosterRows(exams) {
     exams.forEach(ex => {
         const perExam = new Map();
         (ex.data || []).forEach(raw => {
-            if (!fbExamBelongsToCurrentSchool(raw)) return;
+            if (!fbExamBelongsToCurrentSchool(raw, ex.meta)) return;
             const row = fbRosterRow(raw); if (!row) return;
             const key = `${row.name}|${row.gender || ''}`;
             const list = perExam.get(key) || [];
@@ -574,7 +589,7 @@ async function FB_assembleFromCloud(options = {}) {
     exams.forEach((ex, ei) => {
         const w = weights[ei] || 0;
         ex.data.forEach((row) => {
-            if (!fbExamBelongsToCurrentSchool(row)) return;
+            if (!fbExamBelongsToCurrentSchool(row, ex.meta)) return;
             const rosterRow = fbRosterRow(row);
             if (rosterRow && (fbIsDropout(rosterRow) || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || fbIsTransferred(rosterRow))) return;
             const nm = fbNormalizeName(row.name);
@@ -889,6 +904,12 @@ async function FB_runDivision() {
 
     // 获取参数
     const k = parseInt(document.getElementById('fb_cls_num').value) || 6;
+    // 本校分班安全阈值：银山实验学校单班不超过 60 人。
+    // 若考试数据仍混入其他学校，先阻断生成并明确提示，不允许导出错误方案。
+    const maxStudentsForClasses = k * 60;
+    if (FB_ROSTER_ROWS.length && FB_STUDENTS.length > maxStudentsForClasses) {
+        return window.UI.alert(`当前本校分班名单 ${FB_STUDENTS.length} 人，超过 ${k} 个班 × 60 人的安全上限（${maxStudentsForClasses} 人）。已停止生成，请检查考试数据的学校字段或届别筛选。`, 'error');
+    }
     const algo = document.getElementById('fb_algorithm').value;
     const fixedCounts = fbCountFixedAssignments(k);
     const fixedErrors = fbValidateFixedAssignments(k);
