@@ -32,10 +32,19 @@
         applyingHistory = true;
         try {
             root.switchTab(id);
-            return true;
+            return !!root.document?.getElementById(id)?.classList.contains('active');
         } finally {
             applyingHistory = false;
         }
+    }
+
+    function queueUrlActivation() {
+        const run = () => {
+            if (activateUrlModule()) return;
+            root.setTimeout(activateUrlModule, 500);
+            root.setTimeout(activateUrlModule, 1500);
+        };
+        root.setTimeout(run, 0);
     }
 
     root.addEventListener('school:module-changed', (event) => {
@@ -52,6 +61,6 @@
 
     Promise.all([appReady, authReady]).then(() => {
         ready = true;
-        activateUrlModule();
+        queueUrlActivation();
     });
 }(window));
