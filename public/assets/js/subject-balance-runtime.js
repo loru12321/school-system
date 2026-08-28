@@ -32,6 +32,7 @@
     let SB_CACHE_DATA = [];
     let SB_GRADE_STATS_SIGNATURE = '';
     let SB_GRADE_STATS_CACHE = null;
+    let SB_RENDER_CACHE = null;
 
     function getGradeStatsSignature() {
         const rows = getRawData();
@@ -81,6 +82,28 @@
         let students = schoolRecord.students;
         if (cls && cls !== '全部') students = students.filter(s => s.class === cls);
 
+        const sourceRows = schoolRecord.students;
+        const firstRow = sourceRows[0] || {};
+        const lastRow = sourceRows[sourceRows.length - 1] || {};
+        const renderSignature = [
+            sch,
+            cls || '全部',
+            sortType || 'balance',
+            getGradeStatsSignature(),
+            sourceRows.length,
+            String(firstRow.name || ''),
+            String(firstRow.total || ''),
+            String(lastRow.name || ''),
+            String(lastRow.total || ''),
+            students.length
+        ].join('::');
+        const tbody = root.document.querySelector('#sb-table tbody');
+        if (SB_RENDER_CACHE?.signature === renderSignature && tbody) {
+            SB_CACHE_DATA = SB_RENDER_CACHE.renderList;
+            tbody.innerHTML = SB_RENDER_CACHE.html;
+            return;
+        }
+
         const gradeStats = SB_getGradeStats();
 
         const renderList = students.map(s => {
@@ -119,7 +142,6 @@
 
         SB_CACHE_DATA = renderList; // 存入缓存
 
-        const tbody = root.document.querySelector('#sb-table tbody');
         let html = '';
 
         renderList.forEach(row => {
@@ -179,8 +201,9 @@
                 `;
         });
 
-        tbody.innerHTML = html;
-        if (renderList.length === 0) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">无数据</td></tr>';
+        if (renderList.length === 0) html = '<tr><td colspan="5" style="text-align:center; padding:20px;">无数据</td></tr>';
+        SB_RENDER_CACHE = { signature: renderSignature, renderList, html };
+        if (tbody) tbody.innerHTML = html;
     }
 
     function SB_getGradeStats() {

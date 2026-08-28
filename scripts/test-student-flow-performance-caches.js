@@ -96,7 +96,11 @@ const pkg = JSON.parse(read(packageFile));
     'SB_GRADE_STATS_SIGNATURE',
     'SB_GRADE_STATS_CACHE',
     'getGradeStatsSignature',
-    'signature === SB_GRADE_STATS_SIGNATURE'
+    'signature === SB_GRADE_STATS_SIGNATURE',
+    'SB_RENDER_CACHE',
+    'renderSignature',
+    'SB_RENDER_CACHE?.signature === renderSignature',
+    'tbody.innerHTML = SB_RENDER_CACHE.html'
 ].forEach((token) => assertContains(subjectBalance, token, 'public/assets/js/subject-balance-runtime.js'));
 
 assertContains(app, 'function readPotentialStudentsCache()', appFile);
