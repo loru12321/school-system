@@ -4,13 +4,13 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `89788aceb227`
-- Recorded at: 2026-08-28T15:35:21.641Z
-- Total smoke time: 20892 ms (-931 ms vs previous)
-- Login: 2307 ms
-- App ready: 2033 ms
+- Commit: `aba8932f8f92`
+- Recorded at: 2026-08-28T15:54:36.200Z
+- Total smoke time: 21855 ms (+963 ms vs previous)
+- Login: 2518 ms
+- App ready: 1092 ms
 - Native long tasks: 0, max 0 ms
-- Scheduled task samples: 65, max end-to-end 74.8 ms, max derived network wait 24.2 ms
+- Scheduled task samples: 58, max end-to-end 189.6 ms, max derived network wait 6.1 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -18,19 +18,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `grade-scheduler` | 28.89999999999418 ms | 659 ms | 687.8999999999942 ms |
-| `student-overview` | 34.29999999998836 ms | 469 ms | 503.29999999998836 ms |
-| `report-generator` | 16 ms | 350 ms | 366 ms |
-| `freshman-simulator` | 73.30000000001746 ms | 282 ms | 355.30000000001746 ms |
-| `exam-arranger` | 1.1999999999825377 ms | 349 ms | 350.19999999998254 ms |
-| `subject-balance` | 35 ms | 314 ms | 349 ms |
-| `cohort-growth` | 23.39999999999418 ms | 305 ms | 328.3999999999942 ms |
-| `progress-analysis` | 65.19999999998254 ms | 190 ms | 255.19999999998254 ms |
+| `grade-scheduler` | 37.5 ms | 692 ms | 729.5 ms |
+| `student-overview` | 45.60000000000582 ms | 562 ms | 607.6000000000058 ms |
+| `freshman-simulator` | 79 ms | 392 ms | 471 ms |
+| `subject-balance` | 35.09999999999127 ms | 422 ms | 457.09999999999127 ms |
+| `report-generator` | 19.5 ms | 419 ms | 438.5 ms |
+| `cohort-growth` | 21.20000000001164 ms | 413 ms | 434.20000000001164 ms |
+| `exam-arranger` | 19.80000000000291 ms | 348 ms | 367.8000000000029 ms |
+| `progress-analysis` | 98.39999999999418 ms | 252 ms | 350.3999999999942 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Native long tasks | Scheduled tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `aba8932f8f92` | 21855 ms | 2518 ms | 1092 ms | 0 | 58 | 0 | 0 |
 | `89788aceb227` | 20892 ms | 2307 ms | 2033 ms | 0 | 65 | 0 | 0 |
 | `7e87756601fb` | 21823 ms | 2467 ms | 1035 ms | 0 | 65 | 0 | 0 |
 | `92d04a2c78db` | 21209 ms | 2359 ms | 1171 ms | 0 | 64 | 0 | 0 |
@@ -45,7 +46,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `4a033a87ff55` | 19952 ms | 3311 ms | 1007 ms | 0 | 63 | 0 | 0 |
 | `d84b4db93607` | 20800 ms | 2698 ms | 1019 ms | 0 | 62 | 0 | 0 |
 | `0fb7cec1739b` | 21187 ms | 2294 ms | 1011 ms | 0 | 63 | 0 | 0 |
-| `bd4ecfc61f28` | 20613 ms | 2306 ms | 1011 ms | 0 | 65 | 0 | 0 |
 
 ## Data Files
 
