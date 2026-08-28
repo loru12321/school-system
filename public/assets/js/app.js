@@ -1799,46 +1799,6 @@ function setCohortSyncStatus(state = 'idle', options = {}) {
     return runtime.setStatus(state, { ...options, cohortId });
 }
 
-function getCloudRestoreSummary(cohortId = '') {
-    const rows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
-    const examId = String(CURRENT_EXAM_ID || COHORT_DB?.currentExamId || readWorkspaceExamId() || '').trim();
-    const subjectSet = new Set();
-    rows.forEach((row) => {
-        const scores = row && typeof row.scores === 'object' ? row.scores : null;
-        if (!scores) return;
-        Object.keys(scores).forEach((subject) => {
-            const name = String(subject || '').trim();
-            if (name && name !== '总分' && name !== 'total') subjectSet.add(name);
-        });
-    });
-    const school = String(
-        window.MY_SCHOOL_NAME
-        || window.MY_SCHOOL
-        || window.CONFIG?.schoolName
-        || window.CONFIG?.name
-        || ''
-    ).trim();
-    return {
-        cohortId: String(cohortId || CURRENT_COHORT_ID || '').trim(),
-        examId,
-        rowCount: rows.length,
-        subjectCount: subjectSet.size,
-        school
-    };
-}
-
-function formatCloudRestoreSummary(summary = {}) {
-    const cohort = summary.cohortId ? `${summary.cohortId}届` : '当前届别';
-    const exam = summary.examId || '考试批次待确认';
-    const rows = Number(summary.rowCount) || 0;
-    const subjects = Number(summary.subjectCount) || 0;
-    const school = summary.school || '本校待确认';
-    return `${cohort} · ${exam} · ${rows}条成绩 · ${subjects}科 · ${school}`;
-}
-
-window.getCloudRestoreSummary = window.getCloudRestoreSummary || getCloudRestoreSummary;
-window.formatCloudRestoreSummary = window.formatCloudRestoreSummary || formatCloudRestoreSummary;
-
 async function retryCurrentCohortSync() {
     const cohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
     const restoreLatestExam = async () => {
@@ -2274,7 +2234,7 @@ async function switchCohort(cohortId, options = {}) {
                         warnPrefix: '[switchCohort] 后台历史考试补全失败:'
                     });
                     scheduleCohortWorkspaceMetadataRefresh(cohortKey, cohortId);
-                    UI.toast(`已从云端考试快照恢复：${formatCloudRestoreSummary(getCloudRestoreSummary(cohortId))}`, "success");
+                    UI.toast(`已从云端考试快照恢复：${window.formatCloudRestoreSummary(window.getCloudRestoreSummary(cohortId))}`, "success");
                     logAction('届别切换', `已从云端考试快照恢复 ${cohortKey}`);
                     updateStatusPanel();
                     setCohortSyncStatus('synced', { cohortId });

@@ -1577,6 +1577,11 @@ assert.ok(
 );
 assert.ok(appSource.includes('function setCohortSyncStatus'), 'cohort cloud restore should expose visible sync state');
 assert.ok(indexHtml.includes('cohort-sync-status-runtime.js'), 'cohort sync status should load outside the main application bundle');
+assert.ok(
+    indexHtml.includes('cloud-restore-summary-runtime.js')
+        && fs.existsSync(path.resolve(__dirname, '../public/assets/js/cloud-restore-summary-runtime.js')),
+    'cloud restore summary helpers should load as a lightweight runtime before app.js'
+);
 assert.ok(appSource.includes('function retryCurrentCohortSync'), 'failed cohort cloud restore should provide an explicit retry path');
 assert.ok(indexHtml.includes('id="shell-sync-chip"'), 'workspace shell should render the cohort sync status chip');
 assert.ok(

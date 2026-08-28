@@ -10,6 +10,7 @@ const cohortDbSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-
 const cohortExamMetaSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-exam-meta-runtime.js'), 'utf8');
 const cloudSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud.js'), 'utf8');
 const dataCloudSource = fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8');
+const cloudRestoreSummarySource = fs.readFileSync(path.join(root, 'public/assets/js/cloud-restore-summary-runtime.js'), 'utf8');
 const cloudWorkspaceSource = fs.readFileSync(path.join(root, 'public/assets/js/cloud-workspace-runtime.js'), 'utf8');
 const snapshotSystemSource = fs.readFileSync(path.join(root, 'public/assets/js/snapshot-system-runtime.js'), 'utf8');
 const examAnalysisPackageSource = fs.readFileSync(path.join(root, 'public/assets/js/exam-analysis-package-runtime.js'), 'utf8');
@@ -532,10 +533,10 @@ assert.ok(
 );
 
 assert.ok(
-    appSource.includes("function getCloudRestoreSummary(cohortId = '')")
-        && appSource.includes('rowCount: rows.length')
-        && appSource.includes('subjectCount: subjectSet.size')
-        && appSource.includes('formatCloudRestoreSummary(getCloudRestoreSummary(cohortId))')
+    cloudRestoreSummarySource.includes("function getCloudRestoreSummary(cohortId = '')")
+        && cloudRestoreSummarySource.includes('rowCount: rows.length')
+        && cloudRestoreSummarySource.includes('subjectCount: subjectSet.size')
+        && appSource.includes('window.formatCloudRestoreSummary(window.getCloudRestoreSummary(cohortId))')
         && fs.readFileSync(path.join(root, 'public/assets/js/cohort-sync-status-runtime.js'), 'utf8').includes('云端数据同步完成${summaryText}'),
     'cloud restore success feedback should expose cohort, exam, row count, subject count, and school context'
 );
