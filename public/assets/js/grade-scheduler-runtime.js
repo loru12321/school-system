@@ -19,6 +19,8 @@ const SCHEDULER = {
     lastPreflight: null,
     scheduleRenderVersion: 0,
     tableRenderCache: { signature: '', html: '' },
+    classSubjectDayIndex: null,
+    teacherDayLoadIndex: null,
 
     // 存储动态添加的规则
     rules: {
@@ -749,7 +751,42 @@ const SCHEDULER = {
             combinedGroup: options.groupId || ''
         };
         this.schedule[demand.className][slotId] = cell;
+        const dayMatch = String(slotId || '').match(/^d(\d+)_/);
+        const day = dayMatch ? dayMatch[1] : '';
+        if (day) {
+            if (this.classSubjectDayIndex) {
+                const subjectKey = `${demand.className}__${demand.subject}__${day}`;
+                this.classSubjectDayIndex[subjectKey] = (this.classSubjectDayIndex[subjectKey] || 0) + 1;
+            }
+            if (this.teacherDayLoadIndex) {
+                const teacherKey = `${this.normalizeTeacherName(demand.name)}__${day}`;
+                this.teacherDayLoadIndex[teacherKey] = (this.teacherDayLoadIndex[teacherKey] || 0) + 1;
+            }
+        }
         return cell;
+    },
+
+    rebuildDayLoadIndexes: function () {
+        this.classSubjectDayIndex = Object.create(null);
+        this.teacherDayLoadIndex = Object.create(null);
+        this.classes.forEach((className) => {
+            Object.entries(this.schedule[className] || {}).forEach(([slotId, cell]) => {
+                if (slotId.startsWith('_') || !cell) return;
+                const dayMatch = slotId.match(/^d(\d+)_/);
+                if (!dayMatch) return;
+                const day = dayMatch[1];
+                const subject = String(cell.subject || '').replace(/\(合\)$/, '');
+                if (subject) {
+                    const subjectKey = `${className}__${subject}__${day}`;
+                    this.classSubjectDayIndex[subjectKey] = (this.classSubjectDayIndex[subjectKey] || 0) + 1;
+                }
+                const teacher = this.normalizeTeacherName(cell.teacher);
+                if (teacher && teacher !== '-') {
+                    const teacherKey = `${teacher}__${day}`;
+                    this.teacherDayLoadIndex[teacherKey] = (this.teacherDayLoadIndex[teacherKey] || 0) + 1;
+                }
+            });
+        });
     },
 
     getCombinedGroups: function (rule, pending) {
@@ -791,6 +828,7 @@ const SCHEDULER = {
     },
 
     getClassSubjectDayCount: function (className, subject, day) {
+        if (this.classSubjectDayIndex) return this.classSubjectDayIndex[`${className}__${subject}__${day}`] || 0;
         return Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => (
             slotId.startsWith(`d${day}_`) && cell && cell.subject === subject
         )).length;
@@ -811,6 +849,7 @@ const SCHEDULER = {
 
     getTeacherDayLoad: function (teacherName, day) {
         const teacher = this.normalizeTeacherName(teacherName);
+        if (this.teacherDayLoadIndex) return this.teacherDayLoadIndex[`${teacher}__${day}`] || 0;
         return this.classes.reduce((count, className) => count + Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => (
             slotId.startsWith(`d${day}_`) && this.normalizeTeacherName(cell?.teacher) === teacher
         )).length, 0);
@@ -835,6 +874,7 @@ const SCHEDULER = {
                 this.resetTeacherSlotIndex();
                 this.resetVenueSlotIndex();
                 this.applyBaseConstraints(config);
+                this.rebuildDayLoadIndexes();
                 const teacherBusyMap = this.getTeacherBusyMap(config);
                 const pending = this.demands.map((demand) => ({
                     ...demand,
