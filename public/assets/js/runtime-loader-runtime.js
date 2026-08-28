@@ -822,8 +822,7 @@ return window.SystemRuntimeLoader.load('freshman-exam');
 window.ensureFreshmanSimulatorRuntimeLoaded = function () {
 return Promise.all([
     window.ensureFreshmanExamRuntimeLoaded(),
-    window.ensureXlsxVendorLoaded(),
-    window.ensureChartVendorLoaded()
+    window.ensureXlsxVendorLoaded()
 ]).then((result) => result[0]);
 };
 

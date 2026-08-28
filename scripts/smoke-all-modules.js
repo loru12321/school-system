@@ -4506,7 +4506,11 @@ async function runModuleDeepCheck(page, id) {
                 sectionReady: !!document.querySelector('#freshman-simulator.analysis-workspace-violet'),
                 runtimeReady: !!runtime,
                 xlsxReady: !!(window.XLSX && window.XLSX.utils),
-                chartReady: typeof window.Chart === 'function',
+                // Chart.js is intentionally lazy-loaded: the entry path only
+                // needs the loader contract; FB_renderBalanceChart() starts the
+                // vendor load when a result is rendered.
+                chartReady: typeof window.Chart === 'function'
+                    || typeof window.ensureChartVendorLoaded === 'function',
                 importReady: typeof window.FB_loadData === 'function',
                 constraintReviewReady: typeof window.FB_preflight === 'function'
                     && !!window.FreshmanConstraintInsightRuntime,

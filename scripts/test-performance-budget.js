@@ -112,8 +112,8 @@ assert.ok(
   runtimeLoaderRuntime.includes('window.ensureFreshmanSimulatorRuntimeLoaded = function ()')
     && runtimeLoaderRuntime.includes('window.ensureExamArrangerRuntimeLoaded = function ()')
     && runtimeLoaderRuntime.includes('window.ensureXlsxVendorLoaded()')
-    && runtimeLoaderRuntime.includes('window.ensureChartVendorLoaded()'),
-  'new-student and exam-arranger entries should prepare their real interactive vendors on entry'
+    && !runtimeLoaderRuntime.match(/window\.ensureFreshmanSimulatorRuntimeLoaded = function \(\) \{[\s\S]*?window\.ensureChartVendorLoaded\(\)/),
+  'new-student and exam-arranger entries should prepare core interactive vendors while lazy-loading charts'
 );
 assert.ok(
   moduleEntryRuntime.includes("id === 'freshman-simulator'")
