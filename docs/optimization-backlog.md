@@ -92,3 +92,4 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 | 2026-08-28 | P1 | 新生均衡分班增加本年级学籍名单上传、转出登记及差异确认；转出学生排除分班，学籍在册但未考试者在成绩分班完成后按人数/性别补入，考试名单无学籍者标记并增加分散惩罚，未确认差异不得生成方案 | `npm run build`, `npm run check:release-fast` |
 | 2026-08-28 | P1 | 新生分班结果增加考试名单阶段与最终名单阶段的主要学科“两率一分”对照表，并支持导出两阶段指标和最终分班名单，便于向任课教师解释分班差异 | `npm run build`, `node scripts/test-syntax.js`, `node scripts/test-mobile-workflow-contract.js` |
 | 2026-08-28 | P1 | 新生均衡分班补齐新6年级入口；班级卡片显示在册未考/新转入后置人数；分班异步异常自动恢复按钮并给出错误提示；两率一分有效学生过滤逻辑加固 | `node scripts/test-syntax.js`, `node scripts/test-mobile-workflow-contract.js`, `node scripts/test-dialog-runtime-contract.js`, `npm run build`, `npm run check:release-fast` |
+| 2026-08-28 | P1 | 新生分班名单核对口径修正：考试名单有、学籍名单无的学生默认按“在校参加考试”纳入分班；仅管理员明确选择转出/不在校时排除，转入学生继续进入后置分配池 | `node scripts/test-syntax.js`, `node scripts/test-teaching-workbench-runtime.js`, `npm run build`, `npm run check:release-fast` |

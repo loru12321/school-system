@@ -385,13 +385,19 @@ async function FB_reconcileRoster(exams) {
     if (!unresolved.length) { FB_ROSTER_RECONCILIATION = { rosterCount: FB_ROSTER_ROWS.length, examCount: examRows.length, autoTransferred, decisions: [], examOnly }; FB_UNEXAM_ROSTER_STUDENTS = []; return true; }
     const Swal = window.Swal && typeof window.Swal.fire === 'function' ? window.Swal : null;
     if (!Swal) { await window.UI.alert(`学籍与考试名单有 ${unresolved.length} 项不一致，请补充转出登记后再生成。`, 'warning'); return false; }
-    const rowsHtml = unresolved.map((item, i) => `<tr><td>${i + 1}</td><td>${item.row.name}</td><td>${item.row.gender === 'M' ? '男' : item.row.gender === 'F' ? '女' : '未填'}</td><td>${item.side}</td><td><select data-fb-reconcile="${i}" style="width:100%;"><option value="">请选择原因</option><option value="transfer">转出/已离校</option><option value="not_exam">在校但本次未参加考试</option><option value="transfer_in">转入/临时在校</option><option value="data_error">姓名或性别信息错误</option><option value="other">其他原因</option></select></td></tr>`).join('');
-    const result = await Swal.fire({ title: '学籍与考试名单不一致', html: `<div style="text-align:left;font-size:13px;margin-bottom:8px;">已自动匹配转出 ${autoTransferred.length} 人。请为其余差异逐项选择原因，未完成的项目不能继续分班。</div><div style="max-height:360px;overflow:auto;"><table style="width:100%;font-size:12px;"><thead><tr><th>#</th><th>姓名</th><th>性别</th><th>差异</th><th>管理员确认原因</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`, showCancelButton: true, confirmButtonText: '确认并继续', cancelButtonText: '返回补充', width: 900, preConfirm: () => { const decisions = unresolved.map((_, i) => document.querySelector(`[data-fb-reconcile="${i}"]`)?.value || ''); if (decisions.some(v => !v)) { Swal.showValidationMessage('请为所有差异选择原因。'); return false; } return decisions; } });
+    const rowsHtml = unresolved.map((item, i) => {
+        const examOnly = item.side === '考试名单有、学籍名单无';
+        const defaultOption = examOnly ? '<option value="exam_present" selected>在校参加考试（按学籍处理）</option>' : '<option value="">请选择原因</option>';
+        return `<tr><td>${i + 1}</td><td>${item.row.name}</td><td>${item.row.gender === 'M' ? '男' : item.row.gender === 'F' ? '女' : '未填'}</td><td>${item.side}</td><td><select data-fb-reconcile="${i}" style="width:100%;">${defaultOption}<option value="transfer">转出/已离校</option><option value="not_exam">在校但本次未参加考试</option><option value="transfer_in">转入/临时在校（后置分配）</option><option value="not_enrolled">不在校/不参与本次分班</option><option value="data_error">姓名或性别信息错误（按在校处理）</option><option value="other">其他原因（按在校处理）</option></select></td></tr>`;
+    }).join('');
+    const result = await Swal.fire({ title: '学籍与考试名单不一致', html: `<div style="text-align:left;font-size:13px;margin-bottom:8px;">已自动匹配转出 ${autoTransferred.length} 人。考试名单有、学籍名单无的学生默认按“在校参加考试”处理并参与分班；只有明确选择“不在校/不参与本次分班”或“转出/已离校”才会排除。</div><div style="max-height:360px;overflow:auto;"><table style="width:100%;font-size:12px;"><thead><tr><th>#</th><th>姓名</th><th>性别</th><th>差异</th><th>管理员确认原因</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`, showCancelButton: true, confirmButtonText: '确认并继续', cancelButtonText: '返回补充', width: 900, preConfirm: () => { const decisions = unresolved.map((_, i) => document.querySelector(`[data-fb-reconcile="${i}"]`)?.value || ''); if (decisions.some(v => !v)) { Swal.showValidationMessage('请为所有差异选择原因。'); return false; } return decisions; } });
     if (!result.isConfirmed) return false;
     const decisions = unresolved.map((item, i) => ({ ...item, reason: result.value[i] }));
     FB_UNEXAM_ROSTER_STUDENTS = decisions.filter(item => item.side === '学籍名单有、考试名单无' && item.reason !== 'transfer').map(item => item.row);
     const decisionTransferIns = decisions.filter(item => item.side === '考试名单有、学籍名单无' && item.reason === 'transfer_in').map(item => item.row);
+    const decisionTransfers = decisions.filter(item => item.side === '考试名单有、学籍名单无' && ['transfer', 'not_enrolled'].includes(item.reason)).map(item => item.row);
     FB_TRANSFER_IN_STUDENTS = [...FB_TRANSFER_IN_STUDENTS, ...decisionTransferIns.filter(row => !FB_TRANSFER_IN_STUDENTS.some(s => fbFindRosterMatch(row, [s])))];
+    FB_TRANSFER_STUDENTS = [...FB_TRANSFER_STUDENTS, ...decisionTransfers.filter(row => !FB_TRANSFER_STUDENTS.some(s => fbFindRosterMatch(row, [s])))];
     FB_ROSTER_RECONCILIATION = { rosterCount: FB_ROSTER_ROWS.length, examCount: examRows.length, autoTransferred, decisions, examOnly };
     return true;
 }
@@ -408,7 +414,7 @@ async function FB_assembleFromCloud(options = {}) {
     }
     if (!await FB_reconcileRoster(exams)) return null;
     const examRoster = fbExamRosterRows(exams);
-    const notEnrolledRows = (FB_ROSTER_RECONCILIATION?.decisions || []).filter(item => item.side === '考试名单有、学籍名单无' && item.reason !== 'transfer_in').map(item => item.row);
+    const notEnrolledRows = (FB_ROSTER_RECONCILIATION?.decisions || []).filter(item => item.side === '考试名单有、学籍名单无' && item.reason === 'not_enrolled').map(item => item.row);
     const notEnrolledKeys = new Set(notEnrolledRows.map(fbRosterIdentity));
     const notEnrolledNames = new Set(notEnrolledRows.map(row => row.name));
     // 默认权重：最近一次最高。2次=[0.6,0.4]，3次=[0.5,0.3,0.2]，主要依据最后2次。
@@ -422,7 +428,7 @@ async function FB_assembleFromCloud(options = {}) {
         const w = weights[ei] || 0;
         ex.data.forEach((row) => {
             const rosterRow = fbRosterRow(row);
-            if (rosterRow && FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student]))) return;
+            if (rosterRow && (FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || FB_TRANSFER_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])))) return;
             const key = fbStudentKey(row);
             const nm = fbNormalizeName(row.name);
             if (nm) {

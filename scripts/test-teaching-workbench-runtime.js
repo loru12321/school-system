@@ -62,6 +62,10 @@ assert.ok(scheduler.includes("[data-scheduler-click]") && scheduler.includes("[d
 assert.ok(scheduler.includes("/^d[1-5]_(?:am|pm|eve)_\\d+$/"), 'scheduler cell slots must be format-validated before dispatch');
 
 assert.ok(freshman.includes('get assignmentDataStatus()'), 'freshman runtime should expose non-sensitive assignment readiness metadata');
+assert.ok(freshman.includes('exam_present'), 'exam-only students should default to participating as enrolled students');
+assert.ok(freshman.includes('在校参加考试（按学籍处理）'), 'exam-only reconciliation should explain the enrolled participation default');
+assert.ok(freshman.includes("['transfer', 'not_enrolled'].includes(item.reason)"), 'only explicit transfer/non-enrolled decisions should exclude exam-only students');
+assert.ok(freshman.includes('FB_TRANSFER_STUDENTS.some(student => fbFindRosterMatch'), 'transfer decisions should be excluded from exam aggregation');
 assert.ok(freshmanInsight.includes('window.FB_preflight = preflight'), 'freshman insight should expose the review action');
 assert.ok(freshmanInsight.includes('分班条件检查通过'), 'freshman insight should give an actionable result');
 assert.ok(freshmanInsight.includes('[data-fb-insight-action]'), 'freshman review action should use a scoped declarative binding');
