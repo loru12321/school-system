@@ -82,6 +82,9 @@ assert.ok(freshman.includes('function fbGetRecentExams(limit = 3, targetGrade = 
 assert.ok(freshman.includes('targetAcademicYear - 1'), 'new grade selection should include the prior grade before September');
 assert.ok(freshman.includes('fbGetRecentExams(examLimit, targetGrade)'), 'cloud assembly should filter exams using the selected target grade');
 assert.ok(freshman.includes('9月前按上一年级，9月后按目标年级'), 'freshman result summary should disclose the new-grade transition rule');
+assert.ok(freshman.includes('不同考试的考号可能重新编排'), 'roster reconciliation should document cross-exam id changes');
+assert.ok(freshman.includes('const stableKey = (row)'), 'exam aggregation should use a stable cross-exam student key');
+assert.ok(freshman.includes('duplicateNames.has(nm) ? fbStudentKey(row) : `name:${nm}`'), 'only same-exam duplicate names should fall back to exam ids');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');

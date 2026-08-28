@@ -457,9 +457,23 @@ function FB_loadDropoutList(input) {
     reader.readAsArrayBuffer(file);
 }
 function fbExamRosterRows(exams) {
-    const rows = new Map();
-    exams.forEach(ex => (ex.data || []).forEach(raw => { const row = fbRosterRow(raw); if (row) rows.set(fbRosterIdentity(row), row); }));
-    return [...rows.values()];
+    // 不同考试的考号可能重新编排；先按姓名+性别做跨考试合并，
+    // 同名学生仍保留同场考试中的最大出现人数，避免把同一届学生重复算成多人。
+    const groups = new Map();
+    exams.forEach(ex => {
+        const perExam = new Map();
+        (ex.data || []).forEach(raw => {
+            const row = fbRosterRow(raw); if (!row) return;
+            const key = `${row.name}|${row.gender || ''}`;
+            const list = perExam.get(key) || [];
+            list.push(row); perExam.set(key, list);
+        });
+        perExam.forEach((list, key) => {
+            const prev = groups.get(key);
+            if (!prev || list.length > prev.rows.length) groups.set(key, { rows: list });
+        });
+    });
+    return [...groups.values()].flatMap(group => group.rows);
 }
 function fbIsDropout(row) { return !!row && FB_DROPOUT_STUDENTS.some(student => fbFindRosterMatch(row, [student])); }
 async function FB_reconcileRoster(exams) {
@@ -523,7 +537,6 @@ async function FB_assembleFromCloud(options = {}) {
         ex.data.forEach((row) => {
             const rosterRow = fbRosterRow(row);
             if (rosterRow && (fbIsDropout(rosterRow) || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || fbIsTransferred(rosterRow))) return;
-            const key = fbStudentKey(row);
             const nm = fbNormalizeName(row.name);
             if (nm) {
                 if (!nameExamRows.has(nm)) nameExamRows.set(nm, new Map());
@@ -554,6 +567,41 @@ async function FB_assembleFromCloud(options = {}) {
                 if (Number.isFinite(v)) { agg.subj[sub].s += v * w; agg.subj[sub].w += w; }
             });
         });
+    });
+
+    // 非重名学生优先按归一化姓名跨考试聚合，避免不同考试更换考号后被拆成多人；
+    // 同场重名仍使用考号/学号，保留人工核对提示。
+    const duplicateNames = new Set();
+    nameExamRows.forEach((examMap, nm) => {
+        if ([...examMap.values()].some(record => record.count > 1)) duplicateNames.add(nm);
+    });
+    const stableKey = (row) => {
+        const nm = fbNormalizeName(row && row.name);
+        return duplicateNames.has(nm) ? fbStudentKey(row) : `name:${nm}`;
+    };
+    // 上面的预扫描只建立重名集合；重新装配时使用稳定键。
+    const stableByKey = new Map();
+    exams.forEach((ex, ei) => {
+        const w = weights[ei] || 0;
+        ex.data.forEach((row) => {
+            const rosterRow = fbRosterRow(row);
+            if (rosterRow && (fbIsDropout(rosterRow) || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || fbIsTransferred(rosterRow))) return;
+            const s = fbExamAssignmentScore(row, targetGrade); if (!s) return;
+            const key = stableKey(row);
+            const nm = fbNormalizeName(row.name);
+            if (!stableByKey.has(key)) stableByKey.set(key, { row, wSum: 0, scoreSum: 0, examsGot: 0, subj: Object.fromEntries(fbMajorSubjectsForGradeValue(targetGrade).map(sub => [sub, { s: 0, w: 0 }])) });
+            const agg = stableByKey.get(key);
+            agg.wSum += w; agg.scoreSum += s.score * w; agg.examsGot += 1;
+            const rowScores = (row && row.scores && typeof row.scores === 'object') ? row.scores : {};
+            fbMajorSubjectsForGradeValue(targetGrade).forEach((sub) => { const v = Number(rowScores[sub]); if (Number.isFinite(v)) { agg.subj[sub].s += v * w; agg.subj[sub].w += w; } });
+            if (!agg.row.name && nm) agg.row = row;
+        });
+    });
+    // 用稳定键结果替换前面按原始考号聚合的结果。
+    byKey.clear();
+    stableByKey.forEach((agg, key) => {
+        const row = agg.row || {};
+        byKey.set(key, { name: row.name || '未知', id: fbNormalizeId(row.id || row.examNo || row.studentId), class: row.class || '', wSum: agg.wSum, scoreSum: agg.scoreSum, examsGot: agg.examsGot, subj: agg.subj });
     });
 
     // 重名组（同名但多考号 / 或同名仅姓名匹配）。
