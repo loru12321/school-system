@@ -67,6 +67,9 @@ assert.ok(freshman.includes('在校参加考试（按学籍处理）'), 'exam-on
 assert.ok(freshman.includes("['transfer', 'not_enrolled'].includes(item.reason)"), 'only explicit transfer/non-enrolled decisions should exclude exam-only students');
 assert.ok(freshman.includes("!['transfer', 'not_enrolled'].includes(item.reason)"), 'dropout roster students should remain eligible for post-division allocation');
 assert.ok(freshman.includes('辍学/长期离校（不参与分班）'), 'roster reconciliation should provide an explicit dropout reason');
+assert.ok(indexHtml.includes('data-fb-pick="fbDropoutInput"'), 'freshman UI should provide a dropout roster upload');
+assert.ok(freshman.includes('function FB_loadDropoutList'), 'freshman runtime should parse dropout roster uploads');
+assert.ok(freshman.includes('fbIsDropout(rosterRow)'), 'dropout roster matches should be diverted before exam aggregation');
 assert.ok(freshman.includes('FB_TRANSFER_STUDENTS.some(student => fbFindRosterMatch'), 'transfer decisions should be excluded from exam aggregation');
 assert.ok(freshmanInsight.includes('window.FB_preflight = preflight'), 'freshman insight should expose the review action');
 assert.ok(freshmanInsight.includes('分班条件检查通过'), 'freshman insight should give an actionable result');

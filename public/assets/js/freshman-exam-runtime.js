@@ -304,6 +304,7 @@ let FB_TRANSFER_STUDENTS = [];
 let FB_ROSTER_RECONCILIATION = null;
 let FB_UNEXAM_ROSTER_STUDENTS = [];
 let FB_TRANSFER_IN_STUDENTS = [];
+let FB_DROPOUT_STUDENTS = [];
 
 function fbRosterRow(raw) {
     const name = fbNormalizeName(raw?.姓名 || raw?.名字 || raw?.Name || raw?.name);
@@ -321,11 +322,12 @@ function fbFindRosterMatch(row, candidates) {
 function FB_renderRosterStatus() {
     const status = document.getElementById('fb_roster_status');
     if (status) status.innerHTML = FB_ROSTER_ROWS.length
-        ? `已载入学籍名单 <strong>${FB_ROSTER_ROWS.length}</strong> 人；转出 <strong>${FB_TRANSFER_STUDENTS.length}</strong> 人；新转入 <strong>${FB_TRANSFER_IN_STUDENTS.length}</strong> 人。生成分班前会自动核对学籍与考试名单。`
+        ? `已载入学籍名单 <strong>${FB_ROSTER_ROWS.length}</strong> 人；转出 <strong>${FB_TRANSFER_STUDENTS.length}</strong> 人；辍学 <strong>${FB_DROPOUT_STUDENTS.length}</strong> 人；新转入 <strong>${FB_TRANSFER_IN_STUDENTS.length}</strong> 人。生成分班前会自动核对学籍与考试名单。`
         : '尚未上传学籍名单；如不上传，系统沿用考试名单，不执行在校名单核对。';
     const list = document.getElementById('fb_transfer_list');
     if (list) list.innerHTML = [
         ...FB_TRANSFER_STUDENTS.map((s, i) => `<div class="freshman-fixed-row"><span><strong>${s.name}</strong><small>转出 · ${s.gender === 'M' ? '男' : '女'}</small></span><button type="button" class="btn btn-sm btn-gray" data-fb-action="remove-transfer" data-fb-index="${i}">移除</button></div>`),
+        ...FB_DROPOUT_STUDENTS.map((s, i) => `<div class="freshman-fixed-row"><span><strong>${s.name}</strong><small>辍学/长期离校 · ${s.gender === 'M' ? '男' : s.gender === 'F' ? '女' : '未填'}${s.id ? ` · ${s.id}` : ''}</small></span><button type="button" class="btn btn-sm btn-gray" data-fb-action="remove-dropout" data-fb-index="${i}">移除</button></div>`),
         ...FB_TRANSFER_IN_STUDENTS.map((s, i) => `<div class="freshman-fixed-row"><span><strong>${s.name}</strong><small>新转入 · ${s.gender === 'M' ? '男' : '女'}${s.id ? ` · ${s.id}` : ''}</small></span><button type="button" class="btn btn-sm btn-gray" data-fb-action="remove-transfer-in" data-fb-index="${i}">移除</button></div>`)
     ].join('') || '<div class="freshman-fixed-empty">暂无转出或新转入登记。</div>';
 }
@@ -340,6 +342,19 @@ function FB_addTransferStudent() {
 }
 function FB_removeTransferStudent(index) { FB_TRANSFER_STUDENTS.splice(Number(index), 1); FB_renderRosterStatus(); }
 function FB_clearTransfers() { FB_TRANSFER_STUDENTS = []; FB_renderRosterStatus(); }
+function FB_addDropoutStudent() {
+    const name = fbNormalizeName(document.getElementById('fb_dropout_name')?.value);
+    const gender = String(document.getElementById('fb_dropout_gender')?.value || '');
+    const id = fbNormalizeId(document.getElementById('fb_dropout_id')?.value || '');
+    if (!name) return window.UI.alert('请填写辍学学生姓名。', 'warning');
+    if (!FB_DROPOUT_STUDENTS.some(s => (id && s.id === id) || (s.name === name && (!gender || !s.gender || s.gender === gender)))) FB_DROPOUT_STUDENTS.push({ name, gender, id });
+    document.getElementById('fb_dropout_name').value = '';
+    document.getElementById('fb_dropout_gender').value = '';
+    document.getElementById('fb_dropout_id').value = '';
+    FB_renderRosterStatus();
+}
+function FB_removeDropoutStudent(index) { FB_DROPOUT_STUDENTS.splice(Number(index), 1); FB_renderRosterStatus(); }
+function FB_clearDropouts() { FB_DROPOUT_STUDENTS = []; FB_renderRosterStatus(); }
 function FB_addTransferInStudent() {
     const name = fbNormalizeName(document.getElementById('fb_transfer_in_name')?.value);
     const gender = String(document.getElementById('fb_transfer_in_gender')?.value || '');
@@ -367,11 +382,25 @@ function FB_loadRosterList(input) {
     };
     reader.readAsArrayBuffer(file);
 }
+function FB_loadDropoutList(input) {
+    const file = input.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            FB_DROPOUT_STUDENTS = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]).map(fbRosterRow).filter(Boolean);
+            FB_renderRosterStatus();
+            window.UI.alert(`✅ 辍学名单导入 ${FB_DROPOUT_STUDENTS.length} 人；命中的考试学生将改为后置均衡分配。`, 'success');
+        } catch (err) { window.UI.alert('辍学名单读取失败：' + err.message, 'error'); }
+    };
+    reader.readAsArrayBuffer(file);
+}
 function fbExamRosterRows(exams) {
     const rows = new Map();
     exams.forEach(ex => (ex.data || []).forEach(raw => { const row = fbRosterRow(raw); if (row) rows.set(fbRosterIdentity(row), row); }));
     return [...rows.values()];
 }
+function fbIsDropout(row) { return !!row && FB_DROPOUT_STUDENTS.some(student => fbFindRosterMatch(row, [student])); }
 async function FB_reconcileRoster(exams) {
     if (!FB_ROSTER_ROWS.length) return true;
     const examRows = fbExamRosterRows(exams);
@@ -379,7 +408,7 @@ async function FB_reconcileRoster(exams) {
     const examOnly = examRows.filter(row => !fbFindRosterMatch(row, FB_ROSTER_ROWS));
     const autoTransferred = rosterOnly.filter(row => fbFindRosterMatch(row, FB_TRANSFER_STUDENTS));
     const unresolved = [
-        ...rosterOnly.filter(row => !fbFindRosterMatch(row, FB_TRANSFER_STUDENTS)).map(row => ({ side: '学籍名单有、考试名单无', row })),
+        ...rosterOnly.filter(row => !fbFindRosterMatch(row, FB_TRANSFER_STUDENTS) && !fbIsDropout(row)).map(row => ({ side: '学籍名单有、考试名单无', row })),
         ...examOnly.map(row => ({ side: '考试名单有、学籍名单无', row }))
     ];
     if (!unresolved.length) { FB_ROSTER_RECONCILIATION = { rosterCount: FB_ROSTER_ROWS.length, examCount: examRows.length, autoTransferred, decisions: [], examOnly }; FB_UNEXAM_ROSTER_STUDENTS = []; return true; }
@@ -414,6 +443,10 @@ async function FB_assembleFromCloud(options = {}) {
     }
     if (!await FB_reconcileRoster(exams)) return null;
     const examRoster = fbExamRosterRows(exams);
+    const dropoutRows = [...FB_ROSTER_ROWS, ...examRoster].filter(fbIsDropout);
+    dropoutRows.forEach((row) => {
+        if (!FB_UNEXAM_ROSTER_STUDENTS.some(student => fbFindRosterMatch(row, [student]))) FB_UNEXAM_ROSTER_STUDENTS.push({ ...row, postType: '辍学/长期离校' });
+    });
     const notEnrolledRows = (FB_ROSTER_RECONCILIATION?.decisions || []).filter(item => item.side === '考试名单有、学籍名单无' && item.reason === 'not_enrolled').map(item => item.row);
     const notEnrolledKeys = new Set(notEnrolledRows.map(fbRosterIdentity));
     const notEnrolledNames = new Set(notEnrolledRows.map(row => row.name));
@@ -428,7 +461,7 @@ async function FB_assembleFromCloud(options = {}) {
         const w = weights[ei] || 0;
         ex.data.forEach((row) => {
             const rosterRow = fbRosterRow(row);
-            if (rosterRow && (FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || FB_TRANSFER_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])))) return;
+            if (rosterRow && (fbIsDropout(rosterRow) || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || FB_TRANSFER_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])))) return;
             const key = fbStudentKey(row);
             const nm = fbNormalizeName(row.name);
             if (nm) {
@@ -615,6 +648,9 @@ function FB_bindDeclarativeHandlers(root = document) {
             if (action === 'add-transfer') FB_addTransferStudent();
             if (action === 'clear-transfers') FB_clearTransfers();
             if (action === 'remove-transfer') FB_removeTransferStudent(el.dataset.fbIndex);
+            if (action === 'add-dropout') FB_addDropoutStudent();
+            if (action === 'clear-dropouts') FB_clearDropouts();
+            if (action === 'remove-dropout') FB_removeDropoutStudent(el.dataset.fbIndex);
             if (action === 'add-transfer-in') FB_addTransferInStudent();
             if (action === 'clear-transfers-in') FB_clearTransfersIn();
             if (action === 'remove-transfer-in') FB_removeTransferInStudent(el.dataset.fbIndex);
@@ -2690,6 +2726,7 @@ function EXAM_exportResult() {
     if (typeof FB_loadData === 'function') window.FB_loadData = FB_loadData;
     if (typeof FB_loadGenderList === 'function') window.FB_loadGenderList = FB_loadGenderList;
     if (typeof FB_loadViolationList === 'function') window.FB_loadViolationList = FB_loadViolationList;
+    if (typeof FB_loadDropoutList === 'function') window.FB_loadDropoutList = FB_loadDropoutList;
     if (typeof FB_assembleFromCloud === 'function') window.FB_assembleFromCloud = FB_assembleFromCloud;
     if (typeof FB_updateAssemblyStatus === 'function') window.FB_updateAssemblyStatus = FB_updateAssemblyStatus;
     if (typeof FB_refreshFixedAssignmentUI === 'function') window.FB_refreshFixedAssignmentUI = FB_refreshFixedAssignmentUI;
