@@ -405,6 +405,8 @@ function FB_loadRosterList(input) {
             FB_ROSTER_RECONCILIATION = null;
             FB_renderRosterStatus();
             window.UI.alert(`✅ 学籍名单导入 ${FB_ROSTER_ROWS.length} 人。`, 'success');
+            // 允许用户修正后再次选择同一个文件时仍触发 change。
+            input.value = '';
         } catch (err) { window.UI.alert('学籍名单读取失败：' + err.message, 'error'); }
     };
     reader.readAsArrayBuffer(file);
@@ -738,7 +740,7 @@ async function FB_runDivision() {
         if (assembly.dupGroups && assembly.dupGroups.length) {
             const list = assembly.dupGroups.slice(0, 12).map((g) => `· ${g.name}（${g.count || g.ids.length} 人${g.examId ? `，${g.examId}` : ''}）`).join('\n');
             const more = assembly.dupGroups.length > 12 ? `\n…共 ${assembly.dupGroups.length} 组` : '';
-            const proceed = window.confirm(
+            const proceed = await window.UI.confirm(
                 `⚠️ 检测到 ${assembly.dupGroups.length} 组重名学生，成绩/性别/违纪可能匹配错乱：\n${list}${more}\n\n`
                 + `建议在性别/违纪名单中补「考号」列以精确匹配。\n是否仍按当前匹配继续分班？`
             );
@@ -2757,6 +2759,7 @@ function EXAM_exportResult() {
     };
 
     if (typeof FB_loadData === 'function') window.FB_loadData = FB_loadData;
+    if (typeof FB_loadRosterList === 'function') window.FB_loadRosterList = FB_loadRosterList;
     if (typeof FB_loadGenderList === 'function') window.FB_loadGenderList = FB_loadGenderList;
     if (typeof FB_loadViolationList === 'function') window.FB_loadViolationList = FB_loadViolationList;
     if (typeof FB_loadDropoutList === 'function') window.FB_loadDropoutList = FB_loadDropoutList;

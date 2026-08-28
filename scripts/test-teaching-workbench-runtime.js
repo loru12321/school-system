@@ -68,12 +68,14 @@ assert.ok(freshman.includes("['transfer', 'not_enrolled'].includes(item.reason)"
 assert.ok(freshman.includes("!['transfer', 'not_enrolled'].includes(item.reason)"), 'dropout roster students should remain eligible for post-division allocation');
 assert.ok(freshman.includes('辍学/长期离校（不参与分班）'), 'roster reconciliation should provide an explicit dropout reason');
 assert.ok(indexHtml.includes('data-fb-pick="fbDropoutInput"'), 'freshman UI should provide a dropout roster upload');
+assert.ok(freshman.includes('window.FB_loadRosterList = FB_loadRosterList'), 'freshman roster upload handler must be exported for declarative file input binding');
 assert.ok(freshman.includes('function FB_loadDropoutList'), 'freshman runtime should parse dropout roster uploads');
 assert.ok(freshman.includes('fbIsDropout(rosterRow)'), 'dropout roster matches should be diverted before exam aggregation');
 assert.ok(freshman.includes('function fbIsTransferred(row)'), 'transfer roster matching should have a dedicated exclusion helper');
 assert.ok(freshman.includes("student.name === row.name"), 'transfer exclusion should fall back to name regardless of gender entry');
 assert.ok(freshman.includes('nameExamRows'), 'duplicate detection should track names per exam to avoid cross-exam false positives');
 assert.ok(freshman.includes('record.count > 1'), 'duplicate detection should only warn for repeated names within one exam');
+assert.ok(!freshman.includes('window.confirm('), 'freshman runtime must not use native confirm that blocks mobile browsers');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');
