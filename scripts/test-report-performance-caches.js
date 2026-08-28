@@ -19,6 +19,7 @@ const comparisonRenderFile = 'public/assets/js/comparison-render-runtime.js';
 const historyCompareFile = 'public/assets/js/history-compare-runtime.js';
 const cloudFile = 'public/assets/js/cloud.js';
 const countyFile = 'public/assets/js/county-analysis-runtime.js';
+const teacherUiFile = 'public/assets/js/teacher-analysis-ui-runtime.js';
 const rankingDataServiceFile = 'public/assets/js/ranking-data-service-runtime.js';
 const runtimeLoaderFile = 'public/assets/js/runtime-loader-runtime.js';
 const packageFile = 'package.json';
@@ -31,6 +32,7 @@ const comparisonRender = read(comparisonRenderFile);
 const historyCompare = read(historyCompareFile);
 const cloud = read(cloudFile);
 const county = read(countyFile);
+const teacherUi = read(teacherUiFile);
 const rankingDataService = read(rankingDataServiceFile);
 const runtimeLoader = read(runtimeLoaderFile);
 const app = read('public/assets/js/app.js');
@@ -333,6 +335,16 @@ if (read('public/assets/js/cloud-workspace-runtime.js').includes("currentExamId 
     'if (!hasCountyScope(scopeRows, options)) return false;',
     'scopedOptions = { ...options, forceCounty: true };'
 ].forEach((token) => assertContains(rankingDataService, token, rankingDataServiceFile));
+
+[
+    'townshipDataRef: null',
+    'townshipAveragesRef: null',
+    'townshipSignature: \'\'',
+    'teacherUiRenderCache.townshipDataRef === townshipData',
+    'teacherUiRenderCache.townshipHtml',
+    'rebuildTownshipSideNav',
+    'bindTownshipJumpLinks'
+].forEach((token) => assertContains(teacherUi, token, teacherUiFile));
 
 [
     'renderCache: new Map()',

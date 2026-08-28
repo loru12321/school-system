@@ -49,7 +49,13 @@
         cardsSignature: '',
         cardsHtml: '',
         comparisonSignature: '',
-        comparisonHtml: ''
+        comparisonHtml: '',
+        townshipDataRef: null,
+        townshipAveragesRef: null,
+        townshipSignature: '',
+        townshipHtml: '',
+        townshipQuickNavHtml: '',
+        townshipAnchors: []
     };
 
     // 教师乡镇页也可能是用户首次查看政治参考的入口。异步读取最新中考整理表学校聚合后
@@ -286,18 +292,67 @@
         const visibleSubjectSet = (role === 'teacher' || role === 'class_teacher') ? getVisibleSubjectSet(user) : null;
         const container = document.getElementById('teacher-township-ranking-container');
         const sideNav = document.getElementById('side-nav-teacher-ranks-container');
-        if (sideNav) sideNav.innerHTML = '';
         if (!container) return;
         warmTeacherTownshipPoliticsReference();
         if (typeof window.calculateTeacherTownshipRanking === 'function') {
             window.calculateTeacherTownshipRanking({ teacherMetricScope: 'admin' });
         }
-        if (!window.TOWNSHIP_RANKING_DATA || !Object.keys(window.TOWNSHIP_RANKING_DATA).length) {
+        const townshipData = window.TOWNSHIP_RANKING_DATA;
+        if (!townshipData || !Object.keys(townshipData).length) {
+            if (sideNav) sideNav.innerHTML = '';
             container.innerHTML = '<div class="analysis-empty-state">暂无教师乡镇排名数据</div>';
             return;
         }
 
+        const teacherAnalysisSubjects = typeof window.getTeacherAnalysisDisplaySubjects === 'function'
+            ? window.getTeacherAnalysisDisplaySubjects()
+            : (window.SUBJECTS || []);
         const townshipAverages = window.TEACHER_TOWNSHIP_AVERAGES || {};
+        const visibleSubjectKey = visibleSubjectSet instanceof Set
+            ? Array.from(visibleSubjectSet).map((subject) => normalizeSubjectFn(subject)).sort().join('|')
+            : '';
+        const townshipSignature = [
+            role,
+            user?.name || '',
+            window.MY_SCHOOL || '',
+            visibleSubjectKey,
+            teacherAnalysisSubjects.map((subject) => normalizeSubjectFn(subject)).join('|')
+        ].join('::');
+        const rebuildTownshipSideNav = (anchors) => {
+            if (!sideNav) return;
+            sideNav.innerHTML = '';
+            (anchors || []).forEach(({ subject, subjectLabel, anchorId }) => {
+                const navLink = document.createElement('a');
+                navLink.className = 'side-nav-sub-link';
+                navLink.innerText = subjectLabel || subject;
+                navLink.onclick = () => {
+                    if (typeof window.scrollToSubAnchor === 'function') window.scrollToSubAnchor(anchorId, navLink);
+                };
+                sideNav.appendChild(navLink);
+            });
+        };
+        const bindTownshipJumpLinks = () => {
+            container.querySelectorAll('[data-rank-anchor]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const anchorId = button.getAttribute('data-rank-anchor');
+                    if (typeof window.scrollToSubAnchor === 'function') {
+                        window.scrollToSubAnchor(anchorId, button);
+                        return;
+                    }
+                    document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+        };
+        if (teacherUiRenderCache.townshipDataRef === townshipData
+            && teacherUiRenderCache.townshipAveragesRef === townshipAverages
+            && teacherUiRenderCache.townshipSignature === townshipSignature
+            && teacherUiRenderCache.townshipHtml) {
+            rebuildTownshipSideNav(teacherUiRenderCache.townshipAnchors);
+            container.innerHTML = teacherUiRenderCache.townshipQuickNavHtml + teacherUiRenderCache.townshipHtml;
+            bindTownshipJumpLinks();
+            return;
+        }
+
         const buildFallbackTownshipAverage = (rankingData) => {
             const sourceRows = (rankingData || []).filter((row) => row.type === 'school' && teacherToNumber(row.studentCount, 0) > 0);
             const rows = sourceRows.length ? sourceRows : (rankingData || []).filter((row) => teacherToNumber(row.studentCount, 0) > 0);
@@ -357,9 +412,6 @@
             `;
         };
 
-        const teacherAnalysisSubjects = typeof window.getTeacherAnalysisDisplaySubjects === 'function'
-            ? window.getTeacherAnalysisDisplaySubjects()
-            : (window.SUBJECTS || []);
         let htmlAll = '';
         teacherAnalysisSubjects.forEach((subject) => {
             if (visibleSubjectSet && visibleSubjectSet.size > 0 && !visibleSubjectSet.has(normalizeSubjectFn(subject))) return;
@@ -434,18 +486,10 @@
                     </div>
                 </div>
             `;
-            if (sideNav) {
-                const navLink = document.createElement('a');
-                navLink.className = 'side-nav-sub-link';
-                navLink.innerText = subjectLabel;
-                navLink.onclick = () => {
-                    if (typeof window.scrollToSubAnchor === 'function') window.scrollToSubAnchor(anchorId, navLink);
-                };
-                sideNav.appendChild(navLink);
-            }
         });
 
         if (!htmlAll) {
+            if (sideNav) sideNav.innerHTML = '';
             container.innerHTML = '<div class="analysis-empty-state">当前角色下暂无可见学科的教师乡镇排名数据</div>';
             return;
         }
@@ -460,17 +504,25 @@
                     </div>
                 </div>`
             : '';
+        if (sideNav) rebuildTownshipSideNav(subjectAnchors.map((item) => ({
+            ...item,
+            subjectLabel: typeof window.getConfiguredDisplaySubjectLabel === 'function'
+                ? window.getConfiguredDisplaySubjectLabel(item.subject)
+                : item.subject
+        })));
+        teacherUiRenderCache.townshipDataRef = townshipData;
+        teacherUiRenderCache.townshipAveragesRef = townshipAverages;
+        teacherUiRenderCache.townshipSignature = townshipSignature;
+        teacherUiRenderCache.townshipHtml = htmlAll;
+        teacherUiRenderCache.townshipQuickNavHtml = quickNavHtml;
+        teacherUiRenderCache.townshipAnchors = subjectAnchors.map((item) => ({
+            ...item,
+            subjectLabel: typeof window.getConfiguredDisplaySubjectLabel === 'function'
+                ? window.getConfiguredDisplaySubjectLabel(item.subject)
+                : item.subject
+        }));
         container.innerHTML = quickNavHtml + htmlAll;
-        container.querySelectorAll('[data-rank-anchor]').forEach((button) => {
-            button.addEventListener('click', () => {
-                const anchorId = button.getAttribute('data-rank-anchor');
-                if (typeof window.scrollToSubAnchor === 'function') {
-                    window.scrollToSubAnchor(anchorId, button);
-                    return;
-                }
-                document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-        });
+        bindTownshipJumpLinks();
     }
 
     function teacherFormatFocusList(list, emptyText = '暂无') {
