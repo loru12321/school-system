@@ -502,9 +502,12 @@ async function FB_reconcileRoster(exams) {
     const rosterOnly = FB_ROSTER_ROWS.filter(row => !fbFindRosterMatch(row, examRows));
     const examOnly = examRows.filter(row => !fbFindRosterMatch(row, FB_ROSTER_ROWS));
     const autoTransferred = rosterOnly.filter(row => fbFindRosterMatch(row, FB_TRANSFER_STUDENTS));
+    // 已登记为转出/辍学/转入的考试名单外学生不再重复弹窗；
+    // 尤其是考试名单有、学籍名单无但管理员已确认休学的学生，
+    // 需要沿用该决定，避免每次生成都再次提示。
     const unresolved = [
         ...rosterOnly.filter(row => !fbIsTransferred(row) && !fbIsDropout(row)).map(row => ({ side: '学籍名单有、考试名单无', row })),
-        ...examOnly.map(row => ({ side: '考试名单有、学籍名单无', row }))
+        ...examOnly.filter(row => !fbIsTransferred(row) && !fbIsDropout(row) && !FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(row, [student]))).map(row => ({ side: '考试名单有、学籍名单无', row }))
     ];
     if (!unresolved.length) { FB_ROSTER_RECONCILIATION = { rosterCount: FB_ROSTER_ROWS.length, examCount: examRows.length, autoTransferred, decisions: [], examOnly }; FB_UNEXAM_ROSTER_STUDENTS = []; return true; }
     const Swal = window.Swal && typeof window.Swal.fire === 'function' ? window.Swal : null;
@@ -520,6 +523,10 @@ async function FB_reconcileRoster(exams) {
     FB_UNEXAM_ROSTER_STUDENTS = decisions.filter(item => item.side === '学籍名单有、考试名单无' && !['transfer', 'not_enrolled'].includes(item.reason)).map(item => ({ ...item.row, postType: item.reason === 'dropout' ? '辍学/长期离校' : '学籍在册未考试' }));
     const decisionTransferIns = decisions.filter(item => item.side === '考试名单有、学籍名单无' && item.reason === 'transfer_in').map(item => item.row);
     const decisionTransfers = decisions.filter(item => item.side === '考试名单有、学籍名单无' && ['transfer', 'not_enrolled'].includes(item.reason)).map(item => item.row);
+    const decisionDropouts = decisions.filter(item => item.side === '考试名单有、学籍名单无' && item.reason === 'dropout').map(item => item.row);
+    // 将本次核对中确认休学的考试学生写回辍学集合，后续聚合时完全排除，
+    // 并在再次生成时复用决定，不再重复弹窗。
+    FB_DROPOUT_STUDENTS = [...FB_DROPOUT_STUDENTS, ...decisionDropouts.filter(row => !FB_DROPOUT_STUDENTS.some(student => fbFindRosterMatch(row, [student])))];
     FB_TRANSFER_IN_STUDENTS = [...FB_TRANSFER_IN_STUDENTS, ...decisionTransferIns.filter(row => !FB_TRANSFER_IN_STUDENTS.some(s => fbFindRosterMatch(row, [s])))];
     FB_TRANSFER_STUDENTS = [...FB_TRANSFER_STUDENTS, ...decisionTransfers.filter(row => !FB_TRANSFER_STUDENTS.some(s => fbFindRosterMatch(row, [s])))];
     FB_ROSTER_RECONCILIATION = { rosterCount: FB_ROSTER_ROWS.length, examCount: examRows.length, autoTransferred, decisions, examOnly };
@@ -570,6 +577,9 @@ async function FB_assembleFromCloud(options = {}) {
             }
             const s = fbExamAssignmentScore(row, targetGrade);
             if (!s) return;
+            // 第一轮按考号/学号聚合仅用于兼容旧数据结构，稳定键会在下方统一重建；
+            // 这里必须先明确学生键，避免生成流程因未定义变量直接中断。
+            const key = fbStudentKey(row);
             if (!byKey.has(key)) {
                 byKey.set(key, {
                     name: row.name || '未知', id: fbNormalizeId(row.id || row.examNo || row.studentId), class: row.class || '',
