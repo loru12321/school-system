@@ -4,13 +4,13 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `67239e3ccaba`
-- Recorded at: 2026-08-28T02:41:01.385Z
-- Total smoke time: 20372 ms (-2987 ms vs previous)
-- Login: 2326 ms
-- App ready: 1010 ms
+- Commit: `23e50869c1ae`
+- Recorded at: 2026-08-28T02:52:04.877Z
+- Total smoke time: 23382 ms (+3010 ms vs previous)
+- Login: 4214 ms
+- App ready: 2276 ms
 - Native long tasks: 0, max 0 ms
-- Scheduled task samples: 68, max end-to-end 189.6 ms, max derived network wait 5.6 ms
+- Scheduled task samples: 65, max end-to-end 55.4 ms, max derived network wait 5.6 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -18,19 +18,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `grade-scheduler` | 30.699999999953434 ms | 706 ms | 736.6999999999534 ms |
-| `student-overview` | 50 ms | 479 ms | 529 ms |
-| `freshman-simulator` | 60.800000000046566 ms | 427 ms | 487.80000000004657 ms |
-| `subject-balance` | 42 ms | 371 ms | 413 ms |
-| `report-generator` | 18.099999999976717 ms | 367 ms | 385.0999999999767 ms |
-| `exam-arranger` | 15.400000000023283 ms | 342 ms | 357.4000000000233 ms |
-| `cohort-growth` | 23 ms | 314 ms | 337 ms |
-| `teacher-analysis` | 36.90000000002328 ms | 206 ms | 242.90000000002328 ms |
+| `grade-scheduler` | 33.39999999999418 ms | 687 ms | 720.3999999999942 ms |
+| `student-overview` | 44.10000000000582 ms | 520 ms | 564.1000000000058 ms |
+| `freshman-simulator` | 57.5 ms | 457 ms | 514.5 ms |
+| `subject-balance` | 35.90000000000873 ms | 431 ms | 466.90000000000873 ms |
+| `report-generator` | 17.5 ms | 359 ms | 376.5 ms |
+| `exam-arranger` | 13.60000000000582 ms | 344 ms | 357.6000000000058 ms |
+| `cohort-growth` | 20.5 ms | 313 ms | 333.5 ms |
+| `progress-analysis` | 71.5 ms | 176 ms | 247.5 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Native long tasks | Scheduled tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `23e50869c1ae` | 23382 ms | 4214 ms | 2276 ms | 0 | 65 | 0 | 0 |
 | `67239e3ccaba` | 20372 ms | 2326 ms | 1010 ms | 0 | 68 | 0 | 0 |
 | `36715d0e02bb` | 23359 ms | 5297 ms | 1155 ms | 0 | 61 | 0 | 0 |
 | `720b88242911` | 20692 ms | 3219 ms | 2031 ms | 0 | 70 | 0 | 0 |
@@ -45,7 +46,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `e519139087c7` | 22248 ms | 2417 ms | 1165 ms | 0 | 63 | 0 | 0 |
 | `f06e638e85c1` | 21466 ms | 3152 ms | 1012 ms | 0 | 73 | 0 | 0 |
 | `2ff81fee0d40` | 21463 ms | 4297 ms | 1007 ms | 0 | 73 | 0 | 0 |
-| `0584365ea6f9` | 21948 ms | 4792 ms | 1013 ms | 0 | 72 | 0 | 0 |
 
 ## Data Files
 
