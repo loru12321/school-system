@@ -268,6 +268,12 @@ function fbCurrentCohortEntryYear() {
     return match ? Number(match[0]) : 0;
 }
 
+function fbLockedTargetGrade() {
+    const runtimeTarget = window.TeachingWorkbenchCohort?.targetGrade?.();
+    if (runtimeTarget) return String(runtimeTarget);
+    return String(document.getElementById('fb_target_grade')?.value || '7').trim();
+}
+
 // 取本届别与目标年级阶段相符的最近 N 次考试。
 // 新生 G 年级：目标学年开始前（9 月前）使用 G-1 年级成绩；
 // 目标学年开始后（9 月起）使用 G 年级成绩。以考试日期所属学年判断，
@@ -509,7 +515,7 @@ async function FB_reconcileRoster(exams) {
 // 聚合最近 N 次云端成绩 → FB_STUDENTS（含分班分 + 性别 + 违纪 + 重名检测）。
 // weights: 最近→次近→再次 的权重（默认最近2次 6:4）。
 async function FB_assembleFromCloud(options = {}) {
-    const targetGrade = String(options.targetGrade || document.getElementById('fb_target_grade')?.value || '7').trim();
+    const targetGrade = fbLockedTargetGrade();
     const examLimit = Math.max(1, Math.min(Number(options.examLimit || document.getElementById('fb_exam_count')?.value || 2), 3));
     const exams = fbGetRecentExams(examLimit, targetGrade);
     if (!exams.length) {

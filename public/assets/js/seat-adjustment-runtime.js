@@ -71,12 +71,13 @@
         if (typeof root.getSchoolClassOptions === 'function') {
             try {
                 const classes = root.getSchoolClassOptions(schoolName);
-                if (Array.isArray(classes)) return classes;
+                if (Array.isArray(classes)) return classes.filter((value) => !root.TeachingWorkbenchCohort?.isAllowedGrade || root.TeachingWorkbenchCohort.isAllowedGrade(value));
             } catch (_) {}
         }
         const school = getSchools()[schoolName];
         const students = Array.isArray(school?.students) ? school.students : [];
         return [...new Set(students.map((student) => String(student?.class || '').trim()).filter(Boolean))]
+            .filter((value) => !root.TeachingWorkbenchCohort?.isAllowedGrade || root.TeachingWorkbenchCohort.isAllowedGrade(value))
             .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
     }
 

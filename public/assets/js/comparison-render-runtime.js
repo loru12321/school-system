@@ -53,11 +53,15 @@ function setMultiSelectOptions(selectEl, values, preferredValues) {
 
 function getSchoolClassOptions(schoolName) {
     if (window.RankingDataService && typeof window.RankingDataService.getClassesForSchool === 'function') {
-        return window.RankingDataService.getClassesForSchool(RAW_DATA, schoolName);
+        const classes = window.RankingDataService.getClassesForSchool(RAW_DATA, schoolName);
+        return window.TeachingWorkbenchCohort?.isAllowedGrade
+            ? classes.filter((value) => window.TeachingWorkbenchCohort.isAllowedGrade(value))
+            : classes;
     }
     const schoolRecord = getAppSchoolRecord(schoolName);
     if (!schoolName || !schoolRecord || !Array.isArray(schoolRecord.students)) return [];
     return [...new Set(schoolRecord.students.map(s => s.class).filter(Boolean))]
+        .filter((value) => !window.TeachingWorkbenchCohort?.isAllowedGrade || window.TeachingWorkbenchCohort.isAllowedGrade(value))
         .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
 }
 

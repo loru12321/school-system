@@ -170,6 +170,7 @@ const SCHEDULER = {
 
     getProjectGrades: function () {
         return [...new Set(this.classes.map((className) => this.inferGradeFromClass(className)).filter(Boolean))]
+            .filter((grade) => !window.TeachingWorkbenchCohort?.isAllowedGrade || window.TeachingWorkbenchCohort.isAllowedGrade(grade))
             .sort((a, b) => Number(a) - Number(b));
     },
 
@@ -446,8 +447,14 @@ const SCHEDULER = {
 
             // 一份新的任课表代表一个新的排课项目。锁定底图必须重新从该项目导入，
             // 防止上一次项目的班级或教师占用被悄悄带入本次排课。
-            this.demands = parsed.demands;
-            this.importWarnings = parsed.warnings;
+            const allowedGrade = window.TeachingWorkbenchCohort?.currentGrade?.();
+            const scopedDemands = allowedGrade
+                ? parsed.demands.filter((demand) => !demand.grade || String(demand.grade) === String(allowedGrade))
+                : parsed.demands;
+            this.demands = scopedDemands;
+            this.importWarnings = [...parsed.warnings, ...(allowedGrade && scopedDemands.length !== parsed.demands.length
+                ? [`已按当前届别${allowedGrade}年级过滤 ${parsed.demands.length - scopedDemands.length} 条其他年级任课数据。`]
+                : [])];
             this.lockedSchedule = Object.create(null);
             this.schedule = {};
             this.invalidateTableRenderCache();
@@ -458,7 +465,7 @@ const SCHEDULER = {
             this.preflight({ silent: true });
             this.renderProjectStatus();
 
-            if (window.UI) UI.toast(`✅ 已导入 ${this.demands.length} 条逐班课程需求，覆盖 ${this.getProjectGrades().length} 个年级。`, 'success');
+            if (window.UI) UI.toast(`✅ 已导入当前届别${allowedGrade ? `${allowedGrade}年级` : ''}的 ${this.demands.length} 条逐班课程需求。`, 'success');
         } catch (e) {
             console.error(e);
             window.UI.alert('导入失败: ' + (e.message || e));

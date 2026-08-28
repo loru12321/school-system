@@ -263,8 +263,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-8f6f9082198a.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-8f6f9082198a.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-9ab45710c567.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-9ab45710c567.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -2536,8 +2536,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <option value="cloud" selected>云端最近成绩（推荐）</option>
                                     <option value="manual">手动导入 Excel</option>
                                 </select></div>
-                            <div style="min-width:170px;"><label class="stat-label">目标年级（口径）</label>
-                                <select id="fb_target_grade" style="width:100%;">
+                    <div style="min-width:170px;"><label class="stat-label">目标年级（由届别锁定）</label>
+                        <select id="fb_target_grade" style="width:100%;" disabled>
                                     <option value="6">新 6 年级</option>
                                     <option value="7">新 7 年级</option>
                                     <option value="8">新 8 年级</option>
@@ -3333,6 +3333,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <option value="class">按班级查看</option>
                             <option value="teacher">按教师查看</option>
                         </select>
+                        <div id="fb_target_grade_note" style="font-size:11px;color:#64748b;margin-top:4px;">请先选择届别。</div>
                         <select id="sch_view_target" onchange="SCHEDULER.renderTable()">
                             <!-- 动态填充班级或教师名 -->
                         </select>
