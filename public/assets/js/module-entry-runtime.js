@@ -815,7 +815,6 @@
         const renderNow = () => {
             if (typeof updateStudentSchoolSelect === 'function') updateStudentSchoolSelect();
             if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-            if (typeof updateClassSelect === 'function') updateClassSelect();
             if (typeof window.smScheduleStudentOverviewRender === 'function') {
                 window.smScheduleStudentOverviewRender();
             } else if (typeof window.renderStudentOverview === 'function') {
