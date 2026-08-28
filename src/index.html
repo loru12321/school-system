@@ -263,8 +263,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-d3a0cfac1a04.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-d3a0cfac1a04.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-acf2fb29e211.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-acf2fb29e211.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -2673,9 +2673,13 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 </div>
                 <div id="fb-results-area" class="hidden analysis-anchor-panel" style="margin-top:20px;">
                     <div class="sub-header analysis-section-head">⚖️ 分班均衡度诊断 (箱线图)</div>
-                    <div class="analysis-table-meta">
-                        <span><strong>阅读建议：</strong>先看均分极差和标准差，再决定使用哪套分班方案。</span>
-                        <span><strong>导出建议：</strong>适合招生分班留档和开学前方案确认。</span>
+                        <div class="analysis-table-meta">
+                            <span><strong>阅读建议：</strong>先看均分极差和标准差，再决定使用哪套分班方案。</span>
+                            <span><strong>导出建议：</strong>适合招生分班留档和开学前方案确认。</span>
+                        </div>
+                    <div id="fb_two_stage_balance" style="margin:16px 0; overflow-x:auto;"></div>
+                    <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+                        <button class="btn btn-green" type="button" onclick="FB_exportResultWithBalance()"><i class="ti ti-file-spreadsheet"></i> 下载分班方案及两率一分对照</button>
                     </div>
                     <div
                         style="background:white; border-radius:8px; padding:15px; border:1px solid #e2e8f0;">

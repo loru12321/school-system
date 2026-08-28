@@ -10,6 +10,7 @@
     let EXAM_DATA = [];
     let EXAM_ROOMS = [];
     let FB_SCHEMES_CACHE = [];
+    let FB_ACTIVE_SCHEME_ID = null;
     // 人工指定的“学生 → 具体班级”锁定项。键优先使用考号，其次使用归一化姓名。
     // 锁定只影响本次分班方案生成，不改动云端成绩和原始学生数据。
     let FB_FIXED_ASSIGNMENTS = {};
@@ -229,6 +230,7 @@ const FB_GRADE9_SUBJECTS = Object.freeze(['语文', '数学', '英语', '物理'
 const FB_GRADE9_WEIGHT = Object.freeze({ '语文': 1, '数学': 1, '英语': 1, '物理': 0.9, '化学': 0.6 });
 // 主科：每科每班均衡（均分/优秀率/及格率）只对语数英。副科只计入总分。
 const FB_MAIN_SUBJECTS = Object.freeze(['语文', '数学', '英语']);
+function fbMajorSubjectsForGradeValue(grade) { return String(grade) === '9' ? ['语文', '数学', '英语', '物理', '化学'] : [...FB_MAIN_SUBJECTS]; }
 // 主科优秀/及格线（满分×0.85 / ×0.6，语数英满分均 150）。与系统 AnalyticsKernel 口径一致。
 const FB_MAIN_FULL = 150;
 const FB_MAIN_EXC_LINE = FB_MAIN_FULL * 0.85; // 127.5
@@ -434,7 +436,7 @@ async function FB_assembleFromCloud(options = {}) {
                     name: row.name || '未知', id: fbNormalizeId(row.id || row.examNo || row.studentId), class: row.class || '',
                     wSum: 0, scoreSum: 0, examsGot: 0,
                     // 主科（语数英）分别累加加权分，用于每科每班均衡。
-                    subj: { '语文': { s: 0, w: 0 }, '数学': { s: 0, w: 0 }, '英语': { s: 0, w: 0 } }
+                    subj: Object.fromEntries(fbMajorSubjectsForGradeValue(targetGrade).map(sub => [sub, { s: 0, w: 0 }]))
                 });
             }
             const agg = byKey.get(key);
@@ -442,7 +444,7 @@ async function FB_assembleFromCloud(options = {}) {
             agg.scoreSum += s.score * w;
             agg.examsGot += 1;
             const rowScores = (row && row.scores && typeof row.scores === 'object') ? row.scores : {};
-            FB_MAIN_SUBJECTS.forEach((sub) => {
+            fbMajorSubjectsForGradeValue(targetGrade).forEach((sub) => {
                 const v = Number(rowScores[sub]);
                 if (Number.isFinite(v)) { agg.subj[sub].s += v * w; agg.subj[sub].w += w; }
             });
@@ -470,7 +472,7 @@ async function FB_assembleFromCloud(options = {}) {
         const isViol = !!(FB_VIOLATION_SET[key] || FB_VIOLATION_SET['name:' + fbNormalizeName(agg.name)]);
         // 各主科加权平均分（缺该科则为 null，不计入该科均衡）。
         const subjAvg = {};
-        FB_MAIN_SUBJECTS.forEach((sub) => {
+        fbMajorSubjectsForGradeValue(targetGrade).forEach((sub) => {
             const rec = agg.subj && agg.subj[sub];
             subjAvg[sub] = (rec && rec.w > 0) ? (rec.s / rec.w) : null;
         });
@@ -709,7 +711,9 @@ async function FB_runDivision() {
 
         for (let i = 0; i < runs; i++) {
             const classes = FB_generateSingleScheme(k, algo);
+            const examClasses = JSON.parse(JSON.stringify(classes));
             FB_appendRosterOnlyStudents(classes, k);
+            const finalClasses = JSON.parse(JSON.stringify(classes));
             // 计算该方案的评分 (极差)
             const avgs = classes.map(c => c.stats.avg);
             const range = Math.max(...avgs) - Math.min(...avgs);
@@ -719,6 +723,8 @@ async function FB_runDivision() {
                 id: i,
                 name: runs === 1 ? '标准方案' : `方案 ${String.fromCharCode(65 + i)}`, // 方案A, 方案B...
                 data: classes,
+                examData: examClasses,
+                finalData: finalClasses,
                 range: range,
                 sd: sd,
                 desc: `均分极差 ${range.toFixed(2)}`
@@ -936,6 +942,7 @@ function FB_renderSchemeSelector() {
 function FB_applyScheme(id) {
     const scheme = FB_SCHEMES_CACHE.find(s => s.id === id);
     if (!scheme) return;
+    FB_ACTIVE_SCHEME_ID = scheme.id;
 
     // 更新全局变量
     writeFbClasses(scheme.data);
@@ -944,6 +951,7 @@ function FB_applyScheme(id) {
 
     // 渲染原有仪表盘
     FB_renderDashboard();
+    FB_renderTwoStageBalance(scheme);
 
     // 高亮选中的卡片
     const cardsWrap = document.getElementById('fb-scheme-cards');
@@ -959,6 +967,40 @@ function FB_applyScheme(id) {
             }
         });
     }
+}
+
+function fbMajorSubjectsForGrade() {
+    const grade = String(document.getElementById('fb_target_grade')?.value || '7');
+    return grade === '9' ? ['语文', '数学', '英语', '物理', '化学'] : ['语文', '数学', '英语'];
+}
+function fbSubjectMetric(classes, subject) {
+    return (classes || []).map(cls => {
+        const valid = (cls.students || []).map(s => Number(s?.subjAvg?.[subject])).filter((v, i) => Number.isFinite(v) && !cls.students[i]?.isNoExam);
+        if (!valid.length) return { avg: null, excellent: null, pass: null, n: 0 };
+        const full = subject === '物理' ? 90 : subject === '化学' ? 60 : FB_MAIN_FULL;
+        return { avg: valid.reduce((a, b) => a + b, 0) / valid.length, excellent: valid.filter(v => v >= full * 0.85).length / valid.length, pass: valid.filter(v => v >= full * 0.6).length / valid.length, n: valid.length };
+    });
+}
+function fbBuildStageBalanceTable(classes, title, subjects) {
+    let html = `<div style="margin-top:12px;"><div style="font-weight:700;color:#334155;margin-bottom:6px;">${title}</div><table class="comparison-table" style="font-size:12px;"><thead><tr><th>班级</th><th>有效人数</th>`;
+    subjects.forEach(s => { html += `<th>${s}均分</th><th>${s}优秀率</th><th>${s}及格率</th>`; });
+    html += '</tr></thead><tbody>';
+    const metrics = Object.fromEntries(subjects.map(s => [s, fbSubjectMetric(classes, s)]));
+    (classes || []).forEach((cls, i) => {
+        const scoredCount = (cls.students || []).filter(s => !s?.isNoExam && Number.isFinite(Number(s?.score))).length;
+        html += `<tr><td>${cls.name}</td><td>${scoredCount}</td>`;
+        subjects.forEach(s => { const m = metrics[s][i]; html += m.n ? `<td>${m.avg.toFixed(1)}</td><td>${(m.excellent * 100).toFixed(1)}%</td><td>${(m.pass * 100).toFixed(1)}%</td>` : '<td>-</td><td>-</td><td>-</td>'; });
+        html += '</tr>';
+    });
+    return html + '</tbody></table></div>';
+}
+function FB_renderTwoStageBalance(scheme) {
+    const root = document.getElementById('fb_two_stage_balance'); if (!root || !scheme) return;
+    const subjects = fbMajorSubjectsForGrade();
+    root.innerHTML = `<div style="font-weight:700;color:#1e293b;">📊 两阶段主要学科“两率一分”对照（${subjects.join('、')}）</div>`
+        + '<div style="font-size:12px;color:#64748b;margin-top:4px;">第一阶段只统计有考试成绩的分班名单；第二阶段包含后置补入的未考试/新转入学生，缺少成绩的学生不计入均分、优秀率和及格率分母。</div>'
+        + fbBuildStageBalanceTable(scheme.examData || scheme.data, '第一阶段：按考试名单分配', subjects)
+        + fbBuildStageBalanceTable(scheme.finalData || scheme.data, '第二阶段：加入未考试及新转入学生后的最终名单', subjects);
 }
 
 // 分段阈值（高/中/低）：全局前 27% 为高分段、后 27% 为低分段，中间为中段。
@@ -2118,6 +2160,30 @@ function FB_exportResult() {
     FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { data.push([c.name, i + 1, s.name, s.gender, s.score, s.height, s.vision, s.remarks]); }); });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "分班与座位表"); XLSX.writeFile(wb, "新生分班结果.xlsx");
 }
+function FB_exportResultWithBalance() {
+    if (!FB_CLASSES.length) return window.UI.alert('请先生成分班方案。', 'warning');
+    const scheme = FB_SCHEMES_CACHE.find(item => item.id === FB_ACTIVE_SCHEME_ID) || FB_SCHEMES_CACHE[0] || { data: FB_CLASSES, examData: FB_CLASSES, finalData: FB_CLASSES };
+    const subjects = fbMajorSubjectsForGrade();
+    const wb = XLSX.utils.book_new();
+    const buildRows = (classes) => {
+        const rows = [['班级', '有效成绩人数']];
+        subjects.forEach(s => rows[0].push(`${s}平均分`, `${s}优秀率`, `${s}及格率`));
+        const metrics = Object.fromEntries(subjects.map(s => [s, fbSubjectMetric(classes, s)]));
+        (classes || []).forEach((cls, i) => {
+            const scored = (cls.students || []).filter(s => !s?.isNoExam && Number.isFinite(Number(s?.score))).length;
+            const row = [cls.name, scored];
+            subjects.forEach(s => { const m = metrics[s][i]; row.push(m.n ? Number(m.avg.toFixed(2)) : null, m.n ? Number((m.excellent * 100).toFixed(2)) : null, m.n ? Number((m.pass * 100).toFixed(2)) : null); });
+            rows.push(row);
+        });
+        return rows;
+    };
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.examData || FB_CLASSES)), '考试名单两率一分');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.finalData || FB_CLASSES)), '最终名单两率一分');
+    const roster = [['阶段', '班级', '姓名', '性别', '总分', '是否后置分配', '备注']];
+    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => roster.push(['最终名单', cls.name, s.name, s.gender === 'M' ? '男' : '女', Number.isFinite(Number(s.score)) ? s.score : '', s.isNoExam ? '是' : '否', s.remarks || ''])));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(roster), '最终分班名单');
+    XLSX.writeFile(wb, '新生分班方案及两率一分.xlsx');
+}
 
 // --- 固定搭档 (绑定) 辅助函数 ---
 function addBindPair(type) {
@@ -2631,6 +2697,8 @@ function EXAM_exportResult() {
     if (typeof FB_toggleViewRotation === 'function') window.FB_toggleViewRotation = FB_toggleViewRotation;
     if (typeof FB_saveToLocal === 'function') window.FB_saveToLocal = FB_saveToLocal;
     if (typeof FB_exportResult === 'function') window.FB_exportResult = FB_exportResult;
+    if (typeof FB_exportResultWithBalance === 'function') window.FB_exportResultWithBalance = FB_exportResultWithBalance;
+    if (typeof FB_exportResultWithBalance === 'function') window.FB_exportResultWithBalance = FB_exportResultWithBalance;
     if (typeof addBindPair === 'function') window.addBindPair = addBindPair;
     if (typeof FB_initScenarioSelect === 'function') window.FB_initScenarioSelect = FB_initScenarioSelect;
     if (typeof FB_saveScenario === 'function') window.FB_saveScenario = FB_saveScenario;
