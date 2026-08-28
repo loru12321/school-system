@@ -88,3 +88,4 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 | 2026-08-28 | P1 | 新生均衡分班入口移除图表库阻塞加载，保留结果渲染时的按需图表加载与兜底；减少首个入口等待，不改分班算法、数据同步或导出逻辑 | commit `14b76c7c`, `npm run validate`, `SMOKE_MODULE_IDS=freshman-simulator SMOKE_PERF_STRICT=true node scripts/smoke-all-modules.js`（本地深检 396ms、预算失败 0），CI/Performance Trend/Deploy Cloudflare 全部成功，Cloudflare version `6c96e075-7240-4c85-a8bc-19745dca1123` |
 | 2026-08-28 | P1 | 学情总览入口移除与总览无关的成绩单班级下拉框刷新，保留学生范围、对比期次初始化与总览渲染；减少移动端首次进入的无效 DOM 工作，不改任何计算口径 | `npm run validate`, `npm run smoke:modules:local` |
 | 2026-08-28 | P1 | 学科均衡、分数段分析、偏科潜力三个移动端高频模块的提示统一接入 `UI.alert`，保留无 UI 运行时的安全兜底；避免原生阻塞弹窗造成手机点击无响应，不改分析与导出逻辑 | `npm run validate`, `npm run check:release-fast`, `npm run smoke:layout:local` |
+| 2026-08-28 | P1 | 学生成绩明细导出、学科关联导出提示统一接入 `UI.alert`，避免移动端导出前置错误触发原生阻塞弹窗；保留导出数据和权限逻辑 | `npm run validate`, `npm run check:release-fast`, `npm run smoke:layout:local` |

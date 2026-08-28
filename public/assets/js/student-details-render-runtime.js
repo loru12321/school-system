@@ -34,6 +34,12 @@ const StudentDetailsPerfCache = {
     filterSearchCache: new WeakMap()
 };
 
+function studentDetailsAlert(message, type = 'info') {
+    if (window.UI && typeof window.UI.alert === 'function') return window.UI.alert(message, type);
+    if (typeof window.uiAlert === 'function') return window.uiAlert(message, type);
+    return window.alert(message);
+}
+
 function hasStudentDetailsQueryRole(user, roleName) {
     if (window.PermissionPolicy && typeof PermissionPolicy.hasQueryRole === 'function') {
         return PermissionPolicy.hasQueryRole(user, roleName);
@@ -1485,7 +1491,7 @@ window.changeStdPage = function (delta) {
 
 
 function exportStudentDetails() {
-    if (!RAW_DATA.length) { alert('请先上传数据'); return; }
+    if (!RAW_DATA.length) { studentDetailsAlert('请先上传数据', 'warning'); return; }
 
     const user = getCurrentUser();
     const role = user?.role || 'guest';

@@ -11,6 +11,12 @@
         townshipRankFallbacks: new Map()
     };
 
+    const showAlert = (message, type = 'info') => {
+        if (window.UI && typeof window.UI.alert === 'function') return window.UI.alert(message, type);
+        if (typeof window.uiAlert === 'function') return window.uiAlert(message, type);
+        return window.alert(message);
+    };
+
     function buildCorrelationDataSignature(scope) {
         const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
         const first = rows[0] || {};
@@ -494,7 +500,7 @@
     // renderCorrelationAnalysis)归位到本 bridge 运行时；纯只读 DOM 表格→XLSX，无口径。
     function exportCorrelationExcel() {
         const matrixTable = document.getElementById('corrMatrixTable'); const liftDragTable = document.getElementById('liftDragTable');
-        if (!matrixTable || matrixTable.rows.length === 0) return alert("请先生成分析结果");
+        if (!matrixTable || matrixTable.rows.length === 0) return showAlert("请先生成分析结果", 'warning');
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(matrixTable), "相关性矩阵"); XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(liftDragTable), "提分与拖分分析"); XLSX.writeFile(wb, "学科关联深度分析.xlsx");
     }
