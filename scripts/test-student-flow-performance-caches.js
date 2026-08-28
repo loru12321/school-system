@@ -164,6 +164,9 @@ assertContains(app, 'window.readPotentialStudentsCache = readPotentialStudentsCa
 
 [
     'SchoolNormalizationPerfCache',
+    'TownshipRowsPerfCache',
+    'canUseDefaultCache',
+    'TownshipRowsPerfCache.source === list',
     'setBoundedSchoolNormalizationCache',
     'ensureSchoolAliasCacheIsCurrent',
     'clearSchoolNormalizationCache',

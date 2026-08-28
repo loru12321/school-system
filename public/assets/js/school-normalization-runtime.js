@@ -86,6 +86,12 @@ const SchoolNormalizationPerfCache = {
     aliasStore: null
 };
 
+const TownshipRowsPerfCache = {
+    signature: '',
+    source: null,
+    rows: []
+};
+
 function setBoundedSchoolNormalizationCache(cache, key, value, limit = 512) {
     if (cache.has(key)) return cache.get(key);
     if (cache.size >= limit) cache.clear();
@@ -111,6 +117,9 @@ function clearSchoolNormalizationCache() {
     IndicatorSchoolBucketPerfCache.buckets = [];
     IndicatorSchoolBucketPerfCache.scoreMapSignature = '';
     IndicatorSchoolBucketPerfCache.scoreNameMap.clear();
+    TownshipRowsPerfCache.signature = '';
+    TownshipRowsPerfCache.source = null;
+    TownshipRowsPerfCache.rows = [];
     bumpSchoolNormalizationCacheVersion();
 }
 
@@ -840,6 +849,20 @@ function isTownshipManagedSchool(name, candidateNames = []) {
 function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
     const list = Array.isArray(rows) ? rows : [];
     if (!list.length) return [];
+    const canUseDefaultCache = typeof schoolNameResolver !== 'function';
+    const firstRow = list[0] || {};
+    const lastRow = list[list.length - 1] || {};
+    const cacheSignature = [
+        String(window.__RAW_DATA_VERSION || 0),
+        list.length,
+        String(firstRow?.school || ''),
+        String(lastRow?.school || '')
+    ].join('::');
+    if (canUseDefaultCache
+        && TownshipRowsPerfCache.source === list
+        && TownshipRowsPerfCache.signature === cacheSignature) {
+        return TownshipRowsPerfCache.rows.slice();
+    }
     const resolver = typeof schoolNameResolver === 'function'
         ? schoolNameResolver
         : ((row) => row?.school);
@@ -860,9 +883,15 @@ function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
         townshipEligibilityCache.set(school, matched);
         return matched;
     };
-    return list.filter((row) => {
+    const result = list.filter((row) => {
         return isTownshipSchool(resolver(row));
     });
+    if (canUseDefaultCache) {
+        TownshipRowsPerfCache.source = list;
+        TownshipRowsPerfCache.signature = cacheSignature;
+        TownshipRowsPerfCache.rows = result.slice();
+    }
+    return result;
 }
 
 function listAvailableSchoolsForCompare(scope = 'township') {
