@@ -17,6 +17,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createRankingDataService(root) {
     const EPSILON = 0.0001;
     const rankValueCache = new WeakMap();
+    const rankPresenceCache = new WeakMap();
+    let rankPresenceCacheEpoch = 0;
 
     function normalizeText(value) {
         return String(value == null ? '' : value).trim();
@@ -40,6 +42,7 @@
         const normalizedScope = normalizeText(scope);
         if (!bucket || !normalizedScope) return row;
         if (row && typeof row === 'object') rankValueCache.delete(row);
+        rankPresenceCacheEpoch += 1;
         bucket[normalizedScope] = rank;
         if (subject === 'total') {
             if (normalizedScope === 'county') row.countyRank = rank;
@@ -173,16 +176,25 @@
         const list = Array.isArray(rows) ? rows : [];
         const subjectList = Array.isArray(subjects) && subjects.length ? subjects : ['total'];
         const normalizedScope = normalizeText(scope);
+        const cacheable = !options.rows || options.rows === list;
+        const cacheKey = `${normalizedScope}|${subjectList.map(normalizeText).join(',')}|${options.forceCounty === true ? 'county' : ''}|${rankPresenceCacheEpoch}`;
+        const cached = cacheable ? rankPresenceCache.get(list) : null;
+        if (cached && cached.has(cacheKey)) return cached.get(cacheKey);
         let scopedOptions = options;
         if (normalizedScope === 'county') {
             const scopeRows = Array.isArray(options.rows) ? options.rows : list;
             if (!hasCountyScope(scopeRows, options)) return false;
             scopedOptions = { ...options, forceCounty: true };
         }
-        return list.some((student) => {
+        const result = list.some((student) => {
             if (hasRankValue(getStudentRankValue(student, 'total', normalizedScope, scopedOptions))) return true;
             return subjectList.some((subject) => hasRankValue(getStudentRankValue(student, subject, normalizedScope, scopedOptions)));
         });
+        if (cacheable) {
+            if (cached) cached.set(cacheKey, result);
+            else rankPresenceCache.set(list, new Map([[cacheKey, result]]));
+        }
+        return result;
     }
 
     function getStudentRankVisibility(rows = [], subjects = [], options = {}) {
