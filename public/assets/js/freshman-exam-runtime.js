@@ -381,17 +381,14 @@ function fbExamBelongsToCurrentSchool(raw, context = {}) {
     // 没有学校字段时，仅允许后续通过已上传学籍/人工名单匹配的学生；
     // 不能把整场考试的其他学校数据默认当成本校。
     if (!school) {
-        const roster = fbRosterRow(raw);
-        if (!roster) return false;
-        return FB_ROSTER_ROWS.length > 0
-            ? !!fbFindRosterMatch(roster, FB_ROSTER_ROWS)
-                || FB_TRANSFER_STUDENTS.some(student => fbFindRosterMatch(roster, [student]))
-                || FB_DROPOUT_STUDENTS.some(student => fbFindRosterMatch(roster, [student]))
-                || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(roster, [student]))
-            : false;
+        // 缺少学校字段时保留考试名单中的学生，以便处理“考试有、学籍无”的合法情况；
+        // 若因此超过本校班额安全上限，生成流程会立即阻断并要求检查数据来源。
+        return true;
     }
-    if (typeof window.sameAppSchoolName === 'function') return window.sameAppSchoolName(school, current);
-    return school === current || school.replace(/学校$/, '') === current.replace(/学校$/, '');
+    // 有明确学校字段时，只接受当前本校；考试有、学籍无的本校学生仍可进入核对弹窗。
+    // 分班场景只允许当前本校，不能使用县域分析里的宽松别名匹配。
+    const canonical = (value) => String(value || '').replace(/[\s　]/g, '').replace(/学校$/, '').replace(/校区$/, '');
+    return canonical(school) === canonical(current);
 }
 function fbFindRosterMatch(row, candidates) {
     return candidates.find(item => row.id && item.id && row.id === item.id)
@@ -897,7 +894,7 @@ async function FB_runDivision() {
         }
         if (assembly.missingGender > 0) {
             // 缺性别不阻断，但提示（默认按女生处理会影响男女均衡）。
-            window.UI && window.UI.toast && window.UI.toast(`⚠️ ${assembly.missingGender} 人未匹配到性别，已暂按女生计入，建议补全性别名单`, 'warning');
+            window.UI && window.UI.toast && window.UI.toast(`⚠️ ${assembly.missingGender} 人未匹配到性别，已标记为未填，不计入男女比例；建议补全性别名单`, 'warning');
         }
     }
     if (!FB_STUDENTS.length) return window.UI.alert(source === 'cloud' ? "云端未聚合到学生成绩，请检查考试数据与名单。" : "请先导入数据");
@@ -907,7 +904,10 @@ async function FB_runDivision() {
     // 本校分班安全阈值：银山实验学校单班不超过 60 人。
     // 若考试数据仍混入其他学校，先阻断生成并明确提示，不允许导出错误方案。
     const maxStudentsForClasses = k * 60;
-    if (FB_ROSTER_ROWS.length && FB_STUDENTS.length > maxStudentsForClasses) {
+    if (FB_STUDENTS.length > maxStudentsForClasses) {
+        FB_CLASSES = writeFbClasses([]);
+        FB_SCHEMES_CACHE = [];
+        document.getElementById('fb-results-area')?.classList.add('hidden');
         return window.UI.alert(`当前本校分班名单 ${FB_STUDENTS.length} 人，超过 ${k} 个班 × 60 人的安全上限（${maxStudentsForClasses} 人）。已停止生成，请检查考试数据的学校字段或届别筛选。`, 'error');
     }
     const algo = document.getElementById('fb_algorithm').value;
