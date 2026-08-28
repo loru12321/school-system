@@ -34,6 +34,12 @@
         return val.toFixed(2);
     }
 
+    const showAlert = (message, type = 'info') => {
+        if (root.UI && typeof root.UI.alert === 'function') return root.UI.alert(message, type);
+        if (typeof root.uiAlert === 'function') return root.uiAlert(message, type);
+        return root.alert(message);
+    };
+
     function updatePotentialSchoolSelect() {
         const sel = root.document.getElementById('potSchoolSelect');
         if (!sel) return;
@@ -70,7 +76,7 @@
         const SUBJECTS = Array.isArray(root.SUBJECTS) ? root.SUBJECTS : [];
         const normalizeClass = (typeof root.normalizeClass === 'function') ? root.normalizeClass : (v => String(v ?? ''));
         const safeGet = (typeof root.safeGet === 'function') ? root.safeGet : ((obj, path, dflt) => dflt);
-        if (!RAW_DATA.length) return alert('请先上传数据');
+        if (!RAW_DATA.length) return showAlert('请先上传数据');
         const scope = root.document.getElementById('potSchoolSelect').value;
         const selectedClass = root.document.getElementById('potClassSelect')?.value || 'ALL';
         const topRatio = parseFloat(root.document.getElementById('potTopSelect').value);
@@ -184,8 +190,8 @@
     }
 
     function exportPotentialAnalysis() {
-        if (!POTENTIAL_STUDENTS_CACHE.length) { alert('请先生成数据或结果为空'); return; }
-        if (typeof root.XLSX === 'undefined') return alert("导出组件尚未加载完成，请稍后重试。");
+        if (!POTENTIAL_STUDENTS_CACHE.length) { showAlert('请先生成数据或结果为空'); return; }
+        if (typeof root.XLSX === 'undefined') return showAlert("导出组件尚未加载完成，请稍后重试。");
         const XLSX = root.XLSX;
         const wb = XLSX.utils.book_new(); const data = [['学校', '班级', '姓名', '总分', '总分排名', '排名口径', '跛脚学科', '学科分数', '学科排名', '名次落差']];
         POTENTIAL_STUDENTS_CACHE.forEach(c => data.push([c.school, c.class, c.name, c.totalScore, c.totalRank, c.rankScope === 'class' ? '班级' : (c.rankScope === 'school' ? '学校' : '全镇'), c.subject, c.subScore, c.subRank, c.gap]));

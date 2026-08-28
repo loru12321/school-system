@@ -27,6 +27,11 @@
     const getRawData = () => (Array.isArray(root.RAW_DATA) ? root.RAW_DATA : []);
     const getSchoolRecord = (school) => (typeof root.getAppSchoolRecord === 'function'
         ? root.getAppSchoolRecord(school) : null);
+    const showAlert = (message, type = 'info') => {
+        if (root.UI && typeof root.UI.alert === 'function') return root.UI.alert(message, type);
+        if (typeof root.uiAlert === 'function') return root.uiAlert(message, type);
+        return root.alert(message);
+    };
 
     // 缓存最近一次分析结果，供导出复用（原 app.js 的 SB_CACHE_DATA）。
     let SB_CACHE_DATA = [];
@@ -88,10 +93,10 @@
         const cls = root.document.getElementById('sbClassSelect').value;
         const sortType = root.document.getElementById('sbSortBy').value;
 
-        if (!sch) return alert("请先选择学校");
+        if (!sch) return showAlert("请先选择学校");
 
         const schoolRecord = getSchoolRecord(sch);
-        if (!schoolRecord || !Array.isArray(schoolRecord.students)) return alert("该学校暂无学生数据");
+        if (!schoolRecord || !Array.isArray(schoolRecord.students)) return showAlert("该学校暂无学生数据");
         let students = schoolRecord.students;
         if (cls && cls !== '全部') students = students.filter(s => s.class === cls);
 
@@ -236,13 +241,13 @@
     function SB_runCluster() {
         const sch = root.document.getElementById('sbSchoolSelect').value;
         const cls = root.document.getElementById('sbClassSelect').value;
-        if (!sch) return alert("请先选择学校");
+        if (!sch) return showAlert("请先选择学校");
 
         const schoolRecord = getSchoolRecord(sch);
-        if (!schoolRecord || !Array.isArray(schoolRecord.students)) return alert("该学校暂无学生数据");
+        if (!schoolRecord || !Array.isArray(schoolRecord.students)) return showAlert("该学校暂无学生数据");
         let students = schoolRecord.students;
         if (cls && cls !== '全部') students = students.filter(s => s.class === cls);
-        if (!students.length) return alert("无可用学生数据");
+        if (!students.length) return showAlert("无可用学生数据");
 
         const gradeStats = SB_getGradeStats();
         const humanities = ['语文', '英语', '政治', '历史', '地理'];
@@ -357,8 +362,8 @@
     }
 
     function SB_exportExcel() {
-        if (!SB_CACHE_DATA.length) return alert("请先生成分析数据");
-        if (typeof root.XLSX === 'undefined') return alert("导出组件尚未加载完成，请稍后重试。");
+        if (!SB_CACHE_DATA.length) return showAlert("请先生成分析数据");
+        if (typeof root.XLSX === 'undefined') return showAlert("导出组件尚未加载完成，请稍后重试。");
 
         const wb = root.XLSX.utils.book_new();
         const headers = ["班级", "姓名", "总分", "全镇排名", "最强学科", "最强分差", "最弱学科", "最弱分差"];

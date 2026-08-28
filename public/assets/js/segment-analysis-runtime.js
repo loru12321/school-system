@@ -33,6 +33,11 @@
     const townshipRowsOf = (rows) => (typeof root.filterRowsToTownshipSchools === 'function'
         ? root.filterRowsToTownshipSchools(rows || [])
         : (Array.isArray(rows) ? rows : []));
+    const showAlert = (message, type = 'info') => {
+        if (root.UI && typeof root.UI.alert === 'function') return root.UI.alert(message, type);
+        if (typeof root.uiAlert === 'function') return root.uiAlert(message, type);
+        return root.alert(message);
+    };
 
     // Selector option markup is derived from the current cohort snapshot, not
     // from the selected chart values. Reuse it across module re-entry and exam
@@ -100,7 +105,7 @@
                 .catch((error) => {
                     console.warn('[segment-analysis] Chart runtime load failed:', error);
                     if (typeof root.uiAlert === 'function') root.uiAlert('图表组件加载失败，请刷新页面后重试', 'error');
-                    else alert('图表组件加载失败，请刷新页面后重试');
+                    else showAlert('图表组件加载失败，请刷新页面后重试', 'error');
                     return false;
                 });
         }
@@ -127,7 +132,7 @@
 
         const scores = validStudents.map(s => s._filterScore); // 兼容旧逻辑的 scores 数组用于计算 max/total
 
-        if (!scores.length) { alert('没有找到相关成绩数据'); return; }
+        if (!scores.length) { showAlert('没有找到相关成绩数据', 'warning'); return; }
 
         const maxScore = Math.ceil(Math.max(...scores));
         const topCeil = Math.ceil(maxScore / step) * step;
@@ -239,8 +244,8 @@
 
     function exportSegmentExcel() {
         const table = root.document.getElementById('tb-segment');
-        if (!table || !table.rows.length) return alert("请先生成统计表");
-        if (typeof root.XLSX === 'undefined') return alert("导出组件尚未加载完成，请稍后重试。");
+        if (!table || !table.rows.length) return showAlert("请先生成统计表");
+        if (typeof root.XLSX === 'undefined') return showAlert("导出组件尚未加载完成，请稍后重试。");
         const wb = root.XLSX.utils.table_to_book(table);
         root.XLSX.writeFile(wb, "分数段统计.xlsx");
     }
