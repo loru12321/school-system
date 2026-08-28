@@ -703,6 +703,7 @@ async function FB_runDivision() {
 
     // 使用 setTimeout 让 UI 有机会渲染 Loading 状态
     setTimeout(async () => {
+      try {
         FB_SCHEMES_CACHE = [];
 
         // 如果是蛇形分班，因为是固定的，只生成 1 套
@@ -731,10 +732,6 @@ async function FB_runDivision() {
             });
         }
 
-        // 恢复按钮
-        btn.innerHTML = '🚀 开始智能分班';
-        btn.disabled = false;
-
         // 渲染方案选择器
         FB_renderSchemeSelector();
 
@@ -751,6 +748,15 @@ async function FB_runDivision() {
             if (schemePanel) schemePanel.classList.add('hidden');
         }
 
+      } catch (err) {
+        console.error('[freshman] division failed', err);
+        const message = err && err.message ? err.message : String(err);
+        if (window.UI && typeof window.UI.alert === 'function') await window.UI.alert(`分班方案生成失败：${message}`, 'error');
+        else window.alert(`分班方案生成失败：${message}`);
+      } finally {
+        btn.innerHTML = '🚀 开始智能分班';
+        btn.disabled = false;
+      }
     }, 100);
 }
 
@@ -769,7 +775,7 @@ function FB_appendRosterOnlyStudents(classes, k) {
         })).sort((a, b) => (a.noExam - b.noExam) || (a.notEnrolled - b.notEnrolled) || (Math.abs((row.gender === 'M' ? 1 : 0) - a.maleRatio) - Math.abs((row.gender === 'M' ? 1 : 0) - b.maleRatio)) || (a.classIdx - b.classIdx));
         const picked = ranked[0];
         if (!picked) return;
-        picked.cls.students.push({ _id: `roster-${index}`, key: `roster:${fbRosterIdentity(row)}`, name: row.name, id: row.id, gender: row.gender || 'F', score: 0, subjAvg: {}, examsGot: 0, examsTotal: 0, height: 160, vision: 5, isNoExam: true, isNotEnrolled: false, isDiff: false, isViolation: false, remarks: row.postType === '新转入' ? '新转入学生，后置均衡分配' : '学籍在册，本次未参加考试', constraints: { same: [], diff: [] }, classIdx: picked.classIdx });
+        picked.cls.students.push({ _id: `roster-${index}`, key: `roster:${fbRosterIdentity(row)}`, name: row.name, id: row.id, gender: row.gender || 'F', score: 0, subjAvg: {}, examsGot: 0, examsTotal: 0, height: 160, vision: 5, isNoExam: true, postType: row.postType === '新转入' ? 'transfer-in' : 'roster-no-exam', isNotEnrolled: false, isDiff: false, isViolation: false, remarks: row.postType === '新转入' ? '新转入学生，后置均衡分配' : '学籍在册，本次未参加考试', constraints: { same: [], diff: [] }, classIdx: picked.classIdx });
     });
     classes.forEach(c => { c.stats = fbCalcClassStats(c.students); });
 }
@@ -975,7 +981,7 @@ function fbMajorSubjectsForGrade() {
 }
 function fbSubjectMetric(classes, subject) {
     return (classes || []).map(cls => {
-        const valid = (cls.students || []).map(s => Number(s?.subjAvg?.[subject])).filter((v, i) => Number.isFinite(v) && !cls.students[i]?.isNoExam);
+        const valid = (cls.students || []).filter(s => !s?.isNoExam).map(s => Number(s?.subjAvg?.[subject])).filter(Number.isFinite);
         if (!valid.length) return { avg: null, excellent: null, pass: null, n: 0 };
         const full = subject === '物理' ? 90 : subject === '化学' ? 60 : FB_MAIN_FULL;
         return { avg: valid.reduce((a, b) => a + b, 0) / valid.length, excellent: valid.filter(v => v >= full * 0.85).length / valid.length, pass: valid.filter(v => v >= full * 0.6).length / valid.length, n: valid.length };
@@ -1119,7 +1125,7 @@ function FB_renderAssemblyBanner() {
         area.insertBefore(banner, area.firstChild);
     }
     const gradeLabel = a.targetGrade === '9' ? '新9年级（语数英物化，物×0.9 化×0.6，不含政治）'
-        : (a.targetGrade === '8' ? '新8年级' : '新7年级');
+        : `新${a.targetGrade || '7'}年级`;
     const parts = [];
     parts.push(`口径：${gradeLabel}`);
     parts.push(`参考考试：${a.examLabels.join(' + ') || a.examCount + ' 次'}`);
@@ -1159,8 +1165,10 @@ function FB_renderDashboard() {
         const hiCnt = c.students.filter(s => fbTierOf(s.score) === 'high').length;
         const loCnt = c.students.filter(s => fbTierOf(s.score) === 'low').length;
         const fixedCnt = c.students.filter(s => s.isFixedAssignment).length;
+        const postRosterCnt = c.students.filter(s => s.postType === 'roster-no-exam').length;
+        const postTransferCnt = c.students.filter(s => s.postType === 'transfer-in').length;
         const violLabel = (FB_LAST_ASSEMBLY && FB_LAST_ASSEMBLY.violationUploaded) ? '违纪' : '难管';
-        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span class="fb-tag fb-tag-red" style="${diffCnt > 0 ? '' : 'display:none'}">${violLabel}: ${diffCnt}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div>高分段: ${hiCnt}</div><div>低分段: ${loCnt}</div>${fixedCnt ? `<div style="grid-column:span 2; color:#166534; font-weight:700;">🔒 指定学生: ${fixedCnt} 人</div>` : ''}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">点击进入座位编排 →</div></div></div>`;
+        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span class="fb-tag fb-tag-red" style="${diffCnt > 0 ? '' : 'display:none'}">${violLabel}: ${diffCnt}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div>高分段: ${hiCnt}</div><div>低分段: ${loCnt}</div>${postRosterCnt || postTransferCnt ? `<div style="grid-column:span 2; color:#7c3aed; font-weight:700;">↳ 后置学生: ${postRosterCnt + postTransferCnt} 人（${postRosterCnt ? `在册未考 ${postRosterCnt}` : ''}${postRosterCnt && postTransferCnt ? '、' : ''}${postTransferCnt ? `新转入 ${postTransferCnt}` : ''}）</div>` : ''}${fixedCnt ? `<div style="grid-column:span 2; color:#166534; font-weight:700;">🔒 指定学生: ${fixedCnt} 人</div>` : ''}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">点击进入座位编排 →</div></div></div>`;
     }).join('');
     if (container && container.innerHTML !== classCardsHtml) {
         container.innerHTML = classCardsHtml;
@@ -2697,7 +2705,6 @@ function EXAM_exportResult() {
     if (typeof FB_toggleViewRotation === 'function') window.FB_toggleViewRotation = FB_toggleViewRotation;
     if (typeof FB_saveToLocal === 'function') window.FB_saveToLocal = FB_saveToLocal;
     if (typeof FB_exportResult === 'function') window.FB_exportResult = FB_exportResult;
-    if (typeof FB_exportResultWithBalance === 'function') window.FB_exportResultWithBalance = FB_exportResultWithBalance;
     if (typeof FB_exportResultWithBalance === 'function') window.FB_exportResultWithBalance = FB_exportResultWithBalance;
     if (typeof addBindPair === 'function') window.addBindPair = addBindPair;
     if (typeof FB_initScenarioSelect === 'function') window.FB_initScenarioSelect = FB_initScenarioSelect;
