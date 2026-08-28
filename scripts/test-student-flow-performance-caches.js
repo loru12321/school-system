@@ -25,6 +25,7 @@ const teacherBridgeFile = 'public/assets/js/teacher-analysis-bridge-runtime.js';
 const packageFile = 'package.json';
 const app = read(appFile);
 const overview = read(overviewFile);
+const subjectBalance = read('public/assets/js/subject-balance-runtime.js');
 const freshman = read(freshmanFile);
 const progress = read(progressFile);
 const cohortGrowth = read(cohortGrowthFile);
@@ -87,6 +88,13 @@ const pkg = JSON.parse(read(packageFile));
     'readPotentialStudentsCache',
     'renderSignature'
 ].forEach((token) => assertContains(overview, token, overviewFile));
+
+[
+    'SB_GRADE_STATS_SIGNATURE',
+    'SB_GRADE_STATS_CACHE',
+    'getGradeStatsSignature',
+    'signature === SB_GRADE_STATS_SIGNATURE'
+].forEach((token) => assertContains(subjectBalance, token, 'public/assets/js/subject-balance-runtime.js'));
 
 assertContains(app, 'function readPotentialStudentsCache()', appFile);
 assertContains(app, 'window.readPotentialStudentsCache = readPotentialStudentsCache;', appFile);

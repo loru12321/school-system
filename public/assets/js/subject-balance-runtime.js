@@ -30,6 +30,22 @@
 
     // 缓存最近一次分析结果，供导出复用（原 app.js 的 SB_CACHE_DATA）。
     let SB_CACHE_DATA = [];
+    let SB_GRADE_STATS_SIGNATURE = '';
+    let SB_GRADE_STATS_CACHE = null;
+
+    function getGradeStatsSignature() {
+        const rows = getRawData();
+        const first = rows[0] || {};
+        const last = rows[rows.length - 1] || {};
+        return [
+            rows.length,
+            getSubjects().join('|'),
+            String(first.name || ''),
+            String(last.name || ''),
+            String(first.total || ''),
+            String(last.total || '')
+        ].join('::');
+    }
 
     function updateSubjectBalanceSelects() {
         const schSel = root.document.getElementById('sbSchoolSelect');
@@ -168,12 +184,16 @@
     }
 
     function SB_getGradeStats() {
+        const signature = getGradeStatsSignature();
+        if (signature === SB_GRADE_STATS_SIGNATURE && SB_GRADE_STATS_CACHE) return SB_GRADE_STATS_CACHE;
         const gradeStats = {};
         getSubjects().forEach(sub => {
             const allScores = getRawData().map(s => s.scores[sub]).filter(v => typeof v === 'number');
             const avg = allScores.length ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
             gradeStats[sub] = avg;
         });
+        SB_GRADE_STATS_SIGNATURE = signature;
+        SB_GRADE_STATS_CACHE = gradeStats;
         return gradeStats;
     }
 
