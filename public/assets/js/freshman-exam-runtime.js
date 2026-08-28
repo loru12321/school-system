@@ -249,8 +249,30 @@ function fbStudentKey(row) {
     return 'name:' + fbNormalizeName(row && row.name);
 }
 
-// 取本届别最近 N 次考试的内存副本（按 meta 日期倒序），只读。
-function fbGetRecentExams(limit = 3) {
+function fbAcademicYearStart(dateOrYear) {
+    const raw = String(dateOrYear || '').trim();
+    const dateMatch = raw.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?/);
+    if (dateMatch) {
+        const year = Number(dateMatch[1]);
+        const month = Number(dateMatch[2]);
+        return month >= 9 ? year : year - 1;
+    }
+    const yearMatch = raw.match(/^(\d{4})/);
+    return yearMatch ? Number(yearMatch[1]) : 0;
+}
+
+function fbCurrentCohortEntryYear() {
+    const metaYear = window.CURRENT_COHORT_META?.year;
+    const raw = String(metaYear || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+    const match = raw.match(/\d{4}/);
+    return match ? Number(match[0]) : 0;
+}
+
+// 取本届别与目标年级阶段相符的最近 N 次考试。
+// 新生 G 年级：目标学年开始前（9 月前）使用 G-1 年级成绩；
+// 目标学年开始后（9 月起）使用 G 年级成绩。以考试日期所属学年判断，
+// 不再把当前届别内不同年级的成绩混在一起。
+function fbGetRecentExams(limit = 3, targetGrade = '') {
     const db = (typeof window.COHORT_DB === 'object' && window.COHORT_DB) ? window.COHORT_DB : null;
     const exams = db && db.exams && typeof db.exams === 'object' ? db.exams : null;
     if (!exams) return [];
@@ -270,7 +292,17 @@ function fbGetRecentExams(limit = 3) {
         };
     }).filter((e) => e.data.length > 0);
     list.sort((a, b) => b.ts - a.ts);
-    return list.slice(0, Math.max(1, Math.min(limit, 3)));
+    const grade = Number(targetGrade);
+    const cohortYear = fbCurrentCohortEntryYear();
+    if (!Number.isFinite(grade) || grade < 6 || grade > 9 || !cohortYear) {
+        return list.slice(0, Math.max(1, Math.min(limit, 3)));
+    }
+    const targetAcademicYear = cohortYear + (grade - 6);
+    const eligible = list.filter((exam) => {
+        const academicYear = fbAcademicYearStart(exam.dateStr || exam.meta?.year);
+        return academicYear === targetAcademicYear || academicYear === targetAcademicYear - 1;
+    });
+    return eligible.slice(0, Math.max(1, Math.min(limit, 3)));
 }
 
 // 单场考试内、按目标年级口径算某学生该场的分班分。
@@ -465,7 +497,7 @@ async function FB_reconcileRoster(exams) {
 async function FB_assembleFromCloud(options = {}) {
     const targetGrade = String(options.targetGrade || document.getElementById('fb_target_grade')?.value || '7').trim();
     const examLimit = Math.max(1, Math.min(Number(options.examLimit || document.getElementById('fb_exam_count')?.value || 2), 3));
-    const exams = fbGetRecentExams(examLimit);
+    const exams = fbGetRecentExams(examLimit, targetGrade);
     if (!exams.length) {
         window.UI.alert('未找到本届别的云端考试数据，请先在「数据准备」上传并同步成绩。');
         return null;
@@ -1207,6 +1239,7 @@ function FB_renderAssemblyBanner() {
         : `新${a.targetGrade || '7'}年级`;
     const parts = [];
     parts.push(`口径：${gradeLabel}`);
+    parts.push('成绩阶段：9月前按上一年级，9月后按目标年级');
     parts.push(`参考考试：${a.examLabels.join(' + ') || a.examCount + ' 次'}`);
     parts.push(`匹配学生：${a.matched} 人`);
     const fixedCount = Object.keys(FB_FIXED_ASSIGNMENTS).length;

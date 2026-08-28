@@ -76,6 +76,12 @@ assert.ok(freshman.includes("student.name === row.name"), 'transfer exclusion sh
 assert.ok(freshman.includes('nameExamRows'), 'duplicate detection should track names per exam to avoid cross-exam false positives');
 assert.ok(freshman.includes('record.count > 1'), 'duplicate detection should only warn for repeated names within one exam');
 assert.ok(!freshman.includes('window.confirm('), 'freshman runtime must not use native confirm that blocks mobile browsers');
+assert.ok(freshman.includes('function fbAcademicYearStart'), 'freshman exam selection should normalize exam dates to academic-year starts');
+assert.ok(freshman.includes('function fbCurrentCohortEntryYear'), 'freshman exam selection should read the active cohort entry year');
+assert.ok(freshman.includes('function fbGetRecentExams(limit = 3, targetGrade = \'\')'), 'freshman exam selection should accept the target grade');
+assert.ok(freshman.includes('targetAcademicYear - 1'), 'new grade selection should include the prior grade before September');
+assert.ok(freshman.includes('fbGetRecentExams(examLimit, targetGrade)'), 'cloud assembly should filter exams using the selected target grade');
+assert.ok(freshman.includes('9月前按上一年级，9月后按目标年级'), 'freshman result summary should disclose the new-grade transition rule');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');
