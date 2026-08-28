@@ -459,7 +459,7 @@ async function FB_assembleFromCloud(options = {}) {
 
     // 按学生 key 聚合。
     const byKey = new Map();          // key -> { name, id, class, wSum, scoreSum, examsGot }
-    const nameCount = new Map();      // 归一化姓名 -> Set(考号)  用于重名检测
+    const nameExamRows = new Map();   // 归一化姓名 -> Map(考试ID -> { count, ids })；仅同场重复才判定重名
     exams.forEach((ex, ei) => {
         const w = weights[ei] || 0;
         ex.data.forEach((row) => {
@@ -468,8 +468,13 @@ async function FB_assembleFromCloud(options = {}) {
             const key = fbStudentKey(row);
             const nm = fbNormalizeName(row.name);
             if (nm) {
-                if (!nameCount.has(nm)) nameCount.set(nm, new Set());
-                nameCount.get(nm).add(fbNormalizeId(row.id || row.examNo || row.studentId) || '(无考号)');
+                if (!nameExamRows.has(nm)) nameExamRows.set(nm, new Map());
+                const examRows = nameExamRows.get(nm);
+                const record = examRows.get(ex.examId) || { count: 0, ids: new Set() };
+                record.count += 1;
+                const rowId = fbNormalizeId(row.id || row.examNo || row.studentId);
+                if (rowId) record.ids.add(rowId);
+                examRows.set(ex.examId, record);
             }
             const s = fbExamAssignmentScore(row, targetGrade);
             if (!s) return;
@@ -495,11 +500,12 @@ async function FB_assembleFromCloud(options = {}) {
 
     // 重名组（同名但多考号 / 或同名仅姓名匹配）。
     const dupGroups = [];
-    nameCount.forEach((ids, nm) => {
-        const realIds = [...ids].filter((x) => x && x !== '(无考号)');
-        if (ids.size > 1 || (realIds.length === 0 && [...byKey.values()].filter((s) => fbNormalizeName(s.name) === nm).length > 1)) {
-            dupGroups.push({ name: nm, ids: [...ids] });
-        }
+    nameExamRows.forEach((examMap, nm) => {
+        examMap.forEach((record, examId) => {
+            if (record.count > 1) {
+                dupGroups.push({ name: nm, examId, ids: [...record.ids], count: record.count });
+            }
+        });
     });
 
     // 组装 FB_STUDENTS（沿用既有 shape：score/gender/isDiff/constraints/...）。
@@ -706,7 +712,7 @@ async function FB_runDivision() {
         if (!assembly) return; // 无云端数据，已弹提示
         // 重名弹窗：装配阶段发现重名 → 明确提示人工核对（阻断前先确认）。
         if (assembly.dupGroups && assembly.dupGroups.length) {
-            const list = assembly.dupGroups.slice(0, 12).map((g) => `· ${g.name}（${g.ids.length} 人）`).join('\n');
+            const list = assembly.dupGroups.slice(0, 12).map((g) => `· ${g.name}（${g.count || g.ids.length} 人${g.examId ? `，${g.examId}` : ''}）`).join('\n');
             const more = assembly.dupGroups.length > 12 ? `\n…共 ${assembly.dupGroups.length} 组` : '';
             const proceed = window.confirm(
                 `⚠️ 检测到 ${assembly.dupGroups.length} 组重名学生，成绩/性别/违纪可能匹配错乱：\n${list}${more}\n\n`
