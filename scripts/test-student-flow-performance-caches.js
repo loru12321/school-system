@@ -26,6 +26,7 @@ const packageFile = 'package.json';
 const app = read(appFile);
 const overview = read(overviewFile);
 const subjectBalance = read('public/assets/js/subject-balance-runtime.js');
+const segmentAnalysis = read('public/assets/js/segment-analysis-runtime.js');
 const freshman = read(freshmanFile);
 const progress = read(progressFile);
 const progressFilterCache = read('public/assets/js/progress-filter-cache-runtime.js');
@@ -105,6 +106,14 @@ const pkg = JSON.parse(read(packageFile));
     'schoolSignature',
     'classSignature'
 ].forEach((token) => assertContains(subjectBalance, token, 'public/assets/js/subject-balance-runtime.js'));
+
+[
+    'SEG_SELECT_OPTIONS_CACHE',
+    'schoolSignature',
+    'subjectSignature',
+    'classSignature',
+    'getDataVersion'
+].forEach((token) => assertContains(segmentAnalysis, token, 'public/assets/js/segment-analysis-runtime.js'));
 
 assertContains(app, 'function readPotentialStudentsCache()', appFile);
 assertContains(app, 'window.readPotentialStudentsCache = readPotentialStudentsCache;', appFile);

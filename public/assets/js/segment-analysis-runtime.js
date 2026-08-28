@@ -34,6 +34,18 @@
         ? root.filterRowsToTownshipSchools(rows || [])
         : (Array.isArray(rows) ? rows : []));
 
+    // Selector option markup is derived from the current cohort snapshot, not
+    // from the selected chart values. Reuse it across module re-entry and exam
+    // selector refreshes while invalidating whenever the source snapshot changes.
+    const SEG_SELECT_OPTIONS_CACHE = {
+        schoolSignature: '',
+        subjectSignature: '',
+        classSignature: '',
+        classSchool: ''
+    };
+
+    const getDataVersion = () => String(root.__RAW_DATA_VERSION || 0);
+
     function updateSegmentSelects() {
         const schSel = root.document.getElementById('segSchoolSelect');
         const subSel = root.document.getElementById('segSubjectSelect');
@@ -43,10 +55,19 @@
         const schoolList = (typeof root.listAvailableSchoolsForCompare === 'function')
             ? root.listAvailableSchoolsForCompare('all')
             : Object.keys(schools);
-        schSel.innerHTML = `<option value="ALL">全部学校</option>${schoolList.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}`;
+        const schoolSignature = `${getDataVersion()}::${schoolList.join('|')}`;
+        if (SEG_SELECT_OPTIONS_CACHE.schoolSignature !== schoolSignature) {
+            schSel.innerHTML = `<option value="ALL">全部学校</option>${schoolList.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}`;
+            SEG_SELECT_OPTIONS_CACHE.schoolSignature = schoolSignature;
+        }
         if (oldSch && (oldSch === 'ALL' || schools[oldSch])) schSel.value = oldSch;
         const oldSub = subSel.value;
-        subSel.innerHTML = `<option value="total">总分</option>${getSubjects().map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}`;
+        const subjects = getSubjects();
+        const subjectSignature = `${getDataVersion()}::${subjects.join('|')}`;
+        if (SEG_SELECT_OPTIONS_CACHE.subjectSignature !== subjectSignature) {
+            subSel.innerHTML = `<option value="total">总分</option>${subjects.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}`;
+            SEG_SELECT_OPTIONS_CACHE.subjectSignature = subjectSignature;
+        }
         if (oldSub) subSel.value = oldSub;
         schSel.onchange = updateSegmentClassSelect;
         updateSegmentClassSelect();
@@ -62,7 +83,13 @@
         const students = schSel.value === 'ALL' ? townshipRows : (schoolRecord?.students || []);
         const classes = Array.from(new Set(students.map(s => s.class).filter(Boolean)))
             .sort((a, b) => normClass(a).localeCompare(normClass(b), 'zh-Hans-CN', { numeric: true }));
-        clsSel.innerHTML = `<option value="ALL">全部班级</option>${classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}`;
+        const classSignature = `${getDataVersion()}::${schSel.value}::${classes.join('|')}`;
+        if (SEG_SELECT_OPTIONS_CACHE.classSignature !== classSignature
+            || SEG_SELECT_OPTIONS_CACHE.classSchool !== schSel.value) {
+            clsSel.innerHTML = `<option value="ALL">全部班级</option>${classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}`;
+            SEG_SELECT_OPTIONS_CACHE.classSignature = classSignature;
+            SEG_SELECT_OPTIONS_CACHE.classSchool = schSel.value;
+        }
         if (oldClass && Array.from(clsSel.options || []).some(option => option.value === oldClass)) clsSel.value = oldClass;
     }
 
