@@ -900,6 +900,20 @@ const SCHEDULER = {
         const pm = parseInt(document.getElementById('sch_pm_count').value);
         const eve = parseInt(document.getElementById('sch_eve_count').value);
 
+        // 疲劳审计只依赖当前课表和节次数配置。重复点击“审计”时复用结果，
+        // 避免对所有班级×5天×节次再次扫描；排课生成后 lastRun 时间戳会自然失效。
+        const cacheKey = [
+            this.lastRun?.generatedAt || 0,
+            this.classes.length,
+            am || 0,
+            pm || 0,
+            eve || 0,
+            this.countScheduleCells(this.schedule)
+        ].join('|');
+        if (this._fatigueAnalysisCacheKey === cacheKey && this._fatigueAnalysisCache) {
+            return this._fatigueAnalysisCache;
+        }
+
         const slotOrder = [];
         for (let i = 1; i <= am; i++) slotOrder.push({ type: 'am', code: `am_${i}` });
         for (let i = 1; i <= pm; i++) slotOrder.push({ type: 'pm', code: `pm_${i}` });
@@ -988,7 +1002,7 @@ const SCHEDULER = {
             teacherEveningOver2: teacherStats.filter(x => x.eveningLessons >= 2).slice(0, 10)
         };
 
-        return {
+        const result = {
             meta: {
                 am, pm, eve,
                 classCount: this.classes.length,
@@ -998,6 +1012,9 @@ const SCHEDULER = {
             teacherStats,
             flags
         };
+        this._fatigueAnalysisCacheKey = cacheKey;
+        this._fatigueAnalysisCache = result;
+        return result;
     },
 
     buildFallbackAuditList: function (analysis) {
