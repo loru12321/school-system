@@ -4,13 +4,13 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 ## Latest Run
 
-- Commit: `23e50869c1ae`
-- Recorded at: 2026-08-28T02:52:04.877Z
-- Total smoke time: 23382 ms (+3010 ms vs previous)
-- Login: 4214 ms
-- App ready: 2276 ms
+- Commit: `57a81a74f43a`
+- Recorded at: 2026-08-28T03:17:55.521Z
+- Total smoke time: 22094 ms (-1288 ms vs previous)
+- Login: 3726 ms
+- App ready: 1011 ms
 - Native long tasks: 0, max 0 ms
-- Scheduled task samples: 65, max end-to-end 55.4 ms, max derived network wait 5.6 ms
+- Scheduled task samples: 62, max end-to-end 59.1 ms, max derived network wait 5.3 ms
 - Budget failures: 0
 - Errors: 0
 
@@ -18,19 +18,20 @@ This report is generated from browser smoke-test performance samples. It is mean
 
 | Module | Switch | Deep check | Total |
 | --- | --- | --- | --- |
-| `grade-scheduler` | 33.39999999999418 ms | 687 ms | 720.3999999999942 ms |
-| `student-overview` | 44.10000000000582 ms | 520 ms | 564.1000000000058 ms |
-| `freshman-simulator` | 57.5 ms | 457 ms | 514.5 ms |
-| `subject-balance` | 35.90000000000873 ms | 431 ms | 466.90000000000873 ms |
-| `report-generator` | 17.5 ms | 359 ms | 376.5 ms |
-| `exam-arranger` | 13.60000000000582 ms | 344 ms | 357.6000000000058 ms |
-| `cohort-growth` | 20.5 ms | 313 ms | 333.5 ms |
-| `progress-analysis` | 71.5 ms | 176 ms | 247.5 ms |
+| `grade-scheduler` | 29.30000000000291 ms | 660 ms | 689.3000000000029 ms |
+| `student-overview` | 31.80000000000291 ms | 493 ms | 524.8000000000029 ms |
+| `subject-balance` | 37.19999999999709 ms | 388 ms | 425.1999999999971 ms |
+| `freshman-simulator` | 91.89999999999418 ms | 315 ms | 406.8999999999942 ms |
+| `report-generator` | 19.19999999999709 ms | 380 ms | 399.1999999999971 ms |
+| `progress-analysis` | 69.80000000000291 ms | 301 ms | 370.8000000000029 ms |
+| `cohort-growth` | 16.5 ms | 345 ms | 361.5 ms |
+| `exam-arranger` | 16 ms | 344 ms | 360 ms |
 
 ## Recent Runs
 
 | Commit | Total | Login | App ready | Native long tasks | Scheduled tasks | Budget failures | Errors |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `57a81a74f43a` | 22094 ms | 3726 ms | 1011 ms | 0 | 62 | 0 | 0 |
 | `23e50869c1ae` | 23382 ms | 4214 ms | 2276 ms | 0 | 65 | 0 | 0 |
 | `67239e3ccaba` | 20372 ms | 2326 ms | 1010 ms | 0 | 68 | 0 | 0 |
 | `36715d0e02bb` | 23359 ms | 5297 ms | 1155 ms | 0 | 61 | 0 | 0 |
@@ -45,7 +46,6 @@ This report is generated from browser smoke-test performance samples. It is mean
 | `1c9630f19fd5` | 24534 ms | 5681 ms | 1026 ms | 0 | 65 | 0 | 0 |
 | `e519139087c7` | 22248 ms | 2417 ms | 1165 ms | 0 | 63 | 0 | 0 |
 | `f06e638e85c1` | 21466 ms | 3152 ms | 1012 ms | 0 | 73 | 0 | 0 |
-| `2ff81fee0d40` | 21463 ms | 4297 ms | 1007 ms | 0 | 73 | 0 | 0 |
 
 ## Data Files
 
