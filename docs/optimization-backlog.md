@@ -93,4 +93,4 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 | 2026-08-28 | P1 | 新生分班结果增加考试名单阶段与最终名单阶段的主要学科“两率一分”对照表，并支持导出两阶段指标和最终分班名单，便于向任课教师解释分班差异 | `npm run build`, `node scripts/test-syntax.js`, `node scripts/test-mobile-workflow-contract.js` |
 | 2026-08-28 | P1 | 新生均衡分班补齐新6年级入口；班级卡片显示在册未考/新转入后置人数；分班异步异常自动恢复按钮并给出错误提示；两率一分有效学生过滤逻辑加固 | `node scripts/test-syntax.js`, `node scripts/test-mobile-workflow-contract.js`, `node scripts/test-dialog-runtime-contract.js`, `npm run build`, `npm run check:release-fast` |
 | 2026-08-28 | P1 | 新生分班名单核对口径修正：考试名单有、学籍名单无的学生默认按“在校参加考试”纳入分班；仅管理员明确选择转出/不在校时排除，转入学生继续进入后置分配池 | `node scripts/test-syntax.js`, `node scripts/test-teaching-workbench-runtime.js`, `npm run build`, `npm run check:release-fast` |
-| 2026-08-28 | P1 | 学籍中登记为辍学/长期离校的学生新增明确排除原因，不再进入未考试学生后置分班池；保留“在校但未考试”与“转入/临时在校”的后置分配口径 | `node scripts/test-syntax.js`, `node scripts/test-teaching-workbench-runtime.js` |
+| 2026-08-28 | P1 | 新生分班口径调整：学籍有、考试无且登记为辍学/长期离校的学生仍进入后置均衡分配池，单独标记为“辍学/长期离校”，不参与成绩指标分母但参与班额与性别平衡 | `node scripts/test-syntax.js`, `node scripts/test-teaching-workbench-runtime.js` |
