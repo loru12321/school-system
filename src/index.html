@@ -263,8 +263,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-c75eed31f535.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-c75eed31f535.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-7fe1f7aa9330.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-7fe1f7aa9330.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -2512,7 +2512,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <button type="button" class="module-help-btn" data-module-help="tools"><i class="ti ti-info-circle"></i><span>分班规则</span></button>
                     </h2>
                     <div class="analysis-action-stack">
-                        <div class="analysis-action-note">建议先生成分班方案，再保存、导出并继续进入座位编排；多方案时优先看均分极差最小的结果。</div>
+                        <div class="analysis-action-note">建议先生成分班方案，再保存、导出并继续进入座位编排；多方案时先看主科优秀率极差，再看均分极差。</div>
                         <div class="analysis-actions">
                             <button class="btn btn-purple" onclick="FB_saveToLocal()"><i class="ti ti-device-floppy"></i> 保存方案</button>
                             <button class="btn btn-green" onclick="FB_exportResult()"><i class="ti ti-file-export"></i> 导出结果</button>
@@ -2523,7 +2523,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <summary>分班口径与使用建议</summary>
                     <div class="explain-content">
                         <p>建议先导入名单，再配置班级数、班额微调、性别控制和难管分散规则。</p>
-                        <p>综合智能优化更适合生成多套均衡方案，蛇形分班更适合做标准基准方案。</p>
+                        <p>综合智能优化以主科优秀率均衡为第一优先级，再兼顾均分、及格率、性别和班额；蛇形分班适合做标准基准方案。</p>
                         <p>生成后建议先看均衡度诊断，再进入班级卡片和座位编排页面继续细化。</p>
                     </div>
                 </details>

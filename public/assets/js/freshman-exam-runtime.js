@@ -49,16 +49,21 @@
         let total = 0;
         let scored = 0;
         let male = 0;
+        let female = 0;
+        let unknownGender = 0;
         let diff = 0;
         list.forEach((student) => {
             if (Number.isFinite(Number(student?.score)) && !student?.isNoExam) { total += Number(student.score); scored += 1; }
             if (student?.gender === 'M') male += 1;
+            else if (student?.gender === 'F') female += 1;
+            else unknownGender += 1;
             if (student?.isDiff || student?._isDiff) diff += 1;
         });
         return {
             avg: scored ? total / scored : 0,
             male,
-            female: n - male,
+            female,
+            unknownGender,
             diff,
             count: n,
             scoredCount: scored,
@@ -349,10 +354,17 @@ let FB_DROPOUT_STUDENTS = [];
 function fbRosterRow(raw) {
     const name = fbNormalizeName(raw?.姓名 || raw?.名字 || raw?.Name || raw?.name);
     if (!name) return null;
-    const genderRaw = String(raw?.性别 || raw?.Gender || raw?.gender || '').trim().toUpperCase();
+    const genderRaw = String(raw?.性别 || raw?.Gender || raw?.gender || raw?.sex || raw?.性别名称 || '').trim().toUpperCase();
     const gender = genderRaw === '男' || genderRaw === 'M' ? 'M' : genderRaw === '女' || genderRaw === 'F' ? 'F' : '';
     const id = fbNormalizeId(raw?.考号 || raw?.学号 || raw?.准考证号 || raw?.studentId || raw?.id || '');
     return { name, gender, id };
+}
+function fbParseGender(value) {
+    const raw = String(value ?? '').trim().toUpperCase();
+    return raw === '男' || raw === 'M' ? 'M' : raw === '女' || raw === 'F' ? 'F' : 'U';
+}
+function fbGenderLabel(value) {
+    return value === 'M' ? '男' : value === 'F' ? '女' : '未填';
 }
 function fbRosterIdentity(row) { return row?.id ? `id:${row.id}` : `name:${row?.name || ''}|${row?.gender || ''}`; }
 function fbCurrentSchoolName() {
@@ -380,9 +392,9 @@ function FB_renderRosterStatus() {
         : '尚未上传学籍名单；如不上传，系统沿用考试名单，不执行在校名单核对。';
     const list = document.getElementById('fb_transfer_list');
     if (list) list.innerHTML = [
-        ...FB_TRANSFER_STUDENTS.map((s, i) => `<div class="freshman-fixed-row"><span><strong>${s.name}</strong><small>转出 · ${s.gender === 'M' ? '男' : '女'}</small></span><button type="button" class="btn btn-sm btn-gray" data-fb-action="remove-transfer" data-fb-index="${i}">移除</button></div>`),
+        ...FB_TRANSFER_STUDENTS.map((s, i) => `<div class="freshman-fixed-row"><span><strong>${s.name}</strong><small>转出 · ${fbGenderLabel(s.gender)}</small></span><button type="button" class="btn btn-sm btn-gray" data-fb-action="remove-transfer" data-fb-index="${i}">移除</button></div>`),
         ...FB_DROPOUT_STUDENTS.map((s, i) => `<div class="freshman-fixed-row"><span><strong>${s.name}</strong><small>辍学/长期离校 · ${s.gender === 'M' ? '男' : s.gender === 'F' ? '女' : '未填'}${s.id ? ` · ${s.id}` : ''}</small></span><button type="button" class="btn btn-sm btn-gray" data-fb-action="remove-dropout" data-fb-index="${i}">移除</button></div>`),
-        ...FB_TRANSFER_IN_STUDENTS.map((s, i) => `<div class="freshman-fixed-row"><span><strong>${s.name}</strong><small>新转入 · ${s.gender === 'M' ? '男' : '女'}${s.id ? ` · ${s.id}` : ''}</small></span><button type="button" class="btn btn-sm btn-gray" data-fb-action="remove-transfer-in" data-fb-index="${i}">移除</button></div>`)
+        ...FB_TRANSFER_IN_STUDENTS.map((s, i) => `<div class="freshman-fixed-row"><span><strong>${s.name}</strong><small>新转入 · ${fbGenderLabel(s.gender)}${s.id ? ` · ${s.id}` : ''}</small></span><button type="button" class="btn btn-sm btn-gray" data-fb-action="remove-transfer-in" data-fb-index="${i}">移除</button></div>`)
     ].join('') || '<div class="freshman-fixed-empty">暂无转出或新转入登记。</div>';
 }
 function FB_addTransferStudent() {
@@ -651,9 +663,19 @@ async function FB_assembleFromCloud(options = {}) {
     byKey.forEach((agg, key) => {
         const score = agg.wSum > 0 ? (agg.scoreSum / agg.wSum) : 0;
         if (agg.wSum <= 0) missingScore += 1;
-        let gender = FB_GENDER_MAP[key];
-        if (!gender) gender = FB_GENDER_MAP['name:' + fbNormalizeName(agg.name)]; // 姓名兜底
-        if (!gender) { gender = 'F'; missingGender += 1; }
+        const normalizedName = fbNormalizeName(agg.name);
+        const normalizedId = fbNormalizeId(agg.id);
+        // 优先考号/学号，再按姓名匹配；旧逻辑只查 stable name key，
+        // 会漏掉带考号的性别名单，进而把大量未知性别误计为女生。
+        let gender = (normalizedId && FB_GENDER_MAP['id:' + normalizedId])
+            || FB_GENDER_MAP[key]
+            || FB_GENDER_MAP['name:' + normalizedName];
+        if (!gender) {
+            const sourceRow = stableByKey.get(key)?.row;
+            const sourceGender = fbRosterRow(sourceRow)?.gender;
+            gender = sourceGender || 'U';
+        }
+        if (gender === 'U') missingGender += 1;
         const isViol = !!(FB_VIOLATION_SET[key] || FB_VIOLATION_SET['name:' + fbNormalizeName(agg.name)]);
         // 各主科加权平均分（缺该科则为 null，不计入该科均衡）。
         const subjAvg = {};
@@ -698,7 +720,8 @@ function FB_loadGenderList(input) {
             json.forEach((r) => {
                 const nm = fbNormalizeName(r['姓名'] || r['名字'] || r['Name']);
                 if (!nm) return;
-                const g = (String(r['性别'] || r['Gender'] || '').trim() === '男' || String(r['性别'] || r['Gender'] || '').toUpperCase() === 'M') ? 'M' : 'F';
+                const g = fbParseGender(r['性别'] || r['Gender'] || r['gender']);
+                if (g === 'U') return;
                 const rawId = fbNormalizeId(r['考号'] || r['学号'] || r['准考证号'] || '');
                 const key = rawId ? 'id:' + rawId : 'name:' + nm;
                 FB_GENDER_MAP[key] = g;
@@ -822,7 +845,7 @@ function FB_loadData(input) {
             if (!json.length) throw new Error("Excel没有数据");
             FB_STUDENTS = json.map((r, i) => {
                 const remarks = String(r['备注'] || r['说明'] || ""); const sameMatch = remarks.match(/(?:和|与|跟)([\u4e00-\u9fa5\w]+)(?:同班|一起|一班)/); const diffMatch = remarks.match(/(?:和|与|跟)([\u4e00-\u9fa5\w]+)(?:分开|不同班|不在一起)/);
-                return { _id: i, name: r['姓名'] || '未知', gender: (r['性别'] === '男' || r['Gender'] === 'M') ? 'M' : 'F', score: parseFloat(r['总分'] || r['语数英'] || 0), height: parseFloat(r['身高'] || 160), vision: parseFloat(r['视力'] || r['左眼'] || 5.0), isDiff: (String(r['难管'] || "").includes('是') || remarks.includes('难管') || remarks.includes('调皮')), remarks: remarks, constraints: { same: sameMatch ? [sameMatch[1]] : [], diff: diffMatch ? [diffMatch[1]] : [] }, classIdx: -1 };
+                return { _id: i, name: r['姓名'] || '未知', gender: fbParseGender(r['性别'] || r['Gender']), score: parseFloat(r['总分'] || r['语数英'] || 0), height: parseFloat(r['身高'] || 160), vision: parseFloat(r['视力'] || r['左眼'] || 5.0), isDiff: (String(r['难管'] || "").includes('是') || remarks.includes('难管') || remarks.includes('调皮')), remarks: remarks, constraints: { same: sameMatch ? [sameMatch[1]] : [], diff: diffMatch ? [diffMatch[1]] : [] }, classIdx: -1 };
             });
             // 手动导入 Excel → 切到 manual 模式，使 FB_runDivision 用这批学生而非覆盖为云端聚合。
             const srcSel = document.getElementById('fb_data_source');
@@ -907,6 +930,13 @@ async function FB_runDivision() {
             const avgs = classes.map(c => c.stats.avg);
             const range = Math.max(...avgs) - Math.min(...avgs);
             const sd = calculateSD(avgs);
+            // 优秀率是本模块的首要均衡指标；以主科各班优秀率极差作为方案主排序键。
+            const excellentRanges = fbMajorSubjectsForGrade()
+                .map((subject) => fbSubjectMetric(examClasses, subject).map((metric) => metric.excellent).filter(Number.isFinite))
+                .filter((values) => values.length > 1)
+                .map((values) => Math.max(...values) - Math.min(...values));
+            const excellentRange = excellentRanges.length ? Math.max(...excellentRanges) : 0;
+            const excellentRangeAvg = excellentRanges.length ? excellentRanges.reduce((sum, value) => sum + value, 0) / excellentRanges.length : 0;
 
             FB_SCHEMES_CACHE.push({
                 id: i,
@@ -915,8 +945,10 @@ async function FB_runDivision() {
                 examData: examClasses,
                 finalData: finalClasses,
                 range: range,
+                excellentRange,
+                excellentRangeAvg,
                 sd: sd,
-                desc: `均分极差 ${range.toFixed(2)}`
+                desc: `优秀率极差 ${(excellentRange * 100).toFixed(1)} 个百分点 · 均分极差 ${range.toFixed(2)}`
             });
         }
 
@@ -924,7 +956,8 @@ async function FB_runDivision() {
         FB_renderSchemeSelector();
 
         // 默认应用均分极差最小（最均衡）的方案
-        const bestScheme = [...FB_SCHEMES_CACHE].sort((a, b) => a.range - b.range)[0];
+        // 先比较主科优秀率极差，再比较均分极差；确保优秀率均衡优先。
+        const bestScheme = [...FB_SCHEMES_CACHE].sort((a, b) => (a.excellentRange - b.excellentRange) || (a.range - b.range))[0];
         FB_applyScheme(bestScheme.id);
 
         // 显示区域
@@ -965,13 +998,13 @@ function FB_appendRosterOnlyStudents(classes, k) {
         if (!picked) return;
         const isTransferIn = row.postType === '新转入';
         const isDropout = row.postType === '辍学/长期离校';
-        picked.cls.students.push({ _id: `roster-${index}`, key: `roster:${fbRosterIdentity(row)}`, name: row.name, id: row.id, gender: row.gender || 'F', score: 0, subjAvg: {}, examsGot: 0, examsTotal: 0, height: 160, vision: 5, isNoExam: true, postType: isTransferIn ? 'transfer-in' : isDropout ? 'dropout' : 'roster-no-exam', isNotEnrolled: false, isDiff: false, isViolation: false, remarks: isTransferIn ? '新转入学生，后置均衡分配' : isDropout ? '辍学/长期离校，按要求后置均衡分配' : '学籍在册，本次未参加考试', constraints: { same: [], diff: [] }, classIdx: picked.classIdx });
+        picked.cls.students.push({ _id: `roster-${index}`, key: `roster:${fbRosterIdentity(row)}`, name: row.name, id: row.id, gender: row.gender || 'U', score: 0, subjAvg: {}, examsGot: 0, examsTotal: 0, height: 160, vision: 5, isNoExam: true, postType: isTransferIn ? 'transfer-in' : isDropout ? 'dropout' : 'roster-no-exam', isNotEnrolled: false, isDiff: false, isViolation: false, remarks: isTransferIn ? '新转入学生，后置均衡分配' : isDropout ? '辍学/长期离校，按要求后置均衡分配' : '学籍在册，本次未参加考试', constraints: { same: [], diff: [] }, classIdx: picked.classIdx });
     });
     classes.forEach(c => { c.stats = fbCalcClassStats(c.students); });
 }
 
 // 2. 核心算法：生成单次方案 (提取出来的纯逻辑)
-function FB_generateSingleScheme(k, algo) {
+    function FB_generateSingleScheme(k, algo) {
     // 供 cost 函数读取的班数 + 分段阈值（档次分布均衡用）。
     window.__FB_K = k;
     FB_computeTiers();
@@ -990,6 +1023,10 @@ function FB_generateSingleScheme(k, algo) {
         idealLow: tierCounts.low / k,
         classCount: k,
         targetSize: FB_STUDENTS.length / k,
+        targetMaleRatio: (() => {
+            const known = FB_STUDENTS.filter(s => s.gender === 'M' || s.gender === 'F');
+            return known.length ? known.filter(s => s.gender === 'M').length / known.length : 0.5;
+        })(),
         subjectTarget: FB_SUBJ_TARGET
     };
     // 初始化空班级
@@ -1096,8 +1133,8 @@ function FB_generateSingleScheme(k, algo) {
 function FB_renderSchemeSelector() {
     const container = document.getElementById('fb-scheme-cards');
     if (!container) return;
-    const bestRange = FB_SCHEMES_CACHE.length ? Math.min(...FB_SCHEMES_CACHE.map(s => s.range)) : Infinity;
-    const signature = FB_SCHEMES_CACHE.map(scheme => `${scheme.id}:${scheme.range.toFixed(3)}:${scheme.sd.toFixed(3)}:${fbClassSignature(scheme.data)}`).join('|');
+    const bestExcellentRange = FB_SCHEMES_CACHE.length ? Math.min(...FB_SCHEMES_CACHE.map(s => s.excellentRange ?? Infinity)) : Infinity;
+    const signature = FB_SCHEMES_CACHE.map(scheme => `${scheme.id}:${(scheme.excellentRange ?? 0).toFixed(3)}:${scheme.range.toFixed(3)}:${scheme.sd.toFixed(3)}:${fbClassSignature(scheme.data)}`).join('|');
     if (FreshmanExamPerfCache.schemeSelectorSignature === signature) {
         if (container.dataset.freshmanSchemeSig !== signature) {
             container.innerHTML = FreshmanExamPerfCache.schemeSelectorHtml;
@@ -1108,7 +1145,7 @@ function FB_renderSchemeSelector() {
 
     const html = FB_SCHEMES_CACHE.map(scheme => {
         // 简单的评分逻辑
-        const isBest = scheme.range <= bestRange;
+        const isBest = (scheme.excellentRange ?? Infinity) <= bestExcellentRange;
         const borderStyle = isBest ? 'border:2px solid #16a34a; background:#fff;' : 'border:1px solid #ddd; background:#fff;';
 
         // 找出该方案中男女比例极差
@@ -1122,7 +1159,8 @@ function FB_renderSchemeSelector() {
                         ${isBest ? '<span style="color:red; font-size:10px;">★ 推荐</span>' : ''}
                     </div>
                     <div style="font-size:12px; color:#666; margin-top:5px;">
-                        <div>均分极差: <strong>${scheme.range.toFixed(2)}</strong></div>
+                        <div>主科优秀率极差: <strong>${((scheme.excellentRange ?? 0) * 100).toFixed(1)} 个百分点</strong></div>
+                        <div>均分极差: ${scheme.range.toFixed(2)}</div>
                         <div>男女极差: ${maleRange} 人</div>
                     </div>
                 </div>
@@ -1232,12 +1270,15 @@ function FB_calcClassCost(cls, gAvg) {
     const n = cls.students.length; if (n === 0) return 10000;
     const avg = cls.students.reduce((a, b) => a + b.score, 0) / n;
     const male = cls.students.filter(s => s.gender === 'M').length;
+    const knownGender = cls.students.filter(s => s.gender === 'M' || s.gender === 'F').length;
     // 违纪生（分班装配里 isViolation，兼容旧的 isDiff/_isDiff 备注难管）。
     const viol = cls.students.filter(s => (s.isViolation || s.isDiff || s._isDiff)).length;
     const notEnrolled = cls.students.filter(s => s.isNotEnrolled).length;
 
     let cost = Math.pow(avg - gAvg, 2) * 100;         // 均分均衡
-    cost += Math.pow((male / n) - 0.5, 2) * 5000;      // 男女均衡
+    const targetMaleRatio = FB_COST_CONTEXT?.targetMaleRatio ?? 0.5;
+    const classMaleRatio = knownGender ? male / knownGender : targetMaleRatio;
+    cost += Math.pow(classMaleRatio - targetMaleRatio, 2) * 5000; // 已知性别男女均衡，未知不计入女生
     const classCount = FB_COST_CONTEXT?.classCount || ((typeof window.__FB_K === 'number' && window.__FB_K > 0) ? window.__FB_K : 1);
     const targetSize = FB_COST_CONTEXT?.targetSize ?? (FB_STUDENTS.length / classCount);
     cost += Math.pow(n - targetSize, 2) * 260;          // 班额均衡：指定学生较多的班由其余学生自动让位
@@ -1287,10 +1328,11 @@ function FB_calcClassCost(cls, gAvg) {
             const cAvg = vals.reduce((a, b) => a + b, 0) / vals.length;
             const cExc = vals.filter(v => v >= FB_MAIN_EXC_LINE).length / vals.length;
             const cPass = vals.filter(v => v >= FB_MAIN_PASS_LINE).length / vals.length;
-            // 均分偏差（分单位）权重较小；优秀/及格率偏差（0~1）放大后惩罚。
-            cost += Math.pow(cAvg - tgt.avg, 2) * 40;
-            cost += Math.pow(cExc - tgt.exc, 2) * 4000;
-            cost += Math.pow(cPass - tgt.pass, 2) * 4000;
+            // 优秀率是本模块首要均衡目标；均分、及格率作为次级约束。
+            // 比例偏差按 0~1 计算，权重保持可解释且不改变优秀线/及格线口径。
+            cost += Math.pow(cExc - tgt.exc, 2) * 12000;
+            cost += Math.pow(cPass - tgt.pass, 2) * 2500;
+            cost += Math.pow(cAvg - tgt.avg, 2) * 20;
         });
     }
     return cost;
@@ -2380,7 +2422,7 @@ function FB_exportResultWithBalance() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.examData || FB_CLASSES)), '考试名单两率一分');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.finalData || FB_CLASSES)), '最终名单两率一分');
     const roster = [['阶段', '班级', '姓名', '性别', '总分', '是否后置分配', '备注']];
-    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => roster.push(['最终名单', cls.name, s.name, s.gender === 'M' ? '男' : '女', Number.isFinite(Number(s.score)) ? s.score : '', s.isNoExam ? '是' : '否', s.remarks || ''])));
+    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) ? s.score : '', s.isNoExam ? '是' : '否', s.remarks || ''])));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(roster), '最终分班名单');
     XLSX.writeFile(wb, '新生分班方案及两率一分.xlsx');
 }
