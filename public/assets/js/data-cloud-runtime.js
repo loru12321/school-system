@@ -261,7 +261,6 @@
     async function fetchCloudBackupMetadata(selectSystemDataRecords, listQueryOptions, filterCurrent, filterSnapshotsOnly, force) {
         const select = 'key, created_at, updated_at, size_bytes';
         const baseOptions = { ...listQueryOptions };
-        delete baseOptions.keyIn;
         const queries = [
             { kind: 'exam' },
             { kind: 'workspace' },

@@ -158,6 +158,7 @@ assert.ok(
 );
 assert.ok(dataCloudRuntime.includes('function getCloudBackupListQueryOptions(filterCurrent)'), 'cloud backup list should build bounded query options');
 assert.ok(dataCloudRuntime.includes('options.keyIn = Array.from(keys);'), 'cloud backup list should query exact current workspace keys');
+assert.ok(!dataCloudRuntime.includes('delete baseOptions.keyIn;'), 'cloud backup metadata queries should preserve exact current-workspace key filters');
 assert.ok(!dataCloudRuntime.includes('options.keyLike = `%${cohortId}%`;'), 'current cloud backup list should not use wildcard cohort scans');
 assert.ok(dataCloudRuntime.includes('limit: filterCurrent ? 800 : 500'), 'cloud backup list should cap metadata list reads');
 assert.ok(dataCloudRuntime.includes('const MAX_CLOUD_BACKUP_RENDER_ROWS = 80'), 'cloud backup list should cap rows rendered into the DOM');
