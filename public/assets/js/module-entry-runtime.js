@@ -821,18 +821,10 @@
             } else if (typeof window.renderStudentOverview === 'function') {
                 window.renderStudentOverview();
             }
-            // These selectors all read the same cohort/school snapshot. Batch them
-            // into one idle task so activating student overview does not enqueue
-            // five separate idle callbacks (and five independent layout passes).
-            scheduleActiveModuleTask('student-overview', 'student-overview-deferred-selects', () => {
-                [
-                    () => { if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects(); },
-                    () => { if (typeof updateMarginalSchoolSelect === 'function') updateMarginalSchoolSelect(); },
-                    () => { if (typeof updateSubjectBalanceSelects === 'function') updateSubjectBalanceSelects(); },
-                    () => { if (typeof updatePotentialSchoolSelect === 'function') updatePotentialSchoolSelect(); },
-                    () => { if (typeof updateSegmentSelects === 'function') updateSegmentSelects(); }
-                ].forEach((task) => task());
-            }, { delay: 120, idle: true, timeout: 1200 });
+            // Hidden diagnosis/report selectors are initialized by their own
+            // module-entry handlers. Avoid refreshing all five off-screen controls
+            // when the student overview is opened; this removes unrelated layout
+            // work from the mobile first-paint path without changing module output.
         };
 
         const loadRuntime = () => {
