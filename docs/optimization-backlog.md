@@ -89,3 +89,4 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 | 2026-08-28 | P1 | 学情总览入口移除与总览无关的成绩单班级下拉框刷新，保留学生范围、对比期次初始化与总览渲染；减少移动端首次进入的无效 DOM 工作，不改任何计算口径 | `npm run validate`, `npm run smoke:modules:local` |
 | 2026-08-28 | P1 | 学科均衡、分数段分析、偏科潜力三个移动端高频模块的提示统一接入 `UI.alert`，保留无 UI 运行时的安全兜底；避免原生阻塞弹窗造成手机点击无响应，不改分析与导出逻辑 | `npm run validate`, `npm run check:release-fast`, `npm run smoke:layout:local` |
 | 2026-08-28 | P1 | 学生成绩明细导出、学科关联导出提示统一接入 `UI.alert`，避免移动端导出前置错误触发原生阻塞弹窗；保留导出数据和权限逻辑 | `npm run validate`, `npm run check:release-fast`, `npm run smoke:layout:local` |
+| 2026-08-28 | P1 | 新生均衡分班增加本年级学籍名单上传、转出登记及差异确认；转出学生排除分班，学籍在册但未考试者在成绩分班完成后按人数/性别补入，考试名单无学籍者标记并增加分散惩罚，未确认差异不得生成方案 | `npm run build`, `npm run check:release-fast` |
