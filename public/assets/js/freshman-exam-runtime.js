@@ -345,6 +345,30 @@ function FB_addTransferStudent() {
 }
 function FB_removeTransferStudent(index) { FB_TRANSFER_STUDENTS.splice(Number(index), 1); FB_renderRosterStatus(); }
 function FB_clearTransfers() { FB_TRANSFER_STUDENTS = []; FB_renderRosterStatus(); }
+function fbReadRosterUpload(input, label, onRows) {
+    const file = input.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]).map(fbRosterRow).filter(Boolean);
+            onRows(rows);
+            FB_renderRosterStatus();
+            window.UI.alert(`✅ ${label}导入 ${rows.length} 人。`, 'success');
+        } catch (err) { window.UI.alert(`${label}读取失败：` + err.message, 'error'); }
+    };
+    reader.readAsArrayBuffer(file);
+}
+function FB_loadTransferList(input) {
+    fbReadRosterUpload(input, '转出学生名单', (rows) => {
+        rows.forEach(row => { if (!FB_TRANSFER_STUDENTS.some(s => (row.id && s.id && row.id === s.id) || s.name === row.name)) FB_TRANSFER_STUDENTS.push(row); });
+    });
+}
+function FB_loadTransferInList(input) {
+    fbReadRosterUpload(input, '转入学生名单', (rows) => {
+        rows.forEach(row => { if (!FB_TRANSFER_IN_STUDENTS.some(s => (row.id && s.id && row.id === s.id) || (s.name === row.name && (!row.gender || !s.gender || row.gender === s.gender)))) FB_TRANSFER_IN_STUDENTS.push(row); });
+    });
+}
 function FB_addDropoutStudent() {
     const name = fbNormalizeName(document.getElementById('fb_dropout_name')?.value);
     const gender = String(document.getElementById('fb_dropout_gender')?.value || '');
@@ -2736,6 +2760,8 @@ function EXAM_exportResult() {
     if (typeof FB_loadGenderList === 'function') window.FB_loadGenderList = FB_loadGenderList;
     if (typeof FB_loadViolationList === 'function') window.FB_loadViolationList = FB_loadViolationList;
     if (typeof FB_loadDropoutList === 'function') window.FB_loadDropoutList = FB_loadDropoutList;
+    if (typeof FB_loadTransferList === 'function') window.FB_loadTransferList = FB_loadTransferList;
+    if (typeof FB_loadTransferInList === 'function') window.FB_loadTransferInList = FB_loadTransferInList;
     if (typeof FB_assembleFromCloud === 'function') window.FB_assembleFromCloud = FB_assembleFromCloud;
     if (typeof FB_updateAssemblyStatus === 'function') window.FB_updateAssemblyStatus = FB_updateAssemblyStatus;
     if (typeof FB_refreshFixedAssignmentUI === 'function') window.FB_refreshFixedAssignmentUI = FB_refreshFixedAssignmentUI;

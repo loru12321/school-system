@@ -74,6 +74,10 @@ assert.ok(freshman.includes('function fbIsTransferred(row)'), 'transfer roster m
 assert.ok(freshman.includes("student.name === row.name"), 'transfer exclusion should fall back to name regardless of gender entry');
 assert.ok(freshman.includes('nameExamRows'), 'duplicate detection should track names per exam to avoid cross-exam false positives');
 assert.ok(freshman.includes('record.count > 1'), 'duplicate detection should only warn for repeated names within one exam');
+assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
+assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
+assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');
+assert.ok(freshman.includes('function FB_loadTransferInList'), 'freshman runtime should parse transfer-in roster uploads');
 assert.ok(freshman.includes('fbIsTransferred(rosterRow)'), 'transfer decisions should be excluded from exam aggregation');
 assert.ok(freshmanInsight.includes('window.FB_preflight = preflight'), 'freshman insight should expose the review action');
 assert.ok(freshmanInsight.includes('分班条件检查通过'), 'freshman insight should give an actionable result');
