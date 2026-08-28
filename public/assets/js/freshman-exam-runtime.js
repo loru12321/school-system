@@ -1449,6 +1449,20 @@ function FB_renderDashboard() {
     FB_renderBalanceChart();
 }
 
+// 清理旧版本遗留的异常分班结果，避免页面打开后继续显示“269 人/班”等错误缓存。
+function FB_sanitizePersistedClasses() {
+    const k = Math.max(1, Number(document.getElementById('fb_cls_num')?.value) || 6);
+    const counts = (Array.isArray(FB_CLASSES) ? FB_CLASSES : []).map(c => Array.isArray(c?.students) ? c.students.length : 0);
+    const total = counts.reduce((sum, count) => sum + count, 0);
+    if (!counts.length || (!counts.some(count => count > 60) && total <= k * 60)) return false;
+    writeFbClasses([]);
+    FB_SCHEMES_CACHE = [];
+    FB_ACTIVE_SCHEME_ID = null;
+    document.getElementById('fb-results-area')?.classList.add('hidden');
+    window.UI?.toast?.(`已清除旧版异常分班缓存（${total} 人），请重新载入本校数据后生成。`, 'warning');
+    return true;
+}
+
 // 主科（语数英）每班均衡诊断表：均分 / 优秀率 / 及格率，供人工核对是否坐到接近。
 function fbBuildSubjectBalanceTable(labels) {
     // 仅当聚合了主科数据时展示。
@@ -2969,6 +2983,8 @@ function EXAM_exportResult() {
     if (typeof FB_initScenarioSelect === 'function') window.FB_initScenarioSelect = FB_initScenarioSelect;
     if (typeof FB_saveScenario === 'function') window.FB_saveScenario = FB_saveScenario;
     if (typeof FB_loadScenario === 'function') window.FB_loadScenario = FB_loadScenario;
+    // 模块首次加载时即清理超出单班 60 人的旧缓存。
+    if (typeof FB_sanitizePersistedClasses === 'function') FB_sanitizePersistedClasses();
     if (typeof FB_deleteScenario === 'function') window.FB_deleteScenario = FB_deleteScenario;
     if (typeof EXAM_loadData === 'function') window.EXAM_loadData = EXAM_loadData;
     if (typeof EXAM_generate === 'function') window.EXAM_generate = EXAM_generate;
