@@ -319,6 +319,9 @@ function fbFindRosterMatch(row, candidates) {
     return candidates.find(item => row.id && item.id && row.id === item.id)
         || candidates.find(item => item.name === row.name && (!row.gender || !item.gender || row.gender === item.gender));
 }
+function fbIsTransferred(row) {
+    return !!row && FB_TRANSFER_STUDENTS.some(student => (row.id && student.id && row.id === student.id) || (row.name && student.name === row.name));
+}
 function FB_renderRosterStatus() {
     const status = document.getElementById('fb_roster_status');
     if (status) status.innerHTML = FB_ROSTER_ROWS.length
@@ -408,7 +411,7 @@ async function FB_reconcileRoster(exams) {
     const examOnly = examRows.filter(row => !fbFindRosterMatch(row, FB_ROSTER_ROWS));
     const autoTransferred = rosterOnly.filter(row => fbFindRosterMatch(row, FB_TRANSFER_STUDENTS));
     const unresolved = [
-        ...rosterOnly.filter(row => !fbFindRosterMatch(row, FB_TRANSFER_STUDENTS) && !fbIsDropout(row)).map(row => ({ side: '学籍名单有、考试名单无', row })),
+        ...rosterOnly.filter(row => !fbIsTransferred(row) && !fbIsDropout(row)).map(row => ({ side: '学籍名单有、考试名单无', row })),
         ...examOnly.map(row => ({ side: '考试名单有、学籍名单无', row }))
     ];
     if (!unresolved.length) { FB_ROSTER_RECONCILIATION = { rosterCount: FB_ROSTER_ROWS.length, examCount: examRows.length, autoTransferred, decisions: [], examOnly }; FB_UNEXAM_ROSTER_STUDENTS = []; return true; }
@@ -461,7 +464,7 @@ async function FB_assembleFromCloud(options = {}) {
         const w = weights[ei] || 0;
         ex.data.forEach((row) => {
             const rosterRow = fbRosterRow(row);
-            if (rosterRow && (fbIsDropout(rosterRow) || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || FB_TRANSFER_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])))) return;
+            if (rosterRow && (fbIsDropout(rosterRow) || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || fbIsTransferred(rosterRow))) return;
             const key = fbStudentKey(row);
             const nm = fbNormalizeName(row.name);
             if (nm) {

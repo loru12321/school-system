@@ -70,7 +70,9 @@ assert.ok(freshman.includes('辍学/长期离校（不参与分班）'), 'roster
 assert.ok(indexHtml.includes('data-fb-pick="fbDropoutInput"'), 'freshman UI should provide a dropout roster upload');
 assert.ok(freshman.includes('function FB_loadDropoutList'), 'freshman runtime should parse dropout roster uploads');
 assert.ok(freshman.includes('fbIsDropout(rosterRow)'), 'dropout roster matches should be diverted before exam aggregation');
-assert.ok(freshman.includes('FB_TRANSFER_STUDENTS.some(student => fbFindRosterMatch'), 'transfer decisions should be excluded from exam aggregation');
+assert.ok(freshman.includes('function fbIsTransferred(row)'), 'transfer roster matching should have a dedicated exclusion helper');
+assert.ok(freshman.includes("student.name === row.name"), 'transfer exclusion should fall back to name regardless of gender entry');
+assert.ok(freshman.includes('fbIsTransferred(rosterRow)'), 'transfer decisions should be excluded from exam aggregation');
 assert.ok(freshmanInsight.includes('window.FB_preflight = preflight'), 'freshman insight should expose the review action');
 assert.ok(freshmanInsight.includes('分班条件检查通过'), 'freshman insight should give an actionable result');
 assert.ok(freshmanInsight.includes('[data-fb-insight-action]'), 'freshman review action should use a scoped declarative binding');
