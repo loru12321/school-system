@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-8f6f9082198a';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-9ab45710c567';
 
 var COHORT_DB = window.COHORT_DB || null;
 var CURRENT_COHORT_ID = String(window.CURRENT_COHORT_ID || window.localStorage?.getItem('CURRENT_COHORT_ID') || '').trim();
@@ -188,6 +188,7 @@ var APP_MODULES = [
 'auth-state-runtime.js',
 'login-entry-runtime.js',
 'workspace-state-runtime.js',
+'teaching-workbench-cohort-runtime.js',
 'exam-state-runtime.js',
 'school-state-runtime.js',
 'teacher-state-runtime.js',
