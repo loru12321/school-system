@@ -1985,36 +1985,11 @@ function applyProgressFilter() {
     const threshold = thresholdEl ? parseInt(thresholdEl.value || '20', 10) : 20;
     const sortMode = sortEl ? sortEl.value : 'improve_desc';
     const quickMode = getProgressQuickFilterMode();
-
-    let list = readProgressCacheFullState().slice();
-    if (quickMode === 'my_class') {
-        const myClass = getProgressQuickFilterClass();
-        if (myClass) list = list.filter(item => isClassEquivalent(item.class, myClass));
-    } else if (quickMode === 'focus') {
-        list = list.filter(item => Math.abs(item.change) >= threshold);
-    }
-    if (type === 'up') list = list.filter(item => item.change > 0);
-    if (type === 'down') list = list.filter(item => item.change < 0);
-    list.sort((a, b) => {
-        switch (sortMode) {
-            case 'regress_desc':
-                if (a.change !== b.change) return a.change - b.change;
-                return a.currRank - b.currRank;
-            case 'current_rank_asc':
-                if (a.currRank !== b.currRank) return a.currRank - b.currRank;
-                return b.change - a.change;
-            case 'class_name_asc': {
-                const classDiff = String(a.class || '').localeCompare(String(b.class || ''), 'zh-CN', { numeric: true });
-                if (classDiff !== 0) return classDiff;
-                return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { numeric: true });
-            }
-            case 'improve_desc':
-            default:
-                if (a.change !== b.change) return b.change - a.change;
-                return a.currRank - b.currRank;
-        }
-    });
-
+    const source=readProgressCacheFullState();
+    const myClass=quickMode==='my_class'?getProgressQuickFilterClass():'';
+    const filterSignature=`${quickMode}|${type}|${threshold}|${sortMode}|${myClass}`;
+    const list=window.ProgressFilterCache?.apply(source,{quickMode,type,threshold,sortMode,myClass,signature:filterSignature});
+    if (!list) return;
     syncLocalProgressState({ progressCache: list });
     syncProgressQuickFilterButtons();
     updateProgressFilterSummary({ mode: quickMode, type, threshold, sortMode });

@@ -28,6 +28,7 @@ const overview = read(overviewFile);
 const subjectBalance = read('public/assets/js/subject-balance-runtime.js');
 const freshman = read(freshmanFile);
 const progress = read(progressFile);
+const progressFilterCache = read('public/assets/js/progress-filter-cache-runtime.js');
 const cohortGrowth = read(cohortGrowthFile);
 const compareShared = read(compareSharedFile);
 const comparisonRender = read(comparisonRenderFile);
@@ -104,11 +105,16 @@ assertContains(app, 'window.readPotentialStudentsCache = readPotentialStudentsCa
 [
     'ProgressBaselineExamPerfCache',
     'ProgressCompareSelectPerfCache',
+    'filterSignature',
+    'window.ProgressFilterCache?.apply',
     'window.ProgressMultiPeriodCache.get',
     'ProgressBaselineExamPerfCache.signature === signature',
     'ProgressCompareSelectPerfCache.examOptionsHtml',
     'ProgressCompareSelectPerfCache.schoolOptionsHtml'
 ].forEach((token) => assertContains(progress, token, progressFile));
+
+['window.ProgressFilterCache = { apply }', 'source === nextSource && signature === nextSignature']
+    .forEach((token) => assertContains(progressFilterCache, token, 'public/assets/js/progress-filter-cache-runtime.js'));
 
 [
     'cacheSignature',

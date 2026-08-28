@@ -99,6 +99,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('macro-analysis-compat', bootJs('macro-analysis-compat-runtime.js'))
 ]),
 'progress-analysis': bootSkill('demand', 'full', ['progress-analysis'], [
+    bootEntry('progress-filter-cache', bootJs('progress-filter-cache-runtime.js')),
     bootEntry('progress-analysis', bootJs('progress-analysis-runtime.js'))
 ]),
 'data-manager-sql': bootSkill('demand', 'full', ['data-manager-sql', 'talkToData'], [
