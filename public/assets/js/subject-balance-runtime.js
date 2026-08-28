@@ -33,6 +33,7 @@
     let SB_GRADE_STATS_SIGNATURE = '';
     let SB_GRADE_STATS_CACHE = null;
     let SB_RENDER_CACHE = null;
+    let SB_SELECT_OPTIONS_CACHE = { schoolSignature: '', classSignature: '', classSchool: '' };
 
     function getGradeStatsSignature() {
         const rows = getRawData();
@@ -56,7 +57,12 @@
         const schoolList = (typeof root.listAvailableSchoolsForCompare === 'function')
             ? root.listAvailableSchoolsForCompare('all')
             : Object.keys(root.SCHOOLS || {});
-        schSel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}`;
+        const schoolOptionsHtml = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}`;
+        const schoolSignature = schoolList.join('|');
+        if (SB_SELECT_OPTIONS_CACHE.schoolSignature !== schoolSignature) {
+            schSel.innerHTML = schoolOptionsHtml;
+            SB_SELECT_OPTIONS_CACHE.schoolSignature = schoolSignature;
+        }
         const currentSchool = typeof root.readCurrentSchool === 'function' ? root.readCurrentSchool() : '';
         const matched = Array.from(schSel.options || []).find(option =>
             (typeof root.sameAppSchoolName === 'function' ? root.sameAppSchoolName(option.value, currentSchool) : option.value === currentSchool));
@@ -65,7 +71,14 @@
         schSel.onchange = () => {
             const schoolRecord = getSchoolRecord(schSel.value);
             const classes = schoolRecord ? [...new Set((schoolRecord.students || []).map(s => s.class))].sort() : [];
-            clsSel.innerHTML = `<option value="">全部</option>${classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}`;
+            const classOptionsHtml = `<option value="">全部</option>${classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}`;
+            const classSignature = `${schSel.value}::${classes.join('|')}`;
+            if (SB_SELECT_OPTIONS_CACHE.classSignature !== classSignature
+                || SB_SELECT_OPTIONS_CACHE.classSchool !== schSel.value) {
+                clsSel.innerHTML = classOptionsHtml;
+                SB_SELECT_OPTIONS_CACHE.classSignature = classSignature;
+                SB_SELECT_OPTIONS_CACHE.classSchool = schSel.value;
+            }
         };
         schSel.onchange();
     }
