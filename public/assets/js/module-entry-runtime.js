@@ -821,20 +821,18 @@
             } else if (typeof window.renderStudentOverview === 'function') {
                 window.renderStudentOverview();
             }
-            const deferredSelectorUpdates = [
-                () => { if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects(); },
-                () => { if (typeof updateMarginalSchoolSelect === 'function') updateMarginalSchoolSelect(); },
-                () => { if (typeof updateSubjectBalanceSelects === 'function') updateSubjectBalanceSelects(); },
-                () => { if (typeof updatePotentialSchoolSelect === 'function') updatePotentialSchoolSelect(); },
-                () => { if (typeof updateSegmentSelects === 'function') updateSegmentSelects(); }
-            ];
-            deferredSelectorUpdates.forEach((task, index) => {
-                scheduleActiveModuleTask('student-overview', `student-overview-deferred-select:${index}`, task, {
-                    delay: 120 + index * 80,
-                    idle: true,
-                    timeout: 1200
-                });
-            });
+            // These selectors all read the same cohort/school snapshot. Batch them
+            // into one idle task so activating student overview does not enqueue
+            // five separate idle callbacks (and five independent layout passes).
+            scheduleActiveModuleTask('student-overview', 'student-overview-deferred-selects', () => {
+                [
+                    () => { if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects(); },
+                    () => { if (typeof updateMarginalSchoolSelect === 'function') updateMarginalSchoolSelect(); },
+                    () => { if (typeof updateSubjectBalanceSelects === 'function') updateSubjectBalanceSelects(); },
+                    () => { if (typeof updatePotentialSchoolSelect === 'function') updatePotentialSchoolSelect(); },
+                    () => { if (typeof updateSegmentSelects === 'function') updateSegmentSelects(); }
+                ].forEach((task) => task());
+            }, { delay: 120, idle: true, timeout: 1200 });
         };
 
         const loadRuntime = () => {

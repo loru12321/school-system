@@ -1146,7 +1146,7 @@ assert.ok(studentOverviewRuntime.includes('function smScheduleStudentOverviewRen
 assert.ok(studentOverviewEntrySource.includes("window.SystemRuntimeLoader.load('student-overview')"), 'student overview entry should load only the student overview runtime');
 assert.ok(!studentOverviewEntrySource.includes("window.SystemRuntimeLoader.load('teaching-management')"), 'student overview entry should not load the teaching-management bundle');
 assert.ok(moduleEntryRuntime.includes('student-overview-deferred-select'), 'student overview should defer cross-module selector refreshes off the switch frame');
-assert.ok(moduleEntryRuntime.includes('const deferredSelectorUpdates = ['), 'student overview should batch non-critical selector refreshes');
+assert.ok(moduleEntryRuntime.includes("'student-overview-deferred-selects'"), 'student overview should batch non-critical selector refreshes');
 assert.ok(!studentOverviewEntrySource.includes('updateCorrelationSchoolSelect'), 'student overview should not refresh hidden correlation-analysis selectors on entry');
 assert.ok(moduleEntryRuntime.includes('ensureTeacherCorrelationRuntimeLoaded'), 'correlation-analysis entry should load only the correlation runtime');
 assert.ok(moduleEntryRuntime.includes("return Promise.reject(new Error('student overview runtime loader unavailable'))"), 'student overview entry should explicitly wait for its runtime loader before first render');
