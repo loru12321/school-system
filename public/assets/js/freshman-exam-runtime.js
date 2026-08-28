@@ -293,6 +293,7 @@ let FB_VIOLATION_SET = {};   // key -> true
 let FB_GENDER_NAMES = [];    // 原始姓名（用于重名检测展示）
 let FB_VIOLATION_NAMES = [];
 let FB_LAST_ASSEMBLY = null; // { targetGrade, examCount, dupGroups, matched, ... } 供结果页横幅用
+let FB_COST_CONTEXT = null;
 
 // 聚合最近 N 次云端成绩 → FB_STUDENTS（含分班分 + 性别 + 违纪 + 重名检测）。
 // weights: 最近→次近→再次 的权重（默认最近2次 6:4）。
@@ -638,6 +639,23 @@ function FB_generateSingleScheme(k, algo) {
     // 供 cost 函数读取的班数 + 分段阈值（档次分布均衡用）。
     window.__FB_K = k;
     FB_computeTiers();
+    const tierCounts = { high: 0, low: 0 };
+    FB_STUDENTS.forEach((student) => {
+        const tier = fbTierOf(student.score);
+        if (tier === 'high') tierCounts.high += 1;
+        if (tier === 'low') tierCounts.low += 1;
+    });
+    FB_COST_CONTEXT = {
+        diffRule: document.getElementById('fb_rule_diff')?.value || 'spread',
+        tierRule: document.getElementById('fb_rule_tier')?.value || 'on',
+        rankRule: document.getElementById('fb_rule_rank')?.value || 'on',
+        subjRule: document.getElementById('fb_rule_subject')?.value || 'on',
+        idealHigh: tierCounts.high / k,
+        idealLow: tierCounts.low / k,
+        classCount: k,
+        targetSize: FB_STUDENTS.length / k,
+        subjectTarget: FB_SUBJ_TARGET
+    };
     // 初始化空班级
     let classes = Array.from({ length: k }, (_, i) => ({ id: i, name: (i + 1) + "班", students: [], stats: {} }));
     let pool = JSON.parse(JSON.stringify(FB_STUDENTS)); // 深拷贝，防止污染
@@ -847,22 +865,22 @@ function FB_calcClassCost(cls, gAvg) {
 
     let cost = Math.pow(avg - gAvg, 2) * 100;         // 均分均衡
     cost += Math.pow((male / n) - 0.5, 2) * 5000;      // 男女均衡
-    const classCount = (typeof window.__FB_K === 'number' && window.__FB_K > 0) ? window.__FB_K : 1;
-    const targetSize = FB_STUDENTS.length / classCount;
+    const classCount = FB_COST_CONTEXT?.classCount || ((typeof window.__FB_K === 'number' && window.__FB_K > 0) ? window.__FB_K : 1);
+    const targetSize = FB_COST_CONTEXT?.targetSize ?? (FB_STUDENTS.length / classCount);
     cost += Math.pow(n - targetSize, 2) * 260;          // 班额均衡：指定学生较多的班由其余学生自动让位
 
     // 违纪「分散 + 均衡」：软惩罚。同班违纪越多惩罚越重（二次），鼓励打散；
     // 目标不是绝对不同班，而是每班违纪数尽量少且接近。
-    const diffRule = document.getElementById('fb_rule_diff')?.value || 'spread';
+    const diffRule = FB_COST_CONTEXT?.diffRule || document.getElementById('fb_rule_diff')?.value || 'spread';
     if (diffRule === 'spread') { cost += Math.pow(viol, 2) * 600; }
     else if (diffRule === 'gather') { cost -= viol * 100; } // 集中管理：轻微鼓励聚集
 
     // 档次分布均衡：每班高/中/低段人数接近理想值（总数/班数）。可选开关。
-    const tierRule = document.getElementById('fb_rule_tier')?.value || 'on';
+    const tierRule = FB_COST_CONTEXT?.tierRule || document.getElementById('fb_rule_tier')?.value || 'on';
     if (tierRule === 'on' && FB_TIER && FB_STUDENTS.length) {
         const k = (typeof window.__FB_K === 'number' && window.__FB_K > 0) ? window.__FB_K : 1;
-        const idealHigh = FB_STUDENTS.filter(s => fbTierOf(s.score) === 'high').length / k;
-        const idealLow = FB_STUDENTS.filter(s => fbTierOf(s.score) === 'low').length / k;
+        const idealHigh = FB_COST_CONTEXT?.idealHigh ?? (FB_STUDENTS.filter(s => fbTierOf(s.score) === 'high').length / k);
+        const idealLow = FB_COST_CONTEXT?.idealLow ?? (FB_STUDENTS.filter(s => fbTierOf(s.score) === 'low').length / k);
         const hi = cls.students.filter(s => fbTierOf(s.score) === 'high').length;
         const lo = cls.students.filter(s => fbTierOf(s.score) === 'low').length;
         cost += (Math.pow(hi - idealHigh, 2) + Math.pow(lo - idealLow, 2)) * 300;
@@ -870,7 +888,7 @@ function FB_calcClassCost(cls, gAvg) {
 
     // 名次蛇形铺开保护：每班理想是每个「名次区块」各占 1 人（1..k 名分到 k 个班、
     // k+1..2k 名再各占一个班…）。同班出现同区块的多名学生 → 惩罚，保证 1..k 名散到不同班。
-    const rankRule = document.getElementById('fb_rule_rank')?.value || 'on';
+    const rankRule = FB_COST_CONTEXT?.rankRule || document.getElementById('fb_rule_rank')?.value || 'on';
     if (rankRule === 'on') {
         const blockCount = {};
         cls.students.forEach((s) => {
@@ -883,10 +901,11 @@ function FB_calcClassCost(cls, gAvg) {
 
     // 主科（语数英）每班均衡：均分 + 优秀率 + 及格率 都向全局目标靠拢。
     // 只在开启时（fb_rule_subject）且有主科目标时生效。
-    const subjRule = document.getElementById('fb_rule_subject')?.value || 'on';
-    if (subjRule === 'on' && FB_SUBJ_TARGET) {
+    const subjRule = FB_COST_CONTEXT?.subjRule || document.getElementById('fb_rule_subject')?.value || 'on';
+    const subjectTarget = FB_COST_CONTEXT?.subjectTarget || FB_SUBJ_TARGET;
+    if (subjRule === 'on' && subjectTarget) {
         FB_MAIN_SUBJECTS.forEach((sub) => {
-            const tgt = FB_SUBJ_TARGET[sub];
+            const tgt = subjectTarget[sub];
             if (!tgt) return;
             const vals = cls.students.map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
             if (!vals.length) return;
