@@ -161,6 +161,7 @@
         if (activeSelect && activeSelect.dataset.graduateResetBound !== '1') {
             activeSelect.dataset.graduateResetBound = '1';
             activeSelect.addEventListener('change', () => {
+                window.__REQUIRE_MANUAL_COHORT__ = false;
                 writeSelectedCohortTarget(activeSelect.value);
                 writeGraduateTarget('');
                 document.getElementById('login-graduate-cohort-panel')?.classList.remove('is-selected');
@@ -202,17 +203,20 @@
         const years = getRecentCohortYears();
         const defaultYear = getCurrentGrade9CohortYear();
         const storedSelection = readSelectedCohortTarget();
+        const requireManualCohort = window.__REQUIRE_MANUAL_COHORT__ === true;
         const preserveSelection = select.dataset.cohortInitialized === '1' && years.includes(select.value);
-        const currentValue = years.includes(storedSelection)
+        const currentValue = requireManualCohort ? '' : (years.includes(storedSelection)
             ? storedSelection
-            : (preserveSelection ? select.value : defaultYear);
-        const nextHtml = years.map((year) => `<option value="${year}">${year}届</option>`).join('');
+            : (preserveSelection ? select.value : defaultYear));
+        const nextHtml = ['<option value="">请选择届别</option>']
+            .concat(years.map((year) => `<option value="${year}">${year}届</option>`))
+            .join('');
         if (select.dataset.cohortYears !== years.join('|')) {
             select.innerHTML = nextHtml;
             select.dataset.cohortYears = years.join('|');
         }
         select.value = currentValue;
-        writeSelectedCohortTarget(currentValue);
+        if (currentValue) writeSelectedCohortTarget(currentValue);
         select.dataset.cohortInitialized = '1';
         group.style.display = portal === 'parent' ? 'none' : '';
         group.setAttribute('aria-hidden', portal === 'parent' ? 'true' : 'false');

@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-701961ee5737';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-afaf20fee47d';
 
 // 每次重新进入系统都要求重新验证账号、密码并选择届别。
 // 仅清除“当前登录/当前工作区身份”，不删除各届别的云端或本地业务数据。
@@ -21,6 +21,7 @@ var BOOT_ASSET_VERSION_FALLBACK = 'runtime-701961ee5737';
     window.CURRENT_COHORT_META = null;
     window.CURRENT_EXAM_ID = '';
     window.__FRESH_LOGIN_ENTRY__ = true;
+    window.__REQUIRE_MANUAL_COHORT__ = true;
 })();
 
 var COHORT_DB = window.COHORT_DB || null;
@@ -1569,6 +1570,7 @@ function bindBootGraduateCohortPanel() {
     if (activeSelect && activeSelect.dataset.graduateResetBound !== '1') {
         activeSelect.dataset.graduateResetBound = '1';
         activeSelect.addEventListener('change', () => {
+            window.__REQUIRE_MANUAL_COHORT__ = false;
             writeBootGraduateCohortTarget('');
             document.getElementById('login-graduate-cohort-panel')?.classList.remove('is-selected');
         });
@@ -1588,9 +1590,12 @@ function syncBootLoginCohortSelect(portal) {
     if (!select) return '';
     const years = getBootLoginCohortYears();
     const defaultYear = getBootCurrentGrade9CohortYear();
+    const requireManualCohort = window.__REQUIRE_MANUAL_COHORT__ === true;
     const preserveSelection = years.includes(select.value);
-    const selected = preserveSelection ? select.value : defaultYear;
-    const html = years.map((year) => `<option value="${year}">${year}届</option>`).join('');
+    const selected = requireManualCohort ? '' : (preserveSelection ? select.value : defaultYear);
+    const html = ['<option value="">请选择届别</option>']
+        .concat(years.map((year) => `<option value="${year}">${year}届</option>`))
+        .join('');
     if (select.dataset.cohortYears !== years.join('|')) {
         select.innerHTML = html;
         select.dataset.cohortYears = years.join('|');
