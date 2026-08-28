@@ -2,8 +2,7 @@
 const smCache = {
     ls: '', list: [], us: '', uc: 0,
     ms: '', marginal: { classCount: 0, total: 0 },
-    ps: '', progress: null, pts: '', potential: 0, rs: '',
-    model: null, modelInputs: null
+    ps: '', progress: null, pts: '', potential: 0, rs: ''
 };
 var SM_OVERVIEW_RENDER_FRAME = 0;
 
@@ -230,44 +229,9 @@ function smBuildOverviewModel() {
     const selectedClass = normalizeClass(context.classValue || '');
     const fullProgressRows = readProgressCacheFullState();
     const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();
-    const marginalRows = Array.isArray(window.MP_DATA_CACHE) ? window.MP_DATA_CACHE : [];
     const potentialSourceRows = typeof window.readPotentialStudentsCache === 'function'
         ? window.readPotentialStudentsCache()
         : [];
-    const modelInputs = {
-        school: context.schoolValue,
-        className: selectedClass,
-        exam1: context.exam1Value,
-        exam2: context.exam2Value,
-        period: context.periodValue,
-        focus: context.focusText,
-        rawData,
-        rawVersion: Number(window.__RAW_DATA_VERSION || 0),
-        examsKey: exams.join('|'),
-        schoolList,
-        progressRows,
-        fullProgressRows,
-        marginalRows,
-        potentialSourceRows
-    };
-    const previousInputs = smCache.modelInputs;
-    if (smCache.model && previousInputs
-        && previousInputs.school === modelInputs.school
-        && previousInputs.className === modelInputs.className
-        && previousInputs.exam1 === modelInputs.exam1
-        && previousInputs.exam2 === modelInputs.exam2
-        && previousInputs.period === modelInputs.period
-        && previousInputs.focus === modelInputs.focus
-        && previousInputs.rawData === modelInputs.rawData
-        && previousInputs.rawVersion === modelInputs.rawVersion
-        && previousInputs.examsKey === modelInputs.examsKey
-        && previousInputs.schoolList === modelInputs.schoolList
-        && previousInputs.progressRows === modelInputs.progressRows
-        && previousInputs.fullProgressRows === modelInputs.fullProgressRows
-        && previousInputs.marginalRows === modelInputs.marginalRows
-        && previousInputs.potentialSourceRows === modelInputs.potentialSourceRows) {
-        return smCache.model;
-    }
     const progressSummary = smBuildProgressSummary(progressRows, context, selectedClass);
     const marginalSummary = smBuildMarginalSummary(context, selectedClass);
     const potentialCount = smBuildPotentialCount(potentialSourceRows, context, selectedClass);
@@ -278,8 +242,7 @@ function smBuildOverviewModel() {
     const progressReady = progressSummary.progressCount > 0;
     const supportReady = marginalSummary.total > 0 || potentialCount > 0;
 
-    smCache.modelInputs = modelInputs;
-    smCache.model = {
+    return {
         context,
         exams,
         rawData,
@@ -298,7 +261,6 @@ function smBuildOverviewModel() {
         marginalRecordCount: marginalSummary.total,
         potentialCount
     };
-    return smCache.model;
 }
 
 function smBuildActionQueue(model) {
