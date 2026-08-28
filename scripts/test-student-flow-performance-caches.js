@@ -86,7 +86,9 @@ const pkg = JSON.parse(read(packageFile));
     'signatureParts',
     'smBuildPotentialCount',
     'readPotentialStudentsCache',
-    'renderSignature'
+    'renderSignature',
+    'dataset.smOverviewActionBound',
+    "if (btn.dataset.smOverviewActionBound === '1') return;"
 ].forEach((token) => assertContains(overview, token, overviewFile));
 
 [

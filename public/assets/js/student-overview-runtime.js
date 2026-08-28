@@ -612,19 +612,24 @@ function bindStudentOverviewActions() {
 
     Object.entries(topActions).forEach(([id, target]) => {
         const btn = document.getElementById(id);
-        if (!btn) return;
+        if (!btn || btn.dataset.smOverviewActionBound === '1') return;
+        btn.dataset.smOverviewActionBound = '1';
         btn.onclick = () => {
             if (!btn.disabled) smJumpToStudentModule(target);
         };
     });
 
     document.querySelectorAll('#smQuickEntry [data-target]').forEach((btn) => {
+        if (btn.dataset.smOverviewActionBound === '1') return;
+        btn.dataset.smOverviewActionBound = '1';
         btn.onclick = () => {
             if (!btn.disabled) smJumpToStudentModule(btn.dataset.target || '');
         };
     });
 
     document.querySelectorAll('#smActionQueue [data-sm-action]').forEach((btn) => {
+        if (btn.dataset.smOverviewActionBound === '1') return;
+        btn.dataset.smOverviewActionBound = '1';
         btn.onclick = () => {
             if (btn.dataset.smAction === 'open-data-manager') {
                 smOpenStudentDataManager();
