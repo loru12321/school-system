@@ -1297,10 +1297,10 @@ prioritySteps.concat(deferredSteps).forEach((step) => {
 const skill = SYSTEM_RUNTIME_SKILLS[step.label];
 if (skill && Array.isArray(skill.entries)) {
 const modules = skill.entries.map((entry) => entry.src);
+// Report runtimes are demand-loaded.
 prefetchAppModuleList(modules, `hotspot-runtime-${step.label}`);
 }
 });
-prefetchAppModuleList(SYSTEM_RUNTIME_SKILLS['freshman-exam'].entries.map((entry) => entry.src), 'hotspot-runtime-freshman-exam');
 };
 const warmStep = (step) => Promise.resolve(step.loader()).catch(() => {});
 const scheduleWarmup = (label, run) => {
