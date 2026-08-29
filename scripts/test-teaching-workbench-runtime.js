@@ -92,6 +92,8 @@ assert.ok(freshman.includes("['班级', '总人数', '男生', '女生', '有效
 assert.ok(freshman.includes('function fbResolveSubjectThreshold(subject, kind, scores)'), 'freshman two-rate metrics must resolve thresholds from the current exam before falling back to quantiles');
 assert.ok(freshman.includes("const excellentLine = fbResolveSubjectThreshold(subject, 'excellent', allValues)"), 'freshman subject metrics must use one global excellent line across classes');
 assert.ok(freshman.includes("const passLine = fbResolveSubjectThreshold(subject, 'pass', allValues)"), 'freshman subject metrics must use one global pass line across classes');
+assert.ok(freshman.includes("const excLine = fbResolveSubjectThreshold(sub, 'excellent', globalValues)"), 'freshman optimizer must use the same global excellent line as the displayed metrics');
+assert.ok(freshman.includes("const passLine = fbResolveSubjectThreshold(sub, 'pass', globalValues)"), 'freshman optimizer must use the same global pass line as the displayed metrics');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');

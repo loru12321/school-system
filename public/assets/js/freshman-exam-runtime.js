@@ -1371,8 +1371,16 @@ function FB_calcClassCost(cls, gAvg) {
             const vals = cls.students.map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
             if (!vals.length) return;
             const cAvg = vals.reduce((a, b) => a + b, 0) / vals.length;
-            const cExc = vals.filter(v => v >= FB_MAIN_EXC_LINE).length / vals.length;
-            const cPass = vals.filter(v => v >= FB_MAIN_PASS_LINE).length / vals.length;
+            // 评分与展示必须使用同一套全局划线。旧逻辑固定使用 85%/60% 满分线
+            // （如 150/127.5、90），会让算法按错误口径优化，最终展示的优秀率/及格率
+            // 与“两率一分”模块不一致。优先读取当前考试配置，缺省时再按全体分班学生分位线回退。
+            const globalValues = FB_STUDENTS
+                .map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null)
+                .filter(v => v != null);
+            const excLine = fbResolveSubjectThreshold(sub, 'excellent', globalValues);
+            const passLine = fbResolveSubjectThreshold(sub, 'pass', globalValues);
+            const cExc = vals.filter(v => v >= excLine).length / vals.length;
+            const cPass = vals.filter(v => v >= passLine).length / vals.length;
             // 优秀率是本模块首要均衡目标；均分、及格率作为次级约束。
             // 比例偏差按 0~1 计算，权重保持可解释且不改变优秀线/及格线口径。
             cost += Math.pow(cExc - tgt.exc, 2) * 12000;
