@@ -98,8 +98,11 @@ assert.ok(freshman.includes('function fbBalanceGenderCounts(classes, k)'), 'fres
 assert.ok(freshman.includes('fbBalanceGenderCounts(classes, k);'), 'freshman generation should apply the deterministic gender balancing pass');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
+assert.ok(indexHtml.includes('data-fb-pick="fbFixedClassInput"'), 'freshman UI should provide a fixed-class roster upload');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');
 assert.ok(freshman.includes('function FB_loadTransferInList'), 'freshman runtime should parse transfer-in roster uploads');
+assert.ok(freshman.includes('function FB_loadFixedClassList'), 'freshman runtime should parse fixed-class roster uploads');
+assert.ok(freshman.includes('fbFixedAssignmentCandidates'), 'fixed-class student selector should use uploaded roster candidates before cloud assembly');
 assert.ok(freshman.includes('fbIsTransferred(rosterRow)'), 'transfer decisions should be excluded from exam aggregation');
 assert.ok(freshmanInsight.includes('window.FB_preflight = preflight'), 'freshman insight should expose the review action');
 assert.ok(freshmanInsight.includes('分班条件检查通过'), 'freshman insight should give an actionable result');

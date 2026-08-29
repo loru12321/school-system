@@ -263,8 +263,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-be3404da9014.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-be3404da9014.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-cef8560d7e78.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-cef8560d7e78.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -2636,11 +2636,16 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             </div>
                             <span class="freshman-fixed-badge"><i class="ti ti-lock"></i> 锁定优先</span>
                         </div>
-                        <div class="freshman-fixed-form">
-                            <label>学生<select id="fb_fixed_student"><option value="">请先载入学生</option></select></label>
+                    <div class="freshman-fixed-form">
+                            <label>学生<select id="fb_fixed_student"><option value="">请先载入成绩、学籍或性别名单</option></select></label>
                             <label>具体班级<select id="fb_fixed_class"><option value="0">1班</option></select></label>
                             <button type="button" class="btn btn-primary" data-fb-action="add-fixed"><i class="ti ti-lock"></i> 锁定到该班</button>
                             <button type="button" class="btn btn-gray" data-fb-action="clear-fixed">清空指定</button>
+                            <div class="upload-box" style="min-width:260px; padding:10px;" data-fb-pick="fbFixedClassInput">
+                                <div style="font-weight:bold; font-size:13px;"><i class="ti ti-file-spreadsheet"></i> 上传指定班级名单</div>
+                                <div style="font-size:11px; color:#64748b;">列：姓名, 班级（或指定班级）[, 考号/学号]</div>
+                                <input type="file" id="fbFixedClassInput" accept=".xlsx,.xls,.csv" hidden data-fb-change="FB_loadFixedClassList">
+                            </div>
                         </div>
                         <div id="fb_fixed_assignment_list" class="freshman-fixed-list" aria-live="polite">
                             <div class="freshman-fixed-empty">暂未指定学生，系统将按均衡算法自动分班。</div>

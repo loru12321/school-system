@@ -134,16 +134,72 @@
         return { ...FB_FIXED_ASSIGNMENTS };
     }
 
+    // 指定班级控件在云端模式下可能早于成绩装配打开；此时仍应允许
+    // 使用已上传的学籍/转入/性别名单选择学生，待成绩装配后再按考号或姓名归一化。
+    function fbFixedAssignmentCandidates() {
+        const candidates = [];
+        const seen = new Set();
+        const add = (student) => {
+            if (!student) return;
+            const name = fbNormalizeName(student.name);
+            if (!name) return;
+            const id = fbNormalizeId(student.id || student.examNo || student.studentId);
+            const identity = id ? `id:${id}` : `name:${name}`;
+            if (seen.has(identity)) return;
+            seen.add(identity);
+            candidates.push({
+                ...student,
+                name,
+                id,
+                gender: student.gender || 'U',
+                score: Number.isFinite(Number(student.score)) ? Number(student.score) : 0,
+                _candidateOnly: !FB_STUDENTS.some(item => fbStudentIdentity(item) === identity)
+            });
+        };
+        (Array.isArray(FB_STUDENTS) ? FB_STUDENTS : []).forEach(add);
+        (Array.isArray(FB_ROSTER_ROWS) ? FB_ROSTER_ROWS : []).forEach(add);
+        (Array.isArray(FB_TRANSFER_IN_STUDENTS) ? FB_TRANSFER_IN_STUDENTS : []).forEach(add);
+        // 性别名单没有考号时也提供姓名候选，避免用户必须先点击生成方案。
+        (Array.isArray(FB_GENDER_NAMES) ? FB_GENDER_NAMES : []).forEach((name) => {
+            const normalized = fbNormalizeName(name);
+            if (normalized && !candidates.some(item => fbNormalizeName(item.name) === normalized)) add({ name: normalized, gender: FB_GENDER_MAP[`name:${normalized}`] || 'U' });
+        });
+        return candidates;
+    }
+
+    function fbResolveFixedAssignmentIdentities() {
+        const candidates = fbFixedAssignmentCandidates();
+        const byName = new Map();
+        candidates.forEach((student) => {
+            const name = fbNormalizeName(student.name);
+            const list = byName.get(name) || [];
+            list.push(student);
+            byName.set(name, list);
+        });
+        Object.entries(FB_FIXED_ASSIGNMENTS).forEach(([identity, classIdx]) => {
+            if (!identity.startsWith('name:')) return;
+            const name = identity.slice(5);
+            const matches = byName.get(name) || [];
+            if (matches.length !== 1) return;
+            const resolved = fbStudentIdentity(matches[0]);
+            if (resolved && resolved !== identity) {
+                FB_FIXED_ASSIGNMENTS[resolved] = classIdx;
+                delete FB_FIXED_ASSIGNMENTS[identity];
+            }
+        });
+    }
+
     function FB_refreshFixedAssignmentUI() {
         const studentSelect = document.getElementById('fb_fixed_student');
         const classSelect = document.getElementById('fb_fixed_class');
         const list = document.getElementById('fb_fixed_assignment_list');
         if (!studentSelect || !classSelect || !list) return;
-        const students = Array.isArray(FB_STUDENTS) ? [...FB_STUDENTS].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN')) : [];
+        fbResolveFixedAssignmentIdentities();
+        const students = fbFixedAssignmentCandidates().sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN'));
         const selectedStudent = studentSelect.value;
         studentSelect.innerHTML = students.length
             ? `<option value="">选择学生</option>${students.map(s => `<option value="${String(fbStudentIdentity(s)).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">${String(fbFixedLabel(s)).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}</option>`).join('')}`
-            : '<option value="">请先载入学生</option>';
+            : '<option value="">请先载入成绩、学籍或性别名单</option>';
         if (selectedStudent && students.some(s => fbStudentIdentity(s) === selectedStudent)) studentSelect.value = selectedStudent;
         const k = fbFixedClassCount();
         const selectedClass = classSelect.value;
@@ -166,7 +222,7 @@
         const classIdx = Number(classSelect?.value);
         if (!identity) return window.UI?.alert?.('请先选择要指定的学生。');
         if (!Number.isInteger(classIdx) || classIdx < 0 || classIdx >= fbFixedClassCount()) return window.UI?.alert?.('请选择有效的具体班级。');
-        const student = FB_STUDENTS.find(s => fbStudentIdentity(s) === identity);
+        const student = fbFixedAssignmentCandidates().find(s => fbStudentIdentity(s) === identity);
         if (!student) return window.UI?.alert?.('未找到该学生，请重新载入名单。');
         FB_FIXED_ASSIGNMENTS[identity] = classIdx;
         FB_refreshFixedAssignmentUI();
@@ -186,6 +242,44 @@
         window.UI?.toast?.('已清空全部指定班级', 'success');
     }
 
+    function fbFixedClassIndex(value, classCount) {
+        const raw = String(value == null ? '' : value).trim();
+        if (!raw) return -1;
+        const match = raw.match(/(?:^|[.\-\s])([0-9]{1,2})\s*(?:班)?$/) || raw.match(/([0-9]{1,2})/);
+        const number = match ? Number(match[1]) : NaN;
+        return Number.isInteger(number) && number >= 1 && number <= classCount ? number - 1 : -1;
+    }
+
+    function FB_loadFixedClassList(input) {
+        const file = input?.files?.[0]; if (!file) return;
+        const classCount = fbFixedClassCount();
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                if (!rows.length) throw new Error('Excel没有数据');
+                let imported = 0;
+                const errors = [];
+                rows.forEach((row, index) => {
+                    const student = fbRosterRow(row);
+                    const target = row['指定班级'] ?? row['目标班级'] ?? row['班级'] ?? row['分配班级'] ?? row['class'] ?? row['className'];
+                    const classIdx = fbFixedClassIndex(target, classCount);
+                    if (!student) { errors.push(`第${index + 2}行缺少姓名`); return; }
+                    if (classIdx < 0) { errors.push(`第${index + 2}行班级“${target || ''}”无效（当前为1-${classCount}班）`); return; }
+                    FB_FIXED_ASSIGNMENTS[fbStudentIdentity(student)] = classIdx;
+                    imported += 1;
+                });
+                fbResolveFixedAssignmentIdentities();
+                FB_refreshFixedAssignmentUI();
+                const suffix = errors.length ? `\n⚠️ 已跳过 ${errors.length} 行：\n${errors.slice(0, 6).join('\n')}${errors.length > 6 ? '\n…' : ''}` : '';
+                window.UI?.alert?.(`✅ 指定班级名单导入 ${imported} 人。${suffix}`, errors.length ? 'warning' : 'success');
+                input.value = '';
+            } catch (err) { window.UI?.alert?.('指定班级名单读取失败：' + err.message, 'error'); }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
     function fbGetFixedClass(student, k) {
         const idx = FB_FIXED_ASSIGNMENTS[fbStudentIdentity(student)];
         return Number.isInteger(idx) && idx >= 0 && idx < k ? idx : -1;
@@ -202,7 +296,7 @@
 
     function fbValidateFixedAssignments(k) {
         const errors = [];
-        const active = new Set(FB_STUDENTS.map(fbStudentIdentity));
+        const active = new Set(fbFixedAssignmentCandidates().map(fbStudentIdentity));
         Object.keys(FB_FIXED_ASSIGNMENTS).forEach(identity => {
             const classIdx = FB_FIXED_ASSIGNMENTS[identity];
             if (!active.has(identity)) errors.push('指定班级中存在当前名单找不到的学生。');
@@ -352,11 +446,11 @@ let FB_TRANSFER_IN_STUDENTS = [];
 let FB_DROPOUT_STUDENTS = [];
 
 function fbRosterRow(raw) {
-    const name = fbNormalizeName(raw?.姓名 || raw?.名字 || raw?.Name || raw?.name);
+    const name = fbNormalizeName(raw?.姓名 || raw?.学生姓名 || raw?.名字 || raw?.Name || raw?.name);
     if (!name) return null;
     const genderRaw = String(raw?.性别 || raw?.Gender || raw?.gender || raw?.sex || raw?.性别名称 || '').trim().toUpperCase();
     const gender = genderRaw === '男' || genderRaw === 'M' ? 'M' : genderRaw === '女' || genderRaw === 'F' ? 'F' : '';
-    const id = fbNormalizeId(raw?.考号 || raw?.学号 || raw?.准考证号 || raw?.studentId || raw?.id || '');
+    const id = fbNormalizeId(raw?.考号 || raw?.学号 || raw?.学生学号 || raw?.准考证号 || raw?.studentId || raw?.id || '');
     return { name, gender, id };
 }
 function fbParseGender(value) {
@@ -919,7 +1013,7 @@ async function FB_runDivision() {
     if (fixedErrors.length) {
         return window.UI.alert(`指定班级检查未通过：\n\n${fixedErrors.slice(0, 6).map(item => `· ${item}`).join('\n')}`);
     }
-    const activeIdentities = new Set(FB_STUDENTS.map(fbStudentIdentity));
+    const activeIdentities = new Set(fbFixedAssignmentCandidates().map(fbStudentIdentity));
     const staleAssignments = Object.keys(FB_FIXED_ASSIGNMENTS).filter(identity => !activeIdentities.has(identity));
     if (staleAssignments.length) {
         return window.UI.alert(`有 ${staleAssignments.length} 条指定班级记录未匹配到当前学生名单，请移除后再生成，避免把上一届设置误用于本届。`);
@@ -1016,17 +1110,19 @@ function FB_appendRosterOnlyStudents(classes, k) {
     ];
     if (!postStudents.length) return;
     postStudents.forEach((row, index) => {
+        const rowStudent = { name: row.name, id: row.id, gender: row.gender || 'U' };
+        const fixedClass = fbGetFixedClass(rowStudent, k);
         const ranked = classes.map((cls, classIdx) => ({
             cls, classIdx,
             noExam: cls.students.filter(s => s.isNoExam).length,
             notEnrolled: cls.students.filter(s => s.isNotEnrolled).length,
             maleRatio: cls.students.length ? cls.students.filter(s => s.gender === 'M').length / cls.students.length : 0
         })).sort((a, b) => (a.noExam - b.noExam) || (a.notEnrolled - b.notEnrolled) || (Math.abs((row.gender === 'M' ? 1 : 0) - a.maleRatio) - Math.abs((row.gender === 'M' ? 1 : 0) - b.maleRatio)) || (a.classIdx - b.classIdx));
-        const picked = ranked[0];
+        const picked = fixedClass >= 0 ? { cls: classes[fixedClass], classIdx: fixedClass } : ranked[0];
         if (!picked) return;
         const isTransferIn = row.postType === '新转入';
         const isDropout = row.postType === '辍学/长期离校' || row.postType === 'dropout';
-        picked.cls.students.push({ _id: `roster-${index}`, key: `roster:${fbRosterIdentity(row)}`, name: row.name, id: row.id, gender: row.gender || 'U', score: 0, subjAvg: {}, examsGot: 0, examsTotal: 0, height: 160, vision: 5, isNoExam: true, postType: isTransferIn ? 'transfer-in' : isDropout ? 'dropout' : 'roster-no-exam', isNotEnrolled: false, isDiff: false, isViolation: false, remarks: isTransferIn ? '新转入学生，后置均衡分配' : isDropout ? '辍学/长期离校，按要求后置均衡分配' : '学籍在册，本次未参加考试', constraints: { same: [], diff: [] }, classIdx: picked.classIdx });
+        picked.cls.students.push({ _id: `roster-${index}`, key: `roster:${fbRosterIdentity(row)}`, name: row.name, id: row.id, gender: row.gender || 'U', score: 0, subjAvg: {}, examsGot: 0, examsTotal: 0, height: 160, vision: 5, isNoExam: true, postType: isTransferIn ? 'transfer-in' : isDropout ? 'dropout' : 'roster-no-exam', isNotEnrolled: false, isDiff: false, isViolation: false, isFixedAssignment: fixedClass >= 0, remarks: isTransferIn ? '新转入学生，后置均衡分配' : isDropout ? '辍学/长期离校，按要求后置均衡分配' : '学籍在册，本次未参加考试', constraints: { same: [], diff: [] }, classIdx: picked.classIdx });
     });
     classes.forEach(c => { c.stats = fbCalcClassStats(c.students); });
 }
@@ -3082,6 +3178,7 @@ function EXAM_exportResult() {
     if (typeof FB_loadDropoutList === 'function') window.FB_loadDropoutList = FB_loadDropoutList;
     if (typeof FB_loadTransferList === 'function') window.FB_loadTransferList = FB_loadTransferList;
     if (typeof FB_loadTransferInList === 'function') window.FB_loadTransferInList = FB_loadTransferInList;
+    if (typeof FB_loadFixedClassList === 'function') window.FB_loadFixedClassList = FB_loadFixedClassList;
     if (typeof FB_assembleFromCloud === 'function') window.FB_assembleFromCloud = FB_assembleFromCloud;
     if (typeof FB_updateAssemblyStatus === 'function') window.FB_updateAssemblyStatus = FB_updateAssemblyStatus;
     if (typeof FB_refreshFixedAssignmentUI === 'function') window.FB_refreshFixedAssignmentUI = FB_refreshFixedAssignmentUI;
