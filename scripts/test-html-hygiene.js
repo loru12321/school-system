@@ -47,12 +47,13 @@ assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 's
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-// 253: the freshman module's six upload/data-source handlers moved into
+// 218: the freshman module's six upload/data-source handlers moved into
 // freshman-exam-runtime.js (data-fb-pick / data-fb-change); the 17 modal-close,
 // 12 file-pick, 15 showModuleHelp, 11 scrollToAnchor and 44 DataManager
-// boilerplate handlers all moved into the delegated binder in
-// app-foundation-runtime.js. Ratchet only downward from here.
-assert.ok(inlineHandlerCount <= 253, `inline event handler count grew: ${inlineHandlerCount} > 253`);
+// boilerplate handlers plus the four openTeacherSync entry points all moved
+// into delegated bindings in app-foundation-runtime.js. Ratchet only downward
+// from here.
+assert.ok(inlineHandlerCount <= 218, `inline event handler count grew: ${inlineHandlerCount} > 218`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 // The freshman module's upload/data-source controls are bound declaratively in
@@ -129,6 +130,12 @@ assert.ok(count(/data-scroll-anchor=/g) >= 11, 'declarative scroll-anchor bindin
 assert.ok(
     /\[data-module-help\], \[data-scroll-anchor\]/.test(foundationRuntime),
     'the delegated binder must resolve the module-help and scroll-anchor attributes'
+);
+assert.ok(
+    /data-open-teacher-sync/.test(html)
+        && /kind === 'teacher-sync'/.test(foundationRuntime)
+        && /window\.openTeacherSync\(\)/.test(foundationRuntime),
+    'teacher sync entry points must use one delegated action binding'
 );
 // help 的取值是帮助键而非元素 id，必须在 getElementById 之前分流，否则永远解析不到。
 // 注意两个 indexOf 都要先确认 >= 0：缺失时 indexOf 返回 -1，而 -1 < 任何正数会让

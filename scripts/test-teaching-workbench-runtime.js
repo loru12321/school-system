@@ -9,6 +9,7 @@ const scheduler = read('public/assets/js/grade-scheduler-runtime.js');
 const freshman = read('public/assets/js/freshman-exam-runtime.js');
 const freshmanInsight = read('public/assets/js/freshman-constraint-insight-runtime.js');
 const runtimeLoader = read('public/assets/js/runtime-loader-runtime.js');
+const teacherSyncEntry = read('public/assets/js/teacher-sync-entry-runtime.js');
 const moduleEntry = read('public/assets/js/module-entry-runtime.js');
 const indexHtml = read('src/index.html');
 const stylesheet = read('src/assets/css/main.css');
@@ -118,6 +119,10 @@ assert.ok(freshman.includes('状态说明'), 'freshman exports should include a 
 assert.ok(freshman.includes('未参加考试'), 'freshman exports and seat map should label no-exam students instead of showing a fake score');
 assert.ok(freshman.includes('is-no-exam'), 'freshman seat map should apply a dedicated no-exam color class');
 assert.ok(stylesheet.includes('.desk.is-no-exam'), 'freshman seat map no-exam color should be defined in the shared stylesheet');
+assert.ok(teacherSyncEntry.includes('window.openTeacherSync = openTeacherSync'), 'teacher sync entry should be exposed by its deferred runtime');
+assert.ok(runtimeLoader.includes("loadOptionalRuntime('teacher-sync-entry', bootJs('teacher-sync-entry-runtime.js'))"), 'teacher sync entry should be demand-loaded from its dedicated runtime');
+assert.ok(indexHtml.includes('data-open-teacher-sync'), 'teacher sync entry points should use declarative bindings');
+assert.ok(!/onclick="openTeacherSync\(\)"/.test(indexHtml), 'teacher sync entry points should not keep inline onclick handlers');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbFixedClassInput"'), 'freshman UI should provide a fixed-class roster upload');

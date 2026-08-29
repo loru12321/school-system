@@ -7947,64 +7947,6 @@ async function loadDemoData() {
     updateStatusPanel();
 }
 
-async function openTeacherSync() {
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const preferredTerm = getPreferredTeacherTermId() || pickAutoTeacherTerm();
-    const canManageTeachers = role !== 'teacher' && role !== 'class_teacher';
-    const openTeacherManager = () => {
-        if (!canManageTeachers) return false;
-        if (window.DataManager && typeof DataManager.open === 'function') {
-            DataManager.open('teacher');
-            return true;
-        }
-        return false;
-    };
-
-    try {
-        if (preferredTerm && applyTeacherTermWithoutPrompt(preferredTerm)) {
-            if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
-            if (window.UI) UI.toast(`已恢复 ${preferredTerm} 的任课表`, 'success');
-            openTeacherManager();
-            return;
-        }
-
-        if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
-            if (window.UI) UI.toast(preferredTerm ? `正在同步 ${preferredTerm} 的任课表...` : '正在同步任课表...', 'info');
-            await CloudManager.loadTeachers();
-            if (preferredTerm && applyTeacherTermWithoutPrompt(preferredTerm)) {
-                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
-                if (window.UI) UI.toast(`已从云端恢复 ${preferredTerm} 的任课表`, 'success');
-                openTeacherManager();
-                return;
-            }
-            if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
-                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
-                if (window.UI) UI.toast('任课表已同步到当前页面', 'success');
-                openTeacherManager();
-                return;
-            }
-        }
-
-        if (role === 'teacher' || role === 'class_teacher') {
-            if (window.UI) UI.toast('当前学期暂无可用任课表，请联系管理员在“教师任课”中导入或同步', 'warning');
-            return;
-        }
-
-        if (!openTeacherManager()) {
-            switchTab('upload');
-        }
-    } catch (err) {
-        console.error('openTeacherSync failed:', err);
-        if (window.UI) {
-            UI.toast(`任课表同步失败：${err?.message || err}`, 'error');
-            return;
-        }
-        alert(`任课表同步失败：${err?.message || err}`);
-    }
-}
-
-
 if (typeof DataManager !== 'undefined') {
     DataManager.isGrade9Context = function () {
         return requireDataManagerGrade9TemplateRuntime().isGrade9Context(this);

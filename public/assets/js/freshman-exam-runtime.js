@@ -42,8 +42,14 @@
             c?.id,
             c?.name,
             Array.isArray(c?.students) ? c.students.length : 0,
-            Array.isArray(c?.students) ? c.students.map(s => `${s.name}:${s.score}:${s.gender}:${s.isDiff || s._isDiff ? 1 : 0}`).join(',') : ''
+            Array.isArray(c?.students) ? c.students.map(s => `${s.name}:${s.score}:${s.gender}:${s.isDiff || s._isDiff ? 1 : 0}:${s.postType || ''}:${s.isNoExam ? 1 : 0}:${s.isViolation ? 1 : 0}`).join(',') : ''
         ].join(':')).join('|');
+    }
+
+    function fbIsNoExamStudent(student) {
+        return !!student && (student.isNoExam === true
+            || student.postType === 'roster-no-exam'
+            || student.postType === '学籍在册未考试');
     }
 
     function fbCalcClassStats(students = []) {
@@ -56,7 +62,7 @@
         let unknownGender = 0;
         let diff = 0;
         list.forEach((student) => {
-            if (Number.isFinite(Number(student?.score)) && !student?.isNoExam) { total += Number(student.score); scored += 1; }
+            if (Number.isFinite(Number(student?.score)) && !fbIsNoExamStudent(student)) { total += Number(student.score); scored += 1; }
             if (student?.gender === 'M') male += 1;
             else if (student?.gender === 'F') female += 1;
             else unknownGender += 1;
@@ -1299,7 +1305,7 @@ function FB_appendRosterOnlyStudents(classes, k) {
         const fixedClass = fbGetFixedClass(rowStudent, k);
         const ranked = classes.map((cls, classIdx) => ({
             cls, classIdx,
-            noExam: cls.students.filter(s => s.isNoExam).length,
+            noExam: cls.students.filter(fbIsNoExamStudent).length,
             notEnrolled: cls.students.filter(s => s.isNotEnrolled).length,
             maleRatio: cls.students.length ? cls.students.filter(s => s.gender === 'M').length / cls.students.length : 0
         })).sort((a, b) => (a.noExam - b.noExam) || (a.notEnrolled - b.notEnrolled) || (Math.abs((row.gender === 'M' ? 1 : 0) - a.maleRatio) - Math.abs((row.gender === 'M' ? 1 : 0) - b.maleRatio)) || (a.classIdx - b.classIdx));
@@ -1663,13 +1669,13 @@ function fbResolveSubjectThreshold(subject, kind, scores) {
 }
 function fbSubjectMetric(classes, subject) {
     const allValues = (classes || []).flatMap(cls => (cls.students || [])
-        .filter(s => !s?.isNoExam)
+        .filter(s => !fbIsNoExamStudent(s))
         .map(s => Number(s?.subjAvg?.[subject]))
         .filter(Number.isFinite));
     const excellentLine = fbResolveSubjectThreshold(subject, 'excellent', allValues);
     const passLine = fbResolveSubjectThreshold(subject, 'pass', allValues);
     return (classes || []).map(cls => {
-        const valid = (cls.students || []).filter(s => !s?.isNoExam).map(s => Number(s?.subjAvg?.[subject])).filter(Number.isFinite);
+        const valid = (cls.students || []).filter(s => !fbIsNoExamStudent(s)).map(s => Number(s?.subjAvg?.[subject])).filter(Number.isFinite);
         if (!valid.length) return { avg: null, excellent: null, pass: null, n: 0 };
         return { avg: valid.reduce((a, b) => a + b, 0) / valid.length, excellent: valid.filter(v => v >= excellentLine).length / valid.length, pass: valid.filter(v => v >= passLine).length / valid.length, n: valid.length };
     });
@@ -1681,7 +1687,7 @@ function fbBuildStageBalanceTable(classes, title, subjects) {
     const metrics = Object.fromEntries(subjects.map(s => [s, fbSubjectMetric(classes, s)]));
     (classes || []).forEach((cls, i) => {
         const stats = fbCalcClassStats(cls.students || []);
-        const scoredCount = (cls.students || []).filter(s => !s?.isNoExam && Number.isFinite(Number(s?.score))).length;
+        const scoredCount = (cls.students || []).filter(s => !fbIsNoExamStudent(s) && Number.isFinite(Number(s?.score))).length;
         html += `<tr><td>${cls.name}</td><td>${stats.count}</td><td>${stats.male}</td><td>${stats.female}</td><td>${scoredCount}</td>`;
         subjects.forEach(s => { const m = metrics[s][i]; html += m.n ? `<td>${m.avg.toFixed(1)}</td><td>${(m.excellent * 100).toFixed(1)}%</td><td>${(m.pass * 100).toFixed(1)}%</td>` : '<td>-</td><td>-</td><td>-</td>'; });
         html += '</tr>';
@@ -1849,11 +1855,27 @@ function FB_renderAssemblyBanner() {
         <div style="margin-top:6px;">${parts.join(' · ')}</div>${dupWarn}`;
 }
 
+function fbRenderStatusLegend() {
+    const area = document.getElementById('fb-results-area');
+    if (!area) return;
+    let legend = document.getElementById('fb_status_legend');
+    if (!legend) {
+        legend = document.createElement('div');
+        legend.id = 'fb_status_legend';
+        const heading = area.querySelector('.sub-header');
+        if (heading) heading.insertAdjacentElement('afterend', legend);
+        else area.insertBefore(legend, area.firstChild);
+    }
+    legend.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:10px 0 14px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#475569;font-size:12px;line-height:1.6;';
+    const item = (bg, border, text) => `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><i style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${bg};border:1px solid ${border};"></i>${text}</span>`;
+    legend.innerHTML = `<strong style="color:#1e293b;">特殊学生颜色说明：</strong>${item('#fef3c7', '#f59e0b', '黄色：在册未考，后置均衡；不计入两率一分')}${item('#f3e8ff', '#a855f7', '紫色：辍学/长期离校，后置均衡')}${item('#dbeafe', '#3b82f6', '蓝色：新转入，后置均衡')}${item('#fee2e2', '#ef4444', '红色：违纪，参与分班并尽量分散')}`;
+}
+
 function fbStudentStatus(student) {
-    if (student?.isViolation) return '违纪';
     if (student?.postType === 'dropout' || student?.postType === '辍学/长期离校') return '辍学/长期离校';
     if (student?.postType === 'transfer-in' || student?.postType === '新转入') return '新转入';
-    if (student?.postType === 'roster-no-exam' || student?.postType === '学籍在册未考试' || student?.isNoExam) return '学籍在册未考试';
+    if (fbIsNoExamStudent(student)) return '学籍在册未考试';
+    if (student?.isViolation) return '违纪';
     if (student?.isFixedAssignment) return '指定班级';
     if (student?.sameGroupId) return '同班组合';
     return '';
@@ -1867,7 +1889,7 @@ function fbStudentStatusExplanation(student) {
     if (status === '新转入') {
         return '新转入学生，按后置均衡分配；无本次考试成绩。';
     }
-    if (status === '学籍在册未考试' || student?.isNoExam) {
+    if (status === '学籍在册未考试' || fbIsNoExamStudent(student)) {
         return '学籍在册但本次未参加考试，按后置均衡分配；各科成绩不计入两率一分。';
     }
     if (status === '违纪') return '违纪学生参与分班，算法已尽量分散到各班。';
@@ -1896,7 +1918,7 @@ function fbExportSubjectNames(classes = []) {
 function fbStudentSubjectScore(student, subject) {
     const raw = student?.subjAvg?.[subject] ?? student?.scores?.[subject];
     const value = Number(raw);
-    return Number.isFinite(value) && !student?.isNoExam ? value : null;
+    return Number.isFinite(value) && !fbIsNoExamStudent(student) ? value : null;
 }
 
 function fbSameGroupLabel(student) {
@@ -1974,9 +1996,9 @@ function fbBuildClassRosterRows(cls, stageLabel = '最终名单', subjects = fbE
             Number.isFinite(Number(student?.score)) ? student.score : '',
             ...subjects.map((subject) => {
                 const value = fbStudentSubjectScore(student, subject);
-                return value === null ? (student?.isNoExam ? '未参加考试' : '—') : value;
+                return value === null ? (fbIsNoExamStudent(student) ? '未参加考试' : '—') : value;
             }),
-            student?.isNoExam ? '是' : '否',
+            fbIsNoExamStudent(student) ? '是' : '否',
             status || '正常',
             fbStudentStatusExplanation(student),
             fbSameGroupLabel(student),
@@ -2006,6 +2028,7 @@ function fbAppendClassRosterSheets(wb, classes, stageLabel = '最终名单') {
 function FB_renderDashboard() {
     document.getElementById('fb-results-area').classList.remove('hidden');
     FB_renderAssemblyBanner();
+    fbRenderStatusLegend();
     const container = document.getElementById('fb_class_container');
     const dashboardSignature = fbClassSignature(FB_CLASSES);
     if (container?.dataset.freshmanDashboardSig === dashboardSignature && FreshmanExamPerfCache.dashboardSignature === dashboardSignature) {
@@ -2025,14 +2048,16 @@ function FB_renderDashboard() {
         const loCnt = c.students.filter(s => fbTierOf(s.score) === 'low').length;
         const fixedCnt = c.students.filter(s => s.isFixedAssignment).length;
         const sameGroupIds = [...new Set(c.students.map(s => s.sameGroupId).filter(Boolean))];
-        const postRosterCnt = c.students.filter(s => s.postType === 'roster-no-exam').length;
+        const postRosterCnt = c.students.filter(s => fbIsNoExamStudent(s)
+            && s.postType !== 'dropout' && s.postType !== '辍学/长期离校'
+            && s.postType !== 'transfer-in' && s.postType !== '新转入').length;
         const postDropoutCnt = c.students.filter(s => s.postType === 'dropout').length;
         const postTransferCnt = c.students.filter(s => s.postType === 'transfer-in').length;
         const violLabel = (FB_LAST_ASSEMBLY && FB_LAST_ASSEMBLY.violationUploaded) ? '违纪' : '难管';
         const violationBadge = violationCnt > 0
             ? `<button type="button" class="fb-tag fb-tag-red fb-violation-link" data-fb-action="view-violations" data-fb-class-id="${c.id}">${violLabel}: ${violationCnt}</button>`
             : (diffCnt > 0 ? `<span class="fb-tag fb-tag-red">${violLabel}: ${diffCnt}</span>` : '');
-        const noExamBadge = postRosterCnt > 0 ? `<span class="fb-tag fb-tag-yellow" title="学籍在册但本次未参加考试，按后置均衡分配；各科成绩不计入两率一分。">未参加考试: ${postRosterCnt}</span>` : '';
+        const noExamBadge = postRosterCnt > 0 ? `<span class="fb-tag fb-tag-yellow" title="学籍在册但本次未参加考试，按后置均衡分配；各科成绩不计入两率一分。">未参加考试（后置）: ${postRosterCnt}</span>` : '';
         const dropoutBadge = postDropoutCnt > 0 ? `<span class="fb-tag fb-tag-purple">辍学/长期离校: ${postDropoutCnt}</span>` : '';
         return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">${violationBadge}${noExamBadge}${dropoutBadge}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div>高分段: ${hiCnt}</div><div>低分段: ${loCnt}</div>${postRosterCnt || postDropoutCnt || postTransferCnt ? `<div style="grid-column:span 2; color:#7c3aed; font-weight:700;">↳ 后置学生: ${postRosterCnt + postDropoutCnt + postTransferCnt} 人（${postRosterCnt ? `在册未考 ${postRosterCnt}` : ''}${postRosterCnt && (postDropoutCnt || postTransferCnt) ? '、' : ''}${postDropoutCnt ? `辍学/长期离校 ${postDropoutCnt}` : ''}${postDropoutCnt && postTransferCnt ? '、' : ''}${postTransferCnt ? `新转入 ${postTransferCnt}` : ''}）</div>` : ''}${fixedCnt ? `<div style="grid-column:span 2; color:#166534; font-weight:700;">🔒 指定学生: ${fixedCnt} 人</div>` : ''}${sameGroupIds.length ? `<div style="grid-column:span 2; color:#1d4ed8; font-weight:700;">👥 同班组合: ${sameGroupIds.length} 组</div>` : ''}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">颜色说明：黄色=在册未参加考试，后置均衡分配；点击进入座位编排 →</div></div></div>`;
     }).join('');
@@ -2081,7 +2106,7 @@ function fbBuildSubjectBalanceTable(labels) {
     if (!hasSubj) return '';
     const fmtPct = (v) => (v * 100).toFixed(0) + '%';
     const thresholdLabels = FB_MAIN_SUBJECTS.map((sub) => {
-        const values = FB_CLASSES.flatMap(item => (item.students || []).filter(s => !s?.isNoExam).map(s => Number(s?.subjAvg?.[sub])).filter(Number.isFinite));
+        const values = FB_CLASSES.flatMap(item => (item.students || []).filter(s => !fbIsNoExamStudent(s)).map(s => Number(s?.subjAvg?.[sub])).filter(Number.isFinite));
         return `${sub}优秀线≥${fbResolveSubjectThreshold(sub, 'excellent', values).toFixed(1)}、及格线≥${fbResolveSubjectThreshold(sub, 'pass', values).toFixed(1)}`;
     }).join('；');
     let html = `<div style="margin-top:16px; font-weight:600; color:#334155;">📚 主科每班均衡（语数英 · 均分 / 优秀率 / 及格率）</div><div style="font-size:11px;color:#64748b;margin-top:3px;">${thresholdLabels}</div>`;
@@ -2094,7 +2119,7 @@ function fbBuildSubjectBalanceTable(labels) {
             const vals = c.students.map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
             if (!vals.length) { html += `<td>-</td><td>-</td><td>-</td>`; return; }
             const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-            const allValues = FB_CLASSES.flatMap(item => (item.students || []).filter(s => !s?.isNoExam).map(s => Number(s?.subjAvg?.[sub])).filter(Number.isFinite));
+            const allValues = FB_CLASSES.flatMap(item => (item.students || []).filter(s => !fbIsNoExamStudent(s)).map(s => Number(s?.subjAvg?.[sub])).filter(Number.isFinite));
             const excLine = fbResolveSubjectThreshold(sub, 'excellent', allValues);
             const passLine = fbResolveSubjectThreshold(sub, 'pass', allValues);
             const exc = vals.filter(v => v >= excLine).length / vals.length;
@@ -2984,7 +3009,7 @@ function FB_renderSeatMap() {
                     desk.dataset.idx = stuIdx;
                     const statusText = fbStudentStatusExplanation(stu);
                     desk.title = statusText || '正常学生';
-                    desk.innerHTML = `<div class="desk-name">${stu.name}</div><div class="desk-info"><span>${stu.height}cm</span><span>${stu.isNoExam ? '未参加考试' : stu.score}</span></div><div class="desk-popover">视力:${stu.vision} | ${statusText || `备注:${stu.remarks || '无'}`}</div>`;
+                    desk.innerHTML = `<div class="desk-name">${stu.name}</div><div class="desk-info"><span>${stu.height}cm</span><span>${fbIsNoExamStudent(stu) ? '未参加考试' : stu.score}</span></div><div class="desk-popover">视力:${stu.vision} | ${statusText || `备注:${stu.remarks || '无'}`}</div>`;
 
                     // 绑定右键事件
                     desk.oncontextmenu = (e) => {
@@ -3061,7 +3086,7 @@ function FB_saveToLocal() {
 function FB_exportResult() {
     if (!FB_CLASSES.length) return window.UI.alert("无数据"); const wb = XLSX.utils.book_new(); const subjects = fbExportSubjectNames(FB_CLASSES); const data = [['班级', '座位号', '姓名', '性别', '总分', ...subjects.map((subject) => `${subject}成绩`), '身高', '视力', '状态', '状态说明', '同班组合', '备注']];
     const students = [];
-    FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { const status = fbStudentStatus(s); data.push([c.name, i + 1, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !s.isNoExam ? s.score : (s.isNoExam ? '' : s.score), ...subjects.map((subject) => { const value = fbStudentSubjectScore(s, subject); return value === null ? (s.isNoExam ? '未参加考试' : '—') : value; }), s.height, s.vision, status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), s.remarks]); students.push(s); }); });
+    FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { const status = fbStudentStatus(s); const noExam = fbIsNoExamStudent(s); data.push([c.name, i + 1, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !noExam ? s.score : (noExam ? '' : s.score), ...subjects.map((subject) => { const value = fbStudentSubjectScore(s, subject); return value === null ? (noExam ? '未参加考试' : '—') : value; }), s.height, s.vision, status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), s.remarks]); students.push(s); }); });
     const ws = XLSX.utils.aoa_to_sheet(data); fbDecorateRosterExportSheet(ws, data[0], students);
     XLSX.utils.book_append_sheet(wb, ws, "分班与座位表");
     fbAppendClassRosterSheets(wb, FB_CLASSES, '最终名单');
@@ -3078,7 +3103,7 @@ function FB_exportResultWithBalance() {
         const metrics = Object.fromEntries(subjects.map(s => [s, fbSubjectMetric(classes, s)]));
         (classes || []).forEach((cls, i) => {
             const stats = fbCalcClassStats(cls.students || []);
-            const scored = (cls.students || []).filter(s => !s?.isNoExam && Number.isFinite(Number(s?.score))).length;
+            const scored = (cls.students || []).filter(s => !fbIsNoExamStudent(s) && Number.isFinite(Number(s?.score))).length;
             const row = [cls.name, stats.count, stats.male, stats.female, scored];
             subjects.forEach(s => { const m = metrics[s][i]; row.push(m.n ? Number(m.avg.toFixed(2)) : null, m.n ? Number((m.excellent * 100).toFixed(2)) : null, m.n ? Number((m.pass * 100).toFixed(2)) : null); });
             rows.push(row);
@@ -3089,7 +3114,7 @@ function FB_exportResultWithBalance() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.finalData || FB_CLASSES)), '最终名单两率一分');
     const roster = [['阶段', '班级', '姓名', '性别', '总分', '是否后置分配', '状态', '状态说明', '同班组合', '备注']];
     const rosterStudents = [];
-    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => { const status = fbStudentStatus(s); roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !s.isNoExam ? s.score : '', s.isNoExam ? '是' : '否', status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), s.remarks || '']); rosterStudents.push(s); }));
+    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => { const status = fbStudentStatus(s); const noExam = fbIsNoExamStudent(s); roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !noExam ? s.score : '', noExam ? '是' : '否', status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), s.remarks || '']); rosterStudents.push(s); }));
     const rosterSheet = XLSX.utils.aoa_to_sheet(roster); fbDecorateRosterExportSheet(rosterSheet, roster[0], rosterStudents);
     XLSX.utils.book_append_sheet(wb, rosterSheet, '最终分班名单');
     fbAppendClassRosterSheets(wb, scheme.finalData || FB_CLASSES, '最终名单');

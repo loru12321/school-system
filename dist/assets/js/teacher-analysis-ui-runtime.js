@@ -2,7 +2,7 @@
                 <div style="grid-column:1/-1; text-align:center; color:#999; padding:20px;">
                     暂无教师数据，请先完成任课表同步和成绩导入。
                     <div style="margin-top:10px;">
-                        <button class="btn btn-orange" onclick="openTeacherSync()">去同步任课表</button>
+                        <button class="btn btn-orange" data-open-teacher-sync>去同步任课表</button>
                     </div>
                 </div>
             `;return}const c=V(n,[i,(s==null?void 0:s.name)||"",Object.keys(l||{}).sort().join("|")].join("|"));if(v.cardsSignature===c&&v.cardsHtml){(t.dataset.teacherCardsSignature!==c||!t.querySelector(".teacher-card"))&&(t.innerHTML=v.cardsHtml,t.dataset.teacherCardsSignature=c);return}const p=r.map(e=>`

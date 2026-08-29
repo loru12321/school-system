@@ -1189,6 +1189,7 @@ window.VoiceControl = voiceControlStub;
 
 installOptionalRuntimeMethod('showModuleHelp', window.ensureModuleHelpRuntimeLoaded);
 installOptionalRuntimeMethod('downloadExamAnalysisPackage', window.ensureExamAnalysisPackageRuntimeLoaded);
+installOptionalRuntimeMethod('openTeacherSync', () => loadOptionalRuntime('teacher-sync-entry', bootJs('teacher-sync-entry-runtime.js')));
 window.wrapXlsxRuntimeExports();
 
 if (typeof window.ensureModuleHelpButton !== 'function') {

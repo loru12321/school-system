@@ -409,7 +409,7 @@ function installDeclarativeDomBindings() {
     // 按「最近祖先」判定,而不是固定先查某一类属性:file-pick 按钮可能嵌在弹层内部
     // (如换肤弹层里的上传 logo),固定顺序会让内层点击误命中外层的关闭意图。
     const resolveBinding = (origin) => {
-        const holder = origin.closest('[data-close-modal], [data-pick-file], [data-module-help], [data-scroll-anchor]');
+        const holder = origin.closest('[data-close-modal], [data-pick-file], [data-module-help], [data-scroll-anchor], [data-open-teacher-sync]');
         if (!holder) return null;
         const closeId = String(holder.getAttribute('data-close-modal') || '').trim();
         if (closeId) return { kind: 'close', id: closeId };
@@ -419,6 +419,7 @@ function installDeclarativeDomBindings() {
         if (helpKey) return { kind: 'help', id: helpKey };
         const anchorId = String(holder.getAttribute('data-scroll-anchor') || '').trim();
         if (anchorId) return { kind: 'anchor', id: anchorId, holder };
+        if (holder.hasAttribute('data-open-teacher-sync')) return { kind: 'teacher-sync' };
         return null;
     };
 
@@ -430,7 +431,13 @@ function installDeclarativeDomBindings() {
         if (!origin) return;
 
         const binding = resolveBinding(origin);
-        if (!binding || !isSafeElementId(binding.id)) return;
+        if (!binding) return;
+
+        if (binding.kind === 'teacher-sync') {
+            if (typeof window.openTeacherSync === 'function') window.openTeacherSync();
+            return;
+        }
+        if (!isSafeElementId(binding.id)) return;
 
         // help 的取值是模块帮助键(不是元素 id),必须在 getElementById 之前分流。
         // showModuleHelp 由 app.js 提供,帮助运行时按需加载,函数未就绪时静默跳过

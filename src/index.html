@@ -263,8 +263,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-2d429d1183a9.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-2d429d1183a9.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-d704d428c0c3.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-d704d428c0c3.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -1074,7 +1074,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <i class="ti ti-file-upload"></i>
                                 <span>数据导入</span>
                             </button>
-                            <button class="starter-entry-btn" onclick="openTeacherSync()">
+                            <button class="starter-entry-btn" data-open-teacher-sync>
                                 <i class="ti ti-users"></i>
                                 <span>任课表</span>
                             </button>
@@ -5463,7 +5463,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
                     <span>本校教师教学分析基于导入的教师信息和成绩数据，展示教师所教班级的整体表现，并与乡镇学校进行对比。</span>
                     <button id="teacher-sync-cta" class="btn btn-orange" style="display:none; white-space:nowrap;"
-                        onclick="openTeacherSync()">去同步任课表</button>
+                        data-open-teacher-sync>去同步任课表</button>
                 </div>
                 <div id="tmAssessmentSyncPanel" class="tm-next-card tm-assessment-sync-panel" data-seasonal="july-august" data-role-allow="admin,director,grade_director" style="display:none">
                     <div class="tm-assessment-sync-copy">
@@ -5601,7 +5601,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     style="grid-column: 1/-1; text-align:center; color:#999; padding:20px;">
                                     暂无教师数据，请先在上方配置并导入。
                                     <div style="margin-top:10px;">
-                                        <button class="btn btn-orange" onclick="openTeacherSync()">去同步任课表</button>
+                                        <button class="btn btn-orange" data-open-teacher-sync>去同步任课表</button>
                                     </div>
                                 </div>
 

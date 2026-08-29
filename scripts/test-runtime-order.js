@@ -81,6 +81,7 @@ const teachingManagementVersionRuntimePath = path.resolve(__dirname, '../public/
 const teacherAnalysisCoreRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-core-runtime.js');
 const teacherAnalysisUiRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-ui-runtime.js');
 const teacherAnalysisBridgeRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-bridge-runtime.js');
+const teacherSyncEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-sync-entry-runtime.js');
 const countyAnalysisRuntimePath = path.resolve(__dirname, '../public/assets/js/county-analysis-runtime.js');
 const mobileAppRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-app-runtime.js');
 const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-sql.js');
@@ -210,6 +211,7 @@ const studentOverviewRuntime = fs.readFileSync(studentOverviewRuntimePath, 'utf8
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
 const teacherAnalysisUiRuntime = fs.readFileSync(teacherAnalysisUiRuntimePath, 'utf8');
 const teacherAnalysisBridgeRuntime = fs.readFileSync(teacherAnalysisBridgeRuntimePath, 'utf8');
+const teacherSyncEntryRuntime = fs.readFileSync(teacherSyncEntryRuntimePath, 'utf8');
 const countyAnalysisRuntime = fs.readFileSync(countyAnalysisRuntimePath, 'utf8');
 const mobileAppRuntime = fs.readFileSync(mobileAppRuntimePath, 'utf8');
 const supportMetricsRuntime = fs.readFileSync(supportMetricsRuntimePath, 'utf8');
@@ -895,7 +897,8 @@ assert.ok(
 assert.ok(
     indicatorCalcRuntime.includes("DataManager.open('params');")
         && indicatorCalcRuntime.includes("DataManager.open('targets');")
-        && appSource.includes("DataManager.open('teacher');"),
+        && (appSource.includes("DataManager.open('teacher');")
+            || fs.readFileSync(path.resolve(__dirname, '../public/assets/js/teacher-sync-entry-runtime.js'), 'utf8').includes("window.DataManager.open('teacher');")),
     'targeted data manager entries should open their requested tabs directly'
 );
 assert.ok(!bootRuntime.includes('await window.waitForAuthReady();'), 'boot login should not block workbench entry on Auth readiness');
@@ -1164,9 +1167,12 @@ assert.ok(
     'teacher maintenance should show the active cohort/term, confirm imports, and expose an explicit teacher replacement flow'
 );
 assert.ok(
-    appSource.includes("const openTeacherManager = () => {")
+    (appSource.includes("const openTeacherManager = () => {")
         && appSource.includes("DataManager.open('teacher');")
-        && appSource.includes('openTeacherManager();'),
+        && appSource.includes('openTeacherManager();'))
+        || (teacherSyncEntryRuntime.includes('const openTeacherManager = () => {')
+            && teacherSyncEntryRuntime.includes("window.DataManager.open('teacher');")
+            && teacherSyncEntryRuntime.includes('openTeacherManager();')),
     'starter teacher shortcut should open the editable teacher manager after restoring or syncing assignments'
 );
 assert.ok(
