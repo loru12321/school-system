@@ -175,6 +175,14 @@ assert.ok(
 );
 
 assert.ok(
+        bootSource.includes('function forceFreshLoginEntry()')
+        && bootSource.includes('window.EdgeGateway?.clearSession();')
+        && bootSource.includes('if (window.__FRESH_LOGIN_ENTRY__) return Promise.resolve();')
+        && authLoginSource.includes('window.__FRESH_LOGIN_ENTRY__ = false;'),
+    'every new web entry must clear the previous gateway session, skip automatic restore, and re-enable normal runtime after manual login'
+);
+
+assert.ok(
     cloudSource.includes("raw.startsWith('LZB64|')") && cloudSource.includes("return 'LZB64|' + LZString.compressToBase64(json);"),
     'workspace cloud payloads should use the smaller LZB64 format while keeping legacy LZ reads'
 );

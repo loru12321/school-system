@@ -652,6 +652,7 @@ var Auth = {
 
             const isLocalOnlySession = !!data.local_only;
             this.currentUser = AuthState.setCurrentUser(matchedUser) || matchedUser;
+            window.__FRESH_LOGIN_ENTRY__ = false;
             this.setLoginPortal(isParentLikeUser(this.currentUser) ? 'parent' : 'school');
             const selectedLoginCohort = String(
                 requestedLoginCohort
