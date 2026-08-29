@@ -109,6 +109,11 @@ assert.ok(freshman.includes('fbBalanceGenderCounts(classes, k);'), 'freshman gen
 assert.ok(freshman.includes('function FB_viewClassViolations'), 'freshman class cards should expose a violation roster viewer');
 assert.ok(freshman.includes('data-fb-action="view-violations"'), 'freshman class cards should render a clickable violation count');
 assert.ok(freshman.includes('fbDecorateRosterExportSheet'), 'freshman exports should style violation and dropout rows');
+assert.ok(freshman.includes('fbAppendClassRosterSheets'), 'freshman exports should include one worksheet per class');
+assert.ok(freshman.includes('fbSafeExportSheetName'), 'freshman class worksheet names should be Excel-safe and unique');
+assert.ok(freshman.includes("'新转入': ['DBEAFE', '1D4ED8']"), 'freshman exports should color-code transfer-in students');
+assert.ok(freshman.includes("'学籍在册未考试': ['FEF3C7', '92400E']"), 'freshman exports should color-code no-exam roster students');
+assert.ok(freshman.includes('特殊学生整行着色'), 'freshman exports should color the full special-student row');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbFixedClassInput"'), 'freshman UI should provide a fixed-class roster upload');

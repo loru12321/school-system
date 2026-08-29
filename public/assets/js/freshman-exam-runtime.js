@@ -1838,6 +1838,10 @@ function FB_renderAssemblyBanner() {
 function fbStudentStatus(student) {
     if (student?.isViolation) return '违纪';
     if (student?.postType === 'dropout' || student?.postType === '辍学/长期离校') return '辍学/长期离校';
+    if (student?.postType === 'transfer-in' || student?.postType === '新转入') return '新转入';
+    if (student?.postType === 'roster-no-exam' || student?.postType === '学籍在册未考试' || student?.isNoExam) return '学籍在册未考试';
+    if (student?.isFixedAssignment) return '指定班级';
+    if (student?.sameGroupId) return '同班组合';
     return '';
 }
 
@@ -1863,14 +1867,75 @@ function fbDecorateRosterExportSheet(ws, headers, dataRows = []) {
     const range = XLSX.utils.decode_range(ws['!ref']);
     const statusCol = headers.findIndex(header => String(header).includes('状态'));
     if (statusCol < 0) return;
-    const colors = { '违纪': ['FEE2E2', 'B91C1C'], '辍学/长期离校': ['F3E8FF', '7E22CE'] };
+    const colors = {
+        '违纪': ['FEE2E2', 'B91C1C'],
+        '辍学/长期离校': ['F3E8FF', '7E22CE'],
+        '新转入': ['DBEAFE', '1D4ED8'],
+        '学籍在册未考试': ['FEF3C7', '92400E'],
+        '指定班级': ['DCFCE7', '166534'],
+        '同班组合': ['E0E7FF', '3730A3']
+    };
     dataRows.forEach((student, index) => {
         const row = range.s.r + index + 1;
         const status = fbStudentStatus(student);
-        if (!status) return;
         const style = colors[status];
-        const ref = XLSX.utils.encode_cell({ c: statusCol, r: row });
-        if (ws[ref]) ws[ref].s = { ...(ws[ref].s || {}), fill: { fgColor: { rgb: style[0] } }, font: { color: { rgb: style[1] }, bold: true } };
+        if (!style) return;
+        // 特殊学生整行着色，保证在 Excel 中横向查看时仍能识别；状态列额外加粗。
+        for (let column = range.s.c; column <= range.e.c; column += 1) {
+            const ref = XLSX.utils.encode_cell({ c: column, r: row });
+            if (!ws[ref]) continue;
+            ws[ref].s = {
+                ...(ws[ref].s || {}),
+                fill: { fgColor: { rgb: style[0] } },
+                font: { ...(ws[ref].s?.font || {}), color: { rgb: style[1] }, bold: column === statusCol || !!ws[ref].s?.font?.bold }
+            };
+        }
+    });
+}
+
+function fbSafeExportSheetName(name, usedNames = new Set()) {
+    const base = String(name || '班级').replace(/[\\/*?:\[\]]/g, '').trim() || '班级';
+    let candidate = base.slice(0, 31);
+    let suffix = 2;
+    while (usedNames.has(candidate)) {
+        const tail = `-${suffix++}`;
+        candidate = `${base.slice(0, Math.max(1, 31 - tail.length))}${tail}`;
+    }
+    usedNames.add(candidate);
+    return candidate;
+}
+
+function fbBuildClassRosterRows(cls, stageLabel = '最终名单') {
+    const rows = [['阶段', '班级', '座位号', '姓名', '性别', '总分', '是否后置分配', '状态', '同班组合', '备注']];
+    const students = [];
+    const list = cls?.seatLayout || cls?.students || [];
+    list.forEach((student, index) => {
+        const status = fbStudentStatus(student);
+        rows.push([
+            stageLabel,
+            cls?.name || '',
+            index + 1,
+            student?.name || '',
+            fbGenderLabel(student?.gender),
+            Number.isFinite(Number(student?.score)) ? student.score : '',
+            student?.isNoExam ? '是' : '否',
+            status || '正常',
+            fbSameGroupLabel(student),
+            student?.remarks || ''
+        ]);
+        students.push(student);
+    });
+    return { rows, students };
+}
+
+function fbAppendClassRosterSheets(wb, classes, stageLabel = '最终名单') {
+    const usedNames = new Set((wb.SheetNames || []).map(name => String(name)));
+    (Array.isArray(classes) ? classes : []).forEach((cls) => {
+        const { rows, students } = fbBuildClassRosterRows(cls, stageLabel);
+        const sheet = XLSX.utils.aoa_to_sheet(rows);
+        sheet['!cols'] = [{ wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 8 }, { wch: 10 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 34 }];
+        fbDecorateRosterExportSheet(sheet, rows[0], students);
+        XLSX.utils.book_append_sheet(wb, sheet, fbSafeExportSheetName(cls?.name || '班级', usedNames));
     });
 }
 
@@ -2927,7 +2992,9 @@ function FB_exportResult() {
     const students = [];
     FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { const status = fbStudentStatus(s); data.push([c.name, i + 1, s.name, fbGenderLabel(s.gender), s.score, s.height, s.vision, status || '正常', fbSameGroupLabel(s), s.remarks]); students.push(s); }); });
     const ws = XLSX.utils.aoa_to_sheet(data); fbDecorateRosterExportSheet(ws, data[0], students);
-    XLSX.utils.book_append_sheet(wb, ws, "分班与座位表"); XLSX.writeFile(wb, "新生分班结果.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "分班与座位表");
+    fbAppendClassRosterSheets(wb, FB_CLASSES, '最终名单');
+    XLSX.writeFile(wb, "新生分班结果.xlsx");
 }
 function FB_exportResultWithBalance() {
     if (!FB_CLASSES.length) return window.UI.alert('请先生成分班方案。', 'warning');
@@ -2954,6 +3021,7 @@ function FB_exportResultWithBalance() {
     (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => { const status = fbStudentStatus(s); roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) ? s.score : '', s.isNoExam ? '是' : '否', status || '正常', fbSameGroupLabel(s), s.remarks || '']); rosterStudents.push(s); }));
     const rosterSheet = XLSX.utils.aoa_to_sheet(roster); fbDecorateRosterExportSheet(rosterSheet, roster[0], rosterStudents);
     XLSX.utils.book_append_sheet(wb, rosterSheet, '最终分班名单');
+    fbAppendClassRosterSheets(wb, scheme.finalData || FB_CLASSES, '最终名单');
     XLSX.writeFile(wb, '新生分班方案及两率一分.xlsx');
 }
 
