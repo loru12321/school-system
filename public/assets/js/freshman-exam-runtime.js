@@ -1069,11 +1069,6 @@ function fbBalanceGenderCounts(classes, k) {
                 const lowFemale = lowClass.students.filter(s => s.gender === 'F' && !s.isFixedAssignment);
                 if (!highMale.length || !lowFemale.length) continue;
 
-                // 只有能改善当前男女极差的方向才进入候选，避免为了均分代价
-                // 选择“看似交换、实际没有更均衡”的方案。
-                if (beforeSpread.maleRange <= 1 && high.female <= low.female + 1) continue;
-                if (beforeSpread.maleRange > 1 && high.male <= low.male + 1 && beforeSpread.femaleRange <= 1) continue;
-
                 for (const maleStudent of highMale) {
                     for (const femaleStudent of lowFemale) {
                         const nextHighStudents = highClass.students.filter(s => s !== maleStudent).concat(femaleStudent);
