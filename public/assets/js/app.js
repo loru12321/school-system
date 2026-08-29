@@ -5257,15 +5257,40 @@ async function processDataInner() {
             appDebug('[score] normalized student totals for current config:', totalNormalization);
         }
 
-        const schoolSet = new Set(RAW_DATA.map(s => s.school));
-        const singleSchool = schoolSet.size === 1;
-
         const input1 = parseFloat(window.SYS_VARS?.indicator?.ind1) || 0;
         const input2 = parseFloat(window.SYS_VARS?.indicator?.ind2) || 0;
-
         const townshipRowsForCore = (typeof filterRowsToTownshipSchools === 'function')
             ? filterRowsToTownshipSchools(RAW_DATA || [])
             : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+        if (window.ThresholdRuntime && typeof window.ThresholdRuntime.buildThresholdSnapshot === 'function') {
+            const snapshot = window.ThresholdRuntime.buildThresholdSnapshot({
+                rows: RAW_DATA || [],
+                subjects: SUBJECTS || [],
+                townshipRows: townshipRowsForCore,
+                singleSchool: new Set((RAW_DATA || []).map((row) => row && row.school).filter(Boolean)).size === 1,
+                topExcellent: input1,
+                topPass: input2
+            });
+            THRESHOLDS = snapshot.thresholds || {};
+            window.THRESHOLD_METADATA = snapshot.metadata || {};
+            window.THRESHOLD_SCOPE = {
+                source: snapshot.source,
+                sourceLabel: snapshot.sourceLabel,
+                sampleCount: snapshot.sampleCount,
+                schoolCount: snapshot.schoolCount,
+                scope: snapshot.scope
+            };
+            const policyNote = document.getElementById('threshold-policy-note');
+            if (policyNote) {
+                const coverage = snapshot.schoolCount > 0 ? `，覆盖${snapshot.schoolCount}校` : '';
+                policyNote.textContent = `优秀线/及格线：默认按优秀前15%、及格前50%划定；当前来源为“${snapshot.sourceLabel}”，样本${snapshot.sampleCount}人${coverage}；单校总分可按“名次线”换算。`;
+            }
+            if (typeof setThresholds === 'function') setThresholds(THRESHOLDS);
+            return snapshot.singleSchool;
+        }
+
+        const schoolSet = new Set(RAW_DATA.map(s => s.school));
+        const singleSchool = schoolSet.size === 1;
         const thresholdSourceRows = townshipRowsForCore.length ? townshipRowsForCore : (RAW_DATA || []);
 
         const keys = [...SUBJECTS, 'total'];

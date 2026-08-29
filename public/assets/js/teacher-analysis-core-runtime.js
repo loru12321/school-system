@@ -376,6 +376,21 @@
             .map((student) => teacherToNumber(student?.scores?.[subject], NaN))
             .filter((score) => Number.isFinite(score))
             .sort((a, b) => b - a);
+        if (window.ThresholdRuntime && typeof window.ThresholdRuntime.resolveSubjectThreshold === 'function') {
+            const excellent = window.ThresholdRuntime.resolveSubjectThreshold(subject, 'excellent', fallbackScores, {
+                thresholds: window.THRESHOLDS,
+                sourceLabel: window.THRESHOLD_SCOPE?.sourceLabel || '当前数据范围按比例划线',
+                schoolCount: window.THRESHOLD_SCOPE?.schoolCount,
+                scope: window.THRESHOLD_SCOPE?.scope
+            }).value;
+            const pass = window.ThresholdRuntime.resolveSubjectThreshold(subject, 'pass', fallbackScores, {
+                thresholds: window.THRESHOLDS,
+                sourceLabel: window.THRESHOLD_SCOPE?.sourceLabel || '当前数据范围按比例划线',
+                schoolCount: window.THRESHOLD_SCOPE?.schoolCount,
+                scope: window.THRESHOLD_SCOPE?.scope
+            }).value;
+            return { exc: excellent, pass, low: pass * 0.6 };
+        }
         const config = window.THRESHOLDS?.[subject] || {};
         let exc = teacherToNumber(config.exc, NaN);
         let pass = teacherToNumber(config.pass, NaN);

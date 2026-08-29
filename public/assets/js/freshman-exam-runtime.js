@@ -1637,6 +1637,14 @@ function fbMajorSubjectsForGrade() {
 // 两率一分沿用系统当前考试的优秀线/及格线；若当前考试没有显式配置，
 // 按全体分班学生的 85%/60% 分位回退，避免把班级内部成绩当作各班自己的划线。
 function fbResolveSubjectThreshold(subject, kind, scores) {
+    if (window.ThresholdRuntime && typeof window.ThresholdRuntime.resolveSubjectThreshold === 'function') {
+        return window.ThresholdRuntime.resolveSubjectThreshold(subject, kind, scores, {
+            thresholds: window.THRESHOLDS,
+            sourceLabel: window.THRESHOLD_SCOPE?.sourceLabel || '当前数据范围按比例划线',
+            schoolCount: window.THRESHOLD_SCOPE?.schoolCount,
+            scope: window.THRESHOLD_SCOPE?.scope
+        }).value;
+    }
     const config = (window.THRESHOLDS && typeof window.THRESHOLDS === 'object' && window.THRESHOLDS[subject]) || {};
     const direct = kind === 'excellent'
         ? (config.excellent ?? config.exc ?? config.good)

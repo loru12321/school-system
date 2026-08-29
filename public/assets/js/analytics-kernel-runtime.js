@@ -234,11 +234,17 @@
         const snapshot = root.DataState && typeof root.DataState.snapshotDataState === 'function'
             ? root.DataState.snapshotDataState()
             : {};
+        const thresholdMetadata = source.THRESHOLD_METADATA && typeof source.THRESHOLD_METADATA === 'object'
+            ? source.THRESHOLD_METADATA
+            : (source.thresholdMetadata && typeof source.thresholdMetadata === 'object'
+                ? source.thresholdMetadata
+                : (snapshot.thresholdMetadata || root.THRESHOLD_METADATA || {}));
         return {
             rows: Array.isArray(source.RAW_DATA) ? source.RAW_DATA : (Array.isArray(source.rawData) ? source.rawData : (Array.isArray(snapshot.rawData) ? snapshot.rawData : (root.RAW_DATA || []))),
             schools: source.SCHOOLS && typeof source.SCHOOLS === 'object' ? source.SCHOOLS : (source.schools && typeof source.schools === 'object' ? source.schools : (snapshot.schools || root.SCHOOLS || {})),
             subjects: Array.isArray(source.SUBJECTS) ? source.SUBJECTS : (Array.isArray(source.subjects) ? source.subjects : (Array.isArray(snapshot.subjects) ? snapshot.subjects : (root.SUBJECTS || []))),
             thresholds: source.THRESHOLDS && typeof source.THRESHOLDS === 'object' ? source.THRESHOLDS : (source.thresholds && typeof source.thresholds === 'object' ? source.thresholds : (snapshot.thresholds || root.THRESHOLDS || {})),
+            thresholdMetadata,
             config: source.CONFIG && typeof source.CONFIG === 'object' ? source.CONFIG : (source.config && typeof source.config === 'object' ? source.config : (snapshot.config || root.CONFIG || {}))
         };
     }
@@ -381,6 +387,12 @@
     }
 
     function resolveSubjectThreshold(subject, kind, scores, thresholds) {
+        if (root.ThresholdRuntime && typeof root.ThresholdRuntime.resolveSubjectThreshold === 'function') {
+            return root.ThresholdRuntime.resolveSubjectThreshold(subject, kind, scores, {
+                thresholds,
+                sourceLabel: '当前数据范围按比例划线'
+            }).value;
+        }
         const subjectKey = normalizeText(subject);
         const normalizedKey = normalizeSubjectName(subject);
         const config = thresholds?.[subjectKey] || thresholds?.[normalizedKey] || {};
@@ -511,6 +523,7 @@
             schools: data.schools || {},
             subjects,
             thresholds: data.thresholds || {},
+            thresholdMetadata: data.thresholdMetadata || {},
             config: data.config || {},
             studentIndex,
             teacherStats: teacherStats.rows,

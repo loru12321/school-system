@@ -43,7 +43,8 @@ const budgets = {
     // selector, group-level placement lock, conflict checks, and export column.
     // 2026-08-29: deep-link initialization and upload controls add a small
     // amount of inline bundle size; keep the cap above CI's Brotli output.
-    ltHtmlBrotli: 339_500,
+    // 2026-08-30: threshold source metadata adds 65B to the compressed offline bundle.
+    ltHtmlBrotli: 339_600,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,

@@ -263,8 +263,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-2dff9e1687b0.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-2dff9e1687b0.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-f65c12832149.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-f65c12832149.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -5548,7 +5548,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <summary>指标口径说明（点击展开）</summary>
                     <div class="explain-content">
                         <p>平均分：该教师所教班级、该学科所有有效成绩的算术平均。</p>
-                        <p>优秀线/及格线：按年级实考人数比例自动划定，9年级优秀线取前15%，其他年级取前20%，及格线取前50%；单校总分可按“名次线”换算。</p>
+                        <p id="threshold-policy-note">优秀线/及格线：默认按当前数据范围优秀前15%、及格前50%划定；优先使用全乡镇参评学校数据，无乡镇数据时退回当前数据；单校总分可按“名次线”换算。</p>
                         <p>优秀率：优秀人数 ÷ 实考人数，优秀线来自本次年级分布阈值。</p>
                         <p>及格率：及格人数 ÷ 实考人数，及格线来自本次年级分布阈值。</p>
                         <p>优秀人数：分数 ≥ 优秀线的人数；及格人数：分数 ≥ 及格线的人数。</p>

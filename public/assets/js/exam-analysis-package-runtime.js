@@ -799,6 +799,13 @@
             ? window.filterRowsToTownshipSchools(rows || [])
             : (rows || []);
         const sourceRows = thresholdRows.length ? thresholdRows : (rows || []);
+        if (window.ThresholdRuntime && typeof window.ThresholdRuntime.buildThresholdSnapshot === 'function') {
+            return window.ThresholdRuntime.buildThresholdSnapshot({
+                rows: rows || [],
+                subjects: subjects || [],
+                townshipRows: sourceRows
+            }).thresholds;
+        }
         const thresholds = {};
         const pick = (values, ratio) => {
             const index = Math.max(0, Math.ceil(values.length * ratio) - 1);
