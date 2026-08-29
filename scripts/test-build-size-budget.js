@@ -45,8 +45,9 @@ const budgets = {
     // amount of inline bundle size; keep the cap above CI's Brotli output.
     // 2026-08-30: threshold source metadata adds 65B to the compressed offline bundle.
     // 2026-08-30: freshman no-exam color legend, seat-map labels, and style-capable
-    // XLSX loader add a small, intentional amount to the offline bundle.
-    ltHtmlBrotli: 340_500,
+    // XLSX loader add a small, intentional amount to the offline bundle. Keep
+    // cross-platform Brotli variance headroom (Linux CI can be ~200B larger).
+    ltHtmlBrotli: 341_000,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,
