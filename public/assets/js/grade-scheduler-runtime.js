@@ -9,6 +9,8 @@ const SCHEDULER = {
     classMeta: Object.create(null),
     lockedSchedule: Object.create(null), // 已确认级部课表：作为本项目不可移动的底图
     importWarnings: [],
+    cloudTeacherMap: Object.create(null),
+    cloudTeacherTermId: '',
     schedule: {}, // 结果
     classes: [], // 本学年联合项目的全部班级
     teacherSlotIndex: null,
@@ -170,6 +172,131 @@ const SCHEDULER = {
         if (full) return `${full[1]}.${Number(full[2])}`;
         if (grade && /^\d{1,2}$/.test(raw)) return `${grade}.${Number(raw)}`;
         return raw;
+    },
+
+    getCloudTeacherTermContext: function () {
+        const cohortId = String(
+            (typeof window.getCurrentCohortId === 'function' ? window.getCurrentCohortId() : '')
+            || window.CURRENT_COHORT_ID
+            || (typeof window.readWorkspaceCohortId === 'function' ? window.readWorkspaceCohortId() : '')
+            || ''
+        ).trim();
+        const termSelect = document.getElementById('dm-teacher-term-select');
+        const selectedIsActive = termSelect && typeof window.isTeacherTermSelectActive === 'function'
+            ? window.isTeacherTermSelectActive(termSelect)
+            : !!termSelect && termSelect.options && termSelect.options.length > 0
+                && termSelect.offsetParent !== null;
+        const preferred = selectedIsActive
+            ? String(termSelect.value || '').trim()
+            : '';
+        const parseTerm = (termId) => {
+            const text = String(termId || '').trim();
+            const year = (text.match(/(?:^|_)(\d{4}-\d{4})(?:_|$)/) || [])[1] || '';
+            const term = (text.match(/(?:^|_)(上学期|下学期)(?:_|$)/) || [])[1] || '';
+            const grade = (text.match(/(?:^|_)(\d{1,2})年级(?:_|$)/) || [])[1] || '';
+            return { year, term, grade, termId: text };
+        };
+        const preferredContext = parseTerm(preferred);
+        if (preferredContext.year && preferredContext.term && preferredContext.grade) {
+            return { ...preferredContext, cohortId };
+        }
+
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const startYear = month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+        const term = month >= 8 ? '上学期' : '下学期';
+        const grade = cohortId && /^\d{4}$/.test(cohortId)
+            ? String(6 + (startYear - Number(cohortId)))
+            : '';
+        const year = `${startYear}-${startYear + 1}`;
+        const termId = year && grade ? `${year}_${term}_${grade}年级` : '';
+        return { year, term, grade, termId, cohortId };
+    },
+
+    applyCloudTeacherMap: function (options = {}) {
+        const cloudMap = this.cloudTeacherMap && typeof this.cloudTeacherMap === 'object'
+            ? this.cloudTeacherMap : {};
+        if (!Object.keys(cloudMap).length) return { updated: 0, missing: [] };
+        const missing = [];
+        let updated = 0;
+        this.demands = (this.demands || []).map((demand) => {
+            const key = `${demand.className}_${demand.subject}`;
+            const teacher = String(cloudMap[key] || '').trim();
+            if (!teacher) {
+                missing.push(key);
+                return demand;
+            }
+            if (demand.name !== teacher) updated += 1;
+            return { ...demand, name: teacher, teacherSource: 'cloud' };
+        });
+        if (updated) {
+            // 任课教师变化后，原课表的教师资源占用可能已经失效，必须重新排课。
+            this.schedule = {};
+            this.lockedSchedule = Object.create(null);
+            this.invalidateTableRenderCache();
+            this.rebuildProjectFromDemands();
+            this.renderProjectStatus();
+        }
+        if (!options.silent && window.UI) {
+            const suffix = missing.length ? `，${missing.length} 条班级/学科未找到云端教师` : '';
+            UI.toast(`已用云端任课表更新 ${updated} 条排课资源${suffix}`, missing.length ? 'warning' : 'success');
+        }
+        return { updated, missing };
+    },
+
+    loadCloudTeachers: async function () {
+        const context = this.getCloudTeacherTermContext();
+        if (!context.cohortId) {
+            return window.UI?.alert('请先选择届别。');
+        }
+        if (!context.termId) {
+            return window.UI?.alert('无法确定任课学期，请先选择学年、学期和年级。');
+        }
+        if (!window.CloudManager || typeof window.CloudManager.loadTeachers !== 'function') {
+            return window.UI?.alert('云端任课服务未就绪，请刷新后重试。');
+        }
+        const school = String(
+            (typeof window.readCurrentSchool === 'function' ? window.readCurrentSchool() : '')
+            || window.MY_SCHOOL || ''
+        ).trim();
+        const keyBuilder = typeof window.CloudManager.getTeacherKey === 'function'
+            ? window.CloudManager.getTeacherKey.bind(window.CloudManager)
+            : null;
+        const keys = [];
+        if (keyBuilder && school) keys.push(keyBuilder({ termId: context.termId, schoolName: school }));
+        if (keyBuilder) keys.push(keyBuilder({ termId: context.termId }));
+        let loaded = false;
+        for (const exactKey of [...new Set(keys.filter(Boolean))]) {
+            loaded = await window.CloudManager.loadTeachers({
+                exactKey,
+                schoolName: school,
+                force: true,
+                preferRemote: true,
+                blocking: false,
+                toast: false
+            });
+            if (loaded) break;
+        }
+        if (!loaded) {
+            return window.UI?.alert(`未找到 ${context.cohortId}届 ${context.year} ${context.term} ${context.grade}年级任课表，请先同步。`);
+        }
+        this.cloudTeacherMap = JSON.parse(JSON.stringify(window.TEACHER_MAP || {}));
+        this.cloudTeacherTermId = context.termId;
+        const assignments = Object.entries(this.cloudTeacherMap).filter(([key, teacher]) => {
+            const className = String(key).split('_')[0];
+            return !context.grade || this.inferGradeFromClass(className) === context.grade;
+        });
+        const status = document.getElementById('sch_cloud_teacher_status');
+        if (status) status.textContent = `已读取：${context.cohortId}届 · ${context.year} ${context.term} · ${context.grade}年级 · ${assignments.length} 条云端任课关系`;
+        if (this.demands.length) {
+            const result = this.applyCloudTeacherMap({ silent: true });
+            window.UI?.toast(`✅ 已读取云端任课表并更新 ${result.updated} 条排课教师`, result.missing.length ? 'warning' : 'success');
+        } else {
+            const preview = document.getElementById('sch_resource_preview');
+            if (preview) preview.innerHTML = `<div style="color:#166534;"><strong>云端任课已读取</strong>：${this.escapeHtml(context.cohortId)}届 ${this.escapeHtml(context.year)} ${this.escapeHtml(context.term)} ${this.escapeHtml(context.grade)}年级，共 ${assignments.length} 条。</div><div style="padding-top:6px;color:#64748b;">导入课时表时教师可留空，系统按班级+学科自动补齐。</div>`;
+            window.UI?.toast(`✅ 已读取 ${assignments.length} 条云端任课关系`, 'success');
+        }
+        return true;
     },
 
     inferGradeFromClass: function (className) {
@@ -509,8 +636,8 @@ const SCHEDULER = {
             const venue = this.readImportValue(row, ['场地/资源（可选）', '场地/资源', '场地', '资源', '教室', 'venue', 'Venue']);
             const note = this.readImportValue(row, ['备注（可选）', '备注', '说明', 'note', 'Note']);
             if (!name && !subject && !classValue && !hoursValue) return;
-            if (!name || !subject || !classValue || !hoursValue) {
-                warnings.push(`第 ${index + 2} 行缺少教师、学科、班级或每班周课时，已跳过。`);
+            if (!subject || !classValue || !hoursValue) {
+                warnings.push(`第 ${index + 2} 行缺少学科、班级或每班周课时，已跳过。`);
                 return;
             }
 
@@ -537,15 +664,22 @@ const SCHEDULER = {
                     warnings.push(`第 ${index + 2} 行无法识别年级/班级“${rawClass}”，请填写“年级”和“班级”两列。`);
                     return;
                 }
-                const key = [this.normalizeTeacherName(name), subject, className].join('__');
+                const cloudTeacher = this.cloudTeacherMap?.[`${className}_${subject}`] || '';
+                const resolvedTeacher = this.normalizeTeacherName(cloudTeacher || name);
+                if (!resolvedTeacher) {
+                    warnings.push(`第 ${index + 2} 行缺少教师姓名，且云端任课表中未找到 ${className}班 ${subject}，已跳过。`);
+                    return;
+                }
+                const key = [resolvedTeacher, subject, className].join('__');
                 const current = merged.get(key) || {
                     grade: classGrade,
                     className,
-                    name: this.normalizeTeacherName(name),
+                    name: resolvedTeacher,
                     subject,
                     weeklyHours: 0,
                     venue: String(venue || '').trim(),
-                    note: String(note || '').trim()
+                    note: String(note || '').trim(),
+                    teacherSource: cloudTeacher ? 'cloud' : 'file'
                 };
                 current.weeklyHours += Number(perClassHours);
                 if (!current.venue && venue) current.venue = String(venue).trim();

@@ -18,8 +18,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-0f98503ca9d9.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-0f98503ca9d9.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-2dff9e1687b0.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-2dff9e1687b0.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -237,7 +237,9 @@
                                         🚀 一键编排监考表 (2人/班)
                                     </button></div></div></div><div id="exam-view-proctor" class="hidden"><div class="table-wrap"><table id="exam_proctor_table" class="proctor-table"><thead><tr><th>考场</th><th>人数</th><th>起止考号</th><th>监考员签字</th><th>巡考员签字</th></tr></thead><tbody></tbody></table></div></div></div></div></div><div id="grade-scheduler" class="section card-box analysis-workspace analysis-workspace-violet"><div class="module-desc-bar analysis-hero" style="border-color: #7c3aed"><h3><i class="ti ti-calendar-time"></i> 学年联合智能排课</h3><p>独立于成绩与考核数据。单个级部可单独排课；有跨级教师或共享场地时，将相关年级一次导入，系统会统一避让撞课。</p><div class="analysis-scan-strip"><div class="analysis-scan-item"><span class="analysis-scan-label">Focus</span><strong class="analysis-scan-value">课时 / 约束</strong><span class="analysis-scan-note">先配置课时结构，再导入任课表和特殊约束，最后生成排课结果。</span></div><div class="analysis-scan-item"><span class="analysis-scan-label">Use</span><strong class="analysis-scan-value">单级部 / 联合排课</strong><span class="analysis-scan-note">无跨级冲突时可单独导入一个级部；跨级教师或场地则联合排课。</span></div><div class="analysis-scan-item"><span class="analysis-scan-label">Output</span><strong class="analysis-scan-value">课表 / 审计</strong><span class="analysis-scan-note">支持结果预览、Excel 导出和疲劳审计，便于多轮微调。</span></div></div></div><div class="sec-head analysis-shell-head"><h2><i class="ti ti-layout-grid"></i> 学年联合排课</h2><div class="analysis-action-stack"><div class="analysis-action-note">先导入任课表并做规则预检；已有确认课表可作为锁定底图导入。单级部可独立操作，跨级教师和共享场地须同批导入。</div><div class="analysis-actions"><button class="btn btn-purple" onclick="SCHEDULER.exportResult()">📥 导出课表(Excel)</button><button class="btn btn-orange"
                                 data-pick-file="schedulerImportFile">📤
-                                导入已有课表优化</button><button class="btn btn-gray"
+                                导入已有课表优化</button><button class="btn btn-purple" type="button" onclick="SCHEDULER.loadCloudTeachers()"
+                                title="按当前届别和新学期读取云端任课教师">
+                                ☁️ 读取云端新学期任课</button><button class="btn btn-gray"
                                 data-pick-file="schedulerLockedImportFile">🔒
                                 导入锁定级部课表</button><button class="btn btn-gray" type="button" data-scheduler-click="preflight"><i class="ti ti-shield-check"></i> 规则预检</button><button class="btn btn-gray" onclick="SCHEDULER.auditFatigue()"><i class="ti ti-heart-rate-monitor"></i> 疲劳审计</button><input type="file" id="schedulerImportFile" accept=".xlsx,.xls" hidden
                                 onchange="SCHEDULER.importExisting(this)"><input type="file" id="schedulerLockedImportFile" accept=".xlsx,.xls" hidden
@@ -254,6 +256,8 @@
                         style="flex:2; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; max-height:200px; overflow-y:auto;"><div style="display:flex; justify-content:space-between;"><h4 style="margin:0;">📋 待排课程资源预览</h4><button class="btn btn-sm btn-green" onclick="SCHEDULER.downloadTemplate()"><i
                                     class="ti ti-download"></i> 下载联合模板与说明</button></div><div id="sch_resource_preview" style="margin-top:10px; font-size:12px; color:#666;">
                             请先上传 Excel 文件…
+                        </div><div id="sch_cloud_teacher_status" style="margin-top:8px; color:#2563eb; font-size:12px;" aria-live="polite">
+                            云端任课未读取；读取后自动匹配教师。
                         </div></div></div><div class="constraints-box"
                     style="margin-top:20px; background:#fff; border:1px solid #e2e8f0; box-shadow:0 4px 6px rgba(0,0,0,0.02);"><h4 style="color:#4f46e5; border-bottom:1px solid #eee; padding-bottom:8px; margin-bottom:15px;"><i class="ti ti-adjustments-alt"></i> 排课规则与特殊约束 (动态配置)
                     </h4><div class="constraints-grid" style="grid-template-columns: 1fr 1fr; gap:20px;"><div
