@@ -1,1 +1,0 @@
-(function(){"use strict";function n(){return window.innerWidth<=960}function t(){const e=document.getElementById("mobile-skeleton");if(e){if(!n()){e.remove();return}e.classList.add("hidden"),setTimeout(()=>{e.remove()},350)}}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>{setTimeout(t,100)}):setTimeout(t,100)})();
