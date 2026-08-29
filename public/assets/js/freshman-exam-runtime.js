@@ -169,6 +169,7 @@
 
     function fbResolveFixedAssignmentIdentities() {
         const candidates = fbFixedAssignmentCandidates();
+        const primaryStudents = Array.isArray(FB_STUDENTS) ? FB_STUDENTS : [];
         const byName = new Map();
         candidates.forEach((student) => {
             const name = fbNormalizeName(student.name);
@@ -179,7 +180,10 @@
         Object.entries(FB_FIXED_ASSIGNMENTS).forEach(([identity, classIdx]) => {
             if (!identity.startsWith('name:')) return;
             const name = identity.slice(5);
-            const matches = byName.get(name) || [];
+            // 优先使用已经装配完成的考试学生；学籍/性别名单可能同时保留
+            // 同名记录，不应因此阻止唯一的成绩学生被解析。
+            const primaryMatches = primaryStudents.filter(student => fbNormalizeName(student.name) === name);
+            const matches = primaryMatches.length ? primaryMatches : (byName.get(name) || []);
             if (matches.length !== 1) return;
             const resolved = fbStudentIdentity(matches[0]);
             if (resolved && resolved !== identity) {
