@@ -4,7 +4,11 @@
  * fallbacks when the network is unavailable.
  */
 
+<<<<<<<< HEAD:public/sw-runtime-f65c12832149.js
 const CACHE_VERSION = 'school-system-runtime-f65c12832149';
+========
+const CACHE_VERSION = 'school-system-runtime-100163901213';
+>>>>>>>> 461b3471 (fix: unify threshold resolution and source metadata):public/sw-runtime-100163901213.js
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;

@@ -138,6 +138,18 @@
         };
     }
 
+    function resolvePair(subject, scores, options = {}) {
+        const context = Object.keys(options).length ? options : {
+            thresholds: root.THRESHOLDS,
+            sourceLabel: root.THRESHOLD_SCOPE?.sourceLabel || '当前数据范围按比例划线',
+            schoolCount: root.THRESHOLD_SCOPE?.schoolCount,
+            scope: root.THRESHOLD_SCOPE?.scope
+        };
+        const excellent = resolveSubjectThreshold(subject, 'excellent', scores, context).value;
+        const pass = resolveSubjectThreshold(subject, 'pass', scores, context).value;
+        return { exc: excellent, pass, low: pass * 0.6 };
+    }
+
     function buildThresholdSnapshot(options = {}) {
         const scope = getScopeRows(options);
         const allSchools = uniqueSchools(scope.rows);
@@ -211,6 +223,7 @@
         normalizeSubject,
         readDirectThreshold,
         resolveSubjectThreshold,
+        resolvePair,
         buildThresholdSnapshot,
         formatMetadata,
         percentileLine,

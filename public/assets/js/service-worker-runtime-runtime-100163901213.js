@@ -2,8 +2,13 @@
     const root = window;
     const nav = root.navigator;
     const loc = root.location;
+<<<<<<<< HEAD:public/assets/js/service-worker-runtime-runtime-f65c12832149.js
     const SERVICE_WORKER_VERSION = 'runtime-f65c12832149';
     const SERVICE_WORKER_PATH = './sw-runtime-f65c12832149.js';
+========
+    const SERVICE_WORKER_VERSION = 'runtime-100163901213';
+    const SERVICE_WORKER_PATH = './sw-runtime-100163901213.js';
+>>>>>>>> 461b3471 (fix: unify threshold resolution and source metadata):public/assets/js/service-worker-runtime-runtime-100163901213.js
     const ALLOWED_HOSTS = new Set([
         'schoolsystem.com.cn',
         'www.schoolsystem.com.cn',
