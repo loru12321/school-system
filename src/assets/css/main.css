@@ -8712,6 +8712,11 @@ body {
     color: #7e22ce;
 }
 
+.fb-tag-yellow {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 .fb-violation-link {
     border: 0;
     cursor: pointer;
@@ -9601,6 +9606,21 @@ body {
 .desk.is-diff {
     background: #fef2f2;
     border: 2px solid #ef4444;
+}
+
+.desk.is-no-exam {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+.desk.is-dropout {
+    background: #f3e8ff;
+    border-color: #a855f7;
+}
+
+.desk.is-transfer-in {
+    background: #dbeafe;
+    border-color: #3b82f6;
 }
 
 .desk-name {

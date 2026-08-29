@@ -1116,9 +1116,15 @@ function FB_loadData(input) {
         try {
             const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, { type: 'array' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
             if (!json.length) throw new Error("Excel没有数据");
+            const manualSubjects = fbMajorSubjectsForGradeValue(fbLockedTargetGrade());
             FB_STUDENTS = json.map((r, i) => {
                 const remarks = String(r['备注'] || r['说明'] || ""); const sameMatch = remarks.match(/(?:和|与|跟)([\u4e00-\u9fa5\w]+)(?:同班|一起|一班)/); const diffMatch = remarks.match(/(?:和|与|跟)([\u4e00-\u9fa5\w]+)(?:分开|不同班|不在一起)/);
-                return { _id: i, name: r['姓名'] || '未知', gender: fbParseGender(r['性别'] || r['Gender']), score: parseFloat(r['总分'] || r['语数英'] || 0), height: parseFloat(r['身高'] || 160), vision: parseFloat(r['视力'] || r['左眼'] || 5.0), isDiff: (String(r['难管'] || "").includes('是') || remarks.includes('难管') || remarks.includes('调皮')), remarks: remarks, constraints: { same: sameMatch ? [sameMatch[1]] : [], diff: diffMatch ? [diffMatch[1]] : [] }, classIdx: -1 };
+                const subjAvg = Object.fromEntries(manualSubjects.map((subject) => {
+                    const raw = r[subject] ?? r[`${subject}成绩`] ?? r[`${subject}分数`];
+                    const value = Number(raw);
+                    return [subject, Number.isFinite(value) ? value : null];
+                }));
+                return { _id: i, name: r['姓名'] || '未知', gender: fbParseGender(r['性别'] || r['Gender']), score: parseFloat(r['总分'] || r['语数英'] || 0), subjAvg, height: parseFloat(r['身高'] || 160), vision: parseFloat(r['视力'] || r['左眼'] || 5.0), isDiff: (String(r['难管'] || "").includes('是') || remarks.includes('难管') || remarks.includes('调皮')), remarks: remarks, constraints: { same: sameMatch ? [sameMatch[1]] : [], diff: diffMatch ? [diffMatch[1]] : [] }, classIdx: -1 };
             });
             // 兼容旧版备注规则：将“和XX同班”转成同班组合硬约束。
             const byName = new Map(FB_STUDENTS.map(s => [fbNormalizeName(s.name), s]));
@@ -1853,6 +1859,46 @@ function fbStudentStatus(student) {
     return '';
 }
 
+function fbStudentStatusExplanation(student) {
+    const status = fbStudentStatus(student);
+    if (status === '辍学/长期离校') {
+        return '辍学/长期离校名单学生，按后置均衡分配；无考试成绩。';
+    }
+    if (status === '新转入') {
+        return '新转入学生，按后置均衡分配；无本次考试成绩。';
+    }
+    if (status === '学籍在册未考试' || student?.isNoExam) {
+        return '学籍在册但本次未参加考试，按后置均衡分配；各科成绩不计入两率一分。';
+    }
+    if (status === '违纪') return '违纪学生参与分班，算法已尽量分散到各班。';
+    if (status === '指定班级') return '管理员指定班级，作为硬约束保留。';
+    if (status === '同班组合') return '同班组合，作为整体参与分班，不拆分。';
+    return '';
+}
+
+function fbExportSubjectNames(classes = []) {
+    const names = [];
+    const preferred = typeof fbMajorSubjectsForGrade === 'function'
+        ? fbMajorSubjectsForGrade()
+        : fbMajorSubjectsForGradeValue(fbLockedTargetGrade());
+    preferred.forEach((subject) => { if (!names.includes(subject)) names.push(subject); });
+    const discovered = new Set();
+    (Array.isArray(classes) ? classes : []).forEach((cls) => (cls?.students || []).forEach((student) => {
+        Object.keys(student?.subjAvg || {}).forEach((subject) => discovered.add(String(subject || '').trim()));
+        Object.keys(student?.scores || {}).forEach((subject) => discovered.add(String(subject || '').trim()));
+    }));
+    [...discovered].filter(Boolean).sort((a, b) => a.localeCompare(b, 'zh-CN')).forEach((subject) => {
+        if (!names.includes(subject)) names.push(subject);
+    });
+    return names;
+}
+
+function fbStudentSubjectScore(student, subject) {
+    const raw = student?.subjAvg?.[subject] ?? student?.scores?.[subject];
+    const value = Number(raw);
+    return Number.isFinite(value) && !student?.isNoExam ? value : null;
+}
+
 function fbSameGroupLabel(student) {
     if (!student?.sameGroupId) return '';
     const idx = FB_SAME_CLASS_GROUPS.findIndex(group => group.id === student.sameGroupId);
@@ -1913,8 +1959,8 @@ function fbSafeExportSheetName(name, usedNames = new Set()) {
     return candidate;
 }
 
-function fbBuildClassRosterRows(cls, stageLabel = '最终名单') {
-    const rows = [['阶段', '班级', '座位号', '姓名', '性别', '总分', '是否后置分配', '状态', '同班组合', '备注']];
+function fbBuildClassRosterRows(cls, stageLabel = '最终名单', subjects = fbExportSubjectNames([cls])) {
+    const rows = [['阶段', '班级', '座位号', '姓名', '性别', '总分', ...subjects.map((subject) => `${subject}成绩`), '是否后置分配', '状态', '状态说明', '同班组合', '备注']];
     const students = [];
     const list = cls?.seatLayout || cls?.students || [];
     list.forEach((student, index) => {
@@ -1926,8 +1972,13 @@ function fbBuildClassRosterRows(cls, stageLabel = '最终名单') {
             student?.name || '',
             fbGenderLabel(student?.gender),
             Number.isFinite(Number(student?.score)) ? student.score : '',
+            ...subjects.map((subject) => {
+                const value = fbStudentSubjectScore(student, subject);
+                return value === null ? (student?.isNoExam ? '未参加考试' : '—') : value;
+            }),
             student?.isNoExam ? '是' : '否',
             status || '正常',
+            fbStudentStatusExplanation(student),
             fbSameGroupLabel(student),
             student?.remarks || ''
         ]);
@@ -1938,10 +1989,15 @@ function fbBuildClassRosterRows(cls, stageLabel = '最终名单') {
 
 function fbAppendClassRosterSheets(wb, classes, stageLabel = '最终名单') {
     const usedNames = new Set((wb.SheetNames || []).map(name => String(name)));
+    const subjects = fbExportSubjectNames(classes);
     (Array.isArray(classes) ? classes : []).forEach((cls) => {
-        const { rows, students } = fbBuildClassRosterRows(cls, stageLabel);
+        const { rows, students } = fbBuildClassRosterRows(cls, stageLabel, subjects);
         const sheet = XLSX.utils.aoa_to_sheet(rows);
-        sheet['!cols'] = [{ wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 8 }, { wch: 10 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 34 }];
+        sheet['!cols'] = [
+            { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 8 }, { wch: 10 },
+            ...subjects.map(() => ({ wch: 11 })),
+            { wch: 14 }, { wch: 18 }, { wch: 52 }, { wch: 12 }, { wch: 34 }
+        ];
         fbDecorateRosterExportSheet(sheet, rows[0], students);
         XLSX.utils.book_append_sheet(wb, sheet, fbSafeExportSheetName(cls?.name || '班级', usedNames));
     });
@@ -1976,8 +2032,9 @@ function FB_renderDashboard() {
         const violationBadge = violationCnt > 0
             ? `<button type="button" class="fb-tag fb-tag-red fb-violation-link" data-fb-action="view-violations" data-fb-class-id="${c.id}">${violLabel}: ${violationCnt}</button>`
             : (diffCnt > 0 ? `<span class="fb-tag fb-tag-red">${violLabel}: ${diffCnt}</span>` : '');
+        const noExamBadge = postRosterCnt > 0 ? `<span class="fb-tag fb-tag-yellow" title="学籍在册但本次未参加考试，按后置均衡分配；各科成绩不计入两率一分。">未参加考试: ${postRosterCnt}</span>` : '';
         const dropoutBadge = postDropoutCnt > 0 ? `<span class="fb-tag fb-tag-purple">辍学/长期离校: ${postDropoutCnt}</span>` : '';
-        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span style="display:flex;gap:5px;align-items:center;">${violationBadge}${dropoutBadge}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div>高分段: ${hiCnt}</div><div>低分段: ${loCnt}</div>${postRosterCnt || postDropoutCnt || postTransferCnt ? `<div style="grid-column:span 2; color:#7c3aed; font-weight:700;">↳ 后置学生: ${postRosterCnt + postDropoutCnt + postTransferCnt} 人（${postRosterCnt ? `在册未考 ${postRosterCnt}` : ''}${postRosterCnt && (postDropoutCnt || postTransferCnt) ? '、' : ''}${postDropoutCnt ? `辍学/长期离校 ${postDropoutCnt}` : ''}${postDropoutCnt && postTransferCnt ? '、' : ''}${postTransferCnt ? `新转入 ${postTransferCnt}` : ''}）</div>` : ''}${fixedCnt ? `<div style="grid-column:span 2; color:#166534; font-weight:700;">🔒 指定学生: ${fixedCnt} 人</div>` : ''}${sameGroupIds.length ? `<div style="grid-column:span 2; color:#1d4ed8; font-weight:700;">👥 同班组合: ${sameGroupIds.length} 组</div>` : ''}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">点击进入座位编排 →</div></div></div>`;
+        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">${violationBadge}${noExamBadge}${dropoutBadge}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div>高分段: ${hiCnt}</div><div>低分段: ${loCnt}</div>${postRosterCnt || postDropoutCnt || postTransferCnt ? `<div style="grid-column:span 2; color:#7c3aed; font-weight:700;">↳ 后置学生: ${postRosterCnt + postDropoutCnt + postTransferCnt} 人（${postRosterCnt ? `在册未考 ${postRosterCnt}` : ''}${postRosterCnt && (postDropoutCnt || postTransferCnt) ? '、' : ''}${postDropoutCnt ? `辍学/长期离校 ${postDropoutCnt}` : ''}${postDropoutCnt && postTransferCnt ? '、' : ''}${postTransferCnt ? `新转入 ${postTransferCnt}` : ''}）</div>` : ''}${fixedCnt ? `<div style="grid-column:span 2; color:#166534; font-weight:700;">🔒 指定学生: ${fixedCnt} 人</div>` : ''}${sameGroupIds.length ? `<div style="grid-column:span 2; color:#1d4ed8; font-weight:700;">👥 同班组合: ${sameGroupIds.length} 组</div>` : ''}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">颜色说明：黄色=在册未参加考试，后置均衡分配；点击进入座位编排 →</div></div></div>`;
     }).join('');
     if (container && container.innerHTML !== classCardsHtml) {
         container.innerHTML = classCardsHtml;
@@ -2916,12 +2973,18 @@ function FB_renderSeatMap() {
                     if (stu.gender === 'M') desk.classList.add('is-male');
                     if (stu.gender === 'F') desk.classList.add('is-female');
                     if (stu.isDiff || stu._isDiff) desk.classList.add('is-diff');
+                    const status = fbStudentStatus(stu);
+                    if (status === '学籍在册未考试') desk.classList.add('is-no-exam');
+                    if (status === '辍学/长期离校') desk.classList.add('is-dropout');
+                    if (status === '新转入') desk.classList.add('is-transfer-in');
                     // 处理锁定状态
                     if (stu.locked) desk.classList.add('locked');
 
                     desk.draggable = !stu.locked; // 锁定的不能拖
                     desk.dataset.idx = stuIdx;
-                    desk.innerHTML = `<div class="desk-name">${stu.name}</div><div class="desk-info"><span>${stu.height}cm</span><span>${stu.score}</span></div><div class="desk-popover">视力:${stu.vision} | 备注:${stu.remarks}</div>`;
+                    const statusText = fbStudentStatusExplanation(stu);
+                    desk.title = statusText || '正常学生';
+                    desk.innerHTML = `<div class="desk-name">${stu.name}</div><div class="desk-info"><span>${stu.height}cm</span><span>${stu.isNoExam ? '未参加考试' : stu.score}</span></div><div class="desk-popover">视力:${stu.vision} | ${statusText || `备注:${stu.remarks || '无'}`}</div>`;
 
                     // 绑定右键事件
                     desk.oncontextmenu = (e) => {
@@ -2996,9 +3059,9 @@ function FB_saveToLocal() {
     window.UI.alert(`方案已保存至浏览器缓存${Object.keys(FB_FIXED_ASSIGNMENTS).length ? `（当前会话保留 ${Object.keys(FB_FIXED_ASSIGNMENTS).length} 条指定班级）` : ''}`);
 }
 function FB_exportResult() {
-    if (!FB_CLASSES.length) return window.UI.alert("无数据"); const wb = XLSX.utils.book_new(); const data = [['班级', '座位号', '姓名', '性别', '总分', '身高', '视力', '状态', '同班组合', '备注']];
+    if (!FB_CLASSES.length) return window.UI.alert("无数据"); const wb = XLSX.utils.book_new(); const subjects = fbExportSubjectNames(FB_CLASSES); const data = [['班级', '座位号', '姓名', '性别', '总分', ...subjects.map((subject) => `${subject}成绩`), '身高', '视力', '状态', '状态说明', '同班组合', '备注']];
     const students = [];
-    FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { const status = fbStudentStatus(s); data.push([c.name, i + 1, s.name, fbGenderLabel(s.gender), s.score, s.height, s.vision, status || '正常', fbSameGroupLabel(s), s.remarks]); students.push(s); }); });
+    FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { const status = fbStudentStatus(s); data.push([c.name, i + 1, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !s.isNoExam ? s.score : (s.isNoExam ? '' : s.score), ...subjects.map((subject) => { const value = fbStudentSubjectScore(s, subject); return value === null ? (s.isNoExam ? '未参加考试' : '—') : value; }), s.height, s.vision, status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), s.remarks]); students.push(s); }); });
     const ws = XLSX.utils.aoa_to_sheet(data); fbDecorateRosterExportSheet(ws, data[0], students);
     XLSX.utils.book_append_sheet(wb, ws, "分班与座位表");
     fbAppendClassRosterSheets(wb, FB_CLASSES, '最终名单');
@@ -3024,9 +3087,9 @@ function FB_exportResultWithBalance() {
     };
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.examData || FB_CLASSES)), '考试名单两率一分');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.finalData || FB_CLASSES)), '最终名单两率一分');
-    const roster = [['阶段', '班级', '姓名', '性别', '总分', '是否后置分配', '状态', '同班组合', '备注']];
+    const roster = [['阶段', '班级', '姓名', '性别', '总分', '是否后置分配', '状态', '状态说明', '同班组合', '备注']];
     const rosterStudents = [];
-    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => { const status = fbStudentStatus(s); roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) ? s.score : '', s.isNoExam ? '是' : '否', status || '正常', fbSameGroupLabel(s), s.remarks || '']); rosterStudents.push(s); }));
+    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => { const status = fbStudentStatus(s); roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !s.isNoExam ? s.score : '', s.isNoExam ? '是' : '否', status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), s.remarks || '']); rosterStudents.push(s); }));
     const rosterSheet = XLSX.utils.aoa_to_sheet(roster); fbDecorateRosterExportSheet(rosterSheet, roster[0], rosterStudents);
     XLSX.utils.book_append_sheet(wb, rosterSheet, '最终分班名单');
     fbAppendClassRosterSheets(wb, scheme.finalData || FB_CLASSES, '最终名单');

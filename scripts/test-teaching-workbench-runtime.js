@@ -114,6 +114,10 @@ assert.ok(freshman.includes('fbSafeExportSheetName'), 'freshman class worksheet 
 assert.ok(freshman.includes("'新转入': ['DBEAFE', '1D4ED8']"), 'freshman exports should color-code transfer-in students');
 assert.ok(freshman.includes("'学籍在册未考试': ['FEF3C7', '92400E']"), 'freshman exports should color-code no-exam roster students');
 assert.ok(freshman.includes('特殊学生整行着色'), 'freshman exports should color the full special-student row');
+assert.ok(freshman.includes('状态说明'), 'freshman exports should include a human-readable special-student explanation column');
+assert.ok(freshman.includes('未参加考试'), 'freshman exports and seat map should label no-exam students instead of showing a fake score');
+assert.ok(freshman.includes('is-no-exam'), 'freshman seat map should apply a dedicated no-exam color class');
+assert.ok(stylesheet.includes('.desk.is-no-exam'), 'freshman seat map no-exam color should be defined in the shared stylesheet');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbFixedClassInput"'), 'freshman UI should provide a fixed-class roster upload');
