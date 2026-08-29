@@ -85,6 +85,8 @@ assert.ok(freshman.includes('9月前按上一年级，9月后按目标年级'), 
 assert.ok(freshman.includes('不同考试的考号可能重新编排'), 'roster reconciliation should document cross-exam id changes');
 assert.ok(freshman.includes('const stableKey = (row)'), 'exam aggregation should use a stable cross-exam student key');
 assert.ok(freshman.includes('duplicateNames.has(nm) ? fbStudentKey(row) : `name:${nm}`'), 'only same-exam duplicate names should fall back to exam ids');
+const stableAggregationBlock = freshman.match(/const stableByKey = new Map\(\);[\s\S]*?\/\/ 用稳定键结果替换前面按原始考号聚合的结果。/)?.[0] || '';
+assert.ok(stableAggregationBlock.includes('if (!fbExamBelongsToCurrentSchool(row, ex.meta)) return;'), 'stable cross-exam aggregation must keep the current-school filter before replacing the first pass');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');

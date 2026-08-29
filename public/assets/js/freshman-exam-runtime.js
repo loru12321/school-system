@@ -639,6 +639,9 @@ async function FB_assembleFromCloud(options = {}) {
     exams.forEach((ex, ei) => {
         const w = weights[ei] || 0;
         ex.data.forEach((row) => {
+            // 第二轮会覆盖第一轮聚合结果，因此必须重复执行本校过滤。
+            // 此处若遗漏，会把县域整场考试的学生重新合并进本校分班名单。
+            if (!fbExamBelongsToCurrentSchool(row, ex.meta)) return;
             const rosterRow = fbRosterRow(row);
             if (rosterRow && (fbIsDropout(rosterRow) || FB_TRANSFER_IN_STUDENTS.some(student => fbFindRosterMatch(rosterRow, [student])) || fbIsTransferred(rosterRow))) return;
             const s = fbExamAssignmentScore(row, targetGrade); if (!s) return;
