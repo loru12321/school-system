@@ -949,6 +949,9 @@ async function FB_runDivision() {
             const classes = FB_generateSingleScheme(k, algo);
             const examClasses = JSON.parse(JSON.stringify(classes));
             FB_appendRosterOnlyStudents(classes, k);
+            // 后置学生加入后再次校正，确保最终名单的男女数量也保持接近。
+            fbBalanceGenderCounts(classes, k);
+            classes.forEach(c => { c.stats = fbCalcClassStats(c.students); });
             const finalClasses = JSON.parse(JSON.stringify(classes));
             // 计算该方案的评分 (极差)
             const avgs = classes.map(c => c.stats.avg);
@@ -1027,6 +1030,63 @@ function FB_appendRosterOnlyStudents(classes, k) {
     classes.forEach(c => { c.stats = fbCalcClassStats(c.students); });
 }
 
+// 严格男女均衡的二次校正：智能交换可能因均分/主科/违纪等多重代价停在
+// 男女差距较大的局部最优。这里在不移动人工锁定学生、不破坏互斥约束的前提下，
+// 从男生最多的班与男生最少的班交换一名男女生，直到已知性别人数相差不超过 1 人，
+// 同时优先选择成绩接近且综合代价增量最小的交换。
+function fbBalanceGenderCounts(classes, k) {
+    const mode = document.getElementById('fb_rule_gender')?.value || 'strict';
+    if (mode !== 'strict' || !Array.isArray(classes) || classes.length < 2) return;
+    const maxIterations = Math.max(1, (FB_STUDENTS || []).length * 2);
+    for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+        const counts = classes.map((cls, classIdx) => ({
+            classIdx,
+            male: cls.students.filter(s => s.gender === 'M').length,
+            female: cls.students.filter(s => s.gender === 'F').length
+        }));
+        const maleRange = Math.max(...counts.map(item => item.male)) - Math.min(...counts.map(item => item.male));
+        if (maleRange <= 1) break;
+
+        let best = null;
+        for (const high of counts) {
+            for (const low of counts) {
+                if (high.classIdx === low.classIdx || high.male <= low.male + 1) continue;
+                const highClass = classes[high.classIdx];
+                const lowClass = classes[low.classIdx];
+                const highMale = highClass.students.filter(s => s.gender === 'M' && !s.isFixedAssignment);
+                const lowFemale = lowClass.students.filter(s => s.gender === 'F' && !s.isFixedAssignment);
+                if (!highMale.length || !lowFemale.length) continue;
+
+                for (const maleStudent of highMale) {
+                    for (const femaleStudent of lowFemale) {
+                        const nextHighStudents = highClass.students.filter(s => s !== maleStudent).concat(femaleStudent);
+                        const nextLowStudents = lowClass.students.filter(s => s !== femaleStudent).concat(maleStudent);
+                        if (FB_checkConflict(maleStudent, nextLowStudents) || FB_checkConflict(femaleStudent, nextHighStudents)) continue;
+
+                        const before = FB_calcClassCost(highClass, FB_COST_CONTEXT?.globalAvg ?? 0)
+                            + FB_calcClassCost(lowClass, FB_COST_CONTEXT?.globalAvg ?? 0);
+                        const nextHigh = { ...highClass, students: nextHighStudents };
+                        const nextLow = { ...lowClass, students: nextLowStudents };
+                        const after = FB_calcClassCost(nextHigh, FB_COST_CONTEXT?.globalAvg ?? 0)
+                            + FB_calcClassCost(nextLow, FB_COST_CONTEXT?.globalAvg ?? 0);
+                        const scoreDistance = Math.abs(Number(maleStudent.score || 0) - Number(femaleStudent.score || 0));
+                        const delta = (after - before) + scoreDistance * 0.02;
+                        if (!best || delta < best.delta) best = { highClass, lowClass, maleStudent, femaleStudent, delta };
+                    }
+                }
+            }
+        }
+        if (!best) break;
+        const highIndex = best.highClass.students.indexOf(best.maleStudent);
+        const lowIndex = best.lowClass.students.indexOf(best.femaleStudent);
+        if (highIndex < 0 || lowIndex < 0) break;
+        best.highClass.students[highIndex] = best.femaleStudent;
+        best.lowClass.students[lowIndex] = best.maleStudent;
+        best.femaleStudent.classIdx = classes.indexOf(best.highClass);
+        best.maleStudent.classIdx = classes.indexOf(best.lowClass);
+    }
+}
+
 // 2. 核心算法：生成单次方案 (提取出来的纯逻辑)
     function FB_generateSingleScheme(k, algo) {
     // 供 cost 函数读取的班数 + 分段阈值（档次分布均衡用）。
@@ -1056,6 +1116,8 @@ function FB_appendRosterOnlyStudents(classes, k) {
     // 初始化空班级
     let classes = Array.from({ length: k }, (_, i) => ({ id: i, name: (i + 1) + "班", students: [], stats: {} }));
     let pool = JSON.parse(JSON.stringify(FB_STUDENTS)); // 深拷贝，防止污染
+    const globalAvg = pool.length ? pool.reduce((a, b) => a + b.score, 0) / pool.length : 0;
+    FB_COST_CONTEXT.globalAvg = globalAvg;
 
     // 预处理：按分数排序，并给每人打「级部总名次」+ 名次区块号（每 k 人一个区块）。
     // 区块号让「1..k 名各占一个班、k+1..2k 名再各占一个班」的蛇形分布可被 cost 保护。
@@ -1102,8 +1164,6 @@ function FB_appendRosterOnlyStudents(classes, k) {
 
         // B. 随机交换优化
         const iterations = 8000; // 增加迭代次数以获得不同结果
-        const globalAvg = pool.reduce((a, b) => a + b.score, 0) / pool.length;
-
         for (let i = 0; i < iterations; i++) {
             const c1 = Math.floor(Math.random() * k);
             const c2 = Math.floor(Math.random() * k);
@@ -1144,6 +1204,9 @@ function FB_appendRosterOnlyStudents(classes, k) {
             }
         }
     }
+
+    // 严格均衡模式下做一次确定性男女校正，避免随机交换留下 5~8 人的班级差距。
+    fbBalanceGenderCounts(classes, k);
 
     // 这里的计算是为了 stats，方便外部筛选
     classes.forEach(c => {

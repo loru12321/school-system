@@ -94,6 +94,8 @@ assert.ok(freshman.includes("const excellentLine = fbResolveSubjectThreshold(sub
 assert.ok(freshman.includes("const passLine = fbResolveSubjectThreshold(subject, 'pass', allValues)"), 'freshman subject metrics must use one global pass line across classes');
 assert.ok(freshman.includes("const excLine = fbResolveSubjectThreshold(sub, 'excellent', globalValues)"), 'freshman optimizer must use the same global excellent line as the displayed metrics');
 assert.ok(freshman.includes("const passLine = fbResolveSubjectThreshold(sub, 'pass', globalValues)"), 'freshman optimizer must use the same global pass line as the displayed metrics');
+assert.ok(freshman.includes('function fbBalanceGenderCounts(classes, k)'), 'freshman strict gender mode should have a deterministic balancing pass');
+assert.ok(freshman.includes('fbBalanceGenderCounts(classes, k);'), 'freshman generation should apply the deterministic gender balancing pass');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');
