@@ -36,7 +36,10 @@ const budgets = {
     // tight cap above the current complete offline bundle.
     // 2026-07-09: raised 335_000 -> 336_000 for the non-grade-9 major-subject
     // school-analysis workbook export path; CI Brotli output measured 335_338B.
-    ltHtmlBrotli: 336_000,
+    // 2026-08-29: raised 336_000 -> 336_500 for freshman violation/dropout
+    // roster labels and export color markers; runtime cache hashes can vary
+    // Brotli output by a few hundred bytes between builds.
+    ltHtmlBrotli: 336_500,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,

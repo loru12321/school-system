@@ -96,6 +96,9 @@ assert.ok(freshman.includes("const excLine = fbResolveSubjectThreshold(sub, 'exc
 assert.ok(freshman.includes("const passLine = fbResolveSubjectThreshold(sub, 'pass', globalValues)"), 'freshman optimizer must use the same global pass line as the displayed metrics');
 assert.ok(freshman.includes('function fbBalanceGenderCounts(classes, k)'), 'freshman strict gender mode should have a deterministic balancing pass');
 assert.ok(freshman.includes('fbBalanceGenderCounts(classes, k);'), 'freshman generation should apply the deterministic gender balancing pass');
+assert.ok(freshman.includes('function FB_viewClassViolations'), 'freshman class cards should expose a violation roster viewer');
+assert.ok(freshman.includes('data-fb-action="view-violations"'), 'freshman class cards should render a clickable violation count');
+assert.ok(freshman.includes('fbDecorateRosterExportSheet'), 'freshman exports should style violation and dropout rows');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbFixedClassInput"'), 'freshman UI should provide a fixed-class roster upload');

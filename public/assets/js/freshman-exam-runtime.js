@@ -938,6 +938,18 @@ function FB_bindDeclarativeHandlers(root = document) {
             if (action === 'remove-transfer-in') FB_removeTransferInStudent(el.dataset.fbIndex);
         });
     });
+    // 班级卡片是运行时动态生成的，违纪人数按钮使用文档级委托确保
+    // 重绘后仍可点击，并阻止事件冒泡到“打开座位编排”的卡片处理器。
+    if (!document.documentElement.dataset.fbViolationDelegated) {
+        document.documentElement.dataset.fbViolationDelegated = '1';
+        document.addEventListener('click', (event) => {
+            const trigger = event.target?.closest?.('[data-fb-action="view-violations"]');
+            if (!trigger) return;
+            event.preventDefault();
+            event.stopPropagation();
+            FB_viewClassViolations(Number(trigger.dataset.fbClassId));
+        });
+    }
 }
 
 // 数据体检状态条（显示匹配/缺项/违纪/重名概况）。
@@ -1617,6 +1629,39 @@ function FB_renderAssemblyBanner() {
         <div style="margin-top:6px;">${parts.join(' · ')}</div>${dupWarn}`;
 }
 
+function fbStudentStatus(student) {
+    if (student?.isViolation) return '违纪';
+    if (student?.postType === 'dropout' || student?.postType === '辍学/长期离校') return '辍学/长期离校';
+    return '';
+}
+
+function FB_viewClassViolations(classIdx) {
+    const cls = FB_CLASSES[Number(classIdx)];
+    if (!cls) return;
+    const students = cls.students.filter(student => student.isViolation);
+    const message = students.length
+        ? `${cls.name} 违纪学生 ${students.length} 人：\n${students.map((student, index) => `${index + 1}. ${student.name}${student.id ? `（${student.id}）` : ''}`).join('\n')}`
+        : `${cls.name} 暂无已匹配的违纪学生。`;
+    window.UI?.alert?.(message, students.length ? 'warning' : 'info');
+}
+
+function fbDecorateRosterExportSheet(ws, headers, dataRows = []) {
+    if (!ws || !ws['!ref']) return;
+    if (typeof window.decorateExcelSheet === 'function') window.decorateExcelSheet(ws, headers);
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    const statusCol = headers.findIndex(header => String(header).includes('状态'));
+    if (statusCol < 0) return;
+    const colors = { '违纪': ['FEE2E2', 'B91C1C'], '辍学/长期离校': ['F3E8FF', '7E22CE'] };
+    dataRows.forEach((student, index) => {
+        const row = range.s.r + index + 1;
+        const status = fbStudentStatus(student);
+        if (!status) return;
+        const style = colors[status];
+        const ref = XLSX.utils.encode_cell({ c: statusCol, r: row });
+        if (ws[ref]) ws[ref].s = { ...(ws[ref].s || {}), fill: { fgColor: { rgb: style[0] } }, font: { color: { rgb: style[1] }, bold: true } };
+    });
+}
+
 function FB_renderDashboard() {
     document.getElementById('fb-results-area').classList.remove('hidden');
     FB_renderAssemblyBanner();
@@ -1630,6 +1675,8 @@ function FB_renderDashboard() {
     const classCardsHtml = FB_CLASSES.map(c => {
         const stats = fbCalcClassStats(c.students);
         const n = stats.count; const avg = stats.avg; const male = stats.male;
+        const violationStudents = c.students.filter(student => student.isViolation);
+        const violationCnt = violationStudents.length;
         const diffCnt = stats.diff;
         allAvgs.push(avg); tMale += male; tFemale += stats.female; totalDiffCnt += diffCnt; c.stats = stats; const isWarn = diffCnt > 3;
         // 档次分布（高/低段人数），供均衡核对。
@@ -1640,7 +1687,11 @@ function FB_renderDashboard() {
         const postDropoutCnt = c.students.filter(s => s.postType === 'dropout').length;
         const postTransferCnt = c.students.filter(s => s.postType === 'transfer-in').length;
         const violLabel = (FB_LAST_ASSEMBLY && FB_LAST_ASSEMBLY.violationUploaded) ? '违纪' : '难管';
-        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span class="fb-tag fb-tag-red" style="${diffCnt > 0 ? '' : 'display:none'}">${violLabel}: ${diffCnt}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div>高分段: ${hiCnt}</div><div>低分段: ${loCnt}</div>${postRosterCnt || postDropoutCnt || postTransferCnt ? `<div style="grid-column:span 2; color:#7c3aed; font-weight:700;">↳ 后置学生: ${postRosterCnt + postDropoutCnt + postTransferCnt} 人（${postRosterCnt ? `在册未考 ${postRosterCnt}` : ''}${postRosterCnt && (postDropoutCnt || postTransferCnt) ? '、' : ''}${postDropoutCnt ? `辍学/长期离校 ${postDropoutCnt}` : ''}${postDropoutCnt && postTransferCnt ? '、' : ''}${postTransferCnt ? `新转入 ${postTransferCnt}` : ''}）</div>` : ''}${fixedCnt ? `<div style="grid-column:span 2; color:#166534; font-weight:700;">🔒 指定学生: ${fixedCnt} 人</div>` : ''}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">点击进入座位编排 →</div></div></div>`;
+        const violationBadge = violationCnt > 0
+            ? `<button type="button" class="fb-tag fb-tag-red fb-violation-link" data-fb-action="view-violations" data-fb-class-id="${c.id}">${violLabel}: ${violationCnt}</button>`
+            : (diffCnt > 0 ? `<span class="fb-tag fb-tag-red">${violLabel}: ${diffCnt}</span>` : '');
+        const dropoutBadge = postDropoutCnt > 0 ? `<span class="fb-tag fb-tag-purple">辍学/长期离校: ${postDropoutCnt}</span>` : '';
+        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span style="display:flex;gap:5px;align-items:center;">${violationBadge}${dropoutBadge}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div>高分段: ${hiCnt}</div><div>低分段: ${loCnt}</div>${postRosterCnt || postDropoutCnt || postTransferCnt ? `<div style="grid-column:span 2; color:#7c3aed; font-weight:700;">↳ 后置学生: ${postRosterCnt + postDropoutCnt + postTransferCnt} 人（${postRosterCnt ? `在册未考 ${postRosterCnt}` : ''}${postRosterCnt && (postDropoutCnt || postTransferCnt) ? '、' : ''}${postDropoutCnt ? `辍学/长期离校 ${postDropoutCnt}` : ''}${postDropoutCnt && postTransferCnt ? '、' : ''}${postTransferCnt ? `新转入 ${postTransferCnt}` : ''}）</div>` : ''}${fixedCnt ? `<div style="grid-column:span 2; color:#166534; font-weight:700;">🔒 指定学生: ${fixedCnt} 人</div>` : ''}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">点击进入座位编排 →</div></div></div>`;
     }).join('');
     if (container && container.innerHTML !== classCardsHtml) {
         container.innerHTML = classCardsHtml;
@@ -2579,7 +2630,6 @@ function FB_renderSeatMap() {
                     if (stu.gender === 'M') desk.classList.add('is-male');
                     if (stu.gender === 'F') desk.classList.add('is-female');
                     if (stu.isDiff || stu._isDiff) desk.classList.add('is-diff');
-
                     // 处理锁定状态
                     if (stu.locked) desk.classList.add('locked');
 
@@ -2660,9 +2710,11 @@ function FB_saveToLocal() {
     window.UI.alert(`方案已保存至浏览器缓存${Object.keys(FB_FIXED_ASSIGNMENTS).length ? `（当前会话保留 ${Object.keys(FB_FIXED_ASSIGNMENTS).length} 条指定班级）` : ''}`);
 }
 function FB_exportResult() {
-    if (!FB_CLASSES.length) return window.UI.alert("无数据"); const wb = XLSX.utils.book_new(); const data = [['班级', '座位号', '姓名', '性别', '总分', '身高', '视力', '备注']];
-    FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { data.push([c.name, i + 1, s.name, s.gender, s.score, s.height, s.vision, s.remarks]); }); });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "分班与座位表"); XLSX.writeFile(wb, "新生分班结果.xlsx");
+    if (!FB_CLASSES.length) return window.UI.alert("无数据"); const wb = XLSX.utils.book_new(); const data = [['班级', '座位号', '姓名', '性别', '总分', '身高', '视力', '状态', '备注']];
+    const students = [];
+    FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { const status = fbStudentStatus(s); data.push([c.name, i + 1, s.name, fbGenderLabel(s.gender), s.score, s.height, s.vision, status || '正常', s.remarks]); students.push(s); }); });
+    const ws = XLSX.utils.aoa_to_sheet(data); fbDecorateRosterExportSheet(ws, data[0], students);
+    XLSX.utils.book_append_sheet(wb, ws, "分班与座位表"); XLSX.writeFile(wb, "新生分班结果.xlsx");
 }
 function FB_exportResultWithBalance() {
     if (!FB_CLASSES.length) return window.UI.alert('请先生成分班方案。', 'warning');
@@ -2684,9 +2736,11 @@ function FB_exportResultWithBalance() {
     };
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.examData || FB_CLASSES)), '考试名单两率一分');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.finalData || FB_CLASSES)), '最终名单两率一分');
-    const roster = [['阶段', '班级', '姓名', '性别', '总分', '是否后置分配', '备注']];
-    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) ? s.score : '', s.isNoExam ? '是' : '否', s.remarks || ''])));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(roster), '最终分班名单');
+    const roster = [['阶段', '班级', '姓名', '性别', '总分', '是否后置分配', '状态', '备注']];
+    const rosterStudents = [];
+    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => { const status = fbStudentStatus(s); roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) ? s.score : '', s.isNoExam ? '是' : '否', status || '正常', s.remarks || '']); rosterStudents.push(s); }));
+    const rosterSheet = XLSX.utils.aoa_to_sheet(roster); fbDecorateRosterExportSheet(rosterSheet, roster[0], rosterStudents);
+    XLSX.utils.book_append_sheet(wb, rosterSheet, '最终分班名单');
     XLSX.writeFile(wb, '新生分班方案及两率一分.xlsx');
 }
 

@@ -8669,6 +8669,20 @@ body {
     color: #991b1b;
 }
 
+.fb-tag-purple {
+    background: #f3e8ff;
+    color: #7e22ce;
+}
+
+.fb-violation-link {
+    border: 0;
+    cursor: pointer;
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: #dc2626;
+    text-underline-offset: 3px;
+}
+
 .seat-workspace {
     display: flex;
     gap: 20px;
