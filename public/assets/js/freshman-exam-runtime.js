@@ -1010,7 +1010,8 @@ async function FB_runDivision() {
 
 function FB_appendRosterOnlyStudents(classes, k) {
     const postStudents = [
-        ...FB_UNEXAM_ROSTER_STUDENTS.map(row => ({ ...row, postType: '学籍在册未考试' })),
+        // 保留核对阶段标记的辍学类型；普通学籍有、考试无才归为在册未考。
+        ...FB_UNEXAM_ROSTER_STUDENTS.map(row => ({ ...row, postType: row.postType || '学籍在册未考试' })),
         ...FB_TRANSFER_IN_STUDENTS.map(row => ({ ...row, postType: '新转入' }))
     ];
     if (!postStudents.length) return;
@@ -1024,7 +1025,7 @@ function FB_appendRosterOnlyStudents(classes, k) {
         const picked = ranked[0];
         if (!picked) return;
         const isTransferIn = row.postType === '新转入';
-        const isDropout = row.postType === '辍学/长期离校';
+        const isDropout = row.postType === '辍学/长期离校' || row.postType === 'dropout';
         picked.cls.students.push({ _id: `roster-${index}`, key: `roster:${fbRosterIdentity(row)}`, name: row.name, id: row.id, gender: row.gender || 'U', score: 0, subjAvg: {}, examsGot: 0, examsTotal: 0, height: 160, vision: 5, isNoExam: true, postType: isTransferIn ? 'transfer-in' : isDropout ? 'dropout' : 'roster-no-exam', isNotEnrolled: false, isDiff: false, isViolation: false, remarks: isTransferIn ? '新转入学生，后置均衡分配' : isDropout ? '辍学/长期离校，按要求后置均衡分配' : '学籍在册，本次未参加考试', constraints: { same: [], diff: [] }, classIdx: picked.classIdx });
     });
     classes.forEach(c => { c.stats = fbCalcClassStats(c.students); });
@@ -1038,24 +1039,40 @@ function fbBalanceGenderCounts(classes, k) {
     const mode = document.getElementById('fb_rule_gender')?.value || 'strict';
     if (mode !== 'strict' || !Array.isArray(classes) || classes.length < 2) return;
     const maxIterations = Math.max(1, (FB_STUDENTS || []).length * 2);
+
+    // 以男女两组的班级极差作为硬优先级。只看已知性别，未知性别不参与
+    // 配额计算；这样即使班额有 1 人浮动，也不会出现“男生均了、女生仍差很多”。
+    const genderSpread = (counts) => {
+        const maleValues = counts.map(item => item.male);
+        const femaleValues = counts.map(item => item.female);
+        const maleRange = Math.max(...maleValues) - Math.min(...maleValues);
+        const femaleRange = Math.max(...femaleValues) - Math.min(...femaleValues);
+        return { maleRange, femaleRange, penalty: maleRange * 1000 + femaleRange * 1000 };
+    };
+
     for (let iteration = 0; iteration < maxIterations; iteration += 1) {
         const counts = classes.map((cls, classIdx) => ({
             classIdx,
             male: cls.students.filter(s => s.gender === 'M').length,
             female: cls.students.filter(s => s.gender === 'F').length
         }));
-        const maleRange = Math.max(...counts.map(item => item.male)) - Math.min(...counts.map(item => item.male));
-        if (maleRange <= 1) break;
+        const beforeSpread = genderSpread(counts);
+        if (beforeSpread.maleRange <= 1 && beforeSpread.femaleRange <= 1) break;
 
         let best = null;
         for (const high of counts) {
             for (const low of counts) {
-                if (high.classIdx === low.classIdx || high.male <= low.male + 1) continue;
+                if (high.classIdx === low.classIdx) continue;
                 const highClass = classes[high.classIdx];
                 const lowClass = classes[low.classIdx];
                 const highMale = highClass.students.filter(s => s.gender === 'M' && !s.isFixedAssignment);
                 const lowFemale = lowClass.students.filter(s => s.gender === 'F' && !s.isFixedAssignment);
                 if (!highMale.length || !lowFemale.length) continue;
+
+                // 只有能改善当前男女极差的方向才进入候选，避免为了均分代价
+                // 选择“看似交换、实际没有更均衡”的方案。
+                if (beforeSpread.maleRange <= 1 && high.female <= low.female + 1) continue;
+                if (beforeSpread.maleRange > 1 && high.male <= low.male + 1 && beforeSpread.femaleRange <= 1) continue;
 
                 for (const maleStudent of highMale) {
                     for (const femaleStudent of lowFemale) {
@@ -1067,11 +1084,21 @@ function fbBalanceGenderCounts(classes, k) {
                             + FB_calcClassCost(lowClass, FB_COST_CONTEXT?.globalAvg ?? 0);
                         const nextHigh = { ...highClass, students: nextHighStudents };
                         const nextLow = { ...lowClass, students: nextLowStudents };
+                        const nextCounts = counts.map(item => ({ ...item }));
+                        nextCounts[high.classIdx].male -= 1;
+                        nextCounts[high.classIdx].female += 1;
+                        nextCounts[low.classIdx].male += 1;
+                        nextCounts[low.classIdx].female -= 1;
+                        const afterSpread = genderSpread(nextCounts);
+                        if (afterSpread.penalty >= beforeSpread.penalty) continue;
                         const after = FB_calcClassCost(nextHigh, FB_COST_CONTEXT?.globalAvg ?? 0)
                             + FB_calcClassCost(nextLow, FB_COST_CONTEXT?.globalAvg ?? 0);
                         const scoreDistance = Math.abs(Number(maleStudent.score || 0) - Number(femaleStudent.score || 0));
                         const delta = (after - before) + scoreDistance * 0.02;
-                        if (!best || delta < best.delta) best = { highClass, lowClass, maleStudent, femaleStudent, delta };
+                        const improvement = beforeSpread.penalty - afterSpread.penalty;
+                        if (!best || improvement > best.improvement || (improvement === best.improvement && delta < best.delta)) {
+                            best = { highClass, lowClass, maleStudent, femaleStudent, delta, improvement };
+                        }
                     }
                 }
             }
