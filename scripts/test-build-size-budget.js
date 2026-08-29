@@ -41,7 +41,9 @@ const budgets = {
     // Brotli output by a few hundred bytes between builds.
     // 2026-08-29: raised 336_500 -> 338_500 for the freshman same-class group
     // selector, group-level placement lock, conflict checks, and export column.
-    ltHtmlBrotli: 338_500,
+    // 2026-08-29: deep-link initialization and upload controls add a small
+    // amount of inline bundle size; keep the cap above CI's Brotli output.
+    ltHtmlBrotli: 339_500,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,
