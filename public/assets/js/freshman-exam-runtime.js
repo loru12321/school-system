@@ -1993,7 +1993,7 @@ function fbBuildClassRosterRows(cls, stageLabel = '最终名单', subjects = fbE
             index + 1,
             student?.name || '',
             fbGenderLabel(student?.gender),
-            Number.isFinite(Number(student?.score)) ? student.score : '',
+            Number.isFinite(Number(student?.score)) && !fbIsNoExamStudent(student) ? student.score : '',
             ...subjects.map((subject) => {
                 const value = fbStudentSubjectScore(student, subject);
                 return value === null ? (fbIsNoExamStudent(student) ? '未参加考试' : '—') : value;
@@ -2044,8 +2044,8 @@ function FB_renderDashboard() {
         const diffCnt = stats.diff;
         allAvgs.push(avg); tMale += male; tFemale += stats.female; totalDiffCnt += diffCnt; c.stats = stats; const isWarn = diffCnt > 3;
         // 档次分布（高/低段人数），供均衡核对。
-        const hiCnt = c.students.filter(s => fbTierOf(s.score) === 'high').length;
-        const loCnt = c.students.filter(s => fbTierOf(s.score) === 'low').length;
+        const hiCnt = c.students.filter(s => !fbIsNoExamStudent(s) && fbTierOf(s.score) === 'high').length;
+        const loCnt = c.students.filter(s => !fbIsNoExamStudent(s) && fbTierOf(s.score) === 'low').length;
         const fixedCnt = c.students.filter(s => s.isFixedAssignment).length;
         const sameGroupIds = [...new Set(c.students.map(s => s.sameGroupId).filter(Boolean))];
         const postRosterCnt = c.students.filter(s => fbIsNoExamStudent(s)
@@ -2116,7 +2116,7 @@ function fbBuildSubjectBalanceTable(labels) {
     FB_CLASSES.forEach((c, i) => {
         html += `<tr><td>${labels[i]}</td>`;
         FB_MAIN_SUBJECTS.forEach(sub => {
-            const vals = c.students.map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
+            const vals = c.students.filter(s => !fbIsNoExamStudent(s)).map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
             if (!vals.length) { html += `<td>-</td><td>-</td><td>-</td>`; return; }
             const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
             const allValues = FB_CLASSES.flatMap(item => (item.students || []).filter(s => !fbIsNoExamStudent(s)).map(s => Number(s?.subjAvg?.[sub])).filter(Number.isFinite));
@@ -2140,7 +2140,7 @@ function FB_renderBalanceChart() {
         && FreshmanExamPerfCache.balanceChartSignature === signature) {
         return;
     }
-    const statsData = FB_CLASSES.map(c => { const scores = c.students.map(s => s.score).sort((a, b) => a - b); const qs = calculateQuartiles(scores); return { min: scores[0], max: scores[scores.length - 1], q1: qs.q1, median: qs.q2, q3: qs.q3, avg: c.stats.avg, sd: calculateSD(scores) }; });
+    const statsData = FB_CLASSES.map(c => { const scores = c.students.filter(s => !fbIsNoExamStudent(s)).map(s => Number(s.score)).filter(Number.isFinite).sort((a, b) => a - b); const safeScores = scores.length ? scores : [0]; const qs = calculateQuartiles(safeScores); return { min: safeScores[0], max: safeScores[safeScores.length - 1], q1: qs.q1, median: qs.q2, q3: qs.q3, avg: c.stats.avg, sd: calculateSD(safeScores) }; });
     let tableHtml = `<table class="comparison-table" style="font-size:12px;"><thead><tr><th>班级</th><th>总人数</th><th>男生</th><th>女生</th><th>平均分</th><th>标准差 (SD)</th><th>极差 (Max-Min)</th><th>前25%线 (Q3)</th><th>后25%线 (Q1)</th></tr></thead><tbody>`;
     statsData.forEach((s, i) => {
         const classStats = fbCalcClassStats(FB_CLASSES[i].students || []);
