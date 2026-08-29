@@ -84,3 +84,17 @@ If Cloudflare-only login fails after cutover:
 ## Operator note
 
 Do not delete the remaining Supabase REST compatibility path until `system_data` is fully verified and `CLOUD_SYSTEM_DATA_MODE` is moved away from `supabase`.
+
+## Migration credential safety
+
+The two one-off migration scripts do not contain a shared administrator password. Before running either migration, provide the source gateway administrator password explicitly through `MIGRATION_ADMIN_PASS`; the scripts fail closed when it is missing:
+
+```powershell
+$env:MIGRATION_ADMIN_USER = 'admin'
+$env:MIGRATION_ADMIN_PASS = '<source-admin-password>'
+npm run migrate:gateway-data:cloudflare
+# or
+npm run migrate:supabase:project
+```
+
+Use a temporary administrator password where possible, rotate it after the migration, and never commit the value to the repository or a shell history file.

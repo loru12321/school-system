@@ -7,7 +7,6 @@ import { promisify } from 'node:util';
 const DEFAULT_SOURCE_REST_URL = 'https://okwcciujnfvobbwaydiv.supabase.co';
 const DEFAULT_SOURCE_GATEWAY_URL = 'https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2';
 const DEFAULT_ADMIN_USER = 'admin';
-const DEFAULT_ADMIN_PASS = 'admin123';
 const DEFAULT_TARGET_PROJECT_REF = '';
 const DEFAULT_PAGE_SIZE = 500;
 const DEFAULT_BATCH_SIZE = 200;
@@ -30,6 +29,14 @@ const schemaFiles = [
 
 function normalizeBaseUrl(value) {
   return String(value || '').trim().replace(/\/+$/, '');
+}
+
+function requireSecretEnv(name) {
+  const value = normalizeText(process.env[name]);
+  if (!value) {
+    throw new Error(`${name} is required; refusing to use a shared default password`);
+  }
+  return value;
 }
 
 function toPositiveInt(value, fallback) {
@@ -537,7 +544,7 @@ async function main() {
   const sourceGatewayUrl = normalizeBaseUrl(process.env.SOURCE_GATEWAY_URL || DEFAULT_SOURCE_GATEWAY_URL);
   const sourceKey = normalizeText(process.env.SOURCE_SUPABASE_KEY);
   const adminUser = normalizeText(process.env.MIGRATION_ADMIN_USER || DEFAULT_ADMIN_USER);
-  const adminPass = normalizeText(process.env.MIGRATION_ADMIN_PASS || DEFAULT_ADMIN_PASS);
+  const adminPass = requireSecretEnv('MIGRATION_ADMIN_PASS');
   const managementToken = normalizeText(process.env.SUPABASE_MANAGEMENT_TOKEN);
   const projectRef = normalizeText(process.env.TARGET_PROJECT_REF || DEFAULT_TARGET_PROJECT_REF);
   const pageSize = toPositiveInt(process.env.MIGRATION_PAGE_SIZE || DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);

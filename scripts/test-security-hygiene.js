@@ -49,6 +49,10 @@ const keySensitiveFiles = [
     'scripts/migrate-supabase-project-data.mjs',
     'scripts/migrate-gateway-data-to-cloudflare.mjs'
 ];
+const migrationScripts = [
+    'scripts/migrate-supabase-project-data.mjs',
+    'scripts/migrate-gateway-data-to-cloudflare.mjs'
+];
 
 assert.ok(!gatewayContractSource.includes('internal_gateway_secret_v1_fallback'), 'gateway must not fall back to a static session secret');
 assert.ok(gatewayContractSource.includes('throw new Error(\'APP_SESSION_SECRET_MISSING\')'), 'gateway must fail closed when APP_SESSION_SECRET is missing');
@@ -86,6 +90,11 @@ assert.ok(!runtimeLoader.includes('sb_publishable_'), 'runtime loader should not
 });
 for (const file of keySensitiveFiles) {
     assert.ok(!read(file).includes('sb_publishable_'), `${file} should not embed Supabase publishable keys`);
+}
+for (const file of migrationScripts) {
+    const source = read(file);
+    assert.ok(!source.includes('admin123'), `${file} must not carry a shared default administrator password`);
+    assert.ok(source.includes("requireSecretEnv('MIGRATION_ADMIN_PASS')"), `${file} must require an explicit migration administrator password`);
 }
 assert.ok(boot.includes("getBootStorageValue('SUPABASE_DIRECT_LOCAL') !== 'true'"), 'localhost should use the same-origin proxy unless direct local Supabase is explicitly requested');
 const retiredSupabaseProjectRef = ['dpwsxxgo', 'jpqevzwyxrot'].join('');
