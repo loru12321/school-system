@@ -27,7 +27,15 @@ const SCHEDULER = {
         meetings: [], // 班会 [{day:1, slot:'pm_3'}]
         busy: [],     // 教师忙
         activities: [], // 活动
-        combined: []  // 🟢 新增：合堂规则 [{subject:'物理', slot:'eve_3'}]
+        combined: [],  // 🟢 新增：合堂规则 [{subject:'物理', slot:'eve_3'}]
+        teacherBlocks: {
+            enabled: true,
+            consecutiveWeight: 100,
+            sameSessionWeight: 28,
+            sameDayWeight: 18,
+            classSubjectBalanceWeight: 72,
+            teacherDayLoadWeight: 12
+        }
     },
 
     // --- 1. 约束规则管理 (更新) ---
@@ -63,10 +71,23 @@ const SCHEDULER = {
             const name = document.getElementById('sch_busy_name').value.trim();
             const slotsRaw = document.getElementById('sch_busy_slots').value.trim();
             if (!name || !slotsRaw) return window.UI.alert("请填写教师姓名和节次");
-
-            this.rules.busy.push({ day, slotsStr: slotsRaw, name, id: Date.now() });
+            const config = this.getSlotConfig();
+            const parsedSlots = this.parseBusySlots(day, slotsRaw, config.am, config.pm, config.eve);
+            if (!parsedSlots.length) return window.UI.alert('未识别到有效节次，请输入上午、下午、晚自习或具体节次。');
+            const invalid = parsedSlots.filter((slotId) => !this.isValidSlotCode(slotId.replace(/^d\d+_/, ''), config));
+            if (invalid.length) return window.UI.alert(`禁排节次超出当前课时结构：${invalid.map((slotId) => this.getSlotName(slotId.replace(/^d\d+_/, ''))).join('、')}`);
+            const normalizedName = this.normalizeTeacherName(name);
+            const existing = this.rules.busy.find((rule) => String(rule.day) === String(day) && this.normalizeTeacherName(rule.name) === normalizedName);
+            if (existing) {
+                const merged = new Set(this.parseBusySlots(day, existing.slotsStr, config.am, config.pm, config.eve));
+                parsedSlots.forEach((slotId) => merged.add(slotId));
+                existing.slotsStr = [...merged].map((slotId) => slotId.replace(/^d\d+_/, '')).join(',');
+            } else {
+                this.rules.busy.push({ day, slotsStr: slotsRaw, name: normalizedName, id: Date.now() });
+            }
             this.renderTags('busy', this.rules.busy, b => `${b.name}: 周${b.day} [${b.slotsStr}] 不排`);
             document.getElementById('sch_busy_name').value = '';
+            document.getElementById('sch_busy_slots').value = '';
             this.preflight({ silent: true });
         }
         else if (type === 'activity') {
@@ -579,6 +600,7 @@ const SCHEDULER = {
             venues: [...item.venues]
         }));
         this.refreshGradeScopeControls();
+        this.refreshTeacherBusyOptions();
         this.renderProjectPreview();
         const targetSel = document.getElementById('sch_view_target');
         if (targetSel && this.classes.length) {
@@ -620,6 +642,12 @@ const SCHEDULER = {
         const grades = this.getProjectGrades();
         const crossGradeTeachers = this.getCrossGradeTeachers();
         const base = `${grades.join('、')}年级联合排课 · ${this.classes.length} 个班级 · ${crossGradeTeachers.length} 位跨级教师 · 锁定 ${this.countScheduleCells(this.lockedSchedule)} 节`;
+        const blockStats = this.countScheduleCells(this.schedule)
+            ? this.getTeacherBlockStats()
+            : null;
+        const blockSummary = blockStats && blockStats.teacherSubjectGroups
+            ? `教师同科：${blockStats.consecutiveLinks} 个相邻连排、${blockStats.sameSessionLinks} 个同段连接、${blockStats.sameDayGroups} 组同日安排`
+            : '';
         const remainingCount = unfilled.length || this.demands.filter((demand) => (
             this.countDemandLessons(demand) < Number(demand.weeklyHours)
         )).length;
@@ -631,10 +659,10 @@ const SCHEDULER = {
             status.textContent = `${base}。检测到 ${conflicts.length} 项资源冲突，请不要导出为正式课表。`;
         } else if (remainingCount) {
             status.className = 'scheduler-project-status is-warning';
-            status.textContent = `${base}。仍有 ${remainingCount} 条逐班课程未排完，请放宽禁排/场地约束后重试。`;
+            status.textContent = `${base}。仍有 ${remainingCount} 条逐班课程未排完，请放宽禁排/场地约束后重试。${blockSummary ? ` ${blockSummary}。` : ''}`;
         } else {
             status.className = 'scheduler-project-status is-ok';
-            status.textContent = `${base}。教师与场地均无同一时段冲突，可按班级或教师复核后导出。`;
+            status.textContent = `${base}。教师与场地均无同一时段冲突，可按班级或教师复核后导出。${blockSummary ? ` ${blockSummary}。` : ''}`;
         }
     },
 
@@ -716,6 +744,14 @@ const SCHEDULER = {
                 .forEach((slotId) => { map[`${this.normalizeTeacherName(rule.name)}_${slotId}`] = true; });
         });
         return map;
+    },
+
+    refreshTeacherBusyOptions: function () {
+        const list = document.getElementById('sch_busy_teacher_options');
+        if (!list) return;
+        const names = [...new Set(this.demands.map((demand) => this.normalizeTeacherName(demand.name)).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'zh-CN'));
+        list.innerHTML = names.map((name) => `<option value="${this.escapeHtml(name)}"></option>`).join('');
     },
 
     isDemandBlocked: function (demand, slotId) {
@@ -834,9 +870,101 @@ const SCHEDULER = {
         )).length;
     },
 
+    getTeacherSubjectSlots: function (teacherName, subject, schedule = this.schedule) {
+        const teacher = this.normalizeTeacherName(teacherName);
+        const normalizedSubject = String(subject || '').replace(/\(合\)$/, '');
+        const slots = [];
+        this.classes.forEach((className) => {
+            Object.entries(schedule?.[className] || {}).forEach(([slotId, cell]) => {
+                if (slotId.startsWith('_') || !cell) return;
+                if (this.normalizeTeacherName(cell.teacher) !== teacher) return;
+                if (String(cell.subject || '').replace(/\(合\)$/, '') !== normalizedSubject) return;
+                const match = slotId.match(/^d(\d+)_(am|pm|eve)_(\d+)$/);
+                if (match) slots.push({ id: slotId, day: Number(match[1]), type: match[2], period: Number(match[3]) });
+            });
+        });
+        return slots;
+    },
+
+    getTeacherSubjectBlockScore: function (demand, slot) {
+        const weights = this.rules.teacherBlocks || {};
+        if (weights.enabled === false) return 0;
+        const existing = this.getTeacherSubjectSlots(demand.name, demand.subject);
+        if (!existing.length) return 0;
+        const sameDay = existing.filter((item) => item.day === slot.day);
+        const sameSession = sameDay.filter((item) => item.type === slot.type);
+        const adjacent = existing.filter((item) => item.day === slot.day && item.type === slot.type
+            && Math.abs(item.period - slot.period) === 1).length;
+        const sameDayCount = sameDay.length;
+        const sameSessionCount = sameSession.length;
+        return adjacent * Number(weights.consecutiveWeight || 0)
+            + sameSessionCount * Number(weights.sameSessionWeight || 0)
+            + sameDayCount * Number(weights.sameDayWeight || 0);
+    },
+
+    getClassSubjectBalanceScore: function (demand, slot) {
+        const weights = this.rules.teacherBlocks || {};
+        const count = this.getClassSubjectDayCount(demand.className, demand.subject, slot.day);
+        const daysWithSubject = new Set();
+        Object.entries(this.schedule[demand.className] || {}).forEach(([slotId, cell]) => {
+            if (slotId.startsWith('_') || !cell) return;
+            if (String(cell.subject || '').replace(/\(合\)$/, '') !== String(demand.subject || '')) return;
+            const match = slotId.match(/^d(\d+)_/);
+            if (match) daysWithSubject.add(Number(match[1]));
+        });
+        // 新的一天优先；同一天出现第二节及以上时明显扣分，避免把一个班的同科堆在一天。
+        const spreadBonus = daysWithSubject.has(slot.day) ? 0 : 24;
+        return spreadBonus - count * Number(weights.classSubjectBalanceWeight || 0);
+    },
+
+    getTeacherScheduleQualityScore: function (demand, slot) {
+        const weights = this.rules.teacherBlocks || {};
+        const block = this.getTeacherSubjectBlockScore(demand, slot);
+        const balance = this.getClassSubjectBalanceScore(demand, slot);
+        const teacherDayPenalty = this.getTeacherDayLoad(demand.name, slot.day) * Number(weights.teacherDayLoadWeight || 0);
+        return block + balance - teacherDayPenalty;
+    },
+
+    getTeacherBlockStats: function () {
+        const stats = { teacherSubjectGroups: 0, consecutiveLinks: 0, sameSessionLinks: 0, sameDayGroups: 0 };
+        const groups = new Map();
+        this.classes.forEach((className) => {
+            Object.entries(this.schedule[className] || {}).forEach(([slotId, cell]) => {
+                if (slotId.startsWith('_') || !cell || !cell.teacher || cell.teacher === '-') return;
+                const match = slotId.match(/^d(\d+)_(am|pm|eve)_(\d+)$/);
+                if (!match) return;
+                const key = `${this.normalizeTeacherName(cell.teacher)}__${String(cell.subject || '').replace(/\(合\)$/, '')}`;
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push({ day: Number(match[1]), type: match[2], period: Number(match[3]) });
+            });
+        });
+        groups.forEach((slots) => {
+            if (slots.length < 2) return;
+            stats.teacherSubjectGroups += 1;
+            const days = new Set(slots.map((slot) => slot.day));
+            if (days.size < slots.length) stats.sameDayGroups += 1;
+            const bySession = new Map();
+            slots.forEach((slot) => {
+                const key = `${slot.day}__${slot.type}`;
+                if (!bySession.has(key)) bySession.set(key, []);
+                bySession.get(key).push(slot.period);
+            });
+            bySession.forEach((periods) => {
+                if (periods.length > 1) stats.sameSessionLinks += periods.length - 1;
+                periods.sort((a, b) => a - b).forEach((period, index) => {
+                    if (index && period === periods[index - 1] + 1) stats.consecutiveLinks += 1;
+                });
+            });
+        });
+        return stats;
+    },
+
     findBestSlotForDemand: function (demand, allSlots, teacherBusyMap) {
         const candidates = allSlots.filter((slot) => this.canPlaceDemand(demand, slot, teacherBusyMap));
         candidates.sort((left, right) => {
+            const qualityDiff = this.getTeacherScheduleQualityScore(demand, right)
+                - this.getTeacherScheduleQualityScore(demand, left);
+            if (qualityDiff) return qualityDiff;
             const subjectSpread = this.getClassSubjectDayCount(demand.className, demand.subject, left.day)
                 - this.getClassSubjectDayCount(demand.className, demand.subject, right.day);
             if (subjectSpread) return subjectSpread;
@@ -883,9 +1011,19 @@ const SCHEDULER = {
 
                 this.applyCombinedRules(pending, allSlots, teacherBusyMap);
                 const crossGradeNames = new Set(this.getCrossGradeTeachers().map((item) => item.name));
+                const teacherSubjectTotals = new Map();
+                pending.forEach((demand) => {
+                    const key = `${this.normalizeTeacherName(demand.name)}__${demand.subject}`;
+                    teacherSubjectTotals.set(key, (teacherSubjectTotals.get(key) || 0) + Number(demand.remaining || 0));
+                });
                 pending.sort((left, right) => {
                     const crossDiff = Number(crossGradeNames.has(this.normalizeTeacherName(right.name))) - Number(crossGradeNames.has(this.normalizeTeacherName(left.name)));
-                    return crossDiff || right.remaining - left.remaining || left.className.localeCompare(right.className, 'zh-CN', { numeric: true });
+                    const leftGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(left.name)}__${left.subject}`) || 0;
+                    const rightGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(right.name)}__${right.subject}`) || 0;
+                    return crossDiff || rightGroup - leftGroup || right.remaining - left.remaining
+                        || this.normalizeTeacherName(left.name).localeCompare(this.normalizeTeacherName(right.name), 'zh-CN')
+                        || String(left.subject).localeCompare(String(right.subject), 'zh-CN')
+                        || left.className.localeCompare(right.className, 'zh-CN', { numeric: true });
                 });
                 pending.forEach((demand) => {
                     while (demand.remaining > 0) {
@@ -1115,7 +1253,13 @@ const SCHEDULER = {
         parts.forEach(p => {
             p = p.trim();
             if (!p) return;
-            if (p === '上午' || /^am(?:_all)?$/i.test(p)) {
+            const sessionMatch = p.match(/^(上午|早上|下午|晚|晚自习)(?:第?([1-9]\d*)节?)$/);
+            if (sessionMatch) {
+                const session = sessionMatch[1];
+                const period = Number(sessionMatch[2]);
+                const type = /上午|早上/.test(session) ? 'am' : (/下午/.test(session) ? 'pm' : 'eve');
+                res.push(`d${day}_${type}_${period}`);
+            } else if (p === '上午' || /^am(?:_all)?$/i.test(p)) {
                 for (let i = 1; i <= amLimit; i++) res.push(`d${day}_am_${i}`);
             } else if (p === '下午' || /^pm(?:_all)?$/i.test(p)) {
                 for (let i = 1; i <= pmLimit; i++) res.push(`d${day}_pm_${i}`);
@@ -1831,6 +1975,10 @@ const SCHEDULER = {
             const select = event.target?.closest?.('[data-scheduler-change]');
             if (!select || !document.documentElement.contains(select)) return;
             if (select.dataset.schedulerChange === 'activity-range') this.onActivityRangeChange(select);
+            if (select.dataset.schedulerChange === 'teacher-blocks') {
+                this.rules.teacherBlocks.enabled = !!select.checked;
+                this.preflight({ silent: true });
+            }
         });
     }
 };

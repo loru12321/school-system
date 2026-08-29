@@ -18,8 +18,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-fe0e99f48ad3.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-fe0e99f48ad3.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-7ca46e1f4ed3.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-7ca46e1f4ed3.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -269,18 +269,20 @@
                                 班会/固定全校活动</label><div style="display:flex; gap:5px; margin-bottom:5px;"><select id="sch_meet_day" style="width:80px; padding:4px;"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5" selected>周五</option></select><select id="sch_meet_slot" style="flex:1; padding:4px;"><option value="pm_3">下午第3节</option><option value="pm_4">下午第4节</option><option value="eve_1">晚自习第1节</option></select><select id="sch_meet_scope" style="width:120px; padding:4px;"><option value="ALL">全部导入年级</option></select><button class="btn btn-sm btn-primary" onclick="SCHEDULER.addConstraint('meeting')">➕
                                     添加</button></div><div id="sch_tags_meeting" class="tag-widget-container"
                                 style="min-height:35px; background:white;"></div></div><div style="background:#fffbeb; padding:10px; border-radius:6px; border:1px solid #fcd34d;"><label style="font-weight:bold; color:#b45309; margin-bottom:5px; display:block;">🚫 教师禁排/开会
-                                (不排课)</label><div style="display:flex; gap:5px; margin-bottom:5px;"><select id="sch_busy_day" style="width:70px; padding:4px;"><option value="1">周一</option><option value="5">周五</option><option value="3">周三</option></select><input type="text" id="sch_busy_slots" placeholder="节次(如: 1,2 或 am_1)"
-                                    style="width:100px; padding:4px;"><input type="text" id="sch_busy_name" placeholder="教师姓名" style="flex:1; padding:4px;"><button class="btn btn-sm btn-orange" onclick="SCHEDULER.addConstraint('busy')">➕
+                                (硬约束：绝不会排课)</label><div style="display:flex; gap:5px; margin-bottom:5px;"><select id="sch_busy_day" style="width:70px; padding:4px;"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option></select><input type="text" id="sch_busy_slots" placeholder="节次：上午/下午/晚自习 或 1,2,am_1"
+                                    style="width:100px; padding:4px;"><input type="text" id="sch_busy_name" list="sch_busy_teacher_options" placeholder="教师姓名（可从任课表选择）" style="flex:1; padding:4px;"><datalist id="sch_busy_teacher_options"></datalist><button class="btn btn-sm btn-orange" onclick="SCHEDULER.addConstraint('busy')">➕
                                     添加</button></div><div id="sch_tags_busy" class="tag-widget-container"
-                                style="min-height:35px; background:white;"></div></div><div
+                                style="min-height:35px; background:white;"></div><div style="font-size:11px; color:#92400e; margin-top:5px;">同一教师同一天重复添加会自动合并；支持一次输入多个节次，例如“上午,下午第2节”或“1,2,am_3”。</div></div><div
                             style="grid-column: 1/-1; background:#f0fdf4; padding:10px; border-radius:6px; border:1px solid #86efac;"><label style="font-weight:bold; color:#166534; margin-bottom:5px; display:block;">🗓️ 教研组活动
                                 /
                                 半天无课 (批量锁死)</label><div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:5px;"><select id="sch_act_day" style="width:80px; padding:4px;"><option value="3">周三</option><option value="1">周一</option><option value="2">周二</option><option value="4">周四</option><option value="5">周五</option></select><select id="sch_act_range" style="width:120px; padding:4px;" data-scheduler-change="activity-range"><option value="pm_all">整个下午</option><option value="am_all">整个上午</option><option value="custom">指定节次→</option></select><input type="text" id="sch_act_custom_slots" placeholder="如: 6,7,8"
                                     style="width:80px; padding:4px; display:none;"><span>对象:</span><select id="sch_act_scope" style="width:120px; padding:4px;"><option value="ALL">全部导入年级</option></select><select id="sch_act_subject" style="width:100px; padding:4px;"><option value="ALL">所选年级无课</option><option value="语文">语文组</option><option value="数学">数学组</option><option value="英语">英语组</option><option value="物理">物理组</option><option value="化学">化学组</option><option value="政治">政治组</option></select><button class="btn btn-sm btn-green" onclick="SCHEDULER.addConstraint('activity')">➕
                                     添加活动</button></div><div id="sch_tags_activity" class="tag-widget-container"
                                 style="min-height:35px; background:white;"></div></div></div><div style="font-size:11px; color:#666; margin-top:5px; padding-left:5px;">
-                        💡 提示：教师禁排支持输入 "上午"、"下午" 或具体数字 "1,2"；所选年级无课会自动跳过排课。
-                    </div></div><div style="margin-top:20px; text-align:center;"><button id="sch_run_btn" class="btn btn-primary" style="padding:12px 30px; font-size:16px;"
+                        💡 提示：默认开启“教师同科连排优先”：先尝试相邻节次，再尝试同一上午/下午和同一天；同时避免把同一班同一学科堆在同一天。该规则是软约束，教师禁排、撞课、场地冲突仍是硬约束。
+                    </div><label style="display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12px; color:#4f46e5;"><input type="checkbox" id="sch_teacher_blocks_enabled" checked data-scheduler-change="teacher-blocks">
+                        教师同科连排优先（取消后按班级学科均衡与教师日课量排课）
+                    </label></div><div style="margin-top:20px; text-align:center;"><button id="sch_run_btn" class="btn btn-primary" style="padding:12px 30px; font-size:16px;"
                         onclick="SCHEDULER.run()">
                         🚀 开始联合排课
                     </button></div><div id="sch_preflight_area" class="hidden scheduler-preflight" aria-live="polite"><div class="scheduler-preflight-head"><div><span class="scheduler-eyebrow">RULE CHECK</span><strong>排课前置条件</strong></div><button class="btn btn-sm btn-gray" type="button" data-scheduler-click="preflight"><i class="ti ti-refresh"></i> 重新检查</button></div><div id="sch_preflight_summary" class="scheduler-preflight-summary">导入任课表后，系统会检查规则是否能落在当前课时结构中。</div><div id="sch_preflight_issues" class="scheduler-preflight-issues"></div></div><div id="sch_project_status" class="scheduler-project-status" aria-live="polite">

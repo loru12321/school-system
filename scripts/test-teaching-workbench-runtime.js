@@ -36,6 +36,13 @@ assert.ok(!scheduler.includes('功能开发中：支持上传 Excel 反向解析
 assert.ok(scheduler.includes("p === '上午'"), 'teacher busy parser should accept documented 上午 shorthand');
 assert.ok(scheduler.includes("p === '下午'"), 'teacher busy parser should accept documented 下午 shorthand');
 assert.ok(scheduler.includes("p === '晚自习'"), 'teacher busy parser should accept documented 晚自习 shorthand');
+assert.ok(scheduler.includes('sessionMatch'), 'teacher busy parser should accept session-specific Chinese slots such as 下午第2节');
+assert.ok(scheduler.includes('teacherBlocks:'), 'scheduler should expose teacher subject block weights');
+assert.ok(scheduler.includes('getTeacherSubjectBlockScore'), 'scheduler should score same-teacher same-subject blocks');
+assert.ok(scheduler.includes('getClassSubjectBalanceScore'), 'scheduler should score daily subject distribution');
+assert.ok(scheduler.includes('getTeacherBlockStats'), 'scheduler should summarize teacher block quality');
+assert.ok(scheduler.includes('refreshTeacherBusyOptions'), 'scheduler should refresh teacher busy datalist after import');
+assert.ok(scheduler.includes('同一教师同一天重复添加会自动合并') || indexHtml.includes('同一教师同一天重复添加会自动合并'), 'busy rule should document multi-slot merge behavior');
 assert.ok(scheduler.includes("document.getElementById('sch_run_btn')"), 'run state should bind to the dedicated run button');
 assert.ok(scheduler.includes("'学年联合排课导入模板.xlsx'"), 'scheduler should export a dedicated joint-scheduling Excel template');
 assert.ok(scheduler.includes("'联合总课表'"), 'scheduler export should include a round-trippable joint timetable sheet');
@@ -45,6 +52,8 @@ assert.ok(scheduler.includes("'教师总表'"), 'scheduler export should include
     'sch_preflight_area',
     'sch_manual_undo',
     'sch_run_btn',
+    'sch_busy_teacher_options',
+    'sch_teacher_blocks_enabled',
     'sch_project_status',
     'schedulerLockedImportFile',
     'sch_comb_scope',
