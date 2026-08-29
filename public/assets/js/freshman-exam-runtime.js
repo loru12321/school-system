@@ -1231,22 +1231,41 @@ function fbMajorSubjectsForGrade() {
     const grade = String(document.getElementById('fb_target_grade')?.value || '7');
     return grade === '9' ? ['语文', '数学', '英语', '物理', '化学'] : ['语文', '数学', '英语'];
 }
+// 两率一分沿用系统当前考试的优秀线/及格线；若当前考试没有显式配置，
+// 按全体分班学生的 85%/60% 分位回退，避免把班级内部成绩当作各班自己的划线。
+function fbResolveSubjectThreshold(subject, kind, scores) {
+    const config = (window.THRESHOLDS && typeof window.THRESHOLDS === 'object' && window.THRESHOLDS[subject]) || {};
+    const direct = kind === 'excellent'
+        ? (config.excellent ?? config.exc ?? config.good)
+        : (config.pass ?? config.passLine);
+    if (Number.isFinite(Number(direct)) && Number(direct) > 0) return Number(direct);
+    const sorted = (scores || []).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+    if (!sorted.length) return kind === 'excellent' ? FB_MAIN_EXC_LINE : FB_MAIN_PASS_LINE;
+    const ratio = kind === 'excellent' ? 0.85 : 0.6;
+    return sorted[Math.max(0, Math.min(sorted.length - 1, Math.floor(sorted.length * ratio)))];
+}
 function fbSubjectMetric(classes, subject) {
+    const allValues = (classes || []).flatMap(cls => (cls.students || [])
+        .filter(s => !s?.isNoExam)
+        .map(s => Number(s?.subjAvg?.[subject]))
+        .filter(Number.isFinite));
+    const excellentLine = fbResolveSubjectThreshold(subject, 'excellent', allValues);
+    const passLine = fbResolveSubjectThreshold(subject, 'pass', allValues);
     return (classes || []).map(cls => {
         const valid = (cls.students || []).filter(s => !s?.isNoExam).map(s => Number(s?.subjAvg?.[subject])).filter(Number.isFinite);
         if (!valid.length) return { avg: null, excellent: null, pass: null, n: 0 };
-        const full = subject === '物理' ? 90 : subject === '化学' ? 60 : FB_MAIN_FULL;
-        return { avg: valid.reduce((a, b) => a + b, 0) / valid.length, excellent: valid.filter(v => v >= full * 0.85).length / valid.length, pass: valid.filter(v => v >= full * 0.6).length / valid.length, n: valid.length };
+        return { avg: valid.reduce((a, b) => a + b, 0) / valid.length, excellent: valid.filter(v => v >= excellentLine).length / valid.length, pass: valid.filter(v => v >= passLine).length / valid.length, n: valid.length };
     });
 }
 function fbBuildStageBalanceTable(classes, title, subjects) {
-    let html = `<div style="margin-top:12px;"><div style="font-weight:700;color:#334155;margin-bottom:6px;">${title}</div><table class="comparison-table" style="font-size:12px;"><thead><tr><th>班级</th><th>有效人数</th>`;
+    let html = `<div style="margin-top:12px;"><div style="font-weight:700;color:#334155;margin-bottom:6px;">${title}</div><table class="comparison-table" style="font-size:12px;"><thead><tr><th>班级</th><th>总人数</th><th>男生</th><th>女生</th><th>有效成绩人数</th>`;
     subjects.forEach(s => { html += `<th>${s}均分</th><th>${s}优秀率</th><th>${s}及格率</th>`; });
     html += '</tr></thead><tbody>';
     const metrics = Object.fromEntries(subjects.map(s => [s, fbSubjectMetric(classes, s)]));
     (classes || []).forEach((cls, i) => {
+        const stats = fbCalcClassStats(cls.students || []);
         const scoredCount = (cls.students || []).filter(s => !s?.isNoExam && Number.isFinite(Number(s?.score))).length;
-        html += `<tr><td>${cls.name}</td><td>${scoredCount}</td>`;
+        html += `<tr><td>${cls.name}</td><td>${stats.count}</td><td>${stats.male}</td><td>${stats.female}</td><td>${scoredCount}</td>`;
         subjects.forEach(s => { const m = metrics[s][i]; html += m.n ? `<td>${m.avg.toFixed(1)}</td><td>${(m.excellent * 100).toFixed(1)}%</td><td>${(m.pass * 100).toFixed(1)}%</td>` : '<td>-</td><td>-</td><td>-</td>'; });
         html += '</tr>';
     });
@@ -1278,8 +1297,10 @@ function FB_computeTiers() {
         const vals = FB_STUDENTS.map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
         if (!vals.length) { FB_SUBJ_TARGET[sub] = null; return; }
         const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-        const exc = vals.filter(v => v >= FB_MAIN_EXC_LINE).length / vals.length;
-        const pass = vals.filter(v => v >= FB_MAIN_PASS_LINE).length / vals.length;
+        const excLine = fbResolveSubjectThreshold(sub, 'excellent', vals);
+        const passLine = fbResolveSubjectThreshold(sub, 'pass', vals);
+        const exc = vals.filter(v => v >= excLine).length / vals.length;
+        const pass = vals.filter(v => v >= passLine).length / vals.length;
         FB_SUBJ_TARGET[sub] = { avg, exc, pass, n: vals.length };
     });
 }
@@ -1472,7 +1493,11 @@ function fbBuildSubjectBalanceTable(labels) {
     const hasSubj = FB_CLASSES.some(c => c.students.some(s => s.subjAvg && FB_MAIN_SUBJECTS.some(sub => Number.isFinite(s.subjAvg[sub]))));
     if (!hasSubj) return '';
     const fmtPct = (v) => (v * 100).toFixed(0) + '%';
-    let html = `<div style="margin-top:16px; font-weight:600; color:#334155;">📚 主科每班均衡（语数英 · 均分 / 优秀率≥127.5 / 及格率≥90）</div>`;
+    const thresholdLabels = FB_MAIN_SUBJECTS.map((sub) => {
+        const values = FB_CLASSES.flatMap(item => (item.students || []).filter(s => !s?.isNoExam).map(s => Number(s?.subjAvg?.[sub])).filter(Number.isFinite));
+        return `${sub}优秀线≥${fbResolveSubjectThreshold(sub, 'excellent', values).toFixed(1)}、及格线≥${fbResolveSubjectThreshold(sub, 'pass', values).toFixed(1)}`;
+    }).join('；');
+    let html = `<div style="margin-top:16px; font-weight:600; color:#334155;">📚 主科每班均衡（语数英 · 均分 / 优秀率 / 及格率）</div><div style="font-size:11px;color:#64748b;margin-top:3px;">${thresholdLabels}</div>`;
     html += `<table class="comparison-table" style="font-size:12px; margin-top:6px;"><thead><tr><th>班级</th>`;
     FB_MAIN_SUBJECTS.forEach(sub => { html += `<th>${sub}均分</th><th>${sub}优秀</th><th>${sub}及格</th>`; });
     html += `</tr></thead><tbody>`;
@@ -1482,8 +1507,11 @@ function fbBuildSubjectBalanceTable(labels) {
             const vals = c.students.map(s => (s.subjAvg && Number.isFinite(s.subjAvg[sub])) ? s.subjAvg[sub] : null).filter(v => v != null);
             if (!vals.length) { html += `<td>-</td><td>-</td><td>-</td>`; return; }
             const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-            const exc = vals.filter(v => v >= FB_MAIN_EXC_LINE).length / vals.length;
-            const pass = vals.filter(v => v >= FB_MAIN_PASS_LINE).length / vals.length;
+            const allValues = FB_CLASSES.flatMap(item => (item.students || []).filter(s => !s?.isNoExam).map(s => Number(s?.subjAvg?.[sub])).filter(Number.isFinite));
+            const excLine = fbResolveSubjectThreshold(sub, 'excellent', allValues);
+            const passLine = fbResolveSubjectThreshold(sub, 'pass', allValues);
+            const exc = vals.filter(v => v >= excLine).length / vals.length;
+            const pass = vals.filter(v => v >= passLine).length / vals.length;
             html += `<td>${avg.toFixed(1)}</td><td>${fmtPct(exc)}</td><td>${fmtPct(pass)}</td>`;
         });
         html += `</tr>`;
@@ -1501,8 +1529,11 @@ function FB_renderBalanceChart() {
         return;
     }
     const statsData = FB_CLASSES.map(c => { const scores = c.students.map(s => s.score).sort((a, b) => a - b); const qs = calculateQuartiles(scores); return { min: scores[0], max: scores[scores.length - 1], q1: qs.q1, median: qs.q2, q3: qs.q3, avg: c.stats.avg, sd: calculateSD(scores) }; });
-    let tableHtml = `<table class="comparison-table" style="font-size:12px;"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>标准差 (SD)</th><th>极差 (Max-Min)</th><th>前25%线 (Q3)</th><th>后25%线 (Q1)</th></tr></thead><tbody>`;
-    statsData.forEach((s, i) => { tableHtml += `<tr><td>${labels[i]}</td><td>${FB_CLASSES[i].students.length}</td><td>${s.avg.toFixed(2)}</td><td>${s.sd.toFixed(2)}</td><td>${(s.max - s.min).toFixed(1)}</td><td>${s.q3}</td><td>${s.q1}</td></tr>`; });
+    let tableHtml = `<table class="comparison-table" style="font-size:12px;"><thead><tr><th>班级</th><th>总人数</th><th>男生</th><th>女生</th><th>平均分</th><th>标准差 (SD)</th><th>极差 (Max-Min)</th><th>前25%线 (Q3)</th><th>后25%线 (Q1)</th></tr></thead><tbody>`;
+    statsData.forEach((s, i) => {
+        const classStats = fbCalcClassStats(FB_CLASSES[i].students || []);
+        tableHtml += `<tr><td>${labels[i]}</td><td>${classStats.count}</td><td>${classStats.male}</td><td>${classStats.female}</td><td>${s.avg.toFixed(2)}</td><td>${s.sd.toFixed(2)}</td><td>${(s.max - s.min).toFixed(1)}</td><td>${s.q3}</td><td>${s.q1}</td></tr>`;
+    });
     const nextTableHtml = tableHtml + `</tbody></table>` + fbBuildSubjectBalanceTable(labels);
     if (tableContainer && tableContainer.innerHTML !== nextTableHtml) {
         tableContainer.innerHTML = nextTableHtml;
@@ -2446,12 +2477,13 @@ function FB_exportResultWithBalance() {
     const subjects = fbMajorSubjectsForGrade();
     const wb = XLSX.utils.book_new();
     const buildRows = (classes) => {
-        const rows = [['班级', '有效成绩人数']];
+        const rows = [['班级', '总人数', '男生', '女生', '有效成绩人数']];
         subjects.forEach(s => rows[0].push(`${s}平均分`, `${s}优秀率`, `${s}及格率`));
         const metrics = Object.fromEntries(subjects.map(s => [s, fbSubjectMetric(classes, s)]));
         (classes || []).forEach((cls, i) => {
+            const stats = fbCalcClassStats(cls.students || []);
             const scored = (cls.students || []).filter(s => !s?.isNoExam && Number.isFinite(Number(s?.score))).length;
-            const row = [cls.name, scored];
+            const row = [cls.name, stats.count, stats.male, stats.female, scored];
             subjects.forEach(s => { const m = metrics[s][i]; row.push(m.n ? Number(m.avg.toFixed(2)) : null, m.n ? Number((m.excellent * 100).toFixed(2)) : null, m.n ? Number((m.pass * 100).toFixed(2)) : null); });
             rows.push(row);
         });

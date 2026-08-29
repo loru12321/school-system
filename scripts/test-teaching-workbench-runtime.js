@@ -87,6 +87,11 @@ assert.ok(freshman.includes('const stableKey = (row)'), 'exam aggregation should
 assert.ok(freshman.includes('duplicateNames.has(nm) ? fbStudentKey(row) : `name:${nm}`'), 'only same-exam duplicate names should fall back to exam ids');
 const stableAggregationBlock = freshman.match(/const stableByKey = new Map\(\);[\s\S]*?\/\/ 用稳定键结果替换前面按原始考号聚合的结果。/)?.[0] || '';
 assert.ok(stableAggregationBlock.includes('if (!fbExamBelongsToCurrentSchool(row, ex.meta)) return;'), 'stable cross-exam aggregation must keep the current-school filter before replacing the first pass');
+assert.ok(freshman.includes("<th>男生</th><th>女生</th><th>有效成绩人数</th>"), 'freshman stage balance tables must show male and female counts separately');
+assert.ok(freshman.includes("['班级', '总人数', '男生', '女生', '有效成绩人数']"), 'freshman balance export must include separate male and female columns');
+assert.ok(freshman.includes('function fbResolveSubjectThreshold(subject, kind, scores)'), 'freshman two-rate metrics must resolve thresholds from the current exam before falling back to quantiles');
+assert.ok(freshman.includes("const excellentLine = fbResolveSubjectThreshold(subject, 'excellent', allValues)"), 'freshman subject metrics must use one global excellent line across classes');
+assert.ok(freshman.includes("const passLine = fbResolveSubjectThreshold(subject, 'pass', allValues)"), 'freshman subject metrics must use one global pass line across classes');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');
