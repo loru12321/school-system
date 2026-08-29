@@ -54,6 +54,7 @@ const safelist = {
     /^loader-/,       // Loader classes
     /^drill-/,        // Dynamic drill modal and class-card surfaces
     /^apk-/,          // APK v2 mobile shell is created entirely at runtime
+    /^fb-/,          // Freshman class cards, violation links, and status badges are runtime-generated
     /^clickable-num$/ // Dynamic number drill controls
   ],
   deep: [
