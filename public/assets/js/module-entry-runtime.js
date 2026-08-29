@@ -1565,5 +1565,15 @@
         initCoreWorkflowPreheat();
     }
 
+    // 深链接/刷新直接进入教务模块时，app.js 不一定会再次触发 switchTab。
+    // 主动补一次当前活动模块入口，确保新生分班运行时和名单控件完成初始化。
+    const initDeepLinkedModule = () => {
+        const activeId = ['freshman-simulator', 'exam-arranger'].find(id => document.getElementById(id)?.classList.contains('active'));
+        if (!activeId || typeof window.runModuleTabEnter !== 'function') return;
+        window.runModuleTabEnter({ id: activeId, currentCategory: 'admin', currentCategoryMeta: null }).catch(error => console.warn('[module-entry] deep-link init failed:', error));
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => window.setTimeout(initDeepLinkedModule, 0), { once: true });
+    else window.setTimeout(initDeepLinkedModule, 0);
+
     window.__MODULE_ENTRY_RUNTIME_PATCHED__ = true;
 })();

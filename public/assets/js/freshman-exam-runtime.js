@@ -315,6 +315,44 @@
     function FB_removeSameClassGroup(id) { FB_SAME_CLASS_GROUPS = FB_SAME_CLASS_GROUPS.filter(g => g.id !== String(id)); FB_refreshSameClassUI(); }
     function FB_clearSameClassGroups() { FB_SAME_CLASS_GROUPS = []; FB_SAME_CLASS_DRAFT = []; FB_refreshSameClassUI(); window.UI?.toast?.('已清空全部同班组合', 'success'); }
 
+    function FB_loadSameClassList(input) {
+        const file = input?.files?.[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const wb = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+                if (!rows.length) throw new Error('Excel没有数据');
+                const grouped = new Map(); const errors = [];
+                rows.forEach((row, index) => {
+                    const group = String(row['组合编号'] ?? row['组号'] ?? row['组合'] ?? row['同班组'] ?? row['group'] ?? '').trim();
+                    const student = fbRosterRow(row);
+                    if (!group) { errors.push(`第${index + 2}行缺少组合编号`); return; }
+                    if (!student) { errors.push(`第${index + 2}行缺少姓名`); return; }
+                    const id = fbStudentIdentity(student);
+                    const list = grouped.get(group) || []; if (!list.includes(id)) list.push(id); grouped.set(group, list);
+                });
+                const validGroups = [...grouped.entries()].filter(([, members]) => members.length >= 2);
+                const invalidGroups = [...grouped.entries()].filter(([, members]) => members.length < 2).map(([group]) => group);
+                if (!validGroups.length) throw new Error('没有找到至少包含两名学生的有效组合');
+                const imported = [];
+                validGroups.forEach(([label, members]) => {
+                    const resolvedMembers = members.map(id => {
+                        const candidate = fbSameClassCandidates().find(student => fbStudentIdentity(student) === id);
+                        return candidate ? fbStudentIdentity(candidate) : id;
+                    });
+                    const existing = FB_SAME_CLASS_GROUPS.find(group => group.members.some(id => resolvedMembers.includes(id)));
+                    if (existing) existing.members = [...new Set(existing.members.concat(resolvedMembers))];
+                    else { FB_SAME_CLASS_GROUPS.push({ id: `same-upload-${Date.now()}-${imported.length}`, members: resolvedMembers }); imported.push(label); }
+                });
+                fbResolveSameClassIdentities(); FB_refreshSameClassUI(); input.value = '';
+                const suffix = [...errors, ...(invalidGroups.length ? [`组合“${invalidGroups.join('、')}”少于两人，已跳过`] : [])];
+                window.UI?.alert?.(`✅ 同班组合名单导入 ${validGroups.length} 组、${validGroups.reduce((sum, [, members]) => sum + members.length, 0)} 人。${suffix.length ? `\n⚠️ ${suffix.slice(0, 6).join('\n')}` : ''}`, suffix.length ? 'warning' : 'success');
+            } catch (error) { input.value = ''; window.UI?.alert?.('同班组合名单读取失败：' + error.message, 'error'); }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
     function fbMergeSameClassPair(a, b) {
         const ids = new Set([a, b]);
         const touching = FB_SAME_CLASS_GROUPS.filter(group => group.members.some(id => ids.has(id)));
@@ -3425,6 +3463,7 @@ function EXAM_exportResult() {
     if (typeof FB_createSameClassGroup === 'function') window.FB_createSameClassGroup = FB_createSameClassGroup;
     if (typeof FB_removeSameClassGroup === 'function') window.FB_removeSameClassGroup = FB_removeSameClassGroup;
     if (typeof FB_clearSameClassGroups === 'function') window.FB_clearSameClassGroups = FB_clearSameClassGroups;
+    if (typeof FB_loadSameClassList === 'function') window.FB_loadSameClassList = FB_loadSameClassList;
     if (typeof FB_toggleDataSource === 'function') window.FB_toggleDataSource = FB_toggleDataSource;
     if (typeof FB_runDivision === 'function') window.FB_runDivision = FB_runDivision;
     if (typeof FB_generateSingleScheme === 'function') window.FB_generateSingleScheme = FB_generateSingleScheme;
@@ -3468,6 +3507,7 @@ function EXAM_exportResult() {
     try {
         FB_bindDeclarativeHandlers(document);
         FB_refreshFixedAssignmentUI();
+        FB_refreshSameClassUI();
     } catch (_) { /* 绑定失败不应阻断模块其余功能 */ }
 
     window.__FRESHMAN_EXAM_RUNTIME_PATCHED__ = true;

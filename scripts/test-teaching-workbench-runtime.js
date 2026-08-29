@@ -9,6 +9,7 @@ const scheduler = read('public/assets/js/grade-scheduler-runtime.js');
 const freshman = read('public/assets/js/freshman-exam-runtime.js');
 const freshmanInsight = read('public/assets/js/freshman-constraint-insight-runtime.js');
 const runtimeLoader = read('public/assets/js/runtime-loader-runtime.js');
+const moduleEntry = read('public/assets/js/module-entry-runtime.js');
 const indexHtml = read('src/index.html');
 const stylesheet = read('src/assets/css/main.css');
 
@@ -106,10 +107,14 @@ assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime s
 assert.ok(freshman.includes('function FB_loadTransferInList'), 'freshman runtime should parse transfer-in roster uploads');
 assert.ok(freshman.includes('function FB_loadFixedClassList'), 'freshman runtime should parse fixed-class roster uploads');
 assert.ok(freshman.includes('function FB_createSameClassGroup'), 'freshman runtime should create same-class groups');
+assert.ok(freshman.includes('function FB_loadSameClassList'), 'freshman runtime should parse same-class group uploads');
 assert.ok(freshman.includes('fbResolveSameClassGroups'), 'same-class groups should be resolved before placement');
 assert.ok(freshman.includes('s1.sameGroupId || s2.sameGroupId'), 'optimizer swaps must not split same-class groups');
 assert.ok(indexHtml.includes('id="fb_same_class_student"'), 'freshman UI should provide a same-class student selector');
 assert.ok(indexHtml.includes('data-fb-action="create-same-group"'), 'freshman UI should provide same-class group creation');
+assert.ok(indexHtml.includes('data-fb-pick="fbSameClassInput"'), 'freshman UI should provide same-class group upload');
+assert.ok(indexHtml.includes('组合编号、姓名'), 'same-class group upload should document the row format');
+assert.ok(moduleEntry.includes('initDeepLinkedModule'), 'freshman deep links should initialize their runtime');
 assert.ok(freshman.includes('fbFixedAssignmentCandidates'), 'fixed-class student selector should use uploaded roster candidates before cloud assembly');
 assert.ok(freshman.includes('fbIsTransferred(rosterRow)'), 'transfer decisions should be excluded from exam aggregation');
 assert.ok(freshmanInsight.includes('window.FB_preflight = preflight'), 'freshman insight should expose the review action');

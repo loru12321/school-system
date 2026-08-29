@@ -263,8 +263,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-86396b706e6a.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-86396b706e6a.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-fe0e99f48ad3.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-fe0e99f48ad3.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -2666,6 +2666,11 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <button type="button" class="btn btn-primary" data-fb-action="add-same-member"><i class="ti ti-user-plus"></i> 加入当前组合</button>
                             <button type="button" class="btn btn-green" data-fb-action="create-same-group"><i class="ti ti-users-group"></i> 建立同班组合</button>
                             <button type="button" class="btn btn-gray" data-fb-action="clear-same-groups">清空组合</button>
+                            <div class="upload-box" style="min-width:280px; padding:10px;" data-fb-pick="fbSameClassInput">
+                                <div style="font-weight:bold; font-size:13px;"><i class="ti ti-file-spreadsheet"></i> 上传同班组合名单</div>
+                                <div style="font-size:11px; color:#64748b;">每行一名学生：组合编号、姓名[, 考号/学号]</div>
+                                <input type="file" id="fbSameClassInput" accept=".xlsx,.xls,.csv" hidden data-fb-change="FB_loadSameClassList">
+                            </div>
                         </div>
                         <div id="fb_same_class_draft" class="freshman-same-draft"><span class="freshman-fixed-empty">尚未选择成员（至少两人）</span></div>
                         <div id="fb_same_class_group_list" class="freshman-fixed-list" aria-live="polite"><div class="freshman-fixed-empty">暂未设置同班组合，系统将按均衡算法自动分班。</div></div>
