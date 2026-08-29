@@ -105,6 +105,11 @@ assert.ok(indexHtml.includes('data-fb-pick="fbFixedClassInput"'), 'freshman UI s
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');
 assert.ok(freshman.includes('function FB_loadTransferInList'), 'freshman runtime should parse transfer-in roster uploads');
 assert.ok(freshman.includes('function FB_loadFixedClassList'), 'freshman runtime should parse fixed-class roster uploads');
+assert.ok(freshman.includes('function FB_createSameClassGroup'), 'freshman runtime should create same-class groups');
+assert.ok(freshman.includes('fbResolveSameClassGroups'), 'same-class groups should be resolved before placement');
+assert.ok(freshman.includes('s1.sameGroupId || s2.sameGroupId'), 'optimizer swaps must not split same-class groups');
+assert.ok(indexHtml.includes('id="fb_same_class_student"'), 'freshman UI should provide a same-class student selector');
+assert.ok(indexHtml.includes('data-fb-action="create-same-group"'), 'freshman UI should provide same-class group creation');
 assert.ok(freshman.includes('fbFixedAssignmentCandidates'), 'fixed-class student selector should use uploaded roster candidates before cloud assembly');
 assert.ok(freshman.includes('fbIsTransferred(rosterRow)'), 'transfer decisions should be excluded from exam aggregation');
 assert.ok(freshmanInsight.includes('window.FB_preflight = preflight'), 'freshman insight should expose the review action');

@@ -39,7 +39,9 @@ const budgets = {
     // 2026-08-29: raised 336_000 -> 336_500 for freshman violation/dropout
     // roster labels and export color markers; runtime cache hashes can vary
     // Brotli output by a few hundred bytes between builds.
-    ltHtmlBrotli: 336_500,
+    // 2026-08-29: raised 336_500 -> 338_500 for the freshman same-class group
+    // selector, group-level placement lock, conflict checks, and export column.
+    ltHtmlBrotli: 338_500,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,

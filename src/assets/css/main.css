@@ -874,6 +874,44 @@ header {
     font-size: 11px;
 }
 
+#freshman-simulator .freshman-same-panel {
+    border-color: #bfdbfe;
+    background: linear-gradient(135deg, #eff6ff 0%, #fff 78%);
+}
+
+#freshman-simulator .freshman-same-panel .freshman-fixed-head strong,
+#freshman-simulator .freshman-same-panel .freshman-fixed-row { color: #1e3a8a; }
+
+#freshman-simulator .freshman-same-draft {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 28px;
+    margin-top: 10px;
+}
+
+#freshman-simulator .freshman-same-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1e40af;
+    font-size: 12px;
+}
+
+#freshman-simulator .freshman-same-chip button {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+}
+
 #freshman-simulator .freshman-fixed-empty {
     padding: 8px 9px;
     border: 1px dashed #bbf7d0;
