@@ -3,11 +3,9 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-c9919e7cae6c';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-be3404da9014';
 
-// 每次重新进入系统都要求重新验证账号、密码并选择届别。
-// 仅清除“当前登录/当前工作区身份”，不删除各届别的云端或本地业务数据。
-// 这样浏览器刷新、重新打开站点时不会自动恢复上次届别。
+// 每次进入都重新验证账号密码和届别，仅清理当前会话/工作区身份。
 (function forceFreshLoginEntry() {
     if (window.EMBEDDED_DB) return;
     try {
@@ -1917,6 +1915,7 @@ const bootAuth = window.Auth || {
             if (result && result.user) {
                 const matchedUser = result.user;
                 writeBootSessionUser(matchedUser);
+                window.__FRESH_LOGIN_ENTRY__ = false;
                 setBootHelperMessage('身份验证成功，正在载入工作台。', 'success');
                 setBootSubmitState({
                     busy: true,

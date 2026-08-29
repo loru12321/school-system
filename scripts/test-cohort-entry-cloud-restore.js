@@ -178,6 +178,7 @@ assert.ok(
         bootSource.includes('function forceFreshLoginEntry()')
         && bootSource.includes('window.EdgeGateway?.clearSession();')
         && bootSource.includes('if (window.__FRESH_LOGIN_ENTRY__) return Promise.resolve();')
+        && bootSource.includes('window.__FRESH_LOGIN_ENTRY__ = false;')
         && authLoginSource.includes('window.__FRESH_LOGIN_ENTRY__ = false;'),
     'every new web entry must clear the previous gateway session, skip automatic restore, and re-enable normal runtime after manual login'
 );
