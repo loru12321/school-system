@@ -125,6 +125,8 @@ assert.ok(indexHtml.includes('data-open-teacher-sync'), 'teacher sync entry poin
 assert.ok(!/onclick="openTeacherSync\(\)"/.test(indexHtml), 'teacher sync entry points should not keep inline onclick handlers');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInput"'), 'freshman UI should provide a transfer-out roster upload');
 assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI should provide a transfer-in roster upload');
+assert.ok(indexHtml.includes('accept=".xlsx,.xls,.csv" hidden data-fb-change="FB_loadRelatedRosterPack"'), 'freshman related roster package should accept CSV uploads');
+assert.ok(freshman.includes('inferSingleSheet'), 'freshman related roster package should infer a single-sheet upload from filename or headers');
 assert.ok(indexHtml.includes('data-fb-pick="fbFixedClassInput"'), 'freshman UI should provide a fixed-class roster upload');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');
 assert.ok(freshman.includes('function FB_loadTransferInList'), 'freshman runtime should parse transfer-in roster uploads');

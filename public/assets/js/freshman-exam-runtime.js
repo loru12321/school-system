@@ -944,6 +944,27 @@ function FB_loadRelatedRosterPack(input) {
         }
         return null;
     };
+    // 单文件（尤其 CSV）没有可供识别的工作表名称时，按文件名和表头推断名单类型。
+    // 这样用户也可以直接上传“转入学生名单.csv”等单张名单，不必先拼成工作簿。
+    const inferSingleSheet = (wb, fileName) => {
+        const sheet = wb.Sheets?.[wb.SheetNames?.[0]];
+        if (!sheet) return null;
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        if (!rows.length) return null;
+        const keys = Object.keys(rows[0] || {}).map(key => String(key).replace(/[\s_\-]/g, '').toLowerCase());
+        const file = String(fileName || '').replace(/[\s_\-]/g, '').toLowerCase();
+        const has = (...names) => names.some(name => keys.includes(String(name).replace(/[\s_\-]/g, '').toLowerCase()));
+        if (/(分开|互斥|separate)/i.test(file) || has('分开组号', '分开组', '互斥组')) return { type: 'separate', sheet };
+        if (/(同班|组合|same)/i.test(file) || has('组合编号', '同班组')) return { type: 'same', sheet };
+        if (/(指定|锁定|fixed)/i.test(file) || has('指定班级', '目标班级', '分配班级')) return { type: 'fixed', sheet };
+        if (/(转出|transferout)/i.test(file)) return { type: 'transfer', sheet };
+        if (/(转入|transferin)/i.test(file)) return { type: 'transferIn', sheet };
+        if (/(辍学|休学|长期离校|dropout)/i.test(file)) return { type: 'dropout', sheet };
+        if (/(违纪|violation)/i.test(file)) return { type: 'violation', sheet };
+        if (/(性别|gender)/i.test(file) || has('性别', 'gender', 'sex')) return { type: 'gender', sheet };
+        if (/(学籍|在册|roster)/i.test(file)) return { type: 'roster', sheet };
+        return null;
+    };
     const rowsOf = (sheet) => sheet ? XLSX.utils.sheet_to_json(sheet, { defval: '' }) : [];
     const appendUnique = (target, rows) => {
         rows.forEach(row => {
@@ -958,9 +979,11 @@ function FB_loadRelatedRosterPack(input) {
             const wb = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
             if (!wb.SheetNames?.length) throw new Error('Excel没有工作表');
             const imported = [];
-            const rosterRows = rowsOf(pickSheet(wb, aliases.roster)).map(fbRosterRow).filter(Boolean);
+            const inferred = inferSingleSheet(wb, file.name);
+            const sheetFor = (type) => pickSheet(wb, aliases[type]) || (inferred?.type === type ? inferred.sheet : null);
+            const rosterRows = rowsOf(sheetFor('roster')).map(fbRosterRow).filter(Boolean);
             if (rosterRows.length) { FB_ROSTER_ROWS = rosterRows; FB_ROSTER_RECONCILIATION = null; imported.push(`学籍 ${rosterRows.length}`); }
-            const genderRows = rowsOf(pickSheet(wb, aliases.gender));
+            const genderRows = rowsOf(sheetFor('gender'));
             if (genderRows.length) {
                 FB_GENDER_MAP = {}; FB_GENDER_NAMES = [];
                 genderRows.forEach(row => {
@@ -974,7 +997,7 @@ function FB_loadRelatedRosterPack(input) {
                 });
                 imported.push(`性别 ${FB_GENDER_NAMES.length}`);
             }
-            const violationRows = rowsOf(pickSheet(wb, aliases.violation));
+            const violationRows = rowsOf(sheetFor('violation'));
             if (violationRows.length) {
                 FB_VIOLATION_SET = {}; FB_VIOLATION_NAMES = [];
                 violationRows.forEach(row => {
@@ -987,13 +1010,13 @@ function FB_loadRelatedRosterPack(input) {
                 });
                 imported.push(`违纪 ${FB_VIOLATION_NAMES.length}`);
             }
-            const transferRows = rowsOf(pickSheet(wb, aliases.transfer)).map(fbRosterRow).filter(Boolean);
+            const transferRows = rowsOf(sheetFor('transfer')).map(fbRosterRow).filter(Boolean);
             if (transferRows.length) { appendUnique(FB_TRANSFER_STUDENTS, transferRows); imported.push(`转出 ${transferRows.length}`); }
-            const transferInRows = rowsOf(pickSheet(wb, aliases.transferIn)).map(fbRosterRow).filter(Boolean);
+            const transferInRows = rowsOf(sheetFor('transferIn')).map(fbRosterRow).filter(Boolean);
             if (transferInRows.length) { appendUnique(FB_TRANSFER_IN_STUDENTS, transferInRows); imported.push(`转入 ${transferInRows.length}`); }
-            const dropoutRows = rowsOf(pickSheet(wb, aliases.dropout)).map(fbRosterRow).filter(Boolean);
+            const dropoutRows = rowsOf(sheetFor('dropout')).map(fbRosterRow).filter(Boolean);
             if (dropoutRows.length) { appendUnique(FB_DROPOUT_STUDENTS, dropoutRows); imported.push(`辍学 ${dropoutRows.length}`); }
-            const fixedRows = rowsOf(pickSheet(wb, aliases.fixed));
+            const fixedRows = rowsOf(sheetFor('fixed'));
             if (fixedRows.length) {
                 const classCount = fbFixedClassCount(); let count = 0;
                 fixedRows.forEach(row => {
@@ -1003,14 +1026,14 @@ function FB_loadRelatedRosterPack(input) {
                 });
                 if (count) imported.push(`指定班级 ${count}`);
             }
-            const sameRows = rowsOf(pickSheet(wb, aliases.same));
+            const sameRows = rowsOf(sheetFor('same'));
             if (sameRows.length) {
                 const grouped = new Map();
                 sameRows.forEach(row => { const group = String(row['组合编号'] ?? row['组号'] ?? row['组合'] ?? row['同班组'] ?? row['group'] ?? '').trim(); const student = fbRosterRow(row); if (!group || !student) return; const ids = grouped.get(group) || []; const id = fbStudentIdentity(student); if (!ids.includes(id)) ids.push(id); grouped.set(group, ids); });
                 let count = 0; grouped.forEach(members => { if (members.length < 2) return; const unique = [...new Set(members)]; const exists = FB_SAME_CLASS_GROUPS.some(group => group.members.length === unique.length && group.members.every(id => unique.includes(id))); if (!exists) { FB_SAME_CLASS_GROUPS.push({ id: `same-pack-${Date.now()}-${count}`, members: unique }); count += 1; } });
                 if (count) imported.push(`同班组合 ${count} 组`);
             }
-            const separateRows = rowsOf(pickSheet(wb, aliases.separate));
+            const separateRows = rowsOf(sheetFor('separate'));
             if (separateRows.length) {
                 const grouped = new Map();
                 separateRows.forEach(row => { const group = String(row['分开组号'] ?? row['分开组'] ?? row['互斥组'] ?? row['组合编号'] ?? row['组号'] ?? row['group'] ?? '').trim(); const student = fbRosterRow(row); if (!group || !student) return; const ids = grouped.get(group) || []; const id = fbStudentIdentity(student); if (!ids.includes(id)) ids.push(id); grouped.set(group, ids); });

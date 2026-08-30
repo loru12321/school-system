@@ -3016,7 +3016,7 @@ function uiAlert(message, type = 'info') {
         UI.toast(message, map[type] || 'info');
         return;
     }
-    alert(message);
+    return appAlertDialog(message, type);
 }
 
 function syncRuntimeStateToWindow() {
@@ -3495,7 +3495,7 @@ function showBaseConfigGuardModal(missing) {
     const missingList = Array.isArray(missing) ? missing.filter(Boolean) : [];
     if (!missingList.length) return;
     if (!window.Swal || typeof Swal.fire !== 'function') {
-        alert(`需要先完成基础配置：${missingList.join('、')}`);
+        appAlertDialog(`需要先完成基础配置：${missingList.join('、')}`, 'warning');
         return;
     }
     Swal.fire({
@@ -4034,7 +4034,7 @@ function switchTab(id) {
     }
     if (window.DEBUG_MODULE_SWITCH) console.debug(`🔄 切换模块: ${id}`);
     if (!canAccessModule(id)) {
-        alert('⛔ 权限不足：该模块对当前角色不可见');
+        appAlertDialog('⛔ 权限不足：该模块对当前角色不可见', 'warning');
         return;
     }
     if (!__guardBypass && !guardBeforeSwitch(id)) return;
@@ -4065,7 +4065,7 @@ function switchTab(id) {
     const targetSection = getModuleSectionById(id);
     if (!targetSection) {
         console.error(`❌ 找不到模块: ${id}`);
-        alert(`模块 "${id}" 不存在，请联系管理员`);
+        appAlertDialog(`模块 "${id}" 不存在，请联系管理员`, 'error');
         return;
     }
     if (window.DEBUG_MODULE_SWITCH) console.debug(`✅ 激活模块: ${id}`);
@@ -4159,7 +4159,7 @@ const DrillSystem = {
     },
 
     exportExcel: function () {
-        if (!this.exportData || !this.exportData.data) return alert("当前无数据可导出");
+        if (!this.exportData || !this.exportData.data) return appAlertDialog("当前无数据可导出", 'warning');
 
         const wb = XLSX.utils.book_new();
         let ws = null;
@@ -4277,7 +4277,7 @@ function handleIndicatorClick(schoolName, type) {
     if (!studentsBySchool.length) return;
 
     const { r1, r2 } = getIndicatorRankParams();
-    if (!r1 || !r2) return alert("请先设置指标参数");
+    if (!r1 || !r2) return appAlertDialog("请先设置指标参数", 'warning');
 
     const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
         ? filterRowsToTownshipSchools(RAW_DATA || [])
@@ -4337,7 +4337,7 @@ function handleHighSchoolAdmissionClick(schoolName) {
         Swal.fire({ title: `${schoolName} · 高中上线情况`, html, width: 760, confirmButtonText: '关闭' });
         return;
     }
-    alert(`${schoolName}\n${status}\n高中上线：${countText}`);
+    appAlertDialog(`${schoolName}\n${status}\n高中上线：${countText}`, 'info');
 }
 
 function handleHighSchoolAdmissionClassClick(schoolName, className) {
@@ -4350,7 +4350,7 @@ function handleHighSchoolAdmissionClassClick(schoolName, className) {
     if (!classStats || !classStats.complete || !allowed || line <= 0) {
         const reason = getHighSchoolAdmissionStatusText(classStats, { allowed, line });
         if (window.UI?.toast) window.UI.toast(`无法展示${className}班上线名单：${reason}`, 'warning');
-        else alert(`${schoolName} ${className}\n${reason}`);
+        else appAlertDialog(`${schoolName} ${className}\n${reason}`, 'warning');
         return;
     }
 
@@ -4374,7 +4374,7 @@ function handleHighSchoolAdmissionClassClick(schoolName, className) {
         Swal.fire({ title: `${schoolName} · ${className}班上线学生`, html, width: 660, confirmButtonText: '关闭' });
         return;
     }
-    alert(`${schoolName} ${className}\n上线学生：${admitted.map((entry) => entry.student?.name || '未命名').join('、') || '无'}`);
+    appAlertDialog(`${schoolName} ${className}\n上线学生：${admitted.map((entry) => entry.student?.name || '未命名').join('、') || '无'}`, 'info');
 }
 
 window.handleHighSchoolAdmissionClick = handleHighSchoolAdmissionClick;
@@ -6265,7 +6265,7 @@ function autoDetectMySchool() {
     const schoolNames = (typeof listAvailableSchoolsForCompare === 'function')
         ? listAvailableSchoolsForCompare()
         : Object.keys(SCHOOLS || {});
-    if (!schoolNames.length) return alert('未找到可识别学校（当前与历史考试均为空）');
+    if (!schoolNames.length) return appAlertDialog('未找到可识别学校（当前与历史考试均为空）', 'warning');
 
     let detectedSchool = '';
 
@@ -6351,7 +6351,7 @@ function autoDetectMySchool() {
         }
     }
 
-    if (!detectedSchool) return alert('未能自动识别本校，请手动选择');
+    if (!detectedSchool) return appAlertDialog('未能自动识别本校，请手动选择', 'warning');
 
     writeCurrentSchool(detectedSchool);
 
@@ -6375,7 +6375,7 @@ function updateMarginalSchoolSelect() {
 }
 
 function generateTeacherInputs() {
-    if (!MY_SCHOOL) { alert('请先选择本校'); return; }
+    if (!MY_SCHOOL) { appAlertDialog('请先选择本校', 'warning'); return; }
     const container = document.getElementById('teacherInputsContainer');
     if (!container) return;
     container.innerHTML = '';
@@ -6426,22 +6426,22 @@ function generateTeacherInputs() {
 function importTeacherExcel() {
     const fileInput = document.getElementById('teacherFileInput');
     if (!fileInput) {
-        alert('❌ 系统错误：找不到文件输入框');
+        appAlertDialog('❌ 系统错误：找不到文件输入框', 'error');
         return;
     }
 
     if (!fileInput.files || !fileInput.files.length) {
-        alert('⚠️ 请选择教师信息Excel文件');
+        appAlertDialog('⚠️ 请选择教师信息Excel文件', 'warning');
         return;
     }
 
     if (typeof isArchiveLocked === 'function' && isArchiveLocked()) {
-        alert("⛔ 当前考试已封存，禁止导入任课表");
+        appAlertDialog("⛔ 当前考试已封存，禁止导入任课表", 'warning');
         return;
     }
 
     if (typeof XLSX === 'undefined') {
-        alert('❌ Excel解析库未加载，请刷新页面后重试');
+        appAlertDialog('❌ Excel解析库未加载，请刷新页面后重试', 'error');
         return;
     }
 
@@ -6460,7 +6460,7 @@ function importTeacherExcel() {
 
             if (!jsonData || jsonData.length === 0) {
                 if (window.UI) UI.loading(false);
-                alert('❌ 表格为空或格式不正确');
+                appAlertDialog('❌ 表格为空或格式不正确', 'warning');
                 return;
             }
 
@@ -6478,7 +6478,7 @@ function importTeacherExcel() {
 
             if (count === 0) {
                 if (window.UI) UI.loading(false);
-                alert('❌ 未能导入任何数据，请检查Excel格式');
+                appAlertDialog('❌ 未能导入任何数据，请检查Excel格式', 'warning');
                 return;
             }
 
@@ -6493,28 +6493,28 @@ function importTeacherExcel() {
                         UI.loading(false);
                         UI.toast(`✅ 成功导入 ${count} 条教师信息，云端正在后台同步`, "success");
                     } else {
-                        alert(`✅ 成功导入 ${count} 条教师信息，云端正在后台同步`);
+                        appAlertDialog(`✅ 成功导入 ${count} 条教师信息，云端正在后台同步`, 'success');
                     }
                 } catch (err) {
                     if (window.UI) UI.loading(false);
                     logCloudSyncIssue('云端同步失败:', err);
-                    alert(`✅ 成功导入 ${count} 条教师信息\n\n⚠️ 但云端同步失败，请手动保存。`);
+                    appAlertDialog(`✅ 成功导入 ${count} 条教师信息\n\n⚠️ 但云端同步失败，请手动保存。`, 'warning');
                 }
             } else {
                 if (window.UI) UI.loading(false);
-                alert(`✅ 成功导入 ${count} 条教师信息`);
+                appAlertDialog(`✅ 成功导入 ${count} 条教师信息`, 'success');
             }
 
         } catch (error) {
             if (window.UI) UI.loading(false);
             console.error('导入错误:', error);
-            alert('❌ 导入失败：' + error.message);
+            appAlertDialog('❌ 导入失败：' + error.message, 'error');
         }
     };
 
     reader.onerror = function () {
         if (window.UI) UI.loading(false);
-        alert('❌ 文件读取失败');
+        appAlertDialog('❌ 文件读取失败', 'error');
     };
 
     reader.readAsArrayBuffer(file);
@@ -7302,15 +7302,15 @@ async function calcSummary(isSilent = false) {
 function exportTeacherAnalysis() {
     const user = getCurrentUser();
     const role = user?.role || 'guest';
-    if (!MY_SCHOOL || Object.keys(TEACHER_STATS).length === 0) { alert('请先选择本校并配置教师信息'); return; }
+    if (!MY_SCHOOL || Object.keys(TEACHER_STATS).length === 0) { appAlertDialog('请先选择本校并配置教师信息', 'warning'); return; }
     analyzeTeachers();
     if (role === 'teacher' || role === 'class_teacher') {
         const visibleSubjects = Array.from(getVisibleSubjectsForTeacherUser(user) || []).map(s => normalizeSubject(s)).filter(Boolean);
         const rangeText = visibleSubjects.length ? visibleSubjects.join('、') : '本学科';
-        alert(`教师分析数据已准备就绪（当前可见学科：${rangeText}），请查看"本校教师分析"标签页`);
+        appAlertDialog(`教师分析数据已准备就绪（当前可见学科：${rangeText}），请查看"本校教师分析"标签页`, 'success');
         return;
     }
-    alert('教师分析数据已准备就绪，请查看"本校教师分析"标签页');
+    appAlertDialog('教师分析数据已准备就绪，请查看"本校教师分析"标签页', 'success');
 }
 
 // 分数段分析（segment-analysis）已拆分到 segment-analysis-runtime.js（DEFERRED_APP_MODULES 中，app.js 之后加载）。
@@ -7374,8 +7374,8 @@ function addConflictPair(type) {
     const selB = document.getElementById(idB);
 
     if (!selA || !selB) return console.error("找不到下拉框元素");
-    if (!selA.value || !selB.value) return alert("请先选择两个学生");
-    if (selA.value === selB.value) return alert("不能选择同一个学生");
+    if (!selA.value || !selB.value) return appAlertDialog("请先选择两个学生", 'warning');
+    if (selA.value === selB.value) return appAlertDialog("不能选择同一个学生", 'warning');
 
     addTagToWidget(wrapperId, hiddenId, `${selA.value}&${selB.value}`);
 
@@ -7447,7 +7447,7 @@ function updateConstraintWidgetsContext(type) {
 
 function resetSystem() {
     if (isArchiveLocked()) {
-        return alert("⛔ 当前考试已封存，仅支持只读查看");
+        return appAlertDialog("⛔ 当前考试已封存，仅支持只读查看", 'warning');
     }
     Swal.fire({
         title: '⚠️ 确定要重置系统吗？',
@@ -7574,8 +7574,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function openCloudRollback() {
     const user = Auth?.currentUser;
-    if (!user) return alert('请先登录');
-    if (user.role !== 'admin') return alert('⛔ 权限不足');
+    if (!user) return appAlertDialog('请先登录', 'warning');
+    if (user.role !== 'admin') return appAlertDialog('⛔ 权限不足', 'warning');
     if (typeof DataManager !== 'undefined' && typeof DataManager.openCloudManager === 'function') {
         DataManager.openCloudManager();
         setTimeout(() => {

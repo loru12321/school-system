@@ -68,6 +68,8 @@ assert.ok(appRuntime.includes('return appAlertDialog("⛔ 当前考试已封存�
 ].forEach((token) => {
   assert.ok(!appRuntime.includes(token), 'app.js should not own native dialog fallbacks');
 });
+assert.ok(!/(^|[^\w$.])alert\s*\(/m.test(appRuntime),
+  'app.js should route remaining alerts through the shared non-blocking dialog API');
 
 [
   ['teaching management cloud', teachingCloud, 'tmPromptInput'],
