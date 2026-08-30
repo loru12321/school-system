@@ -1431,25 +1431,24 @@ const SCHEDULER = {
                     }
                 }
                 frontPairs.sort((left, right) => left.day - right.day || left.demands[0].className.localeCompare(right.demands[0].className, 'zh-CN', { numeric: true }));
-                const selected = frontPairs.find(({ day, demands: pair }) => {
+                frontPairs.forEach(({ day, demands: pair }) => {
                     const slot = allSlots.find((item) => item.day === day && item.type === 'eve' && item.period === 3 && !this.isGloballyClosedSlot(item));
-                    if (!slot) return false;
-                    if (teacherBusyMap[`${teacher}_${slot.id}`] || this.isTeacherBusyInOtherClass(teacher, slot.id)) return false;
-                    return pair.every((demand) => {
+                    if (!slot || teacherBusyMap[`${teacher}_${slot.id}`] || this.isTeacherBusyInOtherClass(teacher, slot.id)) return;
+                    const canCombine = pair.every((demand) => {
                         const classSchedule = this.schedule[demand.className] || {};
                         return !classSchedule[slot.id] && !this.isDemandBlocked(demand, slot.id)
                             && (!demand.venue || !this.isVenueBusyInOtherClass(demand.venue, slot.id));
                     });
+                    if (!canCombine) return;
+                    const slotId = slot.id;
+                    pair.forEach((demand) => {
+                        this.placeDemand(demand, slotId, { combined: true, groupId: `${groupId}__${day}` });
+                        // 合堂监督不计入每班正常周课时，故不修改 demand.remaining。
+                    });
+                    this.markTeacherBusy(teacher, slotId);
+                    pair.map((demand) => demand.venue).filter(Boolean)
+                        .forEach((venue) => this.markVenueBusy(venue, slotId));
                 });
-                if (!selected) return;
-                const slotId = `d${selected.day}_eve_3`;
-                selected.demands.forEach((demand) => {
-                    this.placeDemand(demand, slotId, { combined: true, groupId: `${groupId}__${selected.day}` });
-                    // 合堂监督不计入每班正常周课时，故不修改 demand.remaining。
-                });
-                this.markTeacherBusy(teacher, slotId);
-                selected.demands.map((demand) => demand.venue).filter(Boolean)
-                    .forEach((venue) => this.markVenueBusy(venue, slotId));
             });
         });
     },
