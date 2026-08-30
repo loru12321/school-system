@@ -1898,6 +1898,41 @@ function fbStudentStatusExplanation(student) {
     return '';
 }
 
+// 结果/座位视图共用的特殊学生文字徽标。背景色用于快速扫读，文字用于
+// 移动端和打印场景，避免仅靠 hover 或颜色才能识别“未参加考试”学生。
+function fbStudentStatusBadge(student) {
+    const status = fbStudentStatus(student);
+    const config = {
+        '学籍在册未考试': { className: 'desk-status-no-exam', label: '在册未考·后置' },
+        '辍学/长期离校': { className: 'desk-status-dropout', label: '辍学/长期离校·后置' },
+        '新转入': { className: 'desk-status-transfer-in', label: '新转入·后置' },
+        '违纪': { className: 'desk-status-violation', label: '违纪' },
+        '指定班级': { className: 'desk-status-fixed', label: '指定班级' },
+        '同班组合': { className: 'desk-status-same', label: '同班组合' }
+    };
+    const item = config[status];
+    if (!item) return '';
+    return `<span class="desk-status-badge ${item.className}">${item.label}</span>`;
+}
+
+function fbRenderSeatStatusLegend() {
+    const seatView = document.getElementById('fb_seat_view');
+    if (!seatView) return;
+    let legend = document.getElementById('fb_seat_status_legend');
+    if (!legend) {
+        legend = document.createElement('div');
+        legend.id = 'fb_seat_status_legend';
+        const title = document.getElementById('seat_class_title')?.closest('h2');
+        if (title) title.insertAdjacentElement('afterend', legend);
+        else seatView.insertBefore(legend, seatView.firstChild);
+    }
+    legend.innerHTML = '<span class="desk-legend-label">特殊学生：</span>'
+        + '<span class="desk-legend-item desk-legend-no-exam">黄色 在册未考·后置（不计入两率一分）</span>'
+        + '<span class="desk-legend-item desk-legend-dropout">紫色 辍学/长期离校·后置</span>'
+        + '<span class="desk-legend-item desk-legend-transfer-in">蓝色 新转入·后置</span>'
+        + '<span class="desk-legend-item desk-legend-violation">红色 违纪（参与分班）</span>';
+}
+
 function fbExportSubjectNames(classes = []) {
     const names = [];
     const preferred = typeof fbMajorSubjectsForGrade === 'function'
@@ -2057,7 +2092,7 @@ function FB_renderDashboard() {
         const violationBadge = violationCnt > 0
             ? `<button type="button" class="fb-tag fb-tag-red fb-violation-link" data-fb-action="view-violations" data-fb-class-id="${c.id}">${violLabel}: ${violationCnt}</button>`
             : (diffCnt > 0 ? `<span class="fb-tag fb-tag-red">${violLabel}: ${diffCnt}</span>` : '');
-        const noExamBadge = postRosterCnt > 0 ? `<span class="fb-tag fb-tag-yellow" title="学籍在册但本次未参加考试，按后置均衡分配；各科成绩不计入两率一分。">未参加考试（后置）: ${postRosterCnt}</span>` : '';
+        const noExamBadge = postRosterCnt > 0 ? `<span class="fb-tag fb-tag-yellow" title="学籍在册但本次未参加考试，按后置均衡分配；各科成绩不计入两率一分。">在册未考·后置: ${postRosterCnt}</span>` : '';
         const dropoutBadge = postDropoutCnt > 0 ? `<span class="fb-tag fb-tag-purple">辍学/长期离校: ${postDropoutCnt}</span>` : '';
         return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">${violationBadge}${noExamBadge}${dropoutBadge}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div>高分段: ${hiCnt}</div><div>低分段: ${loCnt}</div>${postRosterCnt || postDropoutCnt || postTransferCnt ? `<div style="grid-column:span 2; color:#7c3aed; font-weight:700;">↳ 后置学生: ${postRosterCnt + postDropoutCnt + postTransferCnt} 人（${postRosterCnt ? `在册未考 ${postRosterCnt}` : ''}${postRosterCnt && (postDropoutCnt || postTransferCnt) ? '、' : ''}${postDropoutCnt ? `辍学/长期离校 ${postDropoutCnt}` : ''}${postDropoutCnt && postTransferCnt ? '、' : ''}${postTransferCnt ? `新转入 ${postTransferCnt}` : ''}）</div>` : ''}${fixedCnt ? `<div style="grid-column:span 2; color:#166534; font-weight:700;">🔒 指定学生: ${fixedCnt} 人</div>` : ''}${sameGroupIds.length ? `<div style="grid-column:span 2; color:#1d4ed8; font-weight:700;">👥 同班组合: ${sameGroupIds.length} 组</div>` : ''}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">颜色说明：黄色=在册未参加考试，后置均衡分配；点击进入座位编排 →</div></div></div>`;
     }).join('');
@@ -2265,6 +2300,7 @@ const HistoryManager = {
 function FB_openSeatMap(clsId) {
     HistoryManager.reset();
     FB_CUR_CLASS_IDX = clsId; const cls = FB_CLASSES[clsId]; document.getElementById('seat_class_title').innerText = cls.name;
+    fbRenderSeatStatusLegend();
     document.getElementById('fb_seat_view').classList.remove('hidden'); document.getElementById('fb_seat_view').scrollIntoView({ behavior: 'smooth' });
     updateConstraintWidgetsContext('fb'); // 联动更新
     if (!cls.seatLayout) { FB_autoSeatAlgo(); } else { FB_renderSeatMap(); }
@@ -3009,7 +3045,8 @@ function FB_renderSeatMap() {
                     desk.dataset.idx = stuIdx;
                     const statusText = fbStudentStatusExplanation(stu);
                     desk.title = statusText || '正常学生';
-                    desk.innerHTML = `<div class="desk-name">${stu.name}</div><div class="desk-info"><span>${stu.height}cm</span><span>${fbIsNoExamStudent(stu) ? '未参加考试' : stu.score}</span></div><div class="desk-popover">视力:${stu.vision} | ${statusText || `备注:${stu.remarks || '无'}`}</div>`;
+                    desk.setAttribute('aria-label', `${stu.name}${statusText ? `，${statusText}` : ''}`);
+                    desk.innerHTML = `<div class="desk-name">${stu.name}</div>${fbStudentStatusBadge(stu)}<div class="desk-info"><span>${stu.height}cm</span><span>${fbIsNoExamStudent(stu) ? '未参加考试' : stu.score}</span></div><div class="desk-popover">视力:${stu.vision} | ${statusText || `备注:${stu.remarks || '无'}`}</div>`;
 
                     // 绑定右键事件
                     desk.oncontextmenu = (e) => {

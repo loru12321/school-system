@@ -9623,6 +9623,86 @@ body {
     border-color: #3b82f6;
 }
 
+/* 特殊学生徽标：座位卡片即使在手机端、打印或关闭悬停提示时，
+   也能直接看到“未参加考试·后置”等文字，不仅依赖底色判断。 */
+.desk-status-badge {
+    display: inline-block;
+    max-width: 100%;
+    margin: 2px 0 1px;
+    padding: 1px 4px;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    font-size: 9px;
+    line-height: 1.25;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.desk-status-no-exam {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.desk-status-dropout {
+    color: #7e22ce;
+    background: #f3e8ff;
+}
+
+.desk-status-transfer-in {
+    color: #1d4ed8;
+    background: #dbeafe;
+}
+
+.desk-status-violation {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.desk-status-fixed {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.desk-status-same {
+    color: #3730a3;
+    background: #e0e7ff;
+}
+
+#fb_seat_status_legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px 8px;
+    margin: 0 0 14px;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.desk-legend-label {
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.desk-legend-item {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.desk-legend-no-exam { color: #92400e; background: #fef3c7; }
+.desk-legend-dropout { color: #7e22ce; background: #f3e8ff; }
+.desk-legend-transfer-in { color: #1d4ed8; background: #dbeafe; }
+.desk-legend-violation { color: #b91c1c; background: #fee2e2; }
+
 .desk-name {
     font-weight: bold;
     font-size: 14px;
