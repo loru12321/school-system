@@ -26,7 +26,11 @@ assert.ok(source.includes('applyConsecutivePairRules: function'), 'grade schedul
 assert.ok(source.includes('areAdjacentClasses: function'), 'scheduler should identify adjacent classes for teacher blocks');
 assert.ok(source.includes('isSameClassSubjectConsecutiveAllowed: function'), 'scheduler should allow only explicit same-class consecutive exceptions');
 assert.ok(source.includes('isEveningThirdReserved: function'), 'scheduler should reserve evening third period for eligible combined lessons');
+assert.ok(source.includes('isNonTeachingHourCombinedCell: function'), 'scheduler should identify evening third combined supervision cells');
+assert.ok(source.includes('&& !this.isNonTeachingHourCombinedCell(cell, slotId)'), 'evening third combined supervision should not count toward normal demand hours');
 assert.ok(source.includes('applyEveningThirdCombinedRules: function'), 'scheduler should build evening third combined lessons from front-period subjects');
+assert.ok(source.includes('includeFulfilled: true'), 'evening third combined lessons should still be generated after normal hours are filled');
+assert.ok(source.includes('teacherDaySlotIndex: null'), 'teacher day load should track unique occupied slots for combined lessons');
 assert.ok(source.includes('deferEveningThird: true'), 'scheduler should defer evening third combined placement until front periods are known');
 assert.ok(source.includes('adjacentClassWeight: 160'), 'scheduler should prioritize adjacent-class teacher continuity');
 assert.ok(source.includes('getSoftBusyScore: function'), 'grade scheduler should support soft teacher meeting avoidance');
