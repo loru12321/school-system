@@ -597,6 +597,12 @@ header {
     margin-top: 6px;
 }
 
+#grade-scheduler .scheduler-view-hint {
+    font-size: 11px;
+    color: #64748b;
+    margin: -2px 0 10px;
+}
+
 #grade-scheduler .scheduler-compact-title {
     padding: 10px 8px;
     background: #4f46e5;
