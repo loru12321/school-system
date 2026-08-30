@@ -1480,7 +1480,7 @@ async function runModuleDeepCheck(page, id) {
                     ensureExamAnalysisPackageRuntimeLoaded: typeof window.ensureExamAnalysisPackageRuntimeLoaded === 'function',
                     schoolProfileModal: !!document.getElementById('school-profile-modal'),
                     schoolProfileClose: !!document.querySelector('#school-profile-modal .school-modal-close'),
-                    examAnalysisPackageButton: !!document.querySelector('button[onclick="downloadExamAnalysisPackage()"]'),
+                    examAnalysisPackageButton: !!document.querySelector('#btn-exam-analysis-package[data-ui-action="download-exam-analysis-package"], button[onclick="downloadExamAnalysisPackage()"]'),
                     summaryIndicatorColumnPresent: !hasRenderedSummaryRows
                         || !isGrade9
                         || headers.some((text) => /指标生得分/.test(text)),
@@ -1648,7 +1648,7 @@ async function runModuleDeepCheck(page, id) {
                 showSchoolProfile: typeof window.showSchoolProfile === 'function' || typeof showSchoolProfile === 'function',
                 schoolProfileModal: !!document.getElementById('school-profile-modal'),
                 schoolProfileClose: !!document.querySelector('#school-profile-modal .school-modal-close'),
-                examAnalysisPackageButton: !!document.querySelector('button[onclick="downloadExamAnalysisPackage()"]'),
+                examAnalysisPackageButton: !!document.querySelector('#btn-exam-analysis-package[data-ui-action="download-exam-analysis-package"], button[onclick="downloadExamAnalysisPackage()"]'),
                 examAnalysisPackageRuntime: typeof window.downloadExamAnalysisPackage === 'function',
                 examAnalysisPackageZipVendor: !!window.JSZip,
                 summaryIndicatorColumnPopulated: !summaryIndicatorDiagnostics.isGrade9
