@@ -1822,7 +1822,7 @@ function ensureProgressFilterSummaryElement() {
     const filterBar = document.querySelector('#progress-analysis .analysis-filter-group')
         || document.querySelector('#progress-analysis div[style*="justify-content:space-between"] > div[style*="font-size:12px"]');
     if (!filterBar) return null;
-    const resetBtn = filterBar.querySelector('button[onclick="resetProgressFilter()"]');
+    const resetBtn = filterBar.querySelector('button[data-ui-action="progress-reset-filter"], button[onclick="resetProgressFilter()"]');
     if (!resetBtn) return null;
     summaryEl = document.createElement('span');
     summaryEl.id = 'progressFilterSummary';
@@ -1856,7 +1856,7 @@ function updateProgressModuleCopy() {
     if (directionLabel) directionLabel.textContent = '变化方向';
     if (labels[2]) labels[2].textContent = '重点阈值(名次)';
     if (labels[3]) labels[3].textContent = '排序';
-    const resetBtn = filterBar.querySelector('button[onclick="resetProgressFilter()"]');
+    const resetBtn = filterBar.querySelector('button[data-ui-action="progress-reset-filter"], button[onclick="resetProgressFilter()"]');
     if (resetBtn) resetBtn.textContent = '重置筛选';
     ensureProgressFilterSummaryElement();
 }
