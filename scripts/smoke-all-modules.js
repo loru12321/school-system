@@ -5000,9 +5000,14 @@ async function runModuleDeepCheck(page, id) {
 
             const alerts = [];
             const originalAlert = window.alert;
+            let importedDemandCount = 0;
             window.alert = (message) => alerts.push(String(message || ''));
             try {
                 await scheduler.loadData({ files: [makeWorkbookFile(sampleRows, 'grade-scheduler-smoke.xlsx')], value: '' });
+                // Keep the imported任课表 count separate from manually added
+                // non-assessment projects below.  The latter are valid demands
+                // but are not rows from the uploaded workbook.
+                importedDemandCount = scheduler.demands.length;
 
                 const manualSubject = document.getElementById('sch_manual_subject');
                 const manualHours = document.getElementById('sch_manual_hours');
@@ -5240,7 +5245,7 @@ async function runModuleDeepCheck(page, id) {
                 && scheduler.schedule['6.1'] && scheduler.schedule['6.2']);
             const resultChecks = {
                 ...checks,
-                importedRecordsMatch: demandRecordsBeforeImport === sampleRows.length,
+                importedRecordsMatch: importedDemandCount === sampleRows.length,
                 classListReady: classes.length === 6 && ['6.1', '6.5', '6.6', '7.1', '7.2', '7.3'].every(className => classes.includes(className)),
                 previewRendered: previewText.includes('学年联合项目') && previewText.includes('6、7年级'),
                 crossGradeTeacherDetected: crossGradeTeachers.some(item => item.name === 'B教师'
