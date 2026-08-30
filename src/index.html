@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-95ac9b90a277.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-95ac9b90a277.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-b16b5dbde636.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-b16b5dbde636.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -3078,20 +3078,20 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">先导入任课表并做规则预检；已有确认课表可作为锁定底图导入。单级部可独立操作，跨级教师和共享场地须同批导入。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-purple" onclick="SCHEDULER.exportResult()">📥 导出课表(Excel)</button>
+                            <button class="btn btn-purple" type="button" data-scheduler-click="export-result">📥 导出课表(Excel)</button>
                             <button class="btn btn-orange"
                                 data-pick-file="schedulerImportFile">📤
                                 导入已有课表优化</button>
-                            <button class="btn btn-purple" type="button" onclick="SCHEDULER.loadCloudTeachers()"
+                            <button class="btn btn-purple" type="button" data-scheduler-click="load-cloud-teachers"
                                 title="按当前届别和新学期读取云端任课教师">
                                 ☁️ 读取云端新学期任课</button>
                             <button class="btn btn-gray"
                                 data-pick-file="schedulerLockedImportFile">🔒
                                 导入锁定级部课表</button>
                             <button class="btn btn-gray" type="button" data-scheduler-click="preflight"><i class="ti ti-shield-check"></i> 规则预检</button>
-                            <button class="btn btn-gray" onclick="SCHEDULER.auditFatigue()"><i class="ti ti-heart-rate-monitor"></i> 疲劳审计</button>
+                            <button class="btn btn-gray" type="button" data-scheduler-click="audit-fatigue"><i class="ti ti-heart-rate-monitor"></i> 疲劳审计</button>
                             <input type="file" id="schedulerImportFile" accept=".xlsx,.xls" hidden
-                                onchange="SCHEDULER.importExisting(this)">
+                                data-scheduler-file="import-existing">
                             <input type="file" id="schedulerLockedImportFile" accept=".xlsx,.xls" hidden
                                 data-scheduler-file="import-locked">
                         </div>
@@ -3143,8 +3143,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div
                         style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; font-size:13px;">
                         <label><input type="checkbox" id="sch_rule_fri_eve" checked> 周五晚上不上课</label>
-                        <label><input type="checkbox" id="sch_rule_fri_pm"
-                                onchange="document.getElementById('sch_fri_pm_val').disabled=!this.checked"> 周五下午仅上
+                                <label><input type="checkbox" id="sch_rule_fri_pm" data-scheduler-change="friday-pm"> 周五下午仅上
                             <input type="number" id="sch_fri_pm_val" value="2" style="width:40px; padding:0;" disabled>
                             节</label>
                         <label><input type="checkbox" id="sch_rule_morning_read" checked> 添加 [07:00] 小晨读+早读</label>
@@ -3163,14 +3162,14 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             一班一行；单级部可只填本级部，跨级教师/共享场地请把相关年级同批导入。
                         </div>
                         <input type="file" id="schTeacherFile" accept=".xlsx,.xls" hidden
-                            onchange="SCHEDULER.loadData(this)">
+                            data-scheduler-file="load-data">
                     </div>
 
                     <div
                         style="flex:2; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; max-height:200px; overflow-y:auto;">
                         <div style="display:flex; justify-content:space-between;">
                             <h4 style="margin:0;">📋 待排课程资源预览</h4>
-                            <button class="btn btn-sm btn-green" onclick="SCHEDULER.downloadTemplate()"><i
+                            <button class="btn btn-sm btn-green" type="button" data-scheduler-click="download-template"><i
                                     class="ti ti-download"></i> 下载联合模板与说明</button>
                         </div>
                         <div id="sch_resource_preview" style="margin-top:10px; font-size:12px; color:#666;">
@@ -3261,8 +3260,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <option value="all">允许跨年级合堂（仅真实合堂）</option>
                                 </select>
 
-                                <button class="btn btn-sm" style="background:#ea580c; color:white;"
-                                    onclick="SCHEDULER.addConstraint('combined')">
+                                <button class="btn btn-sm" type="button" style="background:#ea580c; color:white;"
+                                    data-scheduler-click="add-constraint-combined">
                                     <i class="ti ti-link"></i> 添加规则
                                 </button>
                             </div>
@@ -3293,7 +3292,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <select id="sch_meet_scope" style="width:120px; padding:4px;">
                                     <option value="ALL">全部导入年级</option>
                                 </select>
-                                <button class="btn btn-sm btn-primary" onclick="SCHEDULER.addConstraint('meeting')">➕
+                                <button class="btn btn-sm btn-primary" type="button" data-scheduler-click="add-constraint-meeting">➕
                                     添加</button>
                             </div>
                             <!-- 动态标签容器 -->
@@ -3317,7 +3316,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     style="width:100px; padding:4px;">
                                 <input type="text" id="sch_busy_name" list="sch_busy_teacher_options" placeholder="教师姓名（可从任课表选择）" style="flex:1; padding:4px;">
                                 <datalist id="sch_busy_teacher_options"></datalist>
-                                <button class="btn btn-sm btn-orange" onclick="SCHEDULER.addConstraint('busy')">➕
+                                <button class="btn btn-sm btn-orange" type="button" data-scheduler-click="add-constraint-busy">➕
                                     添加</button>
                             </div>
                             <div id="sch_tags_busy" class="tag-widget-container"
@@ -3361,7 +3360,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <option value="化学">化学组</option>
                                     <option value="政治">政治组</option>
                                 </select>
-                                <button class="btn btn-sm btn-green" onclick="SCHEDULER.addConstraint('activity')">➕
+                                <button class="btn btn-sm btn-green" type="button" data-scheduler-click="add-constraint-activity">➕
                                     添加活动</button>
                             </div>
                             <div id="sch_tags_activity" class="tag-widget-container"
@@ -3380,7 +3379,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
                 <div style="margin-top:20px; text-align:center;">
                     <button id="sch_run_btn" class="btn btn-primary" style="padding:12px 30px; font-size:16px;"
-                        onclick="SCHEDULER.run()">
+                        type="button" data-scheduler-click="run">
                         🚀 开始联合排课
                     </button>
                 </div>
@@ -3413,12 +3412,12 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <button id="sch_manual_undo" type="button" class="btn btn-sm btn-gray" data-scheduler-click="undo-manual-move" disabled><i class="ti ti-arrow-back-up"></i> 撤销上一步</button>
                     </div>
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <select id="sch_view_mode" onchange="SCHEDULER.renderTable()">
+                        <select id="sch_view_mode" data-scheduler-change="render-table">
                             <option value="class">按班级查看</option>
                             <option value="teacher">按教师查看</option>
                         </select>
                         <div id="fb_target_grade_note" style="font-size:11px;color:#64748b;margin-top:4px;">请先选择届别。</div>
-                        <select id="sch_view_target" onchange="SCHEDULER.renderTable()">
+                        <select id="sch_view_target" data-scheduler-change="render-table">
                             <!-- 动态填充班级或教师名 -->
                         </select>
                     </div>

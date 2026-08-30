@@ -269,11 +269,13 @@ const SCHEDULER = {
     },
 
     removeConstraint: function (type, id) {
-        if (type === 'meeting') this.rules.meetings = this.rules.meetings.filter(x => x.id !== id);
-        if (type === 'busy') this.rules.busy = this.rules.busy.filter(x => x.id !== id);
-        if (type === 'activity') this.rules.activities = this.rules.activities.filter(x => x.id !== id);
+        const parsedId = Number(id);
+        const targetId = Number.isFinite(parsedId) ? parsedId : id;
+        if (type === 'meeting') this.rules.meetings = this.rules.meetings.filter(x => x.id !== targetId);
+        if (type === 'busy') this.rules.busy = this.rules.busy.filter(x => x.id !== targetId);
+        if (type === 'activity') this.rules.activities = this.rules.activities.filter(x => x.id !== targetId);
         // 🟢 新增 combined 删除
-        if (type === 'combined') this.rules.combined = this.rules.combined.filter(x => x.id !== id);
+        if (type === 'combined') this.rules.combined = this.rules.combined.filter(x => x.id !== targetId);
 
         // 重新渲染对应区域
         if (type === 'meeting') this.renderTags('meeting', this.rules.meetings, m => `周${m.day} ${this.getSlotName(m.slot)} (${this.getScopeName(m.scope)}班会)`);
@@ -296,7 +298,7 @@ const SCHEDULER = {
             if (type === 'busy') tag.style.background = '#fff7ed';
             if (type === 'activity') tag.style.background = '#dcfce7';
             if (type === 'combined') { tag.style.background = '#ffedd5'; tag.style.color = '#9a3412'; }
-            tag.innerHTML = `${labelFn(item)} <span class="tag-chip-remove" onclick="SCHEDULER.removeConstraint('${type}', ${item.id})">&times;</span>`;
+            tag.innerHTML = `${labelFn(item)} <button type="button" class="tag-chip-remove" data-scheduler-remove-type="${this.escapeHtml(type)}" data-scheduler-remove-id="${this.escapeHtml(item.id)}" aria-label="删除规则">&times;</button>`;
             container.appendChild(tag);
         });
     },
@@ -2304,11 +2306,25 @@ const SCHEDULER = {
                 if (action === 'clear-manual-demands') this.clearManualNonAssessmentDemands();
                 if (action === 'select-all-manual-classes') this.selectAllManualClasses();
                 if (action === 'clear-manual-classes') this.clearManualClasses();
+                if (action === 'export-result') this.exportResult();
+                if (action === 'load-cloud-teachers') this.loadCloudTeachers();
+                if (action === 'audit-fatigue') this.auditFatigue();
+                if (action === 'download-template') this.downloadTemplate();
+                if (action === 'add-constraint-combined') this.addConstraint('combined');
+                if (action === 'add-constraint-meeting') this.addConstraint('meeting');
+                if (action === 'add-constraint-busy') this.addConstraint('busy');
+                if (action === 'add-constraint-activity') this.addConstraint('activity');
+                if (action === 'run') this.run();
                 return;
             }
             const removeManual = event.target?.closest?.('[data-scheduler-manual-remove]');
             if (removeManual && document.documentElement.contains(removeManual)) {
                 this.removeManualNonAssessmentDemand(removeManual.dataset.schedulerManualRemove);
+                return;
+            }
+            const removeConstraint = event.target?.closest?.('[data-scheduler-remove-type][data-scheduler-remove-id]');
+            if (removeConstraint && document.documentElement.contains(removeConstraint)) {
+                this.removeConstraint(removeConstraint.dataset.schedulerRemoveType, removeConstraint.dataset.schedulerRemoveId);
                 return;
             }
             const cell = event.target?.closest?.('[data-scheduler-slot]');
@@ -2320,6 +2336,8 @@ const SCHEDULER = {
             const fileInput = event.target?.closest?.('[data-scheduler-file]');
             if (fileInput && document.documentElement.contains(fileInput)) {
                 if (fileInput.dataset.schedulerFile === 'import-locked') this.importLockedSchedule(fileInput);
+                if (fileInput.dataset.schedulerFile === 'import-existing') this.importExisting(fileInput);
+                if (fileInput.dataset.schedulerFile === 'load-data') this.loadData(fileInput);
                 return;
             }
             const select = event.target?.closest?.('[data-scheduler-change]');
@@ -2329,6 +2347,11 @@ const SCHEDULER = {
                 this.rules.teacherBlocks.enabled = !!select.checked;
                 this.preflight({ silent: true });
             }
+            if (select.dataset.schedulerChange === 'friday-pm') {
+                const value = document.getElementById('sch_fri_pm_val');
+                if (value) value.disabled = !select.checked;
+            }
+            if (select.dataset.schedulerChange === 'render-table') this.renderTable();
             if (['sch_am_count', 'sch_pm_count', 'sch_eve_count'].includes(select.id)) this.refreshManualSlotOptions();
             if (select.id === 'sch_manual_classes') {
                 this.refreshManualClassHours();
@@ -2351,6 +2374,9 @@ const SCHEDULER = {
         this.refreshManualSlotOptions();
         this.refreshManualClassHours();
         this.updateManualClassSelectionSummary();
+        const fridayPm = document.getElementById('sch_rule_fri_pm');
+        const fridayPmValue = document.getElementById('sch_fri_pm_val');
+        if (fridayPm && fridayPmValue) fridayPmValue.disabled = !fridayPm.checked;
     }
 };
 
