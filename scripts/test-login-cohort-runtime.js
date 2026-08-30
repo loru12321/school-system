@@ -196,7 +196,7 @@ assert.strictEqual(guardContext.isCurrentCohortSwitch(firstSwitch), false,
 assert.strictEqual(guardContext.isCurrentCohortSwitch(secondSwitch), true,
     'only the latest requested cohort switch may update workspace state');
 assert.ok(
-    /const readyGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*completeCohortSwitch\(readyGuard\);[\s\S]*if \(!options\.skipConfirm && !confirm[\s\S]*const switchGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*const isCurrentSwitch = \(\) => isCurrentCohortSwitch\(switchGuard\);[\s\S]*const cohortDbRuntime = await ensureCohortDbForSwitch\(cohortId\);\s*if \(!isCurrentSwitch\(\)\) return false;[\s\S]*const cachedData = options\.preloadedData \|\|(?: [A-Za-z_$][\w$]* \|\|)* await DB\.get\(cohortKey, \{ localOnly: true \}\);\s*if \(!isCurrentSwitch\(\)\) return false;/.test(appSource),
+    /const readyGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*completeCohortSwitch\(readyGuard\);[\s\S]*if \(!options\.skipConfirm && !await appConfirmDialog[\s\S]*const switchGuard = beginCohortSwitchGuard\(targetCohortId \|\| cohortId\);[\s\S]*const isCurrentSwitch = \(\) => isCurrentCohortSwitch\(switchGuard\);[\s\S]*const cohortDbRuntime = await ensureCohortDbForSwitch\(cohortId\);\s*if \(!isCurrentSwitch\(\)\) return false;[\s\S]*const cachedData = options\.preloadedData \|\|(?: [A-Za-z_$][\w$]* \|\|)* await DB\.get\(cohortKey, \{ localOnly: true \}\);\s*if \(!isCurrentSwitch\(\)\) return false;/.test(appSource),
     'cohort switching must reject stale async runtime and cache responses before they mutate workspace state'
 );
 // The cold-login warm-up awaits a batched cloud read before `cachedData` is
