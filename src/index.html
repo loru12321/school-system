@@ -263,8 +263,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-c52a1df47bda.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-c52a1df47bda.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-f74bf33b55e9.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-f74bf33b55e9.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -1233,8 +1233,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <input id="cohort-year" class="upload-field-input upload-field-input--compact" type="number" min="2000" max="2100" placeholder="入学年份 (如 2022)">
                         </label>
                         <div class="upload-action-row">
-                            <button class="btn btn-purple" onclick="CohortManager.addFromUI()">➕ 新建届别</button>
-                            <button class="btn btn-gray" onclick="resetCohortSelection()">↩ 重新选择届别</button>
+                            <button class="btn btn-purple" data-ui-action="add-cohort">➕ 新建届别</button>
+                            <button class="btn btn-gray" data-ui-action="reset-cohort-selection">↩ 重新选择届别</button>
                         </div>
                     </div>
                     <div class="upload-status-row">
@@ -1271,7 +1271,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <label class="upload-field">
                             <span class="upload-field-label">学年</span>
                             <select id="exam-year" class="upload-field-input"
-                                onchange="window.refreshExamGradePreview?.(); window.onExamTermChange?.();">
+                                data-ui-change="refresh-exam-preview">
                                 <option value="2025-2026">2025-2026</option>
                                 <option value="2026-2027">2026-2027</option>
                                 <option value="2027-2028">2027-2028</option>
@@ -1280,7 +1280,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <label class="upload-field">
                             <span class="upload-field-label">学期</span>
                             <select id="exam-term" class="upload-field-input"
-                                onchange="window.refreshExamGradePreview?.(); window.onExamTermChange?.();">
+                                data-ui-change="refresh-exam-preview">
                                 <option value="上学期">上学期</option>
                                 <option value="下学期">下学期</option>
                             </select>
@@ -1306,9 +1306,9 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <input type="checkbox" id="exam-reset-point"> 本次考试经历重新分班
                         </label>
                         <div class="upload-action-row upload-action-row--wide">
-                            <button class="btn btn-primary" onclick="setCurrentExamMeta()">设为当前考试</button>
-                            <button class="btn btn-orange" onclick="archiveCurrentExam()">一键封存本次考试</button>
-                            <button class="btn btn-gray" onclick="unlockArchive()">解除封存</button>
+                            <button class="btn btn-primary" data-ui-action="set-current-exam-meta">设为当前考试</button>
+                            <button class="btn btn-orange" data-ui-action="archive-current-exam">一键封存本次考试</button>
+                            <button class="btn btn-gray" data-ui-action="unlock-archive">解除封存</button>
                         </div>
                     </div>
                     <div class="upload-history-row">
@@ -1316,8 +1316,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <span class="upload-field-label">历史考试</span>
                             <div class="upload-history-controls">
                                 <select id="exam-history-select" class="upload-field-input upload-field-input--compact"></select>
-                                <button class="btn btn-sm btn-gray" onclick="CohortDB.loadExamFromSelect()">切换到该考试</button>
-                                <button class="btn btn-sm btn-gray" onclick="showMultiCompareDataSourceDiag()">多期数据源诊断</button>
+                                <button class="btn btn-sm btn-gray" data-ui-action="load-exam-from-select">切换到该考试</button>
+                                <button class="btn btn-sm btn-gray" data-ui-action="show-compare-source">多期数据源诊断</button>
                             </div>
                         </div>
                     </div>
@@ -1339,17 +1339,17 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <div class="upload-template-links">
                                     <button class="btn btn-sm"
                                         style="background: white; color: #166534; border: 1px solid #166534; font-size: 12px;"
-                                        onclick="downloadTemplate('primary')">
+                                        data-ui-action="download-template" data-ui-value="primary">
                                         <i class="ti ti-download"></i> 小学期末模板
                                     </button>
                                     <button class="btn btn-sm"
                                         style="background: white; color: #166534; border: 1px solid #166534; font-size: 12px;"
-                                        onclick="downloadTemplate('junior')">
+                                        data-ui-action="download-template" data-ui-value="junior">
                                         <i class="ti ti-download"></i> 初中月考模板 (7-8年级)
                                     </button>
                                     <button class="btn btn-sm"
                                         style="background: white; color: #166534; border: 1px solid #166534; font-size: 12px;"
-                                        onclick="downloadTemplate('grade9')">
+                                        data-ui-action="download-template" data-ui-value="grade9">
                                         <i class="ti ti-download"></i> 中考一模模板 (9年级)
                                     </button>
                                 </div>
@@ -1359,7 +1359,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <div class="upload-template-links">
                                     <button class="btn btn-sm"
                                         style="background: white; color: #0369a1; border: 1px solid #0369a1; font-size: 12px;"
-                                        onclick="downloadTemplate('teacher')">
+                                        data-ui-action="download-template" data-ui-value="teacher">
                                         <i class="ti ti-id"></i> 教师任课导入模板
                                     </button>
                                 </div>
@@ -1407,7 +1407,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <p style="font-size: 12px; color: #64748b; margin: 0;">保存当前届别所有进度（含成绩、教师设置、排座、分班结果），下次可直接恢复。</p>
                         </div>
                         <div class="upload-ops-actions" style="display: flex; gap: 10px;">
-                            <button class="btn btn-primary" id="btn-save-project" onclick="saveProjectSnapshot()">
+                            <button class="btn btn-primary" id="btn-save-project" data-ui-action="save-project-snapshot">
                                 <i class="ti ti-download"></i> 保存到文件 (.json)
                             </button>
                             <button class="btn btn-orange" id="btn-load-project"
@@ -1415,8 +1415,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <i class="ti ti-upload"></i> 从文件恢复
                             </button>
                             <input type="file" id="projectFileInput" accept=".json" hidden
-                                onchange="loadProjectSnapshot(this)">
-                            <button class="btn btn-danger" id="btn-reset-system" onclick="resetSystem()"
+                                data-ui-change="load-project-snapshot">
+                            <button class="btn btn-danger" id="btn-reset-system" data-ui-action="reset-system"
                                 style="background: #dc2626; color: white;">
                                 <i class="ti ti-trash"></i> 清空重置
                             </button>
@@ -1436,7 +1436,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         </div>
                         <div class="upload-ops-actions" style="display:flex; gap:10px; align-items:center;">
                             <button class="btn btn-sm btn-orange"
-                                onclick="createAutoSnapshot(getCurrentSnapshotPayload())">手动生成快照</button>
+                                data-ui-action="create-auto-snapshot">手动生成快照</button>
                         </div>
                         <div class="upload-ops-note">如果本次导入或配置不满意，可以直接从最近快照回滚，不需要重头再来。</div>
                         <div id="auto-snapshot-list" style="width:100%; margin-top:8px; font-size:12px; color:#7c2d12;">

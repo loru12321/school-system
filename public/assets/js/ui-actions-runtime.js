@@ -131,6 +131,15 @@ async function downloadCertificate() {
         'clear-action-logs': () => callGlobal('clearActionLogs'),
         'save-project-snapshot': () => callGlobal('saveProjectSnapshot'),
         'download-template': (target) => callGlobal('downloadTemplate', target?.dataset?.uiValue || ''),
+        'add-cohort': () => window.CohortManager?.addFromUI?.(),
+        'reset-cohort-selection': () => callGlobal('resetCohortSelection'),
+        'set-current-exam-meta': () => callGlobal('setCurrentExamMeta'),
+        'archive-current-exam': () => callGlobal('archiveCurrentExam'),
+        'unlock-archive': () => callGlobal('unlockArchive'),
+        'load-exam-from-select': () => window.CohortDB?.loadExamFromSelect?.(),
+        'show-compare-source': () => callGlobal('showMultiCompareDataSourceDiag'),
+        'reset-system': () => callGlobal('resetSystem'),
+        'create-auto-snapshot': () => callGlobal('createAutoSnapshot', callGlobal('getCurrentSnapshotPayload')),
         'load-cloud-data': () => callGlobal('loadCloudData'),
         'toggle-dark-mode': () => callGlobal('toggleDarkMode'),
         'logout': () => window.Auth?.logout?.(),
@@ -170,6 +179,11 @@ async function downloadCertificate() {
 
     const changeHandlers = {
         'switch-cohort': (target) => window.CohortManager?.switchTo?.(target?.value || ''),
+        'refresh-exam-preview': () => {
+            callGlobal('refreshExamGradePreview');
+            callGlobal('onExamTermChange');
+        },
+        'load-project-snapshot': (target) => callGlobal('loadProjectSnapshot', target),
         'student-compare-period-count': () => callGlobal('onStudentComparePeriodCountChange'),
         'filter-student-compare-class': () => callGlobal('filterStudentCompareByClass'),
         'sort-student-compare': () => callGlobal('sortStudentCompare'),
