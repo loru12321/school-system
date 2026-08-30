@@ -30,8 +30,10 @@ const SCHEDULER = {
     rules: {
         meetings: [], // 班会 [{day:1, slot:'pm_3'}]
         busy: [],     // 教师忙
+        softBusy: [], // 教师尽量避让（不作为硬禁排）
         activities: [], // 活动
         combined: [],  // 🟢 新增：合堂规则 [{subject:'物理', slot:'eve_3'}]
+        pairs: [], // 同一班同一学科连堂偏好 [{subject:'语文', session:'pm', scope:'8'}]
         teacherBlocks: {
             enabled: true,
             consecutiveWeight: 100,
@@ -107,6 +109,142 @@ const SCHEDULER = {
             this.renderTags('activity', this.rules.activities, a => `周${a.day} ${labelRange} (${this.getScopeName(a.scope)} · ${a.subject === "ALL" ? "无课" : a.subject + "教研"})`);
             this.preflight({ silent: true });
         }
+    },
+
+    getGrade8TeacherMap: function () {
+        const localMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
+        const hasLocalGrade8 = Object.keys(localMap).some((key) => /^8(?:[._-])\d+_/.test(String(key || '').trim()));
+        const source = hasLocalGrade8
+            ? localMap
+            : (Object.keys(this.cloudTeacherMap || {}).length ? this.cloudTeacherMap : localMap);
+        const result = Object.create(null);
+        Object.entries(source).forEach(([rawKey, rawTeacher]) => {
+            const key = String(rawKey || '').trim();
+            const separator = key.indexOf('_');
+            if (separator <= 0) return;
+            const className = this.normalizeClassName('', key.slice(0, separator));
+            const subject = String(key.slice(separator + 1) || '').trim();
+            const teacher = this.normalizeTeacherName(rawTeacher);
+            if (!/^8\.\d+$/.test(className) || !subject || !teacher) return;
+            result[`${className}_${subject}`] = teacher;
+        });
+        return result;
+    },
+
+    buildGrade8DemandsFromTeacherMap: function () {
+        const teacherMap = this.getGrade8TeacherMap();
+        const hours = {
+            '语文': 8,
+            '数学': 9,
+            '英语': 9,
+            '历史': 3,
+            '地理': 3,
+            '生物': 3,
+            '政治': 2,
+            '物理': 5,
+            '化学': 5,
+            '体育': 2
+        };
+        const classes = [...new Set(Object.keys(teacherMap).map((key) => key.split('_')[0]).filter((className) => /^8\.\d+$/.test(className)))]
+            .sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }));
+        const warnings = [];
+        if (!classes.length) return { demands: [], classes: [], warnings: ['当前任课数据中没有识别到 8.x 班级。请先在“教师任课”导入 8 年级任课表，或点击“读取云端新学期任课”。'] };
+
+        const physicalTeachers = [...new Set(classes.map((className) => teacherMap[`${className}_体育`] || '').filter(Boolean))];
+        const physicalTeacher = physicalTeachers[0] || '体育教师';
+        if (physicalTeachers.length > 1) warnings.push(`体育任课表识别到 ${physicalTeachers.length} 位教师；已按“全8年级同一位体育教师”规则统一使用 ${physicalTeacher}。`);
+        if (!physicalTeachers.length) warnings.push('任课表未识别到体育教师；已暂用“体育教师”占位，生成前请确认实际姓名。');
+
+        const demands = [];
+        classes.forEach((className) => {
+            Object.entries(hours).forEach(([subject, weeklyHours]) => {
+                const teacher = subject === '体育' ? physicalTeacher : teacherMap[`${className}_${subject}`];
+                if (!teacher) {
+                    warnings.push(`${className}班缺少${subject}教师，已跳过该科 ${weeklyHours} 节。`);
+                    return;
+                }
+                demands.push({
+                    id: `grade8-${className}-${subject}`,
+                    grade: '8',
+                    className,
+                    name: teacher,
+                    subject,
+                    weeklyHours,
+                    venue: '',
+                    note: '新8年级排课方案',
+                    teacherSource: subject === '体育' && !physicalTeachers.length ? 'preset-placeholder' : 'teacher-map'
+                });
+            });
+        });
+        return { demands, classes, warnings };
+    },
+
+    clearGrade8PresetRules: function () {
+        const isPreset = (rule) => rule && rule.profile === 'grade8-preset';
+        this.rules.meetings = this.rules.meetings.filter((rule) => !isPreset(rule));
+        this.rules.busy = this.rules.busy.filter((rule) => !isPreset(rule));
+        this.rules.softBusy = (this.rules.softBusy || []).filter((rule) => !isPreset(rule));
+        this.rules.activities = this.rules.activities.filter((rule) => !isPreset(rule));
+        this.rules.combined = this.rules.combined.filter((rule) => !isPreset(rule));
+        this.rules.pairs = (this.rules.pairs || []).filter((rule) => !isPreset(rule));
+    },
+
+    applyGrade8PresetRules: function (teacherMap, classes) {
+        this.clearGrade8PresetRules();
+        const profile = 'grade8-preset';
+        const pushMeeting = (day, slot) => this.rules.meetings.push({ day: String(day), slot, scope: '8', profile, id: `grade8-meeting-${day}-${slot}` });
+        const pushActivity = (day, subject, slotsStr) => this.rules.activities.push({ day: String(day), range: 'custom', subject, scope: '8', slotsStr, profile, id: `grade8-activity-${day}-${subject}` });
+        const pushBusy = (day, name, slotsStr) => {
+            if (!name) return;
+            this.rules.busy.push({ day: String(day), slotsStr, name: this.normalizeTeacherName(name), profile, id: `grade8-busy-${day}-${name}-${slotsStr}` });
+        };
+        const pushSoftBusy = (day, name, slotsStr) => {
+            if (!name) return;
+            this.rules.softBusy.push({ day: String(day), slotsStr, name: this.normalizeTeacherName(name), profile, id: `grade8-soft-busy-${day}-${name}-${slotsStr}` });
+        };
+
+        pushMeeting(1, 'pm_4');
+        pushMeeting(5, 'pm_4');
+        this.rules.activities.push({ day: '4', range: 'custom', subject: 'ALL', scope: '8', slotsStr: 'pm_4', profile, id: 'grade8-club-thu-pm4' });
+
+        pushActivity(2, '语文', 'am_1,am_2,am_3');
+        pushActivity(3, '数学', 'am_1,am_2,am_3');
+        ['英语', '物理', '化学', '政治', '历史'].forEach((subject) => pushActivity(4, subject, 'am_1,am_2,am_3'));
+        ['地理', '生物'].forEach((subject) => pushActivity(5, subject, 'am_1,am_2,am_3'));
+
+        ['赵世骄', '孙少章', '王旋', '张靖硕'].forEach((name) => {
+            pushBusy(5, name, 'am_3,am_4');
+            pushSoftBusy(1, name, 'am_3,am_4');
+        });
+        [1, 2, 3, 4, 5].forEach((day) => pushBusy(day, '刘敏', 'pm_4'));
+        [1, 2, 3, 4].forEach((day) => pushBusy(day, '薛丽娟', 'eve_1,eve_2,eve_3'));
+
+        ['语文', '数学', '英语', '历史', '地理', '生物', '政治', '物理', '化学'].forEach((subject) => {
+            this.rules.combined.push({ subject, slot: 'eve_3', scope: 'grade', profile, id: `grade8-combined-${subject}` });
+        });
+        this.rules.pairs.push({ subject: '语文', session: 'pm', scope: '8', profile, id: 'grade8-chinese-composition-pair' });
+        return { teacherMap, classes };
+    },
+
+    applyGrade8Preset: async function () {
+        const source = this.buildGrade8DemandsFromTeacherMap();
+        if (!source.demands.length) return window.UI?.alert(source.warnings.join('\n'));
+        if (this.demands.length && window.UI?.confirm) {
+            const confirmed = await window.UI.confirm('将按新8年级规则重建当前排课项目，并替换当前待排课程需求；已有锁定课表不会保留。是否继续？');
+            if (!confirmed) return;
+        }
+        this.demands = source.demands;
+        this.manualNonAssessmentDemands = [];
+        this.importWarnings = source.warnings;
+        this.lockedSchedule = Object.create(null);
+        this.schedule = {};
+        this.cloudTeacherMap = { ...this.getGrade8TeacherMap() };
+        this.applyGrade8PresetRules(this.cloudTeacherMap, source.classes);
+        this.invalidateTableRenderCache();
+        this.rebuildProjectFromDemands();
+        this.preflight({ silent: true });
+        this.renderProjectStatus();
+        window.UI?.toast(`已按新8年级方案生成 ${source.classes.length} 个班、${source.demands.length} 条课程需求；请先查看预检再开始排课。`, source.warnings.length ? 'warning' : 'success');
     },
 
     addManualNonAssessmentDemand: function () {
@@ -539,8 +677,10 @@ const SCHEDULER = {
         return {
             meetings: this.rules.meetings.length,
             busy: this.rules.busy.length,
+            softBusy: (this.rules.softBusy || []).length,
             activities: this.rules.activities.length,
-            combined: this.rules.combined.length
+            combined: this.rules.combined.length,
+            pairs: (this.rules.pairs || []).length
         };
     },
 
@@ -717,7 +857,7 @@ const SCHEDULER = {
             `${result.meta.gradeCount || 0} 个年级 / ${result.meta.classCount} 个班级`,
             `${result.meta.teacherCount} 位教师`,
             `跨级 ${result.meta.crossGradeTeachers.length} 位 / 锁定 ${result.meta.lockedCellCount} 节`,
-            `班会 ${counts.meetings} · 禁排 ${counts.busy} · 教研 ${counts.activities} · 合堂 ${counts.combined}`
+            `班会 ${counts.meetings} · 禁排 ${counts.busy} · 软避让 ${counts.softBusy} · 教研 ${counts.activities} · 合堂 ${counts.combined} · 连堂 ${counts.pairs}`
         ].join(' <span class="scheduler-summary-sep">·</span> ');
         const items = [
             ...result.errors.map(text => ({ type: 'error', text })),
@@ -1258,7 +1398,70 @@ const SCHEDULER = {
         const block = this.getTeacherSubjectBlockScore(demand, slot);
         const balance = this.getClassSubjectBalanceScore(demand, slot);
         const teacherDayPenalty = this.getTeacherDayLoad(demand.name, slot.day) * Number(weights.teacherDayLoadWeight || 0);
-        return block + balance - teacherDayPenalty;
+        return block + balance - teacherDayPenalty
+            + this.getSoftBusyScore(demand.name, slot)
+            + this.getEveningPreferenceScore(demand, slot);
+    },
+
+    getSoftBusyScore: function (teacherName, slot) {
+        const teacher = this.normalizeTeacherName(teacherName);
+        if (!teacher || !slot) return 0;
+        const blocked = (this.rules.softBusy || []).some((rule) => {
+            if (String(rule.day) !== String(slot.day) || this.normalizeTeacherName(rule.name) !== teacher) return false;
+            return this.parseBusySlots(rule.day, rule.slotsStr, this.getSlotConfig().am, this.getSlotConfig().pm, this.getSlotConfig().eve).includes(slot.id);
+        });
+        return blocked ? -180 : 0;
+    },
+
+    getEveningPreferenceScore: function (demand, slot) {
+        if (!slot || slot.type !== 'eve') return 0;
+        const subject = String(demand?.subject || '').replace(/\(合\)$/, '');
+        const core = new Set(['语文', '数学', '英语']);
+        const existing = Object.entries(this.schedule[demand.className] || {})
+            .filter(([slotId, cell]) => slotId.startsWith('d') && cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject)
+            .map(([slotId]) => slotId.match(/^d(\d+)_eve_/))
+            .filter(Boolean)
+            .map((match) => Number(match[1]));
+        const days = new Set(existing);
+        let score = days.has(slot.day) ? 70 : 0;
+        if (!days.has(slot.day) && days.size >= 2) score -= 260;
+        if (core.has(subject) && days.has(slot.day - 1)) score -= 140;
+        if (core.has(subject) && slot.day > 4) score -= 120;
+        const sameSessionSubject = Object.entries(this.schedule[demand.className] || {})
+            .some(([slotId, cell]) => slotId.startsWith(`d${slot.day}_eve_`)
+                && cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject);
+        if (sameSessionSubject) score += 90;
+        return score;
+    },
+
+    applyConsecutivePairRules: function (pending, allSlots, teacherBusyMap) {
+        (this.rules.pairs || []).forEach((rule) => {
+            const targets = pending.filter((demand) => demand.remaining >= 2
+                && demand.subject === rule.subject
+                && this.getScopeClasses(rule.scope).includes(demand.className));
+            targets.forEach((demand) => {
+                const candidates = allSlots.filter((slot) => slot.type === rule.session)
+                    .map((slot) => {
+                        const next = allSlots.find((item) => item.day === slot.day && item.type === slot.type && item.period === slot.period + 1);
+                        return next ? [slot, next] : null;
+                    })
+                    .filter(Boolean)
+                    .filter(([first, second]) => this.canPlaceDemand(demand, first, teacherBusyMap) && this.canPlaceDemand(demand, second, teacherBusyMap));
+                candidates.sort((left, right) => {
+                    const leftScore = this.getTeacherScheduleQualityScore(demand, left[0]) + this.getTeacherScheduleQualityScore(demand, left[1]);
+                    const rightScore = this.getTeacherScheduleQualityScore(demand, right[0]) + this.getTeacherScheduleQualityScore(demand, right[1]);
+                    return rightScore - leftScore || left[0].id.localeCompare(right[0].id);
+                });
+                const pair = candidates[0];
+                if (!pair) return;
+                pair.forEach((slot) => {
+                    this.placeDemand(demand, slot.id);
+                    this.markTeacherBusy(demand.name, slot.id);
+                    if (demand.venue) this.markVenueBusy(demand.venue, slot.id);
+                    demand.remaining -= 1;
+                });
+            });
+        });
     },
 
     getTeacherBlockStats: function () {
@@ -1353,6 +1556,7 @@ const SCHEDULER = {
                     remaining: Math.max(0, Number(demand.weeklyHours) - this.countDemandLessons(demand))
                 }));
 
+                this.applyConsecutivePairRules(pending, allSlots, teacherBusyMap);
                 this.applyCombinedRules(pending, allSlots, teacherBusyMap);
                 const crossGradeNames = new Set(this.getCrossGradeTeachers().map((item) => item.name));
                 const teacherSubjectTotals = new Map();
@@ -2333,6 +2537,7 @@ const SCHEDULER = {
                 if (action === 'clear-manual-classes') this.clearManualClasses();
                 if (action === 'export-result') this.exportResult();
                 if (action === 'load-cloud-teachers') this.loadCloudTeachers();
+                if (action === 'apply-grade8-preset') this.applyGrade8Preset();
                 if (action === 'audit-fatigue') this.auditFatigue();
                 if (action === 'download-template') this.downloadTemplate();
                 if (action === 'add-constraint-combined') this.addConstraint('combined');

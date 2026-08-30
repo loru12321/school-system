@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-30a1196d627a.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-30a1196d627a.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-5e3350d058d4.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-5e3350d058d4.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -3085,6 +3085,9 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <button class="btn btn-purple" type="button" data-scheduler-click="load-cloud-teachers"
                                 title="按当前届别和新学期读取云端任课教师">
                                 ☁️ 读取云端新学期任课</button>
+                            <button class="btn btn-purple" type="button" data-scheduler-click="apply-grade8-preset"
+                                title="使用当前已导入的 8 年级教师任课表和新8年级课时规则">
+                                🧭 套用新8年级方案</button>
                             <button class="btn btn-gray"
                                 data-pick-file="schedulerLockedImportFile">🔒
                                 导入锁定级部课表</button>
@@ -3177,6 +3180,12 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         </div>
                         <div id="sch_cloud_teacher_status" style="margin-top:8px; color:#2563eb; font-size:12px;" aria-live="polite">
                             云端任课未读取；读取后自动匹配教师。
+                        </div>
+                        <div style="margin-top:6px; color:#64748b; font-size:11px;">
+                            新8年级方案会按当前教师任课表自动生成：语文8、数学9、英语9、历史/地理/生物各3、政治2、物理5、化学5、体育2节，并套用班会、半天无课、合堂和教师禁排规则。
+                        </div>
+                        <div style="margin-top:4px; color:#64748b; font-size:11px;">
+                            参考课表中的小早读、早读和午间安排仅作排课提示；本模块正式计算的是上午、下午和晚自习时段，晚自习第三节会优先按教师合堂处理。
                         </div>
                     </div>
                 </div>
