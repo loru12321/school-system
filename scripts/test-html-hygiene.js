@@ -4,6 +4,7 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
+const applicationCss = fs.readFileSync(path.join(root, 'src/assets/css/application.css'), 'utf8');
 const serviceWorkerRuntime = fs.readFileSync(path.join(root, 'public/assets/js/service-worker-runtime.js'), 'utf8');
 const serviceWorkerVersion = (serviceWorkerRuntime.match(/const\s+SERVICE_WORKER_VERSION\s*=\s*'([^']+)'/) || [])[1] || '';
 
@@ -34,8 +35,13 @@ assert.ok(html.includes('<meta name="twitter:card" content="summary">'), 'index.
 assert.ok(html.includes('<meta name="twitter:image" content="https://schoolsystem.com.cn/icon.svg">'), 'index.html should include a Twitter share image');
 assert.ok(html.includes('type="image/x-icon"'), 'favicon link should include an explicit content type');
 assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 'index.html should register the service worker runtime');
-assert.ok(html.includes('./assets/css/product-redesign.css?v=20260617-table-anchor-nav-v1'), 'index.html should load the product redesign layer after legacy styles');
-assert.ok(html.indexOf('layout-refinement.css') < html.indexOf('product-redesign.css'), 'product redesign should override layout refinement styles');
+// Source HTML now loads one application stylesheet entry point. Keep the
+// historical cascade contract in that entry point so refactoring the link
+// chain cannot silently change which visual layer wins.
+assert.ok(html.includes('./assets/css/application.css'), 'index.html should load the consolidated application stylesheet');
+assert.ok(applicationCss.includes('@import "./product-redesign.css";'), 'application.css should include the product redesign layer');
+assert.ok(applicationCss.indexOf('@import "./layout-refinement.css";') < applicationCss.indexOf('@import "./product-redesign.css";'), 'product redesign should override layout refinement styles');
+assert.ok(applicationCss.trim().endsWith('@import "./responsive-login-final.css";'), 'responsive login styles should remain the final application layer');
 assert.ok(html.includes('id="critical-visibility-guard"'), 'index.html should inline a critical visibility guard before scripts run');
 assert.ok(/\.hidden,\s*\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/.test(html), 'critical visibility guard must keep hidden app content invisible before login');
 assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker runtime version should be generated from runtime content');

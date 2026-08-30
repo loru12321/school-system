@@ -4,6 +4,7 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(rootDir, 'src/index.html'), 'utf8');
+const applicationCss = fs.readFileSync(path.join(rootDir, 'src/assets/css/application.css'), 'utf8');
 const cssPath = path.join(rootDir, 'src/assets/css/cloud-archive-visibility.css');
 const css = fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
 const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
@@ -36,7 +37,10 @@ function createElement() {
 }
 
 async function run() {
-    assert.match(html, /cloud-archive-visibility\.css[^"']*["']/);
+    assert.ok(
+        applicationCss.includes('@import "./cloud-archive-visibility.css";'),
+        'application.css should include the cloud archive visibility layer'
+    );
 
     const scrollOwner = html.match(/<div[^>]*class="[^"]*dm-cloud-table-scroll[^"]*"[^>]*>[\s\S]*?<table[^>]*id="dm-cloud-table"/);
     assert.ok(scrollOwner, 'cloud table should be inside its dedicated scroll owner');
