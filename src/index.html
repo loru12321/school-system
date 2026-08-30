@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-d29a852335fc.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-d29a852335fc.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-babe0492dd0d.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-babe0492dd0d.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -2165,12 +2165,12 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <label>学校：</label>
                                     <!-- 🔥 关键修复点：这就是报错找不到的 ID -->
                                     <select id="progressSchoolSelect"
-                                        onchange="renderProgressAnalysis()">
+                                        data-ui-change="progress-render">
                                         <option value="">--请选择--</option>
                                     </select>
                                     <label>历史基准：</label>
                                     <select id="progressBaselineSelect"
-                                        onchange="renderProgressAnalysis()">
+                                        data-ui-change="progress-render">
                                         <option value="">--请选择历史考试--</option>
                                     </select>
                                 </div>
@@ -2181,7 +2181,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <div class="analysis-inline-title">🧭 多期对比 (支持2期/3期：月考/期中/期末等任意组合)</div>
                                     <div class="analysis-inline-meta">
                                         <label>期数：</label>
-                                        <select id="progressComparePeriodCount" onchange="onProgressComparePeriodCountChange()">
+                                        <select id="progressComparePeriodCount" data-ui-change="progress-period-count">
                                             <option value="2">2期</option>
                                             <option value="3">3期</option>
                                         </select>
@@ -2199,9 +2199,9 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                         <select id="progressCompareExam3" style="min-width:180px;"></select>
                                     </span>
                                     <button class="btn btn-sm btn-blue"
-                                        onclick="renderMultiPeriodComparison()">生成多期对比</button>
+                                        data-ui-action="progress-render-multi">生成多期对比</button>
                                     <button class="btn btn-sm btn-green"
-                                        onclick="exportMultiPeriodComparison()">导出多期对比</button>
+                                        data-ui-action="progress-export-multi">导出多期对比</button>
                                 </div>
                                 <div id="multiPeriodCompareHint" class="analysis-hint analysis-status-text">请选择2期或3期考试后生成。</div>
                                 <div id="multiPeriodCompareResult" class="analysis-result-slot">
@@ -2225,15 +2225,15 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <label>筛选：</label>
                                     <span style="color:#475569; font-weight:700;">查看范围</span>
                                     <button type="button" id="progressQuickAllBtn" class="btn btn-sm progress-quick-btn"
-                                        onclick="setProgressQuickFilter('all')">全部学生</button>
+                                        data-ui-action="progress-quick-filter" data-ui-value="all">全部学生</button>
                                     <button type="button" id="progressQuickMyClassBtn" class="btn btn-sm progress-quick-btn"
-                                        onclick="setProgressQuickFilter('my_class')">只看本班</button>
+                                        data-ui-action="progress-quick-filter" data-ui-value="my_class">只看本班</button>
                                     <button type="button" id="progressQuickFocusBtn" class="btn btn-sm progress-quick-btn"
-                                        onclick="setProgressQuickFilter('focus')">重点变化</button>
+                                        data-ui-action="progress-quick-filter" data-ui-value="focus">重点变化</button>
                                     <label class="progress-filter-label-direction">变化方向</label>
                                     <select id="progressFilterType"
                                         style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
-                                        onchange="applyProgressFilter()">
+                                        data-ui-change="progress-filter">
                                         <option value="all">全部</option>
                                         <option value="up">仅进步</option>
                                         <option value="down">仅退步</option>
@@ -2241,19 +2241,19 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <label>阈值(名次)</label>
                                     <input id="progressFilterThreshold" type="number" value="20"
                                         style="width:70px; padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
-                                        oninput="applyProgressFilter()">
+                                        data-ui-input="progress-filter">
                                     <label>排序</label>
                                     <select id="progressSortOrder"
-                                        onchange="applyProgressFilter()">
+                                        data-ui-change="progress-filter">
                                         <option value="improve_desc">进步优先</option>
                                         <option value="regress_desc">退步优先</option>
                                         <option value="current_rank_asc">本次校排靠前</option>
                                         <option value="class_name_asc">班级姓名</option>
                                     </select>
                                     <span style="color:#64748b;">仅显示 |变化| ≥ 阈值</span>
-                                    <button class="btn btn-sm btn-gray" onclick="resetProgressFilter()">重置筛选</button>
+                                    <button class="btn btn-sm btn-gray" data-ui-action="progress-reset-filter">重置筛选</button>
                                 </div>
-                                <button class="btn btn-sm btn-green" onclick="exportProgressAnalysis()">📥
+                                <button class="btn btn-sm btn-green" data-ui-action="progress-export">📥
                                     导出个人明细</button>
                             </div>
                             <div class="analysis-table-meta">

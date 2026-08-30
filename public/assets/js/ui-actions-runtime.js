@@ -192,7 +192,12 @@ async function downloadCertificate() {
         'export-student-multi-period-comparison': () => callGlobal('exportStudentMultiPeriodComparison'),
         'filter-student-compare-name': () => callGlobal('filterStudentCompareByName'),
         'filter-student-compare-progress': (target) => callGlobal('filterByProgress', target?.dataset?.uiValue || ''),
-        'clear-student-compare-filter': () => callGlobal('clearStudentCompareFilter')
+        'clear-student-compare-filter': () => callGlobal('clearStudentCompareFilter'),
+        'progress-render-multi': () => callGlobal('renderMultiPeriodComparison'),
+        'progress-export-multi': () => callGlobal('exportMultiPeriodComparison'),
+        'progress-quick-filter': (target) => callGlobal('setProgressQuickFilter', target?.dataset?.uiValue || 'all'),
+        'progress-reset-filter': () => callGlobal('resetProgressFilter'),
+        'progress-export': () => callGlobal('exportProgressAnalysis')
     };
 
     const changeHandlers = {
@@ -205,11 +210,15 @@ async function downloadCertificate() {
         'student-compare-period-count': () => callGlobal('onStudentComparePeriodCountChange'),
         'filter-student-compare-class': () => callGlobal('filterStudentCompareByClass'),
         'sort-student-compare': () => callGlobal('sortStudentCompare'),
-        'student-compare-page-size': () => callGlobal('changePageSize')
+        'student-compare-page-size': () => callGlobal('changePageSize'),
+        'progress-render': () => callGlobal('renderProgressAnalysis'),
+        'progress-period-count': () => callGlobal('onProgressComparePeriodCountChange'),
+        'progress-filter': () => callGlobal('applyProgressFilter')
     };
 
     const inputHandlers = {
-        'mobile-student-search': () => window.MobMgr?.renderStudentList?.()
+        'mobile-student-search': () => window.MobMgr?.renderStudentList?.(),
+        'progress-filter': () => callGlobal('applyProgressFilter')
     };
 
     function runAction(target, action) {
