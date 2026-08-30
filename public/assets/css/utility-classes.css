@@ -33,6 +33,53 @@
 .text-muted { color: #64748b; }
 .text-secondary { color: #475569; }
 
+/* Scheduler manual-project editor. Keep this compact layout out of the
+ * page markup so the CSP/hygiene budget does not grow with each control. */
+.scheduler-manual-class-select {
+    width: 100%;
+    margin-top: 4px;
+    min-height: 74px;
+}
+
+.scheduler-manual-class-hint {
+    display: block;
+    color: #7c3aed;
+    margin-top: 3px;
+}
+
+.scheduler-manual-class-actions {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+}
+
+.scheduler-manual-selected-count {
+    align-self: center;
+    color: #6d28d9;
+}
+
+.scheduler-manual-class-hours {
+    grid-column: 1 / -1;
+    display: none;
+    padding: 8px;
+    border: 1px dashed #c4b5fd;
+    border-radius: 6px;
+    background: #fff;
+    color: #4c1d95;
+}
+
+.scheduler-manual-class-hours-title {
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.scheduler-manual-class-hours-rows {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 6px;
+}
+
 /* Background utilities */
 .bg-success { background: #16a34a; }
 .bg-info { background: #0ea5e9; }
