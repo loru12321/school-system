@@ -1,5 +1,7 @@
 # Optimization Backlog
 
+> 2026-08-30：分析区高频按钮已统一接入 `data-ui-action` 声明式委托，降低移动端内联事件依赖。
+
 This backlog tracks useful work discovered during maintenance scans. Keep items small enough to validate with the priority checks in `docs/maintenance-runbook.md`.
 
 ## P0: production correctness

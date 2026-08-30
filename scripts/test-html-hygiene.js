@@ -53,14 +53,15 @@ assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 's
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-// 155: the freshman module's upload/data-source and seat-operation handlers moved into
+// 139: the freshman module's upload/data-source and seat-operation handlers moved into
 // freshman-exam-runtime.js (data-fb-pick / data-fb-change); the 17 modal-close,
 // 12 file-pick, 15 showModuleHelp, 11 scrollToAnchor and 44 DataManager
 // boilerplate handlers plus the four openTeacherSync entry points all moved
 // into delegated bindings in app-foundation-runtime.js. The mobile/search,
 // shell, starter-hub and workspace-drawer actions below use the shared
-// data-ui-* dispatcher. Ratchet only downward from here.
-assert.ok(inlineHandlerCount <= 155, `inline event handler count grew: ${inlineHandlerCount} > 155`);
+// data-ui-* dispatcher. The analysis toolbar/export actions below use the same
+// shared dispatcher. Ratchet only downward from here.
+assert.ok(inlineHandlerCount <= 139, `inline event handler count grew: ${inlineHandlerCount} > 139`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 // The freshman module's upload/data-source controls are bound declaratively in
@@ -165,10 +166,24 @@ assert.ok(html.includes('data-ui-change="refresh-exam-preview"'), 'exam year/ter
 assert.ok(html.includes('data-ui-change="load-project-snapshot"'), 'project restore should use data-ui-change');
 assert.ok(html.includes('data-ui-input="mobile-student-search"'), 'mobile student search should use data-ui-input');
 [
+    'render-horizontal-table', 'toggle-horizontal-heatmap', 'export-macro-tables',
+    'export-horizontal-excel', 'export-high-score-excel', 'export-bottom3',
+    'calc-indicators', 'export-indicator', 'calc-summary', 'export-summary-table',
+    'download-exam-analysis-package', 'render-segment-analysis', 'export-segment-excel',
+    'switch-value-added-view', 'export-value-added-excel'
+].forEach((action) => {
+    assert.ok(html.includes(`data-ui-action="${action}"`), `${action} should use data-ui-action`);
+});
+[
     'open-user-password', 'toggle-sidebar', 'open-spotlight', 'open-admin-issues',
     'open-admin-accounts', 'close-workspace-drawer', 'auto-detect-school',
     'load-demo-data', 'switch-tab', 'run-auto-diagnosis', 'scan-data-issues',
-    'run-data-doctor', 'clear-action-logs', 'save-project-snapshot', 'download-template'
+    'run-data-doctor', 'clear-action-logs', 'save-project-snapshot', 'download-template',
+    'render-horizontal-table', 'toggle-horizontal-heatmap', 'export-macro-tables',
+    'export-horizontal-excel', 'export-high-score-excel', 'export-bottom3',
+    'calc-indicators', 'export-indicator', 'calc-summary', 'export-summary-table',
+    'download-exam-analysis-package', 'render-segment-analysis', 'export-segment-excel',
+    'switch-value-added-view', 'export-value-added-excel'
 ].forEach((action) => {
     assert.ok(uiActionsRuntime.includes(`'${action}'`), `${action} should have a shared runtime handler`);
 });

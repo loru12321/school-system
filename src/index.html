@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-3099f4fe87e6.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-3099f4fe87e6.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-2bfb1d67302f.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-2bfb1d67302f.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -1492,10 +1492,10 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div class="analysis-action-note">支持横向对比、热力图和全科导出，适合联考复盘前先快速定站位。</div>
                         <div class="control-panel analysis-toolbar">
                             <input type="text" id="mySchool" placeholder="输入本校名称高亮" style="width:180px;">
-                            <button class="btn" onclick="renderHorizontalTable()">生成横向对比表</button>
-                            <button class="btn btn-purple" onclick="toggleTableHeatmap('horizontal-table')">🎨
+                            <button type="button" class="btn" data-ui-action="render-horizontal-table">生成横向对比表</button>
+                            <button type="button" class="btn btn-purple" data-ui-action="toggle-horizontal-heatmap">🎨
                                 开启热力图</button>
-                            <button class="btn btn-green" onclick="exportMacroTables()">导出全科分析表</button>
+                            <button type="button" class="btn btn-green" data-ui-action="export-macro-tables">导出全科分析表</button>
                         </div>
                     </div>
                 </div>
@@ -1563,7 +1563,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div id="horizontal-box" class="hidden anchor-target analysis-anchor-panel">
                             <div class="sub-header analysis-section-head">
                                 <span>↔️ 横向对比一览表</span>
-                                <button class="btn btn-green" onclick="exportHorizontalExcel()">导出横向Excel</button>
+                                <button type="button" class="btn btn-green" data-ui-action="export-horizontal-excel">导出横向Excel</button>
                             </div>
                             <div class="analysis-table-meta">
                                 <span><strong>用途：</strong>适合做校际复盘、教务通报和联考沟通材料。</span>
@@ -1589,7 +1589,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">适合快速识别尖子生密度和高分学校梯队，导出后可直接做年级汇报附件。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-green" onclick="exportHighScoreExcel()">📊 导出Excel</button>
+                            <button type="button" class="btn btn-green" data-ui-action="export-high-score-excel">📊 导出Excel</button>
                         </div>
                     </div>
                 </div>
@@ -1655,7 +1655,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">适合看学校补弱稳定性和底部学生改善幅度，导出后便于跟进帮扶策略。</div>
                         <div class="analysis-actions support-actions bottom3-actions">
-                            <button class="btn" onclick="exportExcel('bottom3')"><i class="ti ti-file-spreadsheet"></i> 导出结果</button>
+                            <button type="button" class="btn" data-ui-action="export-bottom3"><i class="ti ti-file-spreadsheet"></i> 导出结果</button>
                         </div>
                     </div>
                 </div>
@@ -1760,8 +1760,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <button class="btn btn-blue" data-ui-action="open-target-editor">
                                 <i class="ti ti-edit"></i> 在线调整目标
                             </button>
-                            <button class="btn btn-green" id="btn-indicator-calc" onclick="calcIndicators()"><i class="ti ti-calculator"></i> 开始计算</button>
-                            <button class="btn" onclick="exportExcel('indicator')"><i class="ti ti-file-spreadsheet"></i> 导出结果</button>
+                            <button type="button" class="btn btn-green" id="btn-indicator-calc" data-ui-action="calc-indicators"><i class="ti ti-calculator"></i> 开始计算</button>
+                            <button type="button" class="btn" data-ui-action="export-indicator"><i class="ti ti-file-spreadsheet"></i> 导出结果</button>
                         </div>
                     </div>
                 </div>
@@ -1875,9 +1875,9 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">适合考试后的教务汇总与校长汇报，建议完成前置分析后再统一导出。</div>
                         <div class="analysis-actions">
-                            <button id="btn-summary-generate" class="btn btn-green summary-generate-btn" onclick="calcSummary()">生成总排名</button>
-                            <button class="btn btn-green" onclick="exportSummaryTable()">导出报告</button>
-                            <button id="btn-exam-analysis-package" class="btn btn-green" onclick="downloadExamAnalysisPackage()" title="下载包含学校、学生、教师明细的当前考试分析 ZIP">
+                            <button type="button" id="btn-summary-generate" class="btn btn-green summary-generate-btn" data-ui-action="calc-summary">生成总排名</button>
+                            <button type="button" class="btn btn-green" data-ui-action="export-summary-table">导出报告</button>
+                            <button type="button" id="btn-exam-analysis-package" class="btn btn-green" data-ui-action="download-exam-analysis-package" title="下载包含学校、学生、教师明细的当前考试分析 ZIP">
                                 <i class="ti ti-file-zip"></i> 下载考试分析包
                             </button>
                         </div>
@@ -1947,8 +1947,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先选范围和学科，再生成统计表；图表支持点击柱子下钻查看名单。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-green" onclick="renderSegmentAnalysis()">生成统计表</button><button class="btn btn-green"
-                                onclick="exportSegmentExcel()">导出Excel</button>
+                            <button type="button" class="btn btn-green" data-ui-action="render-segment-analysis">生成统计表</button><button type="button" class="btn btn-green"
+                                data-ui-action="export-segment-excel">导出Excel</button>
                         </div>
                     </div>
                 </div>
@@ -2082,12 +2082,12 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div class="analysis-action-note">建议先看集体增值结果，再切到个人变化明细；导出更适合班主任复盘和年级跟踪。</div>
                         <div class="progress-view-actions">
                             <div class="progress-segmented">
-                                <button class="btn btn-sm active" onclick="switchValueAddedView('school', this)"
+                                <button type="button" class="btn btn-sm active" data-ui-action="switch-value-added-view" data-ui-value="school"
                                     style="border-radius:0; background:#e0f2fe; color:#0369a1;">按学校看</button>
-                                <button class="btn btn-sm" onclick="switchValueAddedView('class', this)"
+                                <button type="button" class="btn btn-sm" data-ui-action="switch-value-added-view" data-ui-value="class"
                                     style="border-radius:0; background:white; color:#64748b;">按班级看</button>
                             </div>
-                            <button class="btn btn-green" onclick="exportValueAddedExcel()">📊 导出增值评价表</button>
+                            <button type="button" class="btn btn-green" data-ui-action="export-value-added-excel">📊 导出增值评价表</button>
                         </div>
                     </div>
                 </div>
