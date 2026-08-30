@@ -5018,12 +5018,19 @@ async function runModuleDeepCheck(page, id) {
                     manualSubject.value = '社团活动';
                     manualHours.value = '2';
                     Array.from(manualClasses.options).forEach((option) => { option.selected = option.value === '6.1' || option.value === '6.5'; });
+                    scheduler.refreshManualClassHours();
+                    const overrideHours = document.querySelector('#sch_manual_class_hours_rows input[data-manual-class-hours="6.5"]');
+                    if (overrideHours) overrideHours.value = '3';
                     manualDay.value = '1';
                     manualSlot.value = 'am_1';
                     scheduler.addManualNonAssessmentDemand();
                 }
                 if (!scheduler.demands.some((demand) => demand.nonAssessment && demand.subject === '社团活动' && demand.fixedDay === '1' && demand.fixedSlot === 'am_1')) {
                     throw new Error('manual non-assessment demand was not added');
+                }
+                if (scheduler.demands.find((demand) => demand.nonAssessment && demand.className === '6.1')?.weeklyHours !== 2
+                    || scheduler.demands.find((demand) => demand.nonAssessment && demand.className === '6.5')?.weeklyHours !== 3) {
+                    throw new Error('manual non-assessment per-class weekly hours were not applied');
                 }
 
                 const setValue = (id, value) => {

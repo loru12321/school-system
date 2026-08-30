@@ -114,6 +114,7 @@ const SCHEDULER = {
         const weeklyHours = Number(document.getElementById('sch_manual_hours')?.value || 0);
         const classSelect = document.getElementById('sch_manual_classes');
         const classNames = Array.from(classSelect?.selectedOptions || []).map((option) => String(option.value || '').trim()).filter(Boolean);
+        const classHours = this.readManualClassHours(classNames, weeklyHours);
         const fixedDay = String(document.getElementById('sch_manual_day')?.value || '').trim();
         const fixedSlot = this.normalizeSlotCode(document.getElementById('sch_manual_slot')?.value || '');
         const venue = String(document.getElementById('sch_manual_venue')?.value || '').trim();
@@ -121,6 +122,8 @@ const SCHEDULER = {
         if (!subject) return window.UI?.alert('请填写科目或项目名称。');
         if (!Number.isInteger(weeklyHours) || weeklyHours <= 0) return window.UI?.alert('每班每周节数请输入正整数。');
         if (!classNames.length) return window.UI?.alert('请至少选择一个对应班级。');
+        const invalidClassHours = classNames.filter((className) => !Number.isInteger(classHours[className]) || classHours[className] <= 0);
+        if (invalidClassHours.length) return window.UI?.alert(`请为以下班级填写正整数课时：${invalidClassHours.join('、')}。`);
         const existingKeys = new Set(this.demands.map((item) => `${item.className}__${item.subject}__${item.nonAssessment ? 'manual' : 'regular'}`));
         const added = [];
         classNames.forEach((className) => {
@@ -133,7 +136,7 @@ const SCHEDULER = {
                 className,
                 name: '',
                 subject,
-                weeklyHours,
+                weeklyHours: classHours[className],
                 venue,
                 note,
                 fixedDay,
@@ -154,6 +157,9 @@ const SCHEDULER = {
         if (added.length) window.UI?.toast(`已添加 ${added.length} 个班级的“${subject}”（非考核）课时。`, 'success');
         else window.UI?.toast('相同班级和科目已存在，未重复添加。', 'info');
         ['sch_manual_subject', 'sch_manual_hours', 'sch_manual_venue', 'sch_manual_note'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
+        Array.from(classSelect?.options || []).forEach((option) => { option.selected = false; });
+        this.refreshManualClassHours();
+        this.updateManualClassSelectionSummary();
     },
 
     removeManualNonAssessmentDemand: function (id) {
@@ -199,6 +205,56 @@ const SCHEDULER = {
         const selected = new Set(Array.from(select.selectedOptions || []).map((option) => option.value));
         select.innerHTML = this.classes.map((className) => `<option value="${this.escapeHtml(className)}">${this.escapeHtml(className)}班</option>`).join('');
         Array.from(select.options).forEach((option) => { option.selected = selected.has(option.value); });
+        this.refreshManualClassHours();
+        this.updateManualClassSelectionSummary();
+    },
+
+    updateManualClassSelectionSummary: function () {
+        const select = document.getElementById('sch_manual_classes');
+        const summary = document.getElementById('sch_manual_selected_count');
+        if (summary) summary.textContent = `已选 ${Array.from(select?.selectedOptions || []).length} 个班`;
+    },
+
+    refreshManualClassHours: function () {
+        const select = document.getElementById('sch_manual_classes');
+        const panel = document.getElementById('sch_manual_class_hours');
+        const rows = document.getElementById('sch_manual_class_hours_rows');
+        if (!select || !panel || !rows) return;
+        const selectedClasses = Array.from(select.selectedOptions || []).map((option) => String(option.value || '').trim()).filter(Boolean);
+        const current = new Map(Array.from(rows.querySelectorAll('input[data-manual-class-hours]')).map((input) => [String(input.dataset.manualClassHours || ''), input.value]));
+        const defaultHours = document.getElementById('sch_manual_hours')?.value || '';
+        panel.style.display = selectedClasses.length ? '' : 'none';
+        rows.innerHTML = selectedClasses.map((className) => {
+            const value = current.has(className) ? current.get(className) : defaultHours;
+            return `<label style="font-size:12px;">${this.escapeHtml(className)}班<input type="number" min="1" step="1" data-manual-class-hours="${this.escapeHtml(className)}" value="${this.escapeHtml(value)}" style="width:100%; margin-top:3px;"></label>`;
+        }).join('');
+    },
+
+    readManualClassHours: function (classNames, fallback) {
+        const result = Object.create(null);
+        const rows = document.getElementById('sch_manual_class_hours_rows');
+        const inputs = rows ? Array.from(rows.querySelectorAll('input[data-manual-class-hours]')) : [];
+        const values = new Map(inputs.map((input) => [String(input.dataset.manualClassHours || ''), Number(input.value || fallback)]));
+        (Array.isArray(classNames) ? classNames : []).forEach((className) => {
+            result[className] = values.has(className) ? values.get(className) : fallback;
+        });
+        return result;
+    },
+
+    selectAllManualClasses: function () {
+        const select = document.getElementById('sch_manual_classes');
+        if (!select) return;
+        Array.from(select.options).forEach((option) => { option.selected = true; });
+        this.refreshManualClassHours();
+        this.updateManualClassSelectionSummary();
+    },
+
+    clearManualClasses: function () {
+        const select = document.getElementById('sch_manual_classes');
+        if (!select) return;
+        Array.from(select.options).forEach((option) => { option.selected = false; });
+        this.refreshManualClassHours();
+        this.updateManualClassSelectionSummary();
     },
 
     refreshManualSlotOptions: function () {
@@ -2246,6 +2302,8 @@ const SCHEDULER = {
                 if (action === 'undo-manual-move') this.undoManualMove();
                 if (action === 'add-manual-demand') this.addManualNonAssessmentDemand();
                 if (action === 'clear-manual-demands') this.clearManualNonAssessmentDemands();
+                if (action === 'select-all-manual-classes') this.selectAllManualClasses();
+                if (action === 'clear-manual-classes') this.clearManualClasses();
                 return;
             }
             const removeManual = event.target?.closest?.('[data-scheduler-manual-remove]');
@@ -2272,11 +2330,27 @@ const SCHEDULER = {
                 this.preflight({ silent: true });
             }
             if (['sch_am_count', 'sch_pm_count', 'sch_eve_count'].includes(select.id)) this.refreshManualSlotOptions();
+            if (select.id === 'sch_manual_classes') {
+                this.refreshManualClassHours();
+                this.updateManualClassSelectionSummary();
+            }
         });
         ['sch_am_count', 'sch_pm_count', 'sch_eve_count'].forEach((id) => {
             document.getElementById(id)?.addEventListener('change', () => this.refreshManualSlotOptions());
         });
+        document.getElementById('sch_manual_hours')?.addEventListener('input', () => {
+            const value = document.getElementById('sch_manual_hours')?.value || '';
+            document.querySelectorAll('#sch_manual_class_hours_rows input[data-manual-class-hours]').forEach((input) => {
+                if (!String(input.value || '').trim()) input.value = value;
+            });
+        });
+        document.getElementById('sch_manual_classes')?.addEventListener('change', () => {
+            this.refreshManualClassHours();
+            this.updateManualClassSelectionSummary();
+        });
         this.refreshManualSlotOptions();
+        this.refreshManualClassHours();
+        this.updateManualClassSelectionSummary();
     }
 };
 
