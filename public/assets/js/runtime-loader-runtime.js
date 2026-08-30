@@ -105,6 +105,7 @@ var SYSTEM_RUNTIME_SKILLS = {
 'data-manager-sql': bootSkill('demand', 'full', ['data-manager-sql', 'talkToData'], [
     bootEntry('data-manager-sql', bootJs('data-manager-sql.js'))
 ]),
+'target-editor': bootSkill('demand', 'full', ['target-editor'], [bootEntry('target-editor', bootJs('target-editor-runtime.js'))]),
 'assessment-roster': bootSkill('demand', 'full', ['assessment-roster', 'AssessmentRoster'], [
     bootEntry('teaching-assessment-sync', bootJs('teaching-assessment-sync-runtime.js')),
     bootEntry('assessment-roster', bootJs('assessment-roster-runtime.js'))

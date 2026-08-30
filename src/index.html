@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-2a6c15cb00dc.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-2a6c15cb00dc.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-88f44a3a6b8b.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-88f44a3a6b8b.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -1757,7 +1757,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先确认目标口径，再计算达标情况；导出结果更适合做指标生专项追踪。</div>
                         <div class="analysis-actions support-actions indicator-actions">
-                            <button class="btn btn-blue" onclick="openTargetEditor()">
+                            <button class="btn btn-blue" data-ui-action="open-target-editor">
                                 <i class="ti ti-edit"></i> 在线调整目标
                             </button>
                             <button class="btn btn-green" id="btn-indicator-calc" onclick="calcIndicators()"><i class="ti ti-calculator"></i> 开始计算</button>
@@ -2652,6 +2652,30 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div id="fb_same_class_group_list" class="freshman-fixed-list" aria-live="polite"><div class="freshman-fixed-empty">暂未设置同班组合，系统将按均衡算法自动分班。</div></div>
                         <div class="freshman-fixed-note"><i class="ti ti-info-circle"></i> 同班组合会作为整体参与班额、优秀率、主科、男女和违纪均衡计算；不会被后续微调拆开。与“指定学生班级”冲突时，生成前会明确提示。</div>
                     </div>
+                    <div class="freshman-fixed-panel freshman-same-panel" aria-labelledby="fb_separate_title">
+                        <div class="freshman-fixed-head">
+                            <div>
+                                <span class="freshman-review-eyebrow">SEPARATE GROUP</span>
+                                <strong id="fb_separate_title">违纪学生分开组</strong>
+                                <p>选择 2 人或更多人组成分开组；同组内每名学生必须进入不同班级，不影响其他均衡规则。</p>
+                            </div>
+                            <span class="freshman-fixed-badge"><i class="ti ti-arrows-split"></i> 硬约束</span>
+                        </div>
+                        <div class="freshman-fixed-form">
+                            <label>学生<select id="fb_separate_student"><option value="">请先载入成绩、学籍或性别名单</option></select></label>
+                            <button type="button" class="btn btn-primary" data-fb-action="add-separate-member"><i class="ti ti-user-plus"></i> 加入当前分开组</button>
+                            <button type="button" class="btn btn-green" data-fb-action="create-separate-group"><i class="ti ti-arrows-split"></i> 建立分开组</button>
+                            <button type="button" class="btn btn-gray" data-fb-action="clear-separate-groups">清空分开组</button>
+                            <div class="upload-box freshman-separate-upload" data-fb-pick="fbSeparateInput">
+                                <div class="freshman-separate-upload-title"><i class="ti ti-file-spreadsheet"></i> 上传违纪分开名单</div>
+                                <div class="freshman-separate-upload-note">列：分开组号、姓名[, 考号/学号]；同组每人分到不同班</div>
+                                <input type="file" id="fbSeparateInput" accept=".xlsx,.xls,.csv" hidden data-fb-change="FB_loadSeparateList">
+                            </div>
+                        </div>
+                        <div id="fb_separate_draft" class="freshman-same-draft"><span class="freshman-fixed-empty">尚未选择成员（至少两人）</span></div>
+                        <div id="fb_separate_group_list" class="freshman-fixed-list" aria-live="polite"><div class="freshman-fixed-empty">暂未设置分开组，违纪学生将按常规分散规则处理。</div></div>
+                        <div class="freshman-fixed-note"><i class="ti ti-info-circle"></i> 分开组是硬约束：当前班级数少于组内人数、与同班组合/指定班级冲突，或包含转出学生时，系统会在生成前提示并阻止生成。</div>
+                    </div>
                     <div style="border-bottom:1px dashed #cbd5e1; padding-bottom:15px; margin-bottom:15px;">
                         <div
                             style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:15px;">
@@ -3435,7 +3459,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <div style="margin-top:15px; text-align:right;">
                 <button class="btn btn-gray"
                     data-close-modal="target-editor-modal">取消</button>
-                <button class="btn btn-primary" onclick="saveTargetEditor()">💾 保存并重算</button>
+                <button class="btn btn-primary" data-ui-action="save-target-editor">💾 保存并重算</button>
             </div>
         </div>
     </div>

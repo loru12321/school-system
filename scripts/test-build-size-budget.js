@@ -49,7 +49,10 @@ const budgets = {
     // cross-platform Brotli variance headroom (Linux CI can be ~200B larger).
     // 2026-08-30: demo data generation moved to a demand-loaded runtime; the
     // offline source map keeps that runtime available for single-file demos.
-    ltHtmlBrotli: 342_000,
+    // 2026-08-30: freshman violation separate-group editor, upload parser,
+    // hard-constraint validation, and export labels add a small intentional
+    // amount to the offline bundle.
+    ltHtmlBrotli: 344_000,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,
@@ -60,7 +63,9 @@ const budgets = {
     // 2026-07-07: raised 85_700 -> 85_800 for the phase-4 startup-hydration-runtime.js APP_MODULES
     // registration string (one manifest line, no new logic/loaders, no removed safety check).
     publicBootJs: 85_800,
-    publicRuntimeLoaderJs: 58_000,
+    // 2026-08-30: target-editor demand skill and declarative action bridge add
+    // a small, intentional manifest entry while keeping the editor out of boot.
+    publicRuntimeLoaderJs: 58_500,
     // Current minified app bundle baseline after runtime splits, cache guards,
     // and the product redesign CSS layer being accounted in the singlefile build.
     distAppJs: 585_000,

@@ -890,6 +890,21 @@ header {
     margin-top: 10px;
 }
 
+#freshman-simulator .freshman-separate-upload {
+    min-width: 300px;
+    padding: 10px;
+}
+
+#freshman-simulator .freshman-separate-upload-title {
+    font-weight: 700;
+    font-size: 13px;
+}
+
+#freshman-simulator .freshman-separate-upload-note {
+    color: #64748b;
+    font-size: 11px;
+}
+
 #freshman-simulator .freshman-same-chip {
     display: inline-flex;
     align-items: center;

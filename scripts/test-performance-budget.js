@@ -169,7 +169,7 @@ const budgets = {
   publicCohortExamHydrationJs: 7_000,
   // 2026-07-07: 85_700 -> 85_800 for phase-4 startup-hydration-runtime.js manifest registration.
   publicBootJs: 85_800,
-  publicRuntimeLoaderJs: 58_000,
+  publicRuntimeLoaderJs: 58_500,
   publicCountyAnalysisJs: 125_000,
   publicProgressAnalysisJs: 95_000,
   publicTeacherAnalysisCoreJs: 85_000,

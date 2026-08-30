@@ -7618,62 +7618,6 @@ syncWatermarkTimer();
 // Moved to cohort-exam-meta-runtime.js (COHORT_STORAGE_KEY, CohortManager, buildExamKey, applyArchiveLockUI)
 // Moved to cohort-db-core-runtime.js (CohortDB)
 // Moved to snapshot-system-runtime.js (getCurrentSnapshotPayload, createAutoSnapshot, applySnapshotPayload, saveProjectSnapshot)
-function openTargetEditor() {
-    if (Object.keys(SCHOOLS).length === 0) return alert("请先上传成绩数据，系统需要读取学校列表。");
-
-    ensureNormalizedTargets();
-    const tbody = document.querySelector('#target-editor-table tbody');
-    tbody.innerHTML = '';
-
-    const targetRowsHtml = Object.keys(SCHOOLS).map(sch => {
-        const t = getTargetConfigBySchool(sch).value || { t1: 0, t2: 0 };
-
-        return `
-                <tr data-school="${escapeAppHtml(sch)}">
-                    <td style="font-weight:bold;">${escapeAppHtml(sch)}</td>
-                    <td>
-                        <input type="number" class="inp-t1" value="${t.t1}" style="width:80px; text-align:center; border:1px solid #93c5fd;">
-                    </td>
-                    <td>
-                        <input type="number" class="inp-t2" value="${t.t2}" style="width:80px; text-align:center; border:1px solid #fdba74;">
-                    </td>
-                </tr>
-            `;
-    });
-    tbody.innerHTML = targetRowsHtml.join('');
-
-    document.getElementById('target-editor-modal').style.display = 'flex';
-}
-
-function saveTargetEditor() {
-    const rows = document.querySelectorAll('#target-editor-table tbody tr');
-    let updateCount = 0;
-
-    setTargetsState(ensureNormalizedTargets());
-
-    rows.forEach(tr => {
-        const sch = getCanonicalSchoolName(tr.dataset.school, [...Object.keys(readTargetsState() || {}), ...Object.keys(SCHOOLS || {}), tr.dataset.school]);
-        const t1 = parseInt(tr.querySelector('.inp-t1').value) || 0;
-        const t2 = parseInt(tr.querySelector('.inp-t2').value) || 0;
-
-        readTargetsState()[sch] = { t1: t1, t2: t2 };
-        updateCount++;
-    });
-
-    setTargetsState(ensureNormalizedTargets());
-
-    document.getElementById('target-editor-modal').style.display = 'none';
-
-    UI.toast(`✅ 已更新 ${updateCount} 所学校的目标设定`, "success");
-
-    const { r1, r2 } = getIndicatorRankParams();
-    if (r1 && r2) {
-        calcIndicators();
-    } else {
-        alert("目标已保存！\n请记得在上方输入框设置【划线名次】，然后点击【开始计算】。");
-    }
-}
-
 document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();

@@ -137,6 +137,14 @@ assert.ok(indexHtml.includes('id="fb_same_class_student"'), 'freshman UI should 
 assert.ok(indexHtml.includes('data-fb-action="create-same-group"'), 'freshman UI should provide same-class group creation');
 assert.ok(indexHtml.includes('data-fb-pick="fbSameClassInput"'), 'freshman UI should provide same-class group upload');
 assert.ok(indexHtml.includes('组合编号、姓名'), 'same-class group upload should document the row format');
+assert.ok(indexHtml.includes('id="fb_separate_student"'), 'freshman UI should provide a separate-group student selector');
+assert.ok(indexHtml.includes('data-fb-action="create-separate-group"'), 'freshman UI should provide separate-group creation');
+assert.ok(indexHtml.includes('data-fb-pick="fbSeparateInput"'), 'freshman UI should provide a violation separate-group upload');
+assert.ok(freshman.includes('function FB_loadSeparateList'), 'freshman runtime should parse separate-group uploads');
+assert.ok(freshman.includes('fbResolveSeparateGroups'), 'separate groups should be resolved before placement');
+assert.ok(freshman.includes('fbValidateSeparateGroups'), 'separate groups should be validated before generation');
+assert.ok(freshman.includes('每人将进入不同班级'), 'separate-group UI should explain the hard constraint');
+assert.ok(freshman.includes('违纪分开组'), 'freshman exports should include separate-group labels');
 assert.ok(moduleEntry.includes('initDeepLinkedModule'), 'freshman deep links should initialize their runtime');
 assert.ok(freshman.includes('fbFixedAssignmentCandidates'), 'fixed-class student selector should use uploaded roster candidates before cloud assembly');
 assert.ok(freshman.includes('fbIsTransferred(rosterRow)'), 'transfer decisions should be excluded from exam aggregation');

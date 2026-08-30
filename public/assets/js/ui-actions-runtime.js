@@ -159,6 +159,8 @@ async function downloadCertificate() {
             document.getElementById('dm-cloud-modal')?.classList.remove('hidden');
         },
         'open-skin-modal': () => callGlobal('openSkinModal'),
+        'open-target-editor': () => window.SystemRuntimeLoader?.load('target-editor').then(() => window.openTargetEditor?.()),
+        'save-target-editor': () => window.SystemRuntimeLoader?.load('target-editor').then(() => window.saveTargetEditor?.()),
         'toggle-sub-nav': (target) => callGlobal('toggleSubNav', target),
         'exam-switch-view': (target) => callGlobal('EXAM_switchView', target?.dataset?.uiValue || 'overview', target),
         'voice-toggle': () => window.VoiceControl?.toggle?.(),

@@ -17,6 +17,9 @@
     // 同班组合：只锁定“必须同班”，不预先指定具体班级，由算法按整体代价选择班级。
     let FB_SAME_CLASS_GROUPS = [];
     let FB_SAME_CLASS_DRAFT = [];
+    // 分开组合：组内每名学生必须落在不同班级；组人数可为 2 人或更多。
+    let FB_SEPARATE_GROUPS = [];
+    let FB_SEPARATE_DRAFT = [];
     let balanceChartInstance = null;
     const FreshmanExamPerfCache = {
         schemeSelectorSignature: '',
@@ -42,7 +45,7 @@
             c?.id,
             c?.name,
             Array.isArray(c?.students) ? c.students.length : 0,
-            Array.isArray(c?.students) ? c.students.map(s => `${s.name}:${s.score}:${s.gender}:${s.isDiff || s._isDiff ? 1 : 0}:${s.postType || ''}:${s.isNoExam ? 1 : 0}:${s.isViolation ? 1 : 0}`).join(',') : ''
+            Array.isArray(c?.students) ? c.students.map(s => `${s.name}:${s.score}:${s.gender}:${s.isDiff || s._isDiff ? 1 : 0}:${s.postType || ''}:${s.isNoExam ? 1 : 0}:${s.isViolation ? 1 : 0}:${s.separateGroupId || ''}`).join(',') : ''
         ].join(':')).join('|');
     }
 
@@ -359,6 +362,97 @@
         reader.readAsArrayBuffer(file);
     }
 
+    // 分开组：同一组内每名学生必须进入不同班级。支持 2 人、3 人或更多，
+    // 既可在页面选择，也可通过 Excel 批量导入。
+    function fbSeparateCandidates() { return fbFixedAssignmentCandidates(); }
+    function fbSeparateLabel(identity) {
+        const student = fbSeparateCandidates().find(s => fbStudentIdentity(s) === identity);
+        return student ? fbFixedLabel(student) : `未匹配（${identity}）`;
+    }
+    function fbResolveSeparateIdentities() {
+        const candidates = fbSeparateCandidates();
+        const primary = Array.isArray(FB_STUDENTS) ? FB_STUDENTS : [];
+        const resolve = (identity) => {
+            if (!String(identity).startsWith('name:')) return identity;
+            const name = String(identity).slice(5);
+            const matches = primary.filter(s => fbNormalizeName(s.name) === name);
+            if (matches.length === 1) return fbStudentIdentity(matches[0]);
+            const fallback = candidates.filter(s => fbNormalizeName(s.name) === name);
+            return fallback.length === 1 ? fbStudentIdentity(fallback[0]) : identity;
+        };
+        FB_SEPARATE_DRAFT = FB_SEPARATE_DRAFT.map(resolve);
+        FB_SEPARATE_GROUPS.forEach(g => { g.members = [...new Set((g.members || []).map(resolve))]; });
+    }
+    function FB_refreshSeparateUI() {
+        const select = document.getElementById('fb_separate_student');
+        const draft = document.getElementById('fb_separate_draft');
+        const list = document.getElementById('fb_separate_group_list');
+        if (!select || !draft || !list) return;
+        fbResolveSeparateIdentities();
+        const students = fbSeparateCandidates().sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-CN'));
+        const selected = select.value;
+        const esc = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+        select.innerHTML = students.length
+            ? `<option value="">选择学生</option>${students.map(s => `<option value="${esc(fbStudentIdentity(s))}">${esc(fbFixedLabel(s))}</option>`).join('')}`
+            : '<option value="">请先载入成绩、学籍或性别名单</option>';
+        if (selected && students.some(s => fbStudentIdentity(s) === selected)) select.value = selected;
+        draft.innerHTML = FB_SEPARATE_DRAFT.length
+            ? FB_SEPARATE_DRAFT.map(id => `<span class="freshman-same-chip">${esc(fbSeparateLabel(id))}<button type="button" aria-label="移除" data-fb-action="remove-separate-draft" data-fb-student="${esc(id)}">×</button></span>`).join('')
+            : '<span class="freshman-fixed-empty">尚未选择成员（至少两人）</span>';
+        list.innerHTML = FB_SEPARATE_GROUPS.length
+            ? FB_SEPARATE_GROUPS.map((group, index) => `<div class="freshman-fixed-row"><span><strong>分开组${index + 1}</strong><small>${(group.members || []).map(fbSeparateLabel).join('、')}</small></span><button type="button" class="btn btn-sm btn-gray" data-fb-action="remove-separate-group" data-fb-group-id="${esc(group.id)}">移除</button></div>`).join('')
+            : '<div class="freshman-fixed-empty">暂未设置分开组，违纪学生将按常规分散规则处理。</div>';
+    }
+    function FB_addSeparateMember() {
+        const id = String(document.getElementById('fb_separate_student')?.value || '').trim();
+        if (!id) return window.UI?.alert?.('请先选择要加入分开组的学生。');
+        if (FB_SEPARATE_DRAFT.includes(id)) return window.UI?.toast?.('该学生已在当前分开组中。', 'warning');
+        if (FB_SEPARATE_GROUPS.some(g => (g.members || []).includes(id))) return window.UI?.alert?.('该学生已经属于一个分开组，请先移除原分开组。');
+        FB_SEPARATE_DRAFT.push(id); FB_refreshSeparateUI();
+    }
+    function FB_removeSeparateDraft(identity) { FB_SEPARATE_DRAFT = FB_SEPARATE_DRAFT.filter(id => id !== String(identity)); FB_refreshSeparateUI(); }
+    function FB_createSeparateGroup() {
+        if (FB_SEPARATE_DRAFT.length < 2) return window.UI?.alert?.('分开组至少需要选择两名学生。');
+        const group = { id: `separate-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, members: [...FB_SEPARATE_DRAFT] };
+        FB_SEPARATE_GROUPS.push(group); FB_SEPARATE_DRAFT = []; FB_refreshSeparateUI();
+        window.UI?.toast?.(`已建立分开组（${group.members.length}人），生成时每人将进入不同班级。`, 'success');
+    }
+    function FB_removeSeparateGroup(id) { FB_SEPARATE_GROUPS = FB_SEPARATE_GROUPS.filter(g => g.id !== String(id)); FB_refreshSeparateUI(); }
+    function FB_clearSeparateGroups() { FB_SEPARATE_GROUPS = []; FB_SEPARATE_DRAFT = []; FB_refreshSeparateUI(); window.UI?.toast?.('已清空全部分开组', 'success'); }
+    function FB_loadSeparateList(input) {
+        const file = input?.files?.[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const wb = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+                if (!rows.length) throw new Error('Excel没有数据');
+                const grouped = new Map(); const errors = [];
+                rows.forEach((row, index) => {
+                    const group = String(row['分开组号'] ?? row['分开组'] ?? row['互斥组'] ?? row['组合编号'] ?? row['组号'] ?? row['group'] ?? '').trim();
+                    const student = fbRosterRow(row);
+                    if (!group) { errors.push(`第${index + 2}行缺少分开组号`); return; }
+                    if (!student) { errors.push(`第${index + 2}行缺少姓名`); return; }
+                    const id = fbStudentIdentity(student); const members = grouped.get(group) || [];
+                    if (!members.includes(id)) members.push(id); grouped.set(group, members);
+                });
+                const validGroups = [...grouped.entries()].filter(([, members]) => members.length >= 2);
+                const invalidGroups = [...grouped.entries()].filter(([, members]) => members.length < 2).map(([group]) => group);
+                if (!validGroups.length) throw new Error('没有找到至少包含两名学生的有效分开组');
+                let imported = 0;
+                validGroups.forEach(([, members]) => {
+                    const resolved = members.map(id => { const c = fbSeparateCandidates().find(s => fbStudentIdentity(s) === id); return c ? fbStudentIdentity(c) : id; });
+                    const exact = FB_SEPARATE_GROUPS.some(g => (g.members || []).length === resolved.length && g.members.every(id => resolved.includes(id)));
+                    if (!exact) { FB_SEPARATE_GROUPS.push({ id: `separate-upload-${Date.now()}-${imported}`, members: [...new Set(resolved)] }); imported += 1; }
+                });
+                fbResolveSeparateIdentities(); FB_refreshSeparateUI(); input.value = '';
+                const suffix = [...errors, ...(invalidGroups.length ? [`分开组“${invalidGroups.join('、')}”少于两人，已跳过`] : [])];
+                window.UI?.alert?.(`✅ 违纪分开名单导入 ${imported} 组、${validGroups.reduce((sum, [, members]) => sum + members.length, 0)} 人。${suffix.length ? `\n⚠️ ${suffix.slice(0, 6).join('\n')}` : ''}`, suffix.length ? 'warning' : 'success');
+            } catch (error) { input.value = ''; window.UI?.alert?.('违纪分开名单读取失败：' + error.message, 'error'); }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
     function fbMergeSameClassPair(a, b) {
         const ids = new Set([a, b]);
         const touching = FB_SAME_CLASS_GROUPS.filter(group => group.members.some(id => ids.has(id)));
@@ -392,6 +486,63 @@
         const transferIds = new Set((FB_TRANSFER_STUDENTS || []).map(fbStudentIdentity));
         FB_SAME_CLASS_GROUPS.forEach((group, gi) => group.members.forEach(id => { if (transferIds.has(id)) errors.push(`组合${gi + 1}包含转出学生${fbSameClassLabel(id)}，转出学生不参与分班。`); }));
         return [...new Set(errors)];
+    }
+
+    function fbResolveSeparateGroups(pool) {
+        const list = Array.isArray(pool) ? pool : [];
+        const byId = new Map(list.map(s => [fbStudentIdentity(s), s]));
+        const byName = new Map(list.map(s => [fbNormalizeName(s.name), s]));
+        return FB_SEPARATE_GROUPS.map((group, index) => {
+            const members = (group.members || []).map(id => byId.get(id) || (String(id).startsWith('name:') ? byName.get(String(id).slice(5)) : null)).filter(Boolean);
+            return { ...group, id: group.id || `separate-${index + 1}`, index, members };
+        }).filter(group => group.members.length >= 2);
+    }
+
+    function fbValidateSeparateGroups(k) {
+        const errors = []; fbResolveSeparateIdentities();
+        const active = new Set(fbSeparateCandidates().map(fbStudentIdentity)); const seen = new Map();
+        FB_SEPARATE_GROUPS.forEach((group, gi) => {
+            const members = Array.isArray(group.members) ? group.members : [];
+            if (members.length < 2) errors.push(`分开组${gi + 1} 少于两名学生。`);
+            if (members.length > k) errors.push(`分开组${gi + 1} 有 ${members.length} 人，但当前只有 ${k} 个班，无法保证每人不同班。`);
+            members.forEach(id => {
+                if (!active.has(id)) errors.push(`分开组${gi + 1} 中存在当前名单找不到的学生。`);
+                const prior = seen.get(id);
+                if (prior) errors.push(`${fbSeparateLabel(id)} 同时出现在分开组${prior}和分开组${gi + 1}中，请拆分后再生成。`);
+                else seen.set(id, gi + 1);
+            });
+            const fixed = [...new Set(members.map(id => FB_FIXED_ASSIGNMENTS[id]).filter(v => Number.isInteger(v)))];
+            if (fixed.length > 1 || (fixed.length === 1 && members.some(id => Number.isInteger(FB_FIXED_ASSIGNMENTS[id]) && FB_FIXED_ASSIGNMENTS[id] !== fixed[0]))) {
+                errors.push(`分开组${gi + 1}的指定班级存在冲突，组内每人必须不同班。`);
+            }
+            const transferIds = new Set((FB_TRANSFER_STUDENTS || []).map(fbStudentIdentity));
+            members.forEach(id => { if (transferIds.has(id)) errors.push(`分开组${gi + 1}包含转出学生${fbSeparateLabel(id)}，转出学生不参与分班。`); });
+            const sameIds = new Set(FB_SAME_CLASS_GROUPS.flatMap(item => item.members || []));
+            members.forEach(id => { if (sameIds.has(id)) errors.push(`${fbSeparateLabel(id)}同时出现在同班组合和分开组中，规则互相冲突。`); });
+        });
+        return [...new Set(errors)];
+    }
+
+    function fbApplySeparateConstraints() {
+        const byId = new Map((FB_STUDENTS || []).map(student => [fbStudentIdentity(student), student]));
+        const byName = new Map((FB_STUDENTS || []).map(student => [fbNormalizeName(student.name), student]));
+        FB_STUDENTS.forEach(student => {
+            student.constraints = student.constraints || { same: [], diff: [] };
+            student.constraints.diff = Array.isArray(student.constraints.diff) ? student.constraints.diff : [];
+            delete student.separateGroupId;
+        });
+        FB_SEPARATE_GROUPS.forEach((group, index) => {
+            const members = (group.members || []).map(id => byId.get(id) || (String(id).startsWith('name:') ? byName.get(String(id).slice(5)) : null)).filter(Boolean);
+            const label = group.id || `separate-${index + 1}`;
+            members.forEach(student => {
+                student.separateGroupId = label;
+                members.forEach(other => {
+                    if (other === student) return;
+                    const refs = [fbStudentIdentity(other), fbNormalizeName(other.name)];
+                    student.constraints.diff = [...new Set(student.constraints.diff.concat(refs))];
+                });
+            });
+        });
     }
 
     function fbFixedClassIndex(value, classCount) {
@@ -956,6 +1107,7 @@ async function FB_assembleFromCloud(options = {}) {
     });
 
     FB_STUDENTS = students;
+    fbApplySeparateConstraints();
     FB_LAST_ASSEMBLY = {
         targetGrade, examCount: exams.length,
         examLabels: exams.map((e) => `${e.label}${e.dateStr ? '(' + e.dateStr + ')' : ''}`),
@@ -1081,6 +1233,11 @@ function FB_bindDeclarativeHandlers(root = document) {
             if (action === 'create-same-group') FB_createSameClassGroup();
             if (action === 'remove-same-group') FB_removeSameClassGroup(el.dataset.fbGroupId);
             if (action === 'clear-same-groups') FB_clearSameClassGroups();
+            if (action === 'add-separate-member') FB_addSeparateMember();
+            if (action === 'remove-separate-draft') FB_removeSeparateDraft(el.dataset.fbStudent);
+            if (action === 'create-separate-group') FB_createSeparateGroup();
+            if (action === 'remove-separate-group') FB_removeSeparateGroup(el.dataset.fbGroupId);
+            if (action === 'clear-separate-groups') FB_clearSeparateGroups();
             if (action === 'add-transfer') FB_addTransferStudent();
             if (action === 'clear-transfers') FB_clearTransfers();
             if (action === 'remove-transfer') FB_removeTransferStudent(el.dataset.fbIndex);
@@ -1112,7 +1269,7 @@ function FB_updateAssemblyStatus() {
     if (!el) return;
     const genderN = Object.keys(FB_GENDER_MAP).length;
     const violN = FB_VIOLATION_NAMES.length;
-    el.innerHTML = `已载入性别名单 <strong>${FB_GENDER_NAMES.length}</strong> 人 · 违纪名单 <strong>${violN}</strong> 人。点击「生成分班方案」将读取本届别最近考试成绩并聚合。`;
+    el.innerHTML = `已载入性别名单 <strong>${FB_GENDER_NAMES.length}</strong> 人 · 违纪名单 <strong>${violN}</strong> 人 · 分开组 <strong>${FB_SEPARATE_GROUPS.length}</strong> 组。点击「生成分班方案」将读取本届别最近考试成绩并聚合。`;
     FB_renderRosterStatus();
 }
 
@@ -1146,6 +1303,7 @@ function FB_loadData(input) {
             window.UI.alert(`✅ 导入成功！共 ${FB_STUDENTS.length} 人。`); document.getElementById('fb-results-area').classList.add('hidden');
             FB_refreshFixedAssignmentUI();
             FB_refreshSameClassUI();
+            FB_refreshSeparateUI();
         } catch (err) { window.UI.alert("读取失败：" + err.message); }
     }; reader.readAsArrayBuffer(file);
 }
@@ -1181,6 +1339,9 @@ async function FB_runDivision() {
     }
     if (!FB_STUDENTS.length) return window.UI.alert(source === 'cloud' ? "云端未聚合到学生成绩，请检查考试数据与名单。" : "请先导入数据");
 
+    // 将页面/Excel设置的分开组同步为学生互斥硬约束，再进行所有前置校验。
+    fbApplySeparateConstraints();
+
     // 获取参数
     const k = parseInt(document.getElementById('fb_cls_num').value) || 6;
     // 本校分班安全阈值：银山实验学校单班不超过 60 人。
@@ -1201,6 +1362,10 @@ async function FB_runDivision() {
     const sameErrors = fbValidateSameClassGroups(k);
     if (sameErrors.length) {
         return window.UI.alert(`同班组合检查未通过：\n\n${sameErrors.slice(0, 8).map(item => `· ${item}`).join('\n')}`);
+    }
+    const separateErrors = fbValidateSeparateGroups(k);
+    if (separateErrors.length) {
+        return window.UI.alert(`违纪分开组检查未通过：\n\n${separateErrors.slice(0, 8).map(item => `· ${item}`).join('\n')}`);
     }
     const activeIdentities = new Set(fbFixedAssignmentCandidates().map(fbStudentIdentity));
     const staleAssignments = Object.keys(FB_FIXED_ASSIGNMENTS).filter(identity => !activeIdentities.has(identity));
@@ -1473,7 +1638,6 @@ function fbBalanceGenderCounts(classes, k) {
             });
         }
     });
-    const freePool = pool.filter(student => !fixedStudents.has(fbStudentIdentity(student)) && !groupedIds.has(fbStudentIdentity(student)));
     const classCapacity = Math.ceil(pool.length / k);
     const addFreeStudent = (student, preferred) => {
         const candidates = classes
@@ -1498,6 +1662,30 @@ function fbBalanceGenderCounts(classes, k) {
         members.forEach(student => { picked.cls.students.push(student); student.classIdx = picked.idx; });
     };
     sameGroups.sort((a, b) => b.members.length - a.members.length).forEach(placeSameGroup);
+
+    // 分开组预分散：同班组合先落位后，再把分开组成员放到互不相同的班级。
+    // 后续交换/男女校正仍通过 FB_checkConflict 保护这些互斥关系。
+    const separateGroups = fbResolveSeparateGroups(pool);
+    const separateIds = new Set();
+    const placeSeparateGroup = (group) => {
+        const members = group.members.filter(student => !fixedStudents.has(fbStudentIdentity(student)));
+        const assigned = group.members.filter(student => Number.isInteger(student.classIdx) && student.classIdx >= 0);
+        const usedClasses = new Set(assigned.map(student => student.classIdx));
+        if (usedClasses.size !== assigned.length) throw new Error(`分开组“${group.members.map(student => student.name).join('、')}”已有指定班级冲突，无法安排到不同班。`);
+        members.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+        members.forEach(student => {
+            const options = classes.map((cls, idx) => ({ cls, idx }))
+                .filter(({ cls, idx }) => !usedClasses.has(idx) && cls.students.length < classCapacity && !FB_checkConflict(student, cls.students))
+                .map(({ cls, idx }) => ({ cls, idx, cost: FB_calcClassCost({ ...cls, students: cls.students.concat(student) }, globalAvg) }))
+                .sort((a, b) => (a.cost - b.cost) || (a.cls.students.length - b.cls.students.length) || (a.idx - b.idx));
+            const picked = options[0];
+            if (!picked) throw new Error(`分开组“${group.members.map(item => item.name).join('、')}”无法满足每人不同班；请增加班级数或减少指定/同班约束。`);
+            picked.cls.students.push(student); student.classIdx = picked.idx; usedClasses.add(picked.idx); separateIds.add(fbStudentIdentity(student)); student.separateGroupId = group.id;
+        });
+        group.members.forEach(student => { separateIds.add(fbStudentIdentity(student)); student.separateGroupId = group.id; });
+    };
+    separateGroups.sort((a, b) => b.members.length - a.members.length).forEach(placeSeparateGroup);
+    const freePool = pool.filter(student => !fixedStudents.has(fbStudentIdentity(student)) && !groupedIds.has(fbStudentIdentity(student)) && !separateIds.has(fbStudentIdentity(student)));
 
     if (algo === 'snake') {
         // --- 蛇形分班 ---
@@ -1816,7 +2004,12 @@ function FB_calcClassCost(cls, gAvg) {
 
 function FB_checkConflict(stu, targetArr) {
     if (!stu.constraints) return false;
-    for (let name of stu.constraints.diff) { if (targetArr.find(s => s.name === name)) return true; }
+    const refs = Array.isArray(stu.constraints.diff) ? stu.constraints.diff : [];
+    for (const ref of refs) {
+        const raw = String(ref || '');
+        const normalized = raw.startsWith('name:') ? raw.slice(5) : raw;
+        if ((targetArr || []).find(candidate => fbStudentIdentity(candidate) === raw || fbNormalizeName(candidate?.name) === fbNormalizeName(normalized))) return true;
+    }
     return false;
 }
 
@@ -1841,6 +2034,7 @@ function FB_renderAssemblyBanner() {
     parts.push(`匹配学生：${a.matched} 人`);
     const fixedCount = Object.keys(FB_FIXED_ASSIGNMENTS).length;
     if (fixedCount) parts.push(`指定班级：${fixedCount} 人`);
+    if (FB_SEPARATE_GROUPS.length) parts.push(`违纪分开组：${FB_SEPARATE_GROUPS.length} 组`);
     if (a.violationUploaded) parts.push(`违纪：${a.violationTotal} 人`);
     if (a.missingGender > 0) parts.push(`⚠️ 缺性别 ${a.missingGender} 人`);
     const dupWarn = (a.dupGroups && a.dupGroups.length)
@@ -1892,7 +2086,7 @@ function fbStudentStatusExplanation(student) {
     if (status === '学籍在册未考试' || fbIsNoExamStudent(student)) {
         return '学籍在册但本次未参加考试，按后置均衡分配；各科成绩不计入两率一分。';
     }
-    if (status === '违纪') return '违纪学生参与分班，算法已尽量分散到各班。';
+    if (status === '违纪') return student?.separateGroupId ? '违纪学生参与分班，已按分开组硬约束安排到不同班。' : '违纪学生参与分班，算法已尽量分散到各班。';
     if (status === '指定班级') return '管理员指定班级，作为硬约束保留。';
     if (status === '同班组合') return '同班组合，作为整体参与分班，不拆分。';
     return '';
@@ -1962,6 +2156,12 @@ function fbSameGroupLabel(student) {
     return idx >= 0 ? `组合${idx + 1}` : String(student.sameGroupId);
 }
 
+function fbSeparateGroupLabel(student) {
+    if (!student?.separateGroupId) return '';
+    const idx = FB_SEPARATE_GROUPS.findIndex(group => group.id === student.separateGroupId);
+    return idx >= 0 ? `分开组${idx + 1}` : String(student.separateGroupId);
+}
+
 function FB_viewClassViolations(classIdx) {
     const cls = FB_CLASSES[Number(classIdx)];
     if (!cls) return;
@@ -2017,7 +2217,7 @@ function fbSafeExportSheetName(name, usedNames = new Set()) {
 }
 
 function fbBuildClassRosterRows(cls, stageLabel = '最终名单', subjects = fbExportSubjectNames([cls])) {
-    const rows = [['阶段', '班级', '座位号', '姓名', '性别', '总分', ...subjects.map((subject) => `${subject}成绩`), '是否后置分配', '状态', '状态说明', '同班组合', '备注']];
+    const rows = [['阶段', '班级', '座位号', '姓名', '性别', '总分', ...subjects.map((subject) => `${subject}成绩`), '是否后置分配', '状态', '状态说明', '同班组合', '违纪分开组', '备注']];
     const students = [];
     const list = cls?.seatLayout || cls?.students || [];
     list.forEach((student, index) => {
@@ -2037,6 +2237,7 @@ function fbBuildClassRosterRows(cls, stageLabel = '最终名单', subjects = fbE
             status || '正常',
             fbStudentStatusExplanation(student),
             fbSameGroupLabel(student),
+            fbSeparateGroupLabel(student),
             student?.remarks || ''
         ]);
         students.push(student);
@@ -2053,7 +2254,7 @@ function fbAppendClassRosterSheets(wb, classes, stageLabel = '最终名单') {
         sheet['!cols'] = [
             { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 8 }, { wch: 10 },
             ...subjects.map(() => ({ wch: 11 })),
-            { wch: 14 }, { wch: 18 }, { wch: 52 }, { wch: 12 }, { wch: 34 }
+            { wch: 14 }, { wch: 18 }, { wch: 52 }, { wch: 12 }, { wch: 14 }, { wch: 34 }
         ];
         fbDecorateRosterExportSheet(sheet, rows[0], students);
         XLSX.utils.book_append_sheet(wb, sheet, fbSafeExportSheetName(cls?.name || '班级', usedNames));
@@ -3121,9 +3322,9 @@ function FB_saveToLocal() {
     window.UI.alert(`方案已保存至浏览器缓存${Object.keys(FB_FIXED_ASSIGNMENTS).length ? `（当前会话保留 ${Object.keys(FB_FIXED_ASSIGNMENTS).length} 条指定班级）` : ''}`);
 }
 function FB_exportResult() {
-    if (!FB_CLASSES.length) return window.UI.alert("无数据"); const wb = XLSX.utils.book_new(); const subjects = fbExportSubjectNames(FB_CLASSES); const data = [['班级', '座位号', '姓名', '性别', '总分', ...subjects.map((subject) => `${subject}成绩`), '身高', '视力', '状态', '状态说明', '同班组合', '备注']];
+    if (!FB_CLASSES.length) return window.UI.alert("无数据"); const wb = XLSX.utils.book_new(); const subjects = fbExportSubjectNames(FB_CLASSES); const data = [['班级', '座位号', '姓名', '性别', '总分', ...subjects.map((subject) => `${subject}成绩`), '身高', '视力', '状态', '状态说明', '同班组合', '违纪分开组', '备注']];
     const students = [];
-    FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { const status = fbStudentStatus(s); const noExam = fbIsNoExamStudent(s); data.push([c.name, i + 1, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !noExam ? s.score : (noExam ? '' : s.score), ...subjects.map((subject) => { const value = fbStudentSubjectScore(s, subject); return value === null ? (noExam ? '未参加考试' : '—') : value; }), s.height, s.vision, status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), s.remarks]); students.push(s); }); });
+    FB_CLASSES.forEach(c => { const list = c.seatLayout || c.students; list.forEach((s, i) => { const status = fbStudentStatus(s); const noExam = fbIsNoExamStudent(s); data.push([c.name, i + 1, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !noExam ? s.score : (noExam ? '' : s.score), ...subjects.map((subject) => { const value = fbStudentSubjectScore(s, subject); return value === null ? (noExam ? '未参加考试' : '—') : value; }), s.height, s.vision, status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), fbSeparateGroupLabel(s), s.remarks]); students.push(s); }); });
     const ws = XLSX.utils.aoa_to_sheet(data); fbDecorateRosterExportSheet(ws, data[0], students);
     XLSX.utils.book_append_sheet(wb, ws, "分班与座位表");
     fbAppendClassRosterSheets(wb, FB_CLASSES, '最终名单');
@@ -3149,9 +3350,9 @@ function FB_exportResultWithBalance() {
     };
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.examData || FB_CLASSES)), '考试名单两率一分');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(scheme.finalData || FB_CLASSES)), '最终名单两率一分');
-    const roster = [['阶段', '班级', '姓名', '性别', '总分', '是否后置分配', '状态', '状态说明', '同班组合', '备注']];
+    const roster = [['阶段', '班级', '姓名', '性别', '总分', '是否后置分配', '状态', '状态说明', '同班组合', '违纪分开组', '备注']];
     const rosterStudents = [];
-    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => { const status = fbStudentStatus(s); const noExam = fbIsNoExamStudent(s); roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !noExam ? s.score : '', noExam ? '是' : '否', status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), s.remarks || '']); rosterStudents.push(s); }));
+    (scheme.finalData || FB_CLASSES).forEach(cls => (cls.students || []).forEach(s => { const status = fbStudentStatus(s); const noExam = fbIsNoExamStudent(s); roster.push(['最终名单', cls.name, s.name, fbGenderLabel(s.gender), Number.isFinite(Number(s.score)) && !noExam ? s.score : '', noExam ? '是' : '否', status || '正常', fbStudentStatusExplanation(s), fbSameGroupLabel(s), fbSeparateGroupLabel(s), s.remarks || '']); rosterStudents.push(s); }));
     const rosterSheet = XLSX.utils.aoa_to_sheet(roster); fbDecorateRosterExportSheet(rosterSheet, roster[0], rosterStudents);
     XLSX.utils.book_append_sheet(wb, rosterSheet, '最终分班名单');
     fbAppendClassRosterSheets(wb, scheme.finalData || FB_CLASSES, '最终名单');
@@ -3665,6 +3866,13 @@ function EXAM_exportResult() {
     if (typeof FB_removeSameClassGroup === 'function') window.FB_removeSameClassGroup = FB_removeSameClassGroup;
     if (typeof FB_clearSameClassGroups === 'function') window.FB_clearSameClassGroups = FB_clearSameClassGroups;
     if (typeof FB_loadSameClassList === 'function') window.FB_loadSameClassList = FB_loadSameClassList;
+    if (typeof FB_refreshSeparateUI === 'function') window.FB_refreshSeparateUI = FB_refreshSeparateUI;
+    if (typeof FB_addSeparateMember === 'function') window.FB_addSeparateMember = FB_addSeparateMember;
+    if (typeof FB_removeSeparateDraft === 'function') window.FB_removeSeparateDraft = FB_removeSeparateDraft;
+    if (typeof FB_createSeparateGroup === 'function') window.FB_createSeparateGroup = FB_createSeparateGroup;
+    if (typeof FB_removeSeparateGroup === 'function') window.FB_removeSeparateGroup = FB_removeSeparateGroup;
+    if (typeof FB_clearSeparateGroups === 'function') window.FB_clearSeparateGroups = FB_clearSeparateGroups;
+    if (typeof FB_loadSeparateList === 'function') window.FB_loadSeparateList = FB_loadSeparateList;
     if (typeof FB_toggleDataSource === 'function') window.FB_toggleDataSource = FB_toggleDataSource;
     if (typeof FB_runDivision === 'function') window.FB_runDivision = FB_runDivision;
     if (typeof FB_generateSingleScheme === 'function') window.FB_generateSingleScheme = FB_generateSingleScheme;
@@ -3709,6 +3917,7 @@ function EXAM_exportResult() {
         FB_bindDeclarativeHandlers(document);
         FB_refreshFixedAssignmentUI();
         FB_refreshSameClassUI();
+        FB_refreshSeparateUI();
     } catch (_) { /* 绑定失败不应阻断模块其余功能 */ }
 
     window.__FRESHMAN_EXAM_RUNTIME_PATCHED__ = true;
