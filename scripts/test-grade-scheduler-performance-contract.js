@@ -36,6 +36,8 @@ assert.ok(source.includes('adjacentClassWeight: 160'), 'scheduler should priorit
 assert.ok(source.includes('getSoftBusyScore: function'), 'grade scheduler should support soft teacher meeting avoidance');
 assert.ok(source.includes('getClassSubjectPeriodRepeatCount: function'), 'scheduler should track repeated class subject periods across days');
 assert.ok(source.includes('getTeacherSubjectPeriodRepeatCount: function'), 'scheduler should track repeated teacher subject periods across days');
+assert.ok(source.includes('getTeacherSubjectDayBalanceScore: function'), 'scheduler should balance same-teacher subject counts by day across classes');
+assert.ok(source.includes(".replace(/\\(合\\)$/, '').trim() === '体育' && slot.type === 'eve'"), 'scheduler should forbid PE in evening slots');
 assert.ok(source.includes('getSubjectTimeDistributionScore: function'), 'scheduler should score subject time-slot variety');
 assert.ok(source.includes('classSubjectPeriodRepeats'), 'fatigue audit should report repeated class subject periods');
 assert.ok(source.includes('buildCompactGradeSheet: function'), 'grade scheduler should provide a compact all-class timetable sheet');

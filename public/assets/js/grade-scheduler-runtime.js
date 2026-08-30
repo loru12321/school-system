@@ -46,7 +46,8 @@ const SCHEDULER = {
             teacherDayLoadWeight: 12,
             classSubjectPeriodRepeatWeight: 220,
             teacherSubjectPeriodRepeatWeight: 54,
-            newPeriodVarietyWeight: 18
+            newPeriodVarietyWeight: 18,
+            teacherSubjectDayBalanceWeight: 96
         }
     },
 
@@ -793,6 +794,9 @@ const SCHEDULER = {
                     errors.push(`锁定课表中的 ${className}班 ${slotId} 不在当前课时结构内。`);
                     return;
                 }
+                if (String(cell.subject || '').replace(/\(合\)$/, '').trim() === '体育' && slot.type === 'eve') {
+                    errors.push(`锁定课表中的 ${className}班 ${this.getSlotName(slotId.replace(/^d\d+_/, ''))} 不允许安排体育课，请调整到上午或下午。`);
+                }
                 if (this.isGloballyClosedSlot(slot)) {
                     errors.push(`锁定课表中的 ${className}班 ${this.getSlotName(slotId.replace(/^d\d+_/, ''))} 与周五停课规则冲突。`);
                 }
@@ -1277,6 +1281,7 @@ const SCHEDULER = {
 
     canPlaceDemand: function (demand, slot, teacherBusyMap, options = {}) {
         if (!demand || !slot || this.isGloballyClosedSlot(slot)) return false;
+        if (String(demand.subject || '').replace(/\(合\)$/, '').trim() === '体育' && slot.type === 'eve') return false;
         const classSchedule = this.schedule[demand.className] || {};
         if (classSchedule[slot.id] || this.isDemandBlocked(demand, slot.id)) return false;
         if (this.isEveningThirdReserved(demand, slot) && !options.combined) return false;
@@ -1560,6 +1565,31 @@ const SCHEDULER = {
         return spreadBonus - count * Number(weights.classSubjectBalanceWeight || 0);
     },
 
+    getTeacherSubjectDayBalanceScore: function (demand, slot) {
+        if (!demand || !slot) return 0;
+        const teacher = this.normalizeTeacherName(demand.name);
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        const grade = String(demand.grade || this.inferGradeFromClass(demand.className) || '');
+        const peers = [...new Set(this.demands
+            .filter((item) => !item.nonAssessment
+                && this.normalizeTeacherName(item.name) === teacher
+                && String(item.subject || '').replace(/\(合\)$/, '').trim() === subject
+                && String(item.grade || this.inferGradeFromClass(item.className) || '') === grade)
+            .map((item) => item.className))];
+        if (peers.length < 2) return 0;
+        const countForClass = (className) => Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => {
+            if (!slotId.startsWith(`d${slot.day}_`) || !cell || this.isNonTeachingHourCombinedCell(cell, slotId)) return false;
+            return this.normalizeTeacherName(cell.teacher) === teacher
+                && String(cell.subject || '').replace(/\(合\)$/, '').trim() === subject;
+        }).length;
+        const projected = countForClass(demand.className) + 1;
+        const peerCounts = peers.filter((className) => className !== demand.className).map(countForClass);
+        if (!peerCounts.length) return 0;
+        const peerAverage = peerCounts.reduce((sum, count) => sum + count, 0) / peerCounts.length;
+        const balanceWeight = Number(this.rules.teacherBlocks?.teacherSubjectDayBalanceWeight || 96);
+        return -Math.abs(projected - peerAverage) * balanceWeight;
+    },
+
     getTeacherScheduleQualityScore: function (demand, slot) {
         const weights = this.rules.teacherBlocks || {};
         const block = this.getTeacherSubjectBlockScore(demand, slot);
@@ -1567,6 +1597,7 @@ const SCHEDULER = {
         const timeDistribution = this.getSubjectTimeDistributionScore(demand, slot);
         const teacherDayPenalty = this.getTeacherDayLoad(demand.name, slot.day) * Number(weights.teacherDayLoadWeight || 0);
         return block + balance + timeDistribution - teacherDayPenalty
+            + this.getTeacherSubjectDayBalanceScore(demand, slot)
             + this.getSoftBusyScore(demand.name, slot)
             + this.getEveningPreferenceScore(demand, slot);
     },
