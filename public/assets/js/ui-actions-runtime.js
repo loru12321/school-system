@@ -109,6 +109,16 @@ async function downloadCertificate() {
         return fn(...args);
     };
 
+    const callObject = (objectName, method, ...args) => {
+        const object = window[objectName];
+        const fn = object?.[method];
+        if (typeof fn !== 'function') {
+            console.warn(`[ui-actions] missing handler: ${objectName}.${method}`);
+            return undefined;
+        }
+        return fn.apply(object, args);
+    };
+
     const actionHandlers = {
         'mobile-open-upload': () => {
             document.getElementById('mobile-manager-app')?.style.setProperty('display', 'none');
@@ -168,6 +178,35 @@ async function downloadCertificate() {
         'exam-print': () => callGlobal('print'),
         'exam-generate': () => callGlobal('EXAM_generate'),
         'exam-assign-proctors': () => callGlobal('EXAM_assignProctors'),
+        'admin-view-logs': () => callObject('Logger', 'view'),
+        'admin-toggle-all-schools': (target) => callObject('Auth', 'toggleAllSchools', target?.dataset?.uiValue === 'true'),
+        'admin-generate-teacher-accounts': () => callObject('Auth', 'generateTeacherAccounts'),
+        'admin-generate-parent-accounts': () => callObject('Auth', 'generateParentAccounts'),
+        'admin-export-accounts': () => callObject('Auth', 'exportAccounts'),
+        'admin-download-account-template': () => callObject('AccountExcel', 'downloadTemplate'),
+        'admin-sync-accounts': () => callObject('Auth', 'syncBatchToCloud'),
+        'admin-delete-cloud-accounts': () => callObject('Auth', 'deleteCloudAccounts'),
+        'admin-export-distributable-html': () => callObject('Packager', 'exportDistributableHTML'),
+        'admin-migrate-accounts': () => callObject('Auth', 'migrateRecoverableAccountsToCloud'),
+        'admin-refresh-account-migration': () => callObject('Auth', 'refreshCloudAccountMigrationStatus'),
+        'admin-add-cloud-account': () => callObject('Auth', 'addCloudAccount'),
+        'admin-change-password': () => callGlobal('changeAdminPass'),
+        'admin-export-cloud-accounts': () => callObject('Auth', 'exportAllCloudAccounts'),
+        'submit-user-password-change': () => callGlobal('submitUserPasswordChange'),
+        'issue-submit': () => callObject('IssueManager', 'submit'),
+        'issue-load': () => callObject('IssueManager', 'loadIssues'),
+        'issue-soft-delete': () => callObject('IssueManager', 'batchSoftDelete'),
+        'issue-hard-delete': () => callObject('IssueManager', 'batchHardDelete'),
+        'issue-restore': () => callObject('IssueManager', 'batchRestore'),
+        'issue-toggle-history': () => callObject('IssueManager', 'toggleHistoryView'),
+        'log-load': () => callObject('Logger', 'loadLogs'),
+        'log-soft-delete': () => callObject('Logger', 'batchSoftDelete'),
+        'log-hard-delete': () => callObject('Logger', 'batchHardDelete'),
+        'log-restore': () => callObject('Logger', 'batchRestore'),
+        'log-toggle-history': () => callObject('Logger', 'toggleHistoryView'),
+        'account-cancel-edit': () => callObject('AccountManager', 'cancelEdit'),
+        'account-save-edit': () => callObject('AccountManager', 'saveInlineEdit'),
+        'account-search': () => callObject('AccountManager', 'search'),
         'clear-logo': () => callGlobal('clearLogo'),
         'save-skin-settings': () => callGlobal('saveSkinSettings'),
         'download-mobile-image': () => callGlobal('downloadMobileImage'),
@@ -235,6 +274,11 @@ async function downloadCertificate() {
         'exam-load-data': (target) => callGlobal('EXAM_loadData', target),
         'set-theme-color-input': (target) => callGlobal('setThemeColor', target?.value || ''),
         'logo-upload': (target) => callGlobal('handleLogoUpload', target),
+        'account-excel-upload': (target) => callObject('AccountExcel', 'upload', target),
+        'toggle-admin-manual-input': () => callGlobal('toggleAdminManualInput'),
+        'issue-toggle-select-all': (target) => callObject('IssueManager', 'toggleSelectAll', target),
+        'log-toggle-select-all': (target) => callObject('Logger', 'toggleSelectAll', target),
+        'admin-role-change': () => callGlobal('toggleAdminManualInput'),
         'load-project-snapshot': (target) => callGlobal('loadProjectSnapshot', target),
         'student-compare-period-count': () => callGlobal('onStudentComparePeriodCountChange'),
         'filter-student-compare-class': () => callGlobal('filterStudentCompareByClass'),

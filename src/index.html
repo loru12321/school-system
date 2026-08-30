@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-a309a4229a2c.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-a309a4229a2c.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-4f363d0a1f22.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-4f363d0a1f22.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -3753,7 +3753,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 <div style="display:flex; align-items:center; gap:10px;">
                     <h3 style="color:#b91c1c; margin:0;"><i class="ti ti-shield-lock"></i> 账号管理</h3>
                     <!-- 新增：查看日志按钮 -->
-                    <button onclick="Logger.view()"
+                    <button type="button" data-ui-action="admin-view-logs"
                         style="font-size:12px; background:#fff; border:1px solid #ccc; padding:4px 8px; border-radius:4px; cursor:pointer; display:flex; align-items:center; gap:4px;">
                         <i class="ti ti-history"></i> 操作日志
                     </button>
@@ -3781,24 +3781,24 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <div style="color:#999; text-align:center; padding:10px;">暂无数据，请先上传成绩</div>
                         </div>
                         <div style="text-align:right; margin-top:2px;">
-                            <a href="javascript:void(0)" onclick="Auth.toggleAllSchools(true)"
+                            <a href="#" data-ui-action="admin-toggle-all-schools" data-ui-value="true"
                                 style="font-size:11px; color:var(--primary);">全选</a> /
-                            <a href="javascript:void(0)" onclick="Auth.toggleAllSchools(false)"
+                            <a href="#" data-ui-action="admin-toggle-all-schools" data-ui-value="false"
                                 style="font-size:11px; color:var(--primary);">清空</a>
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="Auth.generateTeacherAccounts()" style="width:100%;">
+                    <button class="btn btn-primary" type="button" data-ui-action="admin-generate-teacher-accounts" style="width:100%;">
                         <i class="ti ti-user-plus"></i> 一键生成所有账号 (教师)
                     </button>
-                    <button class="btn btn-primary" onclick="Auth.generateParentAccounts()" style="width:100%; margin-top:5px;">
+                    <button class="btn btn-primary" type="button" data-ui-action="admin-generate-parent-accounts" style="width:100%; margin-top:5px;">
                         <i class="ti ti-users"></i> 一键生成所有账号 (家长)
                     </button>
-                    <button class="btn btn-green" onclick="Auth.exportAccounts()"
+                    <button class="btn btn-green" type="button" data-ui-action="admin-export-accounts"
                         style="width:100%; background:#059669; color:white;">
                         <i class="ti ti-file-export"></i> 导出账号密码表 (Excel)
                     </button>
                     <!-- 新增：批量同步云端按钮 -->
-                    <button class="btn btn-blue" onclick="Auth.syncBatchToCloud()"
+                    <button class="btn btn-blue" type="button" data-ui-action="admin-sync-accounts"
                         style="width:100%; background:#2563eb; color:white; margin-top:5px;">
                         <i class="ti ti-cloud-upload"></i> 一键同步所有账号到云端 (Database)
                     </button>
@@ -3807,7 +3807,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     </p>
                     <!-- 新增：清空云端按钮 -->
                     <div style="margin-top:10px; border-top:1px dashed #e2e8f0; padding-top:10px;">
-                        <button class="btn btn-danger" onclick="Auth.deleteCloudAccounts()"
+                        <button class="btn btn-danger" type="button" data-ui-action="admin-delete-cloud-accounts"
                             style="width:100%; background:#dc2626; color:white;">
                             <i class="ti ti-trash-x"></i> ⚠️ 清空云端所有普通账号
                         </button>
@@ -3817,7 +3817,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     </div>
                     <hr style="margin: 15px 0; border:0; border-top:1px dashed #ccc;">
                     <h4 style="margin-bottom:10px; color:#7c3aed;">🚀 发送给家长</h4>
-                    <button class="btn btn-purple" onclick="Packager.exportDistributableHTML()"
+                    <button class="btn btn-purple" type="button" data-ui-action="admin-export-distributable-html"
                         style="width:100%; background:#7c3aed; color:white; font-weight:bold;">
                         <i class="ti ti-package"></i> 生成可分发网页 (含数据)
                     </button>
@@ -3839,7 +3839,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                         <h4 style="margin:0; color:#0369a1;"><i class="ti ti-cloud-upload"></i> 2. 添加/管理云端账号</h4>
                         <div style="display:flex; gap:5px;">
-                            <button class="btn btn-sm btn-green" onclick="AccountExcel.downloadTemplate()"
+                            <button class="btn btn-sm btn-green" type="button" data-ui-action="admin-download-account-template"
                                 title="下载导入模板">
                                 <i class="ti ti-download"></i> 模板
                             </button>
@@ -3848,7 +3848,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <i class="ti ti-file-import"></i> 导入
                             </button>
                             <input type="file" id="accExcelInput" accept=".xlsx,.xls" hidden
-                                onchange="AccountExcel.upload(this)">
+                                data-ui-change="account-excel-upload">
                         </div>
                     </div>
 
@@ -3860,11 +3860,11 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <div id="cloud-account-migration-updated" style="font-size:11px; color:#64748b; margin-top:2px;">等待刷新</div>
                             </div>
                             <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
-                                <button class="btn btn-sm btn-green" onclick="Auth.migrateRecoverableAccountsToCloud()"
+                                <button class="btn btn-sm btn-green" type="button" data-ui-action="admin-migrate-accounts"
                                     style="background:#16a34a; color:white;">
                                     <i class="ti ti-key"></i> 补迁当前浏览器账号
                                 </button>
-                                <button class="btn btn-sm btn-blue" onclick="Auth.refreshCloudAccountMigrationStatus()"
+                                <button class="btn btn-sm btn-blue" type="button" data-ui-action="admin-refresh-account-migration"
                                     style="background:#2563eb; color:white;">
                                     <i class="ti ti-refresh"></i> 刷新状态
                                 </button>
@@ -3877,7 +3877,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
                     <div style="display:flex; gap:5px; margin-bottom:10px;">
                         <select id="manual-role" style="padding:8px; border:1px solid #ccc; width:30%; font-size:12px;"
-                            onchange="toggleAdminManualInput()">
+                            data-ui-change="toggle-admin-manual-input">
                             <option value="teacher">👨‍🏫 科任教师</option>
                             <option value="class_teacher">📋 班主任</option>
                             <option value="grade_director">🚀 级部主任</option>
@@ -3906,7 +3906,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <input type="password" id="manual-pass" autocomplete="new-password" placeholder="输入临时密码"
                             style="padding:8px; border-radius:4px; border:1px solid #ccc; width:60%;">
                         <!-- 这里的 onclick 必须指向 Auth.addCloudAccount -->
-                        <button class="btn btn-primary" onclick="Auth.addCloudAccount()" style="flex:1;">添加/更新</button>
+                        <button class="btn btn-primary" type="button" data-ui-action="admin-add-cloud-account" style="flex:1;">添加/更新</button>
                     </div>
                     <p style="font-size:12px; color:#999; margin-top:5px;">提示：直接写入云端数据库。账号必须唯一，首次登录后必须改密。</p>
                 </div>
@@ -3918,7 +3918,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="new-admin-pass" placeholder="输入新密码"
                             style="padding:8px; flex:1; border:1px solid #cbd5e1; border-radius:4px;">
-                        <button class="btn btn-gray" onclick="changeAdminPass()">确认修改</button>
+                        <button class="btn btn-gray" type="button" data-ui-action="admin-change-password">确认修改</button>
                     </div>
                 </div>
                 <div
@@ -3930,7 +3930,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             此功能直接从云端数据库下载，包含<strong>批量生成</strong>、<strong>手动添加</strong>及<strong>Excel导入</strong>的所有账号。<br>
                             包含：角色、学校、班级、账号、密码状态，不再导出明文密码。
                         </p>
-                        <button class="btn btn-green" onclick="Auth.exportAllCloudAccounts()"
+                        <button class="btn btn-green" type="button" data-ui-action="admin-export-cloud-accounts"
                             style="background:#16a34a; color:white; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                             <i class="ti ti-download"></i> 下载全量账号表
                         </button>
@@ -3969,7 +3969,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px;">
                 </div>
 
-                <button class="btn btn-primary" onclick="submitUserPasswordChange()"
+                <button class="btn btn-primary" type="button" data-ui-action="submit-user-password-change"
                     style="padding:12px; margin-top:10px;">
                     确认修改并同步
                 </button>
@@ -4029,7 +4029,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <button class="btn btn-gray" style="flex:1;"
                         data-close-modal="issue-submit-modal">取消</button>
                     <button class="btn btn-primary" style="flex:1; background:#b45309;"
-                        onclick="IssueManager.submit()">🚀 提交申请</button>
+                        data-ui-action="issue-submit">🚀 提交申请</button>
                 </div>
             </div>
         </div>
@@ -4045,7 +4045,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <!-- 动态标题 ID -->
                     <h3 style="color:var(--primary); margin:0;" id="issue-modal-title"><i class="ti ti-bell"></i> 申诉反馈中心
                     </h3>
-                    <button class="btn btn-sm btn-gray" onclick="IssueManager.loadIssues()"><i
+                    <button class="btn btn-sm btn-gray" type="button" data-ui-action="issue-load"><i
                             class="ti ti-refresh"></i> 刷新</button>
                 </div>
                 <button type="button" class="modal-close-btn" aria-label="关闭申诉反馈中心"
@@ -4057,11 +4057,11 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
                 <!-- A. 正常模式的操作按钮 -->
                 <div style="display:flex; gap:10px;" id="issue-normal-actions">
-                    <button class="btn btn-sm btn-danger" onclick="IssueManager.batchSoftDelete()">
+                    <button class="btn btn-sm btn-danger" type="button" data-ui-action="issue-soft-delete">
                         <i class="ti ti-trash"></i> 批量删除 (放入回收站)
                     </button>
                     <div style="font-size:12px; color:#666; display:flex; align-items:center;">
-                        <input type="checkbox" id="issue-check-all" onchange="IssueManager.toggleSelectAll(this)"
+                        <input type="checkbox" id="issue-check-all" data-ui-change="issue-toggle-select-all"
                             style="margin-right:5px;"> 全选
                     </div>
                 </div>
@@ -4069,22 +4069,22 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 <!-- B. 历史记录模式的操作按钮 (默认隐藏) -->
                 <div style="display:none; gap:10px;" id="issue-history-actions">
                     <button class="btn btn-sm btn-danger" style="background:#b91c1c; border-color:#991b1b;"
-                        onclick="IssueManager.batchHardDelete()">
+                        data-ui-action="issue-hard-delete">
                         <i class="ti ti-trash-x"></i> 彻底粉碎选中
                     </button>
-                    <button class="btn btn-sm btn-green" onclick="IssueManager.batchRestore()">
+                    <button class="btn btn-sm btn-green" type="button" data-ui-action="issue-restore">
                         <i class="ti ti-rotate"></i> 还原选中
                     </button>
                     <div style="font-size:12px; color:#666; display:flex; align-items:center;">
                         <input type="checkbox" id="issue-history-check-all"
-                            onchange="IssueManager.toggleSelectAll(this)" style="margin-right:5px;"> 全选
+                            data-ui-change="issue-toggle-select-all" style="margin-right:5px;"> 全选
                     </div>
                 </div>
 
                 <!-- C. 切换视图按钮 -->
                 <div>
                     <button class="btn btn-sm btn-gray" id="btn-issue-history"
-                        onclick="IssueManager.toggleHistoryView()">
+                        data-ui-action="issue-toggle-history">
                         <i class="ti ti-history"></i> 查看删除历史
                     </button>
                 </div>
@@ -4112,7 +4112,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <h3 style="color:#333; margin:0;" id="log-modal-title"><i class="ti ti-history"></i> 系统操作日志</h3>
-                    <button class="btn btn-sm btn-gray" onclick="Logger.loadLogs()"><i class="ti ti-refresh"></i>
+                    <button class="btn btn-sm btn-gray" type="button" data-ui-action="log-load"><i class="ti ti-refresh"></i>
                         刷新</button>
                 </div>
                 <button type="button" class="modal-close-btn" aria-label="关闭日志中心"
@@ -4123,11 +4123,11 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <!-- 正常模式按钮 -->
                 <div style="display:flex; gap:10px;" id="log-normal-actions">
-                    <button class="btn btn-sm btn-danger" onclick="Logger.batchSoftDelete()">
+                    <button class="btn btn-sm btn-danger" type="button" data-ui-action="log-soft-delete">
                         <i class="ti ti-trash"></i> 批量删除
                     </button>
                     <div style="font-size:12px; color:#666; display:flex; align-items:center;">
-                        <input type="checkbox" id="log-check-all" onchange="Logger.toggleSelectAll(this)"
+                        <input type="checkbox" id="log-check-all" data-ui-change="log-toggle-select-all"
                             style="margin-right:5px;"> 全选
                     </div>
                 </div>
@@ -4135,21 +4135,21 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 <!-- 历史模式按钮 -->
                 <div style="display:none; gap:10px;" id="log-history-actions">
                     <button class="btn btn-sm btn-danger" style="background:#b91c1c;"
-                        onclick="Logger.batchHardDelete()">
+                        data-ui-action="log-hard-delete">
                         <i class="ti ti-trash-x"></i> 彻底粉碎选中
                     </button>
-                    <button class="btn btn-sm btn-green" onclick="Logger.batchRestore()">
+                    <button class="btn btn-sm btn-green" type="button" data-ui-action="log-restore">
                         <i class="ti ti-rotate"></i> 还原选中
                     </button>
                     <div style="font-size:12px; color:#666; display:flex; align-items:center;">
-                        <input type="checkbox" id="log-history-check-all" onchange="Logger.toggleSelectAll(this)"
+                        <input type="checkbox" id="log-history-check-all" data-ui-change="log-toggle-select-all"
                             style="margin-right:5px;"> 全选
                     </div>
                 </div>
 
                 <!-- 视图切换 -->
                 <div>
-                    <button class="btn btn-sm btn-gray" id="btn-log-history" onclick="Logger.toggleHistoryView()">
+                    <button class="btn btn-sm btn-gray" type="button" id="btn-log-history" data-ui-action="log-toggle-history">
                         <i class="ti ti-recycle"></i> 日志回收站
                     </button>
                 </div>
@@ -4184,7 +4184,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 style="display:none; background:#fff7ed; padding:14px; border-radius:8px; border:1px solid #fed7aa; margin-bottom:15px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <strong id="acc-edit-title" style="color:#9a3412;">修改账号信息</strong>
-                    <button type="button" class="btn btn-sm btn-gray" onclick="AccountManager.cancelEdit && AccountManager.cancelEdit()">取消</button>
+                    <button type="button" class="btn btn-sm btn-gray" data-ui-action="account-cancel-edit">取消</button>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                     <label style="font-size:12px; color:#475569;">
@@ -4202,7 +4202,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     </label>
                 </div>
                 <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
-                    <button type="button" class="btn btn-primary" onclick="AccountManager.saveInlineEdit && AccountManager.saveInlineEdit()">保存修改</button>
+                    <button type="button" class="btn btn-primary" data-ui-action="account-save-edit">保存修改</button>
                 </div>
             </div>
 
@@ -4212,8 +4212,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 <div style="display:flex; gap:10px;">
                     <input type="search" id="acc-search-input" name="account-search" aria-label="搜索姓名或账号" autocomplete="off" placeholder="输入姓名或账号进行查找…"
                         style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:6px;"
-                        onkeydown="if(event.key==='Enter') AccountManager.search()">
-                    <button class="btn btn-primary" onclick="AccountManager.search()">
+                        data-ui-enter="account-search">
+                    <button class="btn btn-primary" type="button" data-ui-action="account-search">
                         <i class="ti ti-search"></i> 搜索
                     </button>
                 </div>

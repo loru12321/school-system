@@ -138,8 +138,8 @@ async function run() {
     assert.ok(html.includes('一键生成所有账号 (教师)'), 'account manager should expose a teacher-only bulk generation button');
     assert.ok(html.includes('一键生成所有账号 (家长)'), 'account manager should expose a parent-only bulk generation button');
     assert.ok(!html.includes('一键生成所有账号 (教师+家长)'), 'combined teacher+parent bulk generation button should be removed');
-    assert.ok(html.includes('Auth.generateTeacherAccounts()'), 'teacher bulk button should call the teacher-only entry');
-    assert.ok(html.includes('Auth.generateParentAccounts()'), 'parent bulk button should call the parent-only entry');
+    assert.ok(html.includes('data-ui-action="admin-generate-teacher-accounts"'), 'teacher bulk button should call the teacher-only entry');
+    assert.ok(html.includes('data-ui-action="admin-generate-parent-accounts"'), 'parent bulk button should call the parent-only entry');
     assert.ok(authLogin.includes("generateTeacherAccounts: function ()"), 'Auth should expose a teacher-only account generator');
     assert.ok(authLogin.includes("generateParentAccounts: function ()"), 'Auth should expose a parent-only account generator');
     assert.ok(authLogin.includes("options.accountType === 'teacher'"), 'account generation should support teacher-only scope');

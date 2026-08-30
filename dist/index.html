@@ -18,8 +18,8 @@
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-a309a4229a2c.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-a309a4229a2c.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-4f363d0a1f22.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-4f363d0a1f22.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -337,7 +337,7 @@
                     data-pick-file="logoInput"><div style="color:var(--primary); font-size:20px;"><i class="ti ti-photo-up"></i> 点击上传 Logo 图片</div><p style="font-size:12px; color:#999; margin:5px 0;">建议使用透明背景 PNG，高度60px左右<br>图片将保存在本地浏览器中</p><input type="file" id="logoInput" accept="image/*" hidden data-ui-change="logo-upload"></div><button class="btn btn-gray btn-sm" type="button" data-ui-action="clear-logo" style="margin-top:5px;">🗑️ 清除 Logo</button></div><div style="margin-bottom: 10px;"><h4 style="margin-bottom:10px; color:#333;">3. 系统名称</h4><input type="text" id="custom-title-input" name="custom-report-title" aria-label="自定义系统标题" autocomplete="off" placeholder="例如：乡镇学校成绩分析…"
                     style="width:100%; margin-bottom:5px;" data-ui-input="skin-title-preview"><button class="btn btn-primary" type="button" style="width:100%; margin-top:15px;" data-ui-action="save-skin-settings">💾
                     保存并应用</button></div></div></div><div id="admin-modal" class="modal" style="display: none; z-index: 60000;"><div class="modal-content" style="max-width: 600px;"><div
-                style="display:flex; justify-content:space-between; align-items:flex-start; gap:18px; border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:14px; flex-wrap:wrap;"><div style="display:flex; align-items:center; gap:10px;"><h3 style="color:#b91c1c; margin:0;"><i class="ti ti-shield-lock"></i> 账号管理</h3><button onclick="Logger.view()"
+                style="display:flex; justify-content:space-between; align-items:flex-start; gap:18px; border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:14px; flex-wrap:wrap;"><div style="display:flex; align-items:center; gap:10px;"><h3 style="color:#b91c1c; margin:0;"><i class="ti ti-shield-lock"></i> 账号管理</h3><button type="button" data-ui-action="admin-view-logs"
                         style="font-size:12px; background:#fff; border:1px solid #ccc; padding:4px 8px; border-radius:4px; cursor:pointer; display:flex; align-items:center; gap:4px;"><i class="ti ti-history"></i> 操作日志
                     </button></div><button type="button" class="modal-close-btn" aria-label="关闭管理员面板"
                     data-close-modal="admin-modal">&times;</button></div><div class="info-bar" style="margin-bottom:20px;">
@@ -347,22 +347,22 @@
                             style="font-size:12px; font-weight:bold; color:#64748b; display:block; margin-bottom:5px;">
                             请选择要生成的学校 (多选):
                         </label><div id="admin-gen-school-list"
-                            style="max-height:100px; overflow-y:auto; background:white; border:1px solid #cbd5e1; border-radius:4px; padding:5px; font-size:12px;"><div style="color:#999; text-align:center; padding:10px;">暂无数据，请先上传成绩</div></div><div style="text-align:right; margin-top:2px;"><a href="javascript:void(0)" onclick="Auth.toggleAllSchools(true)"
+                            style="max-height:100px; overflow-y:auto; background:white; border:1px solid #cbd5e1; border-radius:4px; padding:5px; font-size:12px;"><div style="color:#999; text-align:center; padding:10px;">暂无数据，请先上传成绩</div></div><div style="text-align:right; margin-top:2px;"><a href="#" data-ui-action="admin-toggle-all-schools" data-ui-value="true"
                                 style="font-size:11px; color:var(--primary);">全选</a> /
-                            <a href="javascript:void(0)" onclick="Auth.toggleAllSchools(false)"
-                                style="font-size:11px; color:var(--primary);">清空</a></div></div><button class="btn btn-primary" onclick="Auth.generateTeacherAccounts()" style="width:100%;"><i class="ti ti-user-plus"></i> 一键生成所有账号 (教师)
-                    </button><button class="btn btn-primary" onclick="Auth.generateParentAccounts()" style="width:100%; margin-top:5px;"><i class="ti ti-users"></i> 一键生成所有账号 (家长)
-                    </button><button class="btn btn-green" onclick="Auth.exportAccounts()"
+                            <a href="#" data-ui-action="admin-toggle-all-schools" data-ui-value="false"
+                                style="font-size:11px; color:var(--primary);">清空</a></div></div><button class="btn btn-primary" type="button" data-ui-action="admin-generate-teacher-accounts" style="width:100%;"><i class="ti ti-user-plus"></i> 一键生成所有账号 (教师)
+                    </button><button class="btn btn-primary" type="button" data-ui-action="admin-generate-parent-accounts" style="width:100%; margin-top:5px;"><i class="ti ti-users"></i> 一键生成所有账号 (家长)
+                    </button><button class="btn btn-green" type="button" data-ui-action="admin-export-accounts"
                         style="width:100%; background:#059669; color:white;"><i class="ti ti-file-export"></i> 导出账号密码表 (Excel)
-                    </button><button class="btn btn-blue" onclick="Auth.syncBatchToCloud()"
+                    </button><button class="btn btn-blue" type="button" data-ui-action="admin-sync-accounts"
                         style="width:100%; background:#2563eb; color:white; margin-top:5px;"><i class="ti ti-cloud-upload"></i> 一键同步所有账号到云端 (Database)
                     </button><p style="font-size:11px; color:#64748b; margin-top:2px; text-align:center;">
                         将本地生成的账号批量写入 Supabase 数据库，以便用户登录。
-                    </p><div style="margin-top:10px; border-top:1px dashed #e2e8f0; padding-top:10px;"><button class="btn btn-danger" onclick="Auth.deleteCloudAccounts()"
+                    </p><div style="margin-top:10px; border-top:1px dashed #e2e8f0; padding-top:10px;"><button class="btn btn-danger" type="button" data-ui-action="admin-delete-cloud-accounts"
                             style="width:100%; background:#dc2626; color:white;"><i class="ti ti-trash-x"></i> ⚠️ 清空云端所有普通账号
                         </button><p style="font-size:11px; color:#ef4444; margin-top:2px; text-align:center;">
                             警告：将删除云端所有家长和教师账号（保留管理员）。
-                        </p></div><hr style="margin: 15px 0; border:0; border-top:1px dashed #ccc;"><h4 style="margin-bottom:10px; color:#7c3aed;">🚀 发送给家长</h4><button class="btn btn-purple" onclick="Packager.exportDistributableHTML()"
+                        </p></div><hr style="margin: 15px 0; border:0; border-top:1px dashed #ccc;"><h4 style="margin-bottom:10px; color:#7c3aed;">🚀 发送给家长</h4><button class="btn btn-purple" type="button" data-ui-action="admin-export-distributable-html"
                         style="width:100%; background:#7c3aed; color:white; font-weight:bold;"><i class="ti ti-package"></i> 生成可分发网页 (含数据)
                     </button><p
                         style="font-size:11px; color:#7c3aed; margin-top:5px; background:#f3e8ff; padding:5px; border-radius:4px;">
@@ -371,37 +371,37 @@
                         教师账号 = 教师姓名（一次性临时密码）<br>
                         家长账号 = 学生姓名（一次性临时密码）
                     </p></div><div
-                    style="background:#fff; padding:15px; border:1px solid #cbd5e1; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;"><h4 style="margin:0; color:#0369a1;"><i class="ti ti-cloud-upload"></i> 2. 添加/管理云端账号</h4><div style="display:flex; gap:5px;"><button class="btn btn-sm btn-green" onclick="AccountExcel.downloadTemplate()"
+                    style="background:#fff; padding:15px; border:1px solid #cbd5e1; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;"><h4 style="margin:0; color:#0369a1;"><i class="ti ti-cloud-upload"></i> 2. 添加/管理云端账号</h4><div style="display:flex; gap:5px;"><button class="btn btn-sm btn-green" type="button" data-ui-action="admin-download-account-template"
                                 title="下载导入模板"><i class="ti ti-download"></i> 模板
                             </button><button class="btn btn-sm btn-orange"
                                 data-pick-file="accExcelInput" title="上传Excel批量导入"><i class="ti ti-file-import"></i> 导入
                             </button><input type="file" id="accExcelInput" accept=".xlsx,.xls" hidden
-                                onchange="AccountExcel.upload(this)"></div></div><div id="cloud-account-migration-card"
-                        style="margin-bottom:12px; padding:12px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;"><div><div style="font-size:14px; font-weight:700; color:#1d4ed8;">Cloudflare 账号迁移进度</div><div id="cloud-account-migration-updated" style="font-size:11px; color:#64748b; margin-top:2px;">等待刷新</div></div><div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;"><button class="btn btn-sm btn-green" onclick="Auth.migrateRecoverableAccountsToCloud()"
+                                data-ui-change="account-excel-upload"></div></div><div id="cloud-account-migration-card"
+                        style="margin-bottom:12px; padding:12px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff;"><div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;"><div><div style="font-size:14px; font-weight:700; color:#1d4ed8;">Cloudflare 账号迁移进度</div><div id="cloud-account-migration-updated" style="font-size:11px; color:#64748b; margin-top:2px;">等待刷新</div></div><div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;"><button class="btn btn-sm btn-green" type="button" data-ui-action="admin-migrate-accounts"
                                     style="background:#16a34a; color:white;"><i class="ti ti-key"></i> 补迁当前浏览器账号
-                                </button><button class="btn btn-sm btn-blue" onclick="Auth.refreshCloudAccountMigrationStatus()"
+                                </button><button class="btn btn-sm btn-blue" type="button" data-ui-action="admin-refresh-account-migration"
                                     style="background:#2563eb; color:white;"><i class="ti ti-refresh"></i> 刷新状态
                                 </button></div></div><div id="cloud-account-migration-status" style="font-size:13px; color:#334155; line-height:1.7;">
                             尚未读取迁移状态。
                         </div></div><div style="display:flex; gap:5px; margin-bottom:10px;"><select id="manual-role" style="padding:8px; border:1px solid #ccc; width:30%; font-size:12px;"
-                            onchange="toggleAdminManualInput()"><option value="teacher">👨‍🏫 科任教师</option><option value="class_teacher">📋 班主任</option><option value="grade_director">🚀 级部主任</option><option value="director">🎓 教务主任</option><option value="parent">👨‍👩‍👧 家长</option><option value="admin">🔑 管理员</option></select><input type="text" id="manual-grade" placeholder="级部(如:7)"
+                            data-ui-change="toggle-admin-manual-input"><option value="teacher">👨‍🏫 科任教师</option><option value="class_teacher">📋 班主任</option><option value="grade_director">🚀 级部主任</option><option value="director">🎓 教务主任</option><option value="parent">👨‍👩‍👧 家长</option><option value="admin">🔑 管理员</option></select><input type="text" id="manual-grade" placeholder="级部(如:7)"
                             style="padding:8px; border:1px solid #ccc; width:20%; display:none;"><select id="manual-school" style="padding:8px; border:1px solid #ccc; width:25%;"><option value="">选择所属学校</option></select><input type="text" id="manual-name" placeholder="账号/姓名"
                             style="padding:8px; border:1px solid #ccc; flex:1;"></div><div id="manual-class-wrap" style="margin-bottom:10px; display:none;"><input type="text" id="manual-class" placeholder="输入班级 (如: 701，家长必填)"
                             style="width:100%; padding:8px; border:1px solid #ccc;"></div><div style="display:flex; gap:10px;"><input type="password" id="manual-pass" autocomplete="new-password" placeholder="输入临时密码"
-                            style="padding:8px; border-radius:4px; border:1px solid #ccc; width:60%;"><button class="btn btn-primary" onclick="Auth.addCloudAccount()" style="flex:1;">添加/更新</button></div><p style="font-size:12px; color:#999; margin-top:5px;">提示：直接写入云端数据库。账号必须唯一，首次登录后必须改密。</p></div><div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;"><h4 style="margin-bottom:10px; color:#333;">3. 修改管理员密码</h4><div style="display:flex; gap:10px;"><input type="text" id="new-admin-pass" placeholder="输入新密码"
-                            style="padding:8px; flex:1; border:1px solid #cbd5e1; border-radius:4px;"><button class="btn btn-gray" onclick="changeAdminPass()">确认修改</button></div></div><div
+                            style="padding:8px; border-radius:4px; border:1px solid #ccc; width:60%;"><button class="btn btn-primary" type="button" data-ui-action="admin-add-cloud-account" style="flex:1;">添加/更新</button></div><p style="font-size:12px; color:#999; margin-top:5px;">提示：直接写入云端数据库。账号必须唯一，首次登录后必须改密。</p></div><div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;"><h4 style="margin-bottom:10px; color:#333;">3. 修改管理员密码</h4><div style="display:flex; gap:10px;"><input type="text" id="new-admin-pass" placeholder="输入新密码"
+                            style="padding:8px; flex:1; border:1px solid #cbd5e1; border-radius:4px;"><button class="btn btn-gray" type="button" data-ui-action="admin-change-password">确认修改</button></div></div><div
                     style="background:#f0fdf4; padding:15px; border:1px solid #86efac; border-radius:8px; margin-top:5px;"><h4 style="margin-bottom:10px; color:#166534;"><i class="ti ti-cloud-download"></i> 4. 导出云端所有账号
                         (完整备份)</h4><div style="display:flex; justify-content:space-between; align-items:center;"><p style="font-size:12px; color:#15803d; margin:0; flex:1;">
                             此功能直接从云端数据库下载，包含<strong>批量生成</strong>、<strong>手动添加</strong>及<strong>Excel导入</strong>的所有账号。<br>
                             包含：角色、学校、班级、账号、密码状态，不再导出明文密码。
-                        </p><button class="btn btn-green" onclick="Auth.exportAllCloudAccounts()"
+                        </p><button class="btn btn-green" type="button" data-ui-action="admin-export-cloud-accounts"
                             style="background:#16a34a; color:white; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1);"><i class="ti ti-download"></i> 下载全量账号表
                         </button></div></div></div></div></div><div id="user-password-modal" class="modal" style="display: none; z-index: 70000;"><div class="modal-content" style="max-width: 400px;"><div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;"><h3 style="color:var(--primary); margin:0;"><i class="ti ti-lock"></i> 修改个人密码</h3><button type="button" class="modal-close-btn" aria-label="关闭修改密码弹窗"
                     data-close-modal="user-password-modal">&times;</button></div><div style="display:flex; flex-direction:column; gap:15px;"><div><label style="font-size:12px; font-weight:bold; color:#666;">当前旧密码</label><input type="password" id="upm-old" placeholder="输入当前密码"
                         style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px;"></div><div><label style="font-size:12px; font-weight:bold; color:#666;">新密码 (建议字母+数字)</label><input type="password" id="upm-new" placeholder="输入新密码"
                         style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px;"></div><div><label style="font-size:12px; font-weight:bold; color:#666;">确认新密码</label><input type="password" id="upm-confirm" placeholder="再次输入新密码"
-                        style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px;"></div><button class="btn btn-primary" onclick="submitUserPasswordChange()"
+                        style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px;"></div><button class="btn btn-primary" type="button" data-ui-action="submit-user-password-change"
                     style="padding:12px; margin-top:10px;">
                     确认修改并同步
                 </button></div></div></div><div id="issue-submit-modal" class="modal" style="display: none; z-index: 75000;"><div class="modal-content" style="max-width: 500px;"><div
@@ -417,50 +417,50 @@
                 </div><div><label style="font-size:12px; font-weight:bold; color:#374151;">联系电话 (选填)</label><input type="text" id="issue-contact" placeholder="方便老师回访"
                         style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; margin-top:5px;"></div><div style="display:flex; gap:10px; margin-top:10px;"><button class="btn btn-gray" style="flex:1;"
                         data-close-modal="issue-submit-modal">取消</button><button class="btn btn-primary" style="flex:1; background:#b45309;"
-                        onclick="IssueManager.submit()">🚀 提交申请</button></div></div></div></div><div id="admin-issue-modal" class="modal" style="display: none; z-index: 76000;"><div class="modal-content" style="max-width: 800px; height: 80vh; display: flex; flex-direction: column;"><div
+                        data-ui-action="issue-submit">🚀 提交申请</button></div></div></div></div><div id="admin-issue-modal" class="modal" style="display: none; z-index: 76000;"><div class="modal-content" style="max-width: 800px; height: 80vh; display: flex; flex-direction: column;"><div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;"><div style="display:flex; align-items:center; gap:10px;"><h3 style="color:var(--primary); margin:0;" id="issue-modal-title"><i class="ti ti-bell"></i> 申诉反馈中心
-                    </h3><button class="btn btn-sm btn-gray" onclick="IssueManager.loadIssues()"><i
+                    </h3><button class="btn btn-sm btn-gray" type="button" data-ui-action="issue-load"><i
                             class="ti ti-refresh"></i> 刷新</button></div><button type="button" class="modal-close-btn" aria-label="关闭申诉反馈中心"
-                    data-close-modal="admin-issue-modal">&times;</button></div><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div style="display:flex; gap:10px;" id="issue-normal-actions"><button class="btn btn-sm btn-danger" onclick="IssueManager.batchSoftDelete()"><i class="ti ti-trash"></i> 批量删除 (放入回收站)
-                    </button><div style="font-size:12px; color:#666; display:flex; align-items:center;"><input type="checkbox" id="issue-check-all" onchange="IssueManager.toggleSelectAll(this)"
+                    data-close-modal="admin-issue-modal">&times;</button></div><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div style="display:flex; gap:10px;" id="issue-normal-actions"><button class="btn btn-sm btn-danger" type="button" data-ui-action="issue-soft-delete"><i class="ti ti-trash"></i> 批量删除 (放入回收站)
+                    </button><div style="font-size:12px; color:#666; display:flex; align-items:center;"><input type="checkbox" id="issue-check-all" data-ui-change="issue-toggle-select-all"
                             style="margin-right:5px;"> 全选
                     </div></div><div style="display:none; gap:10px;" id="issue-history-actions"><button class="btn btn-sm btn-danger" style="background:#b91c1c; border-color:#991b1b;"
-                        onclick="IssueManager.batchHardDelete()"><i class="ti ti-trash-x"></i> 彻底粉碎选中
-                    </button><button class="btn btn-sm btn-green" onclick="IssueManager.batchRestore()"><i class="ti ti-rotate"></i> 还原选中
+                        data-ui-action="issue-hard-delete"><i class="ti ti-trash-x"></i> 彻底粉碎选中
+                    </button><button class="btn btn-sm btn-green" type="button" data-ui-action="issue-restore"><i class="ti ti-rotate"></i> 还原选中
                     </button><div style="font-size:12px; color:#666; display:flex; align-items:center;"><input type="checkbox" id="issue-history-check-all"
-                            onchange="IssueManager.toggleSelectAll(this)" style="margin-right:5px;"> 全选
+                            data-ui-change="issue-toggle-select-all" style="margin-right:5px;"> 全选
                     </div></div><div><button class="btn btn-sm btn-gray" id="btn-issue-history"
-                        onclick="IssueManager.toggleHistoryView()"><i class="ti ti-history"></i> 查看删除历史
+                        data-ui-action="issue-toggle-history"><i class="ti ti-history"></i> 查看删除历史
                     </button></div></div><div id="issue-tip-bar"
                 style="background:#fffbeb; color:#92400e; padding:10px; border-radius:6px; font-size:12px; margin-bottom:10px;"><i class="ti ti-info-circle"></i> 提示：处理完问题后，请点击“标记已阅/解决”。点击“批量删除”会将记录移入历史记录。
             </div><div id="admin-issue-list"
                 style="flex:1; overflow-y:auto; background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #e5e7eb;"></div></div></div><div id="admin-log-modal" class="modal" style="display: none; z-index: 77000;"><div class="modal-content" style="max-width: 900px; height: 85vh; display: flex; flex-direction: column;"><div
-                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;"><div style="display:flex; align-items:center; gap:10px;"><h3 style="color:#333; margin:0;" id="log-modal-title"><i class="ti ti-history"></i> 系统操作日志</h3><button class="btn btn-sm btn-gray" onclick="Logger.loadLogs()"><i class="ti ti-refresh"></i>
+                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;"><div style="display:flex; align-items:center; gap:10px;"><h3 style="color:#333; margin:0;" id="log-modal-title"><i class="ti ti-history"></i> 系统操作日志</h3><button class="btn btn-sm btn-gray" type="button" data-ui-action="log-load"><i class="ti ti-refresh"></i>
                         刷新</button></div><button type="button" class="modal-close-btn" aria-label="关闭日志中心"
-                    data-close-modal="admin-log-modal">&times;</button></div><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div style="display:flex; gap:10px;" id="log-normal-actions"><button class="btn btn-sm btn-danger" onclick="Logger.batchSoftDelete()"><i class="ti ti-trash"></i> 批量删除
-                    </button><div style="font-size:12px; color:#666; display:flex; align-items:center;"><input type="checkbox" id="log-check-all" onchange="Logger.toggleSelectAll(this)"
+                    data-close-modal="admin-log-modal">&times;</button></div><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div style="display:flex; gap:10px;" id="log-normal-actions"><button class="btn btn-sm btn-danger" type="button" data-ui-action="log-soft-delete"><i class="ti ti-trash"></i> 批量删除
+                    </button><div style="font-size:12px; color:#666; display:flex; align-items:center;"><input type="checkbox" id="log-check-all" data-ui-change="log-toggle-select-all"
                             style="margin-right:5px;"> 全选
                     </div></div><div style="display:none; gap:10px;" id="log-history-actions"><button class="btn btn-sm btn-danger" style="background:#b91c1c;"
-                        onclick="Logger.batchHardDelete()"><i class="ti ti-trash-x"></i> 彻底粉碎选中
-                    </button><button class="btn btn-sm btn-green" onclick="Logger.batchRestore()"><i class="ti ti-rotate"></i> 还原选中
-                    </button><div style="font-size:12px; color:#666; display:flex; align-items:center;"><input type="checkbox" id="log-history-check-all" onchange="Logger.toggleSelectAll(this)"
+                        data-ui-action="log-hard-delete"><i class="ti ti-trash-x"></i> 彻底粉碎选中
+                    </button><button class="btn btn-sm btn-green" type="button" data-ui-action="log-restore"><i class="ti ti-rotate"></i> 还原选中
+                    </button><div style="font-size:12px; color:#666; display:flex; align-items:center;"><input type="checkbox" id="log-history-check-all" data-ui-change="log-toggle-select-all"
                             style="margin-right:5px;"> 全选
-                    </div></div><div><button class="btn btn-sm btn-gray" id="btn-log-history" onclick="Logger.toggleHistoryView()"><i class="ti ti-recycle"></i> 日志回收站
+                    </div></div><div><button class="btn btn-sm btn-gray" type="button" id="btn-log-history" data-ui-action="log-toggle-history"><i class="ti ti-recycle"></i> 日志回收站
                     </button></div></div><div id="admin-log-list"
                 style="flex:1; overflow-y:auto; background:#f9fafb; padding:0; border:1px solid #e5e7eb; border-radius:4px;"></div><div style="padding-top:10px; font-size:12px; color:#999; text-align:right;">
                 显示最近 100 条记录
             </div></div></div><div id="account-manager-modal" class="modal" style="display: none; z-index: 78000;"><div class="modal-content" style="max-width: 700px; height: 80vh; display: flex; flex-direction: column;"><div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;"><h3 style="color:var(--primary); margin:0;"><i class="ti ti-user-search"></i> 账号搜索与管理</h3><button type="button" class="modal-close-btn" aria-label="关闭账号管理弹窗"
                     data-close-modal="account-manager-modal">&times;</button></div><div id="account-edit-panel"
-                style="display:none; background:#fff7ed; padding:14px; border-radius:8px; border:1px solid #fed7aa; margin-bottom:15px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><strong id="acc-edit-title" style="color:#9a3412;">修改账号信息</strong><button type="button" class="btn btn-sm btn-gray" onclick="AccountManager.cancelEdit && AccountManager.cancelEdit()">取消</button></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><label style="font-size:12px; color:#475569;">
+                style="display:none; background:#fff7ed; padding:14px; border-radius:8px; border:1px solid #fed7aa; margin-bottom:15px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><strong id="acc-edit-title" style="color:#9a3412;">修改账号信息</strong><button type="button" class="btn btn-sm btn-gray" data-ui-action="account-cancel-edit">取消</button></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><label style="font-size:12px; color:#475569;">
                         角色权限
                         <select id="acc-edit-role" style="margin-top:4px; width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></select></label><label style="font-size:12px; color:#475569;">
                         所属学校
                         <select id="acc-edit-school" style="margin-top:4px; width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></select></label><label id="acc-edit-class-wrap" style="font-size:12px; color:#475569; grid-column:1 / -1;"><span id="acc-edit-class-label">班级 / 范围</span><input type="text" id="acc-edit-class" placeholder="例如: 9.1 或 9"
-                            style="margin-top:4px; width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></label></div><div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;"><button type="button" class="btn btn-primary" onclick="AccountManager.saveInlineEdit && AccountManager.saveInlineEdit()">保存修改</button></div></div><div
+                            style="margin-top:4px; width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></label></div><div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;"><button type="button" class="btn btn-primary" data-ui-action="account-save-edit">保存修改</button></div></div><div
                 style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;"><div style="display:flex; gap:10px;"><input type="search" id="acc-search-input" name="account-search" aria-label="搜索姓名或账号" autocomplete="off" placeholder="输入姓名或账号进行查找…"
                         style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:6px;"
-                        onkeydown="if(event.key==='Enter') AccountManager.search()"><button class="btn btn-primary" onclick="AccountManager.search()"><i class="ti ti-search"></i> 搜索
+                        data-ui-enter="account-search"><button class="btn btn-primary" type="button" data-ui-action="account-search"><i class="ti ti-search"></i> 搜索
                     </button></div><div id="acc-permission-hint" style="font-size:12px; color:#64748b; margin-top:8px;"></div></div><div class="table-wrap" style="flex:1; overflow-y:auto; box-shadow:none; border:1px solid #e2e8f0;"><table id="acc-result-table"><thead><tr><th>账号/姓名</th><th>角色</th><th>学校</th><th>班级/范围</th><th>密码状态</th><th>操作</th></tr></thead><tbody><tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">请输入关键字搜索</td></tr></tbody></table></div></div></div><div id="login-session-modal" class="modal" style="display:none; z-index:78500;"><div class="modal-content" style="width:min(980px,94vw); max-width:980px; height:min(82vh,760px); display:flex; flex-direction:column; min-height:0;"><div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:14px;"><div><h3 style="margin:0; color:#0f172a;"><i class="ti ti-devices"></i> 登录状态与设备记录</h3><p id="login-session-subtitle" style="margin:6px 0 0; color:#64748b; font-size:13px;">查看当前账号近期在哪些设备上登录。</p></div><button type="button" class="modal-close-btn" aria-label="关闭登录状态弹窗"
                     data-login-session-close="1">&times;</button></div><div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px;"><h4 style="margin:0; color:#1e3a8a;">我的最近登录</h4><button type="button" class="btn btn-sm btn-blue" data-login-session-load="self"><i class="ti ti-refresh"></i> 刷新
                 </button></div><div class="table-wrap" style="box-shadow:none; border:1px solid #e2e8f0; max-height:230px; overflow:auto; margin-bottom:14px;"><table id="login-session-self-table" class="comparison-table" style="font-size:12px; min-width:760px;"><thead><tr><th>设备</th><th>类型</th><th>学校</th><th>班级/范围</th><th>登录时间</th><th>会话到期</th></tr></thead><tbody><tr><td colspan="6" style="text-align:center; padding:28px; color:#94a3b8;">打开后自动读取</td></tr></tbody></table></div><div id="login-session-admin-panel" style="display:none; min-height:0; flex:1;"><div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px;"><h4 style="margin:0; color:#7c2d12;">全部账号最近登录</h4><button type="button" class="btn btn-sm btn-orange" data-login-session-load="all"><i class="ti ti-refresh"></i> 刷新全部

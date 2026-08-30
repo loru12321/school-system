@@ -13,6 +13,7 @@ const teacherSyncEntry = read('public/assets/js/teacher-sync-entry-runtime.js');
 const moduleEntry = read('public/assets/js/module-entry-runtime.js');
 const indexHtml = read('src/index.html');
 const stylesheet = read('src/assets/css/main.css');
+const uiActions = read('public/assets/js/ui-actions-runtime.js');
 
 [
     'preflight: function',
@@ -166,6 +167,28 @@ assert.ok(freshmanInsight.includes('window.FB_preflight = preflight'), 'freshman
 assert.ok(freshmanInsight.includes('分班条件检查通过'), 'freshman insight should give an actionable result');
 assert.ok(freshmanInsight.includes('[data-fb-insight-action]'), 'freshman review action should use a scoped declarative binding');
 assert.ok(runtimeLoader.includes("bootEntry('freshman-constraint-insight', bootJs('freshman-constraint-insight-runtime.js'))"), 'freshman review must load with the existing demand runtime');
+
+[
+    'admin-view-logs',
+    'admin-generate-teacher-accounts',
+    'admin-generate-parent-accounts',
+    'admin-download-account-template',
+    'admin-add-cloud-account',
+    'issue-submit',
+    'issue-toggle-select-all',
+    'log-toggle-select-all',
+    'account-save-edit',
+    'account-search'
+].forEach((action) => assert.ok(uiActions.includes(`'${action}'`), `ui-actions should register ${action}`));
+assert.ok(uiActions.includes('const callObject ='), 'ui-actions should invoke object facades with their receiver context');
+[
+    'data-ui-action="admin-view-logs"',
+    'data-ui-action="admin-generate-teacher-accounts"',
+    'data-ui-change="account-excel-upload"',
+    'data-ui-action="issue-soft-delete"',
+    'data-ui-change="log-toggle-select-all"',
+    'data-ui-enter="account-search"'
+].forEach((token) => assert.ok(indexHtml.includes(token), `admin markup should include ${token}`));
 
 [
     '.scheduler-preflight',
