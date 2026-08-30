@@ -53,14 +53,14 @@ assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 's
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-// 174: the freshman module's six upload/data-source handlers moved into
+// 155: the freshman module's upload/data-source and seat-operation handlers moved into
 // freshman-exam-runtime.js (data-fb-pick / data-fb-change); the 17 modal-close,
 // 12 file-pick, 15 showModuleHelp, 11 scrollToAnchor and 44 DataManager
 // boilerplate handlers plus the four openTeacherSync entry points all moved
 // into delegated bindings in app-foundation-runtime.js. The mobile/search,
 // shell, starter-hub and workspace-drawer actions below use the shared
 // data-ui-* dispatcher. Ratchet only downward from here.
-assert.ok(inlineHandlerCount <= 174, `inline event handler count grew: ${inlineHandlerCount} > 174`);
+assert.ok(inlineHandlerCount <= 155, `inline event handler count grew: ${inlineHandlerCount} > 155`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 // The freshman module's upload/data-source controls are bound declaratively in

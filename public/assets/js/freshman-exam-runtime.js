@@ -1422,6 +1422,25 @@ function FB_bindDeclarativeHandlers(root = document) {
             if (action === 'clear-transfers-in') FB_clearTransfersIn();
             if (action === 'remove-transfer-in') FB_removeTransferInStudent(el.dataset.fbIndex);
             if (action === 'download-related-template') FB_downloadRelatedRosterTemplate();
+            // 新生分班主操作与座位编排控件也走同一白名单委托，避免移动端被内联事件阻塞。
+            if (action === 'save-local') FB_saveToLocal();
+            if (action === 'export-result') FB_exportResult();
+            if (action === 'run-division') FB_runDivision();
+            if (action === 'export-result-balance') FB_exportResultWithBalance();
+            if (action === 'close-seat') document.getElementById('fb_seat_view')?.classList.add('hidden');
+            if (action === 'add-conflict-pair') addConflictPair('fb');
+            if (action === 'add-bind-pair') addBindPair('fb');
+            if (action === 'history-undo') {
+                try { if (typeof HistoryManager !== 'undefined') HistoryManager.undo(); } catch (_) {}
+            }
+            if (action === 'history-redo') {
+                try { if (typeof HistoryManager !== 'undefined') HistoryManager.redo(); } catch (_) {}
+            }
+            if (action === 'save-scenario') FB_saveScenario();
+            if (action === 'delete-scenario') FB_deleteScenario();
+            if (action === 'toggle-seat-rotation') FB_toggleViewRotation();
+            if (action === 'auto-seat') FB_autoSeatAlgo();
+            if (action === 'print-seat') window.print();
         });
     });
     // 班级卡片是运行时动态生成的，违纪人数按钮使用文档级委托确保
@@ -1553,11 +1572,14 @@ async function FB_runDivision() {
         return window.UI.alert(`第 ${overloadedClass + 1} 班已有 ${fixedCounts[overloadedClass]} 名锁定学生，超过当前人数上限 ${maxPerClass} 人；请调整指定班级或增加班级数。`);
     }
     FB_refreshFixedAssignmentUI();
-    const btn = document.querySelector('button[onclick="FB_runDivision()"]');
+    const btn = document.querySelector('[data-fb-action="run-division"]')
+        || document.querySelector('button[onclick="FB_runDivision()"]');
 
     // UI 反馈
-    btn.innerHTML = '⏳ 正在运算多套方案...';
-    btn.disabled = true;
+    if (btn) {
+        btn.innerHTML = '⏳ 正在运算多套方案...';
+        btn.disabled = true;
+    }
 
     // 使用 setTimeout 让 UI 有机会渲染 Loading 状态
     setTimeout(async () => {
@@ -1625,8 +1647,10 @@ async function FB_runDivision() {
         if (window.UI && typeof window.UI.alert === 'function') await window.UI.alert(`分班方案生成失败：${message}`, 'error');
         else window.alert(`分班方案生成失败：${message}`);
       } finally {
-        btn.innerHTML = '🚀 开始智能分班';
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = '🚀 开始智能分班';
+            btn.disabled = false;
+        }
       }
     }, 100);
 }
@@ -3375,10 +3399,16 @@ function FB_autoSeatAlgo() {
 function FB_renderSeatMap() {
     const cls = FB_CLASSES[FB_CUR_CLASS_IDX];
     const container = document.getElementById('seat_map_container');
+    // 座位区只在打开班级卡片后存在；模块切换/移动端重绘期间可能先收到一次
+    // change 事件，此时应安全退出而不是把整个分班模块打成 pageerror。
+    if (!cls || !container) return;
     container.innerHTML = '';
 
-    const groups = parseInt(document.getElementById('seat_opt_groups').value);
-    const colsPerGroup = parseInt(document.getElementById('seat_opt_cols').value);
+    const groupsInput = document.getElementById('seat_opt_groups');
+    const colsInput = document.getElementById('seat_opt_cols');
+    if (!groupsInput || !colsInput) return;
+    const groups = parseInt(groupsInput.value);
+    const colsPerGroup = parseInt(colsInput.value);
 
     container.style.display = 'grid';
     container.style.gridTemplateColumns = `repeat(${groups}, 1fr)`;

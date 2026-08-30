@@ -128,6 +128,11 @@ assert.ok(indexHtml.includes('data-fb-pick="fbTransferInInput"'), 'freshman UI s
 assert.ok(indexHtml.includes('accept=".xlsx,.xls,.csv" hidden data-fb-change="FB_loadRelatedRosterPack"'), 'freshman related roster package should accept CSV uploads');
 assert.ok(freshman.includes('inferSingleSheet'), 'freshman related roster package should infer a single-sheet upload from filename or headers');
 assert.ok(indexHtml.includes('data-fb-pick="fbFixedClassInput"'), 'freshman UI should provide a fixed-class roster upload');
+assert.ok(indexHtml.includes('data-fb-action="run-division"'), 'freshman generation should use declarative action binding');
+assert.ok(indexHtml.includes('data-fb-action="export-result-balance"'), 'freshman balance export should use declarative action binding');
+assert.ok(indexHtml.includes('data-fb-action="auto-seat"'), 'freshman seat generation should use declarative action binding');
+assert.ok(freshman.includes("action === 'run-division'"), 'freshman binder should dispatch generation action');
+assert.ok(freshman.includes("action === 'auto-seat'"), 'freshman binder should dispatch seat generation action');
 assert.ok(freshman.includes('function FB_loadTransferList'), 'freshman runtime should parse transfer-out roster uploads');
 assert.ok(freshman.includes('function FB_loadTransferInList'), 'freshman runtime should parse transfer-in roster uploads');
 assert.ok(freshman.includes('function FB_loadFixedClassList'), 'freshman runtime should parse fixed-class roster uploads');

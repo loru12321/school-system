@@ -56,7 +56,10 @@ const budgets = {
     // small intentional amount while keeping the single-file bundle bounded.
     // 2026-08-30: individual related-list uploads now accept CSV, reject empty
     // sheets, and report duplicate rows; retain a narrow 500B headroom.
-    ltHtmlBrotli: 345_500,
+    // 2026-08-30: freshman seat and scenario actions now use declarative event
+    // delegation so mobile controls remain reliable; allow the resulting
+    // single-file bundle growth without relaxing the broader size guard.
+    ltHtmlBrotli: 346_000,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,
