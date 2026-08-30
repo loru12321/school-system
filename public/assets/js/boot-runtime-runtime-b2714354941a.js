@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-fd35d0659941';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-b2714354941a';
 
 // 每次进入都重新验证账号密码和届别，仅清理当前会话/工作区身份。
 (function forceFreshLoginEntry() {
@@ -291,7 +291,7 @@ var APP_MODULES = [
 'cohort-db-core-runtime.js',
 ].map(bootJs);
 
-var APP_MODULE_PRELOAD_LIMIT = 36;
+var APP_MODULE_PRELOAD_LIMIT = 24;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 4;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 34;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
@@ -433,6 +433,7 @@ try {
 if (isRuntimeMobileViewport() || getRuntimeLoadProfile() === 'lazy') {
     return APP_MODULE_MOBILE_PRELOAD_LIMIT;
 }
+if (!shouldPrefetchLateAppCoreModules()) return 8;
 return APP_MODULE_PRELOAD_LIMIT;
 }
 

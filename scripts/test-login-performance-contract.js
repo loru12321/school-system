@@ -106,6 +106,16 @@ assert.match(
 );
 assert.match(
   bootRuntimeJs,
+  /var APP_MODULE_PRELOAD_LIMIT = 24;/,
+  'ordinary desktop boot should keep the critical preload set bounded'
+);
+assert.match(
+  bootRuntimeJs,
+  /if\s*\(!shouldPrefetchLateAppCoreModules\(\)\)\s*return\s+8;/,
+  'constrained connections should use a smaller preload set'
+);
+assert.match(
+  bootRuntimeJs,
   /var LOGIN_MODULE_PREFETCH_DELAY_MS = 2200;/,
   'login page module prefetch should wait for idle time instead of competing with first paint'
 );

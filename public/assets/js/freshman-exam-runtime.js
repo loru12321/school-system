@@ -823,22 +823,40 @@ function fbReadRosterUpload(input, label, onRows) {
     reader.onload = (e) => {
         try {
             const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]).map(fbRosterRow).filter(Boolean);
-            onRows(rows);
+            const firstSheet = wb.Sheets[wb.SheetNames?.[0]];
+            const rows = firstSheet
+                ? XLSX.utils.sheet_to_json(firstSheet, { defval: '' }).map(fbRosterRow).filter(Boolean)
+                : [];
+            if (!rows.length) throw new Error('未找到有效姓名数据，请检查首行是否包含“姓名”列。');
+            const result = onRows(rows) || {};
             FB_renderRosterStatus();
-            window.UI.alert(`✅ ${label}导入 ${rows.length} 人。`, 'success');
+            const added = Number.isFinite(result.added) ? result.added : rows.length;
+            const duplicates = Math.max(0, rows.length - added);
+            const suffix = duplicates ? `，重复 ${duplicates} 人已跳过` : '';
+            window.UI.alert(`✅ ${label}读取 ${rows.length} 人，新增 ${added} 人${suffix}。`, duplicates ? 'warning' : 'success');
         } catch (err) { window.UI.alert(`${label}读取失败：` + err.message, 'error'); }
+        finally { input.value = ''; }
     };
     reader.readAsArrayBuffer(file);
 }
 function FB_loadTransferList(input) {
     fbReadRosterUpload(input, '转出学生名单', (rows) => {
-        rows.forEach(row => { if (!FB_TRANSFER_STUDENTS.some(s => (row.id && s.id && row.id === s.id) || s.name === row.name)) FB_TRANSFER_STUDENTS.push(row); });
+        let added = 0;
+        rows.forEach(row => {
+            if (FB_TRANSFER_STUDENTS.some(s => (row.id && s.id && row.id === s.id) || s.name === row.name)) return;
+            FB_TRANSFER_STUDENTS.push(row); added += 1;
+        });
+        return { added };
     });
 }
 function FB_loadTransferInList(input) {
     fbReadRosterUpload(input, '转入学生名单', (rows) => {
-        rows.forEach(row => { if (!FB_TRANSFER_IN_STUDENTS.some(s => (row.id && s.id && row.id === s.id) || (s.name === row.name && (!row.gender || !s.gender || row.gender === s.gender)))) FB_TRANSFER_IN_STUDENTS.push(row); });
+        let added = 0;
+        rows.forEach(row => {
+            if (FB_TRANSFER_IN_STUDENTS.some(s => (row.id && s.id && row.id === s.id) || (s.name === row.name && (!row.gender || !s.gender || row.gender === s.gender)))) return;
+            FB_TRANSFER_IN_STUDENTS.push(row); added += 1;
+        });
+        return { added };
     });
 }
 function FB_addDropoutStudent() {
@@ -874,12 +892,14 @@ function FB_loadRosterList(input) {
         try {
             const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
             FB_ROSTER_ROWS = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]).map(fbRosterRow).filter(Boolean);
+            if (!FB_ROSTER_ROWS.length) throw new Error('未找到有效姓名数据，请检查首行是否包含“姓名”列。');
             FB_ROSTER_RECONCILIATION = null;
             FB_renderRosterStatus();
             window.UI.alert(`✅ 学籍名单导入 ${FB_ROSTER_ROWS.length} 人。`, 'success');
             // 允许用户修正后再次选择同一个文件时仍触发 change。
             input.value = '';
         } catch (err) { window.UI.alert('学籍名单读取失败：' + err.message, 'error'); }
+        finally { input.value = ''; }
     };
     reader.readAsArrayBuffer(file);
 }
@@ -890,9 +910,11 @@ function FB_loadDropoutList(input) {
         try {
             const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
             FB_DROPOUT_STUDENTS = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]).map(fbRosterRow).filter(Boolean);
+            if (!FB_DROPOUT_STUDENTS.length) throw new Error('未找到有效姓名数据，请检查首行是否包含“姓名”列。');
             FB_renderRosterStatus();
             window.UI.alert(`✅ 辍学名单导入 ${FB_DROPOUT_STUDENTS.length} 人；命中的考试学生将改为后置均衡分配。`, 'success');
         } catch (err) { window.UI.alert('辍学名单读取失败：' + err.message, 'error'); }
+        finally { input.value = ''; }
     };
     reader.readAsArrayBuffer(file);
 }
@@ -1253,7 +1275,7 @@ function FB_loadGenderList(input) {
     reader.onload = function (e) {
         try {
             const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
             FB_GENDER_MAP = {}; FB_GENDER_NAMES = [];
             const seen = new Map();
             json.forEach((r) => {
@@ -1271,9 +1293,11 @@ function FB_loadGenderList(input) {
             const dups = [...seen.entries()].filter(([, c]) => c > 1).map(([n]) => n);
             let msg = `✅ 性别名单导入 ${FB_GENDER_NAMES.length} 人。`;
             if (dups.length) msg += `\n⚠️ 检测到 ${dups.length} 个重名：${dups.slice(0, 8).join('、')}${dups.length > 8 ? '…' : ''}\n重名建议在名单中补「考号」列以精确匹配。`;
+            if (!FB_GENDER_NAMES.length) throw new Error('未找到有效的姓名/性别数据，请检查首行是否包含“姓名”和“性别”列。');
             window.UI.alert(msg);
             FB_updateAssemblyStatus();
         } catch (err) { window.UI.alert('性别名单读取失败：' + err.message); }
+        finally { input.value = ''; }
     };
     reader.readAsArrayBuffer(file);
 }
@@ -1284,7 +1308,7 @@ function FB_loadViolationList(input) {
     reader.onload = function (e) {
         try {
             const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
             FB_VIOLATION_SET = {}; FB_VIOLATION_NAMES = [];
             const seen = new Map();
             json.forEach((r) => {
@@ -1300,9 +1324,11 @@ function FB_loadViolationList(input) {
             const dups = [...seen.entries()].filter(([, c]) => c > 1).map(([n]) => n);
             let msg = `✅ 违纪名单导入 ${FB_VIOLATION_NAMES.length} 人。`;
             if (dups.length) msg += `\n⚠️ 检测到 ${dups.length} 个重名：${dups.slice(0, 8).join('、')}${dups.length > 8 ? '…' : ''}\n重名建议补「考号」列。`;
+            if (!FB_VIOLATION_NAMES.length) throw new Error('未找到有效的姓名数据，请检查首行是否包含“姓名”列。');
             window.UI.alert(msg);
             FB_updateAssemblyStatus();
         } catch (err) { window.UI.alert('违纪名单读取失败：' + err.message); }
+        finally { input.value = ''; }
     };
     reader.readAsArrayBuffer(file);
 }

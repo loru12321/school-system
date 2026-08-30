@@ -54,7 +54,9 @@ const budgets = {
     // amount to the offline bundle.
     // 2026-08-30: related-roster pack upload and its workbook template add a
     // small intentional amount while keeping the single-file bundle bounded.
-    ltHtmlBrotli: 345_000,
+    // 2026-08-30: individual related-list uploads now accept CSV, reject empty
+    // sheets, and report duplicate rows; retain a narrow 500B headroom.
+    ltHtmlBrotli: 345_500,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,
