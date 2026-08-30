@@ -57,6 +57,10 @@ assert.ok(dialogRuntime.includes('UI.confirm = async function'), 'shared UI shou
 assert.ok(dialogRuntime.includes('UI.prompt = async function'), 'shared UI should expose async prompt from dialog runtime');
 assert.ok(appRuntime.includes('const UI = Object.assign(window.UI || {}, {'), 'app.js should extend the shared UI object instead of owning dialog APIs');
 assert.ok(appRuntime.includes('window.UI = UI;'), 'app.js should publish loading and toast helpers on window.UI');
+assert.ok(appRuntime.includes('async function appConfirmDialog(message, options = {})'), 'app.js should expose a shared confirm helper for high-frequency flows');
+assert.ok(appRuntime.includes('if (!options.skipConfirm && !await appConfirmDialog('), 'cohort switching should use the shared confirm dialog');
+assert.ok(appRuntime.includes('const ok = await appConfirmDialog(`⚠️ 检测到考试批次'), 'score upload overwrite should use the shared confirm dialog');
+assert.ok(appRuntime.includes('return appAlertDialog("⛔ 当前考试已封存，禁止上传新数据", \'warning\')'), 'score upload guards should use the shared alert dialog');
 [
   'window.alert(String(message ||',
   'window.confirm(String(message ||',

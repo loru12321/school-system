@@ -43,6 +43,18 @@ const UI = Object.assign(window.UI || {}, {
 });
 window.UI = UI;
 
+// Shared non-blocking dialogs keep mobile browsers responsive.  The dialog
+// runtime is loaded before app.js; fail closed if it is unavailable rather
+// than reintroducing synchronous native prompts that can freeze the page.
+function appAlertDialog(message, type = 'info') {
+    if (window.UI && typeof window.UI.alert === 'function') return window.UI.alert(message, type);
+    return Promise.resolve(false);
+}
+async function appConfirmDialog(message, options = {}) {
+    if (window.UI && typeof window.UI.confirm === 'function') return !!(await window.UI.confirm(message, options));
+    return false;
+}
+
 
 const EdgeGateway = window.EdgeGateway || {};
 if (!window.EdgeGateway) window.EdgeGateway = EdgeGateway;
@@ -1998,7 +2010,11 @@ async function switchCohort(cohortId, options = {}) {
         return true;
     }
 
-    if (!options.skipConfirm && !confirm("⚠️ 正在切换届别档案...\n\n切换前请确保当前工作已保存（数据会自动保存），否则未同步的修改可能丢失。\n\n确定切换吗？")) {
+    if (!options.skipConfirm && !await appConfirmDialog("⚠️ 正在切换届别档案...\n\n切换前请确保当前工作已保存（数据会自动保存），否则未同步的修改可能丢失。\n\n确定切换吗？", {
+        title: '切换届别档案',
+        confirmText: '继续切换',
+        cancelText: '取消'
+    })) {
         const selector = document.getElementById('cohort-selector');
         if (selector) selector.value = readWorkspaceCohortId() || '';
         return false;
@@ -4892,9 +4908,9 @@ function isScoreImportInProgress() {
     return true;
 }
 
-document.getElementById('fileInput').addEventListener('change', function (e) {
-    if (isArchiveLocked()) return alert("⛔ 当前考试已封存，禁止上传新数据");
-    if (!CURRENT_COHORT_ID) return alert("请先选择或新建届别");
+document.getElementById('fileInput').addEventListener('change', async function (e) {
+    if (isArchiveLocked()) return appAlertDialog("⛔ 当前考试已封存，禁止上传新数据", 'warning');
+    if (!CURRENT_COHORT_ID) return appAlertDialog("请先选择或新建届别", 'warning');
     const inputEl = e.target;
     const files = Array.from(inputEl?.files || []);
     if (!files.length) return;
@@ -4918,7 +4934,11 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
     const hasExistingData = existingRows > 0;
     const shouldOverwriteExistingExam = hasExistingData;
     if (hasExistingData) {
-        const ok = confirm(`⚠️ 检测到考试批次「${currentExamId}」在${existingSourceLabel}已存在 ${existingRows} 条成绩数据。\n继续上传将覆盖该批次原数据，是否继续？`);
+        const ok = await appConfirmDialog(`⚠️ 检测到考试批次「${currentExamId}」在${existingSourceLabel}已存在 ${existingRows} 条成绩数据。\n继续上传将覆盖该批次原数据，是否继续？`, {
+            title: '确认覆盖考试批次',
+            confirmText: '覆盖并上传',
+            cancelText: '取消'
+        });
         if (!ok) {
             inputEl.value = '';
             if (window.UI) UI.toast('已取消上传，原批次数据未被修改', 'info');
