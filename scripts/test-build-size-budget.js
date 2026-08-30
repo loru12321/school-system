@@ -59,7 +59,6 @@ const budgets = {
     // 2026-08-30: freshman seat and scenario actions now use declarative event
     // delegation so mobile controls remain reliable; allow the resulting
     // single-file bundle growth without relaxing the broader size guard.
-    ltHtmlBrotli: 346_000,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,
@@ -72,6 +71,9 @@ const budgets = {
     publicBootJs: 85_800,
     // 2026-08-30: target-editor demand skill and declarative action bridge add
     // a small, intentional manifest entry while keeping the editor out of boot.
+    // 2026-08-30: non-assessment scheduler subjects/projects add a compact
+    // mobile configuration panel and export sheet; retain a narrow bundle cap.
+    ltHtmlBrotli: 347_000,
     publicRuntimeLoaderJs: 58_500,
     // Current minified app bundle baseline after runtime splits, cache guards,
     // and the product redesign CSS layer being accounted in the singlefile build.

@@ -6,6 +6,8 @@ const SCHEDULER = {
     // 这样同一教师在 6、7 年级的课时可以不同，且整个项目只有一个资源占用表。
     data: [],
     demands: [], // { grade, className, name, subject, weeklyHours, venue, note }
+    // 手动补充的不参与教师考核的科目/项目，仍然占用班级时段。
+    manualNonAssessmentDemands: [],
     classMeta: Object.create(null),
     lockedSchedule: Object.create(null), // 已确认级部课表：作为本项目不可移动的底图
     importWarnings: [],
@@ -105,6 +107,107 @@ const SCHEDULER = {
             this.renderTags('activity', this.rules.activities, a => `周${a.day} ${labelRange} (${this.getScopeName(a.scope)} · ${a.subject === "ALL" ? "无课" : a.subject + "教研"})`);
             this.preflight({ silent: true });
         }
+    },
+
+    addManualNonAssessmentDemand: function () {
+        const subject = String(document.getElementById('sch_manual_subject')?.value || '').trim();
+        const weeklyHours = Number(document.getElementById('sch_manual_hours')?.value || 0);
+        const classSelect = document.getElementById('sch_manual_classes');
+        const classNames = Array.from(classSelect?.selectedOptions || []).map((option) => String(option.value || '').trim()).filter(Boolean);
+        const fixedDay = String(document.getElementById('sch_manual_day')?.value || '').trim();
+        const fixedSlot = this.normalizeSlotCode(document.getElementById('sch_manual_slot')?.value || '');
+        const venue = String(document.getElementById('sch_manual_venue')?.value || '').trim();
+        const note = String(document.getElementById('sch_manual_note')?.value || '').trim();
+        if (!subject) return window.UI?.alert('请填写科目或项目名称。');
+        if (!Number.isInteger(weeklyHours) || weeklyHours <= 0) return window.UI?.alert('每班每周节数请输入正整数。');
+        if (!classNames.length) return window.UI?.alert('请至少选择一个对应班级。');
+        if (!fixedDay && fixedSlot) return window.UI?.alert('选择固定第几节时，请同时选择固定星期。');
+        if (fixedDay && !fixedSlot) return window.UI?.alert('选择固定星期时，请同时选择固定第几节。');
+        const existingKeys = new Set(this.demands.map((item) => `${item.className}__${item.subject}__${item.nonAssessment ? 'manual' : 'regular'}`));
+        const added = [];
+        classNames.forEach((className) => {
+            const key = `${className}__${subject}__manual`;
+            if (existingKeys.has(key)) return;
+            const grade = this.inferGradeFromClass(className);
+            const demand = {
+                id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                grade,
+                className,
+                name: '',
+                subject,
+                weeklyHours,
+                venue,
+                note,
+                fixedDay,
+                fixedSlot,
+                nonAssessment: true,
+                teacherSource: 'manual-non-assessment',
+                countsForAssessment: false
+            };
+            this.demands.push(demand);
+            this.manualNonAssessmentDemands.push(demand);
+            existingKeys.add(key);
+            added.push(className);
+        });
+        this.rebuildProjectFromDemands();
+        this.invalidateTableRenderCache();
+        this.preflight({ silent: true });
+        this.renderManualDemandTags();
+        if (added.length) window.UI?.toast(`已添加 ${added.length} 个班级的“${subject}”（非考核）课时。`, 'success');
+        else window.UI?.toast('相同班级和科目已存在，未重复添加。', 'info');
+        ['sch_manual_subject', 'sch_manual_hours', 'sch_manual_venue', 'sch_manual_note'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
+    },
+
+    removeManualNonAssessmentDemand: function (id) {
+        const targetId = String(id || '');
+        this.demands = this.demands.filter((item) => String(item.id || '') !== targetId);
+        this.manualNonAssessmentDemands = this.manualNonAssessmentDemands.filter((item) => String(item.id || '') !== targetId);
+        this.rebuildProjectFromDemands();
+        this.invalidateTableRenderCache();
+        this.preflight({ silent: true });
+        this.renderManualDemandTags();
+    },
+
+    clearManualNonAssessmentDemands: function () {
+        if (!this.manualNonAssessmentDemands.length) return;
+        this.demands = this.demands.filter((item) => !item.nonAssessment);
+        this.manualNonAssessmentDemands = [];
+        this.rebuildProjectFromDemands();
+        this.invalidateTableRenderCache();
+        this.preflight({ silent: true });
+        this.renderManualDemandTags();
+    },
+
+    renderManualDemandTags: function () {
+        const container = document.getElementById('sch_tags_manual');
+        if (!container) return;
+        if (!this.manualNonAssessmentDemands.length) {
+            container.innerHTML = '<span style="color:#94a3b8; font-size:12px;">暂未添加手动非考核科目/项目。</span>';
+            return;
+        }
+        container.innerHTML = this.manualNonAssessmentDemands.map((item) => {
+            const fixed = item.fixedDay && item.fixedSlot ? ` · 固定周${item.fixedDay}${this.getSlotName(item.fixedSlot)}（每周1节固定，其余自动）` : '';
+            return `<div class="tag-chip" style="background:#ede9fe; color:#5b21b6; margin:3px 0;">${this.escapeHtml(item.subject)} · ${this.escapeHtml(item.className)}班 · ${Number(item.weeklyHours)}节/周${fixed}<button type="button" class="tag-chip-remove" data-scheduler-manual-remove="${this.escapeHtml(item.id)}" aria-label="删除">&times;</button></div>`;
+        }).join('');
+    },
+
+    refreshManualClassOptions: function () {
+        const select = document.getElementById('sch_manual_classes');
+        if (!select) return;
+        const selected = new Set(Array.from(select.selectedOptions || []).map((option) => option.value));
+        select.innerHTML = this.classes.map((className) => `<option value="${this.escapeHtml(className)}">${this.escapeHtml(className)}班</option>`).join('');
+        Array.from(select.options).forEach((option) => { option.selected = selected.has(option.value); });
+    },
+
+    refreshManualSlotOptions: function () {
+        const select = document.getElementById('sch_manual_slot');
+        if (!select) return;
+        const config = this.getSlotConfig();
+        Array.from(select.options || []).forEach((option) => {
+            const code = this.normalizeSlotCode(option.value || '');
+            option.disabled = !!code && !this.isValidSlotCode(code, config);
+            if (option.disabled && option.selected) { select.value = ''; }
+        });
     },
 
     removeConstraint: function (type, id) {
@@ -220,6 +323,7 @@ const SCHEDULER = {
         const missing = [];
         let updated = 0;
         this.demands = (this.demands || []).map((demand) => {
+            if (demand.nonAssessment) return demand;
             const key = `${demand.className}_${demand.subject}`;
             const teacher = String(cloudMap[key] || '').trim();
             if (!teacher) {
@@ -404,6 +508,18 @@ const SCHEDULER = {
             if (Number(demand.weeklyHours) > availableSlots) {
                 errors.push(`${demand.className}班 ${demand.subject} 需要 ${demand.weeklyHours} 节，超过当前可排的 ${availableSlots} 个时段。`);
             }
+            if (demand.nonAssessment && ((demand.fixedDay && !demand.fixedSlot) || (!demand.fixedDay && demand.fixedSlot))) {
+                errors.push(`${demand.className}班 ${demand.subject} 的固定时段必须同时填写星期和第几节。`);
+            }
+            if (demand.nonAssessment && demand.fixedSlot && !this.isValidSlotCode(demand.fixedSlot, config)) {
+                errors.push(`${demand.className}班 ${demand.subject} 固定的 ${this.getSlotName(demand.fixedSlot)} 超出当前课时结构。`);
+            }
+        });
+        const fixedDemandKeys = new Set();
+        demands.filter((demand) => demand.nonAssessment && demand.fixedDay && demand.fixedSlot).forEach((demand) => {
+            const key = `${demand.className}__${demand.fixedDay}__${demand.fixedSlot}`;
+            if (fixedDemandKeys.has(key)) errors.push(`${demand.className}班有多个手动项目固定在周${demand.fixedDay}${this.getSlotName(demand.fixedSlot)}，请调整其中一个时段。`);
+            fixedDemandKeys.add(key);
         });
         this.importWarnings.forEach((warning) => warnings.push(warning));
         crossGradeTeachers.forEach(({ name, grades: teacherGrades }) => {
@@ -595,6 +711,7 @@ const SCHEDULER = {
             // 一份新的任课表代表一个新的排课项目。锁定底图必须重新从该项目导入，
             // 防止上一次项目的班级或教师占用被悄悄带入本次排课。
             this.demands = parsed.demands;
+            this.manualNonAssessmentDemands = [];
             this.importWarnings = parsed.warnings;
             this.lockedSchedule = Object.create(null);
             this.schedule = {};
@@ -734,6 +851,8 @@ const SCHEDULER = {
             venues: [...item.venues]
         }));
         this.refreshGradeScopeControls();
+        this.refreshManualClassOptions();
+        this.renderManualDemandTags();
         this.refreshTeacherBusyOptions();
         this.renderProjectPreview();
         const targetSel = document.getElementById('sch_view_target');
@@ -754,7 +873,7 @@ const SCHEDULER = {
         const venues = [...new Set(this.demands.map((demand) => String(demand.venue || '').trim()).filter(Boolean))];
         const top = this.demands.slice(0, 8).map((demand) => (
             `<div style="padding:4px 0; border-bottom:1px dashed #e2e8f0;">` +
-            `<strong>${this.escapeHtml(demand.className)}班</strong> · ${this.escapeHtml(demand.subject)} · ${this.escapeHtml(demand.name)} · ${this.escapeHtml(demand.weeklyHours)}节` +
+            `<strong>${this.escapeHtml(demand.className)}班</strong> · ${this.escapeHtml(demand.subject)} · ${demand.nonAssessment ? '<span style="color:#7c3aed;">非考核手动项目</span>' : this.escapeHtml(demand.name)} · ${this.escapeHtml(demand.weeklyHours)}节` +
             `${demand.venue ? ` · ${this.escapeHtml(demand.venue)}` : ''}</div>`
         )).join('');
         const extra = this.demands.length > 8 ? `<div style="padding-top:6px; color:#94a3b8;">...另有 ${this.demands.length - 8} 条逐班课程需求</div>` : '';
@@ -916,8 +1035,9 @@ const SCHEDULER = {
             subject: demand.subject,
             teacher: options.combined ? `${demand.name}(合)` : demand.name,
             venue: demand.venue || '',
+            nonAssessment: !!demand.nonAssessment,
             isCombined: !!options.combined,
-            fixed: !!options.combined,
+            fixed: !!options.combined || !!(demand.nonAssessment && demand.fixedDay && demand.fixedSlot && !demand._fixedPlaced),
             combinedGroup: options.groupId || ''
         };
         this.schedule[demand.className][slotId] = cell;
@@ -961,7 +1081,7 @@ const SCHEDULER = {
 
     getCombinedGroups: function (rule, pending) {
         const groups = new Map();
-        pending.filter((demand) => demand.subject === rule.subject && demand.remaining > 0).forEach((demand) => {
+        pending.filter((demand) => !demand.nonAssessment && demand.subject === rule.subject && demand.remaining > 0).forEach((demand) => {
             const key = rule.scope === 'all'
                 ? `${this.normalizeTeacherName(demand.name)}__${demand.subject}`
                 : `${this.normalizeTeacherName(demand.name)}__${demand.subject}__${demand.grade}`;
@@ -1094,7 +1214,15 @@ const SCHEDULER = {
     },
 
     findBestSlotForDemand: function (demand, allSlots, teacherBusyMap) {
-        const candidates = allSlots.filter((slot) => this.canPlaceDemand(demand, slot, teacherBusyMap));
+        const fixedDay = Number(demand.fixedDay || 0);
+        const fixedSlot = this.normalizeSlotCode(demand.fixedSlot || '');
+        const fixedPending = !!demand.nonAssessment && fixedDay > 0 && fixedSlot && !demand._fixedPlaced;
+        const candidates = allSlots.filter((slot) => {
+            if (fixedPending && (slot.day !== fixedDay || slot.id.replace(/^d\d+_/, '') !== fixedSlot)) return false;
+            if (demand.nonAssessment && demand.fixedDay && !demand.fixedSlot && slot.day !== Number(demand.fixedDay)) return false;
+            if (demand.nonAssessment && demand.fixedSlot && !demand.fixedDay && slot.id.replace(/^d\d+_/, '') !== fixedSlot) return false;
+            return this.canPlaceDemand(demand, slot, teacherBusyMap);
+        });
         candidates.sort((left, right) => {
             const qualityDiff = this.getTeacherScheduleQualityScore(demand, right)
                 - this.getTeacherScheduleQualityScore(demand, left);
@@ -1151,6 +1279,8 @@ const SCHEDULER = {
                     teacherSubjectTotals.set(key, (teacherSubjectTotals.get(key) || 0) + Number(demand.remaining || 0));
                 });
                 pending.sort((left, right) => {
+                    const fixedDiff = Number(!!right.nonAssessment && (right.fixedDay || right.fixedSlot)) - Number(!!left.nonAssessment && (left.fixedDay || left.fixedSlot));
+                    if (fixedDiff) return fixedDiff;
                     const crossDiff = Number(crossGradeNames.has(this.normalizeTeacherName(right.name))) - Number(crossGradeNames.has(this.normalizeTeacherName(left.name)));
                     const leftGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(left.name)}__${left.subject}`) || 0;
                     const rightGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(right.name)}__${right.subject}`) || 0;
@@ -1166,6 +1296,7 @@ const SCHEDULER = {
                         this.placeDemand(demand, slot.id);
                         this.markTeacherBusy(demand.name, slot.id);
                         if (demand.venue) this.markVenueBusy(demand.venue, slot.id);
+                        if (demand.nonAssessment && demand.fixedDay && demand.fixedSlot && !demand._fixedPlaced) demand._fixedPlaced = true;
                         demand.remaining -= 1;
                     }
                 });
@@ -1490,11 +1621,13 @@ const SCHEDULER = {
         const venueMap = new Map();
         Object.entries(schedule || {}).forEach(([className, entries]) => {
             Object.entries(entries || {}).forEach(([slotId, cell]) => {
-                if (slotId.startsWith('_') || !cell || !cell.teacher || cell.teacher === '-' || cell.teacher === '班主任') return;
+                if (slotId.startsWith('_') || !cell || ((!cell.teacher || cell.teacher === '-' || cell.teacher === '班主任') && !cell.venue)) return;
                 const teacher = this.normalizeTeacherName(cell.teacher);
-                const teacherKey = `${teacher}__${slotId}`;
-                if (!teacherMap.has(teacherKey)) teacherMap.set(teacherKey, []);
-                teacherMap.get(teacherKey).push({ className, cell });
+                if (teacher) {
+                    const teacherKey = `${teacher}__${slotId}`;
+                    if (!teacherMap.has(teacherKey)) teacherMap.set(teacherKey, []);
+                    teacherMap.get(teacherKey).push({ className, cell });
+                }
                 const venue = String(cell.venue || '').trim();
                 if (venue) {
                     const venueKey = `${venue}__${slotId}`;
@@ -1642,7 +1775,7 @@ const SCHEDULER = {
             ? `${cell.subject || ''}${cell.teacher ? ` · ${cell.teacher}` : ''}`
             : '空课';
         const content = cell
-            ? `<strong>${this.escapeHtml(cell.subject)}</strong><span>${this.escapeHtml(cell.teacher || '')}${cell.venue ? ` · ${this.escapeHtml(cell.venue)}` : ''}</span>`
+            ? `<strong>${this.escapeHtml(cell.subject)}</strong><span>${cell.nonAssessment ? '非考核手动项目' : this.escapeHtml(cell.teacher || '')}${cell.venue ? ` · ${this.escapeHtml(cell.venue)}` : ''}</span>`
             : '<span class="scheduler-cell-empty">空课</span>';
         return `<button type="button" class="scheduler-cell${selected ? ' is-selected' : ''}${cell?.fixed ? ' is-fixed' : ''}" data-scheduler-slot="${this.escapeHtml(slotId)}" title="${this.escapeHtml(cell?.fixed ? '固定规则时段，不可移动' : `${title}：点击选择/交换`)}" ${cell?.fixed ? 'disabled' : ''}>${content}</button>`;
     },
@@ -1654,7 +1787,7 @@ const SCHEDULER = {
         // 切换下拉框内容
         const sel = document.getElementById('sch_view_target');
         if (mode === 'teacher') {
-            const teachers = [...new Set(this.data.map(d => d.name))];
+            const teachers = [...new Set(this.data.map(d => d.name).filter(Boolean))];
             if (!teachers.includes(target)) {
                 sel.innerHTML = teachers.map(t => `<option value="${t}">${t}</option>`).join('');
                 target = teachers[0];
@@ -1786,7 +1919,8 @@ const SCHEDULER = {
         if (!cell) return '';
         const teacher = cell.teacher && cell.teacher !== '-' ? `\n(${cell.teacher})` : '';
         const venue = cell.venue ? `\n[${cell.venue}]` : '';
-        return `${cell.subject}${teacher}${venue}`;
+        const marker = cell.nonAssessment ? '\n（非考核手动配置）' : '';
+        return `${cell.subject}${marker}${teacher}${venue}`;
     },
 
     formatExportPeriod: function (slotId) {
@@ -1874,6 +2008,24 @@ const SCHEDULER = {
         const crossSheet = XLSX.utils.aoa_to_sheet(crossRows);
         crossSheet['!cols'] = [{ wch: 15 }, { wch: 14 }, { wch: 32 }, { wch: 12 }, { wch: 14 }, { wch: 24 }];
         XLSX.utils.book_append_sheet(wb, crossSheet, '跨级教师清单');
+
+        const manualRows = [['科目/项目', '年级', '班级', '每周节数', '固定星期', '固定节次', '场地/资源', '备注', '考核计入']];
+        this.demands.filter((demand) => demand.nonAssessment).forEach((demand) => manualRows.push([
+            demand.subject || '',
+            demand.grade || this.inferGradeFromClass(demand.className),
+            `${demand.className}班`,
+            Number(demand.weeklyHours) || 0,
+            demand.fixedDay ? `周${demand.fixedDay}` : '自动安排',
+            demand.fixedSlot ? this.getSlotName(demand.fixedSlot) : '自动安排',
+            demand.venue || '',
+            demand.note || '',
+            '否（非考核手动配置）'
+        ]));
+        if (manualRows.length > 1) {
+            const manualSheet = XLSX.utils.aoa_to_sheet(manualRows);
+            manualSheet['!cols'] = [{ wch: 18 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }, { wch: 28 }, { wch: 22 }];
+            XLSX.utils.book_append_sheet(wb, manualSheet, '非考核手动项目');
+        }
 
         const guideRows = [
             ['导入与锁定说明'],
@@ -2093,6 +2245,13 @@ const SCHEDULER = {
                 const action = actionTrigger.dataset.schedulerClick;
                 if (action === 'preflight') this.preflight();
                 if (action === 'undo-manual-move') this.undoManualMove();
+                if (action === 'add-manual-demand') this.addManualNonAssessmentDemand();
+                if (action === 'clear-manual-demands') this.clearManualNonAssessmentDemands();
+                return;
+            }
+            const removeManual = event.target?.closest?.('[data-scheduler-manual-remove]');
+            if (removeManual && document.documentElement.contains(removeManual)) {
+                this.removeManualNonAssessmentDemand(removeManual.dataset.schedulerManualRemove);
                 return;
             }
             const cell = event.target?.closest?.('[data-scheduler-slot]');
@@ -2113,7 +2272,12 @@ const SCHEDULER = {
                 this.rules.teacherBlocks.enabled = !!select.checked;
                 this.preflight({ silent: true });
             }
+            if (['sch_am_count', 'sch_pm_count', 'sch_eve_count'].includes(select.id)) this.refreshManualSlotOptions();
         });
+        ['sch_am_count', 'sch_pm_count', 'sch_eve_count'].forEach((id) => {
+            document.getElementById(id)?.addEventListener('change', () => this.refreshManualSlotOptions());
+        });
+        this.refreshManualSlotOptions();
     }
 };
 

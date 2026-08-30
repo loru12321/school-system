@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-037b488d506d';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-d29a852335fc';
 
 // 每次进入都重新验证账号密码和届别，仅清理当前会话/工作区身份。
 (function forceFreshLoginEntry() {
@@ -288,6 +288,7 @@ var APP_MODULES = [
 'workspace-ui-refresh-runtime.js',
 'autosave-runtime.js',
 'workspace-unload-guard-runtime.js',
+'teaching-management-helpers-runtime.js',
 'app.js',
 'cohort-db-core-runtime.js',
 ].map(bootJs);
@@ -299,13 +300,7 @@ var APP_MODULE_PREFETCH_CHUNK_SIZE = 8;
 var APP_MODULE_DESKTOP_BATCH_SIZE = 6;
 var APP_MODULE_MOBILE_BATCH_SIZE = 4;
 var APP_MODULE_MAX_BATCH_SIZE = 6;
-// The login screen is normally visible long enough to warm the small state and
-// cloud-runtime prefix. Keep this as low-priority prefetch (not execution),
-// so authentication remains responsive while the post-login request waterfall
-// starts with a useful cache instead of waiting for every file after submit.
-// The login view must get first access to the network and main thread. Keep
-// its idle warmup intentionally small; after a successful submit the targeted
-// transition prewarm below still covers the hand-off modules that matter.
+// Keep login prefetch small; post-login transition prewarm covers the hand-off modules.
 var LOGIN_MODULE_PREFETCH_LIMIT = 8;
 var LOGIN_MODULE_PREFETCH_DELAY_MS = 2200;
 var LOGIN_TRANSITION_TAIL_MODULES = [

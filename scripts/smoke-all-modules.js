@@ -4960,7 +4960,10 @@ async function runModuleDeepCheck(page, id) {
                 existingImportReady: !!scheduler && typeof scheduler.importExisting === 'function',
                 lockedImportReady: !!scheduler && typeof scheduler.importLockedSchedule === 'function',
                 jointProjectReady: !!scheduler && typeof scheduler.getCrossGradeTeachers === 'function'
-                    && typeof scheduler.getScheduleResourceConflicts === 'function'
+                    && typeof scheduler.getScheduleResourceConflicts === 'function',
+                manualNonAssessmentReady: !!scheduler && typeof scheduler.addManualNonAssessmentDemand === 'function'
+                    && typeof scheduler.removeManualNonAssessmentDemand === 'function'
+                    && typeof scheduler.refreshManualClassOptions === 'function'
             };
             if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
                 return {
@@ -5000,6 +5003,23 @@ async function runModuleDeepCheck(page, id) {
             window.alert = (message) => alerts.push(String(message || ''));
             try {
                 await scheduler.loadData({ files: [makeWorkbookFile(sampleRows, 'grade-scheduler-smoke.xlsx')], value: '' });
+
+                const manualSubject = document.getElementById('sch_manual_subject');
+                const manualHours = document.getElementById('sch_manual_hours');
+                const manualClasses = document.getElementById('sch_manual_classes');
+                const manualDay = document.getElementById('sch_manual_day');
+                const manualSlot = document.getElementById('sch_manual_slot');
+                if (manualSubject && manualHours && manualClasses && manualDay && manualSlot) {
+                    manualSubject.value = '社团活动';
+                    manualHours.value = '2';
+                    Array.from(manualClasses.options).forEach((option) => { option.selected = option.value === '6.1' || option.value === '6.5'; });
+                    manualDay.value = '1';
+                    manualSlot.value = 'am_1';
+                    scheduler.addManualNonAssessmentDemand();
+                }
+                if (!scheduler.demands.some((demand) => demand.nonAssessment && demand.subject === '社团活动' && demand.fixedDay === '1' && demand.fixedSlot === 'am_1')) {
+                    throw new Error('manual non-assessment demand was not added');
+                }
 
                 const setValue = (id, value) => {
                     const el = document.getElementById(id);
@@ -5043,6 +5063,8 @@ async function runModuleDeepCheck(page, id) {
                         && button && !button.disabled
                         && document.querySelectorAll('#sch_table tbody tr').length > 0;
                 });
+                const manualCells = Object.values(scheduler.schedule || {}).flatMap((entries) => Object.values(entries || {})).filter((cell) => cell?.nonAssessment && cell.subject === '社团活动');
+                if (!manualCells.length || manualCells.some((cell) => cell.teacher)) throw new Error('manual non-assessment schedule cells should be present without teacher resources');
             } finally {
                 window.alert = originalAlert;
             }
