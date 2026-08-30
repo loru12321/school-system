@@ -138,6 +138,8 @@ assert.ok(
 );
 assert.ok(count(/data-module-help=/g) >= 15, 'declarative module-help bindings should stay wired in the markup');
 assert.ok(count(/data-scroll-anchor=/g) >= 11, 'declarative scroll-anchor bindings should stay wired in the markup');
+assert.ok(count(/data-drill-action="(?:back|export)"/g) >= 2, 'drill modal actions should stay declarative');
+assert.ok(!/onclick="DrillSystem\.(?:goBack|exportExcel)\(\)"/.test(html), 'drill modal actions should not use inline onclick');
 assert.ok(
     /\[data-module-help\], \[data-scroll-anchor\]/.test(foundationRuntime),
     'the delegated binder must resolve the module-help and scroll-anchor attributes'

@@ -92,6 +92,7 @@ var SYSTEM_RUNTIME_SKILLS = {
 'high-score': bootSkill('demand', 'demand', ['high-score', 'renderHighScoreTable'], [
     bootEntry('high-score', bootJs('high-score-runtime.js'))
 ]),
+'drill-system': bootSkill('demand', 'demand', ['DrillSystem', 'drill-modal'], [bootEntry('drill-system', bootJs('drill-system-runtime.js'))]),
 'county-analysis': bootSkill('demand', 'demand', ['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'], [
     bootEntry('county-school-horizontal', bootJs('county-school-horizontal-runtime.js')),
     bootEntry('county-analysis', bootJs('county-analysis-runtime.js'))
@@ -420,6 +421,7 @@ switch (String(key || '').trim()) {
     case 'subject-balance': return window.SubjectBalanceRuntime || null;
     case 'segment-analysis': return window.SegmentAnalysisRuntime || null;
     case 'potential-analysis': return window.PotentialAnalysisRuntime || null;
+    case 'drill-system': return window.DrillSystem && !window.DrillSystem.__drillProxy ? window.DrillSystem : null;
     case 'chart-vendor':
         return window.Chart || null;
     case 'sweetalert-vendor':
@@ -753,6 +755,8 @@ return window.SystemRuntimeLoader.load('school-profile');
 window.ensureHighScoreRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('high-score');
 };
+
+window.ensureDrillSystemRuntimeLoaded = function () { return window.SystemRuntimeLoader.load('drill-system'); };
 
 window.ensureTeachingManagementRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('teaching-management');

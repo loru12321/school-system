@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-4f363d0a1f22.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-4f363d0a1f22.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-981e8d50938f.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-981e8d50938f.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -6326,7 +6326,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <button id="drill-back-btn" class="btn btn-sm btn-gray hidden" onclick="DrillSystem.goBack()">
+                    <button id="drill-back-btn" class="btn btn-sm btn-gray hidden" data-drill-action="back">
                         <i class="ti ti-arrow-left"></i> 返回
                     </button>
                     <h3 id="drill-title" style="margin:0; color:var(--primary); font-size:18px;">数据详情</h3>
@@ -6334,7 +6334,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
                 <div style="display:flex; gap:10px; align-items:center;">
                     <!-- 新增导出按钮 -->
-                    <button id="drill-export-btn" class="btn btn-sm btn-green" onclick="DrillSystem.exportExcel()">
+                    <button id="drill-export-btn" class="btn btn-sm btn-green" data-drill-action="export">
                         <i class="ti ti-file-export"></i> 导出为Excel
                     </button>
                     <button type="button" class="modal-close-btn" aria-label="关闭数据详情弹窗"
