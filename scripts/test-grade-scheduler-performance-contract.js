@@ -30,6 +30,10 @@ assert.ok(source.includes('applyEveningThirdCombinedRules: function'), 'schedule
 assert.ok(source.includes('deferEveningThird: true'), 'scheduler should defer evening third combined placement until front periods are known');
 assert.ok(source.includes('adjacentClassWeight: 160'), 'scheduler should prioritize adjacent-class teacher continuity');
 assert.ok(source.includes('getSoftBusyScore: function'), 'grade scheduler should support soft teacher meeting avoidance');
+assert.ok(source.includes('getClassSubjectPeriodRepeatCount: function'), 'scheduler should track repeated class subject periods across days');
+assert.ok(source.includes('getTeacherSubjectPeriodRepeatCount: function'), 'scheduler should track repeated teacher subject periods across days');
+assert.ok(source.includes('getSubjectTimeDistributionScore: function'), 'scheduler should score subject time-slot variety');
+assert.ok(source.includes('classSubjectPeriodRepeats'), 'fatigue audit should report repeated class subject periods');
 assert.ok(source.includes('buildCompactGradeSheet: function'), 'grade scheduler should provide a compact all-class timetable sheet');
 assert.ok(indexHtml.includes("value=\"subject\""), 'grade scheduler should provide subject-focused timetable mode');
 assert.ok(indexHtml.includes("value=\"grade\""), 'grade scheduler should provide an all-class grade timetable mode');

@@ -42,7 +42,10 @@ const SCHEDULER = {
             sameSessionWeight: 28,
             sameDayWeight: 18,
             classSubjectBalanceWeight: 72,
-            teacherDayLoadWeight: 12
+            teacherDayLoadWeight: 12,
+            classSubjectPeriodRepeatWeight: 220,
+            teacherSubjectPeriodRepeatWeight: 54,
+            newPeriodVarietyWeight: 18
         }
     },
 
@@ -1424,6 +1427,56 @@ const SCHEDULER = {
         )).length;
     },
 
+    // 同一班同一科不应在周一到周五每天都落在同一个节次；这里把“节次位置”
+    // 作为独立的软约束。它不会破坏作文连堂、晚自习第三节合堂等硬规则，
+    // 但会让算法优先选择本周尚未使用过的时段。
+    getClassSubjectPeriodRepeatCount: function (demand, slot) {
+        if (!demand || !slot) return 0;
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        return Object.entries(this.schedule[demand.className] || {}).filter(([slotId, cell]) => {
+            const match = String(slotId).match(/^d(\d+)_(am|pm|eve)_(\d+)$/);
+            if (!match || !cell) return false;
+            return String(cell.subject || '').replace(/\(合\)$/, '').trim() === subject
+                && match[2] === String(slot.type)
+                && Number(match[3]) === Number(slot.period);
+        }).length;
+    },
+
+    getTeacherSubjectPeriodRepeatCount: function (demand, slot) {
+        if (!demand || !slot) return 0;
+        const teacher = this.normalizeTeacherName(demand.name);
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        let count = 0;
+        this.classes.forEach((className) => {
+            Object.entries(this.schedule[className] || {}).forEach(([slotId, cell]) => {
+                const match = String(slotId).match(/^d(\d+)_(am|pm|eve)_(\d+)$/);
+                if (!match || !cell) return;
+                if (this.normalizeTeacherName(cell.teacher) !== teacher) return;
+                if (String(cell.subject || '').replace(/\(合\)$/, '').trim() !== subject) return;
+                if (match[2] === String(slot.type) && Number(match[3]) === Number(slot.period)) count += 1;
+            });
+        });
+        return count;
+    },
+
+    getSubjectTimeDistributionScore: function (demand, slot) {
+        const weights = this.rules.teacherBlocks || {};
+        const classRepeats = this.getClassSubjectPeriodRepeatCount(demand, slot);
+        const teacherRepeats = this.getTeacherSubjectPeriodRepeatCount(demand, slot);
+        const periodKey = `${slot.type}_${slot.period}`;
+        const usedPeriods = new Set();
+        Object.entries(this.schedule[demand.className] || {}).forEach(([slotId, cell]) => {
+            const match = String(slotId).match(/^d(\d+)_(am|pm|eve)_(\d+)$/);
+            if (!match || !cell) return;
+            if (String(cell.subject || '').replace(/\(合\)$/, '').trim() !== String(demand.subject || '').replace(/\(合\)$/, '').trim()) return;
+            usedPeriods.add(`${match[2]}_${match[3]}`);
+        });
+        const variety = usedPeriods.has(periodKey) ? 0 : Number(weights.newPeriodVarietyWeight || 18);
+        return variety
+            - classRepeats * Number(weights.classSubjectPeriodRepeatWeight || 220)
+            - teacherRepeats * Number(weights.teacherSubjectPeriodRepeatWeight || 54);
+    },
+
     getTeacherSubjectSlots: function (teacherName, subject, schedule = this.schedule) {
         const teacher = this.normalizeTeacherName(teacherName);
         const normalizedSubject = String(subject || '').replace(/\(合\)$/, '');
@@ -1478,8 +1531,9 @@ const SCHEDULER = {
         const weights = this.rules.teacherBlocks || {};
         const block = this.getTeacherSubjectBlockScore(demand, slot);
         const balance = this.getClassSubjectBalanceScore(demand, slot);
+        const timeDistribution = this.getSubjectTimeDistributionScore(demand, slot);
         const teacherDayPenalty = this.getTeacherDayLoad(demand.name, slot.day) * Number(weights.teacherDayLoadWeight || 0);
-        return block + balance - teacherDayPenalty
+        return block + balance + timeDistribution - teacherDayPenalty
             + this.getSoftBusyScore(demand.name, slot)
             + this.getEveningPreferenceScore(demand, slot);
     },
@@ -1846,11 +1900,49 @@ const SCHEDULER = {
             }
         });
 
+        const classSubjectPeriodRepeats = [];
+        const teacherSubjectPeriodRepeats = [];
+        const teacherSubjectPeriodMap = new Map();
+        this.classes.forEach((className) => {
+            const classMap = new Map();
+            Object.entries(this.schedule[className] || {}).forEach(([slotId, cell]) => {
+                const match = slotId.match(/^d(\d+)_(am|pm|eve)_(\d+)$/);
+                if (!match || !cell || !cell.subject || cell.subject === '🚫 无课') return;
+                const subject = String(cell.subject).replace(/\(合\)$/, '').trim();
+                if (!subject) return;
+                const slotKey = `${subject}__${match[2]}__${match[3]}`;
+                if (!classMap.has(slotKey)) classMap.set(slotKey, { subject, type: match[2], period: Number(match[3]), days: [] });
+                classMap.get(slotKey).days.push(Number(match[1]));
+                const teacher = String(cell.teacher || '').replace(/\([^)]*\)/g, '').trim();
+                if (teacher && teacher !== '-') {
+                    const teacherKey = `${teacher}__${subject}__${match[2]}__${match[3]}`;
+                    if (!teacherSubjectPeriodMap.has(teacherKey)) teacherSubjectPeriodMap.set(teacherKey, { teacher, subject, type: match[2], period: Number(match[3]), classes: [], days: new Set() });
+                    const teacherRepeat = teacherSubjectPeriodMap.get(teacherKey);
+                    teacherRepeat.classes.push(className);
+                    teacherRepeat.days.add(Number(match[1]));
+                }
+            });
+            classMap.forEach((item) => {
+                if (item.days.length > 1) classSubjectPeriodRepeats.push({ class: className, ...item, count: item.days.length });
+            });
+        });
+        teacherSubjectPeriodMap.forEach((item) => {
+            // 同一教师同一科在同一节次跨多个日期出现时，提示检查是否过于机械；
+            // 同一天的相邻班连续授课不会触发，因为教师同一时段不可同时占用。
+            const distinctDays = [...item.days].sort((a, b) => a - b);
+            if (distinctDays.length > 1) {
+                const { days: _days, ...rest } = item;
+                teacherSubjectPeriodRepeats.push({ ...rest, days: distinctDays, count: distinctDays.length });
+            }
+        });
+
         const flags = {
             classConsecutiveOver4: classStats.filter(x => x.maxConsecutive >= 4).slice(0, 10),
             teacherConsecutiveOver3: teacherStats.filter(x => x.maxConsecutive >= 3).slice(0, 10),
             classEveningOver2: classStats.filter(x => x.eveningLessons >= 2).slice(0, 10),
-            teacherEveningOver2: teacherStats.filter(x => x.eveningLessons >= 2).slice(0, 10)
+            teacherEveningOver2: teacherStats.filter(x => x.eveningLessons >= 2).slice(0, 10),
+            classSubjectPeriodRepeats: classSubjectPeriodRepeats.slice(0, 10),
+            teacherSubjectPeriodRepeats: teacherSubjectPeriodRepeats.slice(0, 10)
         };
 
         const result = {
@@ -1861,6 +1953,8 @@ const SCHEDULER = {
             },
             classStats,
             teacherStats,
+            classSubjectPeriodRepeats,
+            teacherSubjectPeriodRepeats,
             flags
         };
         this._fatigueAnalysisCacheKey = cacheKey;
@@ -1871,6 +1965,12 @@ const SCHEDULER = {
     buildFallbackAuditList: function (analysis) {
         const dayName = d => `周${['一', '二', '三', '四', '五'][d - 1] || d}`;
         const list = [];
+        analysis.flags.classSubjectPeriodRepeats.forEach(x => {
+            list.push(`班级${x.class} 的${x.subject}在${x.type === 'am' ? '上午' : x.type === 'pm' ? '下午' : '晚自习'}第${x.period}节重复 ${x.count} 天，建议换用不同节次。`);
+        });
+        analysis.flags.teacherSubjectPeriodRepeats.forEach(x => {
+            list.push(`教师${x.teacher} 的${x.subject}在同一${x.type === 'am' ? '上午' : x.type === 'pm' ? '下午' : '晚自习'}第${x.period}节跨 ${x.count} 天重复，建议打散时段。`);
+        });
         analysis.flags.classConsecutiveOver4.forEach(x => {
             list.push(`班级${x.class} ${dayName(x.day)} 连续${x.maxConsecutive}节，建议打散主课并插入轻负担课。`);
         });
