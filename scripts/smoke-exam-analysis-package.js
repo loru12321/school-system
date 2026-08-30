@@ -323,9 +323,13 @@ async function login(page) {
             }
             return { externalSchoolNames };
         }, packageScope.townshipNames);
-        const expectedSupportRows = await page.evaluate(() => {
+        const expectedSupportRows = await page.evaluate(async () => {
             if (typeof window.renderTables === 'function') window.renderTables();
             if (typeof window.calcSummary === 'function') window.calcSummary(true);
+            if (typeof window.renderHighScoreTable !== 'function'
+                && typeof window.ensureHighScoreRuntimeLoaded === 'function') {
+                await window.ensureHighScoreRuntimeLoaded();
+            }
             if (typeof window.renderHighScoreTable === 'function') window.renderHighScoreTable();
             if (typeof window.renderBottom3TableOnly === 'function') window.renderBottom3TableOnly();
             let indicatorRows = [];

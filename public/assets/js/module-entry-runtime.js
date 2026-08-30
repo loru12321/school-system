@@ -1377,7 +1377,22 @@
             }
             return scheduleCountyRender();
         }
-        if (id === 'high-score' && typeof renderHighScoreTable === 'function') renderHighScoreTable();
+        if (id === 'high-score') {
+            const renderHighScore = () => {
+                if (typeof window.renderHighScoreTable === 'function') return window.renderHighScoreTable();
+                return false;
+            };
+            if (typeof window.ensureHighScoreRuntimeLoaded === 'function'
+                && typeof window.renderHighScoreTable !== 'function') {
+                return window.ensureHighScoreRuntimeLoaded()
+                    .then(renderHighScore)
+                    .catch((error) => {
+                        console.warn('[high-score] runtime failed:', error);
+                        return false;
+                    });
+            }
+            return Promise.resolve(renderHighScore());
+        }
         if (id === 'student-overview') return initStudentOverviewEntry();
         if (id === 'zhongkao-countdown') {
             const initCountdown = () => {

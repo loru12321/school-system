@@ -11,6 +11,7 @@ function read(relativePath) {
 const dataManager = read('public/assets/js/data-manager-core-runtime.js');
 const studentDetails = read('public/assets/js/student-details-render-runtime.js');
 const app = read('public/assets/js/app.js');
+const highScore = read('public/assets/js/high-score-runtime.js');
 const indicatorCalc = read('public/assets/js/indicator-calc-runtime.js');
 const reportRender = read('public/assets/js/report-render-runtime.js');
 const comparisonRender = read('public/assets/js/comparison-render-runtime.js');
@@ -31,7 +32,8 @@ assert.ok(!studentDetails.includes("updateStudentScore('${student.name}', '${stu
   "handleExcludedClick(${safeNameArg})",
   'removeTagFromWidget(${jsStringLiteral(wrapperId)}, ${jsStringLiteral(hiddenInputId)}, ${jsStringLiteral(tag)})'
 ].forEach((needle) => {
-  assert.ok(app.includes(needle), `app.js should contain safe pattern: ${needle}`);
+  const source = needle.startsWith('handleHighClick') ? highScore : app;
+  assert.ok(source.includes(needle), `${needle.startsWith('handleHighClick') ? 'high-score-runtime.js' : 'app.js'} should contain safe pattern: ${needle}`);
 });
 
 // indicator table onclicks moved to indicator-calc-runtime.js (window.calcIndicators) —
@@ -50,7 +52,7 @@ assert.ok(!studentDetails.includes("updateStudentScore('${student.name}', '${stu
   "removeTagFromWidget('${wrapperId}', '${hiddenInputId}', '${tag}')",
   "DrillSystem.renderStudentView('${cls}')"
 ].forEach((needle) => {
-  assert.ok(!app.includes(needle), `app.js must not contain raw interpolation pattern: ${needle}`);
+  assert.ok(!app.includes(needle) && !highScore.includes(needle), `app.js/high-score-runtime.js must not contain raw interpolation pattern: ${needle}`);
 });
 
 // report-render-runtime: student name/school/class flow into report HTML (later

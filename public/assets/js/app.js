@@ -4399,78 +4399,8 @@ function calculateHighSchoolAdmissionStatsForSummary(schools = getSummaryTownshi
     return rows;
 }
 
-function renderHighScoreTable() {
-    const tbody = document.querySelector('#tb-high-score tbody');
-    tbody.innerHTML = '';
-
-    if (!CONFIG.name || !CONFIG.name.includes('9')) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">🚫 当前非 9 年级模式，无高分段核算数据。</td></tr>';
-        return;
-    }
-    const hasHighScoreScopeHelper = typeof getTownshipManagedSchoolNames === 'function';
-    const townshipSchoolNames = hasHighScoreScopeHelper ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {})) : Object.keys(SCHOOLS || {});
-    const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
-    const townshipSchools = Object.values(SCHOOLS).filter((school) => {
-        if (!hasHighScoreScopeHelper) return true;
-        const name = String(school?.name || '').trim();
-        return typeof isTownshipManagedSchool === 'function'
-            ? isTownshipManagedSchool(name, Object.keys(SCHOOLS || {}))
-            : townshipSchoolSet.has(name);
-    });
-    if (townshipSchools.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px;">请先上传数据</td></tr>';
-        return;
-    }
-
-    const baseList = townshipSchools.map(s => {
-        const students = getEquivalentSchoolStudents(s.name);
-        const count = students.length || (s.metrics.total ? s.metrics.total.count : 0);
-        const hsCount = students.filter(stu => Number(stu.total) >= 490).length;
-        const hsRatio = count ? hsCount / count : 0;
-        return {
-            name: s.name,
-            count,
-            hsCount,
-            hsRatio
-        };
-    });
-    const maxHighRatio = Math.max(...baseList.map(d => d.hsRatio), 0);
-    const list = baseList.map(d => ({
-        ...d,
-        score: maxHighRatio ? d.hsRatio / maxHighRatio * 50 : 0
-    }));
-
-    list.sort((a, b) => b.score - a.score);
-
-    let html = '';
-    list.forEach((d, i) => {
-        const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
-        const safeName = escapeAppHtml(d.name);
-        const safeNameArg = jsStringLiteral(d.name);
-        html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
-                <td>${safeName}</td>
-                <td>${d.count}</td>
-                <td style="font-weight:bold;">
-                    <!-- 添加点击事件 -->
-                    <span class="clickable-num" onclick="handleHighClick(${safeNameArg})" title="点击查看高分学生名单">
-                        ${d.hsCount}
-                    </span>
-                </td>
-                <td>${(d.hsRatio * 100).toFixed(2)}%</td>
-                <td class="text-red" style="font-size:1.1em; font-weight:bold;">${d.score.toFixed(2)}</td>
-                ${getRankHTML(i + 1)}
-            </tr>`;
-    });
-    tbody.innerHTML = html;
-    window.__LAST_HIGH_SCORE_SUMMARY_ROWS__ = list;
-    markSummaryDataChangedIfDependencyChanged(
-        'highScore',
-        buildSummaryDependencySignature('highScore', list),
-        '高分段赋分已更新，请重新生成总排名。'
-    );
-
-    appDebug(`已渲染 ${list.length} 所学校的高分数据`);
-}
+// Moved to high-score-runtime.js (window.renderHighScoreTable) —— 高分段页面属于低频入口，按需加载。
+// 高分段赋分参与综合评价的计算仍保留在本文件的 calculateHighScoreStatsForSummary 中。
 
 // Moved to high-score-export-runtime.js (window.exportHighScoreExcel — 高分段核算导出)
 

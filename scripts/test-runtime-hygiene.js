@@ -99,6 +99,11 @@ const reportHistoryRuntime = fs.readFileSync(path.join(root, 'public/assets/js/r
 const analyticsKernelRuntime = fs.readFileSync(path.join(root, 'public/assets/js/analytics-kernel-runtime.js'), 'utf8');
 const countyAnalysisRuntime = fs.readFileSync(path.join(root, 'public/assets/js/county-analysis-runtime.js'), 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(path.join(root, 'public/assets/js/teacher-analysis-core-runtime.js'), 'utf8');
+const highScoreRuntime = fs.readFileSync(path.join(root, 'public/assets/js/high-score-runtime.js'), 'utf8');
+const runtimeLoaderRuntime = fs.readFileSync(path.join(root, 'public/assets/js/runtime-loader-runtime.js'), 'utf8');
+const bootRuntime = fs.readFileSync(path.join(root, 'public/assets/js/boot-runtime.js'), 'utf8');
+const moduleEntryRuntimeForHighScore = fs.readFileSync(path.join(root, 'public/assets/js/module-entry-runtime.js'), 'utf8');
+const examAnalysisPackageRuntime = fs.readFileSync(path.join(root, 'public/assets/js/exam-analysis-package-runtime.js'), 'utf8');
 const smokeAllModulesRuntime = fs.readFileSync(path.join(root, 'scripts/smoke-all-modules.js'), 'utf8');
 assert.ok(analyticsKernelRuntime.includes('normalizeProcessCacheLimit(root.ANALYTICS_PROCESS_CACHE_LIMIT, 5)'), 'analytics process cache should be configurable and default to five entries');
 assert.ok(analyticsKernelRuntime.includes("hashText(hash, '[')"), 'analytics hashJson arrays should open with [');
@@ -120,7 +125,15 @@ assert.ok(appRuntime.includes('function buildSummaryDependencySignature'), 'summ
 assert.ok(appRuntime.includes('markSummaryDataChangedIfDependencyChanged('), 'summary stale prompt should not be triggered unconditionally by prerequisite renders');
 assert.ok(appRuntime.includes("buildSummaryDependencySignature('twoRateBottom', townshipSchools)"), 'two-rate/bottom3 refresh should use a stable dependency signature');
 assert.ok(indicatorCalcRuntime.includes("buildSummaryDependencySignature('indicator', calcData)"), 'indicator refresh should use a stable dependency signature');
-assert.ok(appRuntime.includes("buildSummaryDependencySignature('highScore', list)"), 'high-score refresh should use a stable dependency signature');
+assert.ok(highScoreRuntime.includes("buildSummaryDependencySignature('highScore', list)"), 'high-score refresh should use a stable dependency signature');
+assert.ok(!appRuntime.includes('function renderHighScoreTable()'), 'low-frequency high-score table renderer should not remain in app.js');
+assert.ok(highScoreRuntime.includes('function renderHighScoreTable()'), 'high-score runtime should own the low-frequency table renderer');
+assert.ok(highScoreRuntime.includes('root.renderHighScoreTable = renderHighScoreTable'), 'high-score runtime should publish the renderer for module entry and legacy callers');
+assert.ok(runtimeLoaderRuntime.includes("'high-score': bootSkill('demand', 'demand', ['high-score', 'renderHighScoreTable']"), 'runtime loader should register the high-score demand skill');
+assert.ok(runtimeLoaderRuntime.includes('window.ensureHighScoreRuntimeLoaded'), 'runtime loader should expose the high-score entry loader');
+assert.ok(bootRuntime.includes("'high-score-runtime.js'"), 'high-score renderer should be in the deferred app module manifest');
+assert.ok(moduleEntryRuntimeForHighScore.includes('ensureHighScoreRuntimeLoaded'), 'high-score module entry should load the renderer before first render');
+assert.ok(examAnalysisPackageRuntime.includes('await window.ensureHighScoreRuntimeLoaded().catch(() => {})'), 'analysis package export should load high-score support metrics before rendering');
 assert.ok(!appRuntime.includes("markSummaryDataChanged('两率一分或后1/3结果已更新，请重新生成总排名。');"), 'two-rate/bottom3 refresh should not always mark summary stale');
 assert.ok(!appRuntime.includes("markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');") && !indicatorCalcRuntime.includes("markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');"), 'indicator refresh should not always mark summary stale');
 assert.ok(!appRuntime.includes("markSummaryDataChanged('高分段赋分已更新，请重新生成总排名。');"), 'high-score refresh should not always mark summary stale');

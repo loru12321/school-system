@@ -61,6 +61,9 @@ const budgets = {
     // single-file bundle growth without relaxing the broader size guard.
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
+    // 2026-08-30: high-score page rendering moved into a demand-loaded runtime;
+    // the offline source map retains the module for file:// use. Keep the cap
+    // just above the resulting Brotli size with cross-platform headroom.
     publicAppJs: 830_000,
     publicCohortExamHydrationJs: 7_000,
     // Keep first-screen boot focused; optional runtime manifest/loaders live in runtime-loader-runtime.js.
@@ -73,7 +76,7 @@ const budgets = {
     // a small, intentional manifest entry while keeping the editor out of boot.
     // 2026-08-30: non-assessment scheduler subjects/projects add a compact
     // mobile configuration panel and export sheet; retain a narrow bundle cap.
-    ltHtmlBrotli: 347_000,
+    ltHtmlBrotli: 348_000,
     publicRuntimeLoaderJs: 58_500,
     // Current minified app bundle baseline after runtime splits, cache guards,
     // and the product redesign CSS layer being accounted in the singlefile build.

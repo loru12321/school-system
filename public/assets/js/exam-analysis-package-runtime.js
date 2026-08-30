@@ -1670,6 +1670,10 @@
     }
 
     async function ensureSupportMetricsForPackage() {
+        if (typeof window.renderHighScoreTable !== 'function'
+            && typeof window.ensureHighScoreRuntimeLoaded === 'function') {
+            await window.ensureHighScoreRuntimeLoaded().catch(() => {});
+        }
         if (typeof window.renderHighScoreTable === 'function') {
             try {
                 window.renderHighScoreTable();

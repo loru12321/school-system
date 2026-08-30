@@ -89,6 +89,9 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
     bootEntry('school-profile', bootJs('school-profile-runtime.js'))
 ]),
+'high-score': bootSkill('demand', 'demand', ['high-score', 'renderHighScoreTable'], [
+    bootEntry('high-score', bootJs('high-score-runtime.js'))
+]),
 'county-analysis': bootSkill('demand', 'demand', ['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'], [
     bootEntry('county-school-horizontal', bootJs('county-school-horizontal-runtime.js')),
     bootEntry('county-analysis', bootJs('county-analysis-runtime.js'))
@@ -745,6 +748,10 @@ return loadOptionalStylesheet(key, href);
 
 window.ensureSchoolProfileRuntimeLoaded = function () {
 return window.SystemRuntimeLoader.load('school-profile');
+};
+
+window.ensureHighScoreRuntimeLoaded = function () {
+return window.SystemRuntimeLoader.load('high-score');
 };
 
 window.ensureTeachingManagementRuntimeLoaded = function () {

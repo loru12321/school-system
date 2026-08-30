@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL ? DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2' : '';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = 'runtime-591c4e1d04d9';
+var BOOT_ASSET_VERSION_FALLBACK = 'runtime-328a3a891eed';
 
 // 每次进入都重新验证账号密码和届别，仅清理当前会话/工作区身份。
 (function forceFreshLoginEntry() {
@@ -177,6 +177,7 @@ var DEFERRED_APP_MODULES = [
 'blank-score-audit-runtime.js',
 'target-gap-analysis-runtime.js',
 'auto-diagnosis-runtime.js',
+'high-score-runtime.js',
 'indicator-bottom3-export-runtime.js',
 'summary-table-export-runtime.js',
 'template-download-runtime.js',
