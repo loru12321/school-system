@@ -116,6 +116,21 @@ async function downloadCertificate() {
             callGlobal('switchTab', 'upload');
         },
         'open-starter-guide': () => callGlobal('openStarterGuide'),
+        'open-user-password': () => callGlobal('openUserPasswordModal'),
+        'toggle-sidebar': () => callGlobal('toggleAppSidebar'),
+        'open-spotlight': () => callGlobal('openSpotlight'),
+        'open-admin-issues': () => window.IssueManager?.openAdminPanel?.(),
+        'open-admin-accounts': () => callGlobal('openAdminCloudAccountModal'),
+        'close-workspace-drawer': () => callGlobal('closeWorkspaceDrawer'),
+        'auto-detect-school': () => callGlobal('autoDetectMySchool'),
+        'load-demo-data': () => callGlobal('loadDemoData'),
+        'switch-tab': (target) => callGlobal('switchTab', target?.dataset?.uiValue || ''),
+        'run-auto-diagnosis': () => callGlobal('runAutoDiagnosis'),
+        'scan-data-issues': () => callGlobal('scanDataIssues'),
+        'run-data-doctor': () => callGlobal('runDataDoctor'),
+        'clear-action-logs': () => callGlobal('clearActionLogs'),
+        'save-project-snapshot': () => callGlobal('saveProjectSnapshot'),
+        'download-template': (target) => callGlobal('downloadTemplate', target?.dataset?.uiValue || ''),
         'load-cloud-data': () => callGlobal('loadCloudData'),
         'toggle-dark-mode': () => callGlobal('toggleDarkMode'),
         'logout': () => window.Auth?.logout?.(),
@@ -154,10 +169,15 @@ async function downloadCertificate() {
     };
 
     const changeHandlers = {
+        'switch-cohort': (target) => window.CohortManager?.switchTo?.(target?.value || ''),
         'student-compare-period-count': () => callGlobal('onStudentComparePeriodCountChange'),
         'filter-student-compare-class': () => callGlobal('filterStudentCompareByClass'),
         'sort-student-compare': () => callGlobal('sortStudentCompare'),
         'student-compare-page-size': () => callGlobal('changePageSize')
+    };
+
+    const inputHandlers = {
+        'mobile-student-search': () => window.MobMgr?.renderStudentList?.()
     };
 
     function runAction(target, action) {
@@ -181,6 +201,14 @@ async function downloadCertificate() {
         const action = target.dataset.uiChange;
         if (!action) return;
         runAction(target, action);
+    });
+
+    document.addEventListener('input', (event) => {
+        const target = event.target?.closest?.('[data-ui-input]');
+        if (!target) return;
+        const action = target.dataset.uiInput;
+        const handler = inputHandlers[action];
+        if (typeof handler === 'function') handler(target);
     });
 
     document.addEventListener('keydown', (event) => {

@@ -47,19 +47,21 @@ assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 's
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
 assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
-// 218: the freshman module's six upload/data-source handlers moved into
+// 191: the freshman module's six upload/data-source handlers moved into
 // freshman-exam-runtime.js (data-fb-pick / data-fb-change); the 17 modal-close,
 // 12 file-pick, 15 showModuleHelp, 11 scrollToAnchor and 44 DataManager
 // boilerplate handlers plus the four openTeacherSync entry points all moved
-// into delegated bindings in app-foundation-runtime.js. Ratchet only downward
-// from here.
-assert.ok(inlineHandlerCount <= 218, `inline event handler count grew: ${inlineHandlerCount} > 218`);
+// into delegated bindings in app-foundation-runtime.js. The mobile/search,
+// shell, starter-hub and workspace-drawer actions below use the shared
+// data-ui-* dispatcher. Ratchet only downward from here.
+assert.ok(inlineHandlerCount <= 191, `inline event handler count grew: ${inlineHandlerCount} > 191`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 // The freshman module's upload/data-source controls are bound declaratively in
 // freshman-exam-runtime.js. Keep the markup and the binder in sync so neither
 // side can drift back to inline attributes or silently drop the listeners.
 const freshmanRuntime = fs.readFileSync(path.join(root, 'public/assets/js/freshman-exam-runtime.js'), 'utf8');
+const uiActionsRuntime = fs.readFileSync(path.join(root, 'public/assets/js/ui-actions-runtime.js'), 'utf8');
 const freshmanPickTargets = ['fbGenderInput', 'fbViolationInput', 'fbFileInput'];
 freshmanPickTargets.forEach((id) => {
     assert.ok(html.includes(`data-fb-pick="${id}"`), `freshman upload box for ${id} should open its file input declaratively`);
@@ -137,6 +139,28 @@ assert.ok(
         && /window\.openTeacherSync\(\)/.test(foundationRuntime),
     'teacher sync entry points must use one delegated action binding'
 );
+
+// High-frequency shell and starter actions must stay declarative so mobile
+// clicks and keyboard activation share one delegated path.
+[
+    'toggle-dark-mode', 'open-user-password', 'logout', 'toggle-sidebar',
+    'open-spotlight', 'open-admin-issues', 'open-admin-accounts',
+    'close-workspace-drawer', 'auto-detect-school', 'open-starter-guide',
+    'load-demo-data', 'switch-tab', 'run-auto-diagnosis', 'scan-data-issues',
+    'run-data-doctor', 'clear-action-logs', 'save-project-snapshot', 'download-template'
+].forEach((action) => {
+    assert.ok(html.includes(`data-ui-action="${action}"`), `${action} should use data-ui-action`);
+});
+assert.ok(html.includes('data-ui-change="switch-cohort"'), 'cohort selector should use data-ui-change');
+assert.ok(html.includes('data-ui-input="mobile-student-search"'), 'mobile student search should use data-ui-input');
+[
+    'open-user-password', 'toggle-sidebar', 'open-spotlight', 'open-admin-issues',
+    'open-admin-accounts', 'close-workspace-drawer', 'auto-detect-school',
+    'load-demo-data', 'switch-tab', 'run-auto-diagnosis', 'scan-data-issues',
+    'run-data-doctor', 'clear-action-logs', 'save-project-snapshot', 'download-template'
+].forEach((action) => {
+    assert.ok(uiActionsRuntime.includes(`'${action}'`), `${action} should have a shared runtime handler`);
+});
 // help 的取值是帮助键而非元素 id，必须在 getElementById 之前分流，否则永远解析不到。
 // 注意两个 indexOf 都要先确认 >= 0：缺失时 indexOf 返回 -1，而 -1 < 任何正数会让
 // 顺序断言假通过（本条最初就是这样的空断言，变异验证时才暴露）。
