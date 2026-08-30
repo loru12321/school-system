@@ -121,8 +121,6 @@ const SCHEDULER = {
         if (!subject) return window.UI?.alert('请填写科目或项目名称。');
         if (!Number.isInteger(weeklyHours) || weeklyHours <= 0) return window.UI?.alert('每班每周节数请输入正整数。');
         if (!classNames.length) return window.UI?.alert('请至少选择一个对应班级。');
-        if (!fixedDay && fixedSlot) return window.UI?.alert('选择固定第几节时，请同时选择固定星期。');
-        if (fixedDay && !fixedSlot) return window.UI?.alert('选择固定星期时，请同时选择固定第几节。');
         const existingKeys = new Set(this.demands.map((item) => `${item.className}__${item.subject}__${item.nonAssessment ? 'manual' : 'regular'}`));
         const added = [];
         classNames.forEach((className) => {
@@ -186,7 +184,11 @@ const SCHEDULER = {
             return;
         }
         container.innerHTML = this.manualNonAssessmentDemands.map((item) => {
-            const fixed = item.fixedDay && item.fixedSlot ? ` · 固定周${item.fixedDay}${this.getSlotName(item.fixedSlot)}（每周1节固定，其余自动）` : '';
+            const fixed = item.fixedDay && item.fixedSlot
+                ? ` · 固定周${item.fixedDay}${this.getSlotName(item.fixedSlot)}（每周1节固定，其余自动）`
+                : (item.fixedDay
+                    ? ` · 仅限周${item.fixedDay}（其余课时自动安排）`
+                    : (item.fixedSlot ? ` · 仅限${this.getSlotName(item.fixedSlot)}（其余课时自动安排）` : ''));
             return `<div class="tag-chip" style="background:#ede9fe; color:#5b21b6; margin:3px 0;">${this.escapeHtml(item.subject)} · ${this.escapeHtml(item.className)}班 · ${Number(item.weeklyHours)}节/周${fixed}<button type="button" class="tag-chip-remove" data-scheduler-manual-remove="${this.escapeHtml(item.id)}" aria-label="删除">&times;</button></div>`;
         }).join('');
     },
@@ -507,9 +509,6 @@ const SCHEDULER = {
             }
             if (Number(demand.weeklyHours) > availableSlots) {
                 errors.push(`${demand.className}班 ${demand.subject} 需要 ${demand.weeklyHours} 节，超过当前可排的 ${availableSlots} 个时段。`);
-            }
-            if (demand.nonAssessment && ((demand.fixedDay && !demand.fixedSlot) || (!demand.fixedDay && demand.fixedSlot))) {
-                errors.push(`${demand.className}班 ${demand.subject} 的固定时段必须同时填写星期和第几节。`);
             }
             if (demand.nonAssessment && demand.fixedSlot && !this.isValidSlotCode(demand.fixedSlot, config)) {
                 errors.push(`${demand.className}班 ${demand.subject} 固定的 ${this.getSlotName(demand.fixedSlot)} 超出当前课时结构。`);
