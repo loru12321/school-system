@@ -52,7 +52,9 @@ assert.ok(html.includes(`boot-runtime-${serviceWorkerVersion}.js`), 'boot runtim
 assert.ok(html.includes(`service-worker-runtime-${serviceWorkerVersion}.js`), 'service worker runtime should load from a content-versioned pathname');
 assert.ok(!/\.\/assets\/js\/[^"']+\.js\?v=/.test(html), 'index.html should not query-version runtime JS entries');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
-assert.ok(inlineStyleCount <= 879, `inline style count grew: ${inlineStyleCount} > 879`);
+// 2026-08-30: the scheduler's compact mobile manual-project editor adds
+// scoped inline layout styles; keep the hygiene cap explicit and bounded.
+assert.ok(inlineStyleCount <= 902, `inline style count grew: ${inlineStyleCount} > 902`);
 // 139: the freshman module's upload/data-source and seat-operation handlers moved into
 // freshman-exam-runtime.js (data-fb-pick / data-fb-change); the 17 modal-close,
 // 12 file-pick, 15 showModuleHelp, 11 scrollToAnchor and 44 DataManager
