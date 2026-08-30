@@ -25,6 +25,7 @@ const SCHEDULER = {
     tableRenderCache: { signature: '', html: '' },
     classSubjectDayIndex: null,
     teacherDayLoadIndex: null,
+    _reserveEveningThird: false,
 
     // 存储动态添加的规则
     rules: {
@@ -37,6 +38,7 @@ const SCHEDULER = {
         teacherBlocks: {
             enabled: true,
             consecutiveWeight: 100,
+            adjacentClassWeight: 160,
             sameSessionWeight: 28,
             sameDayWeight: 18,
             classSubjectBalanceWeight: 72,
@@ -1234,10 +1236,48 @@ const SCHEDULER = {
         return blocked.includes('ALL') || blocked.includes(demand.subject);
     },
 
-    canPlaceDemand: function (demand, slot, teacherBusyMap) {
+    getAdjacentClassNumber: function (className) {
+        const match = String(className || '').match(/(?:^|[._-])(\d+)$/);
+        return match ? Number(match[1]) : NaN;
+    },
+
+    areAdjacentClasses: function (left, right) {
+        const leftNumber = this.getAdjacentClassNumber(left);
+        const rightNumber = this.getAdjacentClassNumber(right);
+        return Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && Math.abs(leftNumber - rightNumber) === 1
+            && String(left || '').replace(/\d+$/, '') === String(right || '').replace(/\d+$/, '');
+    },
+
+    isSameClassSubjectConsecutiveAllowed: function (demand, slot, options = {}) {
+        if (!demand || !slot) return false;
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        if (options.combined || (slot.type === 'eve' && slot.period === 3)) return true;
+        return (this.rules.pairs || []).some((rule) => rule.subject === subject
+            && String(rule.session || '') === String(slot.type || '')
+            && this.getScopeClasses(rule.scope).includes(demand.className));
+    },
+
+    isEveningThirdReserved: function (demand, slot) {
+        if (!this._reserveEveningThird || !demand || !slot || slot.type !== 'eve' || slot.period !== 3) return false;
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        return (this.rules.combined || []).some((rule) => rule.slot === 'eve_3'
+            && rule.subject === subject
+            && this.getScopeClasses(rule.scope).includes(demand.className));
+    },
+
+    canPlaceDemand: function (demand, slot, teacherBusyMap, options = {}) {
         if (!demand || !slot || this.isGloballyClosedSlot(slot)) return false;
         const classSchedule = this.schedule[demand.className] || {};
         if (classSchedule[slot.id] || this.isDemandBlocked(demand, slot.id)) return false;
+        if (this.isEveningThirdReserved(demand, slot) && !options.combined) return false;
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        const adjacentPeriods = [slot.period - 1, slot.period + 1].filter((period) => period >= 1);
+        const hasAdjacentSameSubject = adjacentPeriods.some((period) => {
+            const adjacentId = `d${slot.day}_${slot.type}_${period}`;
+            const cell = classSchedule[adjacentId];
+            return cell && String(cell.subject || '').replace(/\(合\)$/, '').trim() === subject;
+        });
+        if (hasAdjacentSameSubject && !this.isSameClassSubjectConsecutiveAllowed(demand, slot, options)) return false;
         if (teacherBusyMap[`${this.normalizeTeacherName(demand.name)}_${slot.id}`]) return false;
         if (this.isTeacherBusyInOtherClass(demand.name, slot.id)) return false;
         if (demand.venue && this.isVenueBusyInOtherClass(demand.venue, slot.id)) return false;
@@ -1313,8 +1353,9 @@ const SCHEDULER = {
         return [...groups.entries()].filter(([, demands]) => demands.length > 1);
     },
 
-    applyCombinedRules: function (pending, allSlots, teacherBusyMap) {
+    applyCombinedRules: function (pending, allSlots, teacherBusyMap, options = {}) {
         this.rules.combined.forEach((rule) => {
+            if (options.deferEveningThird && rule.slot === 'eve_3') return;
             this.getCombinedGroups(rule, pending).forEach(([groupId, demands]) => {
                 const suffix = this.normalizeSlotCode(rule.slot);
                 const candidate = allSlots.find((slot) => {
@@ -1327,6 +1368,43 @@ const SCHEDULER = {
                             && (!demand.venue || !this.isVenueBusyInOtherClass(demand.venue, slot.id));
                     });
                 });
+                if (!candidate) return;
+                demands.forEach((demand) => {
+                    this.placeDemand(demand, candidate.id, { combined: true, groupId });
+                    demand.remaining -= 1;
+                });
+                this.markTeacherBusy(demands[0].name, candidate.id);
+                demands.map((demand) => demand.venue).filter(Boolean)
+                    .forEach((venue) => this.markVenueBusy(venue, candidate.id));
+            });
+        });
+    },
+
+    applyEveningThirdCombinedRules: function (pending, allSlots, teacherBusyMap) {
+        this.rules.combined.filter((rule) => rule.slot === 'eve_3').forEach((rule) => {
+            this.getCombinedGroups(rule, pending).forEach(([groupId, demands]) => {
+                const subject = String(rule.subject || '').replace(/\(合\)$/, '');
+                const groupClasses = demands.map((demand) => demand.className);
+                const hasAdjacentFrontPair = (day) => groupClasses.some((className, index) => groupClasses.some((otherClass, otherIndex) => {
+                    if (index >= otherIndex || !this.areAdjacentClasses(className, otherClass)) return false;
+                    const first = String(this.schedule[className]?.[`d${day}_eve_1`]?.subject || '').replace(/\(合\)$/, '') === subject;
+                    const second = String(this.schedule[className]?.[`d${day}_eve_2`]?.subject || '').replace(/\(合\)$/, '') === subject;
+                    const otherFirst = String(this.schedule[otherClass]?.[`d${day}_eve_1`]?.subject || '').replace(/\(合\)$/, '') === subject;
+                    const otherSecond = String(this.schedule[otherClass]?.[`d${day}_eve_2`]?.subject || '').replace(/\(合\)$/, '') === subject;
+                    return (first && otherSecond) || (second && otherFirst);
+                }));
+                const candidate = allSlots
+                    .filter((slot) => slot.type === 'eve' && slot.period === 3 && !this.isGloballyClosedSlot(slot))
+                    .filter((slot) => hasAdjacentFrontPair(slot.day))
+                    .find((slot) => {
+                        if (teacherBusyMap[`${this.normalizeTeacherName(demands[0].name)}_${slot.id}`]) return false;
+                        if (this.isTeacherBusyInOtherClass(demands[0].name, slot.id)) return false;
+                        return demands.every((demand) => {
+                            const classSchedule = this.schedule[demand.className] || {};
+                            return !classSchedule[slot.id] && !this.isDemandBlocked(demand, slot.id)
+                                && (!demand.venue || !this.isVenueBusyInOtherClass(demand.venue, slot.id));
+                        });
+                    });
                 if (!candidate) return;
                 demands.forEach((demand) => {
                     this.placeDemand(demand, candidate.id, { combined: true, groupId });
@@ -1356,7 +1434,7 @@ const SCHEDULER = {
                 if (this.normalizeTeacherName(cell.teacher) !== teacher) return;
                 if (String(cell.subject || '').replace(/\(合\)$/, '') !== normalizedSubject) return;
                 const match = slotId.match(/^d(\d+)_(am|pm|eve)_(\d+)$/);
-                if (match) slots.push({ id: slotId, day: Number(match[1]), type: match[2], period: Number(match[3]) });
+                if (match) slots.push({ id: slotId, day: Number(match[1]), type: match[2], period: Number(match[3]), className });
             });
         });
         return slots;
@@ -1371,9 +1449,12 @@ const SCHEDULER = {
         const sameSession = sameDay.filter((item) => item.type === slot.type);
         const adjacent = existing.filter((item) => item.day === slot.day && item.type === slot.type
             && Math.abs(item.period - slot.period) === 1).length;
+        const adjacentClass = existing.filter((item) => item.day === slot.day && item.type === slot.type
+            && Math.abs(item.period - slot.period) === 1 && this.areAdjacentClasses(item.className, demand.className)).length;
         const sameDayCount = sameDay.length;
         const sameSessionCount = sameSession.length;
         return adjacent * Number(weights.consecutiveWeight || 0)
+            + adjacentClass * Number(weights.adjacentClassWeight || 160)
             + sameSessionCount * Number(weights.sameSessionWeight || 0)
             + sameDayCount * Number(weights.sameDayWeight || 0);
     },
@@ -1431,6 +1512,27 @@ const SCHEDULER = {
             .some(([slotId, cell]) => slotId.startsWith(`d${slot.day}_eve_`)
                 && cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject);
         if (sameSessionSubject) score += 90;
+        const adjacentClassBlock = this.classes.some((className) => this.areAdjacentClasses(className, demand.className)
+            && [1, 2].some((period) => {
+                const cell = this.schedule[className]?.[`d${slot.day}_eve_${period}`];
+                return cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject
+                    && this.normalizeTeacherName(cell.teacher) === this.normalizeTeacherName(demand.name);
+            }));
+        if (adjacentClassBlock && slot.period <= 2) score += 220;
+        if (slot.period === 2) {
+            const frontSubject = Object.values(this.schedule).some((classSchedule) => {
+                const cell = classSchedule?.[`d${slot.day}_eve_1`];
+                return cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject;
+            });
+            if (frontSubject) score += 180;
+        }
+        if (slot.period === 3) {
+            const frontSubject = Object.values(this.schedule).some((classSchedule) => [1, 2].some((period) => {
+                const cell = classSchedule?.[`d${slot.day}_eve_${period}`];
+                return cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject;
+            }));
+            score += frontSubject ? 260 : -220;
+        }
         return score;
     },
 
@@ -1551,13 +1653,14 @@ const SCHEDULER = {
                 this.applyBaseConstraints(config);
                 this.rebuildDayLoadIndexes();
                 const teacherBusyMap = this.getTeacherBusyMap(config);
+                this._reserveEveningThird = true;
                 const pending = this.demands.map((demand) => ({
                     ...demand,
                     remaining: Math.max(0, Number(demand.weeklyHours) - this.countDemandLessons(demand))
                 }));
 
                 this.applyConsecutivePairRules(pending, allSlots, teacherBusyMap);
-                this.applyCombinedRules(pending, allSlots, teacherBusyMap);
+                this.applyCombinedRules(pending, allSlots, teacherBusyMap, { deferEveningThird: true });
                 const crossGradeNames = new Set(this.getCrossGradeTeachers().map((item) => item.name));
                 const teacherSubjectTotals = new Map();
                 pending.forEach((demand) => {
@@ -1575,6 +1678,21 @@ const SCHEDULER = {
                         || String(left.subject).localeCompare(String(right.subject), 'zh-CN')
                         || left.className.localeCompare(right.className, 'zh-CN', { numeric: true });
                 });
+                pending.forEach((demand) => {
+                    while (demand.remaining > 0) {
+                        const slot = this.findBestSlotForDemand(demand, allSlots, teacherBusyMap);
+                        if (!slot) break;
+                        this.placeDemand(demand, slot.id);
+                        this.markTeacherBusy(demand.name, slot.id);
+                        if (demand.venue) this.markVenueBusy(demand.venue, slot.id);
+                        if (demand.nonAssessment && demand.fixedDay && demand.fixedSlot && !demand._fixedPlaced) demand._fixedPlaced = true;
+                        demand.remaining -= 1;
+                    }
+                });
+
+                // 晚自习第三节只从前两节已出现的科目中选取合堂；没有形成前置科目时，留到最后普通排课兜底。
+                this._reserveEveningThird = false;
+                this.applyEveningThirdCombinedRules(pending, allSlots, teacherBusyMap);
                 pending.forEach((demand) => {
                     while (demand.remaining > 0) {
                         const slot = this.findBestSlotForDemand(demand, allSlots, teacherBusyMap);

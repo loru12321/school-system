@@ -23,6 +23,12 @@ assert.ok(source.includes('applyGrade8Preset: async function'), 'grade scheduler
 assert.ok(source.includes('buildGrade8DemandsFromTeacherMap: function'), 'grade-8 preset should derive per-class demands from the imported teacher map');
 assert.ok(source.includes("'语文': 8") && source.includes("'数学': 9") && source.includes("'英语': 9"), 'grade-8 preset should encode the requested core-subject weekly hours');
 assert.ok(source.includes('applyConsecutivePairRules: function'), 'grade scheduler should support weekly same-class consecutive composition periods');
+assert.ok(source.includes('areAdjacentClasses: function'), 'scheduler should identify adjacent classes for teacher blocks');
+assert.ok(source.includes('isSameClassSubjectConsecutiveAllowed: function'), 'scheduler should allow only explicit same-class consecutive exceptions');
+assert.ok(source.includes('isEveningThirdReserved: function'), 'scheduler should reserve evening third period for eligible combined lessons');
+assert.ok(source.includes('applyEveningThirdCombinedRules: function'), 'scheduler should build evening third combined lessons from front-period subjects');
+assert.ok(source.includes('deferEveningThird: true'), 'scheduler should defer evening third combined placement until front periods are known');
+assert.ok(source.includes('adjacentClassWeight: 160'), 'scheduler should prioritize adjacent-class teacher continuity');
 assert.ok(source.includes('getSoftBusyScore: function'), 'grade scheduler should support soft teacher meeting avoidance');
 assert.ok(source.includes('buildCompactGradeSheet: function'), 'grade scheduler should provide a compact all-class timetable sheet');
 assert.ok(indexHtml.includes("value=\"subject\""), 'grade scheduler should provide subject-focused timetable mode');
