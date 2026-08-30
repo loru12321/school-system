@@ -59,6 +59,7 @@ const appFoundationRuntimePath = path.resolve(__dirname, '../public/assets/js/ap
 const studentDetailsRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/student-details-render-runtime.js');
 const comparisonRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/comparison-render-runtime.js');
 const reportHistoryRuntimePath = path.resolve(__dirname, '../public/assets/js/report-history-runtime.js');
+const reportMetricsRuntimePath = path.resolve(__dirname, '../public/assets/js/report-metrics-runtime.js');
 const reportCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/report-compare-runtime.js');
 const runtimeLoaderRuntimePath = path.resolve(__dirname, '../public/assets/js/runtime-loader-runtime.js');
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
@@ -168,6 +169,7 @@ assert.ok(fs.existsSync(countyAnalysisRuntimePath), 'county-analysis-runtime.js 
 assert.ok(fs.existsSync(mobileAppRuntimePath), 'mobile-app-runtime.js should exist');
 assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
+assert.ok(fs.existsSync(reportMetricsRuntimePath), 'report-metrics-runtime.js should exist');
 assert.ok(fs.existsSync(targetEditorRuntimePath), 'target-editor-runtime.js should exist');
 assert.ok(fs.existsSync(reportChartRuntimePath), 'report-chart-runtime.js should exist');
 assert.ok(fs.existsSync(reportExportRuntimePath), 'report-export-runtime.js should exist');
@@ -228,6 +230,7 @@ const spotlightContextRuntime = fs.readFileSync(spotlightContextRuntimePath, 'ut
 const edgeGatewaySource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/edge-gateway-runtime.js'), 'utf8');
 const appFoundationRuntime = fs.readFileSync(appFoundationRuntimePath, 'utf8');
 const reportHistoryRuntime = fs.readFileSync(reportHistoryRuntimePath, 'utf8');
+const reportMetricsRuntime = fs.readFileSync(reportMetricsRuntimePath, 'utf8');
 const reportCompareRuntime = fs.readFileSync(reportCompareRuntimePath, 'utf8');
 const reportRenderRuntime = fs.readFileSync(reportRenderRuntimePath, 'utf8');
 const targetEditorRuntime = fs.readFileSync(targetEditorRuntimePath, 'utf8');
@@ -756,6 +759,7 @@ assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js sho
     'student-details-render-runtime.js',
     'comparison-render-runtime.js',
     'snapshot-system-runtime.js',
+    'report-metrics-runtime.js',
     'report-history-runtime.js'
 ].forEach((runtimeName) => {
     assert.ok(
@@ -772,6 +776,8 @@ assert.ok(
     bootRuntime.indexOf("'cohort-db-core-runtime.js'") > bootRuntime.indexOf("'app.js'"),
     'cohort-db-core-runtime.js should load after app.js state accessors'
 );
+assert.ok(reportMetricsRuntime.includes('root.enhanceStudentReportMetrics = enhanceStudentReportMetrics'), 'report metrics runtime should expose the report enhancement helper');
+assert.strictEqual(appSource.includes('function enhanceStudentReportMetrics('), false, 'app.js should not carry the low-frequency report metrics implementation');
 [
     'window.getCohortKey = window.getCohortKey || getCohortKey;',
     'window.showCohortPicker = window.showCohortPicker || showCohortPicker;',

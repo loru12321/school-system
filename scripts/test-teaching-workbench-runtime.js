@@ -109,6 +109,10 @@ assert.ok(freshman.includes('function fbBalanceGenderCounts(classes, k)'), 'fres
 assert.ok(freshman.includes('fbBalanceGenderCounts(classes, k);'), 'freshman generation should apply the deterministic gender balancing pass');
 assert.ok(freshman.includes('function FB_viewClassViolations'), 'freshman class cards should expose a violation roster viewer');
 assert.ok(freshman.includes('data-fb-action="view-violations"'), 'freshman class cards should render a clickable violation count');
+assert.ok(freshman.includes('function FB_viewClassRoster'), 'freshman class cards should expose a general roster viewer for count links');
+assert.ok(freshman.includes('data-fb-action="view-roster"'), 'freshman class cards should render clickable roster count links');
+assert.ok(freshman.includes('data-fb-roster-kind="post"'), 'freshman class cards should expose a combined post-assignment roster link');
+assert.ok(stylesheet.includes('.fb-card-count-link'), 'freshman roster count links should have a shared wavy-underline style');
 assert.ok(freshman.includes('fbDecorateRosterExportSheet'), 'freshman exports should style violation and dropout rows');
 assert.ok(freshman.includes('fbAppendClassRosterSheets'), 'freshman exports should include one worksheet per class');
 assert.ok(freshman.includes('fbSafeExportSheetName'), 'freshman class worksheet names should be Excel-safe and unique');

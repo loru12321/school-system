@@ -8760,6 +8760,45 @@ body {
     text-underline-offset: 3px;
 }
 
+.fb-dropout-link {
+    border: 0;
+    cursor: pointer;
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: #9333ea;
+    text-underline-offset: 3px;
+}
+
+.fb-card-count-link {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: #64748b;
+    text-underline-offset: 3px;
+}
+
+.fb-card-count-link:hover,
+.fb-card-count-link:focus-visible {
+    color: #1d4ed8;
+    outline: 2px solid rgba(59, 130, 246, 0.28);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.fb-total-count-link { text-decoration-color: #334155; }
+.fb-male-count-link { text-decoration-color: #2563eb; }
+.fb-female-count-link { text-decoration-color: #db2777; }
+.fb-high-count-link { text-decoration-color: #16a34a; }
+.fb-low-count-link { text-decoration-color: #ea580c; }
+.fb-post-count-link { color: #7c3aed; text-decoration-color: #7c3aed; font-weight: 700; }
+.fb-fixed-count-link { color: #166534; text-decoration-color: #166534; font-weight: 700; }
+
 .seat-workspace {
     display: flex;
     gap: 20px;
