@@ -206,6 +206,7 @@ async function run() {
     assert.deepStrictEqual(importContext.mismatchedGrades, []);
     assert.strictEqual(importContext.subjectCount, 2);
     assert.strictEqual(importContext.schoolCount, 1);
+    assert.deepStrictEqual(importContext.schoolNames, ['银山实验学校']);
 
     const wrongGradeImport = runtime.summarizeTeacherImportContext([
         { key: '8.1_数学', teacher: '张老师', school: '银山实验学校' }

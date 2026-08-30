@@ -1620,6 +1620,16 @@ const DataManager = {
 
         appDebug(`开始导入教师Excel: ${file.name}, 学期: ${termId}`);
 
+        // The school is already selected in the workspace.  A school column in
+        // the workbook is therefore optional; use the current workspace school
+        // for rows that do not provide one so ownership/filtering remains
+        // deterministic after import and cloud sync.
+        const selectedSchool = String(
+            (typeof readCurrentSchool === 'function' ? readCurrentSchool() : '')
+            || (typeof inferDefaultSchoolFromContext === 'function' ? inferDefaultSchoolFromContext() : '')
+            || ''
+        ).trim();
+
         if (window.UI) UI.loading(true, '✨ 正在解析Excel...');
 
         const reader = new FileReader();
@@ -1665,6 +1675,7 @@ const DataManager = {
                         if (!extractedSchool && !/^Sheet\d+$/i.test(sheetName)) {
                             extractedSchool = sheetName;
                         }
+                        if (!extractedSchool) extractedSchool = selectedSchool;
                         const schoolName = String(extractedSchool || '').trim();
 
                         if (className && subject && teacher) {
@@ -1705,7 +1716,10 @@ const DataManager = {
                     return;
                 }
 
-                const confirmText = `确认导入这份任课表吗？\n\n文件：${file.name}\n归属：${importContext.label}\n记录：${count} 条\n学校：${importContext.schoolCount || '未在文件中标明'}\n学科：${importContext.subjectCount}\n\n导入会替换当前所选学期的任课表，不会修改其他届别或学期。`;
+                const schoolLabel = importContext.schoolNames?.length
+                    ? importContext.schoolNames.join('、')
+                    : (selectedSchool || '未在文件中标明');
+                const confirmText = `确认导入这份任课表吗？\n\n文件：${file.name}\n归属：${importContext.label}\n记录：${count} 条\n学校：${schoolLabel}\n学科：${importContext.subjectCount}\n\n导入会替换当前所选学期的任课表，不会修改其他届别或学期。`;
                 const confirmed = window.UI && typeof UI.confirm === 'function'
                     ? await UI.confirm(confirmText)
                     : confirm(confirmText);

@@ -153,6 +153,7 @@
             schoolCount: schools.size,
             subjectCount: subjects.size,
             detectedGrades: [...detectedGrades].sort((a, b) => a - b),
+            schoolNames: [...schools].sort(),
             mismatchedGrades,
             unknownGradeCount
         };
