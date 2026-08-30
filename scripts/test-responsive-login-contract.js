@@ -12,8 +12,10 @@ assert.ok(!fs.existsSync(path.join(root, 'src', 'assets', 'css', 'login-workbenc
 
 const html = fs.readFileSync(htmlPath, 'utf8');
 const css = fs.readFileSync(cssPath, 'utf8');
+const applicationCss = fs.readFileSync(path.join(root, 'src', 'assets', 'css', 'application.css'), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 const stylesheet = './assets/css/responsive-login-final.css';
+const applicationStylesheet = './assets/css/application.css';
 
 assert.strictEqual(
     packageJson.scripts['check:responsive-login'],
@@ -28,9 +30,18 @@ const stylesheetLinks = [...html.matchAll(/<link\b[^>]*>/gi)]
     .filter(match => /\brel\s*=\s*(["'])[^"']*\bstylesheet\b[^"']*\1/i.test(match[0]))
     .map(match => match[0].match(/\bhref\s*=\s*(["'])([^"']+)\1/i)?.[2])
     .filter(Boolean);
-assert.ok(stylesheetLinks.some(href => href.split('?')[0] === stylesheet), 'index.html must load responsive-login-final.css');
+assert.ok(
+    stylesheetLinks.some(href => href.split('?')[0] === stylesheet)
+        || stylesheetLinks.some(href => href.split('?')[0] === applicationStylesheet),
+    'index.html must load responsive-login-final.css directly or through application.css'
+);
 assert.ok(!stylesheetLinks.some(href => href.split('?')[0] === './assets/css/login-workbench-lite.css'), 'index.html must not load a second login theme');
-assert.strictEqual(stylesheetLinks.at(-1).split('?')[0], stylesheet, 'responsive-login-final.css must be the last login stylesheet loaded');
+if (stylesheetLinks.some(href => href.split('?')[0] === applicationStylesheet)) {
+    assert.strictEqual(stylesheetLinks.at(-1).split('?')[0], applicationStylesheet, 'application.css must be the last application stylesheet loaded');
+    assert.match(applicationCss, /@import\s+["']\.\/responsive-login-final\.css["'];\s*$/m, 'application.css must keep responsive-login-final.css as its final import');
+} else {
+    assert.strictEqual(stylesheetLinks.at(-1).split('?')[0], stylesheet, 'responsive-login-final.css must be the last login stylesheet loaded');
+}
 assert.ok(
     /<button\b[^>]*id="login-submit-button"[^>]*data-login-submit="1"[^>]*>/i.test(html),
     'login submit button must keep the runtime submit hook'

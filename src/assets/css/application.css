@@ -1,0 +1,33 @@
+/*
+ * Single application stylesheet entry point.
+ *
+ * Keep the imports in the same order as the historical <link> chain in
+ * index.html. CSS import order is part of the product surface: the later
+ * workbench layers intentionally refine the earlier foundations, and
+ * responsive-login-final.css must remain the final application layer so the
+ * authentication surface wins over the visual themes on small screens.
+ */
+@import "./main.css";
+@import "./shell.css";
+@import "./fluent-overrides.css";
+@import "./drill-modal.css";
+@import "./dark-mode-fixes.css";
+@import "./vendor-polish.css";
+@import "./apple-platform.css";
+@import "./apk-mobile-shell.css";
+@import "./mobile-skeleton.css";
+@import "./layout-refinement.css";
+@import "./product-redesign.css";
+@import "./designer-studio-workspace.css";
+@import "./cloud-archive-visibility.css";
+@import "./ins-workbench.css";
+@import "./workbench-design-language.css";
+@import "./data-workspace-foundation.css";
+@import "./visual-polish-2026.css";
+@import "./typography-optimization-2026.css";
+@import "./ux-review-2026.css";
+/* Utility classes live in public/ because they are also used by the offline
+ * and static-asset copies; importing the same authored file keeps them in the
+ * single Vite CSS request without maintaining a second copy. */
+@import "../../../public/assets/css/utility-classes.css";
+@import "./responsive-login-final.css";
