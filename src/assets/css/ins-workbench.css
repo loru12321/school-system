@@ -212,12 +212,6 @@ html body:not(.dark-mode) #app .workflow-path {
     border-bottom-color: var(--ins-line) !important;
 }
 
-html body:not(.dark-mode) #app .workflow-path__step.is-active {
-    border-bottom-color: var(--ins-coral) !important;
-    background: var(--ins-coral-soft) !important;
-    color: var(--ins-coral-deep) !important;
-}
-
 /* Opera-style workspace context: state and task continuity without another dashboard. */
 #app .workspace-context-bar {
     display: grid;
@@ -516,26 +510,6 @@ html body:not(.dark-mode) #app .shell-overview-context-row { padding:0!important
     html body:not(.dark-mode) #app .shell-overview-card--dock { grid-template-columns:1fr!important; gap:10px!important; padding-bottom:10px!important; }
 }
 
-html body:not(.dark-mode) #app .shell-module-rail-chip {
-    border: 1px solid transparent !important;
-    border-radius: 7px !important;
-    background: transparent !important;
-    color: var(--ins-muted) !important;
-    box-shadow: none !important;
-}
-
-html body:not(.dark-mode) #app .shell-module-rail-chip:hover {
-    background: #f4f7ff !important;
-    color: var(--ins-ink) !important;
-}
-
-html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) {
-    border-color: var(--ins-coral) !important;
-    background: var(--ins-coral) !important;
-    color: #ffffff !important;
-    box-shadow: 0 2px 5px rgba(49, 94, 251, 0.16) !important;
-}
-
 /* Modules retain clear boundaries for dense data and large tables. */
 html body:not(.dark-mode) #app .section.card-box,
 html body:not(.dark-mode) #app .section.card-box.analysis-workspace {
@@ -767,15 +741,6 @@ html body:not(.dark-mode) #app .workspace-context-summary {
     padding-right: 12px !important;
 }
 
-html body:not(.dark-mode) #app .workspace-context-title {
-    font-size: 13px !important;
-}
-
-html body:not(.dark-mode) #app .workspace-context-statuses {
-    justify-content: flex-end !important;
-    gap: 5px !important;
-}
-
 html body:not(.dark-mode) #app .workspace-context-status {
     min-height: 24px !important;
     padding: 0 7px !important;
@@ -801,10 +766,6 @@ html body:not(.dark-mode) #app .workspace-context-group + .workspace-context-gro
 html body:not(.dark-mode) #app .workspace-context-group__label {
     color: var(--ins-muted) !important;
     font-size: 10px !important;
-}
-
-html body:not(.dark-mode) #app .workspace-context-module-list {
-    gap: 5px !important;
 }
 
 html body:not(.dark-mode) #app .workspace-context-module-entry {
@@ -867,23 +828,6 @@ html body:not(.dark-mode) #app .shell-module-rail-shell {
     border-left: 0 !important;
     border-radius: 0 !important;
     background: transparent !important;
-}
-
-html body:not(.dark-mode) #app .shell-module-rail-chip {
-    min-height: 56px !important;
-    padding: 9px 10px !important;
-    border-radius: 8px !important;
-}
-
-html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) {
-    border-color: var(--ins-coral) !important;
-    background: var(--ins-coral) !important;
-    color: #ffffff !important;
-    box-shadow: none !important;
-}
-
-html body:not(.dark-mode) #app .shell-module-rail-chip:is(.is-active, [aria-current="true"], [aria-selected="true"]) * {
-    color: inherit !important;
 }
 
 @media (max-width: 900px) {

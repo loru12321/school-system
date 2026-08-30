@@ -71,10 +71,6 @@ body {
     color: #e7e9ea;
 }
 
-.dark-mode .card-box {
-    border: 1px solid var(--border);
-}
-
 .dark-mode table thead th {
     background: rgba(30, 41, 59, 0.9);
     color: #94a3b8;
@@ -165,86 +161,7 @@ body {
     background: var(--bg-card);
 }
 
-.spotlight-mask {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.8);
-    z-index: 30000;
-    display: none;
-    justify-content: center;
-    padding-top: 100px;
-    backdrop-filter: blur(4px);
-}
-
-.spotlight-box {
-    width: 100%;
-    max-width: 600px;
-    background: var(--bg-card);
-    border-radius: 12px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-    border: 1px solid var(--primary);
-}
-
-.spotlight-input-wrap {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid var(--border);
-}
-
-.spotlight-input {
-    border: none !important;
-    flex: 1;
-    font-size: 18px;
-    outline: none;
-    background: transparent;
-}
-
-.spotlight-results {
-    max-height: min(60vh, 460px);
-    overflow-y: auto;
-}
-
 /* 命令面板分类分组标签：区隔各分类模块，不参与键盘选择 */
-.spotlight-group-label {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    padding: 8px 20px 6px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #94a3b8;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border);
-}
-
-.spotlight-item {
-    padding: 12px 20px;
-    display: flex;
-    justify-content: space-between;
-    cursor: pointer;
-    transition: 0.2s;
-    border-bottom: 1px solid var(--border);
-}
-
-.spotlight-item:hover,
-.spotlight-item.active {
-    background: var(--primary-light);
-    color: var(--primary);
-}
-
-.spotlight-hint {
-    padding: 10px;
-    font-size: 12px;
-    color: #94a3b8;
-    text-align: center;
-}
 
 .module-help-btn {
     display: inline-flex;
@@ -414,10 +331,6 @@ header {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     line-height: 1.6;
     gap: 8px;
-}
-
-.module-desc-bar p {
-    margin: 4px 0 0 0;
 }
 
 .module-desc-bar .desc-toggle {
@@ -4121,7 +4034,6 @@ body.dark-mode #contributionChartContainer > div > div {
     }
 }
 
-
 .status-badge {
     display: inline-flex;
     align-items: center;
@@ -5798,13 +5710,6 @@ td {
 }
 
 /* 贡献值正负色彩 */
-.text-green {
-    color: #16a34a;
-}
-
-.text-red {
-    color: #dc2626;
-}
 
 th:not(:last-child),
 td:not(:last-child) {
@@ -7809,14 +7714,6 @@ input[type="radio"] {
 }
 
 /* 3. 增强型卡片 (支持折叠) */
-.mob-card {
-    background: white;
-    border-radius: 16px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-}
 
 .mob-card-header {
     display: flex;
@@ -8289,10 +8186,6 @@ input[type="radio"] {
         display: none !important;
     }
 
-}
-
-#desk-labels-print-area {
-    display: none;
 }
 
 @media print {

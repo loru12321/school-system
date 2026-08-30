@@ -73,28 +73,6 @@
 }
 
 /* ================== Final QQ Fullscreen Layout Lock ================== */
-#login-overlay[data-login-layout="qq-fullscreen"] {
-    padding: 0 !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    align-items: stretch !important;
-    justify-content: stretch !important;
-    background:
-        radial-gradient(circle at 18% 18%, rgba(47, 212, 255, 0.56), transparent 24%),
-        radial-gradient(circle at 84% 20%, rgba(173, 127, 255, 0.40), transparent 24%),
-        radial-gradient(circle at 50% 84%, rgba(255, 210, 178, 0.38), transparent 24%),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.11) 0 26px, rgba(255, 255, 255, 0.04) 26px 52px),
-        linear-gradient(180deg, #0f66d2 0%, #2256c8 24%, #463bac 56%, #b998ca 82%, #f2dccc 100%) !important;
-}
-
-#login-overlay[data-login-layout="qq-fullscreen"][data-login-portal="parent"] {
-    background:
-        radial-gradient(circle at 18% 18%, rgba(45, 212, 191, 0.44), transparent 24%),
-        radial-gradient(circle at 84% 20%, rgba(56, 189, 248, 0.34), transparent 24%),
-        radial-gradient(circle at 50% 84%, rgba(255, 224, 188, 0.34), transparent 24%),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.11) 0 26px, rgba(255, 255, 255, 0.04) 26px 52px),
-        linear-gradient(180deg, #0f6a94 0%, #145c8d 24%, #17647f 56%, #99b9c7 82%, #f1dcc8 100%) !important;
-}
 
 #login-overlay[data-login-layout="qq-fullscreen"] > .login-shell,
 #login-overlay[data-login-layout="qq-fullscreen"] .login-shell {
@@ -177,10 +155,6 @@
     -webkit-backdrop-filter: blur(28px) saturate(1.2) !important;
 }
 
-#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel::before {
-    display: none !important;
-}
-
 #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-head,
 #login-overlay[data-login-layout="qq-fullscreen"] .login-system-overview,
 #login-overlay[data-login-layout="qq-fullscreen"] .login-mobile-highlights,
@@ -219,10 +193,6 @@
     text-align: left !important;
 }
 
-#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-badge {
-    margin: 0 0 10px !important;
-}
-
 #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-utility {
     display: flex !important;
     flex-wrap: wrap !important;
@@ -233,18 +203,6 @@
 #login-overlay[data-login-layout="qq-fullscreen"] .login-system-overview {
     display: grid !important;
     gap: 16px !important;
-}
-
-#login-overlay[data-login-layout="qq-fullscreen"] .login-system-metrics {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 12px !important;
-}
-
-#login-overlay[data-login-layout="qq-fullscreen"] .login-mobile-highlights {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 10px !important;
 }
 
 #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-launch-head {
@@ -1434,14 +1392,6 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
         radial-gradient(circle at center, rgba(255, 255, 255, 0.16), transparent 54%) !important;
 }
 
-#login-overlay[data-login-portal="parent"] {
-    background:
-        radial-gradient(circle at 10% 16%, rgba(110, 231, 183, 0.24), transparent 34%),
-        radial-gradient(circle at 88% 14%, rgba(56, 189, 248, 0.22), transparent 32%),
-        radial-gradient(circle at 76% 88%, rgba(96, 165, 250, 0.18), transparent 30%),
-        linear-gradient(136deg, #fbfdff 0%, #ecfeff 44%, #eff6ff 100%) !important;
-}
-
 #login-overlay>.login-shell,
 .login-shell {
     position: relative;
@@ -1494,31 +1444,8 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
     transform: rotate(20deg) !important;
 }
 
-#login-overlay[data-login-portal="parent"] .login-stage {
-    background:
-        radial-gradient(circle at top right, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 34%),
-        linear-gradient(145deg, rgba(8, 15, 29, 0.97) 0%, rgba(10, 42, 74, 0.94) 42%, rgba(10, 111, 119, 0.92) 100%) !important;
-}
-
 #login-overlay[data-login-portal="parent"] .login-stage::after {
     background: linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(34, 197, 94, 0.10)) !important;
-}
-
-.login-stage-copy-wrap {
-    max-width: 760px;
-}
-
-.login-stage h1 {
-    font-size: clamp(44px, 4.8vw, 72px) !important;
-    line-height: 0.98 !important;
-}
-
-#login-stage-copy {
-    margin-top: 20px;
-    max-width: 700px;
-    color: rgba(255, 255, 255, 0.78) !important;
-    font-size: 16px !important;
-    line-height: 1.85 !important;
 }
 
 .login-stage-actions {
@@ -1621,10 +1548,6 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
         linear-gradient(140deg, rgba(14, 165, 233, 0.12), rgba(255, 255, 255, 0.03)) !important;
 }
 
-.login-stage-featured-title {
-    font-size: clamp(28px, 2vw, 38px);
-}
-
 .login-stage-featured-grid,
 .login-stage-stack,
 .login-stage-footer {
@@ -1641,18 +1564,6 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
     border-radius: 22px !important;
 }
 
-.login-auth-panel {
-    display: flex !important;
-    flex-direction: column;
-    justify-content: center;
-    padding: clamp(28px, 3vw, 40px) !important;
-    background: var(--login-poster-panel-bg) !important;
-    border: 1px solid var(--login-poster-panel-border) !important;
-    box-shadow: var(--login-poster-panel-shadow) !important;
-    backdrop-filter: blur(22px) saturate(1.08) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(1.08) !important;
-}
-
 .login-auth-panel::before {
     display: block !important;
     width: 180px !important;
@@ -1664,28 +1575,6 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
 
 #login-overlay[data-login-portal="parent"] .login-auth-panel::before {
     background: radial-gradient(circle, rgba(34, 211, 238, 0.20), rgba(34, 211, 238, 0)) !important;
-}
-
-.login-brand-block,
-.login-system-overview,
-.login-mobile-highlights,
-.login-portal-grid,
-.login-auth-card {
-    width: min(100%, 460px);
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.login-brand-block {
-    text-align: center !important;
-}
-
-.login-portal-badge {
-    margin: 0 auto !important;
-}
-
-.login-brand-kicker {
-    display: block !important;
 }
 
 .login-auth-panel h1 {
@@ -1848,20 +1737,6 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
     margin-top: 18px !important;
 }
 
-.login-portal-card {
-    min-height: 176px !important;
-    padding: 16px !important;
-    border-radius: 22px !important;
-    box-shadow: 0 14px 24px rgba(15, 23, 42, 0.06) !important;
-}
-
-.login-portal-desc,
-.login-portal-meta,
-.login-inline-tip,
-.login-portal-helper {
-    display: block !important;
-}
-
 .login-trust-strip {
     display: flex !important;
     flex-wrap: wrap;
@@ -1878,32 +1753,6 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
     box-shadow:
         0 20px 40px rgba(15, 23, 42, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
-}
-
-#login-form {
-    margin-top: 0 !important;
-    padding: 0 !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-#login-form .form-group {
-    margin-top: 14px !important;
-}
-
-#login-form label {
-    color: #172033 !important;
-}
-
-#login-form input {
-    background: linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(255, 255, 255, 0.98)) !important;
-}
-
-#login-submit-button {
-    margin-top: 18px !important;
-    background: linear-gradient(96deg, #ff7a18 0%, #ff477e 54%, #9ca3af 100%) !important;
-    box-shadow: 0 20px 34px rgba(255, 71, 126, 0.24) !important;
 }
 
 #login-overlay[data-login-portal="parent"] .login-stage-primary-action,
@@ -2256,10 +2105,7 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
             position: relative;
         }
 
-        .login-brand-block {
-            position: relative;
-            z-index: 1;
-        }
+        
 
         .login-mobile-highlights {
             display: flex;
@@ -2287,51 +2133,15 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
             font-size: 14px;
         }
 
-        .login-portal-card {
-            border: 1px solid rgba(251, 113, 133, 0.18);
-            background: rgba(255, 255, 255, 0.72);
-            border-radius: 18px;
-            padding: 14px;
-            text-align: left;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            cursor: pointer;
-            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease;
-            font: inherit;
-            color: #3f1f2d;
-            box-shadow: 0 8px 20px rgba(236, 72, 153, 0.08);
-        }
+        
 
-        .login-portal-card:hover {
-            transform: translateY(-1px);
-            border-color: rgba(236, 72, 153, 0.32);
-            box-shadow: 0 14px 26px rgba(236, 72, 153, 0.14);
-        }
+        
 
-        .login-portal-card.active {
-            border-color: rgba(236, 72, 153, 0.42);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 244, 248, 0.96));
-            box-shadow: 0 16px 30px rgba(236, 72, 153, 0.16);
-        }
+        
 
-        .login-portal-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 21px;
-            color: #fff;
-            background: linear-gradient(135deg, #9ca3af, #ec4899);
-            box-shadow: 0 10px 18px rgba(236, 72, 153, 0.24);
-        }
+        
 
-        .login-portal-card[data-portal="parent"] .login-portal-icon {
-            background: linear-gradient(135deg, #0ea5e9, #22c55e);
-            box-shadow: 0 10px 18px rgba(14, 165, 233, 0.22);
-        }
+        
 
         .login-portal-title {
             font-size: 16px;
@@ -2347,11 +2157,7 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
             min-height: 36px;
         }
 
-        .login-portal-meta {
-            font-size: 11px;
-            font-weight: 700;
-            color: #be185d;
-        }
+        
 
         #login-overlay[data-login-portal="parent"] .login-portal-badge {
             color: #0369a1;
@@ -2365,31 +2171,13 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
             box-shadow: 0 16px 30px rgba(14, 165, 233, 0.14);
         }
 
-        .login-inline-tip {
-            margin-top: 8px;
-            font-size: 11px;
-            line-height: 1.5;
-            color: #9f6478;
-        }
+        
 
-        #login-class-group {
-            transition: opacity .18s ease, transform .18s ease;
-        }
+        
 
-        #login-overlay[data-login-portal="school"] #login-class-group {
-            display: none;
-        }
+        
 
-        .login-portal-helper {
-            margin-top: 16px;
-            padding: 12px 14px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.72);
-            border: 1px solid rgba(251, 113, 133, 0.16);
-            color: #7c4a58;
-            font-size: 12px;
-            line-height: 1.6;
-        }
+        
 
         #login-overlay[data-login-portal="parent"] .login-portal-helper {
             border-color: rgba(14, 165, 233, 0.16);
@@ -2397,21 +2185,11 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
             background: rgba(240, 249, 255, 0.8);
         }
 
-        #login-form {
-            margin-top: 22px;
-            padding: 0 !important;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
+        
 
-        #login-form .form-group {
-            margin-top: 14px !important;
-        }
+        
 
-        #login-form .form-group:first-child {
-            margin-top: 0 !important;
-        }
+        
 
         #login-form .form-group label {
             display: block !important;
@@ -2426,28 +2204,11 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
             color: #9ca3af !important;
         }
 
-        #login-form input {
-            width: 100% !important;
-            border: 1px solid rgba(251, 113, 133, 0.25) !important;
-            background: rgba(255, 255, 255, 0.8) !important;
-            border-radius: 14px !important;
-            padding: 12px 14px !important;
-            font-size: 15px !important;
-            color: #3f1f2d !important;
-            outline: none !important;
-            box-shadow: none !important;
-            transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease !important;
-        }
+        
 
-        #login-form input::placeholder {
-            color: #c18aa0 !important;
-        }
+        
 
-        #login-form input:focus {
-            border-color: #fb7185 !important;
-            background: #fff !important;
-            box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.16) !important;
-        }
+        
 
         #login-form button {
             width: 100% !important;
@@ -3227,16 +2988,7 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
             text-transform: uppercase;
         }
 
-        .login-auth-card {
-            margin-top: 18px;
-            padding: 24px;
-            border-radius: 28px;
-            background: rgba(255, 255, 255, 0.78);
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            box-shadow:
-                0 20px 38px rgba(15, 23, 42, 0.08),
-                inset 0 1px 0 rgba(255, 255, 255, 0.6);
-        }
+        
 
         #login-form {
             margin-top: 0 !important;
@@ -3362,12 +3114,7 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
                 linear-gradient(180deg, #f8fafc 0%, #eef2ff 56%, #f8fafc 100%) !important;
         }
 
-        #login-overlay[data-login-portal="parent"] {
-            background:
-                radial-gradient(circle at 14% 14%, rgba(34, 211, 238, 0.16), transparent 28%),
-                radial-gradient(circle at 86% 18%, rgba(59, 130, 246, 0.14), transparent 26%),
-                linear-gradient(180deg, #f8fafc 0%, #ecfeff 56%, #f8fafc 100%) !important;
-        }
+        
 
         #login-overlay::before,
         #login-overlay::after,
@@ -3385,9 +3132,7 @@ body.dark-mode #login-overlay[data-login-layout="qq-fullscreen"] .login-portal-m
             justify-content: center !important;
         }
 
-        .login-stage {
-            display: none !important;
-        }
+        
 
         .login-auth-panel {
             width: min(560px, 100%) !important;
