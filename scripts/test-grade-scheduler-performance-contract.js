@@ -24,6 +24,10 @@ assert.ok(source.includes('buildGrade8DemandsFromTeacherMap: function'), 'grade-
 assert.ok(source.includes("'语文': 8") && source.includes("'数学': 9") && source.includes("'英语': 9"), 'grade-8 preset should encode the requested core-subject weekly hours');
 assert.ok(source.includes('applyConsecutivePairRules: function'), 'grade scheduler should support weekly same-class consecutive composition periods');
 assert.ok(source.includes('getSoftBusyScore: function'), 'grade scheduler should support soft teacher meeting avoidance');
+assert.ok(source.includes('buildCompactGradeSheet: function'), 'grade scheduler should provide a compact all-class timetable sheet');
+assert.ok(indexHtml.includes("value=\"subject\""), 'grade scheduler should provide subject-focused timetable mode');
+assert.ok(indexHtml.includes("value=\"grade\""), 'grade scheduler should provide an all-class grade timetable mode');
+assert.ok(indexHtml.includes('id="sch_filter_chips"'), 'grade scheduler UI should expose quick timetable filters');
 assert.ok(indexHtml.includes('data-scheduler-click="apply-grade8-preset"'), 'grade scheduler UI should expose the grade-8 preset action');
 assert.ok(source.includes('this.isVenueBusyInOtherClass(demand.venue, slot.id)'), 'placement should reject shared-venue collisions');
 assert.ok(

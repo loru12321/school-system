@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-5e3350d058d4.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-5e3350d058d4.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-12c8f3f88255.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-12c8f3f88255.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -3424,12 +3424,16 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <select id="sch_view_mode" data-scheduler-change="render-table">
                             <option value="class">按班级查看</option>
                             <option value="teacher">按教师查看</option>
+                            <option value="grade">年级简版总表</option>
+                            <option value="subject">按学科查看</option>
                         </select>
                         <div id="fb_target_grade_note" style="font-size:11px;color:#64748b;margin-top:4px;">请先选择届别。</div>
                         <select id="sch_view_target" data-scheduler-change="render-table">
                             <!-- 动态填充班级或教师名 -->
                         </select>
                     </div>
+                    <div id="sch_filter_chips" class="scheduler-filter-chips" aria-live="polite"></div>
+                    <div style="font-size:11px;color:#64748b;margin:-2px 0 10px;">年级简版总表按星期横向列出所有班级；选择教师或学科后只显示对应内容，便于单独打印和复核。</div>
                     <div class="table-wrap analysis-table-shell">
                         <table id="sch_table" class="analysis-table-dense" style="text-align:center; font-size:12px;">
                             <!-- JS 渲染 -->

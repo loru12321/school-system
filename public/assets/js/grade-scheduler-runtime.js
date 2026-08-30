@@ -2066,25 +2066,144 @@ const SCHEDULER = {
         return `<button type="button" class="scheduler-cell${selected ? ' is-selected' : ''}${cell?.fixed ? ' is-fixed' : ''}" data-scheduler-slot="${this.escapeHtml(slotId)}" title="${this.escapeHtml(cell?.fixed ? '固定规则时段，不可移动' : `${title}：点击选择/交换`)}" ${cell?.fixed ? 'disabled' : ''}>${content}</button>`;
     },
 
+    getSchedulerSubjects: function () {
+        const values = [];
+        (this.demands || []).forEach((item) => values.push(item.subject));
+        Object.values(this.schedule || {}).forEach((entries) => Object.values(entries || {}).forEach((cell) => {
+            if (cell && cell.subject) values.push(String(cell.subject).replace(/\(合\)$/, ''));
+        }));
+        return [...new Set(values.map((value) => String(value || '').trim()).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }));
+    },
+
+    getSchedulerTeachers: function () {
+        const values = [];
+        (this.demands || []).forEach((item) => values.push(item.name));
+        Object.values(this.schedule || {}).forEach((entries) => Object.values(entries || {}).forEach((cell) => {
+            if (cell && cell.teacher && cell.teacher !== '-') values.push(cell.teacher);
+        }));
+        return [...new Set(values.map((value) => this.normalizeTeacherName(value)).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }));
+    },
+
+    compactSubjectLabel: function (subject) {
+        const normalized = String(subject || '').replace(/\(合\)$/, '').trim();
+        const aliases = {
+            '语文': '语', '数学': '数', '英语': '英', '历史': '历', '地理': '地',
+            '生物': '生', '政治': '政', '物理': '物', '化学': '化', '体育': '体',
+            '班会': '班会', '社团活动': '社团', '🚫 无课': '无课'
+        };
+        if (aliases[normalized]) return aliases[normalized];
+        return normalized.length > 5 ? `${normalized.slice(0, 5)}…` : normalized;
+    },
+
+    getCompactCellText: function (className, slotId, subjectFilter = '') {
+        const cell = this.schedule[className]?.[slotId];
+        if (!cell || !cell.subject) return '';
+        const subject = String(cell.subject).replace(/\(合\)$/, '');
+        if (subjectFilter && subject !== subjectFilter) return '';
+        return this.compactSubjectLabel(subject);
+    },
+
+    renderQuickFilters: function () {
+        const host = document.getElementById('sch_filter_chips');
+        if (!host) return;
+        const currentMode = document.getElementById('sch_view_mode')?.value || 'grade';
+        const currentTarget = document.getElementById('sch_view_target')?.value || '';
+        const subjects = this.getSchedulerSubjects();
+        const teachers = this.getSchedulerTeachers();
+        const chip = (mode, value, label, active = false) => `<button type="button" class="scheduler-filter-chip${active ? ' is-active' : ''}" data-scheduler-filter="${this.escapeHtml(mode)}" data-scheduler-filter-value="${this.escapeHtml(value)}">${this.escapeHtml(label)}</button>`;
+        host.innerHTML = [
+            chip('grade', '', '全部班级', currentMode === 'grade'),
+            ...subjects.map((subject) => chip('subject', subject, `学科·${subject}`, currentMode === 'subject' && currentTarget === subject)),
+            teachers.length ? `<details class="scheduler-filter-teachers"${currentMode === 'teacher' ? ' open' : ''}><summary>教师快速筛选（${teachers.length}）</summary><div class="scheduler-filter-teacher-list">${teachers.map((teacher) => chip('teacher', teacher, teacher, currentMode === 'teacher' && currentTarget === teacher)).join('')}</div></details>` : ''
+        ].join('');
+    },
+
+    applyViewFilter: function (mode, target = '') {
+        const viewMode = document.getElementById('sch_view_mode');
+        const viewTarget = document.getElementById('sch_view_target');
+        if (viewMode) viewMode.value = mode;
+        if (viewTarget && mode === 'grade') viewTarget.value = '';
+        if (viewTarget && mode !== 'grade') {
+            const options = [...viewTarget.options].map((option) => option.value);
+            if (options.includes(target)) viewTarget.value = target;
+        }
+        this.renderTable();
+    },
+
+    renderGradeOverviewTable: function () {
+        const table = document.getElementById('sch_table');
+        if (!table) return;
+        const classes = [...this.classes].sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }));
+        const days = ['周一', '周二', '周三', '周四', '周五'];
+        const am = Number(document.getElementById('sch_am_count')?.value || 4);
+        const pm = Number(document.getElementById('sch_pm_count')?.value || 4);
+        const eve = Number(document.getElementById('sch_eve_count')?.value || 3);
+        const totalCols = 2 + days.length * classes.length;
+        const row = (values, className = '') => `<tr${className ? ` class="${className}"` : ''}>${values.map((value) => `<td>${value}</td>`).join('')}</tr>`;
+        const cellsFor = (slotKey) => days.flatMap((_, dayIndex) => classes.map((className) => {
+            const text = this.getCompactCellText(className, `d${dayIndex + 1}_${slotKey}`);
+            return text ? `<span class="scheduler-compact-subject">${this.escapeHtml(text)}</span>` : '<span class="scheduler-compact-empty">—</span>';
+        }));
+        let html = '<thead>';
+        html += `<tr><th colspan="${totalCols}" class="scheduler-compact-title">${this.escapeHtml(this.getGradeOverviewTitle())}</th></tr>`;
+        html += `<tr><th rowspan="2">时段</th><th rowspan="2">节次</th>${days.map((day) => `<th colspan="${classes.length}">${day}</th>`).join('')}</tr>`;
+        html += `<tr>${days.flatMap(() => classes.map((className) => `<th>${this.escapeHtml(className.replace(/^\d+\./, ''))}班</th>`)).join('')}</tr>`;
+        html += '</thead><tbody>';
+        for (let period = 1; period <= am; period += 1) html += row([`上午`, period, ...cellsFor(`am_${period}`)]);
+        html += row(new Array(totalCols).fill(''), 'scheduler-compact-break');
+        for (let period = 1; period <= pm; period += 1) html += row([`下午`, period, ...cellsFor(`pm_${period}`)]);
+        html += row(new Array(totalCols).fill(''), 'scheduler-compact-break');
+        for (let period = 1; period <= eve; period += 1) html += row([`晚自习`, period, ...cellsFor(`eve_${period}`)]);
+        html += '</tbody>';
+        table.innerHTML = html;
+        table.dataset.schedulerRenderSignature = `compact|${this.scheduleRenderVersion}|${classes.join(',')}|${am}|${pm}|${eve}`;
+    },
+
+    getGradeOverviewTitle: function () {
+        const grades = [...new Set(this.classes.map((className) => this.inferGradeFromClass(className)).filter(Boolean))];
+        return `${grades.length === 1 ? `${grades[0]}年级` : '学年联合'}简版总课表（仅显示学科）`;
+    },
+
     renderTable: function () {
         const mode = document.getElementById('sch_view_mode').value;
         let target = document.getElementById('sch_view_target').value;
 
         // 切换下拉框内容
         const sel = document.getElementById('sch_view_target');
+        if (mode === 'grade') {
+            if (sel) {
+                sel.innerHTML = '<option value="">全部班级</option>';
+                sel.value = '';
+                sel.disabled = true;
+            }
+            this.renderQuickFilters();
+            this.renderGradeOverviewTable();
+            this.updateManualControls();
+            return;
+        }
+        if (sel) sel.disabled = false;
         if (mode === 'teacher') {
-            const teachers = [...new Set(this.data.map(d => d.name).filter(Boolean))];
+            const teachers = this.getSchedulerTeachers();
             if (!teachers.includes(target)) {
-                sel.innerHTML = teachers.map(t => `<option value="${t}">${t}</option>`).join('');
+                sel.innerHTML = teachers.map(t => `<option value="${this.escapeHtml(t)}">${this.escapeHtml(t)}</option>`).join('');
                 target = teachers[0];
+            }
+        } else if (mode === 'subject') {
+            const subjects = this.getSchedulerSubjects();
+            if (!subjects.includes(target)) {
+                sel.innerHTML = subjects.map(subject => `<option value="${this.escapeHtml(subject)}">${this.escapeHtml(subject)}</option>`).join('');
+                target = subjects[0];
             }
         } else {
             if (!this.classes.includes(target)) {
-                sel.innerHTML = this.classes.map(c => `<option value="${c}">${c}班</option>`).join('');
+                sel.innerHTML = this.classes.map(c => `<option value="${this.escapeHtml(c)}">${this.escapeHtml(c)}班</option>`).join('');
                 target = this.classes[0];
             }
         }
         if (sel && target) sel.value = target;
+        this.renderQuickFilters();
 
         const table = document.getElementById('sch_table');
         const am = parseInt(document.getElementById('sch_am_count').value);
@@ -2127,7 +2246,9 @@ const SCHEDULER = {
                 const foundCls = [];
                 this.classes.forEach(c => {
                     const s = this.schedule[c]?.[slotId];
-                    if (s && this.normalizeTeacherName(s.teacher) === this.normalizeTeacherName(target)) {
+                    const teacherMatch = mode === 'teacher' && s && this.normalizeTeacherName(s.teacher) === this.normalizeTeacherName(target);
+                    const subjectMatch = mode === 'subject' && s && String(s.subject || '').replace(/\(合\)$/, '') === String(target || '');
+                    if (teacherMatch || subjectMatch) {
                         foundCls.push({ className: c, subject: s.subject, venue: s.venue });
                     }
                 });
@@ -2221,10 +2342,62 @@ const SCHEDULER = {
         return match ? `周${['一', '二', '三', '四', '五'][Number(match[1]) - 1]}` : '';
     },
 
+    buildCompactGradeSheet: function (config = this.getSlotConfig()) {
+        const classes = [...this.classes].sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }));
+        const days = ['周一', '周二', '周三', '周四', '周五'];
+        const width = 2 + days.length * classes.length;
+        const rows = [];
+        rows.push([this.getGradeOverviewTitle()]);
+        rows.push(['说明：本页为简版年级总课表，按星期横向列出各班，仅显示学科，不显示教师；原有“联合总课表”“教师总表”等工作表保持不变。']);
+        rows.push(['时段', '节次', ...days.flatMap((day) => new Array(classes.length).fill(day))]);
+        rows.push(['', '', ...days.flatMap(() => classes.map((className) => `${className.replace(/^\d+\./, '')}班`))]);
+        const addPeriodRows = (type, label, count) => {
+            for (let period = 1; period <= Number(count || 0); period += 1) {
+                rows.push([label, period, ...days.flatMap((_, dayIndex) => classes.map((className) => this.getCompactCellText(className, `d${dayIndex + 1}_${type}_${period}`)))]);
+            }
+        };
+        addPeriodRows('am', '上午', config.am);
+        rows.push(['课间操', '', ...new Array(width - 2).fill('')]);
+        addPeriodRows('pm', '下午', config.pm);
+        rows.push(['午休/晚餐', '', ...new Array(width - 2).fill('')]);
+        addPeriodRows('eve', '晚自习', config.eve);
+
+        const sheet = XLSX.utils.aoa_to_sheet(rows);
+        sheet['!cols'] = [{ wch: 11 }, { wch: 7 }, ...new Array(width - 2).fill(null).map(() => ({ wch: 7 }))];
+        sheet['!rows'] = [{ hpt: 26 }, { hpt: 30 }, { hpt: 22 }, { hpt: 22 }];
+        sheet['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: width - 1 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: width - 1 } },
+            ...days.map((_, index) => ({
+                s: { r: 2, c: 2 + index * classes.length },
+                e: { r: 2, c: 1 + (index + 1) * classes.length }
+            }))
+        ];
+        const border = { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'thin', color: { rgb: 'CBD5E1' } }, left: { style: 'thin', color: { rgb: 'CBD5E1' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } };
+        const titleStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 14 }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'center', vertical: 'center' }, border };
+        const headerStyle = { font: { bold: true, color: { rgb: '1E293B' } }, fill: { fgColor: { rgb: 'E0E7FF' } }, alignment: { horizontal: 'center', vertical: 'center' }, border };
+        const noteStyle = { font: { italic: true, color: { rgb: '64748B' }, sz: 10 }, alignment: { horizontal: 'left', vertical: 'center', wrapText: true }, border };
+        const bodyStyle = { alignment: { horizontal: 'center', vertical: 'center' }, border };
+        const breakStyle = { font: { color: { rgb: '64748B' }, italic: true }, fill: { fgColor: { rgb: 'F1F5F9' } }, alignment: { horizontal: 'center', vertical: 'center' }, border };
+        for (let c = 0; c < width; c += 1) {
+            const titleCell = sheet[XLSX.utils.encode_cell({ r: 0, c })];
+            if (titleCell) titleCell.s = titleStyle;
+            const noteCell = sheet[XLSX.utils.encode_cell({ r: 1, c })];
+            if (noteCell) noteCell.s = noteStyle;
+            for (let r = 2; r < rows.length; r += 1) {
+                const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+                if (!cell) continue;
+                cell.s = (r === 2 || r === 3) ? headerStyle : (rows[r][0] === '课间操' || rows[r][0] === '午休/晚餐' ? breakStyle : bodyStyle);
+            }
+        }
+        return sheet;
+    },
+
     exportResult: function () {
         if (Object.keys(this.schedule).length === 0) return window.UI.alert("暂无课表数据");
         const wb = XLSX.utils.book_new();
         const config = this.getSlotConfig();
+        XLSX.utils.book_append_sheet(wb, this.buildCompactGradeSheet(config), '年级简版总课表');
         const jointRows = [['年级', '班级', '时段', '周一', '周二', '周三', '周四', '周五']];
         const orderedPeriods = ['am', 'pm', 'eve'];
         this.classes.forEach((className) => {
@@ -2555,6 +2728,11 @@ const SCHEDULER = {
             const removeConstraint = event.target?.closest?.('[data-scheduler-remove-type][data-scheduler-remove-id]');
             if (removeConstraint && document.documentElement.contains(removeConstraint)) {
                 this.removeConstraint(removeConstraint.dataset.schedulerRemoveType, removeConstraint.dataset.schedulerRemoveId);
+                return;
+            }
+            const filter = event.target?.closest?.('[data-scheduler-filter]');
+            if (filter && document.documentElement.contains(filter)) {
+                this.applyViewFilter(filter.dataset.schedulerFilter, filter.dataset.schedulerFilterValue || '');
                 return;
             }
             const cell = event.target?.closest?.('[data-scheduler-slot]');
