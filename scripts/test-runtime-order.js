@@ -86,6 +86,7 @@ const countyAnalysisRuntimePath = path.resolve(__dirname, '../public/assets/js/c
 const mobileAppRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-app-runtime.js');
 const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-sql.js');
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
+const targetEditorRuntimePath = path.resolve(__dirname, '../public/assets/js/target-editor-runtime.js');
 const reportChartRuntimePath = path.resolve(__dirname, '../public/assets/js/report-chart-runtime.js');
 const reportExportRuntimePath = path.resolve(__dirname, '../public/assets/js/report-export-runtime.js');
 const studentCompareGenerateRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-generate-runtime.js');
@@ -167,6 +168,7 @@ assert.ok(fs.existsSync(countyAnalysisRuntimePath), 'county-analysis-runtime.js 
 assert.ok(fs.existsSync(mobileAppRuntimePath), 'mobile-app-runtime.js should exist');
 assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
+assert.ok(fs.existsSync(targetEditorRuntimePath), 'target-editor-runtime.js should exist');
 assert.ok(fs.existsSync(reportChartRuntimePath), 'report-chart-runtime.js should exist');
 assert.ok(fs.existsSync(reportExportRuntimePath), 'report-export-runtime.js should exist');
 assert.ok(fs.existsSync(studentCompareGenerateRuntimePath), 'student-compare-generate-runtime.js should exist');
@@ -228,6 +230,7 @@ const appFoundationRuntime = fs.readFileSync(appFoundationRuntimePath, 'utf8');
 const reportHistoryRuntime = fs.readFileSync(reportHistoryRuntimePath, 'utf8');
 const reportCompareRuntime = fs.readFileSync(reportCompareRuntimePath, 'utf8');
 const reportRenderRuntime = fs.readFileSync(reportRenderRuntimePath, 'utf8');
+const targetEditorRuntime = fs.readFileSync(targetEditorRuntimePath, 'utf8');
 const townSubmoduleCompareRuntime = fs.readFileSync(townSubmoduleCompareRuntimePath, 'utf8');
 const macroAnalysisCompatRuntime = fs.readFileSync(macroAnalysisCompatRuntimePath, 'utf8');
 const cloudRuntime = fs.readFileSync(cloudRuntimePath, 'utf8');
@@ -1196,8 +1199,11 @@ assert.ok(dataCloudRuntime.includes('readTeacherPreviewCache(item)'), 'teacher p
 assert.ok(appSource.includes('const teacherInputFragment = document.createDocumentFragment();'), 'teacher input generation should collect controls in a fragment');
 assert.ok(appSource.includes('container.appendChild(teacherInputFragment);'), 'teacher input generation should attach controls with one fragment append');
 assert.ok(!appSource.includes('container.appendChild(inputDiv);'), 'teacher input generation should avoid per-control container appends');
-assert.ok(appSource.includes('const targetRowsHtml = Object.keys(SCHOOLS).map'), 'target editor should build school rows off-DOM before writing to tbody');
-assert.ok(appSource.includes("tbody.innerHTML = targetRowsHtml.join('');"), 'target editor should write school target rows to the DOM once');
+const targetEditorSource = appSource.includes('const targetRowsHtml = Object.keys(SCHOOLS).map')
+    ? appSource
+    : targetEditorRuntime;
+assert.ok(targetEditorSource.includes('Object.keys(schools).map') || targetEditorSource.includes('const targetRowsHtml = Object.keys(SCHOOLS).map'), 'target editor should build school rows off-DOM before writing to tbody');
+assert.ok(targetEditorSource.includes("tbody.innerHTML = Object.keys(schools).map") || targetEditorSource.includes("tbody.innerHTML = targetRowsHtml.join('');"), 'target editor should write school target rows to the DOM once');
 assert.ok(spotlightContextRuntime.includes('const fragment = global.document.createDocumentFragment();'), 'spotlight search should collect result rows in a DOM fragment');
 assert.ok(spotlightContextRuntime.includes('root.replaceChildren(fragment);'), 'spotlight search should replace result rows with one DOM write');
 assert.ok(!spotlightContextRuntime.includes('.innerHTML'), 'spotlight search should avoid interpolated or incremental HTML writes');
