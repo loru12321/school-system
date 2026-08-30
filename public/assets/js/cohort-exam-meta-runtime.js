@@ -440,10 +440,19 @@ function isTeacherTermSelectActive(selectEl) {
 }
 
 function getPreferredTeacherTermId() {
-    const uiMeta = getTeacherTermMetaFromRuntime();
-    const uiTeacherTermId = buildTeacherTermId(uiMeta);
     const termSel = document.getElementById('dm-teacher-term-select');
     const selectedTeacherTermId = isTeacherTermSelectActive(termSel) ? String(termSel?.value || '').trim() : '';
+
+    // When the teacher-term selector is visible, its value is an explicit
+    // user choice and must be authoritative.  The current exam/archive meta
+    // can legitimately describe a different grade (for example, an existing
+    // 7th-grade exam archive while the user is preparing the new 8th-grade
+    // timetable).  Rejecting the visible selection against that archive
+    // would save an otherwise valid upload under the wrong grade/term.
+    if (selectedTeacherTermId) return selectedTeacherTermId;
+
+    const uiMeta = getTeacherTermMetaFromRuntime();
+    const uiTeacherTermId = buildTeacherTermId(uiMeta);
     const compatibleSelectedTeacherTermId = isTeacherTermCompatibleWithCurrentExam(selectedTeacherTermId, uiMeta)
         ? selectedTeacherTermId
         : '';

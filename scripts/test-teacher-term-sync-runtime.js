@@ -124,6 +124,11 @@ assert.ok(
 );
 
 assert.ok(
+  /function getPreferredTeacherTermId\(\)[\s\S]*if \(selectedTeacherTermId\) return selectedTeacherTermId;[\s\S]*const uiMeta = getTeacherTermMetaFromRuntime\(\)/.test(cohortExamMeta),
+  'an explicit visible teacher-term selection must override a mismatched archived exam grade'
+);
+
+assert.ok(
   /\[\s*preferred,\s*uiTeacherTermId,\s*savedTeacherTermId,\s*getTeacherTermBase\(preferred\),\s*getTeacherTermBase\(uiTeacherTermId\),\s*getTeacherTermBase\(savedTeacherTermId\),\s*savedBaseTerm\s*\]\.forEach\(pushUnique\)/.test(cohortExamMeta),
   'teacher term candidates should prefer the current exam-derived term before saved stale terms'
 );
