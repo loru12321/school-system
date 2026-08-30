@@ -47,7 +47,9 @@ const budgets = {
     // 2026-08-30: freshman no-exam color legend, seat-map labels, and style-capable
     // XLSX loader add a small, intentional amount to the offline bundle. Keep
     // cross-platform Brotli variance headroom (Linux CI can be ~200B larger).
-    ltHtmlBrotli: 341_000,
+    // 2026-08-30: demo data generation moved to a demand-loaded runtime; the
+    // offline source map keeps that runtime available for single-file demos.
+    ltHtmlBrotli: 342_000,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,

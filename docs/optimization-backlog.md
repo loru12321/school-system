@@ -97,3 +97,4 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 | 2026-08-28 | P1 | 新生分班新增转出/转入学生名单 Excel 上传入口，与手工登记共存；转出名单完全排除，转入名单进入后置均衡分配池，并自动去重 | `node scripts/test-syntax.js`, `node scripts/test-teaching-workbench-runtime.js`, `node scripts/test-html-hygiene.js`, `npm run build` |
 | 2026-08-30 | P1 | 新生分班统一识别“在册未考试”后置学生：结果页增加黄色颜色图例和文字说明，座位卡片与 Excel 状态说明保持一致；特殊状态纳入结果缓存签名，状态变化后可稳定重绘；两率一分统计继续排除无成绩学生 | `npm run validate`, `npm run smoke:modules:local`, `npm run smoke:layout:local` |
 | 2026-08-30 | P0 | 迁移脚本移除 `admin123` 共享默认管理员密码；执行迁移前必须显式提供 `MIGRATION_ADMIN_PASS`，缺失时 fail-closed 并给出明确提示；新增安全契约防止回退 | `npm run test:security-hygiene`, `npm run check:release-fast` |
+| 2026-08-30 | P1 | 演示数据生成逻辑拆分为按需 `demo-data-runtime.js`，首页仅保留轻量代理；运行时清单、离线单文件内联源映射和预算契约同步更新，保持演示入口及自动演示模式兼容 | `npm run build`, `npm run check:release-fast`, `npm run smoke:modules:local` |

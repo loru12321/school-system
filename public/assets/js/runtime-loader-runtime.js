@@ -129,6 +129,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('freshman-exam', bootJs('freshman-exam-runtime.js')),
     bootEntry('freshman-constraint-insight', bootJs('freshman-constraint-insight-runtime.js'))
 ]),
+'demo-data': bootSkill('demand','demand',['loadDemoData'],[bootEntry('demo-data',bootJs('demo-data-runtime.js'))]),
 'grade-scheduler': bootSkill('demand', 'demand', ['grade-scheduler'], [
     bootEntry('grade-scheduler', bootJs('grade-scheduler-runtime.js'))
 ]),

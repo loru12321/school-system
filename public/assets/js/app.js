@@ -5618,7 +5618,7 @@ function calculateStudentRanks() {
 // townshipSchools，早已无法运行），属于迁移后残留的死代码，现已删除以消除「同一口径多处
 // 实现」的漂移风险。
 //
-// 保留空函数体：唯一调用点在演示数据加载路径（本文件内 loadDemoData()，紧跟 processData()
+// 保留空函数体：唯一调用点在演示数据加载路径（deferred demo-data-runtime，紧跟 processData()
 // 之后），删掉函数会让该调用抛 ReferenceError。真实排名由 worker 在 processData 内完成。
 function calculateRankings() {
     /* no-op：实现在 data-processing-worker.js，见上方说明 */
@@ -7858,93 +7858,23 @@ function getCurrentUser() {
 
 // Moved to auto-diagnosis-runtime.js (window.runAutoDiagnosis / AutoDiagnosisRuntime)
 
-async function loadDemoData() {
-    const demoSchool = DEFAULT_MY_SCHOOL_NAME;
-    const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理'];
-    const cohorts = ['2022', '2023', '2024'];
-    const teachers = ['张伟', '王芳', '李娜', '刘强', '陈静', '杨敏', '黄磊', '赵磊', '周涛', '吴洋', '孙丽', '胡勇'];
-
-    setSubjects(subjects);
-    setRawData([]);
-    setSchools({});
-    setThresholds({
-        '总分': { excellent: 650, pass: 420 },
-        '语文': { excellent: 108, pass: 72 },
-        '数学': { excellent: 108, pass: 72 },
-        '英语': { excellent: 108, pass: 72 }
-    });
-
-    let studentId = 1;
-    const teacherAssignments = {};
-
-    function generateChineseName() {
-        const familyNames = "赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜";
-        const givenNames = "嘉懿煜城懿轩烨华煜祺智宸正豪昊然志泽明杰弘文熠彤鸿煊远航旭尧";
-        const f = familyNames[Math.floor(Math.random() * familyNames.length)];
-        const g1 = givenNames[Math.floor(Math.random() * givenNames.length)];
-        const g2 = Math.random() > 0.3 ? givenNames[Math.floor(Math.random() * givenNames.length)] : "";
-        return f + g1 + g2;
-    }
-
-    ['9', '8', '7'].forEach((gradeLevel, gIdx) => {
-        const cohort = cohorts[gIdx];
-        const classCount = 4;
-
-        for (let cNum = 1; cNum <= classCount; cNum++) {
-            const cls = `${gradeLevel}.${cNum}`;
-
-            subjects.forEach(sub => {
-                const tName = teachers[Math.floor(Math.random() * teachers.length)];
-                teacherAssignments[`${cls}_${sub}`] = tName;
-            });
-
-            for (let i = 0; i < 40; i++) {
-                const stu = {
-                    id: `S${String(studentId).padStart(5, '0')}`,
-                    name: generateChineseName(),
-                    school: demoSchool,
-                    class: cls,
-                    cohort: cohort,
-                    scores: {},
-                    total: 0
-                };
-
-                subjects.forEach(sub => {
-                    const base = 65 + Math.random() * 30;
-                    const bonus = Math.random() > 0.8 ? 5 : 0;
-                    stu.scores[sub] = Math.floor(Math.min(120, Math.max(20, base + bonus + (Math.random() * 10 - 5))));
-                    stu.total += stu.scores[sub];
-                });
-
-                RAW_DATA.push(stu);
-                if (!SCHOOLS[demoSchool]) SCHOOLS[demoSchool] = { name: demoSchool, students: [], metrics: {}, rankings: {} };
-                SCHOOLS[demoSchool].students.push(stu);
-                studentId++;
-            }
+function loadDemoData() {
+    const loader = window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function'
+        ? window.SystemRuntimeLoader.load('demo-data')
+        : Promise.reject(new Error('演示数据运行时未加载，请刷新页面后重试'));
+    return loader.then(() => {
+        const runtime = window.DemoDataRuntime;
+        if (!runtime || typeof runtime.loadDemoData !== 'function') {
+            throw new Error('演示数据运行时不可用，请刷新页面后重试');
         }
+        return runtime.loadDemoData();
+    }).catch((error) => {
+        console.error('[DemoMode] 演示数据加载失败:', error);
+        if (window.UI && typeof window.UI.alert === 'function') {
+            return window.UI.alert(error?.message || '演示数据加载失败，请刷新页面后重试', 'error').then(() => false);
+        }
+        return false;
     });
-
-    setTeacherMap(teacherAssignments);
-    writeCurrentSchool(demoSchool);
-    writeCurrentTermId('2025-2026_上学期');
-
-    CURRENT_COHORT_ID = '2022';
-    CURRENT_EXAM_ID = '2026_校内首模';
-
-    syncWorkspaceRuntimeState({
-        currentCohortId: CURRENT_COHORT_ID,
-        currentExamId: CURRENT_EXAM_ID,
-        cohortDb: COHORT_DB
-    });
-
-    if (window.UI) UI.toast('✨ 演示环境已就绪，所有模块均已载入模拟数据', 'success');
-
-    await processData();
-    calculateRankings();
-    analyzeTeachers();
-    renderTeacherComparisonTable();
-    renderTeacherCards();
-    updateStatusPanel();
 }
 
 if (typeof DataManager !== 'undefined') {
