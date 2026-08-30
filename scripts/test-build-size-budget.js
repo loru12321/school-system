@@ -52,7 +52,9 @@ const budgets = {
     // 2026-08-30: freshman violation separate-group editor, upload parser,
     // hard-constraint validation, and export labels add a small intentional
     // amount to the offline bundle.
-    ltHtmlBrotli: 344_000,
+    // 2026-08-30: related-roster pack upload and its workbook template add a
+    // small intentional amount while keeping the single-file bundle bounded.
+    ltHtmlBrotli: 345_000,
     // Cloud sync guards and fail-closed login gates add a small amount of
     // startup-critical source; keep a narrow cap above the current baseline.
     publicAppJs: 830_000,

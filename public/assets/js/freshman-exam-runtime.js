@@ -896,6 +896,131 @@ function FB_loadDropoutList(input) {
     };
     reader.readAsArrayBuffer(file);
 }
+
+// 一次导入新生分班所需的全部相关名单。工作簿按工作表识别：
+// 学籍名单、性别名单、违纪名单、转出名单、转入名单、辍学名单、
+// 指定班级、同班组合、分开组。未提供的工作表不会清空已有数据。
+function FB_loadRelatedRosterPack(input) {
+    const file = input?.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    const aliases = {
+        roster: ['学籍名单', '本年级学籍', '学籍'],
+        gender: ['性别名单', '性别'],
+        violation: ['违纪名单', '违纪'],
+        transfer: ['转出名单', '转出学生', '转出'],
+        transferIn: ['转入名单', '转入学生', '转入'],
+        dropout: ['辍学名单', '长期离校', '辍学'],
+        fixed: ['指定班级', '指定学生班级'],
+        same: ['同班组合', '同班组'],
+        separate: ['分开组', '违纪分开组', '分开名单']
+    };
+    const pickSheet = (wb, names) => {
+        const normalized = new Map((wb.SheetNames || []).map(name => [String(name).replace(/[\s_-]/g, '').toLowerCase(), name]));
+        for (const label of names) {
+            const hit = normalized.get(String(label).replace(/[\s_-]/g, '').toLowerCase());
+            if (hit) return wb.Sheets[hit];
+        }
+        return null;
+    };
+    const rowsOf = (sheet) => sheet ? XLSX.utils.sheet_to_json(sheet, { defval: '' }) : [];
+    const appendUnique = (target, rows) => {
+        rows.forEach(row => {
+            if (!row?.name) return;
+            const same = target.some(item => (row.id && item.id && row.id === item.id)
+                || (item.name === row.name && (!row.gender || !item.gender || row.gender === item.gender)));
+            if (!same) target.push(row);
+        });
+    };
+    reader.onload = (event) => {
+        try {
+            const wb = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
+            if (!wb.SheetNames?.length) throw new Error('Excel没有工作表');
+            const imported = [];
+            const rosterRows = rowsOf(pickSheet(wb, aliases.roster)).map(fbRosterRow).filter(Boolean);
+            if (rosterRows.length) { FB_ROSTER_ROWS = rosterRows; FB_ROSTER_RECONCILIATION = null; imported.push(`学籍 ${rosterRows.length}`); }
+            const genderRows = rowsOf(pickSheet(wb, aliases.gender));
+            if (genderRows.length) {
+                FB_GENDER_MAP = {}; FB_GENDER_NAMES = [];
+                genderRows.forEach(row => {
+                    const name = fbNormalizeName(row['姓名'] ?? row['名字'] ?? row['Name']);
+                    const gender = fbParseGender(row['性别'] ?? row['Gender'] ?? row['gender']);
+                    const id = fbNormalizeId(row['考号'] ?? row['学号'] ?? row['准考证号'] ?? '');
+                    if (!name || gender === 'U') return;
+                    const key = id ? `id:${id}` : `name:${name}`;
+                    FB_GENDER_MAP[key] = gender; if (!id) FB_GENDER_MAP[`name:${name}`] = gender;
+                    FB_GENDER_NAMES.push(name);
+                });
+                imported.push(`性别 ${FB_GENDER_NAMES.length}`);
+            }
+            const violationRows = rowsOf(pickSheet(wb, aliases.violation));
+            if (violationRows.length) {
+                FB_VIOLATION_SET = {}; FB_VIOLATION_NAMES = [];
+                violationRows.forEach(row => {
+                    const name = fbNormalizeName(row['姓名'] ?? row['名字'] ?? row['Name']);
+                    const id = fbNormalizeId(row['考号'] ?? row['学号'] ?? row['准考证号'] ?? '');
+                    if (!name) return;
+                    FB_VIOLATION_SET[id ? `id:${id}` : `name:${name}`] = true;
+                    if (!id) FB_VIOLATION_SET[`name:${name}`] = true;
+                    FB_VIOLATION_NAMES.push(name);
+                });
+                imported.push(`违纪 ${FB_VIOLATION_NAMES.length}`);
+            }
+            const transferRows = rowsOf(pickSheet(wb, aliases.transfer)).map(fbRosterRow).filter(Boolean);
+            if (transferRows.length) { appendUnique(FB_TRANSFER_STUDENTS, transferRows); imported.push(`转出 ${transferRows.length}`); }
+            const transferInRows = rowsOf(pickSheet(wb, aliases.transferIn)).map(fbRosterRow).filter(Boolean);
+            if (transferInRows.length) { appendUnique(FB_TRANSFER_IN_STUDENTS, transferInRows); imported.push(`转入 ${transferInRows.length}`); }
+            const dropoutRows = rowsOf(pickSheet(wb, aliases.dropout)).map(fbRosterRow).filter(Boolean);
+            if (dropoutRows.length) { appendUnique(FB_DROPOUT_STUDENTS, dropoutRows); imported.push(`辍学 ${dropoutRows.length}`); }
+            const fixedRows = rowsOf(pickSheet(wb, aliases.fixed));
+            if (fixedRows.length) {
+                const classCount = fbFixedClassCount(); let count = 0;
+                fixedRows.forEach(row => {
+                    const student = fbRosterRow(row);
+                    const idx = fbFixedClassIndex(row['指定班级'] ?? row['目标班级'] ?? row['班级'] ?? row['分配班级'], classCount);
+                    if (student && idx >= 0) { FB_FIXED_ASSIGNMENTS[fbStudentIdentity(student)] = idx; count += 1; }
+                });
+                if (count) imported.push(`指定班级 ${count}`);
+            }
+            const sameRows = rowsOf(pickSheet(wb, aliases.same));
+            if (sameRows.length) {
+                const grouped = new Map();
+                sameRows.forEach(row => { const group = String(row['组合编号'] ?? row['组号'] ?? row['组合'] ?? row['同班组'] ?? row['group'] ?? '').trim(); const student = fbRosterRow(row); if (!group || !student) return; const ids = grouped.get(group) || []; const id = fbStudentIdentity(student); if (!ids.includes(id)) ids.push(id); grouped.set(group, ids); });
+                let count = 0; grouped.forEach(members => { if (members.length < 2) return; const unique = [...new Set(members)]; const exists = FB_SAME_CLASS_GROUPS.some(group => group.members.length === unique.length && group.members.every(id => unique.includes(id))); if (!exists) { FB_SAME_CLASS_GROUPS.push({ id: `same-pack-${Date.now()}-${count}`, members: unique }); count += 1; } });
+                if (count) imported.push(`同班组合 ${count} 组`);
+            }
+            const separateRows = rowsOf(pickSheet(wb, aliases.separate));
+            if (separateRows.length) {
+                const grouped = new Map();
+                separateRows.forEach(row => { const group = String(row['分开组号'] ?? row['分开组'] ?? row['互斥组'] ?? row['组合编号'] ?? row['组号'] ?? row['group'] ?? '').trim(); const student = fbRosterRow(row); if (!group || !student) return; const ids = grouped.get(group) || []; const id = fbStudentIdentity(student); if (!ids.includes(id)) ids.push(id); grouped.set(group, ids); });
+                let count = 0; grouped.forEach(members => { if (members.length < 2) return; const unique = [...new Set(members)]; const exists = FB_SEPARATE_GROUPS.some(group => group.members.length === unique.length && group.members.every(id => unique.includes(id))); if (!exists) { FB_SEPARATE_GROUPS.push({ id: `separate-pack-${Date.now()}-${count}`, members: unique }); count += 1; } });
+                if (count) imported.push(`分开组 ${count} 组`);
+            }
+            fbResolveFixedAssignmentIdentities(); fbResolveSameClassIdentities(); fbResolveSeparateIdentities();
+            FB_renderRosterStatus(); FB_refreshFixedAssignmentUI(); FB_refreshSameClassUI(); FB_refreshSeparateUI(); FB_updateAssemblyStatus();
+            input.value = '';
+            window.UI?.alert?.(imported.length ? `✅ 相关名单包导入完成：${imported.join('、')}。未提供的工作表保持原有数据。` : '未识别到支持的名单工作表，请使用系统模板。', imported.length ? 'success' : 'warning');
+        } catch (err) { input.value = ''; window.UI?.alert?.('相关名单包读取失败：' + err.message, 'error'); }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function FB_downloadRelatedRosterTemplate() {
+    if (!window.XLSX) return window.UI?.alert?.('表格组件尚未加载，请稍后再试。', 'warning');
+    const wb = XLSX.utils.book_new();
+    const sheets = {
+        '学籍名单': [['姓名', '性别', '考号/学号'], ['张三', '男', 'A001']],
+        '性别名单': [['姓名', '性别', '考号/学号'], ['张三', '男', 'A001']],
+        '违纪名单': [['姓名', '考号/学号'], ['张三', 'A001']],
+        '转出名单': [['姓名', '性别', '考号/学号'], ['李四', '女', 'A002']],
+        '转入名单': [['姓名', '性别', '考号/学号'], ['王五', '男', 'A003']],
+        '辍学名单': [['姓名', '性别', '考号/学号'], ['赵六', '女', 'A004']],
+        '指定班级': [['姓名', '指定班级', '考号/学号'], ['张三', '1班', 'A001']],
+        '同班组合': [['组合编号', '姓名', '考号/学号'], ['同班1', '张三', 'A001'], ['同班1', '王五', 'A003']],
+        '分开组': [['分开组号', '姓名', '考号/学号'], ['分开1', '李四', 'A002'], ['分开1', '赵六', 'A004']]
+    };
+    Object.entries(sheets).forEach(([name, rows]) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), name));
+    XLSX.writeFile(wb, '新生均衡分班相关名单模板.xlsx');
+}
 function fbExamRosterRows(exams) {
     // 不同考试的考号可能重新编排；先按姓名+性别做跨考试合并，
     // 同名学生仍保留同场考试中的最大出现人数，避免把同一届学生重复算成多人。
@@ -1247,6 +1372,7 @@ function FB_bindDeclarativeHandlers(root = document) {
             if (action === 'add-transfer-in') FB_addTransferInStudent();
             if (action === 'clear-transfers-in') FB_clearTransfersIn();
             if (action === 'remove-transfer-in') FB_removeTransferInStudent(el.dataset.fbIndex);
+            if (action === 'download-related-template') FB_downloadRelatedRosterTemplate();
         });
     });
     // 班级卡片是运行时动态生成的，违纪人数按钮使用文档级委托确保
@@ -3851,6 +3977,8 @@ function EXAM_exportResult() {
     if (typeof FB_loadDropoutList === 'function') window.FB_loadDropoutList = FB_loadDropoutList;
     if (typeof FB_loadTransferList === 'function') window.FB_loadTransferList = FB_loadTransferList;
     if (typeof FB_loadTransferInList === 'function') window.FB_loadTransferInList = FB_loadTransferInList;
+    if (typeof FB_loadRelatedRosterPack === 'function') window.FB_loadRelatedRosterPack = FB_loadRelatedRosterPack;
+    if (typeof FB_downloadRelatedRosterTemplate === 'function') window.FB_downloadRelatedRosterTemplate = FB_downloadRelatedRosterTemplate;
     if (typeof FB_loadFixedClassList === 'function') window.FB_loadFixedClassList = FB_loadFixedClassList;
     if (typeof FB_assembleFromCloud === 'function') window.FB_assembleFromCloud = FB_assembleFromCloud;
     if (typeof FB_updateAssemblyStatus === 'function') window.FB_updateAssemblyStatus = FB_updateAssemblyStatus;

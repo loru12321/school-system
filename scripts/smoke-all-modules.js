@@ -4521,6 +4521,10 @@ async function runModuleDeepCheck(page, id) {
                     && typeof window.FB_getFixedAssignments === 'function'
                     && !!document.getElementById('fb_fixed_student')
                     && !!document.getElementById('fb_fixed_class'),
+                relatedRosterPackReady: typeof window.FB_loadRelatedRosterPack === 'function'
+                    && typeof window.FB_downloadRelatedRosterTemplate === 'function'
+                    && !!document.getElementById('fbRelatedRosterPackInput')
+                    && !!document.querySelector('[data-fb-action="download-related-template"]'),
                 seatReady: typeof window.FB_openSeatMap === 'function'
                     && typeof window.FB_autoSeatAlgo === 'function'
                     && typeof window.FB_renderSeatMap === 'function'

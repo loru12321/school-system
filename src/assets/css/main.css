@@ -905,6 +905,25 @@ header {
     font-size: 11px;
 }
 
+#freshman-simulator .freshman-related-pack-upload {
+    min-width: 280px;
+    padding: 12px;
+}
+
+#freshman-simulator .freshman-related-pack-title {
+    font-weight: 700;
+    font-size: 13px;
+}
+
+#freshman-simulator .freshman-related-pack-note {
+    color: #64748b;
+    font-size: 11px;
+}
+
+#freshman-simulator .freshman-related-pack-template-btn {
+    margin-top: 6px;
+}
+
 #freshman-simulator .freshman-same-chip {
     display: inline-flex;
     align-items: center;
