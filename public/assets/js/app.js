@@ -3784,135 +3784,39 @@ if (window.TeachingManagementModulesRuntime
     window.TeachingManagementModulesRuntime.install();
 }
 
-function ensureDrillModalDom() {
-    if (typeof window.ensureLazySectionLoaded === 'function') {
-        window.ensureLazySectionLoaded('drill-modal');
-    }
-    return document.getElementById('drill-modal');
-}
-
-const DrillSystem = {
-    history: [], // 导航历史栈
-    currentData: null, // 当前暂存数据
-    exportData: null, // 🟢 新增：专门用于导出的数据缓存
-
-    open: function (title, studentList, scoreLabel = "总分") {
-        ensureDrillModalDom();
-        this.history = []; // 清空历史
-        this.currentData = { title, list: studentList, scoreLabel };
-
-        this.exportData = { type: 'list', data: studentList, fileName: title };
-
-        const btn = document.getElementById('drill-export-btn');
-        if (btn) btn.classList.remove('hidden');
-
-        document.getElementById('drill-modal').style.display = 'flex';
-        this.renderClassView();
-    },
-
-    exportExcel: function () {
-        if (!this.exportData || !this.exportData.data) return appAlertDialog("当前无数据可导出", 'warning');
-
-        const wb = XLSX.utils.book_new();
-        let ws = null;
-        const filename = (this.exportData.fileName || "导出数据") + ".xlsx";
-
-        if (this.exportData.type === 'gap') {
-            const headers = ['班级', '姓名', '当前总分', '距目标分差', '建议补救/潜力学科', '该科与年级均分差'];
-            const data = [headers];
-            this.exportData.data.forEach(item => {
-                const cleanSub = item.worstSub.replace(/<[^>]+>/g, "");
-                data.push([
-                    item.class,
-                    item.name,
-                    item.total,
-                    item.scoreGap.toFixed(1),
-                    cleanSub,
-                    item.worstDiff
-                ]);
-            });
-            ws = XLSX.utils.aoa_to_sheet(data);
-            ws['!cols'] = [{ wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 30 }, { wch: 15 }];
-
-        } else {
-            const headers = ['班级', '姓名', '考号', '总分', '全镇排名'];
-            const data = [headers];
-            this.exportData.data.forEach(s => {
-                data.push([
-                    s.class,
-                    s.name,
-                    s.id,
-                    s.total,
-                    safeGet(s, 'ranks.total.township', '-')
-                ]);
-            });
-            ws = XLSX.utils.aoa_to_sheet(data);
+// 数据钻取属于低频入口，实际实现按需加载。保留同名 facade，保证总结页和
+// 其他运行时仍可立即调用 DrillSystem.open，而不会把完整弹窗渲染器带入首屏。
+const DrillSystem = window.DrillSystem || {
+    history: [],
+    currentData: null,
+    exportData: null,
+    __drillProxy: true,
+    _load() {
+        if (typeof window.ensureDrillSystemRuntimeLoaded === 'function') {
+            return window.ensureDrillSystemRuntimeLoaded();
         }
-
-        XLSX.utils.book_append_sheet(wb, ws, "导出数据");
-        XLSX.writeFile(wb, filename);
-    },
-
-    renderClassView: function () {
-        const { title, list, scoreLabel } = this.currentData;
-        document.getElementById('drill-title').innerText = title;
-        document.getElementById('drill-back-btn').classList.add('hidden');
-
-        const classMap = {};
-        list.forEach(s => {
-            if (!classMap[s.class]) classMap[s.class] = [];
-            classMap[s.class].push(s);
-        });
-
-        const classes = Object.keys(classMap).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-
-        let html = `<div class="drill-class-grid">`;
-        classes.forEach(cls => {
-            const count = classMap[cls].length;
-            html += `
-                    <button type="button" class="drill-class-card" onclick="DrillSystem.renderStudentView(${jsStringLiteral(cls)})" aria-label="查看${escapeAppHtml(cls)}班${count}名学生名单">
-                        <div class="drill-label">${escapeAppHtml(cls)}</div>
-                        <div class="drill-val">${count} 人</div>
-                        <div class="drill-label" style="font-size:10px;">点击查看名单 &gt;</div>
-                    </button>`;
-        });
-        html += `</div>`;
-
-        if (list.length === 0) html = '<div style="text-align:center; padding:30px; color:#999;">暂无相关学生数据</div>';
-
-        document.getElementById('drill-content').innerHTML = html;
-        document.getElementById('drill-footer').innerText = `合计: ${list.length} 人`;
-    },
-
-    renderStudentView: function (className) {
-        const { list, scoreLabel } = this.currentData;
-        this.history.push('class_view');
-
-        document.getElementById('drill-title').innerText = `${className} - 名单`;
-        document.getElementById('drill-back-btn').classList.remove('hidden');
-
-        const students = list.filter(s => s.class === className).sort((a, b) => b.total - a.total);
-
-        let html = `<div class="drill-stu-list">`;
-        students.forEach(s => {
-            html += `
-                    <button type="button" class="drill-stu-tag" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)}); document.getElementById('drill-modal').style.display='none';" aria-label="查看${escapeAppHtml(s.name)}学生详情">
-                        <span>${escapeAppHtml(s.name)}</span>
-                        <span class="drill-stu-score">${escapeAppHtml(s.total)}</span>
-                    </button>`;
-        });
-        html += `</div>`;
-
-        document.getElementById('drill-content').innerHTML = html;
-    },
-
-    goBack: function () {
-        if (this.history.length > 0) {
-            this.history.pop();
-            this.renderClassView();
+        if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+            return window.SystemRuntimeLoader.load('drill-system');
         }
+        return Promise.reject(new Error('drill-system runtime not loaded'));
+    },
+    open(...args) {
+        return this._load().then(() => window.DrillSystem.open(...args));
+    },
+    exportExcel(...args) {
+        return this._load().then(() => window.DrillSystem.exportExcel(...args));
+    },
+    renderClassView(...args) {
+        return this._load().then(() => window.DrillSystem.renderClassView(...args));
+    },
+    renderStudentView(...args) {
+        return this._load().then(() => window.DrillSystem.renderStudentView(...args));
+    },
+    goBack(...args) {
+        return this._load().then(() => window.DrillSystem.goBack(...args));
     }
 };
+window.DrillSystem = DrillSystem;
 
 function getIndicatorRankParams() {
     const indicator = window.SYS_VARS?.indicator || {};

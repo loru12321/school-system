@@ -98,10 +98,12 @@ const teacherCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets
 const macroCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-result-runtime.js');
 const macroCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-cloud-runtime.js');
 const macroAnalysisCompatRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-analysis-compat-runtime.js');
+const drillSystemRuntimePath = path.resolve(__dirname, '../public/assets/js/drill-system-runtime.js');
 const cloudRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud.js');
 const smokeAllModulesPath = path.resolve(__dirname, './smoke-all-modules.js');
 
 assert.ok(fs.existsSync(runtimePath), 'auth-state-runtime.js should exist');
+assert.ok(fs.existsSync(drillSystemRuntimePath), 'drill-system-runtime.js should exist');
 assert.ok(fs.existsSync(workspaceRuntimePath), 'workspace-state-runtime.js should exist');
 assert.ok(fs.existsSync(examRuntimePath), 'exam-state-runtime.js should exist');
 assert.ok(fs.existsSync(schoolRuntimePath), 'school-state-runtime.js should exist');
@@ -275,6 +277,7 @@ const indicatorBottom3ExportRef = './assets/js/indicator-bottom3-export-runtime.
 const summaryTableExportRef = './assets/js/summary-table-export-runtime.js';
 const templateDownloadRef = './assets/js/template-download-runtime.js';
 const highScoreExportRef = './assets/js/high-score-export-runtime.js';
+const drillSystemRef = './assets/js/drill-system-runtime.js';
 const cohortGrowthRef = './assets/js/cohort-growth-runtime.js';
 const macroAnalysisCompatRef = './assets/js/macro-analysis-compat-runtime.js';
 const schoolNormalizationRef = './assets/js/school-normalization-runtime.js';
@@ -1724,6 +1727,16 @@ assert.ok(
     'county analysis compatibility actions and their heatmap control should have an on-demand runtime loader'
 );
 assert.ok(!normalizedDeferredManifest.includes(tableHeatmapRef), 'table heatmap should load with the analysis interaction instead of racing the generic deferred queue');
+assert.ok(
+    runtimeLoaderRuntime.includes("'drill-system': bootSkill('demand', 'demand', ['DrillSystem', 'drill-modal']")
+        && runtimeLoaderRuntime.includes("bootEntry('drill-system', bootJs('drill-system-runtime.js'))")
+        && runtimeLoaderRuntime.includes('window.ensureDrillSystemRuntimeLoaded = function ()')
+        && runtimeLoaderRuntime.includes("case 'drill-system':")
+        && appSource.includes('__drillProxy'),
+    'drill system should be available through a demand-loaded runtime facade'
+);
+assert.ok(!appSource.includes('const DrillSystem = {'), 'app.js should not carry the full low-frequency drill renderer');
+assert.ok(!drillSystemRef || fs.existsSync(drillSystemRuntimePath), 'drill runtime asset should remain part of the release surface');
 assert.ok(
     macroAnalysisCompatRuntime.includes('const allSchools = Object.values(window.SCHOOLS || {});')
         && macroAnalysisCompatRuntime.includes('const schoolNames = Object.keys(window.SCHOOLS || {});')

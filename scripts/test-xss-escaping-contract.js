@@ -15,6 +15,7 @@ const highScore = read('public/assets/js/high-score-runtime.js');
 const indicatorCalc = read('public/assets/js/indicator-calc-runtime.js');
 const reportRender = read('public/assets/js/report-render-runtime.js');
 const comparisonRender = read('public/assets/js/comparison-render-runtime.js');
+const drillSystem = read('public/assets/js/drill-system-runtime.js');
 
 assert.ok(dataManager.includes('escapeDataManagerHtml(s.school)'), 'student table school names must be HTML-escaped');
 assert.ok(dataManager.includes('escapeDataManagerHtml(s.name)'), 'student table names must be HTML-escaped');
@@ -50,10 +51,15 @@ assert.ok(!studentDetails.includes("updateStudentScore('${student.name}', '${stu
   "handleExcludedClick('${s.name}')",
   "addTagToWidget('${wrapperId}', '${hiddenInputId}', '${s.name}')",
   "removeTagFromWidget('${wrapperId}', '${hiddenInputId}', '${tag}')",
-  "DrillSystem.renderStudentView('${cls}')"
+  "DrillSystem.renderStudentView('${cls}')",
+  'DrillSystem.renderStudentView(${jsStringLiteral(cls)})'
 ].forEach((needle) => {
   assert.ok(!app.includes(needle) && !highScore.includes(needle), `app.js/high-score-runtime.js must not contain raw interpolation pattern: ${needle}`);
 });
+
+assert.ok(drillSystem.includes('data-drill-class="${escapeHtml(className)}"'), 'drill class buttons must use escaped data attributes');
+assert.ok(drillSystem.includes('data-drill-student="${encoded}"'), 'drill student buttons must use encoded data attributes');
+assert.ok(!/onclick\s*=/.test(drillSystem), 'drill runtime must not generate inline onclick handlers');
 
 // report-render-runtime: student name/school/class flow into report HTML (later
 // assigned via innerHTML). Cloud content is attacker-influenceable, so these must

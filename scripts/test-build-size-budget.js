@@ -76,8 +76,11 @@ const budgets = {
     // a small, intentional manifest entry while keeping the editor out of boot.
     // 2026-08-30: non-assessment scheduler subjects/projects add a compact
     // mobile configuration panel and export sheet; retain a narrow bundle cap.
-    ltHtmlBrotli: 348_000,
-    publicRuntimeLoaderJs: 58_500,
+    // 2026-08-30: drill-system moved out of app.js but remains in the offline
+    // source map, adding a small compressed footprint to lt.html.
+    ltHtmlBrotli: 350_000,
+    // 2026-08-30: drill-system demand loader adds a guarded runtime entry.
+    publicRuntimeLoaderJs: 59_000,
     // Current minified app bundle baseline after runtime splits, cache guards,
     // and the product redesign CSS layer being accounted in the singlefile build.
     distAppJs: 585_000,
