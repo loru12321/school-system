@@ -4023,7 +4023,7 @@ function EXAM_assignProctors() {
     tbody.innerHTML = html;
     UI.toast("✅ 监考人员分配完成，请查看“监考汇总表”", "success");
     // 自动切到汇总表看结果
-    EXAM_switchView('proctor', document.querySelector('.nav-link[onclick*="proctor"]'));
+    EXAM_switchView('proctor', document.querySelector('.nav-link[data-ui-action="exam-switch-view"][data-ui-value="proctor"]'));
 }
 
 function EXAM_exportResult() {

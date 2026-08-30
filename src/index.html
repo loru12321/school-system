@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-b16b5dbde636.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-b16b5dbde636.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-a309a4229a2c.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-a309a4229a2c.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -2919,9 +2919,9 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先生成考场安排，再进入人员配置和桌贴打印；Excel 导出更适合考务留档。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-green" onclick="EXAM_exportResult()">📊 导出考务Excel</button><button
-                                class="btn btn-orange" onclick="EXAM_generateDeskLabels()">🏷️ 批量打印桌贴</button><button
-                                class="btn btn-purple" onclick="window.print()">🖨 批量打印桌贴</button>
+                            <button class="btn btn-green" type="button" data-ui-action="exam-export-result">📊 导出考务Excel</button><button
+                                class="btn btn-orange" type="button" data-ui-action="exam-generate-desk-labels">🏷️ 批量打印桌贴</button><button
+                                class="btn btn-purple" type="button" data-ui-action="exam-print">🖨 批量打印桌贴</button>
                         </div>
                     </div>
                 </div>
@@ -2942,7 +2942,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <div style="font-weight:bold;">导入本次考试学生名单</div>
                             <div style="font-size:12px; color:#64748b;">自动识别姓名/班级/总分(自动按分排序)</div>
                             <input type="file" id="examFileInput" accept=".xlsx,.xls" hidden
-                                onchange="EXAM_loadData(this)">
+                                data-ui-change="exam-load-data">
                         </div>
                         <div
                             style="flex:1; display:grid; grid-template-columns: 1fr 1fr; gap:15px; background:#f8fafc; padding:10px; border-radius:8px;">
@@ -2962,8 +2962,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <span style="margin-left:5px;">🐍 <b>S型蛇形排列</b> (座位号)</span>
                                 </label>
                             </div>
-                            <button class="btn btn-primary" style="grid-column: 1/-1; margin-top:5px;"
-                                onclick="EXAM_generate()">
+                            <button class="btn btn-primary" type="button" style="grid-column: 1/-1; margin-top:5px;"
+                                data-ui-action="exam-generate">
                                 🚀 智能生成考场安排
                             </button>
                         </div>
@@ -3023,8 +3023,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                         <label class="role-label">🧹 卫生考务/后勤保障组</label>
                                         <select id="proctor-role-affairs" class="role-select" multiple></select>
                                     </div>
-                                    <button class="btn btn-primary" style="width:100%; margin-top:10px;"
-                                        onclick="EXAM_assignProctors()">
+                                    <button class="btn btn-primary" type="button" style="width:100%; margin-top:10px;"
+                                        data-ui-action="exam-assign-proctors">
                                         🚀 一键编排监考表 (2人/班)
                                     </button>
                                 </div>
@@ -3186,7 +3186,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
                         <div>
                             <h4 style="margin:0; color:#6d28d9;">🧩 手动添加非考核科目 / 项目</h4>
-                            <div style="font-size:12px; color:#7c3aed; margin-top:4px;">不在任课表中的课程也可排课；不计入教师考核。</div>
+                            <div style="font-size:12px; color:#7c3aed; margin-top:4px;">不在任课表中的课程也可排课；不计入教师考核。可与常规任课表一起排，也可以只添加手动项目后直接生成。</div>
                         </div>
                         <button class="btn btn-sm btn-gray" type="button" data-scheduler-click="clear-manual-demands">清空手动项目</button>
                     </div>
@@ -3213,7 +3213,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <label style="font-size:12px; color:#4c1d95;">备注（可选）<input id="sch_manual_note" type="text" placeholder="如：每周一节固定，其余自动安排" style="width:100%; margin-top:4px;"></label>
                         <button class="btn btn-sm" type="button" data-scheduler-click="add-manual-demand" style="background:#7c3aed; color:#fff;">➕ 添加到排课项目</button>
                     </div>
-                    <div style="font-size:11px; color:#6d28d9; margin-top:7px;">固定星期+节次锁定一节，其余课时自动安排；只填一项则按该范围安排。</div>
+                    <div style="font-size:11px; color:#6d28d9; margin-top:7px;">固定星期+节次锁定一节，其余课时自动安排；只填星期则本项目本周课时都排在该天，只填节次则每周优先使用该节次。若当天/该节次容量不足，规则预检会先提示。</div>
                     <div id="sch_tags_manual" class="tag-widget-container" style="margin-top:8px; min-height:32px; background:#fff; border-color:#d8b4fe;"></div>
                 </div>
 
@@ -3509,12 +3509,12 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <div id="batch-print-container" style="display:none;"></div>
     <div id="desk-labels-print-area"></div>
     <!-- 全局快捷搜索弹窗 -->
-    <div id="spotlight-mask" class="spotlight-mask" aria-hidden="true" onclick="closeSpotlight(event)">
-        <div class="spotlight-box" role="dialog" aria-modal="true" aria-label="全局快捷搜索" onclick="event.stopPropagation()">
+    <div id="spotlight-mask" class="spotlight-mask" aria-hidden="true" data-ui-action="close-spotlight">
+        <div class="spotlight-box" role="dialog" aria-modal="true" aria-label="全局快捷搜索">
             <div class="spotlight-input-wrap">
                 <i class="ti ti-search" style="font-size:24px; color:var(--primary); margin-right:10px;"></i>
                 <input type="search" id="spotlight-input" name="spotlight-search" class="spotlight-input" aria-label="搜索功能模块或学生信息" autocomplete="off" placeholder="搜索功能模块或学生姓名、学校、班级…"
-                    oninput="doSpotlightSearch()">
+                    data-ui-input="spotlight-search">
             </div>
             <div id="spotlight-results" class="spotlight-results" role="listbox" aria-label="搜索结果"></div>
             <div class="spotlight-hint" style="font-size:11px;padding:8px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;color:#64748b;text-align:center;">输入搜索 · 回车确认 · ESC 关闭</div>
@@ -3534,7 +3534,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 <!-- 图片将生成在这里 -->
             </div>
             <div style="margin-top:15px;">
-                <button class="btn btn-primary" onclick="downloadMobileImage()">⬇️ 下载图片</button>
+                <button class="btn btn-primary" type="button" data-ui-action="download-mobile-image">⬇️ 下载图片</button>
             </div>
         </div>
     </div>
@@ -3569,7 +3569,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <div style="margin-top:20px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
                 <button class="btn btn-gray"
                     data-close-modal="mappingModal">取消分析</button>
-                <button class="btn btn-primary" onclick="confirmMappingsAndRun()">✅ 确认匹配并继续</button>
+                <button class="btn btn-primary" type="button" data-ui-action="confirm-mappings-run">✅ 确认匹配并继续</button>
             </div>
         </div>
     </div>
@@ -3612,7 +3612,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <!-- 底部操作按钮 -->
             <div style="margin-top: 20px; display: flex; gap: 15px; padding: 10px;">
                 <button class="btn btn-orange" style="flex:1; font-size: 16px; height: 45px;"
-                    onclick="downloadCertificate()">
+                    data-ui-action="download-certificate">
                     <i class="ti ti-download"></i> 保存奖状为高清图片
                 </button>
                 <button class="btn btn-gray" style="width: 100px;"
@@ -3620,8 +3620,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             </div>
         </div>
     </div>
-    <div id="school-profile-modal" class="modal" style="display: none;" onclick="if(event.target===this)this.style.display='none'">
-        <div class="modal-content school-profile-modal-content" style="width: 95%; max-width: 1400px;" onclick="event.stopPropagation()">
+    <div id="school-profile-modal" class="modal" style="display: none;" data-ui-action="close-school-profile">
+        <div class="modal-content school-profile-modal-content" style="width: 95%; max-width: 1400px;">
             <div class="school-modal-header">
                 <h3 id="sp-title" style="margin:0; color:var(--primary); font-size:20px;">🏫 学校画像</h3>
                 <button type="button" class="school-modal-close" aria-label="关闭学校画像弹窗"
@@ -3682,9 +3682,9 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
             <div class="school-modal-actions">
                 <span style="font-size:12px; color:#999; margin-right:auto; align-self:center;">跳转后将自动筛选该校数据</span>
-                <button class="btn btn-blue" onclick="jumpToModule('teacher-analysis')"><i class="ti ti-school"></i>
+                <button class="btn btn-blue" type="button" data-ui-action="jump-module" data-ui-value="teacher-analysis"><i class="ti ti-school"></i>
                     教师评价</button>
-                <button class="btn btn-green" onclick="jumpToModule('student-details')"><i class="ti ti-users"></i>
+                <button class="btn btn-green" type="button" data-ui-action="jump-module" data-ui-value="student-details"><i class="ti ti-users"></i>
                     学生名单</button>
             </div>
         </div>
@@ -3718,7 +3718,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         style="background:#0f172a;" aria-label="使用深邃黑主题" title="深邃黑"></button>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="color" id="custom-color-input" onchange="setThemeColor(this.value)"
+                    <input type="color" id="custom-color-input" data-ui-change="set-theme-color-input"
                         style="width:50px; height:30px; padding:0; border:none;">
                     <span style="font-size:12px; color:#666;">自定义颜色 (点击色块选择)</span>
                 </div>
@@ -3731,17 +3731,17 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     data-pick-file="logoInput">
                     <div style="color:var(--primary); font-size:20px;"><i class="ti ti-photo-up"></i> 点击上传 Logo 图片</div>
                     <p style="font-size:12px; color:#999; margin:5px 0;">建议使用透明背景 PNG，高度60px左右<br>图片将保存在本地浏览器中</p>
-                    <input type="file" id="logoInput" accept="image/*" hidden onchange="handleLogoUpload(this)">
+                    <input type="file" id="logoInput" accept="image/*" hidden data-ui-change="logo-upload">
                 </div>
-                <button class="btn btn-gray btn-sm" onclick="clearLogo()" style="margin-top:5px;">🗑️ 清除 Logo</button>
+                <button class="btn btn-gray btn-sm" type="button" data-ui-action="clear-logo" style="margin-top:5px;">🗑️ 清除 Logo</button>
             </div>
 
             <!-- 3. 标题设置 -->
             <div style="margin-bottom: 10px;">
                 <h4 style="margin-bottom:10px; color:#333;">3. 系统名称</h4>
                 <input type="text" id="custom-title-input" name="custom-report-title" aria-label="自定义系统标题" autocomplete="off" placeholder="例如：乡镇学校成绩分析…"
-                    style="width:100%; margin-bottom:5px;" oninput="updateTitlePreview(this.value)">
-                <button class="btn btn-primary" style="width:100%; margin-top:15px;" onclick="saveSkinSettings()">💾
+                    style="width:100%; margin-bottom:5px;" data-ui-input="skin-title-preview">
+                <button class="btn btn-primary" type="button" style="width:100%; margin-top:15px;" data-ui-action="save-skin-settings">💾
                     保存并应用</button>
             </div>
         </div>

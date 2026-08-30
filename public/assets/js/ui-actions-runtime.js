@@ -163,6 +163,27 @@ async function downloadCertificate() {
         'save-target-editor': () => window.SystemRuntimeLoader?.load('target-editor').then(() => window.saveTargetEditor?.()),
         'toggle-sub-nav': (target) => callGlobal('toggleSubNav', target),
         'exam-switch-view': (target) => callGlobal('EXAM_switchView', target?.dataset?.uiValue || 'overview', target),
+        'exam-export-result': () => callGlobal('EXAM_exportResult'),
+        'exam-generate-desk-labels': () => callGlobal('EXAM_generateDeskLabels'),
+        'exam-print': () => callGlobal('print'),
+        'exam-generate': () => callGlobal('EXAM_generate'),
+        'exam-assign-proctors': () => callGlobal('EXAM_assignProctors'),
+        'clear-logo': () => callGlobal('clearLogo'),
+        'save-skin-settings': () => callGlobal('saveSkinSettings'),
+        'download-mobile-image': () => callGlobal('downloadMobileImage'),
+        'confirm-mappings-run': () => callGlobal('confirmMappingsAndRun'),
+        'download-certificate': () => callGlobal('downloadCertificate'),
+        'jump-module': (target) => callGlobal('jumpToModule', target?.dataset?.uiValue || ''),
+        'close-spotlight': (target, event) => {
+            if (event?.target !== target) return false;
+            callGlobal('closeSpotlight');
+            return true;
+        },
+        'close-school-profile': (target, event) => {
+            if (event?.target !== target) return false;
+            target.style.display = 'none';
+            return true;
+        },
         'voice-toggle': () => window.VoiceControl?.toggle?.(),
         'voice-stop': () => window.VoiceControl?.stop?.(),
         'set-theme-color': (target) => callGlobal('setThemeColor', target?.dataset?.uiValue || ''),
@@ -211,6 +232,9 @@ async function downloadCertificate() {
             callGlobal('refreshExamGradePreview');
             callGlobal('onExamTermChange');
         },
+        'exam-load-data': (target) => callGlobal('EXAM_loadData', target),
+        'set-theme-color-input': (target) => callGlobal('setThemeColor', target?.value || ''),
+        'logo-upload': (target) => callGlobal('handleLogoUpload', target),
         'load-project-snapshot': (target) => callGlobal('loadProjectSnapshot', target),
         'student-compare-period-count': () => callGlobal('onStudentComparePeriodCountChange'),
         'filter-student-compare-class': () => callGlobal('filterStudentCompareByClass'),
@@ -223,21 +247,22 @@ async function downloadCertificate() {
 
     const inputHandlers = {
         'mobile-student-search': () => window.MobMgr?.renderStudentList?.(),
-        'progress-filter': () => callGlobal('applyProgressFilter')
+        'progress-filter': () => callGlobal('applyProgressFilter'),
+        'skin-title-preview': (target) => callGlobal('updateTitlePreview', target?.value || ''),
+        'spotlight-search': () => callGlobal('doSpotlightSearch')
     };
 
-    function runAction(target, action) {
+    function runAction(target, action, event) {
         const handler = actionHandlers[action] || changeHandlers[action];
         if (typeof handler !== 'function') return false;
-        handler(target);
-        return true;
+        return handler(target, event) !== false;
     }
 
     document.addEventListener('click', (event) => {
         const target = event.target?.closest?.('[data-ui-action]');
         if (!target) return;
         const action = target.dataset.uiAction;
-        if (!action || !runAction(target, action)) return;
+        if (!action || !runAction(target, action, event)) return;
         event.preventDefault();
     });
 

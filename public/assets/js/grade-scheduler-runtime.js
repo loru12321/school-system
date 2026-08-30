@@ -554,10 +554,11 @@ const SCHEDULER = {
         const grades = this.getProjectGrades();
         const crossGradeTeachers = this.getCrossGradeTeachers();
         const lockedCellCount = this.countScheduleCells(this.lockedSchedule);
-        const availableSlots = this.getAllSlots(config).filter((slot) => !this.isGloballyClosedSlot(slot)).length;
+        const allSlots = this.getAllSlots(config);
+        const availableSlots = allSlots.filter((slot) => !this.isGloballyClosedSlot(slot)).length;
 
-        if (!demands.length) errors.push('请先导入“学年联合任课表”。');
-        if (!this.classes.length) errors.push('任课表中未识别到班级，请检查“年级”和“班级”列。');
+        if (!demands.length) errors.push('请先导入“学年联合任课表”，或先添加手动非考核科目/项目。');
+        if (!this.classes.length) errors.push('当前项目未识别到班级，请先导入任课表，或添加手动项目并选择对应班级。');
         if (config.am + config.pm + config.eve <= 0) errors.push('上午、下午和晚自习节数不能同时为 0。');
         if (grades.length < 2 && demands.length) warnings.push('当前只导入了一个年级；跨级教师避让需要把相关年级一起导入同一份任课表。');
 
@@ -570,6 +571,25 @@ const SCHEDULER = {
             }
             if (demand.nonAssessment && demand.fixedSlot && !this.isValidSlotCode(demand.fixedSlot, config)) {
                 errors.push(`${demand.className}班 ${demand.subject} 固定的 ${this.getSlotName(demand.fixedSlot)} 超出当前课时结构。`);
+            }
+            if (demand.nonAssessment && demand.fixedDay && !demand.fixedSlot) {
+                const daySlots = allSlots.filter((slot) => slot.day === Number(demand.fixedDay) && !this.isGloballyClosedSlot(slot));
+                if (Number(demand.weeklyHours) > daySlots.length) {
+                    errors.push(`${demand.className}班 ${demand.subject} 限定周${demand.fixedDay}，但每周需要 ${demand.weeklyHours} 节，当天只有 ${daySlots.length} 个可用时段。`);
+                }
+            }
+            if (demand.nonAssessment && demand.fixedSlot && !demand.fixedDay) {
+                const slotDays = allSlots.filter((slot) => slot.id.replace(/^d\d+_/, '') === demand.fixedSlot && !this.isGloballyClosedSlot(slot));
+                if (Number(demand.weeklyHours) > slotDays.length) {
+                    errors.push(`${demand.className}班 ${demand.subject} 限定${this.getSlotName(demand.fixedSlot)}，但每周需要 ${demand.weeklyHours} 节，当前每周只有 ${slotDays.length} 个该节次可用。`);
+                }
+            }
+            if (demand.nonAssessment && demand.fixedDay && demand.fixedSlot) {
+                const fixedSlot = allSlots.find((slot) => slot.day === Number(demand.fixedDay)
+                    && slot.id.replace(/^d\d+_/, '') === demand.fixedSlot);
+                if (!fixedSlot || this.isGloballyClosedSlot(fixedSlot)) {
+                    errors.push(`${demand.className}班 ${demand.subject} 固定的周${demand.fixedDay}${this.getSlotName(demand.fixedSlot)}当前不可用，请调整周次或节次。`);
+                }
             }
         });
         const fixedDemandKeys = new Set();
@@ -945,7 +965,7 @@ const SCHEDULER = {
         if (!status) return;
         if (!this.demands.length) {
             status.className = 'scheduler-project-status';
-            status.textContent = '导入任课表后，这里会显示单级部或联合项目的资源、锁定课与冲突状态。';
+            status.textContent = '导入任课表或添加手动非考核项目后，这里会显示单级部或联合项目的资源、锁定课与冲突状态。';
             return;
         }
         const conflicts = this.getScheduleResourceConflicts();
@@ -963,7 +983,12 @@ const SCHEDULER = {
         )).length;
         if (!this.countScheduleCells(this.schedule)) {
             status.className = 'scheduler-project-status';
-            status.textContent = `${base}。任课表已就绪；请完成规则预检后开始${grades.length > 1 ? '联合' : '本级部'}排课。`;
+            const regularCount = this.demands.filter((demand) => !demand.nonAssessment).length;
+            const manualCount = this.demands.filter((demand) => demand.nonAssessment).length;
+            const sourceSummary = regularCount && manualCount
+                ? `任课表与 ${manualCount} 条手动非考核项目均已就绪`
+                : (regularCount ? '任课表已就绪' : `已配置 ${manualCount} 条手动非考核项目`);
+            status.textContent = `${base}。${sourceSummary}；请完成规则预检后开始${grades.length > 1 ? '联合' : '本级部'}排课。`;
         } else if (conflicts.length) {
             status.className = 'scheduler-project-status is-error';
             status.textContent = `${base}。检测到 ${conflicts.length} 项资源冲突，请不要导出为正式课表。`;
@@ -1303,7 +1328,7 @@ const SCHEDULER = {
     },
 
     run: function () {
-        if (!this.demands.length) return window.UI.alert("请先导入教师任课数据");
+        if (!this.demands.length) return window.UI.alert("请先导入教师任课数据，或先添加手动非考核科目/项目");
         const preflight = this.preflight({ silent: true });
         if (!preflight.ok) return window.UI.alert(`请先处理排课预检中的 ${preflight.errors.length} 项问题。`);
 

@@ -43,6 +43,9 @@ assert.ok(scheduler.includes('getTeacherSubjectBlockScore'), 'scheduler should s
 assert.ok(scheduler.includes('getClassSubjectBalanceScore'), 'scheduler should score daily subject distribution');
 assert.ok(scheduler.includes('getTeacherBlockStats'), 'scheduler should summarize teacher block quality');
 assert.ok(scheduler.includes('refreshTeacherBusyOptions'), 'scheduler should refresh teacher busy datalist after import');
+assert.ok(scheduler.includes('或先添加手动非考核科目/项目'), 'scheduler should allow a manual-only project without a teacher roster');
+assert.ok(scheduler.includes('当天只有 ${daySlots.length} 个可用时段'), 'manual fixed-day demand should be checked against day capacity');
+assert.ok(scheduler.includes('当前每周只有 ${slotDays.length} 个该节次可用'), 'manual fixed-slot demand should be checked against weekly capacity');
 assert.ok(scheduler.includes('同一教师同一天重复添加会自动合并') || indexHtml.includes('同一教师同一天重复添加会自动合并'), 'busy rule should document multi-slot merge behavior');
 assert.ok(scheduler.includes("document.getElementById('sch_run_btn')"), 'run state should bind to the dedicated run button');
 assert.ok(scheduler.includes("'学年联合排课导入模板.xlsx'"), 'scheduler should export a dedicated joint-scheduling Excel template');
