@@ -1704,6 +1704,23 @@ const SCHEDULER = {
         const projected = countForClass(demand.className) + 1;
         const peerCounts = peers.filter((className) => className !== demand.className).map(countForClass);
         if (!peerCounts.length) return 0;
+        // 三班教师的常见实际排法：晚自习前两节连续覆盖其中两个班，
+        // 第三个班在白天单独补一节。此时不能把“白天 1 节、晚自习 0 节”
+        // 判定为失衡，否则评分会把第三个班错误地继续推向晚自习。
+        // 晚自习第三节合堂不进入 session 索引，因此天然不参与这里的比较。
+        const session = String(slot.type || '').trim();
+        if ((session === 'am' || session === 'pm') && peers.length === 3) {
+            const eveningCoveredPeers = peers
+                .filter((className) => className !== demand.className)
+                .filter((className) => (this.classSubjectNormalSessionIndex
+                    ? this.classSubjectNormalSessionIndex[`${className}__${subject}__${slot.day}__eve`] || 0
+                    : 0) > 0)
+                .length;
+            const currentEveningCount = this.classSubjectNormalSessionIndex
+                ? this.classSubjectNormalSessionIndex[`${demand.className}__${subject}__${slot.day}__eve`] || 0
+                : 0;
+            if (eveningCoveredPeers >= 2 && currentEveningCount === 0 && projected <= 1) return 0;
+        }
         const peerAverage = peerCounts.reduce((sum, count) => sum + count, 0) / peerCounts.length;
         const balanceWeight = Number(this.rules.teacherBlocks?.teacherSubjectDayBalanceWeight || 96);
         return -Math.abs(projected - peerAverage) * balanceWeight;
