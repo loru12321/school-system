@@ -1813,8 +1813,10 @@ const SCHEDULER = {
                 return cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject;
             }));
             score += frontSubject ? 260 : -220;
-            // 晚三优先安排语数外；其它学科仍可兜底，但不与主科竞争同等优先级。
-            score += core.has(subject) ? 160 : -40;
+            // 晚三优先安排语数外：把它作为强软约束，避免同教师连续、
+            // 同日均衡等普通偏好把语数外挤到其它学科之后；合法位置不足时
+            // 仍允许历史/地理/生物等学科兜底，不改变任何硬约束。
+            score += core.has(subject) ? 420 : -180;
         }
         return score;
     },

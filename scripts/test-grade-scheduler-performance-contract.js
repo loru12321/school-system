@@ -38,6 +38,7 @@ assert.ok(source.includes('getSoftBusyScore: function'), 'grade scheduler should
 assert.ok(source.includes('getClassSubjectPeriodRepeatCount: function'), 'scheduler should track repeated class subject periods across days');
 assert.ok(source.includes('getTeacherSubjectPeriodRepeatCount: function'), 'scheduler should track repeated teacher subject periods across days');
 assert.ok(source.includes('getTeacherSubjectDayBalanceScore: function'), 'scheduler should balance same-teacher subject counts by day across classes');
+assert.ok(source.includes('score += core.has(subject) ? 420 : -180;'), 'evening third should strongly prefer Chinese, math, and English while retaining non-core fallback');
 assert.ok(source.includes(".replace(/\\(合\\)$/, '').trim() === '体育' && slot.type === 'eve'"), 'scheduler should forbid PE in evening slots');
 assert.ok(source.includes('getSubjectTimeDistributionScore: function'), 'scheduler should score subject time-slot variety');
 assert.ok(source.includes('classSubjectPeriodRepeats'), 'fatigue audit should report repeated class subject periods');
