@@ -55,6 +55,7 @@ assert.ok(source.includes('slot.type === \'am\' && Number(slot.period) === 4) re
 assert.ok(source.includes('ensureDailyCoreCoverage: function'), 'scheduler should seed daily Chinese/math/English coverage before remaining placement');
 assert.ok(source.includes('repairDailyCoreCoverage: function'), 'scheduler should repair daily core coverage by bounded legal swaps');
 assert.ok(source.includes('synchronizeEveningThirdSubject: function'), 'scheduler should synchronize evening-third subjects across the full grade');
+assert.ok(source.includes('ensureEveningThirdCoverage: function'), 'scheduler should ensure every class has an evening-third lesson when the grade uses that period');
 assert.ok(source.includes("cell.lessonType !== 'composition'"), 'daily coverage and evening synchronization must not break composition pairs');
 assert.ok(source.includes('const dailyCoreCoverageMissing = this.ensureDailyCoreCoverage'), 'scheduler should enforce daily core coverage before ordinary placement');
 assert.ok(source.includes('dailyCoreCoverageMissing'), 'scheduler should surface missing daily core coverage in run status');

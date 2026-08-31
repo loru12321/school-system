@@ -1178,6 +1178,7 @@ const SCHEDULER = {
             this.countNormalDemandLessons(demand) < Number(demand.weeklyHours)
         )).length;
         const dailyCoreCoverageMissing = this.lastRun?.dailyCoreCoverageMissing || this.getDailyCoreCoverageMissing(this.schedule);
+        const eveningThirdCoverageMissing = this.lastRun?.eveningThirdCoverageMissing || [];
         const combinedHours = this.countScheduleCells(this.schedule)
             ? Object.values(this.schedule || {}).reduce((sum, classSchedule) => (
                 sum + Object.entries(classSchedule || {}).filter(([slotId, cell]) => this.isNonTeachingHourCombinedCell(cell, slotId)).length
@@ -1204,6 +1205,10 @@ const SCHEDULER = {
             status.className = 'scheduler-project-status is-warning';
             const preview = dailyCoreCoverageMissing.slice(0, 4).map((item) => `${item.className}班周${item.day}${item.subject}`).join('、');
             status.textContent = `${base}。有 ${dailyCoreCoverageMissing.length} 个班级日核心学科覆盖不足（${preview}${dailyCoreCoverageMissing.length > 4 ? '等' : ''}），请调整禁排或手动交换后再导出。${totalHourNote}。${blockSummary ? ` ${blockSummary}。` : ''}`;
+        } else if (eveningThirdCoverageMissing.length) {
+            status.className = 'scheduler-project-status is-warning';
+            const preview = eveningThirdCoverageMissing.slice(0, 4).map((item) => `${item.className}班`).join('、');
+            status.textContent = `${base}。晚自习第3节已有课程，但${preview}${eveningThirdCoverageMissing.length > 4 ? '等班级' : ''}本周尚未安排晚自习第3节，请调整约束后重试。${totalHourNote}。${blockSummary ? ` ${blockSummary}。` : ''}`;
         } else {
             status.className = 'scheduler-project-status is-ok';
             status.textContent = `${base}。教师与场地均无同一时段冲突，可按班级或教师复核后导出。${totalHourNote}。${blockSummary ? ` ${blockSummary}。` : ''}`;
@@ -1647,6 +1652,63 @@ const SCHEDULER = {
                 }
             });
         }
+    },
+
+    ensureEveningThirdCoverage: function (pending, allSlots) {
+        const eve3Slots = allSlots.filter((slot) => slot.type === 'eve' && slot.period === 3 && !this.isGloballyClosedSlot(slot));
+        if (!eve3Slots.length || !this.classes.some((className) => eve3Slots.some((slot) => this.schedule[className]?.[slot.id]))) return [];
+        const missing = [];
+        this.classes.forEach((className) => {
+            if (eve3Slots.some((slot) => this.schedule[className]?.[slot.id])) return;
+            let repaired = false;
+            for (const target of eve3Slots) {
+                const current = this.schedule[className]?.[target.id];
+                if (current) continue;
+                const demand = pending.find((item) => item.className === className && !item.nonAssessment && Number(item.remaining || 0) > 0);
+                if (demand) {
+                    const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
+                    if (this.canPlaceDemand(demand, target, freshBusy)) {
+                        this.placeDemand(demand, target.id);
+                        this.markTeacherBusy(demand.name, target.id);
+                        demand.remaining -= 1;
+                        this.rebuildTeacherSlotIndex();
+                        this.rebuildVenueSlotIndex();
+                        this.rebuildDayLoadIndexes();
+                        repaired = true;
+                        break;
+                    }
+                }
+                const source = Object.entries(this.schedule[className] || {})
+                    .map(([slotId, cell]) => ({ slotId, cell, slot: allSlots.find((item) => item.id === slotId) }))
+                    .filter(({ slot, cell }) => slot && slot.id !== target.id && this.isMovableScheduleCell(cell))
+                    .sort((left, right) => Number(left.slot.type === 'eve') - Number(right.slot.type === 'eve') || left.slot.day - right.slot.day || left.slot.period - right.slot.period)[0];
+                if (!source) continue;
+                const blockerDemand = pending.find((item) => item.className === className && !item.nonAssessment
+                    && this.normalizeTeacherName(item.name) === this.normalizeTeacherName(source.cell.teacher)
+                    && String(item.subject || '').replace(/\(合\)$/, '').trim() === String(source.cell.subject || '').replace(/\(合\)$/, '').trim());
+                if (!blockerDemand) continue;
+                const snapshot = JSON.stringify(this.schedule);
+                delete this.schedule[className][source.slotId];
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                this.rebuildDayLoadIndexes();
+                const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
+                if (this.canPlaceDemand(blockerDemand, target, freshBusy)) {
+                    this.placeDemand(blockerDemand, target.id);
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                    repaired = true;
+                    break;
+                }
+                this.schedule = JSON.parse(snapshot);
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                this.rebuildDayLoadIndexes();
+            }
+            if (!repaired) missing.push({ className, reason: '教师/禁排约束导致无法补入晚自习第3节' });
+        });
+        return missing;
     },
 
     getClassSubjectDayCount: function (className, subject, day) {
@@ -2627,12 +2689,14 @@ const SCHEDULER = {
                         }
                     });
                     this.synchronizeEveningThirdSubject(pending, allSlots);
+                    const eveningThirdCoverageMissing = this.ensureEveningThirdCoverage(pending, allSlots);
 
                     this.repairUnfilledDemands(pending, allSlots, teacherBusyMap);
                     // 最后一轮交换修复：当教师冲突或固定活动阻断了预留位置时，
                     // 将目标日的非核心课换到其它合法时段，确保每天每班都有语数外。
                     this.repairDailyCoreCoverage(pending, allSlots, teacherBusyMap);
                     pending._dailyCoreCoverageMissing = this.getDailyCoreCoverageMissing(this.schedule);
+                    pending._eveningThirdCoverageMissing = eveningThirdCoverageMissing;
                     return pending;
                 };
 
@@ -2643,7 +2707,8 @@ const SCHEDULER = {
                 for (let attemptIndex = 0; attemptIndex < maxAttempts; attemptIndex += 1) {
                     const candidatePending = runAttempt(attemptIndex);
                     const candidateRemaining = candidatePending.reduce((sum, demand) => sum + Math.max(0, Number(demand.remaining || 0)), 0)
-                        + Number(candidatePending._dailyCoreCoverageMissing?.length || 0) * 1000;
+                        + Number(candidatePending._dailyCoreCoverageMissing?.length || 0) * 1000
+                        + Number(candidatePending._eveningThirdCoverageMissing?.length || 0) * 800;
                     if (candidateRemaining < bestRemaining) {
                         bestRemaining = candidateRemaining;
                         bestPending = candidatePending;
@@ -2658,7 +2723,8 @@ const SCHEDULER = {
                 const pending = bestPending || [];
                 const unfilled = pending.filter((demand) => demand.remaining > 0);
                 const dailyCoreCoverageMissing = this.getDailyCoreCoverageMissing(this.schedule);
-                this.lastRun = { unfilled, dailyCoreCoverageMissing, generatedAt: Date.now() };
+                const eveningThirdCoverageMissing = bestPending?._eveningThirdCoverageMissing || [];
+                this.lastRun = { unfilled, dailyCoreCoverageMissing, eveningThirdCoverageMissing, generatedAt: Date.now() };
                 this.renderTable();
                 this.manualSelection = null;
                 this.manualHistory = [];
