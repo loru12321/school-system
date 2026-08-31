@@ -1638,6 +1638,7 @@ const SCHEDULER = {
     repairDailyCoreCoverage: function (pending, allSlots, teacherBusyMap) {
         const coreSubjects = ['语文', '数学', '英语'];
         let repaired = 0;
+        const liveTeacherBusyMap = () => this.getTeacherBusyMap(this.getSlotConfig());
         const demandFor = (className, subject) => pending.find((demand) => (
             demand.className === className && !demand.nonAssessment && String(demand.subject || '').trim() === subject
         ));
@@ -1653,6 +1654,59 @@ const SCHEDULER = {
             const candidates = allSlots
                 .filter((slot) => slot.day === day && !(slot.type === 'eve' && slot.period === 3))
                 .sort((left, right) => (left.type === 'eve') - (right.type === 'eve') || left.period - right.period || left.id.localeCompare(right.id));
+
+            // 每周课时已经排满时，优先把其它日期“多出来”的同科课平移到缺失日，
+            // 保持该科总课时不变；目标位置若被占用，则把占用课程通过有限增广链挪走。
+            const subjectEntries = Object.entries(this.schedule[className] || {})
+                .map(([slotId, cell]) => ({
+                    slot: allSlots.find((item) => item.id === slotId),
+                    slotId,
+                    cell
+                }))
+                .filter(({ slot, cell }) => slot && slot.day !== day
+                    && String(cell?.subject || '').replace(/\(合\)$/, '').trim() === subject
+                    && this.isMovableScheduleCell(cell));
+            const dayCounts = new Map();
+            subjectEntries.forEach(({ slot }) => dayCounts.set(slot.day, (dayCounts.get(slot.day) || 0) + 1));
+            const sourceEntries = subjectEntries
+                .filter(({ slot }) => (dayCounts.get(slot.day) || 0) > 1)
+                .sort((left, right) => right.slot.day - left.slot.day || right.slot.period - left.slot.period);
+            for (const candidate of candidates) {
+                const current = this.schedule[className]?.[candidate.id];
+                if (current && (!this.isMovableScheduleCell(current) || current.nonAssessment)) continue;
+                for (const source of sourceEntries) {
+                    const snapshot = JSON.stringify(this.schedule);
+                    const blocker = current;
+                    delete this.schedule[className][source.slotId];
+                    if (blocker) delete this.schedule[className][candidate.id];
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                    const freshBusy = liveTeacherBusyMap();
+                    const targetOk = this.canPlaceDemand(demand, candidate, freshBusy, { coverage: true });
+                    let blockerOk = true;
+                    let blockerDemand = null;
+                    if (blocker) {
+                        blockerDemand = pending.find((item) => item.className === className
+                            && !item.nonAssessment
+                            && this.normalizeTeacherName(item.name) === this.normalizeTeacherName(blocker.teacher)
+                            && String(item.subject || '').replace(/\(合\)$/, '').trim() === String(blocker.subject || '').replace(/\(合\)$/, '').trim());
+                        blockerOk = !!blockerDemand && this.canPlaceDemand(blockerDemand, source.slot, freshBusy, { coverage: true });
+                    }
+                    if (targetOk && blockerOk) {
+                        this.placeDemand(demand, candidate.id);
+                        if (blocker && blockerDemand) this.placeDemand(blockerDemand, source.slotId);
+                        this.rebuildTeacherSlotIndex();
+                        this.rebuildVenueSlotIndex();
+                        this.rebuildDayLoadIndexes();
+                        repaired += 1;
+                        break;
+                    }
+                    restore(snapshot);
+                }
+                if (this.getDailyCoreCoverageMissing(this.schedule).some((item) => item.className === className && item.day === day && item.subject === subject) === false) break;
+            }
+            if (!this.getDailyCoreCoverageMissing(this.schedule).some((item) => item.className === className && item.day === day && item.subject === subject)) return;
             for (const candidate of candidates) {
                 const current = this.schedule[className]?.[candidate.id];
                 if (!current) {
