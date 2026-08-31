@@ -1825,9 +1825,23 @@ const SCHEDULER = {
             if (subjectSpread) return subjectSpread;
             const teacherLoad = this.getTeacherDayLoad(demand.name, left.day) - this.getTeacherDayLoad(demand.name, right.day);
             if (teacherLoad) return teacherLoad;
-            return left.id.localeCompare(right.id);
+            const leftTie = this.getAttemptTieScore(left.id);
+            const rightTie = this.getAttemptTieScore(right.id);
+            return leftTie - rightTie || left.id.localeCompare(right.id);
         });
         return candidates[0] || null;
+    },
+
+    // 多次排课尝试使用确定性扰动打破完全相同的候选排序，
+    // 避免单次贪心顺序把最后一两节课挤掉；同一输入仍可复现结果。
+    getAttemptTieScore: function (value) {
+        const attempt = Number(this._runAttemptIndex || 0);
+        const text = `${String(value || '')}|${attempt}`;
+        let hash = 0;
+        for (let index = 0; index < text.length; index += 1) {
+            hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+        }
+        return hash % 1009;
     },
 
     // 将已排课单元转换为可再次校验的 demand 结构。
@@ -2025,68 +2039,96 @@ const SCHEDULER = {
             try {
                 const config = this.getSlotConfig();
                 const allSlots = this.getAllSlots(config);
-                this.schedule = this.cloneLockedSchedule();
-                this.invalidateTableRenderCache();
-                this.resetTeacherSlotIndex();
-                this.resetVenueSlotIndex();
-                this.applyBaseConstraints(config);
+                const runAttempt = (attemptIndex) => {
+                    this._runAttemptIndex = attemptIndex;
+                    this.schedule = this.cloneLockedSchedule();
+                    this.invalidateTableRenderCache();
+                    this.resetTeacherSlotIndex();
+                    this.resetVenueSlotIndex();
+                    this.applyBaseConstraints(config);
+                    this.rebuildDayLoadIndexes();
+                    const teacherBusyMap = this.getTeacherBusyMap(config);
+                    this._reserveEveningThird = true;
+                    const pending = this.demands.map((demand) => ({
+                        ...demand,
+                        remaining: Math.max(0, Number(demand.weeklyHours) - this.countNormalDemandLessons(demand))
+                    }));
+
+                    this.applyConsecutivePairRules(pending, allSlots, teacherBusyMap);
+                    this.applyCombinedRules(pending, allSlots, teacherBusyMap, { deferEveningThird: true });
+                    const crossGradeNames = new Set(this.getCrossGradeTeachers().map((item) => item.name));
+                    const teacherSubjectTotals = new Map();
+                    pending.forEach((demand) => {
+                        const key = `${this.normalizeTeacherName(demand.name)}__${demand.subject}`;
+                        teacherSubjectTotals.set(key, (teacherSubjectTotals.get(key) || 0) + Number(demand.remaining || 0));
+                    });
+                    pending.sort((left, right) => {
+                        const fixedDiff = Number(!!right.nonAssessment && (right.fixedDay || right.fixedSlot)) - Number(!!left.nonAssessment && (left.fixedDay || left.fixedSlot));
+                        if (fixedDiff) return fixedDiff;
+                        const crossDiff = Number(crossGradeNames.has(this.normalizeTeacherName(right.name))) - Number(crossGradeNames.has(this.normalizeTeacherName(left.name)));
+                        if (crossDiff) return crossDiff;
+                        if (attemptIndex > 0) {
+                            const attemptDiff = this.getAttemptTieScore(`${left.className}__${left.subject}__${left.name}`)
+                                - this.getAttemptTieScore(`${right.className}__${right.subject}__${right.name}`);
+                            if (attemptDiff) return attemptDiff;
+                        }
+                        const leftGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(left.name)}__${left.subject}`) || 0;
+                        const rightGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(right.name)}__${right.subject}`) || 0;
+                        return rightGroup - leftGroup || right.remaining - left.remaining
+                            || this.normalizeTeacherName(left.name).localeCompare(this.normalizeTeacherName(right.name), 'zh-CN')
+                            || String(left.subject).localeCompare(String(right.subject), 'zh-CN')
+                            || left.className.localeCompare(right.className, 'zh-CN', { numeric: true });
+                    });
+                    pending.forEach((demand) => {
+                        while (demand.remaining > 0) {
+                            const slot = this.findBestSlotForDemand(demand, allSlots, teacherBusyMap);
+                            if (!slot) break;
+                            this.placeDemand(demand, slot.id);
+                            this.markTeacherBusy(demand.name, slot.id);
+                            if (demand.venue) this.markVenueBusy(demand.venue, slot.id);
+                            if (demand.nonAssessment && demand.fixedDay && demand.fixedSlot && !demand._fixedPlaced) demand._fixedPlaced = true;
+                            demand.remaining -= 1;
+                        }
+                    });
+
+                    // 晚自习第三节只从前两节已出现的科目中选取合堂；没有形成前置科目时，留到最后普通排课兜底。
+                    this._reserveEveningThird = false;
+                    this.applyEveningThirdCombinedRules(pending, allSlots, teacherBusyMap);
+                    pending.forEach((demand) => {
+                        while (demand.remaining > 0) {
+                            const slot = this.findBestSlotForDemand(demand, allSlots, teacherBusyMap);
+                            if (!slot) break;
+                            this.placeDemand(demand, slot.id);
+                            this.markTeacherBusy(demand.name, slot.id);
+                            if (demand.venue) this.markVenueBusy(demand.venue, slot.id);
+                            if (demand.nonAssessment && demand.fixedDay && demand.fixedSlot && !demand._fixedPlaced) demand._fixedPlaced = true;
+                            demand.remaining -= 1;
+                        }
+                    });
+
+                    this.repairUnfilledDemands(pending, allSlots, teacherBusyMap);
+                    return pending;
+                };
+
+                const maxAttempts = Number(this.demands.length || 0) >= 40 ? 8 : 3;
+                let bestPending = null;
+                let bestSchedule = null;
+                let bestRemaining = Number.POSITIVE_INFINITY;
+                for (let attemptIndex = 0; attemptIndex < maxAttempts; attemptIndex += 1) {
+                    const candidatePending = runAttempt(attemptIndex);
+                    const candidateRemaining = candidatePending.reduce((sum, demand) => sum + Math.max(0, Number(demand.remaining || 0)), 0);
+                    if (candidateRemaining < bestRemaining) {
+                        bestRemaining = candidateRemaining;
+                        bestPending = candidatePending;
+                        bestSchedule = JSON.parse(JSON.stringify(this.schedule));
+                    }
+                    if (candidateRemaining === 0) break;
+                }
+                this.schedule = bestSchedule || this.cloneLockedSchedule();
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
                 this.rebuildDayLoadIndexes();
-                const teacherBusyMap = this.getTeacherBusyMap(config);
-                this._reserveEveningThird = true;
-                const pending = this.demands.map((demand) => ({
-                    ...demand,
-                    remaining: Math.max(0, Number(demand.weeklyHours) - this.countNormalDemandLessons(demand))
-                }));
-
-                this.applyConsecutivePairRules(pending, allSlots, teacherBusyMap);
-                this.applyCombinedRules(pending, allSlots, teacherBusyMap, { deferEveningThird: true });
-                const crossGradeNames = new Set(this.getCrossGradeTeachers().map((item) => item.name));
-                const teacherSubjectTotals = new Map();
-                pending.forEach((demand) => {
-                    const key = `${this.normalizeTeacherName(demand.name)}__${demand.subject}`;
-                    teacherSubjectTotals.set(key, (teacherSubjectTotals.get(key) || 0) + Number(demand.remaining || 0));
-                });
-                pending.sort((left, right) => {
-                    const fixedDiff = Number(!!right.nonAssessment && (right.fixedDay || right.fixedSlot)) - Number(!!left.nonAssessment && (left.fixedDay || left.fixedSlot));
-                    if (fixedDiff) return fixedDiff;
-                    const crossDiff = Number(crossGradeNames.has(this.normalizeTeacherName(right.name))) - Number(crossGradeNames.has(this.normalizeTeacherName(left.name)));
-                    const leftGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(left.name)}__${left.subject}`) || 0;
-                    const rightGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(right.name)}__${right.subject}`) || 0;
-                    return crossDiff || rightGroup - leftGroup || right.remaining - left.remaining
-                        || this.normalizeTeacherName(left.name).localeCompare(this.normalizeTeacherName(right.name), 'zh-CN')
-                        || String(left.subject).localeCompare(String(right.subject), 'zh-CN')
-                        || left.className.localeCompare(right.className, 'zh-CN', { numeric: true });
-                });
-                pending.forEach((demand) => {
-                    while (demand.remaining > 0) {
-                        const slot = this.findBestSlotForDemand(demand, allSlots, teacherBusyMap);
-                        if (!slot) break;
-                        this.placeDemand(demand, slot.id);
-                        this.markTeacherBusy(demand.name, slot.id);
-                        if (demand.venue) this.markVenueBusy(demand.venue, slot.id);
-                        if (demand.nonAssessment && demand.fixedDay && demand.fixedSlot && !demand._fixedPlaced) demand._fixedPlaced = true;
-                        demand.remaining -= 1;
-                    }
-                });
-
-                // 晚自习第三节只从前两节已出现的科目中选取合堂；没有形成前置科目时，留到最后普通排课兜底。
-                this._reserveEveningThird = false;
-                this.applyEveningThirdCombinedRules(pending, allSlots, teacherBusyMap);
-                pending.forEach((demand) => {
-                    while (demand.remaining > 0) {
-                        const slot = this.findBestSlotForDemand(demand, allSlots, teacherBusyMap);
-                        if (!slot) break;
-                        this.placeDemand(demand, slot.id);
-                        this.markTeacherBusy(demand.name, slot.id);
-                        if (demand.venue) this.markVenueBusy(demand.venue, slot.id);
-                        if (demand.nonAssessment && demand.fixedDay && demand.fixedSlot && !demand._fixedPlaced) demand._fixedPlaced = true;
-                        demand.remaining -= 1;
-                    }
-                });
-
-                // 最后一轮局部换位，修复贪心顺序造成的少量遗漏课时。
-                this.repairUnfilledDemands(pending, allSlots, teacherBusyMap);
-
+                const pending = bestPending || [];
                 const unfilled = pending.filter((demand) => demand.remaining > 0);
                 this.lastRun = { unfilled, generatedAt: Date.now() };
                 this.renderTable();
