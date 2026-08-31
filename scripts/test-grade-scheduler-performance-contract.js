@@ -27,7 +27,8 @@ assert.ok(source.includes('areAdjacentClasses: function'), 'scheduler should ide
 assert.ok(source.includes('isSameClassSubjectConsecutiveAllowed: function'), 'scheduler should allow only explicit same-class consecutive exceptions');
 assert.ok(source.includes('isEveningThirdReserved: function'), 'scheduler should reserve evening third period for eligible combined lessons');
 assert.ok(source.includes('isNonTeachingHourCombinedCell: function'), 'scheduler should identify evening third combined supervision cells');
-assert.ok(source.includes('&& !this.isNonTeachingHourCombinedCell(cell, slotId)'), 'evening third combined supervision should not count toward normal demand hours');
+assert.ok(source.includes('countNormalDemandLessons: function'), 'scheduler should keep a separate normal-demand hour counter');
+assert.ok(source.includes('(includeCombined || !this.isNonTeachingHourCombinedCell(cell, slotId))'), 'total demand hours should include evening third combined supervision cells');
 assert.ok(source.includes('applyEveningThirdCombinedRules: function'), 'scheduler should build evening third combined lessons from front-period subjects');
 assert.ok(source.includes('includeFulfilled: true'), 'evening third combined lessons should still be generated after normal hours are filled');
 assert.ok(source.includes('teacherDaySlotIndex: null'), 'teacher day load should track unique occupied slots for combined lessons');

@@ -1154,8 +1154,16 @@ const SCHEDULER = {
             ? `教师同科：${blockStats.consecutiveLinks} 个相邻连排、${blockStats.sameSessionLinks} 个同段连接、${blockStats.sameDayGroups} 组同日安排`
             : '';
         const remainingCount = unfilled.length || this.demands.filter((demand) => (
-            this.countDemandLessons(demand) < Number(demand.weeklyHours)
+            this.countNormalDemandLessons(demand) < Number(demand.weeklyHours)
         )).length;
+        const combinedHours = this.countScheduleCells(this.schedule)
+            ? Object.values(this.schedule || {}).reduce((sum, classSchedule) => (
+                sum + Object.entries(classSchedule || {}).filter(([slotId, cell]) => this.isNonTeachingHourCombinedCell(cell, slotId)).length
+            ), 0)
+            : 0;
+        const totalHourNote = combinedHours
+            ? `总课时已含晚自习第三节合堂 ${combinedHours} 节`
+            : '总课时按实际课表统计';
         if (!this.countScheduleCells(this.schedule)) {
             status.className = 'scheduler-project-status';
             const regularCount = this.demands.filter((demand) => !demand.nonAssessment).length;
@@ -1163,16 +1171,16 @@ const SCHEDULER = {
             const sourceSummary = regularCount && manualCount
                 ? `任课表与 ${manualCount} 条手动非考核项目均已就绪`
                 : (regularCount ? '任课表已就绪' : `已配置 ${manualCount} 条手动非考核项目`);
-            status.textContent = `${base}。${sourceSummary}；请完成规则预检后开始${grades.length > 1 ? '联合' : '本级部'}排课。`;
+            status.textContent = `${base}。${sourceSummary}；${totalHourNote}；请完成规则预检后开始${grades.length > 1 ? '联合' : '本级部'}排课。`;
         } else if (conflicts.length) {
             status.className = 'scheduler-project-status is-error';
-            status.textContent = `${base}。检测到 ${conflicts.length} 项资源冲突，请不要导出为正式课表。`;
+            status.textContent = `${base}。检测到 ${conflicts.length} 项资源冲突，请不要导出为正式课表。${totalHourNote}。`;
         } else if (remainingCount) {
             status.className = 'scheduler-project-status is-warning';
-            status.textContent = `${base}。仍有 ${remainingCount} 条逐班课程未排完，请放宽禁排/场地约束后重试。${blockSummary ? ` ${blockSummary}。` : ''}`;
+            status.textContent = `${base}。仍有 ${remainingCount} 条逐班课程未排完，请放宽禁排/场地约束后重试。${totalHourNote}。${blockSummary ? ` ${blockSummary}。` : ''}`;
         } else {
             status.className = 'scheduler-project-status is-ok';
-            status.textContent = `${base}。教师与场地均无同一时段冲突，可按班级或教师复核后导出。${blockSummary ? ` ${blockSummary}。` : ''}`;
+            status.textContent = `${base}。教师与场地均无同一时段冲突，可按班级或教师复核后导出。${totalHourNote}。${blockSummary ? ` ${blockSummary}。` : ''}`;
         }
     },
 
@@ -1311,7 +1319,8 @@ const SCHEDULER = {
     },
 
     // 晚自习第三节合堂是教师同时照看多个班级的管理时段：
-    // 它必须占用班级/教师时段，防止冲突，但不应消耗该班正常教学周课时。
+    // 它必须占用班级/教师时段，防止冲突；按当前业务口径，计入“总课时”，
+    // 但正常学科课时仍由 countNormalDemandLessons 单独核算。
     isNonTeachingHourCombinedCell: function (cell, slotId) {
         return !!cell?.isCombined && /^d[1-5]_eve_3$/.test(String(slotId || ''));
     },
@@ -1336,13 +1345,18 @@ const SCHEDULER = {
         return true;
     },
 
-    countDemandLessons: function (demand, schedule = this.schedule) {
+    countDemandLessons: function (demand, schedule = this.schedule, options = {}) {
+        const includeCombined = options.includeCombined !== false;
         return Object.entries(schedule?.[demand.className] || {}).filter(([slotId, cell]) => {
             return !slotId.startsWith('_') && cell
-                && !this.isNonTeachingHourCombinedCell(cell, slotId)
+                && (includeCombined || !this.isNonTeachingHourCombinedCell(cell, slotId))
                 && this.normalizeTeacherName(cell.teacher) === this.normalizeTeacherName(demand.name)
                 && String(cell.subject || '').replace(/\(合\)$/, '') === String(demand.subject || '');
         }).length;
+    },
+
+    countNormalDemandLessons: function (demand, schedule = this.schedule) {
+        return this.countDemandLessons(demand, schedule, { includeCombined: false });
     },
 
     placeDemand: function (demand, slotId, options = {}) {
@@ -1447,8 +1461,8 @@ const SCHEDULER = {
 
     applyEveningThirdCombinedRules: function (pending, allSlots, teacherBusyMap) {
         this.rules.combined.filter((rule) => rule.slot === 'eve_3').forEach((rule) => {
-            // 第三节合堂不消耗正常课时，因此即使这些需求已排满，仍需根据前两节
-            // 的实际授课安排生成合堂监督单元。
+            // 第三节合堂计入总课时，但不消耗正常学科需求；即使这些需求已排满，
+            // 仍需根据前两节的实际授课安排生成合堂监督单元。
             this.getCombinedGroups(rule, pending, { includeFulfilled: true }).forEach(([groupId, demands]) => {
                 const subject = String(rule.subject || '').replace(/\(合\)$/, '');
                 const teacher = this.normalizeTeacherName(demands[0]?.name);
@@ -1485,7 +1499,7 @@ const SCHEDULER = {
                     const slotId = slot.id;
                     pair.forEach((demand) => {
                         this.placeDemand(demand, slotId, { combined: true, groupId: `${groupId}__${day}` });
-                        // 合堂监督不计入每班正常周课时，故不修改 demand.remaining。
+                        // 合堂监督计入总课时，但不修改正常学科需求的 remaining。
                     });
                     this.markTeacherBusy(teacher, slotId);
                     pair.map((demand) => demand.venue).filter(Boolean)
@@ -1972,7 +1986,7 @@ const SCHEDULER = {
                 this._reserveEveningThird = true;
                 const pending = this.demands.map((demand) => ({
                     ...demand,
-                    remaining: Math.max(0, Number(demand.weeklyHours) - this.countDemandLessons(demand))
+                    remaining: Math.max(0, Number(demand.weeklyHours) - this.countNormalDemandLessons(demand))
                 }));
 
                 this.applyConsecutivePairRules(pending, allSlots, teacherBusyMap);
@@ -2925,7 +2939,7 @@ const SCHEDULER = {
         teacherSheet['!cols'] = [{ wch: 15 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 12 }];
         XLSX.utils.book_append_sheet(wb, teacherSheet, '教师总表');
 
-        const crossRows = [['教师', '覆盖年级', '涉及班级', '学科', '每周总课时', '共享场地/资源']];
+        const crossRows = [['教师', '覆盖年级', '涉及班级', '学科', '每周总课时（含晚自习第三节合堂）', '共享场地/资源']];
         const crossMap = new Map();
         this.demands.forEach((demand) => {
             const key = `${this.normalizeTeacherName(demand.name)}__${demand.subject}`;
@@ -2933,7 +2947,10 @@ const SCHEDULER = {
             const entry = crossMap.get(key);
             entry.grades.add(String(demand.grade || this.inferGradeFromClass(demand.className) || ''));
             entry.classes.add(demand.className);
-            entry.hours += Number(demand.weeklyHours) || 0;
+            // 导出使用实际课表课时：晚自习第三节合堂虽然不消耗正常学科需求，
+            // 但现在按业务要求计入教师/班级“总课时”。
+            const scheduledHours = this.countDemandLessons(demand, this.schedule);
+            entry.hours += scheduledHours || Number(demand.weeklyHours) || 0;
             if (demand.venue) entry.venues.add(demand.venue);
         });
         [...crossMap.values()]
@@ -3068,7 +3085,9 @@ const SCHEDULER = {
                 const cell = this.schedule[cls][slotId];
                 const teacher = this.normalizeTeacherName(cell?.teacher);
                 const subject = String(cell?.subject || '').trim();
-                if (!teacher || teacher === '-' || !subject || cell?.fixed) return;
+                // 固定班会/锁定底图不是可重排资源；晚自习第三节合堂虽标记为固定，
+                // 仍属于实际教师总课时，导入已有课表时需保留并计入。
+                if (!teacher || teacher === '-' || !subject || (cell?.fixed && !cell?.isCombined)) return;
                 const venue = String(cell?.venue || '').trim();
                 const grade = this.inferGradeFromClass(cls);
                 const key = `${grade}__${cls}__${teacher}__${subject}__${venue}`;
@@ -3165,7 +3184,7 @@ const SCHEDULER = {
             document.getElementById('sch_result_area')?.classList.remove('hidden');
             this.renderTable();
             this.preflight({ silent: true });
-            const remaining = this.demands.filter((demand) => this.countDemandLessons(demand) < Number(demand.weeklyHours));
+            const remaining = this.demands.filter((demand) => this.countNormalDemandLessons(demand) < Number(demand.weeklyHours));
             this.renderProjectStatus(remaining);
             window.UI?.toast(`已锁定 ${parsed.importedCells} 节已确认课表；其余班级和空时段将继续排课。`, 'success');
         } catch (error) {
