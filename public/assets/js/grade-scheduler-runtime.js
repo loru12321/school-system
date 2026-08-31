@@ -1579,84 +1579,17 @@ const SCHEDULER = {
         });
     },
 
-    // 晚自习第三节按普通“单科”同步：只要 8.4—8.6 中任一班当天出现某学科，
-    // 其它班也尽量在当天或本周其它日期安排该学科的晚三。这里不创建合堂单元，
+    // 晚自习第三节按普通“单科”同步：只要本周任一班出现某学科，
+    // 其它班也尽量在本周其它日期安排该学科的晚三。这里不创建合堂单元，
     // 每个班仍保留自己的任课教师、独立课时和教师冲突校验；优先通过同科换位
     // 保持每班每科周课时不变，只有确有剩余课时才直接补入。班会、社团、禁排和
     // 教师撞课等硬约束始终优先。
     synchronizeEveningThirdSubject: function (pending, allSlots) {
-        const slotByDay = (day) => allSlots.find((slot) => slot.day === day && slot.type === 'eve' && slot.period === 3);
         const baseSubject = (cell) => String(cell?.subject || '').replace(/\(合\)$/, '').trim();
         const demandFor = (className, subject) => pending.find((demand) => demand.className === className
             && !demand.nonAssessment && String(demand.subject || '').trim() === subject);
         const movable = (cell) => this.isMovableScheduleCell(cell) && cell.lessonType !== 'composition';
-        for (let day = 1; day <= 5; day += 1) {
-            const eve3 = slotByDay(day);
-            if (!eve3 || this.isGloballyClosedSlot(eve3)) continue;
-            const upperCells = this.classes.filter((className) => /^8\.[456]$/.test(String(className)))
-                .map((className) => this.schedule[className]?.[eve3.id])
-                .filter((cell) => cell && baseSubject(cell) && baseSubject(cell) !== '班会' && baseSubject(cell) !== '社团活动');
-            if (!upperCells.length) continue;
-            const counts = new Map();
-            upperCells.forEach((cell) => counts.set(baseSubject(cell), (counts.get(baseSubject(cell)) || 0) + 1));
-            const subject = [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], 'zh-CN'))[0]?.[0];
-            if (!subject) continue;
-            this.classes.forEach((className) => {
-                const current = this.schedule[className]?.[eve3.id];
-                if (current && baseSubject(current) === subject) return;
-                if (current && !movable(current)) return;
-                const targetDemand = demandFor(className, subject);
-                if (!targetDemand) return;
-                const sourceEntry = Object.entries(this.schedule[className] || {})
-                    .map(([slotId, cell]) => ({ slotId, cell, slot: allSlots.find((item) => item.id === slotId) }))
-                    .filter(({ slot, cell }) => slot && slot.id !== eve3.id && baseSubject(cell) === subject && movable(cell))
-                    .sort((left, right) => Number(left.slot.type === 'eve') - Number(right.slot.type === 'eve') || left.slot.day - right.slot.day || left.slot.period - right.slot.period)[0];
-                const snapshot = JSON.stringify(this.schedule);
-                if (sourceEntry) {
-                    const blocker = current;
-                    delete this.schedule[className][sourceEntry.slotId];
-                    if (blocker) delete this.schedule[className][eve3.id];
-                    this.rebuildTeacherSlotIndex();
-                    this.rebuildVenueSlotIndex();
-                    this.rebuildDayLoadIndexes();
-                    const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
-                    const targetOk = this.canPlaceDemand(targetDemand, eve3, freshBusy, { coverage: true });
-                    let blockerOk = true;
-                    let blockerDemand = null;
-                    if (blocker) {
-                        blockerDemand = pending.find((item) => item.className === className
-                            && !item.nonAssessment
-                            && this.normalizeTeacherName(item.name) === this.normalizeTeacherName(blocker.teacher)
-                            && String(item.subject || '').replace(/\(合\)$/, '').trim() === baseSubject(blocker));
-                        blockerOk = !!blockerDemand && this.canPlaceDemand(blockerDemand, sourceEntry.slot, freshBusy, { coverage: true });
-                    }
-                    if (targetOk && blockerOk) {
-                        // 晚三是普通单科，不标记为 isCombined，也不改变正常课时计数。
-                        this.placeDemand(targetDemand, eve3.id);
-                        if (blocker && blockerDemand) this.placeDemand(blockerDemand, sourceEntry.slotId);
-                        this.rebuildTeacherSlotIndex();
-                        this.rebuildVenueSlotIndex();
-                        this.rebuildDayLoadIndexes();
-                        return;
-                    }
-                    this.schedule = JSON.parse(snapshot);
-                    this.rebuildTeacherSlotIndex();
-                    this.rebuildVenueSlotIndex();
-                    this.rebuildDayLoadIndexes();
-                } else if (!current && Number(targetDemand.remaining || 0) > 0) {
-                    const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
-                    if (this.canPlaceDemand(targetDemand, eve3, freshBusy, { coverage: true })) {
-                        this.placeDemand(targetDemand, eve3.id);
-                        targetDemand.remaining -= 1;
-                        this.rebuildTeacherSlotIndex();
-                        this.rebuildVenueSlotIndex();
-                        this.rebuildDayLoadIndexes();
-                    }
-                }
-            });
-        }
-
-        // 第二轮做“本周同科覆盖”：某学科已经在任一班晚三出现时，
+        // 只做“本周同科覆盖”：某学科已经在任一班晚三出现时，
         // 其它班尽量也获得一次该学科晚三（不要求同一天）。这正是参考课表
         // 中晚自习第三节按学科轮换的效果，同时不会强行把同一教师同时排到多个班。
         const weeklySubjects = [...new Set(this.classes.flatMap((className) => Object.entries(this.schedule[className] || {})
@@ -2392,6 +2325,31 @@ const SCHEDULER = {
             .some(([slotId, cell]) => slotId.startsWith(`d${slot.day}_eve_`)
                 && cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject);
         if (sameSessionSubject) score += 90;
+        // 晚一/晚二的同周覆盖是软约束：当该学科已经在其它班出现，而当前班
+        // 本周尚未覆盖时，优先把它放入当前班；并按晚一/晚二的全级部使用量
+        // 轻微偏向较少的一侧，形成“交替”而不是长期挤在同一节次。
+        const currentClassHasSubject = Object.entries(this.schedule[demand.className] || {})
+            .some(([slotId, cell]) => /^d[1-5]_eve_[12]$/.test(slotId)
+                && cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject);
+        const coverageCounts = [1, 2].map((period) => this.classes.reduce((count, className) => (
+            count + (Object.entries(this.schedule[className] || {}).some(([slotId, cell]) => (
+                /^d[1-5]_eve_[12]$/.test(slotId)
+                && slotId.endsWith(`_eve_${period}`)
+                && cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject
+            )) ? 1 : 0)
+        ), 0));
+        const coveredOtherClasses = this.classes.reduce((count, className) => (
+            count + (className !== demand.className && Object.entries(this.schedule[className] || {}).some(([slotId, cell]) => (
+                /^d[1-5]_eve_[12]$/.test(slotId)
+                && cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject
+            )) ? 1 : 0)
+        ), 0);
+        if (!currentClassHasSubject && coveredOtherClasses > 0 && slot.period <= 2) {
+            score += core.has(subject) ? 260 : 95;
+        }
+        if (slot.period <= 2 && coverageCounts[0] !== coverageCounts[1]) {
+            score += coverageCounts[slot.period - 1] < coverageCounts[slot.period === 1 ? 1 : 0] ? 55 : -25;
+        }
         const adjacentClassBlock = this.classes.some((className) => this.areAdjacentClasses(className, demand.className)
             && [1, 2].some((period) => {
                 const cell = this.schedule[className]?.[`d${slot.day}_eve_${period}`];

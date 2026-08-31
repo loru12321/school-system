@@ -58,6 +58,9 @@ assert.ok(source.includes('ensureDailyCoreCoverage: function'), 'scheduler shoul
 assert.ok(source.includes('repairDailyCoreCoverage: function'), 'scheduler should repair daily core coverage by bounded legal swaps');
 assert.ok(source.includes('synchronizeEveningThirdSubject: function'), 'scheduler should synchronize evening-third subjects across the full grade');
 assert.ok(source.includes('synchronizeEveningFrontSubjects: function'), 'scheduler should synchronize evening-first-and-second subjects across the week');
+assert.ok(source.includes('const currentClassHasSubject = Object.entries(this.schedule[demand.className] || {})'), 'evening front placement should detect class-level weekly subject coverage');
+assert.ok(source.includes('const coverageCounts = [1, 2].map((period) =>'), 'evening front placement should balance subject coverage between evening periods');
+assert.ok(source.includes('coveredOtherClasses > 0 && slot.period <= 2'), 'evening front placement should prioritize subjects already used by other classes');
 assert.ok(source.includes('ensureEveningThirdCoverage: function'), 'scheduler should ensure every class has an evening-third lesson when the grade uses that period');
 assert.ok(source.includes("cell.lessonType !== 'composition'"), 'daily coverage and evening synchronization must not break composition pairs');
 assert.ok(source.includes('const dailyCoreCoverageMissing = this.ensureDailyCoreCoverage'), 'scheduler should enforce daily core coverage before ordinary placement');
