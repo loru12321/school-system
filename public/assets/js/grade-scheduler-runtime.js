@@ -1643,6 +1643,26 @@ const SCHEDULER = {
 
     getTeacherScheduleQualityScore: function (demand, slot) {
         const weights = this.rules.teacherBlocks || {};
+        // Large real-world grade schedules (50+ per-class demands) used to
+        // spend tens of seconds rescanning every class for every candidate
+        // slot.  Hard constraints are still checked by canPlaceDemand; for
+        // large runs keep the quality score deliberately cheap and stable so
+        // the browser stays responsive.  Small runs retain the full quality
+        // model used by the smoke fixtures.
+        const largeRun = Number(this.demands?.length || 0) >= 40 || Number(this.classes?.length || 0) >= 8;
+        if (largeRun) {
+            const subject = String(demand?.subject || '').replace(/\(合\)$/, '').trim();
+            const core = new Set(['语文', '数学', '英语']);
+            const sameDayCount = this.getClassSubjectDayCount(demand.className, subject, slot.day);
+            const teacherLoad = this.getTeacherDayLoad(demand.name, slot.day);
+            const softBusy = this.getSoftBusyScore(demand.name, slot);
+            const evening = this.getEveningPreferenceScore(demand, slot);
+            const newDayBonus = sameDayCount === 0 ? 32 : -sameDayCount * 24;
+            const coreSpread = core.has(subject) && slot.type === 'eve' && slot.day >= 5 ? -80 : 0;
+            const periodSpread = this.getClassSubjectPeriodRepeatCount(demand, slot) ? -24 : 12;
+            return newDayBonus + periodSpread + softBusy + evening + coreSpread
+                - teacherLoad * Number(weights.teacherDayLoadWeight || 0);
+        }
         const block = this.getTeacherSubjectBlockScore(demand, slot);
         const balance = this.getClassSubjectBalanceScore(demand, slot);
         const timeDistribution = this.getSubjectTimeDistributionScore(demand, slot);
@@ -1817,6 +1837,11 @@ const SCHEDULER = {
     // 因而不会留下半成品或破坏教师/场地索引。
     tryRelocateScheduleCell: function (className, oldSlotId, cell, allSlots, teacherBusyMap, depth, forbiddenSlotIds) {
         if (!this.isMovableScheduleCell(cell) || depth < 0) return false;
+        // Guard the bounded augmenting-chain repair against combinatorial
+        // blow-ups on nearly full real-world timetables.  The repair is a
+        // best-effort final pass; it must never freeze the page.
+        if (Number(this._repairNodeBudget || 0) <= 0) return false;
+        this._repairNodeBudget -= 1;
         const demand = this.getScheduledCellDemand(className, cell);
         if (!demand) return false;
         const forbidden = new Set(forbiddenSlotIds || []);
@@ -1937,9 +1962,16 @@ const SCHEDULER = {
 
     repairUnfilledDemands: function (pending, allSlots, teacherBusyMap) {
         let repaired = 0;
+        const pendingCount = pending.filter((demand) => demand.remaining > 0).length;
+        const totalRemaining = pending.reduce((sum, demand) => sum + Math.max(0, Number(demand.remaining || 0)), 0);
+        // Keep the last-resort repair proportional to the unresolved work.
+        // This prevents a full-grade schedule from exploring thousands of
+        // JSON snapshots while preserving the useful behavior for small runs.
+        this._repairNodeBudget = Math.min(2400, Math.max(240, pendingCount * 24 + totalRemaining * 8));
         for (let pass = 0; pass < 3; pass += 1) {
             let changed = false;
             pending.filter((demand) => demand.remaining > 0).forEach((demand) => {
+                if (this._repairNodeBudget <= 0) return;
                 if (this.repairUnfilledDemand(demand, allSlots, teacherBusyMap)) {
                     repaired += 1;
                     changed = true;
