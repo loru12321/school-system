@@ -1943,6 +1943,47 @@ const SCHEDULER = {
             if (demand.venue && this.isVenueBusyInOtherClass(demand.venue, slot.id)) return false;
             return true;
         });
+
+        // 若班级唯一空位因教师禁排/学科禁排无法直接放入，
+        // 尝试做一次同班二元交换：把当前可移动课程放到空位，
+        // 再把缺失课程放到该课程原来的位置。这样可修复“教师在空位禁排、
+        // 但班内另一个合法位置可交换”的尾部缺口，而不放宽任何硬约束。
+        for (const target of baseCandidates) {
+            const classSchedule = this.schedule[demand.className] || {};
+            const movableEntries = Object.entries(classSchedule)
+                .filter(([slotId, cell]) => slotId.startsWith('d') && this.isMovableScheduleCell(cell));
+            for (const [blockerId, blocker] of movableEntries) {
+                if (blockerId === target.id) continue;
+                const blockerDemand = this.getScheduledCellDemand(demand.className, blocker);
+                const blockerSlot = allSlots.find((slot) => slot.id === blockerId);
+                if (!blockerDemand || !blockerSlot) continue;
+                const snapshot = JSON.stringify(this.schedule);
+                delete classSchedule[blockerId];
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                this.rebuildDayLoadIndexes();
+                const blockerCanMove = this.canPlaceDemand(blockerDemand, target, teacherBusyMap);
+                const demandCanMove = blockerCanMove && this.canPlaceDemand(demand, blockerSlot, teacherBusyMap);
+                if (demandCanMove) {
+                    this.placeDemand(blockerDemand, target.id);
+                    this.markTeacherBusy(blockerDemand.name, target.id);
+                    if (blockerDemand.venue) this.markVenueBusy(blockerDemand.venue, target.id);
+                    this.placeDemand(demand, blockerId);
+                    this.markTeacherBusy(demand.name, blockerId);
+                    if (demand.venue) this.markVenueBusy(demand.venue, blockerId);
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                    demand.remaining -= 1;
+                    return true;
+                }
+                this.schedule = JSON.parse(snapshot);
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                this.rebuildDayLoadIndexes();
+            }
+        }
+
         for (const target of baseCandidates) {
             const classSchedule = this.schedule[demand.className] || {};
             const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
