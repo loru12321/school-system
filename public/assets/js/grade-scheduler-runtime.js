@@ -1742,6 +1742,95 @@ const SCHEDULER = {
         return candidates[0] || null;
     },
 
+    // 贪心排课在强约束较多时可能把某个班的最后一节课“挤”掉。
+    // 这里做小范围局部换位：只移动造成同科连堂冲突的相邻单元，
+    // 并重新通过全部硬约束校验，不放宽体育晚自习、禁排、教师撞课等规则。
+    repairUnfilledDemand: function (demand, allSlots, teacherBusyMap) {
+        if (!demand || demand.remaining <= 0) return false;
+        const classSchedule = this.schedule[demand.className] || {};
+        const baseCandidates = allSlots.filter((slot) => {
+            if (this.isGloballyClosedSlot(slot)) return false;
+            if (String(demand.subject || '').replace(/\(合\)$/, '').trim() === '体育' && slot.type === 'eve') return false;
+            if (classSchedule[slot.id] || this.isDemandBlocked(demand, slot.id)) return false;
+            if (this.isEveningThirdReserved(demand, slot)) return false;
+            if (teacherBusyMap[`${this.normalizeTeacherName(demand.name)}_${slot.id}`]) return false;
+            if (this.isTeacherBusyInOtherClass(demand.name, slot.id)) return false;
+            if (demand.venue && this.isVenueBusyInOtherClass(demand.venue, slot.id)) return false;
+            return true;
+        });
+        for (const target of baseCandidates) {
+            const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+            const adjacentIds = [target.period - 1, target.period + 1]
+                .filter((period) => period >= 1)
+                .map((period) => `d${target.day}_${target.type}_${period}`)
+                .filter((slotId) => {
+                    const cell = classSchedule[slotId];
+                    return cell && String(cell.subject || '').replace(/\(合\)$/, '').trim() === subject;
+                });
+            if (!adjacentIds.length) continue;
+
+            // 一次只尝试移动一个相邻同科单元；如两侧均冲突则分别尝试。
+            for (const blockerId of adjacentIds) {
+                const blocker = classSchedule[blockerId];
+                if (!blocker || blocker.fixed || blocker.isCombined || !blocker.teacher) continue;
+                const blockerDemand = {
+                    className: demand.className,
+                    name: this.normalizeTeacherName(blocker.teacher),
+                    subject: String(blocker.subject || '').replace(/\(合\)$/, '').trim(),
+                    venue: blocker.venue || '',
+                    nonAssessment: !!blocker.nonAssessment
+                };
+                const moveCandidates = allSlots.filter((slot) => {
+                    if (slot.id === target.id || slot.id === blockerId || this.isGloballyClosedSlot(slot)) return false;
+                    if (this.schedule[demand.className]?.[slot.id]) return false;
+                    return true;
+                }).sort((left, right) => (
+                    this.getTeacherScheduleQualityScore(blockerDemand, right)
+                    - this.getTeacherScheduleQualityScore(blockerDemand, left)
+                ));
+                for (const moveSlot of moveCandidates) {
+                    delete classSchedule[blockerId];
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                    const canPlaceTarget = this.canPlaceDemand(demand, target, teacherBusyMap);
+                    const canMoveBlocker = canPlaceTarget && this.canPlaceDemand(blockerDemand, moveSlot, teacherBusyMap);
+                    if (canMoveBlocker) {
+                        this.placeDemand(demand, target.id);
+                        this.markTeacherBusy(demand.name, target.id);
+                        if (demand.venue) this.markVenueBusy(demand.venue, target.id);
+                        this.placeDemand(blockerDemand, moveSlot.id);
+                        this.markTeacherBusy(blockerDemand.name, moveSlot.id);
+                        if (blockerDemand.venue) this.markVenueBusy(blockerDemand.venue, moveSlot.id);
+                        this.rebuildDayLoadIndexes();
+                        demand.remaining -= 1;
+                        return true;
+                    }
+                    classSchedule[blockerId] = blocker;
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                }
+            }
+        }
+        return false;
+    },
+
+    repairUnfilledDemands: function (pending, allSlots, teacherBusyMap) {
+        let repaired = 0;
+        for (let pass = 0; pass < 3; pass += 1) {
+            let changed = false;
+            pending.filter((demand) => demand.remaining > 0).forEach((demand) => {
+                if (this.repairUnfilledDemand(demand, allSlots, teacherBusyMap)) {
+                    repaired += 1;
+                    changed = true;
+                }
+            });
+            if (!changed) break;
+        }
+        return repaired;
+    },
+
     getTeacherDayLoad: function (teacherName, day) {
         const teacher = this.normalizeTeacherName(teacherName);
         if (this.teacherDayLoadIndex) return this.teacherDayLoadIndex[`${teacher}__${day}`] || 0;
@@ -1826,6 +1915,9 @@ const SCHEDULER = {
                         demand.remaining -= 1;
                     }
                 });
+
+                // 最后一轮局部换位，修复贪心顺序造成的少量遗漏课时。
+                this.repairUnfilledDemands(pending, allSlots, teacherBusyMap);
 
                 const unfilled = pending.filter((demand) => demand.remaining > 0);
                 this.lastRun = { unfilled, generatedAt: Date.now() };
