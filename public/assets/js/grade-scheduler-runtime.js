@@ -1177,6 +1177,7 @@ const SCHEDULER = {
         const remainingCount = unfilled.length || this.demands.filter((demand) => (
             this.countNormalDemandLessons(demand) < Number(demand.weeklyHours)
         )).length;
+        const dailyCoreCoverageMissing = this.lastRun?.dailyCoreCoverageMissing || this.getDailyCoreCoverageMissing(this.schedule);
         const combinedHours = this.countScheduleCells(this.schedule)
             ? Object.values(this.schedule || {}).reduce((sum, classSchedule) => (
                 sum + Object.entries(classSchedule || {}).filter(([slotId, cell]) => this.isNonTeachingHourCombinedCell(cell, slotId)).length
@@ -1199,6 +1200,10 @@ const SCHEDULER = {
         } else if (remainingCount) {
             status.className = 'scheduler-project-status is-warning';
             status.textContent = `${base}。仍有 ${remainingCount} 条逐班课程未排完，请放宽禁排/场地约束后重试。${totalHourNote}。${blockSummary ? ` ${blockSummary}。` : ''}`;
+        } else if (dailyCoreCoverageMissing.length) {
+            status.className = 'scheduler-project-status is-warning';
+            const preview = dailyCoreCoverageMissing.slice(0, 4).map((item) => `${item.className}班周${item.day}${item.subject}`).join('、');
+            status.textContent = `${base}。有 ${dailyCoreCoverageMissing.length} 个班级日核心学科覆盖不足（${preview}${dailyCoreCoverageMissing.length > 4 ? '等' : ''}），请调整禁排或手动交换后再导出。${totalHourNote}。${blockSummary ? ` ${blockSummary}。` : ''}`;
         } else {
             status.className = 'scheduler-project-status is-ok';
             status.textContent = `${base}。教师与场地均无同一时段冲突，可按班级或教师复核后导出。${totalHourNote}。${blockSummary ? ` ${blockSummary}。` : ''}`;
@@ -1573,6 +1578,61 @@ const SCHEDULER = {
         return Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => (
             slotId.startsWith(`d${day}_`) && cell && cell.subject === subject
         )).length;
+    },
+
+    getDailyCoreCoverageMissing: function (schedule = this.schedule) {
+        const coreSubjects = ['语文', '数学', '英语'];
+        const missing = [];
+        this.classes.forEach((className) => {
+            for (let day = 1; day <= 5; day += 1) {
+                const entries = Object.entries(schedule?.[className] || {}).filter(([slotId, cell]) => (
+                    slotId.startsWith(`d${day}_`) && cell && !slotId.startsWith('_')
+                ));
+                const subjects = new Set(entries.map(([, cell]) => String(cell.subject || '').replace(/\(合\)$/, '').trim()));
+                coreSubjects.forEach((subject) => {
+                    if (!subjects.has(subject)) missing.push({ className, day, subject });
+                });
+            }
+        });
+        return missing;
+    },
+
+    ensureDailyCoreCoverage: function (pending, allSlots, teacherBusyMap) {
+        const coreSubjects = ['语文', '数学', '英语'];
+        const unresolved = [];
+        const demandMap = new Map(pending
+            .filter((demand) => !demand.nonAssessment && coreSubjects.includes(String(demand.subject || '').trim()))
+            .map((demand) => [`${demand.className}__${String(demand.subject || '').trim()}`, demand]));
+        this.classes.forEach((className) => {
+            for (let day = 1; day <= 5; day += 1) {
+                const dayEntries = Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => (
+                    slotId.startsWith(`d${day}_`) && cell && !slotId.startsWith('_')
+                ));
+                const existingSubjects = new Set(dayEntries.map(([, cell]) => String(cell.subject || '').replace(/\(合\)$/, '').trim()));
+                coreSubjects.forEach((subject) => {
+                    if (existingSubjects.has(subject)) return;
+                    const demand = demandMap.get(`${className}__${subject}`);
+                    if (!demand || demand.remaining <= 0) {
+                        unresolved.push({ className, day, subject, reason: '无可补充课时' });
+                        return;
+                    }
+                    const candidates = allSlots
+                        .filter((slot) => slot.day === day && !(slot.type === 'eve' && slot.period === 3))
+                        .sort((left, right) => (left.type === 'eve') - (right.type === 'eve') || left.period - right.period || left.id.localeCompare(right.id));
+                    const slot = candidates.find((candidate) => this.canPlaceDemand(demand, candidate, teacherBusyMap, { coverage: true }));
+                    if (!slot) {
+                        unresolved.push({ className, day, subject, reason: '受教师/禁排/班级时段约束影响' });
+                        return;
+                    }
+                    this.placeDemand(demand, slot.id);
+                    this.markTeacherBusy(demand.name, slot.id);
+                    if (demand.venue) this.markVenueBusy(demand.venue, slot.id);
+                    demand.remaining -= 1;
+                    existingSubjects.add(subject);
+                });
+            }
+        });
+        return unresolved;
     },
 
     // 同一班同一科不应在周一到周五每天都落在同一个节次；这里把“节次位置”
@@ -2303,6 +2363,10 @@ const SCHEDULER = {
                         remaining: Math.max(0, Number(demand.weeklyHours) - this.countNormalDemandLessons(demand))
                     }));
 
+                    // 用户要求每天每个班至少安排一节语文、数学、英语；
+                    // 先为每个班/每天补齐三科覆盖，再安排剩余课时，避免后续高分偏好把某一科挤出整天。
+                    const dailyCoreCoverageMissing = this.ensureDailyCoreCoverage(pending, allSlots, teacherBusyMap);
+                    pending._dailyCoreCoverageMissing = dailyCoreCoverageMissing;
                     this.applyConsecutivePairRules(pending, allSlots, teacherBusyMap);
                     this.applyCombinedRules(pending, allSlots, teacherBusyMap, { deferEveningThird: true });
                     const crossGradeNames = new Set(this.getCrossGradeTeachers().map((item) => item.name));
@@ -2357,6 +2421,7 @@ const SCHEDULER = {
                     });
 
                     this.repairUnfilledDemands(pending, allSlots, teacherBusyMap);
+                    pending._dailyCoreCoverageMissing = this.getDailyCoreCoverageMissing(this.schedule);
                     return pending;
                 };
 
@@ -2366,7 +2431,8 @@ const SCHEDULER = {
                 let bestRemaining = Number.POSITIVE_INFINITY;
                 for (let attemptIndex = 0; attemptIndex < maxAttempts; attemptIndex += 1) {
                     const candidatePending = runAttempt(attemptIndex);
-                    const candidateRemaining = candidatePending.reduce((sum, demand) => sum + Math.max(0, Number(demand.remaining || 0)), 0);
+                    const candidateRemaining = candidatePending.reduce((sum, demand) => sum + Math.max(0, Number(demand.remaining || 0)), 0)
+                        + Number(candidatePending._dailyCoreCoverageMissing?.length || 0) * 1000;
                     if (candidateRemaining < bestRemaining) {
                         bestRemaining = candidateRemaining;
                         bestPending = candidatePending;
@@ -2380,7 +2446,8 @@ const SCHEDULER = {
                 this.rebuildDayLoadIndexes();
                 const pending = bestPending || [];
                 const unfilled = pending.filter((demand) => demand.remaining > 0);
-                this.lastRun = { unfilled, generatedAt: Date.now() };
+                const dailyCoreCoverageMissing = this.getDailyCoreCoverageMissing(this.schedule);
+                this.lastRun = { unfilled, dailyCoreCoverageMissing, generatedAt: Date.now() };
                 this.renderTable();
                 this.manualSelection = null;
                 this.manualHistory = [];
