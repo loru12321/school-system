@@ -214,7 +214,9 @@ const SCHEDULER = {
 
         pushMeeting(1, 'pm_4');
         pushMeeting(5, 'pm_4');
-        this.rules.activities.push({ day: '4', range: 'custom', subject: 'ALL', scope: '8', slotsStr: 'pm_4', profile, id: 'grade8-club-thu-pm4' });
+        // 社团活动是一个真实的非考核项目，不应再用 ALL 活动写成“无课”占位；
+        // 由 applyGrade8Preset 生成固定到周四下午第 4 节的逐班需求，
+        // 这样课表和导出文件中都会明确显示“社团活动”。
 
         pushActivity(2, '语文', 'am_1,am_2,am_3');
         pushActivity(3, '数学', 'am_1,am_2,am_3');
@@ -253,7 +255,22 @@ const SCHEDULER = {
             if (!confirmed) return;
         }
         this.demands = source.demands;
-        this.manualNonAssessmentDemands = [];
+        this.manualNonAssessmentDemands = source.classes.map((className) => ({
+            id: `grade8-club-${className}`,
+            grade: '8',
+            className,
+            name: '',
+            subject: '社团活动',
+            weeklyHours: 1,
+            venue: '',
+            note: '周四下午第4节固定社团活动',
+            fixedDay: '4',
+            fixedSlot: 'pm_4',
+            nonAssessment: true,
+            teacherSource: 'preset-manual-project',
+            countsForAssessment: false
+        }));
+        this.demands.push(...this.manualNonAssessmentDemands);
         this.importWarnings = source.warnings;
         this.lockedSchedule = Object.create(null);
         this.schedule = {};
