@@ -1635,6 +1635,72 @@ const SCHEDULER = {
         return unresolved;
     },
 
+    repairDailyCoreCoverage: function (pending, allSlots, teacherBusyMap) {
+        const coreSubjects = ['语文', '数学', '英语'];
+        let repaired = 0;
+        const demandFor = (className, subject) => pending.find((demand) => (
+            demand.className === className && !demand.nonAssessment && String(demand.subject || '').trim() === subject
+        ));
+        const restore = (snapshot) => {
+            this.schedule = JSON.parse(snapshot);
+            this.rebuildTeacherSlotIndex();
+            this.rebuildVenueSlotIndex();
+            this.rebuildDayLoadIndexes();
+        };
+        this.getDailyCoreCoverageMissing(this.schedule).forEach(({ className, day, subject }) => {
+            const demand = demandFor(className, subject);
+            if (!demand) return;
+            const candidates = allSlots
+                .filter((slot) => slot.day === day && !(slot.type === 'eve' && slot.period === 3))
+                .sort((left, right) => (left.type === 'eve') - (right.type === 'eve') || left.period - right.period || left.id.localeCompare(right.id));
+            for (const candidate of candidates) {
+                const current = this.schedule[className]?.[candidate.id];
+                if (!current) {
+                    if (demand.remaining <= 0 || !this.canPlaceDemand(demand, candidate, teacherBusyMap, { coverage: true })) continue;
+                    this.placeDemand(demand, candidate.id);
+                    this.markTeacherBusy(demand.name, candidate.id);
+                    if (demand.venue) this.markVenueBusy(demand.venue, candidate.id);
+                    demand.remaining -= 1;
+                    repaired += 1;
+                    break;
+                }
+                if (current.fixed || current.locked || current.isCombined || current.nonAssessment) continue;
+                const blockerDemand = pending.find((item) => (
+                    item.className === className
+                    && !item.nonAssessment
+                    && this.normalizeTeacherName(item.name) === this.normalizeTeacherName(current.teacher)
+                    && String(item.subject || '').replace(/\(合\)$/, '').trim() === String(current.subject || '').replace(/\(合\)$/, '').trim()
+                ));
+                if (!blockerDemand || blockerDemand === demand) continue;
+                const snapshot = JSON.stringify(this.schedule);
+                delete this.schedule[className][candidate.id];
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                if (!this.canPlaceDemand(demand, candidate, teacherBusyMap, { coverage: true })) {
+                    restore(snapshot);
+                    continue;
+                }
+                this.placeDemand(demand, candidate.id);
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                const alternate = allSlots
+                    .filter((slot) => slot.id !== candidate.id && !(slot.type === 'eve' && slot.period === 3))
+                    .find((slot) => this.canPlaceDemand(blockerDemand, slot, teacherBusyMap, { coverage: true }));
+                if (!alternate) {
+                    restore(snapshot);
+                    continue;
+                }
+                this.placeDemand(blockerDemand, alternate.id);
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                this.rebuildDayLoadIndexes();
+                repaired += 1;
+                break;
+            }
+        });
+        return repaired;
+    },
+
     // 同一班同一科不应在周一到周五每天都落在同一个节次；这里把“节次位置”
     // 作为独立的软约束。它不会破坏作文连堂、晚自习第三节合堂等硬规则，
     // 但会让算法优先选择本周尚未使用过的时段。
@@ -2421,6 +2487,9 @@ const SCHEDULER = {
                     });
 
                     this.repairUnfilledDemands(pending, allSlots, teacherBusyMap);
+                    // 最后一轮交换修复：当教师冲突或固定活动阻断了预留位置时，
+                    // 将目标日的非核心课换到其它合法时段，确保每天每班都有语数外。
+                    this.repairDailyCoreCoverage(pending, allSlots, teacherBusyMap);
                     pending._dailyCoreCoverageMissing = this.getDailyCoreCoverageMissing(this.schedule);
                     return pending;
                 };
