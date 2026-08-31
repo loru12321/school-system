@@ -21,6 +21,8 @@ assert.ok(source.includes('this.markTeacherBusy(demand.name, slot.id);'), 'norma
 assert.ok(source.includes('this.markVenueBusy(demand.venue, slot.id);'), 'normal scheduled slots should register venue occupancy');
 assert.ok(source.includes('applyGrade8Preset: async function'), 'grade scheduler should provide a one-click new grade-8 preset');
 assert.ok(source.includes('buildGrade8DemandsFromTeacherMap: function'), 'grade-8 preset should derive per-class demands from the imported teacher map');
+assert.ok(source.includes('晚自习第三节按普通“单科”排课，不再预置合堂规则。'), 'grade-8 preset should treat evening third period as a normal single-subject lesson');
+assert.ok(!source.includes('grade8-combined-'), 'grade-8 preset should not inject evening-third combined rules');
 assert.ok(source.includes("'语文': 8") && source.includes("'数学': 9") && source.includes("'英语': 9"), 'grade-8 preset should encode the requested core-subject weekly hours');
 assert.ok(source.includes('applyConsecutivePairRules: function'), 'grade scheduler should support weekly same-class consecutive composition periods');
 assert.ok(source.includes('areAdjacentClasses: function'), 'scheduler should identify adjacent classes for teacher blocks');
@@ -68,6 +70,7 @@ assert.ok(indexHtml.includes("value=\"subject\""), 'grade scheduler should provi
 assert.ok(indexHtml.includes("value=\"grade\""), 'grade scheduler should provide an all-class grade timetable mode');
 assert.ok(indexHtml.includes('id="sch_filter_chips"'), 'grade scheduler UI should expose quick timetable filters');
 assert.ok(indexHtml.includes('data-scheduler-click="apply-grade8-preset"'), 'grade scheduler UI should expose the grade-8 preset action');
+assert.ok(indexHtml.includes('第三节按普通单科排课'), 'grade scheduler UI should explain the evening-third single-subject rule');
 assert.ok(source.includes('this.isVenueBusyInOtherClass(demand.venue, slot.id)'), 'placement should reject shared-venue collisions');
 assert.ok(
   source.includes('if (this.teacherSlotIndex && this.teacherSlotIndex[`${normalizedTeacher}_${slotId}`]) return true;'),

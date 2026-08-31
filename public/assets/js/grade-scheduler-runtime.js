@@ -24,7 +24,7 @@ const SCHEDULER = {
     scheduleRenderVersion: 0,
     tableRenderCache: { signature: '', html: '' },
     classSubjectDayIndex: null,
-    // 用于同教师同学科跨班日均衡的课时日分布索引（含晚自习第三节）。
+    // 用于同教师同学科跨班日均衡的课时日分布索引（晚自习第三节按普通单科计入）。
     classSubjectNormalDayIndex: null,
     // 按白天/晚自习分段的同科日分布索引，避免晚自习课时掩盖白天失衡。
     classSubjectNormalSessionIndex: null,
@@ -52,7 +52,10 @@ const SCHEDULER = {
             classSubjectPeriodRepeatWeight: 220,
             teacherSubjectPeriodRepeatWeight: 54,
             newPeriodVarietyWeight: 18,
-            teacherSubjectDayBalanceWeight: 96
+            teacherSubjectDayBalanceWeight: 96,
+            // 参考《八年级课程表课表正式版与第一周暂行课表》形成的
+            // 非核心学科时段偏好。仅作软评分，不会覆盖用户配置的硬约束。
+            referenceSubjectPlacementWeight: 1
         }
     },
 
@@ -64,7 +67,7 @@ const SCHEDULER = {
             const slot = this.normalizeSlotCode(document.getElementById('sch_comb_slot').value); // 'eve_3'
             const scope = String(document.getElementById('sch_comb_scope')?.value || 'grade');
 
-            // 同一学科可以分别配置“同年级合堂”和“跨年级合堂”，但默认绝不跨年级。
+            // 合堂仅作为高级例外配置；新8年级方案的晚三默认是普通单科。
             if (this.rules.combined.some(r => r.subject === subject && r.scope === scope)) {
                 return window.UI.alert(`学科 [${subject}] 已存在相同范围的合堂规则，请勿重复添加。`);
             }
@@ -244,9 +247,8 @@ const SCHEDULER = {
         [1, 2, 3, 4, 5].forEach((day) => pushBusy(day, '刘敏', 'pm_4'));
         [1, 2, 3, 4].forEach((day) => pushBusy(day, '薛丽娟', 'eve_1,eve_2,eve_3'));
 
-        ['语文', '数学', '英语', '历史', '地理', '生物', '政治', '物理', '化学'].forEach((subject) => {
-            this.rules.combined.push({ subject, slot: 'eve_3', scope: 'grade', profile, id: `grade8-combined-${subject}` });
-        });
+        // 晚自习第三节按普通“单科”排课，不再预置合堂规则。
+        // 若确有临时合堂需求，仍可在下方高级规则区单独添加，不影响本方案默认口径。
         this.rules.pairs.push({ subject: '语文', session: 'pm', scope: '8', profile, id: 'grade8-chinese-composition-pair' });
         return { teacherMap, classes };
     },
@@ -913,7 +915,7 @@ const SCHEDULER = {
             `${result.meta.gradeCount || 0} 个年级 / ${result.meta.classCount} 个班级`,
             `${result.meta.teacherCount} 位教师`,
             `跨级 ${result.meta.crossGradeTeachers.length} 位 / 锁定 ${result.meta.lockedCellCount} 节`,
-            `班会 ${counts.meetings} · 禁排 ${counts.busy} · 学科禁排 ${counts.classSubjectBlocks} · 软避让 ${counts.softBusy} · 教研 ${counts.activities} · 合堂 ${counts.combined} · 连堂 ${counts.pairs}`
+            `班会 ${counts.meetings} · 禁排 ${counts.busy} · 学科禁排 ${counts.classSubjectBlocks} · 软避让 ${counts.softBusy} · 教研 ${counts.activities} · 高级合堂 ${counts.combined} · 连堂 ${counts.pairs}`
         ].join(' <span class="scheduler-summary-sep">·</span> ');
         const items = [
             ...result.errors.map(text => ({ type: 'error', text })),
@@ -1185,7 +1187,7 @@ const SCHEDULER = {
             ), 0)
             : 0;
         const totalHourNote = combinedHours
-            ? `总课时已含晚自习第三节合堂 ${combinedHours} 节`
+            ? `总课时已含高级合堂 ${combinedHours} 节`
             : '总课时按实际课表统计';
         if (!this.countScheduleCells(this.schedule)) {
             status.className = 'scheduler-project-status';
@@ -1334,9 +1336,9 @@ const SCHEDULER = {
 
     isSameClassSubjectConsecutiveAllowed: function (demand, slot, options = {}) {
         if (!demand || !slot) return false;
-        // 同班同科连堂只能由明确的“作文连堂”流程或晚三合堂显式授权。
-        // 不能因为存在一条作文偏好规则，就把所有普通语文课都放宽成连堂。
-        if (options.combined || options.composition || (slot.type === 'eve' && slot.period === 3)) return true;
+        // 同班同科连堂只能由明确的“作文连堂”流程或显式合堂规则授权。
+        // 晚自习第三节现在是普通单科课，不能因为处于晚三就放宽为同班连堂。
+        if (options.combined || options.composition) return true;
         return false;
     },
 
@@ -1364,9 +1366,8 @@ const SCHEDULER = {
         return !!cell && String(cell.subject || '').replace(/\(合\)$/, '').trim() === subject;
     },
 
-    // 晚自习第三节合堂是教师同时照看多个班级的管理时段：
-    // 它必须占用班级/教师时段，防止冲突；按当前业务口径，计入“总课时”，
-    // 但正常学科课时仍由 countNormalDemandLessons 单独核算。
+        // 仅对用户显式配置的高级合堂单元返回 true。新8年级方案的晚三
+        // 不走这里，而是普通单科课，正常计入该班该科课时。
     isNonTeachingHourCombinedCell: function (cell, slotId) {
         return !!cell?.isCombined && /^d[1-5]_eve_3$/.test(String(slotId || ''));
     },
@@ -1578,10 +1579,11 @@ const SCHEDULER = {
         });
     },
 
-    // 晚自习第三节按年级同步学科：只要 8.4—8.6 中任一班当天有课，
-    // 8.1—8.6 就统一安排同一学科。优先通过“同科跨时段换位”保持各科周课时不变；
-    // 只有确有剩余课时且目标班该时段为空时才直接补课。该规则不改变班会、社团、
-    // 禁排和教师撞课等硬约束。
+    // 晚自习第三节按普通“单科”同步：只要 8.4—8.6 中任一班当天出现某学科，
+    // 其它班也尽量在当天或本周其它日期安排该学科的晚三。这里不创建合堂单元，
+    // 每个班仍保留自己的任课教师、独立课时和教师冲突校验；优先通过同科换位
+    // 保持每班每科周课时不变，只有确有剩余课时才直接补入。班会、社团、禁排和
+    // 教师撞课等硬约束始终优先。
     synchronizeEveningThirdSubject: function (pending, allSlots) {
         const slotByDay = (day) => allSlots.find((slot) => slot.day === day && slot.type === 'eve' && slot.period === 3);
         const baseSubject = (cell) => String(cell?.subject || '').replace(/\(合\)$/, '').trim();
@@ -1618,7 +1620,7 @@ const SCHEDULER = {
                     this.rebuildVenueSlotIndex();
                     this.rebuildDayLoadIndexes();
                     const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
-                    const targetOk = this.canPlaceDemand(targetDemand, eve3, freshBusy, { combined: true, coverage: true });
+                    const targetOk = this.canPlaceDemand(targetDemand, eve3, freshBusy, { coverage: true });
                     let blockerOk = true;
                     let blockerDemand = null;
                     if (blocker) {
@@ -1629,7 +1631,8 @@ const SCHEDULER = {
                         blockerOk = !!blockerDemand && this.canPlaceDemand(blockerDemand, sourceEntry.slot, freshBusy, { coverage: true });
                     }
                     if (targetOk && blockerOk) {
-                        this.placeDemand(targetDemand, eve3.id, { combined: true, groupId: `grade8-eve3-${day}-${subject}` });
+                        // 晚三是普通单科，不标记为 isCombined，也不改变正常课时计数。
+                        this.placeDemand(targetDemand, eve3.id);
                         if (blocker && blockerDemand) this.placeDemand(blockerDemand, sourceEntry.slotId);
                         this.rebuildTeacherSlotIndex();
                         this.rebuildVenueSlotIndex();
@@ -1642,8 +1645,8 @@ const SCHEDULER = {
                     this.rebuildDayLoadIndexes();
                 } else if (!current && Number(targetDemand.remaining || 0) > 0) {
                     const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
-                    if (this.canPlaceDemand(targetDemand, eve3, freshBusy, { combined: true, coverage: true })) {
-                        this.placeDemand(targetDemand, eve3.id, { combined: true, groupId: `grade8-eve3-${day}-${subject}` });
+                    if (this.canPlaceDemand(targetDemand, eve3, freshBusy, { coverage: true })) {
+                        this.placeDemand(targetDemand, eve3.id);
                         targetDemand.remaining -= 1;
                         this.rebuildTeacherSlotIndex();
                         this.rebuildVenueSlotIndex();
@@ -1652,6 +1655,75 @@ const SCHEDULER = {
                 }
             });
         }
+
+        // 第二轮做“本周同科覆盖”：某学科已经在任一班晚三出现时，
+        // 其它班尽量也获得一次该学科晚三（不要求同一天）。这正是参考课表
+        // 中晚自习第三节按学科轮换的效果，同时不会强行把同一教师同时排到多个班。
+        const weeklySubjects = [...new Set(this.classes.flatMap((className) => Object.entries(this.schedule[className] || {})
+            .filter(([slotId, cell]) => /^d[1-5]_eve_3$/.test(slotId) && cell && baseSubject(cell)
+                && !['班会', '社团活动', '🚫 无课'].includes(baseSubject(cell)))
+            .map(([, cell]) => baseSubject(cell))))];
+        weeklySubjects.forEach((subject) => {
+            this.classes.forEach((className) => {
+                const hasSubjectLate3 = allSlots.some((slot) => slot.type === 'eve' && slot.period === 3
+                    && baseSubject(this.schedule[className]?.[slot.id]) === subject);
+                if (hasSubjectLate3) return;
+                const targetDemand = demandFor(className, subject);
+                if (!targetDemand) return;
+                const sourceEntry = Object.entries(this.schedule[className] || {})
+                    .map(([slotId, cell]) => ({ slotId, cell, slot: allSlots.find((item) => item.id === slotId) }))
+                    .filter(({ slot, cell }) => slot && !(slot.type === 'eve' && slot.period === 3)
+                        && baseSubject(cell) === subject && movable(cell))
+                    .sort((left, right) => Number(left.slot.type === 'eve') - Number(right.slot.type === 'eve')
+                        || left.slot.day - right.slot.day || left.slot.period - right.slot.period)[0];
+                const targets = allSlots.filter((slot) => slot.type === 'eve' && slot.period === 3
+                    && !this.isGloballyClosedSlot(slot));
+                for (const target of targets) {
+                    const current = this.schedule[className]?.[target.id];
+                    if (current && !movable(current)) continue;
+                    const snapshot = JSON.stringify(this.schedule);
+                    if (sourceEntry) {
+                        delete this.schedule[className][sourceEntry.slotId];
+                        if (current) delete this.schedule[className][target.id];
+                        this.rebuildTeacherSlotIndex();
+                        this.rebuildVenueSlotIndex();
+                        this.rebuildDayLoadIndexes();
+                        const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
+                        const targetOk = this.canPlaceDemand(targetDemand, target, freshBusy, { coverage: true });
+                        let blockerOk = true;
+                        let blockerDemand = null;
+                        if (current) {
+                            blockerDemand = pending.find((item) => item.className === className && !item.nonAssessment
+                                && this.normalizeTeacherName(item.name) === this.normalizeTeacherName(current.teacher)
+                                && String(item.subject || '').replace(/\(合\)$/, '').trim() === baseSubject(current));
+                            blockerOk = !!blockerDemand && this.canPlaceDemand(blockerDemand, sourceEntry.slot, freshBusy, { coverage: true });
+                        }
+                        if (targetOk && blockerOk) {
+                            this.placeDemand(targetDemand, target.id);
+                            if (current && blockerDemand) this.placeDemand(blockerDemand, sourceEntry.slotId);
+                            this.rebuildTeacherSlotIndex();
+                            this.rebuildVenueSlotIndex();
+                            this.rebuildDayLoadIndexes();
+                            break;
+                        }
+                    } else if (!current && Number(targetDemand.remaining || 0) > 0) {
+                        const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
+                        if (this.canPlaceDemand(targetDemand, target, freshBusy, { coverage: true })) {
+                            this.placeDemand(targetDemand, target.id);
+                            targetDemand.remaining -= 1;
+                            this.rebuildTeacherSlotIndex();
+                            this.rebuildVenueSlotIndex();
+                            this.rebuildDayLoadIndexes();
+                            break;
+                        }
+                    }
+                    this.schedule = JSON.parse(snapshot);
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                }
+            });
+        });
     },
 
     ensureEveningThirdCoverage: function (pending, allSlots) {
@@ -2054,6 +2126,55 @@ const SCHEDULER = {
         return spreadBonus - count * Number(weights.classSubjectBalanceWeight || 0);
     },
 
+    // 参考正式课表的排布风格给非语数外科目增加软偏好：
+    // 史地生政更多使用上午第3/4节或晚自习，物化更多使用下午/晚自习，
+    // 体育只使用白天；同一班同科尽量不在同一天堆叠，也尽量不要总落在同一节次。
+    // 这些分值只参与候选排序，不能绕过 canPlaceDemand 的任何硬约束。
+    getReferenceSubjectPlacementScore: function (demand, slot) {
+        if (!demand || !slot || demand.nonAssessment) return 0;
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        if (new Set(['语文', '数学', '英语']).has(subject)) return 0;
+        const weights = this.rules.teacherBlocks || {};
+        const factor = Number(weights.referenceSubjectPlacementWeight ?? 1);
+        if (!Number.isFinite(factor) || factor === 0) return 0;
+
+        const liberalArts = new Set(['历史', '地理', '生物', '政治']);
+        const sciences = new Set(['物理', '化学']);
+        let score = 0;
+        if (subject === '体育') {
+            // 体育晚自习已是硬禁排；这里仍保留白天时段偏好，贴近参考课表。
+            score += slot.type === 'pm' ? 58 : (slot.type === 'am' ? 28 : -180);
+            if (slot.type === 'am' && Number(slot.period) <= 2) score -= 24;
+        } else if (liberalArts.has(subject)) {
+            if (slot.type === 'am' && Number(slot.period) >= 3) score += 38;
+            else if (slot.type === 'pm') score += 20;
+            else if (slot.type === 'eve') score += 12;
+            else if (slot.type === 'am') score -= 28;
+        } else if (sciences.has(subject)) {
+            if (slot.type === 'pm') score += 42;
+            else if (slot.type === 'eve') score += 30;
+            else if (slot.type === 'am' && Number(slot.period) >= 3) score += 20;
+            else if (slot.type === 'am') score -= 24;
+        } else {
+            // 未单独配置的新科目沿用“上午后段/下午优先，早段少堆叠”的通用规则。
+            if (slot.type === 'am' && Number(slot.period) >= 3) score += 18;
+            else if (slot.type === 'pm') score += 24;
+            else if (slot.type === 'eve') score += 10;
+            else if (slot.type === 'am') score -= 18;
+        }
+
+        const sameDayCount = this.getClassSubjectDayCount(demand.className, subject, slot.day);
+        // 3/5 节课的学科优先一日一节；确有课时压力时仍允许同日第二节。
+        score -= sameDayCount * (sciences.has(subject) ? 52 : 68);
+        const samePeriodCount = this.getClassSubjectPeriodRepeatCount(demand, slot);
+        score -= samePeriodCount * 34;
+
+        // 参考课表强调相邻班级错峰；对非核心科目再给一层温和的错峰奖励。
+        const crossClassRepeats = this.getCrossClassSubjectSlotRepeatCount(demand, slot);
+        score -= crossClassRepeats * (liberalArts.has(subject) || sciences.has(subject) ? 22 : 14);
+        return score * factor;
+    },
+
     getTeacherSubjectDayBalanceScore: function (demand, slot) {
         if (!demand || !slot) return 0;
         const teacher = this.normalizeTeacherName(demand.name);
@@ -2134,8 +2255,9 @@ const SCHEDULER = {
             const periodSpread = this.getClassSubjectPeriodRepeatCount(demand, slot) ? -24 : 12;
             const crossClassRepeats = this.getCrossClassSubjectSlotRepeatCount(demand, slot);
             const crossClassSpread = -crossClassRepeats * 120;
+            const referencePlacement = this.getReferenceSubjectPlacementScore(demand, slot);
             return newDayBonus + periodSpread + softBusy + evening + coreSpread
-                + peerDayBalance + crossClassSpread
+                + peerDayBalance + crossClassSpread + referencePlacement
                 - teacherLoad * Number(weights.teacherDayLoadWeight || 0);
         }
         const block = this.getTeacherSubjectBlockScore(demand, slot);
@@ -2144,10 +2266,12 @@ const SCHEDULER = {
         const teacherDayPenalty = this.getTeacherDayLoad(demand.name, slot.day) * Number(weights.teacherDayLoadWeight || 0);
         const crossClassRepeats = this.getCrossClassSubjectSlotRepeatCount(demand, slot);
         const crossClassSpread = -crossClassRepeats * 120;
+        const referencePlacement = this.getReferenceSubjectPlacementScore(demand, slot);
         return block + balance + timeDistribution - teacherDayPenalty
             + this.getTeacherSubjectDayBalanceScore(demand, slot)
             + this.getSoftBusyScore(demand.name, slot)
             + crossClassSpread
+            + referencePlacement
             + this.getEveningPreferenceScore(demand, slot);
     },
 
@@ -3631,7 +3755,7 @@ const SCHEDULER = {
         teacherSheet['!cols'] = [{ wch: 15 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 12 }];
         XLSX.utils.book_append_sheet(wb, teacherSheet, '教师总表');
 
-        const crossRows = [['教师', '覆盖年级', '涉及班级', '学科', '每周总课时（含晚自习第三节合堂）', '共享场地/资源']];
+        const crossRows = [['教师', '覆盖年级', '涉及班级', '学科', '每周总课时（含晚自习第三节）', '共享场地/资源']];
         const crossMap = new Map();
         this.demands.forEach((demand) => {
             const key = `${this.normalizeTeacherName(demand.name)}__${demand.subject}`;
@@ -3639,8 +3763,8 @@ const SCHEDULER = {
             const entry = crossMap.get(key);
             entry.grades.add(String(demand.grade || this.inferGradeFromClass(demand.className) || ''));
             entry.classes.add(demand.className);
-            // 导出使用实际课表课时：晚自习第三节合堂虽然不消耗正常学科需求，
-            // 但现在按业务要求计入教师/班级“总课时”。
+            // 导出使用实际课表课时：晚自习第三节普通单科和显式高级合堂
+            // 都计入教师/班级“总课时”。
             const scheduledHours = this.countDemandLessons(demand, this.schedule);
             entry.hours += scheduledHours || Number(demand.weeklyHours) || 0;
             if (demand.venue) entry.venues.add(demand.venue);
@@ -3777,7 +3901,7 @@ const SCHEDULER = {
                 const cell = this.schedule[cls][slotId];
                 const teacher = this.normalizeTeacherName(cell?.teacher);
                 const subject = String(cell?.subject || '').trim();
-                // 固定班会/锁定底图不是可重排资源；晚自习第三节合堂虽标记为固定，
+                // 固定班会/锁定底图不是可重排资源；显式高级合堂虽标记为固定，
                 // 仍属于实际教师总课时，导入已有课表时需保留并计入。
                 if (!teacher || teacher === '-' || !subject || (cell?.fixed && !cell?.isCombined)) return;
                 const venue = String(cell?.venue || '').trim();
