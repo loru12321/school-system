@@ -1573,6 +1573,19 @@ const SCHEDULER = {
         }).length;
     },
 
+    // 不同班级尽量不要在同一节次安排同一学科，尤其是相邻班级；
+    // 这能避免出现“1、2 班周一上午第 1 节都上地理”这种视觉和执行上的扎堆。
+    // 这是软约束，只有在教师禁排、班会、半天无课等硬约束挤压时才允许兜底。
+    getCrossClassSubjectSlotRepeatCount: function (demand, slot) {
+        if (!demand || !slot) return 0;
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        return this.classes.filter((className) => className !== demand.className).reduce((count, className) => {
+            const cell = this.schedule[className]?.[slot.id];
+            if (!cell || String(cell.subject || '').replace(/\(合\)$/, '').trim() !== subject) return count;
+            return count + (this.areAdjacentClasses(className, demand.className) ? 2 : 1);
+        }, 0);
+    },
+
     getTeacherSubjectPeriodRepeatCount: function (demand, slot) {
         if (!demand || !slot) return 0;
         const teacher = this.normalizeTeacherName(demand.name);
@@ -1751,17 +1764,22 @@ const SCHEDULER = {
             const newDayBonus = sameDayCount === 0 ? 32 : -sameDayCount * 24;
             const coreSpread = core.has(subject) && slot.type === 'eve' && slot.day >= 5 ? -80 : 0;
             const periodSpread = this.getClassSubjectPeriodRepeatCount(demand, slot) ? -24 : 12;
+            const crossClassRepeats = this.getCrossClassSubjectSlotRepeatCount(demand, slot);
+            const crossClassSpread = -crossClassRepeats * 120;
             return newDayBonus + periodSpread + softBusy + evening + coreSpread
-                + peerDayBalance
+                + peerDayBalance + crossClassSpread
                 - teacherLoad * Number(weights.teacherDayLoadWeight || 0);
         }
         const block = this.getTeacherSubjectBlockScore(demand, slot);
         const balance = this.getClassSubjectBalanceScore(demand, slot);
         const timeDistribution = this.getSubjectTimeDistributionScore(demand, slot);
         const teacherDayPenalty = this.getTeacherDayLoad(demand.name, slot.day) * Number(weights.teacherDayLoadWeight || 0);
+        const crossClassRepeats = this.getCrossClassSubjectSlotRepeatCount(demand, slot);
+        const crossClassSpread = -crossClassRepeats * 120;
         return block + balance + timeDistribution - teacherDayPenalty
             + this.getTeacherSubjectDayBalanceScore(demand, slot)
             + this.getSoftBusyScore(demand.name, slot)
+            + crossClassSpread
             + this.getEveningPreferenceScore(demand, slot);
     },
 

@@ -36,6 +36,7 @@ assert.ok(source.includes('deferEveningThird: true'), 'scheduler should defer ev
 assert.ok(source.includes('adjacentClassWeight: 160'), 'scheduler should prioritize adjacent-class teacher continuity');
 assert.ok(source.includes('getSoftBusyScore: function'), 'grade scheduler should support soft teacher meeting avoidance');
 assert.ok(source.includes('getClassSubjectPeriodRepeatCount: function'), 'scheduler should track repeated class subject periods across days');
+assert.ok(source.includes('getCrossClassSubjectSlotRepeatCount: function'), 'scheduler should spread the same subject across different classes and periods');
 assert.ok(source.includes('getTeacherSubjectPeriodRepeatCount: function'), 'scheduler should track repeated teacher subject periods across days');
 assert.ok(source.includes('getTeacherSubjectDayBalanceScore: function'), 'scheduler should balance same-teacher subject counts by day across classes');
 assert.ok(source.includes('score += core.has(subject) ? 420 : -180;'), 'evening third should strongly prefer Chinese, math, and English while retaining non-core fallback');
