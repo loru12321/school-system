@@ -50,6 +50,8 @@ assert.ok(source.includes("options.composition"), 'same-class consecutive lesson
 assert.ok(source.includes("lessonType: 'composition'"), 'composition pair placements should be marked distinctly from normal Chinese lessons');
 assert.ok(source.includes("&& cell.lessonType !== 'composition'"), 'composition lessons should remain immovable during repair passes');
 assert.ok(source.includes("return cell.lessonType === 'composition' ? '作文'"), 'composition lessons should display as 作文 in timetable views');
+assert.ok(source.includes("const composition = subjectLines.some((line) => /作文(?:课)?/u.test(String(line || '')));"), 'imported composition cells should be recognized as composition lessons');
+assert.ok(source.includes("subject: composition ? '语文' : subject"), 'imported composition cells should normalize to Chinese for weekly hour accounting');
 assert.ok(source.includes('getTeacherSubjectDayBalanceScore: function'), 'scheduler should balance same-teacher subject counts by day across classes');
 assert.ok(source.includes('getDailyCoreCoverageMissing: function'), 'scheduler should audit daily Chinese/math/English coverage');
 assert.ok(source.includes("subject === '作文' || cell?.lessonType === 'composition' ? '语文' : subject"), 'composition should count as Chinese for daily core coverage');

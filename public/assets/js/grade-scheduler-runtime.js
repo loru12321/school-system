@@ -3898,12 +3898,20 @@ const SCHEDULER = {
             else if (venueMatch) venue = venueMatch[1].trim();
             else subjectLines.push(line);
         });
-        const subject = subjectLines.join(' ').trim();
-        if (!subject) return null;
+        const composition = subjectLines.some((line) => /作文(?:课)?/u.test(String(line || '')));
+        const subject = subjectLines
+            .filter((line) => !/（作文课）|\(作文课\)/u.test(String(line || '')))
+            .join(' ')
+            .trim();
+        if (!subject && !composition) return null;
         return {
-            subject,
+            // 作文是语文课时中的连堂课。导入导出课表时保留作文展示标记，
+            // 但底层学科统一归一为“语文”，这样锁定、续排和课时统计不会
+            // 把作文误计成额外独立科目。
+            subject: composition ? '语文' : subject,
             teacher: teacher || '-',
             venue,
+            lessonType: composition ? 'composition' : '',
             fixed: subject === '班会' || subject === '🚫 无课'
         };
     },
