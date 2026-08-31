@@ -1324,11 +1324,10 @@ const SCHEDULER = {
 
     isSameClassSubjectConsecutiveAllowed: function (demand, slot, options = {}) {
         if (!demand || !slot) return false;
-        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
-        if (options.combined || (slot.type === 'eve' && slot.period === 3)) return true;
-        return (this.rules.pairs || []).some((rule) => rule.subject === subject
-            && String(rule.session || '') === String(slot.type || '')
-            && this.getScopeClasses(rule.scope).includes(demand.className));
+        // 同班同科连堂只能由明确的“作文连堂”流程或晚三合堂显式授权。
+        // 不能因为存在一条作文偏好规则，就把所有普通语文课都放宽成连堂。
+        if (options.combined || options.composition || (slot.type === 'eve' && slot.period === 3)) return true;
+        return false;
     },
 
     isEveningThirdReserved: function (demand, slot) {
@@ -1404,6 +1403,7 @@ const SCHEDULER = {
             venue: demand.venue || '',
             nonAssessment: !!demand.nonAssessment,
             isCombined: !!options.combined,
+            lessonType: options.lessonType || demand.lessonType || '',
             fixed: !!options.combined || !!(demand.nonAssessment && demand.fixedDay && demand.fixedSlot && !demand._fixedPlaced),
             combinedGroup: options.groupId || ''
         };
@@ -1900,7 +1900,8 @@ const SCHEDULER = {
                         return next ? [slot, next] : null;
                     })
                     .filter(Boolean)
-                    .filter(([first, second]) => this.canPlaceDemand(demand, first, teacherBusyMap) && this.canPlaceDemand(demand, second, teacherBusyMap));
+                    .filter(([first, second]) => this.canPlaceDemand(demand, first, teacherBusyMap, { composition: true })
+                        && this.canPlaceDemand(demand, second, teacherBusyMap, { composition: true }));
                 candidates.sort((left, right) => {
                     const leftScore = this.getTeacherScheduleQualityScore(demand, left[0]) + this.getTeacherScheduleQualityScore(demand, left[1]);
                     const rightScore = this.getTeacherScheduleQualityScore(demand, right[0]) + this.getTeacherScheduleQualityScore(demand, right[1]);
@@ -1909,7 +1910,7 @@ const SCHEDULER = {
                 const pair = candidates[0];
                 if (!pair) return;
                 pair.forEach((slot) => {
-                    this.placeDemand(demand, slot.id);
+                    this.placeDemand(demand, slot.id, { lessonType: 'composition' });
                     this.markTeacherBusy(demand.name, slot.id);
                     if (demand.venue) this.markVenueBusy(demand.venue, slot.id);
                     demand.remaining -= 1;
@@ -2891,14 +2892,20 @@ const SCHEDULER = {
         }
     },
 
+    getDisplaySubject: function (cell) {
+        if (!cell) return '';
+        return cell.lessonType === 'composition' ? '作文' : String(cell.subject || '').replace(/\(合\)$/, '').trim();
+    },
+
     getClassCellHtml: function (className, slotId) {
         const cell = this.schedule[className]?.[slotId] || null;
         const selected = this.manualSelection?.className === className && this.manualSelection?.slotId === slotId;
+        const displaySubject = this.getDisplaySubject(cell);
         const title = cell
-            ? `${cell.subject || ''}${cell.teacher ? ` · ${cell.teacher}` : ''}`
+            ? `${displaySubject}${cell.teacher ? ` · ${cell.teacher}` : ''}`
             : '空课';
         const content = cell
-            ? `<strong>${this.escapeHtml(cell.subject)}</strong><span>${cell.nonAssessment ? '非考核手动项目' : this.escapeHtml(cell.teacher || '')}${cell.venue ? ` · ${this.escapeHtml(cell.venue)}` : ''}</span>`
+            ? `<strong>${this.escapeHtml(displaySubject)}</strong><span>${this.escapeHtml(cell.lessonType === 'composition' ? '语文教师 · 作文课' : (cell.nonAssessment ? '非考核手动项目' : (cell.teacher || '')))}${cell.venue ? ` · ${this.escapeHtml(cell.venue)}` : ''}</span>`
             : '<span class="scheduler-cell-empty">空课</span>';
         return `<button type="button" class="scheduler-cell${selected ? ' is-selected' : ''}${cell?.fixed ? ' is-fixed' : ''}" data-scheduler-slot="${this.escapeHtml(slotId)}" title="${this.escapeHtml(cell?.fixed ? '固定规则时段，不可移动' : `${title}：点击选择/交换`)}" ${cell?.fixed ? 'disabled' : ''}>${content}</button>`;
     },
@@ -2939,7 +2946,7 @@ const SCHEDULER = {
         if (!cell || !cell.subject) return '';
         const subject = String(cell.subject).replace(/\(合\)$/, '');
         if (subjectFilter && subject !== subjectFilter) return '';
-        return this.compactSubjectLabel(subject);
+        return cell.lessonType === 'composition' ? '作文' : this.compactSubjectLabel(subject);
     },
 
     renderQuickFilters: function () {
@@ -3164,7 +3171,8 @@ const SCHEDULER = {
         const teacher = cell.teacher && cell.teacher !== '-' ? `\n(${cell.teacher})` : '';
         const venue = cell.venue ? `\n[${cell.venue}]` : '';
         const marker = cell.nonAssessment ? '\n（非考核手动配置）' : '';
-        return `${cell.subject}${marker}${teacher}${venue}`;
+        const lessonType = cell.lessonType === 'composition' ? '\n（作文课）' : '';
+        return `${this.getDisplaySubject(cell)}${lessonType}${marker}${teacher}${venue}`;
     },
 
     formatExportPeriod: function (slotId) {
@@ -3264,7 +3272,7 @@ const SCHEDULER = {
                     `${className}班`,
                     this.formatExportWeekday(slotId),
                     this.formatExportPeriod(slotId),
-                    cell.subject || '',
+                    this.getDisplaySubject(cell),
                     cell.venue || '',
                     cell.locked ? '锁定底图' : (cell.fixed ? '固定规则' : '可调整')
                 ]);
