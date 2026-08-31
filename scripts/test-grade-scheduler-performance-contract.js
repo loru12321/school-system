@@ -43,6 +43,7 @@ assert.ok(source.includes('getTeacherSubjectPeriodRepeatCount: function'), 'sche
 assert.ok(source.includes('isPreferredFiveSixClassPair: function'), 'scheduler should recognize the preferred 5/6 class pair for three-class teachers');
 assert.ok(source.includes('getAdjacentClassContinuityScore: function'), 'scheduler should model continuity as adjacent-class same-subject switching');
 assert.ok(source.includes('adjacentClassContinuity'), 'scheduler should apply adjacent-class continuity scoring');
+assert.ok(source.includes('existingSlots = null'), 'continuity scoring should accept the already computed teacher-subject slots');
 assert.ok(source.includes('getTeacherSubjectDayBalanceScore: function'), 'scheduler should balance same-teacher subject counts by day across classes');
 assert.ok(source.includes('score += core.has(subject) ? 420 : -180;'), 'evening third should strongly prefer Chinese, math, and English while retaining non-core fallback');
 assert.ok(source.includes(".replace(/\\(合\\)$/, '').trim() === '体育' && slot.type === 'eve'"), 'scheduler should forbid PE in evening slots');

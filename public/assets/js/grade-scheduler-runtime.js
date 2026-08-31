@@ -1667,15 +1667,13 @@ const SCHEDULER = {
     // “教师连续上课”指同一教师同一科目在相邻节次切换到相邻班级，
     // 而不是把同一个班的同科硬排成连堂。返回值专门奖励这种班级交替链，
     // 供所有候选节次统一评分。
-    getAdjacentClassContinuityScore: function (demand, slot) {
+    getAdjacentClassContinuityScore: function (demand, slot, existingSlots = null) {
         if (!demand || !slot) return 0;
-        const teacher = this.normalizeTeacherName(demand.name);
-        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
-        const neighbors = this.getTeacherSubjectSlots(demand.name, demand.subject).filter((item) => (
+        // 调用方通常已经拿到了同教师同科的 existing 列表，直接复用，
+        // 避免在每个候选节次上再次扫描整张课表。
+        const neighbors = (existingSlots || this.getTeacherSubjectSlots(demand.name, demand.subject)).filter((item) => (
             item.day === slot.day && item.type === slot.type
             && Math.abs(item.period - slot.period) === 1
-            && this.normalizeTeacherName(this.schedule[item.className]?.[item.id]?.teacher) === teacher
-            && String(this.schedule[item.className]?.[item.id]?.subject || '').replace(/\(合\)$/, '').trim() === subject
         ));
         return neighbors.reduce((score, item) => {
             if (!this.areAdjacentClasses(item.className, demand.className)) return score;
@@ -1696,7 +1694,7 @@ const SCHEDULER = {
             && Math.abs(item.period - slot.period) === 1).length;
         const adjacentClass = existing.filter((item) => item.day === slot.day && item.type === slot.type
             && Math.abs(item.period - slot.period) === 1 && this.areAdjacentClasses(item.className, demand.className)).length;
-        const adjacentClassContinuity = this.getAdjacentClassContinuityScore(demand, slot);
+        const adjacentClassContinuity = this.getAdjacentClassContinuityScore(demand, slot, existing);
         const sameDayCount = sameDay.length;
         const sameSessionCount = sameSession.length;
         const peerClasses = new Set(this.demands
