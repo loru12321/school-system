@@ -1602,6 +1602,7 @@ const SCHEDULER = {
     getTeacherSubjectBlockScore: function (demand, slot) {
         const weights = this.rules.teacherBlocks || {};
         if (weights.enabled === false) return 0;
+        const teacher = this.normalizeTeacherName(demand.name);
         const existing = this.getTeacherSubjectSlots(demand.name, demand.subject);
         if (!existing.length) return 0;
         const sameDay = existing.filter((item) => item.day === slot.day);
