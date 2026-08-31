@@ -1726,6 +1726,86 @@ const SCHEDULER = {
         });
     },
 
+    // 晚自习前两节也做“本周同科覆盖”：某学科只要已经出现在任一班的晚一/晚二，
+    // 其它班就尽量在晚一或晚二的其它日期安排一次同科。这里保持普通单科，
+    // 不改变每班每科总课时；若教师、班会、禁排或时段容量阻断，则保留原课表。
+    synchronizeEveningFrontSubjects: function (pending, allSlots) {
+        const eveningSlots = allSlots.filter((slot) => slot.type === 'eve'
+            && [1, 2].includes(Number(slot.period))
+            && !this.isGloballyClosedSlot(slot));
+        if (!eveningSlots.length) return;
+        const baseSubject = (cell) => String(cell?.subject || '').replace(/\(合\)$/, '').trim();
+        const isSpecial = (subject) => ['班会', '社团活动', '🚫 无课', ''].includes(subject);
+        const demandFor = (className, subject) => pending.find((demand) => demand.className === className
+            && !demand.nonAssessment && String(demand.subject || '').trim() === subject);
+        const movable = (cell) => this.isMovableScheduleCell(cell) && cell.lessonType !== 'composition';
+        const weeklySubjects = [...new Set(this.classes.flatMap((className) => Object.entries(this.schedule[className] || {})
+            .filter(([slotId, cell]) => /^d[1-5]_eve_[12]$/.test(slotId) && cell && !isSpecial(baseSubject(cell)))
+            .map(([, cell]) => baseSubject(cell))))];
+        const core = new Set(['语文', '数学', '英语']);
+        weeklySubjects.sort((left, right) => Number(core.has(right)) - Number(core.has(left))
+            || left.localeCompare(right, 'zh-CN'));
+        weeklySubjects.forEach((subject) => {
+            this.classes.forEach((className) => {
+                if (eveningSlots.some((slot) => baseSubject(this.schedule[className]?.[slot.id]) === subject)) return;
+                const targetDemand = demandFor(className, subject);
+                if (!targetDemand) return;
+                const sourceEntry = Object.entries(this.schedule[className] || {})
+                    .map(([slotId, cell]) => ({ slotId, cell, slot: allSlots.find((item) => item.id === slotId) }))
+                    .filter(({ slot, cell }) => slot
+                        && !(slot.type === 'eve' && [1, 2, 3].includes(Number(slot.period)))
+                        && baseSubject(cell) === subject && movable(cell))
+                    .sort((left, right) => Number(left.slot.type === 'eve') - Number(right.slot.type === 'eve')
+                        || left.slot.day - right.slot.day || left.slot.period - right.slot.period)[0];
+                for (const target of eveningSlots) {
+                    const current = this.schedule[className]?.[target.id];
+                    if (current && !movable(current)) continue;
+                    const snapshot = JSON.stringify(this.schedule);
+                    if (sourceEntry) {
+                        const blocker = current;
+                        delete this.schedule[className][sourceEntry.slotId];
+                        if (blocker) delete this.schedule[className][target.id];
+                        this.rebuildTeacherSlotIndex();
+                        this.rebuildVenueSlotIndex();
+                        this.rebuildDayLoadIndexes();
+                        const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
+                        const targetOk = this.canPlaceDemand(targetDemand, target, freshBusy, { coverage: true });
+                        let blockerOk = true;
+                        let blockerDemand = null;
+                        if (blocker) {
+                            blockerDemand = pending.find((item) => item.className === className && !item.nonAssessment
+                                && this.normalizeTeacherName(item.name) === this.normalizeTeacherName(blocker.teacher)
+                                && String(item.subject || '').replace(/\(合\)$/, '').trim() === baseSubject(blocker));
+                            blockerOk = !!blockerDemand && this.canPlaceDemand(blockerDemand, sourceEntry.slot, freshBusy, { coverage: true });
+                        }
+                        if (targetOk && blockerOk) {
+                            this.placeDemand(targetDemand, target.id);
+                            if (blocker && blockerDemand) this.placeDemand(blockerDemand, sourceEntry.slotId);
+                            this.rebuildTeacherSlotIndex();
+                            this.rebuildVenueSlotIndex();
+                            this.rebuildDayLoadIndexes();
+                            break;
+                        }
+                    } else if (!current && Number(targetDemand.remaining || 0) > 0) {
+                        const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
+                        if (this.canPlaceDemand(targetDemand, target, freshBusy, { coverage: true })) {
+                            this.placeDemand(targetDemand, target.id);
+                            targetDemand.remaining -= 1;
+                            this.rebuildTeacherSlotIndex();
+                            this.rebuildVenueSlotIndex();
+                            this.rebuildDayLoadIndexes();
+                            break;
+                        }
+                    }
+                    this.schedule = JSON.parse(snapshot);
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                }
+            });
+        });
+    },
+
     ensureEveningThirdCoverage: function (pending, allSlots) {
         const eve3Slots = allSlots.filter((slot) => slot.type === 'eve' && slot.period === 3 && !this.isGloballyClosedSlot(slot));
         if (!eve3Slots.length || !this.classes.some((className) => eve3Slots.some((slot) => this.schedule[className]?.[slot.id]))) return [];
@@ -2319,6 +2399,9 @@ const SCHEDULER = {
                     && this.normalizeTeacherName(cell.teacher) === this.normalizeTeacherName(demand.name);
             }));
         if (adjacentClassBlock && slot.period <= 2) score += 220;
+        // 晚自习整体以语数外为主：晚一、晚二也给核心科目明显优先，
+        // 但保留非核心科目的合法兜底位置，避免为了偏好破坏课时、教师和禁排硬约束。
+        if (slot.period <= 2) score += core.has(subject) ? 180 : -70;
         if (slot.period === 2) {
             const frontSubject = Object.values(this.schedule).some((classSchedule) => {
                 const cell = classSchedule?.[`d${slot.day}_eve_1`];
@@ -2798,7 +2881,7 @@ const SCHEDULER = {
                         }
                     });
 
-                    // 晚自习第三节只从前两节已出现的科目中选取合堂；没有形成前置科目时，留到最后普通排课兜底。
+                    // 晚自习前两节先做本周同科覆盖，再处理晚三；三节均按普通单科计入课时。
                     this._reserveEveningThird = false;
                     this.applyEveningThirdCombinedRules(pending, allSlots, teacherBusyMap);
                     pending.forEach((demand) => {
@@ -2812,6 +2895,7 @@ const SCHEDULER = {
                             demand.remaining -= 1;
                         }
                     });
+                    this.synchronizeEveningFrontSubjects(pending, allSlots);
                     this.synchronizeEveningThirdSubject(pending, allSlots);
                     const eveningThirdCoverageMissing = this.ensureEveningThirdCoverage(pending, allSlots);
 

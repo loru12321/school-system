@@ -57,11 +57,13 @@ assert.ok(source.includes('slot.type === \'am\' && Number(slot.period) === 4) re
 assert.ok(source.includes('ensureDailyCoreCoverage: function'), 'scheduler should seed daily Chinese/math/English coverage before remaining placement');
 assert.ok(source.includes('repairDailyCoreCoverage: function'), 'scheduler should repair daily core coverage by bounded legal swaps');
 assert.ok(source.includes('synchronizeEveningThirdSubject: function'), 'scheduler should synchronize evening-third subjects across the full grade');
+assert.ok(source.includes('synchronizeEveningFrontSubjects: function'), 'scheduler should synchronize evening-first-and-second subjects across the week');
 assert.ok(source.includes('ensureEveningThirdCoverage: function'), 'scheduler should ensure every class has an evening-third lesson when the grade uses that period');
 assert.ok(source.includes("cell.lessonType !== 'composition'"), 'daily coverage and evening synchronization must not break composition pairs');
 assert.ok(source.includes('const dailyCoreCoverageMissing = this.ensureDailyCoreCoverage'), 'scheduler should enforce daily core coverage before ordinary placement');
 assert.ok(source.includes('dailyCoreCoverageMissing'), 'scheduler should surface missing daily core coverage in run status');
 assert.ok(source.includes('score += core.has(subject) ? 420 : -180;'), 'evening third should strongly prefer Chinese, math, and English while retaining non-core fallback');
+assert.ok(source.includes("if (slot.period <= 2) score += core.has(subject) ? 180 : -70;"), 'all evening periods should primarily prefer Chinese, math, and English');
 assert.ok(source.includes(".replace(/\\(合\\)$/, '').trim() === '体育' && slot.type === 'eve'"), 'scheduler should forbid PE in evening slots');
 assert.ok(source.includes('getSubjectTimeDistributionScore: function'), 'scheduler should score subject time-slot variety');
 assert.ok(source.includes('classSubjectPeriodRepeats'), 'fatigue audit should report repeated class subject periods');
