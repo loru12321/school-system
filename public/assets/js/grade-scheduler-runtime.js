@@ -1825,9 +1825,12 @@ const SCHEDULER = {
             if (subjectSpread) return subjectSpread;
             const teacherLoad = this.getTeacherDayLoad(demand.name, left.day) - this.getTeacherDayLoad(demand.name, right.day);
             if (teacherLoad) return teacherLoad;
-            const leftTie = this.getAttemptTieScore(left.id);
-            const rightTie = this.getAttemptTieScore(right.id);
-            return leftTie - rightTie || left.id.localeCompare(right.id);
+            if (Number(this._runAttemptIndex || 0) > 0) {
+                const leftTie = this.getAttemptTieScore(left.id);
+                const rightTie = this.getAttemptTieScore(right.id);
+                return leftTie - rightTie || left.id.localeCompare(right.id);
+            }
+            return left.id.localeCompare(right.id);
         });
         return candidates[0] || null;
     },
@@ -2067,15 +2070,16 @@ const SCHEDULER = {
                         if (fixedDiff) return fixedDiff;
                         const crossDiff = Number(crossGradeNames.has(this.normalizeTeacherName(right.name))) - Number(crossGradeNames.has(this.normalizeTeacherName(left.name)));
                         if (crossDiff) return crossDiff;
+                        const leftGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(left.name)}__${left.subject}`) || 0;
+                        const rightGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(right.name)}__${right.subject}`) || 0;
+                        const groupDiff = rightGroup - leftGroup || right.remaining - left.remaining;
+                        if (groupDiff) return groupDiff;
                         if (attemptIndex > 0) {
                             const attemptDiff = this.getAttemptTieScore(`${left.className}__${left.subject}__${left.name}`)
                                 - this.getAttemptTieScore(`${right.className}__${right.subject}__${right.name}`);
                             if (attemptDiff) return attemptDiff;
                         }
-                        const leftGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(left.name)}__${left.subject}`) || 0;
-                        const rightGroup = teacherSubjectTotals.get(`${this.normalizeTeacherName(right.name)}__${right.subject}`) || 0;
-                        return rightGroup - leftGroup || right.remaining - left.remaining
-                            || this.normalizeTeacherName(left.name).localeCompare(this.normalizeTeacherName(right.name), 'zh-CN')
+                        return this.normalizeTeacherName(left.name).localeCompare(this.normalizeTeacherName(right.name), 'zh-CN')
                             || String(left.subject).localeCompare(String(right.subject), 'zh-CN')
                             || left.className.localeCompare(right.className, 'zh-CN', { numeric: true });
                     });
