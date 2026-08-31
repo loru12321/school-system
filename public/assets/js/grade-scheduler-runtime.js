@@ -1679,6 +1679,9 @@ const SCHEDULER = {
         if (!demand || !slot) return 0;
         const teacher = this.normalizeTeacherName(demand.name);
         const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        // 跨班日分布均衡只服务于语数外三门主科；化学、物理、史地生政等
+        // 学科按教师可用时段和其它硬约束自然排课，不强行拆散到各个日期。
+        if (!new Set(['语文', '数学', '英语']).has(subject)) return 0;
         const grade = String(demand.grade || this.inferGradeFromClass(demand.className) || '');
         const peers = [...new Set(this.demands
             .filter((item) => !item.nonAssessment
