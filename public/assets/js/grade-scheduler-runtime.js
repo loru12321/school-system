@@ -2275,6 +2275,7 @@ const SCHEDULER = {
 
     isMovableScheduleCell: function (cell) {
         return !!cell && !cell.fixed && !cell.locked && !cell.isCombined
+            && cell.lessonType !== 'composition'
             && !!cell.teacher && cell.teacher !== '-'
             && cell.subject !== '🚫 无课' && cell.subject !== '班会';
     },

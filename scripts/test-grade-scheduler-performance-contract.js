@@ -46,6 +46,7 @@ assert.ok(source.includes('adjacentClassContinuity'), 'scheduler should apply ad
 assert.ok(source.includes('existingSlots = null'), 'continuity scoring should accept the already computed teacher-subject slots');
 assert.ok(source.includes("options.composition"), 'same-class consecutive lessons should require an explicit composition exception');
 assert.ok(source.includes("lessonType: 'composition'"), 'composition pair placements should be marked distinctly from normal Chinese lessons');
+assert.ok(source.includes("&& cell.lessonType !== 'composition'"), 'composition lessons should remain immovable during repair passes');
 assert.ok(source.includes("return cell.lessonType === 'composition' ? '作文'"), 'composition lessons should display as 作文 in timetable views');
 assert.ok(source.includes('getTeacherSubjectDayBalanceScore: function'), 'scheduler should balance same-teacher subject counts by day across classes');
 assert.ok(source.includes('getDailyCoreCoverageMissing: function'), 'scheduler should audit daily Chinese/math/English coverage');
