@@ -1665,6 +1665,7 @@ const SCHEDULER = {
                 }))
                 .filter(({ slot, cell }) => slot && slot.day !== day
                     && String(cell?.subject || '').replace(/\(合\)$/, '').trim() === subject
+                    && cell.lessonType !== 'composition'
                     && this.isMovableScheduleCell(cell));
             const dayCounts = new Map();
             subjectEntries.forEach(({ slot }) => dayCounts.set(slot.day, (dayCounts.get(slot.day) || 0) + 1));
@@ -1673,7 +1674,7 @@ const SCHEDULER = {
                 .sort((left, right) => right.slot.day - left.slot.day || right.slot.period - left.slot.period);
             for (const candidate of candidates) {
                 const current = this.schedule[className]?.[candidate.id];
-                if (current && (!this.isMovableScheduleCell(current) || current.nonAssessment)) continue;
+                if (current && (!this.isMovableScheduleCell(current) || current.nonAssessment || current.lessonType === 'composition')) continue;
                 for (const source of sourceEntries) {
                     const snapshot = JSON.stringify(this.schedule);
                     const blocker = current;
@@ -1718,7 +1719,7 @@ const SCHEDULER = {
                     repaired += 1;
                     break;
                 }
-                if (current.fixed || current.locked || current.isCombined || current.nonAssessment) continue;
+                if (current.fixed || current.locked || current.isCombined || current.nonAssessment || current.lessonType === 'composition') continue;
                 const blockerDemand = pending.find((item) => (
                     item.className === className
                     && !item.nonAssessment
