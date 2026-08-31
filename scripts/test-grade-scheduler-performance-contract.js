@@ -52,6 +52,7 @@ assert.ok(source.includes("&& cell.lessonType !== 'composition'"), 'composition 
 assert.ok(source.includes("return cell.lessonType === 'composition' ? '作文'"), 'composition lessons should display as 作文 in timetable views');
 assert.ok(source.includes('getTeacherSubjectDayBalanceScore: function'), 'scheduler should balance same-teacher subject counts by day across classes');
 assert.ok(source.includes('getDailyCoreCoverageMissing: function'), 'scheduler should audit daily Chinese/math/English coverage');
+assert.ok(source.includes("subject === '作文' || cell?.lessonType === 'composition' ? '语文' : subject"), 'composition should count as Chinese for daily core coverage');
 assert.ok(source.includes('isGrade9MathTeacher'), 'scheduler should identify teachers serving grade 9.3/9.4 mathematics');
 assert.ok(source.includes('slot.type === \'am\' && Number(slot.period) === 4) return -520'), 'grade 9.3/9.4 math teachers should avoid morning period 4 when possible');
 assert.ok(source.includes('ensureDailyCoreCoverage: function'), 'scheduler should seed daily Chinese/math/English coverage before remaining placement');

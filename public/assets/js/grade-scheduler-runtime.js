@@ -1816,13 +1816,17 @@ const SCHEDULER = {
 
     getDailyCoreCoverageMissing: function (schedule = this.schedule) {
         const coreSubjects = ['语文', '数学', '英语'];
+        const coverageSubject = (cell) => {
+            const subject = String(cell?.subject || '').replace(/\(合\)$/, '').trim();
+            return subject === '作文' || cell?.lessonType === 'composition' ? '语文' : subject;
+        };
         const missing = [];
         this.classes.forEach((className) => {
             for (let day = 1; day <= 5; day += 1) {
                 const entries = Object.entries(schedule?.[className] || {}).filter(([slotId, cell]) => (
                     slotId.startsWith(`d${day}_`) && cell && !slotId.startsWith('_')
                 ));
-                const subjects = new Set(entries.map(([, cell]) => String(cell.subject || '').replace(/\(合\)$/, '').trim()));
+                const subjects = new Set(entries.map(([, cell]) => coverageSubject(cell)));
                 coreSubjects.forEach((subject) => {
                     if (!subjects.has(subject)) missing.push({ className, day, subject });
                 });
@@ -1833,6 +1837,10 @@ const SCHEDULER = {
 
     ensureDailyCoreCoverage: function (pending, allSlots, teacherBusyMap) {
         const coreSubjects = ['语文', '数学', '英语'];
+        const coverageSubject = (cell) => {
+            const subject = String(cell?.subject || '').replace(/\(合\)$/, '').trim();
+            return subject === '作文' || cell?.lessonType === 'composition' ? '语文' : subject;
+        };
         const unresolved = [];
         const demandMap = new Map(pending
             .filter((demand) => !demand.nonAssessment && coreSubjects.includes(String(demand.subject || '').trim()))
@@ -1842,7 +1850,7 @@ const SCHEDULER = {
                 const dayEntries = Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => (
                     slotId.startsWith(`d${day}_`) && cell && !slotId.startsWith('_')
                 ));
-                const existingSubjects = new Set(dayEntries.map(([, cell]) => String(cell.subject || '').replace(/\(合\)$/, '').trim()));
+                const existingSubjects = new Set(dayEntries.map(([, cell]) => coverageSubject(cell)));
                 coreSubjects.forEach((subject) => {
                     if (existingSubjects.has(subject)) return;
                     const demand = demandMap.get(`${className}__${subject}`);
