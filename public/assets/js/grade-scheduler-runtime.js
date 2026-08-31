@@ -1612,10 +1612,24 @@ const SCHEDULER = {
             && Math.abs(item.period - slot.period) === 1 && this.areAdjacentClasses(item.className, demand.className)).length;
         const sameDayCount = sameDay.length;
         const sameSessionCount = sameSession.length;
+        const peerClasses = new Set(this.demands
+            .filter((item) => !item.nonAssessment
+                && this.normalizeTeacherName(item.name) === teacher
+                && String(item.subject || '').replace(/\(合\)$/, '') === String(demand.subject || '').replace(/\(合\)$/, '')
+                && String(item.grade || this.inferGradeFromClass(item.className) || '') === String(demand.grade || this.inferGradeFromClass(demand.className) || ''))
+            .map((item) => item.className));
+        // 三班及以上由同一教师任教时，优先形成一组相邻班连排，
+        // 第三个班仅保持同日即可，避免把三个班硬挤成连续三节。
+        let multiClassPairPreference = 0;
+        if (peerClasses.size >= 3) {
+            multiClassPairPreference += adjacentClass > 0 ? 180 : (sameDayCount > 0 ? 36 : 0);
+            if (sameSessionCount >= 2 && adjacentClass === 0) multiClassPairPreference -= 110;
+        }
         return adjacent * Number(weights.consecutiveWeight || 0)
             + adjacentClass * Number(weights.adjacentClassWeight || 160)
             + sameSessionCount * Number(weights.sameSessionWeight || 0)
-            + sameDayCount * Number(weights.sameDayWeight || 0);
+            + sameDayCount * Number(weights.sameDayWeight || 0)
+            + multiClassPairPreference;
     },
 
     getClassSubjectBalanceScore: function (demand, slot) {
@@ -1943,6 +1957,57 @@ const SCHEDULER = {
             if (demand.venue && this.isVenueBusyInOtherClass(demand.venue, slot.id)) return false;
             return true;
         });
+
+        // 当缺失课程的所有合法时段都被占用时，尝试一条有限深度增广链：
+        // 暂时移走目标时段的课程，再把它（必要时连同后续占用课程）
+        // 移到班内空位，最后将缺失课程放入目标时段。所有节点仍经过
+        // canPlaceDemand 校验，因此不会绕过教师撞课、禁排或同科连堂规则。
+        const occupiedTargets = allSlots.filter((slot) => {
+            const cell = this.schedule[demand.className]?.[slot.id];
+            if (!cell || !this.isMovableScheduleCell(cell) || this.isGloballyClosedSlot(slot)) return false;
+            if (this.isDemandBlocked(demand, slot.id) || this.isEveningThirdReserved(demand, slot)) return false;
+            if (String(demand.subject || '').replace(/\(合\)$/, '').trim() === '体育' && slot.type === 'eve') return false;
+            return true;
+        });
+        occupiedTargets.sort((left, right) => (
+            this.getTeacherScheduleQualityScore(demand, right)
+            - this.getTeacherScheduleQualityScore(demand, left)
+            || left.id.localeCompare(right.id)
+        ));
+        for (const target of occupiedTargets) {
+            const classSchedule = this.schedule[demand.className] || {};
+            const blocker = classSchedule[target.id];
+            if (!this.isMovableScheduleCell(blocker)) continue;
+            const snapshot = JSON.stringify(this.schedule);
+            delete classSchedule[target.id];
+            this.rebuildTeacherSlotIndex();
+            this.rebuildVenueSlotIndex();
+            this.rebuildDayLoadIndexes();
+            const demandCanUseTarget = this.canPlaceDemand(demand, target, teacherBusyMap);
+            const relocated = demandCanUseTarget && this.tryRelocateScheduleCell(
+                demand.className,
+                target.id,
+                blocker,
+                allSlots,
+                teacherBusyMap,
+                4,
+                [target.id]
+            );
+            if (relocated && this.canPlaceDemand(demand, target, teacherBusyMap)) {
+                this.placeDemand(demand, target.id);
+                this.markTeacherBusy(demand.name, target.id);
+                if (demand.venue) this.markVenueBusy(demand.venue, target.id);
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                this.rebuildDayLoadIndexes();
+                demand.remaining -= 1;
+                return true;
+            }
+            this.schedule = JSON.parse(snapshot);
+            this.rebuildTeacherSlotIndex();
+            this.rebuildVenueSlotIndex();
+            this.rebuildDayLoadIndexes();
+        }
 
         // 若班级唯一空位因教师禁排/学科禁排无法直接放入，
         // 尝试做一次同班二元交换：把当前可移动课程放到空位，
