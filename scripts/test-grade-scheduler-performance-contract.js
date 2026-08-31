@@ -37,7 +37,12 @@ assert.ok(source.includes('adjacentClassWeight: 160'), 'scheduler should priorit
 assert.ok(source.includes('getSoftBusyScore: function'), 'grade scheduler should support soft teacher meeting avoidance');
 assert.ok(source.includes('getClassSubjectPeriodRepeatCount: function'), 'scheduler should track repeated class subject periods across days');
 assert.ok(source.includes('getCrossClassSubjectSlotRepeatCount: function'), 'scheduler should spread the same subject across different classes and periods');
+assert.ok(source.includes('violatesGrade9MathPm4Eve1Rule: function'), 'scheduler should enforce the grade-9.3/9.4 math pm4/eve1 exclusive rule');
+assert.ok(source.includes('if (this.violatesGrade9MathPm4Eve1Rule(demand, slot)) return false;'), 'grade-9.3/9.4 math pm4/eve1 rule must be enforced during placement');
 assert.ok(source.includes('getTeacherSubjectPeriodRepeatCount: function'), 'scheduler should track repeated teacher subject periods across days');
+assert.ok(source.includes('isPreferredFiveSixClassPair: function'), 'scheduler should recognize the preferred 5/6 class pair for three-class teachers');
+assert.ok(source.includes('getAdjacentClassContinuityScore: function'), 'scheduler should model continuity as adjacent-class same-subject switching');
+assert.ok(source.includes('adjacentClassContinuity'), 'scheduler should apply adjacent-class continuity scoring');
 assert.ok(source.includes('getTeacherSubjectDayBalanceScore: function'), 'scheduler should balance same-teacher subject counts by day across classes');
 assert.ok(source.includes('score += core.has(subject) ? 420 : -180;'), 'evening third should strongly prefer Chinese, math, and English while retaining non-core fallback');
 assert.ok(source.includes(".replace(/\\(合\\)$/, '').trim() === '体育' && slot.type === 'eve'"), 'scheduler should forbid PE in evening slots');

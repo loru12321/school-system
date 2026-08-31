@@ -1339,6 +1339,22 @@ const SCHEDULER = {
             && this.getScopeClasses(rule.scope).includes(demand.className));
     },
 
+    // 9.3、9.4 的数学：下午第 4 节和晚自习第 1 节属于二选一，
+    // 同一天不能同时出现，避免白天最后一节与晚一连续堆叠。
+    // 这是针对特定班级的硬约束，正排课、合堂和后置修复都会统一经过这里。
+    violatesGrade9MathPm4Eve1Rule: function (demand, slot) {
+        if (!demand || !slot) return false;
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        if (subject !== '数学' || !new Set(['9.3', '9.4']).has(String(demand.className || '').trim())) return false;
+        const isTarget = (slot.type === 'pm' && slot.period === 4) || (slot.type === 'eve' && slot.period === 1);
+        if (!isTarget) return false;
+        const otherId = slot.type === 'pm'
+            ? `d${slot.day}_eve_1`
+            : `d${slot.day}_pm_4`;
+        const cell = this.schedule[demand.className]?.[otherId];
+        return !!cell && String(cell.subject || '').replace(/\(合\)$/, '').trim() === subject;
+    },
+
     // 晚自习第三节合堂是教师同时照看多个班级的管理时段：
     // 它必须占用班级/教师时段，防止冲突；按当前业务口径，计入“总课时”，
     // 但正常学科课时仍由 countNormalDemandLessons 单独核算。
@@ -1351,6 +1367,7 @@ const SCHEDULER = {
         if (String(demand.subject || '').replace(/\(合\)$/, '').trim() === '体育' && slot.type === 'eve') return false;
         const classSchedule = this.schedule[demand.className] || {};
         if (classSchedule[slot.id] || this.isDemandBlocked(demand, slot.id)) return false;
+        if (this.violatesGrade9MathPm4Eve1Rule(demand, slot)) return false;
         if (this.isEveningThirdReserved(demand, slot) && !options.combined) return false;
         const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
         const adjacentPeriods = [slot.period - 1, slot.period + 1].filter((period) => period >= 1);
@@ -1637,6 +1654,36 @@ const SCHEDULER = {
         return slots;
     },
 
+    isPreferredFiveSixClassPair: function (leftClass, rightClass) {
+        const left = String(leftClass || '').trim();
+        const right = String(rightClass || '').trim();
+        const leftMatch = left.match(/^(.*?)(\d+)$/);
+        const rightMatch = right.match(/^(.*?)(\d+)$/);
+        if (!leftMatch || !rightMatch || leftMatch[1] !== rightMatch[1]) return false;
+        return (leftMatch[2] === '5' && rightMatch[2] === '6')
+            || (leftMatch[2] === '6' && rightMatch[2] === '5');
+    },
+
+    // “教师连续上课”指同一教师同一科目在相邻节次切换到相邻班级，
+    // 而不是把同一个班的同科硬排成连堂。返回值专门奖励这种班级交替链，
+    // 供所有候选节次统一评分。
+    getAdjacentClassContinuityScore: function (demand, slot) {
+        if (!demand || !slot) return 0;
+        const teacher = this.normalizeTeacherName(demand.name);
+        const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
+        const neighbors = this.getTeacherSubjectSlots(demand.name, demand.subject).filter((item) => (
+            item.day === slot.day && item.type === slot.type
+            && Math.abs(item.period - slot.period) === 1
+            && this.normalizeTeacherName(this.schedule[item.className]?.[item.id]?.teacher) === teacher
+            && String(this.schedule[item.className]?.[item.id]?.subject || '').replace(/\(合\)$/, '').trim() === subject
+        ));
+        return neighbors.reduce((score, item) => {
+            if (!this.areAdjacentClasses(item.className, demand.className)) return score;
+            const pairBonus = this.isPreferredFiveSixClassPair(item.className, demand.className) ? 120 : 0;
+            return score + 260 + pairBonus;
+        }, 0);
+    },
+
     getTeacherSubjectBlockScore: function (demand, slot) {
         const weights = this.rules.teacherBlocks || {};
         if (weights.enabled === false) return 0;
@@ -1649,6 +1696,7 @@ const SCHEDULER = {
             && Math.abs(item.period - slot.period) === 1).length;
         const adjacentClass = existing.filter((item) => item.day === slot.day && item.type === slot.type
             && Math.abs(item.period - slot.period) === 1 && this.areAdjacentClasses(item.className, demand.className)).length;
+        const adjacentClassContinuity = this.getAdjacentClassContinuityScore(demand, slot);
         const sameDayCount = sameDay.length;
         const sameSessionCount = sameSession.length;
         const peerClasses = new Set(this.demands
@@ -1662,6 +1710,9 @@ const SCHEDULER = {
         let multiClassPairPreference = 0;
         if (peerClasses.size >= 3) {
             multiClassPairPreference += adjacentClass > 0 ? 180 : (sameDayCount > 0 ? 36 : 0);
+            // 任教三个班时，5、6班优先错位交替连排；这是软偏好，
+            // 只在不违反教师/班级硬约束时生效。
+            multiClassPairPreference += adjacentClassContinuity;
             if (sameSessionCount >= 2 && adjacentClass === 0) multiClassPairPreference -= 110;
         }
         return adjacent * Number(weights.consecutiveWeight || 0)
