@@ -1742,9 +1742,84 @@ const SCHEDULER = {
         return candidates[0] || null;
     },
 
+    // 将已排课单元转换为可再次校验的 demand 结构。
+    // 这是局部换位/增广链使用的内部辅助，不改变原始课时需求。
+    getScheduledCellDemand: function (className, cell) {
+        if (!cell || !cell.subject || cell.subject === '🚫 无课' || cell.subject === '班会') return null;
+        return {
+            className,
+            name: this.normalizeTeacherName(cell.teacher),
+            subject: String(cell.subject || '').replace(/\(合\)$/, '').trim(),
+            venue: cell.venue || '',
+            nonAssessment: !!cell.nonAssessment
+        };
+    },
+
+    isMovableScheduleCell: function (cell) {
+        return !!cell && !cell.fixed && !cell.locked && !cell.isCombined
+            && !!cell.teacher && cell.teacher !== '-'
+            && cell.subject !== '🚫 无课' && cell.subject !== '班会';
+    },
+
+    // 尝试把一个已排课单元移动到其它位置；如果候选位置被另一个可移动单元占用，
+    // 则递归尝试继续移动后者，形成有限深度的增广链。每次失败都恢复完整课表，
+    // 因而不会留下半成品或破坏教师/场地索引。
+    tryRelocateScheduleCell: function (className, oldSlotId, cell, allSlots, teacherBusyMap, depth, forbiddenSlotIds) {
+        if (!this.isMovableScheduleCell(cell) || depth < 0) return false;
+        const demand = this.getScheduledCellDemand(className, cell);
+        if (!demand) return false;
+        const forbidden = new Set(forbiddenSlotIds || []);
+        forbidden.add(oldSlotId);
+        const snapshot = JSON.stringify(this.schedule);
+        delete (this.schedule[className] || {})[oldSlotId];
+        this.rebuildTeacherSlotIndex();
+        this.rebuildVenueSlotIndex();
+        this.rebuildDayLoadIndexes();
+
+        const candidates = allSlots.filter((slot) => (
+            !forbidden.has(slot.id)
+            && !this.isGloballyClosedSlot(slot)
+            && !(String(demand.subject || '').trim() === '体育' && slot.type === 'eve')
+            && !this.isDemandBlocked(demand, slot.id)
+        ));
+        candidates.sort((left, right) => (
+            this.getTeacherScheduleQualityScore(demand, right)
+            - this.getTeacherScheduleQualityScore(demand, left)
+            || left.id.localeCompare(right.id)
+        ));
+
+        for (const slot of candidates) {
+            const branchSnapshot = JSON.stringify(this.schedule);
+            const occupant = this.schedule[className]?.[slot.id];
+            if (occupant) {
+                if (depth <= 0 || !this.isMovableScheduleCell(occupant)) continue;
+                if (!this.tryRelocateScheduleCell(className, slot.id, occupant, allSlots, teacherBusyMap, depth - 1, [...forbidden, slot.id])) {
+                    continue;
+                }
+            }
+            if (this.canPlaceDemand(demand, slot, teacherBusyMap)) {
+                this.placeDemand(demand, slot.id);
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                this.rebuildDayLoadIndexes();
+                return true;
+            }
+            this.schedule = JSON.parse(branchSnapshot);
+            this.rebuildTeacherSlotIndex();
+            this.rebuildVenueSlotIndex();
+            this.rebuildDayLoadIndexes();
+        }
+
+        this.schedule = JSON.parse(snapshot);
+        this.rebuildTeacherSlotIndex();
+        this.rebuildVenueSlotIndex();
+        this.rebuildDayLoadIndexes();
+        return false;
+    },
+
     // 贪心排课在强约束较多时可能把某个班的最后一节课“挤”掉。
-    // 这里做小范围局部换位：只移动造成同科连堂冲突的相邻单元，
-    // 并重新通过全部硬约束校验，不放宽体育晚自习、禁排、教师撞课等规则。
+    // 这里做有限深度局部换位/增广链，并重新通过全部硬约束校验，
+    // 不放宽体育晚自习、禁排、教师撞课等规则。
     repairUnfilledDemand: function (demand, allSlots, teacherBusyMap) {
         if (!demand || demand.remaining <= 0) return false;
         const classSchedule = this.schedule[demand.className] || {};
@@ -1769,48 +1844,39 @@ const SCHEDULER = {
                 });
             if (!adjacentIds.length) continue;
 
-            // 一次只尝试移动一个相邻同科单元；如两侧均冲突则分别尝试。
+            // 一次先尝试移动一个相邻同科单元；如两侧均冲突则分别尝试。
             for (const blockerId of adjacentIds) {
                 const blocker = classSchedule[blockerId];
-                if (!blocker || blocker.fixed || blocker.isCombined || !blocker.teacher) continue;
-                const blockerDemand = {
-                    className: demand.className,
-                    name: this.normalizeTeacherName(blocker.teacher),
-                    subject: String(blocker.subject || '').replace(/\(合\)$/, '').trim(),
-                    venue: blocker.venue || '',
-                    nonAssessment: !!blocker.nonAssessment
-                };
-                const moveCandidates = allSlots.filter((slot) => {
-                    if (slot.id === target.id || slot.id === blockerId || this.isGloballyClosedSlot(slot)) return false;
-                    if (this.schedule[demand.className]?.[slot.id]) return false;
+                if (!this.isMovableScheduleCell(blocker)) continue;
+                const snapshot = JSON.stringify(this.schedule);
+                delete classSchedule[blockerId];
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                this.rebuildDayLoadIndexes();
+                const canPlaceTarget = this.canPlaceDemand(demand, target, teacherBusyMap);
+                const relocated = canPlaceTarget && this.tryRelocateScheduleCell(
+                    demand.className,
+                    blockerId,
+                    blocker,
+                    allSlots,
+                    teacherBusyMap,
+                    3,
+                    [target.id, blockerId]
+                );
+                if (relocated) {
+                    this.placeDemand(demand, target.id);
+                    this.markTeacherBusy(demand.name, target.id);
+                    if (demand.venue) this.markVenueBusy(demand.venue, target.id);
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                    demand.remaining -= 1;
                     return true;
-                }).sort((left, right) => (
-                    this.getTeacherScheduleQualityScore(blockerDemand, right)
-                    - this.getTeacherScheduleQualityScore(blockerDemand, left)
-                ));
-                for (const moveSlot of moveCandidates) {
-                    delete classSchedule[blockerId];
-                    this.rebuildTeacherSlotIndex();
-                    this.rebuildVenueSlotIndex();
-                    this.rebuildDayLoadIndexes();
-                    const canPlaceTarget = this.canPlaceDemand(demand, target, teacherBusyMap);
-                    const canMoveBlocker = canPlaceTarget && this.canPlaceDemand(blockerDemand, moveSlot, teacherBusyMap);
-                    if (canMoveBlocker) {
-                        this.placeDemand(demand, target.id);
-                        this.markTeacherBusy(demand.name, target.id);
-                        if (demand.venue) this.markVenueBusy(demand.venue, target.id);
-                        this.placeDemand(blockerDemand, moveSlot.id);
-                        this.markTeacherBusy(blockerDemand.name, moveSlot.id);
-                        if (blockerDemand.venue) this.markVenueBusy(blockerDemand.venue, moveSlot.id);
-                        this.rebuildDayLoadIndexes();
-                        demand.remaining -= 1;
-                        return true;
-                    }
-                    classSchedule[blockerId] = blocker;
-                    this.rebuildTeacherSlotIndex();
-                    this.rebuildVenueSlotIndex();
-                    this.rebuildDayLoadIndexes();
                 }
+                this.schedule = JSON.parse(snapshot);
+                this.rebuildTeacherSlotIndex();
+                this.rebuildVenueSlotIndex();
+                this.rebuildDayLoadIndexes();
             }
         }
         return false;
