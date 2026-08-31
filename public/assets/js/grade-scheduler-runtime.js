@@ -24,7 +24,7 @@ const SCHEDULER = {
     scheduleRenderVersion: 0,
     tableRenderCache: { signature: '', html: '' },
     classSubjectDayIndex: null,
-    // 排除晚自习第三节合堂的正常课时日分布索引。
+    // 用于同教师同学科跨班日均衡的课时日分布索引（含晚自习第三节）。
     classSubjectNormalDayIndex: null,
     // 按白天/晚自习分段的同科日分布索引，避免晚自习课时掩盖白天失衡。
     classSubjectNormalSessionIndex: null,
@@ -1398,7 +1398,7 @@ const SCHEDULER = {
                 const subjectKey = `${demand.className}__${demand.subject}__${day}`;
                 this.classSubjectDayIndex[subjectKey] = (this.classSubjectDayIndex[subjectKey] || 0) + 1;
             }
-            if (!options.combined && this.classSubjectNormalDayIndex) {
+            if (this.classSubjectNormalDayIndex) {
                 const subjectKey = `${demand.className}__${demand.subject}__${day}`;
                 this.classSubjectNormalDayIndex[subjectKey] = (this.classSubjectNormalDayIndex[subjectKey] || 0) + 1;
                 if (this.classSubjectNormalSessionIndex) {
@@ -1439,14 +1439,12 @@ const SCHEDULER = {
                 if (subject) {
                     const subjectKey = `${className}__${subject}__${day}`;
                     this.classSubjectDayIndex[subjectKey] = (this.classSubjectDayIndex[subjectKey] || 0) + 1;
-                    if (!this.isNonTeachingHourCombinedCell(cell, slotId)) {
-                        this.classSubjectNormalDayIndex[subjectKey] = (this.classSubjectNormalDayIndex[subjectKey] || 0) + 1;
-                        const sessionMatch = String(slotId || '').match(/^d\d+_(am|pm|eve)_/);
-                        const session = sessionMatch ? sessionMatch[1] : '';
-                        if (session) {
-                            const sessionKey = `${className}__${subject}__${day}__${session}`;
-                            this.classSubjectNormalSessionIndex[sessionKey] = (this.classSubjectNormalSessionIndex[sessionKey] || 0) + 1;
-                        }
+                    this.classSubjectNormalDayIndex[subjectKey] = (this.classSubjectNormalDayIndex[subjectKey] || 0) + 1;
+                    const sessionMatch = String(slotId || '').match(/^d\d+_(am|pm|eve)_/);
+                    const session = sessionMatch ? sessionMatch[1] : '';
+                    if (session) {
+                        const sessionKey = `${className}__${subject}__${day}__${session}`;
+                        this.classSubjectNormalSessionIndex[sessionKey] = (this.classSubjectNormalSessionIndex[sessionKey] || 0) + 1;
                     }
                 }
                 const teacher = this.normalizeTeacherName(cell.teacher);
@@ -1679,9 +1677,9 @@ const SCHEDULER = {
         if (!demand || !slot) return 0;
         const teacher = this.normalizeTeacherName(demand.name);
         const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
-        // 跨班日分布均衡只服务于语数外三门主科；化学、物理、史地生政等
-        // 学科按教师可用时段和其它硬约束自然排课，不强行拆散到各个日期。
-        if (!new Set(['语文', '数学', '英语']).has(subject)) return 0;
+        // 语数外允许个别课时落在相邻日期，由班级自身的分散规则处理；
+        // 化学、物理、史地生政等学科则优先做同一天的跨班均衡。
+        if (new Set(['语文', '数学', '英语']).has(subject)) return 0;
         const grade = String(demand.grade || this.inferGradeFromClass(demand.className) || '');
         const peers = [...new Set(this.demands
             .filter((item) => !item.nonAssessment
@@ -1699,7 +1697,7 @@ const SCHEDULER = {
                 return this.classSubjectNormalDayIndex[`${className}__${subject}__${slot.day}`] || 0;
             }
             return Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => {
-                if (!slotId.startsWith(`d${slot.day}_`) || !cell || this.isNonTeachingHourCombinedCell(cell, slotId)) return false;
+                if (!slotId.startsWith(`d${slot.day}_`) || !cell) return false;
                 return this.normalizeTeacherName(cell.teacher) === teacher
                     && String(cell.subject || '').replace(/\(合\)$/, '').trim() === subject;
             }).length;
