@@ -1708,7 +1708,7 @@ const SCHEDULER = {
         // 三班教师的常见实际排法：晚自习前两节连续覆盖其中两个班，
         // 第三个班在白天单独补一节。此时不能把“白天 1 节、晚自习 0 节”
         // 判定为失衡，否则评分会把第三个班错误地继续推向晚自习。
-        // 晚自习第三节合堂不进入 session 索引，因此天然不参与这里的比较。
+        // 晚自习第三节也进入 session 索引，参与同一天的课时比较。
         const session = String(slot.type || '').trim();
         if ((session === 'am' || session === 'pm') && peers.length === 3) {
             const eveningCoveredPeers = peers
@@ -1813,6 +1813,8 @@ const SCHEDULER = {
                 return cell && String(cell.subject || '').replace(/\(合\)$/, '') === subject;
             }));
             score += frontSubject ? 260 : -220;
+            // 晚三优先安排语数外；其它学科仍可兜底，但不与主科竞争同等优先级。
+            score += core.has(subject) ? 160 : -40;
         }
         return score;
     },
