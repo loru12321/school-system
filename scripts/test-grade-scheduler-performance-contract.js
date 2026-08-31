@@ -49,8 +49,12 @@ assert.ok(source.includes("lessonType: 'composition'"), 'composition pair placem
 assert.ok(source.includes("return cell.lessonType === 'composition' ? '作文'"), 'composition lessons should display as 作文 in timetable views');
 assert.ok(source.includes('getTeacherSubjectDayBalanceScore: function'), 'scheduler should balance same-teacher subject counts by day across classes');
 assert.ok(source.includes('getDailyCoreCoverageMissing: function'), 'scheduler should audit daily Chinese/math/English coverage');
+assert.ok(source.includes('isGrade9MathTeacher'), 'scheduler should identify teachers serving grade 9.3/9.4 mathematics');
+assert.ok(source.includes('slot.type === \'am\' && Number(slot.period) === 4) return -520'), 'grade 9.3/9.4 math teachers should avoid morning period 4 when possible');
 assert.ok(source.includes('ensureDailyCoreCoverage: function'), 'scheduler should seed daily Chinese/math/English coverage before remaining placement');
 assert.ok(source.includes('repairDailyCoreCoverage: function'), 'scheduler should repair daily core coverage by bounded legal swaps');
+assert.ok(source.includes('synchronizeEveningThirdSubject: function'), 'scheduler should synchronize evening-third subjects across the full grade');
+assert.ok(source.includes("cell.lessonType !== 'composition'"), 'daily coverage and evening synchronization must not break composition pairs');
 assert.ok(source.includes('const dailyCoreCoverageMissing = this.ensureDailyCoreCoverage'), 'scheduler should enforce daily core coverage before ordinary placement');
 assert.ok(source.includes('dailyCoreCoverageMissing'), 'scheduler should surface missing daily core coverage in run status');
 assert.ok(source.includes('score += core.has(subject) ? 420 : -180;'), 'evening third should strongly prefer Chinese, math, and English while retaining non-core fallback');

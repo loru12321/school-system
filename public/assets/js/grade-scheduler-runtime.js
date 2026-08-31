@@ -1573,6 +1573,82 @@ const SCHEDULER = {
         });
     },
 
+    // 晚自习第三节按年级同步学科：只要 8.4—8.6 中任一班当天有课，
+    // 8.1—8.6 就统一安排同一学科。优先通过“同科跨时段换位”保持各科周课时不变；
+    // 只有确有剩余课时且目标班该时段为空时才直接补课。该规则不改变班会、社团、
+    // 禁排和教师撞课等硬约束。
+    synchronizeEveningThirdSubject: function (pending, allSlots) {
+        const slotByDay = (day) => allSlots.find((slot) => slot.day === day && slot.type === 'eve' && slot.period === 3);
+        const baseSubject = (cell) => String(cell?.subject || '').replace(/\(合\)$/, '').trim();
+        const demandFor = (className, subject) => pending.find((demand) => demand.className === className
+            && !demand.nonAssessment && String(demand.subject || '').trim() === subject);
+        const movable = (cell) => this.isMovableScheduleCell(cell) && cell.lessonType !== 'composition';
+        for (let day = 1; day <= 5; day += 1) {
+            const eve3 = slotByDay(day);
+            if (!eve3 || this.isGloballyClosedSlot(eve3)) continue;
+            const upperCells = this.classes.filter((className) => /^8\.[456]$/.test(String(className)))
+                .map((className) => this.schedule[className]?.[eve3.id])
+                .filter((cell) => cell && baseSubject(cell) && baseSubject(cell) !== '班会' && baseSubject(cell) !== '社团活动');
+            if (!upperCells.length) continue;
+            const counts = new Map();
+            upperCells.forEach((cell) => counts.set(baseSubject(cell), (counts.get(baseSubject(cell)) || 0) + 1));
+            const subject = [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], 'zh-CN'))[0]?.[0];
+            if (!subject) continue;
+            this.classes.forEach((className) => {
+                const current = this.schedule[className]?.[eve3.id];
+                if (current && baseSubject(current) === subject) return;
+                if (current && !movable(current)) return;
+                const targetDemand = demandFor(className, subject);
+                if (!targetDemand) return;
+                const sourceEntry = Object.entries(this.schedule[className] || {})
+                    .map(([slotId, cell]) => ({ slotId, cell, slot: allSlots.find((item) => item.id === slotId) }))
+                    .filter(({ slot, cell }) => slot && slot.id !== eve3.id && baseSubject(cell) === subject && movable(cell))
+                    .sort((left, right) => Number(left.slot.type === 'eve') - Number(right.slot.type === 'eve') || left.slot.day - right.slot.day || left.slot.period - right.slot.period)[0];
+                const snapshot = JSON.stringify(this.schedule);
+                if (sourceEntry) {
+                    const blocker = current;
+                    delete this.schedule[className][sourceEntry.slotId];
+                    if (blocker) delete this.schedule[className][eve3.id];
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                    const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
+                    const targetOk = this.canPlaceDemand(targetDemand, eve3, freshBusy, { combined: true, coverage: true });
+                    let blockerOk = true;
+                    let blockerDemand = null;
+                    if (blocker) {
+                        blockerDemand = pending.find((item) => item.className === className
+                            && !item.nonAssessment
+                            && this.normalizeTeacherName(item.name) === this.normalizeTeacherName(blocker.teacher)
+                            && String(item.subject || '').replace(/\(合\)$/, '').trim() === baseSubject(blocker));
+                        blockerOk = !!blockerDemand && this.canPlaceDemand(blockerDemand, sourceEntry.slot, freshBusy, { coverage: true });
+                    }
+                    if (targetOk && blockerOk) {
+                        this.placeDemand(targetDemand, eve3.id, { combined: true, groupId: `grade8-eve3-${day}-${subject}` });
+                        if (blocker && blockerDemand) this.placeDemand(blockerDemand, sourceEntry.slotId);
+                        this.rebuildTeacherSlotIndex();
+                        this.rebuildVenueSlotIndex();
+                        this.rebuildDayLoadIndexes();
+                        return;
+                    }
+                    this.schedule = JSON.parse(snapshot);
+                    this.rebuildTeacherSlotIndex();
+                    this.rebuildVenueSlotIndex();
+                    this.rebuildDayLoadIndexes();
+                } else if (!current && Number(targetDemand.remaining || 0) > 0) {
+                    const freshBusy = this.getTeacherBusyMap(this.getSlotConfig());
+                    if (this.canPlaceDemand(targetDemand, eve3, freshBusy, { combined: true, coverage: true })) {
+                        this.placeDemand(targetDemand, eve3.id, { combined: true, groupId: `grade8-eve3-${day}-${subject}` });
+                        targetDemand.remaining -= 1;
+                        this.rebuildTeacherSlotIndex();
+                        this.rebuildVenueSlotIndex();
+                        this.rebuildDayLoadIndexes();
+                    }
+                }
+            });
+        }
+    },
+
     getClassSubjectDayCount: function (className, subject, day) {
         if (this.classSubjectDayIndex) return this.classSubjectDayIndex[`${className}__${subject}__${day}`] || 0;
         return Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => (
@@ -2016,6 +2092,15 @@ const SCHEDULER = {
     getSoftBusyScore: function (teacherName, slot) {
         const teacher = this.normalizeTeacherName(teacherName);
         if (!teacher || !slot) return 0;
+        // 9.3/9.4 数学教师上午第 4 节尽量留空；这是软避让，
+        // 只有其它硬约束无法满足时才允许落课。教师可能还兼任其它班级，
+        // 因此按任课关系识别教师，而不是只看当前 demand 的班级。
+        const isGrade9MathTeacher = (this.demands || []).some((demand) => (
+            String(demand.subject || '').replace(/\(合\)$/, '').trim() === '数学'
+            && ['9.3', '9.4'].includes(String(demand.className || '').trim())
+            && this.normalizeTeacherName(demand.name) === teacher
+        ));
+        if (isGrade9MathTeacher && slot.type === 'am' && Number(slot.period) === 4) return -520;
         const blocked = (this.rules.softBusy || []).some((rule) => {
             if (String(rule.day) !== String(slot.day) || this.normalizeTeacherName(rule.name) !== teacher) return false;
             return this.parseBusySlots(rule.day, rule.slotsStr, this.getSlotConfig().am, this.getSlotConfig().pm, this.getSlotConfig().eve).includes(slot.id);
@@ -2540,6 +2625,7 @@ const SCHEDULER = {
                             demand.remaining -= 1;
                         }
                     });
+                    this.synchronizeEveningThirdSubject(pending, allSlots);
 
                     this.repairUnfilledDemands(pending, allSlots, teacherBusyMap);
                     // 最后一轮交换修复：当教师冲突或固定活动阻断了预留位置时，
