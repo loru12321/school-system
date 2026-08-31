@@ -24,6 +24,10 @@ const SCHEDULER = {
     scheduleRenderVersion: 0,
     tableRenderCache: { signature: '', html: '' },
     classSubjectDayIndex: null,
+    // 排除晚自习第三节合堂的正常课时日分布索引。
+    classSubjectNormalDayIndex: null,
+    // 按白天/晚自习分段的同科日分布索引，避免晚自习课时掩盖白天失衡。
+    classSubjectNormalSessionIndex: null,
     teacherDayLoadIndex: null,
     teacherDaySlotIndex: null,
     _reserveEveningThird: false,
@@ -1394,6 +1398,18 @@ const SCHEDULER = {
                 const subjectKey = `${demand.className}__${demand.subject}__${day}`;
                 this.classSubjectDayIndex[subjectKey] = (this.classSubjectDayIndex[subjectKey] || 0) + 1;
             }
+            if (!options.combined && this.classSubjectNormalDayIndex) {
+                const subjectKey = `${demand.className}__${demand.subject}__${day}`;
+                this.classSubjectNormalDayIndex[subjectKey] = (this.classSubjectNormalDayIndex[subjectKey] || 0) + 1;
+                if (this.classSubjectNormalSessionIndex) {
+                    const sessionMatch = String(slotId || '').match(/^d\d+_(am|pm|eve)_/);
+                    const session = sessionMatch ? sessionMatch[1] : '';
+                    if (session) {
+                        const sessionKey = `${demand.className}__${demand.subject}__${day}__${session}`;
+                        this.classSubjectNormalSessionIndex[sessionKey] = (this.classSubjectNormalSessionIndex[sessionKey] || 0) + 1;
+                    }
+                }
+            }
             if (this.teacherDayLoadIndex) {
                 const teacherKey = `${this.normalizeTeacherName(demand.name)}__${day}`;
                 const teacherSlotKey = `${this.normalizeTeacherName(demand.name)}__${slotId}`;
@@ -1409,6 +1425,8 @@ const SCHEDULER = {
 
     rebuildDayLoadIndexes: function () {
         this.classSubjectDayIndex = Object.create(null);
+        this.classSubjectNormalDayIndex = Object.create(null);
+        this.classSubjectNormalSessionIndex = Object.create(null);
         this.teacherDayLoadIndex = Object.create(null);
         this.teacherDaySlotIndex = Object.create(null);
         this.classes.forEach((className) => {
@@ -1421,6 +1439,15 @@ const SCHEDULER = {
                 if (subject) {
                     const subjectKey = `${className}__${subject}__${day}`;
                     this.classSubjectDayIndex[subjectKey] = (this.classSubjectDayIndex[subjectKey] || 0) + 1;
+                    if (!this.isNonTeachingHourCombinedCell(cell, slotId)) {
+                        this.classSubjectNormalDayIndex[subjectKey] = (this.classSubjectNormalDayIndex[subjectKey] || 0) + 1;
+                        const sessionMatch = String(slotId || '').match(/^d\d+_(am|pm|eve)_/);
+                        const session = sessionMatch ? sessionMatch[1] : '';
+                        if (session) {
+                            const sessionKey = `${className}__${subject}__${day}__${session}`;
+                            this.classSubjectNormalSessionIndex[sessionKey] = (this.classSubjectNormalSessionIndex[sessionKey] || 0) + 1;
+                        }
+                    }
                 }
                 const teacher = this.normalizeTeacherName(cell.teacher);
                 if (teacher && teacher !== '-') {
@@ -1660,11 +1687,20 @@ const SCHEDULER = {
                 && String(item.grade || this.inferGradeFromClass(item.className) || '') === grade)
             .map((item) => item.className))];
         if (peers.length < 2) return 0;
-        const countForClass = (className) => Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => {
-            if (!slotId.startsWith(`d${slot.day}_`) || !cell || this.isNonTeachingHourCombinedCell(cell, slotId)) return false;
-            return this.normalizeTeacherName(cell.teacher) === teacher
-                && String(cell.subject || '').replace(/\(合\)$/, '').trim() === subject;
-        }).length;
+        const countForClass = (className) => {
+            const session = String(slot.type || '').trim();
+            if (session && this.classSubjectNormalSessionIndex) {
+                return this.classSubjectNormalSessionIndex[`${className}__${subject}__${slot.day}__${session}`] || 0;
+            }
+            if (this.classSubjectNormalDayIndex) {
+                return this.classSubjectNormalDayIndex[`${className}__${subject}__${slot.day}`] || 0;
+            }
+            return Object.entries(this.schedule[className] || {}).filter(([slotId, cell]) => {
+                if (!slotId.startsWith(`d${slot.day}_`) || !cell || this.isNonTeachingHourCombinedCell(cell, slotId)) return false;
+                return this.normalizeTeacherName(cell.teacher) === teacher
+                    && String(cell.subject || '').replace(/\(合\)$/, '').trim() === subject;
+            }).length;
+        };
         const projected = countForClass(demand.className) + 1;
         const peerCounts = peers.filter((className) => className !== demand.className).map(countForClass);
         if (!peerCounts.length) return 0;
@@ -1689,10 +1725,16 @@ const SCHEDULER = {
             const teacherLoad = this.getTeacherDayLoad(demand.name, slot.day);
             const softBusy = this.getSoftBusyScore(demand.name, slot);
             const evening = this.getEveningPreferenceScore(demand, slot);
+            // 即使进入大规模排课的轻量评分，也要保留同一教师/学科
+            // 在各班之间的日课时均衡，避免出现“1班周一白天多节、2班
+            // 周一只有晚自习”的派生失衡。使用增量索引，避免恢复完整
+            // 评分模型带来的整表重复扫描。
+            const peerDayBalance = this.getTeacherSubjectDayBalanceScore(demand, slot);
             const newDayBonus = sameDayCount === 0 ? 32 : -sameDayCount * 24;
             const coreSpread = core.has(subject) && slot.type === 'eve' && slot.day >= 5 ? -80 : 0;
             const periodSpread = this.getClassSubjectPeriodRepeatCount(demand, slot) ? -24 : 12;
             return newDayBonus + periodSpread + softBusy + evening + coreSpread
+                + peerDayBalance
                 - teacherLoad * Number(weights.teacherDayLoadWeight || 0);
         }
         const block = this.getTeacherSubjectBlockScore(demand, slot);
