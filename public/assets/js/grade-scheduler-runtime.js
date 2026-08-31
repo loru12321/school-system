@@ -1586,6 +1586,7 @@ const SCHEDULER = {
     // 教师撞课等硬约束始终优先。
     synchronizeEveningThirdSubject: function (pending, allSlots) {
         const baseSubject = (cell) => String(cell?.subject || '').replace(/\(合\)$/, '').trim();
+        const coreSubjects = new Set(['语文', '数学', '英语']);
         const demandFor = (className, subject) => pending.find((demand) => demand.className === className
             && !demand.nonAssessment && String(demand.subject || '').trim() === subject);
         const movable = (cell) => this.isMovableScheduleCell(cell) && cell.lessonType !== 'composition';
@@ -1607,6 +1608,11 @@ const SCHEDULER = {
                     .map(([slotId, cell]) => ({ slotId, cell, slot: allSlots.find((item) => item.id === slotId) }))
                     .filter(({ slot, cell }) => slot && !(slot.type === 'eve' && slot.period === 3)
                         && baseSubject(cell) === subject && movable(cell))
+                    // 日核心覆盖是更高优先级：将唯一的语数外课程从某天
+                    // 挪到晚三会造成“该班当天没有语数外”。只有源日期仍有
+                    // 同科课程时，才允许用它做晚三同周覆盖换位。
+                    .filter(({ slot }) => !coreSubjects.has(subject)
+                        || this.getClassSubjectDayCount(className, subject, slot.day) > 1)
                     .sort((left, right) => Number(left.slot.type === 'eve') - Number(right.slot.type === 'eve')
                         || left.slot.day - right.slot.day || left.slot.period - right.slot.period)[0];
                 const targets = allSlots.filter((slot) => slot.type === 'eve' && slot.period === 3
@@ -1668,6 +1674,7 @@ const SCHEDULER = {
             && !this.isGloballyClosedSlot(slot));
         if (!eveningSlots.length) return;
         const baseSubject = (cell) => String(cell?.subject || '').replace(/\(合\)$/, '').trim();
+        const coreSubjects = new Set(['语文', '数学', '英语']);
         const isSpecial = (subject) => ['班会', '社团活动', '🚫 无课', ''].includes(subject);
         const demandFor = (className, subject) => pending.find((demand) => demand.className === className
             && !demand.nonAssessment && String(demand.subject || '').trim() === subject);
@@ -1688,6 +1695,10 @@ const SCHEDULER = {
                     .filter(({ slot, cell }) => slot
                         && !(slot.type === 'eve' && [1, 2, 3].includes(Number(slot.period)))
                         && baseSubject(cell) === subject && movable(cell))
+                    // 晚一/晚二同周覆盖不能牺牲每天语数外覆盖；核心科目
+                    // 仅允许从当天已有同科的日期挪出，避免移动唯一课程。
+                    .filter(({ slot }) => !coreSubjects.has(subject)
+                        || this.getClassSubjectDayCount(className, subject, slot.day) > 1)
                     .sort((left, right) => Number(left.slot.type === 'eve') - Number(right.slot.type === 'eve')
                         || left.slot.day - right.slot.day || left.slot.period - right.slot.period)[0];
                 for (const target of eveningSlots) {
