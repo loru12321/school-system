@@ -36,6 +36,7 @@ const SCHEDULER = {
         activities: [], // 活动
         combined: [],  // 🟢 新增：合堂规则 [{subject:'物理', slot:'eve_3'}]
         pairs: [], // 同一班同一学科连堂偏好 [{subject:'语文', session:'pm', scope:'8'}]
+        classSubjectBlocks: [], // 指定班级/学科/节次禁排 [{classNames, subject, days, slot}]
         teacherBlocks: {
             enabled: true,
             consecutiveWeight: 100,
@@ -194,6 +195,7 @@ const SCHEDULER = {
         this.rules.activities = this.rules.activities.filter((rule) => !isPreset(rule));
         this.rules.combined = this.rules.combined.filter((rule) => !isPreset(rule));
         this.rules.pairs = (this.rules.pairs || []).filter((rule) => !isPreset(rule));
+        this.rules.classSubjectBlocks = (this.rules.classSubjectBlocks || []).filter((rule) => !isPreset(rule));
     },
 
     applyGrade8PresetRules: function (teacherMap, classes) {
@@ -218,6 +220,16 @@ const SCHEDULER = {
         pushActivity(3, '数学', 'am_1,am_2,am_3');
         ['英语', '物理', '化学', '政治', '历史'].forEach((subject) => pushActivity(4, subject, 'am_1,am_2,am_3'));
         ['地理', '生物'].forEach((subject) => pushActivity(5, subject, 'am_1,am_2,am_3'));
+
+        // 新 8 年级专项限制：8.3、8.4 班英语不得安排在上午第 4 节。
+        this.rules.classSubjectBlocks.push({
+            classNames: ['8.3', '8.4'],
+            subject: '英语',
+            days: [1, 2, 3, 4, 5],
+            slot: 'am_4',
+            profile,
+            id: 'grade8-english-no-am4-83-84'
+        });
 
         ['赵世骄', '孙少章', '王旋', '张靖硕'].forEach((name) => {
             pushBusy(5, name, 'am_3,am_4');
@@ -687,7 +699,8 @@ const SCHEDULER = {
             softBusy: (this.rules.softBusy || []).length,
             activities: this.rules.activities.length,
             combined: this.rules.combined.length,
-            pairs: (this.rules.pairs || []).length
+            pairs: (this.rules.pairs || []).length,
+            classSubjectBlocks: (this.rules.classSubjectBlocks || []).length
         };
     },
 
@@ -781,6 +794,18 @@ const SCHEDULER = {
                 errors.push(`合堂规则“${rule.subject} ${this.getSlotName(rule.slot)}”超出当前课时结构。`);
             }
         });
+        (this.rules.classSubjectBlocks || []).forEach((rule) => {
+            const targetClasses = Array.isArray(rule.classNames) && rule.classNames.length
+                ? rule.classNames.filter((className) => this.classes.includes(className))
+                : this.getScopeClasses(rule.scope);
+            if (!targetClasses.length) warnings.push(`班级学科禁排规则“${rule.subject}”当前没有对应班级。`);
+            if (!subjects.has(rule.subject)) warnings.push(`班级学科禁排规则“${rule.subject}”未在任课表中识别到该学科。`);
+            if (!this.isValidSlotCode(rule.slot, config)) errors.push(`班级学科禁排规则“${rule.subject} ${this.getSlotName(rule.slot)}”超出当前课时结构。`);
+            const days = Array.isArray(rule.days) && rule.days.length ? rule.days : [1, 2, 3, 4, 5];
+            if (days.some((day) => !Number.isInteger(Number(day)) || Number(day) < 1 || Number(day) > 5)) {
+                errors.push(`班级学科禁排规则“${rule.subject}”包含无效星期。`);
+            }
+        });
 
         this.getScheduleResourceConflicts(this.lockedSchedule).forEach((conflict) => {
             errors.push(`锁定课表存在${conflict.type === 'venue' ? '场地' : '教师'}冲突：${conflict.name} 在 ${this.getSlotName(conflict.slotId.replace(/^d\d+_/, ''))} 被 ${conflict.classes.join('、')} 同时占用。`);
@@ -867,7 +892,7 @@ const SCHEDULER = {
             `${result.meta.gradeCount || 0} 个年级 / ${result.meta.classCount} 个班级`,
             `${result.meta.teacherCount} 位教师`,
             `跨级 ${result.meta.crossGradeTeachers.length} 位 / 锁定 ${result.meta.lockedCellCount} 节`,
-            `班会 ${counts.meetings} · 禁排 ${counts.busy} · 软避让 ${counts.softBusy} · 教研 ${counts.activities} · 合堂 ${counts.combined} · 连堂 ${counts.pairs}`
+            `班会 ${counts.meetings} · 禁排 ${counts.busy} · 学科禁排 ${counts.classSubjectBlocks} · 软避让 ${counts.softBusy} · 教研 ${counts.activities} · 合堂 ${counts.combined} · 连堂 ${counts.pairs}`
         ].join(' <span class="scheduler-summary-sep">·</span> ');
         const items = [
             ...result.errors.map(text => ({ type: 'error', text })),
@@ -1216,6 +1241,18 @@ const SCHEDULER = {
                 if (!this.schedule[className][slotId]) {
                     this.schedule[className][slotId] = { subject: '班会', teacher: '班主任', fixed: true };
                 }
+            });
+        });
+        // 指定班级的指定学科/节次禁排，按星期批量写入班级黑名单。
+        (this.rules.classSubjectBlocks || []).forEach((rule) => {
+            const targetClasses = Array.isArray(rule.classNames) && rule.classNames.length
+                ? rule.classNames.filter((className) => this.classes.includes(className))
+                : this.getScopeClasses(rule.scope);
+            const days = Array.isArray(rule.days) && rule.days.length ? rule.days : [1, 2, 3, 4, 5];
+            targetClasses.forEach((className) => {
+                days.forEach((day) => {
+                    this.addBlacklist(className, `d${day}_${this.normalizeSlotCode(rule.slot)}`, rule.subject);
+                });
             });
         });
         this.rebuildTeacherSlotIndex();
