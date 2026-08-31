@@ -1822,8 +1822,8 @@ const SCHEDULER = {
     // 不放宽体育晚自习、禁排、教师撞课等规则。
     repairUnfilledDemand: function (demand, allSlots, teacherBusyMap) {
         if (!demand || demand.remaining <= 0) return false;
-        const classSchedule = this.schedule[demand.className] || {};
         const baseCandidates = allSlots.filter((slot) => {
+            const classSchedule = this.schedule[demand.className] || {};
             if (this.isGloballyClosedSlot(slot)) return false;
             if (String(demand.subject || '').replace(/\(合\)$/, '').trim() === '体育' && slot.type === 'eve') return false;
             if (classSchedule[slot.id] || this.isDemandBlocked(demand, slot.id)) return false;
@@ -1834,6 +1834,7 @@ const SCHEDULER = {
             return true;
         });
         for (const target of baseCandidates) {
+            const classSchedule = this.schedule[demand.className] || {};
             const subject = String(demand.subject || '').replace(/\(合\)$/, '').trim();
             const adjacentIds = [target.period - 1, target.period + 1]
                 .filter((period) => period >= 1)
@@ -1846,10 +1847,11 @@ const SCHEDULER = {
 
             // 一次先尝试移动一个相邻同科单元；如两侧均冲突则分别尝试。
             for (const blockerId of adjacentIds) {
-                const blocker = classSchedule[blockerId];
+                const currentClassSchedule = this.schedule[demand.className] || {};
+                const blocker = currentClassSchedule[blockerId];
                 if (!this.isMovableScheduleCell(blocker)) continue;
                 const snapshot = JSON.stringify(this.schedule);
-                delete classSchedule[blockerId];
+                delete currentClassSchedule[blockerId];
                 this.rebuildTeacherSlotIndex();
                 this.rebuildVenueSlotIndex();
                 this.rebuildDayLoadIndexes();
