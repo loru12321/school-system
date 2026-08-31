@@ -1948,7 +1948,14 @@ const SCHEDULER = {
         // 尝试做一次同班二元交换：把当前可移动课程放到空位，
         // 再把缺失课程放到该课程原来的位置。这样可修复“教师在空位禁排、
         // 但班内另一个合法位置可交换”的尾部缺口，而不放宽任何硬约束。
-        for (const target of baseCandidates) {
+        // 中转位不必对缺失学科本身合法；它只需要对被挪走的课程合法。
+        // 例如周五上午前三节禁止地理时，空出的周五上午第3节仍可临时承接
+        // 另一门课，再把地理放到那门课释放出的合法位置。
+        const repairTargets = allSlots.filter((slot) => {
+            const classSchedule = this.schedule[demand.className] || {};
+            return !this.isGloballyClosedSlot(slot) && !classSchedule[slot.id];
+        });
+        for (const target of repairTargets) {
             const classSchedule = this.schedule[demand.className] || {};
             const movableEntries = Object.entries(classSchedule)
                 .filter(([slotId, cell]) => slotId.startsWith('d') && this.isMovableScheduleCell(cell));
