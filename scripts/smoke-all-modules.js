@@ -839,6 +839,8 @@ async function ensureCohortEntered(page) {
         if (!explicitCohortYear || String(state?.currentCohortId || '').trim() === explicitCohortYear) {
             return state;
         }
+        // 登录恢复期间持有跨届锁，切届会被恢复完成后的回锁挡掉；等 Auth.init 的会话恢复落定再切。
+        await page.waitForFunction(() => window.__SESSION_COHORT_RESTORE_PENDING__ !== true, null, { timeout: 150000 }).catch(() => {});
         await withNavigationRetry(page, async () => {
             await page.evaluate(async (year) => {
                 const manager = window.CohortManager;
