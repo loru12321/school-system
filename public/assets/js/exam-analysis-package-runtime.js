@@ -929,6 +929,9 @@
         const rows = getTownshipRows();
         const subjects = getMajorSubjectsForPackage(rows);
         if (!subjects.length) return null;
+        // 6-8 年级考核口径本身就是主科时，主科包与「学校分析」完全同内容，不再重复出一本。
+        const current = new Set(getSubjectList(rows));
+        if (subjects.length === current.size && subjects.every((subject) => current.has(subject))) return null;
         const snapshot = calculateMajorSubjectSnapshot(rows, subjects);
         const totalLabel = getPackageTotalLabel(snapshot.subjects);
         return buildSchoolAnalysisWorkbook('township', {
@@ -983,12 +986,32 @@
 
     // 中考主科仍固定为五科；这里只为原始成绩、学生明细和教师明细附上最新中考整理表已有的政治列。
     // 不从二模补学生或补分，且绝不回写 RAW_DATA、SUBJECTS 或学生正式 total。
-    function getGrade9ZhongkaoDisplayData(rows = getAllRows()) {
-        const officialSubjects = getSubjectList(rows).filter((subject) => subject !== '政治');
-        if (!isGrade9ZhongkaoPackage()) return { rows, subjects: officialSubjects, politics: null };
+    // 非中考（期中/期末/模考）：考核学科 = SUBJECTS；政史地生等展示科目（CONFIG.extraDisplaySubs）
+    // 只要成绩表里有分就附在后面，供单科查看与同学科教师对比，但不进 totalSubjects（总分口径）。
+    function getConfiguredDisplayOnlySubjects() {
+        if (typeof window.getConfiguredExtraDisplaySubjects === 'function') {
+            return window.getConfiguredExtraDisplaySubjects(window.CONFIG || {}).filter(Boolean);
+        }
+        const extras = window.CONFIG?.extraDisplaySubs;
+        return Array.isArray(extras) ? extras.filter(Boolean) : [];
+    }
+
+    function getPresentDisplayOnlySubjects(rows, assessmentSubjects) {
+        const assessment = new Set(assessmentSubjects);
+        return getConfiguredDisplayOnlySubjects().filter((subject) => !assessment.has(subject)
+            && (rows || []).some((row) => Number.isFinite(Number(row?.scores?.[subject]))));
+    }
+
+    function getPackageDisplayData(rows = getAllRows()) {
+        const allSubjects = getSubjectList(rows);
+        if (!isGrade9ZhongkaoPackage()) {
+            const displayOnly = getPresentDisplayOnlySubjects(rows, allSubjects);
+            return { rows, subjects: [...allSubjects, ...displayOnly], totalSubjects: allSubjects, displayOnly, politics: null };
+        }
+        const officialSubjects = allSubjects.filter((subject) => subject !== '政治');
         const politics = getGrade9LatestPoliticsRows(rows);
-        if (!politics.matched) return { rows, subjects: officialSubjects, politics };
-        return { rows: politics.rows, subjects: [...officialSubjects, '政治'], politics };
+        if (!politics.matched) return { rows, subjects: officialSubjects, totalSubjects: officialSubjects, displayOnly: [], politics };
+        return { rows: politics.rows, subjects: [...officialSubjects, '政治'], totalSubjects: officialSubjects, displayOnly: ['政治'], politics };
     }
 
     function getPackageDisplaySubjectLabel(subject) {
@@ -1453,9 +1476,10 @@
         ];
     }
 
-    // 政治列出现在哪个工作簿，这两句提醒就跟到那本的封面上。
+    // 展示科目列出现在哪个工作簿，提醒就跟到那本的封面上：中考政治用二模参考口径，
+    // 其他考试的政史地生用统一的“不计考核、只作单科与教师对比”口径。
     function buildPoliticsCoverNotices(displayData) {
-        if (!displayData?.politics?.matched) return [];
+        if (!displayData?.politics?.matched) return buildDisplayOnlyCoverNotices(displayData);
         if (!Array.isArray(displayData.subjects) || !displayData.subjects.includes('政治')) return [];
         return [
             `${GRADE9_ZHONGKAO_POLITICS_NOTE} 「${GRADE9_ZHONGKAO_POLITICS_LABEL}」只取本次中考整理表内人工整理的政治列；原始二模不会自动覆盖该列，整理表外学生不补入。`,
@@ -1463,11 +1487,21 @@
         ];
     }
 
+    function buildDisplayOnlyCoverNotices(displayData) {
+        const displayOnly = Array.isArray(displayData?.displayOnly) ? displayData.displayOnly.filter(Boolean) : [];
+        if (!displayOnly.length || displayData?.politics) return [];
+        const totalLabel = getPackageTotalLabel(displayData.totalSubjects || []);
+        return [
+            `${displayOnly.join('、')} 为展示科目：不计入${totalLabel}、两率一分、综合评价与任何考核排名，学校分析报告中不出现。`,
+            '展示科目只作单科成绩查看与同年级同学科教师对比（见「教师/」目录下对应学科工作表）。'
+        ];
+    }
+
     function buildRawScoreWorkbook(rows = getAllRows()) {
         const wb = window.XLSX.utils.book_new();
-        const displayData = getGrade9ZhongkaoDisplayData(rows);
+        const displayData = getPackageDisplayData(rows);
         const subjects = displayData.subjects;
-        const totalLabel = getPackageTotalLabel(subjects.filter((subject) => subject !== '政治'));
+        const totalLabel = getPackageTotalLabel(displayData.totalSubjects);
         addCoverSheet(wb, buildCoverRows({
             title: `${getExamPackageStem()}原始成绩`,
             scopeText: '本次考试全部考生原始成绩（按学校分表）',
@@ -1586,10 +1620,10 @@
     }
 
     function buildStudentDetailWorkbook(rows, options = {}) {
-        const displayData = getGrade9ZhongkaoDisplayData(rows);
+        const displayData = getPackageDisplayData(rows);
         const subjects = displayData.subjects;
         const displayRows = displayData.rows;
-        const totalLabel = getPackageTotalLabel(subjects.filter((subject) => subject !== '政治'));
+        const totalLabel = getPackageTotalLabel(displayData.totalSubjects);
         const includeCounty = !!options.includeCounty;
         // 与学校分析报告保持一致：所有对外文件第一张都是封面，说明范围与生成时间。
         const studentCover = buildCoverRows({
@@ -1707,7 +1741,7 @@
     function buildTeacherTownWorkbook() {
         const wb = window.XLSX.utils.book_new();
         const data = window.TOWNSHIP_RANKING_DATA || {};
-        const displayData = getGrade9ZhongkaoDisplayData(getAllRows());
+        const displayData = getPackageDisplayData(getAllRows());
         const subjects = displayData.subjects;
         // 教师相关文件的封面额外写明「未做生源校正」——这份文件常被直接转发，
         // 收到的人未必了解口径，容易把名次当成教学水平的唯一证据。
@@ -1744,7 +1778,7 @@
     function buildTeacherCountyWorkbook() {
         const wb = window.XLSX.utils.book_new();
         const rankingData = window.COUNTY_TEACHER_RANKING_DATA || {};
-        const displayData = getGrade9ZhongkaoDisplayData(getAllRows());
+        const displayData = getPackageDisplayData(getAllRows());
         const subjects = displayData.subjects;
         addCoverSheet(wb, buildCoverRows({
             title: `${getExamPackageStem()}教师县域排名`,
@@ -1858,7 +1892,12 @@
         const politicsMatched = Number(politics?.politics?.matched || 0);
         const showPolitics = politicsMatched > 0 && !!politics?.withPolitics;
         const politicsNote = showPolitics ? '（含政治单列，备注：参考二模数据，不计入五科总）' : '';
-        const files = [`${packageStem}成绩${suffix}.xlsx  —— 原始成绩，按学校分表${politicsNote}`];
+        // 非中考包：政史地生等展示科目附在成绩/学生明细/教师分析里，但不进任何考核口径。
+        const displayOnly = Array.isArray(context.displayOnly) ? context.displayOnly.filter(Boolean) : [];
+        const showDisplayOnly = !showPolitics && displayOnly.length > 0;
+        const displayOnlyText = displayOnly.join('、');
+        const displayNote = showDisplayOnly ? `（含 ${displayOnlyText} 展示列，不计考核）` : '';
+        const files = [`${packageStem}成绩${suffix}.xlsx  —— 原始成绩，按学校分表${politicsNote}${displayNote}`];
         if (politics?.withoutPolitics) {
             files.push(`学校/${packageStem}学校分析（不含政治）${suffix}.xlsx  —— 正式口径的学校分析，结论以此为准`);
             if (politics.withPolitics) {
@@ -1869,9 +1908,9 @@
         }
         if (hasMajorSubject) files.push(`学校/${packageStem}主科学校分析${suffix}.xlsx  —— 只看主科的学校分析`);
         if (includeCounty) files.push(`学校/${packageStem}学校县域分析${suffix}.xlsx  —— 县域范围对比`);
-        files.push(`学生/${packageStem}学生乡镇考试明细.xlsx  —— 逐个学生成绩与位次${politicsNote}`);
+        files.push(`学生/${packageStem}学生乡镇考试明细.xlsx  —— 逐个学生成绩与位次${politicsNote}${displayNote}`);
         if (includeCounty) files.push(`学生/${packageStem}学生考试明细 县域排名.xlsx  —— 含县域位次`);
-        files.push(`教师/${packageStem}教师分析${suffix}.xlsx  —— 教师所教班级表现${showPolitics ? '（含政治教师单独排名）' : ''}`);
+        files.push(`教师/${packageStem}教师分析${suffix}.xlsx  —— 教师所教班级表现${showPolitics ? '（含政治教师单独排名）' : ''}${showDisplayOnly ? `（含 ${displayOnlyText} 教师同学科排名）` : ''}`);
         if (includeCounty) files.push(`教师/${packageStem}教师县域分析${suffix}.xlsx  —— 教师县域对比`);
 
         return [
@@ -1901,6 +1940,13 @@
                 '· 政治不计入五科总分、两率一分、指标生、高分段、高中上线率等任何正式中考口径。',
                 '· 因此「五科总」始终不含政治；要看含政治的对照，只用「学校分析（含政治·参考二模数据）」，且不作正式依据。',
                 '· 原始二模仅用于核对，不会覆盖中考整理表内人工整理的政治列；整理表没有该学生时不补入本包。',
+                ''
+            ] : []),
+            ...(showDisplayOnly ? [
+                '【展示科目说明】',
+                `· ${displayOnlyText} 为展示科目：不计入总分、两率一分、综合评价与任何考核排名，「学校分析」中不出现。`,
+                '· 展示科目在成绩表与学生明细中单独成列、单独排名，只用于看该科表现。',
+                '· 「教师分析」为每个展示科目单列一张工作表，同年级同学科教师之间可以对比；不要跨学科比较名次。',
                 ''
             ] : []),
             '【口径注意】',
@@ -1961,7 +2007,8 @@
                 suffix,
                 includeCounty,
                 hasMajorSubject: !!majorSubjectWorkbook,
-                politics: grade9PoliticsReferences
+                politics: grade9PoliticsReferences,
+                displayOnly: getPackageDisplayData(allRows).displayOnly
             }));
 
             const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 1 } });

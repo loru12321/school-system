@@ -844,13 +844,51 @@ function getActiveGrade() {
     return 6;
 }
 
+// 各年级考核口径（总分、两率一分、排名、综合评价只读这些学科）。
+// 政治/历史/地理/生物在所有年级都只作单科展示与同学科教师对比，不进 SUBJECTS、不计总分。
+// 8 年级列了化学：按当地课程 8 年级已开化学；成绩表里没有化学列时会在解析/加载阶段被自动剔除。
+const GRADE_MODE_ASSESSMENT_SUBJECTS = Object.freeze({
+    '6': Object.freeze(['语文', '数学', '英语']),
+    '7': Object.freeze(['语文', '数学', '英语']),
+    '8': Object.freeze(['语文', '数学', '英语', '物理', '化学']),
+    '9': Object.freeze(['语文', '数学', '英语', '物理', '化学'])
+});
+const GRADE_MODE_DISPLAY_ONLY_SUBJECTS = Object.freeze({
+    '9': Object.freeze(['政治']),
+    default: Object.freeze(['政治', '历史', '地理', '生物'])
+});
+const SUBJECT_POLICY_VERSION = 'assessment-core-v1';
+
+function normalizeGradeModeKey(grade) {
+    const match = String(grade ?? '').match(/[6-9]/);
+    return match ? match[0] : '6';
+}
+
+// 纯函数：只返回某年级的口径字段，不碰 CONFIG / DOM。applyModeByGrade 与老考试迁移共用它，
+// 保证“当前考试”和“历史考试”永远是同一套学科口径。
+function getGradeModeConfig(grade) {
+    const key = normalizeGradeModeKey(grade);
+    const isGrade9 = key === '9';
+    const assessmentSubjects = [...(GRADE_MODE_ASSESSMENT_SUBJECTS[key] || GRADE_MODE_ASSESSMENT_SUBJECTS['6'])];
+    const extraDisplaySubs = [...(GRADE_MODE_DISPLAY_ONLY_SUBJECTS[key] || GRADE_MODE_DISPLAY_ONLY_SUBJECTS.default)];
+    return {
+        name: `${key}年级`,
+        label: isGrade9 ? '五科总' : `${['', '一', '二', '三', '四', '五', '六', '七', '八', '九'][assessmentSubjects.length] || assessmentSubjects.length}科总`,
+        excRate: isGrade9 ? 0.06 : 0.05,
+        totalSubs: assessmentSubjects,
+        analysisSubs: assessmentSubjects.slice(),
+        extraDisplaySubs,
+        showQuery: true,
+        subjectPolicy: SUBJECT_POLICY_VERSION
+    };
+}
+
 function applyModeByGrade(grade) {
-    const isGrade9 = String(grade) === '9';
-    if (isGrade9) {
-        setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], extraDisplaySubs: ['政治'], showQuery: true, mode: CONFIG.mode || 'multi' });
-    } else {
-        setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', extraDisplaySubs: [], showQuery: true, mode: CONFIG.mode || 'multi' });
-    }
+    setConfigState({ ...getGradeModeConfig(grade), mode: CONFIG.mode || 'multi' });
+    // 老考试加载时 SUBJECTS 来自存档（可能还带着政史地生），这里按口径收敛；解析新表时也走同一函数。
+    const subjectsResult = typeof applyConfiguredAnalysisSubjects === 'function'
+        ? applyConfiguredAnalysisSubjects()
+        : { changed: false, removed: [] };
     if (typeof refreshTotalSubjectPresentation === 'function') refreshTotalSubjectPresentation();
     const badge = document.getElementById('mode-badge');
     if (badge) badge.innerText = CONFIG.name;
@@ -865,7 +903,71 @@ function applyModeByGrade(grade) {
     const excEl = document.getElementById('label-exc');
     if (excEl) excEl.innerText = (CONFIG.excRate * 100) + '%';
     if (typeof renderNavigation === 'function') renderNavigation();
+    return subjectsResult;
 }
+
+// 老考试统一到当前学科口径：收敛 exam.subjects、按口径重算每个学生的 total、同步 exam.config，
+// 并清掉按旧口径算出的 exam.schools（下次加载会强制重算）。只读 scores，不删任何原始分。
+// 幂等：已打上 subjectPolicy 标记的考试直接跳过，ensure() 高频调用也不会重复扫全表。
+function normalizeCohortExamSubjectPolicy(db) {
+    const exams = db && db.exams && typeof db.exams === 'object' ? db.exams : null;
+    if (!exams) return { migrated: [], totalsChanged: 0 };
+    const migrated = [];
+    let totalsChanged = 0;
+    const totalsByExam = new Map();
+    Object.entries(exams).forEach(([examId, exam]) => {
+        if (!exam || typeof exam !== 'object') return;
+        if (exam.subjectPolicy === SUBJECT_POLICY_VERSION) return;
+        const meta = exam.meta && typeof exam.meta === 'object' ? exam.meta : {};
+        const grade = (typeof getEffectiveGrade === 'function' ? getEffectiveGrade(meta) : '') || meta.grade;
+        const mode = getGradeModeConfig(grade);
+        const allowed = new Set(mode.analysisSubs);
+        const storedSubjects = Array.isArray(exam.subjects) ? exam.subjects.filter(Boolean) : [];
+        const nextSubjects = storedSubjects.filter((subject) => allowed.has(subject));
+        const rows = Array.isArray(exam.data) ? exam.data : [];
+        const totals = typeof normalizeStudentTotalsForCurrentConfig === 'function'
+            ? normalizeStudentTotalsForCurrentConfig(rows, nextSubjects, mode)
+            : { changed: 0 };
+        const subjectsChanged = nextSubjects.length !== storedSubjects.length;
+        if (subjectsChanged || totals.changed > 0) {
+            exam.subjects = nextSubjects;
+            exam.config = { ...(exam.config && typeof exam.config === 'object' ? exam.config : {}), ...mode, mode: exam.config?.mode || 'multi' };
+            exam.schools = {};
+            if (typeof window.computeExamDataFingerprint === 'function') {
+                exam.fingerprint = window.computeExamDataFingerprint(rows);
+            } else {
+                delete exam.fingerprint;
+            }
+            exam.updatedAt = Date.now();
+            totalsChanged += totals.changed || 0;
+            migrated.push(examId);
+            const byUuid = new Map();
+            rows.forEach((row) => { if (row?.uuid) byUuid.set(row.uuid, row.total); });
+            totalsByExam.set(examId, byUuid);
+        }
+        exam.subjectPolicy = SUBJECT_POLICY_VERSION;
+    });
+    // 学生名册里每条 history 也存了当次 total，跟着改，否则个人轨迹仍是旧口径。
+    if (totalsByExam.size && db.students && typeof db.students === 'object') {
+        Object.values(db.students).forEach((student) => {
+            (Array.isArray(student?.history) ? student.history : []).forEach((entry) => {
+                const byUuid = totalsByExam.get(entry?.examId);
+                if (!byUuid || !byUuid.has(student.uuid)) return;
+                entry.total = byUuid.get(student.uuid);
+            });
+            if (student?.lastExamId && totalsByExam.get(student.lastExamId)?.has(student.uuid)) {
+                student.lastScore = totalsByExam.get(student.lastExamId).get(student.uuid);
+            }
+        });
+    }
+    if (migrated.length) {
+        console.info(`[SubjectPolicy] 已将 ${migrated.length} 场历史考试收敛到考核口径（重算 ${totalsChanged} 条总分）`, migrated);
+    }
+    return { migrated, totalsChanged };
+}
+
+window.getGradeModeConfig = getGradeModeConfig;
+window.normalizeCohortExamSubjectPolicy = normalizeCohortExamSubjectPolicy;
 
 const CohortManager = {
     list: [],

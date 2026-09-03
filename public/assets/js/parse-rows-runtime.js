@@ -94,9 +94,13 @@
         );
 
         const detectedSubjects = Array.isArray(root.SUBJECTS) ? [...root.SUBJECTS] : [];
-        const analysisSubjects = root.getConfiguredDisplaySubjects(root.CONFIG, { includeExtra: false });
-        if (analysisSubjects && analysisSubjects !== 'auto') {
-            root.setSubjects(root.SUBJECTS.filter(s => analysisSubjects.includes(s)));
+        if (typeof root.applyConfiguredAnalysisSubjects === 'function') {
+            root.applyConfiguredAnalysisSubjects(root.CONFIG);
+        } else {
+            const analysisSubjects = root.getConfiguredDisplaySubjects(root.CONFIG, { includeExtra: false });
+            if (analysisSubjects && analysisSubjects !== 'auto') {
+                root.setSubjects(root.SUBJECTS.filter(s => analysisSubjects.includes(s)));
+            }
         }
         root.refreshTotalSubjectPresentation();
         const subsForTotal = root.CONFIG.totalSubs === 'auto' ? root.SUBJECTS : root.CONFIG.totalSubs;

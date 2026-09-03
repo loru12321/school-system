@@ -251,8 +251,9 @@ const hostedGatewayCandidatesIndex = edgeGatewaySource.indexOf('pushCandidate(th
 const edgeSameOriginGatewayCandidateIndex = edgeGatewaySource.indexOf('pushCandidate(window.EDGE_GATEWAY_URL);', hostedGatewayCandidatesIndex);
 const edgeDirectGatewayCandidateIndex = edgeGatewaySource.indexOf('pushCandidate(DIRECT_EDGE_GATEWAY_URL);', hostedGatewayCandidatesIndex);
 const gatewaySessionRef = './assets/js/gateway-session-runtime.js';
-const grade9TotalSubjectContract = /totalSubs:\s*\['语文',\s*'数学',\s*'英语',\s*'物理',\s*'化学'\]/;
-const grade9PoliticsDisplayContract = /extraDisplaySubs:\s*\['政治'\]/;
+// 9 年级口径现在在 GRADE_MODE_ASSESSMENT_SUBJECTS / GRADE_MODE_DISPLAY_ONLY_SUBJECTS 表里按年级列出。
+const grade9TotalSubjectContract = /'9':\s*Object\.freeze\(\['语文',\s*'数学',\s*'英语',\s*'物理',\s*'化学'\]\)/;
+const grade9PoliticsDisplayContract = /'9':\s*Object\.freeze\(\['政治'\]\)/;
 const authStateRef = './assets/js/auth-state-runtime.js';
 const edgeGatewayRef = './assets/js/edge-gateway-runtime.js';
 const workspaceStateRef = './assets/js/workspace-state-runtime.js';

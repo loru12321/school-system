@@ -60,26 +60,26 @@ assert.ok(
 );
 
 assert.ok(
-    source.includes('function getGrade9ZhongkaoDisplayData')
-        && source.includes("return { rows: politics.rows, subjects: [...officialSubjects, '政治'], politics }"),
+    source.includes('function getPackageDisplayData')
+        && source.includes("return { rows: politics.rows, subjects: [...officialSubjects, '政治'], totalSubjects: officialSubjects, displayOnly: ['政治'], politics }"),
     'grade 9 export details should use latest-sheet politics only as display data'
 );
 
-function createRuntimeContext({ grade, subjects, zhongkao = false }) {
+function createRuntimeContext({ grade, subjects, zhongkao = false, displayOnlySubjects = [], displayOnlyScores = {} }) {
     const files = [];
     const students = [
         {
             school: '银山实验学校',
             class: `${grade}.1`,
             name: '甲',
-            scores: Object.fromEntries(subjects.map((subject, index) => [subject, 80 + index])),
+            scores: { ...Object.fromEntries(subjects.map((subject, index) => [subject, 80 + index])), ...(displayOnlyScores['甲'] || {}) },
             total: 600
         },
         {
             school: '州城中学',
             class: `${grade}.1`,
             name: '乙',
-            scores: Object.fromEntries(subjects.map((subject, index) => [subject, 70 + index])),
+            scores: { ...Object.fromEntries(subjects.map((subject, index) => [subject, 70 + index])), ...(displayOnlyScores['乙'] || {}) },
             total: 500
         }
     ];
@@ -127,7 +127,7 @@ function createRuntimeContext({ grade, subjects, zhongkao = false }) {
             '州城中学': { name: '州城中学', students: students.slice(1), metrics: {}, rankings: {} }
         },
         // 模拟当前全科界面仍显示“七科总”；主科包必须忽略它，改用传入的主科集合。
-        CONFIG: { name: `${grade}年级`, label: '七科总', excRate: 0.15 },
+        CONFIG: { name: `${grade}年级`, label: '七科总', excRate: 0.15, extraDisplaySubs: displayOnlySubjects },
         CURRENT_EXAM_ID: zhongkao
             ? `2023级-${grade}年级-2025-2026-暑假-中考-2026-07-12`
             : `2023级-${grade}年级-2025-2026-下学期-期末-2026-07-01`,
@@ -227,6 +227,68 @@ function getWorkbookRows(file, sheetName) {
 
         const teacherFile = files.find((file) => /教师\/.*教师分析.*\.xlsx$/.test(file.name));
         assert.ok(teacherFile?.payload?.SheetNames.includes('政治（参考二模数据） 教师乡镇排名'), 'teacher workbook should include visibly marked politics teacher township ranking sheet');
+    }
+    {
+        // 非中考（期末）新口径：SUBJECTS 只含考核学科（7 年级=语数英），政史地生是展示科目。
+        // 成绩/学生明细要附上展示科目列（单独排名），总分列名按考核学科计数；
+        // 教师分析为每个展示科目单列一张同学科排名表；学校分析里不能出现展示科目。
+        const subjects = ['语文', '数学', '英语'];
+        const displayOnlySubjects = ['政治', '历史', '地理', '生物'];
+        const { context, files } = createRuntimeContext({
+            grade: '7',
+            subjects,
+            displayOnlySubjects,
+            displayOnlyScores: {
+                '甲': { 政治: 88, 历史: 45, 地理: 41, 生物: 39 },
+                '乙': { 政治: 76, 历史: 40, 地理: 38, 生物: 30 }
+            }
+        });
+        context.TOWNSHIP_RANKING_DATA = Object.fromEntries([...subjects, ...displayOnlySubjects].map((subject) => [subject, []]));
+        await context.downloadExamAnalysisPackage();
+
+        assert.ok(
+            !files.some((file) => /主科学校分析/.test(file.name)),
+            '期末 package must not duplicate the school workbook as a major-subject workbook when SUBJECTS already equals the major subjects'
+        );
+
+        const rawScoreFile = files.find((file) => /成绩.*\.xlsx$/.test(file.name) && !file.name.includes('/'));
+        const rawScoreRows = getWorkbookRows(rawScoreFile, '银山实验学校');
+        displayOnlySubjects.forEach((subject) => {
+            assert.ok(rawScoreRows[0]?.includes(subject), `期末 raw score workbook must carry the display-only ${subject} column`);
+        });
+        assert.ok(!rawScoreRows[0]?.some((cell) => /参考二模/.test(String(cell))), '期末 raw score workbook must not carry the Zhongkao politics reference label');
+        assert.strictEqual(rawScoreRows[0]?.at(-2), '三科总', '期末 raw score total label must count only assessment subjects');
+        assert.strictEqual(rawScoreRows[1]?.[rawScoreRows[0].indexOf('政治')], 88, '期末 raw score workbook must write the real 政治 score');
+        const rawCover = getWorkbookRows(rawScoreFile, rawScoreFile.payload.SheetNames[0]).flat().join('|');
+        assert.ok(/政治、历史、地理、生物 为展示科目/.test(rawCover), '期末 raw score cover must explain that display-only subjects are excluded from assessment');
+
+        const studentDetailFile = files.find((file) => /学生\/.*学生乡镇考试明细\.xlsx$/.test(file.name));
+        const studentDetailRows = getWorkbookRows(studentDetailFile, '学生考试明细');
+        assert.ok(studentDetailRows[0]?.includes('政治分数'), '期末 student detail workbook must carry the 政治 score column');
+        assert.ok(studentDetailRows[0]?.includes('历史镇排'), '期末 student detail workbook must rank display-only subjects on their own');
+        assert.ok(studentDetailRows[0]?.includes('三科总校排'), '期末 student detail total rank header must use the assessment label');
+
+        const teacherFile = files.find((file) => /教师\/.*教师分析.*\.xlsx$/.test(file.name));
+        displayOnlySubjects.forEach((subject) => {
+            assert.ok(teacherFile?.payload?.SheetNames.includes(`${subject} 教师乡镇排名`), `期末 teacher workbook must include the ${subject} same-subject ranking sheet`);
+        });
+
+        const schoolFile = files.find((file) => /学校\/.*学校分析.*\.xlsx$/.test(file.name));
+        assert.ok(schoolFile, '期末 package must include the school workbook');
+        displayOnlySubjects.forEach((subject) => {
+            assert.ok(!schoolFile.payload.SheetNames.some((name) => name.startsWith(`${subject} `)), `期末 school workbook must not contain a ${subject} sheet`);
+        });
+
+        const readme = files.find((file) => file.name === '阅读说明.txt');
+        assert.ok(/【展示科目说明】/.test(String(readme?.payload || '')), '期末 readme must explain display-only subjects');
+    }
+    {
+        // 展示科目在成绩表里没有分时不应凭空多出空列。
+        const { context, files } = createRuntimeContext({ grade: '6', subjects: ['语文', '数学', '英语'], displayOnlySubjects: ['政治', '历史', '地理', '生物'] });
+        await context.downloadExamAnalysisPackage();
+        const rawScoreFile = files.find((file) => /成绩.*\.xlsx$/.test(file.name) && !file.name.includes('/'));
+        const rawScoreRows = getWorkbookRows(rawScoreFile, '银山实验学校');
+        assert.ok(!rawScoreRows[0]?.includes('政治'), 'display-only subjects without any score must not produce empty columns');
     }
     console.log('test-exam-analysis-package-major-subjects passed');
 })().catch((error) => {

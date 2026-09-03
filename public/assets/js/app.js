@@ -2888,7 +2888,27 @@ function getTotalSubjectsForLabel(config = CONFIG, subjects = SUBJECTS) {
     const configured = config?.totalSubs === 'auto'
         ? (Array.isArray(subjects) ? subjects : [])
         : (Array.isArray(config?.totalSubs) ? config.totalSubs : []);
-    return [...new Set(configured.map(subject => String(subject || '').trim()).filter(Boolean))];
+    const normalized = [...new Set(configured.map(subject => String(subject || '').trim()).filter(Boolean))];
+    // 口径列表可能比成绩表多（如 8 年级口径含化学而该次未考）：有实际学科时只数真正计入总分的。
+    if (config?.totalSubs !== 'auto' && Array.isArray(subjects) && subjects.length) {
+        const present = new Set(subjects.map(subject => String(subject || '').trim()));
+        const intersected = normalized.filter(subject => present.has(subject));
+        if (intersected.length) return intersected;
+    }
+    return normalized;
+}
+
+// 把 SUBJECTS 收敛到当前口径的 analysisSubs（政史地生等展示科目留在 scores 里，不进 SUBJECTS）。
+// parseRows 解析新表和 applyModeByGrade 加载老考试都走这里，保证同一套过滤。
+function applyConfiguredAnalysisSubjects(config = CONFIG) {
+    const analysisSubjects = getConfiguredDisplaySubjects(config, { includeExtra: false });
+    const current = Array.isArray(SUBJECTS) ? SUBJECTS.filter(Boolean) : [];
+    if (!analysisSubjects || analysisSubjects === 'auto' || !current.length) return { changed: false, removed: [] };
+    const allowed = new Set(analysisSubjects);
+    const removed = current.filter(subject => !allowed.has(subject));
+    if (!removed.length) return { changed: false, removed };
+    setSubjects(current.filter(subject => allowed.has(subject)));
+    return { changed: true, removed };
 }
 
 function getTotalSubjectLabel(options = {}) {
@@ -2912,6 +2932,7 @@ function refreshTotalSubjectPresentation() {
 window.getTotalSubjectsForLabel = getTotalSubjectsForLabel;
 window.getTotalSubjectLabel = getTotalSubjectLabel;
 window.refreshTotalSubjectPresentation = refreshTotalSubjectPresentation;
+window.applyConfiguredAnalysisSubjects = applyConfiguredAnalysisSubjects;
 
 function getConfiguredExtraDisplaySubjects(config = CONFIG) {
     return Array.isArray(config.extraDisplaySubs) ? config.extraDisplaySubs.filter(Boolean) : [];

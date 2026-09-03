@@ -240,7 +240,7 @@ assert.ok(
     'auto restore should detect split cloud payloads that have rows but missing school metrics'
 );
 assert.ok(
-    cohortDbCoreSource.includes('const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;'),
+    /(?:const|let) shouldRecalculate = options\.recalculate !== false \|\| !hasProcessedSchools \|\| !hasProcessedSchoolMetrics;/.test(cohortDbCoreSource),
     'exam restore should recalculate when restored school metrics are missing even if school rosters exist'
 );
 assert.ok(

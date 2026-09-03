@@ -40,7 +40,7 @@ function renderStudentComparePage(page) {
 
     // 判断是6-8年级还是9年级模式
     const is9thGrade = CONFIG.name === '9年级';
-    const totalLabel = is9thGrade ? '五科总' : '全科总';
+    const totalLabel = is9thGrade ? '五科总' : (CONFIG.label || '全科总');
 
     // 直接使用studentsCompareData（已经包含筛选和排序后的数据）
     const visibleStudents = studentsCompareData;
@@ -252,7 +252,7 @@ function showStudentComparePopup(student) {
     if (!student || typeof Swal === 'undefined' || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return false;
 
     const { periodCount, subjects } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
-    const totalLabel = CONFIG.name === '9年级' ? '五科总' : '全科总';
+    const totalLabel = CONFIG.name === '9年级' ? '五科总' : (CONFIG.label || '全科总');
     const popupHtml = generateStudentCard(student, periodCount, totalLabel, subjects);
 
     Swal.fire({
@@ -590,7 +590,7 @@ function toggleGroupDisplay() {
         }
 
         const is9thGrade = CONFIG.name === '9年级';
-        const totalLabel = is9thGrade ? '五科总' : '全科总';
+        const totalLabel = is9thGrade ? '五科总' : (CONFIG.label || '全科总');
 
         // 计算班级统计
         const improveCount = classStudents.filter(s => s.progressType === 'improve').length;
@@ -640,7 +640,7 @@ function toggleGroupDisplay() {
 
         // 判断是6-8年级还是9年级模式
         const is9thGrade = CONFIG.name === '9年级';
-        const totalLabel = is9thGrade ? '五科总' : '全科总';
+        const totalLabel = is9thGrade ? '五科总' : (CONFIG.label || '全科总');
 
         // 生成分组HTML
         let html = '';
@@ -708,7 +708,7 @@ function exportStudentMultiPeriodComparison() {
 
     // 判断是6-8年级还是9年级模式
     const is9thGrade = CONFIG.name === '9年级';
-    const totalLabel = is9thGrade ? '五科总' : '全科总';
+    const totalLabel = is9thGrade ? '五科总' : (CONFIG.label || '全科总');
 
     // 检查当前是否有过滤（只导出可见学生）
     const resultEl = document.getElementById('studentCompareResult');

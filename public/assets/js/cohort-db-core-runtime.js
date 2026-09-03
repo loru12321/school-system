@@ -23,6 +23,11 @@ const CohortDB = {
             }
             syncRuntimeStateToWindow();
         }
+        // 老考试统一到考核口径（政史地生不进 SUBJECTS / 不计总分）。按 exam.subjectPolicy 标记幂等，
+        // 云端拉回的新 db 对象会再走一遍，本地已迁移过的考试直接跳过。
+        if (typeof normalizeCohortExamSubjectPolicy === 'function') {
+            normalizeCohortExamSubjectPolicy(COHORT_DB);
+        }
         return COHORT_DB;
     },
 
@@ -167,7 +172,7 @@ const CohortDB = {
         }
         const hasProcessedSchools = !!(exam.schools && typeof exam.schools === 'object' && Object.keys(exam.schools).length > 0);
         const hasProcessedSchoolMetrics = hasUsableProcessedSchoolMetrics(exam.schools);
-        const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;
+        let shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;
         const shouldRenderTables = options.renderTables !== false;
         syncDataRuntimeState({
             rawData: exam.data || [],
@@ -201,7 +206,13 @@ const CohortDB = {
         if (effectiveGrade && exam.meta && exam.meta.grade !== effectiveGrade) exam.meta.grade = effectiveGrade;
         const termId = getTermId(exam.meta || {});
         if (termId) writeCurrentTermId(termId);
-        applyModeByGrade(effectiveGrade || exam.meta?.grade);
+        const modeResult = applyModeByGrade(effectiveGrade || exam.meta?.grade);
+        // 存档 SUBJECTS 若还带着展示科目，说明这份考试的 total / 学校指标仍是旧口径：
+        // 即使调用方要求 recalculate:false（登录恢复路径）也必须重算一次，并把收敛后的学科写回存档。
+        if (modeResult && modeResult.changed) {
+            exam.subjects = Array.isArray(SUBJECTS) ? SUBJECTS.slice() : [];
+            shouldRecalculate = true;
+        }
 
         if (shouldRecalculate && RAW_DATA.length > 0 && typeof processData === 'function') {
             // Coalesce back-to-back recomputes queued within the same tick. The

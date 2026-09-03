@@ -89,7 +89,7 @@ function renderStudentMultiPeriodComparison() {
 
     // 判断是6-8年级还是9年级模式
     const is9thGrade = CONFIG.name === '9年级';
-    const totalLabel = is9thGrade ? '五科总' : '全科总';
+    const totalLabel = is9thGrade ? '五科总' : (CONFIG.label || '全科总');
 
     // 获取科目列表
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
