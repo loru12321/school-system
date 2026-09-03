@@ -222,7 +222,12 @@ async function ensureCohortEntered(page) {
         if (!candidate) return;
         // 登录后 Auth.init 会异步恢复“上次会话的届别”（可能不是 SMOKE_COHORT_YEAR），期间持有跨届锁；
         // 若此时切届，恢复完成后会把锁改回原届别，切届被静默挡掉。必须等恢复落定再切。
-        await page.waitForFunction(() => window.__SESSION_COHORT_RESTORE_PENDING__ !== true, null, { timeout: 150000 }).catch(() => {});
+        // 注意标志在 Auth.init 走到调度点之前是 undefined（CI 慢机器上常见），不能把 undefined 当“没有恢复”。
+        await page.waitForFunction(() => {
+            const pending = window.__SESSION_COHORT_RESTORE_PENDING__;
+            const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            return pending === false || (pending !== true && rows > 0);
+        }, null, { timeout: 150000 }).catch(() => {});
         await withNavigationRetry(page, async () => {
             await page.evaluate(async (year) => {
                 const manager = window.CohortManager;

@@ -840,7 +840,12 @@ async function ensureCohortEntered(page) {
             return state;
         }
         // 登录恢复期间持有跨届锁，切届会被恢复完成后的回锁挡掉；等 Auth.init 的会话恢复落定再切。
-        await page.waitForFunction(() => window.__SESSION_COHORT_RESTORE_PENDING__ !== true, null, { timeout: 150000 }).catch(() => {});
+        // 标志在调度点之前是 undefined（慢机器上常见），只认显式 false 或“数据已就位且未在恢复中”。
+        await page.waitForFunction(() => {
+            const pending = window.__SESSION_COHORT_RESTORE_PENDING__;
+            const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            return pending === false || (pending !== true && rows > 0);
+        }, null, { timeout: 150000 }).catch(() => {});
         await withNavigationRetry(page, async () => {
             await page.evaluate(async (year) => {
                 const manager = window.CohortManager;
