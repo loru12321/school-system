@@ -726,12 +726,19 @@ async function login(page, user, pass) {
         const requestedCohortYear = String(process.env.SMOKE_COHORT_YEAR || '').trim();
         if (/^\d{4}$/.test(requestedCohortYear)) {
             const cohortSelect = page.locator('#login-cohort-select');
-            if (await cohortSelect.count()) {
+            // 登录页届别下拉只列在校 4 届；学年翻篇后 SMOKE_COHORT_YEAR 可能已毕业、不在选项里。
+            // 此时不要卡在 selectOption 上超时，登录后由 switchToExplicitCohortIfNeeded 走 addCohort 切届。
+            const hasOption = (await cohortSelect.count())
+                ? await cohortSelect.evaluate((select, year) => Array.from(select.options || []).some((option) => String(option.value || '').trim() === year), requestedCohortYear).catch(() => false)
+                : false;
+            if (hasOption) {
                 await cohortSelect.selectOption(requestedCohortYear);
                 await page.waitForFunction((expectedCohortId) => {
                     const select = document.getElementById('login-cohort-select');
                     return String(select?.value || '').trim() === expectedCohortId;
                 }, requestedCohortYear, { timeout: 10000 });
+            } else if (await cohortSelect.count()) {
+                console.log(`[smoke] login cohort select has no option for ${requestedCohortYear} (graduated?); will switch after login`);
             }
         }
         await page.fill('#login-user', user);
