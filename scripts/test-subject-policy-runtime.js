@@ -35,7 +35,7 @@ function extractConst(source, name) {
 // ── 源码契约 ─────────────────────────────────────────────────────────────────
 assert.ok(!/analysisSubs: 'auto'/.test(extractFunction(cohortExamMetaSource, 'getGradeModeConfig')),
     'no grade may fall back to the old "all detected subjects count" mode');
-assert.ok(cohortDbSource.includes('normalizeCohortExamSubjectPolicy(COHORT_DB)'),
+assert.ok(/normalizeCohortExamSubjectPolicy\(COHORT_DB, currentExamId \? \{ onlyExamIds: \[currentExamId\] \}/.test(cohortDbSource) && /scheduleDeferredCohortExamSubjectPolicy\(COHORT_DB\)/.test(cohortDbSource),
     'CohortDB.ensure must migrate stored exams to the subject policy');
 assert.ok(/const modeResult = applyModeByGrade\([\s\S]*?if \(modeResult && modeResult\.changed\) \{[\s\S]*?shouldRecalculate = true;/.test(cohortDbSource),
     'applyExamToWorkspace must force recalculation when stored SUBJECTS still carried display-only subjects');
@@ -169,5 +169,28 @@ assert.strictEqual(migration.totalsChanged, 0);
 // 空/异常 db 不抛错。
 same(context.normalizeCohortExamSubjectPolicy(null).migrated, []);
 same(context.normalizeCohortExamSubjectPolicy({}).migrated, []);
+
+// ── 4. 分批与只处理指定考试 ──────────────────────────────────────────────────
+{
+    const mk = (grade, subjects) => ({ meta: { grade }, subjects, config: {}, schools: { x: { metrics: { total: {} } } }, data: [makeRow('u9', '丙', Object.fromEntries(subjects.map((s, i) => [s, 50 + i])))] });
+    const batchDb = { exams: { a: mk('6', ['语文', '数学', '英语', '政治']), b: mk('7', ['语文', '数学', '英语', '历史']), c: mk('8', ['语文', '数学', '英语', '物理', '地理']) }, students: {} };
+    // 只处理指定考试：其余标记为 remaining，且不被打上版本戳
+    let r = context.normalizeCohortExamSubjectPolicy(batchDb, { onlyExamIds: ['b'] });
+    same(r.migrated, ['b']);
+    assert.strictEqual(r.remaining, 2);
+    assert.strictEqual(batchDb.exams.a.subjectPolicy, undefined, 'exams outside onlyExamIds must stay unstamped for the deferred pass');
+    assert.strictEqual(batchDb.exams.b.subjectPolicy, 'assessment-core-v1');
+    // 分批：每批 1 场，剩余数递减到 0
+    r = context.normalizeCohortExamSubjectPolicy(batchDb, { maxExams: 1 });
+    assert.strictEqual(r.migrated.length, 1);
+    assert.strictEqual(r.remaining, 1);
+    r = context.normalizeCohortExamSubjectPolicy(batchDb, { maxExams: 1 });
+    assert.strictEqual(r.migrated.length, 1);
+    assert.strictEqual(r.remaining, 0);
+    r = context.normalizeCohortExamSubjectPolicy(batchDb, { maxExams: 1 });
+    same(r.migrated, []);
+    assert.strictEqual(r.remaining, 0);
+    same(batchDb.exams.c.subjects, ['语文', '数学', '英语', '物理']);
+}
 
 console.log('test-subject-policy-runtime passed');

@@ -23,6 +23,7 @@
                             <li><strong>9年级：</strong> 均分50 + 优率80 + 及格50 = 满分180</li>
                         </ul>
                         <p style="font-size:12px; color:#666; margin-top:5px;">优秀线统一按当前参照范围前15%划定，及格线按前50%划定。</p>
+                        <p style="font-size:12px; color:#666; margin-top:5px;"><strong>考核学科口径：</strong>6/7年级 = 语文·数学·英语（三科总）；8/9年级 = 语文·数学·英语·物理·化学（五科总，未考化学时自动按四科）。政治、历史、地理、生物为展示科目：单科可查、同学科教师可对比，但不计入总分、两率一分与任何考核排名。</p>
                         <p style="font-size:12px; color:#666; margin-top:5px;">* 指标计算基准：以全镇最高值为满分进行归一化折算。</p>
                     </div>
                 `},teacher:{title:"👨‍🏫 教师评价模型",html:`

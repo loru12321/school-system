@@ -120,6 +120,14 @@
     }
 
     function getCurrentGradeNumberForPackage() {
+        // 年级推断统一走 resolveWorkspaceGrade（见 cohort-exam-meta-runtime）；下面是同优先级的降级实现。
+        if (typeof window.resolveWorkspaceGrade === 'function') {
+            const resolved = String(window.resolveWorkspaceGrade({
+                examId: currentExamMatchesActiveCohort() ? window.CURRENT_EXAM_ID : '',
+                meta: getCurrentExamMeta()
+            }) || '').trim();
+            if (/^[6-9]$/.test(resolved)) return resolved;
+        }
         const source = currentExamMatchesActiveCohort()
             ? `${window.CURRENT_EXAM_ID || ''} ${window.CONFIG?.name || ''} ${getCohortGradeLabel()}`
             : `${window.CONFIG?.name || ''} ${getCohortGradeLabel()}`;

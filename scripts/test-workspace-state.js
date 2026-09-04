@@ -82,6 +82,23 @@ function run() {
     assert.strictEqual(workspaceState.getCohortDb(), null);
     assert.strictEqual(workspaceState.hasSavedWorkspace(), false);
 
+    // 登录锁定的届别优先于存储里指向别届的旧指针（legacy 单场考试 key / 别届 cohort key），
+    // 否则会话恢复会去拉被跨届锁挡掉的载荷而落入空工作区。
+    {
+        const lockedRoot = {
+            localStorage: createMockStorage({ CURRENT_PROJECT_KEY: '2022级-9年级-2025-2026-下学期-中考-2026-07-28' }),
+            sessionStorage: createMockStorage({ LOCKED_LOGIN_COHORT_ID: '2023' })
+        };
+        const locked = createWorkspaceStateRuntime(lockedRoot);
+        assert.strictEqual(locked.getCurrentProjectKey(), 'cohort::2023', 'locked cohort must win over a stale foreign legacy exam key');
+        lockedRoot.localStorage.setItem('CURRENT_PROJECT_KEY', 'cohort::2022');
+        assert.strictEqual(locked.getCurrentProjectKey(), 'cohort::2023', 'locked cohort must win over a stale foreign cohort key');
+        lockedRoot.localStorage.setItem('CURRENT_PROJECT_KEY', 'cohort::2023');
+        assert.strictEqual(locked.getCurrentProjectKey(), 'cohort::2023');
+        const unlockedRoot = { localStorage: createMockStorage({ CURRENT_PROJECT_KEY: '2022级-9年级-2025-2026-下学期-中考-2026-07-28' }) };
+        assert.strictEqual(createWorkspaceStateRuntime(unlockedRoot).getCurrentProjectKey(), 'cohort::2022', 'without a lock the legacy key still normalizes to its own cohort');
+    }
+
     console.log('workspace-state-runtime tests passed');
 }
 

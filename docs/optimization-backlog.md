@@ -6,6 +6,10 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 
 ## P0: production correctness
 
+- 年级推断只走 `resolveWorkspaceGrade`（cohort-exam-meta-runtime）：考试 ID > 存档 meta > 届别入学年+考试学年 > 精确 CONFIG.name > 日期兜底。Status: 2026-09-04 落地，工作台与分析包已委托；`test:teaching-workbench-cohort-runtime` 锁定优先级。
+- 跨届身份与守卫按 `docs/cohort-identity-contract.md` 执行，读侧/写侧守卫必须对称。Status: `test:cohort-identity-contract` 锁定七处守卫。
+- 测试账号云端仍残留指向已毕业届别的 legacy 单场考试 key；应用侧已按锁定届别自愈（workspace-state getCurrentProjectKey），数据侧清理待人工确认。
+
 - Harden default account credentials: replace visible shared defaults with reset-required temporary passwords or server-generated credentials.
 - Finish Cloudflare account migration: remove the legacy gateway fallback only after `pending_accounts = 0`.
 - Clarify Worker entrypoint ownership: keep `wrangler.jsonc` aligned with the intended production Worker and guard it in release checks.
@@ -17,8 +21,11 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 
 ## P1: release quality and user experience
 
-- Continue splitting `public/assets/js/app.js` so low-frequency modules load on demand.
+- Continue splitting `public/assets/js/app.js` so low-frequency modules load on demand. Status: freshman-exam / grade-scheduler / county-analysis 等低频模块已是 `bootSkill('demand')` 按需加载；剩余是 switchCohort/processDataInner/calcSummary 三个 bridge-only 大函数。
 - Reduce `src/index.html` inline event handlers by moving behavior into runtime modules.
+- 新增契约测试只锁行为片段/正则，不锁整行源码。Status: `lint:contract-literals` 以 711 条存量为基线做棘轮，纳入 validate:hygiene。
+- 老考试口径迁移：当前考试同步、其余空闲期每批 2 场（`scheduleDeferredCohortExamSubjectPolicy`），避免叠在登录首屏。
+- smoke 届别参数翻篇预警：`run-local-smoke` 在 SMOKE_COHORT_YEAR 已毕业时告警；calc-snapshot 数据集迁到在校届别待做（需重置基线学生/行数）。
 - Lazy-load heavy vendor libraries such as Excel, SQL, PDF, and charting dependencies. Status: guarded so heavy vendors stay out of first-screen HTML and offline `lt.html` runtime source maps.
 - Subset or prune Tabler icon fonts so unused font formats do not dominate the release surface.
 - Replace alert, confirm, and prompt flows with a shared modal/toast API.
@@ -53,6 +60,7 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 
 | Date | Priority | Scope | Verification |
 | --- | --- | --- | --- |
+| 2026-09-04 | P0/P1/P2 | 全年级政史地生只展示不计考核（6/7 语数英、8/9 语数英物化）+ 老考试迁移；修复学年翻篮后按日期误判年级；切届竞写四处止血；年级推断收口 `resolveWorkspaceGrade`；跨届守卫契约文档+测试；契约字面量棘轮 lint；迁移改空闲分批；帮助文案同步口径 | `npm run validate`、`check:release-fast`、calc-snapshot/layout/report-footnote/modules 四个浏览器 smoke 本地全绿；CI + Deploy Cloudflare 绿 |
 | 2026-05-23 | P0 | Managed account password hardening, weak default removal, Worker ownership clarification | `npm run check:release-fast`, Cloudflare version `5fa1dc97-3cfa-4d3d-87a1-9e6337ccee65` |
 | 2026-05-23 | P1 | Login runtime binding, CI split, JS cache policy, build warning contract | `npm run check:p1`, `npm run check:release-fast`, Cloudflare version `d2afbb6a-52cd-4caa-bb48-33d7c4b51963` |
 | 2026-05-23 | P2 | Legacy script archive, shared Worker HTTP helpers, dialog API guardrails, production minimal smoke alias | commit `08a0fc6`, Cloudflare version `2268aef9-8324-498d-ab2d-0e2b92b2496d` |

@@ -150,6 +150,16 @@ async function main() {
         SMOKE_PASS: process.env.SMOKE_PASS || 'admin123',
         SMOKE_COHORT_YEAR: process.env.SMOKE_COHORT_YEAR || '2022'
     };
+    // 学年翻篇预警：届别按 9 月 1 日翻年，入学年 + 3 < 当前学年起点即已毕业。
+    // 已毕业届别不在登录下拉里，且随时可能被清理；smoke 仍可通过 addCohort 进入，但要显式提醒换参数。
+    {
+        const now = new Date();
+        const academicYearStart = now.getMonth() + 1 >= 9 ? now.getFullYear() : now.getFullYear() - 1;
+        const cohortYear = Number(env.SMOKE_COHORT_YEAR);
+        if (Number.isFinite(cohortYear) && cohortYear + 3 < academicYearStart) {
+            console.warn(`[local-smoke] ⚠️ SMOKE_COHORT_YEAR=${cohortYear} 已毕业（当前学年 ${academicYearStart}-${academicYearStart + 1} 在校届别为 ${academicYearStart - 3}~${academicYearStart}）。建议尽快把 smoke 数据集迁到在校届别，并重置 calc-snapshot 基线。`);
+        }
+    }
 
     const child = spawn(process.execPath, [smokeScript], {
         cwd: path.resolve(__dirname, '..'),

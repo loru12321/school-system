@@ -26,6 +26,11 @@
         return 0;
     };
     const currentGrade = () => {
+        // 统一入口在 cohort-exam-meta-runtime.resolveWorkspaceGrade；未加载时用同优先级的本地实现兜底。
+        if (typeof window.resolveWorkspaceGrade === 'function') {
+            const resolved = Number(window.resolveWorkspaceGrade());
+            if (resolved) return resolved;
+        }
         const loaded = examGrade();
         if (loaded) return loaded;
         const explicit = String(window.CURRENT_COHORT_META?.grade || '').match(/[6-9]/);

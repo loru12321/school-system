@@ -134,7 +134,7 @@ scripts/legacy/            已归档的历史发布脚本
 - `npm run check:p2`：文档、自动化、性能趋势与维护守卫。
 - `npm run check:release-fast`：部署前共享快速闸门。
 
-维护分级见 [`docs/maintenance-runbook.md`](docs/maintenance-runbook.md)，持续优化清单见 [`docs/optimization-backlog.md`](docs/optimization-backlog.md)。
+维护分级见 [`docs/maintenance-runbook.md`](docs/maintenance-runbook.md)，持续优化清单见 [`docs/optimization-backlog.md`](docs/optimization-backlog.md)。届别身份与跨届守卫规则见 [`docs/cohort-identity-contract.md`](docs/cohort-identity-contract.md)。
 
 每次发布前确认：
 

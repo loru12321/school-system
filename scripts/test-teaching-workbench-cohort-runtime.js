@@ -81,3 +81,34 @@ function boot(globals) {
 }
 
 console.log('test-teaching-workbench-cohort-runtime passed');
+
+// ── resolveWorkspaceGrade：全系统年级推断唯一入口的优先级 ───────────────────────
+{
+    const metaSource = fs.readFileSync(path.join(root, 'public/assets/js/cohort-exam-meta-runtime.js'), 'utf8');
+    const slice = (name) => {
+        const start = metaSource.indexOf(`function ${name}(`);
+        assert.ok(start >= 0, `${name} should exist`);
+        const next = metaSource.slice(start + 1).search(/\n(?:async\s+)?function\s+|\nwindow\./);
+        return metaSource.slice(start, start + 1 + next);
+    };
+    const ctx = { window: null, CURRENT_EXAM_ID: '', CURRENT_COHORT_META: null, ARCHIVE_META: null, CONFIG: {}, Date };
+    ctx.window = ctx;
+    vm.runInNewContext([slice('computeCohortGrade'), slice('getAcademicYearStart'), slice('resolveWorkspaceGrade'), 'this.resolveWorkspaceGrade = resolveWorkspaceGrade;'].join('\n'), ctx);
+    const r = ctx.resolveWorkspaceGrade;
+    // 1) 考试 ID 优先于一切
+    assert.strictEqual(r({ examId: '2023级-8年级-2025-2026-下学期-期末', meta: { grade: '9' }, cohortMeta: { year: '2023' } }), '8');
+    // 2) 存档 meta.grade
+    assert.strictEqual(r({ examId: 'x', meta: { grade: '7' }, cohortMeta: { year: '2023' } }), '7');
+    // 3) 届别入学年 + 考试学年（不看今天）
+    assert.strictEqual(r({ examId: 'x', meta: { year: '2025-2026' }, cohortMeta: { year: '2023' } }), '8');
+    // 4) 精确 CONFIG.name；旧默认名 6-8年级 不算
+    assert.strictEqual(r({ examId: 'x', meta: {}, cohortMeta: null, configName: '7年级' }), '7');
+    assert.notStrictEqual(r({ examId: 'x', meta: {}, cohortMeta: null, configName: '6-8年级', allowCalendarFallback: false }), '6');
+    // 5) 只有在完全没有考试信息时才按今天日期兜底，且可关闭
+    assert.strictEqual(r({ examId: 'x', meta: {}, cohortMeta: { year: '2025' }, configName: '', allowCalendarFallback: false }), '');
+    assert.ok(/^[6-9]$/.test(r({ examId: 'x', meta: {}, cohortMeta: { year: '2025' }, configName: '' })));
+    // 工作台在 resolveWorkspaceGrade 可用时必须委托给它
+    const api = boot({ CURRENT_COHORT_ID: '2023', CURRENT_EXAM_ID: '2023级-8年级-x', CONFIG: { name: '8年级' }, resolveWorkspaceGrade: () => '7' });
+    assert.strictEqual(api.currentGrade(), 7, 'workbench must delegate to the shared resolver when present');
+    console.log('resolveWorkspaceGrade precedence passed');
+}

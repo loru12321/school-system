@@ -331,6 +331,33 @@ function getAcademicYearStart(examMeta) {
     return isNaN(start) ? new Date().getFullYear() : start;
 }
 
+// ── 年级推断的唯一入口 ─────────────────────────────────────────────────────────
+// 历史上有四套各自推年级的逻辑（按考试 ID、按 CONFIG.name、按届别入学年 + 学年、按今天日期），
+// 2026-09-01 学年翻篇时因分叉出过“数据是 8 年级期末、模块按日期算成 9 年级”的线上 bug。
+// 之后所有“当前是几年级”的判断都走这里；优先级：考试 ID 显式年级 > 存档 meta 年级
+// > 届别入学年 + 考试学年 > 精确的 CONFIG.name > 届别入学年 + 今天日期（仅无任何考试信息时）。
+function resolveWorkspaceGrade(options = {}) {
+    const examId = String(options.examId ?? (typeof CURRENT_EXAM_ID !== 'undefined' ? CURRENT_EXAM_ID : window.CURRENT_EXAM_ID) ?? '').trim();
+    const fromExamId = examId.match(/([6-9])\s*年级/);
+    if (fromExamId) return fromExamId[1];
+    const meta = options.meta && typeof options.meta === 'object'
+        ? options.meta
+        : (typeof readArchiveMeta === 'function' ? readArchiveMeta() : window.ARCHIVE_META) || {};
+    const fromMeta = String(meta?.grade || '').match(/[6-9]/);
+    if (fromMeta) return fromMeta[0];
+    const cohortMeta = options.cohortMeta || CURRENT_COHORT_META || (typeof readWorkspaceCohortMeta === 'function' ? readWorkspaceCohortMeta() : null) || null;
+    if (meta?.year) {
+        const byExamYear = computeCohortGrade(cohortMeta, meta);
+        if (byExamYear) return String(byExamYear);
+    }
+    const fromConfig = String(options.configName ?? window.CONFIG?.name ?? '').match(/^([6-9])年级$/);
+    if (fromConfig) return fromConfig[1];
+    if (options.allowCalendarFallback === false) return '';
+    const byCalendar = computeCohortGrade(cohortMeta, {});
+    return byCalendar ? String(byCalendar) : '';
+}
+window.resolveWorkspaceGrade = resolveWorkspaceGrade;
+
 function getEffectiveGrade(meta) {
     const cohortMeta = CURRENT_COHORT_META || readWorkspaceCohortMeta() || null;
     const recalculated = computeCohortGrade(cohortMeta, meta || {});
@@ -909,15 +936,24 @@ function applyModeByGrade(grade) {
 // 老考试统一到当前学科口径：收敛 exam.subjects、按口径重算每个学生的 total、同步 exam.config，
 // 并清掉按旧口径算出的 exam.schools（下次加载会强制重算）。只读 scores，不删任何原始分。
 // 幂等：已打上 subjectPolicy 标记的考试直接跳过，ensure() 高频调用也不会重复扫全表。
-function normalizeCohortExamSubjectPolicy(db) {
+// options.onlyExamIds：只处理这些考试（当前考试要同步迁移，其余交给空闲期分批，避免叠在登录首屏上）。
+// options.maxExams：一批最多处理几场，配合 scheduleDeferredCohortExamSubjectPolicy 分片。
+function normalizeCohortExamSubjectPolicy(db, options = {}) {
     const exams = db && db.exams && typeof db.exams === 'object' ? db.exams : null;
-    if (!exams) return { migrated: [], totalsChanged: 0 };
+    if (!exams) return { migrated: [], totalsChanged: 0, remaining: 0 };
+    const onlySet = Array.isArray(options.onlyExamIds) ? new Set(options.onlyExamIds.map((id) => String(id || '').trim()).filter(Boolean)) : null;
+    const maxExams = Number.isFinite(Number(options.maxExams)) && Number(options.maxExams) > 0 ? Number(options.maxExams) : Infinity;
+    let processed = 0;
+    let remaining = 0;
     const migrated = [];
     let totalsChanged = 0;
     const totalsByExam = new Map();
     Object.entries(exams).forEach(([examId, exam]) => {
         if (!exam || typeof exam !== 'object') return;
         if (exam.subjectPolicy === SUBJECT_POLICY_VERSION) return;
+        if (onlySet && !onlySet.has(String(examId).trim())) { remaining += 1; return; }
+        if (processed >= maxExams) { remaining += 1; return; }
+        processed += 1;
         const meta = exam.meta && typeof exam.meta === 'object' ? exam.meta : {};
         const grade = (typeof getEffectiveGrade === 'function' ? getEffectiveGrade(meta) : '') || meta.grade;
         const mode = getGradeModeConfig(grade);
@@ -963,11 +999,34 @@ function normalizeCohortExamSubjectPolicy(db) {
     if (migrated.length) {
         console.info(`[SubjectPolicy] 已将 ${migrated.length} 场历史考试收敛到考核口径（重算 ${totalsChanged} 条总分）`, migrated);
     }
-    return { migrated, totalsChanged };
+    return { migrated, totalsChanged, remaining };
+}
+
+// 非当前考试的迁移放到空闲期分批跑：每批 2 场，批间让出主线程。同一个 db 对象只调度一次；
+// 云端拉回新 db 对象后由 ensure() 再次调度。迁移期间若 db 被替换（切届），旧任务自然停止。
+const deferredSubjectPolicyDbs = typeof WeakSet === 'function' ? new WeakSet() : null;
+function scheduleDeferredCohortExamSubjectPolicy(db) {
+    if (!db || typeof db !== 'object') return false;
+    if (deferredSubjectPolicyDbs) {
+        if (deferredSubjectPolicyDbs.has(db)) return false;
+        deferredSubjectPolicyDbs.add(db);
+    }
+    const runBatch = () => {
+        if (typeof COHORT_DB !== 'undefined' && COHORT_DB && COHORT_DB !== db) return;
+        const result = normalizeCohortExamSubjectPolicy(db, { maxExams: 2 });
+        if (result.remaining > 0) schedule(runBatch);
+    };
+    const schedule = (task) => {
+        if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(() => task(), { timeout: 4000 });
+        else setTimeout(task, 250);
+    };
+    schedule(runBatch);
+    return true;
 }
 
 window.getGradeModeConfig = getGradeModeConfig;
 window.normalizeCohortExamSubjectPolicy = normalizeCohortExamSubjectPolicy;
+window.scheduleDeferredCohortExamSubjectPolicy = scheduleDeferredCohortExamSubjectPolicy;
 
 const CohortManager = {
     list: [],

@@ -23,10 +23,14 @@ const CohortDB = {
             }
             syncRuntimeStateToWindow();
         }
-        // 老考试统一到考核口径（政史地生不进 SUBJECTS / 不计总分）。按 exam.subjectPolicy 标记幂等，
-        // 云端拉回的新 db 对象会再走一遍，本地已迁移过的考试直接跳过。
+        // 老考试统一到考核口径（政史地生不进 SUBJECTS / 不计总分）。按 exam.subjectPolicy 标记幂等。
+        // 当前考试同步处理（马上要展示），其余考试交给空闲期分批，避免叠在登录首屏与切届上。
         if (typeof normalizeCohortExamSubjectPolicy === 'function') {
-            normalizeCohortExamSubjectPolicy(COHORT_DB);
+            const currentExamId = String(COHORT_DB.currentExamId || CURRENT_EXAM_ID || readWorkspaceExamId() || '').trim();
+            const result = normalizeCohortExamSubjectPolicy(COHORT_DB, currentExamId ? { onlyExamIds: [currentExamId] } : { maxExams: 1 });
+            if (result.remaining > 0 && typeof scheduleDeferredCohortExamSubjectPolicy === 'function') {
+                scheduleDeferredCohortExamSubjectPolicy(COHORT_DB);
+            }
         }
         return COHORT_DB;
     },
@@ -173,6 +177,10 @@ const CohortDB = {
         const db = this.ensure();
         const exam = db.exams?.[examId];
         if (!exam) return false;
+        // 即将套用的考试必须先落到考核口径（ensure 只同步处理了 db.currentExamId，这里可能是别的一场）。
+        if (typeof normalizeCohortExamSubjectPolicy === 'function' && exam.subjectPolicy !== (typeof SUBJECT_POLICY_VERSION !== 'undefined' ? SUBJECT_POLICY_VERSION : 'assessment-core-v1')) {
+            normalizeCohortExamSubjectPolicy(db, { onlyExamIds: [examId] });
+        }
         const currentCohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
         const examCohortId = inferCohortIdFromValue(examId) || inferCohortIdFromValue(exam?.meta?.cohortId || '');
         if (currentCohortId && examCohortId && currentCohortId !== examCohortId && options.allowCrossCohort !== true) {

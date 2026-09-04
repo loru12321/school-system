@@ -104,10 +104,24 @@
     function getCurrentProjectKey() {
         const storage = getStorage('localStorage');
         const explicitProjectKey = normalizeText((storage && storage.getItem(CURRENT_PROJECT_KEY_STORAGE)) || root.CURRENT_PROJECT_KEY);
+        // 登录会话锁定了届别时，存储里指向别届的旧指针（跨设备/切届竞速/legacy 单场考试 key）
+        // 不能决定加载哪个工作区，否则恢复会去拉被跨届锁挡掉的载荷而落入空工作区。
+        const lockedCohortId = getLockedCohortId();
+        const explicitCohortId = normalizeCohortId(explicitProjectKey);
+        if (lockedCohortId && explicitCohortId && explicitCohortId !== lockedCohortId) return getCohortKey(lockedCohortId);
         if (/^cohort::/i.test(explicitProjectKey)) return explicitProjectKey;
-        const cohortId = getCurrentCohortId() || normalizeCohortId(explicitProjectKey);
+        const cohortId = getCurrentCohortId() || explicitCohortId;
         if (cohortId) return getCohortKey(cohortId);
         return explicitProjectKey;
+    }
+
+    function getLockedCohortId() {
+        let locked = normalizeText(root.__LOCKED_LOGIN_COHORT_ID__);
+        if (!locked) {
+            const session = getStorage('sessionStorage');
+            locked = normalizeText(session && session.getItem('LOCKED_LOGIN_COHORT_ID'));
+        }
+        return normalizeCohortId(locked);
     }
 
     function setCurrentProjectKey(key) {
