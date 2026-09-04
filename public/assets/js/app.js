@@ -2958,6 +2958,10 @@ function getConfiguredDisplaySubjectNotice(subject, config = CONFIG) {
     if (normalized === '政治' && isConfiguredDisplayOnlySubject(normalized, config) && String(config?.name || '').includes('9')) {
         return '备注：参考二模数据（以本次中考整理表内人工整理的政治列为准）。九年级中考政治仅作单科展示，单科两率一分与排名仅供参考；不计入中考五科总、综合评价、指标生、高分段或高中上线。';
     }
+    // 6-8 年级的政史地生：统一的展示科目说明。文案不带科目名，便于报告脚注把多科合并成一条。
+    if (isConfiguredDisplayOnlySubject(normalized, config)) {
+        return '备注：展示科目，不计入考核总分、两率一分与任何考核排名；仅供单科参考与同学科教师对比。';
+    }
     return '';
 }
 
@@ -2965,16 +2969,24 @@ function getConfiguredDisplaySubjectNotice(subject, config = CONFIG) {
 // 带着班排/校排/镇排，没有可见说明容易被当成本次中考的科目成绩。这里产出正文元素而
 // 不是 title/伪元素，保证 print 时仍可见；样式类 .report-display-note 由报告页提供。
 // 放在 app.js 而非 report-render-runtime.js：后者贴着体积预算，且文案口径本就归这里。
+// 同一条说明覆盖多个科目时合并成一行并列出科目名，避免政史地生各挂一条重复脚注。
 function buildDisplayOnlySubjectFootnote(subjects, hasScore, config = CONFIG) {
     const owned = typeof hasScore === 'function' ? hasScore : () => true;
     const escape = typeof window.tmEscapeHtml === 'function'
         ? window.tmEscapeHtml
         : (value) => String(value == null ? '' : value);
-    return [...new Set((Array.isArray(subjects) ? subjects : [])
-        .filter((subject) => owned(subject))
-        .map((subject) => getConfiguredDisplaySubjectNotice(subject, config))
-        .filter(Boolean))]
-        .map((notice) => `<div class="report-display-note">注：${escape(notice)}</div>`)
+    const grouped = new Map();
+    [...new Set((Array.isArray(subjects) ? subjects : []).filter((subject) => owned(subject)))].forEach((subject) => {
+        const notice = getConfiguredDisplaySubjectNotice(subject, config);
+        if (!notice) return;
+        if (!grouped.has(notice)) grouped.set(notice, []);
+        grouped.get(notice).push(String(subject).trim());
+    });
+    return [...grouped.entries()]
+        .map(([notice, names]) => {
+            const prefix = names.length > 1 ? `${names.join('、')}——` : '';
+            return `<div class="report-display-note">注：${escape(prefix + notice)}</div>`;
+        })
         .join('');
 }
 
