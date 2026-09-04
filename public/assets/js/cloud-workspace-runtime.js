@@ -1912,7 +1912,10 @@
         fetchCohortExamsToLocal: async function (cohortId, options = {}) {
             const cid = normalizeCohortId(cohortId || getCurrentCohortId());
             const initialCurrentCohortId = getCurrentCohortId();
-            const allowCrossCohort = options.allowCrossCohort === true;
+            // 登录会话锁定的届别是最强信号：CURRENT_COHORT_ID/localStorage 可能被别届的旧工作区指针
+            // 污染（跨设备/切届残留），若此时拒绝为锁定届别拉考试，恢复流程会停在空工作区。
+            const lockedCohortId = normalizeCohortId(typeof window.getRuntimeCohortGuardId === 'function' ? window.getRuntimeCohortGuardId() : '');
+            const allowCrossCohort = options.allowCrossCohort === true || (!!lockedCohortId && lockedCohortId === cid);
             if (initialCurrentCohortId && cid && cid !== initialCurrentCohortId && !allowCrossCohort) {
                 return { success: false, skipped: true, staleCohort: true, cohortId: cid, currentCohortId: initialCurrentCohortId };
             }

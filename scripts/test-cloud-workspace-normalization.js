@@ -243,6 +243,16 @@ assert.ok(
     /(?:const|let) shouldRecalculate = options\.recalculate !== false \|\| !hasProcessedSchools \|\| !hasProcessedSchoolMetrics;/.test(cohortDbCoreSource),
     'exam restore should recalculate when restored school metrics are missing even if school rosters exist'
 );
+// 套用考试时必须显式声明这场考试的身份，否则跨届守卫会退到 localStorage 里的旧考试指针；
+// 旧指针属于外届时，本届考试的数据会被整批误拦，工作区停在无数据、无弹窗的死局。
+assert.ok(
+    /syncDataRuntimeState\(\{\s*currentExamId: examId,\s*currentCohortId: examCohortId \|\| currentCohortId \|\| '',\s*rawData: exam\.data \|\| \[\]/.test(cohortDbCoreSource),
+    'applyExamToWorkspace must pass the exam identity into the data-runtime cross-cohort guard'
+);
+assert.ok(
+    /blocked cross-cohort exam write/.test(cohortDbCoreSource),
+    'syncCurrentExam must refuse to write an exam whose cohort differs from the cohort db'
+);
 assert.ok(
     appSource.includes('function normalizeStudentTotalsForCurrentConfig'),
     'score processing should normalize restored student totals to the active grade total-subject policy'

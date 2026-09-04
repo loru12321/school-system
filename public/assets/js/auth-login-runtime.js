@@ -496,6 +496,36 @@ var Auth = {
                                 if (entered === false || !Array.isArray(RAW_DATA) || RAW_DATA.length === 0) {
                                     await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');
                                 }
+                                // loadCloudData 读的是全局“上次工作区”指针，可能指向别的届别（跨设备/切届残留），
+                                // 会被跨届锁正确挡掉而留下空工作区。会话届别自己的考试才是权威来源：
+                                // 仍为空时按该届别把最新一场考试拉回本地再套用，而不是直接宣告恢复失败。
+                                if ((!Array.isArray(RAW_DATA) || RAW_DATA.length === 0)
+                                    && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
+                                    // 被挡掉的外届载荷可能已把 CURRENT_COHORT_ID 指针带偏，先校回会话届别。
+                                    if (typeof writeWorkspaceCohortId === 'function') {
+                                        try { CURRENT_COHORT_ID = writeWorkspaceCohortId(preferredSessionCohort) || CURRENT_COHORT_ID; } catch (_) {}
+                                    }
+                                    const fetched = await withTimeout(
+                                        Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(preferredSessionCohort, {
+                                            background: false,
+                                            latestOnly: true,
+                                            minCount: 1,
+                                            refreshSelectors: false
+                                        })).catch((error) => {
+                                            console.warn('[Auth.init] session cohort exam fetch failed:', error?.message || error);
+                                            return null;
+                                        }),
+                                        CLOUD_STARTUP_LOAD_TIMEOUT_MS,
+                                        'cohort-exams-timeout'
+                                    ).catch(() => null);
+                                    if (typeof appDebug === 'function') {
+                                        appDebug('[Auth.init] session cohort exam fetch', {
+                                            cohortId: preferredSessionCohort,
+                                            result: JSON.stringify(fetched),
+                                            examKeys: Object.keys(COHORT_DB?.exams || {})
+                                        });
+                                    }
+                                }
                                 tryAutoRestoreWorkspaceExam({
                                     preferredExamId: CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '',
                                     cohortId: preferredSessionCohort

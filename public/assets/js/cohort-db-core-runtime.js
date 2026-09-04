@@ -108,6 +108,15 @@ const CohortDB = {
         const meta = getExamMetaFromUI();
         const db = this.ensure();
         const examId = CURRENT_EXAM_ID;
+        // 写入侧跨届守卫：切届竞速时 CURRENT_EXAM_ID 可能已是新届别的考试而 COHORT_DB 仍是旧届别，
+        // 直接写入会把外届考试塞进本届库并随自动保存上云，之后每次登录恢复都被跨届锁挡住。
+        // 拉取侧（fetchCohortExamsToLocal / applyExamToWorkspace）早有同类校验，这里补齐对称的一端。
+        const examCohortId = inferCohortIdFromValue(examId) || inferCohortIdFromValue(meta?.cohortId || '');
+        const dbCohortId = inferCohortIdFromValue(db?.cohortId || '') || String(CURRENT_COHORT_ID || '').trim();
+        if (examCohortId && dbCohortId && examCohortId !== dbCohortId) {
+            console.warn('[CohortDB] blocked cross-cohort exam write', { examId, examCohortId, dbCohortId });
+            return;
+        }
         const existing = db.exams?.[examId] || null;
 
         this.removeStudentHistoryByExamId(examId);
@@ -174,7 +183,12 @@ const CohortDB = {
         const hasProcessedSchoolMetrics = hasUsableProcessedSchoolMetrics(exam.schools);
         let shouldRecalculate = options.recalculate !== false || !hasProcessedSchools || !hasProcessedSchoolMetrics;
         const shouldRenderTables = options.renderTables !== false;
+        // 显式带上这场考试自己的身份：跨届守卫推断“来料届别”时会退到 window.CURRENT_EXAM_ID /
+        // localStorage 里的旧指针，若那是外届考试（切届竞速、跨设备残留），本届考试的数据会被
+        // 误判为跨届写入而整批丢弃，工作区停在“无数据、无弹窗”的死局。
         syncDataRuntimeState({
+            currentExamId: examId,
+            currentCohortId: examCohortId || currentCohortId || '',
             rawData: exam.data || [],
             schools: (exam.schools && typeof exam.schools === 'object') ? exam.schools : {},
             subjects: exam.subjects || [],

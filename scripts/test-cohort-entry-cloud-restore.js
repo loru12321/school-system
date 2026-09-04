@@ -521,7 +521,8 @@ assert.ok(
 );
 
 assert.ok(
-    cloudWorkspaceSource.includes('const allowCrossCohort = options.allowCrossCohort === true;')
+    // 锁定的登录届别可以越过被外届旧指针污染的 CURRENT_COHORT_ID 拉自己的考试；其他情况仍按 options 决定。
+    cloudWorkspaceSource.includes("const allowCrossCohort = options.allowCrossCohort === true || (!!lockedCohortId && lockedCohortId === cid);")
         && cloudWorkspaceSource.includes('const initialCurrentCohortId = getCurrentCohortId();')
         && cloudWorkspaceSource.includes('const currentCohortBeforeApply = getCurrentCohortId();')
         && cloudWorkspaceSource.includes('staleCohort: true'),

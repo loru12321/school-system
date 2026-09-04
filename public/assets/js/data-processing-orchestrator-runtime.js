@@ -65,6 +65,12 @@
         await yieldToMain();
         const result = await workerTask;
         await runPhase('processData:worker-result', async () => {});
+        // Worker 结果属于提交时的那份 RAW_DATA/届别；期间切届或清空过工作区就整轮作废，
+        // 不写回、不算校排、不自动保存——否则上一届的数据会顶着新届别身份复活。
+        if (typeof o.isRunStale === 'function' && o.isRunStale()) {
+            console.warn('[processData] discarded stale worker result after workspace/cohort change');
+            return;
+        }
 
         if (typeof o.receiveWorkerResult === 'function') o.receiveWorkerResult(result);
 

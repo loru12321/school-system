@@ -12,7 +12,22 @@
         if (Number.isNaN(d.getTime())) return new Date().getFullYear();
         return d.getMonth() + 1 >= 9 ? d.getFullYear() : d.getFullYear() - 1;
     };
+    // 年级以“当前加载的考试”为准，日期推算只做兜底。否则每年 9 月 1 日学年翻篇后、
+    // 新学年第一次考试上传之前，届别会被算高一级：8 年级期末的 8.x 班全被过滤，
+    // 座位/排考/排课看不到班级，新生分班也会误判“已到 9 年级”。
+    const examGrade = () => {
+        const fromExamId = String(window.CURRENT_EXAM_ID || '').match(/([6-9])\s*年级/);
+        if (fromExamId) return Number(fromExamId[1]);
+        const meta = typeof window.readArchiveMeta === 'function' ? window.readArchiveMeta() : window.ARCHIVE_META;
+        const fromMeta = String(meta?.grade || '').match(/[6-9]/);
+        if (fromMeta) return Number(fromMeta[0]);
+        const fromConfig = String(window.CONFIG?.name || '').match(/^([6-9])年级$/);
+        if (fromConfig) return Number(fromConfig[1]);
+        return 0;
+    };
     const currentGrade = () => {
+        const loaded = examGrade();
+        if (loaded) return loaded;
         const explicit = String(window.CURRENT_COHORT_META?.grade || '').match(/[6-9]/);
         if (explicit) return Number(explicit[0]);
         const entry = readCohortYear();

@@ -4777,6 +4777,13 @@ async function processDataInner() {
     // the phase order, labels and yield placement are identical to the former
     // inline implementation.
 
+    // 本轮 processData 绑定的数据代际：切届/清空工作区会把 RAW_DATA 换成新数组，
+    // 此时 Worker 若还在算上一届的数据，结果回来绝不能再写回（否则旧届别的成绩会顶着
+    // 新届别的身份复活，工作区变成“2022 的考试 ID + 2023 的学生”）。
+    const runRows = RAW_DATA;
+    const runCohortId = String(CURRENT_COHORT_ID || '');
+    const isRunStale = () => RAW_DATA !== runRows || String(CURRENT_COHORT_ID || '') !== runCohortId;
+
     // --- Phase bodies (calculation code, unchanged) ---------------------------
     const runThresholds = () => {
         const totalNormalization = normalizeStudentTotalsForCurrentConfig(RAW_DATA, SUBJECTS, CONFIG);
@@ -5028,7 +5035,8 @@ async function processDataInner() {
         finalizeSchools,
         runSummary,
         runAutosave: runAutosavePhase,
-        runStatus
+        runStatus,
+        isRunStale
     };
 
     // Delegate the phase sequencing to the orchestrator runtime when present.
@@ -5050,6 +5058,10 @@ async function processDataInner() {
     await perfYieldToMain();
     const result = await workerTask;
     await perfRunPhase('processData:worker-result', async () => {});
+    if (isRunStale()) {
+        console.warn('[processData] discarded stale worker result after workspace/cohort change');
+        return;
+    }
 
     receiveWorkerResult(result);
 
