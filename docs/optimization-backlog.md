@@ -8,7 +8,8 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 
 - 年级推断只走 `resolveWorkspaceGrade`（cohort-exam-meta-runtime）：考试 ID > 存档 meta > 届别入学年+考试学年 > 精确 CONFIG.name > 日期兜底。Status: 2026-09-04 落地，工作台与分析包已委托；`test:teaching-workbench-cohort-runtime` 锁定优先级。
 - 跨届身份与守卫按 `docs/cohort-identity-contract.md` 执行，读侧/写侧守卫必须对称。Status: `test:cohort-identity-contract` 锁定七处守卫。
-- 测试账号云端仍残留指向已毕业届别的 legacy 单场考试 key；应用侧已按锁定届别自愈（workspace-state getCurrentProjectKey），数据侧清理待人工确认。
+- 登录时“加载别届最近一场考试”的问题根因是 `resolveCloudSnapshotKey` 在届别未知时查全库；已改为按登录锁定届别收窄（无需清理云端数据）。Status: 2026-09-04 完成，`test:cohort-identity-contract` 锁定。
+- Harden default account credentials 决策（2026-09-04）：不由自动化流程静默轮换生产管理员口令——会让仍在使用默认口令的教务人员被锁在门外；需管理员本人改密并把 `SMOKE_USER/SMOKE_PASS` 配到 GitHub secrets 后，再把 smoke 默认值改为“缺 secrets 即失败”。
 
 - Harden default account credentials: replace visible shared defaults with reset-required temporary passwords or server-generated credentials.
 - Finish Cloudflare account migration: remove the legacy gateway fallback only after `pending_accounts = 0`.
@@ -25,7 +26,7 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Reduce `src/index.html` inline event handlers by moving behavior into runtime modules.
 - 新增契约测试只锁行为片段/正则，不锁整行源码。Status: `lint:contract-literals` 以 711 条存量为基线做棘轮，纳入 validate:hygiene。
 - 老考试口径迁移：当前考试同步、其余空闲期每批 2 场（`scheduleDeferredCohortExamSubjectPolicy`），避免叠在登录首屏。
-- smoke 届别参数翻篇预警：`run-local-smoke` 在 SMOKE_COHORT_YEAR 已毕业时告警；calc-snapshot 数据集迁到在校届别待做（需重置基线学生/行数）。
+- smoke 届别参数翻篇预警：`run-local-smoke` 在 SMOKE_COHORT_YEAR 已毕业时告警；calc-snapshot 数据集决策（2026-09-04）：继续使用 2022 级中考（唯一完整的 9 年级中考数据集，61 条断言含多项 9 年级口径；毕业届别数据不会被清理），待 2023 级中考（2027-07）落库后迁移并重置基线。
 - Lazy-load heavy vendor libraries such as Excel, SQL, PDF, and charting dependencies. Status: guarded so heavy vendors stay out of first-screen HTML and offline `lt.html` runtime source maps.
 - Subset or prune Tabler icon fonts so unused font formats do not dominate the release surface.
 - Replace alert, confirm, and prompt flows with a shared modal/toast API.

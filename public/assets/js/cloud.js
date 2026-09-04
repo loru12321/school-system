@@ -1410,9 +1410,15 @@
             && !!extractCohortIdFromKey(rawKey);
         if (keyLooksLikeExam) return rawKey;
 
+        // 届别未知时不能查“全库最近更新的一场考试”——那可能是别届（smoke/其他设备刚碰过的），
+        // 拿到 legacy 单场 key 后加载会被跨届锁挡掉、落入空工作区。登录会话锁定了届别就用它收窄。
+        const lockedCohortId = normalizeCohortId(
+            typeof window.getRuntimeCohortGuardId === 'function' ? window.getRuntimeCohortGuardId() : ''
+        );
         const cid = normalizeCohortId(
             extractCohortIdFromKey(rawKey)
             || getCurrentCohortId()
+            || lockedCohortId
         );
         const { data, error } = await selectSystemData({
             select: 'key,updated_at',

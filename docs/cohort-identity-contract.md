@@ -27,6 +27,7 @@
 | `cohort-db-core syncCurrentExam` | **写**（存档） | 考试届别 ≠ db 届别 → 拒绝写入 | — |
 | `cloud-workspace fetchCohortExamsToLocal` | 读（拉云端） | 目标届别 ≠ `CURRENT_COHORT_ID` → 跳过 | 目标 = 锁定届别时放行 |
 | `data-processing-orchestrator run` | 写（回写计算结果） | Worker 提交时的 `RAW_DATA` 引用或届别已变 → 整轮作废 | — |
+| `cloud.js resolveCloudSnapshotKey` | 读（选云端快照 key） | 届别未知时用锁定届别收窄查询，不查全库最近一场考试 | — |
 | `auth-login 会话恢复` | 读 | 全局“上次工作区”指针被挡后，按**锁定届别**拉该届最新考试 | — |
 
 ## 3. 已知的历史坑（回归测试锁定）
@@ -35,3 +36,4 @@
 2. 切届清空后，上一届 `processData` 的 Worker 结果回写，旧数据顶着新届身份复活。（`2920f988`）
 3. `syncCurrentExam` 无写侧守卫，把外届考试写进本届库并上云。（`2920f988`）
 4. 会话恢复只信全局指针；指针指向别届即宣告失败。（`2920f988`）
+5. 登录时届别尚未写入，`resolveCloudSnapshotKey` 查到别届最近一场考试的 legacy key，加载被锁挡掉。（2026-09-04）

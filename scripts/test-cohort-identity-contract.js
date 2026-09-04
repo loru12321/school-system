@@ -47,4 +47,9 @@ assert.ok(/fetchCohortExamsToLocal\(preferredSessionCohort/.test(authLogin),
 assert.ok(/writeWorkspaceCohortId\(preferredSessionCohort\)/.test(authLogin),
     'session restore must realign CURRENT_COHORT_ID with the session cohort before fetching');
 
+// 云端快照 key 解析：届别未知时先用登录锁定的届别收窄，不查全库最近一场考试
+const cloud = read('public/assets/js/cloud.js');
+assert.ok(/|| getCurrentCohortId()s*|| lockedCohortId/.test(cloud),
+    'resolveCloudSnapshotKey must narrow the exam lookup by the locked cohort before falling back to a global latest-exam query');
+
 console.log('cohort identity contract passed');
