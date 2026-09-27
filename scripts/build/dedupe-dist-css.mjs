@@ -36,8 +36,24 @@ function main() {
         return;
     }
 
+    const indexPath = path.join(distRoot, 'index.html');
+    const indexHtml = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : '';
+    const referencedStylesheet = indexHtml.match(/(?:\.\/)?(style-[\w-]+\.css)/i)?.[1] || '';
     const stylesheetNames = fs.readdirSync(distRoot)
         .filter((name) => /^style-[\w-]+\.css$/.test(name));
+
+    // Vite changes the stylesheet hash whenever authored CSS changes. Remove
+    // older generated copies so local rebuilds and release checks see the same
+    // single stylesheet that dist/index.html references.
+    stylesheetNames
+        .filter((name) => name !== referencedStylesheet)
+        .forEach((name) => {
+            const stalePath = path.join(distRoot, name);
+            if (fs.existsSync(stalePath)) fs.unlinkSync(stalePath);
+            const brotliPath = path.join(distRoot, `${name}.br`);
+            if (fs.existsSync(brotliPath)) fs.unlinkSync(brotliPath);
+            console.log(`[dedupe-dist-css] removed stale stylesheet: ${name}`);
+        });
 
     stylesheetNames.forEach((name) => {
         const filePath = path.join(distRoot, name);

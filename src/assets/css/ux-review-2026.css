@@ -52,7 +52,12 @@
 
 #app-sidebar .sidebar-menu-item__main::before {
     content: "" !important;
-    flex: 0 0 4px !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    display: block !important;
+    flex: none !important;
     width: 4px !important;
     height: 30px !important;
     border-radius: 999px !important;

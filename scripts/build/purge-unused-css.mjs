@@ -10,14 +10,28 @@ const distRoot = path.resolve(__dirname, '../../dist');
 console.log('🧹 Purging unused CSS...');
 const startTime = Date.now();
 
-// Find the CSS bundle
-const cssFiles = fs.readdirSync(distRoot).filter(f => f.startsWith('style-') && f.endsWith('.css') && !f.endsWith('.br'));
+// Find the CSS bundle referenced by the generated entrypoint. A previous
+// build may leave an older hashed stylesheet in dist, so never choose the
+// first directory entry by filesystem order.
+const indexPath = path.join(distRoot, 'index.html');
+const htmlContent = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : '';
+const referencedCss = htmlContent.match(/(?:\.\/)?(style-[\w-]+\.css)/i)?.[1] || '';
+const cssFiles = fs.readdirSync(distRoot).filter(f => /^style-[\w-]+\.css$/.test(f));
 if (cssFiles.length === 0) {
   console.log('❌ No CSS bundle found');
   process.exit(1);
 }
 
-const cssFile = path.join(distRoot, cssFiles[0]);
+const cssName = cssFiles.includes(referencedCss) ? referencedCss : cssFiles[0];
+cssFiles.filter((name) => name !== cssName).forEach((name) => {
+  const stalePath = path.join(distRoot, name);
+  const staleBrotliPath = path.join(distRoot, `${name}.br`);
+  if (fs.existsSync(stalePath)) fs.unlinkSync(stalePath);
+  if (fs.existsSync(staleBrotliPath)) fs.unlinkSync(staleBrotliPath);
+  console.log(`Removed stale CSS bundle: ${name}`);
+});
+
+const cssFile = path.join(distRoot, cssName);
 const originalSize = fs.statSync(cssFile).size;
 
 // Safelist for dynamic classes and patterns
@@ -64,12 +78,11 @@ const safelist = {
 };
 
 console.log(`Processing: ${cssFile}`);
-console.log(`Content: ${path.join(distRoot, 'index.html')}`);
-console.log(`Content exists: ${fs.existsSync(path.join(distRoot, 'index.html'))}`);
+console.log(`Content: ${indexPath}`);
+console.log(`Content exists: ${fs.existsSync(indexPath)}`);
 console.log(`CSS exists: ${fs.existsSync(cssFile)}`);
 
 const cssContent = fs.readFileSync(cssFile, 'utf8');
-const htmlContent = fs.readFileSync(path.join(distRoot, 'index.html'), 'utf8');
 // The application creates most module markup after boot, including lazy modules.
 // Scan the shipped JS, not just the entry HTML, before deciding a selector is dead.
 function readRuntimeContent(directory) {
