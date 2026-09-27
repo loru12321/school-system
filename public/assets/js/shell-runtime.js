@@ -997,7 +997,10 @@
         if (modeChip) {
             const modeText = resolveShellModeText();
             const shellModeText = modeText || language?.states?.modeLoading || '年级待加载';
-            setTextAndTooltip(modeChip, formatOverviewModeText(shellModeText), `当前模式：${shellModeText}`);
+            const gradeExplanation = `考试年级：${shellModeText}；顶部届别选择器显示当前学年年级，历史考试年级可能不同。`;
+            setTextAndTooltip(modeChip, `考试：${formatOverviewModeText(shellModeText)}`, gradeExplanation);
+            // Native tooltip remains available when optional shell enhancements are off.
+            setAttrIfChanged(modeChip, 'title', gradeExplanation);
         }
 
         const roleText = resolveRoleLabel();

@@ -59,6 +59,8 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 
 ## Optimization pass log
 
+- 2026-09-27：项目审查与不改计算口径修复见 [project-audit-2026-09-27.md](project-audit-2026-09-27.md)。修复 CSS 作用域去重、动态样式误删、构建过期检查遗漏及考试年级说明；增加 36 组计算输出基线并接入发布门禁。构建、完整 validate、release-fast、全模块本地 smoke 通过；未部署生产。
+
 | Date | Priority | Scope | Verification |
 | --- | --- | --- | --- |
 | 2026-09-04 | P0/P1/P2 | 全年级政史地生只展示不计考核（6/7 语数英、8/9 语数英物化）+ 老考试迁移；修复学年翻篮后按日期误判年级；切届竞写四处止血；年级推断收口 `resolveWorkspaceGrade`；跨届守卫契约文档+测试；契约字面量棘轮 lint；迁移改空闲分批；帮助文案同步口径 | `npm run validate`、`check:release-fast`、calc-snapshot/layout/report-footnote/modules 四个浏览器 smoke 本地全绿；CI + Deploy Cloudflare 绿 |

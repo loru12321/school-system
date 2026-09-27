@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import postcss from 'postcss';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,43 +10,22 @@ const distRoot = path.join(projectRoot, 'dist');
 
 function dedupeCssRules(css) {
     const source = String(css || '');
-    const rulePattern = /([^{}]+)\{([^{}]*)\}/g;
-    const matches = [];
-    let match;
-
-    while ((match = rulePattern.exec(source)) !== null) {
-        matches.push({
-            start: match.index,
-            end: rulePattern.lastIndex,
-            selector: match[1].trim(),
-            body: match[2].trim()
-        });
-    }
-
-    const lastByRule = new Map();
-    matches.forEach((item, index) => {
-        lastByRule.set(`${item.selector}{${item.body}}`, index);
+    const tree = postcss.parse(source);
+    let removedRules = 0;
+    // Only identical adjacent siblings are redundant. Crossing an @media,
+    // @layer or intervening rule can change the cascade even for identical text.
+    tree.walkRules((rule) => {
+        const previous = rule.prev();
+        if (previous?.type === 'rule' && previous.toString() === rule.toString()) {
+            previous.remove();
+            removedRules += 1;
+        }
     });
-
-    const removeRanges = matches
-        .filter((item, index) => lastByRule.get(`${item.selector}{${item.body}}`) !== index)
-        .map((item) => [item.start, item.end]);
-
-    if (!removeRanges.length) {
-        return { css: source, removedRules: 0, savedBytes: 0 };
-    }
-
-    let output = '';
-    let cursor = 0;
-    removeRanges.forEach(([start, end]) => {
-        output += source.slice(cursor, start);
-        cursor = end;
-    });
-    output += source.slice(cursor);
+    const output = removedRules ? tree.toString() : source;
 
     return {
         css: output,
-        removedRules: removeRanges.length,
+        removedRules,
         savedBytes: Buffer.byteLength(source) - Buffer.byteLength(output)
     };
 }

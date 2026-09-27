@@ -70,6 +70,18 @@ console.log(`CSS exists: ${fs.existsSync(cssFile)}`);
 
 const cssContent = fs.readFileSync(cssFile, 'utf8');
 const htmlContent = fs.readFileSync(path.join(distRoot, 'index.html'), 'utf8');
+// The application creates most module markup after boot, including lazy modules.
+// Scan the shipped JS, not just the entry HTML, before deciding a selector is dead.
+function readRuntimeContent(directory) {
+  if (!fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const target = path.join(directory, entry.name);
+    if (entry.isDirectory()) return readRuntimeContent(target);
+    return entry.isFile() && /\.(?:js|mjs|html)$/.test(entry.name)
+      ? [{ raw: fs.readFileSync(target, 'utf8'), extension: path.extname(entry.name).slice(1) }]
+      : [];
+  });
+}
 console.log(`CSS file size: ${cssContent.length} bytes`);
 console.log(`HTML file size: ${htmlContent.length} bytes`);
 
@@ -77,18 +89,18 @@ const purgeCSSResults = await new PurgeCSS().purge({
   content: [{
     raw: htmlContent,
     extension: 'html'
-  }],
+  }, ...readRuntimeContent(path.join(distRoot, 'assets', 'js'))],
   css: [{
     raw: cssContent
   }],
   safelist,
   // Keep keyframes and font-face rules
-  keyframes: true,
-  fontFace: true,
+  keyframes: false,
+  fontFace: false,
   // Reject removed rules so we can see what was purged
   rejected: true,
   // Variables used in :root should be kept
-  variables: true
+  variables: false
 });
 
 console.log(`PurgeCSS results count: ${purgeCSSResults.length}`);

@@ -78,7 +78,10 @@ const budgets = {
     // mobile configuration panel and export sheet; retain a narrow bundle cap.
     // 2026-08-30: drill-system moved out of app.js but remains in the offline
     // source map, adding a small compressed footprint to lt.html.
-    ltHtmlBrotli: 350_000,
+    // 2026-09-27: preserve conditional CSS and runtime-generated module styles.
+    // The previous 349,952B baseline was missing styles after unsafe dedupe/purge.
+    // Corrected output is 360,536B; retain <1.5KB of compression variance headroom.
+    ltHtmlBrotli: 362_000,
     // 2026-08-30: drill-system demand loader adds a guarded runtime entry.
     publicRuntimeLoaderJs: 59_000,
     // Current minified app bundle baseline after runtime splits, cache guards,

@@ -34,19 +34,21 @@ if (distMtime === null) {
 const sourceFiles = [
     'vite.config.js',
     'package.json',
-    path.join('src', 'index.html'),
+    'package-lock.json',
 ];
 
-// Also check the newest file under src/ (worker sources).
-const srcDir = path.join(root, 'src');
-try {
-    const srcEntries = fs.readdirSync(srcDir);
-    for (const entry of srcEntries) {
-        if (entry.endsWith('.js') || entry.endsWith('.ts') || entry.endsWith('.html')) {
-            sourceFiles.push(path.join('src', entry));
-        }
+// Runtime JS lives in public/, CSS is nested in src/, and postprocessors
+// also affect the shipped output. All of these are build inputs.
+function collectSourceFiles(relativeDirectory) {
+    const directory = path.join(root, relativeDirectory);
+    if (!fs.existsSync(directory)) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        const relativePath = path.join(relativeDirectory, entry.name);
+        if (entry.isDirectory()) collectSourceFiles(relativePath);
+        else if (entry.isFile()) sourceFiles.push(relativePath);
     }
-} catch { /* src/ might not exist in all setups */ }
+}
+['src', 'public', path.join('scripts', 'build'), path.join('scripts', 'vendor')].forEach(collectSourceFiles);
 
 const GRACE_MS = 5000; // 5s — tolerate minor clock skew
 const staleFiles = [];
