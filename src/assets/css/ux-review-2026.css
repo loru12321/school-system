@@ -561,7 +561,7 @@ html body:not(.dark-mode) #app-sidebar .sidebar-menu-item {
     flex-wrap: wrap;
     margin: 8px 0 12px;
 }
-.section .analysis-auxiliary-toggle {
+.analysis-auxiliary-toggle {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -575,14 +575,16 @@ html body:not(.dark-mode) #app-sidebar .sidebar-menu-item {
     font-size: 13px;
     cursor: pointer;
 }
-.section .analysis-auxiliary-toggle::after { content: '⌄'; }
-.section .analysis-auxiliary-toggle[aria-expanded="true"] {
+.analysis-auxiliary-toggle::after { content: '⌄'; }
+.analysis-auxiliary-toggle[aria-expanded="true"] {
     background: #eff6ff;
     border-color: #93c5fd;
     color: #1d4ed8;
 }
-.section .analysis-auxiliary-toggle[aria-expanded="true"]::after { content: '⌃'; }
-.section .analysis-auxiliary-toggle:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.analysis-auxiliary-toggle[aria-expanded="true"]::after { content: '⌃'; }
+.analysis-auxiliary-toggle:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+html body :is(#app, #apk-mobile-shell, #mobile-query-shell) .section[id] .analysis-auxiliary-content.is-auxiliary-collapsed,
+html body :is(#app, #apk-mobile-shell, #mobile-query-shell) .section[id] .analysis-auxiliary-content[hidden],
 .section .analysis-auxiliary-content.is-auxiliary-collapsed,
 .section .analysis-auxiliary-content[hidden],
 .section .analysis-auxiliary-toolbar[hidden],
@@ -590,9 +592,36 @@ html body:not(.dark-mode) #app-sidebar .sidebar-menu-item {
 .section .analysis-auxiliary-doc > summary { display: none !important; }
 body.dark-mode .analysis-auxiliary-toggle { background: #1e293b; color: #e2e8f0; border-color: #475569; }
 body.dark-mode .analysis-auxiliary-toggle[aria-expanded="true"] { background: #1e3a5f; color: #bfdbfe; }
+/* Opted-in static guidance can be restored even in skins that used to hide it. */
+html body :is(#app, #apk-mobile-shell, #mobile-query-shell) .section .analysis-auxiliary-guidance:not(.is-auxiliary-collapsed):not([hidden]) {
+    display: block !important;
+}
+#app #shell-overview.is-navigation-compact #shell-category-desc,
+#app #shell-overview.is-navigation-compact #shell-workflow-path,
+#app #shell-overview.is-navigation-compact .shell-module-rail-chip-hint,
+#app #shell-overview.is-navigation-compact .shell-module-rail-chip-index { display: none !important; }
+#app #shell-overview.is-navigation-compact .shell-overview-card--dock { padding: 10px 14px !important; }
+#app #shell-overview.is-navigation-compact #shell-module-rail-shell { margin-top: 0 !important; padding: 8px 14px !important; }
+#app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    gap: 6px !important;
+    padding: 6px 0 !important;
+}
+#app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail-chip {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-height: 38px !important;
+    padding: 6px 12px !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+#shell-module-rail-shell [data-auxiliary-navigation] { margin-left: auto; flex-shrink: 0; }
+#app .section .prerequisite-status-bar { padding: 6px 10px !important; margin-bottom: 8px !important; }
 @media (max-width: 600px) {
-    .section .analysis-auxiliary-toolbar { gap: 6px; }
-    .section .analysis-auxiliary-toggle { min-height: 44px; padding: 6px 9px; font-size: 12px; }
+    .section .analysis-auxiliary-toolbar { gap: 6px; flex-wrap: nowrap; overflow-x: auto; padding: 3px 0; }
+    .analysis-auxiliary-toggle { min-height: 44px; padding: 6px 9px; font-size: 12px; flex-shrink: 0; white-space: nowrap; }
 }
 
 /* Some legacy workspace skins are loaded after the base sidebar rules. Keep
