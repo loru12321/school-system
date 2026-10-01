@@ -513,12 +513,6 @@
     box-shadow: inset 0 0 0 1px rgba(37, 99, 235, .12) !important;
 }
 
-/* Assessment sync is a seasonal workflow; runtime sets [hidden] outside July
- * and August, but this keeps a hidden panel from reserving layout space. */
-#tmAssessmentSyncPanel[hidden] {
-    display: none !important;
-}
-
 /* Final visual ownership for cloud archive: keep the table inside its scroll
  * frame and use a neutral editorial header instead of the legacy blue theme. */
 #data-manager-modal .dm-cloud-table-scroll {

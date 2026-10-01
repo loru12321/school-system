@@ -286,12 +286,6 @@ const edgeGateway = Object.assign(root.EdgeGateway || {}, {
     },
     getAccountMigrationStatus: async function () {
         return await this.request('account.migration_status', {});
-    },
-    syncAssessmentScores: async function (payload = {}) {
-        return await this.request('assessment.sync_scores', payload || {});
-    },
-    getAssessmentSyncSettings: async function (payload = {}) {
-        return await this.request('assessment.get_sync_settings', payload || {});
     }
 });
 

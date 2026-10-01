@@ -13,7 +13,6 @@ const gatewayAuth = read('src/worker-auth.js');
 const gatewayAccounts = read('src/worker-accounts.js');
 const gatewayVersions = read('src/worker-versions.js');
 const gatewayDataQuality = read('src/worker-data-quality.js');
-const gatewayAssessment = read('src/worker-assessment.js');
 const gatewayCrypto = read('src/worker-crypto.js');
 const gatewayContractSource = [
     gateway,
@@ -21,7 +20,6 @@ const gatewayContractSource = [
     gatewayAccounts,
     gatewayVersions,
     gatewayDataQuality,
-    gatewayAssessment,
     gatewayCrypto
 ].join('\n');
 const worker = read('src/worker-dummy.js');

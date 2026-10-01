@@ -100,14 +100,13 @@ vm.createContext(context);
 vm.runInContext(source, context);
 
 assert.strictEqual(typeof context.window.tmBuildTeacherAssessmentSyncPayload, 'function');
-assert.ok(source.includes('watchAssessmentSyncMount'), 'assessment sync panel should remount when teaching overview renders later');
-assert.ok(teachingRuntimeSource.includes('tmRenderAssessmentSyncPanel'), 'teaching overview scheduler should call assessment sync panel mount hook');
+assert.ok(!source.includes('watchAssessmentSyncMount'), 'retired assessment sync panel must not remount');
+assert.ok(!teachingRuntimeSource.includes('tmRenderAssessmentSyncPanel'), 'teaching overview must not recreate the retired panel');
 assert.ok(
   /'teacher-analysis': bootSkill[\s\S]*bootEntry\('teaching-assessment-sync', bootJs\('teaching-assessment-sync-runtime\.js'\)\)/.test(runtimeLoaderSource),
   'teacher analysis page should load assessment sync runtime'
 );
-assert.ok(source.includes('tmRunAutomaticAssessmentSync'), 'assessment sync should expose an automatic background sync runner');
-assert.ok(source.includes('isLocalPreviewRuntime'), 'local previews must never run automatic production assessment writes');
+assert.ok(!source.includes('tmRunAutomaticAssessmentSync'), 'retired assessment project must receive no automatic writes');
 assert.ok(source.includes('tmBuildTeacherAssessmentSyncAudit'), 'assessment sync should expose a reconciliation audit builder');
 assert.ok(source.includes("await root.CloudManager.loadTeachers({ background: true, toast: false })"), 'assessment sync should wait for the active cohort teacher roster before calculating');
 assert.ok(source.includes('root.syncRuntimeStateToWindow?.()'), 'assessment roster locks should be published to the workspace before cloud save');
@@ -122,21 +121,13 @@ assert.ok(dataManagerRuntimeSource.includes("tab === 'assessment-roster'") && ru
 assert.ok(dataManagerRuntimeSource.includes("SystemRuntimeLoader.load('assessment-roster')"), 'assessment roster tab must load its renderer bundle, not only the sync core');
 assert.ok(rosterRuntimeSource.includes('根据当前成绩锁定名册') && rosterRuntimeSource.includes('95%目标'), 'assessment roster renderer should show lock controls and 95% target counts');
 assert.ok(bootRuntimeSource.includes("'teaching-assessment-sync-runtime.js'"), 'assessment sync runtime should load with the workbench, not only after entering teacher analysis');
-assert.ok(indexHtml.includes('考核同步对账'), 'teaching management page should show a fixed assessment sync reconciliation entry');
-assert.ok(indexHtml.includes('联考分析的“两率一分”同步也在这里看'), 'fixed sync entry should explain where two-rates-one-score sync is checked');
-assert.ok(source.includes('collapseAssessmentResult'), 'assessment sync preview button should collapse the result on second click');
-assert.ok(source.includes('assessmentSyncOpen'), 'assessment sync panel should track expanded and collapsed state');
-assert.ok(source.includes('fetchAssessmentSyncSettings'), 'assessment sync should read cross-system settings before building payload');
+assert.ok(!indexHtml.includes('考核同步对账') && !indexHtml.includes('tmAssessmentSyncPanel'), 'teaching page must not contain the retired reconciliation panel');
+assert.ok(!source.includes('tmAssessmentSyncPanel'), 'runtime must not recreate the retired reconciliation panel');
+assert.ok(source.includes('fetchAssessmentSyncSettings'), 'calculation builder must retain its settings fallback');
 assert.ok(source.includes('findGrade6GrowthBaselineExam'), 'assessment sync should find the confirmed grade 6 growth baseline exam');
 assert.ok(source.includes('buildStudentGrowthContext'), 'assessment sync should calculate student-remapped excellent-rate growth context');
-assert.ok(source.includes('growth_baseline_exam_id'), 'automatic sync signature should include the selected growth baseline exam');
-assert.ok(source.includes('getAssessmentSyncItemDigest'), 'automatic sync signature should include a deterministic item digest');
-assert.ok(source.includes('`items:${getAssessmentSyncItemDigest(payload.items)}`'), 'automatic sync should rerun when an eligible item value changes');
-assert.ok(source.includes('overwrite_manual: true'), 'automatic sync should replace an existing assessment score with the new calculation');
+assert.ok(source.includes('growth_baseline_exam_id'), 'calculation output should retain the selected growth baseline exam');
 assert.ok(source.includes('优秀率增幅'), 'two-rates-one-score notes should expose excellent-rate growth scoring');
-assert.ok(source.includes('tm-assessment-score-warning'), 'assessment sync should show warnings for ignored unmatched growth students');
-assert.ok(teachingCss.includes('min-width: 1180px'), 'assessment sync table should keep a wide scrollable layout');
-assert.ok(teachingCss.includes('overscroll-behavior-x: contain'), 'assessment sync table should support horizontal scrolling inside the panel');
 
 context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
   assert.match(payload.academic_year, /^20\d{2}-20\d{2}$/);
@@ -314,7 +305,6 @@ context.window.tmBuildTeacherAssessmentSyncPayload().then((payload) => {
         assert.deepStrictEqual(Array.from(previewAudit.composite.secondMockSubjects), [], 'audit must not label curated politics as raw second-mock data');
         assert.strictEqual(previewAudit.composite.grade9CuratedPoliticsSource, true, 'audit should expose the curated politics source');
         assert.strictEqual(previewAudit.composite.grade9CuratedPoliticsExamDate, '2026-07-12', 'audit should show the Zhongkao archive date for curated politics');
-        assert.ok(source.includes('中考整理表的人工二模政治列'), 'audit UI should explicitly label the curated politics rule');
         assert.strictEqual(previewAudit.projects.class_target_grad.mode, 'sync', 'class target should be represented as an automatic sync item in audit');
         assert.strictEqual(previewAudit.projects.class_target_grad.syncable, classTargetItems.length, 'audit should count class target sync rows');
         assert.strictEqual(previewAudit.projects.class_high_school_contribution_grad.mode, 'sync', 'high-school contribution should be represented as an automatic sync item in audit');

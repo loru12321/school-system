@@ -33,7 +33,6 @@ const gatewayAuth = read('src/worker-auth.js');
 const gatewayAccounts = read('src/worker-accounts.js');
 const gatewayVersions = read('src/worker-versions.js');
 const gatewayDataQuality = read('src/worker-data-quality.js');
-const gatewayAssessment = read('src/worker-assessment.js');
 const gatewayCrypto = read('src/worker-crypto.js');
 const gatewayContractSource = [
   gateway,
@@ -41,7 +40,6 @@ const gatewayContractSource = [
   gatewayAccounts,
   gatewayVersions,
   gatewayDataQuality,
-  gatewayAssessment,
   gatewayCrypto
 ].join('\n');
 const supabaseGateway = read('supabase/functions/edu-gateway/index.ts');
@@ -233,27 +231,12 @@ assert.ok(gatewayContractSource.includes('function scheduleLoginAuditWrite(ctx, 
 assert.ok(gatewayContractSource.includes('ctx.waitUntil(task.catch'), 'gateway should use waitUntil for successful login audit writes');
 assert.ok(gatewayContractSource.includes('return performGatewayLogin(request, env, body, ctx);'), 'login action should receive execution context for non-blocking audit writes');
 assert.ok(gatewayContractSource.includes('Only admin can view all login sessions'), 'all-account login session lookup should be admin-only');
-assert.ok(gatewayContractSource.includes("case 'assessment.sync_scores'"), 'gateway should expose assessment score sync through authenticated edu-gateway');
-assert.ok(gatewayContractSource.includes("case 'assessment.get_sync_settings'"), 'gateway should expose assessment sync settings through authenticated edu-gateway');
-assert.ok(gatewayContractSource.includes('assessment_sync_settings'), 'gateway should read assessment sync settings from the assessment Supabase project');
-assert.ok(gatewayContractSource.includes('ASSESSMENT_SUPABASE_SERVICE_ROLE_KEY'), 'assessment sync service role key must be read from Worker env only');
-assert.ok(gatewayContractSource.includes("change_tag: 'system_sync'"), 'assessment sync writes should mark rows as system_sync');
-assert.ok(gatewayContractSource.includes('dry_run: dryRun') && gatewayContractSource.includes('rows.length && !dryRun'), 'assessment sync should support a no-write dry-run match check');
-assert.ok(gatewayAssessment.includes('calculation_version') && gatewayAssessment.includes('threshold_source') && gatewayAssessment.includes('roster_summary'), 'assessment sync must preserve calculation version, threshold source, and roster audit metadata');
-assert.ok(gatewayAssessment.includes('cross_grade_mode') && gatewayAssessment.includes('跨级合并'), 'assessment sync must preserve cross-grade calculation audit metadata');
-assert.ok(gatewayAssessment.includes('protected_manual_count') && gatewayAssessment.includes('changed_count') && gatewayAssessment.includes('differences'), 'assessment dry-run must expose manual protection and old/new differences');
-assert.ok(gatewayContractSource.includes('findAssessmentTeacherMatch') && gatewayContractSource.includes('目标考核系统教师匹配不唯一'), 'assessment sync should skip ambiguous teacher matches instead of writing to a guessed account');
-assert.ok(gatewayAssessment.includes('metadataMismatch') && gatewayAssessment.includes('年级或学科不一致'), 'assessment sync must reject same-name teachers whose grade or subject metadata does not match');
-assert.ok(gatewayAssessment.includes('conflictingRowKeys') && gatewayAssessment.includes('重复且冲突的教师项目分值'), 'assessment sync must reject conflicting duplicate teacher-project scores instead of relying on upsert order');
-assert.ok(gatewayAssessment.includes('class_target_grad: 33') && gatewayAssessment.includes('class_high_school_contribution_grad: 15') && gatewayAssessment.includes('class_high_score_grad: 15'), 'gateway must recognize the three bounded graduate-class auto-sync projects');
-assert.ok(gatewayAssessment.includes('GRADUATE_CLASS_AUTO_SYNC_PROJECT_IDS') && gatewayAssessment.includes('班级自动导入只允许九年级记录') && gatewayAssessment.includes('班级自动导入必须标记为真实中考成绩'), 'gateway must reject graduate-class records outside a Grade 9 July Zhongkao source');
-assert.ok(gatewayContractSource.includes('second_mock_source') && gatewayContractSource.includes('二模单独来源'), 'assessment sync should mark second-mock sourced teacher items without calling them July makeup composites');
-assert.ok(!gatewayContractSource.includes('合成口径：7月基准 + 二模补科'), 'assessment sync change notes must not claim July final data is composited with second mock data');
-assert.ok(gatewayContractSource.includes('teacher_workload') === false, 'assessment sync must not write workload scores without a system data source');
+assert.ok(!gatewayContractSource.includes("case 'assessment.sync_scores'"), 'retired assessment project must have no Worker write route');
+assert.ok(!gatewayContractSource.includes("case 'assessment.get_sync_settings'"), 'retired assessment project must have no Worker settings route');
 
 // ─── 批量入口必须有界 ──────────────────────────────────────────────────────────
 // 无上限的批量写入 / IN 过滤既能耗尽 Worker CPU 与时间预算，也会因 D1 绑定变量上限
-// 直接抛库错误。worker-accounts(50) / worker-assessment(600) 已有此保护，这里把其余
+// 直接抛库错误。worker-accounts(50) 已有此保护，这里把其余
 // 三个入口一并锁定，防止回归。
 const dataQualitySource = fs.readFileSync(path.join(root, 'src/worker-data-quality.js'), 'utf8');
 const systemDataSource = fs.readFileSync(path.join(root, 'src/worker-system-data.js'), 'utf8');

@@ -9,8 +9,8 @@ import {
 
 // Maximum number of alias rules per batch. handleAliasSave 把每行展开成一条 D1 语句后
 // 走 db.batch()，不设上限时单个请求可以提交任意条数，既能耗尽 Worker CPU 预算也会让
-// D1 批次无界增长。与 worker-accounts.js 的 ACCOUNT_UPSERT_BATCH_LIMIT(50) 和
-// worker-assessment.js 的 ASSESSMENT_SYNC_BATCH_LIMIT(600) 同一套保护。
+// D1 批次无界增长。与 worker-accounts.js 的 ACCOUNT_UPSERT_BATCH_LIMIT(50)
+// 同一套保护。
 // 取 500：别名规则是纯文本行（无 PBKDF2 之类重计算），远宽于账号批量，但仍为有界值。
 const ALIAS_SAVE_BATCH_LIMIT = 500;
 

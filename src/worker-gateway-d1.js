@@ -23,7 +23,6 @@ import {
   handleVersionList, handleVersionCreate,
   handleVersionUpdate, handleVersionDelete
 } from './worker-versions.js';
-import { handleAssessmentScoreSync, handleAssessmentSyncSettingsGet } from './worker-assessment.js';
 
 const REST_META_KEYS = new Set(['select', 'order', 'limit', 'offset', 'or']);
 
@@ -289,8 +288,6 @@ async function routeGatewayAction(request, env, body, ctx) {
     case 'account.upsert_many': return handleAccountUpsertMany(request, db, session, payload);
     case 'account.delete_non_admin': return handleAccountDeleteNonAdmin(request, db, session);
     case 'account.migration_status': return handleAccountMigrationStatus(request, db, session);
-    case 'assessment.sync_scores': return handleAssessmentScoreSync(request, env, session, payload);
-    case 'assessment.get_sync_settings': return handleAssessmentSyncSettingsGet(request, env, session, payload);
     default: return null;
   }
 }
