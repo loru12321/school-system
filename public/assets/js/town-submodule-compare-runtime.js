@@ -236,7 +236,7 @@ function ensureTownSubmoduleCompareUIs(submoduleId = '') {
         panel.style.cssText = 'margin:10px 0 14px 0; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;';
         panel.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <div style="font-weight:600; color:#334155;">🧭 ${title} 多期对比（2期/3期）</div>
+                    <div data-compare-panel-title style="font-weight:600; color:#334155;">🧭 ${title} 多期对比（2期/3期）</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                         <button class="btn btn-sm btn-blue" onclick="openTownSubmoduleCompareDialog('${entryId}')">生成多期对比</button>
                         <button class="btn btn-sm btn-green" onclick="exportTownSubmoduleCompare('${entryId}')">导出多期对比</button>
