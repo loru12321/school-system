@@ -101,6 +101,10 @@ body.shell-sidebar-collapsed .sidebar-spacious {
 /* Sidebar Items */
 .sidebar-menu-item {
     display: flex;
+    width: 100%;
+    font: inherit;
+    text-align: left;
+    appearance: none;
     align-items: center;
     gap: 12px;
     padding: 12px 14px;

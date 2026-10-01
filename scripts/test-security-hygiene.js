@@ -111,7 +111,7 @@ assert.ok(
 );
 assert.ok(gatewaySession.includes('if (apikey) headers.apikey = apikey;'), 'gateway session runtime should omit empty apikey headers for hosted gateway calls');
 assert.ok(!edgeGateway.includes("localStorage.getItem('EDGE_GATEWAY_URL')"), 'EdgeGateway runtime should not accept gateway endpoints from localStorage');
-assert.ok(serviceWorker.includes('isApiCacheEligible'), 'service worker should gate API caching');
+assert.ok(!serviceWorker.includes('API_CACHE') && serviceWorker.includes("cache: 'no-store'"), 'service worker should never cache session-authorized API responses');
 assert.ok(!serviceWorker.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 assert.ok(publicHeaders.includes('Content-Security-Policy-Report-Only:'), 'static headers should start CSP in report-only mode');
 assert.ok(publicHeaders.includes('Content-Security-Policy:'), 'static headers should enforce CSP after report-only rollout');

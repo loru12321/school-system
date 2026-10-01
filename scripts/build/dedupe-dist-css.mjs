@@ -30,16 +30,14 @@ function dedupeCssRules(css) {
     };
 }
 
-function main() {
-    if (!fs.existsSync(distRoot)) {
-        console.warn(`[dedupe-dist-css] dist not found: ${distRoot}`);
-        return;
-    }
-
-    const indexPath = path.join(distRoot, 'index.html');
+function dedupeDistStylesheets(root) {
+    const indexPath = path.join(root, 'index.html');
     const indexHtml = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : '';
     const referencedStylesheet = indexHtml.match(/(?:\.\/)?(style-[\w-]+\.css)/i)?.[1] || '';
-    const stylesheetNames = fs.readdirSync(distRoot)
+    if (!referencedStylesheet || !fs.existsSync(path.join(root, referencedStylesheet))) {
+        throw new Error(`Referenced stylesheet is missing from ${indexPath}: ${referencedStylesheet || '(none)'}`);
+    }
+    const stylesheetNames = fs.readdirSync(root)
         .filter((name) => /^style-[\w-]+\.css$/.test(name));
 
     // Vite changes the stylesheet hash whenever authored CSS changes. Remove
@@ -48,26 +46,32 @@ function main() {
     stylesheetNames
         .filter((name) => name !== referencedStylesheet)
         .forEach((name) => {
-            const stalePath = path.join(distRoot, name);
+            const stalePath = path.join(root, name);
             if (fs.existsSync(stalePath)) fs.unlinkSync(stalePath);
-            const brotliPath = path.join(distRoot, `${name}.br`);
+            const brotliPath = path.join(root, `${name}.br`);
             if (fs.existsSync(brotliPath)) fs.unlinkSync(brotliPath);
             console.log(`[dedupe-dist-css] removed stale stylesheet: ${name}`);
         });
 
-    stylesheetNames.forEach((name) => {
-        const filePath = path.join(distRoot, name);
-        const source = fs.readFileSync(filePath, 'utf8');
-        const result = dedupeCssRules(source);
-        if (result.removedRules > 0) {
-            fs.writeFileSync(filePath, result.css, 'utf8');
-            console.log(`[dedupe-dist-css] ${name}: removed ${result.removedRules} duplicate rules, saved ${result.savedBytes} bytes`);
-        }
-    });
+    const filePath = path.join(root, referencedStylesheet);
+    const source = fs.readFileSync(filePath, 'utf8');
+    const result = dedupeCssRules(source);
+    if (result.removedRules > 0) {
+        fs.writeFileSync(filePath, result.css, 'utf8');
+        console.log(`[dedupe-dist-css] ${referencedStylesheet}: removed ${result.removedRules} duplicate rules, saved ${result.savedBytes} bytes`);
+    }
+}
+
+function main() {
+    if (!fs.existsSync(distRoot)) {
+        console.warn(`[dedupe-dist-css] dist not found: ${distRoot}`);
+        return;
+    }
+    dedupeDistStylesheets(distRoot);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
     main();
 }
 
-export { dedupeCssRules };
+export { dedupeCssRules, dedupeDistStylesheets };

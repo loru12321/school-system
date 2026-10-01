@@ -60,7 +60,7 @@ assert.match(serviceWorkerVersion, /^runtime-[0-9a-f]{12}$/, 'service worker run
 assert.strictEqual(cacheVersion, `school-system-${serviceWorkerVersion}`, 'service worker cache version should follow the generated runtime version');
 assertIncludes(publicSw, 'const STATIC_CACHE = `${CACHE_VERSION}-static`;', 'static cache name should be versioned');
 assertIncludes(publicSw, 'const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;', 'dynamic cache name should be versioned');
-assertIncludes(publicSw, 'const API_CACHE = `${CACHE_VERSION}-api`;', 'API cache name should be versioned');
+assert.ok(!publicSw.includes('API_CACHE'), 'protected API responses must not use Cache Storage');
 assertIncludes(publicSw, "self.addEventListener('install'", 'install handler should be registered');
 assertIncludes(publicSw, 'await Promise.all(APP_SHELL_ASSETS.map(asset => precacheAsset(cache, asset)));', 'install should precache app shell assets safely');
 assertIncludes(publicSw, 'await self.skipWaiting();', 'install should activate updates promptly');
@@ -68,24 +68,18 @@ assertIncludes(publicSw, "self.addEventListener('activate'", 'activate handler s
 assertIncludes(publicSw, 'await self.clients.claim();', 'activate should claim clients');
 assert.ok(!publicSw.includes('client.navigate'), 'service worker should not force-navigate clients during activation');
 assertIncludes(publicSw, "self.addEventListener('fetch'", 'fetch handler should be registered');
-assertIncludes(publicSw, "if (request.method !== 'GET') {", 'service worker must branch mutating requests before caching');
-assertIncludes(publicSw, "event.waitUntil(clearApiCacheAfterMutation(url));", 'service worker should clear API cache after mutating API requests');
+assertIncludes(publicSw, "if (request.method !== 'GET') return;", 'service worker must branch mutating requests before caching');
 assertIncludes(publicSw, "if (url.protocol === 'chrome-extension:') return;", 'service worker should ignore browser extension requests');
 assertIncludes(publicSw, "request.mode === 'navigate' || acceptsHtml(request)", 'HTML navigation should use network-first handling');
-assertIncludes(publicSw, 'event.respondWith(networkFirstApi(request, url));', 'API requests should use network-first handling');
+assertIncludes(publicSw, 'event.respondWith(networkFirstApi(request));', 'API requests should always reach the server');
 assertIncludes(publicSw, 'event.respondWith(networkFirstRuntimeAsset(request));', 'runtime JS/CSS assets should always use network-first handling');
 assertIncludes(publicSw, "fetch(new Request(request, { cache: 'reload' }))", 'runtime JS/CSS and HTML should bypass stale browser caches');
+assertIncludes(publicSw, "fetch(new Request(request, { cache: 'no-store' }))", 'API requests should bypass the browser HTTP cache');
 assert.ok(!publicSw.includes('isVersionedRuntimeAsset'), 'service worker should not branch on query-versioned runtime assets');
 assert.ok(!publicSw.includes('cacheFirstRuntimeAsset'), 'service worker should not cache-first runtime assets by version marker');
 assertIncludes(publicSw, 'event.respondWith(cacheFirstStatic(request));', 'non-runtime static assets should keep cache-first handling');
 assertIncludes(publicSw, 'function isRuntimeAsset(pathname)', 'runtime asset routing should be centralized');
-assertIncludes(publicSw, 'function isApiCacheEligible(url)', 'API cache eligibility should be centralized');
-assertIncludes(publicSw, "if (pathname === '/api/health') return true;", 'health API should be cache eligible');
-assertIncludes(publicSw, "if (pathname === '/api/system-data') {", 'readonly system_data selects should be cache eligible');
-assertIncludes(publicSw, "searchParams.has('select')", 'system_data cache eligibility should require an explicit select');
-assertIncludes(publicSw, "&& (searchParams.has('key') || searchParams.has('limit'));", 'system_data cache eligibility should require a bounded readonly query');
-assertIncludes(publicSw, 'return false;', 'API cache eligibility should fail closed');
-assertIncludes(publicSw, 'async function clearApiCacheAfterMutation(url)', 'API cache invalidation should be centralized');
+assert.ok(!publicSw.includes('isApiCacheEligible'), 'authorization must not rely on URL-only cache eligibility');
 assertIncludes(publicSw, "headers: buildOfflineHeaders('application/json; charset=utf-8')", 'offline API fallback should be JSON with charset');
 assertIncludes(publicSw, "headers: buildOfflineHeaders('text/html; charset=utf-8')", 'offline HTML fallback should be HTML with charset');
 assertIncludes(publicSw, "function buildOfflineHeaders(contentType)", 'offline fallback headers should be centralized');
@@ -114,6 +108,7 @@ assertIncludes(serviceWorkerRuntime, "root.addEventListener('load', registerServ
 assertIncludes(serviceWorkerRuntime, 'requestIdleCallback', 'service worker registration should avoid competing with initial rendering');
 assert.ok(!serviceWorkerRuntime.includes("console.log('[SW] loaded')"), 'service worker runtime should not log on every load');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:service-worker-contract'), 'fast release check must include service worker contract guard');
+assert.ok(scripts['check:release-fast'].includes('test:service-worker-api-auth'), 'fast release check must verify API authorization after account changes');
 assert.strictEqual(scripts['check:syntax'], 'node scripts/test-syntax.js', 'syntax check must use recursive service worker coverage');
 assert.ok(releaseSurface.includes("exists('dist/sw.js')"), 'release surface check should require dist service worker');
 
@@ -121,5 +116,5 @@ console.log(JSON.stringify({
   ok: true,
   appShellAssets: publicAppShellAssets,
   cacheVersion,
-  apiCachePolicy: 'health-and-bounded-system-data'
+  apiCachePolicy: 'no-store-session-authorized'
 }, null, 2));

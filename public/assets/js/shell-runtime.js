@@ -1033,15 +1033,23 @@
         if (!sidebarNav) return;
 
         resolveCategoryState();
+        const focusedCategory = sidebarNav.contains(document.activeElement)
+            && document.activeElement.classList.contains('sidebar-menu-item')
+            ? document.activeElement.getAttribute('data-shell-category') : '';
         sidebarNav.innerHTML = '';
 
         Object.keys(NAV_STRUCTURE).forEach((key) => {
             const category = NAV_STRUCTURE[key];
             const visibleItems = resolveVisibleItems(category);
             if (visibleItems.length === 0) return;
-            const item = document.createElement('div');
+            const item = document.createElement('button');
+            item.type = 'button';
             item.className = 'sidebar-menu-item';
-            if (key === currentCategory) item.classList.add('active');
+            item.setAttribute('data-shell-category', key);
+            if (key === currentCategory) {
+                item.classList.add('active');
+                item.setAttribute('aria-current', 'page');
+            }
             item.title = category.title;
             item.setAttribute('data-shell-summary', category.summary || category.title);
             item.setAttribute('data-shell-tooltip', category.summary || category.title);
@@ -1080,6 +1088,11 @@
         renderSubNavigation();
         updateShellChrome();
         notifyShellEnhancements();
+        if (focusedCategory) {
+            const replacement = Array.from(sidebarNav.querySelectorAll('.sidebar-menu-item'))
+                .find((item) => item.getAttribute('data-shell-category') === focusedCategory);
+            if (replacement) replacement.focus({ preventScroll: true });
+        }
     }
 
     function activateSubmodule(item, category) {

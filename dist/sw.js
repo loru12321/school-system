@@ -4,10 +4,9 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-runtime-351f3b129a42';
+const CACHE_VERSION = 'school-system-runtime-1d3db18ea7db';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
-const API_CACHE = `${CACHE_VERSION}-api`;
 
 // Only precache deterministic app shell assets to avoid install failures.
 // Keep this list minimal to ensure fast SW installation
@@ -34,7 +33,7 @@ self.addEventListener('activate', event => {
         const cacheNames = await caches.keys();
         await Promise.all(
             cacheNames
-                .filter(name => ![STATIC_CACHE, DYNAMIC_CACHE, API_CACHE].includes(name))
+                .filter(name => ![STATIC_CACHE, DYNAMIC_CACHE].includes(name))
                 .map(name => caches.delete(name))
         );
         await self.clients.claim();
@@ -47,20 +46,15 @@ self.addEventListener('fetch', event => {
     const url = new URL(request.url);
     if (url.protocol === 'chrome-extension:') return;
 
-    if (request.method !== 'GET') {
-        if (isApiRequest(url.pathname)) {
-            event.waitUntil(clearApiCacheAfterMutation(url));
-        }
+    if (request.method !== 'GET') return;
+
+    if (isApiRequest(url.pathname)) {
+        event.respondWith(networkFirstApi(request));
         return;
     }
 
     if (request.mode === 'navigate' || acceptsHtml(request)) {
         event.respondWith(networkFirstHtml(request));
-        return;
-    }
-
-    if (isApiRequest(url.pathname)) {
-        event.respondWith(networkFirstApi(request, url));
         return;
     }
 
@@ -130,30 +124,12 @@ async function networkFirstRuntimeAsset(request) {
     return new Response('Runtime resource unavailable while offline', { status: 404 });
 }
 
-async function networkFirstApi(request, url) {
-    const eligible = isApiCacheEligible(url);
-    if (eligible) {
-        const cache = await caches.open(API_CACHE);
-        const cached = await cache.match(request);
-        if (cached) {
-            fetch(request).then((r) => {
-                if (!r.ok) return;
-                const cacheResponse = r.clone();
-                return cache.put(request, cacheResponse);
-            }).catch(() => {});
-            return cached;
-        }
-    }
+async function networkFirstApi(request) {
+    // API responses depend on the current session and role. Cache Storage is
+    // shared across account changes, so always ask the server to authorize.
     try {
-        const response = await fetch(request);
-        if (isCacheable(response) && eligible) {
-            const cache = await caches.open(API_CACHE);
-            await cache.put(request, response.clone());
-        }
-        return response;
+        return await fetch(new Request(request, { cache: 'no-store' }));
     } catch (error) {
-        const cached = await caches.match(request);
-        if (cached) return cached;
         return new Response(
             JSON.stringify({ error: 'Network unavailable and no cached data exists' }),
             {
@@ -213,23 +189,6 @@ function isRuntimeAsset(pathname) {
 
 function isApiRequest(pathname) {
     return pathname.includes('/api/') || pathname.includes('/rest/');
-}
-
-function isApiCacheEligible(url) {
-    const pathname = String(url && url.pathname || '');
-    if (pathname === '/api/health') return true;
-    if (pathname === '/api/system-data') {
-        const searchParams = url && url.searchParams;
-        return !!searchParams
-            && searchParams.has('select')
-            && (searchParams.has('key') || searchParams.has('limit'));
-    }
-    return false;
-}
-
-async function clearApiCacheAfterMutation(url) {
-    if (!url || !isApiRequest(url.pathname)) return;
-    await caches.delete(API_CACHE);
 }
 
 self.addEventListener('sync', event => {

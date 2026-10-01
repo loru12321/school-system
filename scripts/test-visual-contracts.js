@@ -10,6 +10,7 @@ const sourceHtml = fs.readFileSync(path.join(root, 'src', 'index.html'), 'utf8')
 const uiActions = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'ui-actions-runtime.js'), 'utf8');
 const utilities = fs.readFileSync(path.join(root, 'public', 'assets', 'css', 'utility-classes.css'), 'utf8');
 const moduleUrlState = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'module-url-state-runtime.js'), 'utf8');
+const shellRuntime = fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'shell-runtime.js'), 'utf8');
 
 for (const metric of ['rankAvg', 'rankExc', 'rankPass']) {
     if (!teacherUi.includes(`class="teacher-rank-badge"`)) {
@@ -27,6 +28,12 @@ if (!drill.includes('text-decoration-style: wavy')) throw new Error('clickable e
 if (!drill.includes('grid-template-columns: repeat(auto-fit')) throw new Error('drill class cards are not using a responsive grid');
 if (!sourceHtml.includes('<button type="button" class="mob-nav-btn active" data-ui-action="mobile-switch-tab"')) {
     throw new Error('mobile primary navigation must use semantic buttons');
+}
+if (!shellRuntime.includes("document.createElement('button')") || !shellRuntime.includes("item.type = 'button'")) {
+    throw new Error('desktop sidebar category navigation must use native buttons');
+}
+if (!shellRuntime.includes("item.setAttribute('aria-current', 'page')")) {
+    throw new Error('desktop sidebar must expose its selected category');
 }
 if (/<(?:div|span)\b[^>]*class="[^"]*mob-nav-btn[^"]*"[^>]*onclick=/i.test(sourceHtml)) {
     throw new Error('mobile primary navigation must not use inline div/span click handlers');
