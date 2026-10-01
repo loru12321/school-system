@@ -67,6 +67,19 @@ const fixture = `<div id="app"><section id="summary" class="section"><div class=
         assert.equal(await page.locator('#schedule').isVisible(), true);
         assert.equal(await page.locator('#shell-category-desc').isVisible(), false);
         assert.equal(await page.locator('.shell-module-rail-chip').isVisible(), true, '精简导航必须保留直接切换入口');
+        await page.evaluate(() => {
+            const labels = ['中考日程', '学情总览', '学生成绩明细', '空分与零分核对', '学科优势与短板', '临界学生', '进步与增值', '成长记录', '偏科与潜力', '分数段统计', '学科关联分析', '成绩反馈'];
+            const rail = document.getElementById('shell-module-rail');
+            rail.className = 'shell-module-rail';
+            rail.parentElement.style.width = '700px';
+            rail.innerHTML = labels.map((label, index) => `<button type="button" class="shell-module-rail-chip"><span class="shell-module-rail-chip-index">${index + 1}</span><span class="shell-module-rail-chip-copy"><span class="shell-module-rail-chip-title">${label}</span><span class="shell-module-rail-chip-hint">模块说明</span></span></button>`).join('');
+        });
+        const navText = await page.locator('.shell-module-rail-chip-title').evaluateAll(nodes => nodes.map(node => ({
+            label: node.textContent, width: node.clientWidth, needed: node.scrollWidth
+        })));
+        assert.ok(navText.every(item => item.width >= item.needed), `导航名称不可截断：${JSON.stringify(navText)}`);
+        const navSize = await page.locator('#shell-module-rail').evaluate(e => ({ width: e.clientWidth, content: e.scrollWidth }));
+        assert.ok(navSize.content > navSize.width, `名称过多时应横向滚动，不压缩文字：${JSON.stringify(navSize)}`);
         await page.getByRole('button', {name:'展开导航', exact:true}).click();
         assert.equal(await page.locator('#shell-category-desc').isVisible(), true);
         await bar.getByRole('button', { name: '多期对比', exact: true }).click();

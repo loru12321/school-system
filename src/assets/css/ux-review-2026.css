@@ -610,12 +610,25 @@ html body :is(#app, #apk-mobile-shell, #mobile-query-shell) .section .analysis-a
     padding: 6px 0 !important;
 }
 #app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail-chip {
+    display: inline-flex !important;
     flex: 0 0 auto !important;
-    width: auto !important;
+    width: max-content !important;
+    max-width: none !important;
     min-height: 38px !important;
     padding: 6px 12px !important;
     border-radius: 8px !important;
     box-shadow: none !important;
+}
+#app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail-chip-copy {
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: max-content !important;
+}
+#app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail-chip-title {
+    display: block !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
 }
 #shell-module-rail-shell [data-auxiliary-navigation] { margin-left: auto; flex-shrink: 0; }
 #app .section .prerequisite-status-bar { padding: 6px 10px !important; margin-bottom: 8px !important; }
