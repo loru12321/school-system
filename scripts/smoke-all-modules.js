@@ -1441,6 +1441,7 @@ async function smokeSwitchModule(page, id) {
 async function runModuleDeepCheck(page, id) {
     if (id === 'summary') {
         return page.evaluate(async ({ strictPerformance }) => {
+            const deepCheckStartedAt = performance.now();
             const smokeTimeout = (task, timeoutMs = 5000) => Promise.race([
                 Promise.resolve(task),
                 new Promise(resolve => setTimeout(() => resolve(null), timeoutMs))
@@ -1449,6 +1450,7 @@ async function runModuleDeepCheck(page, id) {
             const captureState = (label) => {
                 stateTrace.push({
                     label,
+                    elapsedMs: Math.round(performance.now() - deepCheckStartedAt),
                     cohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || ''),
                     examId: String(
                         (typeof window.__resolveSmokeRuntimeExamId === 'function'
@@ -1549,14 +1551,15 @@ async function runModuleDeepCheck(page, id) {
                 await smokeTimeout(window.ensureTownSubmoduleCompareUIs(), 5000);
             }
             captureState('town-ui-ensured');
-            if (typeof window.ensureSchoolProfileRuntimeLoaded === 'function') {
-                await smokeTimeout(window.ensureSchoolProfileRuntimeLoaded(), 5000);
-            }
-            captureState('school-profile-runtime-loaded');
-            if (typeof window.ensureExamAnalysisPackageRuntimeLoaded === 'function') {
-                await smokeTimeout(window.ensureExamAnalysisPackageRuntimeLoaded(), 5000);
-            }
-            captureState('exam-analysis-package-runtime-loaded');
+            // These optional features have independent assets. Load them together so
+            // the smoke check measures their slowest path rather than their sum.
+            await Promise.all([
+                typeof window.ensureSchoolProfileRuntimeLoaded === 'function'
+                    ? smokeTimeout(window.ensureSchoolProfileRuntimeLoaded(), 5000) : Promise.resolve(),
+                typeof window.ensureExamAnalysisPackageRuntimeLoaded === 'function'
+                    ? smokeTimeout(window.ensureExamAnalysisPackageRuntimeLoaded(), 5000) : Promise.resolve()
+            ]);
+            captureState('optional-runtimes-loaded');
             let summaryIndicatorDiagnostics = {
                 isGrade9: false,
                 indicatorRowsPositive: 0,
@@ -3383,6 +3386,8 @@ async function runModuleDeepCheck(page, id) {
                     : []).includes('政治')
                     && (window.RAW_DATA || []).some((row) => Number.isFinite(Number(row?.scores?.政治)));
                 const politicsRankingRows = window.TOWNSHIP_RANKING_DATA?.政治;
+                const politicsLabel = typeof window.getConfiguredDisplaySubjectLabel === 'function'
+                    ? window.getConfiguredDisplaySubjectLabel('政治') : '政治';
                 state = {
                     sectionReady: !!section,
                     sectionActive: !!section?.classList.contains('active'),
@@ -3395,9 +3400,13 @@ async function runModuleDeepCheck(page, id) {
                     teacherMapCount,
                     expectsTeacherData,
                     politicsExpected,
+                    politicsRankingTeacherRows: Array.isArray(politicsRankingRows)
+                        ? politicsRankingRows.filter((row) => row?.type === 'teacher').length : 0,
+                    politicsLabel,
+                    politicsLabelPresent: text.includes(politicsLabel),
                     politicsRankingReady: !politicsExpected || (Array.isArray(politicsRankingRows)
                         && politicsRankingRows.some((row) => row?.type === 'teacher')
-                        && text.includes('政治（参考二模数据）'))
+                        && text.includes(politicsLabel))
                 };
                 if (state.sectionActive
                     && state.contentReady
@@ -4183,13 +4192,15 @@ async function runModuleDeepCheck(page, id) {
                     ? window.getConfiguredExtraDisplaySubjects(window.CONFIG || {})
                     : []).includes('政治')
                     && (window.RAW_DATA || []).some((row) => Number.isFinite(Number(row?.scores?.政治)));
+                const politicsLabel = typeof window.getConfiguredDisplaySubjectLabel === 'function'
+                    ? window.getConfiguredDisplaySubjectLabel('政治') : '政治';
                 return {
                     rows: detailRows,
                     headers: detailHeaders,
                     classOptionCount: detailClassOptionCount,
                     countyRankAfterTownRank: detailCountyRankAfterTownRank,
                     politicsExpected,
-                    politicsHeaderReady: !politicsExpected || detailHeaders.some((header) => header.includes('政治（参考二模数据）')),
+                    politicsHeaderReady: !politicsExpected || detailHeaders.some((header) => header.includes(politicsLabel)),
                     ready: detailClassOptionCount > 0 && detailRows > 0
                 };
             };
