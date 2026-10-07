@@ -1,11 +1,12 @@
 (function () {
     const DESKTOP_MEDIA_QUERY = '(min-width: 1100px)';
-    // Category names are part of the operator's orientation. Keep the main
-    // navigation readable by default; analysis-side rails remain compact.
-    const DEFAULT_DESKTOP_SIDEBAR_COLLAPSED = false;
+    // The compact rail retains full category names; expansion is an overlay.
+    const DEFAULT_DESKTOP_SIDEBAR_COLLAPSED = true;
+    const SIDEBAR_PREFERENCE_KEY = 'school:sidebar:compact:v1';
     const DEFAULT_ANALYSIS_RAIL_COLLAPSED = true;
     let refreshFrame = 0;
     let desktopSidebarCollapsed = DEFAULT_DESKTOP_SIDEBAR_COLLAPSED;
+    try { desktopSidebarCollapsed = localStorage.getItem(SIDEBAR_PREFERENCE_KEY) !== 'expanded'; } catch (_) {}
     const analysisRailStates = new Map();
     let moduleDockFrame = 0;
     let moduleDockBound = false;
@@ -30,10 +31,12 @@
             button.setAttribute('aria-label', label);
             button.setAttribute('title', label);
             button.setAttribute('aria-pressed', isCollapsed ? 'true' : 'false');
+            button.setAttribute('aria-expanded', String(!isCollapsed));
+            button.setAttribute('aria-controls', 'app-sidebar');
 
             const icon = button.querySelector('[data-sidebar-toggle-icon="true"]');
             if (icon) {
-                icon.className = 'ti ' + (isCollapsed ? 'ti-chevrons-right' : 'ti-chevrons-left');
+                icon.className = 'ti ti-menu-2';
             }
         });
     }
@@ -48,6 +51,7 @@
 
         if (rememberState) {
             desktopSidebarCollapsed = desiredCollapsed;
+            try { localStorage.setItem(SIDEBAR_PREFERENCE_KEY, desiredCollapsed ? 'compact' : 'expanded'); } catch (_) {}
         }
 
         sidebar.classList.toggle('is-collapsed', shouldCollapse);
@@ -58,7 +62,9 @@
             document.body.classList.remove('shell-sidebar-collapsed');
         }
 
-        syncSidebarToggleButtons(shouldCollapse);
+        syncSidebarToggleButtons(isDesktopViewport() ? shouldCollapse : !sidebar.classList.contains('show-mobile'));
+        const backdrop = document.getElementById('workspace-sidebar-backdrop');
+        if (backdrop) backdrop.hidden = !isDesktopViewport() || shouldCollapse;
 
         if (typeof window.refreshShellEnhancements === 'function') {
             window.refreshShellEnhancements();
@@ -71,6 +77,7 @@
 
         if (!isDesktopViewport()) {
             sidebar.classList.toggle('show-mobile');
+            syncSidebarToggleButtons(!sidebar.classList.contains('show-mobile'));
             return;
         }
 
@@ -83,6 +90,33 @@
 
     function restoreAppSidebar() {
         setAppSidebarCollapsed(desktopSidebarCollapsed, { rememberState: false });
+    }
+
+    function bindCompactShellControls() {
+        if (document.getElementById('workspace-sidebar-backdrop')) return;
+        const backdrop = document.createElement('button');
+        backdrop.id = 'workspace-sidebar-backdrop';
+        backdrop.type = 'button';
+        backdrop.hidden = true;
+        backdrop.tabIndex = -1;
+        backdrop.setAttribute('aria-label', '关闭导航');
+        backdrop.addEventListener('click', () => setAppSidebarCollapsed(true));
+        document.getElementById('app')?.append(backdrop);
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape') return;
+            const menu = document.getElementById('shell-account-menu');
+            if (menu?.open) {
+                menu.open = false;
+                menu.querySelector('summary')?.focus();
+            } else if (isDesktopViewport() && !getSidebar()?.classList.contains('is-collapsed')) {
+                setAppSidebarCollapsed(true);
+                getSidebarToggleButtons()[0]?.focus();
+            }
+        });
+        document.addEventListener('click', event => {
+            const menu = document.getElementById('shell-account-menu');
+            if (menu?.open && (!menu.contains(event.target) || event.target.closest('#shell-account-panel button'))) menu.open = false;
+        }, true);
     }
 
     function resolveAnalysisLayoutId(layout) {
@@ -521,6 +555,9 @@
     }
 
     function handleViewportChange() {
+        const cloudStatus = document.getElementById('cloud-sync-indicator');
+        const cloudHost = isDesktopViewport() && document.getElementById('shell-cloud-status-host');
+        if (cloudStatus && cloudStatus.parentElement !== (cloudHost || document.body)) (cloudHost || document.body).append(cloudStatus);
         restoreAppSidebar();
         refreshAnalysisSideRails();
     }
@@ -541,7 +578,8 @@
     window.refreshAnalysisSideRails = scheduleAnalysisRailRefresh;
     window.refreshModuleSubnavDock = scheduleModuleSubnavDockSync;
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function initializeWorkspaceRails() {
+        bindCompactShellControls();
         bindModuleDockSyncEvents();
         restoreAppSidebar();
         refreshAnalysisSideRails();
@@ -556,7 +594,10 @@
             childList: true,
             subtree: true
         });
-    });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeWorkspaceRails, { once: true });
+    else initializeWorkspaceRails();
 
     window.addEventListener('resize', handleViewportChange);
 })();

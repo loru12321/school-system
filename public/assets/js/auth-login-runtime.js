@@ -1035,39 +1035,39 @@ var Auth = {
             ).trim() || '用户';
 
             accountActionsContainer.innerHTML = `
-                <button class="btn" onclick="openUserPasswordModal()" style="background:transparent; border:none; color:var(--text-color); font-size: 22px; padding: 8px; border-radius: 50%; display:flex; align-items:center; justify-content:center; width:40px; height:40px;" title="修改密码">
-                    <i class="ti ti-key"></i>
+                <button class="btn" onclick="openUserPasswordModal()" title="修改密码">
+                    <i class="ti ti-key"></i><span>修改密码</span>
                 </button>
-                <div onclick="Auth.logout()" style="cursor:pointer; background:var(--primary); color:white; font-size: 16px; font-weight:bold; border-radius: 50%; display:flex; align-items:center; justify-content:center; width:36px; height:36px; margin-left:8px;" title="退出登录 (${accountDisplayName})">
-                    ${accountDisplayName.charAt(0).toUpperCase()}
-                </div>
+                <button class="btn" onclick="Auth.logout()" title="退出登录">
+                    <i class="ti ti-logout"></i><span>退出登录</span>
+                </button>
             `;
+            const avatar = document.getElementById('shell-account-avatar');
+            const name = document.getElementById('shell-account-name');
+            if (avatar) avatar.textContent = accountDisplayName.charAt(0).toUpperCase();
+            if (name) name.textContent = accountDisplayName;
         }
 
         const currentRole = this.currentUser.role;
         const allowedRoles = ['admin', 'director', 'grade_director', 'class_teacher'];
 
         const toolbar = document.querySelector('#main-header > div:last-child');
+        const accountPanel = document.getElementById('shell-account-panel') || toolbar;
 
         const oldBtn = document.getElementById('header-acc-mgr-btn');
         if (oldBtn) oldBtn.remove();
 
-        if (toolbar && allowedRoles.includes(currentRole)) {
+        if (accountPanel && allowedRoles.includes(currentRole)) {
             const mgrBtn = document.createElement('button');
             mgrBtn.id = 'header-acc-mgr-btn';
             mgrBtn.className = 'btn';
             mgrBtn.style.cssText = 'background:transparent; border:none; color:var(--text-color); font-size: 22px; padding: 8px; border-radius: 50%; display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px;';
-            mgrBtn.innerHTML = '<i class="ti ti-user-cog"></i>';
+            mgrBtn.innerHTML = '<i class="ti ti-user-cog"></i><span>账号权限管理</span>';
             mgrBtn.title = "账号权限管理";
 
             mgrBtn.onclick = () => AccountManager.open();
 
-            const msgBtnNode = document.getElementById('admin-msg-btn');
-            if (msgBtnNode && msgBtnNode.parentNode === toolbar) {
-                toolbar.insertBefore(mgrBtn, msgBtnNode);
-            } else {
-                toolbar.insertBefore(mgrBtn, toolbar.firstChild);
-            }
+            accountPanel.insertBefore(mgrBtn, document.getElementById('account-actions'));
         }
 
         const dataRoles = ['admin', 'director'];

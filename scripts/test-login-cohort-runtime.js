@@ -173,7 +173,8 @@ assert.ok(
 assert.ok(
     authLoginSource.includes("data.display_name || data.teacher_name || user || '用户'")
         && authLoginSource.includes("const accountDisplayName = String(")
-        && authLoginSource.includes('title="退出登录 (${accountDisplayName})"'),
+        && authLoginSource.includes('name.textContent = accountDisplayName')
+        && !authLoginSource.includes('${accountDisplayName}'),
     'login and account actions must never render an undefined user display name'
 );
 

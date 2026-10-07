@@ -306,7 +306,9 @@
                 'box-shadow:0 4px 12px rgba(15,23,42,0.08)'
             ].join(';');
             node.innerHTML = '<span style="font-size:10px;">●</span><span>云端: 未连接</span>';
-            root.document.body.appendChild(node);
+            const headerHost = root.matchMedia?.('(min-width: 1100px)').matches
+                && root.document.getElementById('shell-cloud-status-host');
+            (headerHost || root.document.body).appendChild(node);
             this.el = node;
             return node;
         },
