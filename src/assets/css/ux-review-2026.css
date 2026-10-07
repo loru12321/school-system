@@ -632,6 +632,35 @@ html body :is(#app, #apk-mobile-shell, #mobile-query-shell) .section .analysis-a
 }
 #shell-module-rail-shell [data-auxiliary-navigation] { margin-left: auto; flex-shrink: 0; }
 #app .section .prerequisite-status-bar { padding: 6px 10px !important; margin-bottom: 8px !important; }
+/* Operational headings should use their content height, not a decorative masthead.
+ * A busy action row gets the available width instead of the legacy 520px cap. */
+@media (min-width: 961px) {
+    html body #app .section[id][data-editorial-module="true"] > .analysis-shell-head {
+        min-height: 58px !important;
+        padding: 10px 14px 10px 60px !important;
+        row-gap: 8px !important;
+    }
+    html body #app .section[id][data-editorial-module="true"] > .analysis-shell-head::before {
+        inset: 14px auto auto 0 !important;
+        width: 40px !important;
+        height: 26px !important;
+    }
+    html body #app .section[id] > .analysis-shell-head .analysis-action-stack {
+        max-width: 100% !important;
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+    html body #app .section[id] > .analysis-shell-head .analysis-action-stack::before {
+        content: none !important;
+    }
+    html body #app .section[id] > .analysis-shell-head .analysis-action-stack:has(.analysis-actions > button:nth-of-type(5)) {
+        flex-basis: 100% !important;
+        width: 100% !important;
+        justify-items: stretch !important;
+    }
+}
 @media (max-width: 600px) {
     .section .analysis-auxiliary-toolbar { gap: 6px; flex-wrap: nowrap; overflow-x: auto; padding: 3px 0; }
     .analysis-auxiliary-toggle { min-height: 44px; padding: 6px 9px; font-size: 12px; flex-shrink: 0; white-space: nowrap; }
