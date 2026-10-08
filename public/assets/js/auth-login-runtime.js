@@ -430,6 +430,7 @@ var Auth = {
             if (window.EdgeGateway && typeof EdgeGateway.verify === 'function' && EdgeGateway.getToken()) {
                 EdgeGateway.verify().catch(err => {
                     console.warn('[EdgeGateway] session verify failed:', err?.message || err);
+                    if (!window.GatewaySessionRuntime?.isAuthoritativeSessionFailure?.(err)) return;
                     try { sessionStorage.removeItem('edu:session:token'); } catch (_) { }
                     EdgeGateway.clearSession();
                     if (window.AuthState && typeof AuthState.clearCurrentUser === 'function') {

@@ -953,7 +953,6 @@ html body #app #main-header .toolbar-right #cloud-sync-indicator {
     font-size: 14px !important;
     font-weight: 500 !important;
     cursor: pointer !important;
-    transition: all 0.15s ease !important;
 }
 
 html body #app #main-header .toolbar-right button:hover {

@@ -45,6 +45,11 @@
         return urls.some(sameOrigin);
     }
 
+    function isAuthoritativeSessionFailure(error) {
+        return /edge_gateway_http_401|invalid or expired app session token|missing bearer token/i
+            .test(String(error?.message || error || ''));
+    }
+
     function canRetry(gateway, status, message) {
         return typeof gateway.shouldRetryRequest === 'function'
             && gateway.shouldRetryRequest(status, message);
@@ -114,6 +119,7 @@
         clearSession,
         getToken,
         hasCookieRoute,
+        isAuthoritativeSessionFailure,
         request,
         restore: (gateway) => request(gateway, 'session.verify', {}),
         sameOrigin,

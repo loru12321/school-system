@@ -177,7 +177,6 @@ html body #app #main-header .toolbar-right #cloud-sync-indicator {
     font-size: 14px !important;
     font-weight: 500 !important;
     cursor: pointer !important;
-    transition: all 0.15s ease !important;
 }
 
 html body #app #main-header .toolbar-right button:hover {
@@ -201,7 +200,7 @@ html body #app #main-header #shell-account-menu > summary {
 }
 
 /* ==================== 左侧导航栏 ==================== */
-html body #app.app-layout {
+html[data-boot-auth="logged_in"] body #app.app-layout {
     display: grid !important;
     grid-template-columns: auto 1fr !important;
     grid-template-rows: var(--yt-header-height) 1fr !important;

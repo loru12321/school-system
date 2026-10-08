@@ -39,6 +39,7 @@ async function inspectLayout(page, viewport) {
             };
         };
         return {
+            appDisplay: getComputedStyle(document.getElementById('app')).display,
             overlay: rect(overlay),
             stage: rect(stage),
             card: rect(card),
@@ -82,6 +83,7 @@ async function main() {
         for (const viewport of viewports) {
             const state = await inspectLayout(page, viewport);
             const label = `${viewport.width}x${viewport.height}`;
+            assert.strictEqual(state.appDisplay, 'none', `${label}: logged-out app root must remain hidden behind the login shell`);
             for (const [name, styles] of [['stage', state.stageStyle], ['card', state.cardStyle]]) {
                 assert.ok(!['absolute', 'fixed'].includes(styles.position), `${label}: ${name} must remain in document flow`);
                 assert.strictEqual(styles.transform, 'none', `${label}: ${name} must not be transformed`);

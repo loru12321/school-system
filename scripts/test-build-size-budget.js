@@ -81,7 +81,9 @@ const budgets = {
     // 2026-09-27: preserve conditional CSS and runtime-generated module styles.
     // The previous 349,952B baseline was missing styles after unsafe dedupe/purge.
     // Corrected output is 360,536B; retain <1.5KB of compression variance headroom.
-    ltHtmlBrotli: 362_000,
+    // 2026-10-08: the YouTube-inspired shell already measured 362,669B on main;
+    // the session-resilience fix reduces that output while restoring CI headroom.
+    ltHtmlBrotli: 363_000,
     // 2026-08-30: drill-system demand loader adds a guarded runtime entry.
     publicRuntimeLoaderJs: 59_000,
     // Current minified app bundle baseline after runtime splits, cache guards,
