@@ -773,3 +773,168 @@ html body #app #main-header #shell-account-panel button i { font-size: 20px; ver
 }
 @media (max-width: 1099px) { .shell-brand { display: none; } }
 @media print { #workspace-sidebar-backdrop, #shell-account-panel { display: none !important; } }
+
+/* Channel-style workspace hierarchy: the category title and its modules form
+ * one aligned navigation band above the working surface. */
+@media (min-width: 1100px) {
+    html body #app.app-layout > main.app-main {
+        background: #f8fafc !important;
+    }
+    html body #app.app-layout #shell-overview.is-navigation-compact {
+        box-sizing: border-box;
+        width: min(100%, 1500px);
+        max-width: 1500px;
+        margin: 0 auto 8px !important;
+        padding: 8px 0 0 !important;
+    }
+    html body #app #shell-overview.is-navigation-compact .shell-overview-card--dock {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 20px !important;
+        min-height: 68px !important;
+        padding: 8px 0 12px !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    html body #app #shell-overview.is-navigation-compact .shell-overview-card--dock::before {
+        display: none !important;
+    }
+    html body #app #shell-overview.is-navigation-compact .shell-overview-copy {
+        gap: 0 !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-category-title {
+        margin: 0 !important;
+        font-size: clamp(22px, 1.6vw, 28px) !important;
+        line-height: 1.2 !important;
+        letter-spacing: -0.025em !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-module-count {
+        min-height: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        color: #64748b !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+    }
+    html body #app #shell-overview.is-navigation-compact .shell-overview-context-row {
+        min-height: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-cohort-chip {
+        display: none !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-sync-chip {
+        width: auto !important;
+        max-width: none !important;
+        min-height: 32px !important;
+        padding: 0 10px !important;
+        border: 1px solid #dbe2e9 !important;
+        border-radius: 999px !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        white-space: nowrap !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-sync-chip [data-sync-meta] {
+        display: none !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-module-rail-shell {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        align-items: end !important;
+        min-height: 52px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-bottom: 1px solid #dbe2e9 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail-meta {
+        grid-column: 2;
+        grid-row: 1;
+        width: auto !important;
+        min-width: 0 !important;
+        padding: 0 0 6px 12px !important;
+        border: 0 !important;
+        background: transparent !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-module-rail-shell :is(.shell-module-rail-copy, .shell-module-rail-status) {
+        display: none !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail {
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0 !important;
+        gap: clamp(16px, 2vw, 30px) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail-chip {
+        min-height: 50px !important;
+        padding: 0 3px !important;
+        border: 0 !important;
+        border-bottom: 2px solid transparent !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        transform: none !important;
+        color: #64748b !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail-chip:hover,
+    html body #app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail-chip.is-active {
+        border-bottom-color: var(--rail-accent, #334155) !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: #172033 !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-module-rail-shell .shell-module-rail-chip-title {
+        color: inherit !important;
+        font-size: 14px !important;
+        font-weight: 650 !important;
+    }
+    html body #app #shell-overview.is-navigation-compact #shell-module-rail-shell [data-auxiliary-navigation] {
+        min-height: 32px !important;
+        margin: 0 !important;
+        padding: 4px 10px !important;
+        border: 0 !important;
+        background: transparent !important;
+        color: #64748b !important;
+    }
+    html body #app.app-layout > main.app-main > .section {
+        max-width: 1500px !important;
+    }
+    html body #app.app-layout #workspace-sidebar-backdrop {
+        background: rgba(15, 23, 42, 0.18) !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+}
+
+@media (min-width: 1600px) {
+    html body #app #main-header.shell-toolbar {
+        grid-template-columns: minmax(0, 1fr) minmax(340px, 640px) minmax(0, 1fr) !important;
+    }
+    html body #app #main-header .toolbar-right {
+        justify-self: end !important;
+    }
+}
+
+html body #app #main-header.shell-toolbar[style*="display: none"] {
+    display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app #shell-overview .shell-module-rail-chip,
+    #app #app-sidebar .sidebar-menu-item {
+        transition: none !important;
+    }
+}
