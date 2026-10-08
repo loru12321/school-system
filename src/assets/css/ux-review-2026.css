@@ -828,7 +828,8 @@ html body #app #main-header #shell-account-panel button i { font-size: 20px; ver
 }
 
 /* ==================== 顶部导航栏 ==================== */
-html body #app #main-header.shell-toolbar {
+/* 只在登录后显示 YouTube 布局 */
+html[data-boot-auth="logged_in"] body #app #main-header.shell-toolbar {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -976,7 +977,8 @@ html body #app #main-header #shell-account-menu > summary {
 }
 
 /* ==================== 左侧导航栏 ==================== */
-html body #app.app-layout {
+/* 只在登录后显示 YouTube 布局 */
+html[data-boot-auth="logged_in"] body #app.app-layout {
     display: grid !important;
     grid-template-columns: auto 1fr !important;
     grid-template-rows: var(--yt-header-height) 1fr !important;
@@ -984,7 +986,7 @@ html body #app.app-layout {
     background: var(--yt-spec-base-background) !important;
 }
 
-html body #app.app-layout > #app-sidebar {
+html[data-boot-auth="logged_in"] body #app.app-layout > #app-sidebar {
     position: fixed !important;
     left: 0 !important;
     top: var(--yt-header-height) !important;
@@ -1111,7 +1113,7 @@ html body.shell-sidebar-collapsed #app-sidebar .sidebar-menu-item__meta {
 }
 
 /* ==================== 主内容区 ==================== */
-html body #app.app-layout > main.app-main {
+html[data-boot-auth="logged_in"] body #app.app-layout > main.app-main {
     grid-column: 2 !important;
     grid-row: 2 !important;
     margin-left: var(--yt-sidebar-width) !important;
@@ -1121,7 +1123,7 @@ html body #app.app-layout > main.app-main {
     transition: margin-left 0.2s ease !important;
 }
 
-html body.shell-sidebar-collapsed #app.app-layout > main.app-main {
+html[data-boot-auth="logged_in"] body.shell-sidebar-collapsed #app.app-layout > main.app-main {
     margin-left: var(--yt-sidebar-mini-width) !important;
 }
 
