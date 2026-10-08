@@ -14,6 +14,7 @@ Set-Location $PSScriptRoot
 # commit + push，造成「dist 产物已提交、源码/测试没提交」的半成品发布。
 # 因此下面既做存在性过滤，也对每条 git 命令显式检查 $LASTEXITCODE。
 $sourcePaths = @(
+    ".github",
     ".gitignore",
     "src",
     "public",
