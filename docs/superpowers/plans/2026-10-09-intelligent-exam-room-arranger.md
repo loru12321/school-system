@@ -53,7 +53,7 @@ Cover current-class sheets, historical mapping sheets, explicit exclusion sheets
 
 - [ ] **Step 2: Run the core test and confirm the new global is missing**
 
-Run: `node scripts/test-exam-arranger-core-runtime.js`  
+Run: `node scripts/test-exam-arranger-core-runtime.js`
 Expected: FAIL because `ExamArrangerCore` is undefined.
 
 - [ ] **Step 3: Implement the normalized workspace and workbook recognizer**
@@ -66,7 +66,7 @@ Assert that current and historical sheets do not double-count, same-name/differe
 
 - [ ] **Step 5: Run and register the core test**
 
-Run: `node scripts/test-exam-arranger-core-runtime.js`  
+Run: `node scripts/test-exam-arranger-core-runtime.js`
 Expected: PASS with a JSON summary. Add `test:exam-arranger-core` to `package.json`.
 
 - [ ] **Step 6: Commit**
@@ -107,7 +107,7 @@ Keep the default path strictly score-ranked. Advanced rules receive a copy of th
 
 - [ ] **Step 5: Run the core suite**
 
-Run: `npm run test:exam-arranger-core`  
+Run: `npm run test:exam-arranger-core`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
@@ -138,7 +138,7 @@ Assert loader order `xlsx-js-style -> jszip -> core -> freshman -> arranger`, sc
 
 - [ ] **Step 2: Run the contract test**
 
-Run: `node scripts/test-exam-arranger-runtime.js`  
+Run: `node scripts/test-exam-arranger-runtime.js`
 Expected: FAIL because the new runtimes are absent.
 
 - [ ] **Step 3: Move exam state and handlers into the new controller**
@@ -151,7 +151,7 @@ Save only after an explicit user action. Store normalized workspace data in a ve
 
 - [ ] **Step 5: Run syntax, runtime order, and controller tests**
 
-Run: `npm run check:syntax && npm run test:runtime-order && node scripts/test-exam-arranger-runtime.js`  
+Run: `npm run check:syntax && npm run test:runtime-order && node scripts/test-exam-arranger-runtime.js`
 Expected: PASS. Add `test:exam-arranger-runtime` to `package.json`.
 
 - [ ] **Step 6: Commit**
@@ -192,7 +192,7 @@ Render import sources, issue groups, eligible/excluded students, room capacities
 
 - [ ] **Step 5: Run UI and hygiene tests**
 
-Run: `node scripts/test-exam-arranger-ui-contract.js && npm run test:html-hygiene && npm run test:css-hygiene && npm run test:ui-copy-integrity`  
+Run: `node scripts/test-exam-arranger-ui-contract.js && npm run test:html-hygiene && npm run test:css-hygiene && npm run test:ui-copy-integrity`
 Expected: PASS. Add `test:exam-arranger-ui` to `package.json`.
 
 - [ ] **Step 6: Commit**
@@ -239,7 +239,7 @@ The manifest records file names, counts, capacities, rule signature, timestamp, 
 
 - [ ] **Step 5: Run export tests**
 
-Run: `node scripts/test-exam-arranger-export-runtime.js`  
+Run: `node scripts/test-exam-arranger-export-runtime.js`
 Expected: PASS. Add `test:exam-arranger-export` to `package.json`.
 
 - [ ] **Step 6: Commit**
@@ -282,7 +282,7 @@ Generate A4 portrait tables with 2 columns × 8 rows, double borders, red exam n
 
 - [ ] **Step 5: Run DOCX tests and connect the files to the ZIP package**
 
-Run: `node scripts/test-exam-arranger-docx-runtime.js && npm run test:exam-arranger-export`  
+Run: `node scripts/test-exam-arranger-docx-runtime.js && npm run test:exam-arranger-export`
 Expected: PASS. Add `test:exam-arranger-docx` to `package.json`.
 
 - [ ] **Step 6: Commit**
@@ -313,7 +313,7 @@ Read `新生分班方案.xlsx`, `考场考号总表.xlsx`, the by-class workbook
 
 - [ ] **Step 2: Run the verifier against the approved desktop sample**
 
-Run: `node scripts/verify-exam-arranger-sample.js "C:\Users\loru\Desktop\考号及考场"`  
+Run: `node scripts/verify-exam-arranger-sample.js "C:\Users\loru\Desktop\考号及考场"`
 Expected: `337 source`, `12 excluded`, `325 assigned`, room sizes `[55,54,54,54,54,54]`, and zero ordering mismatches.
 
 - [ ] **Step 3: Adapt proctor assignment to the new room model**
@@ -326,7 +326,7 @@ Generate a temporary workbook, open `exam-arranger`, upload it, resolve one excl
 
 - [ ] **Step 5: Run focused local regression**
 
-Run: `npm run build` then `node scripts/smoke-exam-arranger.js`  
+Run: `npm run build` then `node scripts/smoke-exam-arranger.js`
 Expected: PASS. Add `smoke:exam-arranger:local` to `package.json`.
 
 - [ ] **Step 6: Commit**
@@ -347,12 +347,12 @@ git commit -m "test(exam-arranger): verify sample and browser workflow"
 
 - [ ] **Step 1: Run focused unit and contract suites**
 
-Run: `npm run test:exam-arranger-core && npm run test:exam-arranger-runtime && npm run test:exam-arranger-ui && npm run test:exam-arranger-export && npm run test:exam-arranger-docx`  
+Run: `npm run test:exam-arranger-core && npm run test:exam-arranger-runtime && npm run test:exam-arranger-ui && npm run test:exam-arranger-export && npm run test:exam-arranger-docx`
 Expected: all PASS.
 
 - [ ] **Step 2: Run repository integrity gates**
 
-Run: `npm run build && npm run check:syntax && npm run test:runtime-order && npm run test:module-inventory && npm run test:workflow-interaction && npm run test:ui-copy-integrity`  
+Run: `npm run build && npm run check:syntax && npm run test:runtime-order && npm run test:module-inventory && npm run test:workflow-interaction && npm run test:ui-copy-integrity`
 Expected: all PASS and no new runtime ordering or module inventory errors.
 
 - [ ] **Step 3: Perform local browser regression with school-browser-regression**
