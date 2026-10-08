@@ -123,6 +123,20 @@ async function openUploadModule(page) {
         const upload = document.getElementById('upload');
         return !!upload && upload.classList.contains('active') && getComputedStyle(upload).display !== 'none';
     }, null, { timeout: 30000 });
+    // Login and background workspace recovery may leave a transient
+    // informational SweetAlert open while the module is already ready.
+    // Dismiss only known non-error prompts before measuring the page.
+    await page.evaluate(() => {
+        const swal = window.Swal;
+        const title = String(swal?.getTitle?.()?.textContent || '').trim();
+        const dismissible = !title
+            || title === '提示'
+            || title.includes('需要先完成基础配置')
+            || /登录成功|同步|恢复|加载/.test(title);
+        if (swal && typeof swal.isVisible === 'function' && swal.isVisible() && dismissible && typeof swal.close === 'function') {
+            swal.close();
+        }
+    }).catch(() => {});
     await page.waitForTimeout(500);
 }
 

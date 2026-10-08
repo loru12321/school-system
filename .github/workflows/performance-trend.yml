@@ -49,6 +49,9 @@ jobs:
         run: npm run build
 
       - name: Run fast release guards
+        env:
+          NODE_OPTIONS: --require ./scripts/playwright-system-chromium.cjs
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: npm run check:release-fast
 
       - name: Verify system Chrome
