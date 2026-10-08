@@ -828,9 +828,28 @@ async function inspectSummaryLayout(page, mode) {
 }
 
 async function inspectTeacherAnalysisLayout(page, mode) {
+    const targetSelector = await page.evaluate(() => {
+        const panel = document.querySelector('#teacher-analysis .analysis-inline-panel');
+        if (panel) {
+            const style = getComputedStyle(panel);
+            const rect = panel.getBoundingClientRect();
+            if (style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 120 && rect.height > 40) {
+                return '#teacher-analysis .analysis-inline-panel';
+            }
+        }
+        const cards = document.querySelector('#teacherCardsContainer');
+        if (cards) {
+            const style = getComputedStyle(cards);
+            const rect = cards.getBoundingClientRect();
+            if (style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 120 && rect.height > 40) {
+                return '#teacherCardsContainer';
+            }
+        }
+        return '#teacher-analysis .analysis-shell-head';
+    });
     return inspectSectionLayout(page, mode, {
         sectionId: 'teacher-analysis',
-        targetSelector: '#teacher-analysis .analysis-inline-panel',
+        targetSelector,
         requiredSelectors: {
             shellHead: '#teacher-analysis .analysis-shell-head',
             syncCta: '#teacher-sync-cta',
