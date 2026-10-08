@@ -51,3 +51,4 @@ docs/*-favorite-audit-ledger.json
 docs/*-favorite-evidence-*.md
 docs/*-favorite-music-audit-ledger.json
 scripts/merge-*-detail-batch.mjs
+.dev.vars
