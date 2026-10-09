@@ -131,7 +131,10 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('teaching-workbench-cohort', bootJs('teaching-workbench-cohort-runtime.js')),
     // 新生分班导出需要保留特殊学生行的填充色和字体色。
     bootEntry('xlsx-js-style-vendor', bootVend('xlsx-js-style/xlsx.min.js')),
+    bootEntry('jszip-vendor', bootVend('jszip/jszip.min.js')),
+    bootEntry('exam-arranger-core', bootJs('exam-arranger-core-runtime.js')),
     bootEntry('freshman-exam', bootJs('freshman-exam-runtime.js')),
+    bootEntry('exam-arranger', bootJs('exam-arranger-runtime.js')),
     bootEntry('freshman-constraint-insight', bootJs('freshman-constraint-insight-runtime.js'))
 ]),
 'demo-data': bootSkill('demand','demand',['loadDemoData'],[bootEntry('demo-data',bootJs('demo-data-runtime.js'))]),
