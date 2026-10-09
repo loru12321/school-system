@@ -25,14 +25,20 @@ const url = process.env.SMOKE_URL || 'http://127.0.0.1:4173/';
         section?.classList.add('active');
         if (section) section.style.display = 'block';
     });
-    for (const asset of [
-        '/assets/vendor/xlsx-js-style/xlsx.min.js',
-        '/assets/vendor/jszip/jszip.min.js',
-        '/assets/js/exam-arranger-core-runtime.js',
-        '/assets/js/exam-arranger-docx-runtime.js',
-        '/assets/js/exam-arranger-export-runtime.js',
-        '/assets/js/exam-arranger-runtime.js'
-    ]) { console.error(`[exam-smoke] loading ${asset}`); await page.addScriptTag({ url: new URL(asset, url).toString() }); }
+    if (new URL(url).protocol === 'file:') {
+        console.error('[exam-smoke] loading offline runtime registry');
+        await page.waitForFunction(() => typeof window.ensureExamArrangerRuntimeLoaded === 'function', null, { timeout: 30000 });
+        await page.evaluate(() => window.ensureExamArrangerRuntimeLoaded());
+    } else {
+        for (const asset of [
+            '/assets/vendor/xlsx-js-style/xlsx.min.js',
+            '/assets/vendor/jszip/jszip.min.js',
+            '/assets/js/exam-arranger-core-runtime.js',
+            '/assets/js/exam-arranger-docx-runtime.js',
+            '/assets/js/exam-arranger-export-runtime.js',
+            '/assets/js/exam-arranger-runtime.js'
+        ]) { console.error(`[exam-smoke] loading ${asset}`); await page.addScriptTag({ url: new URL(asset, url).toString() }); }
+    }
     console.error('[exam-smoke] runtimes-ready');
     await page.evaluate(() => {
         window.ExamArranger?.init?.();
@@ -57,10 +63,12 @@ const url = process.env.SMOKE_URL || 'http://127.0.0.1:4173/';
     await page.waitForSelector('#exam-step-output', { state: 'attached', timeout: 30000 });
     const output = await page.evaluate(() => ({
         outputCards: document.querySelectorAll('#exam-output-center .exam-output-card').length,
-        publicPreview: document.querySelector('#exam-output-preview-table')?.textContent?.includes('成绩') === false
+        publicPreview: document.querySelector('#exam-output-preview-table')?.textContent?.includes('成绩') === false,
+        proctorPanel: !!document.querySelector('#exam-proctor-panel [data-exam-action="assign-proctors"]')
     }));
     assert.equal(output.outputCards, 4);
     assert.equal(output.publicPreview, true);
+    assert.equal(output.proctorPanel, true);
     await browser.close();
     console.log(JSON.stringify({ ok: true, contract: 'exam-arranger-workbench-smoke', initial, output }, null, 2));
 })().catch((error) => {

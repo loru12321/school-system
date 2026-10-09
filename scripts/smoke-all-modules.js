@@ -4516,8 +4516,8 @@ async function runModuleDeepCheck(page, id) {
                 });
             };
 
-            if (typeof window.ensureFreshmanExamRuntimeLoaded === 'function') {
-                await window.ensureFreshmanExamRuntimeLoaded();
+            if (typeof window.ensureExamArrangerRuntimeLoaded === 'function') {
+                await window.ensureExamArrangerRuntimeLoaded();
             }
             if (typeof window.ensureXlsxVendorLoaded === 'function') {
                 await window.ensureXlsxVendorLoaded();
@@ -4766,18 +4766,15 @@ async function runModuleDeepCheck(page, id) {
                 await window.ensureXlsxVendorLoaded();
             }
 
-            const runtime = window.FreshmanExamRuntime;
+            const runtime = window.ExamArranger;
             const checks = {
                 sectionReady: !!document.querySelector('#exam-arranger.analysis-workspace-tools'),
-                runtimeReady: !!runtime,
+                runtimeReady: !!runtime && typeof runtime.getWorkspace === 'function',
                 xlsxReady: !!(window.XLSX && window.XLSX.utils),
-                importReady: typeof window.EXAM_loadData === 'function',
-                generateReady: typeof window.EXAM_generate === 'function'
-                    && typeof window.EXAM_renderOverview === 'function'
-                    && typeof window.EXAM_renderStudentList === 'function'
-                    && typeof window.EXAM_renderProctorTable === 'function',
+                importReady: typeof runtime?.loadFiles === 'function',
+                generateReady: typeof runtime?.generate === 'function',
                 proctorUiReady: typeof window.EXAM_initProctorUI === 'function',
-                proctorAssignReady: typeof window.EXAM_assignProctors === 'function'
+                proctorAssignReady: typeof runtime?.assignProctors === 'function'
             };
             if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
                 return {
@@ -4813,8 +4810,8 @@ async function runModuleDeepCheck(page, id) {
                 };
             }
             try {
-                window.EXAM_loadData({ files: [makeWorkbookFile(sampleRows, 'exam-smoke.xlsx')], value: '' });
-                await waitUntil(() => runtime.examData.length === sampleRows.length);
+                await runtime.loadFiles([makeWorkbookFile(sampleRows, 'exam-smoke.xlsx')]);
+                await waitUntil(() => runtime.getWorkspace().students.length === sampleRows.length);
 
                 const prefixInput = document.getElementById('exam_prefix');
                 const seatsInput = document.getElementById('exam_seats_per_room');
@@ -4825,9 +4822,9 @@ async function runModuleDeepCheck(page, id) {
                 if (separateInput) separateInput.checked = true;
                 if (snakeInput) snakeInput.checked = true;
 
-                window.EXAM_generate();
-                await waitUntil(() => runtime.examRooms.length === expectedRoomCount
-                    && document.querySelectorAll('#exam_room_grid .exam-room-card').length === expectedRoomCount);
+                runtime.generate();
+                await waitUntil(() => runtime.getWorkspace().generation?.rooms?.length === expectedRoomCount
+                    && document.querySelectorAll('#exam-output-preview-table tbody tr').length === sampleRows.length);
 
                 if (typeof window.EXAM_initProctorUI === 'function') {
                     window.EXAM_initProctorUI();
@@ -4837,8 +4834,9 @@ async function runModuleDeepCheck(page, id) {
                 if (window.UI && originalUiAlert) window.UI.alert = originalUiAlert;
             }
 
-            const rooms = Array.isArray(runtime.examRooms) ? runtime.examRooms : [];
-            const examData = Array.isArray(runtime.examData) ? runtime.examData : [];
+            const workspace = runtime.getWorkspace();
+            const rooms = Array.isArray(workspace.generation?.rooms) ? workspace.generation.rooms : [];
+            const examData = Array.isArray(workspace.students) ? workspace.students : [];
             const assigned = rooms.flatMap(room => Array.isArray(room.students) ? room.students : []);
             const examNos = assigned.map(student => String(student.examNo || '').trim()).filter(Boolean);
             const teacherNames = [...new Set(Object.values(window.TEACHER_MAP || {})
@@ -4861,7 +4859,7 @@ async function runModuleDeepCheck(page, id) {
                     };
                 }
                 try {
-                    window.EXAM_assignProctors();
+                    runtime.assignProctors();
                     proctorAssignmentTried = true;
                     await wait(200);
                 } finally {
@@ -4891,7 +4889,7 @@ async function runModuleDeepCheck(page, id) {
             });
             const examNoSortedStudents = [...assigned].sort((a, b) => String(a.examNo || '').localeCompare(String(b.examNo || '')));
             const noAdjacentSameClass = examNoSortedStudents.every((student, index, rows) => (
-                index === 0 || String(student.class) !== String(rows[index - 1].class)
+                index === 0 || String(student.currentClass) !== String(rows[index - 1].currentClass)
             ));
             const firstExamNo = String(examNoSortedStudents[0]?.examNo || '');
             const lastExamNo = String(examNoSortedStudents[examNoSortedStudents.length - 1]?.examNo || '');
@@ -4907,12 +4905,13 @@ async function runModuleDeepCheck(page, id) {
                 seatIntegrity,
                 snakePrintOrder,
                 classSeparationApplied: noAdjacentSameClass,
-                resultsAreaVisible: !document.getElementById('exam-results-area')?.classList.contains('hidden'),
-                overviewRendered: document.querySelectorAll('#exam_room_grid .exam-room-card').length === expectedRoomCount,
-                studentRowsRendered: document.querySelectorAll('#exam_student_table tbody tr').length === sampleRows.length,
+                resultsAreaVisible: !document.getElementById('exam-step-output')?.hidden,
+                overviewRendered: Number(document.querySelector('[data-exam-metric="rooms"]')?.textContent || 0) === expectedRoomCount,
+                studentRowsRendered: document.querySelectorAll('#exam-output-preview-table tbody tr').length === sampleRows.length,
                 proctorRowsRendered: document.querySelectorAll('#exam_proctor_table tbody tr').length >= rooms.length,
-                printViewRendered: document.querySelectorAll('#batch-print-area-wrapper .exam-print-page, #batch-print-container .exam-print-page').length === expectedRoomCount,
-                importSucceeded: alerts.some(message => message.includes(String(sampleRows.length))),
+                outputActionsReady: document.querySelectorAll('#exam-output-center [data-exam-action^="export"]').length === 4,
+                publicPreviewHidesScores: !document.querySelector('#exam-output-preview-table thead')?.textContent.includes('成绩'),
+                importSucceeded: workspace.sources.length === 1 && workspace.importSummary?.rawStudentRows === sampleRows.length,
                 proctorAssignmentReady
             };
 

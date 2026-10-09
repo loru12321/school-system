@@ -30,8 +30,12 @@ const budgets = {
     distIndexHtml: 330_000,
     // Approved responsive login recovery/fullscreen polish and current product workspace styles
     // fit under this cap while retaining tight regression detection headroom.
-    distAppCss: 640_000,
-    ltHtml: 2_100_000,
+    // 2026-10-09: the four-step exam-room workbench adds its responsive layout
+    // and output preview styles. Keep less than 1.5KB above the built baseline.
+    distAppCss: 648_000,
+    // The offline single-file build embeds the four demand-loaded exam arranger
+    // runtimes so folder import and exports remain available without a server.
+    ltHtml: 2_150_000,
     // Offline lt.html carries inline runtime sources for single-file use; keep a
     // tight cap above the current complete offline bundle.
     // 2026-07-09: raised 335_000 -> 336_000 for the non-grade-9 major-subject
@@ -83,9 +87,12 @@ const budgets = {
     // Corrected output is 360,536B; retain <1.5KB of compression variance headroom.
     // 2026-10-08: the YouTube-inspired shell already measured 362,669B on main;
     // the session-resilience fix reduces that output while restoring CI headroom.
-    ltHtmlBrotli: 363_000,
+    // 2026-10-09: compressed offline baseline after adding the exam arranger's
+    // import, allocation, confidential export, and DOCX output runtimes.
+    ltHtmlBrotli: 375_000,
     // 2026-08-30: drill-system demand loader adds a guarded runtime entry.
-    publicRuntimeLoaderJs: 59_000,
+    // 2026-10-09: four guarded exam arranger module registrations add 119B.
+    publicRuntimeLoaderJs: 59_500,
     // Current minified app bundle baseline after runtime splits, cache guards,
     // and the product redesign CSS layer being accounted in the singlefile build.
     distAppJs: 585_000,
@@ -93,7 +100,7 @@ const budgets = {
     distTeacherAnalysisJs: 72_000
 };
 
-assert.strictEqual(budgets.distAppCss, 640_000, 'approved CSS budget must remain fixed at 640000 bytes');
+assert.strictEqual(budgets.distAppCss, 648_000, 'approved CSS budget must remain fixed at 648000 bytes');
 
 const actual = {
     distIndexHtml: getSize(distIndexPath),

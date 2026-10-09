@@ -353,7 +353,32 @@
     function render() {
         renderWorkbench();
         renderLegacyResult();
+        initProctorUI();
         root.dispatchEvent?.(new root.CustomEvent('exam-arranger:state', { detail: getWorkspace() }));
+    }
+
+    function proctorTeacherNames() {
+        return [...new Set(Object.values(root.TEACHER_MAP || {})
+            .map((name) => String(name || '').trim())
+            .filter(Boolean))]
+            .sort((left, right) => left.localeCompare(right, 'zh-CN'));
+    }
+
+    function initProctorUI() {
+        const teachers = proctorTeacherNames();
+        const pool = root.document?.getElementById?.('proctor-teacher-pool');
+        if (pool) {
+            pool.innerHTML = teachers.length
+                ? teachers.map((name) => `<label><input class="exclude-check" type="checkbox" value="${escapeHtml(name)}"> <span>${escapeHtml(name)}</span></label>`).join('')
+                : '<div class="exam-empty-state">请先在数据准备中导入教师信息。</div>';
+        }
+        ['proctor-role-patrol', 'proctor-role-affairs'].forEach((id) => {
+            const select = root.document?.getElementById?.(id);
+            if (!select) return;
+            const selected = new Set(Array.from(select.selectedOptions || [], (option) => option.value));
+            select.innerHTML = teachers.map((name) => `<option value="${escapeHtml(name)}"${selected.has(name) ? ' selected' : ''}>${escapeHtml(name)}</option>`).join('');
+        });
+        return { teacherCount: teachers.length };
     }
 
     function assignProctors() {
@@ -362,7 +387,7 @@
             notify('请先生成考场安排', 'warning');
             return false;
         }
-        const teachers = [...new Set(Object.values(root.TEACHER_MAP || {}).map((name) => String(name || '').trim()).filter(Boolean))];
+        const teachers = proctorTeacherNames();
         const excluded = Array.from(root.document?.querySelectorAll?.('.exclude-check:checked') || [], (item) => item.value);
         const patrols = Array.from(root.document?.getElementById('proctor-role-patrol')?.selectedOptions || [], (item) => item.value);
         const affairs = Array.from(root.document?.getElementById('proctor-role-affairs')?.selectedOptions || [], (item) => item.value)
@@ -419,6 +444,7 @@
             else if (action === 'toggle-excluded') toggleExcluded(target.dataset.studentId, target.dataset.reason);
             else if (action === 'download-template') downloadTemplate(target.dataset.examTemplate);
             else if (action === 'add-room') addRoom();
+            else if (action === 'assign-proctors') assignProctors();
             else if (action === 'export') exportResult('package');
             else if (action === 'export-confidential') exportResult('confidential');
             else if (action === 'export-public') exportResult('public');
@@ -462,7 +488,7 @@
     root.EXAM_assignProctors = assignProctors;
     root.EXAM_exportResult = exportResult;
     root.EXAM_generateDeskLabels = exportResult;
-    root.EXAM_initProctorUI = () => true;
+    root.EXAM_initProctorUI = initProctorUI;
 
     if (root.document?.readyState === 'loading') {
         root.document.addEventListener('DOMContentLoaded', init, { once: true });

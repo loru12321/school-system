@@ -12709,6 +12709,16 @@ body.dark-mode .version-center-meta-list > div {
 .exam-output-confidential { border-color: #fed7aa; background: #fffaf5; }
 .exam-output-confidential > i { color: #c2410c; }
 .exam-output-package { grid-column: 1 / -1; border-color: #c4b5fd; background: #faf5ff; }
+.exam-proctor-panel { margin-top: 16px; border: 1px solid #ddd6fe; border-radius: 12px; background: #fafaff; overflow: hidden; }
+.exam-proctor-panel > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; color: #5b21b6; cursor: pointer; list-style: none; }
+.exam-proctor-panel > summary::-webkit-details-marker { display: none; }
+.exam-proctor-panel > summary > span { display: flex; align-items: center; gap: 8px; }
+.exam-proctor-panel > summary small { color: #7c3aed; font-weight: 500; }
+.exam-proctor-panel[open] > summary > .ti-chevron-down { transform: rotate(180deg); }
+.exam-proctor-content { display: grid; gap: 14px; padding: 0 16px 16px; }
+.exam-proctor-content .proctor-setup-grid { margin-top: 0; }
+.exam-proctor-content .teacher-scroll-list { min-height: 120px; max-height: 220px; }
+.exam-proctor-content [data-exam-action="assign-proctors"] { width: 100%; margin-top: 10px; }
 .exam-sticky-rail { position: sticky; top: 18px; display: grid; gap: 10px; }
 .exam-rail-card { padding: 16px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
 .exam-rail-card h3 { margin: 5px 0 14px; color: #1e293b; font-size: 15px; }

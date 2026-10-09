@@ -22,7 +22,12 @@ const visibleSection = section.slice(visibleStart, legacyStart > visibleStart ? 
     'exam-summary-strip',
     'exam-issue-list',
     'exam-room-editor',
-    'exam-output-center'
+    'exam-output-center',
+    'exam-proctor-panel',
+    'proctor-teacher-pool',
+    'proctor-role-patrol',
+    'proctor-role-affairs',
+    'exam_proctor_table'
 ].forEach((id) => assert.ok(visibleSection.includes(`id="${id}"`), `workbench should include ${id}`));
 
 [
@@ -35,6 +40,7 @@ assert.ok(visibleSection.includes('data-exam-change="files"'), 'file input shoul
 assert.ok(section.includes('data-exam-action="save-draft"'), 'explicit local save action should exist');
 assert.ok(section.includes('data-exam-action="clear"'), 'clear workspace action should exist');
 assert.ok(visibleSection.includes('data-exam-action="generate"'), 'generate action should exist');
+assert.ok(visibleSection.includes('data-exam-action="assign-proctors"'), 'proctor assignment action should exist');
 assert.ok(visibleSection.includes('data-exam-action="export"'), 'export action should exist');
 assert.ok(visibleSection.includes('data-exam-step="1"') && visibleSection.includes('data-exam-step="4"'), 'step controls should exist');
 assert.ok(/ti ti-[a-z0-9-]+/.test(visibleSection), 'workbench should use Tabler icons');
@@ -53,4 +59,6 @@ assert.ok(!/[🚀🔀🐍🏷️👀👨‍🏫📋👮]/u.test(visibleSection),
 ].forEach((selector) => assert.ok(css.includes(selector), `stylesheet should define ${selector}`));
 
 assert.ok(runtime.includes('data-exam-panel') && runtime.includes('renderWorkbench'), 'runtime should render workbench state');
+assert.ok(runtime.includes('function initProctorUI'), 'runtime should initialize the visible proctor panel');
+assert.ok(!runtime.includes('root.EXAM_initProctorUI = () => true'), 'proctor initialization must not remain a compatibility stub');
 console.log(JSON.stringify({ ok: true, contract: 'exam-arranger-four-step-ui' }, null, 2));

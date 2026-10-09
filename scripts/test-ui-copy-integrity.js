@@ -298,6 +298,18 @@ async function ensureCohortEntered(page) {
         };
     });
     let state = await withNavigationRetry(page, readEntryState, { attempts: 4 });
+    const hasWorkspaceIdentity = (entryState) => !!(
+        entryState.currentCohortId || entryState.examId || entryState.rawDataLen > 0
+    );
+    const revealCohortPicker = async () => {
+        await page.evaluate(() => {
+            if (typeof window.showCohortPicker === 'function') window.showCohortPicker();
+        });
+        await page.waitForTimeout(200);
+        return withNavigationRetry(page, readEntryState, { attempts: 4 });
+    };
+    if (!state.maskVisible && hasWorkspaceIdentity(state)) return state;
+    if (!state.maskVisible) state = await revealCohortPicker();
     if (!state.maskVisible) return state;
 
     if (!state.overlayHidden && (state.authState === 'logged_in' || state.sessionUserPresent || state.bootPending)) {
@@ -311,6 +323,8 @@ async function ensureCohortEntered(page) {
             // 登录接力可能仍在收尾，超时后按当前状态继续判断。
         }
         state = await withNavigationRetry(page, readEntryState, { attempts: 4 });
+        if (!state.maskVisible && hasWorkspaceIdentity(state)) return state;
+        if (!state.maskVisible) state = await revealCohortPicker();
         if (!state.maskVisible) return state;
     }
 
