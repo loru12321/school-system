@@ -1368,6 +1368,10 @@
                     <i class="ti ti-history"></i>
                     <span>${escapeHtml(copy.recent)}</span>
                 </button>
+                <button type="button" class="apk-shell-tab" data-apk-tab="library">
+                    <i class="ti ti-apps"></i>
+                    <span>${escapeHtml(copy.modules)}</span>
+                </button>
                 <button type="button" class="apk-shell-tab" data-apk-tab="account">
                     <i class="ti ti-user-circle"></i>
                     <span>${escapeHtml(copy.account)}</span>
@@ -1600,6 +1604,7 @@
                     (tab === 'home' && !sheetMode && activeId === homeId)
                     || (tab === 'modules' && sheetMode === 'modules')
                     || (tab === 'quick' && sheetMode === 'quick')
+                    || (tab === 'library' && libraryOpen)
                     || (tab === 'account' && sheetMode === 'account')
                 )
             );
@@ -1623,6 +1628,9 @@
         setDatasetIfChanged(root, 'sheetOpen', sheetMode ? 'true' : 'false');
         setDatasetIfChanged(root, 'sheetMode', sheetMode || '');
         setDatasetIfChanged(root, 'libraryOpen', libraryOpen ? 'true' : 'false');
+        setDatasetIfChanged(root, 'mobileSheetOpen', sheetMode ? 'true' : 'false');
+        setDatasetIfChanged(root, 'mobileLibraryOpen', libraryOpen ? 'true' : 'false');
+        setDatasetIfChanged(root, 'mobileCurrentModule', activeItem?.id || getActiveModuleId() || '');
 
         const fields = {
             role: `${humanizeRole()}工作台`,
@@ -1727,6 +1735,10 @@
         }
         if (tabName === 'quick') {
             toggleSheet('quick');
+            return;
+        }
+        if (tabName === 'library') {
+            toggleLibrary();
             return;
         }
         if (tabName === 'account') {
@@ -1973,6 +1985,9 @@
             root.dataset.sheetOpen = 'false';
             root.dataset.sheetMode = '';
             root.dataset.libraryOpen = 'false';
+            root.dataset.mobileSheetOpen = 'false';
+            root.dataset.mobileLibraryOpen = 'false';
+            root.dataset.mobileCurrentModule = '';
             root.dataset.modalOpen = 'false';
             restoreMainToApp();
             return;

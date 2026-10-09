@@ -68,6 +68,16 @@ async function readMobileShellState(page) {
             shellVisible: !!shell && rootDisplay !== 'none' && shell.getAttribute('aria-hidden') === 'false',
             railChips: document.querySelectorAll('#apk-mobile-shell .apk-rail-chip').length,
             activeRailChip: !!document.querySelector('#apk-mobile-shell .apk-rail-chip.is-active'),
+            shellCount: document.querySelectorAll('#apk-mobile-shell').length,
+            bottomEntries: document.querySelectorAll('#apk-mobile-shell [data-apk-tab]').length,
+            currentModule: shell?.dataset?.mobileCurrentModule || '',
+            mobileSheetOpen: shell?.dataset?.mobileSheetOpen || '',
+            mobileLibraryOpen: shell?.dataset?.mobileLibraryOpen || '',
+            titleLineClamp: shell ? getComputedStyle(shell.querySelector('.apk-shell-title')).webkitLineClamp : '',
+            horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+            verticalScrollOwners: [...document.querySelectorAll('body, #app, #apk-mobile-shell, #apk-mobile-shell .apk-shell-content, main.app-main')]
+                .filter((node) => /auto|scroll/.test(getComputedStyle(node).overflowY))
+                .map((node) => node.matches('main.app-main') ? 'app-main' : (node.id || node.tagName.toLowerCase())),
             mobileExperienceRuntime: typeof window.MobileExperienceRuntime?.syncCompactState === 'function',
             compactViewportClass: document.documentElement.classList.contains('is-compact-viewport'),
             perfRuntimeLoaded: !!window.PerformanceMonitor,
@@ -120,6 +130,19 @@ async function main() {
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
     const state = await waitForMobileShellReady(page);
 
+    const viewportStates = [];
+    for (const viewport of [
+        { width: 320, height: 568, name: '320' },
+        { width: 390, height: 844, name: '390' },
+        { width: 430, height: 932, name: '430' },
+        { width: 844, height: 390, name: 'landscape' }
+    ]) {
+        await page.setViewportSize(viewport);
+        await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
+        await page.waitForTimeout(250);
+        viewportStates.push({ name: viewport.name, ...(await readMobileShellState(page)) });
+    }
+
     await browser.close();
 
     const actionableMessages = messages.filter((message) => !isIgnorableMessage(message));
@@ -129,6 +152,16 @@ async function main() {
     assert.ok(state.shellVisible, 'mobile shell was not visible');
     assert.ok(state.railChips > 0, 'mobile rail chips were not rendered');
     assert.ok(state.activeRailChip, 'mobile rail active chip was missing');
+    for (const viewportState of viewportStates) {
+        assert.strictEqual(viewportState.shellCount, 1, `${viewportState.name}: duplicate mobile shell found`);
+        assert.strictEqual(viewportState.bottomEntries, 5, `${viewportState.name}: bottom navigation must have five entries`);
+        assert.ok(viewportState.currentModule, `${viewportState.name}: current module state was not published`);
+        assert.strictEqual(viewportState.mobileSheetOpen, 'false', `${viewportState.name}: unexpected open sheet`);
+        assert.strictEqual(viewportState.mobileLibraryOpen, 'false', `${viewportState.name}: unexpected open library`);
+        assert.strictEqual(viewportState.titleLineClamp, '2', `${viewportState.name}: title must clamp to two lines`);
+        assert.strictEqual(viewportState.horizontalOverflow, false, `${viewportState.name}: document has horizontal overflow`);
+        assert.deepStrictEqual(viewportState.verticalScrollOwners, ['app-main'], `${viewportState.name}: .app-main must be the only vertical scroll root`);
+    }
     assert.ok(state.mobileExperienceRuntime, 'merged mobile experience runtime was not exposed');
     assert.ok(state.compactViewportClass, 'compact viewport class was not synchronized');
     assert.strictEqual(state.perfRuntimeLoaded, false, 'perf-mobile runtime should not load during normal mobile bootstrap');
@@ -139,7 +172,7 @@ async function main() {
         `mobile shell console errors found: ${actionableMessages.join('\n')}`
     );
 
-    console.log(JSON.stringify({ state, actionableMessages }, null, 2));
+    console.log(JSON.stringify({ state, viewportStates, actionableMessages }, null, 2));
 }
 
 main().catch((error) => {

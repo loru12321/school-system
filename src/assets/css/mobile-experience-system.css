@@ -57,6 +57,12 @@
     overscroll-behavior: contain;
   }
 
+  #apk-mobile-shell[data-mobile-sheet-open="true"] .app-main,
+  #apk-mobile-shell[data-mobile-library-open="true"] .app-main {
+    overflow: hidden !important;
+    touch-action: none;
+  }
+
   body.dark-mode :where(input, select, textarea),
   [data-theme="dark"] :where(input, select, textarea) {
     color-scheme: dark;

@@ -312,6 +312,10 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
         font-size: 18px;
         line-height: 1.2;
         font-weight: 800;
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
     }
 
     #apk-mobile-shell .apk-shell-subtitle {
@@ -841,15 +845,15 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
         right: 12px;
         bottom: calc(var(--app-safe-bottom) + 10px);
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 8px;
-        padding: 10px;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+        padding: 8px;
         border-radius: 24px;
         pointer-events: auto;
     }
 
     #apk-mobile-shell .apk-shell-tab {
-        min-height: 56px;
+        min-height: var(--mobile-control-min, 44px);
         border: none;
         border-radius: 18px;
         background: transparent;
