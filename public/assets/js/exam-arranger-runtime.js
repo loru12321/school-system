@@ -154,7 +154,15 @@
 
     function setStep(step) {
         const nextStep = Math.max(1, Math.min(4, Number(step) || 1));
-        getWorkspace().step = nextStep;
+        const current = getWorkspace();
+        if (nextStep >= 3 && current.students.length) {
+            const validation = core.validateWorkspace(current);
+            if (!validation.valid) {
+                notify(`还有 ${validation.blockingIssues.length} 项阻断问题需要处理`, 'warning');
+                return current.step;
+            }
+        }
+        current.step = nextStep;
         render();
         return nextStep;
     }
@@ -268,7 +276,82 @@
         }
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[character]));
+    }
+
+    function setText(selector, value) {
+        const node = root.document?.querySelector?.(selector);
+        if (node) node.textContent = String(value ?? '');
+    }
+
+    function renderWorkbench() {
+        const current = getWorkspace();
+        const validation = core.validateWorkspace(current);
+        const summary = validation.summary || {};
+        setText('[data-exam-metric="raw"]', current.importSummary?.rawStudentRows || current.students.length || 0);
+        setText('[data-exam-metric="eligible"]', summary.eligibleStudents || 0);
+        setText('[data-exam-metric="excluded"]', summary.excludedStudents || 0);
+        setText('[data-exam-metric="rooms"]', current.generation?.summary?.roomCount || current.rooms.length || 0);
+        setText('[data-exam-metric="issues"]', validation.issues.length || 0);
+        setText('[data-exam-workspace-status]', current.generation?.ok ? '已生成待导出' : (current.students.length ? '待核对' : '等待导入'));
+        setText('[data-exam-version]', current.generation?.generationSignature ? 'V1' : '未生成');
+        root.document?.querySelectorAll?.('[data-exam-panel]').forEach((panel) => {
+            const active = Number(panel.dataset.examPanel) === Number(current.step);
+            panel.hidden = !active;
+            panel.classList.toggle('is-active', active);
+        });
+        root.document?.querySelectorAll?.('.exam-step').forEach((step) => {
+            step.classList.toggle('is-current', Number(step.dataset.examStep) === Number(current.step));
+        });
+        const sourceBody = root.document?.getElementById?.('exam-source-list');
+        if (sourceBody && current.sources?.length) {
+            sourceBody.innerHTML = current.sources.flatMap((source) => source.sheets.map((sheet) => `<tr><td>${escapeHtml(source.name)}</td><td>${escapeHtml(sheet.name)} · ${escapeHtml(sheet.kind)}</td><td>${sheet.rowCount}</td><td><span class="exam-status-complete">已识别</span></td></tr>`)).join('');
+            setText('[data-exam-source-count]', `${current.sources.length} 个文件`);
+        }
+        const issueList = root.document?.getElementById?.('exam-issue-list');
+        if (issueList && current.issues?.length) {
+            issueList.innerHTML = current.issues.map((issue) => `<div class="exam-issue ${issue.blocking ? 'is-blocking' : ''}"><i class="ti ti-${issue.blocking ? 'alert-triangle' : 'alert-circle'}"></i><span>${escapeHtml(issue.message)}</span></div>`).join('');
+        }
+        const reviewBody = root.document?.querySelector?.('#exam-review-table tbody');
+        if (reviewBody && current.students?.length) {
+            reviewBody.innerHTML = current.students.map((student) => `<tr><td>${escapeHtml(student.name)}</td><td>${escapeHtml(student.currentClass)}</td><td>${escapeHtml(student.gender)}</td><td>${student.totalScore ?? '缺失'}</td><td>${escapeHtml(student.status)}</td><td><button type="button" class="btn btn-soft" data-exam-action="toggle-excluded" data-student-id="${escapeHtml(student.id)}" data-reason="人工排除">${student.excluded ? '恢复参考' : '列入排除'}</button></td></tr>`).join('');
+        }
+        const roomBody = root.document?.getElementById?.('exam-room-editor-body');
+        if (roomBody && current.rooms?.length) {
+            roomBody.innerHTML = current.rooms.map((room, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(room.name)}</td><td>${room.capacity}</td><td>${escapeHtml(room.building)}</td><td>${escapeHtml(room.classroom)}</td></tr>`).join('');
+        }
+        const outputBody = root.document?.querySelector?.('#exam-output-preview-table tbody');
+        if (outputBody && current.assignments?.length) {
+            outputBody.innerHTML = current.assignments.map((student) => `<tr><td>${escapeHtml(student.examNo)}</td><td>${escapeHtml(student.name)}</td><td>${escapeHtml(student.currentClass)}</td><td>${escapeHtml(student.roomName)}</td><td>${student.seatNo}</td></tr>`).join('');
+        }
+    }
+
+    function downloadTemplate(kind) {
+        if (!root.XLSX?.utils?.book_new) return notify('Excel 组件尚未加载', 'warning');
+        const definitions = {
+            students: [['姓名', '班级', '性别', '总分', '语文', '数学', '英语']],
+            exclusions: [['姓名', '班级', '学号', '不参加原因', '备注']],
+            rooms: [['考场名称', '容量', '教学楼', '教室', '排序']]
+        };
+        const rows = definitions[kind] || definitions.students;
+        const workbook = root.XLSX.utils.book_new();
+        root.XLSX.utils.book_append_sheet(workbook, root.XLSX.utils.aoa_to_sheet(rows), kind === 'rooms' ? '考场配置' : (kind === 'exclusions' ? '不参加考试名单' : '学生成绩'));
+        root.XLSX.writeFile(workbook, `${kind === 'rooms' ? '考场配置' : (kind === 'exclusions' ? '不参加考试名单' : '学生及成绩表')}模板.xlsx`);
+    }
+
+    function addRoom() {
+        const current = getWorkspace();
+        const index = current.rooms.length + 1;
+        current.rooms.push({ id: `room-${index}`, name: `第${index}考场`, capacity: 0, building: '', classroom: '', order: index });
+        current.dirty = true;
+        render();
+    }
+
     function render() {
+        renderWorkbench();
         renderLegacyResult();
         root.dispatchEvent?.(new root.CustomEvent('exam-arranger:state', { detail: getWorkspace() }));
     }
@@ -324,6 +407,8 @@
             else if (action === 'save-draft') saveDraft();
             else if (action === 'clear') clearWorkspace();
             else if (action === 'toggle-excluded') toggleExcluded(target.dataset.studentId, target.dataset.reason);
+            else if (action === 'download-template') downloadTemplate(target.dataset.examTemplate);
+            else if (action === 'add-room') addRoom();
             else if (action === 'export') exportResult();
         });
         root.document.addEventListener('change', (event) => {

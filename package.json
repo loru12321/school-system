@@ -21,6 +21,7 @@
     "check:syntax": "node scripts/test-syntax.js",
     "test:exam-arranger-core": "node scripts/test-exam-arranger-core-runtime.js",
     "test:exam-arranger-runtime": "node scripts/test-exam-arranger-runtime.js",
+    "test:exam-arranger-ui": "node scripts/test-exam-arranger-ui-contract.js",
     "test:auth-state": "node scripts/test-auth-state.js",
     "test:login-shell-state": "node scripts/test-login-shell-state-runtime.js",
     "test:login-cohort-runtime": "node scripts/test-login-cohort-runtime.js",
