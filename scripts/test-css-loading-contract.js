@@ -29,6 +29,7 @@ const expectedLayers = [
   'visual-polish-2026.css',
   'typography-optimization-2026.css',
   'ux-review-2026.css',
+  'mobile-experience-system.css',
   'utility-classes.css',
   'responsive-login-final.css'
 ];

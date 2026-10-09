@@ -26,6 +26,7 @@
 @import "./visual-polish-2026.css";
 @import "./typography-optimization-2026.css";
 @import "./ux-review-2026.css";
+@import "./mobile-experience-system.css";
 /* Utility classes live in public/ because they are also used by the offline
  * and static-asset copies; importing the same authored file keeps them in the
  * single Vite CSS request without maintaining a second copy. */

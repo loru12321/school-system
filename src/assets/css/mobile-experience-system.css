@@ -1,0 +1,81 @@
+/* Shared mobile interaction primitives. Module-specific layouts extend these hooks. */
+:root {
+  --mobile-page-gutter: 14px;
+  --mobile-control-min: 44px;
+  --mobile-control-primary: 46px;
+  --mobile-shell-top: 112px;
+  --mobile-shell-bottom: 72px;
+  --mobile-content-bottom: calc(var(--mobile-shell-bottom) + env(safe-area-inset-bottom, 0px) + 16px);
+}
+
+@media (max-width: 768px) {
+  button,
+  [role="button"],
+  .btn,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  button,
+  [role="button"],
+  .btn,
+  input,
+  select {
+    min-height: var(--mobile-control-min);
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea,
+  .btn-primary {
+    min-height: var(--mobile-control-primary);
+  }
+
+  :where(button, [role="button"], .btn, a, input, select, textarea):focus-visible {
+    outline: 3px solid var(--primary-color, #2563eb);
+    outline-offset: 2px;
+  }
+
+  [data-mobile-surface] {
+    min-width: 0;
+    padding-inline: var(--mobile-page-gutter);
+  }
+
+  [data-mobile-action-bar] {
+    min-height: var(--mobile-shell-bottom);
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
+
+  [data-mobile-table] {
+    min-width: 0;
+    overscroll-behavior-inline: contain;
+  }
+
+  [data-mobile-sheet] {
+    overscroll-behavior: contain;
+  }
+
+  body.dark-mode :where(input, select, textarea),
+  [data-theme="dark"] :where(input, select, textarea) {
+    color-scheme: dark;
+    color: var(--text-primary, #f8fafc);
+    background: var(--surface-raised, #1f2937);
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  [data-mobile-surface],
+  [data-mobile-action-bar],
+  [data-mobile-table],
+  [data-mobile-sheet] {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+  }
+}
