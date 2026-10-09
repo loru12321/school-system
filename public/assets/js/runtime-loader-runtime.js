@@ -133,6 +133,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('xlsx-js-style-vendor', bootVend('xlsx-js-style/xlsx.min.js')),
     bootEntry('jszip-vendor', bootVend('jszip/jszip.min.js')),
     bootEntry('exam-arranger-core', bootJs('exam-arranger-core-runtime.js')),
+    bootEntry('exam-arranger-docx', bootJs('exam-arranger-docx-runtime.js')),
     bootEntry('exam-arranger-export', bootJs('exam-arranger-export-runtime.js')),
     bootEntry('freshman-exam', bootJs('freshman-exam-runtime.js')),
     bootEntry('exam-arranger', bootJs('exam-arranger-runtime.js')),
