@@ -58,6 +58,26 @@
     max-width: 68ch;
   }
 
+  [data-mobile-surface="analysis"] {
+    width: 100%;
+    max-width: 100%;
+    overflow: clip;
+  }
+
+  [data-mobile-surface="analysis"] :where(canvas, svg, .chart-container) {
+    max-width: 100%;
+  }
+
+  [data-mobile-surface="analysis"] :where(.legend, .chart-legend, .filter-row, .analysis-toolbar) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  [data-mobile-surface="analysis"] :where(td, .metric-value, .stat-value) {
+    font-variant-numeric: tabular-nums;
+  }
+
   [data-mobile-action-bar] {
     display: flex;
     align-items: center;

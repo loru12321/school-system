@@ -175,6 +175,7 @@
         syncCompactState(document);
         document.querySelectorAll('[data-mobile-action-bar]').forEach(syncActionBar);
         annotateCoreMobileModules(document);
+        annotateAnalysisMobileModules(document);
     }
 
     const CORE_MOBILE_MODULE_IDS = ['upload', 'summary', 'teacher-analysis', 'student-details', 'report-generator', 'exam-arranger'];
@@ -190,6 +191,25 @@
                 syncActionBar(heading);
             }
             section.querySelectorAll('.table-wrap, .analysis-table-shell, .exam-table-scroll').forEach((wrap) => {
+                if (!wrap.dataset.mobileTable && window.TableScrollIndicators) {
+                    window.TableScrollIndicators.setupTableWrap(wrap);
+                }
+            });
+        });
+    }
+
+    const ANALYSIS_MOBILE_MODULE_IDS = [
+        'analysis', 'correlation-analysis', 'progress-analysis', 'marginal-push',
+        'seat-adjustment', 'cohort-growth', 'mutual-aid', 'county-analysis',
+        'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking'
+    ];
+
+    function annotateAnalysisMobileModules(scope = document) {
+        ANALYSIS_MOBILE_MODULE_IDS.forEach((id) => {
+            const section = scope.getElementById?.(id) || document.getElementById(id);
+            if (!section) return;
+            section.dataset.mobileSurface = 'analysis';
+            section.querySelectorAll('.table-wrap, .analysis-table-shell').forEach((wrap) => {
                 if (!wrap.dataset.mobileTable && window.TableScrollIndicators) {
                     window.TableScrollIndicators.setupTableWrap(wrap);
                 }
@@ -985,6 +1005,8 @@
         installResponsiveTableObserver(scope);
         markFlexibleRows(scope);
         attachTableScrollIndicators(scope);
+        annotateCoreMobileModules(document);
+        annotateAnalysisMobileModules(document);
     }
 
     function isVisiblyRendered(node) {
@@ -2167,6 +2189,7 @@
         syncActionBar,
         focusFirstInvalid
         , annotateCoreMobileModules
+        , annotateAnalysisMobileModules
     });
     window.MobDashboardMgr = window.MobDashboardMgr || {
         showToast(msg) {
