@@ -58,6 +58,8 @@
     let allowedCategoriesCacheKey = '';
     let allowedCategoriesCache = null;
     let allowedItemCache = new Map();
+    let activeExperienceSheet = null;
+    let previousSheetTrigger = null;
 
     // 复用 runtime-registry 的规范实现（与 account-manager / data-manager-* 同一委托模式）；
     // 本地实现仅作加载顺序兜底，行为与规范版一致。
@@ -171,7 +173,89 @@
 
     function installMobileExperienceRuntime() {
         syncCompactState(document);
+        document.querySelectorAll('[data-mobile-action-bar]').forEach(syncActionBar);
     }
+
+    function resolveExperienceSheet(id) {
+        if (!id) return null;
+        const escaped = window.CSS?.escape ? window.CSS.escape(String(id)) : String(id).replace(/[^a-zA-Z0-9_-]/g, '');
+        return document.querySelector(`[data-mobile-sheet="${escaped}"]`) || document.getElementById(String(id));
+    }
+
+    function openSheet(id, trigger = document.activeElement) {
+        const sheet = resolveExperienceSheet(id);
+        if (!sheet) return false;
+        if (activeExperienceSheet && activeExperienceSheet !== sheet) closeSheet('replace');
+        activeExperienceSheet = sheet;
+        previousSheetTrigger = trigger instanceof HTMLElement ? trigger : null;
+        sheet.hidden = false;
+        sheet.setAttribute('aria-hidden', 'false');
+        sheet.dataset.mobileSheetState = 'open';
+        document.body.dataset.mobileSheetOpen = 'true';
+        const focusTarget = sheet.querySelector('[autofocus], input, select, textarea, button, [tabindex]:not([tabindex="-1"])');
+        window.requestAnimationFrame(() => focusTarget?.focus?.({ preventScroll: true }));
+        return true;
+    }
+
+    function closeSheet(reason = 'dismiss') {
+        if (!activeExperienceSheet) return false;
+        const sheet = activeExperienceSheet;
+        activeExperienceSheet = null;
+        sheet.dataset.mobileSheetState = 'closed';
+        sheet.setAttribute('aria-hidden', 'true');
+        sheet.hidden = true;
+        delete document.body.dataset.mobileSheetOpen;
+        const sheetTrigger = previousSheetTrigger;
+        previousSheetTrigger = null;
+        if (reason !== 'replace') window.requestAnimationFrame(() => sheetTrigger?.focus?.({ preventScroll: true }));
+        return true;
+    }
+
+    function focusFirstInvalid(scope = document) {
+        const invalid = scope.querySelector('[aria-invalid="true"], input:invalid, select:invalid, textarea:invalid');
+        invalid?.focus?.({ preventScroll: false });
+        invalid?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+        return invalid || null;
+    }
+
+    function syncActionBar(section = document) {
+        const bar = section?.matches?.('[data-mobile-action-bar]')
+            ? section
+            : section?.querySelector?.('[data-mobile-action-bar]');
+        if (!bar) return null;
+        const actions = [...bar.querySelectorAll('button, .btn, [role="button"]')]
+            .filter((action) => !action.matches('[data-mobile-action-more]'));
+        const primary = actions.find((action) => action.matches('.btn-primary, [data-primary-action]')) || actions[0];
+        const secondary = actions.find((action) => action !== primary) || null;
+        actions.forEach((action) => {
+            action.toggleAttribute('data-mobile-primary-action', action === primary);
+            action.toggleAttribute('data-mobile-secondary-action', action === secondary);
+            action.toggleAttribute('data-mobile-overflow-action', action !== primary && action !== secondary);
+        });
+        const overflow = actions.filter((action) => action.hasAttribute('data-mobile-overflow-action'));
+        let more = bar.querySelector('[data-mobile-action-more]');
+        if (overflow.length && !more) {
+            more = document.createElement('button');
+            more.type = 'button';
+            more.className = 'btn mobile-action-more';
+            more.dataset.mobileActionMore = 'true';
+            more.textContent = '更多';
+            more.addEventListener('click', () => {
+                bar.dataset.mobileOverflowOpen = bar.dataset.mobileOverflowOpen === 'true' ? 'false' : 'true';
+                more.setAttribute('aria-expanded', bar.dataset.mobileOverflowOpen);
+            });
+            bar.appendChild(more);
+        }
+        if (more) more.hidden = overflow.length === 0;
+        return bar;
+    }
+
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('[data-mobile-sheet-dismiss]')) closeSheet('backdrop');
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && activeExperienceSheet) closeSheet('escape');
+    });
 
     function scrollActiveRailChipIntoView(root) {
         const rail = root?.querySelector?.('[data-apk-rail]');
@@ -2053,11 +2137,15 @@
         openAccount: () => setSheetMode('account'),
         openCohorts: () => setSheetMode('cohorts')
     };
-    window.MobileExperienceRuntime = window.MobileExperienceRuntime || {
+    window.MobileExperienceRuntime = Object.assign(window.MobileExperienceRuntime || {}, {
         install: installMobileExperienceRuntime,
         syncCompactState,
-        isCompactViewport
-    };
+        isCompactViewport,
+        openSheet,
+        closeSheet,
+        syncActionBar,
+        focusFirstInvalid
+    });
     window.MobDashboardMgr = window.MobDashboardMgr || {
         showToast(msg) {
             if (window.UI && typeof window.UI.toast === 'function') window.UI.toast(msg, 'info');

@@ -44,8 +44,19 @@
   }
 
   [data-mobile-action-bar] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     min-height: var(--mobile-shell-bottom);
     padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
+
+  [data-mobile-action-bar] [data-mobile-overflow-action] {
+    display: none;
+  }
+
+  [data-mobile-action-bar][data-mobile-overflow-open="true"] [data-mobile-overflow-action] {
+    display: inline-flex;
   }
 
   [data-mobile-table] {
@@ -54,7 +65,23 @@
   }
 
   [data-mobile-sheet] {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 16000;
+    max-height: min(82dvh, 720px);
+    overflow-y: auto;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
     overscroll-behavior: contain;
+  }
+
+  body[data-mobile-sheet-open="true"] {
+    overflow: hidden;
+  }
+
+  :where(input, select, textarea)[aria-invalid="true"],
+  :where(input, select, textarea):invalid:not(:placeholder-shown) {
+    outline: 2px solid var(--danger-color, #dc2626);
+    outline-offset: 1px;
   }
 
   #apk-mobile-shell[data-mobile-sheet-open="true"] .app-main,
