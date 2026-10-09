@@ -174,6 +174,27 @@
     function installMobileExperienceRuntime() {
         syncCompactState(document);
         document.querySelectorAll('[data-mobile-action-bar]').forEach(syncActionBar);
+        annotateCoreMobileModules(document);
+    }
+
+    const CORE_MOBILE_MODULE_IDS = ['upload', 'summary', 'teacher-analysis', 'student-details', 'report-generator', 'exam-arranger'];
+
+    function annotateCoreMobileModules(scope = document) {
+        CORE_MOBILE_MODULE_IDS.forEach((id) => {
+            const section = scope.getElementById?.(id) || document.getElementById(id);
+            if (!section) return;
+            section.dataset.mobileSurface = 'core';
+            const heading = section.querySelector('.sec-head, .analysis-shell-head, .exam-arranger-head');
+            if (heading?.querySelector('button, .btn')) {
+                heading.setAttribute('data-mobile-action-bar', '');
+                syncActionBar(heading);
+            }
+            section.querySelectorAll('.table-wrap, .analysis-table-shell, .exam-table-scroll').forEach((wrap) => {
+                if (!wrap.dataset.mobileTable && window.TableScrollIndicators) {
+                    window.TableScrollIndicators.setupTableWrap(wrap);
+                }
+            });
+        });
     }
 
     function resolveExperienceSheet(id) {
@@ -2145,6 +2166,7 @@
         closeSheet,
         syncActionBar,
         focusFirstInvalid
+        , annotateCoreMobileModules
     });
     window.MobDashboardMgr = window.MobDashboardMgr || {
         showToast(msg) {

@@ -1127,7 +1127,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             </div>
 
             <!-- 1. 数据上传 & 项目管理 -->
-            <div id="upload" class="section card-box analysis-workspace analysis-workspace-upload">
+            <div id="upload" class="section card-box analysis-workspace analysis-workspace-upload" data-mobile-surface="core">
                 <div class="module-desc-bar analysis-hero" style="border-color: var(--color-data)">
                     <h3><i class="ti ti-database-import"></i> 数据枢纽中心 <span class="badge"
                             style="background:#16a34a;">⭐
@@ -1850,7 +1850,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             </div>
 
             <!-- 5. 综合总排名 -->
-            <div id="summary" class="section card-box analysis-workspace analysis-workspace-summary">
+            <div id="summary" class="section card-box analysis-workspace analysis-workspace-summary" data-mobile-surface="core">
                 <div class="module-desc-bar analysis-hero" style="border-color:#16a34a;">
                     <h3><i class="ti ti-report"></i> 综合分析报告 <span class="badge" style="background:#16a34a;">核心汇总</span></h3>
                     <p><strong>一句话目的：</strong>把关键分析指标汇总成最终排序，方便汇报、复盘和导出。</p>
@@ -1924,7 +1924,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             </div>
 
                         <!-- 6. ?????? -->
-            <div id="teacher-analysis" class="section card-box analysis-workspace analysis-workspace-teacher" data-lazy-section-template="lazy-section-template-teacher-analysis" data-lazy-section-placeholder="1"></div>
+            <div id="teacher-analysis" class="section card-box analysis-workspace analysis-workspace-teacher" data-mobile-surface="core" data-lazy-section-template="lazy-section-template-teacher-analysis" data-lazy-section-placeholder="1"></div>
 
             <!-- 9. 分数段统计 -->
             <div id="segment-analysis" class="section card-box analysis-workspace analysis-workspace-violet">
@@ -2007,7 +2007,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div id="cohort-growth" class="section card-box analysis-workspace analysis-workspace-progress" data-lazy-section-template="lazy-section-template-cohort-growth" data-lazy-section-placeholder="1"></div>
 
             <!-- 10. 学生考试明细 -->
-                        <div id="student-details" class="section card-box analysis-workspace analysis-workspace-student" data-lazy-section-template="lazy-section-template-student-details" data-lazy-section-placeholder="1"></div>
+                        <div id="student-details" class="section card-box analysis-workspace analysis-workspace-student" data-mobile-surface="core" data-lazy-section-template="lazy-section-template-student-details" data-lazy-section-placeholder="1"></div>
 
             <!-- 10. 空分学科核对 -->
             <div id="blank-score-audit" class="section card-box analysis-workspace analysis-workspace-amber">
@@ -2290,7 +2290,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             </div>
 
             <!-- 11. 个性化成绩单生成器 -->
-                        <div id="report-generator" class="section card-box analysis-workspace analysis-workspace-student" data-lazy-section-template="lazy-section-template-report-generator" data-lazy-section-placeholder="1"></div>
+                        <div id="report-generator" class="section card-box analysis-workspace analysis-workspace-student" data-mobile-surface="core" data-lazy-section-template="lazy-section-template-report-generator" data-lazy-section-placeholder="1"></div>
 
             <div id="subject-balance" class="section card-box analysis-workspace analysis-workspace-emerald">
                 <div class="module-desc-bar analysis-hero" style="border-color: #059669">
@@ -2899,7 +2899,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 </div>
             </div>
 
-<div id="exam-arranger" class="section card-box analysis-workspace analysis-workspace-tools">
+<div id="exam-arranger" class="section card-box analysis-workspace analysis-workspace-tools" data-mobile-surface="core">
 
                 <div class="sec-head analysis-shell-head exam-arranger-head">
                     <div><span class="eyebrow"><i class="ti ti-route"></i> 教务执行 / 考场编排</span><h2><i class="ti ti-layout-grid"></i> 智能考场编排器</h2><p class="analysis-subtitle">从文件夹导入资料，完成名单核对、容量编排与成套考务输出。</p></div>
@@ -5041,7 +5041,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
         </script>
 
         <script type="text/html" id="lazy-section-template-student-details">
-<div id="student-details" class="section card-box analysis-workspace analysis-workspace-student">
+<div id="student-details" class="section card-box analysis-workspace analysis-workspace-student" data-mobile-surface="core">
                 <div class="module-desc-bar analysis-hero" style="border-color: var(--color-student)">
                     <h3><i class="ti ti-users"></i> 学生考试明细 <span class="badge" style="background:#16a34a;">⭐ 教务常用</span>
                         <button type="button" class="module-help-btn" data-module-help="student-details"><i class="ti ti-info-circle"></i><span>使用说明</span></button>
@@ -5236,7 +5236,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
         </script>
 
         <script type="text/html" id="lazy-section-template-report-generator">
-<div id="report-generator" class="section card-box analysis-workspace analysis-workspace-student">
+<div id="report-generator" class="section card-box analysis-workspace analysis-workspace-student" data-mobile-surface="core">
                 <div class="module-desc-bar analysis-hero" style="border-color: var(--color-student)">
                     <h3><i class="ti ti-user-heart"></i> 学生发展与家校沟通 <span class="badge" style="background:#0ea5e9;">📊
                             班主任必看</span></h3>
@@ -5499,7 +5499,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <!-- 消息提示容器 -->
 </script>
 <script type="text/html" id="lazy-section-template-teacher-analysis">
-<div id="teacher-analysis" class="section card-box analysis-workspace analysis-workspace-teacher">
+<div id="teacher-analysis" class="section card-box analysis-workspace analysis-workspace-teacher" data-mobile-surface="core">
                 <div class="module-desc-bar analysis-hero" style="border-color:#2563eb;">
                     <h3><i class="ti ti-school"></i> 教师教学分析 <span class="badge" style="background:#0ea5e9;">高频使用</span>
                         <button type="button" class="module-help-btn" data-module-help="teacher-analysis"><i class="ti ti-info-circle"></i><span>使用说明</span></button>

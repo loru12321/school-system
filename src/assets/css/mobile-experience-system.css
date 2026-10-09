@@ -43,6 +43,21 @@
     padding-inline: var(--mobile-page-gutter);
   }
 
+  [data-mobile-surface="core"] {
+    width: 100%;
+    max-width: 100%;
+    overflow: clip;
+    scroll-margin-bottom: var(--mobile-content-bottom);
+  }
+
+  [data-mobile-surface="core"] :where(.metrics-grid, .stat-grid, .exam-review-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  [data-mobile-surface="core"] :where(.analysis-subtitle, .module-desc-bar p) {
+    max-width: 68ch;
+  }
+
   [data-mobile-action-bar] {
     display: flex;
     align-items: center;
