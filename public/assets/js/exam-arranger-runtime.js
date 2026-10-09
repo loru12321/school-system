@@ -295,7 +295,7 @@
         setText('[data-exam-metric="eligible"]', summary.eligibleStudents || 0);
         setText('[data-exam-metric="excluded"]', summary.excludedStudents || 0);
         setText('[data-exam-metric="rooms"]', current.generation?.summary?.roomCount || current.rooms.length || 0);
-        setText('[data-exam-metric="issues"]', validation.issues.length || 0);
+        setText('[data-exam-metric="issues"]', (validation.issues || []).length || 0);
         setText('[data-exam-workspace-status]', current.generation?.ok ? '已生成待导出' : (current.students.length ? '待核对' : '等待导入'));
         setText('[data-exam-version]', current.generation?.generationSignature ? 'V1' : '未生成');
         root.document?.querySelectorAll?.('[data-exam-panel]').forEach((panel) => {
