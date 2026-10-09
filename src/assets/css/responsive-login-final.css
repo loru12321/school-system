@@ -536,10 +536,10 @@ html body #login-overlay[data-login-skin="clean"] .login-entry-transition {
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-        min-height: 216px !important;
-        gap: 26px !important;
-        padding-top: max(24px, env(safe-area-inset-top, 0px)) !important;
-        padding-bottom: 26px !important;
+        min-height: 92px !important;
+        gap: 8px !important;
+        padding-top: max(12px, env(safe-area-inset-top, 0px)) !important;
+        padding-bottom: 12px !important;
         padding-left: max(24px, env(safe-area-inset-left, 0px)) !important;
         padding-right: max(24px, env(safe-area-inset-right, 0px)) !important;
         border-right: 0 !important;
@@ -547,19 +547,16 @@ html body #login-overlay[data-login-skin="clean"] .login-entry-transition {
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
-        margin-bottom: 8px !important;
-        font-size: 40px !important;
+        display: none !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-copy p {
-        max-width: 320px !important;
-        font-size: 13px !important;
-        line-height: 1.6 !important;
+        display: none !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-card {
         display: block !important;
-        padding-top: 28px !important;
+        padding-top: 16px !important;
         padding-left: max(24px, env(safe-area-inset-left, 0px)) !important;
         padding-right: max(24px, env(safe-area-inset-right, 0px)) !important;
         padding-bottom: 34px !important;
@@ -575,11 +572,49 @@ html body #login-overlay[data-login-skin="clean"] .login-entry-transition {
         margin-left: auto !important;
         margin-right: auto !important;
     }
+
+    html body #login-overlay[data-login-skin="clean"] .login-form-header p,
+    html body #login-overlay[data-login-skin="clean"] .login-clean-helper,
+    html body #login-overlay[data-login-skin="clean"] .login-portal-helper {
+        display: none !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-form {
+        gap: 8px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] :where(button, input, select) {
+        min-height: 44px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .role-btn {
+        min-height: 44px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-clean-submit {
+        min-height: 46px !important;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-auxiliary-disclosure {
+        margin-top: 8px;
+        border-top: 1px solid var(--login-line);
+        padding-top: 8px;
+    }
+
+    html body #login-overlay[data-login-skin="clean"] .login-auxiliary-disclosure > summary {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        color: var(--login-muted);
+        font-size: 13px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
 }
 
 @media (max-width: 440px) {
     html body #login-overlay[data-login-skin="clean"] .login-clean-stage {
-        min-height: 204px !important;
+        min-height: 84px !important;
     }
 
     html body #login-overlay[data-login-skin="clean"] .login-clean-card {

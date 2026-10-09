@@ -668,24 +668,6 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         </div>
                     </div>
 
-                    <div id="login-graduate-cohort-panel" class="login-graduate-cohort-panel">
-                        <div class="login-graduate-cohort-head">
-                            <span>毕业生档案</span>
-                            <small>历届成绩查询入口</small>
-                        </div>
-                        <div class="login-graduate-cohort-row">
-                            <div class="login-entry-field login-entry-field--select" data-login-field="graduate-cohort">
-                                <span class="login-entry-prefix">毕业届别</span>
-                                <!-- Keep a visible, usable fallback while the lightweight boot runtime loads archive years. -->
-                                <select id="login-graduate-cohort-select" data-login-graduate-cohort-select="1">
-                                    <option value="2021">2021届 · 已毕业</option>
-                                </select>
-                            </div>
-                            <button id="login-graduate-cohort-button" type="button">查询</button>
-                        </div>
-                        <div id="login-graduate-cohort-helper" class="login-graduate-cohort-helper">选择毕业届后，完成登录即可进入该届成绩档案。</div>
-                    </div>
-
                     <button id="login-submit-button" type="button" class="advanced-submit login-clean-submit" data-login-submit="1">进入学校工作台</button>
                     <script>
                         document.addEventListener('click', function (event) {
@@ -703,6 +685,26 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         </div>
                     </div>
                     <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后进入届别选择和工作台。</div>
+                    <details class="login-auxiliary-disclosure">
+                        <summary>查询毕业生档案</summary>
+                        <div id="login-graduate-cohort-panel" class="login-graduate-cohort-panel">
+                            <div class="login-graduate-cohort-head">
+                                <span>毕业生档案</span>
+                                <small>历届成绩查询入口</small>
+                            </div>
+                            <div class="login-graduate-cohort-row">
+                                <div class="login-entry-field login-entry-field--select" data-login-field="graduate-cohort">
+                                    <span class="login-entry-prefix">毕业届别</span>
+                                    <!-- Keep a visible, usable fallback while the lightweight boot runtime loads archive years. -->
+                                    <select id="login-graduate-cohort-select" data-login-graduate-cohort-select="1">
+                                        <option value="2021">2021届 · 已毕业</option>
+                                    </select>
+                                </div>
+                                <button id="login-graduate-cohort-button" type="button">查询</button>
+                            </div>
+                            <div id="login-graduate-cohort-helper" class="login-graduate-cohort-helper">选择毕业届后，完成登录即可进入该届成绩档案。</div>
+                        </div>
+                    </details>
                 </div>
             </section>
         </div>

@@ -46,6 +46,10 @@ assert.ok(
     /<button\b[^>]*id="login-submit-button"[^>]*data-login-submit="1"[^>]*>/i.test(html),
     'login submit button must keep the runtime submit hook'
 );
+assert.doesNotMatch(html, /<(?:input|select)\b[^>]*\bautofocus\b/i, 'mobile login must not summon the keyboard on first paint');
+assert.ok(html.indexOf('id="login-submit-button"') < html.indexOf('id="login-graduate-cohort-panel"'), 'archive lookup must follow the primary login action');
+assert.match(html, /<details\b[^>]*class="login-auxiliary-disclosure"[^>]*>[\s\S]*id="login-graduate-cohort-panel"/, 'archive lookup must use a collapsed disclosure');
+assert.doesNotMatch(html, /<details\b[^>]*class="login-auxiliary-disclosure"[^>]*\bopen\b/, 'archive disclosure must start collapsed');
 assert.doesNotMatch(
     html,
     /<button\b[^>]*id="login-submit-button"[^>]*\bonclick=/i,

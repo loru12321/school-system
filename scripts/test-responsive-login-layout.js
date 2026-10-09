@@ -11,6 +11,7 @@ const viewports = [
     { width: 768, height: 900, mode: 'phone' },
     { width: 430, height: 932, mode: 'phone' },
     { width: 390, height: 844, mode: 'phone' },
+    { width: 320, height: 568, mode: 'phone-short' },
     { width: 390, height: 560, mode: 'phone-short' }
 ];
 
@@ -26,6 +27,10 @@ async function inspectLayout(page, viewport) {
         const shell = document.querySelector('.login-clean-shell');
         const submit = document.querySelector('#login-submit-button');
         const styleboard = document.querySelector('.login-styleboard');
+        const controls = [...document.querySelectorAll('#login-overlay button, #login-overlay input, #login-overlay select')]
+            .filter(node => getComputedStyle(node).display !== 'none' && node.getBoundingClientRect().height > 0)
+            .map(node => ({ id: node.id, height: node.getBoundingClientRect().height }));
+        const auxiliary = document.querySelector('.login-auxiliary-disclosure');
         const rect = node => {
             const value = node.getBoundingClientRect();
             return { left: value.left, right: value.right, top: value.top, bottom: value.bottom, width: value.width, height: value.height };
@@ -59,6 +64,8 @@ async function inspectLayout(page, viewport) {
             overlayScrollOverflow: overlay.scrollHeight - overlay.clientHeight,
             cardScrollOverflow: card.scrollHeight - card.clientHeight,
             horizontalOverflow: document.documentElement.scrollWidth - window.innerWidth
+            , controls
+            , auxiliaryOpen: auxiliary?.open || false
         };
     });
 }
@@ -90,6 +97,10 @@ async function main() {
                 assert.ok(styles.marginTop >= 0, `${label}: ${name} must not have a negative top margin`);
             }
             assert.ok(state.horizontalOverflow <= 1, `${label}: document must not overflow horizontally`);
+            if (viewport.mode.startsWith('phone')) {
+                assert.ok(state.controls.every(control => control.height >= 44), `${label}: every visible login control must be at least 44px (${JSON.stringify(state.controls)})`);
+            }
+            assert.strictEqual(state.auxiliaryOpen, false, `${label}: auxiliary login content must start collapsed`);
             assert.ok(state.overlay.left >= -1, `${label}: overlay must start inside the viewport`);
             assert.ok(state.overlay.top >= -1, `${label}: overlay must start inside the viewport`);
             assert.ok(state.overlay.right <= state.viewportWidth + 1, `${label}: overlay must not exceed viewport width`);
@@ -124,6 +135,9 @@ async function main() {
                 assert.ok(state.card.top >= state.stage.bottom - 1, `${label}: tablet card must follow the compact brand band`);
             } else {
                 assert.ok(state.card.top >= state.stage.bottom - 1, `${label}: phone card must follow the stage`);
+                if (viewport.height >= 844) {
+                    assert.ok(state.submit.bottom <= viewport.height + 1, `${label}: primary login action must be visible without scrolling`);
+                }
             }
 
             await page.locator('#login-submit-button').scrollIntoViewIfNeeded();
