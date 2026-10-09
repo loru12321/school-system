@@ -85,6 +85,7 @@ const teacherAnalysisBridgeRuntimePath = path.resolve(__dirname, '../public/asse
 const teacherSyncEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-sync-entry-runtime.js');
 const countyAnalysisRuntimePath = path.resolve(__dirname, '../public/assets/js/county-analysis-runtime.js');
 const mobileAppRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-app-runtime.js');
+const mobileTableScrollRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-table-scroll-runtime.js');
 const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-sql.js');
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
 const targetEditorRuntimePath = path.resolve(__dirname, '../public/assets/js/target-editor-runtime.js');
@@ -169,6 +170,7 @@ assert.ok(fs.existsSync(teacherAnalysisUiRuntimePath), 'teacher-analysis-ui-runt
 assert.ok(fs.existsSync(teacherAnalysisBridgeRuntimePath), 'teacher-analysis-bridge-runtime.js should exist');
 assert.ok(fs.existsSync(countyAnalysisRuntimePath), 'county-analysis-runtime.js should exist');
 assert.ok(fs.existsSync(mobileAppRuntimePath), 'mobile-app-runtime.js should exist');
+assert.ok(fs.existsSync(mobileTableScrollRuntimePath), 'mobile-table-scroll-runtime.js should exist');
 assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
 assert.ok(fs.existsSync(reportMetricsRuntimePath), 'report-metrics-runtime.js should exist');

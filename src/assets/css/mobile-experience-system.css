@@ -64,6 +64,35 @@
     overscroll-behavior-inline: contain;
   }
 
+  [data-mobile-table="list"] table {
+    width: 100%;
+  }
+
+  [data-mobile-table="list"] :where(th, td) {
+    white-space: normal;
+  }
+
+  [data-mobile-table="summary"] {
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+
+  [data-mobile-table="summary"] :where(th, td) {
+    min-width: 88px;
+  }
+
+  [data-mobile-table="matrix"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [data-mobile-table="matrix"] :where(th:first-child, td:first-child) {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface, #fff);
+  }
+
   [data-mobile-sheet] {
     position: fixed;
     inset: auto 0 0;

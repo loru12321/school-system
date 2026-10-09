@@ -7,6 +7,7 @@
     'use strict';
 
     const TableScrollIndicators = {
+        _listenersAttached: false,
         init: function () {
             if (!this.isMobileArchitecture()) {
                 return;
@@ -26,7 +27,20 @@
         },
 
         attachScrollListeners: function () {
+            if (this._listenersAttached) return;
+            this._listenersAttached = true;
             document.addEventListener('scroll', this.handleTableScroll.bind(this), { passive: true, capture: true });
+        },
+
+        classifyTable: function (table) {
+            if (!table) return 'list';
+            const explicit = table.dataset?.mobileTable || table.closest?.('[data-mobile-table]')?.dataset?.mobileTable;
+            if (['list', 'summary', 'matrix'].includes(explicit)) return explicit;
+            const columns = table.querySelectorAll?.('thead th')?.length || table.querySelectorAll?.('tr:first-child > *')?.length || 0;
+            const copy = String(table.textContent || '');
+            if (columns >= 9) return 'matrix';
+            if (/(平均|合计|优秀率|及格率|排名|统计|汇总)/.test(copy) || columns >= 6) return 'summary';
+            return 'list';
         },
 
         handleTableScroll: function (e) {
@@ -77,14 +91,14 @@
         setupTableWrap: function (tableWrap) {
             const table = tableWrap.querySelector('table');
             if (!table) return;
-
-            // Make table-wrap scrollable
-            tableWrap.style.overflowX = 'auto';
-            tableWrap.style.overflowY = 'visible';
-            tableWrap.style.webkitOverflowScrolling = 'touch';
+            const strategy = this.classifyTable(table);
+            tableWrap.dataset.mobileTable = strategy;
+            tableWrap.dataset.mobileTableReady = 'true';
+            table.dataset.mobileTable = strategy;
+            tableWrap.dataset.stickyFirstColumn = strategy === 'matrix' ? 'true' : 'false';
 
             // Check if table is wider than container
-            const needsScroll = table.scrollWidth > tableWrap.clientWidth;
+            const needsScroll = tableWrap.scrollWidth > tableWrap.clientWidth;
 
             if (needsScroll) {
                 // Show scroll hint initially
@@ -107,6 +121,7 @@
                 tableWrap.dataset.scrollLeft = 'false';
                 tableWrap.dataset.scrollRight = 'false';
             }
+            return tableWrap;
         },
 
         observeTableChanges: function () {
