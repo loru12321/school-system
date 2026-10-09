@@ -407,11 +407,182 @@
         };
     }
 
+    function naturalCompare(left, right) {
+        return normalizeText(left).localeCompare(normalizeText(right), 'zh-CN', {
+            numeric: true,
+            sensitivity: 'base'
+        });
+    }
+
+    function scoreGroup(value) {
+        const score = normalizeNumber(value);
+        if (score === null) return { group: 2, score: null };
+        if (score === 0) return { group: 1, score: 0 };
+        return { group: 0, score };
+    }
+
+    function rankStudents(students) {
+        return (Array.isArray(students) ? students : [])
+            .filter((student) => student && !student.excluded)
+            .map((student, stableIndex) => {
+                const score = scoreGroup(student.totalScore);
+                return {
+                    ...student,
+                    subjects: { ...(student.subjects || {}) },
+                    _rankingGroup: score.group,
+                    _rankingScore: score.score,
+                    _stableIndex: stableIndex
+                };
+            })
+            .sort((left, right) => {
+                if (left._rankingGroup !== right._rankingGroup) return left._rankingGroup - right._rankingGroup;
+                if (left._rankingGroup === 0 && left._rankingScore !== right._rankingScore) {
+                    return right._rankingScore - left._rankingScore;
+                }
+                const classOrder = naturalCompare(left.originalClass || left.currentClass, right.originalClass || right.currentClass);
+                if (classOrder) return classOrder;
+                const sheetOrder = Number(left.source?.sheetOrder || 0) - Number(right.source?.sheetOrder || 0);
+                if (sheetOrder) return sheetOrder;
+                const rowOrder = Number(left.source?.rowNumber || 0) - Number(right.source?.rowNumber || 0);
+                if (rowOrder) return rowOrder;
+                return left._stableIndex - right._stableIndex;
+            })
+            .map((student, index) => {
+                const ranked = { ...student, rank: index + 1 };
+                delete ranked._rankingGroup;
+                delete ranked._rankingScore;
+                delete ranked._stableIndex;
+                return ranked;
+            });
+    }
+
+    function chineseRoomNumber(value) {
+        const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+        const number = Number(value);
+        if (!Number.isInteger(number) || number <= 0 || number >= 100) return String(value);
+        if (number < 10) return digits[number];
+        if (number === 10) return '十';
+        if (number < 20) return `十${digits[number % 10]}`;
+        return `${digits[Math.floor(number / 10)]}十${number % 10 ? digits[number % 10] : ''}`;
+    }
+
+    function normalizeRooms(rooms) {
+        return (Array.isArray(rooms) ? rooms : [])
+            .map((room, index) => ({
+                id: normalizeText(room.id) || `room-${index + 1}`,
+                name: normalizeText(room.name) || `第${chineseRoomNumber(index + 1)}考场`,
+                capacity: Math.max(0, Math.floor(normalizeNumber(room.capacity) || 0)),
+                building: normalizeText(room.building),
+                classroom: normalizeText(room.classroom),
+                order: normalizeNumber(room.order) ?? index + 1
+            }))
+            .sort((left, right) => left.order - right.order || naturalCompare(left.name, right.name));
+    }
+
+    function deriveBalancedRooms(studentCount, options = {}) {
+        const total = Math.max(0, Math.floor(normalizeNumber(studentCount) || 0));
+        if (Array.isArray(options.rooms) && options.rooms.length) return normalizeRooms(options.rooms);
+        let roomCount = Math.max(0, Math.floor(normalizeNumber(options.roomCount) || 0));
+        const maxPerRoom = Math.max(0, Math.floor(normalizeNumber(options.maxPerRoom) || 0));
+        if (!roomCount && maxPerRoom) roomCount = total ? Math.ceil(total / maxPerRoom) : 0;
+        if (!roomCount || !total) return [];
+        const base = Math.floor(total / roomCount);
+        const remainder = total % roomCount;
+        return Array.from({ length: roomCount }, (_, index) => ({
+            id: `room-${index + 1}`,
+            name: `第${chineseRoomNumber(index + 1)}考场`,
+            capacity: base + (index < remainder ? 1 : 0),
+            building: '',
+            classroom: '',
+            order: index + 1
+        }));
+    }
+
+    function normalizeAdvancedRules(rules = {}) {
+        return {
+            separateSameClass: rules.separateSameClass === true,
+            snakeSeating: rules.snakeSeating === true,
+            alternateGender: rules.alternateGender === true
+        };
+    }
+
+    function assignStudents(students, rooms, settings = {}) {
+        const ranked = rankStudents(students, settings);
+        const normalizedRooms = normalizeRooms(rooms);
+        const totalCapacity = normalizedRooms.reduce((sum, room) => sum + room.capacity, 0);
+        if (totalCapacity < ranked.length) {
+            return {
+                ok: false,
+                code: 'ROOM_CAPACITY_SHORTFALL',
+                shortfall: ranked.length - totalCapacity,
+                assignments: [],
+                rooms: normalizedRooms.map((room) => ({ ...room, students: [] })),
+                summary: { eligibleStudents: ranked.length, totalCapacity },
+                warnings: [],
+                generationSignature: ''
+            };
+        }
+        const prefix = normalizeText(settings.prefix);
+        const serialWidth = Math.max(1, Math.floor(normalizeNumber(settings.serialWidth) || 3));
+        const advancedRules = normalizeAdvancedRules(settings.advancedRules);
+        const assignedRooms = normalizedRooms.map((room) => ({ ...room, students: [] }));
+        const assignments = [];
+        let roomIndex = 0;
+
+        ranked.forEach((student, index) => {
+            while (assignedRooms[roomIndex] && assignedRooms[roomIndex].students.length >= assignedRooms[roomIndex].capacity) {
+                roomIndex += 1;
+            }
+            const room = assignedRooms[roomIndex];
+            const seatNo = room.students.length + 1;
+            const assignment = {
+                ...student,
+                examNo: `${prefix}${String(index + 1).padStart(serialWidth, '0')}`,
+                roomId: room.id,
+                roomName: room.name,
+                roomNo: roomIndex + 1,
+                seatNo
+            };
+            room.students.push(assignment);
+            assignments.push(assignment);
+        });
+
+        const signaturePayload = {
+            students: assignments.map((student) => student.id),
+            rooms: assignedRooms.map((room) => ({ id: room.id, name: room.name, capacity: room.capacity })),
+            prefix,
+            serialWidth,
+            advancedRules
+        };
+        const zeroOrMissing = assignments.filter((student) => normalizeNumber(student.totalScore) === null || normalizeNumber(student.totalScore) === 0);
+        return {
+            ok: true,
+            assignments,
+            rooms: assignedRooms,
+            summary: {
+                eligibleStudents: assignments.length,
+                excludedStudents: Math.max(0, (Array.isArray(students) ? students.length : 0) - assignments.length),
+                roomCount: assignedRooms.filter((room) => room.students.length).length,
+                totalCapacity,
+                zeroOrMissingScoreStudents: zeroOrMissing.length
+            },
+            warnings: zeroOrMissing.length ? [{
+                code: 'ZERO_OR_MISSING_SCORE_INCLUDED',
+                count: zeroOrMissing.length,
+                message: `${zeroOrMissing.length} 名零分或成绩缺失学生已保留在编排中`
+            }] : [],
+            generationSignature: JSON.stringify(signaturePayload)
+        };
+    }
+
     root.ExamArrangerCore = Object.freeze({
         createWorkspace,
         inspectWorkbook,
         mergeImportSources,
         validateWorkspace,
+        rankStudents,
+        deriveBalancedRooms,
+        assignStudents,
         normalizeText,
         normalizeClass,
         normalizeNumber,
