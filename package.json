@@ -19,6 +19,7 @@
     "build:post:prune": "node scripts/build/prune-dist-assets.mjs",
     "build:post:optimize": "node scripts/build/optimize-dist-html.mjs",
     "check:syntax": "node scripts/test-syntax.js",
+    "test:exam-arranger-core": "node scripts/test-exam-arranger-core-runtime.js",
     "test:auth-state": "node scripts/test-auth-state.js",
     "test:login-shell-state": "node scripts/test-login-shell-state-runtime.js",
     "test:login-cohort-runtime": "node scripts/test-login-cohort-runtime.js",
