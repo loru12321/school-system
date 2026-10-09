@@ -382,12 +382,22 @@
         return true;
     }
 
-    function exportResult() {
-        if (root.ExamArrangerExport?.downloadDefaultPackage) {
-            return root.ExamArrangerExport.downloadDefaultPackage(getWorkspace(), getWorkspace().generation);
+    function exportResult(kind = 'package') {
+        const exporter = root.ExamArrangerExport;
+        if (!exporter) {
+            notify('输出组件将在进入“预览与输出”步骤后加载', 'info');
+            return false;
         }
-        notify('输出组件将在进入“预览与输出”步骤后加载', 'info');
-        return false;
+        const current = getWorkspace();
+        const handlers = {
+            confidential: exporter.downloadConfidential,
+            public: exporter.downloadPublic,
+            print: exporter.downloadPrint,
+            package: exporter.downloadDefaultPackage
+        };
+        const handler = handlers[kind] || handlers.package;
+        if (typeof handler !== 'function') return false;
+        return handler(current, current.generation);
     }
 
     function actionFromEvent(event) {
@@ -409,7 +419,10 @@
             else if (action === 'toggle-excluded') toggleExcluded(target.dataset.studentId, target.dataset.reason);
             else if (action === 'download-template') downloadTemplate(target.dataset.examTemplate);
             else if (action === 'add-room') addRoom();
-            else if (action === 'export') exportResult();
+            else if (action === 'export') exportResult('package');
+            else if (action === 'export-confidential') exportResult('confidential');
+            else if (action === 'export-public') exportResult('public');
+            else if (action === 'export-print') exportResult('print');
         });
         root.document.addEventListener('change', (event) => {
             const target = event.target?.closest?.('[data-exam-change]');
