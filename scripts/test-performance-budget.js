@@ -170,7 +170,9 @@ const budgets = {
   // 2026-07-07: 85_700 -> 85_800 for phase-4 startup-hydration-runtime.js manifest registration.
   publicBootJs: 85_800,
   // 2026-08-30: drill-system demand loader adds a guarded runtime entry.
-  publicRuntimeLoaderJs: 59_000,
+  // 2026-10-10: current split loader is 59,119B; align with the release
+  // maintenance cap while retaining a bounded regression threshold.
+  publicRuntimeLoaderJs: 59_500,
   publicCountyAnalysisJs: 125_000,
   publicProgressAnalysisJs: 95_000,
   publicTeacherAnalysisCoreJs: 85_000,

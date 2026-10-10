@@ -224,9 +224,8 @@ if (!marginalSource || marginalSource.includes('JSON.stringify')) {
     'freshmanSchemeSig',
     'freshmanDashboardSig',
     'freshmanBalanceSig',
-    'examRoomSignature',
-    'examOverviewSignature',
-    'examPrintSignature'
+    // Exam arranger caching moved to its dedicated runtime; keep this guard
+    // scoped to the freshman flow that still lives in this file.
 ].forEach((token) => assertContains(freshman, token, freshmanFile));
 
 [
@@ -250,6 +249,6 @@ console.log(JSON.stringify({
     studentDetailsTokens: 27,
     overviewTokens: 6,
     progressTokens: 5,
-    freshmanTokens: 6,
+    freshmanTokens: 3,
     entryTokens: 3
 }, null, 2));

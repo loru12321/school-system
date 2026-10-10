@@ -352,7 +352,7 @@ async function ensureCohortEntered(page) {
         || state.currentCohortId
         || state.knownCohorts[0]
         || state.inferredCohortId
-        || '2022'
+        || '2023'
     ).trim();
     if (!candidate) return state;
 
