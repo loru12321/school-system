@@ -11,7 +11,7 @@ const { chromium } = require('playwright');
 const url = process.env.SMOKE_URL || 'https://schoolsystem.com.cn/';
 const user = process.env.SMOKE_USER || 'admin';
 const pass = process.env.SMOKE_PASS || 'admin123';
-const cohortYear = process.env.SMOKE_COHORT_YEAR || '2022';
+const cohortYear = process.env.SMOKE_COHORT_YEAR || '2023';
 
 function isIgnorableMessage(text) {
     return /favicon|GitHub release API|fetch releases|cloudflareinsights|beacon\.min\.js|Failed to load resource/i.test(String(text || ''));
@@ -30,7 +30,18 @@ async function loginAndEnterCohort(page) {
         const app = document.getElementById('app');
         return (!overlay || getComputedStyle(overlay).display === 'none')
             && (!!mask || !!app || document.body?.dataset?.authState === 'logged_in');
-    }, null, { timeout: 90000 });
+    }, null, { timeout: 90000 }).catch(async (error) => {
+        console.error('[mobile-smoke] login boundary diagnostics', await page.evaluate(() => ({
+            readyState: document.readyState,
+            overlay: document.getElementById('login-overlay')?.getAttribute('aria-hidden'),
+            overlayDisplay: document.getElementById('login-overlay') ? getComputedStyle(document.getElementById('login-overlay')).display : '',
+            appDisplay: document.getElementById('app') ? getComputedStyle(document.getElementById('app')).display : '',
+            authState: document.body?.dataset?.authState || '',
+            userStored: !!localStorage.getItem('currentUser'),
+            runtimeErrors: window.__BOOT_ERROR__ || window.__AUTH_ERROR__ || ''
+        })).catch(() => ({})));
+        throw error;
+    });
 
     await page.waitForFunction(() => typeof window.enterCohortFromMask === 'function', null, { timeout: 30000 }).catch(() => {});
     const maskVisible = await page.evaluate(() => {
@@ -53,7 +64,16 @@ async function loginAndEnterCohort(page) {
         const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
         const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
         return !!cohortId && rawDataLen > 0;
-    }, null, { timeout: 90000 });
+    }, null, { timeout: 90000 }).catch(async (error) => {
+        console.error('[mobile-smoke] cohort boundary diagnostics', await page.evaluate(() => ({
+            authState: document.body?.dataset?.authState || '',
+            cohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || ''),
+            rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            modeMask: document.getElementById('mode-mask') ? getComputedStyle(document.getElementById('mode-mask')).display : '',
+            bodyText: document.body?.innerText?.slice(0, 240) || ''
+        })).catch(() => ({})));
+        throw error;
+    });
 }
 
 async function readMobileShellState(page) {

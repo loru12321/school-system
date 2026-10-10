@@ -148,7 +148,7 @@ async function main() {
         SMOKE_URL: process.env.SMOKE_URL || `http://127.0.0.1:${server.address().port}/`,
         SMOKE_USER: process.env.SMOKE_USER || 'admin',
         SMOKE_PASS: process.env.SMOKE_PASS || 'admin123',
-        SMOKE_COHORT_YEAR: process.env.SMOKE_COHORT_YEAR || '2022'
+        SMOKE_COHORT_YEAR: process.env.SMOKE_COHORT_YEAR || '2023'
     };
     // 学年翻篇预警：届别按 9 月 1 日翻年，入学年 + 3 < 当前学年起点即已毕业。
     // 已毕业届别不在登录下拉里，且随时可能被清理；smoke 仍可通过 addCohort 进入，但要显式提醒换参数。
