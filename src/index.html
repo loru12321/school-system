@@ -4208,7 +4208,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     </div>
 
     <!-- 4. 通用：账号搜索与密码管理 (多角色权限) -->
-    <div id="account-manager-modal" class="modal" style="display: none; z-index: 78000;">
+    <div id="account-manager-modal" class="modal" data-mobile-surface="management" style="display: none; z-index: 78000;">
         <div class="modal-content" style="max-width: 700px; height: 80vh; display: flex; flex-direction: column;">
 
             <div
@@ -4348,7 +4348,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     </div>
 
     <!-- 5. 数据综合管理后台 (成绩/教师/档案) -->
-    <div id="data-manager-modal" class="modal" x-ignore data-mojibake-skip="true" style="display: none; z-index: 79000;">
+    <div id="data-manager-modal" class="modal" data-mobile-surface="management" x-ignore data-mojibake-skip="true" style="display: none; z-index: 79000;">
         <div class="modal-content" data-mojibake-skip="true"
             style="width:min(1480px,96vw); max-width:1480px; height:min(92vh,960px); display:flex; flex-direction:column; min-height:0; overflow:hidden; padding:22px 24px 18px; border-radius:22px;">
 

@@ -78,6 +78,21 @@
     font-variant-numeric: tabular-nums;
   }
 
+  [data-mobile-surface="management"] {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  [data-mobile-surface="management"] :where(#dm-tab-strip, .login-tab, .dm-cloud-category-tab) {
+    min-height: var(--mobile-control-min);
+    touch-action: manipulation;
+  }
+
+  [data-mobile-surface="management"] :where(#dm-tab-strip, .dm-cloud-category-tabs) {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
   [data-mobile-action-bar] {
     display: flex;
     align-items: center;

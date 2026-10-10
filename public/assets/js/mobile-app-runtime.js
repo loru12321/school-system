@@ -176,6 +176,7 @@
         document.querySelectorAll('[data-mobile-action-bar]').forEach(syncActionBar);
         annotateCoreMobileModules(document);
         annotateAnalysisMobileModules(document);
+        annotateManagementMobileSurfaces(document);
     }
 
     const CORE_MOBILE_MODULE_IDS = ['upload', 'summary', 'teacher-analysis', 'student-details', 'report-generator', 'exam-arranger'];
@@ -210,6 +211,22 @@
             if (!section) return;
             section.dataset.mobileSurface = 'analysis';
             section.querySelectorAll('.table-wrap, .analysis-table-shell').forEach((wrap) => {
+                if (!wrap.dataset.mobileTable && window.TableScrollIndicators) {
+                    window.TableScrollIndicators.setupTableWrap(wrap);
+                }
+            });
+        });
+    }
+
+    function annotateManagementMobileSurfaces(scope = document) {
+        ['data-manager-modal', 'account-manager-modal', 'cloud-archive-manager', 'cloud-workspace-panel'].forEach((id) => {
+            const surface = scope.getElementById?.(id) || document.getElementById(id);
+            if (!surface) return;
+            surface.dataset.mobileSurface = 'management';
+            surface.querySelectorAll('#dm-tab-strip, .login-tab, .dm-cloud-category-tab').forEach((tabStrip) => {
+                tabStrip.dataset.mobileActionBar = '';
+            });
+            surface.querySelectorAll('.table-wrap, .dm-cloud-table-scroll, .dm-table-scroll').forEach((wrap) => {
                 if (!wrap.dataset.mobileTable && window.TableScrollIndicators) {
                     window.TableScrollIndicators.setupTableWrap(wrap);
                 }
@@ -1007,6 +1024,7 @@
         attachTableScrollIndicators(scope);
         annotateCoreMobileModules(document);
         annotateAnalysisMobileModules(document);
+        annotateManagementMobileSurfaces(document);
     }
 
     function isVisiblyRendered(node) {
@@ -2190,6 +2208,7 @@
         focusFirstInvalid
         , annotateCoreMobileModules
         , annotateAnalysisMobileModules
+        , annotateManagementMobileSurfaces
     });
     window.MobDashboardMgr = window.MobDashboardMgr || {
         showToast(msg) {
