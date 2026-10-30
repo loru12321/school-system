@@ -59,6 +59,7 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 
 ## Optimization pass log
 
+- 2026-10-31：安全加固与工程整理见 [optimization-pass-2026-10-31.md](optimization-pass-2026-10-31.md)。管理 REST 接口全量鉴权与角色范围、会话可撤销与 7 天上限、错误/CORS/CSP 收紧、运行时模块长期缓存、index.html 内联事件清零、D1 迁移可重放、入口更名 `src/worker.js`、删除旧依赖与孤立样式；计算输出 36 组基线不变。
 - 2026-09-27：项目审查与不改计算口径修复见 [project-audit-2026-09-27.md](project-audit-2026-09-27.md)。修复 CSS 作用域去重、动态样式误删、构建过期检查遗漏及考试年级说明；增加 36 组计算输出基线并接入发布门禁。构建、完整 validate、release-fast、全模块本地 smoke 通过；未部署生产。
 
 | Date | Priority | Scope | Verification |
