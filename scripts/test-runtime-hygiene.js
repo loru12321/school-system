@@ -36,7 +36,7 @@ const forbiddenRuntimeTokens = [
 
 const sourceFiles = [
     'src/index.html',
-    'src/worker-dummy.js',
+    'src/worker.js',
     'public/assets/js/app.js',
     'public/assets/js/boot-runtime.js',
     'public/assets/js/runtime-loader-runtime.js',

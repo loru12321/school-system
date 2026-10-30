@@ -26,7 +26,7 @@ function listRootWorkerConfigs() {
 const packageJson = JSON.parse(read('package.json'));
 const scripts = packageJson.scripts || {};
 const wrangler = parseJsonc('wrangler.jsonc');
-const worker = read('src/worker-dummy.js');
+const worker = read('src/worker.js');
 const releaseSurface = read('scripts/test-release-surface.js');
 const maintenanceContract = read('scripts/test-maintenance-priority-contract.js');
 const ciWorkflow = read('.github/workflows/ci.yml');
@@ -36,7 +36,7 @@ const d1Bindings = (wrangler.d1_databases || []).map((db) => db.binding).sort();
 
 assert.deepStrictEqual(rootConfigs, ['wrangler.jsonc'], 'repository root should expose exactly one Wrangler config');
 assert.strictEqual(wrangler.name, 'school-system', 'Wrangler Worker name should match the repository and product name');
-assert.strictEqual(wrangler.main, 'src/worker-dummy.js', 'Wrangler main must point at the production Worker entrypoint');
+assert.strictEqual(wrangler.main, 'src/worker.js', 'Wrangler main must point at the production Worker entrypoint');
 assert.ok(exists(wrangler.main), 'Wrangler main Worker entrypoint must exist');
 assert.ok(worker.includes('Production Cloudflare Worker entrypoint'), 'Worker entrypoint should document production ownership');
 assert.ok(worker.includes('env.ASSETS.fetch(request)'), 'production Worker must serve Cloudflare Assets');
@@ -53,8 +53,8 @@ assert.ok(!('SUPABASE_ORIGIN' in (wrangler.vars || {})), 'Supabase origin must n
 assert.ok(!('SUPABASE_REST_API_KEY' in (wrangler.vars || {})), 'Supabase REST key must not be hardcoded in Wrangler vars');
 assert.strictEqual(scripts['check:cloudflare'], 'npx wrangler deploy --dry-run', 'Cloudflare dry-run should use the canonical Wrangler config');
 assert.ok(scripts['check:release-fast']?.includes('test:worker-entrypoint-contract'), 'fast release checks must guard the Worker entrypoint');
-assert.ok(releaseSurface.includes("wrangler.main, 'src/worker-dummy.js'"), 'release surface should also guard the Worker entrypoint');
-assert.ok(maintenanceContract.includes("wrangler.main, 'src/worker-dummy.js'"), 'maintenance contract should also guard the Worker entrypoint');
+assert.ok(releaseSurface.includes("wrangler.main, 'src/worker.js'"), 'release surface should also guard the Worker entrypoint');
+assert.ok(maintenanceContract.includes("wrangler.main, 'src/worker.js'"), 'maintenance contract should also guard the Worker entrypoint');
 assert.ok(ciWorkflow.includes('npm run check:release-fast'), 'CI release guards should run fast release checks');
 assert.ok(!ciWorkflow.includes('wrangler deploy --config'), 'CI should not deploy using an alternate Wrangler config');
 assert.ok(!exists('.github/workflows/release-apps.yml'), 'native release workflow should stay removed');

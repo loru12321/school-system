@@ -72,7 +72,7 @@ curl http://localhost:8787/api/health
 
 - `wrangler.jsonc` - Cloudflare Workers 配置
 - `.dev.vars` - 本地开发环境变量
-- `src/worker-dummy.js` - Worker 入口文件
+- `src/worker.js` - Worker 入口文件
 - `src/index.html` - 前端入口
 
 ## 常见问题

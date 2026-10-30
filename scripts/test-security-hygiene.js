@@ -22,7 +22,7 @@ const gatewayContractSource = [
     gatewayDataQuality,
     gatewayCrypto
 ].join('\n');
-const worker = read('src/worker-dummy.js');
+const worker = read('src/worker.js');
 const workerHelpers = read('src/worker-http-helpers.js');
 const workerSystemData = read('src/worker-system-data.js');
 const workerAssetProtection = read('src/worker-asset-protection.js');
@@ -42,7 +42,7 @@ const supabaseLegacyLockdown = read('supabase/sql/009_lockdown_legacy_public_tab
 const keySensitiveFiles = [
     'wrangler.jsonc',
     'src/worker-gateway-d1.js',
-    'src/worker-dummy.js',
+    'src/worker.js',
     'scripts/migrate-system-data-to-cloudflare.js',
     'scripts/migrate-supabase-project-data.mjs',
     'scripts/migrate-gateway-data-to-cloudflare.mjs'

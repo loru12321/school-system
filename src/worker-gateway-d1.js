@@ -1,5 +1,5 @@
-// Managed D1 account/data gateway implementation imported by src/worker-dummy.js.
-// It is not the Wrangler main entrypoint; keep production routing in worker-dummy.js.
+// Managed D1 account/data gateway implementation imported by src/worker.js.
+// It is not the Wrangler main entrypoint; keep production routing in worker.js.
 import { buildCorsHeaders, normalizeText } from './worker-http-helpers.js';
 import { signLocalSession } from './worker-crypto.js';
 import {

@@ -19,7 +19,7 @@ const manifest = JSON.parse(manifestText);
 const publicHeaders = read('public/_headers');
 const srcIndex = read('src/index.html');
 const swRuntime = read('public/assets/js/service-worker-runtime.js');
-const worker = read('src/worker-dummy.js');
+const worker = read('src/worker.js');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
 const userFacingReleaseFiles = [
   'public/site.webmanifest',

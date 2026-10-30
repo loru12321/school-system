@@ -64,7 +64,7 @@ const gatewayContractSource = [
   gatewayDataQuality,
   gatewayCrypto
 ].join('\n');
-const worker = read('src/worker-dummy.js');
+const worker = read('src/worker.js');
 const workerHelpers = read('src/worker-http-helpers.js');
 const workerSystemData = read('src/worker-system-data.js');
 const workerAssetProtection = read('src/worker-asset-protection.js');
@@ -101,7 +101,7 @@ const guardedItems = [
   () => assertIncludes(backlog, '## Optimization pass log', 'backlog should keep optimization pass log'),
   () => assert.ok((backlog.match(/^- /gm) || []).length >= 20, 'backlog should track at least 20 optimization items'),
   () => assertIncludes(legacyReadme, 'npx wrangler deploy', 'legacy README should point to Wrangler path'),
-  () => assert.strictEqual(wrangler.main, 'src/worker-dummy.js', 'Worker entrypoint should stay explicit'),
+  () => assert.strictEqual(wrangler.main, 'src/worker.js', 'Worker entrypoint should stay explicit'),
   () => assert.strictEqual(wrangler.name, 'school-system', 'Worker name should match the project name'),
   () => assert.strictEqual(wrangler.assets.directory, './dist', 'Cloudflare should deploy dist assets'),
   () => assertIncludes(headers, 'Content-Type: text/html; charset=utf-8', 'HTML charset header should stay explicit'),

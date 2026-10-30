@@ -18,7 +18,7 @@ function parseJsonc(relativePath) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-const worker = read('src/worker-dummy.js');
+const worker = read('src/worker.js');
 const workerSystemData = read('src/worker-system-data.js');
 const workerAssetProtection = read('src/worker-asset-protection.js');
 const helpers = read('src/worker-http-helpers.js');

@@ -48,7 +48,7 @@ function createD1() {
 async function run() {
   const tempDir = prepareEsmWorkerModules();
   try {
-    const worker = (await import(pathToFileURL(path.join(tempDir, 'worker-dummy.mjs')).href)).default;
+    const worker = (await import(pathToFileURL(path.join(tempDir, 'worker.mjs')).href)).default;
     const { signLocalSession } = await import(pathToFileURL(path.join(tempDir, 'worker-crypto.mjs')).href);
     const db = createD1();
     const env = { APP_SESSION_SECRET: 'test-secret', GATEWAY_DATA_DB: db, CLOUD_SYSTEM_DATA_MODE: 'primary' };
