@@ -119,7 +119,56 @@ async function downloadCertificate() {
         return fn.apply(object, args);
     };
 
+    // Declarative replacements for former inline onclick/onchange handlers in
+    // src/index.html: <button data-ui-action="call" data-ui-call="fnName"
+    // data-ui-args='["literal", "$value"]'>. Only names in this allow-list can be
+    // invoked; "$value" is replaced by the element's current value.
+    const DECLARED_CALLS = new Set([
+        'CloudManager.loadTeachers', 'CloudManager.saveTeachers', 'talkToData', 'batchGeneratePDF',
+        'doQuery', 'onReportComparePeriodCountChange', 'printSingleReport', 'downloadSingleReportPDF',
+        'analyzeMarginalStudents', 'exportMarginalStudents', 'CohortGrowth.updateClassSelectForSchool',
+        'CohortGrowth.render', 'CohortGrowth.exportVolatility', 'renderTeacherAnalysisNow', 'exportTeacherAnalysis',
+        'onTeacherComparePeriodCountChange', 'updateTeacherCompareTeacherSelect', 'renderTeacherMultiPeriodComparison',
+        'renderAllTeachersMultiPeriodComparison', 'exportTeacherMultiPeriodComparison',
+        'saveTeacherMultiPeriodCompareToCloud', 'viewCloudTeacherCompares', 'exportTeacherComparisonExcel',
+        'exportTeacherTownshipRankExcel', 'renderCorrelationAnalysis', 'exportCorrelationExcel', 'printMarginalTickets',
+        'exportMarginalTasks', 'updateMpClassSelect', 'generateMarginalTickets', 'MP_saveSnapshot',
+        'MP_analyzeConversion', 'MP_deleteSnapshot', 'renderSeatGrid', 'addConflictPair', 'exportMutualAidGroups',
+        'updateMutualAidSelects', 'renderMutualAidGroups'
+    ]);
+
+    const readDeclaredArgs = (target) => {
+        const raw = String(target?.dataset?.uiArgs || '').trim();
+        if (!raw) return [];
+        let args;
+        try {
+            args = JSON.parse(raw);
+        } catch (error) {
+            console.warn('[ui-actions] invalid data-ui-args', raw);
+            return [];
+        }
+        return (Array.isArray(args) ? args : [args]).map((arg) => (arg === '$value' ? target.value : arg));
+    };
+
+    const invokeDeclaredCall = (target) => {
+        const name = String(target?.dataset?.uiCall || '').trim();
+        if (!DECLARED_CALLS.has(name)) {
+            console.warn(`[ui-actions] call not allowed: ${name}`);
+            return undefined;
+        }
+        const args = readDeclaredArgs(target);
+        const dot = name.indexOf('.');
+        return dot === -1
+            ? callGlobal(name, ...args)
+            : callObject(name.slice(0, dot), name.slice(dot + 1), ...args);
+    };
+
     const actionHandlers = {
+        call: (target) => { invokeDeclaredCall(target); },
+        'show-message': (target) => {
+            const message = String(target?.dataset?.uiMessage || '').trim();
+            if (message) window.alert(message);
+        },
         'mobile-open-upload': () => {
             document.getElementById('mobile-manager-app')?.style.setProperty('display', 'none');
             document.getElementById('app')?.classList.remove('hidden');

@@ -1100,7 +1100,7 @@ assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching 
 assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
 assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis'];"), 'teaching management state bars should only cover retained modules');
 assert.ok(moduleEntryRuntime.includes("if (id === 'single-school-eval') return false;"), 'module entry runtime should not initialize the removed performance fairness module');
-assert.ok(indexHtml.includes('onclick="renderTeacherAnalysisNow()">刷新教师画像'), 'teacher portrait should expose an explicit refresh action');
+assert.ok(/data-ui-call="renderTeacherAnalysisNow"[^>]*>刷新教师画像/.test(indexHtml), 'teacher portrait should expose an explicit refresh action');
 const teacherEntryStart = moduleEntryRuntime.indexOf("function initTeacherAnalysisEntry(moduleId = 'teacher-analysis')");
 const teacherEntryEnd = moduleEntryRuntime.indexOf('function releaseTeacherAnalysisHeavyDom()', teacherEntryStart);
 const teacherEntrySource = moduleEntryRuntime.slice(teacherEntryStart, teacherEntryEnd);

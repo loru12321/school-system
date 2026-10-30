@@ -63,7 +63,9 @@ assert.ok(inlineStyleCount <= 902, `inline style count grew: ${inlineStyleCount}
 // shell, starter-hub and workspace-drawer actions below use the shared
 // data-ui-* dispatcher. The analysis toolbar/export actions below use the same
 // shared dispatcher. Ratchet only downward from here.
-assert.ok(inlineHandlerCount <= 139, `inline event handler count grew: ${inlineHandlerCount} > 139`);
+// 0 (2026-10-31): the last 47 module-panel handlers moved to data-ui-action="call"
+// / data-ui-change="call" with an allow-list in ui-actions-runtime.js.
+assert.ok(inlineHandlerCount === 0, `src/index.html must not reintroduce inline event handlers (found ${inlineHandlerCount}); use data-ui-* delegation`);
 assert.ok(!html.includes('sb_publishable_'), 'index.html should not embed Supabase publishable keys');
 
 // The freshman module's upload/data-source controls are bound declaratively in

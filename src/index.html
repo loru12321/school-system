@@ -4519,13 +4519,13 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
 
                         <!-- 右侧：操作按钮组 -->
                         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                            <button class="btn btn-sm btn-purple" onclick="CloudManager.loadTeachers({ force: true, preferRemote: true })"
+                            <button class="btn btn-sm btn-purple" data-ui-action="call" data-ui-call="CloudManager.loadTeachers" data-ui-args='[{"force":true,"preferRemote":true}]'
                                 title="从云端同步本学期的教师任课数据"
                                 style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:4px;">
                                 <i class="ti ti-cloud-download"></i> 云端同步
                             </button>
 
-                            <button class="btn btn-sm btn-orange" onclick="CloudManager.saveTeachers()"
+                            <button class="btn btn-sm btn-orange" data-ui-action="call" data-ui-call="CloudManager.saveTeachers"
                                 title="保存当前教师任课数据到云端"
                                 style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:4px;">
                                 <i class="ti ti-cloud-upload"></i> 上传云端
@@ -4545,7 +4545,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <i class="ti ti-plus"></i> 手动新增
                             </button>
 
-                            <button class="btn btn-sm" onclick="downloadTemplate('teacher')" title="下载教师任课表Excel模板"
+                            <button class="btn btn-sm" data-ui-action="download-template" data-ui-value="teacher" title="下载教师任课表Excel模板"
                                 style="padding:6px 12px; font-size:12px; background:white; border:1px solid #cbd5e1; color:#475569; display:flex; align-items:center; gap:4px;">
                                 <i class="ti ti-download"></i> 下载模板
                             </button>
@@ -4659,9 +4659,9 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <input type="file" id="dm-target-file" accept=".xlsx,.xls" hidden
                                 data-dm-change="handleTargetUpload" data-dm-arg-from="element">
 
-                            <a href="javascript:void(0)"
+                            <a href="#" role="button"
                                 style="font-size:12px; margin-left:10px; color:#666; text-decoration:underline;"
-                                onclick="alert('Excel格式要求：\n第一列：学校名称\n第二列：指标一目标人数\n第三列：指标二目标人数')">格式说明</a>
+                                data-ui-action="show-message" data-ui-message="Excel格式要求：&#10;第一列：学校名称&#10;第二列：指标一目标人数&#10;第三列：指标二目标人数">格式说明</a>
                         </div>
                         <!-- 👆 🟢 [修改结束] -->
                     </div>
@@ -4771,7 +4771,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:8px;">
                         <input id="dm-nlq-input" type="text" placeholder="例如：找出701班物理不及格但数学前10名的学生"
                             style="flex:1; min-width:280px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
-                        <button class="btn btn-sm btn-purple" onclick="talkToData()">💬 自然语言查数</button>
+                        <button class="btn btn-sm btn-purple" data-ui-action="call" data-ui-call="talkToData">💬 自然语言查数</button>
                         <span id="dm-nlq-status" style="font-size:12px; color:#64748b;"></span>
                     </div>
 
@@ -5265,7 +5265,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先完成成绩查询，再按需导出单份 PDF 或批量生成全班材料。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-primary" onclick="batchGeneratePDF()">
+                            <button class="btn btn-primary" data-ui-action="call" data-ui-call="batchGeneratePDF">
                                 <i class="ti ti-files"></i> 批量生成全班 PDF
                             </button>
                         </div>
@@ -5286,7 +5286,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <option>--请先选择学校--</option>
                     </select>
                     <input type="text" id="inp-name" placeholder="查询单个学生姓名" style="width:120px; margin-left:10px;">
-                    <button class="btn" style="background:var(--primary); color:white;" onclick="window.doQuery()">查询单人报告</button>
+                    <button class="btn" style="background:var(--primary); color:white;" data-ui-action="call" data-ui-call="doQuery">查询单人报告</button>
                 </div>
 
                 <!-- 🆕 自定义历史对比考试 (覆盖自动获取) -->
@@ -5300,24 +5300,24 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-inline-controls">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <label style="font-size:13px; font-weight:600; color:#475569;">对比期数：</label>
-                        <select id="reportComparePeriodCount" style="padding:4px 8px; border-radius:6px;" onchange="onReportComparePeriodCountChange()">
+                        <select id="reportComparePeriodCount" style="padding:4px 8px; border-radius:6px;" data-ui-change="call" data-ui-call="onReportComparePeriodCountChange">
                             <option value="2">2期对比</option>
                             <option value="3" selected>3期对比</option>
                         </select>
                     </div>
 
                     <label style="font-size:13px; font-weight:600; margin-left:10px;">第1期：</label>
-                    <select id="reportCompareExam1" onchange="window.doQuery()" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    <select id="reportCompareExam1" data-ui-change="call" data-ui-call="doQuery" style="min-width:180px; background:#fff; border-radius:6px;"></select>
                     
                     <label style="font-size:13px; font-weight:600; margin-left:10px;">第2期：</label>
-                    <select id="reportCompareExam2" onchange="window.doQuery()" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    <select id="reportCompareExam2" data-ui-change="call" data-ui-call="doQuery" style="min-width:180px; background:#fff; border-radius:6px;"></select>
                     
                     <span id="reportCompareExam3Wrap" style="display:flex; align-items:center; gap:10px;">
                         <label style="font-size:13px; font-weight:600; margin-left:10px;">第3期：</label>
-                        <select id="reportCompareExam3" onchange="window.doQuery()" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                        <select id="reportCompareExam3" data-ui-change="call" data-ui-call="doQuery" style="min-width:180px; background:#fff; border-radius:6px;"></select>
                     </span>
                     
-                    <button class="btn btn-blue" onclick="window.doQuery()" style="background:#3b82f6; border-radius:20px; padding: 5px 15px; font-size:12px; font-weight:700;">
+                    <button class="btn btn-blue" data-ui-action="call" data-ui-call="doQuery" style="background:#3b82f6; border-radius:20px; padding: 5px 15px; font-size:12px; font-weight:700;">
                         <i class="ti ti-arrows-left-right"></i> 执行对比
                     </button>
                     
@@ -5335,10 +5335,10 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 <div id="single-report-result" class="hidden analysis-anchor-panel analysis-report-result">
                     <div class="analysis-report-actions">
                         <!-- [修改] 打印/PDF -->
-                        <button class="btn btn-purple" onclick="printSingleReport()">
+                        <button class="btn btn-purple" data-ui-action="call" data-ui-call="printSingleReport">
                             <i class="ti ti-printer"></i> 打印 / 另存为 PDF
                         </button>
-                        <button class="btn btn-blue" onclick="downloadSingleReportPDF()">
+                        <button class="btn btn-blue" data-ui-action="call" data-ui-call="downloadSingleReportPDF">
                             <i class="ti ti-file-export"></i> 下载PDF
                         </button>
                     </div>
@@ -5354,8 +5354,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <label>选择本校：</label><select id="marginalSchoolSelect" style="min-width:200px;">
                         <option value="">--请选择--</option>
                     </select>
-                    <button class="btn" onclick="analyzeMarginalStudents()">分析边缘生</button>
-                    <button class="btn btn-green" onclick="exportMarginalStudents()">导出Excel</button>
+                    <button class="btn" data-ui-action="call" data-ui-call="analyzeMarginalStudents">分析边缘生</button>
+                    <button class="btn btn-green" data-ui-action="call" data-ui-call="exportMarginalStudents">导出Excel</button>
                 </div>
                 <div id="marginal-student-results"></div>
                 </div>
@@ -5402,14 +5402,14 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
             <div class="analysis-action-stack">
                 <div class="analysis-action-note">建议先确保同一届别下已经累计多次考试，再生成成长档案；如果考试次数太少，这页更适合先当作趋势预览而不是结论依据。</div>
                 <div class="analysis-actions cohort-growth-actions">
-                    <select id="cgSchoolSelect" class="analysis-scope-select" style="min-width:180px;" onchange="CohortGrowth.updateClassSelectForSchool(this.value)">
+                    <select id="cgSchoolSelect" class="analysis-scope-select" style="min-width:180px;" data-ui-change="call" data-ui-call="CohortGrowth.updateClassSelectForSchool" data-ui-args='["$value"]'>
                         <option value="ALL">全部学校</option>
                     </select>
                     <select id="cgClassSelect" class="analysis-scope-select" style="min-width:130px;">
                         <option value="ALL">全部班级</option>
                     </select>
-                    <button class="btn btn-purple" onclick="CohortGrowth.render()">🔎 生成成长档案</button>
-                    <button class="btn btn-gray" onclick="CohortGrowth.exportVolatility()">📥 导出波动名单</button>
+                    <button class="btn btn-purple" data-ui-action="call" data-ui-call="CohortGrowth.render">🔎 生成成长档案</button>
+                    <button class="btn btn-gray" data-ui-action="call" data-ui-call="CohortGrowth.exportVolatility">📥 导出波动名单</button>
                 </div>
             </div>
         </div>
@@ -5531,8 +5531,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">先查看画像和多期趋势，再导出教师分析与乡镇排名，适合教研组复盘。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-blue" onclick="renderTeacherAnalysisNow()">刷新教师画像</button>
-                            <button class="btn" onclick="exportTeacherAnalysis()">导出教师分析</button>
+                            <button class="btn btn-blue" data-ui-action="call" data-ui-call="renderTeacherAnalysisNow">刷新教师画像</button>
+                            <button class="btn" data-ui-action="call" data-ui-call="exportTeacherAnalysis">导出教师分析</button>
                         </div>
                     </div>
                 </div>
@@ -5547,7 +5547,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div class="analysis-inline-title">🧭 教师同学科多期对比（2期/3期）</div>
                         <div class="analysis-inline-meta">
                             <label>期数：</label>
-                            <select id="teacherComparePeriodCount" onchange="onTeacherComparePeriodCountChange()">
+                            <select id="teacherComparePeriodCount" data-ui-change="call" data-ui-call="onTeacherComparePeriodCountChange">
                                 <option value="2">2期</option>
                                 <option value="3">3期</option>
                             </select>
@@ -5556,10 +5556,10 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-inline-controls">
                         <label style="font-size:12px; color:#475569;">学校：</label>
                         <select id="teacherCompareSchool" style="min-width:130px;"
-                            onchange="updateTeacherCompareTeacherSelect()"></select>
+                            data-ui-change="call" data-ui-call="updateTeacherCompareTeacherSelect"></select>
                         <label style="font-size:12px; color:#475569;">学科：</label>
                         <select id="teacherCompareSubject" style="min-width:110px;"
-                            onchange="updateTeacherCompareTeacherSelect()"></select>
+                            data-ui-change="call" data-ui-call="updateTeacherCompareTeacherSelect"></select>
                         <label style="font-size:12px; color:#475569;">教师：</label>
                         <select id="teacherCompareTeacher" style="min-width:120px;"></select>
                         <label style="font-size:12px; color:#475569;">第1期：</label>
@@ -5571,15 +5571,15 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <select id="teacherCompareExam3" style="min-width:180px;"></select>
                         </span>
                         <button class="btn btn-sm btn-blue"
-                            onclick="renderTeacherMultiPeriodComparison()">重新生成教师对比</button>
+                            data-ui-action="call" data-ui-call="renderTeacherMultiPeriodComparison">重新生成教师对比</button>
                         <button class="btn btn-sm" style="background:#ea580c; color:white;"
-                            onclick="renderAllTeachersMultiPeriodComparison()" title="重新生成该学校所有教师的对比表">📊 重新生成全校对比</button>
+                            data-ui-action="call" data-ui-call="renderAllTeachersMultiPeriodComparison" title="重新生成该学校所有教师的对比表">📊 重新生成全校对比</button>
                         <button class="btn btn-sm btn-green"
-                            onclick="exportTeacherMultiPeriodComparison()">导出教师多期对比</button>
+                            data-ui-action="call" data-ui-call="exportTeacherMultiPeriodComparison">导出教师多期对比</button>
                         <button class="btn btn-sm" style="background:#8b5cf6; color:white;"
-                            onclick="saveTeacherMultiPeriodCompareToCloud()" title="保存当前对比结果到云端">☁️ 保存云端对比</button>
+                            data-ui-action="call" data-ui-call="saveTeacherMultiPeriodCompareToCloud" title="保存当前对比结果到云端">☁️ 保存云端对比</button>
                         <button class="btn btn-sm" style="background:#06b6d4; color:white;"
-                            onclick="viewCloudTeacherCompares()" title="查看已保存的教师对比记录">📋 查看云端对比</button>
+                            data-ui-action="call" data-ui-call="viewCloudTeacherCompares" title="查看已保存的教师对比记录">📋 查看云端对比</button>
                     </div>
                     <div id="teacherCompareHint" class="analysis-hint analysis-status-text">
                         选择学校、学科、教师和期次后，点击按钮生成多期变化结果。</div>
@@ -5694,7 +5694,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div id="anchor-detail" class="anchor-target analysis-anchor-panel">
                             <div class="sub-header analysis-section-head">
                                 <span>📊 教师教学详细数据对比表</span>
-                                <button class="btn btn-green" onclick="exportTeacherComparisonExcel()">导出Excel</button>
+                                <button class="btn btn-green" data-ui-action="call" data-ui-call="exportTeacherComparisonExcel">导出Excel</button>
                             </div>
                             <div class="analysis-table-meta">
                                 <span><strong>用途：</strong>用于查看教师在本校内的横向对比和学科差异。</span>
@@ -5743,7 +5743,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <span><strong>导出建议：</strong>导出结果包含外校整体数据，适合教研复盘与组会材料。</span>
                             </div>
                             <div class="analysis-inline-export"><button class="btn btn-green"
-                                    onclick="exportTeacherTownshipRankExcel()">导出教师乡镇排名</button></div>
+                                    data-ui-action="call" data-ui-call="exportTeacherTownshipRankExcel">导出教师乡镇排名</button></div>
                         </div>
                     </div>
                 </div>
@@ -5782,8 +5782,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先选分析范围，再生成结果；阅读顺序最好是“相关矩阵 -> 贡献度 -> 提分/拖分频率”，这样更容易形成完整判断。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-purple" onclick="renderCorrelationAnalysis()">🚀 开始深度分析</button>
-                            <button class="btn btn-green" onclick="exportCorrelationExcel()">导出分析Excel</button>
+                            <button class="btn btn-purple" data-ui-action="call" data-ui-call="renderCorrelationAnalysis">🚀 开始深度分析</button>
+                            <button class="btn btn-green" data-ui-action="call" data-ui-call="exportCorrelationExcel">导出分析Excel</button>
                         </div>
                     </div>
                 </div>
@@ -5820,7 +5820,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <label style="margin-left:10px;">班级：</label><select id="corrClassSelect" style="min-width:130px;">
                         <option value="ALL">全部班级</option>
                     </select>
-                    <button class="btn btn-purple" onclick="renderCorrelationAnalysis()">🚀 开始深度分析</button>
+                    <button class="btn btn-purple" data-ui-action="call" data-ui-call="renderCorrelationAnalysis">🚀 开始深度分析</button>
                 </div>
                 <div class="corr-board-grid">
                     <div class="analysis-anchor-panel">
@@ -5912,8 +5912,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先生成任务单，再决定是批量打印给教师，还是导出做跟踪台账。</div>
                         <div class="analysis-actions marginal-actions">
-                            <button class="btn btn-purple" onclick="printMarginalTickets()">🖨 批量打印任务单</button>
-                            <button class="btn btn-green" onclick="exportMarginalTasks()">📊 导出Excel</button>
+                            <button class="btn btn-purple" data-ui-action="call" data-ui-call="printMarginalTickets">🖨 批量打印任务单</button>
+                            <button class="btn btn-green" data-ui-action="call" data-ui-call="exportMarginalTasks">📊 导出Excel</button>
                         </div>
                     </div>
                 </div>
@@ -5955,7 +5955,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="marginal-filter-grid">
                         <div class="marginal-field">
                             <label>选择学校</label>
-                            <select id="mpSchoolSelect" onchange="updateMpClassSelect()">
+                            <select id="mpSchoolSelect" data-ui-change="call" data-ui-call="updateMpClassSelect">
                                 <option value="">--请选择--</option>
                             </select>
                         </div>
@@ -5987,7 +5987,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             </select>
                         </div>
                         <div class="marginal-field marginal-submit-field">
-                            <button class="btn btn-primary" onclick="generateMarginalTickets()">🚀 生成辅导单</button>
+                            <button class="btn btn-primary" data-ui-action="call" data-ui-call="generateMarginalTickets">🚀 生成辅导单</button>
                         </div>
                     </div>
                 </div>
@@ -6010,7 +6010,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             <div class="marginal-cycle-controls">
                                 <input type="text" id="mp_save_name" placeholder="任务名 (如:期中临界生)"
                                     >
-                                <button class="btn btn-green btn-sm" onclick="MP_saveSnapshot()">💾 存档</button>
+                                <button class="btn btn-green btn-sm" data-ui-action="call" data-ui-call="MP_saveSnapshot">💾 存档</button>
                             </div>
                         </div>
 
@@ -6021,8 +6021,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <select id="mp_snapshot_select">
                                     <option value="">-- 选择历史任务 --</option>
                                 </select>
-                                <button class="btn btn-orange btn-sm" onclick="MP_analyzeConversion()">📈 计算转化率</button>
-                                <button class="btn btn-gray btn-sm" onclick="MP_deleteSnapshot()"><i
+                                <button class="btn btn-orange btn-sm" data-ui-action="call" data-ui-call="MP_analyzeConversion">📈 计算转化率</button>
+                                <button class="btn btn-gray btn-sm" data-ui-action="call" data-ui-call="MP_deleteSnapshot"><i
                                         class="ti ti-trash"></i></button>
                             </div>
                         </div>
@@ -6148,11 +6148,11 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             </div>
                             <div class="seat-field seat-number-field">
                                 <label>左右大组数</label>
-                                <input type="number" id="seatAdjGroups" value="2" min="1" max="4" onchange="renderSeatGrid()">
+                                <input type="number" id="seatAdjGroups" value="2" min="1" max="4" data-ui-change="call" data-ui-call="renderSeatGrid">
                             </div>
                             <div class="seat-field seat-number-field">
                                 <label>每组列数</label>
-                                <input type="number" id="seatAdjCols" value="4" min="2" max="6" onchange="renderSeatGrid()">
+                                <input type="number" id="seatAdjCols" value="4" min="2" max="6" data-ui-change="call" data-ui-call="renderSeatGrid">
                             </div>
                             <div class="seat-field seat-strategy-field">
                                 <label>分组策略</label>
@@ -6204,7 +6204,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                     <option value="">学生 A</option>
                                 </select><span>&</span><select id="conflict_sel_b">
                                     <option value="">学生 B</option>
-                                </select><button class="btn btn-gray btn-sm" onclick="addConflictPair('adj')"><i class="ti ti-plus"></i> 添加</button></div><input type="hidden"
+                                </select><button class="btn btn-gray btn-sm" data-ui-action="call" data-ui-call="addConflictPair" data-ui-args='["adj"]'><i class="ti ti-plus"></i> 添加</button></div><input type="hidden"
                                 id="adj_c_conflict">
                             <div id="widget_adj_conflict" class="tag-widget-container seat-conflict-tags"><span>请使用上方选择器添加矛盾对</span></div>
                         </div>
@@ -6269,7 +6269,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先确认数据源和班级，再生成分组；导出结果适合课堂实施和班级留档。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-green" onclick="exportMutualAidGroups()">导出Excel</button>
+                            <button class="btn btn-green" data-ui-action="call" data-ui-call="exportMutualAidGroups">导出Excel</button>
                         </div>
                     </div>
                 </div>
@@ -6289,7 +6289,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 <div class="control-panel">
                     <div style="flex:1; border-right:1px solid #ccc; padding-right:10px; margin-right:10px;">
                         <label><strong>数据源：</strong></label>
-                        <select id="aid_source" style="width:100%; margin-top:5px;" onchange="updateMutualAidSelects()">
+                        <select id="aid_source" style="width:100%; margin-top:5px;" data-ui-change="call" data-ui-call="updateMutualAidSelects">
                             <option value="upload">📊 上传的考试成绩 (老生)</option>
                             <option value="freshman">🚀 新生分班结果 (新生)</option>
                         </select>
@@ -6307,7 +6307,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div><label>每组人数：</label><br><input type="number" id="aidGroupSize" value="4" min="2" max="8"
                                 style="width:60px;"></div>
                     </div>
-                    <button class="btn btn-primary" onclick="renderMutualAidGroups()">⚡ 生成分组</button>
+                    <button class="btn btn-primary" data-ui-action="call" data-ui-call="renderMutualAidGroups">⚡ 生成分组</button>
                 </div>
                 <div class="analysis-anchor-panel">
                     <div class="sub-header analysis-section-head">🤝 当前互助小组预览</div>
