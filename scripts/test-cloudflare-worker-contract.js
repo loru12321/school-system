@@ -133,7 +133,7 @@ assert.ok(workerSystemData.includes('const auth = await requireSystemDataSession
 assert.ok(workerSystemData.includes("hasAnyRole(session, ['admin', 'director', 'grade_director'])"), 'system_data writes should preserve existing management-role writers');
 assert.ok(workerSystemData.includes("const PROTECTED_REST_PATHS = new Set"), 'managed REST write paths should be explicitly protected');
 assert.ok(fs.existsSync(path.join(root, 'src/worker-rest-policy.js')), 'managed REST role scoping should live in worker-rest-policy.js (behaviour covered by test:managed-rest-access)');
-assert.ok(workerSystemData.includes('if (PROTECTED_REST_PATHS.has(url.pathname)) {') && workerSystemData.includes('handleManagedRestRequest(request, env, url, restSession)'), 'protected REST tables should enforce session validation for every method');
+assert.ok(/PROTECTED_REST_PATHS\.has\(url\.pathname\)\)\s*\{[\s\S]{0,120}resolveSession\(/.test(workerSystemData), 'protected REST tables should enforce session validation for every method (behaviour: test:managed-rest-access)');
 assert.ok(workerContractSource.includes("Authorization: `Bearer ${apikey}`"), 'Supabase proxy must forward bearer auth');
 assert.ok(workerContractSource.includes("return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);"), 'system data route must fail closed for unsupported methods');
 assert.ok(!worker.includes('ENTRANCE_AUDIO_MANIFEST_API_PATH'), 'Worker must not retain the removed entrance audio manifest route');
