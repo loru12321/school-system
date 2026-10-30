@@ -115,6 +115,30 @@ async function run() {
     assert.strictEqual(auth.shouldForceManagedPasswordChange({ role: 'admin', password_source: 'supabase_login' }), false, 'a self-chosen legacy admin password is not forced');
     assert.strictEqual(auth.shouldForceManagedPasswordChange({ role: 'teacher', password_source: 'supabase_login' }), true, 'non-admin behaviour is unchanged');
 
+    // 7. Login history retention (no cron: pruned on a share of logins).
+    db.sqlite.exec(`CREATE TABLE IF NOT EXISTS login_rate_limits (scope_key TEXT PRIMARY KEY, failed_count INTEGER NOT NULL DEFAULT 0,
+      first_failed_at TEXT NOT NULL, last_failed_at TEXT NOT NULL, locked_until TEXT)`);
+    const day = 24 * 60 * 60 * 1000;
+    const fixedNow = Date.parse('2026-10-31T00:00:00.000Z');
+    const iso = (offsetDays) => new Date(fixedNow - offsetDays * day).toISOString();
+    const insertSession = db.sqlite.prepare("INSERT INTO login_sessions (id, username, session_id, login_at, last_seen_at) VALUES (?, 'admin', ?, ?, ?)");
+    insertSession.run('old-1', 'old-1', iso(200), iso(200));
+    insertSession.run('recent-1', 'recent-1', iso(10), iso(10));
+    const insertRate = db.sqlite.prepare('INSERT INTO login_rate_limits (scope_key, failed_count, first_failed_at, last_failed_at, locked_until) VALUES (?, 1, ?, ?, ?)');
+    insertRate.run('stale', iso(3), iso(3), null);
+    insertRate.run('locked', iso(3), iso(3), new Date(fixedNow + day).toISOString());
+    insertRate.run('fresh', iso(0), iso(0), null);
+    assert.strictEqual(auth.resolveLoginSessionRetentionDays({}), 180);
+    assert.strictEqual(auth.resolveLoginSessionRetentionDays({ LOGIN_SESSION_RETENTION_DAYS: '0' }), 0);
+    assert.deepStrictEqual(await auth.pruneLoginHistory(db, env, { random: () => 0.99, now: fixedNow }), { skipped: true }, 'most logins skip pruning');
+    const disabled = await auth.pruneLoginHistory(db, { LOGIN_SESSION_RETENTION_DAYS: '0' }, { force: true, now: fixedNow });
+    assert.strictEqual(disabled.sessions, 0, 'retention 0 keeps all login history');
+    const pruned = await auth.pruneLoginHistory(db, env, { force: true, now: fixedNow });
+    assert.strictEqual(pruned.sessions, 1, 'only sessions older than 180 days are removed');
+    assert.ok(db.sqlite.prepare("SELECT 1 FROM login_sessions WHERE id = 'recent-1'").get(), 'recent history is kept');
+    const remainingRates = db.sqlite.prepare('SELECT scope_key FROM login_rate_limits ORDER BY scope_key').all().map((row) => row.scope_key);
+    assert.ok(remainingRates.includes('locked') && remainingRates.includes('fresh') && !remainingRates.includes('stale'), 'stale unlocked counters are removed, active locks kept');
+
     console.log('session revocation tests passed');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });

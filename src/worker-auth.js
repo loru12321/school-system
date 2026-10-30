@@ -205,6 +205,42 @@ export async function clearLoginRateLimit(request, db, username) {
 // Login audit scheduling
 // ---------------------------------------------------------------------------
 
+// Login history retention. LOGIN_SESSION_RETENTION_DAYS=0 disables pruning.
+const DEFAULT_LOGIN_SESSION_RETENTION_DAYS = 180;
+const LOGIN_HISTORY_PRUNE_PROBABILITY = 0.05;
+
+export function resolveLoginSessionRetentionDays(env = {}) {
+  const raw = normalizeText(env.LOGIN_SESSION_RETENTION_DAYS);
+  if (raw === '') return DEFAULT_LOGIN_SESSION_RETENTION_DAYS;
+  const days = Number(raw);
+  return Number.isFinite(days) && days >= 0 ? Math.floor(days) : DEFAULT_LOGIN_SESSION_RETENTION_DAYS;
+}
+
+// Deletes login history older than the retention window and stale, unlocked
+// rate-limit counters. Runs on a small share of logins so no cron is needed.
+export async function pruneLoginHistory(db, env = {}, options = {}) {
+  if (!db) return { skipped: true };
+  const random = typeof options.random === 'function' ? options.random : Math.random;
+  if (!options.force && random() >= LOGIN_HISTORY_PRUNE_PROBABILITY) return { skipped: true };
+  const days = resolveLoginSessionRetentionDays(env);
+  const now = Number.isFinite(options.now) ? options.now : Date.now();
+  let sessions = 0;
+  if (days > 0) {
+    await ensureLoginSessionsTable(db);
+    const cutoff = new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
+    const result = await db.prepare('DELETE FROM login_sessions WHERE login_at < ?').bind(cutoff).run();
+    sessions = Number(result?.meta?.changes || 0);
+  }
+  await ensureLoginRateLimitTable(db);
+  const staleBefore = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const nowIso = new Date(now).toISOString();
+  const rateResult = await db.prepare(`
+    DELETE FROM login_rate_limits
+    WHERE last_failed_at < ? AND (locked_until IS NULL OR locked_until < ?)
+  `).bind(staleBefore, nowIso).run();
+  return { skipped: false, sessions, rateLimits: Number(rateResult?.meta?.changes || 0) };
+}
+
 export function scheduleLoginAuditWrite(ctx, task) {
   if (ctx && typeof ctx.waitUntil === 'function') {
     ctx.waitUntil(task.catch((error) => {
@@ -871,7 +907,10 @@ export async function performGatewayLogin(request, env, body, ctx) {
       has_password: true,
       updated_at: new Date().toISOString()
     }),
-    recordLoginSession(db, request, session, body?.payload || {})
+    recordLoginSession(db, request, session, body?.payload || {}),
+    pruneLoginHistory(db, env).catch((error) => {
+      console.error('[gateway] login history prune failed:', error);
+    })
   ]);
   if (!scheduleLoginAuditWrite(ctx, auditWrite)) {
     await auditWrite.catch((error) => {
