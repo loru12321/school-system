@@ -339,6 +339,7 @@ export async function ensureLoginSessionsTable(db) {
   `).run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_login_sessions_username_login ON login_sessions(username, login_at DESC)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_login_sessions_status_login ON login_sessions(status, login_at DESC)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_login_sessions_session_id ON login_sessions(session_id)').run();
   if (db && typeof db === 'object') ensuredLoginSessionDbs.add(db);
 }
 
