@@ -5,7 +5,25 @@ const vm = require('vm');
 const XLSX = require('xlsx-js-style');
 
 const root = path.resolve(__dirname, '..');
-const folder = path.resolve(process.argv[2] || 'C:/Users/loru/Desktop/考号及考场');
+// The sample workbooks contain real student data and live only on the
+// maintainer's machine. Pass a folder (argv or EXAM_ARRANGER_SAMPLE_DIR) to
+// verify against them; without one, a missing default folder is a skip so CI
+// and other machines do not fail. EXAM_ARRANGER_SAMPLE_REQUIRED=1 forces a failure.
+const explicitFolder = process.argv[2] || process.env.EXAM_ARRANGER_SAMPLE_DIR || '';
+const folder = path.resolve(explicitFolder || 'C:/Users/loru/Desktop/考号及考场');
+const requiredSampleFiles = ['新生分班方案.xlsx', '考场考号总表.xlsx', '考场考号-按考场分表.xlsx'];
+// The .docx outputs checked at the end are asserted, not skipped: if the workbooks exist they must too.
+const missingSampleFiles = requiredSampleFiles.filter((name) => !fs.existsSync(path.join(folder, name)));
+if (missingSampleFiles.length) {
+    const mustRun = Boolean(explicitFolder) || process.env.EXAM_ARRANGER_SAMPLE_REQUIRED === '1';
+    const message = `[exam-arranger-sample] sample files not found in ${folder}: ${missingSampleFiles.join(', ')}`;
+    if (mustRun) {
+        console.error(message);
+        process.exit(1);
+    }
+    console.log(`${message}; skipped (set EXAM_ARRANGER_SAMPLE_DIR to verify locally)`);
+    process.exit(0);
+}
 const coreContext = { console, XLSX };
 coreContext.window = coreContext;
 vm.runInNewContext(fs.readFileSync(path.join(root, 'public/assets/js/exam-arranger-core-runtime.js'), 'utf8'), coreContext);
