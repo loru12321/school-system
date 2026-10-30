@@ -89,6 +89,12 @@ assertCacheControl(
   'vendor bundles should stay immutable'
 );
 
+// Workers Static Assets answers matching files without invoking the Worker, so
+// the ?v= policy below only reaches users if /assets/js/* runs the Worker first.
+const wranglerConfig = fs.readFileSync(path.join(root, 'wrangler.jsonc'), 'utf8');
+assert.ok(/"run_worker_first"\s*:\s*\[[^\]]*"\/assets\/js\/\*"/.test(wranglerConfig),
+  'wrangler.jsonc must route /assets/js/* through the Worker (assets.run_worker_first) so versioned runtime caching applies');
+
 // Boot-loader requests carry the runtime version as ?v=runtime-<hash>: immutable.
 assertCacheControl(
   `/assets/js/app.js?v=runtime-${RUNTIME_VERSION}`,
