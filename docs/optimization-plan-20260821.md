@@ -75,7 +75,7 @@ npm run smoke:modules:local
 
 ## 回退方案
 
-参见 `ROLLBACK_SNAPSHOT.md`，当前基准:
+参见 `docs/archive/ROLLBACK_SNAPSHOT.md`，当前基准:
 - Git: 1dde0e2
 - Cloudflare: 2026-08-11T02:35:24.050Z
 - 计算基准: rawData=2176

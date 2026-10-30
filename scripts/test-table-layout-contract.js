@@ -7,7 +7,6 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 const appRuntime = read('public/assets/js/app.js');
 const mainCss = read('src/assets/css/main.css');
-const matureCss = read('src/assets/css/mature-system-shell.css');
 
 assert.ok(
   appRuntime.includes('.table-wrap:not(.analysis-table-shell):not(.analysis-scroll-shell):not([style*="overflow"])'),
@@ -38,8 +37,8 @@ assert.ok(
   'table shell headers should override page-level sticky offsets'
 );
 assert.ok(
-  !/body:not\(\.dark-mode\)\s+th\s*\{[\s\S]{0,160}top:\s*var\(--mature-header-h\)/.test(matureCss),
-  'mature shell must not apply toolbar-height sticky offsets to every table header cell'
+  !/body:not\(\.dark-mode\)\s+th\s*\{[\s\S]{0,160}top:\s*var\(--mature-header-h\)/.test(mainCss),
+  'no stylesheet may apply toolbar-height sticky offsets to every table header cell'
 );
 assert.ok(
   !/\.table-wrap\s*\{[\s\S]{0,360}overflow-y:\s*visible\s*!important/.test(mainCss),
