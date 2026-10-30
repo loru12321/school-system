@@ -6,7 +6,10 @@
   "observability": { "enabled": true },
   "assets": {
     "directory": "./dist",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    // 运行时模块经 Worker 返回，才能对带 ?v=runtime-<hash> 的请求设置长期缓存
+    // （_headers 无法按查询参数区分）。见 src/worker-asset-protection.js。
+    "run_worker_first": ["/assets/js/*"]
   },
   "vars": {
     // 当前数据模式：supabase | primary | hybrid
