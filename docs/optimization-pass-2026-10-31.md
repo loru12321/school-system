@@ -19,6 +19,9 @@
 | P1 | 带 `?v=runtime-<hash>` 的运行时模块改为一年 immutable 缓存，回访不再重复下载约 170 个模块 | `test-worker-asset-cache-policy` |
 | P1 | `src/index.html` 剩余 47 个内联事件全部改为 `data-ui-action="call"` / `data-ui-change="call"` 白名单委托 | `test:html-hygiene`（要求 0）、`test:ui-actions-declared-calls` |
 | P1 | 运行时加载器删除两个从未被调用的函数，回到 59,000 字节预算内；修正已删除考场视图遗留的性能缓存断言 | `check:performance`、`test:maintenance-priority-contract` |
+| P1 | 家长端“数据有疑问”按钮、学生明细筛选菜单、教师多期差异导出的 onclick 参数改为转义后的 JS 字符串字面量（原先姓名以反斜杠结尾即可跳出处理器） | `test:inline-arg-escaping` |
+| P2 | 登录记录按 `LOGIN_SESSION_RETENTION_DAYS`（默认 180 天，`0` 关闭）在 5% 的登录中顺带清理，同时清理闲置的限流计数；生产当前无超过 180 天的记录 | `test:session-revocation` |
+| P2 | 生产已新建 `idx_login_sessions_session_id`（只读核对后执行，仅加索引） | `EXPLAIN QUERY PLAN` 确认走索引 |
 | P2 | D1：新增 008 迁移（登录限流表 + `login_sessions(session_id)` 索引）；004 改为可在全新库重放的说明文件，原清理语句移至 `cloudflare/d1/legacy/` | `test:d1-migrations-replay` |
 | P2 | 生产入口 `worker-dummy.js` 更名为 `worker.js` | `test:worker-entrypoint-contract` |
 | P2 | 删除旧阿里云/ACME 依赖（lockfile 148 项）、9 个未被引入的 CSS、根目录临时脚本与对比页；旧修复报告移入 `docs/archive/`；测试夹具清理加重试，避免残留 `.tmp-*` | `test:css-hygiene`（禁止孤立样式）、`test:npm-audit` |
@@ -31,7 +34,7 @@
 
 ## 后续建议
 
-- `public/assets/js` 中运行时拼接的 HTML 仍有约 115 处内联事件，以及 12 个内联 `<script>`；迁完后才能去掉 CSP 的 `unsafe-inline`。
+- `public/assets/js` 中运行时拼接的 HTML 仍有约 115 处内联事件（参数已全部转义；其中不少被 smoke 选择器和运行时 `querySelector('[onclick=...]')` 依赖，需配合能登录的浏览器冒烟逐模块迁移），以及 12 个内联 `<script>`；迁完后才能去掉 CSP 的 `unsafe-inline`。
 - smoke 数据集仍使用已毕业的 2022 级，应迁到在校届别并重置计算快照基线。
-- `login_sessions` 没有保留期限，可按 180 天等策略定期归档或清理。
+- `login_sessions` 4 个月 1.1 万行仅来自 3 个账号，多为 CI/冒烟登录；可让冒烟复用会话以减少写入。
 - 校领导和年级主任读取的仍是整届打包数据，按学校分片后才能在服务端限制范围。
