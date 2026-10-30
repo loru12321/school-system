@@ -1,7 +1,11 @@
--- Existing remote D1 cleanup only.
--- Run this once against a D1 database created before password_display was removed
--- from 002_gateway_data.sql and 003_gateway_accounts.sql.
-
-ALTER TABLE system_users DROP COLUMN password_display;
-
-ALTER TABLE system_users_staging DROP COLUMN password_display;
+-- One-time cleanup, no longer part of the replayable migration chain.
+--
+-- The original statements (ALTER TABLE ... DROP COLUMN password_display) only
+-- apply to databases created before password_display was removed from 002/003,
+-- and they fail on a fresh database because the column never exists.
+-- Production (school-system-gateway) was checked on 2026-10-31: neither
+-- system_users nor system_users_staging has a password_display column.
+--
+-- If an old database still has the column, run
+-- cloudflare/d1/legacy/004_drop_password_display.sql against it once.
+SELECT 1;
