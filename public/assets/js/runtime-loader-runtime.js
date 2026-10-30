@@ -887,13 +887,6 @@ window[name] = function (...args) {
 };
 }
 
-function installOptionalRuntimePlaceholder(name, message) {
-if (typeof window[name] === 'function') return;
-window[name] = function () {
-    throw new Error(message || `${name} runtime not loaded`);
-};
-}
-
 const XLSX_RUNTIME_FUNCTIONS = [
 'exportHighScoreExcel',
 'exportStudentDetails',
@@ -979,23 +972,6 @@ XLSX_RUNTIME_OBJECT_METHODS.forEach((group) => {
     group.methods.forEach((name) => wrapXlsxRuntimeFunction(owner, name));
 });
 };
-
-function warmOptionalRuntimeAfterLoad(flagName, loader, delayMs = 1200) {
-if (typeof loader !== 'function') return;
-const run = () => {
-    if (flagName && window[flagName]) return;
-    loader().catch((error) => {
-        console.warn(error);
-    });
-};
-if (document.readyState === 'complete') {
-    window.setTimeout(run, delayMs);
-    return;
-}
-window.addEventListener('load', () => {
-    window.setTimeout(run, delayMs);
-}, { once: true });
-}
 
 const accountAdminStub = {
 downloadTemplate(...args) {
