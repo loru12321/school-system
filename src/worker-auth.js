@@ -406,10 +406,16 @@ export async function recordLoginSession(db, request, session, payload) {
 // Password helpers
 // ---------------------------------------------------------------------------
 
+// Password sources that mean "someone else set this password for you".
+const ISSUED_PASSWORD_SOURCES = new Set(['', 'cloudflare_upsert', 'cloudflare_reset']);
+
 export function shouldForceManagedPasswordChange(row) {
-  // Applies to every role, administrators included: any password that was
-  // issued, imported or reset by someone else must be replaced by its owner.
+  const role = normalizeText(row?.role);
   const source = normalizeText(row?.password_source);
+  // Administrators keep a password they chose themselves (including one
+  // carried over from the legacy login, `supabase_login`), but must replace
+  // any password that was issued, imported or reset for them.
+  if (role === 'admin') return ISSUED_PASSWORD_SOURCES.has(source);
   return source !== 'cloudflare_change';
 }
 

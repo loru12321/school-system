@@ -111,6 +111,9 @@ async function run() {
     // 6. Administrators are not exempt from replacing an issued password.
     assert.strictEqual(auth.shouldForceManagedPasswordChange({ role: 'admin', password_source: 'cloudflare_upsert' }), true, 'admins must change issued passwords');
     assert.strictEqual(auth.shouldForceManagedPasswordChange({ role: 'admin', password_source: 'cloudflare_change' }), false);
+    assert.strictEqual(auth.shouldForceManagedPasswordChange({ role: 'admin', password_source: 'cloudflare_reset' }), true, 'admins must change reset passwords');
+    assert.strictEqual(auth.shouldForceManagedPasswordChange({ role: 'admin', password_source: 'supabase_login' }), false, 'a self-chosen legacy admin password is not forced');
+    assert.strictEqual(auth.shouldForceManagedPasswordChange({ role: 'teacher', password_source: 'supabase_login' }), true, 'non-admin behaviour is unchanged');
 
     console.log('session revocation tests passed');
   } finally {
