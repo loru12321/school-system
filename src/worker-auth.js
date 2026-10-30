@@ -406,8 +406,8 @@ export async function recordLoginSession(db, request, session, payload) {
 // ---------------------------------------------------------------------------
 
 export function shouldForceManagedPasswordChange(row) {
-  const role = normalizeText(row?.role);
-  if (role === 'admin') return false;
+  // Applies to every role, administrators included: any password that was
+  // issued, imported or reset by someone else must be replaced by its owner.
   const source = normalizeText(row?.password_source);
   return source !== 'cloudflare_change';
 }

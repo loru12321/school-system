@@ -9,6 +9,7 @@ import {
   buildForwardHeaders,
   proxyRequest,
   readRequestBody,
+  buildErrorDetail,
   PROXY_TIMEOUT_MS
 } from './worker-http-helpers.js';
 
@@ -1001,8 +1002,8 @@ export async function handleCloudRestProxy(request, env, url) {
     return jsonResponse(500, {
       ok: false,
       error: 'MANAGED_REST_RUNTIME_FAILED',
-      detail: error instanceof Error ? error.message : String(error)
-    }, request);
+      detail: buildErrorDetail(error, env)
+    }, request, env);
   }
   return jsonResponse(404, { ok: false, error: 'CLOUDFLARE_REST_PATH_NOT_SUPPORTED' }, request);
 }

@@ -108,6 +108,10 @@ async function run() {
     const originalPayload = JSON.parse(Buffer.from(admin.split('.')[1], 'base64url').toString('utf8'));
     assert.strictEqual(renewedPayload.auth_at, originalPayload.auth_at, 'renewal must keep the original sign-in time');
 
+    // 6. Administrators are not exempt from replacing an issued password.
+    assert.strictEqual(auth.shouldForceManagedPasswordChange({ role: 'admin', password_source: 'cloudflare_upsert' }), true, 'admins must change issued passwords');
+    assert.strictEqual(auth.shouldForceManagedPasswordChange({ role: 'admin', password_source: 'cloudflare_change' }), false);
+
     console.log('session revocation tests passed');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
