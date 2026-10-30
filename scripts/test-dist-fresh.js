@@ -29,5 +29,5 @@ try {
     console.log('Build freshness coverage tests passed');
 } finally {
     assert.ok(fixture.startsWith(root + path.sep + '.tmp-dist-fresh-'));
-    fs.rmSync(fixture, { recursive: true, force: true });
+    fs.rmSync(fixture, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

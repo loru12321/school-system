@@ -79,8 +79,8 @@ assert.ok(
 assert.ok(exists('dist/assets/js/app.js'), 'dist app runtime must exist before release');
 assert.ok(!exists('dist/assets/audio/entrance'), 'release must not contain bundled entrance audio sources');
 assert.ok(!exists('dist/assets/js/entrance-sound-runtime.js'), 'release must not contain an entrance audio runtime');
-assert.ok(exists('src/worker-dummy.js'), 'Cloudflare Worker entry must exist');
-assert.strictEqual(wrangler.main, 'src/worker-dummy.js', 'Cloudflare Worker entry should stay on the static asset worker');
+assert.ok(exists('src/worker.js'), 'Cloudflare Worker entry must exist');
+assert.strictEqual(wrangler.main, 'src/worker.js', 'Cloudflare Worker entry should stay on the static asset worker');
 assert.strictEqual(wrangler.assets && wrangler.assets.directory, './dist', 'Cloudflare assets directory should deploy ./dist');
 assert.strictEqual(wrangler.assets && wrangler.assets.binding, 'ASSETS', 'Cloudflare assets binding should be ASSETS');
 assert.ok(wrangler.d1_databases && wrangler.d1_databases.some((db) => db.binding === 'GATEWAY_DATA_DB'), 'Cloudflare gateway D1 binding must be configured');

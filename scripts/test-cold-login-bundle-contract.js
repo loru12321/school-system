@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
 const workerSystemData = read('src/worker-system-data.js');
-const workerDummy = read('src/worker-dummy.js');
+const workerDummy = read('src/worker.js');
 const cloudApi = read('public/assets/js/cloud-api-runtime.js');
 const dataCloud = read('public/assets/js/data-cloud-runtime.js');
 const appJs = read('public/assets/js/app.js');

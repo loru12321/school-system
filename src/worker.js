@@ -2,6 +2,7 @@ import { handleGatewayRequest } from './worker-gateway-d1.js';
 import {
   buildCorsHeaders,
   jsonResponse,
+  buildErrorDetail,
   buildWorkerErrorBody,
   buildWorkerErrorHeaders
 } from './worker-http-helpers.js';
@@ -27,8 +28,8 @@ async function handleGatewayProxy(request, env, url, ctx) {
     return jsonResponse(500, {
       ok: false,
       error: 'GATEWAY_DATA_RUNTIME_FAILED',
-      detail: error instanceof Error ? error.message : String(error)
-    }, request);
+      detail: buildErrorDetail(error, env)
+    }, request, env);
   }
   return jsonResponse(404, { ok: false, error: 'CLOUDFLARE_GATEWAY_ACTION_NOT_SUPPORTED' }, request, env);
 }
@@ -53,6 +54,21 @@ export default {
       }
 
       if (url.pathname === '/api/csp-report') {
+        // Surface violations in Workers observability logs so the CSP can be
+        // tightened (unsafe-inline / unsafe-eval) with real data.
+        if (request.method === 'POST') {
+          try {
+            const text = (await request.text()).slice(0, 4096);
+            const report = JSON.parse(text || '{}');
+            const item = report['csp-report'] || (Array.isArray(report) ? report[0]?.body : report?.body) || report;
+            console.warn('[csp-report]', JSON.stringify({
+              directive: item?.['violated-directive'] || item?.effectiveDirective || '',
+              blocked: item?.['blocked-uri'] || item?.blockedURL || '',
+              source: item?.['source-file'] || item?.sourceFile || '',
+              line: item?.['line-number'] || item?.lineNumber || 0
+            }));
+          } catch (_) { /* ignore malformed reports */ }
+        }
         return new Response(null, {
           status: 204,
           headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }

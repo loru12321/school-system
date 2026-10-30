@@ -15,7 +15,7 @@
     function isComparisonPanel(panel) {
         if (panel.dataset.compareCollapsibleSkip === 'true') return false;
         return panel.matches('.town-submodule-compare-panel, .student-details-secondary-flow')
-            || !!panel.querySelector('[id*="Compare"], [id*="compare"], [onclick*="Compare"], [onclick*="Comparison"], [onclick*="compare"]')
+            || !!panel.querySelector('[id*="Compare"], [id*="compare"], [onclick*="Compare"], [onclick*="Comparison"], [onclick*="compare"], [data-ui-call*="Compare"], [data-ui-call*="Comparison"], [data-ui-call*="compare"]')
             || /多期|历史对比|对比/i.test(panel.querySelector('.analysis-inline-title')?.textContent || '');
     }
 

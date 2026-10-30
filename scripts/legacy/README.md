@@ -18,3 +18,7 @@ Archived categories:
 - `direct-deploy-cloudflare.*`: pre-Wrangler direct deploy helpers kept only for emergency reference.
 
 Do not add new release automation here. If a legacy script must be used, record the reason and verification output in `docs/optimization-backlog.md` or a dated optimization pass note.
+
+The Aliyun/ACME SDKs these scripts need (`ali-oss`, `@alicloud/*`, `acme-client`, `mime-types`) are no longer
+project dependencies. Install them ad hoc only for a recorded recovery, e.g.
+`npm install --no-save ali-oss mime-types`.

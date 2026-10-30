@@ -579,7 +579,7 @@ function renderAllTeachersMultiPeriodComparison() {
                 </table>
             </div>
                 <div class="analysis-inline-export">
-                    <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${school}', '${examIds.join('_')}')">📤 导出Excel</button>
+                    <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff(${teacherDiffAttrArg(school)}, ${teacherDiffAttrArg(examIds.join('_'))})">📤 导出Excel</button>
                 </div>
             </div>
         `;
@@ -609,6 +609,12 @@ function renderAllTeachersMultiPeriodComparison() {
 }
 
 // 🆕 导出全校教师对比
+// JS string literal escaped for a double-quoted HTML attribute.
+function teacherDiffAttrArg(value) {
+    return JSON.stringify(String(value ?? ''))
+        .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
     if (!canUseTeacherMultiPeriodCompare()) {
         return window.UI.alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');

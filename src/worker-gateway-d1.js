@@ -1,12 +1,12 @@
-// Managed D1 account/data gateway implementation imported by src/worker-dummy.js.
-// It is not the Wrangler main entrypoint; keep production routing in worker-dummy.js.
+// Managed D1 account/data gateway implementation imported by src/worker.js.
+// It is not the Wrangler main entrypoint; keep production routing in worker.js.
 import { buildCorsHeaders, normalizeText } from './worker-http-helpers.js';
 import { signLocalSession } from './worker-crypto.js';
 import {
   jsonResponse, badRequest,
   buildSessionPayload, ensureLoginSessionsTable,
   resolveSession, performGatewayLogin,
-  buildSessionCookie, clearSessionCookie
+  buildSessionCookie, clearSessionCookie, revokeSession
 } from './worker-auth.js';
 import {
   handleAccountSearch, handleLoginSessionList,
@@ -23,6 +23,10 @@ import {
   handleVersionList, handleVersionCreate,
   handleVersionUpdate, handleVersionDelete
 } from './worker-versions.js';
+import {
+  resolveIssuesAccess, resolveSystemLogsAccess,
+  buildSessionOperatorLabel, mergeWhereWithScope
+} from './worker-rest-policy.js';
 
 const REST_META_KEYS = new Set(['select', 'order', 'limit', 'offset', 'or']);
 
@@ -163,17 +167,25 @@ function buildRestResponse(request, rows, count, offset = 0, status = 200, selec
   return new Response(JSON.stringify(payload), { status, headers });
 }
 
-async function handleManagedRestTable(request, env, url, config) {
+async function handleManagedRestTable(request, env, url, config, session) {
   const db = getGatewayDb(env);
   if (!db) return null;
 
   const method = String(request.method || 'GET').toUpperCase();
+  if (!session) {
+    return jsonResponse(401, { ok: false, error: 'Unauthorized' }, request);
+  }
+  const access = config.resolveAccess(session, method);
+  if (!access || !access.allowed) {
+    return jsonResponse(403, { ok: false, error: 'INSUFFICIENT_ROLE' }, request);
+  }
   const allowedColumns = config.columns;
   const order = parseOrder(url, config.defaultOrderColumn);
   const limit = parseLimit(url, 100);
   const offset = parseOffset(url);
   const selectFields = readSelectFields(url, config.columns);
-  const where = buildRestWhereClause(url, allowedColumns);
+  const requestedWhere = buildRestWhereClause(url, allowedColumns);
+  const where = mergeWhereWithScope(requestedWhere, access.scope);
 
   if (method === 'GET' || method === 'HEAD') {
     // Use LIMIT n+1 to infer "has more" without a separate COUNT(*) query,
@@ -199,7 +211,7 @@ async function handleManagedRestTable(request, env, url, config) {
     const rows = Array.isArray(payload) ? payload : [payload];
     const statements = rows
       .filter((row) => row && typeof row === 'object')
-      .map((row) => config.buildInsertStatement(db, row));
+      .map((row) => config.buildInsertStatement(db, row, session));
     if (!statements.length) return badRequest(request, `${config.tableName.toUpperCase()}_ROWS_MISSING`);
     await db.batch(statements);
     return buildRestResponse(request, [], statements.length, 0, 201, selectFields);
@@ -210,7 +222,7 @@ async function handleManagedRestTable(request, env, url, config) {
     if (!payload || typeof payload !== 'object') return badRequest(request, 'INVALID_JSON_BODY');
     const patchColumns = Object.keys(payload).filter((column) => allowedColumns.includes(column) && column !== 'id' && column !== 'created_at');
     if (!patchColumns.length) return badRequest(request, 'PATCH_FIELDS_MISSING');
-    if (!where.clause) return badRequest(request, 'PATCH_FILTER_MISSING');
+    if (!requestedWhere.clause) return badRequest(request, 'PATCH_FILTER_MISSING');
     const setClause = patchColumns.map((column) => `${column} = ?`).join(', ');
     const values = patchColumns.map((column) => payload[column]);
     const result = await db.prepare(`
@@ -222,7 +234,7 @@ async function handleManagedRestTable(request, env, url, config) {
   }
 
   if (method === 'DELETE') {
-    if (!where.clause) return badRequest(request, 'DELETE_FILTER_MISSING');
+    if (!requestedWhere.clause) return badRequest(request, 'DELETE_FILTER_MISSING');
     const result = await db.prepare(`DELETE FROM ${config.tableName} ${where.clause}`).bind(...where.bindings).run();
     return buildRestResponse(request, [], Number(result?.meta?.changes || 0), 0, 200, selectFields);
   }
@@ -251,6 +263,14 @@ async function routeGatewayAction(request, env, body, ctx) {
   if (!action) return badRequest(request, 'action is required');
   if (action === 'login') return performGatewayLogin(request, env, body, ctx);
   if (action === 'session.logout') {
+    // Best effort: revoke the presented session server-side so a copied token
+    // stops working immediately, then clear the browser cookie.
+    try {
+      const current = await resolveSession(request, env);
+      if (current?.session?.session_id) await revokeSession(db, current.session.session_id);
+    } catch (error) {
+      console.error('[gateway] logout revoke failed:', error);
+    }
     return jsonResponse(200, { ok: true }, request, { 'Set-Cookie': clearSessionCookie() });
   }
   const resolved = await resolveSession(request, env);
@@ -298,14 +318,16 @@ export async function handleGatewayRequest(request, env, ctx) {
   return routeGatewayAction(request, env, body, ctx);
 }
 
-export async function handleManagedRestRequest(request, env, url) {
+export async function handleManagedRestRequest(request, env, url, session = null) {
   const pathname = String(url.pathname || '');
   if (pathname === '/sb/rest/v1/issues') {
     return handleManagedRestTable(request, env, url, {
       tableName: 'issues',
       defaultOrderColumn: 'created_at',
+      resolveAccess: resolveIssuesAccess,
       columns: ['id', 'student_name', 'student_class', 'school', 'issue_type', 'description', 'contact_info', 'status', 'created_at'],
-      buildInsertStatement(db, row) {
+      buildInsertStatement(db, row, actor) {
+        const canTriage = resolveIssuesAccess(actor, 'PATCH').allowed;
         return db.prepare(`
           INSERT INTO issues (student_name, student_class, school, issue_type, description, contact_info, status, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -316,30 +338,32 @@ export async function handleManagedRestRequest(request, env, url) {
           normalizeText(row?.issue_type),
           normalizeText(row?.description),
           normalizeText(row?.contact_info) || null,
-          normalizeText(row?.status) || 'pending',
-          normalizeText(row?.created_at) || new Date().toISOString()
+          (canTriage && normalizeText(row?.status)) || 'pending',
+          new Date().toISOString()
         );
       }
-    });
+    }, session);
   }
   if (pathname === '/sb/rest/v1/system_logs') {
     return handleManagedRestTable(request, env, url, {
       tableName: 'system_logs',
       defaultOrderColumn: 'created_at',
+      resolveAccess: resolveSystemLogsAccess,
       columns: ['id', 'operator', 'action', 'details', 'status', 'created_at'],
-      buildInsertStatement(db, row) {
+      buildInsertStatement(db, row, actor) {
+        // Operator and timestamp come from the verified session, never the client.
         return db.prepare(`
           INSERT INTO system_logs (operator, action, details, status, created_at)
           VALUES (?, ?, ?, ?, ?)
         `).bind(
-          normalizeText(row?.operator) || null,
+          buildSessionOperatorLabel(actor),
           normalizeText(row?.action),
           normalizeText(row?.details) || null,
-          normalizeText(row?.status) || 'normal',
-          normalizeText(row?.created_at) || new Date().toISOString()
+          'normal',
+          new Date().toISOString()
         );
       }
-    });
+    }, session);
   }
   return null;
 }

@@ -9,6 +9,7 @@ import {
   buildForwardHeaders,
   proxyRequest,
   readRequestBody,
+  buildErrorDetail,
   PROXY_TIMEOUT_MS
 } from './worker-http-helpers.js';
 
@@ -35,7 +36,6 @@ const PROTECTED_REST_PATHS = new Set([
   '/sb/rest/v1/issues',
   '/sb/rest/v1/system_logs'
 ]);
-const PROTECTED_REST_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // ---------------------------------------------------------------------------
 // Environment accessors
@@ -86,16 +86,6 @@ function getSystemDataMode(env) {
   if (mode === 'primary') return 'primary';
   if (mode === 'supabase') return 'supabase';
   return 'hybrid';
-}
-
-function requiresRestWriteSession(method) {
-  return PROTECTED_REST_METHODS.has(String(method || 'GET').toUpperCase());
-}
-
-async function requireRestWriteSession(request, env) {
-  const resolved = await resolveSession(request, env);
-  if (resolved?.error) return resolved.error;
-  return null;
 }
 
 async function requireSystemDataSession(request, env) {
@@ -994,22 +984,26 @@ export async function handleSystemDataProxy(request, env, url) {
 export async function handleCloudRestProxy(request, env, url) {
   if (url.pathname === SYSTEM_DATA_PATH) return handleSystemDataProxy(request, env, url);
 
-  if (PROTECTED_REST_PATHS.has(url.pathname) && requiresRestWriteSession(request.method)) {
-    const authError = await requireRestWriteSession(request, env);
-    if (authError) return authError;
+  // Every method on the managed REST tables requires a verified session;
+  // role/scope checks are applied by worker-rest-policy.js.
+  let restSession = null;
+  if (PROTECTED_REST_PATHS.has(url.pathname)) {
+    const resolved = await resolveSession(request, env);
+    if (resolved?.error) return resolved.error;
+    restSession = resolved.session;
   }
 
   if (shouldProxyManagedRestToSupabase(env)) return proxySupabaseRestRequest(request, env, url);
 
   try {
-    const managed = await handleManagedRestRequest(request, env, url);
+    const managed = await handleManagedRestRequest(request, env, url, restSession);
     if (managed) return managed;
   } catch (error) {
     return jsonResponse(500, {
       ok: false,
       error: 'MANAGED_REST_RUNTIME_FAILED',
-      detail: error instanceof Error ? error.message : String(error)
-    }, request);
+      detail: buildErrorDetail(error, env)
+    }, request, env);
   }
   return jsonResponse(404, { ok: false, error: 'CLOUDFLARE_REST_PATH_NOT_SUPPORTED' }, request);
 }

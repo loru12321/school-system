@@ -1,7 +1,7 @@
 {
   "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
   "name": "school-system",
-  "main": "src/worker-dummy.js",
+  "main": "src/worker.js",
   "compatibility_date": "2026-06-27",
   "observability": { "enabled": true },
   "assets": {
@@ -12,6 +12,8 @@
     // 当前数据模式：supabase | primary | hybrid
     // system_data 已迁移至 Cloudflare D1，生产读写以 D1 为主
     "CLOUD_SYSTEM_DATA_MODE": "primary"
+    // 可选：登录记录保留天数（默认 180，设为 "0" 不清理）
+    //   "LOGIN_SESSION_RETENTION_DAYS": "180"
     // 以下敏感配置请通过 Wrangler Secrets 管理，不要写入此文件：
     //   LEGACY_GATEWAY_ORIGIN   → npx wrangler secret put LEGACY_GATEWAY_ORIGIN
     //   SUPABASE_ORIGIN         → npx wrangler secret put SUPABASE_ORIGIN

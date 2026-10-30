@@ -66,6 +66,15 @@ function getStaticAssetCacheControl(url) {
   if (isStaticAssetPath(pathname) && isVersionedStaticAsset(pathname)) {
     return 'public, max-age=31536000, immutable';
   }
+  // Runtime modules requested by the boot loader carry `?v=runtime-<hash>`,
+  // where the hash covers every file in public/assets/js (see
+  // scripts/build/update-runtime-cache-version.mjs). A new deployment always
+  // produces a new `v`, so these URLs are safe to cache for a year and repeat
+  // visits stop re-downloading ~170 modules.
+  if (pathname.startsWith('/assets/js/') && pathname.endsWith('.js')
+    && /^runtime-[0-9a-f]{12}$/.test(String(url.searchParams.get('v') || ''))) {
+    return 'public, max-age=31536000, immutable';
+  }
   // Unversioned runtime JS (app.js and friends) is served no-store so a
   // deployment can never serve stale app code behind the boot loader.
   if (pathname.startsWith('/assets/js/')) {

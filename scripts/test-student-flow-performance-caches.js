@@ -223,10 +223,10 @@ if (!marginalSource || marginalSource.includes('JSON.stringify')) {
     'fbCalcClassStats',
     'freshmanSchemeSig',
     'freshmanDashboardSig',
-    'freshmanBalanceSig',
-    'examRoomSignature',
-    'examOverviewSignature',
-    'examPrintSignature'
+    'freshmanBalanceSig'
+    // examRoomSignature / examOverviewSignature / examPrintSignature belonged to
+    // the old exam-room view, removed from this file when the exam arranger moved
+    // to exam-arranger-runtime.js (c6b30f4).
 ].forEach((token) => assertContains(freshman, token, freshmanFile));
 
 [

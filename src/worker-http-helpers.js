@@ -89,7 +89,11 @@ export function resolveCorsOrigin(request, env = {}) {
   if (normalizedOrigin === 'null') return '';
   if (!normalizedOrigin) return DEFAULT_ALLOWED_CORS_ORIGINS[0];
   if (getAllowedCorsOrigins(env).has(normalizedOrigin)) return normalizedOrigin;
-  if (isLocalDevelopmentOrigin(normalizedOrigin)) return normalizedOrigin;
+  // Localhost origins are only trusted when explicitly enabled (e.g. in .dev.vars);
+  // `wrangler dev` itself is covered by the same-origin rule below.
+  if (isLocalDevelopmentOrigin(normalizedOrigin) && normalizeText(env.ALLOW_LOCALHOST_CORS).toLowerCase() === 'true') {
+    return normalizedOrigin;
+  }
   try {
     if (normalizedOrigin === new URL(request.url).origin) return normalizedOrigin;
   } catch {}
@@ -218,15 +222,24 @@ export function shouldExposeErrorDetails(env = {}) {
 }
 
 export function buildWorkerErrorBody(error, env = {}) {
+  console.error('[worker] unhandled error:', error);
   const body = {
     ok: false,
     error: 'WORKER_CRASHED',
-    message: error instanceof Error ? error.message : String(error)
+    message: 'Internal error'
   };
-  if (shouldExposeErrorDetails(env) && error instanceof Error && error.stack) {
-    body.stack = error.stack;
+  if (shouldExposeErrorDetails(env)) {
+    body.message = error instanceof Error ? error.message : String(error);
+    if (error instanceof Error && error.stack) body.stack = error.stack;
   }
   return body;
+}
+
+/** Internal error details are only returned when WORKER_DEBUG_ERRORS=true. */
+export function buildErrorDetail(error, env = {}) {
+  console.error('[worker] request failed:', error);
+  if (!shouldExposeErrorDetails(env)) return undefined;
+  return error instanceof Error ? error.message : String(error);
 }
 
 export function buildWorkerErrorHeaders() {

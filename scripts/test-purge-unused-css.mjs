@@ -24,5 +24,5 @@ try {
   console.log('CSS purge runtime retention tests passed');
 } finally {
   assert.ok(fixture.startsWith(root + path.sep + '.tmp-css-purge-'));
-  fs.rmSync(fixture, { recursive: true, force: true });
+  fs.rmSync(fixture, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

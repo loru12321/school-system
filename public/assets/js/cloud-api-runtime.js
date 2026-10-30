@@ -303,8 +303,10 @@
 
     function getSessionAccessToken() {
         return normalizeText(
-            getSessionValue('edu:session:token')
-            || (root.EdgeGateway && typeof root.EdgeGateway.getToken === 'function' ? root.EdgeGateway.getToken() : '')
+            // The in-memory gateway token is authoritative; legacy sessionStorage
+            // keys are only read so stale values never override a fresh login.
+            (root.EdgeGateway && typeof root.EdgeGateway.getToken === 'function' ? root.EdgeGateway.getToken() : '')
+            || getSessionValue('edu:session:token')
             || getSessionValue('EDGE_GATEWAY_TOKEN_V1')
         );
     }

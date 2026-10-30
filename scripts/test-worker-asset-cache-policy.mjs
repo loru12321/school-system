@@ -89,6 +89,28 @@ assertCacheControl(
   'vendor bundles should stay immutable'
 );
 
+// Boot-loader requests carry the runtime version as ?v=runtime-<hash>: immutable.
+assertCacheControl(
+  `/assets/js/app.js?v=runtime-${RUNTIME_VERSION}`,
+  IMMUTABLE,
+  'runtime modules loaded with the deployment version should be immutable'
+);
+assertCacheControl(
+  `/assets/js/auth-state-runtime.js.br?v=runtime-${RUNTIME_VERSION}`,
+  IMMUTABLE,
+  'precompressed versioned runtime modules should be immutable'
+);
+assertCacheControl(
+  '/assets/js/app.js?v=20260830',
+  NO_STORE,
+  'non-hash version tokens must not unlock immutable caching'
+);
+assertCacheControl(
+  '/assets/js/app.js?v=runtime-xyz',
+  NO_STORE,
+  'malformed runtime versions must stay no-store'
+);
+
 // Unversioned runtime JS: no-store so a fresh deploy never serves stale code.
 assertCacheControl(
   '/assets/js/app.js',

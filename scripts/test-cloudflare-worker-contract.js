@@ -18,7 +18,7 @@ function parseJsonc(relativePath) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-const worker = read('src/worker-dummy.js');
+const worker = read('src/worker.js');
 const workerSystemData = read('src/worker-system-data.js');
 const workerAssetProtection = read('src/worker-asset-protection.js');
 const helpers = read('src/worker-http-helpers.js');
@@ -132,8 +132,8 @@ assert.ok(workerSystemData.includes("import { resolveSession, hasAnyRole, isAdmi
 assert.ok(workerSystemData.includes('const auth = await requireSystemDataSession(request, env);'), 'system_data reads and writes must require an app session before backend dispatch');
 assert.ok(workerSystemData.includes("hasAnyRole(session, ['admin', 'director', 'grade_director'])"), 'system_data writes should preserve existing management-role writers');
 assert.ok(workerSystemData.includes("const PROTECTED_REST_PATHS = new Set"), 'managed REST write paths should be explicitly protected');
-assert.ok(workerSystemData.includes("'POST', 'PUT', 'PATCH', 'DELETE'"), 'protected REST write methods should require a session');
-assert.ok(workerSystemData.includes('requireRestWriteSession(request, env)'), 'protected REST writes should enforce session validation before mutation');
+assert.ok(fs.existsSync(path.join(root, 'src/worker-rest-policy.js')), 'managed REST role scoping should live in worker-rest-policy.js (behaviour covered by test:managed-rest-access)');
+assert.ok(/PROTECTED_REST_PATHS\.has\(url\.pathname\)\)\s*\{[\s\S]{0,120}resolveSession\(/.test(workerSystemData), 'protected REST tables should enforce session validation for every method (behaviour: test:managed-rest-access)');
 assert.ok(workerContractSource.includes("Authorization: `Bearer ${apikey}`"), 'Supabase proxy must forward bearer auth');
 assert.ok(workerContractSource.includes("return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);"), 'system data route must fail closed for unsupported methods');
 assert.ok(!worker.includes('ENTRANCE_AUDIO_MANIFEST_API_PATH'), 'Worker must not retain the removed entrance audio manifest route');
