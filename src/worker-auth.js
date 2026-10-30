@@ -44,6 +44,10 @@ export function forbidden(request, message = 'Forbidden') {
 // ---------------------------------------------------------------------------
 
 export const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 8;
+// Sliding renewal (session.verify) can never extend a login beyond this age.
+export const SESSION_ABSOLUTE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+// How long a per-isolate positive store check is reused before D1 is consulted again.
+const SESSION_STORE_CHECK_TTL_MS = 30 * 1000;
 export const SESSION_COOKIE_NAME = '__Host-school-session';
 const LOGIN_MAX_FAILURES = 5;
 const LOGIN_FAILURE_WINDOW_MS = 15 * 60 * 1000;
@@ -255,6 +259,8 @@ export function buildSessionPayload(row) {
     class_name: className,
     grade_name: roles.includes('grade_director') ? className : extractGradeName(className),
     teacher_name: teacherName,
+    // Original sign-in time; preserved across session.verify renewals.
+    auth_at: Number(row?.auth_at) > 0 ? Number(row.auth_at) : Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + LOCAL_SESSION_TTL_SECONDS
   };
 }
@@ -691,16 +697,120 @@ export async function upsertSystemUser(db, row) {
 // Session resolution
 // ---------------------------------------------------------------------------
 
+const sessionStoreCache = new Map();
+
+export function forgetCachedSession(sessionId) {
+  sessionStoreCache.delete(normalizeText(sessionId));
+}
+
+export function isSessionBeyondAbsoluteLifetime(session, nowSeconds = Math.floor(Date.now() / 1000)) {
+  const authAt = Number(session?.auth_at || 0);
+  if (!authAt) return false; // legacy tokens receive auth_at on their next renewal
+  return nowSeconds - authAt > SESSION_ABSOLUTE_MAX_AGE_SECONDS;
+}
+
+// Re-check a cryptographically valid session against D1 so that logout,
+// password resets, account removal and role changes take effect before the
+// token expires. Returns { ok, claims } where claims are the current account
+// fields, or { ok: false, reason }.
+export async function checkSessionAgainstStore(db, session) {
+  if (!db) return { ok: true, claims: null };
+  const sessionId = normalizeText(session?.session_id);
+  const username = normalizeText(session?.username);
+  const cacheKey = sessionId || `user:${username}`;
+  const cached = sessionStoreCache.get(cacheKey);
+  if (cached && Date.now() - cached.checkedAt < SESSION_STORE_CHECK_TTL_MS) return cached.result;
+
+  const account = await db.prepare(`
+    SELECT username, role, roles_json, school, class_name, teacher_name, is_active
+    FROM system_users WHERE username = ? LIMIT 1
+  `).bind(username).first();
+  let result;
+  if (!account || Number(account.is_active ?? 1) === 0) {
+    result = { ok: false, reason: 'ACCOUNT_INACTIVE' };
+  } else {
+    let revoked = false;
+    if (sessionId) {
+      const row = await db.prepare('SELECT status FROM login_sessions WHERE session_id = ? LIMIT 1')
+        .bind(sessionId).first().catch(() => null);
+      revoked = normalizeText(row?.status) === 'revoked';
+    }
+    result = revoked
+      ? { ok: false, reason: 'SESSION_REVOKED' }
+      : { ok: true, claims: normalizeDbAccountRow(account) };
+  }
+  if (sessionStoreCache.size > 5000) sessionStoreCache.clear();
+  sessionStoreCache.set(cacheKey, { checkedAt: Date.now(), result });
+  return result;
+}
+
+export async function revokeUserSessions(db, usernames, options = {}) {
+  const names = Array.from(new Set((Array.isArray(usernames) ? usernames : [usernames])
+    .map((item) => normalizeText(item)).filter(Boolean)));
+  if (!db || !names.length) return 0;
+  await ensureLoginSessionsTable(db);
+  const exceptSessionId = normalizeText(options.exceptSessionId);
+  const placeholders = names.map(() => '?').join(', ');
+  let sql = `UPDATE login_sessions SET status = 'revoked' WHERE status <> 'revoked' AND username IN (${placeholders})`;
+  const bindings = [...names];
+  if (exceptSessionId) {
+    sql += ' AND session_id <> ?';
+    bindings.push(exceptSessionId);
+  }
+  const result = await db.prepare(sql).bind(...bindings).run();
+  for (const key of Array.from(sessionStoreCache.keys())) {
+    if (key !== exceptSessionId) sessionStoreCache.delete(key);
+  }
+  return Number(result?.meta?.changes || 0);
+}
+
+export async function revokeSession(db, sessionId) {
+  const id = normalizeText(sessionId);
+  forgetCachedSession(id);
+  if (!db || !id) return;
+  await ensureLoginSessionsTable(db);
+  await db.prepare("UPDATE login_sessions SET status = 'revoked', last_seen_at = ? WHERE session_id = ?")
+    .bind(new Date().toISOString(), id).run();
+}
+
 export async function resolveSession(request, env) {
   const token = readSessionToken(request);
   if (!token) return { error: unauthorized(request, 'Missing bearer token') };
 
   const localSession = await verifyLocalSession(env, token);
-  if (localSession) {
-    return { session: normalizeGatewaySession(localSession), source: 'local' };
+  if (!localSession) {
+    return { error: unauthorized(request, 'Invalid or expired app session token') };
   }
-
-  return { error: unauthorized(request, 'Invalid or expired app session token') };
+  const session = normalizeGatewaySession(localSession);
+  if (isSessionBeyondAbsoluteLifetime(session)) {
+    return { error: unauthorized(request, 'Session exceeded maximum lifetime, please sign in again') };
+  }
+  let check;
+  try {
+    check = await checkSessionAgainstStore(env.GATEWAY_DATA_DB || null, session);
+  } catch (error) {
+    // A store outage must not lock every user out; the signature and expiry
+    // checks above still apply.
+    console.error('[gateway] session store check failed:', error);
+    check = { ok: true, claims: null };
+  }
+  if (!check.ok) {
+    return { error: unauthorized(request, check.reason === 'SESSION_REVOKED' ? 'Session has been signed out' : 'Account is no longer active') };
+  }
+  if (check.claims) {
+    // Role, scope and display name always reflect the current account record.
+    const refreshed = normalizeGatewaySession({
+      ...session,
+      role: check.claims.role,
+      roles: check.claims.roles.length ? check.claims.roles : [check.claims.role],
+      school: check.claims.school,
+      class_name: check.claims.class_name,
+      grade_name: '',
+      teacher_name: check.claims.teacher_name || session.teacher_name
+    });
+    return { session: refreshed, source: 'local' };
+  }
+  return { session, source: 'local' };
 }
 
 // ---------------------------------------------------------------------------

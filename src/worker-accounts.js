@@ -9,7 +9,7 @@ import {
   normalizeDbAccountRow, normalizeAccountUpsertRow, validateAccountUpsertRow,
   getSystemUserRow, upsertSystemUser,
   ensureLoginSessionsTable, normalizeLoginSessionRow,
-  queryRows
+  queryRows, revokeUserSessions
 } from './worker-auth.js';
 import {
   hashAccountPassword, verifyAccountPasswordHash, PBKDF2_SCHEME
@@ -153,6 +153,8 @@ export async function handleAccountResetPassword(request, db, session, payload) 
     has_password: true,
     updated_at: new Date().toISOString()
   });
+  // A reset password must sign the account out everywhere else.
+  await revokeUserSessions(db, [username], { exceptSessionId: session.session_id });
   const updated = await getSystemUserRow(db, username, { includeInactive: true });
   return jsonResponse(200, { ok: true, record: sanitizeAccountRecord(updated) }, request);
 }
@@ -179,6 +181,8 @@ export async function handleAccountChangePassword(request, db, session, payload)
     has_password: true,
     updated_at: new Date().toISOString()
   });
+  // Keep the current device signed in; end every other session for this account.
+  await revokeUserSessions(db, [session.username], { exceptSessionId: session.session_id });
   const updated = await getSystemUserRow(db, normalizeText(session.username), { includeInactive: true });
   return jsonResponse(200, { ok: true, record: sanitizeAccountRecord(updated) }, request);
 }
@@ -263,6 +267,8 @@ export async function handleAccountUpsertMany(request, db, session, payload) {
   }
   // Atomic batch write — all rows succeed or all fail together.
   if (statements.length) await db.batch(statements);
+  // Passwords were (re)issued for these accounts; existing sessions must end.
+  await revokeUserSessions(db, normalizedRows.map((row) => row.username), { exceptSessionId: session.session_id });
   return jsonResponse(200, { ok: true, count: normalizedRows.length }, request);
 }
 

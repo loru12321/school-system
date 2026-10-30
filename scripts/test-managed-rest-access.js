@@ -23,6 +23,7 @@ function prepareEsmWorkerModules() {
 
 function createD1() {
   const sqlite = new DatabaseSync(':memory:');
+  sqlite.exec(fs.readFileSync(path.join(root, 'cloudflare/d1/003_gateway_accounts.sql'), 'utf8'));
   sqlite.exec(`
     CREATE TABLE issues (id INTEGER PRIMARY KEY AUTOINCREMENT, student_name TEXT, student_class TEXT, school TEXT,
       issue_type TEXT, description TEXT, contact_info TEXT, status TEXT, created_at TEXT);
@@ -55,6 +56,12 @@ async function run() {
     const tokenFor = (claims) => signLocalSession(env, { session_id: `s-${claims.username}`, exp, ...claims });
 
     db.sqlite.exec(`
+      INSERT INTO system_users (username, role, roles_json, school, class_name, teacher_name) VALUES
+        ('admin', 'admin', '["admin"]', '系统', '', 'admin'),
+        ('dirA', 'director', '["director"]', 'A校', '', 'dirA'),
+        ('g7', 'grade_director', '["grade_director"]', 'A校', '7', 'g7'),
+        ('c702', 'class_teacher', '["class_teacher"]', 'A校', '702', 'c702'),
+        ('p1', 'parent', '["parent"]', 'A校', '701', '家长');
       INSERT INTO issues (student_name, student_class, school, issue_type, description, contact_info, status, created_at) VALUES
         ('甲', '701', 'A校', 'score', 'x', '13800000000', 'pending', '2026-10-01'),
         ('乙', '702', 'A校', 'score', 'x', NULL, 'pending', '2026-10-02'),

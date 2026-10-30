@@ -6,7 +6,7 @@ import {
   jsonResponse, badRequest,
   buildSessionPayload, ensureLoginSessionsTable,
   resolveSession, performGatewayLogin,
-  buildSessionCookie, clearSessionCookie
+  buildSessionCookie, clearSessionCookie, revokeSession
 } from './worker-auth.js';
 import {
   handleAccountSearch, handleLoginSessionList,
@@ -263,6 +263,14 @@ async function routeGatewayAction(request, env, body, ctx) {
   if (!action) return badRequest(request, 'action is required');
   if (action === 'login') return performGatewayLogin(request, env, body, ctx);
   if (action === 'session.logout') {
+    // Best effort: revoke the presented session server-side so a copied token
+    // stops working immediately, then clear the browser cookie.
+    try {
+      const current = await resolveSession(request, env);
+      if (current?.session?.session_id) await revokeSession(db, current.session.session_id);
+    } catch (error) {
+      console.error('[gateway] logout revoke failed:', error);
+    }
     return jsonResponse(200, { ok: true }, request, { 'Set-Cookie': clearSessionCookie() });
   }
   const resolved = await resolveSession(request, env);
