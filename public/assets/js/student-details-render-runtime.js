@@ -1115,13 +1115,13 @@ function renderStudentDetails(reset = true) {
 
         return `
                 <th style="min-width:${width}">
-                    <div class="excel-header" onclick="toggleExcelMenu('${colKey}', event)">
+                    <div class="excel-header" onclick="toggleExcelMenu(${jsStringLiteral(colKey)}, event)">
                         <div class="header-text">${label} <span style="color:#2563eb">${sortIcon}</span></div>
                         <div class="filter-icon-btn ${activeClass}">
                             <i class="ti ti-filter"></i>
                         </div>
                         <!-- 下拉菜单容器，点击时动态填充 -->
-                        <div id="menu-${colKey}" class="excel-filter-menu" onclick="event.stopPropagation()"></div>
+                        <div id="menu-${tmEscapeHtml(colKey)}" class="excel-filter-menu" onclick="event.stopPropagation()"></div>
                     </div>
                 </th>
             `;
@@ -1398,25 +1398,25 @@ function buildFilterMenuContent(colKey, container) {
         const checked = isAllChecked || currentSet.has(v) ? 'checked' : '';
         listHtml += `
                 <label class="menu-item">
-                    <input type="checkbox" value="${tmEscapeHtml(v)}" ${checked} class="filter-cb-${colKey}"> ${tmEscapeHtml(v)}
+                    <input type="checkbox" value="${tmEscapeHtml(v)}" ${checked} class="filter-cb-${tmEscapeHtml(colKey)}"> ${tmEscapeHtml(v)}
                 </label>`;
     });
 
     container.innerHTML = `
             <div class="menu-actions">
-                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort('${colKey}', 'asc')">⬆️ 升序排列</button>
-                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort('${colKey}', 'desc')">⬇️ 降序排列</button>
+                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort(${jsStringLiteral(colKey)}, 'asc')">⬆️ 升序排列</button>
+                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort(${jsStringLiteral(colKey)}, 'desc')">⬇️ 降序排列</button>
                 <input type="text" class="menu-search" placeholder="搜索..." oninput="filterCheckboxList(this)">
             </div>
             <div class="menu-list">
                 <label class="menu-item" style="font-weight:bold; border-bottom:1px solid #eee;">
-                    <input type="checkbox" id="cb-all-${colKey}" ${isAllChecked ? 'checked' : ''} onchange="toggleAllCheckboxes('${colKey}', this)"> (全选)
+                    <input type="checkbox" id="cb-all-${tmEscapeHtml(colKey)}" ${isAllChecked ? 'checked' : ''} onchange="toggleAllCheckboxes(${jsStringLiteral(colKey)}, this)"> (全选)
                 </label>
                 ${listHtml}
             </div>
             <div class="menu-footer">
-                <button class="btn btn-sm btn-primary" onclick="confirmFilter('${colKey}')">确定</button>
-                <button class="btn btn-sm btn-gray" onclick="clearFilter('${colKey}')">重置</button>
+                <button class="btn btn-sm btn-primary" onclick="confirmFilter(${jsStringLiteral(colKey)})">确定</button>
+                <button class="btn btn-sm btn-gray" onclick="clearFilter(${jsStringLiteral(colKey)})">重置</button>
             </div>
         `;
     container.dataset.studentDetailsFilterMenuSig = menuSignature;

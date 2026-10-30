@@ -1241,15 +1241,19 @@ var Auth = {
             const teacherName = TEACHER_MAP[stu.class + '_班主任'] || '班主任';
             reportHtml = reportHtml.replace(/<input.*id="inp-teacher-name".*?>/, `<span style="font-weight:bold">${teacherName}</span>`);
 
-            const safeName = stu.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            const safeClass = stu.class.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            const safeSchool = stu.school.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            // JSON string literals, HTML-escaped for the double-quoted attribute:
+            // safe for names containing quotes or backslashes.
+            const issueArg = (value) => JSON.stringify(String(value ?? ''))
+                .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const safeName = issueArg(stu.name);
+            const safeClass = issueArg(stu.class);
+            const safeSchool = issueArg(stu.school);
             reportHtml += `
                     <div style="text-align:center; margin-top:30px; padding-bottom:80px; border-top:1px dashed #e5e7eb; padding-top:20px;">
                         <p style="font-size:14px; color:#64748b; margin-bottom:15px;">数据有疑问？</p>
                         <!-- 核心修复：使用转义后的变量 -->
                         <button class="btn" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:16px; padding:10px 20px; margin-bottom:20px;"
-                                onclick="IssueManager.openSubmitModal('${safeName}', '${safeClass}', '${safeSchool}')">
+                                onclick="IssueManager.openSubmitModal(${safeName}, ${safeClass}, ${safeSchool})">
                             <i class="ti ti-alert-circle"></i> 申请成绩核查
                         </button>
 
