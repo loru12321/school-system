@@ -1,6 +1,6 @@
 # 成绩数据库迁移到亚太区域（school-system-cloud-metadata → APAC）
 
-状态：**已排期，工具就绪，尚未执行**。登录库 `school-system-gateway` 已在大阪（KIX），不需要迁移。
+状态：**新库已建（`school-system-cloud-metadata-apac`，`71236bbb-cccf-4e3d-8f3f-881026464b81`，实际位于香港 HKG），切换排期在北京时间 2026-11-01（周日）05:00**。登录库 `school-system-gateway` 已在大阪（KIX），不需要迁移。
 
 ## 为什么迁
 
