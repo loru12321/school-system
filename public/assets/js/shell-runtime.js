@@ -201,7 +201,8 @@
         if (shouldOpen) {
             const sidebar = document.getElementById('app-sidebar');
             if (sidebar && sidebar.classList.contains('show-mobile')) {
-                sidebar.classList.remove('show-mobile');
+                if (typeof window.toggleAppSidebar === 'function') window.toggleAppSidebar(true);
+                else sidebar.classList.remove('show-mobile');
             }
         }
 
@@ -1078,7 +1079,8 @@
                 }
                 const sidebar = document.getElementById('app-sidebar');
                 if (sidebar && sidebar.classList.contains('show-mobile')) {
-                    sidebar.classList.remove('show-mobile');
+                    if (typeof window.toggleAppSidebar === 'function') window.toggleAppSidebar(true);
+                    else sidebar.classList.remove('show-mobile');
                 }
             };
 

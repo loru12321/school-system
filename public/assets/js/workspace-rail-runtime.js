@@ -60,11 +60,13 @@
         if (!isDesktopViewport()) {
             sidebar.classList.remove('is-collapsed');
             document.body.classList.remove('shell-sidebar-collapsed');
+        } else {
+            sidebar.classList.remove('show-mobile');
         }
 
         syncSidebarToggleButtons(isDesktopViewport() ? shouldCollapse : !sidebar.classList.contains('show-mobile'));
         const backdrop = document.getElementById('workspace-sidebar-backdrop');
-        if (backdrop) backdrop.hidden = !isDesktopViewport() || shouldCollapse;
+        if (backdrop) backdrop.hidden = isDesktopViewport() ? shouldCollapse : !sidebar.classList.contains('show-mobile');
 
         if (typeof window.refreshShellEnhancements === 'function') {
             window.refreshShellEnhancements();
@@ -76,8 +78,11 @@
         if (!sidebar) return;
 
         if (!isDesktopViewport()) {
-            sidebar.classList.toggle('show-mobile');
-            syncSidebarToggleButtons(!sidebar.classList.contains('show-mobile'));
+            const shouldOpen = typeof force === 'boolean' ? !force : !sidebar.classList.contains('show-mobile');
+            sidebar.classList.toggle('show-mobile', shouldOpen);
+            syncSidebarToggleButtons(!shouldOpen);
+            const backdrop = document.getElementById('workspace-sidebar-backdrop');
+            if (backdrop) backdrop.hidden = !shouldOpen;
             return;
         }
 
@@ -100,7 +105,7 @@
         backdrop.hidden = true;
         backdrop.tabIndex = -1;
         backdrop.setAttribute('aria-label', '关闭导航');
-        backdrop.addEventListener('click', () => setAppSidebarCollapsed(true));
+        backdrop.addEventListener('click', () => toggleAppSidebar(true));
         document.getElementById('app')?.append(backdrop);
         document.addEventListener('keydown', event => {
             if (event.key !== 'Escape') return;
@@ -108,8 +113,9 @@
             if (menu?.open) {
                 menu.open = false;
                 menu.querySelector('summary')?.focus();
-            } else if (isDesktopViewport() && !getSidebar()?.classList.contains('is-collapsed')) {
-                setAppSidebarCollapsed(true);
+            } else if (getSidebar()?.classList.contains('show-mobile')
+                || (isDesktopViewport() && !getSidebar()?.classList.contains('is-collapsed'))) {
+                toggleAppSidebar(true);
                 getSidebarToggleButtons()[0]?.focus();
             }
         });
@@ -558,6 +564,7 @@
         const cloudStatus = document.getElementById('cloud-sync-indicator');
         const cloudHost = isDesktopViewport() && document.getElementById('shell-cloud-status-host');
         if (cloudStatus && cloudStatus.parentElement !== (cloudHost || document.body)) (cloudHost || document.body).append(cloudStatus);
+        getSidebar()?.classList.remove('show-mobile');
         restoreAppSidebar();
         refreshAnalysisSideRails();
     }

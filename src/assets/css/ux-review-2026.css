@@ -1224,29 +1224,39 @@ html body #app #shell-module-rail-shell .shell-module-rail-chip-index {
     }
 }
 
-@media (max-width: 1024px) {
-    html body #app.app-layout > #app-sidebar {
+@media (min-width: 961px) and (max-width: 1099px) {
+    html[data-boot-auth="logged_in"] body #app #main-header.shell-toolbar {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    html[data-boot-auth="logged_in"] body #app.app-layout {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    html[data-boot-auth="logged_in"] body #app.app-layout > #app-sidebar {
         transform: translateX(-100%) !important;
     }
 
-    html body #app.app-layout > #app-sidebar[data-visible="true"] {
+    html[data-boot-auth="logged_in"] body #app.app-layout > #app-sidebar.show-mobile {
         transform: translateX(0) !important;
     }
 
-    html body #app.app-layout > main.app-main {
+    html[data-boot-auth="logged_in"] body #app.app-layout > main.app-main {
+        grid-column: 1 !important;
+        width: 100% !important;
+        min-width: 0 !important;
         margin-left: 0 !important;
     }
 
-    /* 遮罩层 */
     #workspace-sidebar-backdrop {
         position: fixed !important;
         inset: var(--yt-header-height) 0 0 0 !important;
         background: rgba(0, 0, 0, 0.5) !important;
         z-index: 2000 !important;
-        display: none !important;
     }
 
-    #workspace-sidebar-backdrop[data-visible="true"] {
+    #workspace-sidebar-backdrop:not([hidden]) {
         display: block !important;
     }
 }
