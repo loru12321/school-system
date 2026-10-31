@@ -71,15 +71,15 @@
       "visible": true,
       "active": true,
       "title": "数据准备状态",
-      "activationMs": 22.09999999999127,
-      "activationHandlerMs": 22.09999999999127,
+      "activationMs": 37.40000000002328,
+      "activationHandlerMs": 37.40000000002328,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "starter-hub",
-        "switchMs": 22.09999999999127,
-        "deepCheckMs": 14,
-        "totalMs": 36.09999999999127
+        "switchMs": 37.40000000002328,
+        "deepCheckMs": 15,
+        "totalMs": 52.40000000002328
       },
       "deepCheck": {
         "ok": true
@@ -100,15 +100,15 @@
       "visible": true,
       "active": true,
       "title": "数据文件上传\n                        导入说明建议按“届别 -> 考试 -> 上传 -> 快照”顺序完成本页操作；每次批量导入前先看顶部摘要和当前模式，更不容易把数据导错届别。 数据体检",
-      "activationMs": 21.60000000000582,
-      "activationHandlerMs": 21.60000000000582,
+      "activationMs": 26.600000000034925,
+      "activationHandlerMs": 26.600000000034925,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "upload",
-        "switchMs": 21.60000000000582,
-        "deepCheckMs": 12,
-        "totalMs": 33.60000000000582
+        "switchMs": 26.600000000034925,
+        "deepCheckMs": 7,
+        "totalMs": 33.600000000034925
       },
       "deepCheck": {
         "ok": true,
@@ -150,15 +150,15 @@
       "visible": true,
       "active": true,
       "title": "数据质量体检\n                            使用说明",
-      "activationMs": 7.69999999999709,
-      "activationHandlerMs": 7.69999999999709,
+      "activationMs": 10.200000000011642,
+      "activationHandlerMs": 10.200000000011642,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "data-quality",
-        "switchMs": 7.69999999999709,
-        "deepCheckMs": 2,
-        "totalMs": 9.69999999999709
+        "switchMs": 10.200000000011642,
+        "deepCheckMs": 3,
+        "totalMs": 13.200000000011642
       },
       "deepCheck": {
         "ok": true
@@ -179,15 +179,15 @@
       "visible": true,
       "active": true,
       "title": "综合分析报告 ⭐\n                            教务常用权重说明适合考试后的教务汇总与校长汇报，建议完成前置分析后再统一导出。生成总排名导出报告 下载考试分析包",
-      "activationMs": 24.10000000000582,
-      "activationHandlerMs": 24.10000000000582,
+      "activationMs": 41,
+      "activationHandlerMs": 41,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "summary",
-        "switchMs": 24.10000000000582,
-        "deepCheckMs": 36,
-        "totalMs": 60.10000000000582
+        "switchMs": 41,
+        "deepCheckMs": 70,
+        "totalMs": 111
       },
       "deepCheck": {
         "ok": true,
@@ -263,15 +263,15 @@
       "visible": true,
       "active": true,
       "title": "乡镇学校分析 - 两率一分\n                        统计口径支持横向对比、热力图和全科导出，适合联考复盘前先快速定站位。生成横向对比表🎨\n                                开启热力图导出全科分析表",
-      "activationMs": 25.60000000000582,
-      "activationHandlerMs": 25.60000000000582,
+      "activationMs": 39.79999999998836,
+      "activationHandlerMs": 39.79999999998836,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "analysis",
-        "switchMs": 25.60000000000582,
-        "deepCheckMs": 95,
-        "totalMs": 120.60000000000582
+        "switchMs": 39.79999999998836,
+        "deepCheckMs": 145,
+        "totalMs": 184.79999999998836
       },
       "deepCheck": {
         "ok": true,
@@ -315,15 +315,15 @@
       "visible": true,
       "active": true,
       "title": "高分段赋分详情\n                        核算规则适合快速识别尖子生密度和高分学校梯队，导出后可直接做年级汇报附件。📊 导出Excel",
-      "activationMs": 5.399999999994179,
-      "activationHandlerMs": 5.399999999994179,
+      "activationMs": 37.90000000002328,
+      "activationHandlerMs": 37.79999999998836,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "high-score",
-        "switchMs": 5.399999999994179,
-        "deepCheckMs": 7,
-        "totalMs": 12.39999999999418
+        "switchMs": 37.90000000002328,
+        "deepCheckMs": 3,
+        "totalMs": 40.90000000002328
       },
       "deepCheck": {
         "ok": true
@@ -344,15 +344,15 @@
       "visible": true,
       "active": true,
       "title": "",
-      "activationMs": 17,
-      "activationHandlerMs": 17,
+      "activationMs": 35.5,
+      "activationHandlerMs": 35.5,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "county-teacher-portrait",
-        "switchMs": 17,
-        "deepCheckMs": 68,
-        "totalMs": 85
+        "switchMs": 35.5,
+        "deepCheckMs": 114,
+        "totalMs": 149.5
       },
       "deepCheck": {
         "ok": true,
@@ -482,15 +482,15 @@
       "visible": true,
       "active": true,
       "title": "五科总 - 综合分析表",
-      "activationMs": 31.60000000000582,
-      "activationHandlerMs": 31.5,
+      "activationMs": 60.40000000002328,
+      "activationHandlerMs": 60.40000000002328,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "county-school-horizontal",
-        "switchMs": 31.60000000000582,
-        "deepCheckMs": 4,
-        "totalMs": 35.60000000000582
+        "switchMs": 60.40000000002328,
+        "deepCheckMs": 3,
+        "totalMs": 63.40000000002328
       },
       "deepCheck": {
         "ok": true
@@ -511,15 +511,15 @@
       "visible": true,
       "active": true,
       "title": "本校教师教学分析 📊\n                            班主任必看评价模型先查看画像和多期趋势，再导出教师分析与乡镇排名，适合教研组复盘。刷新教师画像导出教师分析",
-      "activationMs": 40.69999999999709,
-      "activationHandlerMs": 40.69999999999709,
+      "activationMs": 32.600000000034925,
+      "activationHandlerMs": 32.600000000034925,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "teacher-analysis",
-        "switchMs": 40.69999999999709,
-        "deepCheckMs": 150,
-        "totalMs": 190.6999999999971
+        "switchMs": 32.600000000034925,
+        "deepCheckMs": 224,
+        "totalMs": 256.6000000000349
       },
       "deepCheck": {
         "ok": true,
@@ -557,15 +557,15 @@
       "visible": true,
       "active": true,
       "title": "教师教学详细数据对比表",
-      "activationMs": 9.5,
-      "activationHandlerMs": 9.400000000008731,
+      "activationMs": 12,
+      "activationHandlerMs": 12,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "teacher-detail-comparison",
-        "switchMs": 9.5,
-        "deepCheckMs": 155,
-        "totalMs": 164.5
+        "switchMs": 12,
+        "deepCheckMs": 165,
+        "totalMs": 177
       },
       "deepCheck": {
         "ok": true,
@@ -601,15 +601,15 @@
       "visible": true,
       "active": true,
       "title": "校内教师结对子建议",
-      "activationMs": 11.10000000000582,
-      "activationHandlerMs": 11.10000000000582,
+      "activationMs": 19.899999999965075,
+      "activationHandlerMs": 19.899999999965075,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "teacher-pairing",
-        "switchMs": 11.10000000000582,
-        "deepCheckMs": 4,
-        "totalMs": 15.10000000000582
+        "switchMs": 19.899999999965075,
+        "deepCheckMs": 8,
+        "totalMs": 27.899999999965075
       },
       "deepCheck": {
         "ok": true,
@@ -638,15 +638,15 @@
       "visible": true,
       "active": true,
       "title": "教师乡镇排名",
-      "activationMs": 7.80000000000291,
-      "activationHandlerMs": 7.80000000000291,
+      "activationMs": 7,
+      "activationHandlerMs": 7,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "teacher-township-ranking",
-        "switchMs": 7.80000000000291,
-        "deepCheckMs": 154,
-        "totalMs": 161.8000000000029
+        "switchMs": 7,
+        "deepCheckMs": 223,
+        "totalMs": 230
       },
       "deepCheck": {
         "ok": true,
@@ -684,15 +684,15 @@
       "visible": true,
       "active": true,
       "title": "分数段统计分析建议先选范围和学科，再生成统计表；图表支持点击柱子下钻查看名单。生成统计表导出Excel",
-      "activationMs": 18.5,
-      "activationHandlerMs": 18.5,
+      "activationMs": 30.70000000001164,
+      "activationHandlerMs": 30.70000000001164,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "segment-analysis",
-        "switchMs": 18.5,
-        "deepCheckMs": 4,
-        "totalMs": 22.5
+        "switchMs": 30.70000000001164,
+        "deepCheckMs": 1,
+        "totalMs": 31.70000000001164
       },
       "deepCheck": {
         "ok": true
@@ -713,15 +713,15 @@
       "visible": true,
       "active": true,
       "title": "学科贡献度与关联性深度分析\n                        口径与注意建议先选分析范围，再生成结果；阅读顺序最好是“相关矩阵 -> 贡献度 -> 提分/拖分频率”，这样更容易形成完整判断。🚀 开始深度分析导出分析Excel",
-      "activationMs": 15.200000000011642,
-      "activationHandlerMs": 15.200000000011642,
+      "activationMs": 30.5,
+      "activationHandlerMs": 30.399999999965075,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "correlation-analysis",
-        "switchMs": 15.200000000011642,
-        "deepCheckMs": 180,
-        "totalMs": 195.20000000001164
+        "switchMs": 30.5,
+        "deepCheckMs": 221,
+        "totalMs": 251.5
       },
       "deepCheck": {
         "ok": true,
@@ -841,15 +841,15 @@
       "visible": true,
       "active": true,
       "title": "指标生达标核算\n                        计分公式建议先确认目标口径，再计算达标情况；导出结果更适合做指标生专项追踪。 在线调整目标\n                             开始计算 导出结果",
-      "activationMs": 52.5,
-      "activationHandlerMs": 52.39999999999418,
+      "activationMs": 49.399999999965075,
+      "activationHandlerMs": 49.399999999965075,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "indicator",
-        "switchMs": 52.5,
-        "deepCheckMs": 129,
-        "totalMs": 181.5
+        "switchMs": 49.399999999965075,
+        "deepCheckMs": 136,
+        "totalMs": 185.39999999996508
       },
       "deepCheck": {
         "ok": true,
@@ -912,7 +912,7 @@
         "timings": [
           {
             "label": "calc",
-            "durationMs": 0
+            "durationMs": 1
           },
           {
             "label": "settle",
@@ -968,15 +968,15 @@
       "visible": true,
       "active": true,
       "title": "后1/3学生核算\n                        筛选规则适合看学校补弱稳定性和底部学生改善幅度，导出后便于跟进帮扶策略。 导出结果",
-      "activationMs": 15,
-      "activationHandlerMs": 15,
+      "activationMs": 22.79999999998836,
+      "activationHandlerMs": 22.79999999998836,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "bottom3",
-        "switchMs": 15,
-        "deepCheckMs": 10,
-        "totalMs": 25
+        "switchMs": 22.79999999998836,
+        "deepCheckMs": 27,
+        "totalMs": 49.79999999998836
       },
       "deepCheck": {
         "ok": true,
@@ -1006,7 +1006,7 @@
         "timings": [
           {
             "label": "filterTownshipSchools",
-            "durationMs": 3
+            "durationMs": 8
           },
           {
             "label": "mapRows",
@@ -1040,14 +1040,18 @@
         "entryTimings": [
           {
             "label": "switchTab",
-            "durationMs": 15
+            "durationMs": 23
           },
           {
             "label": "releaseTeacherAnalysisHeavyDom",
             "durationMs": 0
           },
           {
-            "label": "runModuleTabEnter",
+            "label": "switchTab",
+            "durationMs": 14
+          },
+          {
+            "label": "releaseTeacherAnalysisHeavyDom",
             "durationMs": 0
           }
         ],
@@ -1076,15 +1080,15 @@
       "visible": true,
       "active": true,
       "title": "临界生精准辅导任务单\n                        筛选规则建议先生成任务单，再决定是批量打印给教师，还是导出做跟踪台账。🖨 批量打印任务单📊 导出Excel",
-      "activationMs": 25.5,
-      "activationHandlerMs": 25.5,
+      "activationMs": 43,
+      "activationHandlerMs": 43,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "marginal-push",
-        "switchMs": 25.5,
-        "deepCheckMs": 48,
-        "totalMs": 73.5
+        "switchMs": 43,
+        "deepCheckMs": 52,
+        "totalMs": 95
       },
       "deepCheck": {
         "ok": true,
@@ -1121,15 +1125,15 @@
       "visible": true,
       "active": true,
       "title": "考后“座位微调”建议建议先设定约束和策略，再生成座次；打印适合课堂落地，现场也可二次微调。 生成座次 打印",
-      "activationMs": 33.60000000000582,
-      "activationHandlerMs": 33.60000000000582,
+      "activationMs": 51.899999999965075,
+      "activationHandlerMs": 51.899999999965075,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "seat-adjustment",
-        "switchMs": 33.60000000000582,
-        "deepCheckMs": 155,
-        "totalMs": 188.60000000000582
+        "switchMs": 51.899999999965075,
+        "deepCheckMs": 99,
+        "totalMs": 150.89999999996508
       },
       "deepCheck": {
         "ok": true,
@@ -1170,15 +1174,15 @@
       "visible": true,
       "active": true,
       "title": "学生进退步追踪分析\n                        增值口径建议先看集体增值结果，再切到个人变化明细；导出更适合班主任复盘和年级跟踪。按学校看按班级看📊 导出增值评价表",
-      "activationMs": 36.40000000000873,
-      "activationHandlerMs": 36.30000000000291,
+      "activationMs": 59.29999999998836,
+      "activationHandlerMs": 59.29999999998836,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "progress-analysis",
-        "switchMs": 36.40000000000873,
-        "deepCheckMs": 161,
-        "totalMs": 197.40000000000873
+        "switchMs": 59.29999999998836,
+        "deepCheckMs": 257,
+        "totalMs": 316.29999999998836
       },
       "deepCheck": {
         "ok": true,
@@ -1218,15 +1222,15 @@
       "visible": true,
       "active": true,
       "title": "成长轨迹与稳定性分析\n                口径与注意建议先确保同一届别下已经累计多次考试，再生成成长档案；如果考试次数太少，这页更适合先当作趋势预览而不是结论依据。全部学校全部班级🔎 生成成长档案📥 导出波动名单",
-      "activationMs": 12.799999999988358,
-      "activationHandlerMs": 12.799999999988358,
+      "activationMs": 23.29999999998836,
+      "activationHandlerMs": 23.199999999953434,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "cohort-growth",
-        "switchMs": 12.799999999988358,
-        "deepCheckMs": 263,
-        "totalMs": 275.79999999998836
+        "switchMs": 23.29999999998836,
+        "deepCheckMs": 288,
+        "totalMs": 311.29999999998836
       },
       "deepCheck": {
         "ok": true,
@@ -1276,15 +1280,15 @@
       "visible": true,
       "active": true,
       "title": "个性化成绩单生成器\n                        使用说明建议先完成成绩查询，再按需导出单份 PDF 或批量生成全班材料。 批量生成全班 PDF",
-      "activationMs": 12.900000000008731,
-      "activationHandlerMs": 12.900000000008731,
+      "activationMs": 19.20000000001164,
+      "activationHandlerMs": 19.20000000001164,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "report-generator",
-        "switchMs": 12.900000000008731,
-        "deepCheckMs": 267,
-        "totalMs": 279.90000000000873
+        "switchMs": 19.20000000001164,
+        "deepCheckMs": 319,
+        "totalMs": 338.20000000001164
       },
       "deepCheck": {
         "ok": true,
@@ -1369,15 +1373,15 @@
       "visible": true,
       "active": true,
       "title": "中考倒计时",
-      "activationMs": 16.5,
-      "activationHandlerMs": 16.5,
+      "activationMs": 16.400000000023283,
+      "activationHandlerMs": 16.400000000023283,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "zhongkao-countdown",
-        "switchMs": 16.5,
-        "deepCheckMs": 4,
-        "totalMs": 20.5
+        "switchMs": 16.400000000023283,
+        "deepCheckMs": 18,
+        "totalMs": 34.40000000002328
       },
       "deepCheck": {
         "ok": true
@@ -1398,15 +1402,15 @@
       "visible": true,
       "active": true,
       "title": "新生均衡分班\n                        分班规则建议先生成分班方案，再保存、导出并继续进入座位编排；多方案时先看主科优秀率极差，再看均分极差。 保存方案 导出结果",
-      "activationMs": 41.90000000000873,
-      "activationHandlerMs": 41.90000000000873,
+      "activationMs": 64.89999999996508,
+      "activationHandlerMs": 64.89999999996508,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "freshman-simulator",
-        "switchMs": 41.90000000000873,
-        "deepCheckMs": 278,
-        "totalMs": 319.90000000000873
+        "switchMs": 64.89999999996508,
+        "deepCheckMs": 598,
+        "totalMs": 662.8999999999651
       },
       "deepCheck": {
         "ok": true,
@@ -1470,15 +1474,15 @@
       "visible": true,
       "active": true,
       "title": "教务执行 / 考场编排 智能考场编排器口径说明从文件夹导入资料，完成名单核对、容量编排与成套考务输出。 成绩本地处理 保存本机草稿 清空工作区",
-      "activationMs": 1.2000000000116415,
-      "activationHandlerMs": 1.2000000000116415,
+      "activationMs": 1.5,
+      "activationHandlerMs": 1.5,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "exam-arranger",
-        "switchMs": 1.2000000000116415,
-        "deepCheckMs": 221,
-        "totalMs": 222.20000000001164
+        "switchMs": 1.5,
+        "deepCheckMs": 242,
+        "totalMs": 243.5
       },
       "deepCheck": {
         "ok": true,
@@ -1539,15 +1543,15 @@
       "visible": true,
       "active": true,
       "title": "学年联合排课先导入任课表并做规则预检；已有确认课表可作为锁定底图导入。单级部可独立操作，跨级教师和共享场地须同批导入。📥 导出课表(Excel)📤\n                                导入已有课表优化\n                                ☁️ 读取云端新学期任课\n                                🧭 套用新8年级方案🔒\n                                导入锁定级部课表 规则预检 疲劳审计",
-      "activationMs": 11.700000000011642,
-      "activationHandlerMs": 11.700000000011642,
+      "activationMs": 10.400000000023283,
+      "activationHandlerMs": 10.400000000023283,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "grade-scheduler",
-        "switchMs": 11.700000000011642,
-        "deepCheckMs": 1157,
-        "totalMs": 1168.7000000000116
+        "switchMs": 10.400000000023283,
+        "deepCheckMs": 1273,
+        "totalMs": 1283.4000000000233
       },
       "deepCheck": {
         "ok": true,
@@ -1620,15 +1624,15 @@
       "visible": true,
       "active": true,
       "title": "优劣势学科透视表建议先按学校/班级分析，再导出透视表和聚类结果，适合班主任做结构诊断。📊 导出Excel",
-      "activationMs": 33.30000000000291,
-      "activationHandlerMs": 33.30000000000291,
+      "activationMs": 27.29999999998836,
+      "activationHandlerMs": 27.29999999998836,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "subject-balance",
-        "switchMs": 33.30000000000291,
-        "deepCheckMs": 207,
-        "totalMs": 240.3000000000029
+        "switchMs": 27.29999999998836,
+        "deepCheckMs": 221,
+        "totalMs": 248.29999999998836
       },
       "deepCheck": {
         "ok": true,
@@ -1666,15 +1670,15 @@
       "visible": true,
       "active": true,
       "title": "偏科潜力生挖掘\n                        分析口径适合识别“总分不错但单科掉队”的学生，导出后便于做培优补短跟进。导出名单",
-      "activationMs": 26.60000000000582,
-      "activationHandlerMs": 26.60000000000582,
+      "activationMs": 25.600000000034925,
+      "activationHandlerMs": 25.600000000034925,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "potential-analysis",
-        "switchMs": 26.60000000000582,
-        "deepCheckMs": 56,
-        "totalMs": 82.60000000000582
+        "switchMs": 25.600000000034925,
+        "deepCheckMs": 32,
+        "totalMs": 57.600000000034925
       },
       "deepCheck": {
         "ok": true,
@@ -1708,15 +1712,15 @@
       "visible": true,
       "active": true,
       "title": "学科互助分组建议先确认数据源和班级，再生成分组；导出结果适合课堂实施和班级留档。导出Excel",
-      "activationMs": 31.40000000000873,
-      "activationHandlerMs": 31.40000000000873,
+      "activationMs": 29.5,
+      "activationHandlerMs": 29.5,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "mutual-aid",
-        "switchMs": 31.40000000000873,
-        "deepCheckMs": 3,
-        "totalMs": 34.40000000000873
+        "switchMs": 29.5,
+        "deepCheckMs": 4,
+        "totalMs": 33.5
       },
       "deepCheck": {
         "ok": true
@@ -1737,15 +1741,15 @@
       "visible": true,
       "active": true,
       "title": "学情总览先看总览和数据就绪状态，再进入学生明细、进退步、偏科和成绩单模块。 学生明细 进退步分析 成绩单/家长查分",
-      "activationMs": 27.19999999999709,
-      "activationHandlerMs": 27.19999999999709,
+      "activationMs": 27.599999999976717,
+      "activationHandlerMs": 27.599999999976717,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "student-overview",
-        "switchMs": 27.19999999999709,
-        "deepCheckMs": 482,
-        "totalMs": 509.1999999999971
+        "switchMs": 27.599999999976717,
+        "deepCheckMs": 477,
+        "totalMs": 504.5999999999767
       },
       "deepCheck": {
         "ok": true,
@@ -1822,15 +1826,15 @@
       "visible": true,
       "active": true,
       "title": "空分/0分学科核对集中展示原始 Excel 空白学科和 0 分记录；这些学科仍按 0 分参与单科、总分、校排、镇排、县排。刷新核对清单",
-      "activationMs": 12.89999999999418,
-      "activationHandlerMs": 12.89999999999418,
+      "activationMs": 11,
+      "activationHandlerMs": 11,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "blank-score-audit",
-        "switchMs": 12.89999999999418,
+        "switchMs": 11,
         "deepCheckMs": 1,
-        "totalMs": 13.89999999999418
+        "totalMs": 12
       },
       "deepCheck": {
         "ok": true
@@ -1851,15 +1855,15 @@
       "visible": true,
       "active": true,
       "title": "学生考试明细口径说明建议先筛选学校/班级，再决定是导出 Excel、长图还是查分包。导出Excel",
-      "activationMs": 16.39999999999418,
-      "activationHandlerMs": 16.39999999999418,
+      "activationMs": 21.29999999998836,
+      "activationHandlerMs": 21.29999999998836,
       "activationMode": "switchTab",
       "immediateSelected": true,
       "performance": {
         "id": "student-details",
-        "switchMs": 16.39999999999418,
-        "deepCheckMs": 54,
-        "totalMs": 70.39999999999418
+        "switchMs": 21.29999999998836,
+        "deepCheckMs": 58,
+        "totalMs": 79.29999999998836
       },
       "deepCheck": {
         "ok": true,
@@ -1945,7 +1949,7 @@
       "activeText": "",
       "performance": {
         "id": "student",
-        "durationMs": 642
+        "durationMs": 636
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1965,7 +1969,7 @@
       "activeText": "",
       "performance": {
         "id": "teacher",
-        "durationMs": 629
+        "durationMs": 628
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -1985,7 +1989,7 @@
       "activeText": "",
       "performance": {
         "id": "targets",
-        "durationMs": 626
+        "durationMs": 631
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -2005,7 +2009,7 @@
       "activeText": "",
       "performance": {
         "id": "params",
-        "durationMs": 625
+        "durationMs": 626
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -2030,7 +2034,7 @@
       },
       "performance": {
         "id": "sql",
-        "durationMs": 425
+        "durationMs": 424
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -2057,7 +2061,7 @@
       },
       "performance": {
         "id": "cloud",
-        "durationMs": 1104
+        "durationMs": 1108
       },
       "cohortGuard": {
         "cohortId": "2022",
@@ -2080,587 +2084,587 @@
       "longTaskMs": 500
     },
     "strict": true,
-    "loginMs": 4831,
-    "appReadyMs": 2,
-    "teacherAutoRestoreMs": 0,
+    "loginMs": 5421,
+    "appReadyMs": 8,
+    "teacherAutoRestoreMs": 2,
     "moduleTimings": [
       {
         "id": "starter-hub",
-        "switchMs": 22.09999999999127,
-        "deepCheckMs": 14,
-        "totalMs": 36.09999999999127
+        "switchMs": 37.40000000002328,
+        "deepCheckMs": 15,
+        "totalMs": 52.40000000002328
       },
       {
         "id": "upload",
-        "switchMs": 21.60000000000582,
-        "deepCheckMs": 12,
-        "totalMs": 33.60000000000582
+        "switchMs": 26.600000000034925,
+        "deepCheckMs": 7,
+        "totalMs": 33.600000000034925
       },
       {
         "id": "data-quality",
-        "switchMs": 7.69999999999709,
-        "deepCheckMs": 2,
-        "totalMs": 9.69999999999709
+        "switchMs": 10.200000000011642,
+        "deepCheckMs": 3,
+        "totalMs": 13.200000000011642
       },
       {
         "id": "summary",
-        "switchMs": 24.10000000000582,
-        "deepCheckMs": 36,
-        "totalMs": 60.10000000000582
+        "switchMs": 41,
+        "deepCheckMs": 70,
+        "totalMs": 111
       },
       {
         "id": "analysis",
-        "switchMs": 25.60000000000582,
-        "deepCheckMs": 95,
-        "totalMs": 120.60000000000582
+        "switchMs": 39.79999999998836,
+        "deepCheckMs": 145,
+        "totalMs": 184.79999999998836
       },
       {
         "id": "high-score",
-        "switchMs": 5.399999999994179,
-        "deepCheckMs": 7,
-        "totalMs": 12.39999999999418
+        "switchMs": 37.90000000002328,
+        "deepCheckMs": 3,
+        "totalMs": 40.90000000002328
       },
       {
         "id": "county-teacher-portrait",
-        "switchMs": 17,
-        "deepCheckMs": 68,
-        "totalMs": 85
+        "switchMs": 35.5,
+        "deepCheckMs": 114,
+        "totalMs": 149.5
       },
       {
         "id": "county-school-horizontal",
-        "switchMs": 31.60000000000582,
-        "deepCheckMs": 4,
-        "totalMs": 35.60000000000582
+        "switchMs": 60.40000000002328,
+        "deepCheckMs": 3,
+        "totalMs": 63.40000000002328
       },
       {
         "id": "teacher-analysis",
-        "switchMs": 40.69999999999709,
-        "deepCheckMs": 150,
-        "totalMs": 190.6999999999971
+        "switchMs": 32.600000000034925,
+        "deepCheckMs": 224,
+        "totalMs": 256.6000000000349
       },
       {
         "id": "teacher-detail-comparison",
-        "switchMs": 9.5,
-        "deepCheckMs": 155,
-        "totalMs": 164.5
+        "switchMs": 12,
+        "deepCheckMs": 165,
+        "totalMs": 177
       },
       {
         "id": "teacher-pairing",
-        "switchMs": 11.10000000000582,
-        "deepCheckMs": 4,
-        "totalMs": 15.10000000000582
+        "switchMs": 19.899999999965075,
+        "deepCheckMs": 8,
+        "totalMs": 27.899999999965075
       },
       {
         "id": "teacher-township-ranking",
-        "switchMs": 7.80000000000291,
-        "deepCheckMs": 154,
-        "totalMs": 161.8000000000029
+        "switchMs": 7,
+        "deepCheckMs": 223,
+        "totalMs": 230
       },
       {
         "id": "segment-analysis",
-        "switchMs": 18.5,
-        "deepCheckMs": 4,
-        "totalMs": 22.5
+        "switchMs": 30.70000000001164,
+        "deepCheckMs": 1,
+        "totalMs": 31.70000000001164
       },
       {
         "id": "correlation-analysis",
-        "switchMs": 15.200000000011642,
-        "deepCheckMs": 180,
-        "totalMs": 195.20000000001164
+        "switchMs": 30.5,
+        "deepCheckMs": 221,
+        "totalMs": 251.5
       },
       {
         "id": "indicator",
-        "switchMs": 52.5,
-        "deepCheckMs": 129,
-        "totalMs": 181.5
+        "switchMs": 49.399999999965075,
+        "deepCheckMs": 136,
+        "totalMs": 185.39999999996508
       },
       {
         "id": "bottom3",
-        "switchMs": 15,
-        "deepCheckMs": 10,
-        "totalMs": 25
+        "switchMs": 22.79999999998836,
+        "deepCheckMs": 27,
+        "totalMs": 49.79999999998836
       },
       {
         "id": "marginal-push",
-        "switchMs": 25.5,
-        "deepCheckMs": 48,
-        "totalMs": 73.5
+        "switchMs": 43,
+        "deepCheckMs": 52,
+        "totalMs": 95
       },
       {
         "id": "seat-adjustment",
-        "switchMs": 33.60000000000582,
-        "deepCheckMs": 155,
-        "totalMs": 188.60000000000582
+        "switchMs": 51.899999999965075,
+        "deepCheckMs": 99,
+        "totalMs": 150.89999999996508
       },
       {
         "id": "progress-analysis",
-        "switchMs": 36.40000000000873,
-        "deepCheckMs": 161,
-        "totalMs": 197.40000000000873
+        "switchMs": 59.29999999998836,
+        "deepCheckMs": 257,
+        "totalMs": 316.29999999998836
       },
       {
         "id": "cohort-growth",
-        "switchMs": 12.799999999988358,
-        "deepCheckMs": 263,
-        "totalMs": 275.79999999998836
+        "switchMs": 23.29999999998836,
+        "deepCheckMs": 288,
+        "totalMs": 311.29999999998836
       },
       {
         "id": "report-generator",
-        "switchMs": 12.900000000008731,
-        "deepCheckMs": 267,
-        "totalMs": 279.90000000000873
+        "switchMs": 19.20000000001164,
+        "deepCheckMs": 319,
+        "totalMs": 338.20000000001164
       },
       {
         "id": "zhongkao-countdown",
-        "switchMs": 16.5,
-        "deepCheckMs": 4,
-        "totalMs": 20.5
+        "switchMs": 16.400000000023283,
+        "deepCheckMs": 18,
+        "totalMs": 34.40000000002328
       },
       {
         "id": "freshman-simulator",
-        "switchMs": 41.90000000000873,
-        "deepCheckMs": 278,
-        "totalMs": 319.90000000000873
+        "switchMs": 64.89999999996508,
+        "deepCheckMs": 598,
+        "totalMs": 662.8999999999651
       },
       {
         "id": "exam-arranger",
-        "switchMs": 1.2000000000116415,
-        "deepCheckMs": 221,
-        "totalMs": 222.20000000001164
+        "switchMs": 1.5,
+        "deepCheckMs": 242,
+        "totalMs": 243.5
       },
       {
         "id": "grade-scheduler",
-        "switchMs": 11.700000000011642,
-        "deepCheckMs": 1157,
-        "totalMs": 1168.7000000000116
+        "switchMs": 10.400000000023283,
+        "deepCheckMs": 1273,
+        "totalMs": 1283.4000000000233
       },
       {
         "id": "subject-balance",
-        "switchMs": 33.30000000000291,
-        "deepCheckMs": 207,
-        "totalMs": 240.3000000000029
+        "switchMs": 27.29999999998836,
+        "deepCheckMs": 221,
+        "totalMs": 248.29999999998836
       },
       {
         "id": "potential-analysis",
-        "switchMs": 26.60000000000582,
-        "deepCheckMs": 56,
-        "totalMs": 82.60000000000582
+        "switchMs": 25.600000000034925,
+        "deepCheckMs": 32,
+        "totalMs": 57.600000000034925
       },
       {
         "id": "mutual-aid",
-        "switchMs": 31.40000000000873,
-        "deepCheckMs": 3,
-        "totalMs": 34.40000000000873
+        "switchMs": 29.5,
+        "deepCheckMs": 4,
+        "totalMs": 33.5
       },
       {
         "id": "student-overview",
-        "switchMs": 27.19999999999709,
-        "deepCheckMs": 482,
-        "totalMs": 509.1999999999971
+        "switchMs": 27.599999999976717,
+        "deepCheckMs": 477,
+        "totalMs": 504.5999999999767
       },
       {
         "id": "blank-score-audit",
-        "switchMs": 12.89999999999418,
+        "switchMs": 11,
         "deepCheckMs": 1,
-        "totalMs": 13.89999999999418
+        "totalMs": 12
       },
       {
         "id": "student-details",
-        "switchMs": 16.39999999999418,
-        "deepCheckMs": 54,
-        "totalMs": 70.39999999999418
+        "switchMs": 21.29999999998836,
+        "deepCheckMs": 58,
+        "totalMs": 79.29999999998836
       }
     ],
     "dataManagerTimings": [
       {
         "id": "student",
-        "durationMs": 642
+        "durationMs": 636
       },
       {
         "id": "teacher",
-        "durationMs": 629
+        "durationMs": 628
       },
       {
         "id": "targets",
-        "durationMs": 626
+        "durationMs": 631
       },
       {
         "id": "params",
-        "durationMs": 625
+        "durationMs": 626
       },
       {
         "id": "sql",
-        "durationMs": 425
+        "durationMs": 424
       },
       {
         "id": "cloud",
-        "durationMs": 1104
+        "durationMs": 1108
       }
     ],
     "budgetStatus": [
       {
         "label": "login",
-        "durationMs": 4831,
+        "durationMs": 5421,
         "budgetMs": 30000,
         "ok": true
       },
       {
         "label": "app-ready",
-        "durationMs": 2,
+        "durationMs": 8,
         "budgetMs": 15000,
         "ok": true
       },
       {
         "label": "switch:starter-hub",
-        "durationMs": 22.09999999999127,
+        "durationMs": 37.40000000002328,
         "budgetMs": 1000,
         "ok": true
       },
       {
         "label": "deep:starter-hub",
-        "durationMs": 14,
+        "durationMs": 15,
         "budgetMs": 3000,
         "ok": true
       },
       {
         "label": "switch:upload",
-        "durationMs": 21.60000000000582,
+        "durationMs": 26.600000000034925,
         "budgetMs": 1000,
         "ok": true
       },
       {
         "label": "deep:upload",
-        "durationMs": 12,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:data-quality",
-        "durationMs": 7.69999999999709,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:data-quality",
-        "durationMs": 2,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:summary",
-        "durationMs": 24.10000000000582,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:summary",
-        "durationMs": 36,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:analysis",
-        "durationMs": 25.60000000000582,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:analysis",
-        "durationMs": 95,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:high-score",
-        "durationMs": 5.399999999994179,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:high-score",
         "durationMs": 7,
         "budgetMs": 3000,
         "ok": true
       },
       {
-        "label": "switch:county-teacher-portrait",
-        "durationMs": 17,
+        "label": "switch:data-quality",
+        "durationMs": 10.200000000011642,
         "budgetMs": 1000,
         "ok": true
       },
       {
-        "label": "deep:county-teacher-portrait",
-        "durationMs": 68,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:county-school-horizontal",
-        "durationMs": 31.60000000000582,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:county-school-horizontal",
-        "durationMs": 4,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:teacher-analysis",
-        "durationMs": 40.69999999999709,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:teacher-analysis",
-        "durationMs": 150,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:teacher-detail-comparison",
-        "durationMs": 9.5,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:teacher-detail-comparison",
-        "durationMs": 155,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:teacher-pairing",
-        "durationMs": 11.10000000000582,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:teacher-pairing",
-        "durationMs": 4,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:teacher-township-ranking",
-        "durationMs": 7.80000000000291,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:teacher-township-ranking",
-        "durationMs": 154,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:segment-analysis",
-        "durationMs": 18.5,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:segment-analysis",
-        "durationMs": 4,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:correlation-analysis",
-        "durationMs": 15.200000000011642,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:correlation-analysis",
-        "durationMs": 180,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:indicator",
-        "durationMs": 52.5,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:indicator",
-        "durationMs": 129,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:bottom3",
-        "durationMs": 15,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:bottom3",
-        "durationMs": 10,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:marginal-push",
-        "durationMs": 25.5,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:marginal-push",
-        "durationMs": 48,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:seat-adjustment",
-        "durationMs": 33.60000000000582,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:seat-adjustment",
-        "durationMs": 155,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:progress-analysis",
-        "durationMs": 36.40000000000873,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:progress-analysis",
-        "durationMs": 161,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:cohort-growth",
-        "durationMs": 12.799999999988358,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:cohort-growth",
-        "durationMs": 263,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:report-generator",
-        "durationMs": 12.900000000008731,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:report-generator",
-        "durationMs": 267,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:zhongkao-countdown",
-        "durationMs": 16.5,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:zhongkao-countdown",
-        "durationMs": 4,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:freshman-simulator",
-        "durationMs": 41.90000000000873,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:freshman-simulator",
-        "durationMs": 278,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:exam-arranger",
-        "durationMs": 1.2000000000116415,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:exam-arranger",
-        "durationMs": 221,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:grade-scheduler",
-        "durationMs": 11.700000000011642,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:grade-scheduler",
-        "durationMs": 1157,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:subject-balance",
-        "durationMs": 33.30000000000291,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:subject-balance",
-        "durationMs": 207,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:potential-analysis",
-        "durationMs": 26.60000000000582,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:potential-analysis",
-        "durationMs": 56,
-        "budgetMs": 3000,
-        "ok": true
-      },
-      {
-        "label": "switch:mutual-aid",
-        "durationMs": 31.40000000000873,
-        "budgetMs": 1000,
-        "ok": true
-      },
-      {
-        "label": "deep:mutual-aid",
+        "label": "deep:data-quality",
         "durationMs": 3,
         "budgetMs": 3000,
         "ok": true
       },
       {
+        "label": "switch:summary",
+        "durationMs": 41,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:summary",
+        "durationMs": 70,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:analysis",
+        "durationMs": 39.79999999998836,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:analysis",
+        "durationMs": 145,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:high-score",
+        "durationMs": 37.90000000002328,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:high-score",
+        "durationMs": 3,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:county-teacher-portrait",
+        "durationMs": 35.5,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:county-teacher-portrait",
+        "durationMs": 114,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:county-school-horizontal",
+        "durationMs": 60.40000000002328,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:county-school-horizontal",
+        "durationMs": 3,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:teacher-analysis",
+        "durationMs": 32.600000000034925,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:teacher-analysis",
+        "durationMs": 224,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:teacher-detail-comparison",
+        "durationMs": 12,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:teacher-detail-comparison",
+        "durationMs": 165,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:teacher-pairing",
+        "durationMs": 19.899999999965075,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:teacher-pairing",
+        "durationMs": 8,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:teacher-township-ranking",
+        "durationMs": 7,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:teacher-township-ranking",
+        "durationMs": 223,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:segment-analysis",
+        "durationMs": 30.70000000001164,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:segment-analysis",
+        "durationMs": 1,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:correlation-analysis",
+        "durationMs": 30.5,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:correlation-analysis",
+        "durationMs": 221,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:indicator",
+        "durationMs": 49.399999999965075,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:indicator",
+        "durationMs": 136,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:bottom3",
+        "durationMs": 22.79999999998836,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:bottom3",
+        "durationMs": 27,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:marginal-push",
+        "durationMs": 43,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:marginal-push",
+        "durationMs": 52,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:seat-adjustment",
+        "durationMs": 51.899999999965075,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:seat-adjustment",
+        "durationMs": 99,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:progress-analysis",
+        "durationMs": 59.29999999998836,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:progress-analysis",
+        "durationMs": 257,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:cohort-growth",
+        "durationMs": 23.29999999998836,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:cohort-growth",
+        "durationMs": 288,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:report-generator",
+        "durationMs": 19.20000000001164,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:report-generator",
+        "durationMs": 319,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:zhongkao-countdown",
+        "durationMs": 16.400000000023283,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:zhongkao-countdown",
+        "durationMs": 18,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:freshman-simulator",
+        "durationMs": 64.89999999996508,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:freshman-simulator",
+        "durationMs": 598,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:exam-arranger",
+        "durationMs": 1.5,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:exam-arranger",
+        "durationMs": 242,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:grade-scheduler",
+        "durationMs": 10.400000000023283,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:grade-scheduler",
+        "durationMs": 1273,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:subject-balance",
+        "durationMs": 27.29999999998836,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:subject-balance",
+        "durationMs": 221,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:potential-analysis",
+        "durationMs": 25.600000000034925,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:potential-analysis",
+        "durationMs": 32,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
+        "label": "switch:mutual-aid",
+        "durationMs": 29.5,
+        "budgetMs": 1000,
+        "ok": true
+      },
+      {
+        "label": "deep:mutual-aid",
+        "durationMs": 4,
+        "budgetMs": 3000,
+        "ok": true
+      },
+      {
         "label": "switch:student-overview",
-        "durationMs": 27.19999999999709,
+        "durationMs": 27.599999999976717,
         "budgetMs": 1000,
         "ok": true
       },
       {
         "label": "deep:student-overview",
-        "durationMs": 482,
+        "durationMs": 477,
         "budgetMs": 3000,
         "ok": true
       },
       {
         "label": "switch:blank-score-audit",
-        "durationMs": 12.89999999999418,
+        "durationMs": 11,
         "budgetMs": 1000,
         "ok": true
       },
@@ -2672,49 +2676,49 @@
       },
       {
         "label": "switch:student-details",
-        "durationMs": 16.39999999999418,
+        "durationMs": 21.29999999998836,
         "budgetMs": 1000,
         "ok": true
       },
       {
         "label": "deep:student-details",
-        "durationMs": 54,
+        "durationMs": 58,
         "budgetMs": 3000,
         "ok": true
       },
       {
         "label": "dm:student",
-        "durationMs": 642,
+        "durationMs": 636,
         "budgetMs": 3000,
         "ok": true
       },
       {
         "label": "dm:teacher",
-        "durationMs": 629,
+        "durationMs": 628,
         "budgetMs": 3000,
         "ok": true
       },
       {
         "label": "dm:targets",
-        "durationMs": 626,
+        "durationMs": 631,
         "budgetMs": 3000,
         "ok": true
       },
       {
         "label": "dm:params",
-        "durationMs": 625,
+        "durationMs": 626,
         "budgetMs": 3000,
         "ok": true
       },
       {
         "label": "dm:sql",
-        "durationMs": 425,
+        "durationMs": 424,
         "budgetMs": 3000,
         "ok": true
       },
       {
         "label": "dm:cloud",
-        "durationMs": 1104,
+        "durationMs": 1108,
         "budgetMs": 3000,
         "ok": true
       }
@@ -2722,26 +2726,59 @@
     "nativeLongTasks": [],
     "scheduledTasks": [
       {
+        "key": "module-entry:student-diagnosis-report-prewarm",
+        "type": "scheduled",
+        "durationMs": 0.6,
+        "blockedMs": 0.1,
+        "networkWaitMs": 0.5,
+        "queuedMs": 2600.1,
+        "status": "ok",
+        "phase": "",
+        "time": "2026-10-31T06:04:52.495Z"
+      },
+      {
+        "key": "module-entry:comparison-panel-collapse-enter",
+        "type": "scheduled",
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 227.6,
+        "status": "ok",
+        "phase": "smoke-switch:summary",
+        "time": "2026-10-31T06:04:53.378Z"
+      },
+      {
         "key": "module-entry:prerequisite-status-enter",
         "type": "scheduled",
-        "durationMs": 0.2,
-        "blockedMs": 0.2,
+        "durationMs": 0.1,
+        "blockedMs": 0.1,
         "networkWaitMs": 0,
-        "queuedMs": 45.7,
+        "queuedMs": 227.6,
         "status": "ok",
-        "phase": "smoke-switch:analysis",
-        "time": "2026-10-31T02:01:53.755Z"
+        "phase": "smoke-switch:summary",
+        "time": "2026-10-31T06:04:53.378Z"
+      },
+      {
+        "key": "module-entry:prerequisite-status-enter",
+        "type": "scheduled",
+        "durationMs": 0.1,
+        "blockedMs": 0.1,
+        "networkWaitMs": 0,
+        "queuedMs": 41.6,
+        "status": "ok",
+        "phase": "",
+        "time": "2026-10-31T06:04:53.492Z"
       },
       {
         "key": "module-entry:summary-tables",
         "type": "scheduled",
-        "durationMs": 5.2,
-        "blockedMs": 3.9,
-        "networkWaitMs": 1.3,
-        "queuedMs": 45.8,
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 97.6,
         "status": "ok",
         "phase": "smoke-switch:analysis",
-        "time": "2026-10-31T02:01:53.760Z"
+        "time": "2026-10-31T06:04:53.548Z"
       },
       {
         "key": "module-entry:analysis-entry-selects",
@@ -2749,43 +2786,21 @@
         "durationMs": 0,
         "blockedMs": 0,
         "networkWaitMs": 0,
-        "queuedMs": 59.6,
+        "queuedMs": 99.3,
         "status": "ok",
-        "phase": "",
-        "time": "2026-10-31T02:01:53.940Z"
-      },
-      {
-        "key": "module-entry:summary-auto-calculate",
-        "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 233.5,
-        "status": "ok",
-        "phase": "smoke-deep:high-score",
-        "time": "2026-10-31T02:01:53.943Z"
-      },
-      {
-        "key": "module-entry:macro-tables:analysis-tables",
-        "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 109.8,
-        "status": "ok",
-        "phase": "",
-        "time": "2026-10-31T02:01:53.991Z"
+        "phase": "smoke-switch:high-score",
+        "time": "2026-10-31T06:04:53.819Z"
       },
       {
         "key": "module-entry:county-analysis-render:county-teacher-portrait",
         "type": "scheduled",
-        "durationMs": 1.5,
-        "blockedMs": 1.5,
+        "durationMs": 1.1,
+        "blockedMs": 1.1,
         "networkWaitMs": 0,
-        "queuedMs": 114.2,
+        "queuedMs": 199.7,
         "status": "ok",
-        "phase": "smoke-switch:county-school-horizontal",
-        "time": "2026-10-31T02:01:54.166Z"
+        "phase": "",
+        "time": "2026-10-31T06:04:54.232Z"
       },
       {
         "key": "module-entry:county-analysis-render:county-school-horizontal",
@@ -2793,197 +2808,43 @@
         "durationMs": 0,
         "blockedMs": 0,
         "networkWaitMs": 0,
-        "queuedMs": 150.8,
+        "queuedMs": 84.6,
         "status": "ok",
         "phase": "smoke-deep:teacher-analysis",
-        "time": "2026-10-31T02:01:54.315Z"
+        "time": "2026-10-31T06:04:54.315Z"
       },
       {
         "key": "module-entry:teacher-analysis-render-work",
         "type": "scheduled",
-        "durationMs": 53.1,
-        "blockedMs": 52.8,
-        "networkWaitMs": 0.3,
+        "durationMs": 98.6,
+        "blockedMs": 98.1,
+        "networkWaitMs": 0.5,
         "queuedMs": 0,
         "status": "ok",
         "phase": "smoke-deep:teacher-analysis",
-        "time": "2026-10-31T02:01:54.416Z"
+        "time": "2026-10-31T06:04:54.500Z"
       },
       {
         "key": "module-entry:teacher-analysis-auto-render",
         "type": "scheduled",
-        "durationMs": 53.9,
-        "blockedMs": 53.6,
-        "networkWaitMs": 0.3,
-        "queuedMs": 16.2,
+        "durationMs": 99.4,
+        "blockedMs": 98.9,
+        "networkWaitMs": 0.5,
+        "queuedMs": 16.3,
         "status": "ok",
         "phase": "smoke-deep:teacher-analysis",
-        "time": "2026-10-31T02:01:54.416Z"
+        "time": "2026-10-31T06:04:54.500Z"
       },
       {
         "key": "module-entry:teacher-analysis-render-cards",
         "type": "scheduled",
-        "durationMs": 9.7,
-        "blockedMs": 2.9,
-        "networkWaitMs": 6.8,
-        "queuedMs": 1.9,
+        "durationMs": 9.8,
+        "blockedMs": 3.4,
+        "networkWaitMs": 6.4,
+        "queuedMs": 2.9,
         "status": "ok",
         "phase": "smoke-deep:teacher-analysis",
-        "time": "2026-10-31T02:01:54.427Z"
-      },
-      {
-        "key": "module-entry:town-submodule-compare-ui",
-        "type": "scheduled",
-        "durationMs": 0.1,
-        "blockedMs": 0,
-        "networkWaitMs": 0.1,
-        "queuedMs": 612,
-        "status": "ok",
-        "phase": "smoke-switch:teacher-detail-comparison",
-        "time": "2026-10-31T02:01:54.493Z"
-      },
-      {
-        "key": "module-entry:comparison-panel-collapse-enter",
-        "type": "scheduled",
-        "durationMs": 0.6,
-        "blockedMs": 0.4,
-        "networkWaitMs": 0.2,
-        "queuedMs": 178.7,
-        "status": "ok",
-        "phase": "smoke-switch:teacher-detail-comparison",
-        "time": "2026-10-31T02:01:54.493Z"
-      },
-      {
-        "key": "module-entry:teacher-analysis-render-work",
-        "type": "scheduled",
-        "durationMs": 18.1,
-        "blockedMs": 16.8,
-        "networkWaitMs": 1.3,
-        "queuedMs": 0,
-        "status": "ok",
-        "phase": "smoke-deep:teacher-detail-comparison",
-        "time": "2026-10-31T02:01:54.561Z"
-      },
-      {
-        "key": "module-entry:teacher-analysis-auto-render",
-        "type": "scheduled",
-        "durationMs": 18.5,
-        "blockedMs": 17.2,
-        "networkWaitMs": 1.3,
-        "queuedMs": 16.1,
-        "status": "ok",
-        "phase": "smoke-deep:teacher-detail-comparison",
-        "time": "2026-10-31T02:01:54.561Z"
-      },
-      {
-        "key": "module-entry:comparison-panel-collapse-enter",
-        "type": "scheduled",
-        "durationMs": 0.3,
-        "blockedMs": 0.2,
-        "networkWaitMs": 0.1,
-        "queuedMs": 139.3,
-        "status": "ok",
-        "phase": "smoke-switch:teacher-pairing",
-        "time": "2026-10-31T02:01:54.666Z"
-      },
-      {
-        "key": "module-entry:teacher-analysis-render-work",
-        "type": "scheduled",
-        "durationMs": 0.1,
-        "blockedMs": 0,
-        "networkWaitMs": 0.1,
-        "queuedMs": 0,
-        "status": "ok",
-        "phase": "smoke-deep:teacher-township-ranking",
-        "time": "2026-10-31T02:01:54.777Z"
-      },
-      {
-        "key": "module-entry:teacher-analysis-auto-render",
-        "type": "scheduled",
-        "durationMs": 0.5,
-        "blockedMs": 0.3,
-        "networkWaitMs": 0.2,
-        "queuedMs": 16.2,
-        "status": "ok",
-        "phase": "smoke-deep:teacher-township-ranking",
-        "time": "2026-10-31T02:01:54.777Z"
-      },
-      {
-        "key": "module-entry:teacher-analysis-render-township",
-        "type": "scheduled",
-        "durationMs": 26.3,
-        "blockedMs": 21.2,
-        "networkWaitMs": 5.1,
-        "queuedMs": 21.3,
-        "status": "ok",
-        "phase": "smoke-deep:teacher-township-ranking",
-        "time": "2026-10-31T02:01:54.825Z"
-      },
-      {
-        "key": "module-entry:teacher-analysis-refresh-compare-selects",
-        "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 526.4,
-        "status": "ok",
-        "phase": "",
-        "time": "2026-10-31T02:01:54.942Z"
-      },
-      {
-        "key": "module-entry:teacher-analysis-role-visibility",
-        "type": "scheduled",
-        "durationMs": 0.1,
-        "blockedMs": 0.1,
-        "networkWaitMs": 0,
-        "queuedMs": 445.8,
-        "status": "ok",
-        "phase": "smoke-switch:indicator",
-        "time": "2026-10-31T02:01:55.223Z"
-      },
-      {
-        "key": "module-entry:indicator-results",
-        "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 108.4,
-        "status": "ok",
-        "phase": "smoke-deep:indicator",
-        "time": "2026-10-31T02:01:55.418Z"
-      },
-      {
-        "key": "module-entry:prerequisite-status-enter",
-        "type": "scheduled",
-        "durationMs": 0.2,
-        "blockedMs": 0.2,
-        "networkWaitMs": 0,
-        "queuedMs": 61.8,
-        "status": "ok",
-        "phase": "smoke-switch:bottom3",
-        "time": "2026-10-31T02:01:55.478Z"
-      },
-      {
-        "key": "module-entry:summary-tables",
-        "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 62.7,
-        "status": "ok",
-        "phase": "smoke-switch:bottom3",
-        "time": "2026-10-31T02:01:55.479Z"
-      },
-      {
-        "key": "module-entry:macro-tables:bottom3-tables",
-        "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 971.2,
-        "status": "ok",
-        "phase": "smoke-deep:cohort-growth",
-        "time": "2026-10-31T02:01:56.462Z"
+        "time": "2026-10-31T06:04:54.512Z"
       },
       {
         "key": "module-entry:summary-auto-calculate",
@@ -2991,21 +2852,263 @@
         "durationMs": 0,
         "blockedMs": 0,
         "networkWaitMs": 0,
-        "queuedMs": 1115.4,
+        "queuedMs": 1172,
         "status": "ok",
-        "phase": "smoke-deep:cohort-growth",
-        "time": "2026-10-31T02:01:56.532Z"
+        "phase": "smoke-deep:teacher-detail-comparison",
+        "time": "2026-10-31T06:04:54.623Z"
+      },
+      {
+        "key": "module-entry:macro-tables:analysis-tables",
+        "type": "scheduled",
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 902.9,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-detail-comparison",
+        "time": "2026-10-31T06:04:54.623Z"
       },
       {
         "key": "module-entry:town-submodule-compare-ui",
         "type": "scheduled",
+        "durationMs": 0.1,
+        "blockedMs": 0.1,
+        "networkWaitMs": 0,
+        "queuedMs": 907.7,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-detail-comparison",
+        "time": "2026-10-31T06:04:54.628Z"
+      },
+      {
+        "key": "module-entry:comparison-panel-collapse-enter",
+        "type": "scheduled",
+        "durationMs": 0.6,
+        "blockedMs": 0.5,
+        "networkWaitMs": 0.1,
+        "queuedMs": 299.8,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-detail-comparison",
+        "time": "2026-10-31T06:04:54.628Z"
+      },
+      {
+        "key": "module-entry:prerequisite-status-enter",
+        "type": "scheduled",
         "durationMs": 0.5,
-        "blockedMs": 0.3,
+        "blockedMs": 0.2,
+        "networkWaitMs": 0.3,
+        "queuedMs": 300.3,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-detail-comparison",
+        "time": "2026-10-31T06:04:54.629Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-render-overview",
+        "type": "scheduled",
+        "durationMs": 0.1,
+        "blockedMs": 0.1,
+        "networkWaitMs": 0,
+        "queuedMs": 160.1,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-detail-comparison",
+        "time": "2026-10-31T06:04:54.660Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-role-visibility",
+        "type": "scheduled",
+        "durationMs": 0.1,
+        "blockedMs": 0.1,
+        "networkWaitMs": 0,
+        "queuedMs": 190.6,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-detail-comparison",
+        "time": "2026-10-31T06:04:54.690Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-render-work",
+        "type": "scheduled",
+        "durationMs": 33.2,
+        "blockedMs": 29.9,
+        "networkWaitMs": 3.3,
+        "queuedMs": 0,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-detail-comparison",
+        "time": "2026-10-31T06:04:54.735Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-auto-render",
+        "type": "scheduled",
+        "durationMs": 33.5,
+        "blockedMs": 30.2,
+        "networkWaitMs": 3.3,
+        "queuedMs": 16.2,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-detail-comparison",
+        "time": "2026-10-31T06:04:54.735Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-role-visibility",
+        "type": "scheduled",
+        "durationMs": 0.1,
+        "blockedMs": 0,
+        "networkWaitMs": 0.1,
+        "queuedMs": 195.4,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-township-ranking",
+        "time": "2026-10-31T06:04:54.927Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-render-work",
+        "type": "scheduled",
+        "durationMs": 0.2,
+        "blockedMs": 0.1,
+        "networkWaitMs": 0.1,
+        "queuedMs": 0,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-township-ranking",
+        "time": "2026-10-31T06:04:54.940Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-auto-render",
+        "type": "scheduled",
+        "durationMs": 0.4,
+        "blockedMs": 0.4,
+        "networkWaitMs": 0,
+        "queuedMs": 16.2,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-township-ranking",
+        "time": "2026-10-31T06:04:54.940Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-render-township",
+        "type": "scheduled",
+        "durationMs": 53.2,
+        "blockedMs": 42,
+        "networkWaitMs": 11.2,
+        "queuedMs": 31.7,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-township-ranking",
+        "time": "2026-10-31T06:04:55.025Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-refresh-compare-selects",
+        "type": "scheduled",
+        "durationMs": 0.1,
+        "blockedMs": 0,
+        "networkWaitMs": 0.1,
+        "queuedMs": 603.9,
+        "status": "ok",
+        "phase": "smoke-deep:teacher-township-ranking",
+        "time": "2026-10-31T06:04:55.103Z"
+      },
+      {
+        "key": "module-entry:comparison-panel-collapse-enter",
+        "type": "scheduled",
+        "durationMs": 0.9,
+        "blockedMs": 0.9,
+        "networkWaitMs": 0,
+        "queuedMs": 194.5,
+        "status": "ok",
+        "phase": "",
+        "time": "2026-10-31T06:04:55.118Z"
+      },
+      {
+        "key": "module-entry:prerequisite-status-enter",
+        "type": "scheduled",
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 210.2,
+        "status": "ok",
+        "phase": "",
+        "time": "2026-10-31T06:04:55.133Z"
+      },
+      {
+        "key": "module-entry:teacher-analysis-role-visibility",
+        "type": "scheduled",
+        "durationMs": 0.1,
+        "blockedMs": 0.1,
+        "networkWaitMs": 0,
+        "queuedMs": 193.4,
+        "status": "ok",
+        "phase": "",
+        "time": "2026-10-31T06:04:55.133Z"
+      },
+      {
+        "key": "module-entry:correlation-analysis-auto",
+        "type": "scheduled",
+        "durationMs": 0.6,
+        "blockedMs": 0.6,
+        "networkWaitMs": 0,
+        "queuedMs": 32.1,
+        "status": "ok",
+        "phase": "smoke-deep:correlation-analysis",
+        "time": "2026-10-31T06:04:55.367Z"
+      },
+      {
+        "key": "module-entry:comparison-panel-collapse-enter",
+        "type": "scheduled",
+        "durationMs": 0.3,
+        "blockedMs": 0.2,
+        "networkWaitMs": 0.1,
+        "queuedMs": 140.8,
+        "status": "ok",
+        "phase": "smoke-deep:correlation-analysis",
+        "time": "2026-10-31T06:04:55.475Z"
+      },
+      {
+        "key": "module-entry:prerequisite-status-enter",
+        "type": "scheduled",
+        "durationMs": 0.1,
+        "blockedMs": 0,
+        "networkWaitMs": 0.1,
+        "queuedMs": 172,
+        "status": "ok",
+        "phase": "smoke-switch:indicator",
+        "time": "2026-10-31T06:04:55.506Z"
+      },
+      {
+        "key": "module-entry:student-diagnosis-runtime-prewarm",
+        "type": "scheduled",
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 549.4,
+        "status": "ok",
+        "phase": "smoke-switch:bottom3",
+        "time": "2026-10-31T06:04:55.883Z"
+      },
+      {
+        "key": "module-entry:indicator-results",
+        "type": "scheduled",
+        "durationMs": 0.5,
+        "blockedMs": 0.5,
+        "networkWaitMs": 0,
+        "queuedMs": 110.4,
+        "status": "ok",
+        "phase": "smoke-switch:bottom3",
+        "time": "2026-10-31T06:04:55.884Z"
+      },
+      {
+        "key": "module-entry:comparison-panel-collapse-enter",
+        "type": "scheduled",
+        "durationMs": 0.5,
+        "blockedMs": 0.5,
+        "networkWaitMs": 0,
+        "queuedMs": 172,
+        "status": "ok",
+        "phase": "smoke-deep:bottom3",
+        "time": "2026-10-31T06:04:55.944Z"
+      },
+      {
+        "key": "module-entry:town-submodule-compare-ui",
+        "type": "scheduled",
+        "durationMs": 0.4,
+        "blockedMs": 0.2,
         "networkWaitMs": 0.2,
-        "queuedMs": 1042.9,
+        "queuedMs": 1431.2,
         "status": "ok",
         "phase": "smoke-deep:cohort-growth",
-        "time": "2026-10-31T02:01:56.534Z"
+        "time": "2026-10-31T06:04:57.203Z"
       },
       {
         "key": "module-entry:progress-analysis-controls",
@@ -3013,65 +3116,76 @@
         "durationMs": 0,
         "blockedMs": 0,
         "networkWaitMs": 0,
-        "queuedMs": 459.5,
+        "queuedMs": 624.8,
         "status": "ok",
         "phase": "smoke-deep:cohort-growth",
-        "time": "2026-10-31T02:01:56.535Z"
+        "time": "2026-10-31T06:04:57.203Z"
       },
       {
         "key": "module-entry:comparison-panel-collapse-enter",
         "type": "scheduled",
-        "durationMs": 0.6,
-        "blockedMs": 0.5,
-        "networkWaitMs": 0.1,
-        "queuedMs": 234.2,
+        "durationMs": 0.5,
+        "blockedMs": 0.3,
+        "networkWaitMs": 0.2,
+        "queuedMs": 137.3,
         "status": "ok",
         "phase": "smoke-deep:cohort-growth",
-        "time": "2026-10-31T02:01:56.548Z"
-      },
-      {
-        "key": "module-entry:prerequisite-status-enter",
-        "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 234.8,
-        "status": "ok",
-        "phase": "smoke-deep:cohort-growth",
-        "time": "2026-10-31T02:01:56.548Z"
+        "time": "2026-10-31T06:04:57.282Z"
       },
       {
         "key": "module-entry:report-generator-selects",
         "type": "scheduled",
-        "durationMs": 0.2,
-        "blockedMs": 0.2,
+        "durationMs": 0.4,
+        "blockedMs": 0.4,
         "networkWaitMs": 0,
-        "queuedMs": 67.4,
+        "queuedMs": 114.7,
         "status": "ok",
         "phase": "smoke-deep:report-generator",
-        "time": "2026-10-31T02:01:56.727Z"
+        "time": "2026-10-31T06:04:57.471Z"
       },
       {
         "key": "module-entry:report-generator-runtime-prewarm",
         "type": "scheduled",
-        "durationMs": 0.2,
-        "blockedMs": 0.1,
+        "durationMs": 0.1,
+        "blockedMs": 0,
         "networkWaitMs": 0.1,
-        "queuedMs": 103.9,
+        "queuedMs": 121.6,
         "status": "ok",
         "phase": "smoke-deep:report-generator",
-        "time": "2026-10-31T02:01:56.763Z"
+        "time": "2026-10-31T06:04:57.477Z"
       },
       {
         "key": "module-entry:comparison-panel-collapse-enter",
         "type": "scheduled",
-        "durationMs": 0.3,
-        "blockedMs": 0.2,
+        "durationMs": 0.2,
+        "blockedMs": 0.1,
         "networkWaitMs": 0.1,
-        "queuedMs": 134.7,
+        "queuedMs": 165.4,
         "status": "ok",
         "phase": "smoke-deep:report-generator",
-        "time": "2026-10-31T02:01:56.794Z"
+        "time": "2026-10-31T06:04:57.521Z"
+      },
+      {
+        "key": "module-entry:student-diagnosis-runtime-prewarm",
+        "type": "scheduled",
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 687.1,
+        "status": "ok",
+        "phase": "smoke-deep:freshman-simulator",
+        "time": "2026-10-31T06:04:58.458Z"
+      },
+      {
+        "key": "module-entry:comparison-panel-collapse-enter",
+        "type": "scheduled",
+        "durationMs": 0.5,
+        "blockedMs": 0.5,
+        "networkWaitMs": 0,
+        "queuedMs": 240.8,
+        "status": "ok",
+        "phase": "smoke-deep:freshman-simulator",
+        "time": "2026-10-31T06:04:58.458Z"
       },
       {
         "key": "module-entry:prerequisite-status-enter",
@@ -3079,32 +3193,10 @@
         "durationMs": 0,
         "blockedMs": 0,
         "networkWaitMs": 0,
-        "queuedMs": 244.4,
-        "status": "ok",
-        "phase": "",
-        "time": "2026-10-31T02:01:56.903Z"
-      },
-      {
-        "key": "module-entry:comparison-panel-collapse-enter",
-        "type": "scheduled",
-        "durationMs": 0.4,
-        "blockedMs": 0.3,
-        "networkWaitMs": 0.1,
-        "queuedMs": 130.5,
+        "queuedMs": 298.3,
         "status": "ok",
         "phase": "smoke-deep:freshman-simulator",
-        "time": "2026-10-31T02:01:57.270Z"
-      },
-      {
-        "key": "module-entry:student-diagnosis-runtime-prewarm",
-        "type": "scheduled",
-        "durationMs": 0.1,
-        "blockedMs": 0.1,
-        "networkWaitMs": 0,
-        "queuedMs": 544.9,
-        "status": "ok",
-        "phase": "smoke-deep:exam-arranger",
-        "time": "2026-10-31T02:01:57.547Z"
+        "time": "2026-10-31T06:04:58.515Z"
       },
       {
         "key": "module-entry:comparison-panel-collapse-enter",
@@ -3112,10 +3204,10 @@
         "durationMs": 0.8,
         "blockedMs": 0.8,
         "networkWaitMs": 0,
-        "queuedMs": 147.3,
+        "queuedMs": 205.9,
         "status": "ok",
-        "phase": "smoke-deep:exam-arranger",
-        "time": "2026-10-31T02:01:57.548Z"
+        "phase": "smoke-deep:grade-scheduler",
+        "time": "2026-10-31T06:04:58.960Z"
       },
       {
         "key": "module-entry:prerequisite-status-enter",
@@ -3123,43 +3215,21 @@
         "durationMs": 0,
         "blockedMs": 0,
         "networkWaitMs": 0,
-        "queuedMs": 182.6,
+        "queuedMs": 206.8,
         "status": "ok",
-        "phase": "smoke-deep:exam-arranger",
-        "time": "2026-10-31T02:01:57.583Z"
+        "phase": "smoke-deep:grade-scheduler",
+        "time": "2026-10-31T06:04:58.960Z"
       },
       {
         "key": "module-entry:comparison-panel-collapse-enter",
         "type": "scheduled",
-        "durationMs": 0.6,
-        "blockedMs": 0.5,
-        "networkWaitMs": 0.1,
-        "queuedMs": 415.8,
-        "status": "ok",
-        "phase": "smoke-deep:grade-scheduler",
-        "time": "2026-10-31T02:01:58.102Z"
-      },
-      {
-        "key": "module-entry:prerequisite-status-enter",
-        "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 416.4,
-        "status": "ok",
-        "phase": "smoke-deep:grade-scheduler",
-        "time": "2026-10-31T02:01:58.102Z"
-      },
-      {
-        "key": "module-entry:comparison-panel-collapse-enter",
-        "type": "scheduled",
-        "durationMs": 0.2,
+        "durationMs": 0.3,
         "blockedMs": 0.2,
-        "networkWaitMs": 0,
-        "queuedMs": 123.2,
+        "networkWaitMs": 0.1,
+        "queuedMs": 460.2,
         "status": "ok",
-        "phase": "smoke-deep:student-overview",
-        "time": "2026-10-31T02:01:59.516Z"
+        "phase": "smoke-deep:grade-scheduler",
+        "time": "2026-10-31T06:04:59.461Z"
       },
       {
         "key": "module-entry:prerequisite-status-enter",
@@ -3167,21 +3237,10 @@
         "durationMs": 0,
         "blockedMs": 0,
         "networkWaitMs": 0,
-        "queuedMs": 162.2,
+        "queuedMs": 460.5,
         "status": "ok",
-        "phase": "smoke-deep:student-overview",
-        "time": "2026-10-31T02:01:59.555Z"
-      },
-      {
-        "key": "module-entry:student-details-enter-init",
-        "type": "scheduled",
-        "durationMs": 0.6,
-        "blockedMs": 0.4,
-        "networkWaitMs": 0.2,
-        "queuedMs": 95.9,
-        "status": "ok",
-        "phase": "",
-        "time": "2026-10-31T02:02:00.088Z"
+        "phase": "smoke-deep:grade-scheduler",
+        "time": "2026-10-31T06:04:59.461Z"
       },
       {
         "key": "report-history-hydrate:银山实验|9.4|解洪旭|-::2022级-9年级-2025-2026-上学期-期末-2026-01-31|2022级-9年级-2025-2026-下学期-一模-2026-04-16::2022级-9年级-2025-2026-下学期-中考-2026-07-28",
@@ -3189,65 +3248,32 @@
         "durationMs": 0.3,
         "blockedMs": 0.3,
         "networkWaitMs": 0,
-        "queuedMs": 3269.9,
+        "queuedMs": 3292,
         "status": "ok",
-        "phase": "smoke-dm:student",
-        "time": "2026-10-31T02:02:00.150Z"
-      },
-      {
-        "key": "data-manager-status-render",
-        "type": "scheduled",
-        "durationMs": 3.3,
-        "blockedMs": 3.1,
-        "networkWaitMs": 0.2,
-        "queuedMs": 110.8,
-        "status": "ok",
-        "phase": "smoke-dm:student",
-        "time": "2026-10-31T02:02:00.246Z"
+        "phase": "smoke-deep:student-overview",
+        "time": "2026-10-31T06:05:00.941Z"
       },
       {
         "key": "module-entry:comparison-panel-collapse-enter",
         "type": "scheduled",
-        "durationMs": 0.3,
-        "blockedMs": 0.2,
-        "networkWaitMs": 0.1,
-        "queuedMs": 131,
-        "status": "ok",
-        "phase": "smoke-dm:student",
-        "time": "2026-10-31T02:02:00.274Z"
-      },
-      {
-        "key": "module-entry:student-details-render-primary",
-        "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 297.6,
-        "status": "ok",
-        "phase": "smoke-dm:student",
-        "time": "2026-10-31T02:02:00.386Z"
-      },
-      {
-        "key": "module-entry:comparison-panel-collapse-enter",
-        "type": "scheduled",
-        "durationMs": 0.1,
+        "durationMs": 0.2,
         "blockedMs": 0.1,
-        "networkWaitMs": 0,
-        "queuedMs": 137.6,
+        "networkWaitMs": 0.1,
+        "queuedMs": 170,
         "status": "ok",
-        "phase": "smoke-dm:student",
-        "time": "2026-10-31T02:02:00.480Z"
+        "phase": "smoke-deep:student-overview",
+        "time": "2026-10-31T06:05:00.996Z"
       },
       {
         "key": "module-entry:prerequisite-status-enter",
         "type": "scheduled",
-        "durationMs": 0,
+        "durationMs": 0.1,
         "blockedMs": 0,
-        "networkWaitMs": 0,
-        "queuedMs": 167.9,
+        "networkWaitMs": 0.1,
+        "queuedMs": 205,
         "status": "ok",
-        "phase": "smoke-dm:student",
-        "time": "2026-10-31T02:02:00.510Z"
+        "phase": "smoke-deep:student-overview",
+        "time": "2026-10-31T06:05:01.031Z"
       },
       {
         "key": "module-entry:student-diagnosis-runtime-prewarm",
@@ -3255,10 +3281,98 @@
         "durationMs": 0,
         "blockedMs": 0,
         "networkWaitMs": 0,
-        "queuedMs": 505.3,
+        "queuedMs": 584.8,
+        "status": "ok",
+        "phase": "",
+        "time": "2026-10-31T06:05:01.411Z"
+      },
+      {
+        "key": "module-entry:student-details-enter-init",
+        "type": "scheduled",
+        "durationMs": 0.6,
+        "blockedMs": 0.5,
+        "networkWaitMs": 0.1,
+        "queuedMs": 134.5,
         "status": "ok",
         "phase": "smoke-dm:student",
-        "time": "2026-10-31T02:02:00.593Z"
+        "time": "2026-10-31T06:05:01.533Z"
+      },
+      {
+        "key": "data-manager-status-render",
+        "type": "scheduled",
+        "durationMs": 4.5,
+        "blockedMs": 4,
+        "networkWaitMs": 0.5,
+        "queuedMs": 88.5,
+        "status": "ok",
+        "phase": "smoke-dm:student",
+        "time": "2026-10-31T06:05:01.593Z"
+      },
+      {
+        "key": "module-entry:student-details-render-primary",
+        "type": "scheduled",
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 264,
+        "status": "ok",
+        "phase": "smoke-dm:student",
+        "time": "2026-10-31T06:05:01.797Z"
+      },
+      {
+        "key": "module-entry:comparison-panel-collapse-enter",
+        "type": "scheduled",
+        "durationMs": 0.1,
+        "blockedMs": 0.1,
+        "networkWaitMs": 0,
+        "queuedMs": 131.2,
+        "status": "ok",
+        "phase": "smoke-dm:student",
+        "time": "2026-10-31T06:05:01.814Z"
+      },
+      {
+        "key": "module-entry:prerequisite-status-enter",
+        "type": "scheduled",
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 163.9,
+        "status": "ok",
+        "phase": "smoke-dm:student",
+        "time": "2026-10-31T06:05:01.846Z"
+      },
+      {
+        "key": "module-entry:student-diagnosis-runtime-prewarm",
+        "type": "scheduled",
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 513.4,
+        "status": "ok",
+        "phase": "smoke-dm:student",
+        "time": "2026-10-31T06:05:02.046Z"
+      },
+      {
+        "key": "data-manager-status-render",
+        "type": "scheduled",
+        "durationMs": 0.3,
+        "blockedMs": 0.3,
+        "networkWaitMs": 0,
+        "queuedMs": 80.2,
+        "status": "ok",
+        "phase": "smoke-dm:teacher",
+        "time": "2026-10-31T06:05:02.226Z"
+      },
+      {
+        "key": "module-entry:student-details-render-fallback",
+        "type": "scheduled",
+        "durationMs": 0,
+        "blockedMs": 0,
+        "networkWaitMs": 0,
+        "queuedMs": 900.2,
+        "status": "ok",
+        "phase": "smoke-dm:teacher",
+        "time": "2026-10-31T06:05:02.434Z"
       },
       {
         "key": "data-manager-status-render",
@@ -3266,21 +3380,10 @@
         "durationMs": 0.2,
         "blockedMs": 0.2,
         "networkWaitMs": 0,
-        "queuedMs": 83,
+        "queuedMs": 80.2,
         "status": "ok",
-        "phase": "smoke-dm:teacher",
-        "time": "2026-10-31T02:02:00.860Z"
-      },
-      {
-        "key": "module-entry:student-details-render-fallback",
-        "type": "scheduled",
-        "durationMs": 0.1,
-        "blockedMs": 0.1,
-        "networkWaitMs": 0,
-        "queuedMs": 901.5,
-        "status": "ok",
-        "phase": "smoke-dm:teacher",
-        "time": "2026-10-31T02:02:00.990Z"
+        "phase": "smoke-dm:targets",
+        "time": "2026-10-31T06:05:02.883Z"
       },
       {
         "key": "module-entry:student-details-compare-selects",
@@ -3288,32 +3391,21 @@
         "durationMs": 0,
         "blockedMs": 0,
         "networkWaitMs": 0,
-        "queuedMs": 1416,
+        "queuedMs": 1400.2,
         "status": "ok",
         "phase": "smoke-dm:targets",
-        "time": "2026-10-31T02:02:01.504Z"
-      },
-      {
-        "key": "data-manager-status-render",
-        "type": "scheduled",
-        "durationMs": 2.6,
-        "blockedMs": 2.6,
-        "networkWaitMs": 0,
-        "queuedMs": 83.5,
-        "status": "ok",
-        "phase": "smoke-dm:targets",
-        "time": "2026-10-31T02:02:01.507Z"
+        "time": "2026-10-31T06:05:02.934Z"
       },
       {
         "key": "module-entry:student-diagnosis-report-prewarm",
         "type": "scheduled",
-        "durationMs": 0,
-        "blockedMs": 0,
+        "durationMs": 0.1,
+        "blockedMs": 0.1,
         "networkWaitMs": 0,
         "queuedMs": 2600.1,
         "status": "ok",
-        "phase": "smoke-dm:params",
-        "time": "2026-10-31T02:02:02.688Z"
+        "phase": "smoke-dm:sql",
+        "time": "2026-10-31T06:05:04.133Z"
       },
       {
         "key": "data-manager-status-render",
@@ -3321,25 +3413,25 @@
         "durationMs": 1.9,
         "blockedMs": 1.9,
         "networkWaitMs": 0,
-        "queuedMs": 80.1,
+        "queuedMs": 80.2,
         "status": "ok",
         "phase": "smoke-dm:sql",
-        "time": "2026-10-31T02:02:02.789Z"
+        "time": "2026-10-31T06:05:04.178Z"
       },
       {
         "key": "data-manager-status-render",
         "type": "scheduled",
-        "durationMs": 0.1,
-        "blockedMs": 0.1,
+        "durationMs": 0.2,
+        "blockedMs": 0.2,
         "networkWaitMs": 0,
-        "queuedMs": 80.2,
+        "queuedMs": 80.1,
         "status": "ok",
         "phase": "smoke-dm:cloud",
-        "time": "2026-10-31T02:02:03.227Z"
+        "time": "2026-10-31T06:05:04.626Z"
       }
     ],
-    "maxScheduledTaskMs": 53.9,
-    "maxNetworkWaitMs": 6.8,
+    "maxScheduledTaskMs": 99.4,
+    "maxNetworkWaitMs": 11.2,
     "longTasks": [],
     "hotspotPrewarm": {
       "ok": true,
@@ -3365,76 +3457,76 @@
           "status": "loaded"
         }
       ],
-      "durationMs": 86
+      "durationMs": 110
     },
     "functionProfilerInstalled": [],
-    "totalMs": 20717,
+    "totalMs": 23072,
     "slowestModules": [
       {
         "id": "grade-scheduler",
-        "switchMs": 11.700000000011642,
-        "deepCheckMs": 1157,
-        "totalMs": 1168.7000000000116
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 27.19999999999709,
-        "deepCheckMs": 482,
-        "totalMs": 509.1999999999971
+        "switchMs": 10.400000000023283,
+        "deepCheckMs": 1273,
+        "totalMs": 1283.4000000000233
       },
       {
         "id": "freshman-simulator",
-        "switchMs": 41.90000000000873,
-        "deepCheckMs": 278,
-        "totalMs": 319.90000000000873
+        "switchMs": 64.89999999996508,
+        "deepCheckMs": 598,
+        "totalMs": 662.8999999999651
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 27.599999999976717,
+        "deepCheckMs": 477,
+        "totalMs": 504.5999999999767
       },
       {
         "id": "report-generator",
-        "switchMs": 12.900000000008731,
-        "deepCheckMs": 267,
-        "totalMs": 279.90000000000873
-      },
-      {
-        "id": "cohort-growth",
-        "switchMs": 12.799999999988358,
-        "deepCheckMs": 263,
-        "totalMs": 275.79999999998836
-      },
-      {
-        "id": "subject-balance",
-        "switchMs": 33.30000000000291,
-        "deepCheckMs": 207,
-        "totalMs": 240.3000000000029
-      },
-      {
-        "id": "exam-arranger",
-        "switchMs": 1.2000000000116415,
-        "deepCheckMs": 221,
-        "totalMs": 222.20000000001164
+        "switchMs": 19.20000000001164,
+        "deepCheckMs": 319,
+        "totalMs": 338.20000000001164
       },
       {
         "id": "progress-analysis",
-        "switchMs": 36.40000000000873,
-        "deepCheckMs": 161,
-        "totalMs": 197.40000000000873
+        "switchMs": 59.29999999998836,
+        "deepCheckMs": 257,
+        "totalMs": 316.29999999998836
+      },
+      {
+        "id": "cohort-growth",
+        "switchMs": 23.29999999998836,
+        "deepCheckMs": 288,
+        "totalMs": 311.29999999998836
+      },
+      {
+        "id": "teacher-analysis",
+        "switchMs": 32.600000000034925,
+        "deepCheckMs": 224,
+        "totalMs": 256.6000000000349
+      },
+      {
+        "id": "correlation-analysis",
+        "switchMs": 30.5,
+        "deepCheckMs": 221,
+        "totalMs": 251.5
       }
     ],
     "slowestDataManagerTabs": [
       {
         "id": "cloud",
-        "durationMs": 1104
+        "durationMs": 1108
       },
       {
         "id": "student",
-        "durationMs": 642
-      },
-      {
-        "id": "teacher",
-        "durationMs": 629
+        "durationMs": 636
       },
       {
         "id": "targets",
-        "durationMs": 626
+        "durationMs": 631
+      },
+      {
+        "id": "teacher",
+        "durationMs": 628
       }
     ],
     "systemPerformanceSnapshot": {
@@ -3448,195 +3540,136 @@
       "nativeLongTasks": [
         {
           "key": "self",
-          "duration": 211,
-          "time": "2026-10-31T02:01:47.512Z"
-        },
-        {
-          "key": "self",
-          "duration": 189,
-          "time": "2026-10-31T02:01:48.082Z"
-        },
-        {
-          "key": "self",
-          "duration": 135,
-          "time": "2026-10-31T02:01:49.816Z"
-        },
-        {
-          "key": "self",
-          "duration": 50,
-          "time": "2026-10-31T02:01:51.051Z"
-        },
-        {
-          "key": "self",
-          "duration": 60,
-          "time": "2026-10-31T02:01:51.152Z"
-        },
-        {
-          "key": "self",
-          "duration": 141,
-          "time": "2026-10-31T02:01:51.409Z"
-        },
-        {
-          "key": "self",
-          "duration": 59,
-          "time": "2026-10-31T02:01:52.111Z"
-        },
-        {
-          "key": "self",
-          "duration": 71,
-          "time": "2026-10-31T02:01:53.884Z",
+          "duration": 130,
+          "time": "2026-10-31T06:04:53.726Z",
           "phase": "smoke-deep:analysis"
         },
         {
           "key": "self",
-          "duration": 58,
-          "time": "2026-10-31T02:01:54.290Z",
+          "duration": 82,
+          "time": "2026-10-31T06:04:54.040Z",
+          "phase": "smoke-deep:county-teacher-portrait"
+        },
+        {
+          "key": "self",
+          "duration": 82,
+          "time": "2026-10-31T06:04:54.192Z",
+          "phase": "smoke-switch:county-school-horizontal"
+        },
+        {
+          "key": "self",
+          "duration": 50,
+          "time": "2026-10-31T06:04:54.300Z",
           "phase": "smoke-switch:teacher-analysis"
         },
         {
           "key": "self",
-          "duration": 53,
-          "time": "2026-10-31T02:01:54.436Z",
+          "duration": 99,
+          "time": "2026-10-31T06:04:54.525Z",
           "phase": "smoke-deep:teacher-analysis"
         },
         {
           "key": "self",
-          "duration": 65,
-          "time": "2026-10-31T02:01:54.864Z",
+          "duration": 131,
+          "time": "2026-10-31T06:04:55.103Z",
           "phase": "smoke-deep:teacher-township-ranking"
         },
         {
           "key": "self",
-          "duration": 53,
-          "time": "2026-10-31T02:01:55.290Z",
+          "duration": 50,
+          "time": "2026-10-31T06:04:55.565Z",
           "phase": "smoke-switch:indicator"
         },
         {
           "key": "self",
-          "duration": 59,
-          "time": "2026-10-31T02:01:55.864Z",
-          "phase": "smoke-deep:seat-adjustment"
+          "duration": 60,
+          "time": "2026-10-31T06:04:55.706Z",
+          "phase": "smoke-switch:indicator"
         },
         {
           "key": "self",
-          "duration": 85,
-          "time": "2026-10-31T02:01:56.211Z",
+          "duration": 53,
+          "time": "2026-10-31T06:04:56.245Z",
+          "phase": "smoke-switch:seat-adjustment"
+        },
+        {
+          "key": "self",
+          "duration": 62,
+          "time": "2026-10-31T06:04:56.534Z",
+          "phase": "smoke-switch:progress-analysis"
+        },
+        {
+          "key": "self",
+          "duration": 147,
+          "time": "2026-10-31T06:04:56.812Z",
           "phase": "smoke-deep:progress-analysis"
         },
         {
           "key": "self",
-          "duration": 83,
-          "time": "2026-10-31T02:01:56.902Z",
+          "duration": 75,
+          "time": "2026-10-31T06:04:56.812Z",
+          "phase": "smoke-deep:progress-analysis"
+        },
+        {
+          "key": "self",
+          "duration": 75,
+          "time": "2026-10-31T06:04:57.104Z",
+          "phase": "smoke-deep:cohort-growth"
+        },
+        {
+          "key": "self",
+          "duration": 110,
+          "time": "2026-10-31T06:04:57.681Z",
           "phase": "smoke-deep:report-generator"
         },
         {
           "key": "self",
-          "duration": 288,
-          "time": "2026-10-31T02:01:58.070Z",
+          "duration": 67,
+          "time": "2026-10-31T06:04:57.991Z",
+          "phase": "smoke-switch:freshman-simulator"
+        },
+        {
+          "key": "self",
+          "duration": 60,
+          "time": "2026-10-31T06:04:58.221Z",
+          "phase": "smoke-deep:freshman-simulator"
+        },
+        {
+          "key": "self",
+          "duration": 370,
+          "time": "2026-10-31T06:04:59.448Z",
           "phase": "smoke-deep:grade-scheduler"
         },
         {
           "key": "self",
-          "duration": 277,
-          "time": "2026-10-31T02:01:58.621Z",
+          "duration": 320,
+          "time": "2026-10-31T06:05:00.042Z",
           "phase": "smoke-deep:grade-scheduler"
         },
         {
           "key": "self",
-          "duration": 54,
-          "time": "2026-10-31T02:01:59.058Z",
+          "duration": 68,
+          "time": "2026-10-31T06:05:00.457Z",
           "phase": "smoke-deep:subject-balance"
         },
         {
           "key": "self",
-          "duration": 108,
-          "time": "2026-10-31T02:01:59.058Z",
+          "duration": 110,
+          "time": "2026-10-31T06:05:00.457Z",
           "phase": "smoke-deep:subject-balance"
-        },
-        {
-          "key": "self",
-          "duration": 51,
-          "time": "2026-10-31T02:01:59.493Z",
-          "phase": "smoke-deep:student-overview"
         }
       ],
       "scheduledTasks": [
         {
-          "key": "module-entry:core-workflow-preheat-initial",
-          "type": "scheduled",
-          "durationMs": 0.1,
-          "blockedMs": 0.1,
-          "networkWaitMs": 0,
-          "queuedMs": 3018,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:48.735Z"
-        },
-        {
-          "key": "module-entry:prerequisite-status-enter",
-          "type": "scheduled",
-          "durationMs": 0.9,
-          "blockedMs": 0.6,
-          "networkWaitMs": 0.3,
-          "queuedMs": 40.3,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:48.813Z"
-        },
-        {
-          "key": "module-entry:summary-tables",
-          "type": "scheduled",
-          "durationMs": 13.1,
-          "blockedMs": 7.9,
-          "networkWaitMs": 5.2,
-          "queuedMs": 40.7,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:48.827Z"
-        },
-        {
-          "key": "module-entry:summary-auto-calculate",
-          "type": "scheduled",
-          "durationMs": 16.1,
-          "blockedMs": 0.9,
-          "networkWaitMs": 15.2,
-          "queuedMs": 101.5,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:48.890Z"
-        },
-        {
           "key": "module-entry:comparison-panel-collapse-enter",
           "type": "scheduled",
-          "durationMs": 0.3,
+          "durationMs": 0.5,
           "blockedMs": 0.3,
-          "networkWaitMs": 0,
-          "queuedMs": 162.1,
+          "networkWaitMs": 0.2,
+          "queuedMs": 274.8,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:48.935Z"
-        },
-        {
-          "key": "module-entry:student-details-enter-init",
-          "type": "scheduled",
-          "durationMs": 2.2,
-          "blockedMs": 1.9,
-          "networkWaitMs": 0.3,
-          "queuedMs": 54.2,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:49.925Z"
-        },
-        {
-          "key": "module-entry:comparison-panel-collapse-enter",
-          "type": "scheduled",
-          "durationMs": 0.2,
-          "blockedMs": 0.2,
-          "networkWaitMs": 0,
-          "queuedMs": 125.7,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:49.994Z"
+          "time": "2026-10-31T06:04:49.913Z"
         },
         {
           "key": "module-entry:prerequisite-status-enter",
@@ -3644,43 +3677,43 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 175.1,
+          "queuedMs": 607.6,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:50.044Z"
+          "time": "2026-10-31T06:04:50.245Z"
         },
         {
           "key": "module-entry:student-details-county-runtime",
           "type": "scheduled",
-          "durationMs": 0.5,
-          "blockedMs": 0,
+          "durationMs": 0.6,
+          "blockedMs": 0.1,
           "networkWaitMs": 0.5,
-          "queuedMs": 260.2,
+          "queuedMs": 349.5,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:50.186Z"
+          "time": "2026-10-31T06:04:50.246Z"
         },
         {
           "key": "module-entry:student-details-render-primary",
           "type": "scheduled",
-          "durationMs": 33.2,
-          "blockedMs": 31.6,
-          "networkWaitMs": 1.6,
-          "queuedMs": 261.6,
+          "durationMs": 72.9,
+          "blockedMs": 70,
+          "networkWaitMs": 2.9,
+          "queuedMs": 350.1,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:50.220Z"
+          "time": "2026-10-31T06:04:50.319Z"
         },
         {
           "key": "module-entry:student-diagnosis-runtime-prewarm",
           "type": "scheduled",
-          "durationMs": 0.5,
-          "blockedMs": 0,
-          "networkWaitMs": 0.5,
-          "queuedMs": 524.7,
+          "durationMs": 0.7,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0.6,
+          "queuedMs": 502,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:50.449Z"
+          "time": "2026-10-31T06:04:50.397Z"
         },
         {
           "key": "module-entry:student-details-render-fallback",
@@ -3688,76 +3721,65 @@
           "durationMs": 0.1,
           "blockedMs": 0.1,
           "networkWaitMs": 0,
-          "queuedMs": 900.2,
+          "queuedMs": 900.1,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:50.825Z"
-        },
-        {
-          "key": "module-entry:core-workflow-preheat",
-          "type": "scheduled",
-          "durationMs": 0.8,
-          "blockedMs": 0.2,
-          "networkWaitMs": 0.6,
-          "queuedMs": 2500.2,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:51.236Z"
-        },
-        {
-          "key": "module-entry:student-details-compare-selects",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 1506.9,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:51.432Z"
+          "time": "2026-10-31T06:04:50.796Z"
         },
         {
           "key": "module-entry:prerequisite-status-enter",
           "type": "scheduled",
-          "durationMs": 0.2,
+          "durationMs": 0.3,
           "blockedMs": 0.2,
-          "networkWaitMs": 0,
-          "queuedMs": 35.6,
+          "networkWaitMs": 0.1,
+          "queuedMs": 47.2,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:51.561Z"
+          "time": "2026-10-31T06:04:51.263Z"
         },
         {
           "key": "module-entry:summary-tables",
           "type": "scheduled",
-          "durationMs": 35.5,
-          "blockedMs": 29.9,
-          "networkWaitMs": 5.6,
-          "queuedMs": 35.7,
+          "durationMs": 61.9,
+          "blockedMs": 49.3,
+          "networkWaitMs": 12.6,
+          "queuedMs": 47.3,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:51.596Z"
+          "time": "2026-10-31T06:04:51.325Z"
         },
         {
           "key": "module-entry:summary-auto-calculate",
           "type": "scheduled",
-          "durationMs": 17.2,
-          "blockedMs": 0.3,
-          "networkWaitMs": 16.9,
-          "queuedMs": 93.2,
+          "durationMs": 17.8,
+          "blockedMs": 0.4,
+          "networkWaitMs": 17.4,
+          "queuedMs": 229.7,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:51.635Z"
+          "time": "2026-10-31T06:04:51.463Z"
+        },
+        {
+          "key": "module-entry:student-details-compare-selects",
+          "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0,
+          "queuedMs": 1569.3,
+          "status": "ok",
+          "phase": "",
+          "time": "2026-10-31T06:04:51.466Z"
         },
         {
           "key": "module-entry:comparison-panel-collapse-enter",
           "type": "scheduled",
-          "durationMs": 0.2,
-          "blockedMs": 0.2,
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
           "networkWaitMs": 0,
-          "queuedMs": 141.4,
+          "queuedMs": 250.3,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:51.666Z"
+          "time": "2026-10-31T06:04:51.466Z"
         },
         {
           "key": "module-entry:analysis-entry-selects",
@@ -3765,32 +3787,32 @@
           "durationMs": 0.1,
           "blockedMs": 0.1,
           "networkWaitMs": 0,
-          "queuedMs": 49,
+          "queuedMs": 57.4,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:52.173Z"
+          "time": "2026-10-31T06:04:51.742Z"
         },
         {
           "key": "module-entry:macro-tables:analysis-tables",
           "type": "scheduled",
-          "durationMs": 14.5,
-          "blockedMs": 12.1,
-          "networkWaitMs": 2.4,
-          "queuedMs": 76,
+          "durationMs": 18.5,
+          "blockedMs": 16,
+          "networkWaitMs": 2.5,
+          "queuedMs": 105.4,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:52.214Z"
+          "time": "2026-10-31T06:04:51.808Z"
         },
         {
           "key": "module-entry:comparison-panel-collapse-enter",
           "type": "scheduled",
-          "durationMs": 0.6,
-          "blockedMs": 0.5,
+          "durationMs": 0.8,
+          "blockedMs": 0.7,
           "networkWaitMs": 0.1,
-          "queuedMs": 139.1,
+          "queuedMs": 221.1,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:52.252Z"
+          "time": "2026-10-31T06:04:51.876Z"
         },
         {
           "key": "module-entry:prerequisite-status-enter",
@@ -3798,54 +3820,76 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 202.1,
+          "queuedMs": 222,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:52.315Z"
-        },
-        {
-          "key": "module-entry:student-diagnosis-report-prewarm",
-          "type": "scheduled",
-          "durationMs": 0.7,
-          "blockedMs": 0.1,
-          "networkWaitMs": 0.6,
-          "queuedMs": 2600.1,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:52.524Z"
+          "time": "2026-10-31T06:04:51.876Z"
         },
         {
           "key": "module-entry:town-submodule-compare-ui",
           "type": "scheduled",
-          "durationMs": 0.4,
+          "durationMs": 0.8,
           "blockedMs": 0.1,
-          "networkWaitMs": 0.3,
+          "networkWaitMs": 0.7,
           "queuedMs": 420.2,
           "status": "ok",
           "phase": "",
-          "time": "2026-10-31T02:01:52.533Z"
+          "time": "2026-10-31T06:04:52.075Z"
+        },
+        {
+          "key": "module-entry:student-diagnosis-report-prewarm",
+          "type": "scheduled",
+          "durationMs": 0.6,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0.5,
+          "queuedMs": 2600.1,
+          "status": "ok",
+          "phase": "",
+          "time": "2026-10-31T06:04:52.495Z"
+        },
+        {
+          "key": "module-entry:comparison-panel-collapse-enter",
+          "type": "scheduled",
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 227.6,
+          "status": "ok",
+          "phase": "smoke-switch:summary",
+          "time": "2026-10-31T06:04:53.378Z"
         },
         {
           "key": "module-entry:prerequisite-status-enter",
           "type": "scheduled",
-          "durationMs": 0.2,
-          "blockedMs": 0.2,
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
           "networkWaitMs": 0,
-          "queuedMs": 45.7,
+          "queuedMs": 227.6,
           "status": "ok",
-          "phase": "smoke-switch:analysis",
-          "time": "2026-10-31T02:01:53.755Z"
+          "phase": "smoke-switch:summary",
+          "time": "2026-10-31T06:04:53.378Z"
+        },
+        {
+          "key": "module-entry:prerequisite-status-enter",
+          "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0,
+          "queuedMs": 41.6,
+          "status": "ok",
+          "phase": "",
+          "time": "2026-10-31T06:04:53.492Z"
         },
         {
           "key": "module-entry:summary-tables",
           "type": "scheduled",
-          "durationMs": 5.2,
-          "blockedMs": 3.9,
-          "networkWaitMs": 1.3,
-          "queuedMs": 45.8,
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 97.6,
           "status": "ok",
           "phase": "smoke-switch:analysis",
-          "time": "2026-10-31T02:01:53.760Z"
+          "time": "2026-10-31T06:04:53.548Z"
         },
         {
           "key": "module-entry:analysis-entry-selects",
@@ -3853,43 +3897,21 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 59.6,
+          "queuedMs": 99.3,
           "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:53.940Z"
-        },
-        {
-          "key": "module-entry:summary-auto-calculate",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 233.5,
-          "status": "ok",
-          "phase": "smoke-deep:high-score",
-          "time": "2026-10-31T02:01:53.943Z"
-        },
-        {
-          "key": "module-entry:macro-tables:analysis-tables",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 109.8,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:53.991Z"
+          "phase": "smoke-switch:high-score",
+          "time": "2026-10-31T06:04:53.819Z"
         },
         {
           "key": "module-entry:county-analysis-render:county-teacher-portrait",
           "type": "scheduled",
-          "durationMs": 1.5,
-          "blockedMs": 1.5,
+          "durationMs": 1.1,
+          "blockedMs": 1.1,
           "networkWaitMs": 0,
-          "queuedMs": 114.2,
+          "queuedMs": 199.7,
           "status": "ok",
-          "phase": "smoke-switch:county-school-horizontal",
-          "time": "2026-10-31T02:01:54.166Z"
+          "phase": "",
+          "time": "2026-10-31T06:04:54.232Z"
         },
         {
           "key": "module-entry:county-analysis-render:county-school-horizontal",
@@ -3897,197 +3919,43 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 150.8,
+          "queuedMs": 84.6,
           "status": "ok",
           "phase": "smoke-deep:teacher-analysis",
-          "time": "2026-10-31T02:01:54.315Z"
+          "time": "2026-10-31T06:04:54.315Z"
         },
         {
           "key": "module-entry:teacher-analysis-render-work",
           "type": "scheduled",
-          "durationMs": 53.1,
-          "blockedMs": 52.8,
-          "networkWaitMs": 0.3,
+          "durationMs": 98.6,
+          "blockedMs": 98.1,
+          "networkWaitMs": 0.5,
           "queuedMs": 0,
           "status": "ok",
           "phase": "smoke-deep:teacher-analysis",
-          "time": "2026-10-31T02:01:54.416Z"
+          "time": "2026-10-31T06:04:54.500Z"
         },
         {
           "key": "module-entry:teacher-analysis-auto-render",
           "type": "scheduled",
-          "durationMs": 53.9,
-          "blockedMs": 53.6,
-          "networkWaitMs": 0.3,
-          "queuedMs": 16.2,
+          "durationMs": 99.4,
+          "blockedMs": 98.9,
+          "networkWaitMs": 0.5,
+          "queuedMs": 16.3,
           "status": "ok",
           "phase": "smoke-deep:teacher-analysis",
-          "time": "2026-10-31T02:01:54.416Z"
+          "time": "2026-10-31T06:04:54.500Z"
         },
         {
           "key": "module-entry:teacher-analysis-render-cards",
           "type": "scheduled",
-          "durationMs": 9.7,
-          "blockedMs": 2.9,
-          "networkWaitMs": 6.8,
-          "queuedMs": 1.9,
+          "durationMs": 9.8,
+          "blockedMs": 3.4,
+          "networkWaitMs": 6.4,
+          "queuedMs": 2.9,
           "status": "ok",
           "phase": "smoke-deep:teacher-analysis",
-          "time": "2026-10-31T02:01:54.427Z"
-        },
-        {
-          "key": "module-entry:town-submodule-compare-ui",
-          "type": "scheduled",
-          "durationMs": 0.1,
-          "blockedMs": 0,
-          "networkWaitMs": 0.1,
-          "queuedMs": 612,
-          "status": "ok",
-          "phase": "smoke-switch:teacher-detail-comparison",
-          "time": "2026-10-31T02:01:54.493Z"
-        },
-        {
-          "key": "module-entry:comparison-panel-collapse-enter",
-          "type": "scheduled",
-          "durationMs": 0.6,
-          "blockedMs": 0.4,
-          "networkWaitMs": 0.2,
-          "queuedMs": 178.7,
-          "status": "ok",
-          "phase": "smoke-switch:teacher-detail-comparison",
-          "time": "2026-10-31T02:01:54.493Z"
-        },
-        {
-          "key": "module-entry:teacher-analysis-render-work",
-          "type": "scheduled",
-          "durationMs": 18.1,
-          "blockedMs": 16.8,
-          "networkWaitMs": 1.3,
-          "queuedMs": 0,
-          "status": "ok",
-          "phase": "smoke-deep:teacher-detail-comparison",
-          "time": "2026-10-31T02:01:54.561Z"
-        },
-        {
-          "key": "module-entry:teacher-analysis-auto-render",
-          "type": "scheduled",
-          "durationMs": 18.5,
-          "blockedMs": 17.2,
-          "networkWaitMs": 1.3,
-          "queuedMs": 16.1,
-          "status": "ok",
-          "phase": "smoke-deep:teacher-detail-comparison",
-          "time": "2026-10-31T02:01:54.561Z"
-        },
-        {
-          "key": "module-entry:comparison-panel-collapse-enter",
-          "type": "scheduled",
-          "durationMs": 0.3,
-          "blockedMs": 0.2,
-          "networkWaitMs": 0.1,
-          "queuedMs": 139.3,
-          "status": "ok",
-          "phase": "smoke-switch:teacher-pairing",
-          "time": "2026-10-31T02:01:54.666Z"
-        },
-        {
-          "key": "module-entry:teacher-analysis-render-work",
-          "type": "scheduled",
-          "durationMs": 0.1,
-          "blockedMs": 0,
-          "networkWaitMs": 0.1,
-          "queuedMs": 0,
-          "status": "ok",
-          "phase": "smoke-deep:teacher-township-ranking",
-          "time": "2026-10-31T02:01:54.777Z"
-        },
-        {
-          "key": "module-entry:teacher-analysis-auto-render",
-          "type": "scheduled",
-          "durationMs": 0.5,
-          "blockedMs": 0.3,
-          "networkWaitMs": 0.2,
-          "queuedMs": 16.2,
-          "status": "ok",
-          "phase": "smoke-deep:teacher-township-ranking",
-          "time": "2026-10-31T02:01:54.777Z"
-        },
-        {
-          "key": "module-entry:teacher-analysis-render-township",
-          "type": "scheduled",
-          "durationMs": 26.3,
-          "blockedMs": 21.2,
-          "networkWaitMs": 5.1,
-          "queuedMs": 21.3,
-          "status": "ok",
-          "phase": "smoke-deep:teacher-township-ranking",
-          "time": "2026-10-31T02:01:54.825Z"
-        },
-        {
-          "key": "module-entry:teacher-analysis-refresh-compare-selects",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 526.4,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:54.942Z"
-        },
-        {
-          "key": "module-entry:teacher-analysis-role-visibility",
-          "type": "scheduled",
-          "durationMs": 0.1,
-          "blockedMs": 0.1,
-          "networkWaitMs": 0,
-          "queuedMs": 445.8,
-          "status": "ok",
-          "phase": "smoke-switch:indicator",
-          "time": "2026-10-31T02:01:55.223Z"
-        },
-        {
-          "key": "module-entry:indicator-results",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 108.4,
-          "status": "ok",
-          "phase": "smoke-deep:indicator",
-          "time": "2026-10-31T02:01:55.418Z"
-        },
-        {
-          "key": "module-entry:prerequisite-status-enter",
-          "type": "scheduled",
-          "durationMs": 0.2,
-          "blockedMs": 0.2,
-          "networkWaitMs": 0,
-          "queuedMs": 61.8,
-          "status": "ok",
-          "phase": "smoke-switch:bottom3",
-          "time": "2026-10-31T02:01:55.478Z"
-        },
-        {
-          "key": "module-entry:summary-tables",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 62.7,
-          "status": "ok",
-          "phase": "smoke-switch:bottom3",
-          "time": "2026-10-31T02:01:55.479Z"
-        },
-        {
-          "key": "module-entry:macro-tables:bottom3-tables",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 971.2,
-          "status": "ok",
-          "phase": "smoke-deep:cohort-growth",
-          "time": "2026-10-31T02:01:56.462Z"
+          "time": "2026-10-31T06:04:54.512Z"
         },
         {
           "key": "module-entry:summary-auto-calculate",
@@ -4095,21 +3963,263 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 1115.4,
+          "queuedMs": 1172,
           "status": "ok",
-          "phase": "smoke-deep:cohort-growth",
-          "time": "2026-10-31T02:01:56.532Z"
+          "phase": "smoke-deep:teacher-detail-comparison",
+          "time": "2026-10-31T06:04:54.623Z"
+        },
+        {
+          "key": "module-entry:macro-tables:analysis-tables",
+          "type": "scheduled",
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 902.9,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-detail-comparison",
+          "time": "2026-10-31T06:04:54.623Z"
         },
         {
           "key": "module-entry:town-submodule-compare-ui",
           "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0,
+          "queuedMs": 907.7,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-detail-comparison",
+          "time": "2026-10-31T06:04:54.628Z"
+        },
+        {
+          "key": "module-entry:comparison-panel-collapse-enter",
+          "type": "scheduled",
+          "durationMs": 0.6,
+          "blockedMs": 0.5,
+          "networkWaitMs": 0.1,
+          "queuedMs": 299.8,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-detail-comparison",
+          "time": "2026-10-31T06:04:54.628Z"
+        },
+        {
+          "key": "module-entry:prerequisite-status-enter",
+          "type": "scheduled",
           "durationMs": 0.5,
-          "blockedMs": 0.3,
+          "blockedMs": 0.2,
+          "networkWaitMs": 0.3,
+          "queuedMs": 300.3,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-detail-comparison",
+          "time": "2026-10-31T06:04:54.629Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-render-overview",
+          "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0,
+          "queuedMs": 160.1,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-detail-comparison",
+          "time": "2026-10-31T06:04:54.660Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-role-visibility",
+          "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0,
+          "queuedMs": 190.6,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-detail-comparison",
+          "time": "2026-10-31T06:04:54.690Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-render-work",
+          "type": "scheduled",
+          "durationMs": 33.2,
+          "blockedMs": 29.9,
+          "networkWaitMs": 3.3,
+          "queuedMs": 0,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-detail-comparison",
+          "time": "2026-10-31T06:04:54.735Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-auto-render",
+          "type": "scheduled",
+          "durationMs": 33.5,
+          "blockedMs": 30.2,
+          "networkWaitMs": 3.3,
+          "queuedMs": 16.2,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-detail-comparison",
+          "time": "2026-10-31T06:04:54.735Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-role-visibility",
+          "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0,
+          "networkWaitMs": 0.1,
+          "queuedMs": 195.4,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-township-ranking",
+          "time": "2026-10-31T06:04:54.927Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-render-work",
+          "type": "scheduled",
+          "durationMs": 0.2,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0.1,
+          "queuedMs": 0,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-township-ranking",
+          "time": "2026-10-31T06:04:54.940Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-auto-render",
+          "type": "scheduled",
+          "durationMs": 0.4,
+          "blockedMs": 0.4,
+          "networkWaitMs": 0,
+          "queuedMs": 16.2,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-township-ranking",
+          "time": "2026-10-31T06:04:54.940Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-render-township",
+          "type": "scheduled",
+          "durationMs": 53.2,
+          "blockedMs": 42,
+          "networkWaitMs": 11.2,
+          "queuedMs": 31.7,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-township-ranking",
+          "time": "2026-10-31T06:04:55.025Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-refresh-compare-selects",
+          "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0,
+          "networkWaitMs": 0.1,
+          "queuedMs": 603.9,
+          "status": "ok",
+          "phase": "smoke-deep:teacher-township-ranking",
+          "time": "2026-10-31T06:04:55.103Z"
+        },
+        {
+          "key": "module-entry:comparison-panel-collapse-enter",
+          "type": "scheduled",
+          "durationMs": 0.9,
+          "blockedMs": 0.9,
+          "networkWaitMs": 0,
+          "queuedMs": 194.5,
+          "status": "ok",
+          "phase": "",
+          "time": "2026-10-31T06:04:55.118Z"
+        },
+        {
+          "key": "module-entry:prerequisite-status-enter",
+          "type": "scheduled",
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 210.2,
+          "status": "ok",
+          "phase": "",
+          "time": "2026-10-31T06:04:55.133Z"
+        },
+        {
+          "key": "module-entry:teacher-analysis-role-visibility",
+          "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0,
+          "queuedMs": 193.4,
+          "status": "ok",
+          "phase": "",
+          "time": "2026-10-31T06:04:55.133Z"
+        },
+        {
+          "key": "module-entry:correlation-analysis-auto",
+          "type": "scheduled",
+          "durationMs": 0.6,
+          "blockedMs": 0.6,
+          "networkWaitMs": 0,
+          "queuedMs": 32.1,
+          "status": "ok",
+          "phase": "smoke-deep:correlation-analysis",
+          "time": "2026-10-31T06:04:55.367Z"
+        },
+        {
+          "key": "module-entry:comparison-panel-collapse-enter",
+          "type": "scheduled",
+          "durationMs": 0.3,
+          "blockedMs": 0.2,
+          "networkWaitMs": 0.1,
+          "queuedMs": 140.8,
+          "status": "ok",
+          "phase": "smoke-deep:correlation-analysis",
+          "time": "2026-10-31T06:04:55.475Z"
+        },
+        {
+          "key": "module-entry:prerequisite-status-enter",
+          "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0,
+          "networkWaitMs": 0.1,
+          "queuedMs": 172,
+          "status": "ok",
+          "phase": "smoke-switch:indicator",
+          "time": "2026-10-31T06:04:55.506Z"
+        },
+        {
+          "key": "module-entry:student-diagnosis-runtime-prewarm",
+          "type": "scheduled",
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 549.4,
+          "status": "ok",
+          "phase": "smoke-switch:bottom3",
+          "time": "2026-10-31T06:04:55.883Z"
+        },
+        {
+          "key": "module-entry:indicator-results",
+          "type": "scheduled",
+          "durationMs": 0.5,
+          "blockedMs": 0.5,
+          "networkWaitMs": 0,
+          "queuedMs": 110.4,
+          "status": "ok",
+          "phase": "smoke-switch:bottom3",
+          "time": "2026-10-31T06:04:55.884Z"
+        },
+        {
+          "key": "module-entry:comparison-panel-collapse-enter",
+          "type": "scheduled",
+          "durationMs": 0.5,
+          "blockedMs": 0.5,
+          "networkWaitMs": 0,
+          "queuedMs": 172,
+          "status": "ok",
+          "phase": "smoke-deep:bottom3",
+          "time": "2026-10-31T06:04:55.944Z"
+        },
+        {
+          "key": "module-entry:town-submodule-compare-ui",
+          "type": "scheduled",
+          "durationMs": 0.4,
+          "blockedMs": 0.2,
           "networkWaitMs": 0.2,
-          "queuedMs": 1042.9,
+          "queuedMs": 1431.2,
           "status": "ok",
           "phase": "smoke-deep:cohort-growth",
-          "time": "2026-10-31T02:01:56.534Z"
+          "time": "2026-10-31T06:04:57.203Z"
         },
         {
           "key": "module-entry:progress-analysis-controls",
@@ -4117,65 +4227,76 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 459.5,
+          "queuedMs": 624.8,
           "status": "ok",
           "phase": "smoke-deep:cohort-growth",
-          "time": "2026-10-31T02:01:56.535Z"
+          "time": "2026-10-31T06:04:57.203Z"
         },
         {
           "key": "module-entry:comparison-panel-collapse-enter",
           "type": "scheduled",
-          "durationMs": 0.6,
-          "blockedMs": 0.5,
-          "networkWaitMs": 0.1,
-          "queuedMs": 234.2,
+          "durationMs": 0.5,
+          "blockedMs": 0.3,
+          "networkWaitMs": 0.2,
+          "queuedMs": 137.3,
           "status": "ok",
           "phase": "smoke-deep:cohort-growth",
-          "time": "2026-10-31T02:01:56.548Z"
-        },
-        {
-          "key": "module-entry:prerequisite-status-enter",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 234.8,
-          "status": "ok",
-          "phase": "smoke-deep:cohort-growth",
-          "time": "2026-10-31T02:01:56.548Z"
+          "time": "2026-10-31T06:04:57.282Z"
         },
         {
           "key": "module-entry:report-generator-selects",
           "type": "scheduled",
-          "durationMs": 0.2,
-          "blockedMs": 0.2,
+          "durationMs": 0.4,
+          "blockedMs": 0.4,
           "networkWaitMs": 0,
-          "queuedMs": 67.4,
+          "queuedMs": 114.7,
           "status": "ok",
           "phase": "smoke-deep:report-generator",
-          "time": "2026-10-31T02:01:56.727Z"
+          "time": "2026-10-31T06:04:57.471Z"
         },
         {
           "key": "module-entry:report-generator-runtime-prewarm",
           "type": "scheduled",
-          "durationMs": 0.2,
-          "blockedMs": 0.1,
+          "durationMs": 0.1,
+          "blockedMs": 0,
           "networkWaitMs": 0.1,
-          "queuedMs": 103.9,
+          "queuedMs": 121.6,
           "status": "ok",
           "phase": "smoke-deep:report-generator",
-          "time": "2026-10-31T02:01:56.763Z"
+          "time": "2026-10-31T06:04:57.477Z"
         },
         {
           "key": "module-entry:comparison-panel-collapse-enter",
           "type": "scheduled",
-          "durationMs": 0.3,
-          "blockedMs": 0.2,
+          "durationMs": 0.2,
+          "blockedMs": 0.1,
           "networkWaitMs": 0.1,
-          "queuedMs": 134.7,
+          "queuedMs": 165.4,
           "status": "ok",
           "phase": "smoke-deep:report-generator",
-          "time": "2026-10-31T02:01:56.794Z"
+          "time": "2026-10-31T06:04:57.521Z"
+        },
+        {
+          "key": "module-entry:student-diagnosis-runtime-prewarm",
+          "type": "scheduled",
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 687.1,
+          "status": "ok",
+          "phase": "smoke-deep:freshman-simulator",
+          "time": "2026-10-31T06:04:58.458Z"
+        },
+        {
+          "key": "module-entry:comparison-panel-collapse-enter",
+          "type": "scheduled",
+          "durationMs": 0.5,
+          "blockedMs": 0.5,
+          "networkWaitMs": 0,
+          "queuedMs": 240.8,
+          "status": "ok",
+          "phase": "smoke-deep:freshman-simulator",
+          "time": "2026-10-31T06:04:58.458Z"
         },
         {
           "key": "module-entry:prerequisite-status-enter",
@@ -4183,32 +4304,10 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 244.4,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:01:56.903Z"
-        },
-        {
-          "key": "module-entry:comparison-panel-collapse-enter",
-          "type": "scheduled",
-          "durationMs": 0.4,
-          "blockedMs": 0.3,
-          "networkWaitMs": 0.1,
-          "queuedMs": 130.5,
+          "queuedMs": 298.3,
           "status": "ok",
           "phase": "smoke-deep:freshman-simulator",
-          "time": "2026-10-31T02:01:57.270Z"
-        },
-        {
-          "key": "module-entry:student-diagnosis-runtime-prewarm",
-          "type": "scheduled",
-          "durationMs": 0.1,
-          "blockedMs": 0.1,
-          "networkWaitMs": 0,
-          "queuedMs": 544.9,
-          "status": "ok",
-          "phase": "smoke-deep:exam-arranger",
-          "time": "2026-10-31T02:01:57.547Z"
+          "time": "2026-10-31T06:04:58.515Z"
         },
         {
           "key": "module-entry:comparison-panel-collapse-enter",
@@ -4216,10 +4315,10 @@
           "durationMs": 0.8,
           "blockedMs": 0.8,
           "networkWaitMs": 0,
-          "queuedMs": 147.3,
+          "queuedMs": 205.9,
           "status": "ok",
-          "phase": "smoke-deep:exam-arranger",
-          "time": "2026-10-31T02:01:57.548Z"
+          "phase": "smoke-deep:grade-scheduler",
+          "time": "2026-10-31T06:04:58.960Z"
         },
         {
           "key": "module-entry:prerequisite-status-enter",
@@ -4227,43 +4326,21 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 182.6,
+          "queuedMs": 206.8,
           "status": "ok",
-          "phase": "smoke-deep:exam-arranger",
-          "time": "2026-10-31T02:01:57.583Z"
+          "phase": "smoke-deep:grade-scheduler",
+          "time": "2026-10-31T06:04:58.960Z"
         },
         {
           "key": "module-entry:comparison-panel-collapse-enter",
           "type": "scheduled",
-          "durationMs": 0.6,
-          "blockedMs": 0.5,
-          "networkWaitMs": 0.1,
-          "queuedMs": 415.8,
-          "status": "ok",
-          "phase": "smoke-deep:grade-scheduler",
-          "time": "2026-10-31T02:01:58.102Z"
-        },
-        {
-          "key": "module-entry:prerequisite-status-enter",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 416.4,
-          "status": "ok",
-          "phase": "smoke-deep:grade-scheduler",
-          "time": "2026-10-31T02:01:58.102Z"
-        },
-        {
-          "key": "module-entry:comparison-panel-collapse-enter",
-          "type": "scheduled",
-          "durationMs": 0.2,
+          "durationMs": 0.3,
           "blockedMs": 0.2,
-          "networkWaitMs": 0,
-          "queuedMs": 123.2,
+          "networkWaitMs": 0.1,
+          "queuedMs": 460.2,
           "status": "ok",
-          "phase": "smoke-deep:student-overview",
-          "time": "2026-10-31T02:01:59.516Z"
+          "phase": "smoke-deep:grade-scheduler",
+          "time": "2026-10-31T06:04:59.461Z"
         },
         {
           "key": "module-entry:prerequisite-status-enter",
@@ -4271,21 +4348,10 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 162.2,
+          "queuedMs": 460.5,
           "status": "ok",
-          "phase": "smoke-deep:student-overview",
-          "time": "2026-10-31T02:01:59.555Z"
-        },
-        {
-          "key": "module-entry:student-details-enter-init",
-          "type": "scheduled",
-          "durationMs": 0.6,
-          "blockedMs": 0.4,
-          "networkWaitMs": 0.2,
-          "queuedMs": 95.9,
-          "status": "ok",
-          "phase": "",
-          "time": "2026-10-31T02:02:00.088Z"
+          "phase": "smoke-deep:grade-scheduler",
+          "time": "2026-10-31T06:04:59.461Z"
         },
         {
           "key": "report-history-hydrate:银山实验|9.4|解洪旭|-::2022级-9年级-2025-2026-上学期-期末-2026-01-31|2022级-9年级-2025-2026-下学期-一模-2026-04-16::2022级-9年级-2025-2026-下学期-中考-2026-07-28",
@@ -4293,65 +4359,32 @@
           "durationMs": 0.3,
           "blockedMs": 0.3,
           "networkWaitMs": 0,
-          "queuedMs": 3269.9,
+          "queuedMs": 3292,
           "status": "ok",
-          "phase": "smoke-dm:student",
-          "time": "2026-10-31T02:02:00.150Z"
-        },
-        {
-          "key": "data-manager-status-render",
-          "type": "scheduled",
-          "durationMs": 3.3,
-          "blockedMs": 3.1,
-          "networkWaitMs": 0.2,
-          "queuedMs": 110.8,
-          "status": "ok",
-          "phase": "smoke-dm:student",
-          "time": "2026-10-31T02:02:00.246Z"
+          "phase": "smoke-deep:student-overview",
+          "time": "2026-10-31T06:05:00.941Z"
         },
         {
           "key": "module-entry:comparison-panel-collapse-enter",
           "type": "scheduled",
-          "durationMs": 0.3,
-          "blockedMs": 0.2,
-          "networkWaitMs": 0.1,
-          "queuedMs": 131,
-          "status": "ok",
-          "phase": "smoke-dm:student",
-          "time": "2026-10-31T02:02:00.274Z"
-        },
-        {
-          "key": "module-entry:student-details-render-primary",
-          "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 297.6,
-          "status": "ok",
-          "phase": "smoke-dm:student",
-          "time": "2026-10-31T02:02:00.386Z"
-        },
-        {
-          "key": "module-entry:comparison-panel-collapse-enter",
-          "type": "scheduled",
-          "durationMs": 0.1,
+          "durationMs": 0.2,
           "blockedMs": 0.1,
-          "networkWaitMs": 0,
-          "queuedMs": 137.6,
+          "networkWaitMs": 0.1,
+          "queuedMs": 170,
           "status": "ok",
-          "phase": "smoke-dm:student",
-          "time": "2026-10-31T02:02:00.480Z"
+          "phase": "smoke-deep:student-overview",
+          "time": "2026-10-31T06:05:00.996Z"
         },
         {
           "key": "module-entry:prerequisite-status-enter",
           "type": "scheduled",
-          "durationMs": 0,
+          "durationMs": 0.1,
           "blockedMs": 0,
-          "networkWaitMs": 0,
-          "queuedMs": 167.9,
+          "networkWaitMs": 0.1,
+          "queuedMs": 205,
           "status": "ok",
-          "phase": "smoke-dm:student",
-          "time": "2026-10-31T02:02:00.510Z"
+          "phase": "smoke-deep:student-overview",
+          "time": "2026-10-31T06:05:01.031Z"
         },
         {
           "key": "module-entry:student-diagnosis-runtime-prewarm",
@@ -4359,10 +4392,98 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 505.3,
+          "queuedMs": 584.8,
+          "status": "ok",
+          "phase": "",
+          "time": "2026-10-31T06:05:01.411Z"
+        },
+        {
+          "key": "module-entry:student-details-enter-init",
+          "type": "scheduled",
+          "durationMs": 0.6,
+          "blockedMs": 0.5,
+          "networkWaitMs": 0.1,
+          "queuedMs": 134.5,
           "status": "ok",
           "phase": "smoke-dm:student",
-          "time": "2026-10-31T02:02:00.593Z"
+          "time": "2026-10-31T06:05:01.533Z"
+        },
+        {
+          "key": "data-manager-status-render",
+          "type": "scheduled",
+          "durationMs": 4.5,
+          "blockedMs": 4,
+          "networkWaitMs": 0.5,
+          "queuedMs": 88.5,
+          "status": "ok",
+          "phase": "smoke-dm:student",
+          "time": "2026-10-31T06:05:01.593Z"
+        },
+        {
+          "key": "module-entry:student-details-render-primary",
+          "type": "scheduled",
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 264,
+          "status": "ok",
+          "phase": "smoke-dm:student",
+          "time": "2026-10-31T06:05:01.797Z"
+        },
+        {
+          "key": "module-entry:comparison-panel-collapse-enter",
+          "type": "scheduled",
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
+          "networkWaitMs": 0,
+          "queuedMs": 131.2,
+          "status": "ok",
+          "phase": "smoke-dm:student",
+          "time": "2026-10-31T06:05:01.814Z"
+        },
+        {
+          "key": "module-entry:prerequisite-status-enter",
+          "type": "scheduled",
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 163.9,
+          "status": "ok",
+          "phase": "smoke-dm:student",
+          "time": "2026-10-31T06:05:01.846Z"
+        },
+        {
+          "key": "module-entry:student-diagnosis-runtime-prewarm",
+          "type": "scheduled",
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 513.4,
+          "status": "ok",
+          "phase": "smoke-dm:student",
+          "time": "2026-10-31T06:05:02.046Z"
+        },
+        {
+          "key": "data-manager-status-render",
+          "type": "scheduled",
+          "durationMs": 0.3,
+          "blockedMs": 0.3,
+          "networkWaitMs": 0,
+          "queuedMs": 80.2,
+          "status": "ok",
+          "phase": "smoke-dm:teacher",
+          "time": "2026-10-31T06:05:02.226Z"
+        },
+        {
+          "key": "module-entry:student-details-render-fallback",
+          "type": "scheduled",
+          "durationMs": 0,
+          "blockedMs": 0,
+          "networkWaitMs": 0,
+          "queuedMs": 900.2,
+          "status": "ok",
+          "phase": "smoke-dm:teacher",
+          "time": "2026-10-31T06:05:02.434Z"
         },
         {
           "key": "data-manager-status-render",
@@ -4370,21 +4491,10 @@
           "durationMs": 0.2,
           "blockedMs": 0.2,
           "networkWaitMs": 0,
-          "queuedMs": 83,
+          "queuedMs": 80.2,
           "status": "ok",
-          "phase": "smoke-dm:teacher",
-          "time": "2026-10-31T02:02:00.860Z"
-        },
-        {
-          "key": "module-entry:student-details-render-fallback",
-          "type": "scheduled",
-          "durationMs": 0.1,
-          "blockedMs": 0.1,
-          "networkWaitMs": 0,
-          "queuedMs": 901.5,
-          "status": "ok",
-          "phase": "smoke-dm:teacher",
-          "time": "2026-10-31T02:02:00.990Z"
+          "phase": "smoke-dm:targets",
+          "time": "2026-10-31T06:05:02.883Z"
         },
         {
           "key": "module-entry:student-details-compare-selects",
@@ -4392,32 +4502,21 @@
           "durationMs": 0,
           "blockedMs": 0,
           "networkWaitMs": 0,
-          "queuedMs": 1416,
+          "queuedMs": 1400.2,
           "status": "ok",
           "phase": "smoke-dm:targets",
-          "time": "2026-10-31T02:02:01.504Z"
-        },
-        {
-          "key": "data-manager-status-render",
-          "type": "scheduled",
-          "durationMs": 2.6,
-          "blockedMs": 2.6,
-          "networkWaitMs": 0,
-          "queuedMs": 83.5,
-          "status": "ok",
-          "phase": "smoke-dm:targets",
-          "time": "2026-10-31T02:02:01.507Z"
+          "time": "2026-10-31T06:05:02.934Z"
         },
         {
           "key": "module-entry:student-diagnosis-report-prewarm",
           "type": "scheduled",
-          "durationMs": 0,
-          "blockedMs": 0,
+          "durationMs": 0.1,
+          "blockedMs": 0.1,
           "networkWaitMs": 0,
           "queuedMs": 2600.1,
           "status": "ok",
-          "phase": "smoke-dm:params",
-          "time": "2026-10-31T02:02:02.688Z"
+          "phase": "smoke-dm:sql",
+          "time": "2026-10-31T06:05:04.133Z"
         },
         {
           "key": "data-manager-status-render",
@@ -4425,136 +4524,143 @@
           "durationMs": 1.9,
           "blockedMs": 1.9,
           "networkWaitMs": 0,
-          "queuedMs": 80.1,
+          "queuedMs": 80.2,
           "status": "ok",
           "phase": "smoke-dm:sql",
-          "time": "2026-10-31T02:02:02.789Z"
+          "time": "2026-10-31T06:05:04.178Z"
         },
         {
           "key": "data-manager-status-render",
           "type": "scheduled",
-          "durationMs": 0.1,
-          "blockedMs": 0.1,
+          "durationMs": 0.2,
+          "blockedMs": 0.2,
           "networkWaitMs": 0,
-          "queuedMs": 80.2,
+          "queuedMs": 80.1,
           "status": "ok",
           "phase": "smoke-dm:cloud",
-          "time": "2026-10-31T02:02:03.227Z"
+          "time": "2026-10-31T06:05:04.626Z"
         }
       ],
       "longTasks": [
         {
           "key": "self",
-          "duration": 211,
-          "time": "2026-10-31T02:01:47.512Z"
-        },
-        {
-          "key": "self",
-          "duration": 189,
-          "time": "2026-10-31T02:01:48.082Z"
-        },
-        {
-          "key": "self",
-          "duration": 135,
-          "time": "2026-10-31T02:01:49.816Z"
-        },
-        {
-          "key": "self",
-          "duration": 50,
-          "time": "2026-10-31T02:01:51.051Z"
-        },
-        {
-          "key": "self",
-          "duration": 60,
-          "time": "2026-10-31T02:01:51.152Z"
-        },
-        {
-          "key": "self",
-          "duration": 141,
-          "time": "2026-10-31T02:01:51.409Z"
-        },
-        {
-          "key": "self",
-          "duration": 59,
-          "time": "2026-10-31T02:01:52.111Z"
-        },
-        {
-          "key": "self",
-          "duration": 71,
-          "time": "2026-10-31T02:01:53.884Z",
+          "duration": 130,
+          "time": "2026-10-31T06:04:53.726Z",
           "phase": "smoke-deep:analysis"
         },
         {
           "key": "self",
-          "duration": 58,
-          "time": "2026-10-31T02:01:54.290Z",
+          "duration": 82,
+          "time": "2026-10-31T06:04:54.040Z",
+          "phase": "smoke-deep:county-teacher-portrait"
+        },
+        {
+          "key": "self",
+          "duration": 82,
+          "time": "2026-10-31T06:04:54.192Z",
+          "phase": "smoke-switch:county-school-horizontal"
+        },
+        {
+          "key": "self",
+          "duration": 50,
+          "time": "2026-10-31T06:04:54.300Z",
           "phase": "smoke-switch:teacher-analysis"
         },
         {
           "key": "self",
-          "duration": 53,
-          "time": "2026-10-31T02:01:54.436Z",
+          "duration": 99,
+          "time": "2026-10-31T06:04:54.525Z",
           "phase": "smoke-deep:teacher-analysis"
         },
         {
           "key": "self",
-          "duration": 65,
-          "time": "2026-10-31T02:01:54.864Z",
+          "duration": 131,
+          "time": "2026-10-31T06:04:55.103Z",
           "phase": "smoke-deep:teacher-township-ranking"
         },
         {
           "key": "self",
-          "duration": 53,
-          "time": "2026-10-31T02:01:55.290Z",
+          "duration": 50,
+          "time": "2026-10-31T06:04:55.565Z",
           "phase": "smoke-switch:indicator"
         },
         {
           "key": "self",
-          "duration": 59,
-          "time": "2026-10-31T02:01:55.864Z",
-          "phase": "smoke-deep:seat-adjustment"
+          "duration": 60,
+          "time": "2026-10-31T06:04:55.706Z",
+          "phase": "smoke-switch:indicator"
         },
         {
           "key": "self",
-          "duration": 85,
-          "time": "2026-10-31T02:01:56.211Z",
+          "duration": 53,
+          "time": "2026-10-31T06:04:56.245Z",
+          "phase": "smoke-switch:seat-adjustment"
+        },
+        {
+          "key": "self",
+          "duration": 62,
+          "time": "2026-10-31T06:04:56.534Z",
+          "phase": "smoke-switch:progress-analysis"
+        },
+        {
+          "key": "self",
+          "duration": 147,
+          "time": "2026-10-31T06:04:56.812Z",
           "phase": "smoke-deep:progress-analysis"
         },
         {
           "key": "self",
-          "duration": 83,
-          "time": "2026-10-31T02:01:56.902Z",
+          "duration": 75,
+          "time": "2026-10-31T06:04:56.812Z",
+          "phase": "smoke-deep:progress-analysis"
+        },
+        {
+          "key": "self",
+          "duration": 75,
+          "time": "2026-10-31T06:04:57.104Z",
+          "phase": "smoke-deep:cohort-growth"
+        },
+        {
+          "key": "self",
+          "duration": 110,
+          "time": "2026-10-31T06:04:57.681Z",
           "phase": "smoke-deep:report-generator"
         },
         {
           "key": "self",
-          "duration": 288,
-          "time": "2026-10-31T02:01:58.070Z",
+          "duration": 67,
+          "time": "2026-10-31T06:04:57.991Z",
+          "phase": "smoke-switch:freshman-simulator"
+        },
+        {
+          "key": "self",
+          "duration": 60,
+          "time": "2026-10-31T06:04:58.221Z",
+          "phase": "smoke-deep:freshman-simulator"
+        },
+        {
+          "key": "self",
+          "duration": 370,
+          "time": "2026-10-31T06:04:59.448Z",
           "phase": "smoke-deep:grade-scheduler"
         },
         {
           "key": "self",
-          "duration": 277,
-          "time": "2026-10-31T02:01:58.621Z",
+          "duration": 320,
+          "time": "2026-10-31T06:05:00.042Z",
           "phase": "smoke-deep:grade-scheduler"
         },
         {
           "key": "self",
-          "duration": 54,
-          "time": "2026-10-31T02:01:59.058Z",
+          "duration": 68,
+          "time": "2026-10-31T06:05:00.457Z",
           "phase": "smoke-deep:subject-balance"
         },
         {
           "key": "self",
-          "duration": 108,
-          "time": "2026-10-31T02:01:59.058Z",
+          "duration": 110,
+          "time": "2026-10-31T06:05:00.457Z",
           "phase": "smoke-deep:subject-balance"
-        },
-        {
-          "key": "self",
-          "duration": 51,
-          "time": "2026-10-31T02:01:59.493Z",
-          "phase": "smoke-deep:student-overview"
         }
       ]
     },
