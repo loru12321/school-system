@@ -42,6 +42,11 @@
 4. **验证**：`/api/health` 显示 `cloudSystemDataReady: true`；管理员登录后打开最近一场考试，成绩条数与切换前一致；对新库执行 `SELECT COUNT(*) FROM cloud_system_data`，应等于旧库行数。
 5. **保留旧库 30 天**，不再写入。确认无误后再删除。
 
+## 演练记录
+
+- 2026-10-31 01:39 UTC（`D1 copy cloud metadata` run 41156361203，`mode = full`）：`cloud_system_data` 7,714 行、10,326,519 字节，`cloud_system_data_quarantine` 1 行，全部复制并逐行 SHA-256 校验一致；新库 6 个索引齐全；复制加校验约 5 分钟，临时 Worker 已删除。
+- 切换时第一次 delta 的 `since` 用演练开始时间 `2026-10-31T01:39:05Z`。
+
 ## 回滚
 
 - 切换后出现问题：把 `wrangler.jsonc` 的 `database_id` 改回 `4ce32844-b42d-45ff-b436-818ffe714a08` 并部署。如果切换后新库已有写入，先用同一工作流把新库反向复制回旧库（SRC 和 DST 互换，`mode = delta`，`since = T0`）。
