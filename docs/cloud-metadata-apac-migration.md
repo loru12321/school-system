@@ -1,6 +1,6 @@
 # 成绩数据库迁移到亚太区域（school-system-cloud-metadata → APAC）
 
-状态：**已排期，工具就绪，尚未执行**。登录库 `school-system-gateway` 已在大阪（KIX），不需要迁移。
+状态：**新库已建（`school-system-cloud-metadata-apac`，`71236bbb-cccf-4e3d-8f3f-881026464b81`，实际位于香港 HKG），切换排期在北京时间 2026-11-01（周日）05:00**。登录库 `school-system-gateway` 已在大阪（KIX），不需要迁移。
 
 ## 为什么迁
 
@@ -41,6 +41,11 @@
    4. 部署成功后立即再跑一次 `mode = delta`，`since = T0`，补齐切换期间落在旧库的写入。新库中更新的行会被保留并报告为 `destination newer`。
 4. **验证**：`/api/health` 显示 `cloudSystemDataReady: true`；管理员登录后打开最近一场考试，成绩条数与切换前一致；对新库执行 `SELECT COUNT(*) FROM cloud_system_data`，应等于旧库行数。
 5. **保留旧库 30 天**，不再写入。确认无误后再删除。
+
+## 演练记录
+
+- 2026-10-31 01:39 UTC（`D1 copy cloud metadata` run 41156361203，`mode = full`）：`cloud_system_data` 7,714 行、10,326,519 字节，`cloud_system_data_quarantine` 1 行，全部复制并逐行 SHA-256 校验一致；新库 6 个索引齐全；复制加校验约 5 分钟，临时 Worker 已删除。
+- 切换时第一次 delta 的 `since` 用演练开始时间 `2026-10-31T01:39:05Z`。
 
 ## 回滚
 

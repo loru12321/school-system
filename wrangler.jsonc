@@ -42,8 +42,10 @@
     },
     {
       "binding": "CLOUD_SYSTEM_DATA_DB",
-      "database_name": "school-system-cloud-metadata",
-      "database_id": "4ce32844-b42d-45ff-b436-818ffe714a08"
+      // 2026-11-01 切换到亚太（香港）新库；旧库 school-system-cloud-metadata
+      // (4ce32844-b42d-45ff-b436-818ffe714a08) 保留 30 天用于回滚。
+      "database_name": "school-system-cloud-metadata-apac",
+      "database_id": "71236bbb-cccf-4e3d-8f3f-881026464b81"
     }
   ]
 }
