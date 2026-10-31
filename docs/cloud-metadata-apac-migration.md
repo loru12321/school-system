@@ -1,6 +1,6 @@
 # 成绩数据库迁移到亚太区域（school-system-cloud-metadata → APAC）
 
-状态：**新库已建（`school-system-cloud-metadata-apac`，`71236bbb-cccf-4e3d-8f3f-881026464b81`，实际位于香港 HKG），切换排期在北京时间 2026-11-01（周日）05:00**。登录库 `school-system-gateway` 已在大阪（KIX），不需要迁移。
+状态：**已切换（2026-10-31 01:59 UTC，北京时间 09:59）**。线上 `CLOUD_SYSTEM_DATA_DB` 已指向 `school-system-cloud-metadata-apac`（`71236bbb-cccf-4e3d-8f3f-881026464b81`，香港 HKG）。旧库 `school-system-cloud-metadata`（`4ce32844-…`）不再写入，保留到 2026-11-30 用于回滚，之后再删除。
 
 ## 为什么迁
 
@@ -46,6 +46,16 @@
 
 - 2026-10-31 01:39 UTC（`D1 copy cloud metadata` run 41156361203，`mode = full`）：`cloud_system_data` 7,714 行、10,326,519 字节，`cloud_system_data_quarantine` 1 行，全部复制并逐行 SHA-256 校验一致；新库 6 个索引齐全；复制加校验约 5 分钟，临时 Worker 已删除。
 - 切换时第一次 delta 的 `since` 用演练开始时间 `2026-10-31T01:39:05Z`。
+
+## 切换记录（2026-10-31，应用户要求提前到白天执行）
+
+| 时间（UTC） | 步骤 | 结果 |
+| --- | --- | --- |
+| 01:50 | 预检：PR #4 CI、两库行数与最新写入 | 两库均 7,714 行，最新写入 2026-09-19，演练后无新写入 |
+| 01:52 | delta（since 01:39:05Z，run #2） | 复制 0 行，7,714 + 1 行逐行校验一致 |
+| 01:59:20 | T0；PR #4 转为正式并合并（`2c647b2`） | Deploy Cloudflare #1176 成功（含生产冒烟） |
+| 02:05 | delta（since T0，run #3） | 旧库 T0 后无写入；逐行校验一致 |
+| 02:06 | 验证 | `/api/health` 正常（`cloudSystemDataReady: true`），首页无失败请求 |
 
 ## 回滚
 
