@@ -5,7 +5,7 @@ import { normalizeText } from './worker-http-helpers.js';
 import {
   jsonResponse, badRequest, forbidden,
   isAdmin, hasRole, canSearchAccounts, canBulkManageAccounts,
-  accountVisible, accountEditable, sanitizeAccountRecord,
+  accountVisible, accountEditable, sanitizeAccountRecord, validateAssignedRoles,
   normalizeDbAccountRow, normalizeAccountUpsertRow, validateAccountUpsertRow,
   getSystemUserRow, upsertSystemUser,
   ensureLoginSessionsTable, normalizeLoginSessionRow,
@@ -118,9 +118,24 @@ export async function handleAccountUpdate(request, db, session, payload) {
   const existingRoles = Array.isArray(existing.roles)
     ? existing.roles.map((role) => normalizeText(role)).filter(Boolean)
     : [];
+  // Without explicit roles, keep secondary memberships but drop the previous
+  // primary role when it changes; otherwise a demoted director keeps
+  // "director" in roles_json and stays a director.
+  const previousRole = normalizeText(existing.role);
+  const carriedRoles = nextRole === previousRole
+    ? existingRoles
+    : existingRoles.filter((role) => role !== previousRole);
   const nextRoles = payloadRoles.length
-    ? Array.from(new Set(payloadRoles))
-    : Array.from(new Set([nextRole, ...existingRoles].filter(Boolean)));
+    ? Array.from(new Set([nextRole, ...payloadRoles]))
+    : Array.from(new Set([nextRole, ...carriedRoles].filter(Boolean)));
+  const roleError = validateAssignedRoles(session, {
+    username,
+    role: nextRole,
+    roles: nextRoles,
+    school: nextSchool,
+    class_name: nextClassName
+  }, existingRoles);
+  if (roleError) return forbidden(request, roleError);
   await upsertSystemUser(db, {
     ...existing,
     role: nextRole,
@@ -208,15 +223,27 @@ export async function handleAccountUpsertMany(request, db, session, payload) {
     return badRequest(request, `单次批量上限为 ${ACCOUNT_UPSERT_BATCH_LIMIT} 条，本次提交 ${rows.length} 条，请分批提交`);
   }
   const normalizedRows = rows.map((row) => normalizeAccountUpsertRow(row, session));
+  const existingRows = [];
   for (let index = 0; index < normalizedRows.length; index += 1) {
     const reason = validateAccountUpsertRow(session, normalizedRows[index]);
     if (reason) return badRequest(request, `第 ${index + 1} 条账号数据无效: ${reason}`);
+    const roleError = validateAssignedRoles(session, normalizedRows[index]);
+    if (roleError) return forbidden(request, `第 ${index + 1} 条账号数据无效: ${roleError}`);
+    const existing = await getSystemUserRow(db, normalizedRows[index].username, { includeInactive: true });
+    // Bulk import overwrites password, role and scope.  A non-admin must not be
+    // able to take over an account outside their scope (for example the
+    // administrator) just by reusing its username.
+    if (existing && !isAdmin(session) && !accountEditable(session, existing)) {
+      return forbidden(request, `第 ${index + 1} 条账号 ${normalizedRows[index].username} 已存在且不在管理范围内`);
+    }
+    existingRows.push(existing);
   }
   // Pre-hash all passwords and fetch existing rows before batching to D1.
   const now = new Date().toISOString();
   const statements = [];
-  for (const row of normalizedRows) {
-    const existing = await getSystemUserRow(db, row.username, { includeInactive: true });
+  for (let index = 0; index < normalizedRows.length; index += 1) {
+    const row = normalizedRows[index];
+    const existing = existingRows[index];
     const passwordHash = await hashAccountPassword(row.password);
     // Build the upsert statement inline so all writes go in a single db.batch() call.
     const normalized = {

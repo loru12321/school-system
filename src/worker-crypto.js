@@ -88,7 +88,14 @@ export async function verifyLocalSession(env, token) {
   const signature = await crypto.subtle.sign('HMAC', key, textEncoder.encode(content));
   const expected = toBase64Url(new Uint8Array(signature));
   if (!timingSafeEqual(expected, providedSignature)) return null;
-  const payload = safeJsonParse(new TextDecoder().decode(fromBase64Url(encodedPayload)), null);
+  let payload = null;
+  try {
+    payload = safeJsonParse(new TextDecoder().decode(fromBase64Url(encodedPayload)), null);
+  } catch (_) {
+    // A token with a valid signature but undecodable payload is still invalid,
+    // not a server error.
+    return null;
+  }
   if (!payload || !payload.exp || Number(payload.exp) < Math.floor(Date.now() / 1000)) return null;
   return payload;
 }

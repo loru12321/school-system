@@ -6,7 +6,8 @@ import {
   getBearerToken,
   signLocalSession,
   verifyLocalSession,
-  verifyAccountPasswordHash
+  verifyAccountPasswordHash,
+  hashAccountPassword
 } from './worker-crypto.js';
 
 // ---------------------------------------------------------------------------
@@ -109,13 +110,11 @@ function getLoginRateLimitPolicy(scopeKey) {
   };
 }
 
+// locked_until is only ever set when a scope reaches its failure budget, and it
+// survives a counter reset at the end of the failure window.
 function isLoginRateLimitRowLocked(row, now = Date.now()) {
-  const policy = getLoginRateLimitPolicy(row?.scope_key);
-  const failedCount = Number(row?.failed_count || 0);
   const lockedUntil = Date.parse(String(row?.locked_until || ''));
-  return failedCount >= policy.maxFailures
-    && Number.isFinite(lockedUntil)
-    && lockedUntil > now;
+  return Number.isFinite(lockedUntil) && lockedUntil > now;
 }
 
 export async function ensureLoginRateLimitTable(db) {
@@ -141,8 +140,31 @@ export async function getLoginRateLimit(request, db, username) {
   const rows = await db.prepare(`SELECT scope_key, failed_count, locked_until FROM login_rate_limits WHERE scope_key IN (${placeholders})`)
     .bind(...keys)
     .all();
-  const now = Date.now();
-  const lockedUntil = (Array.isArray(rows?.results) ? rows.results : [])
+  return summarizeRateLimitRows(Array.isArray(rows?.results) ? rows.results : [], Date.now());
+}
+
+// Atomically counts one login attempt against every scope (account + IP) and
+// returns the per-scope state.  The count is taken *before* the password is
+// verified, so a burst of parallel requests cannot all slip past the lock while
+// the earlier ones are still hashing.  A successful login gives the attempt back
+// (see settleSuccessfulLogin).
+const RESERVE_LOGIN_ATTEMPT_SQL = `
+  INSERT INTO login_rate_limits (scope_key, failed_count, first_failed_at, last_failed_at, locked_until)
+  VALUES (?1, 1, ?2, ?2, CASE WHEN 1 >= ?4 THEN ?5 ELSE NULL END)
+  ON CONFLICT(scope_key) DO UPDATE SET
+    failed_count = CASE WHEN login_rate_limits.first_failed_at >= ?3 THEN login_rate_limits.failed_count + 1 ELSE 1 END,
+    first_failed_at = CASE WHEN login_rate_limits.first_failed_at >= ?3 THEN login_rate_limits.first_failed_at ELSE ?2 END,
+    last_failed_at = ?2,
+    locked_until = CASE
+      WHEN login_rate_limits.locked_until IS NOT NULL AND login_rate_limits.locked_until > ?2 THEN login_rate_limits.locked_until
+      WHEN (CASE WHEN login_rate_limits.first_failed_at >= ?3 THEN login_rate_limits.failed_count + 1 ELSE 1 END) >= ?4 THEN ?5
+      ELSE NULL
+    END
+  RETURNING scope_key, failed_count, locked_until
+`;
+
+function summarizeRateLimitRows(rows, now) {
+  const lockedUntil = rows
     .filter((row) => isLoginRateLimitRowLocked(row, now))
     .map((row) => Date.parse(String(row?.locked_until || '')))
     .sort((left, right) => right - left)[0] || 0;
@@ -152,43 +174,49 @@ export async function getLoginRateLimit(request, db, username) {
   };
 }
 
-export async function recordFailedLogin(request, db, username) {
+export async function reserveLoginAttempt(request, db, username) {
   await ensureLoginRateLimitTable(db);
   const keys = getLoginRateLimitKeys(request, username);
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   const rows = await Promise.all(keys.map(async (scopeKey) => {
     const policy = getLoginRateLimitPolicy(scopeKey);
-    const existing = await db.prepare('SELECT failed_count, first_failed_at FROM login_rate_limits WHERE scope_key = ? LIMIT 1')
-      .bind(scopeKey)
+    const windowStartIso = new Date(now - policy.failureWindowMs).toISOString();
+    const lockUntilIso = new Date(now + policy.lockMs).toISOString();
+    const row = await db.prepare(RESERVE_LOGIN_ATTEMPT_SQL)
+      .bind(scopeKey, nowIso, windowStartIso, policy.maxFailures, lockUntilIso)
       .first();
-    const firstFailedAt = Date.parse(String(existing?.first_failed_at || ''));
-    const inWindow = Number.isFinite(firstFailedAt) && now - firstFailedAt < policy.failureWindowMs;
-    const failedCount = (inWindow ? Number(existing?.failed_count || 0) : 0) + 1;
-    const lockedUntil = failedCount >= policy.maxFailures ? new Date(now + policy.lockMs).toISOString() : null;
-    await db.prepare(`
-      INSERT INTO login_rate_limits (scope_key, failed_count, first_failed_at, last_failed_at, locked_until)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(scope_key) DO UPDATE SET
-        failed_count = excluded.failed_count,
-        first_failed_at = excluded.first_failed_at,
-        last_failed_at = excluded.last_failed_at,
-        locked_until = excluded.locked_until
-    `).bind(scopeKey, failedCount, inWindow ? existing.first_failed_at : nowIso, nowIso, lockedUntil).run();
-    return { scopeKey, failedCount, lockedUntil };
+    return {
+      scope_key: scopeKey,
+      failed_count: Number(row?.failed_count || 0),
+      locked_until: row?.locked_until || null,
+      // This attempt arrived after the scope had already used up its budget.
+      exceeded: Number(row?.failed_count || 0) > policy.maxFailures
+        || (Number(row?.failed_count || 0) < policy.maxFailures && isLoginRateLimitRowLocked(row, now))
+    };
   }));
-  const lockedUntil = rows
-    .filter((row) => isLoginRateLimitRowLocked({
-      scope_key: row.scopeKey,
-      failed_count: row.failedCount,
-      locked_until: row.lockedUntil
-    }, now))
-    .map((row) => Date.parse(String(row.lockedUntil || '')))
-    .sort((left, right) => right - left)[0] || 0;
-  return {
-    locked: lockedUntil > now,
-    retryAfterSeconds: lockedUntil > now ? Math.max(1, Math.ceil((lockedUntil - now) / 1000)) : 0
-  };
+  const summary = summarizeRateLimitRows(rows, now);
+  return { ...summary, rejected: rows.some((row) => row.exceeded) };
+}
+
+// Kept for callers/tests that record a failure after the fact.
+export async function recordFailedLogin(request, db, username) {
+  const { locked, retryAfterSeconds } = await reserveLoginAttempt(request, db, username);
+  return { locked, retryAfterSeconds };
+}
+
+// A correct password returns the attempt that reserveLoginAttempt took from the
+// shared IP budget, so a staff room full of teachers signing in does not add up
+// to an IP lock, and clears the account's own counter.
+export async function settleSuccessfulLogin(request, db, username) {
+  await clearLoginRateLimit(request, db, username);
+  const ip = readRequestIp(request);
+  if (!ip) return;
+  await db.prepare(`
+    UPDATE login_rate_limits
+    SET failed_count = MAX(failed_count - 1, 0)
+    WHERE scope_key = ? AND (locked_until IS NULL OR locked_until <= ?)
+  `).bind(`ip:${ip}`, new Date().toISOString()).run();
 }
 
 export async function clearLoginRateLimit(request, db, username) {
@@ -590,6 +618,26 @@ export function accountEditable(session, row) {
   return false;
 }
 
+// Every role an actor hands out must be one they could manage on the
+// resulting record.  Without this, `roles: ["admin"]` (or a primary role the
+// actor cannot see) in an account.update / account.upsert_many payload lets a
+// class teacher or director mint an administrator.
+export function validateAssignedRoles(session, record, alreadyHeld = []) {
+  if (isAdmin(session)) return '';
+  const held = new Set((Array.isArray(alreadyHeld) ? alreadyHeld : []).map((item) => normalizeText(item)).filter(Boolean));
+  const primary = normalizeText(record?.role);
+  const requested = Array.from(new Set([primary, ...(Array.isArray(record?.roles) ? record.roles : [])]
+    .map((item) => normalizeText(item))
+    .filter(Boolean)));
+  for (const role of requested) {
+    // Memberships the account already had are preserved, not granted; the
+    // primary role is always re-checked because it decides school/class scope.
+    if (role !== primary && held.has(role)) continue;
+    if (!accountEditable(session, { ...record, role })) return `无权授予角色 ${role}`;
+  }
+  return '';
+}
+
 export function canSearchAccounts(session) {
   return hasAnyRole(session, ['admin', 'director', 'grade_director', 'class_teacher']);
 }
@@ -860,6 +908,17 @@ export async function resolveSession(request, env) {
 // Login handler
 // ---------------------------------------------------------------------------
 
+let dummyPasswordHashPromise = null;
+function getDummyPasswordHash() {
+  if (!dummyPasswordHashPromise) {
+    dummyPasswordHashPromise = hashAccountPassword(crypto.randomUUID()).catch((error) => {
+      dummyPasswordHashPromise = null;
+      throw error;
+    });
+  }
+  return dummyPasswordHashPromise;
+}
+
 export async function performGatewayLogin(request, env, body, ctx) {
   const db = env.GATEWAY_DATA_DB || null;
   if (!db) return null;
@@ -882,22 +941,28 @@ export async function performGatewayLogin(request, env, body, ctx) {
     }, request, { 'Retry-After': String(rateLimit.retryAfterSeconds) });
   }
 
+  const attempt = await reserveLoginAttempt(request, db, username);
+  if (attempt.rejected) {
+    return jsonResponse(429, {
+      ok: false,
+      error: 'LOGIN_TEMPORARILY_LOCKED',
+      retry_after_seconds: attempt.retryAfterSeconds
+    }, request, { 'Retry-After': String(attempt.retryAfterSeconds || 1) });
+  }
+
   const existing = await getSystemUserRow(db, username, { includeInactive: true });
-  if (existing && !existing.is_active) {
+  // Always run one PBKDF2 derivation so response time does not reveal whether
+  // the account exists, and only report "disabled" to someone who knows the
+  // password.
+  const localMatch = await verifyAccountPasswordHash(existing?.password_hash || await getDummyPasswordHash(), password)
+    && Boolean(existing?.password_hash);
+  if (!localMatch) {
+    return jsonResponse(401, { ok: false, error: 'Invalid username or password' }, request);
+  }
+  if (!existing.is_active) {
     return forbidden(request, 'Account disabled');
   }
-
-  if (!existing?.password_hash) {
-    await recordFailedLogin(request, db, username);
-    return jsonResponse(401, { ok: false, error: 'Invalid username or password' }, request);
-  }
-
-  const localMatch = await verifyAccountPasswordHash(existing.password_hash, password);
-  if (!localMatch) {
-    await recordFailedLogin(request, db, username);
-    return jsonResponse(401, { ok: false, error: 'Invalid username or password' }, request);
-  }
-  await clearLoginRateLimit(request, db, username);
+  await settleSuccessfulLogin(request, db, username);
   const session = buildSessionPayload(existing);
   const token = await signLocalSession(env, session);
   const auditWrite = Promise.all([

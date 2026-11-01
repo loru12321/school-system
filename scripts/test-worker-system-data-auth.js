@@ -136,6 +136,13 @@ async function run() {
     assert.strictEqual(response.status, 200, 'director GET should retain the leadership analytics read path');
     assert.deepStrictEqual(await json(response), [], 'leadership read should keep the existing packed archive response shape');
 
+    const metadataUrl = `${baseUrl}?select=key,updated_at`;
+    response = await handleSystemDataProxy(makeRequest('GET', metadataUrl, directorToken, undefined), env, new URL(metadataUrl));
+    assert.strictEqual(response.status, 200);
+    const clientCacheControl = response.headers.get('Cache-Control') || '';
+    assert.ok(/\bprivate\b/.test(clientCacheControl) && !/\bpublic\b/.test(clientCacheControl),
+      `signed-in score data must not be marked publicly cacheable (got "${clientCacheControl}")`);
+
     response = await handleSystemDataProxy(makeRequest('GET', baseUrl, gradeDirectorToken, undefined), env, new URL(baseUrl));
     assert.strictEqual(response.status, 200, 'grade director GET should retain the scoped analytics read path');
 
