@@ -75,14 +75,21 @@
 
 本机通过：`validate:data`（全部）、`test:cloudflare-worker-contract`、`test:worker-entrypoint-contract`、`test:security-hygiene`、`test:d1-migrations-replay`、`test:service-worker-api-auth`、`test:worker-asset-cache-policy`。`check:cloudflare`（`wrangler deploy --dry-run`）需要在 CI 上跑（本机 `node_modules` 为 Windows 版 workerd）。
 
+## 第二轮修复（2026-11-01，分支 `fix/review-followups-2026-11-01`）
+
+| 严重度 | 问题 | 修复 | 验证 |
+| --- | --- | --- | --- |
+| 🟡 Medium | 教务主任可读取**所有学校**的 `system_logs` | 新增 `school` 列（迁移 `009`，Worker 首次使用时自动 `ALTER TABLE` 补列，生产无需手动迁移）；写入时由会话填充，客户端传值无效；主任只读本校，管理员读全部。加列前的旧日志 `school` 为空，仅管理员可见 | `test:managed-rest-access`、`test:d1-migrations-replay` |
+| 🟡 Medium | 非管理员的 PATCH 可改写决定可见范围的列（问题反馈的 `school`/`student_class`、日志的 `school`），把记录移出或移入他人范围 | 受管表声明 `scopeColumns`，非管理员 PATCH 时忽略这些列 | `test:managed-rest-access` |
+| 🟢 Low | `or=` 过滤超过 D1 绑定上限时返回 500 | 超过 100 个条件返回 400 `SYSTEM_DATA_FILTER_TOO_LARGE` | `test:worker-system-data-auth` |
+| 🟢 Low | PostgREST 标准写法 `or=(...)` 带括号时被整段忽略，过滤静默失效 | 同时接受带括号与不带括号两种写法 | `test:worker-system-data-auth` |
+
 ## 建议（未在本次修改）
 
 | 严重度 | 建议 |
 | --- | --- |
-| 🟡 Medium | 校领导可读取**所有学校**的 `system_logs`。日志表没有学校列，需要先加列并在写入时由会话填充，才能按校限定。 |
 | 🟡 Medium | 校领导/级部主任读取的仍是整届打包数据（已在 2026-10-31 记录）；按学校分片后才能在服务端限制范围。 |
 | 🟡 Medium | CSP 仍含 `unsafe-inline`：`public/assets/js` 中约 115 处运行时内联事件需逐模块迁移（已在 2026-10-31 记录）。 |
 | 🟢 Low | PBKDF2-SHA256 为 100,000 次（Workers 上限）。OWASP 建议 600,000 次；如需更强，可评估在 Worker 内用 scrypt/Argon2 的 WASM 实现。 |
 | 🟢 Low | 会话撤销缓存为每个 isolate 30 秒，撤销后最多 30 秒内其他 isolate 仍放行，属设计取舍。 |
-| 🟢 Low | `or=` 过滤可展开出超过 D1 绑定上限的参数，导致 500；可像 `in.()` 一样设上限。 |
 | 🟢 Low | 密码经 `normalizeText` 去除首尾空格后再哈希/校验，行为一致但会静默改变用户输入；如要更改需同步迁移。 |
