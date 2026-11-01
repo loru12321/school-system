@@ -12748,3 +12748,7 @@ body.dark-mode .version-center-meta-list > div {
     .exam-head-actions { justify-content: flex-start; }
     .exam-template-row > span { width: 100%; }
 }
+
+/* Hover states formerly set by inline onmouseover/onmouseout (CSP without 'unsafe-inline'). */
+.report-hover-row:hover { background: rgba(241, 245, 249, 0.5); }
+.fb-scheme-option:hover { background: #f0fdf4; }
