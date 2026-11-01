@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_COMPARE_RESULT_RUNTIME_PATCHED__) return;
 
@@ -579,7 +589,7 @@ function renderAllTeachersMultiPeriodComparison() {
                 </table>
             </div>
                 <div class="analysis-inline-export">
-                    <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff(${teacherDiffAttrArg(school)}, ${teacherDiffAttrArg(examIds.join('_'))})">📤 导出Excel</button>
+                    <button class="btn btn-sm" ${uiDeclaredAttrs('click', 'exportAllTeachersMultiPeriodDiff', String(school ?? ''), String(examIds.join('_') ?? ''))}>📤 导出Excel</button>
                 </div>
             </div>
         `;
@@ -610,11 +620,6 @@ function renderAllTeachersMultiPeriodComparison() {
 
 // 🆕 导出全校教师对比
 // JS string literal escaped for a double-quoted HTML attribute.
-function teacherDiffAttrArg(value) {
-    return JSON.stringify(String(value ?? ''))
-        .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
 function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
     if (!canUseTeacherMultiPeriodCompare()) {
         return window.UI.alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');

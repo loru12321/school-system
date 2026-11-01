@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 
 const UI = Object.assign(window.UI || {}, {
     loading: (show, text = '系统正在处理数据...') => {
@@ -3908,7 +3918,7 @@ function handleHighSchoolAdmissionClick(schoolName) {
                 ? '可计算'
                 : getHighSchoolAdmissionStatusText(item, { allowed, line });
             const result = canCalculate
-                ? `<button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighSchoolAdmissionClassClick(${jsStringLiteral(schoolName)}, ${jsStringLiteral(item.className)})" title="查看${escapeAppHtml(item.className)}班全部高中上线学生姓名" aria-label="查看${escapeAppHtml(item.className)}班高中上线学生姓名">${item.admissionCount}/${item.count} 人（${(item.ratio * 100).toFixed(2)}%）</button>`
+                ? `<button type="button" class="summary-drill-link summary-drill-link-warm" ${uiDeclaredAttrs('click', 'handleHighSchoolAdmissionClassClick', String(schoolName ?? ''), String(item.className ?? ''))} title="查看${escapeAppHtml(item.className)}班全部高中上线学生姓名" aria-label="查看${escapeAppHtml(item.className)}班高中上线学生姓名">${item.admissionCount}/${item.count} 人（${(item.ratio * 100).toFixed(2)}%）</button>`
                 : '—';
             return `<tr><td>${escapeAppHtml(item.className)}</td><td>${item.count}</td><td>${item.availableCount}</td><td>${result}</td><td>${escapeAppHtml(rowStatus)}</td></tr>`;
         }).join('')
@@ -5267,14 +5277,13 @@ function renderBottom3TableBody(summarySignature = getSummaryRenderSignature(), 
     bottomList.forEach(s => {
         const isMySchool = sameAppSchoolName(s.name, MY_SCHOOL);
         const safeName = escapeAppHtml(s.name);
-        const safeNameArg = jsStringLiteral(s.name);
         htmlBottom += `
             <tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td>${safeName}</td>
                 <td>${s.bottom3 ? s.bottom3.totalN : ''}</td>
                 <td>${s.bottom3 ? s.bottom3.bottomN : ''}</td>
                 <td>
-                    <button type="button" class="clickable-num" onclick="handleExcludedClick(${safeNameArg})" title="点击查看被剔除的低分学生" aria-label="查看${safeName}被剔除的低分学生名单">
+                    <button type="button" class="clickable-num" ${uiDeclaredAttrs('click', 'handleExcludedClick', String(s.name ?? ''))} title="点击查看被剔除的低分学生" aria-label="查看${safeName}被剔除的低分学生名单">
                         ${s.bottom3 ? s.bottom3.excN : ''}
                     </button>
                 </td>
@@ -6766,7 +6775,6 @@ async function calcSummary(isSilent = false) {
     list.forEach(d => {
         const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
         const safeName = escapeAppHtml(d.name);
-        const safeSchoolArg = jsStringLiteral(d.name);
         let indicatorCell = '';
         if (isGrade9) {
             const indicatorReady = indicatorRowsForSummary.length > 0 && indicatorScoreMap.size > 0;
@@ -6778,7 +6786,7 @@ async function calcSummary(isSilent = false) {
                     : '<td data-label="指标生得分" data-indicator-state="missing" title="本届指标参数或目标人数尚未配置" style="color:#b45309;font-weight:600;">待配置</td>';
         }
         let highScoreCell = '';
-        if (isGrade9) highScoreCell = `<td data-label="高分段赋分" style="color:#b45309; background:#fff7ed; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighClick(${safeSchoolArg})" title="点击查看高分段学生名单">${d.s4.toFixed(2)}</button></td>`;
+        if (isGrade9) highScoreCell = `<td data-label="高分段赋分" style="color:#b45309; background:#fff7ed; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" ${uiDeclaredAttrs('click', 'handleHighClick', String(d.name ?? ''))} title="点击查看高分段学生名单">${d.s4.toFixed(2)}</button></td>`;
         let highSchoolAdmissionCell = '';
         if (isGrade9) {
             const admissionAllowed = isHighSchoolAdmissionExamAllowed();
@@ -6797,7 +6805,7 @@ async function calcSummary(isSilent = false) {
                 : missingAdmissionCount > 0
                     ? '待中考总分'
                     : admissionLine > 0 ? d.s5.toFixed(2) : '待录取线';
-            highSchoolAdmissionCell = `<td data-label="高中上线率赋分" style="color:#047857; background:#ecfdf5; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" data-school="${escapeAppHtml(d.name)}" data-drill="high-school-admission" onclick="handleHighSchoolAdmissionClick(${safeSchoolArg})" title="${escapeAppHtml(admissionTitle)}；点击查看该校各班高中上线情况" aria-label="查看${escapeAppHtml(d.name)}各班高中上线情况">${admissionText}</button></td>`;
+            highSchoolAdmissionCell = `<td data-label="高中上线率赋分" style="color:#047857; background:#ecfdf5; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" data-school="${escapeAppHtml(d.name)}" data-drill="high-school-admission" ${uiDeclaredAttrs('click', 'handleHighSchoolAdmissionClick', String(d.name ?? ''))} title="${escapeAppHtml(admissionTitle)}；点击查看该校各班高中上线情况" aria-label="查看${escapeAppHtml(d.name)}各班高中上线情况">${admissionText}</button></td>`;
         }
         const rankClass = ['rank-cell', d.rank === 1 ? 'r-1' : '', d.rank === 2 ? 'r-2' : '', d.rank === 3 ? 'r-3' : '']
             .filter(Boolean)
@@ -6806,7 +6814,7 @@ async function calcSummary(isSilent = false) {
         html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td data-label="学校名称">${safeName}</td>
                 <td data-label="两率一分得分">${d.s1.toFixed(2)}</td>
-                <td data-label="后1/3得分"><button type="button" class="summary-drill-link" onclick="handleExcludedClick(${safeSchoolArg})" title="点击查看后1/3核算剔除名单">${d.s2.toFixed(2)}</button></td>
+                <td data-label="后1/3得分"><button type="button" class="summary-drill-link" ${uiDeclaredAttrs('click', 'handleExcludedClick', String(d.name ?? ''))} title="点击查看后1/3核算剔除名单">${d.s2.toFixed(2)}</button></td>
                 ${indicatorCell}
                 ${highScoreCell}
                 ${highSchoolAdmissionCell}
@@ -6867,7 +6875,7 @@ function initTagWidget(wrapperId, hiddenInputId) {
             const val = this.value.trim().toLowerCase();
             if (!val) { dropdown.style.display = 'none'; return; }
             const matches = readCurrentContextStudentsState().filter(s => s.name.includes(val)).slice(0, 8);
-            if (matches.length) { dropdown.innerHTML = matches.map(s => `<div class="suggestion-item" onclick="addTagToWidget(${jsStringLiteral(wrapperId)}, ${jsStringLiteral(hiddenInputId)}, ${jsStringLiteral(s.name)})">${escapeAppHtml(s.name)} <small>${escapeAppHtml(s.score || s.total)}分</small></div>`).join(''); dropdown.style.display = 'block'; }
+            if (matches.length) { dropdown.innerHTML = matches.map(s => `<div class="suggestion-item" ${uiDeclaredAttrs('click', 'addTagToWidget', String(wrapperId ?? ''), String(hiddenInputId ?? ''), String(s.name ?? ''))}>${escapeAppHtml(s.name)} <small>${escapeAppHtml(s.score || s.total)}分</small></div>`).join(''); dropdown.style.display = 'block'; }
             else { dropdown.style.display = 'none'; }
         });
         input.addEventListener('blur', () => { setTimeout(() => dropdown.style.display = 'none', 200); });
@@ -6891,7 +6899,7 @@ function renderTagsUI(wrapperId, hiddenInputId) {
     const input = wrapper.querySelector('.tag-input-field');
     tags.forEach(tag => {
         const chip = document.createElement('div'); chip.className = 'tag-chip';
-        chip.innerHTML = `${escapeAppHtml(tag)} <span class="tag-chip-remove" onclick="removeTagFromWidget(${jsStringLiteral(wrapperId)}, ${jsStringLiteral(hiddenInputId)}, ${jsStringLiteral(tag)})">&times;</span>`;
+        chip.innerHTML = `${escapeAppHtml(tag)} <span class="tag-chip-remove" ${uiDeclaredAttrs('click', 'removeTagFromWidget', String(wrapperId ?? ''), String(hiddenInputId ?? ''), String(tag ?? ''))}>&times;</span>`;
         if (input) wrapper.insertBefore(chip, input); else wrapper.appendChild(chip);
     });
 }

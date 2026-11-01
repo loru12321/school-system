@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__) return;
 
@@ -238,10 +248,10 @@ function ensureTownSubmoduleCompareUIs(submoduleId = '') {
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
                     <div data-compare-panel-title style="font-weight:600; color:#334155;">🧭 ${title} 多期对比（2期/3期）</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn btn-sm btn-blue" onclick="openTownSubmoduleCompareDialog('${entryId}')">生成多期对比</button>
-                        <button class="btn btn-sm btn-green" onclick="exportTownSubmoduleCompare('${entryId}')">导出多期对比</button>
-                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;" onclick="saveTownSubmoduleCompareToCloud('${entryId}')">☁️ 保存云端对比</button>
-                        <button class="btn btn-sm" style="background:#06b6d4; color:white;" onclick="viewCloudTownSubmoduleCompares('${entryId}')">📋 查看云端对比</button>
+                        <button class="btn btn-sm btn-blue" ${uiDeclaredAttrs('click', 'openTownSubmoduleCompareDialog', '${entryId}')}>生成多期对比</button>
+                        <button class="btn btn-sm btn-green" ${uiDeclaredAttrs('click', 'exportTownSubmoduleCompare', '${entryId}')}>导出多期对比</button>
+                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;" ${uiDeclaredAttrs('click', 'saveTownSubmoduleCompareToCloud', '${entryId}')}>☁️ 保存云端对比</button>
+                        <button class="btn btn-sm" style="background:#06b6d4; color:white;" ${uiDeclaredAttrs('click', 'viewCloudTownSubmoduleCompares', '${entryId}')}>📋 查看云端对比</button>
                     </div>
                 </div>
                 <div id="town-submodule-compare-hint-${entryId}" style="margin-top:6px; font-size:12px; color:#64748b;">请选择学校与考试期次后生成。</div>
@@ -428,7 +438,7 @@ async function openTownSubmoduleCompareDialog(submoduleId) {
                 <div style="text-align:left; display:flex; flex-direction:column; gap:8px;">
                     <label>学校：<select id="townSubSchool" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${schoolOptions}</select></label>
                     <label>期数：
-                        <select id="townSubPeriod" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;" onchange="document.getElementById('townSubExam3Wrap').style.display=this.value==='3'?'block':'none'">
+                        <select id="townSubPeriod" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;" data-ui-change="toggle-display-when" data-ui-target="townSubExam3Wrap" data-ui-when="3">
                             <option value="2">2期</option>
                             <option value="3">3期</option>
                         </select>

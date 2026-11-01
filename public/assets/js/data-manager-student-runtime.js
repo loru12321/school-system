@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -217,7 +227,7 @@
                 const total = student.total != null ? student.total : '';
                 return `
                 <tr>
-                    <td style="text-align:center;"><input type="checkbox" class="dm-stu-select" data-idx="${originalIndex}" ${selection.has(originalIndex) ? 'checked' : ''} onchange="DataManager.toggleStudentSelection(this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="dm-stu-select" data-idx="${originalIndex}" ${selection.has(originalIndex) ? 'checked' : ''} ${uiDeclaredAttrs('change', 'DataManager.toggleStudentSelection', '$this')}></td>
                     <td>${escapeStudentCell(manager, school)}</td>
                     <td>${escapeStudentCell(manager, klass)}</td>
                     <td style="font-weight:bold;">${escapeStudentCell(manager, name)}</td>
@@ -225,8 +235,8 @@
                     <td>${escapeStudentCell(manager, total)}</td>
                     ${renderDisplayOnlyScoreCells(manager, student, displayOnlySubjects)}
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button>
-                        <button class="btn btn-sm btn-danger" onclick="DataManager.deleteStudent(${originalIndex})" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
+                        <button class="btn btn-sm btn-primary" ${uiDeclaredAttrs('click', 'DataManager.editStudent', Number(originalIndex))} style="padding:2px 6px; font-size:11px;">编辑</button>
+                        <button class="btn btn-sm btn-danger" ${uiDeclaredAttrs('click', 'DataManager.deleteStudent', Number(originalIndex))} style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
                     </td>
                 </tr>`;
             });

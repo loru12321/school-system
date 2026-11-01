@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 /*
  * 指标生核算（indicator-calc）运行时模块
  *
@@ -264,7 +274,6 @@
         calcData.forEach(d => {
             const isMySchool = root.sameAppSchoolName(d.name, root.MY_SCHOOL);
             const safeName = root.escapeAppHtml(d.name);
-            const safeNameArg = root.jsStringLiteral(d.name);
             const targetTitle = d.targetKey ? `目标人数匹配：${d.targetKey}` : '未匹配目标人数';
             html += `
             <tr class="${isMySchool ? 'bg-highlight' : ''}">
@@ -274,11 +283,11 @@
                 <td>
                     <!-- 👇 新增点击事件：点击目标人数，分析如何达标 -->
                     <span class="clickable-num" style="color:#d97706; border-bottom:1px dashed #d97706;"
-                          onclick="analyzeTargetGap(${safeNameArg}, 'ind1', ${line1})"
+                          ${uiDeclaredAttrs('click', 'analyzeTargetGap', String(d.name ?? ''), 'ind1', Number(line1))}
                           title="点击分析：哪些学生差一点就达标？补哪科？">
                         ${d.t1 || (d.invalidTarget ? '异常' : (d.missingTarget ? '未匹配' : 0))}
                     </span> /
-                    <strong class="clickable-num" onclick="handleIndicatorClick(${safeNameArg}, 'ind1')">${d.r1}</strong>
+                    <strong class="clickable-num" ${uiDeclaredAttrs('click', 'handleIndicatorClick', String(d.name ?? ''), 'ind1')}>${d.r1}</strong>
                 </td>
                 <td>${d.base1.toFixed(2)}</td>
                 <td style="color:${d.bonus1 > 0 ? 'green' : '#ccc'}; font-weight:bold;">${d.bonus1 > 0 ? '+' : ''}${d.bonus1.toFixed(2)}</td>
@@ -288,11 +297,11 @@
                 <td>
 
                     <span class="clickable-num" style="color:#d97706; border-bottom:1px dashed #d97706;"
-                          onclick="analyzeTargetGap(${safeNameArg}, 'ind2', ${line2})"
+                          ${uiDeclaredAttrs('click', 'analyzeTargetGap', String(d.name ?? ''), 'ind2', Number(line2))}
                           title="点击分析：哪些学生差一点就达标？补哪科？">
                         ${d.t2 || (d.invalidTarget ? '异常' : (d.missingTarget ? '未匹配' : 0))}
                     </span> /
-                    <strong class="clickable-num" onclick="handleIndicatorClick(${safeNameArg}, 'ind2')">${d.r2}</strong>
+                    <strong class="clickable-num" ${uiDeclaredAttrs('click', 'handleIndicatorClick', String(d.name ?? ''), 'ind2')}>${d.r2}</strong>
                 </td>
                 <td>${d.base2.toFixed(2)}</td>
                 <td style="color:${d.bonus2 > 0 ? 'green' : '#ccc'}; font-weight:bold;">${d.bonus2 > 0 ? '+' : ''}${d.bonus2.toFixed(2)}</td>

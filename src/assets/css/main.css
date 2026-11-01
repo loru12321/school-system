@@ -12748,3 +12748,7 @@ body.dark-mode .version-center-meta-list > div {
     .exam-head-actions { justify-content: flex-start; }
     .exam-template-row > span { width: 100%; }
 }
+
+/* Hover states formerly set by inline onmouseover/onmouseout (CSP without 'unsafe-inline'). */
+/* Freshman scheme hover, formerly inline onmouseover (CSP). Report rows rely on the global tr:hover rule. */
+.fb-opt:hover { background: #f0fdf4; }

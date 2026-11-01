@@ -119,11 +119,30 @@ assert.match(
 );
 assert.ok(distIndex.includes('./assets/js/runtime-registry-runtime.js'), 'dist HTML must load runtime registry');
 assert.ok(distIndex.includes('./assets/vendor/tabler-icons/tabler-icons.min.css'), 'dist HTML must load local Tabler icons CSS');
+// The build (scripts/build/inject-csp-script-hashes.mjs) swaps 'unsafe-inline'
+// in the Report-Only script-src for hashes of dist/index.html's inline scripts;
+// everything else must be copied verbatim.
+const reportOnlyScriptSrc = /(Content-Security-Policy-Report-Only:[^\n]*?script-src)([^;\n]*)/;
+const withoutReportOnlyScriptSrc = (text) => text.replace(reportOnlyScriptSrc, '$1 <build>');
 assert.strictEqual(
-  distHeaders,
-  publicHeaders,
-  'dist static asset headers should match public/_headers'
+  withoutReportOnlyScriptSrc(distHeaders),
+  withoutReportOnlyScriptSrc(publicHeaders),
+  'dist static asset headers should match public/_headers apart from the Report-Only script-src'
 );
+{
+  const crypto = require('crypto');
+  const sources = (distHeaders.match(reportOnlyScriptSrc) || [])[2] || '';
+  const expectedHashes = [];
+  for (const match of distIndex.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script\s*>/gi)) {
+    const attrs = match[1] || '';
+    if (/\ssrc\s*=/i.test(attrs) || /\stype\s*=\s*["']?(text\/html|application\/(ld\+)?json)/i.test(attrs)) continue;
+    const token = `'sha256-${crypto.createHash('sha256').update(match[2], 'utf8').digest('base64')}'`;
+    if (!expectedHashes.includes(token)) expectedHashes.push(token);
+  }
+  assert.ok(!sources.includes("'unsafe-inline'"), "dist Report-Only script-src must not allow 'unsafe-inline'");
+  assert.deepStrictEqual(sources.match(/'sha256-[^']+'/g) || [], expectedHashes,
+    'dist Report-Only script-src must list exactly the hashes of the inline scripts in dist/index.html');
+}
 assert.ok(publicHeaders.includes('/style-*.css'), 'static asset headers should cover hashed Vite CSS');
 assert.ok(publicHeaders.includes('/assets/vendor/*'), 'static asset headers should cover vendored assets');
 assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should cover runtime JS assets');

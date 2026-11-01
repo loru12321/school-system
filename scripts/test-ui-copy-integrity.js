@@ -504,7 +504,7 @@ async function login(page) {
                 page.locator('[data-login-open="school"]').first(),
                 page.locator('.login-stage-nav-links a[data-nav="modal"]').first(),
                 page.locator('.login-stage-primary-action').first(),
-                page.locator('button[onclick="window.Auth?.openLoginPortalModal(\'school\')"]').first()
+                page.locator('button[data-ui-call="Auth.openLoginPortalModal"][data-ui-args=\'["school"]\'], button[onclick="window.Auth?.openLoginPortalModal(\'school\')"]').first()
             ];
             for (const opener of openers) {
                 if (!(await opener.count().catch(() => 0))) continue;

@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 /*
  * 高分段页面运行时模块
  *
@@ -21,11 +31,6 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
-    }
-
-    function stringLiteral(value) {
-        if (typeof root.jsStringLiteral === 'function') return root.jsStringLiteral(value);
-        return JSON.stringify(String(value == null ? '' : value));
     }
 
     function getRankHtml(rank) {
@@ -86,12 +91,11 @@
                 ? root.sameAppSchoolName(row.name, root.MY_SCHOOL)
                 : String(row.name || '') === String(root.MY_SCHOOL || '');
             const safeName = escapeHtml(row.name);
-            const safeNameArg = stringLiteral(row.name);
             return `<tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td>${safeName}</td>
                 <td>${row.count}</td>
                 <td style="font-weight:bold;">
-                    <span class="clickable-num" onclick="handleHighClick(${safeNameArg})" title="点击查看高分学生名单">
+                    <span class="clickable-num" ${uiDeclaredAttrs('click', 'handleHighClick', String(row.name ?? ''))} title="点击查看高分学生名单">
                         ${row.hsCount}
                     </span>
                 </td>

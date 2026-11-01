@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.CountySchoolHorizontalRenderer) return;
 
@@ -104,7 +114,7 @@
                 </div>
                 <div class="table-anchor-jumpbar-links">
                     ${items.map((item, index) => `
-                        <button type="button" class="${index === 0 ? 'active' : ''}" onclick="document.getElementById('${ctx.escapeHtml(item.anchorId)}')?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })">
+                        <button type="button" class="${index === 0 ? 'active' : ''}" data-ui-action="scroll-into-view" data-ui-target="${ctx.escapeHtml(item.anchorId)}">
                             <span>${ctx.escapeHtml(item.label)}</span>
                         </button>
                     `).join('')}
@@ -130,9 +140,9 @@
                     <input id="countySchoolNameInput" type="text" value="${ctx.escapeHtml(currentSchoolName)}" placeholder="输入本校名称，用于高亮和横向对比">
                 </label>
                 <div class="county-control-actions">
-                    <button class="btn btn-sm btn-green" type="button" onclick="generateCountySchoolHorizontalTable()">生成横向对比表</button>
-                    <button class="btn btn-sm btn-blue" type="button" onclick="exportCountyAnalysisSection('school')">下载横向对比表</button>
-                    <button class="btn btn-sm btn-secondary" type="button" onclick="setCountyAnalysisSchoolNameFromInput()">锁定本校</button>
+                    <button class="btn btn-sm btn-green" type="button" ${uiDeclaredAttrs('click', 'generateCountySchoolHorizontalTable')}>生成横向对比表</button>
+                    <button class="btn btn-sm btn-blue" type="button" ${uiDeclaredAttrs('click', 'exportCountyAnalysisSection', 'school')}>下载横向对比表</button>
+                    <button class="btn btn-sm btn-secondary" type="button" ${uiDeclaredAttrs('click', 'setCountyAnalysisSchoolNameFromInput')}>锁定本校</button>
                 </div>
             </div>
             <div class="county-kpi-grid">
@@ -146,7 +156,7 @@
                 <div class="county-section-head">
                     <div class="sub-header analysis-section-head">${ctx.escapeHtml(totalLabel)} - 综合分析表</div>
                     <div class="county-section-actions">
-                        <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('school')">下载Excel</button>
+                        <button class="btn btn-sm btn-green" type="button" ${uiDeclaredAttrs('click', 'exportCountyAnalysisSection', 'school')}>下载Excel</button>
                     </div>
                 </div>
                 <div class="analysis-table-meta">

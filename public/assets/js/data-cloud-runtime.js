@@ -716,7 +716,7 @@
                     <div style="margin-top:4px; font-size:12px; color:#9a3412; line-height:1.7;">${escapeHtml(currentExamStatus)}</div>
                     <div style="margin-top:4px; font-size:11px; color:#c2410c; line-height:1.6;">${escapeHtml(currentExamScope)}</div>
                 </div>
-                <button class="btn btn-sm btn-danger" ${disabledAttr} style="${disabledStyle}" onclick="window.DataCloudRuntime.deleteCurrentExamCloudBackup(window.DataManager)" title="删除当前考试的本地届别库数据、工作区快照引用和独立云端考试快照">
+                <button class="btn btn-sm btn-danger" ${disabledAttr} style="${disabledStyle}" data-ui-action="delete-current-exam-cloud-backup" title="删除当前考试的本地届别库数据、工作区快照引用和独立云端考试快照">
                     <i class="ti ti-trash"></i> 删除当前考试数据
                 </button>
             </div>

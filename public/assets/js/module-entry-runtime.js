@@ -758,7 +758,7 @@
 
         if (canUseStudentMultiPeriod) {
             multiPeriodSection.style.display = 'block';
-            const saveCloudBtn = multiPeriodSection.querySelector('[onclick="saveStudentCompareToCloud()"]');
+            const saveCloudBtn = multiPeriodSection.querySelector('[data-ui-action="save-student-compare-cloud"]');
             if (saveCloudBtn) saveCloudBtn.style.display = '';
         } else {
             multiPeriodSection.style.display = 'none';

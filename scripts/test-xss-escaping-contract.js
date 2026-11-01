@@ -19,29 +19,31 @@ const drillSystem = read('public/assets/js/drill-system-runtime.js');
 
 assert.ok(dataManager.includes('escapeDataManagerHtml(s.school)'), 'student table school names must be HTML-escaped');
 assert.ok(dataManager.includes('escapeDataManagerHtml(s.name)'), 'student table names must be HTML-escaped');
-assert.ok(dataManager.includes('dataManagerJsStringLiteral(t.key)'), 'teacher action keys must use JS string literals');
-assert.ok(dataManager.includes('dataManagerJsStringLiteral(t.name)'), 'teacher action names must use JS string literals');
+// Runtime-rendered actions pass their arguments as escaped JSON data through
+// uiDeclaredAttrs() (see test:ui-actions-declared-calls for the round trip),
+// never as JavaScript source inside an inline handler.
+assert.ok(/uiDeclaredAttrs\('click', 'DataManager\.editTeacher', String\(t\.key \?\? ''\), String\(t\.name \?\? ''\)\)/.test(dataManager), 'teacher actions must pass key/name as declarative data');
 assert.ok(!dataManager.includes("onclick=\"DataManager.editTeacher('${t.key}', '${t.name}')"), 'teacher edit onclick must not interpolate raw quoted values');
 assert.ok(!dataManager.includes('value="${s.name}"'), 'student edit modal values must not interpolate raw names');
 
-assert.ok(studentDetails.includes('updateStudentScore(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.class)}, ${jsStringLiteral(sub)}, ${scoreArg})'), 'student score editing onclick must use safe JS literals');
+assert.ok(/uiDeclaredAttrs\('click', 'updateStudentScore', String\(student\.name \?\? ''\), String\(student\.class \?\? ''\), String\(sub \?\? ''\), scoreArg\)/.test(studentDetails), 'student score editing must pass its arguments as declarative data');
 assert.ok(studentDetails.includes('${tmEscapeHtml(student.name || \'-\')}</a>'), 'student detail links must escape displayed names');
 assert.ok(!studentDetails.includes("updateStudentScore('${student.name}', '${student.class}', '${sub}'"), 'student detail score onclick must not interpolate raw quoted values');
 
 [
-  "handleHighClick(${safeNameArg})",
-  "handleExcludedClick(${safeNameArg})",
-  'removeTagFromWidget(${jsStringLiteral(wrapperId)}, ${jsStringLiteral(hiddenInputId)}, ${jsStringLiteral(tag)})'
+  "uiDeclaredAttrs('click', 'handleHighClick', String(row.name ?? ''))",
+  "uiDeclaredAttrs('click', 'handleExcludedClick', String(s.name ?? ''))",
+  "uiDeclaredAttrs('click', 'removeTagFromWidget', String(wrapperId ?? ''), String(hiddenInputId ?? ''), String(tag ?? ''))"
 ].forEach((needle) => {
-  const source = needle.startsWith('handleHighClick') ? highScore : app;
-  assert.ok(source.includes(needle), `${needle.startsWith('handleHighClick') ? 'high-score-runtime.js' : 'app.js'} should contain safe pattern: ${needle}`);
+  const source = needle.includes("'handleHighClick'") ? highScore : app;
+  assert.ok(source.includes(needle), `${needle.includes("'handleHighClick'") ? 'high-score-runtime.js' : 'app.js'} should contain safe pattern: ${needle}`);
 });
 
-// indicator table onclicks moved to indicator-calc-runtime.js (window.calcIndicators) —
-// still must use the escaped ${safeNameArg} JS literal, not raw interpolation.
+// indicator table actions live in indicator-calc-runtime.js (window.calcIndicators) and
+// pass the school name as declarative data, not raw interpolation.
 [
-  "analyzeTargetGap(${safeNameArg}, 'ind1'",
-  "handleIndicatorClick(${safeNameArg}, 'ind1')"
+  "uiDeclaredAttrs('click', 'analyzeTargetGap', String(d.name ?? ''), 'ind1'",
+  "uiDeclaredAttrs('click', 'handleIndicatorClick', String(d.name ?? ''), 'ind1')"
 ].forEach((needle) => {
   assert.ok(indicatorCalc.includes(needle), `indicator-calc-runtime.js should contain safe pattern: ${needle}`);
 });

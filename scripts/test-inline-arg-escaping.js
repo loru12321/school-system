@@ -16,10 +16,16 @@ function extract(source, pattern, label) {
 }
 
 const helpers = {
-  'teacher-compare-result teacherDiffAttrArg': extract(read('teacher-compare-result-runtime.js'),
-    /(function teacherDiffAttrArg\(value\) \{[\s\S]*?\n\})/, 'teacherDiffAttrArg'),
-  'auth-login issueArg': extract(read('auth-login-runtime.js'),
-    /const issueArg = (\(value\) => JSON\.stringify[\s\S]*?\.replace\(\/>\/g, '&gt;'\));/, 'issueArg'),
+  // Runtime-rendered declarative calls: the data-ui-args JSON array carries each
+  // argument as a JSON (and therefore JS) string literal, HTML-escaped.
+  'uiDeclaredAttrs data-ui-args': (() => {
+    const source = read('auth-login-runtime.js');
+    const match = /^var uiDeclaredAttrs[\s\S]*?\n\}\);/m.exec(source);
+    assert.ok(match, 'uiDeclaredAttrs helper not found');
+    const sandbox = {};
+    vm.runInNewContext(match[0], sandbox);
+    return (value) => /data-ui-args="\[([^"]*)\]"/.exec(sandbox.uiDeclaredAttrs('click', 'IssueManager.openSubmitModal', value))[1];
+  })(),
   'student-jump jsStringLiteral': extract(read('student-jump-runtime.js'),
     /(function jsStringLiteral\(value\) \{[\s\S]*?\n    \})/, 'jsStringLiteral')
 };
