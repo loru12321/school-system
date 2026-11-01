@@ -65,7 +65,9 @@ async function run() {
       INSERT INTO issues (student_name, student_class, school, issue_type, description, contact_info, status, created_at) VALUES
         ('甲', '701', 'A校', 'score', 'x', '13800000000', 'pending', '2026-10-01'),
         ('乙', '702', 'A校', 'score', 'x', NULL, 'pending', '2026-10-02'),
-        ('丙', '801', 'B校', 'score', 'x', NULL, 'pending', '2026-10-03');
+        ('丙', '801', 'B校', 'score', 'x', NULL, 'pending', '2026-10-03'),
+        -- Same class name as A校 702 but another school: must stay invisible to A校 staff.
+        ('戊', '702', 'B校', 'score', 'x', '13900000000', 'pending', '2026-10-04');
       INSERT INTO system_logs (operator, action, details, status, created_at) VALUES ('admin (admin)', '登录', '', 'normal', '2026-10-01');
     `);
 
@@ -91,11 +93,11 @@ async function run() {
     const parent = await tokenFor({ username: 'p1', role: 'parent', roles: ['parent'], school: 'A校', class_name: '701', teacher_name: '家长' });
 
     const names = (result) => result.json.map((row) => row.student_name).sort().join(',');
-    assert.strictEqual(names(await call('/sb/rest/v1/issues?select=*', { token: admin })), '丙,乙,甲', 'admin sees every issue');
+    assert.strictEqual(names(await call('/sb/rest/v1/issues?select=*', { token: admin })), '丙,乙,戊,甲', 'admin sees every issue');
     assert.strictEqual(names(await call('/sb/rest/v1/issues?select=*', { token: directorA })), '乙,甲', 'director sees own school only');
     assert.strictEqual(names(await call('/sb/rest/v1/issues?select=*&school=eq.B校', { token: directorA })), '', 'director filters cannot widen scope');
-    assert.strictEqual(names(await call('/sb/rest/v1/issues?select=*', { token: gradeDirector })), '乙,甲', 'grade director sees own grade prefix');
-    assert.strictEqual(names(await call('/sb/rest/v1/issues?select=*', { token: classTeacher })), '乙', 'class teacher sees own class');
+    assert.strictEqual(names(await call('/sb/rest/v1/issues?select=*', { token: gradeDirector })), '乙,甲', 'grade director sees own grade prefix in own school only');
+    assert.strictEqual(names(await call('/sb/rest/v1/issues?select=*', { token: classTeacher })), '乙', 'class teacher sees own class in own school only');
     assert.strictEqual((await call('/sb/rest/v1/issues?select=*', { token: parent })).status, 403, 'parents cannot list issues');
 
     // Parents can still submit; status/created_at are server controlled.

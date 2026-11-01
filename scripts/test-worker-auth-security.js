@@ -3,6 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { DatabaseSync } = require('node:sqlite');
 
 const root = path.resolve(__dirname, '..');
 const edgeGatewayRuntime = fs.readFileSync(path.join(root, 'public/assets/js/edge-gateway-runtime.js'), 'utf8');
@@ -26,46 +27,22 @@ function prepareEsmWorkerModules() {
   return tempDir;
 }
 
+// Real SQLite behind a minimal D1 facade, so the atomic UPSERT ... RETURNING
+// used by the login rate limiter is exercised exactly as D1 would run it.
 function createRateLimitDb() {
-  const rows = new Map();
+  const sqlite = new DatabaseSync(':memory:');
+  const statement = (sql, bindings = []) => ({
+    bind(...values) { return statement(sql, values); },
+    async all() { return { results: sqlite.prepare(sql).all(...bindings) }; },
+    async first() { return sqlite.prepare(sql).get(...bindings) || null; },
+    async run() { const info = sqlite.prepare(sql).run(...bindings); return { success: true, meta: { changes: Number(info.changes) } }; }
+  });
   return {
-    rows,
-    prepare(sql) {
-      let bindings = [];
-      return {
-        bind(...values) {
-          bindings = values;
-          return this;
-        },
-        async run() {
-          if (/INSERT INTO login_rate_limits/i.test(sql)) {
-            const [scopeKey, failedCount, firstFailedAt, lastFailedAt, lockedUntil] = bindings;
-            rows.set(scopeKey, {
-              scope_key: scopeKey,
-              failed_count: failedCount,
-              first_failed_at: firstFailedAt,
-              last_failed_at: lastFailedAt,
-              locked_until: lockedUntil
-            });
-          } else if (/DELETE FROM login_rate_limits/i.test(sql)) {
-            bindings.forEach((key) => rows.delete(key));
-          }
-          return { success: true };
-        },
-        async first() {
-          const key = bindings[0];
-          const row = rows.get(key);
-          return row ? { ...row } : null;
-        },
-        async all() {
-          const selected = bindings
-            .map((key) => rows.get(key))
-            .filter(Boolean)
-            .map((row) => ({ ...row }));
-          return { results: selected };
-        }
-      };
-    }
+    sqlite,
+    rows: {
+      has(key) { return Boolean(sqlite.prepare('SELECT 1 FROM login_rate_limits WHERE scope_key = ?').get(key)); }
+    },
+    prepare(sql) { return statement(sql); }
   };
 }
 
@@ -91,7 +68,9 @@ async function run() {
       resolveSession,
       recordFailedLogin,
       getLoginRateLimit,
-      clearLoginRateLimit
+      clearLoginRateLimit,
+      reserveLoginAttempt,
+      settleSuccessfulLogin
     }, { signLocalSession }] = await Promise.all([
       import(pathToFileURL(path.join(tempDir, 'worker-auth.mjs')).href),
       import(pathToFileURL(path.join(tempDir, 'worker-crypto.mjs')).href)
@@ -131,6 +110,25 @@ async function run() {
       await recordFailedLogin(request, db, `burst-user-${index}`);
     }
     assert.strictEqual((await getLoginRateLimit(request, db, 'unrelated-user')).locked, true, 'a clear high-frequency burst must still trigger an IP-wide lock');
+
+    // A parallel burst must not get more than the allowed number of tries in.
+    const raceDb = createRateLimitDb();
+    const raceRequest = new Request('https://schoolsystem.com.cn/api/edu-gateway', {
+      headers: { 'CF-Connecting-IP': '198.51.100.7' }
+    });
+    const burst = await Promise.all(Array.from({ length: 20 }, () => reserveLoginAttempt(raceRequest, raceDb, 'race-user')));
+    assert.strictEqual(burst.filter((item) => !item.rejected).length, 5, 'only the per-account budget of attempts may proceed in a parallel burst');
+
+    // Successful sign-ins hand their attempt back to the shared IP budget.
+    const staffDb = createRateLimitDb();
+    const staffRequest = new Request('https://schoolsystem.com.cn/api/edu-gateway', {
+      headers: { 'CF-Connecting-IP': '198.51.100.8' }
+    });
+    for (let index = 0; index < 40; index += 1) {
+      const attempt = await reserveLoginAttempt(staffRequest, staffDb, `staff-${index}`);
+      assert.strictEqual(attempt.rejected, false, 'teachers signing in correctly from one school IP must never be locked out');
+      await settleSuccessfulLogin(staffRequest, staffDb, `staff-${index}`);
+    }
 
     console.log('worker auth security tests passed');
   } finally {
