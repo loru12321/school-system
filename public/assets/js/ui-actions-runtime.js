@@ -134,10 +134,32 @@ async function downloadCertificate() {
         'exportTeacherTownshipRankExcel', 'renderCorrelationAnalysis', 'exportCorrelationExcel', 'printMarginalTickets',
         'exportMarginalTasks', 'updateMpClassSelect', 'generateMarginalTickets', 'MP_saveSnapshot',
         'MP_analyzeConversion', 'MP_deleteSnapshot', 'renderSeatGrid', 'addConflictPair', 'exportMutualAidGroups',
-        'updateMutualAidSelects', 'renderMutualAidGroups'
+        'updateMutualAidSelects', 'renderMutualAidGroups',
+        // Runtime-rendered HTML (public/assets/js/*), generated through uiDeclaredAttrs().
+        'Auth.closeLoginPortalModal', 'Auth.logout', 'Auth.openLoginPortalModal', 'DataManager.deleteExamBatch',
+        'DataManager.deleteHistoryExam', 'DataManager.deleteSchoolAliasMapping', 'DataManager.deleteStudent',
+        'DataManager.deleteTarget', 'DataManager.deleteTeacher', 'DataManager.editStudent', 'DataManager.editTarget',
+        'DataManager.editTeacher', 'DataManager.openSchoolAliasEditor', 'DataManager.renameHistoryExam',
+        'DataManager.setCloudPanelView', 'DataManager.switchToExamBatch', 'DataManager.toggleExamBatchSelection',
+        'DataManager.toggleStudentSelection', 'FB_applyScheme', 'FB_openSeatMap', 'IssueManager.openSubmitModal',
+        'IssueManager.resolve', 'addTagToWidget', 'analyzeTargetGap', 'applySort', 'changeStdPage', 'clearFilter',
+        'confirmFilter', 'exportAllTeachersMultiPeriodDiff', 'exportCountyAnalysisSection',
+        'exportTownSubmoduleCompare', 'filterCheckboxList', 'generateCountySchoolHorizontalTable',
+        'handleExcludedClick', 'handleHighClick', 'handleHighSchoolAdmissionClassClick',
+        'handleHighSchoolAdmissionClick', 'handleIndicatorClick', 'jumpToStudent', 'openStudentSubjectDialogOrJump',
+        'openTownSubmoduleCompareDialog', 'openUserPasswordModal', 'removeTagFromWidget', 'renderStudentComparePage',
+        'restoreAutoSnapshot', 'saveTownSubmoduleCompareToCloud', 'setCountyAnalysisSchoolNameFromInput',
+        'showTeacherDetails', 'showTeacherFocusTargets', 'showTeacherFocusTargetsFromButton', 'switchTab',
+        'toggleAllCheckboxes', 'toggleClassGroup', 'toggleExcelMenu', 'toggleStudentDetail', 'updateStudentScore',
+        'viewCloudTownSubmoduleCompares'
     ]);
 
-    const readDeclaredArgs = (target) => {
+    // Placeholders a data-ui-args array may contain:
+    //   "$value" -> the element's current value
+    //   "$this"  -> the element itself (former onclick="fn(this)")
+    //   "$event" -> the DOM event (former onclick="fn(..., event)")
+    // Everything else is passed through as JSON data, never evaluated.
+    const readDeclaredArgs = (target, event) => {
         const raw = String(target?.dataset?.uiArgs || '').trim();
         if (!raw) return [];
         let args;
@@ -147,16 +169,24 @@ async function downloadCertificate() {
             console.warn('[ui-actions] invalid data-ui-args', raw);
             return [];
         }
-        return (Array.isArray(args) ? args : [args]).map((arg) => (arg === '$value' ? target.value : arg));
+        return (Array.isArray(args) ? args : [args]).map((arg) => {
+            if (arg === '$value') return target.value;
+            if (arg === '$this') return target;
+            if (arg === '$event') return event;
+            return arg;
+        });
     };
 
-    const invokeDeclaredCall = (target) => {
+    const invokeDeclaredCall = (target, event) => {
+        // data-ui-self-only: only react when the element itself was clicked, not a
+        // descendant (former onclick="if(event.target===this) ...", e.g. modal backdrops).
+        if (target?.dataset?.uiSelfOnly !== undefined && event && event.target !== target) return false;
         const name = String(target?.dataset?.uiCall || '').trim();
         if (!DECLARED_CALLS.has(name)) {
             console.warn(`[ui-actions] call not allowed: ${name}`);
             return undefined;
         }
-        const args = readDeclaredArgs(target);
+        const args = readDeclaredArgs(target, event);
         const dot = name.indexOf('.');
         return dot === -1
             ? callGlobal(name, ...args)
@@ -164,7 +194,7 @@ async function downloadCertificate() {
     };
 
     const actionHandlers = {
-        call: (target) => { invokeDeclaredCall(target); },
+        call: (target, event) => invokeDeclaredCall(target, event) === false ? false : undefined,
         'show-message': (target) => {
             const message = String(target?.dataset?.uiMessage || '').trim();
             if (message) window.alert(message);
@@ -198,6 +228,11 @@ async function downloadCertificate() {
         'load-exam-from-select': () => window.CohortDB?.loadExamFromSelect?.(),
         'show-compare-source': () => callGlobal('showMultiCompareDataSourceDiag'),
         'reset-system': () => callGlobal('resetSystem'),
+        'scroll-into-view': (target) => {
+            const id = String(target?.dataset?.uiTarget || '');
+            document.getElementById(id)?.scrollIntoView?.({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        },
+        'delete-current-exam-cloud-backup': () => window.DataCloudRuntime?.deleteCurrentExamCloudBackup?.(window.DataManager),
         'create-auto-snapshot': () => callGlobal('createAutoSnapshot', callGlobal('getCurrentSnapshotPayload')),
         'load-cloud-data': () => callGlobal('loadCloudData'),
         'toggle-dark-mode': () => callGlobal('toggleDarkMode'),
@@ -315,6 +350,11 @@ async function downloadCertificate() {
     };
 
     const changeHandlers = {
+        // Show data-ui-target only while the control's value equals data-ui-when.
+        'toggle-display-when': (target) => {
+            const panel = document.getElementById(String(target?.dataset?.uiTarget || ''));
+            if (panel) panel.style.display = target?.value === String(target?.dataset?.uiWhen ?? '') ? 'block' : 'none';
+        },
         'switch-cohort': (target) => window.CohortManager?.switchTo?.(target?.value || ''),
         'refresh-exam-preview': () => {
             callGlobal('refreshExamGradePreview');
@@ -339,6 +379,7 @@ async function downloadCertificate() {
     };
 
     const inputHandlers = {
+        call: (target, event) => { invokeDeclaredCall(target, event); },
         'mobile-student-search': () => window.MobMgr?.renderStudentList?.(),
         'progress-filter': () => callGlobal('applyProgressFilter'),
         'skin-title-preview': (target) => callGlobal('updateTitlePreview', target?.value || ''),
@@ -352,8 +393,10 @@ async function downloadCertificate() {
     }
 
     document.addEventListener('click', (event) => {
-        const target = event.target?.closest?.('[data-ui-action]');
-        if (!target) return;
+        // data-ui-stop marks a boundary (former onclick="event.stopPropagation()"):
+        // clicks inside it never trigger a data-ui-action declared on an ancestor.
+        const target = event.target?.closest?.('[data-ui-action], [data-ui-stop]');
+        if (!target || !target.dataset.uiAction) return;
         const action = target.dataset.uiAction;
         if (!action || !runAction(target, action, event)) return;
         event.preventDefault();
@@ -364,7 +407,7 @@ async function downloadCertificate() {
         if (!target) return;
         const action = target.dataset.uiChange;
         if (!action) return;
-        runAction(target, action);
+        runAction(target, action, event);
     });
 
     document.addEventListener('input', (event) => {
@@ -372,7 +415,7 @@ async function downloadCertificate() {
         if (!target) return;
         const action = target.dataset.uiInput;
         const handler = inputHandlers[action];
-        if (typeof handler === 'function') handler(target);
+        if (typeof handler === 'function') handler(target, event);
     });
 
     document.addEventListener('keydown', (event) => {

@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 // student-details-render-runtime.js — StudentDetails rendering, rank display, exportStudentDetails (extracted from app.js)
 const StudentDetailsPerfCache = {
     schoolOptionsSignature: '',
@@ -718,8 +728,8 @@ function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTea
         : '';
     const score = rankItem?.score !== undefined ? rankItem.score : (student.scores[sub] !== undefined ? student.scores[sub] : '-');
     const townRank = rankItem?.township ?? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' });
-    const scoreArg = Number.isFinite(Number(score)) ? Number(score) : jsStringLiteral(score);
-    const clickAttr = `onclick="updateStudentScore(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.class)}, ${jsStringLiteral(sub)}, ${scoreArg})"`;
+    const scoreArg = Number.isFinite(Number(score)) ? Number(score) : String(score ?? '');
+    const clickAttr = uiDeclaredAttrs('click', 'updateStudentScore', String(student.name ?? ''), String(student.class ?? ''), String(sub ?? ''), scoreArg);
     const auditBadge = buildStudentScoreAuditBadge(student, sub, tmEscapeHtml);
     const scoreButton = `
         <button type="button" class="student-detail-mobile-score-btn" ${clickAttr} title="${tmEscapeHtml(subjectNotice || `点击修改${sub}成绩`)}">
@@ -790,7 +800,7 @@ function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClas
                 <article class="student-detail-mobile-card">
                     <div class="student-detail-mobile-head">
                         <div>
-                            <a href="javascript:void(0)" class="student-detail-mobile-name" onclick="jumpToStudent(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.school)}, ${jsStringLiteral(student.class)})">${tmEscapeHtml(student.name || '-')}</a>
+                            <a href="#" class="student-detail-mobile-name" ${uiDeclaredAttrs('click', 'jumpToStudent', String(student.name ?? ''), String(student.school ?? ''), String(student.class ?? ''))}>${tmEscapeHtml(student.name || '-')}</a>
                             <div class="student-detail-mobile-submeta">${tmEscapeHtml(`${schoolText} · ${classText}`)}</div>
                         </div>
                         <div class="student-detail-mobile-score-summary">
@@ -1115,13 +1125,13 @@ function renderStudentDetails(reset = true) {
 
         return `
                 <th style="min-width:${width}">
-                    <div class="excel-header" onclick="toggleExcelMenu(${jsStringLiteral(colKey)}, event)">
+                    <div class="excel-header" ${uiDeclaredAttrs('click', 'toggleExcelMenu', String(colKey ?? ''), '$event')}>
                         <div class="header-text">${label} <span style="color:#2563eb">${sortIcon}</span></div>
                         <div class="filter-icon-btn ${activeClass}">
                             <i class="ti ti-filter"></i>
                         </div>
                         <!-- 下拉菜单容器，点击时动态填充 -->
-                        <div id="menu-${tmEscapeHtml(colKey)}" class="excel-filter-menu" onclick="event.stopPropagation()"></div>
+                        <div id="menu-${tmEscapeHtml(colKey)}" class="excel-filter-menu" data-ui-stop></div>
                     </div>
                 </th>
             `;
@@ -1204,7 +1214,7 @@ function renderStudentDetails(reset = true) {
         StudentDetailsPerfCache.mobileRowsHtml = rowsHTML;
     } else {
         rowsHTML = displayList.map(student => {
-            const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.school)}, ${jsStringLiteral(student.class)})" style="color:var(--primary); font-weight:800;">${tmEscapeHtml(student.name || '-')}</a>`;
+            const nameLink = `<a href="#" ${uiDeclaredAttrs('click', 'jumpToStudent', String(student.name ?? ''), String(student.school ?? ''), String(student.class ?? ''))} style="color:var(--primary); font-weight:800;">${tmEscapeHtml(student.name || '-')}</a>`;
             const rank = getStudentDetailsRankSnapshot(student, visibleSubjects, townRankVisible, countyRankVisible, STD_STATE.dataSignature);
 
             let row = `<tr>
@@ -1224,8 +1234,8 @@ function renderStudentDetails(reset = true) {
                     ? getConfiguredDisplaySubjectNotice(sub)
                     : '';
 
-                const scoreArg = Number.isFinite(Number(score)) ? Number(score) : jsStringLiteral(score);
-                const clickAttr = `onclick="updateStudentScore(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.class)}, ${jsStringLiteral(sub)}, ${scoreArg})"`;
+                const scoreArg = Number.isFinite(Number(score)) ? Number(score) : String(score ?? '');
+                const clickAttr = uiDeclaredAttrs('click', 'updateStudentScore', String(student.name ?? ''), String(student.class ?? ''), String(sub ?? ''), scoreArg);
 
                 if (!isTeacher && !isClassTeacher) {
                     row += `<td data-label="${tmEscapeHtml(subjectLabel)}分数" ${clickAttr} style="cursor:pointer;" title="${tmEscapeHtml(subjectNotice || '点击修改')}">${scoreDisplay}</td>
@@ -1273,8 +1283,8 @@ function renderStudentDetails(reset = true) {
                     <div class="student-detail-mobile-pagination-bar">
                         <span>共 ${totalItems} 条 · ${STD_STATE.page}/${totalPages} 页</span>
                         <div class="student-detail-mobile-pagination-actions">
-                            <button class="btn btn-sm" onclick="changeStdPage(-1)" ${STD_STATE.page === 1 ? 'disabled' : ''}>◀ 上一页</button>
-                            <button class="btn btn-sm" onclick="changeStdPage(1)" ${STD_STATE.page === totalPages ? 'disabled' : ''}>下一页 ▶</button>
+                            <button class="btn btn-sm" ${uiDeclaredAttrs('click', 'changeStdPage', -1)} ${STD_STATE.page === 1 ? 'disabled' : ''}>◀ 上一页</button>
+                            <button class="btn btn-sm" ${uiDeclaredAttrs('click', 'changeStdPage', 1)} ${STD_STATE.page === totalPages ? 'disabled' : ''}>下一页 ▶</button>
                         </div>
                     </div>
                 </td>
@@ -1284,8 +1294,8 @@ function renderStudentDetails(reset = true) {
                 <td colspan="100" style="text-align:center; padding:8px;">
                     <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
                         <span style="font-size:12px; color:#666;">共 ${totalItems} 条 · ${STD_STATE.page}/${totalPages} 页</span>
-                        <button class="btn btn-sm" onclick="changeStdPage(-1)" ${STD_STATE.page === 1 ? 'disabled' : ''}>◀</button>
-                        <button class="btn btn-sm" onclick="changeStdPage(1)" ${STD_STATE.page === totalPages ? 'disabled' : ''}>▶</button>
+                        <button class="btn btn-sm" ${uiDeclaredAttrs('click', 'changeStdPage', -1)} ${STD_STATE.page === 1 ? 'disabled' : ''}>◀</button>
+                        <button class="btn btn-sm" ${uiDeclaredAttrs('click', 'changeStdPage', 1)} ${STD_STATE.page === totalPages ? 'disabled' : ''}>▶</button>
                     </div>
                 </td>
             </tr>`;
@@ -1404,19 +1414,19 @@ function buildFilterMenuContent(colKey, container) {
 
     container.innerHTML = `
             <div class="menu-actions">
-                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort(${jsStringLiteral(colKey)}, 'asc')">⬆️ 升序排列</button>
-                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort(${jsStringLiteral(colKey)}, 'desc')">⬇️ 降序排列</button>
-                <input type="text" class="menu-search" placeholder="搜索..." oninput="filterCheckboxList(this)">
+                <button class="btn btn-sm btn-gray" style="width:100%" ${uiDeclaredAttrs('click', 'applySort', String(colKey ?? ''), 'asc')}>⬆️ 升序排列</button>
+                <button class="btn btn-sm btn-gray" style="width:100%" ${uiDeclaredAttrs('click', 'applySort', String(colKey ?? ''), 'desc')}>⬇️ 降序排列</button>
+                <input type="text" class="menu-search" placeholder="搜索..." ${uiDeclaredAttrs('input', 'filterCheckboxList', '$this')}>
             </div>
             <div class="menu-list">
                 <label class="menu-item" style="font-weight:bold; border-bottom:1px solid #eee;">
-                    <input type="checkbox" id="cb-all-${tmEscapeHtml(colKey)}" ${isAllChecked ? 'checked' : ''} onchange="toggleAllCheckboxes(${jsStringLiteral(colKey)}, this)"> (全选)
+                    <input type="checkbox" id="cb-all-${tmEscapeHtml(colKey)}" ${isAllChecked ? 'checked' : ''} ${uiDeclaredAttrs('change', 'toggleAllCheckboxes', String(colKey ?? ''), '$this')}> (全选)
                 </label>
                 ${listHtml}
             </div>
             <div class="menu-footer">
-                <button class="btn btn-sm btn-primary" onclick="confirmFilter(${jsStringLiteral(colKey)})">确定</button>
-                <button class="btn btn-sm btn-gray" onclick="clearFilter(${jsStringLiteral(colKey)})">重置</button>
+                <button class="btn btn-sm btn-primary" ${uiDeclaredAttrs('click', 'confirmFilter', String(colKey ?? ''))}>确定</button>
+                <button class="btn btn-sm btn-gray" ${uiDeclaredAttrs('click', 'clearFilter', String(colKey ?? ''))}>重置</button>
             </div>
         `;
     container.dataset.studentDetailsFilterMenuSig = menuSignature;
@@ -1480,7 +1490,12 @@ function closeAllMenus() {
     StudentDetailsPerfCache.openFilterMenu = null;
 }
 
-document.addEventListener('click', closeAllMenus);
+// Header and menu clicks used to stop propagation inline; with delegated
+// handlers they reach the document, so keep the open filter menu open here.
+document.addEventListener('click', (event) => {
+    if (event.target?.closest?.('.excel-header')) return;
+    closeAllMenus();
+});
 
 window.changeStdPage = function (delta) {
     STD_STATE.page += delta;

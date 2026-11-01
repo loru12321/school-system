@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_ANALYSIS_UI_RUNTIME_PATCHED__) return;
 
@@ -269,7 +279,7 @@
                     <span>${teacherEscapeHtml(item.sampleSummary)}</span>
                     <span>${teacherEscapeHtml(item.focusSummary)} · ${teacherEscapeHtml(item.conversionSummary)}</span>
                 </div>
-                <button class="view-details-btn" onclick='showTeacherDetails(${JSON.stringify(item.name)}, ${JSON.stringify(item.subject)})'>查看详情</button>
+                <button class="view-details-btn" ${uiDeclaredAttrs('click', 'showTeacherDetails', Number(JSON.stringify(item.name)), Number(JSON.stringify(item.subject)))}>查看详情</button>
             </div>
         `).join('');
         teacherUiRenderCache.cardsSignature = signature;
@@ -553,7 +563,7 @@
                 data-teacher="${teacherEscapeHtml(teacher)}"
                 data-subject="${teacherEscapeHtml(subject)}"
                 data-focus-type="${teacherEscapeHtml(type)}"
-                onclick="window.showTeacherFocusTargetsFromButton && window.showTeacherFocusTargetsFromButton(this)"
+                ${uiDeclaredAttrs('click', 'showTeacherFocusTargetsFromButton', '$this')}
                 title="点击查看${teacherEscapeHtml(meta.title)}名单和班级"
                 style="border:1px solid ${meta.color}; color:${meta.color}; background:#fff; border-radius:999px; padding:3px 8px; font-size:12px; font-weight:800; cursor:pointer; margin:2px;"
             >${teacherEscapeHtml(meta.label)} ${rows.length}</button>
@@ -599,7 +609,7 @@
                                         <td>${gapText}</td>
                                         <td>
                                             <button type="button" class="btn btn-sm btn-blue"
-                                                onclick="window.openStudentSubjectDialog ? window.openStudentSubjectDialog(${teacherJsonAttr(row.name)}, ${teacherJsonAttr(school)}, ${teacherJsonAttr(row.className)}, ${teacherJsonAttr(subject)}, { focusLabel: ${teacherJsonAttr(meta.title)}, gap: ${Number.isFinite(row.gap) ? Number(row.gap) : 'null'} }) : (window.jumpToStudent && window.jumpToStudent(${teacherJsonAttr(row.name)}, ${teacherJsonAttr(school)}, ${teacherJsonAttr(row.className)}))">
+                                                ${uiDeclaredAttrs('click', 'openStudentSubjectDialogOrJump', String(row.name || ''), String(school || ''), String(row.className || ''), String(subject || ''), { focusLabel: String(meta.title || ''), gap: Number.isFinite(row.gap) ? Number(row.gap) : null })}>
                                                 查看${teacherEscapeHtml(subject)}情况
                                             </button>
                                         </td>
@@ -622,6 +632,15 @@
         } else {
             window.UI.alert(`${title}\n${rows.map((row) => `${row.className || '-'} ${row.name || '-'} ${row.score ?? '-'}`).join('\n') || meta.empty}`);
         }
+    }
+
+    // Former inline fallback: open the subject dialog when available, otherwise jump to the student.
+    function openStudentSubjectDialogOrJump(name, school, className, subject, context) {
+        if (typeof window.openStudentSubjectDialog === 'function') {
+            return window.openStudentSubjectDialog(name, school, className, subject, context);
+        }
+        if (typeof window.jumpToStudent === 'function') return window.jumpToStudent(name, school, className);
+        return undefined;
     }
 
     function showTeacherFocusTargetsFromButton(button) {
@@ -902,15 +921,15 @@
                     <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:10px;">培优 / 辅差名单</div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
                         <div>
-                            <button type="button" onclick="window.showTeacherFocusTargets(${teacherJsonAttr(teacher)}, ${teacherJsonAttr(subject)}, 'excellentEdges')" style="font-size:12px; color:#0f766e; font-weight:800; margin-bottom:4px; border:0; background:transparent; cursor:pointer; padding:0;">培优边缘生</button>
+                            <button type="button" ${uiDeclaredAttrs('click', 'showTeacherFocusTargets', String(teacher || ''), String(subject || ''), 'excellentEdges')} style="font-size:12px; color:#0f766e; font-weight:800; margin-bottom:4px; border:0; background:transparent; cursor:pointer; padding:0;">培优边缘生</button>
                             <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.excellentEdges, '暂无培优边缘生'))}</div>
                         </div>
                         <div>
-                            <button type="button" onclick="window.showTeacherFocusTargets(${teacherJsonAttr(teacher)}, ${teacherJsonAttr(subject)}, 'passEdges')" style="font-size:12px; color:#1d4ed8; font-weight:800; margin-bottom:4px; border:0; background:transparent; cursor:pointer; padding:0;">及格临界生</button>
+                            <button type="button" ${uiDeclaredAttrs('click', 'showTeacherFocusTargets', String(teacher || ''), String(subject || ''), 'passEdges')} style="font-size:12px; color:#1d4ed8; font-weight:800; margin-bottom:4px; border:0; background:transparent; cursor:pointer; padding:0;">及格临界生</button>
                             <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.passEdges, '暂无及格临界生'))}</div>
                         </div>
                         <div>
-                            <button type="button" onclick="window.showTeacherFocusTargets(${teacherJsonAttr(teacher)}, ${teacherJsonAttr(subject)}, 'lowRisk')" style="font-size:12px; color:#b45309; font-weight:800; margin-bottom:4px; border:0; background:transparent; cursor:pointer; padding:0;">辅差关注生</button>
+                            <button type="button" ${uiDeclaredAttrs('click', 'showTeacherFocusTargets', String(teacher || ''), String(subject || ''), 'lowRisk')} style="font-size:12px; color:#b45309; font-weight:800; margin-bottom:4px; border:0; background:transparent; cursor:pointer; padding:0;">辅差关注生</button>
                             <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.lowRisk, '暂无辅差关注生'))}</div>
                         </div>
                     </div>
@@ -1019,6 +1038,7 @@
         renderTeacherFocusSummaryCell,
         showTeacherFocusTargets,
         showTeacherFocusTargetsFromButton,
+        openStudentSubjectDialogOrJump,
         showTeacherDetails: showTeacherDetailsV2,
         showTeacherDetailsV2,
         exportTeacherComparisonExcel: exportTeacherComparisonExcelV2,

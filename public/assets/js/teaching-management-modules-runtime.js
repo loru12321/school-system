@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.TeachingManagementModulesRuntime) return;
 
@@ -66,7 +76,7 @@
                 <h3><i class="ti ${escapeHtml(meta.icon)}"></i> ${escapeHtml(meta.title)}</h3>
                 <p>${escapeHtml(meta.desc)}</p>
                 <div class="analysis-actions">
-                    <button type="button" class="btn btn-secondary" onclick="switchTab('teacher-analysis')">回到教师概况</button>
+                    <button type="button" class="btn btn-secondary" ${uiDeclaredAttrs('click', 'switchTab', 'teacher-analysis')}>回到教师概况</button>
                 </div>
             </div>
             <div class="sec-head analysis-shell-head">
@@ -205,7 +215,7 @@
         placeholder.innerHTML = `
             <div class="analysis-section-head">
                 <span>教师乡镇排名已拆分为独立子模块</span>
-                <button type="button" class="btn btn-secondary" onclick="switchTab('teacher-township-ranking')">打开乡镇排名</button>
+                <button type="button" class="btn btn-secondary" ${uiDeclaredAttrs('click', 'switchTab', 'teacher-township-ranking')}>打开乡镇排名</button>
             </div>
             ${needsRankingContainer ? '<div id="teacher-township-ranking-container" hidden></div>' : ''}
             <div class="analysis-generated-note">教师画像页只保留概况入口，完整乡镇排名、导出和快速学科定位请进入“教师乡镇排名”子模块。</div>

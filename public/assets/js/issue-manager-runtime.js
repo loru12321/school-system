@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -342,7 +352,7 @@
                     ? '<span class="badge" style="background:#ef4444; color:white;">待处理</span>'
                     : '<span class="badge" style="background:#10b981; color:white;">已解决</span>';
                 actionBtn = isPending
-                    ? `<button class="btn btn-sm btn-primary" onclick="IssueManager.resolve(${item.id})">✅ 标记已阅/解决</button>`
+                    ? `<button class="btn btn-sm btn-primary" ${uiDeclaredAttrs('click', 'IssueManager.resolve', Number(item.id))}>✅ 标记已阅/解决</button>`
                     : '<span style="font-size:12px; color:#ccc;">已归档</span>';
             }
 

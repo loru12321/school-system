@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -75,8 +85,8 @@
                     <td style="font-weight:700;">${row.canonical}</td>
                     <td>${row.alias}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="DataManager.openSchoolAliasEditor(${row.index})" style="padding:2px 8px;">修改</button>
-                        <button class="btn btn-sm btn-danger" onclick="DataManager.deleteSchoolAliasMapping(${row.index})" style="padding:2px 8px;">删除</button>
+                        <button class="btn btn-sm btn-primary" ${uiDeclaredAttrs('click', 'DataManager.openSchoolAliasEditor', Number(row.index))} style="padding:2px 8px;">修改</button>
+                        <button class="btn btn-sm btn-danger" ${uiDeclaredAttrs('click', 'DataManager.deleteSchoolAliasMapping', Number(row.index))} style="padding:2px 8px;">删除</button>
                     </td>
                 </tr>
             `).join('') || '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">暂无自定义对应，可点击上方“新增对应”补充。</td></tr>';

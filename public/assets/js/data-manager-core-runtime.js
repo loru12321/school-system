@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 // data-manager-core-runtime.js — DataManager object (extracted from app.js)
 const DataManager = {
     init: function () {
@@ -158,11 +168,11 @@ const DataManager = {
             switcher.innerHTML = `
                 <div style="font-size:12px; color:#64748b; padding:0 6px;">左右点击切换显示区域</div>
                 <div style="display:flex; gap:8px; flex:1; min-width:260px;">
-                    <button type="button" id="dm-cloud-view-overview" onclick="DataManager.setCloudPanelView('overview')"
+                    <button type="button" id="dm-cloud-view-overview" ${uiDeclaredAttrs('click', 'DataManager.setCloudPanelView', 'overview')}
                         style="flex:1; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:700; background:#ffffff; color:#334155;">
                         ① 左侧显示概览
                     </button>
-                    <button type="button" id="dm-cloud-view-list" onclick="DataManager.setCloudPanelView('list')"
+                    <button type="button" id="dm-cloud-view-list" ${uiDeclaredAttrs('click', 'DataManager.setCloudPanelView', 'list')}
                         style="flex:1; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:700; background:#ffffff; color:#334155;">
                         ② 右侧显示存档
                     </button>
@@ -280,7 +290,7 @@ const DataManager = {
         const tabContainer = document.getElementById('tab-data-stu')?.parentElement;
         const statusOverview = document.getElementById('dm-status-overview');
         const searchBar = document.getElementById('dm-search-bar');
-        const saveBtn = content.querySelector('button[onclick="DataManager.saveAndSync()"]');
+        const saveBtn = content.querySelector('button[data-dm-click="saveAndSync"]');
         const closeBtn = content.querySelector('.modal-close-btn');
         const legacyHeader = saveBtn?.parentElement?.parentElement;
 
@@ -1024,7 +1034,6 @@ const DataManager = {
         tbody.innerHTML = rows.map(row => {
             const meta = row.meta || {};
             const title = meta.examName || meta.name || meta.type || row.examId;
-            const encodedExamId = encodeURIComponent(row.examId);
             const statusBadges = [];
             if (row.current) statusBadges.push('<span class="badge" style="background:#dbeafe;color:#1d4ed8;">当前</span>');
             if (row.duplicate) statusBadges.push('<span class="badge" style="background:#fef3c7;color:#92400e;">疑似重复</span>');
@@ -1036,7 +1045,7 @@ const DataManager = {
             return `
                 <tr data-exam-id="${h(row.examId)}">
                     <td style="text-align:center;">
-                        <input type="checkbox" class="dm-exams-select" data-exam-id="${h(row.examId)}" ${this.examBatchSelection.has(row.examId) ? 'checked' : ''} onchange="DataManager.toggleExamBatchSelection(this)">
+                        <input type="checkbox" class="dm-exams-select" data-exam-id="${h(row.examId)}" ${this.examBatchSelection.has(row.examId) ? 'checked' : ''} ${uiDeclaredAttrs('change', 'DataManager.toggleExamBatchSelection', '$this')}>
                     </td>
                     <td>
                         <div style="font-weight:700; color:#0f172a;">${h(title)}</div>
@@ -1048,8 +1057,8 @@ const DataManager = {
                     <td>${statusBadges.join(' ')}</td>
                     <td>${h(updatedText)}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" type="button" onclick="DataManager.switchToExamBatch(decodeURIComponent('${encodedExamId}'))" style="padding:3px 7px;">切换</button>
-                        <button class="btn btn-sm btn-danger" type="button" onclick="DataManager.deleteExamBatch(decodeURIComponent('${encodedExamId}'))" style="padding:3px 7px; background:#dc2626;">删除</button>
+                        <button class="btn btn-sm btn-primary" type="button" ${uiDeclaredAttrs('click', 'DataManager.switchToExamBatch', String(row.examId ?? ''))} style="padding:3px 7px;">切换</button>
+                        <button class="btn btn-sm btn-danger" type="button" ${uiDeclaredAttrs('click', 'DataManager.deleteExamBatch', String(row.examId ?? ''))} style="padding:3px 7px; background:#dc2626;">删除</button>
                     </td>
                 </tr>
             `;
@@ -1230,15 +1239,15 @@ const DataManager = {
         } else {
             const rows = pageData.map(s => `
                 <tr>
-                    <td style="text-align:center;"><input type="checkbox" class="dm-stu-select" data-idx="${s._originalIndex}" ${this.studentSelection.has(s._originalIndex) ? 'checked' : ''} onchange="DataManager.toggleStudentSelection(this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="dm-stu-select" data-idx="${s._originalIndex}" ${this.studentSelection.has(s._originalIndex) ? 'checked' : ''} ${uiDeclaredAttrs('change', 'DataManager.toggleStudentSelection', '$this')}></td>
                     <td>${this.escapeDataManagerHtml(s.school)}</td>
                     <td>${this.escapeDataManagerHtml(s.class)}</td>
                     <td style="font-weight:bold;">${this.escapeDataManagerHtml(s.name)}</td>
                     <td>${this.escapeDataManagerHtml(s.id)}</td>
                     <td>${s.total}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${s._originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button>
-                        <button class="btn btn-sm btn-danger" onclick="DataManager.deleteStudent(${s._originalIndex})" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
+                        <button class="btn btn-sm btn-primary" ${uiDeclaredAttrs('click', 'DataManager.editStudent', Number(s._originalIndex))} style="padding:2px 6px; font-size:11px;">编辑</button>
+                        <button class="btn btn-sm btn-danger" ${uiDeclaredAttrs('click', 'DataManager.deleteStudent', Number(s._originalIndex))} style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
                     </td>
                 </tr>`);
             tbody.innerHTML = rows.join('');
@@ -1896,8 +1905,6 @@ const DataManager = {
 
             const teacherRowsHtml = displayList.map(t => {
                 const schoolStyle = t.school.includes("未知") ? "color:#94a3b8; font-style:italic;" : "color:#475569;";
-                const keyArg = this.dataManagerJsStringLiteral(t.key);
-                const nameArg = this.dataManagerJsStringLiteral(t.name);
                 return `
                     <tr>
                         <td style="${schoolStyle}">${this.escapeDataManagerHtml(t.school)}</td>
@@ -1905,8 +1912,8 @@ const DataManager = {
                         <td><span class="badge" style="background:#f1f5f9; color:#475569;">${this.escapeDataManagerHtml(t.subject)}</span></td>
                         <td style="font-weight:bold; color:#1e293b;">${this.escapeDataManagerHtml(t.name)}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="DataManager.editTeacher(${keyArg}, ${nameArg})" style="padding:2px 6px; font-size:11px;">更换教师</button>
-                            <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTeacher(${keyArg})" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
+                            <button class="btn btn-sm btn-primary" ${uiDeclaredAttrs('click', 'DataManager.editTeacher', String(t.key ?? ''), String(t.name ?? ''))} style="padding:2px 6px; font-size:11px;">更换教师</button>
+                            <button class="btn btn-sm btn-danger" ${uiDeclaredAttrs('click', 'DataManager.deleteTeacher', String(t.key ?? ''))} style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
                         </td>
                     </tr>`;
             });
@@ -2087,8 +2094,7 @@ const DataManager = {
         } else {
             let html = '';
             Object.keys(examStats).forEach(examName => {
-                const examArg = this.dataManagerJsStringLiteral(examName);
-                html += `<tr><td style="font-weight:bold;">${this.escapeDataManagerHtml(examName)}</td><td>${examStats[examName]} 条记录</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.renameHistoryExam(${examArg})" style="padding:2px 6px;">重命名</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteHistoryExam(${examArg})" style="padding:2px 6px; background:#dc2626;">删除</button></td></tr>`;
+                html += `<tr><td style="font-weight:bold;">${this.escapeDataManagerHtml(examName)}</td><td>${examStats[examName]} 条记录</td><td><button class="btn btn-sm btn-primary" ${uiDeclaredAttrs('click', 'DataManager.renameHistoryExam', String(examName ?? ''))} style="padding:2px 6px;">重命名</button> <button class="btn btn-sm btn-danger" ${uiDeclaredAttrs('click', 'DataManager.deleteHistoryExam', String(examName ?? ''))} style="padding:2px 6px; background:#dc2626;">删除</button></td></tr>`;
             });
             tbody.innerHTML = html;
         }
@@ -2270,8 +2276,7 @@ const DataManager = {
         let html = '';
         list.forEach(sch => {
             const t = readTargetsState()[sch];
-            const schoolArg = this.dataManagerJsStringLiteral(sch);
-            html += `<tr><td style="font-weight:bold;">${this.escapeDataManagerHtml(sch)}</td><td>${t.t1}</td><td>${t.t2}</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.editTarget(${schoolArg})" style="padding:2px 6px;">修改</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTarget(${schoolArg})" style="padding:2px 6px;">删除</button></td></tr>`;
+            html += `<tr><td style="font-weight:bold;">${this.escapeDataManagerHtml(sch)}</td><td>${t.t1}</td><td>${t.t2}</td><td><button class="btn btn-sm btn-primary" ${uiDeclaredAttrs('click', 'DataManager.editTarget', String(sch ?? ''))} style="padding:2px 6px;">修改</button> <button class="btn btn-sm btn-danger" ${uiDeclaredAttrs('click', 'DataManager.deleteTarget', String(sch ?? ''))} style="padding:2px 6px;">删除</button></td></tr>`;
         });
         tbody.innerHTML = html;
         this.renderDataManagerStatus();
@@ -2315,8 +2320,8 @@ const DataManager = {
                     <td style="font-weight:700;">${row.canonical}</td>
                     <td>${row.alias}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="DataManager.openSchoolAliasEditor(${row.index})" style="padding:2px 8px;">修改</button>
-                        <button class="btn btn-sm btn-danger" onclick="DataManager.deleteSchoolAliasMapping(${row.index})" style="padding:2px 8px;">删除</button>
+                        <button class="btn btn-sm btn-primary" ${uiDeclaredAttrs('click', 'DataManager.openSchoolAliasEditor', Number(row.index))} style="padding:2px 8px;">修改</button>
+                        <button class="btn btn-sm btn-danger" ${uiDeclaredAttrs('click', 'DataManager.deleteSchoolAliasMapping', Number(row.index))} style="padding:2px 8px;">删除</button>
                     </td>
                 </tr>
             `).join('') || '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">暂无自定义对应，可点击上方“新增对应”补充。</td></tr>';

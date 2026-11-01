@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_RESULT_RUNTIME_PATCHED__) return;
 
@@ -72,7 +82,7 @@ function renderStudentComparePage(page) {
             let btnsHtml = '';
 
             // 上一页
-            btnsHtml += `<button class="btn btn-sm" onclick="renderStudentComparePage(${page - 1})" ${page <= 1 ? 'disabled' : ''} style="padding:3px 10px;">◀ 上一页</button>`;
+            btnsHtml += `<button class="btn btn-sm" ${uiDeclaredAttrs('click', 'renderStudentComparePage', Number(page - 1))} ${page <= 1 ? 'disabled' : ''} style="padding:3px 10px;">◀ 上一页</button>`;
 
             // 页码按钮
             const maxButtons = 5;
@@ -84,22 +94,22 @@ function renderStudentComparePage(page) {
             }
 
             if (startPage > 1) {
-                btnsHtml += `<button class="btn btn-sm" onclick="renderStudentComparePage(1)" style="padding:3px 10px;">1</button>`;
+                btnsHtml += `<button class="btn btn-sm" ${uiDeclaredAttrs('click', 'renderStudentComparePage', 1)} style="padding:3px 10px;">1</button>`;
                 if (startPage > 2) btnsHtml += `<span style="padding:3px 8px;">...</span>`;
             }
 
             for (let i = startPage; i <= endPage; i++) {
                 const isActive = i === page;
-                btnsHtml += `<button class="btn btn-sm ${isActive ? 'btn-blue' : ''}" onclick="renderStudentComparePage(${i})" style="padding:3px 10px; ${isActive ? 'font-weight:bold;' : ''}">${i}</button>`;
+                btnsHtml += `<button class="btn btn-sm ${isActive ? 'btn-blue' : ''}" ${uiDeclaredAttrs('click', 'renderStudentComparePage', Number(i))} style="padding:3px 10px; ${isActive ? 'font-weight:bold;' : ''}">${i}</button>`;
             }
 
             if (endPage < totalPages) {
                 if (endPage < totalPages - 1) btnsHtml += `<span style="padding:3px 8px;">...</span>`;
-                btnsHtml += `<button class="btn btn-sm" onclick="renderStudentComparePage(${totalPages})" style="padding:3px 10px;">${totalPages}</button>`;
+                btnsHtml += `<button class="btn btn-sm" ${uiDeclaredAttrs('click', 'renderStudentComparePage', Number(totalPages))} style="padding:3px 10px;">${totalPages}</button>`;
             }
 
             // 下一页
-            btnsHtml += `<button class="btn btn-sm" onclick="renderStudentComparePage(${page + 1})" ${page >= totalPages ? 'disabled' : ''} style="padding:3px 10px;">下一页 ▶</button>`;
+            btnsHtml += `<button class="btn btn-sm" ${uiDeclaredAttrs('click', 'renderStudentComparePage', Number(page + 1))} ${page >= totalPages ? 'disabled' : ''} style="padding:3px 10px;">下一页 ▶</button>`;
 
             paginationBtnsEl.innerHTML = btnsHtml;
         }
@@ -147,7 +157,7 @@ function generateStudentCard(student, periodCount, totalLabel, subjects) {
                         👤 ${student.name} ${student.class ? `(${student.class})` : ''}${badge}
                         ${periodCount > 1 ? `<span style="font-size:20px; margin-left:8px;">${trendIcon}</span>` : ''}
                     </div>
-                    <button class="btn btn-sm btn-gray" onclick="toggleStudentDetail(this)" style="font-size:11px; padding:3px 10px;">展开详情 ▼</button>
+                    <button class="btn btn-sm btn-gray" ${uiDeclaredAttrs('click', 'toggleStudentDetail', '$this')} style="font-size:11px; padding:3px 10px;">展开详情 ▼</button>
                 </div>
         `;
 
@@ -654,7 +664,7 @@ function toggleGroupDisplay() {
 
             html += `
                     <div class="class-group-section" style="margin-bottom:25px; border:2px solid #cbd5e1; border-radius:10px; overflow:hidden;">
-                        <div class="class-group-header" style="background:#e0f2fe; padding:10px 15px; font-weight:600; color:#0c4a6e; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleClassGroup(this)">
+                        <div class="class-group-header" style="background:#e0f2fe; padding:10px 15px; font-weight:600; color:#0c4a6e; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" ${uiDeclaredAttrs('click', 'toggleClassGroup', '$this')}>
                             <div>
                                 <span style="font-size:16px;">📋 ${className}</span>
                                 <span style="font-size:13px; margin-left:10px; color:#64748b;">${students.length}人</span>

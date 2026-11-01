@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__) return;
 
@@ -2046,7 +2056,7 @@
                 <div class="county-section-head">
                     <div class="sub-header analysis-section-head">县域教师教学质量画像</div>
                     <div class="county-section-actions">
-                        <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('teacher')">下载Excel</button>
+                        <button class="btn btn-sm btn-green" type="button" ${uiDeclaredAttrs('click', 'exportCountyAnalysisSection', 'teacher')}>下载Excel</button>
                     </div>
                 </div>
                 <div class="analysis-table-meta">

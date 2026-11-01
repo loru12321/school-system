@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.__LOGIN_ENTRY_RUNTIME_PATCHED__) return;
 
@@ -321,7 +331,7 @@
                             <div class="login-stage-nav-links">
                                 <a href="#login-hero" class="active">首页</a>
                                 <a href="#login-portal-hub">登录</a>
-                                <button type="button" class="login-stage-nav-login" onclick="window.Auth?.openLoginPortalModal('school')">打开学校端</button>
+                                <button type="button" class="login-stage-nav-login" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'school')}>打开学校端</button>
                             </div>
                         </nav>
 
@@ -333,10 +343,10 @@
                             </h1>
                             <p id="login-stage-copy">把系统说明与登录动作拆开，让首页先呈现品牌感和唯一主入口，再进入真正的登录表单。</p>
                             <div class="login-stage-actions">
-                                <button type="button" class="login-stage-primary-action" onclick="window.Auth?.openLoginPortalModal('school')">
+                                <button type="button" class="login-stage-primary-action" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'school')}>
                                     <i class="ti ti-building-community"></i> 学校端登录
                                 </button>
-                                <button type="button" class="login-stage-secondary-action" onclick="window.Auth?.openLoginPortalModal('parent')">
+                                <button type="button" class="login-stage-secondary-action" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'parent')}>
                                     <i class="ti ti-heart-handshake"></i> 家长端登录
                                 </button>
                             </div>
@@ -393,14 +403,14 @@
                                 </div>
 
                                 <div class="login-portal-grid" aria-label="登录入口选择">
-                                    <button type="button" class="login-portal-card active" data-portal="school" data-login-open="school" onclick="window.Auth?.openLoginPortalModal('school')">
+                                    <button type="button" class="login-portal-card active" data-portal="school" data-login-open="school" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'school')}>
                                         <span class="login-portal-icon"><i class="ti ti-building-community"></i></span>
                                         <span class="login-portal-title">学校端</span>
                                         <span class="login-portal-desc">适用于教务、年级、班主任与教师的统一工作台。</span>
                                         <span class="login-portal-meta">Analysis / Data / Workspace</span>
                                         <span class="login-portal-action">打开学校端窗口</span>
                                     </button>
-                                    <button type="button" class="login-portal-card" data-portal="parent" data-login-open="parent" onclick="window.Auth?.openLoginPortalModal('parent')">
+                                    <button type="button" class="login-portal-card" data-portal="parent" data-login-open="parent" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'parent')}>
                                         <span class="login-portal-icon"><i class="ti ti-heart-handshake"></i></span>
                                         <span class="login-portal-title">家长端</span>
                                         <span class="login-portal-desc">输入学生姓名、班级与密码，查看成长报告、成绩与提醒。</span>
@@ -423,12 +433,12 @@
                     </section>
                 </div>
 
-                <div id="login-modal-backdrop" class="login-modal-backdrop" style="display:none;" aria-hidden="true" onclick="if(event.target===this) window.Auth?.closeLoginPortalModal()">
+                <div id="login-modal-backdrop" class="login-modal-backdrop" style="display:none;" aria-hidden="true" ${uiDeclaredAttrs('click', 'Auth.closeLoginPortalModal')} data-ui-self-only>
                     <div class="login-modal-dialog login-modal-dialog--instagram" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
                         <div class="login-modal-head login-modal-head--instagram">
                             <div class="login-modal-head-top">
                                 <span id="login-modal-chip" class="login-modal-chip">学校端登录窗口</span>
-                                <button type="button" class="login-modal-close" onclick="window.Auth?.closeLoginPortalModal()" aria-label="关闭登录窗口">
+                                <button type="button" class="login-modal-close" ${uiDeclaredAttrs('click', 'Auth.closeLoginPortalModal')} aria-label="关闭登录窗口">
                                     <i class="ti ti-x"></i>
                                 </button>
                             </div>
@@ -513,7 +523,7 @@
                             <div class="login-stage-nav-links">
                                 <a href="#login-hero" class="active">首页</a>
                                 <a href="#login-portal-hub">登录</a>
-                                <button type="button" class="login-stage-nav-login" onclick="window.Auth?.openLoginPortalModal('school')">打开学校端</button>
+                                <button type="button" class="login-stage-nav-login" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'school')}>打开学校端</button>
                             </div>
                         </nav>
 
@@ -525,10 +535,10 @@
                             </h1>
                             <p id="login-stage-copy">把登录和系统说明拆分成清晰的工作台入口。首屏只负责方向感，登录动作集中在同一张认证面板里完成。</p>
                             <div class="login-stage-actions">
-                                <button type="button" class="login-stage-primary-action" onclick="window.Auth?.openLoginPortalModal('school')">
+                                <button type="button" class="login-stage-primary-action" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'school')}>
                                     <i class="ti ti-building-community"></i> 进入学校端
                                 </button>
-                                <button type="button" class="login-stage-secondary-action" onclick="window.Auth?.openLoginPortalModal('parent')">
+                                <button type="button" class="login-stage-secondary-action" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'parent')}>
                                     <i class="ti ti-heart-handshake"></i> 进入家长端
                                 </button>
                             </div>
@@ -592,14 +602,14 @@
                                 </div>
 
                                 <div class="login-portal-grid" aria-label="登录入口选择">
-                                    <button type="button" class="login-portal-card active" data-portal="school" data-login-open="school" onclick="window.Auth?.openLoginPortalModal('school')">
+                                    <button type="button" class="login-portal-card active" data-portal="school" data-login-open="school" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'school')}>
                                         <span class="login-portal-icon"><i class="ti ti-building-community"></i></span>
                                         <span class="login-portal-title">学校端</span>
                                         <span class="login-portal-desc">面向管理员、教务、年级主任、班主任和教师的统一工作台。</span>
                                         <span class="login-portal-meta">Analysis / Data / Workspace</span>
                                         <span class="login-portal-action">打开学校端窗口</span>
                                     </button>
-                                    <button type="button" class="login-portal-card" data-portal="parent" data-login-open="parent" onclick="window.Auth?.openLoginPortalModal('parent')">
+                                    <button type="button" class="login-portal-card" data-portal="parent" data-login-open="parent" ${uiDeclaredAttrs('click', 'Auth.openLoginPortalModal', 'parent')}>
                                         <span class="login-portal-icon"><i class="ti ti-heart-handshake"></i></span>
                                         <span class="login-portal-title">家长端</span>
                                         <span class="login-portal-desc">输入学生姓名、班级和密码后，直接查看成长报告、成绩与提醒。</span>
@@ -622,12 +632,12 @@
                     </section>
                 </div>
 
-                <div id="login-modal-backdrop" class="login-modal-backdrop" style="display:none;" aria-hidden="true" onclick="if(event.target===this) window.Auth?.closeLoginPortalModal()">
+                <div id="login-modal-backdrop" class="login-modal-backdrop" style="display:none;" aria-hidden="true" ${uiDeclaredAttrs('click', 'Auth.closeLoginPortalModal')} data-ui-self-only>
                     <div class="login-modal-dialog login-modal-dialog--commanddeck" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
                         <div class="login-modal-head login-modal-head--commanddeck">
                             <div class="login-modal-head-top">
                                 <span id="login-modal-chip" class="login-modal-chip">学校端登录窗口</span>
-                                <button type="button" class="login-modal-close" onclick="window.Auth?.closeLoginPortalModal()" aria-label="关闭登录窗口">
+                                <button type="button" class="login-modal-close" ${uiDeclaredAttrs('click', 'Auth.closeLoginPortalModal')} aria-label="关闭登录窗口">
                                     <i class="ti ti-x"></i>
                                 </button>
                             </div>

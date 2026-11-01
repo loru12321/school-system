@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_RENDER_RUNTIME_PATCHED__) return;
 
@@ -460,7 +470,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 ? prevCountyR
                 : '-';
 
-            tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
+            tableRows += `<tr class="report-hover-row" style="transition:0.2s;">
                     ${renderResponsiveTableCell('科目', tmEscapeHtml(subjectLabel), 'font-weight:600; color:#475569;')}
                     ${renderResponsiveTableCell('成绩对比', renderMetricComparison(stuScores[sub], prevSubScore, 'score'), 'font-weight:bold;color:#334155;')}
                     ${renderResponsiveTableCell('班排对比', renderMetricComparison(curClassR, prevClassR, 'rank'), 'color:#64748b;')}
@@ -1120,7 +1130,7 @@ function renderInstagramCard(stu) {
                 
                 <div style="text-align:center; padding:20px; color:#999; font-size:12px;">
                     <p>已显示全部数据</p>
-                    <button class="btn btn-sm btn-gray" onclick="Auth.logout()">退出登录</button>
+                    <button class="btn btn-sm btn-gray" ${uiDeclaredAttrs('click', 'Auth.logout')}>退出登录</button>
                 </div>
             </div>
         `;

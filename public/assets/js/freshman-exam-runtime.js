@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 (() => {
     if (typeof window === 'undefined' || window.__FRESHMAN_EXAM_RUNTIME_PATCHED__) return;
 
@@ -1548,8 +1558,7 @@ async function FB_runDivision() {
         return window.UI.alert(`第 ${overloadedClass + 1} 班已有 ${fixedCounts[overloadedClass]} 名锁定学生，超过当前人数上限 ${maxPerClass} 人；请调整指定班级或增加班级数。`);
     }
     FB_refreshFixedAssignmentUI();
-    const btn = document.querySelector('[data-fb-action="run-division"]')
-        || document.querySelector('button[onclick="FB_runDivision()"]');
+    const btn = document.querySelector('[data-fb-action="run-division"]');
 
     // UI 反馈
     if (btn) {
@@ -1955,7 +1964,7 @@ function FB_renderSchemeSelector() {
         const maleRange = Math.max(...males) - Math.min(...males);
 
         return `
-                <div data-scheme-id="${scheme.id}" onclick="FB_applyScheme(${scheme.id})" style="cursor:pointer; padding:10px; border-radius:6px; ${borderStyle} transition:0.2s;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#fff'">
+                <div data-scheme-id="${scheme.id}" ${uiDeclaredAttrs('click', 'FB_applyScheme', Number(scheme.id))} style="cursor:pointer; padding:10px; border-radius:6px; ${borderStyle} transition:0.2s;" class="fb-scheme-option">
                     <div style="font-weight:bold; color:#333; display:flex; justify-content:space-between;">
                         <span>${scheme.name}</span>
                         ${isBest ? '<span style="color:red; font-size:10px;">★ 推荐</span>' : ''}
@@ -2498,7 +2507,7 @@ function FB_renderDashboard() {
         const postBadge = (postRosterCnt || postDropoutCnt || postTransferCnt)
             ? `<button type="button" class="fb-card-count-link fb-post-count-link" data-fb-action="view-roster" data-fb-roster-kind="post" data-fb-class-id="${c.id}" title="点击查看本班全部后置学生名单">↳ 后置学生: <strong>${postRosterCnt + postDropoutCnt + postTransferCnt}</strong> 人（${postRosterCnt ? `在册未考 ${postRosterCnt}` : ''}${postRosterCnt && (postDropoutCnt || postTransferCnt) ? '、' : ''}${postDropoutCnt ? `辍学/长期离校 ${postDropoutCnt}` : ''}${postDropoutCnt && postTransferCnt ? '、' : ''}${postTransferCnt ? `新转入 ${postTransferCnt}` : ''}）</button>` : '';
         const fixedLink = fixedCnt ? `<button type="button" class="fb-card-count-link fb-fixed-count-link" data-fb-action="view-roster" data-fb-roster-kind="fixed" data-fb-class-id="${c.id}">🔒 指定学生: <strong>${fixedCnt}</strong> 人</button>` : '';
-        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">${violationBadge}${noExamBadge}${dropoutBadge}</span></div><div class="fb-c-body"><div>${countLink('人数', n, 'all', 'fb-total-count-link')}</div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>${countLink('男生', male, 'male', 'fb-male-count-link')}</div><div>${countLink('女生', stats.female, 'female', 'fb-female-count-link')}</div><div>${countLink('高分段', hiCnt, 'high', 'fb-high-count-link')}</div><div>${countLink('低分段', loCnt, 'low', 'fb-low-count-link')}</div>${postBadge}${fixedLink}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">颜色说明：黄色=在册未参加考试，后置均衡分配；带波浪线的数字可点击查看名单；点击空白区域进入座位编排 →</div></div></div>`;
+        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" ${uiDeclaredAttrs('click', 'FB_openSeatMap', Number(c.id))}><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">${violationBadge}${noExamBadge}${dropoutBadge}</span></div><div class="fb-c-body"><div>${countLink('人数', n, 'all', 'fb-total-count-link')}</div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>${countLink('男生', male, 'male', 'fb-male-count-link')}</div><div>${countLink('女生', stats.female, 'female', 'fb-female-count-link')}</div><div>${countLink('高分段', hiCnt, 'high', 'fb-high-count-link')}</div><div>${countLink('低分段', loCnt, 'low', 'fb-low-count-link')}</div>${postBadge}${fixedLink}<div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">颜色说明：黄色=在册未参加考试，后置均衡分配；带波浪线的数字可点击查看名单；点击空白区域进入座位编排 →</div></div></div>`;
     }).join('');
     if (container && container.innerHTML !== classCardsHtml) {
         container.innerHTML = classCardsHtml;

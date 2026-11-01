@@ -1,3 +1,13 @@
+// Declarative replacement for inline on* handlers (CSP without 'unsafe-inline').
+// Produces data-ui-action|change|input="call" attributes that ui-actions-runtime.js
+// dispatches through its allow-list; arguments travel as JSON data, never as code.
+var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs = function uiDeclaredAttrs(trigger, name, ...args) {
+    const kind = trigger === 'change' ? 'data-ui-change' : (trigger === 'input' ? 'data-ui-input' : 'data-ui-action');
+    const escapeAttr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const argsAttr = args.length ? ` data-ui-args="${escapeAttr(JSON.stringify(args))}"` : '';
+    return `${kind}="call" data-ui-call="${escapeAttr(name)}"${argsAttr}`;
+});
+
 // auth-login-runtime.js — Auth login system, RoleManager, alert/confirm UI overrides (extracted from app.js)
 function scheduleStartupCloudTask(task, options = {}) {
     const delay = Number.isFinite(Number(options.delay)) ? Number(options.delay) : 1200;
@@ -1036,10 +1046,10 @@ var Auth = {
             ).trim() || '用户';
 
             accountActionsContainer.innerHTML = `
-                <button class="btn" onclick="openUserPasswordModal()" title="修改密码">
+                <button class="btn" ${uiDeclaredAttrs('click', 'openUserPasswordModal')} title="修改密码">
                     <i class="ti ti-key"></i><span>修改密码</span>
                 </button>
-                <button class="btn" onclick="Auth.logout()" title="退出登录">
+                <button class="btn" ${uiDeclaredAttrs('click', 'Auth.logout')} title="退出登录">
                     <i class="ti ti-logout"></i><span>退出登录</span>
                 </button>
             `;
@@ -1241,24 +1251,17 @@ var Auth = {
             const teacherName = TEACHER_MAP[stu.class + '_班主任'] || '班主任';
             reportHtml = reportHtml.replace(/<input.*id="inp-teacher-name".*?>/, `<span style="font-weight:bold">${teacherName}</span>`);
 
-            // JSON string literals, HTML-escaped for the double-quoted attribute:
-            // safe for names containing quotes or backslashes.
-            const issueArg = (value) => JSON.stringify(String(value ?? ''))
-                .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const safeName = issueArg(stu.name);
-            const safeClass = issueArg(stu.class);
-            const safeSchool = issueArg(stu.school);
             reportHtml += `
                     <div style="text-align:center; margin-top:30px; padding-bottom:80px; border-top:1px dashed #e5e7eb; padding-top:20px;">
                         <p style="font-size:14px; color:#64748b; margin-bottom:15px;">数据有疑问？</p>
                         <!-- 核心修复：使用转义后的变量 -->
                         <button class="btn" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:16px; padding:10px 20px; margin-bottom:20px;"
-                                onclick="IssueManager.openSubmitModal(${safeName}, ${safeClass}, ${safeSchool})">
+                                ${uiDeclaredAttrs('click', 'IssueManager.openSubmitModal', String(stu.name ?? ''), String(stu.class ?? ''), String(stu.school ?? ''))}>
                             <i class="ti ti-alert-circle"></i> 申请成绩核查
                         </button>
 
                         <br>
-                        <button onclick="Auth.logout()" style="background:none; border:none; color:#94a3b8; text-decoration:underline; font-size:14px; cursor:pointer;">
+                        <button ${uiDeclaredAttrs('click', 'Auth.logout')} style="background:none; border:none; color:#94a3b8; text-decoration:underline; font-size:14px; cursor:pointer;">
                             退出登录
                         </button>
                     </div>
