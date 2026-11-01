@@ -123,7 +123,15 @@ assert.strictEqual(prevented, true, 'the help link should not navigate');
   const jsDir = path.join(root, 'public/assets/js');
   const files = fs.readdirSync(jsDir).filter((name) => name.endsWith('.js') && !/-[0-9a-f]{12}\.js$/.test(name));
   const usingFiles = files.filter((name) => /uiDeclaredAttrs\('(?:click|change|input)'/.test(fs.readFileSync(path.join(jsDir, name), 'utf8')));
-  assert.ok(usingFiles.length >= 20, 'runtime modules should render declarative calls');
+  assert.ok(usingFiles.length >= 15, 'runtime modules should render declarative calls');
+  // Literal data-ui-call attributes (used where a module has a single argument-free call,
+  // e.g. report-render-runtime.js, to stay within its size budget) are allow-listed too.
+  for (const name of files.filter((file) => file !== 'ui-actions-runtime.js')) {
+    for (const match of fs.readFileSync(path.join(jsDir, name), 'utf8').matchAll(/data-ui-call="([^"$]+)"/g)) {
+      assert.ok(new Set(Array.from(runtimeSource.match(/DECLARED_CALLS = new Set\(\[([\s\S]*?)\]\)/)[1].matchAll(/'([^']+)'/g), (m) => m[1])).has(match[1]),
+        `${name}: data-ui-call="${match[1]}" is not in DECLARED_CALLS`);
+    }
+  }
   const runtimeAllowList = new Set(Array.from(runtimeSource.match(/DECLARED_CALLS = new Set\(\[([\s\S]*?)\]\)/)[1].matchAll(/'([^']+)'/g), (m) => m[1]));
   for (const name of usingFiles) {
     const source = fs.readFileSync(path.join(jsDir, name), 'utf8');
