@@ -136,6 +136,19 @@ async function run() {
     assert.strictEqual(response.status, 200, 'director GET should retain the leadership analytics read path');
     assert.deepStrictEqual(await json(response), [], 'leadership read should keep the existing packed archive response shape');
 
+    const manyKeys = Array.from({ length: 101 }, (_, index) => `key.eq.EXAM_${index}`).join(',');
+    const oversizedUrl = `${baseUrl}?select=key&or=(${manyKeys})`;
+    response = await handleSystemDataProxy(makeRequest('GET', oversizedUrl, directorToken, undefined), env, new URL(oversizedUrl));
+    assert.strictEqual(response.status, 400, 'an or= filter beyond the binding limit is a client error, not a 500');
+    assert.strictEqual((await json(response)).error, 'SYSTEM_DATA_FILTER_TOO_LARGE');
+    const boundedKeys = Array.from({ length: 100 }, (_, index) => `key.eq.EXAM_${index}`).join(',');
+    const bareUrl = `${baseUrl}?select=key&or=${manyKeys}`;
+    response = await handleSystemDataProxy(makeRequest('GET', bareUrl, directorToken, undefined), env, new URL(bareUrl));
+    assert.strictEqual(response.status, 400, 'the bare or= form used by the in-house client is capped too');
+    const boundedUrl = `${baseUrl}?select=key&or=(${boundedKeys})`;
+    response = await handleSystemDataProxy(makeRequest('GET', boundedUrl, directorToken, undefined), env, new URL(boundedUrl));
+    assert.strictEqual(response.status, 200, 'filters within the limit keep working');
+
     const metadataUrl = `${baseUrl}?select=key,updated_at`;
     response = await handleSystemDataProxy(makeRequest('GET', metadataUrl, directorToken, undefined), env, new URL(metadataUrl));
     assert.strictEqual(response.status, 200);
