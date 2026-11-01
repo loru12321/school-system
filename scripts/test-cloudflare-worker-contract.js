@@ -186,7 +186,7 @@ assert.ok(dataCloudRuntime.includes("kind: 'exam',\n            cohortId,"), 'da
 assert.ok(dataCloudRuntime.includes("cacheVersion: remoteUpdatedAt"), 'data cloud split reads should pass updated_at as a safe cache version');
 assert.ok(cloudRuntime.includes("kind: 'exam',\n            cohortId") && cloudRuntime.includes("kind: 'exam',\n                        cohortId"), 'cloud history/supplement fallback should fetch exam rows through indexed kind/cohort filters');
 assert.ok(workerContractSource.includes('function isSystemDataEdgeCacheEligible(request, url)'), 'system_data edge cache eligibility should be centralized and fail closed');
-assert.ok(workerContractSource.includes('function getSystemDataEdgeCacheKey(request, url)'), 'system_data edge cache key should include request representation details');
+assert.ok(workerContractSource.includes("function getSystemDataEdgeCacheKey(request, url, scopeTag = 'full')"), 'system_data edge cache key should include request representation details');
 assert.ok(workerContractSource.includes("cacheUrl.searchParams.set('__accept', String(request.headers.get('accept') || 'application/json'));"), 'system_data edge cache key should separate maybeSingle object responses from array responses');
 assert.ok(workerContractSource.includes("searchParams.has('select')") && workerContractSource.includes("(searchParams.has('key') || searchParams.has('limit'))"), 'system_data edge cache should only store bounded explicit readonly selects');
 assert.ok(workerContractSource.includes("searchParams.get('cache_version') || searchParams.get('v')"), 'system_data content edge cache should require an explicit payload version');
@@ -194,7 +194,7 @@ assert.ok(workerContractSource.includes("return !!version && /^eq\\./i.test(norm
 assert.ok(workerContractSource.includes("const cacheControl = selectSet.has('content') && !versionedContent ? 'no-store' : SYSTEM_DATA_READ_CACHE_CONTROL;"), 'unversioned content reads should still bypass shared edge caches');
 assert.ok(workerContractSource.includes('const cache = globalThis.caches && globalThis.caches.default;'), 'system_data reads should use Cloudflare Cache API when available');
 assert.ok(workerContractSource.includes("headers.set('X-School-System-Cache', cacheStatus);"), 'system_data cache responses should expose hit/miss status for diagnosis');
-assert.ok(/if \(isSystemDataHybridMode\(env\)\) \{[\s\S]*method === 'GET'[\s\S]*handleCachedSystemDataRead\(request, env, url\)/.test(workerContractSource), 'hybrid system_data GET reads should use the same edge cache path as D1 primary reads');
+assert.ok(/if \(isSystemDataHybridMode\(env\)\) \{[\s\S]*method === 'GET'[\s\S]*handleCachedSystemDataRead\(request, env, url, readScope\)/.test(workerContractSource), 'hybrid system_data GET reads should use the same edge cache path as D1 primary reads');
 const cloudSystemDataRestoreIndexes = fs.readFileSync(path.join(root, 'cloudflare/d1/006_cloud_system_data_restore_indexes.sql'), 'utf8');
 assert.ok(cloudSystemDataRestoreIndexes.includes('idx_cloud_system_data_cohort_kind_updated'), 'cloud restore should have a cohort/kind/updated_at composite index');
 assert.ok(cloudSystemDataRestoreIndexes.includes('idx_cloud_system_data_prefix_cohort_updated'), 'teacher cloud restore should have a key_prefix/cohort/updated_at composite index');

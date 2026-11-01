@@ -609,6 +609,9 @@
     }
 
     function packPayload(payload) {
+        // Archives served to school-scoped roles carry pseudonymised rows for
+        // other schools; never let one be uploaded back over the full archive.
+        if (payload && payload.__SCHOOL_SCOPE_REDACTED) throw new Error('SCHOOL_SCOPE_REDACTED_PAYLOAD');
         const json = JSON.stringify(compactPayloadForStorage(payload || {}));
         return 'LZB64|' + LZString.compressToBase64(json);
     }

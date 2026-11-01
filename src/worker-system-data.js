@@ -12,6 +12,11 @@ import {
   buildErrorDetail,
   PROXY_TIMEOUT_MS
 } from './worker-http-helpers.js';
+import {
+  resolveSchoolRedactionScope,
+  getSchoolRedactionCacheTag,
+  redactSystemDataContent
+} from './worker-school-redaction.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -107,8 +112,9 @@ function canWriteSystemDataKey(session, key) {
 
 function canReadSystemData(session) {
   // Teachers, parents, and students must never receive an entire packed
-  // cohort through the generic REST surface. Leadership roles retain the
-  // existing analytics read path until the per-school shard migration lands.
+  // cohort through the generic REST surface. Leadership roles keep the
+  // analytics read path, but non-admins receive archives with other schools'
+  // student identities redacted (see worker-school-redaction.js).
   return hasAnyRole(session, ['admin', 'director', 'grade_director']);
 }
 
@@ -571,12 +577,14 @@ function mapSystemDataResponseRow(row, selectSet, content) {
   return out;
 }
 
-async function buildSystemDataJsonResponse(request, env, rows, selectSet, cacheControl = SYSTEM_DATA_READ_CACHE_CONTROL) {
+async function buildSystemDataJsonResponse(request, env, rows, selectSet, cacheControl = SYSTEM_DATA_READ_CACHE_CONTROL, scope = null) {
   // Read all R2 objects concurrently instead of awaiting each one serially.
   const contents = await Promise.all(
-    rows.map((row) =>
-      selectSet.has('content') ? readStoredSystemDataContent(env, row) : Promise.resolve(undefined)
-    )
+    rows.map(async (row) => {
+      if (!selectSet.has('content')) return undefined;
+      const content = await readStoredSystemDataContent(env, row);
+      return scope ? redactSystemDataContent(content, scope, env) : content;
+    })
   );
   const payloadRows = rows.map((row, index) => mapSystemDataResponseRow(row, selectSet, contents[index]));
   const single = wantsSingleSystemDataObject(request);
@@ -597,9 +605,11 @@ function isSystemDataEdgeCacheEligible(request, url) {
   return searchParams.has('select') && (searchParams.has('key') || searchParams.has('limit'));
 }
 
-function getSystemDataEdgeCacheKey(request, url) {
+function getSystemDataEdgeCacheKey(request, url, scopeTag = 'full') {
   const cacheUrl = new URL(url.toString());
   cacheUrl.searchParams.set('__accept', String(request.headers.get('accept') || 'application/json'));
+  // Redacted and full views of the same archive must never share an entry.
+  cacheUrl.searchParams.set('__scope', scopeTag);
   return new Request(cacheUrl.toString(), { method: 'GET' });
 }
 
@@ -618,25 +628,25 @@ function withSystemDataCacheStatus(response, cacheStatus) {
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
-async function handleCachedSystemDataRead(request, env, url) {
+async function handleCachedSystemDataRead(request, env, url, scope = null) {
   if (!isSystemDataEdgeCacheEligible(request, url)) {
     const { rows, selectSet } = await querySystemDataRows(env, request, url);
     const versionedContent = selectSet.has('content') && normalizeText(url.searchParams.get('cache_version') || url.searchParams.get('v'));
     const cacheControl = selectSet.has('content') && !versionedContent ? 'no-store' : SYSTEM_DATA_READ_CACHE_CONTROL;
     return withSystemDataCacheStatus(
-      await buildSystemDataJsonResponse(request, env, rows, selectSet, cacheControl), 'BYPASS'
+      await buildSystemDataJsonResponse(request, env, rows, selectSet, cacheControl, scope), 'BYPASS'
     );
   }
 
   const cache = globalThis.caches && globalThis.caches.default;
-  const cacheKey = getSystemDataEdgeCacheKey(request, url);
+  const cacheKey = getSystemDataEdgeCacheKey(request, url, await getSchoolRedactionCacheTag(scope, env));
   if (cache) {
     const cached = await cache.match(cacheKey);
     if (cached) return withSystemDataCacheStatus(cached, 'HIT');
   }
 
   const { rows, selectSet } = await querySystemDataRows(env, request, url);
-  const response = await buildSystemDataJsonResponse(request, env, rows, selectSet);
+  const response = await buildSystemDataJsonResponse(request, env, rows, selectSet, SYSTEM_DATA_READ_CACHE_CONTROL, scope);
   if (cache && response.ok) await cache.put(cacheKey, response.clone());
   return withSystemDataCacheStatus(response, cache ? 'MISS' : 'BYPASS');
 }
@@ -645,10 +655,10 @@ async function handleCachedSystemDataRead(request, env, url) {
 // system_data CRUD handlers (D1 mode)
 // ---------------------------------------------------------------------------
 
-async function handleSystemDataRead(request, env, url) {
+async function handleSystemDataRead(request, env, url, scope = null) {
   const { rows, selectSet } = await querySystemDataRows(env, request, url);
   if (!rows.length) return null;
-  return buildSystemDataJsonResponse(request, env, rows, selectSet);
+  return buildSystemDataJsonResponse(request, env, rows, selectSet, SYSTEM_DATA_READ_CACHE_CONTROL, scope);
 }
 
 // ---------------------------------------------------------------------------
@@ -688,10 +698,10 @@ export async function handleSystemDataBootstrapProxy(request, env) {
   if (shouldProxySystemDataToSupabase(env)) {
     return jsonResponse(501, { ok: false, error: 'SYSTEM_DATA_BOOTSTRAP_UNAVAILABLE' }, request);
   }
-  return handleSystemDataBootstrap(request, env);
+  return handleSystemDataBootstrap(request, env, resolveSchoolRedactionScope(auth.session, env));
 }
 
-async function handleSystemDataBootstrap(request, env) {
+async function handleSystemDataBootstrap(request, env, scope = null) {
   const db = getSystemDataDb(env);
   if (!db || typeof db.batch !== 'function') {
     return jsonResponse(501, { ok: false, error: 'SYSTEM_DATA_BOOTSTRAP_UNAVAILABLE' }, request);
@@ -753,12 +763,14 @@ async function handleSystemDataBootstrap(request, env) {
       .catch(() => null);
     const shardRaw = firstRow(shardRes);
     if (shardRaw) {
-      const shardContent = await readStoredSystemDataContent(env, shardRaw);
+      const storedShardContent = await readStoredSystemDataContent(env, shardRaw);
+      const shardContent = scope ? await redactSystemDataContent(storedShardContent, scope, env) : storedShardContent;
       if (shardContent) currentShard = { key: shardRaw.key, updated_at: shardRaw.updated_at, content: shardContent };
     }
   }
 
-  const workspaceContent = workspaceRaw ? await readStoredSystemDataContent(env, workspaceRaw) : '';
+  const storedWorkspaceContent = workspaceRaw ? await readStoredSystemDataContent(env, workspaceRaw) : '';
+  const workspaceContent = scope ? await redactSystemDataContent(storedWorkspaceContent, scope, env) : storedWorkspaceContent;
   const workspaceRow = workspaceRaw
     ? { key: workspaceRaw.key, updated_at: workspaceRaw.updated_at, content: workspaceContent }
     : null;
@@ -886,7 +898,7 @@ async function proxySupabaseRestRequest(request, env, url, explicitPath = '', op
     Object.assign({ apikey, Authorization: `Bearer ${apikey}` }, options.extraHeaders || {}));
 }
 
-async function proxySystemDataReadToSupabase(request, env, url) {
+async function proxySystemDataReadToSupabase(request, env, url, scope = null) {
   const targetUrl = new URL(buildSupabaseRestTargetUrl(env, url, '/rest/v1/system_data'));
   const apikey = getSupabaseRestApiKey(env);
   if (!apikey) return jsonResponse(503, { ok: false, error: 'SUPABASE_REST_PROXY_UNAVAILABLE' }, request);
@@ -910,7 +922,7 @@ async function proxySystemDataReadToSupabase(request, env, url) {
     return new Response(text, { status: response.status, statusText: response.statusText, headers: buildForwardHeaders(response.headers, request) });
   }
 
-  if (!requestedSizeBytes) {
+  if (!requestedSizeBytes && !(scope && requestedContent)) {
     const fwdHeaders = buildForwardHeaders(response.headers, request);
     fwdHeaders.set('Cache-Control', SYSTEM_DATA_READ_CACHE_CONTROL);
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers: fwdHeaders });
@@ -923,15 +935,16 @@ async function proxySystemDataReadToSupabase(request, env, url) {
   }
 
   const rows = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
-  const payloadRows = rows.map((row) => {
+  const payloadRows = await Promise.all(rows.map(async (row) => {
     const next = {};
+    const storedContent = typeof row.content === 'string' ? row.content : '';
     if (selectSet.has('key')) next.key = row.key;
     if (selectSet.has('created_at')) next.created_at = row.created_at;
     if (selectSet.has('updated_at')) next.updated_at = row.updated_at;
-    if (requestedContent) next.content = typeof row.content === 'string' ? row.content : '';
-    if (requestedSizeBytes) next.size_bytes = new TextEncoder().encode(typeof row.content === 'string' ? row.content : '').length;
+    if (requestedContent) next.content = scope ? await redactSystemDataContent(storedContent, scope, env) : storedContent;
+    if (requestedSizeBytes) next.size_bytes = new TextEncoder().encode(storedContent).length;
     return next;
-  });
+  }));
 
   const body = wantsSingleSystemDataObject(request) ? (payloadRows[0] || null) : payloadRows;
   return jsonResponse(200, body, request, {}, SYSTEM_DATA_READ_CACHE_CONTROL);
@@ -961,9 +974,11 @@ export async function handleSystemDataProxy(request, env, url) {
   if (auth.error) return auth.error;
   const session = auth.session;
 
+  let readScope = null;
   if (method === 'GET' || method === 'HEAD') {
     const authorizationError = authorizeSystemDataRead(request, session);
     if (authorizationError) return authorizationError;
+    readScope = resolveSchoolRedactionScope(session, env);
     const filterError = rejectOversizedSystemDataFilter(request, url);
     if (filterError) return filterError;
   }
@@ -979,7 +994,7 @@ export async function handleSystemDataProxy(request, env, url) {
   }
 
   if (shouldProxySystemDataToSupabase(env)) {
-    if (method === 'GET' || method === 'HEAD') return proxySystemDataReadToSupabase(request, env, url);
+    if (method === 'GET' || method === 'HEAD') return proxySystemDataReadToSupabase(request, env, url, readScope);
     if (method === 'POST' || method === 'PUT' || method === 'PATCH') return proxySystemDataWriteToSupabase(request, env, url);
     if (method === 'DELETE') return proxySupabaseRestRequest(request, env, url, '/rest/v1/system_data');
     return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);
@@ -990,9 +1005,9 @@ export async function handleSystemDataProxy(request, env, url) {
   if (isSystemDataHybridMode(env)) {
     if (method === 'GET' || method === 'HEAD') {
       const d1Response = method === 'GET'
-        ? await handleCachedSystemDataRead(request, env, url)
-        : await handleSystemDataRead(request, env, url);
-      return d1Response || proxySystemDataReadToSupabase(request, env, url);
+        ? await handleCachedSystemDataRead(request, env, url, readScope)
+        : await handleSystemDataRead(request, env, url, readScope);
+      return d1Response || proxySystemDataReadToSupabase(request, env, url, readScope);
     }
     if (method === 'POST') {
       const supabaseRequest = request.clone();
@@ -1014,7 +1029,7 @@ export async function handleSystemDataProxy(request, env, url) {
   }
 
   if (method === 'GET' || method === 'HEAD') {
-    return method === 'GET' ? handleCachedSystemDataRead(request, env, url) : handleSystemDataRead(request, env, url);
+    return method === 'GET' ? handleCachedSystemDataRead(request, env, url, readScope) : handleSystemDataRead(request, env, url, readScope);
   }
   if (method === 'POST') return handleSystemDataWrite(request, env);
   if (method === 'DELETE') return handleSystemDataDelete(request, env, url);
