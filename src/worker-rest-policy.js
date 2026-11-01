@@ -46,11 +46,14 @@ export function resolveIssuesAccess(session, method) {
 export function resolveSystemLogsAccess(session, method) {
   const verb = String(method || 'GET').toUpperCase();
   if (verb === 'POST') return { allowed: true, scope: { clause: '', bindings: [] } };
-  if (READ_METHODS.has(verb) && hasAnyRole(session, ['admin', 'director'])) {
-    return { allowed: true, scope: { clause: '', bindings: [] } };
+  if (isAdmin(session)) return { allowed: true, scope: { clause: '', bindings: [] } };
+  // Directors read their own school's audit trail only; the school is stamped
+  // from the writer's session (see worker-gateway-d1.js), never the client.
+  const school = normalizeText(session?.school);
+  if (READ_METHODS.has(verb) && hasRole(session, 'director') && school) {
+    return { allowed: true, scope: { clause: 'school = ?', bindings: [school] } };
   }
   // Audit records may only be altered or removed by administrators.
-  if (isAdmin(session)) return { allowed: true, scope: { clause: '', bindings: [] } };
   return { allowed: false };
 }
 

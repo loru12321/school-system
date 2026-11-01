@@ -8,7 +8,7 @@ const { DatabaseSync } = require('node:sqlite');
 const root = path.resolve(__dirname, '..');
 const dir = path.join(root, 'cloudflare', 'd1');
 const files = fs.readdirSync(dir).filter((name) => /^\d{3}_.+\.sql$/.test(name)).sort();
-assert.ok(files.length >= 8, 'expected the numbered D1 migrations');
+assert.ok(files.length >= 9, 'expected the numbered D1 migrations');
 
 const db = new DatabaseSync(':memory:');
 for (const name of files) {
@@ -23,7 +23,10 @@ const objects = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type IN
 [
   'cloud_system_data', 'system_users', 'login_sessions', 'login_rate_limits', 'issues', 'system_logs',
   'config_alias_rules', 'warning_records', 'rectify_tasks', 'snapshot_versions',
-  'idx_login_sessions_session_id', 'idx_login_rate_limits_locked_until'
+  'idx_login_sessions_session_id', 'idx_login_rate_limits_locked_until', 'idx_system_logs_school_created'
 ].forEach((name) => assert.ok(objects.has(name), `fresh database should contain ${name}`));
+
+const logColumns = db.prepare('PRAGMA table_info(system_logs)').all().map((row) => row.name);
+assert.ok(logColumns.includes('school'), 'system_logs should carry the school scope column');
 
 console.log(`d1 migrations replay tests passed (${files.length} files)`);

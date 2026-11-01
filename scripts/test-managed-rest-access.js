@@ -59,6 +59,7 @@ async function run() {
       INSERT INTO system_users (username, role, roles_json, school, class_name, teacher_name) VALUES
         ('admin', 'admin', '["admin"]', '系统', '', 'admin'),
         ('dirA', 'director', '["director"]', 'A校', '', 'dirA'),
+        ('dirB', 'director', '["director"]', 'B校', '', 'dirB'),
         ('g7', 'grade_director', '["grade_director"]', 'A校', '7', 'g7'),
         ('c702', 'class_teacher', '["class_teacher"]', 'A校', '702', 'c702'),
         ('p1', 'parent', '["parent"]', 'A校', '701', '家长');
@@ -88,6 +89,7 @@ async function run() {
 
     const admin = await tokenFor({ username: 'admin', role: 'admin', roles: ['admin'] });
     const directorA = await tokenFor({ username: 'dirA', role: 'director', roles: ['director'], school: 'A校' });
+    const directorB = await tokenFor({ username: 'dirB', role: 'director', roles: ['director'], school: 'B校' });
     const gradeDirector = await tokenFor({ username: 'g7', role: 'grade_director', roles: ['grade_director'], school: 'A校', class_name: '7' });
     const classTeacher = await tokenFor({ username: 'c702', role: 'class_teacher', roles: ['class_teacher'], school: 'A校', class_name: '702' });
     const parent = await tokenFor({ username: 'p1', role: 'parent', roles: ['parent'], school: 'A校', class_name: '701', teacher_name: '家长' });
@@ -114,10 +116,26 @@ async function run() {
     assert.strictEqual(db.sqlite.prepare('SELECT status FROM issues WHERE id = ?').get(other).status, 'pending', 'out-of-scope PATCH must change nothing');
     assert.strictEqual((await call(`/sb/rest/v1/issues?id=eq.${other}`, { token: parent, method: 'DELETE' })).status, 403, 'parents cannot delete issues');
 
+    // Scope columns are fixed for non-admins: a class teacher cannot move an
+    // issue to another school or class while updating it.
+    const own = db.sqlite.prepare("SELECT id FROM issues WHERE student_name = '乙'").get().id;
+    const moveOwn = await call(`/sb/rest/v1/issues?id=eq.${own}`, { token: classTeacher, method: 'PATCH', body: { status: 'resolved', school: 'B校', student_class: '801' } });
+    assert.strictEqual(moveOwn.status, 200);
+    const ownAfter = db.sqlite.prepare('SELECT status, school, student_class FROM issues WHERE id = ?').get(own);
+    assert.deepStrictEqual({ ...ownAfter }, { status: 'resolved', school: 'A校', student_class: '702' }, 'status updates apply but scope columns stay put');
+    assert.strictEqual((await call(`/sb/rest/v1/issues?id=eq.${own}`, { token: classTeacher, method: 'PATCH', body: { school: 'B校' } })).status, 400, 'a PATCH with only locked columns has nothing to apply');
+
     // system_logs: anyone signed in may append; operator comes from the session.
     assert.strictEqual((await call('/sb/rest/v1/system_logs', { token: parent, method: 'POST', body: [{ operator: 'admin (admin)', action: '查看', details: 'd' }] })).status, 201);
-    const lastLog = db.sqlite.prepare('SELECT operator FROM system_logs ORDER BY id DESC LIMIT 1').get();
+    const lastLog = db.sqlite.prepare('SELECT operator, school FROM system_logs ORDER BY id DESC LIMIT 1').get();
     assert.strictEqual(lastLog.operator, '家长 (parent)', 'log operator must not be spoofable');
+    assert.strictEqual(lastLog.school, 'A校', 'log school comes from the writer\'s session (column added on first use)');
+    assert.strictEqual((await call('/sb/rest/v1/system_logs', { token: directorB, method: 'POST', body: [{ action: '查看', details: 'b', school: 'A校' }] })).status, 201);
+    assert.strictEqual(db.sqlite.prepare('SELECT school FROM system_logs ORDER BY id DESC LIMIT 1').get().school, 'B校', 'log school cannot be spoofed by the client');
+    const logActions = (result) => result.json.map((row) => `${row.school || '-'}:${row.details}`).sort().join(',');
+    assert.strictEqual(logActions(await call('/sb/rest/v1/system_logs?select=*', { token: directorA })), 'A校:d', 'directors read only their own school\'s logs');
+    assert.strictEqual(logActions(await call('/sb/rest/v1/system_logs?select=*&school=eq.B校', { token: directorA })), '', 'log filters cannot widen a director\'s scope');
+    assert.strictEqual(logActions(await call('/sb/rest/v1/system_logs?select=*', { token: admin })), '-:,A校:d,B校:b', 'admins read every log, including rows written before the school column');
     assert.strictEqual((await call('/sb/rest/v1/system_logs?select=*', { token: parent })).status, 403, 'parents cannot read logs');
     assert.strictEqual((await call('/sb/rest/v1/system_logs?select=*', { token: directorA })).status, 200, 'directors can read logs');
     assert.strictEqual((await call('/sb/rest/v1/system_logs?id=eq.1', { token: directorA, method: 'DELETE' })).status, 403, 'only admins may delete logs');

@@ -3,7 +3,7 @@
 import { buildCorsHeaders, normalizeText } from './worker-http-helpers.js';
 import { signLocalSession } from './worker-crypto.js';
 import {
-  jsonResponse, badRequest,
+  jsonResponse, badRequest, isAdmin,
   buildSessionPayload, ensureLoginSessionsTable,
   resolveSession, performGatewayLogin,
   buildSessionCookie, clearSessionCookie, revokeSession
@@ -179,6 +179,7 @@ async function handleManagedRestTable(request, env, url, config, session) {
   if (!access || !access.allowed) {
     return jsonResponse(403, { ok: false, error: 'INSUFFICIENT_ROLE' }, request);
   }
+  if (typeof config.ensureSchema === 'function') await config.ensureSchema(db);
   const allowedColumns = config.columns;
   const order = parseOrder(url, config.defaultOrderColumn);
   const limit = parseLimit(url, 100);
@@ -220,7 +221,11 @@ async function handleManagedRestTable(request, env, url, config, session) {
   if (method === 'PATCH') {
     const payload = await request.json().catch(() => null);
     if (!payload || typeof payload !== 'object') return badRequest(request, 'INVALID_JSON_BODY');
-    const patchColumns = Object.keys(payload).filter((column) => allowedColumns.includes(column) && column !== 'id' && column !== 'created_at');
+    // Columns that decide who can see a row are fixed for non-admins, otherwise
+    // a scoped PATCH could move a record out of (or into) someone else's scope.
+    const lockedColumns = isAdmin(session) ? [] : (config.scopeColumns || []);
+    const patchColumns = Object.keys(payload).filter((column) => allowedColumns.includes(column)
+      && column !== 'id' && column !== 'created_at' && !lockedColumns.includes(column));
     if (!patchColumns.length) return badRequest(request, 'PATCH_FIELDS_MISSING');
     if (!requestedWhere.clause) return badRequest(request, 'PATCH_FILTER_MISSING');
     const setClause = patchColumns.map((column) => `${column} = ?`).join(', ');
@@ -318,6 +323,21 @@ export async function handleGatewayRequest(request, env, ctx) {
   return routeGatewayAction(request, env, body, ctx);
 }
 
+// Production predates migration 009, so add the column on first use.  ALTER
+// TABLE fails harmlessly once the column exists; the WeakSet keeps it to one
+// attempt per isolate.
+const systemLogsSchemaReady = new WeakSet();
+export async function ensureSystemLogsSchoolColumn(db) {
+  if (!db || typeof db !== 'object' || systemLogsSchemaReady.has(db)) return;
+  try {
+    await db.prepare('ALTER TABLE system_logs ADD COLUMN school TEXT').run();
+  } catch (error) {
+    if (!/duplicate column/i.test(String(error?.message || error))) throw error;
+  }
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_system_logs_school_created ON system_logs(school, created_at DESC)').run();
+  systemLogsSchemaReady.add(db);
+}
+
 export async function handleManagedRestRequest(request, env, url, session = null) {
   const pathname = String(url.pathname || '');
   if (pathname === '/sb/rest/v1/issues') {
@@ -325,6 +345,7 @@ export async function handleManagedRestRequest(request, env, url, session = null
       tableName: 'issues',
       defaultOrderColumn: 'created_at',
       resolveAccess: resolveIssuesAccess,
+      scopeColumns: ['school', 'student_class'],
       columns: ['id', 'student_name', 'student_class', 'school', 'issue_type', 'description', 'contact_info', 'status', 'created_at'],
       buildInsertStatement(db, row, actor) {
         const canTriage = resolveIssuesAccess(actor, 'PATCH').allowed;
@@ -349,14 +370,17 @@ export async function handleManagedRestRequest(request, env, url, session = null
       tableName: 'system_logs',
       defaultOrderColumn: 'created_at',
       resolveAccess: resolveSystemLogsAccess,
-      columns: ['id', 'operator', 'action', 'details', 'status', 'created_at'],
+      ensureSchema: ensureSystemLogsSchoolColumn,
+      scopeColumns: ['school'],
+      columns: ['id', 'operator', 'school', 'action', 'details', 'status', 'created_at'],
       buildInsertStatement(db, row, actor) {
-        // Operator and timestamp come from the verified session, never the client.
+        // Operator, school and timestamp come from the verified session, never the client.
         return db.prepare(`
-          INSERT INTO system_logs (operator, action, details, status, created_at)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO system_logs (operator, school, action, details, status, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)
         `).bind(
           buildSessionOperatorLabel(actor),
+          normalizeText(actor?.school) || null,
           normalizeText(row?.action),
           normalizeText(row?.details) || null,
           'normal',
