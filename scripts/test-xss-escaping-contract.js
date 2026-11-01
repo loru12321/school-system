@@ -22,11 +22,11 @@ assert.ok(dataManager.includes('escapeDataManagerHtml(s.name)'), 'student table 
 // Runtime-rendered actions pass their arguments as escaped JSON data through
 // uiDeclaredAttrs() (see test:ui-actions-declared-calls for the round trip),
 // never as JavaScript source inside an inline handler.
-assert.ok(dataManager.includes("uiDeclaredAttrs('click', 'DataManager.editTeacher', String(t.key ?? ''), String(t.name ?? ''))"), 'teacher actions must pass key/name as declarative data');
+assert.ok(/uiDeclaredAttrs\('click', 'DataManager\.editTeacher', String\(t\.key \?\? ''\), String\(t\.name \?\? ''\)\)/.test(dataManager), 'teacher actions must pass key/name as declarative data');
 assert.ok(!dataManager.includes("onclick=\"DataManager.editTeacher('${t.key}', '${t.name}')"), 'teacher edit onclick must not interpolate raw quoted values');
 assert.ok(!dataManager.includes('value="${s.name}"'), 'student edit modal values must not interpolate raw names');
 
-assert.ok(studentDetails.includes("uiDeclaredAttrs('click', 'updateStudentScore', String(student.name ?? ''), String(student.class ?? ''), String(sub ?? ''), scoreArg)"), 'student score editing must pass its arguments as declarative data');
+assert.ok(/uiDeclaredAttrs\('click', 'updateStudentScore', String\(student\.name \?\? ''\), String\(student\.class \?\? ''\), String\(sub \?\? ''\), scoreArg\)/.test(studentDetails), 'student score editing must pass its arguments as declarative data');
 assert.ok(studentDetails.includes('${tmEscapeHtml(student.name || \'-\')}</a>'), 'student detail links must escape displayed names');
 assert.ok(!studentDetails.includes("updateStudentScore('${student.name}', '${student.class}', '${sub}'"), 'student detail score onclick must not interpolate raw quoted values');
 

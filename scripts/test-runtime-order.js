@@ -1689,8 +1689,8 @@ assert.ok(indexHtml.includes('id="btn-summary-generate"'), 'summary should expos
 assert.ok(indexHtml.includes('id="summary-refresh-notice"'), 'summary should include a stale-data reminder region');
 assert.ok(appSource.includes('function markSummaryDataChanged'), 'summary stale-data state helper should exist');
 assert.ok(appSource.includes('function markSummaryFresh'), 'summary fresh-state helper should exist');
-assert.ok(appSource.includes("uiDeclaredAttrs('click', 'handleExcludedClick', String(d.name ?? ''))"), 'summary bottom-third score should drill into excluded students');
-assert.ok(appSource.includes("uiDeclaredAttrs('click', 'handleHighClick', String(d.name ?? ''))"), 'summary high-score score should drill into high-score students');
+assert.ok(/uiDeclaredAttrs\('click', 'handleExcludedClick', String\(d\.name \?\? ''\)\)/.test(appSource), 'summary bottom-third score should drill into excluded students');
+assert.ok(/uiDeclaredAttrs\('click', 'handleHighClick', String\(d\.name \?\? ''\)\)/.test(appSource), 'summary high-score score should drill into high-score students');
 assert.ok(layoutRefinementCss.includes('#summary #tb-summary thead th') && layoutRefinementCss.includes('position: sticky'), 'summary table header should remain sticky');
 assert.ok(layoutRefinementCss.includes('.summary-generate-btn.is-stale'), 'summary stale generate button styling should exist');
 assert.ok(teacherAnalysisCoreRuntime.includes('function buildTeacherRowsFingerprint'), 'teacher analysis cache signature should include a row fingerprint helper');
