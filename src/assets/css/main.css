@@ -12750,5 +12750,5 @@ body.dark-mode .version-center-meta-list > div {
 }
 
 /* Hover states formerly set by inline onmouseover/onmouseout (CSP without 'unsafe-inline'). */
-.report-hover-row:hover { background: rgba(241, 245, 249, 0.5); }
-.fb-scheme-option:hover { background: #f0fdf4; }
+/* Freshman scheme hover, formerly inline onmouseover (CSP). Report rows rely on the global tr:hover rule. */
+.fb-opt:hover { background: #f0fdf4; }
