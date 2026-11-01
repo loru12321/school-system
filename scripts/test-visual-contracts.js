@@ -23,7 +23,7 @@ if (!teacherUi.includes('aria-label="及格率镇排')) throw new Error('pass-ra
 if (!app.includes('function syncVisibleCohortSelector()')) throw new Error('cohort selector reconciliation is missing');
 if (!app.includes('selector.dataset.restoredCohort = cohortId')) throw new Error('cohort restore marker is missing');
 if (!polish.includes('content: none !important')) throw new Error('detached rank pseudo-element neutralization is missing');
-if (!app.includes('class="clickable-num" onclick="handleExcludedClick')) throw new Error('bottom-third exclusion drill control is missing');
+if (!app.includes('class="clickable-num" ${uiDeclaredAttrs(\'click\', \'handleExcludedClick\'')) throw new Error('bottom-third exclusion drill control is missing');
 if (!drill.includes('text-decoration-style: wavy')) throw new Error('clickable exclusion number wave affordance is missing');
 if (!drill.includes('grid-template-columns: repeat(auto-fit')) throw new Error('drill class cards are not using a responsive grid');
 if (!sourceHtml.includes('<button type="button" class="mob-nav-btn active" data-ui-action="mobile-switch-tab"')) {

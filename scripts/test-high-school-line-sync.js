@@ -323,7 +323,7 @@ assert.ok(
 );
 assert.ok(
     appSource.includes('function handleHighSchoolAdmissionClassClick(schoolName, className)')
-        && appSource.includes('handleHighSchoolAdmissionClassClick(${jsStringLiteral(schoolName)}, ${jsStringLiteral(item.className)})')
+        && appSource.includes("uiDeclaredAttrs('click', 'handleHighSchoolAdmissionClassClick', String(schoolName ?? ''), String(item.className ?? ''))")
         && appSource.includes('学生姓名')
         && appSource.includes('中考总分（含体育）'),
     'each class admission result must open the admitted student names and Zhongkao totals'
