@@ -382,8 +382,16 @@ function appendSystemDataMetadataFilter(clauses, bindings, url, paramName, colum
   appendSystemDataFilterClause(clauses, bindings, filter, columnName);
 }
 
-function buildSystemDataOrClause(rawOr) {
+// PostgREST wraps or= in parentheses ("or=(key.eq.a,key.eq.b)"); the in-house
+// REST client sends the bare list.  Accept both instead of silently dropping
+// the parenthesised filter.
+function unwrapSystemDataOrExpression(rawOr) {
   const text = normalizeText(rawOr);
+  return text.startsWith('(') && text.endsWith(')') ? text.slice(1, -1) : text;
+}
+
+function buildSystemDataOrClause(rawOr) {
+  const text = unwrapSystemDataOrExpression(rawOr);
   if (!text) return { clause: '', bindings: [] };
   const clauses = [];
   const bindings = [];
@@ -396,6 +404,32 @@ function buildSystemDataOrClause(rawOr) {
     appendSystemDataFilterClause(clauses, bindings, filter, column);
   }
   return { clause: clauses.length ? `(${clauses.join(' OR ')})` : '', bindings };
+}
+
+// Each `or=` item (and each `in.()` value inside it) becomes one bound SQL
+// parameter.  D1 rejects statements with too many bindings, which used to
+// surface as a 500; refuse oversized filters up front instead.
+function countSystemDataOrBindings(rawOr) {
+  const text = unwrapSystemDataOrExpression(rawOr);
+  if (!text) return 0;
+  let count = 0;
+  for (const item of text.split(',')) {
+    const parts = String(item || '').split('.');
+    if (parts.length < 3 || parts[0] !== 'key') continue;
+    const filter = parseSystemDataKeyFilter(parts.slice(1).join('.'));
+    if (!filter) continue;
+    count += filter.op === 'in' ? (filter.values || []).length : 1;
+  }
+  return count;
+}
+
+function rejectOversizedSystemDataFilter(request, url) {
+  if (countSystemDataOrBindings(url.searchParams.get('or')) <= SYSTEM_DATA_KEY_FILTER_IN_LIMIT) return null;
+  return jsonResponse(400, {
+    ok: false,
+    error: 'SYSTEM_DATA_FILTER_TOO_LARGE',
+    limit: SYSTEM_DATA_KEY_FILTER_IN_LIMIT
+  }, request);
 }
 
 // ---------------------------------------------------------------------------
@@ -930,6 +964,8 @@ export async function handleSystemDataProxy(request, env, url) {
   if (method === 'GET' || method === 'HEAD') {
     const authorizationError = authorizeSystemDataRead(request, session);
     if (authorizationError) return authorizationError;
+    const filterError = rejectOversizedSystemDataFilter(request, url);
+    if (filterError) return filterError;
   }
 
   if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
