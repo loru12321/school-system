@@ -569,10 +569,18 @@ function getSystemDataEdgeCacheKey(request, url) {
   return new Request(cacheUrl.toString(), { method: 'GET' });
 }
 
+// The edge copy needs `public, s-maxage` for caches.default to keep it, but
+// the response leaving the Worker carries signed-in users' score data and must
+// never be stored by a shared proxy or CDN in front of the browser.
+const SYSTEM_DATA_CLIENT_CACHE_CONTROL = 'private, max-age=20, stale-while-revalidate=60';
+
 function withSystemDataCacheStatus(response, cacheStatus) {
   if (!response || !cacheStatus) return response;
   const headers = new Headers(response.headers);
   headers.set('X-School-System-Cache', cacheStatus);
+  if (/\bpublic\b/i.test(headers.get('Cache-Control') || '')) {
+    headers.set('Cache-Control', SYSTEM_DATA_CLIENT_CACHE_CONTROL);
+  }
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 

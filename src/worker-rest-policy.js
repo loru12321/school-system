@@ -26,14 +26,19 @@ export function resolveIssuesAccess(session, method) {
   if (hasRole(session, 'director') && school) {
     return { allowed: true, scope: { clause: 'school = ?', bindings: [school] } };
   }
-  if (hasRole(session, 'grade_director') && className) {
+  // Class names such as "702" repeat across schools, so grade and class scopes
+  // must also be pinned to the session's school.
+  if (hasRole(session, 'grade_director') && className && school) {
     return {
       allowed: true,
-      scope: { clause: "student_class LIKE ? ESCAPE '\\'", bindings: [`${escapeLikePrefix(className)}%`] }
+      scope: {
+        clause: "school = ? AND student_class LIKE ? ESCAPE '\\'",
+        bindings: [school, `${escapeLikePrefix(className)}%`]
+      }
     };
   }
-  if (hasRole(session, 'class_teacher') && className) {
-    return { allowed: true, scope: { clause: 'student_class = ?', bindings: [className] } };
+  if (hasRole(session, 'class_teacher') && className && school) {
+    return { allowed: true, scope: { clause: 'school = ? AND student_class = ?', bindings: [school, className] } };
   }
   return { allowed: false };
 }
