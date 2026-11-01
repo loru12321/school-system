@@ -1075,6 +1075,7 @@
     }
 
     function packCloudPayload(value) {
+        if (value && value.__SCHOOL_SCOPE_REDACTED) throw new Error('SCHOOL_SCOPE_REDACTED_PAYLOAD');
         if (root.CloudWorkspaceRuntimeDeps && typeof root.CloudWorkspaceRuntimeDeps.packPayload === 'function') {
             return root.CloudWorkspaceRuntimeDeps.packPayload(value);
         }
