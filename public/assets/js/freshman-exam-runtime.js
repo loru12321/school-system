@@ -1957,14 +1957,14 @@ function FB_renderSchemeSelector() {
     const html = FB_SCHEMES_CACHE.map(scheme => {
         // 简单的评分逻辑
         const isBest = (scheme.excellentRange ?? Infinity) <= bestExcellentRange;
-        const borderStyle = isBest ? 'border:2px solid #16a34a; background:#fff;' : 'border:1px solid #ddd; background:#fff;';
+        const borderStyle = isBest ? 'border:2px solid #16a34a;' : 'border:1px solid #ddd;';
 
         // 找出该方案中男女比例极差
         const males = scheme.data.map(c => c.stats.male);
         const maleRange = Math.max(...males) - Math.min(...males);
 
         return `
-                <div data-scheme-id="${scheme.id}" ${uiDeclaredAttrs('click', 'FB_applyScheme', Number(scheme.id))} style="cursor:pointer; padding:10px; border-radius:6px; ${borderStyle} transition:0.2s;" class="fb-scheme-option">
+                <div data-scheme-id="${scheme.id}" ${uiDeclaredAttrs('click', 'FB_applyScheme', Number(scheme.id))} style="cursor:pointer; padding:10px; border-radius:6px; ${borderStyle} transition:0.2s;" class="fb-opt">
                     <div style="font-weight:bold; color:#333; display:flex; justify-content:space-between;">
                         <span>${scheme.name}</span>
                         ${isBest ? '<span style="color:red; font-size:10px;">★ 推荐</span>' : ''}

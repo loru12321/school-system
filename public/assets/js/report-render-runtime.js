@@ -460,7 +460,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
                 ? prevCountyR
                 : '-';
 
-            tableRows += `<tr class="report-hover-row" style="transition:0.2s;">
+            tableRows += `<tr style="transition:0.2s;">
                     ${renderResponsiveTableCell('科目', tmEscapeHtml(subjectLabel), 'font-weight:600; color:#475569;')}
                     ${renderResponsiveTableCell('成绩对比', renderMetricComparison(stuScores[sub], prevSubScore, 'score'), 'font-weight:bold;color:#334155;')}
                     ${renderResponsiveTableCell('班排对比', renderMetricComparison(curClassR, prevClassR, 'rank'), 'color:#64748b;')}
