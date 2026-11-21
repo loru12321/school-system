@@ -47,6 +47,8 @@ assert.strictEqual(roster.list.length, 3, 'external school students must be excl
 const lin = roster.list[0];
 assert.strictEqual(lin.name, '林冲');
 assert.strictEqual(lin.gradeRank, 1);
+assert.strictEqual(lin.townRank, 2, '林冲 (520) should be ranked #2 in township behind 外校生 (540)');
+assert.ok(lin.diagnosis.townGoal.includes('全镇第 2 名'), 'township goal direction should be generated');
 assert.strictEqual(lin.tier, '冲刺梯队');
 assert.strictEqual(lin.mentor, '张老师<script>');
 assert.strictEqual(lin.history.length, 2, 'should include previous exam and current exam');

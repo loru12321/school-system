@@ -1,12 +1,14 @@
 /*
  * 质量分析会一键工具箱（quality-meeting-kit）按需运行时模块
  *
- * 视觉与交互设计遵循澄见（school-system）极简克制风格，完整适配浅色与深色模式：
- * 1. 「质量分析会 PPT 工作室」：左栏配置（自定义标题/汇报人/配色主题/页签勾选）+ 右栏 16:9 实时幻灯片预览器 + 纯前端 JSZip 生成标准 .pptx
- * 2. 「教师分析手册（Excel）」：按任课教师聚合多班两率一分、排名及分学科临界生名单
- * 3. 「本校班级插入全镇学校对标 & 临界生速览」：4 张 KPI 卡 + 表头点击排序 + 横向数据条 + 金/银/铜内联排名徽章 + 自定义容差/按班筛选临界生芯片 + 导出对标 Excel
+ * 覆盖考后全链路决策与汇报：
+ * 1. 全镇定位与强弱诊断：全镇校际排名、各科镇域位次矩阵、距镇均分/标杆校/前一名追赶校精确分差、学科失衡与极差诊断
+ * 2. 自动生成「提质方向与整改措施」：校级追赶、学科分类施策、班级均衡帮扶、临界生量化转化测算（可一键复制会议发言稿）
+ * 3. 「质量分析会 PPT 工作室」：左栏配置 + 右栏 16:9 实时预览 + 纯前端 JSZip 生成标准 .pptx（含全镇定位页与整改措施页）
+ * 4. 「本校班级插入全镇对标 & 临界生速览」：3 大 Tab 工作台（镇域定位与措施 / 班级镇域对标 / 临界生转化测算）
+ * 5. 「教师分析手册（Excel）」：教师任教汇总 + 班级总分排名 + 分学科临界生 + 镇域定位与整改措施
  *
- * 零内联 on* 事件，全部通过 addEventListener 绑定，满足严格 CSP。
+ * 零内联 on* 事件，全部通过 addEventListener 绑定，完整适配浅色与深色模式。
  */
 (function (root) {
     if (!root || root.__QUALITY_MEETING_KIT_PATCHED__) return;
@@ -232,6 +234,235 @@
         return [...decoratedOwn, ...decoratedExternal].sort((a, b) => Number(b.score) - Number(a.score));
     }
 
+    // -------------------------------------------------------------------------
+    // Township School Ranking Matrix, Subject Diagnosis & Actionable Measures
+    // -------------------------------------------------------------------------
+    function buildTownshipSchoolMatrix(allRows, mySchool, subjects, thresholdsMap) {
+        const bySchool = new Map();
+        (allRows || []).forEach((r) => {
+            const sch = String(r?.school || '').trim() || '未知学校';
+            if (!bySchool.has(sch)) bySchool.set(sch, []);
+            bySchool.get(sch).push(r);
+        });
+        const allKeys = ['总分', ...(subjects || [])];
+        const townOverall = {};
+        allKeys.forEach((k) => {
+            townOverall[k] = calcGroupMetrics(allRows, k, thresholdsMap?.[k]);
+        });
+
+        const perKeyRanking = {};
+        allKeys.forEach((k) => {
+            const list = Array.from(bySchool.entries()).map(([name, rows]) => ({
+                name,
+                isOwn: sameSchool(name, mySchool),
+                ...calcGroupMetrics(rows, k, thresholdsMap?.[k])
+            }));
+            const rAvg = assignRanks(list, 'avg');
+            const rExc = assignRanks(list, 'excRate');
+            const rPass = assignRanks(list, 'passRate');
+            const rScore = assignRanks(list, 'score');
+            const ranked = list.map((item) => ({
+                ...item,
+                avgRank: rAvg.get(item),
+                excRank: rExc.get(item),
+                passRank: rPass.get(item),
+                scoreRank: rScore.get(item)
+            })).sort((a, b) => a.scoreRank - b.scoreRank || b.avg - a.avg);
+            perKeyRanking[k] = ranked;
+        });
+
+        const totalSchools = bySchool.size;
+        const totalBoard = perKeyRanking['总分'] || [];
+        const ownIdx = totalBoard.findIndex((s) => s.isOwn);
+        const ownTotal = ownIdx >= 0 ? totalBoard[ownIdx] : (totalBoard[0] || null);
+        const leaderSchool = totalBoard[0] || null;
+        const targetAhead = ownIdx > 0 ? totalBoard[ownIdx - 1] : null;
+        const schoolMatrixRows = totalBoard.map((sch) => {
+            const subjectRanks = {};
+            (subjects || []).forEach((subj) => {
+                const found = (perKeyRanking[subj] || []).find((x) => x.name === sch.name);
+                subjectRanks[subj] = found ? { avg: found.avg, rank: found.scoreRank, avgRank: found.avgRank, excRate: found.excRate, passRate: found.passRate } : null;
+            });
+            return { ...sch, subjectRanks };
+        });
+
+        return {
+            totalSchools,
+            hasTownship: totalSchools > 1,
+            townOverall,
+            perKeyRanking,
+            schoolMatrixRows,
+            ownTotal,
+            leaderSchool,
+            targetAhead,
+            gapToTownAvg: ownTotal ? Number((ownTotal.avg - townOverall['总分'].avg).toFixed(2)) : 0,
+            gapToLeader: (ownTotal && leaderSchool) ? Number((leaderSchool.avg - ownTotal.avg).toFixed(2)) : 0,
+            gapToAhead: (ownTotal && targetAhead) ? Number((targetAhead.avg - ownTotal.avg).toFixed(2)) : 0
+        };
+    }
+
+    function buildSubjectDiagnosis(townMatrix, mySchoolRows, subjects, thresholdsMap) {
+        const totalSchools = Math.max(1, townMatrix.totalSchools || 1);
+        return (subjects || []).map((subj) => {
+            const ranking = townMatrix.perKeyRanking?.[subj] || [];
+            const own = ranking.find((s) => s.isOwn) || calcGroupMetrics(mySchoolRows, subj, thresholdsMap?.[subj]);
+            const town = townMatrix.townOverall?.[subj] || own;
+            const rank = Number(own.scoreRank || 1);
+            const avgDiff = Number(((own.avg || 0) - (town.avg || 0)).toFixed(2));
+            const excDiff = Number(((own.excRate || 0) - (town.excRate || 0)).toFixed(1));
+            const passDiff = Number(((own.passRate || 0) - (town.passRate || 0)).toFixed(1));
+            const classRows = buildClassRows(mySchoolRows, subj, thresholdsMap?.[subj]);
+            const classSpread = classRows.length >= 2
+                ? Number((classRows[0].avg - classRows[classRows.length - 1].avg).toFixed(1))
+                : 0;
+            const topClass = classRows[0] || null;
+            const weakClass = classRows.length >= 2 ? classRows[classRows.length - 1] : null;
+
+            let tier = '稳健保持';
+            let issueType = '均衡';
+            let measure = '保持现有教学节奏，依托集体备课固化优势，冲刺全镇更高位次。';
+            if (townMatrix.hasTownship && rank <= Math.max(1, Math.ceil(totalSchools * 0.3)) && avgDiff >= 0) {
+                tier = '优势领跑';
+                issueType = '标杆';
+                measure = '总结学科教研组有效做法并在校内推广，进一步扩大高分段领先优势。';
+            } else if (townMatrix.hasTownship && (rank > Math.ceil(totalSchools * 0.6) || avgDiff < -2)) {
+                tier = '重点短板';
+                if (excDiff >= 0 && passDiff < -3) {
+                    issueType = '两极分化';
+                    measure = '及格率明显低于镇均，立即启动后 1/3 基础过关周测、错题重做与分层作业，先守住及格底盘。';
+                } else if (passDiff >= 0 && excDiff < -3) {
+                    issueType = '拔尖不足';
+                    measure = '底盘尚可但高分偏少，建议增设压轴题微专题、尖子生面批与限时拉练，拉升优秀率。';
+                } else {
+                    issueType = '整体偏弱';
+                    measure = '均分与两率均落后镇均，建议教务处下沉听课，梳理高频失分知识点，统一教案与堂清节奏。';
+                }
+            } else if (excDiff < -2.5) {
+                tier = '冲优潜力';
+                issueType = '高分偏弱';
+                measure = '重点盯紧优秀边缘生，强化中档题准确率与综合题规范作答。';
+            } else if (passDiff < -2.5) {
+                tier = '保底预警';
+                issueType = '及格偏弱';
+                measure = '重点盯紧及格边缘生，落实核心概念默写与基础题每日清零。';
+            }
+            if (classSpread >= 8 && weakClass) {
+                measure += `（班际极差 ${classSpread} 分，重点帮扶 ${weakClass.name}）`;
+            }
+
+            return {
+                subject: subj,
+                ownAvg: own.avg || 0,
+                townAvg: town.avg || 0,
+                avgDiff,
+                ownExc: own.excRate || 0,
+                townExc: town.excRate || 0,
+                excDiff,
+                ownPass: own.passRate || 0,
+                townPass: town.passRate || 0,
+                passDiff,
+                rank,
+                totalSchools,
+                classSpread,
+                topClass: topClass?.name || '',
+                weakClass: weakClass?.name || '',
+                tier,
+                issueType,
+                measure
+            };
+        });
+    }
+
+    function buildActionPlan(townMatrix, subjectDiag, classRows, totalBorderline, overall) {
+        const actions = [];
+        // 1. 校级镇域追赶方向
+        if (townMatrix.hasTownship && townMatrix.ownTotal) {
+            const own = townMatrix.ownTotal;
+            const strongList = subjectDiag.filter((d) => d.tier === '优势领跑').map((d) => d.subject);
+            const weakList = subjectDiag.filter((d) => d.tier === '重点短板' || d.tier === '保底预警').map((d) => d.subject);
+            const chaseText = townMatrix.targetAhead
+                ? `锚定前一名「${townMatrix.targetAhead.name}」（均分差 ${townMatrix.gapToAhead} 分，距第一名「${townMatrix.leaderSchool.name}」差 ${townMatrix.gapToLeader} 分）作为下阶段直接追赶目标`
+                : '当前稳居全镇第一，下阶段目标为巩固领先身位并扩大高分段优势';
+            actions.push({
+                dimension: '校级镇域追赶方向',
+                owner: '校长室 / 教导处',
+                priority: '核心方向',
+                summary: `当前全镇第 ${own.scoreRank}/${townMatrix.totalSchools} 名（较镇均 ${townMatrix.gapToTownAvg >= 0 ? '+' : ''}${townMatrix.gapToTownAvg} 分），${chaseText}。`,
+                steps: [
+                    `优势巩固：${strongList.length ? `${strongList.join('、')} 保持全镇前列，提炼备考范式` : '继续夯实优势学科，力争 1–2 门学科率先进入全镇前三'}。`,
+                    `短板攻坚：${weakList.length ? `把 ${weakList.join('、')} 列为下月重点提质学科，每周开展 1 次针对性教研诊断` : '各科均处于中上游，重点消除局部失分点'}。`
+                ]
+            });
+        } else {
+            actions.push({
+                dimension: '年级整体提质方向',
+                owner: '教导处 / 级部',
+                priority: '核心方向',
+                summary: `本次参评 ${overall.count} 人，平均分 ${overall.avg}，优秀率 ${overall.excRate}%，及格率 ${overall.passRate}%。`,
+                steps: ['建议导入全镇联考数据后启用「套用乡镇线」，精准定位本校在全镇的绝对站位与追赶目标校。']
+            });
+        }
+
+        // 2. 学科分类提质措施
+        const prioritySubjs = subjectDiag.slice().sort((a, b) => a.avgDiff - b.avgDiff).slice(0, 3);
+        actions.push({
+            dimension: '学科分类提质措施',
+            owner: '各学科备课组长',
+            priority: '教学重点',
+            summary: prioritySubjs.length
+                ? `优先攻坚 ${prioritySubjs.map((s) => `${s.subject}（${s.tier}，较镇均 ${s.avgDiff >= 0 ? '+' : ''}${s.avgDiff}）`).join('、')}。`
+                : '各学科按两率一分推进精细化复习。',
+            steps: prioritySubjs.map((s) => `${s.subject}（${s.issueType}）：${s.measure}`)
+        });
+
+        // 3. 班级均衡与薄弱班帮扶
+        const maxSpreadSubj = subjectDiag.slice().sort((a, b) => b.classSpread - a.classSpread)[0];
+        const leadCls = classRows[0];
+        const lagCls = classRows.length >= 2 ? classRows[classRows.length - 1] : null;
+        actions.push({
+            dimension: '班级均衡与薄弱班帮扶',
+            owner: '级部主任 / 班主任',
+            priority: '管理抓手',
+            summary: (leadCls && lagCls)
+                ? `总分领跑班为 ${leadCls.name}（均分 ${leadCls.avg}），相对薄弱班为 ${lagCls.name}（均分 ${lagCls.avg}，极差 ${(leadCls.avg - lagCls.avg).toFixed(1)} 分）。`
+                : '推进班级日常常规与课堂效率均衡发展。',
+            steps: [
+                maxSpreadSubj && maxSpreadSubj.classSpread > 0
+                    ? `消除学科失衡：${maxSpreadSubj.subject} 班际极差最大（${maxSpreadSubj.classSpread} 分），组织 ${maxSpreadSubj.topClass} 与 ${maxSpreadSubj.weakClass} 开展同课异构与集体备课统一学案。`
+                    : '保持各班教学进度与作业难度同步，防止中后期拉大差距。',
+                lagCls ? `薄弱班包保：教务/级部领导下沉 ${lagCls.name} 推门听课，每周跟进课堂纪律、作业订正率与自习效率。` : '持续落实班主任与任课教师周会商机制。'
+            ]
+        });
+
+        // 4. 临界生转化量化测算与育苗落实
+        const n = Math.max(1, overall.count || 1);
+        const excGain = Number(((totalBorderline.excMarginal.length / n) * 100).toFixed(1));
+        const passGain = Number(((totalBorderline.passMarginal.length / n) * 100).toFixed(1));
+        actions.push({
+            dimension: '临界生转化与尖子生包保',
+            owner: '全体任课教师 / 包保教师',
+            priority: '提分抓手',
+            summary: `若下阶段成功转化 ${totalBorderline.excMarginal.length} 名优秀边缘生、${totalBorderline.passMarginal.length} 名及格边缘生，本校优秀率最高可提升 +${excGain}%、及格率最高可提升 +${passGain}%。`,
+            steps: [
+                `优秀边缘生（${totalBorderline.excMarginal.length} 人）：按班下发临界生速览名单，实行「一生一弱科」面批，主攻中档提分点。`,
+                `及格边缘生（${totalBorderline.passMarginal.length} 人）：建立基础题过关打卡表，确保课本原题与基础题型不丢分。`,
+                '尖子生育苗：在「高分段核算 → 育苗包保档案」为前 30 名指派包保教师并打印 A4 签字档案，跟踪名次进退。'
+            ]
+        });
+
+        return { actions, excGain, passGain };
+    }
+
+    function formatActionPlanCopyText(examTitle, mySchool, actionPlan) {
+        const lines = [`【${examTitle} · ${mySchool} 质量分析方向与整改措施】`];
+        (actionPlan?.actions || []).forEach((item, idx) => {
+            lines.push(`\n${idx + 1}. ${item.dimension}（责任人：${item.owner}）`);
+            lines.push(`   研判：${item.summary}`);
+            (item.steps || []).forEach((st) => lines.push(`   - ${st}`));
+        });
+        return lines.join('\n');
+    }
+
     function buildTeacherHandbookRows(mySchoolRows, subjects, teacherMap, thresholdsMap) {
         const map = teacherMap && typeof teacherMap === 'object' ? teacherMap : {};
         const byClass = new Map();
@@ -383,11 +614,13 @@
         const teacherMap = options.teacherMap || root.TEACHER_MAP || {};
         const include = {
             overview: true,
+            townPosition: true,
             classRank: true,
             townBenchmark: true,
             subjects: true,
             charts: true,
             borderline: true,
+            actionPlan: true,
             ...(options.include || {})
         };
 
@@ -400,6 +633,10 @@
         const totalBorderline = buildBorderlineChips(activeRows, '总分', thresholdInfo.thresholds['总分']);
         const diagnostics = buildSmartDiagnostics(overall, classRows, subjectOverview, totalBorderline);
         const teacherRows = buildTeacherHandbookRows(activeRows, subjects, teacherMap, thresholdInfo.thresholds);
+        const townMatrix = buildTownshipSchoolMatrix(allRows, mySchool, subjects, thresholdInfo.thresholds);
+        const subjectDiag = buildSubjectDiagnosis(townMatrix, activeRows, subjects, thresholdInfo.thresholds);
+        const actionPlan = buildActionPlan(townMatrix, subjectDiag, classRows, totalBorderline, overall);
+
         const modeLabel = thresholdInfo.source === 'township'
             ? `已套用全镇划线（${thresholdInfo.schoolCount}校 · 共${allRows.length}人）`
             : `本校模式（共${activeRows.length}人）`;
@@ -424,6 +661,23 @@
                     { label: '及格率', val: `${overall.passRate}%`, color: 'B45309' }
                 ],
                 diagnostics
+            });
+        }
+
+        if (include.townPosition && townMatrix.hasTownship) {
+            const targetNote = townMatrix.targetAhead
+                ? `本校全镇第 ${townMatrix.ownTotal.scoreRank}/${townMatrix.totalSchools} 名 · 较镇均 ${townMatrix.gapToTownAvg >= 0 ? '+' : ''}${townMatrix.gapToTownAvg} 分 · 距前一名「${townMatrix.targetAhead.name}」差 ${townMatrix.gapToAhead} 分`
+                : `本校稳居全镇第 1/${townMatrix.totalSchools} 名 · 较镇均 +${townMatrix.gapToTownAvg} 分`;
+            slides.push({
+                kind: 'table',
+                title: '全镇校际定位与各科强弱诊断',
+                subtitle: targetNote,
+                headers: ['学科', '本校均分', '全镇均分', '较镇均差', '全镇位次', '班际极差', '强弱判定'],
+                rows: subjectDiag.map((d) => ({
+                    isEmph: d.tier === '重点短板' || d.tier === '优势领跑',
+                    cells: [d.subject, String(d.ownAvg), String(d.townAvg), `${d.avgDiff >= 0 ? '+' : ''}${d.avgDiff}`, `第${d.rank}/${d.totalSchools}`, `${d.classSpread}`, d.tier]
+                })),
+                footerNote: `追赶建议：优势领跑科保持高位，重点短板科按「${subjectDiag.filter((d) => d.tier === '重点短板').map((d) => `${d.subject}-${d.issueType}`).join(' / ') || '均衡提质'}」精准施策。`
             });
         }
 
@@ -461,15 +715,18 @@
                 const subjClasses = buildClassRows(activeRows, subj, th);
                 const useTeacher = subjTeachers.length > 0;
                 const border = buildBorderlineChips(activeRows, subj, th);
+                const diag = subjectDiag.find((d) => d.subject === subj);
                 slides.push({
                     kind: 'table',
-                    title: `分学科质量分析 · ${subj}`,
-                    subtitle: useTeacher ? '按任课教师聚合两率一分与单项排名' : '按班级统计两率一分与单项排名',
+                    title: `分学科质量分析 · ${subj}${diag ? `（${diag.tier}）` : ''}`,
+                    subtitle: diag && townMatrix.hasTownship
+                        ? `全镇第 ${diag.rank}/${diag.totalSchools} 名 · 较镇均 ${diag.avgDiff >= 0 ? '+' : ''}${diag.avgDiff} 分 · 班际极差 ${diag.classSpread} 分`
+                        : (useTeacher ? '按任课教师聚合两率一分与单项排名' : '按班级统计两率一分与单项排名'),
                     headers: useTeacher ? ['任课教师', '任教班级', '人数', '均分', '优秀率', '及格率'] : ['班级', '人数', '均分', '优秀率', '及格率', '综合得分'],
                     rows: useTeacher
                         ? subjTeachers.slice(0, 12).map((t) => ({ isEmph: t.scoreRank === 1, cells: [t.teacher, t.classes.join('、'), String(t.count), `${t.avg} (#${t.avgRank})`, `${t.excRate}% (#${t.excRank})`, `${t.passRate}% (#${t.passRank})`] }))
                         : subjClasses.slice(0, 12).map((c) => ({ isEmph: c.scoreRank === 1, cells: [c.name, String(c.count), `${c.avg} (#${c.avgRank})`, `${c.excRate}% (#${c.excRank})`, `${c.passRate}% (#${c.passRank})`, `${c.score}`] })),
-                    footerNote: `优秀线 ${th.exc} · 及格线 ${th.pass} | 优秀边缘 ${border.excMarginal.length} 人：${border.excMarginal.slice(0, 6).map((s) => `${s.name}(${s.score})`).join('、') || '无'}`
+                    footerNote: diag ? `施策：${diag.measure} | 优秀边缘 ${border.excMarginal.length} 人` : `优秀线 ${th.exc} · 及格线 ${th.pass}`
                 });
             });
         }
@@ -489,12 +746,21 @@
         if (include.borderline) {
             slides.push({
                 kind: 'borderline',
-                title: '重点临界生抓手清单',
-                subtitle: `总分优秀线 ${totalBorderline.exc}（±${totalBorderline.margin}分） / 及格线 ${totalBorderline.pass}（±${totalBorderline.margin}分）`,
-                excTitle: `优秀边缘生（共 ${totalBorderline.excMarginal.length} 人，冲刺优秀线）`,
+                title: '重点临界生抓手与提分测算',
+                subtitle: `全部转化可提升优秀率 +${actionPlan.excGain}% / 及格率 +${actionPlan.passGain}%`,
+                excTitle: `优秀边缘生（共 ${totalBorderline.excMarginal.length} 人，冲刺优秀线 ${totalBorderline.exc}）`,
                 excNames: totalBorderline.excMarginal.slice(0, 18).map((s) => `${s.name}(${s.class} ${s.score})`).join('、') || '暂无',
-                passTitle: `及格边缘生（共 ${totalBorderline.passMarginal.length} 人，守住及格线）`,
+                passTitle: `及格边缘生（共 ${totalBorderline.passMarginal.length} 人，守住及格线 ${totalBorderline.pass}）`,
                 passNames: totalBorderline.passMarginal.slice(0, 18).map((s) => `${s.name}(${s.class} ${s.score})`).join('、') || '暂无'
+            });
+        }
+
+        if (include.actionPlan) {
+            slides.push({
+                kind: 'actionPlan',
+                title: '下阶段提质方向与整改措施',
+                subtitle: '明确责任主体、追赶目标与可量化落实动作',
+                actions: actionPlan.actions
             });
         }
 
@@ -504,7 +770,7 @@
             subtitle: `${presenter}  ·  ${examTitle}`
         });
 
-        return { slides, theme, themeKey, examTitle, presenter, mySchool, thresholdInfo, activeRowsCount: activeRows.length, allRowsCount: allRows.length, subjects };
+        return { slides, theme, themeKey, examTitle, presenter, mySchool, thresholdInfo, townMatrix, subjectDiag, actionPlan, activeRowsCount: activeRows.length, allRowsCount: allRows.length, subjects };
     }
 
     // -------------------------------------------------------------------------
@@ -550,7 +816,7 @@ ${shapesXml}
             const fill = isHeader ? theme.tblHead : (isEmph ? theme.rowTint : (rowIdx % 2 === 1 ? 'F8FAFC' : 'FFFFFF'));
             const txtColor = isHeader ? 'FFFFFF' : '0F1419';
             const bold = (isHeader || isEmph) ? ' b="1"' : '';
-            const tcs = cells.map((cell) => `<a:tc><a:txBody><a:bodyPr anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="zh-CN" sz="${isHeader ? 1200 : 1100}"${bold}><a:solidFill><a:srgbClr val="${txtColor}"/></a:solidFill><a:latin typeface="Microsoft YaHei"/><a:ea typeface="Microsoft YaHei"/></a:rPr><a:t>${escXml(cell)}</a:t></a:r></a:p></a:txBody><a:tcPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></a:tcPr></a:tc>`).join('');
+            const tcs = cells.map((cell) => `<a:tc><a:txBody><a:bodyPr anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="zh-CN" sz="${isHeader ? 1200 : 1050}"${bold}><a:solidFill><a:srgbClr val="${txtColor}"/></a:solidFill><a:latin typeface="Microsoft YaHei"/><a:ea typeface="Microsoft YaHei"/></a:rPr><a:t>${escXml(cell)}</a:t></a:r></a:p></a:txBody><a:tcPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></a:tcPr></a:tc>`).join('');
             return `<a:tr h="${rowH}">${tcs}</a:tr>`;
         };
         const trXml = [makeRow(headers, true, 0, false), ...rows.map((r, i) => makeRow(r.cells || r, false, i + 1, !!r.isEmph))].join('');
@@ -575,8 +841,8 @@ ${shapesXml}
         const headerBand = (title, subtitle, pageNo) => (
             pptRect(2, 0, 0, 12192000, 1020000, theme.bg) +
             pptRect(3, 0, 995000, 12192000, 42000, theme.accent) +
-            pptTextBox(4, 480000, 160000, 10400000, 440000, title, { fontSize: 23, bold: true, color: 'FFFFFF' }) +
-            pptTextBox(5, 480000, 590000, 10400000, 320000, subtitle, { fontSize: 12.5, color: '94A3B8' }) +
+            pptTextBox(4, 480000, 160000, 10400000, 440000, title, { fontSize: 22, bold: true, color: 'FFFFFF' }) +
+            pptTextBox(5, 480000, 590000, 10400000, 320000, subtitle, { fontSize: 12, color: '94A3B8' }) +
             pptTextBox(98, 480000, 6480000, 9200000, 280000, `${presenter} · ${examTitle}`, { fontSize: 10, color: '94A3B8' }) +
             pptTextBox(99, 10400000, 6480000, 1300000, 280000, `${pageNo} / ${totalSlides}`, { fontSize: 10, color: '64748B', align: 'r' })
         );
@@ -616,7 +882,7 @@ ${shapesXml}
             }
             if (s.kind === 'table') {
                 const tableH = s.footerNote ? 4400000 : 5000000;
-                const noteXml = s.footerNote ? pptTextBox(11, 480000, 5780000, 11230000, 620000, s.footerNote, { fontSize: 12, color: '475569' }) : '';
+                const noteXml = s.footerNote ? pptTextBox(11, 480000, 5780000, 11230000, 620000, s.footerNote, { fontSize: 11.5, color: '475569' }) : '';
                 return {
                     xml: xmlSlideShell(
                         headerBand(s.title, s.subtitle, pageNo) +
@@ -647,6 +913,19 @@ ${shapesXml}
                     ),
                     images: []
                 };
+            }
+            if (s.kind === 'actionPlan') {
+                const cardsXml = (s.actions || []).slice(0, 4).map((act, i) => {
+                    const col = i % 2;
+                    const row = Math.floor(i / 2);
+                    const x = 480000 + col * 5720000;
+                    const y = 1280000 + row * 2550000;
+                    const base = 10 + i * 4;
+                    return pptRect(base, x, y, 5500000, 2380000, theme.soft) +
+                        pptTextBox(base + 1, x + 140000, y + 100000, 5200000, 340000, `${i + 1}. ${act.dimension}（${act.owner}）`, { fontSize: 13.5, bold: true, color: theme.tblHead }) +
+                        pptTextBox(base + 2, x + 140000, y + 480000, 5200000, 1780000, [act.summary, ...(act.steps || []).slice(0, 2).map((st) => `• ${st}`)], { fontSize: 11, color: '334155' });
+                }).join('');
+                return { xml: xmlSlideShell(headerBand(s.title, s.subtitle, pageNo) + cardsXml), images: [] };
             }
             return {
                 xml: xmlSlideShell(
@@ -760,6 +1039,11 @@ ${imgRels}
         const thInfo = resolveThresholds(allRows, activeRows, subjects, options.useTownshipLine !== false);
         const teacherRows = buildTeacherHandbookRows(activeRows, subjects, options.teacherMap || root.TEACHER_MAP || {}, thInfo.thresholds);
         const classRows = buildClassRows(activeRows, '总分', thInfo.thresholds['总分']);
+        const overall = calcGroupMetrics(activeRows, '总分', thInfo.thresholds['总分']);
+        const totalBorderline = buildBorderlineChips(activeRows, '总分', thInfo.thresholds['总分']);
+        const townMatrix = buildTownshipSchoolMatrix(allRows, mySchool, subjects, thInfo.thresholds);
+        const subjectDiag = buildSubjectDiagnosis(townMatrix, activeRows, subjects, thInfo.thresholds);
+        const actionPlan = buildActionPlan(townMatrix, subjectDiag, classRows, totalBorderline, overall);
 
         const wb = XLSX.utils.book_new();
         const sheet1Data = [
@@ -787,6 +1071,17 @@ ${imgRels}
         const ws3 = XLSX.utils.aoa_to_sheet(borderRows);
         if (typeof root.decorateExcelSheet === 'function') root.decorateExcelSheet(ws3, borderRows[0]);
         XLSX.utils.book_append_sheet(wb, ws3, '分学科临界生名单');
+
+        const planRows = [
+            ['学科', '本校均分', '全镇均分', '较镇均差', '全镇位次', '班际极差', '强弱判定', '问题类型', '针对性措施'],
+            ...subjectDiag.map((d) => [d.subject, d.ownAvg, d.townAvg, d.avgDiff, `${d.rank}/${d.totalSchools}`, d.classSpread, d.tier, d.issueType, d.measure]),
+            [],
+            ['整改维度', '责任主体', '优先级', '核心研判', '落实措施'],
+            ...actionPlan.actions.map((a) => [a.dimension, a.owner, a.priority, a.summary, a.steps.join('；')])
+        ];
+        const ws4 = XLSX.utils.aoa_to_sheet(planRows);
+        if (typeof root.decorateExcelSheet === 'function') root.decorateExcelSheet(ws4, planRows[0]);
+        XLSX.utils.book_append_sheet(wb, ws4, '镇域定位与整改措施');
 
         const fileName = `教师分析手册_${examTitle.replace(/[\\/:*?"<>|]/g, '_')}.xlsx`;
         if (!options.dryRun) XLSX.writeFile(wb, fileName);
@@ -824,7 +1119,7 @@ ${imgRels}
         style.id = 'qmk-style';
         style.textContent = `
 .qmk-mask{position:fixed;inset:0;background:rgba(15,20,25,.48);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
-.qmk-dialog{background:var(--bg-card,#fff);color:var(--color-data,#0f1419);border:1px solid var(--border,#e5e7eb);border-radius:18px;width:min(1140px,96vw);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(15,20,25,.18);overflow:hidden}
+.qmk-dialog{background:var(--bg-card,#fff);color:var(--color-data,#0f1419);border:1px solid var(--border,#e5e7eb);border-radius:18px;width:min(1160px,96vw);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(15,20,25,.18);overflow:hidden}
 .qmk-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border,#eff3f4);background:var(--bg-card,#fff)}
 .qmk-head-meta{display:grid;gap:2px}
 .qmk-head h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
@@ -832,6 +1127,9 @@ ${imgRels}
 .qmk-close{width:34px;height:34px;border-radius:999px;border:1px solid var(--border,#e5e7eb);background:transparent;color:var(--secondary,#536471);font-size:18px;cursor:pointer;display:grid;place-items:center;transition:background .15s}
 .qmk-close:hover{background:var(--primary-light,#eff3f4);color:var(--color-data,#0f1419)}
 .qmk-body{padding:20px 24px;overflow:auto;display:grid;gap:16px;background:var(--bg-body,#f7f9f9)}
+.qmk-nav-pills{display:flex;gap:8px;flex-wrap:wrap;background:var(--bg-card,#fff);padding:6px;border-radius:14px;border:1px solid var(--border,#e5e7eb);width:fit-content}
+.qmk-nav-pill{padding:7px 16px;border-radius:10px;border:none;background:transparent;color:var(--secondary,#536471);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.qmk-nav-pill.is-active{background:var(--primary,#0f1419);color:var(--bg-card,#fff)}
 .qmk-studio{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;align-items:start}
 @media(max-width:860px){.qmk-studio{grid-template-columns:1fr}}
 .qmk-panel{background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;padding:16px;display:grid;gap:12px}
@@ -843,8 +1141,7 @@ ${imgRels}
 .qmk-swatch.is-active{border-color:#1d9bf0;box-shadow:0 0 0 2px rgba(29,155,240,.18);font-weight:600}
 .qmk-dot{width:10px;height:10px;border-radius:999px;display:inline-block}
 .qmk-check-list{display:grid;gap:6px}
-.qmk-check-item{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--border,#e5e7eb);border-radius:10px;background:var(--bg-body,#f7f9f9);font-size:12.5px;cursor:pointer;transition:border-color .15s}
-.qmk-check-item:hover{border-color:#94a3b8}
+.qmk-check-item{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--border,#e5e7eb);border-radius:10px;background:var(--bg-body,#f7f9f9);font-size:12.5px;cursor:pointer}
 .qmk-stage-wrap{display:grid;gap:12px}
 .qmk-stage{aspect-ratio:16/9;width:100%;border-radius:14px;overflow:hidden;border:1px solid var(--border,#dbe2e8);background:#fff;box-shadow:0 12px 32px rgba(15,20,25,.08);display:flex;flex-direction:column;color:#0f1419}
 .qmk-stage-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -855,7 +1152,8 @@ ${imgRels}
 @media(max-width:720px){.qmk-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .qmk-kpi{background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;padding:14px 16px;display:grid;gap:4px}
 .qmk-kpi span{font-size:12px;color:var(--secondary,#536471)}
-.qmk-kpi strong{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.qmk-kpi strong{font-size:21px;font-weight:700;letter-spacing:-.02em}
+.qmk-kpi small{font-size:11.5px;color:var(--secondary,#536471)}
 .qmk-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--bg-card,#fff);padding:12px 16px;border-radius:14px;border:1px solid var(--border,#e5e7eb)}
 .qmk-tabs{display:flex;flex-wrap:wrap;gap:6px}
 .qmk-tab{padding:5px 12px;border-radius:999px;border:1px solid var(--border,#d1d5db);background:transparent;color:var(--color-data,#0f1419);cursor:pointer;font-size:12.5px;transition:all .15s}
@@ -877,8 +1175,17 @@ ${imgRels}
 .qmk-rk-3{background:#ffedd5;color:#c2410c}
 .qmk-rk-n{background:rgba(148,163,184,.16);color:var(--secondary,#536471)}
 .qmk-tag{display:inline-block;padding:2px 7px;border-radius:999px;font-size:11px;margin-left:6px;font-weight:600}
-.qmk-tag-own{background:rgba(0,186,124,.14);color:#00875a}
-.qmk-tag-ext{background:rgba(148,163,184,.16);color:var(--secondary,#536471)}
+.qmk-tag-own,.qmk-tier-lead{background:rgba(0,186,124,.14);color:#00875a}
+.qmk-tag-ext,.qmk-tier-mid{background:rgba(148,163,184,.16);color:var(--secondary,#536471)}
+.qmk-tier-weak{background:rgba(244,33,46,.12);color:#dc2626}
+.qmk-tier-warn{background:rgba(245,158,11,.14);color:#b45309}
+.qmk-plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px}
+@media(max-width:560px){.qmk-plan-grid{grid-template-columns:1fr}}
+.qmk-plan-card{background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;padding:16px 18px;display:grid;gap:8px;align-content:start}
+.qmk-plan-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.qmk-plan-head strong{font-size:14.5px}
+.qmk-plan-summary{font-size:13px;line-height:1.6;color:var(--color-data,#0f1419);background:var(--bg-body,#f7f9f9);padding:9px 12px;border-radius:10px}
+.qmk-plan-steps{margin:0;padding-left:18px;display:grid;gap:5px;font-size:12.5px;line-height:1.6;color:var(--secondary,#475569)}
 .qmk-chips-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
 .qmk-chips-box{background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;padding:14px 16px;display:grid;gap:10px}
 .qmk-chips-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:600}
@@ -888,8 +1195,9 @@ ${imgRels}
 .qmk-chip-pass{background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.30);color:#b45309}
 .qmk-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 24px;border-top:1px solid var(--border,#eff3f4);background:var(--bg-card,#fff)}
 body.dark-mode .qmk-chip-exc{color:#7dd3fc}
-body.dark-mode .qmk-chip-pass{color:#fcd34d}
-body.dark-mode .qmk-tag-own{color:#34d399}
+body.dark-mode .qmk-chip-pass,body.dark-mode .qmk-tier-warn{color:#fcd34d}
+body.dark-mode .qmk-tag-own,body.dark-mode .qmk-tier-lead{color:#34d399}
+body.dark-mode .qmk-tier-weak{color:#f87171}
 `;
         doc.head.appendChild(style);
     }
@@ -939,7 +1247,7 @@ body.dark-mode .qmk-tag-own{color:#34d399}
             </div>`;
         }
         const headHtml = `<div style="background:#${theme.bg};color:#fff;padding:12px 20px;border-bottom:3px solid #${theme.accent};display:flex;justify-content:space-between;align-items:center;">
-            <div><div style="font-size:16px;font-weight:700;">${escHtml(slide.title)}</div><div style="font-size:11px;color:#94a3b8;margin-top:2px;">${escHtml(slide.subtitle || '')}</div></div>
+            <div><div style="font-size:15.5px;font-weight:700;">${escHtml(slide.title)}</div><div style="font-size:11px;color:#94a3b8;margin-top:2px;">${escHtml(slide.subtitle || '')}</div></div>
             <div style="font-size:11px;color:#94a3b8;">${pageNo} / ${total}</div>
         </div>`;
         if (slide.kind === 'overview') {
@@ -967,6 +1275,15 @@ body.dark-mode .qmk-tag-own{color:#34d399}
                 ${(slide.images || []).map((img) => `<img src="data:image/png;base64,${img.base64}" alt="${escHtml(img.title)}" style="max-height:100%;max-width:${slide.images.length > 1 ? '48%' : '92%'};object-fit:contain;border:1px solid #e2e8f0;border-radius:8px;">`).join('')}
             </div>`;
         }
+        if (slide.kind === 'actionPlan') {
+            return `${headHtml}<div style="flex:1;padding:12px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#fff;align-content:start;">
+                ${(slide.actions || []).slice(0, 4).map((a, i) => `<div style="background:#${theme.soft};border:1px solid #e2e8f0;border-radius:10px;padding:9px 11px;font-size:10.5px;line-height:1.5;">
+                    <div style="font-weight:700;color:#${theme.tblHead};margin-bottom:3px;">${i + 1}. ${escHtml(a.dimension)}（${escHtml(a.owner)}）</div>
+                    <div style="color:#0f1419;margin-bottom:3px;">${escHtml(a.summary)}</div>
+                    ${(a.steps || []).slice(0, 2).map((st) => `<div style="color:#475569;">• ${escHtml(st)}</div>`).join('')}
+                </div>`).join('')}
+            </div>`;
+        }
         return `${headHtml}<div style="flex:1;padding:14px 20px;display:grid;gap:10px;background:#fff;align-content:start;">
             <div style="background:#eff6ff;border-radius:10px;padding:10px 14px;font-size:11.5px;line-height:1.6;"><div style="font-weight:700;color:#1d4ed8;margin-bottom:4px;">${escHtml(slide.excTitle)}</div><div>${escHtml(slide.excNames)}</div></div>
             <div style="background:#fffbeb;border-radius:10px;padding:10px 14px;font-size:11.5px;line-height:1.6;"><div style="font-weight:700;color:#b45309;margin-bottom:4px;">${escHtml(slide.passTitle)}</div><div>${escHtml(slide.passNames)}</div></div>
@@ -989,18 +1306,20 @@ body.dark-mode .qmk-tag-own{color:#34d399}
             presenter: `${mySchool}教务处`,
             theme: 'editorial',
             useTownshipLine: true,
-            include: { overview: true, classRank: true, townBenchmark: true, subjects: true, charts: true, borderline: true },
+            include: { overview: true, townPosition: true, classRank: true, townBenchmark: true, subjects: true, charts: true, borderline: true, actionPlan: true },
             previewIdx: 0
         };
-        const modal = createModalShell('qmk-ppt-modal', '质量分析会 PPT 课件工作室', '左侧自定义内容与配色，右侧实时预览 16:9 幻灯片，确认无误后一键导出标准 .pptx');
+        const modal = createModalShell('qmk-ppt-modal', '质量分析会 PPT 课件工作室', '内置全镇定位诊断、班级对标、临界生测算与下阶段整改措施，左侧配置右侧 16:9 实时预览');
 
         const slideChecks = [
             { key: 'overview', label: '总体概览与 4 维智能诊断' },
+            { key: 'townPosition', label: '全镇校际定位与各科强弱诊断' },
             { key: 'classRank', label: '班级总分排名表（含单项名次）' },
             { key: 'townBenchmark', label: '本校班级插入全镇学校对标' },
-            { key: 'subjects', label: `分学科逐科分析（${subjects.length} 科）` },
+            { key: 'subjects', label: `分学科逐科分析与施策（${subjects.length} 科）` },
             { key: 'charts', label: '页面可视化图表快照' },
-            { key: 'borderline', label: '重点临界生抓手清单' }
+            { key: 'borderline', label: '重点临界生抓手与提分测算' },
+            { key: 'actionPlan', label: '下阶段提质方向与整改措施' }
         ];
 
         function render() {
@@ -1071,7 +1390,7 @@ body.dark-mode .qmk-tag-own{color:#34d399}
     }
 
     // -------------------------------------------------------------------------
-    // UI Entry 2: Class-vs-Township Benchmark + Interactive Borderline Chips
+    // UI Entry 2: 3-Tab Township Decision, Class Benchmark & Borderline Workbench
     // -------------------------------------------------------------------------
     function openClassTownshipBenchmarkModal() {
         const allRows = getAllRows();
@@ -1084,8 +1403,9 @@ body.dark-mode .qmk-tag-own{color:#34d399}
         const activeRows = mySchoolRows.length ? mySchoolRows : allRows;
         const subjects = getSubjects(allRows);
         const ownClasses = Array.from(new Set(activeRows.map((r) => String(r?.class || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
-        const modal = createModalShell('qmk-bench-modal', '本校班级全镇对标 & 临界生速览', '本校各班插入全镇外校榜单同台排名（点击表头可排序），下方实时联动临界生名单');
+        const modal = createModalShell('qmk-bench-modal', '镇域定位、班级对标与整改决策工作台', '全镇校际位次与追赶目标分析、本校班级插入全镇榜单、临界生提分测算与整改措施一站式输出');
 
+        let activeTab = 'strategy'; // 'strategy' | 'benchmark' | 'borderline'
         let currentSubject = '总分';
         let useTownshipLine = true;
         let sortKey = 'score';
@@ -1093,113 +1413,196 @@ body.dark-mode .qmk-tag-own{color:#34d399}
         let margin = DEFAULT_MARGIN;
         let classFilter = '';
 
+        function tierClass(tier) {
+            if (tier === '优势领跑') return 'qmk-tier-lead';
+            if (tier === '重点短板') return 'qmk-tier-weak';
+            if (tier === '保底预警' || tier === '冲优潜力') return 'qmk-tier-warn';
+            return 'qmk-tier-mid';
+        }
+
         function render() {
             const thInfo = resolveThresholds(allRows, activeRows, subjects, useTownshipLine);
             const th = thInfo.thresholds[currentSubject] || { exc: 0, pass: 0 };
-            const overall = calcGroupMetrics(activeRows, currentSubject, th);
-            const rawBench = thInfo.hasTownship
-                ? buildClassTownshipBenchmark(allRows, mySchool, currentSubject, th)
-                : buildClassRows(activeRows, currentSubject, th).map((c) => ({ ...c, kind: 'own-class' }));
-            const benchRows = rawBench.slice().sort((a, b) => sortDir * ((Number(a[sortKey]) || 0) - (Number(b[sortKey]) || 0)));
-            const maxAvg = Math.max(...benchRows.map((r) => Number(r.avg) || 0), 1);
-            const filteredRowsForChips = classFilter ? activeRows.filter((r) => String(r?.class || '').trim() === classFilter) : activeRows;
-            const chips = buildBorderlineChips(filteredRowsForChips, currentSubject, th, margin);
-            const sortArrow = (k) => (sortKey === k ? (sortDir < 0 ? ' ↓' : ' ↑') : '');
+            const overallTotal = calcGroupMetrics(activeRows, '总分', thInfo.thresholds['总分']);
+            const overallSubj = calcGroupMetrics(activeRows, currentSubject, th);
+            const classTotalRows = buildClassRows(activeRows, '总分', thInfo.thresholds['总分']);
+            const totalBorderline = buildBorderlineChips(activeRows, '总分', thInfo.thresholds['总分'], margin);
+            const townMatrix = buildTownshipSchoolMatrix(allRows, mySchool, subjects, thInfo.thresholds);
+            const subjectDiag = buildSubjectDiagnosis(townMatrix, activeRows, subjects, thInfo.thresholds);
+            const actionPlan = buildActionPlan(townMatrix, subjectDiag, classTotalRows, totalBorderline, overallTotal);
 
-            modal.body.innerHTML = `
-                <div class="qmk-kpis">
-                    <div class="qmk-kpi"><span>${escHtml(mySchool)} · ${escHtml(currentSubject)}参评</span><strong>${overall.count} 人</strong></div>
-                    <div class="qmk-kpi"><span>本校平均分</span><strong style="color:#1d9bf0;">${overall.avg}</strong></div>
-                    <div class="qmk-kpi"><span>优秀率（线 ${th.exc}）</span><strong style="color:#00ba7c;">${overall.excRate}%</strong></div>
-                    <div class="qmk-kpi"><span>及格率（线 ${th.pass}）</span><strong style="color:#f59e0b;">${overall.passRate}%</strong></div>
+            const navHtml = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <div class="qmk-nav-pills">
+                    <button type="button" class="qmk-nav-pill ${activeTab === 'strategy' ? 'is-active' : ''}" data-qmk-tab="strategy">全镇定位与整改方向</button>
+                    <button type="button" class="qmk-nav-pill ${activeTab === 'benchmark' ? 'is-active' : ''}" data-qmk-tab="benchmark">本校班级镇域对标</button>
+                    <button type="button" class="qmk-nav-pill ${activeTab === 'borderline' ? 'is-active' : ''}" data-qmk-tab="borderline">临界生名单与提分测算</button>
                 </div>
-                <div class="qmk-bar">
-                    <div class="qmk-tabs">
-                        ${['总分', ...subjects].map((s) => `<button type="button" class="qmk-tab ${s === currentSubject ? 'is-active' : ''}" data-qmk-subj="${escHtml(s)}">${escHtml(s)}</button>`).join('')}
+                <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;">
+                    <input type="checkbox" id="qmk-bench-town-line" ${thInfo.source === 'township' ? 'checked' : ''} ${thInfo.hasTownship ? '' : 'disabled'}>
+                    ${thInfo.source === 'township' ? `已套用全镇线（${thInfo.schoolCount}校）` : '校内划线'}
+                </label>
+            </div>`;
+
+            let contentHtml = '';
+            if (activeTab === 'strategy') {
+                const own = townMatrix.ownTotal || overallTotal;
+                const rankText = townMatrix.hasTownship ? `第 ${own.scoreRank} / ${townMatrix.totalSchools} 名` : '单校模式';
+                const targetText = townMatrix.targetAhead ? `差 ${townMatrix.gapToAhead} 分` : (townMatrix.hasTownship ? '全镇领跑' : '—');
+                const targetSub = townMatrix.targetAhead ? `追赶目标：${townMatrix.targetAhead.name}` : (townMatrix.hasTownship ? '当前稳居第一' : '导入多校解锁对标');
+                contentHtml = `
+                    <div class="qmk-kpis">
+                        <div class="qmk-kpi"><span>本校全镇综合位次</span><strong style="color:#1d9bf0;">${rankText}</strong><small>较镇均 ${townMatrix.gapToTownAvg >= 0 ? '+' : ''}${townMatrix.gapToTownAvg} 分</small></div>
+                        <div class="qmk-kpi"><span>距前一名追赶校</span><strong style="color:#f59e0b;">${targetText}</strong><small>${escHtml(targetSub)}</small></div>
+                        <div class="qmk-kpi"><span>临界生全部转化可提分</span><strong style="color:#00ba7c;">优 +${actionPlan.excGain}%</strong><small>及格率最高可提 +${actionPlan.passGain}%</small></div>
+                        <div class="qmk-kpi"><span>优势科 / 短板科</span><strong>${subjectDiag.filter((d) => d.tier === '优势领跑').length} / ${subjectDiag.filter((d) => d.tier === '重点短板').length}</strong><small>共 ${subjects.length} 科纳入诊断</small></div>
                     </div>
-                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12.5px;">
-                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                            <input type="checkbox" id="qmk-bench-town-line" ${thInfo.source === 'township' ? 'checked' : ''} ${thInfo.hasTownship ? '' : 'disabled'}>
-                            ${thInfo.source === 'township' ? '已套用乡镇线' : '校内划线'}
-                        </label>
+                    <div class="qmk-table-card">
+                        <table class="qmk-table">
+                            <thead><tr><th>学科</th><th>本校均分</th><th>全镇均分</th><th>较镇均差</th><th>全镇位次</th><th>优秀率差</th><th>及格率差</th><th>班际极差</th><th>强弱判定</th></tr></thead>
+                            <tbody>
+                                ${subjectDiag.map((d) => `<tr class="${d.tier === '重点短板' ? '' : (d.tier === '优势领跑' ? 'is-own' : '')}">
+                                    <td><strong>${escHtml(d.subject)}</strong></td>
+                                    <td>${d.ownAvg}</td>
+                                    <td>${d.townAvg}</td>
+                                    <td style="color:${d.avgDiff >= 0 ? '#00875a' : '#dc2626'};font-weight:700;">${d.avgDiff >= 0 ? '+' : ''}${d.avgDiff}</td>
+                                    <td>${buildInlineRankBadgeHtml(d.rank)} <span style="font-size:11.5px;color:var(--secondary,#536471);">/${d.totalSchools}</span></td>
+                                    <td style="color:${d.excDiff >= 0 ? '#00875a' : '#dc2626'};">${d.excDiff >= 0 ? '+' : ''}${d.excDiff}%</td>
+                                    <td style="color:${d.passDiff >= 0 ? '#00875a' : '#dc2626'};">${d.passDiff >= 0 ? '+' : ''}${d.passDiff}%</td>
+                                    <td>${d.classSpread}</td>
+                                    <td><span class="qmk-tag ${tierClass(d.tier)}">${escHtml(d.tier)}</span></td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="qmk-bar" style="padding:10px 14px;">
+                        <strong style="font-size:13.5px;">下阶段提质方向与可落地整改措施</strong>
+                        <button type="button" class="qmk-tab" id="qmk-copy-plan">一键复制会议发言稿 / 整改措施</button>
+                    </div>
+                    <div class="qmk-plan-grid">
+                        ${actionPlan.actions.map((a, idx) => `<div class="qmk-plan-card">
+                            <div class="qmk-plan-head"><strong>${idx + 1}. ${escHtml(a.dimension)}</strong><span class="qmk-tag qmk-tag-ext">${escHtml(a.owner)}</span></div>
+                            <div class="qmk-plan-summary">${escHtml(a.summary)}</div>
+                            <ul class="qmk-plan-steps">${(a.steps || []).map((st) => `<li>${escHtml(st)}</li>`).join('')}</ul>
+                        </div>`).join('')}
+                    </div>`;
+            } else if (activeTab === 'benchmark') {
+                const rawBench = thInfo.hasTownship
+                    ? buildClassTownshipBenchmark(allRows, mySchool, currentSubject, th)
+                    : buildClassRows(activeRows, currentSubject, th).map((c) => ({ ...c, kind: 'own-class' }));
+                const benchRows = rawBench.slice().sort((a, b) => sortDir * ((Number(a[sortKey]) || 0) - (Number(b[sortKey]) || 0)));
+                const maxAvg = Math.max(...benchRows.map((r) => Number(r.avg) || 0), 1);
+                const sortArrow = (k) => (sortKey === k ? (sortDir < 0 ? ' ↓' : ' ↑') : '');
+                contentHtml = `
+                    <div class="qmk-kpis">
+                        <div class="qmk-kpi"><span>${escHtml(mySchool)} · ${escHtml(currentSubject)}</span><strong>${overallSubj.count} 人</strong></div>
+                        <div class="qmk-kpi"><span>本校平均分</span><strong style="color:#1d9bf0;">${overallSubj.avg}</strong></div>
+                        <div class="qmk-kpi"><span>优秀率（线 ${th.exc}）</span><strong style="color:#00ba7c;">${overallSubj.excRate}%</strong></div>
+                        <div class="qmk-kpi"><span>及格率（线 ${th.pass}）</span><strong style="color:#f59e0b;">${overallSubj.passRate}%</strong></div>
+                    </div>
+                    <div class="qmk-bar">
+                        <div class="qmk-tabs">${['总分', ...subjects].map((s) => `<button type="button" class="qmk-tab ${s === currentSubject ? 'is-active' : ''}" data-qmk-subj="${escHtml(s)}">${escHtml(s)}</button>`).join('')}</div>
                         <button type="button" class="qmk-tab" id="qmk-export-bench">导出对标 Excel</button>
                     </div>
-                </div>
-                <div class="qmk-table-card">
-                    <table class="qmk-table">
-                        <thead><tr>
-                            <th>班级 / 学校</th>
-                            <th data-qmk-sort="count">人数${sortArrow('count')}</th>
-                            <th data-qmk-sort="avg">均分${sortArrow('avg')}</th>
-                            <th data-qmk-sort="excRate">优秀率${sortArrow('excRate')}</th>
-                            <th data-qmk-sort="passRate">及格率${sortArrow('passRate')}</th>
-                            <th data-qmk-sort="score">综合得分${sortArrow('score')}</th>
-                        </tr></thead>
-                        <tbody>
-                            ${benchRows.map((r) => `<tr class="${r.kind === 'own-class' ? 'is-own' : ''}">
-                                <td>${escHtml(r.name)}<span class="qmk-tag ${r.kind === 'own-class' ? 'qmk-tag-own' : 'qmk-tag-ext'}">${r.kind === 'own-class' ? '本校班级' : '外校'}</span></td>
-                                <td>${r.count}</td>
-                                <td><div class="qmk-metric"><div class="qmk-metric-top"><span>${r.avg}</span>${buildInlineRankBadgeHtml(r.avgRank)}</div><div class="qmk-meter"><i style="width:${Math.min(100, Math.round((r.avg / maxAvg) * 100))}%;"></i></div></div></td>
-                                <td><div class="qmk-metric"><div class="qmk-metric-top"><span>${r.excRate}%</span>${buildInlineRankBadgeHtml(r.excRank)}</div><div class="qmk-meter"><i style="width:${Math.min(100, Math.round(r.excRate))}%;background:#00ba7c;"></i></div></div></td>
-                                <td><div class="qmk-metric"><div class="qmk-metric-top"><span>${r.passRate}%</span>${buildInlineRankBadgeHtml(r.passRank)}</div><div class="qmk-meter"><i style="width:${Math.min(100, Math.round(r.passRate))}%;background:#f59e0b;"></i></div></div></td>
-                                <td><div class="qmk-metric-top"><strong>${r.score}</strong>${buildInlineRankBadgeHtml(r.scoreRank)}</div></td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="qmk-bar" style="padding:10px 14px;">
-                    <div style="font-size:13px;font-weight:600;">${escHtml(currentSubject)} 临界生名单筛选</div>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;">
-                        <select class="qmk-input" id="qmk-chip-class" style="padding:4px 8px;">
-                            <option value="">全部班级</option>
-                            ${ownClasses.map((c) => `<option value="${escHtml(c)}" ${c === classFilter ? 'selected' : ''}>${escHtml(c)}</option>`).join('')}
-                        </select>
-                        <select class="qmk-input" id="qmk-chip-margin" style="padding:4px 8px;">
-                            ${[5, 10, 15, 20].map((m) => `<option value="${m}" ${m === margin ? 'selected' : ''}>容差 ±${m} 分</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                <div class="qmk-chips-grid">
-                    <div class="qmk-chips-box">
-                        <div class="qmk-chips-head">
-                            <span>优秀边缘生（${(chips.exc - chips.margin).toFixed(1)}~${chips.exc}，${chips.excMarginal.length} 人）</span>
-                            <button type="button" class="qmk-tab" data-qmk-copy="exc">一键复制</button>
+                    <div class="qmk-table-card">
+                        <table class="qmk-table">
+                            <thead><tr>
+                                <th>班级 / 学校</th>
+                                <th data-qmk-sort="count">人数${sortArrow('count')}</th>
+                                <th data-qmk-sort="avg">均分${sortArrow('avg')}</th>
+                                <th data-qmk-sort="excRate">优秀率${sortArrow('excRate')}</th>
+                                <th data-qmk-sort="passRate">及格率${sortArrow('passRate')}</th>
+                                <th data-qmk-sort="score">综合得分${sortArrow('score')}</th>
+                            </tr></thead>
+                            <tbody>
+                                ${benchRows.map((r) => `<tr class="${r.kind === 'own-class' ? 'is-own' : ''}">
+                                    <td>${escHtml(r.name)}<span class="qmk-tag ${r.kind === 'own-class' ? 'qmk-tag-own' : 'qmk-tag-ext'}">${r.kind === 'own-class' ? '本校班级' : '外校'}</span></td>
+                                    <td>${r.count}</td>
+                                    <td><div class="qmk-metric"><div class="qmk-metric-top"><span>${r.avg}</span>${buildInlineRankBadgeHtml(r.avgRank)}</div><div class="qmk-meter"><i style="width:${Math.min(100, Math.round((r.avg / maxAvg) * 100))}%;"></i></div></div></td>
+                                    <td><div class="qmk-metric"><div class="qmk-metric-top"><span>${r.excRate}%</span>${buildInlineRankBadgeHtml(r.excRank)}</div><div class="qmk-meter"><i style="width:${Math.min(100, Math.round(r.excRate))}%;background:#00ba7c;"></i></div></div></td>
+                                    <td><div class="qmk-metric"><div class="qmk-metric-top"><span>${r.passRate}%</span>${buildInlineRankBadgeHtml(r.passRank)}</div><div class="qmk-meter"><i style="width:${Math.min(100, Math.round(r.passRate))}%;background:#f59e0b;"></i></div></div></td>
+                                    <td><div class="qmk-metric-top"><strong>${r.score}</strong>${buildInlineRankBadgeHtml(r.scoreRank)}</div></td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>`;
+            } else {
+                const filteredRows = classFilter ? activeRows.filter((r) => String(r?.class || '').trim() === classFilter) : activeRows;
+                const chips = buildBorderlineChips(filteredRows, currentSubject, th, margin);
+                const baseCount = Math.max(1, filteredRows.length);
+                const excLift = ((chips.excMarginal.length / baseCount) * 100).toFixed(1);
+                const passLift = ((chips.passMarginal.length / baseCount) * 100).toFixed(1);
+                contentHtml = `
+                    <div class="qmk-bar">
+                        <div class="qmk-tabs">${['总分', ...subjects].map((s) => `<button type="button" class="qmk-tab ${s === currentSubject ? 'is-active' : ''}" data-qmk-subj="${escHtml(s)}">${escHtml(s)}</button>`).join('')}</div>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;">
+                            <select class="qmk-input" id="qmk-chip-class" style="padding:4px 8px;">
+                                <option value="">全部班级</option>
+                                ${ownClasses.map((c) => `<option value="${escHtml(c)}" ${c === classFilter ? 'selected' : ''}>${escHtml(c)}</option>`).join('')}
+                            </select>
+                            <select class="qmk-input" id="qmk-chip-margin" style="padding:4px 8px;">
+                                ${[5, 10, 15, 20].map((m) => `<option value="${m}" ${m === margin ? 'selected' : ''}>容差 ±${m} 分</option>`).join('')}
+                            </select>
                         </div>
-                        <div class="qmk-chips">${chips.excMarginal.length ? chips.excMarginal.map((s) => `<span class="qmk-chip qmk-chip-exc">${escHtml(s.name)} · ${escHtml(s.class)} · ${s.score}</span>`).join('') : '<span style="color:var(--secondary,#64748b);font-size:12px;">当前条件下暂无</span>'}</div>
                     </div>
-                    <div class="qmk-chips-box">
-                        <div class="qmk-chips-head">
-                            <span>及格边缘生（${(chips.pass - chips.margin).toFixed(1)}~${chips.pass}，${chips.passMarginal.length} 人）</span>
-                            <button type="button" class="qmk-tab" data-qmk-copy="pass">一键复制</button>
+                    <div class="qmk-chips-grid">
+                        <div class="qmk-chips-box">
+                            <div class="qmk-chips-head">
+                                <span>优秀边缘生（${(chips.exc - chips.margin).toFixed(1)}~${chips.exc}，${chips.excMarginal.length} 人 · 转化可提 +${excLift}%）</span>
+                                <button type="button" class="qmk-tab" data-qmk-copy="exc">一键复制</button>
+                            </div>
+                            <div class="qmk-chips">${chips.excMarginal.length ? chips.excMarginal.map((s) => `<span class="qmk-chip qmk-chip-exc">${escHtml(s.name)} · ${escHtml(s.class)} · ${s.score}</span>`).join('') : '<span style="color:var(--secondary,#64748b);font-size:12px;">当前条件下暂无</span>'}</div>
                         </div>
-                        <div class="qmk-chips">${chips.passMarginal.length ? chips.passMarginal.map((s) => `<span class="qmk-chip qmk-chip-pass">${escHtml(s.name)} · ${escHtml(s.class)} · ${s.score}</span>`).join('') : '<span style="color:var(--secondary,#64748b);font-size:12px;">当前条件下暂无</span>'}</div>
-                    </div>
-                </div>`;
+                        <div class="qmk-chips-box">
+                            <div class="qmk-chips-head">
+                                <span>及格边缘生（${(chips.pass - chips.margin).toFixed(1)}~${chips.pass}，${chips.passMarginal.length} 人 · 转化可提 +${passLift}%）</span>
+                                <button type="button" class="qmk-tab" data-qmk-copy="pass">一键复制</button>
+                            </div>
+                            <div class="qmk-chips">${chips.passMarginal.length ? chips.passMarginal.map((s) => `<span class="qmk-chip qmk-chip-pass">${escHtml(s.name)} · ${escHtml(s.class)} · ${s.score}</span>`).join('') : '<span style="color:var(--secondary,#64748b);font-size:12px;">当前条件下暂无</span>'}</div>
+                        </div>
+                    </div>`;
+            }
 
+            modal.body.innerHTML = navHtml + contentHtml;
+
+            modal.body.querySelectorAll('[data-qmk-tab]').forEach((btn) => btn.addEventListener('click', () => { activeTab = btn.dataset.qmkTab; render(); }));
+            const townToggle = modal.body.querySelector('#qmk-bench-town-line');
+            if (townToggle) townToggle.addEventListener('change', () => { useTownshipLine = townToggle.checked; render(); });
             modal.body.querySelectorAll('[data-qmk-subj]').forEach((btn) => btn.addEventListener('click', () => { currentSubject = btn.dataset.qmkSubj; render(); }));
             modal.body.querySelectorAll('[data-qmk-sort]').forEach((thEl) => thEl.addEventListener('click', () => {
                 const k = thEl.dataset.qmkSort;
                 if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = -1; }
                 render();
             }));
-            const townToggle = modal.body.querySelector('#qmk-bench-town-line');
-            if (townToggle) townToggle.addEventListener('change', () => { useTownshipLine = townToggle.checked; render(); });
-            modal.body.querySelector('#qmk-export-bench').addEventListener('click', () => exportBenchmarkExcel(benchRows, currentSubject, getExamTitle()));
-            modal.body.querySelector('#qmk-chip-class').addEventListener('change', (e) => { classFilter = e.target.value; render(); });
-            modal.body.querySelector('#qmk-chip-margin').addEventListener('change', (e) => { margin = Number(e.target.value) || DEFAULT_MARGIN; render(); });
+            const copyPlanBtn = modal.body.querySelector('#qmk-copy-plan');
+            if (copyPlanBtn) {
+                copyPlanBtn.addEventListener('click', async () => {
+                    const txt = formatActionPlanCopyText(getExamTitle(), mySchool, actionPlan);
+                    try { await root.navigator.clipboard.writeText(txt); toast('会议发言稿与整改措施已复制', 'success'); } catch (_) { toast(txt, 'info'); }
+                });
+            }
+            const expBenchBtn = modal.body.querySelector('#qmk-export-bench');
+            if (expBenchBtn) {
+                expBenchBtn.addEventListener('click', () => {
+                    const rawBench = thInfo.hasTownship
+                        ? buildClassTownshipBenchmark(allRows, mySchool, currentSubject, th)
+                        : buildClassRows(activeRows, currentSubject, th).map((c) => ({ ...c, kind: 'own-class' }));
+                    exportBenchmarkExcel(rawBench, currentSubject, getExamTitle());
+                });
+            }
+            const clsSel = modal.body.querySelector('#qmk-chip-class');
+            if (clsSel) clsSel.addEventListener('change', (e) => { classFilter = e.target.value; render(); });
+            const marSel = modal.body.querySelector('#qmk-chip-margin');
+            if (marSel) marSel.addEventListener('change', (e) => { margin = Number(e.target.value) || DEFAULT_MARGIN; render(); });
             modal.body.querySelectorAll('[data-qmk-copy]').forEach((btn) => btn.addEventListener('click', async () => {
                 const isExc = btn.dataset.qmkCopy === 'exc';
+                const filteredRows = classFilter ? activeRows.filter((r) => String(r?.class || '').trim() === classFilter) : activeRows;
+                const chips = buildBorderlineChips(filteredRows, currentSubject, th, margin);
                 const text = formatChipsCopyText(`${getExamTitle()} ${currentSubject} ${isExc ? '优秀边缘生' : '及格边缘生'}`, isExc ? chips.excMarginal : chips.passMarginal);
-                try {
-                    await root.navigator.clipboard.writeText(text);
-                    toast('名单已复制到剪贴板', 'success');
-                } catch (_) {
-                    toast(text, 'info');
-                }
+                try { await root.navigator.clipboard.writeText(text); toast('名单已复制到剪贴板', 'success'); } catch (_) { toast(text, 'info'); }
             }));
         }
 
-        modal.foot.innerHTML = `<span style="font-size:12px;color:var(--secondary,#536471);">注：本校班级分别与全镇各外校对标，本校班级间不互比；点击表头可升降序排列</span><button type="button" class="btn btn-green" id="qmk-bench-to-ppt">打开质量分析会 PPT 工作室</button>`;
+        modal.foot.innerHTML = `<span style="font-size:12px;color:var(--secondary,#536471);">所有镇域定位、强弱诊断与整改措施均会同步写入质量分析会 PPT 与教师手册</span><button type="button" class="btn btn-green" id="qmk-bench-to-ppt">打开质量分析会 PPT 工作室</button>`;
         modal.foot.querySelector('#qmk-bench-to-ppt').addEventListener('click', () => { modal.close(); openQualityMeetingPptModal(); });
         render();
         return true;
@@ -1226,6 +1629,10 @@ body.dark-mode .qmk-tag-own{color:#34d399}
         buildInlineRankBadgeHtml,
         buildClassRows,
         buildClassTownshipBenchmark,
+        buildTownshipSchoolMatrix,
+        buildSubjectDiagnosis,
+        buildActionPlan,
+        formatActionPlanCopyText,
         buildTeacherHandbookRows,
         buildBorderlineChips,
         formatChipsCopyText,

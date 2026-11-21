@@ -87,14 +87,30 @@ assert.deepStrictEqual(Array.from(chips.passMarginal, (s) => s.name), ['王五']
 const copyText = kit.formatChipsCopyText('优秀边缘生', chips.excMarginal);
 assert.ok(copyText.includes('赵六(九.2 488)'), 'copy text should include student name, class, and score');
 
-// 6. Real PPTX OOXML zip generation + XML validation
+// 5b. Township school ranking matrix, subject diagnosis, and actionable direction/measures
+const townMatrix = kit.buildTownshipSchoolMatrix(sampleRows, '银山实验学校', ['语文', '数学'], townTh.thresholds);
+assert.strictEqual(townMatrix.totalSchools, 3);
+assert.strictEqual(townMatrix.ownTotal.scoreRank, 2, '银山实验学校 should rank #2 among 3 township schools');
+assert.strictEqual(townMatrix.targetAhead.name, '镇一中', '追赶目标校应为前一名 镇一中');
+assert.ok(townMatrix.gapToAhead > 0, 'gap to target school ahead should be positive');
+const subjDiag = kit.buildSubjectDiagnosis(townMatrix, myRows, ['语文', '数学'], townTh.thresholds);
+assert.strictEqual(subjDiag.length, 2);
+assert.ok(subjDiag.every((d) => d.measure && d.tier), 'every subject must have a tier classification and concrete measure');
+const classRows = kit.buildClassRows(myRows, '总分', townTh.thresholds['总分']);
+const overall = kit.calcGroupMetrics(myRows, '总分', townTh.thresholds['总分']);
+const plan = kit.buildActionPlan(townMatrix, subjDiag, classRows, chips, overall);
+assert.strictEqual(plan.actions.length, 4, 'action plan should cover all 4 dimensions');
+const planText = kit.formatActionPlanCopyText('2026九年级期中考试', '银山实验学校', plan);
+assert.ok(planText.includes('镇一中') && planText.includes('校级镇域追赶方向'), 'copyable meeting speech should include target school and strategy');
+
+// 6. Real PPTX OOXML zip generation + XML validation (including townPosition & actionPlan slides)
 (async () => {
   const fakePngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
   const ppt = await kit.buildMeetingPptxBlob({
     outputType: 'nodebuffer',
     chartImages: [{ title: '测试图表', base64: fakePngBase64 }]
   });
-  assert.ok(ppt.slideCount >= 7, `expected at least 7 slides, got ${ppt.slideCount}`);
+  assert.ok(ppt.slideCount >= 10, `expected at least 10 slides with townPosition + actionPlan + closing, got ${ppt.slideCount}`);
   assert.ok(ppt.fileName.endsWith('.pptx'));
 
   const zip = await JSZip.loadAsync(ppt.payload);
@@ -104,7 +120,12 @@ assert.ok(copyText.includes('赵六(九.2 488)'), 'copy text should include stud
   const slide1Xml = await zip.file('ppt/slides/slide1.xml').async('text');
   assert.ok(slide1Xml.includes('2026九年级期中考试'), 'slide 1 must include exam title');
   const slide3Xml = await zip.file('ppt/slides/slide3.xml').async('text');
-  assert.ok(slide3Xml.includes('<a:tbl>'), 'class rank slide must contain native OOXML table');
+  assert.ok(slide3Xml.includes('<a:tbl>'), 'town position slide must contain native OOXML table');
+  const allSlidesXml = await Promise.all(
+    Object.keys(zip.files).filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f)).map((f) => zip.file(f).async('text'))
+  );
+  assert.ok(allSlidesXml.some((x) => x.includes('下阶段提质方向与整改措施')), 'PPTX must include action plan slide');
+  assert.ok(allSlidesXml.some((x) => x.includes('全镇校际定位与各科强弱诊断')), 'PPTX must include township positioning slide');
 
   console.log('quality-meeting-kit-runtime tests passed');
 })().catch((err) => {

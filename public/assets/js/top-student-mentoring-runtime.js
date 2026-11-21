@@ -156,17 +156,33 @@
             .filter((r) => Number.isFinite(Number(r?.total)))
             .slice()
             .sort((a, b) => Number(b.total) - Number(a.total));
+        const townSorted = (allRows || [])
+            .filter((r) => Number.isFinite(Number(r?.total)))
+            .slice()
+            .sort((a, b) => Number(b.total) - Number(a.total));
+        const distinctSchools = new Set((allRows || []).map((r) => String(r?.school || '').trim()).filter(Boolean));
+        const hasTownship = distinctSchools.size > 1;
+        const getTownRank = (score) => 1 + townSorted.filter((r) => Number(r.total) > Number(score)).length;
 
         const list = sorted.slice(0, topN).map((student, idx) => {
             const gradeRank = idx + 1;
             const total = Number(Number(student.total).toFixed(1));
+            const townRank = hasTownship ? getTownRank(total) : null;
             const tier = (total >= 490 || gradeRank <= Math.ceil(topN / 3))
                 ? '冲刺梯队'
                 : (gradeRank <= Math.ceil((topN * 2) / 3) ? '稳进梯队' : '提升梯队');
             const key = getStudentKey(student);
             const meta = store[key] || {};
-            const enriched = { ...student, gradeRank, total };
+            const enriched = { ...student, gradeRank, townRank, total };
             const diagnosis = diagnoseStudentSubjects(enriched, subjects, gradeAverages);
+            if (townRank != null) {
+                const nextMilestone = townRank <= 10 ? 5 : (townRank <= 30 ? 20 : (townRank <= 50 ? 30 : (townRank <= 100 ? 50 : 100)));
+                diagnosis.townGoal = townRank <= 5
+                    ? `当前全镇第 ${townRank} 名，已处于全镇顶尖行列，建议保持稳定并冲刺全镇前三。`
+                    : `当前全镇第 ${townRank}/${townSorted.length} 名，下阶段方向：锚定全镇前 ${nextMilestone} 名。`;
+            } else {
+                diagnosis.townGoal = '';
+            }
             const history = collectStudentHistory(enriched, examLabel);
             const latestDelta = history.length > 1 ? history[history.length - 1].delta : null;
             return {
@@ -176,6 +192,8 @@
                 school: String(student.school || mySchool || '本校').trim(),
                 total,
                 gradeRank,
+                townRank,
+                townTotal: hasTownship ? townSorted.length : null,
                 tier,
                 latestDelta,
                 mentor: String(meta.mentor || '').trim(),
@@ -186,7 +204,7 @@
                 history
             };
         });
-        return { list, subjects, gradeAverages, examLabel, schoolName: mySchool || (pool[0]?.school || '本校'), totalPool: sorted.length };
+        return { list, subjects, gradeAverages, examLabel, schoolName: mySchool || (pool[0]?.school || '本校'), totalPool: sorted.length, hasTownship, townTotal: townSorted.length };
     }
 
     function buildArchiveFileName(student, context) {
@@ -250,9 +268,9 @@ th{background:#f1f5f9;font-weight:600}
     <div><strong>班级：</strong>${escHtml(student.class)}</div>
     <div><strong>培养梯队：</strong>${escHtml(student.tier)}</div>
     <div><strong>本次总分：</strong>${student.total} 分</div>
-    <div><strong>级部名次：</strong>第 ${student.gradeRank} 名</div>
+    <div><strong>级部名次：</strong>第 ${student.gradeRank} 名${student.townRank ? `（全镇第 ${student.townRank} 名）` : ''}</div>
     <div><strong>包保教师：</strong>${escHtml(student.mentor || '待指派')}</div>
-    <div style="grid-column:span 3;"><strong>家长联系：</strong>${escHtml(student.parentContact || '未填写')} &nbsp;|&nbsp; <strong>阶段目标：</strong>${escHtml(student.targetNote || '稳步冲刺前列')}</div>
+    <div style="grid-column:span 3;"><strong>家长联系：</strong>${escHtml(student.parentContact || '未填写')} &nbsp;|&nbsp; <strong>阶段目标：</strong>${escHtml(student.targetNote || student.diagnosis?.townGoal || '稳步冲刺前列')}</div>
   </div>
   <h2>一、本次各科成绩与级部均分对标</h2>
   <table><thead><tr><th>学科</th><th>个人得分</th><th>级部均分</th><th>相对均分偏离</th></tr></thead><tbody>${subjectRows}</tbody></table>
@@ -450,7 +468,7 @@ body.dark-mode .tsm-tag-w,body.dark-mode .tsm-delta-down{color:#f87171}
                                 <span class="tsm-badge">${escHtml(s.tier)}</span>
                             </div>
                             <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
-                                <span>总分 <strong style="font-size:15px;">${s.total}</strong> ${deltaHtml}</span>
+                                <span>总分 <strong style="font-size:15px;">${s.total}</strong> ${deltaHtml}${s.townRank ? ` <span style="font-size:11.5px;color:#1d9bf0;">全镇#${s.townRank}</span>` : ''}</span>
                                 <span style="font-size:12px;color:var(--secondary,#536471);">包保：${escHtml(s.mentor || '待指派')}</span>
                             </div>
                             <div class="tsm-tags">
