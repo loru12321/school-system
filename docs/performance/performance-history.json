@@ -1,95 +1,5 @@
 [
   {
-    "recordedAt": "2026-08-30T07:33:11.164Z",
-    "commit": "396276c5274f",
-    "branch": "main",
-    "runId": "33299420113",
-    "runAttempt": "1",
-    "url": "",
-    "errorCount": 0,
-    "loginMs": 2258,
-    "appReadyMs": 1036,
-    "totalMs": 19182,
-    "moduleCount": 31,
-    "slowestModules": [
-      {
-        "id": "grade-scheduler",
-        "switchMs": 30.30000000000291,
-        "deepCheckMs": 695,
-        "totalMs": 725.3000000000029
-      },
-      {
-        "id": "student-overview",
-        "switchMs": 27.70000000001164,
-        "deepCheckMs": 505,
-        "totalMs": 532.7000000000116
-      },
-      {
-        "id": "freshman-simulator",
-        "switchMs": 60.30000000000291,
-        "deepCheckMs": 395,
-        "totalMs": 455.3000000000029
-      },
-      {
-        "id": "exam-arranger",
-        "switchMs": 13.69999999999709,
-        "deepCheckMs": 339,
-        "totalMs": 352.6999999999971
-      },
-      {
-        "id": "report-generator",
-        "switchMs": 14.400000000008731,
-        "deepCheckMs": 318,
-        "totalMs": 332.40000000000873
-      },
-      {
-        "id": "subject-balance",
-        "switchMs": 32.09999999999127,
-        "deepCheckMs": 291,
-        "totalMs": 323.09999999999127
-      },
-      {
-        "id": "cohort-growth",
-        "switchMs": 11.60000000000582,
-        "deepCheckMs": 264,
-        "totalMs": 275.6000000000058
-      },
-      {
-        "id": "teacher-analysis",
-        "switchMs": 43.59999999999127,
-        "deepCheckMs": 149,
-        "totalMs": 192.59999999999127
-      }
-    ],
-    "slowestDataManagerTabs": [
-      {
-        "id": "cloud",
-        "durationMs": 1115
-      },
-      {
-        "id": "student",
-        "durationMs": 649
-      },
-      {
-        "id": "teacher",
-        "durationMs": 627
-      },
-      {
-        "id": "targets",
-        "durationMs": 626
-      }
-    ],
-    "longTaskCount": 0,
-    "maxLongTaskMs": 0,
-    "nativeLongTaskCount": 0,
-    "maxNativeLongTaskMs": 0,
-    "scheduledTaskCount": 68,
-    "maxScheduledTaskMs": 149.5,
-    "maxNetworkWaitMs": 5.9,
-    "budgetFailureCount": 0,
-    "budgetFailures": []
-  },
-  {
     "recordedAt": "2026-08-30T07:41:21.005Z",
     "commit": "6ebdb6afe76a",
     "branch": "main",
@@ -7196,6 +7106,96 @@
     "scheduledTaskCount": 55,
     "maxScheduledTaskMs": 93.9,
     "maxNetworkWaitMs": 9,
+    "budgetFailureCount": 0,
+    "budgetFailures": []
+  },
+  {
+    "recordedAt": "2026-11-21T16:35:02.773Z",
+    "commit": "ee093bec2e4c",
+    "branch": "main",
+    "runId": "44925137422",
+    "runAttempt": "1",
+    "url": "",
+    "errorCount": 0,
+    "loginMs": 6754,
+    "appReadyMs": 2,
+    "totalMs": 24818,
+    "moduleCount": 31,
+    "slowestModules": [
+      {
+        "id": "grade-scheduler",
+        "switchMs": 11.099999999976717,
+        "deepCheckMs": 1425,
+        "totalMs": 1436.0999999999767
+      },
+      {
+        "id": "freshman-simulator",
+        "switchMs": 69.10000000003492,
+        "deepCheckMs": 597,
+        "totalMs": 666.1000000000349
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 31.5,
+        "deepCheckMs": 568,
+        "totalMs": 599.5
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 19.199999999953434,
+        "deepCheckMs": 313,
+        "totalMs": 332.19999999995343
+      },
+      {
+        "id": "cohort-growth",
+        "switchMs": 17,
+        "deepCheckMs": 282,
+        "totalMs": 299
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 57.59999999997672,
+        "deepCheckMs": 239,
+        "totalMs": 296.5999999999767
+      },
+      {
+        "id": "subject-balance",
+        "switchMs": 27.400000000023283,
+        "deepCheckMs": 266,
+        "totalMs": 293.4000000000233
+      },
+      {
+        "id": "correlation-analysis",
+        "switchMs": 17.5,
+        "deepCheckMs": 257,
+        "totalMs": 274.5
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "cloud",
+        "durationMs": 1105
+      },
+      {
+        "id": "student",
+        "durationMs": 634
+      },
+      {
+        "id": "teacher",
+        "durationMs": 628
+      },
+      {
+        "id": "targets",
+        "durationMs": 627
+      }
+    ],
+    "longTaskCount": 0,
+    "maxLongTaskMs": 0,
+    "nativeLongTaskCount": 0,
+    "maxNativeLongTaskMs": 0,
+    "scheduledTaskCount": 54,
+    "maxScheduledTaskMs": 91.3,
+    "maxNetworkWaitMs": 10.9,
     "budgetFailureCount": 0,
     "budgetFailures": []
   }
