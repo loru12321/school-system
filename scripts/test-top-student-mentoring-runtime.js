@@ -60,5 +60,6 @@ assert.ok(html.includes('尖子生「育苗」包保培养档案'));
 assert.ok(html.includes('班主任签字') && html.includes('包保教师签字') && html.includes('教导主任签字'));
 assert.ok(!html.includes('<script>'), 'mentor/notes must be HTML-escaped in printable archive');
 assert.ok(html.includes('张老师&lt;script&gt;'));
+assert.strictEqual(mod.buildArchiveFileName(lin, roster), '育苗培养档案_九.1_林冲_2026九年级期中考试.html');
 
 console.log('top-student-mentoring-runtime tests passed');

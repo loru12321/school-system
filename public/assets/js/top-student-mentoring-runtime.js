@@ -391,7 +391,10 @@ th{background:#f1f5f9}
                 </div>`;
             foot.innerHTML = `
                 <button type="button" class="btn" id="tsm-save-meta">💾 保存包保信息</button>
-                <button type="button" class="btn btn-green" id="tsm-print-a4">🖨️ 打印 / 导出 A4 育苗档案 (PDF)</button>`;
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" class="btn" id="tsm-download-a4">📥 下载 A4 档案</button>
+                    <button type="button" class="btn btn-green" id="tsm-print-a4">🖨️ 打印 / 存为 PDF</button>
+                </div>`;
 
             const saveCurrent = () => {
                 const store = loadMentoringStore(options.cohortKey);
@@ -408,24 +411,54 @@ th{background:#f1f5f9}
             body.querySelector('#tsm-prev').addEventListener('click', () => { if (selectedIdx > 0) { selectedIdx -= 1; renderDetail(); } });
             body.querySelector('#tsm-next').addEventListener('click', () => { if (selectedIdx < rosterCtx.list.length - 1) { selectedIdx += 1; renderDetail(); } });
             foot.querySelector('#tsm-save-meta').addEventListener('click', saveCurrent);
+            foot.querySelector('#tsm-download-a4').addEventListener('click', () => {
+                saveCurrent();
+                const latest = rosterCtx.list[selectedIdx];
+                const html = buildPrintableArchiveHtml(latest, rosterCtx);
+                const fileName = buildArchiveFileName(latest, rosterCtx);
+                const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+                const url = root.URL.createObjectURL(blob);
+                const a = doc.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                doc.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => root.URL.revokeObjectURL(url), 1500);
+                toast(`已下载 ${fileName}`, 'success');
+            });
             foot.querySelector('#tsm-print-a4').addEventListener('click', () => {
                 saveCurrent();
                 const latest = rosterCtx.list[selectedIdx];
                 const html = buildPrintableArchiveHtml(latest, rosterCtx);
-                const win = root.open('', '_blank');
-                if (!win) {
-                    toast('浏览器拦截了打印窗口，请允许弹窗后重试', 'error');
-                    return;
-                }
-                win.document.open();
-                win.document.write(html);
-                win.document.close();
-                setTimeout(() => { try { win.print(); } catch (_) { } }, 200);
+                const iframe = doc.createElement('iframe');
+                iframe.setAttribute('aria-hidden', 'true');
+                iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;';
+                iframe.srcdoc = html;
+                const cleanup = () => { setTimeout(() => { try { iframe.remove(); } catch (_) { } }, 500); };
+                iframe.addEventListener('load', () => {
+                    try {
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                    } catch (_) {
+                        toast('当前环境不支持直接拉起打印，请点击「下载 A4 档案」后打开打印', 'info');
+                    }
+                    cleanup();
+                }, { once: true });
+                doc.body.appendChild(iframe);
             });
         }
 
         renderList();
         return true;
+    }
+
+    function buildArchiveFileName(student, context) {
+        const safe = (v) => String(v || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+        const exam = safe(context?.examLabel || '考试');
+        const cls = safe(student?.class || '');
+        const name = safe(student?.name || '学生');
+        return `育苗培养档案_${cls ? `${cls}_` : ''}${name}_${exam}.html`;
     }
 
     root.__TOP_STUDENT_MENTORING_PATCHED__ = true;
@@ -438,6 +471,7 @@ th{background:#f1f5f9}
         diagnoseStudentSubjects,
         buildTopStudentRoster,
         buildPrintableArchiveHtml,
+        buildArchiveFileName,
         openTopStudentMentoringModal
     };
 })(typeof window !== 'undefined' ? window : globalThis);
