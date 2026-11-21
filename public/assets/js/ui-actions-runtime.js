@@ -326,6 +326,7 @@ async function downloadCertificate() {
         'calc-summary': () => callGlobal('calcSummary'),
         'export-summary-table': () => callGlobal('exportSummaryTable'),
         'download-exam-analysis-package': () => callGlobal('downloadExamAnalysisPackage'),
+        'qmk': (target) => callGlobal('runQualityMeetingAction', target?.dataset?.qmk || ''),
         'render-segment-analysis': () => callGlobal('renderSegmentAnalysis'),
         'export-segment-excel': () => callGlobal('exportSegmentExcel'),
         'subject-balance-export': () => callGlobal('SB_exportExcel'),

@@ -158,6 +158,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('xlsx-js-style-vendor', bootVend('xlsx-js-style/xlsx.min.js')),
     bootEntry('exam-analysis-package', bootJs('exam-analysis-package-runtime.js'))
 ]),
+'qmk':bootSkill('demand','demand',['runQualityMeetingAction'],[bootEntry('jszip-vendor',bootVend('jszip/jszip.min.js')),bootEntry('xlsx-js-style-vendor',bootVend('xlsx-js-style/xlsx.min.js')),bootEntry('qmk',bootJs('quality-meeting-kit-runtime.js')),bootEntry('tsm',bootJs('top-student-mentoring-runtime.js'))]),
 'worker-api': bootSkill('demand', 'demand', ['WorkerAPI.run'], [
     bootEntry('worker-api', bootJs('worker-api-runtime.js'))
 ])
@@ -1183,6 +1184,7 @@ window.VoiceControl = voiceControlStub;
 
 installOptionalRuntimeMethod('showModuleHelp', window.ensureModuleHelpRuntimeLoaded);
 installOptionalRuntimeMethod('downloadExamAnalysisPackage', window.ensureExamAnalysisPackageRuntimeLoaded);
+installOptionalRuntimeMethod('runQualityMeetingAction',()=>window.SystemRuntimeLoader.load('qmk'));
 installOptionalRuntimeMethod('openTeacherSync', () => loadOptionalRuntime('teacher-sync-entry', bootJs('teacher-sync-entry-runtime.js')));
 window.wrapXlsxRuntimeExports();
 

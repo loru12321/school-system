@@ -57,7 +57,11 @@ const NON_INLINE_RUNTIME_PATHS = new Set([
     // runtime external in lt.html so the legacy single-file artifact stays
     // below its strict transport budget; normal web and local-file use load it
     // from ./public/assets only when the module is opened.
-    './assets/js/grade-scheduler-runtime.js'
+    './assets/js/grade-scheduler-runtime.js',
+    // Demand-loaded meeting kit (PPTX/handbook/benchmark) and top-student A4
+    // mentoring runtimes stay external in lt.html to preserve the single-file budget.
+    './assets/js/quality-meeting-kit-runtime.js',
+    './assets/js/top-student-mentoring-runtime.js'
 ]);
 
 // Keep original script semantics intact; only normalize newlines.
