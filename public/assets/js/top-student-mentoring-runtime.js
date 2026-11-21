@@ -257,7 +257,7 @@ th{background:#f1f5f9}
         const style = doc.createElement('style');
         style.id = 'tsm-style';
         style.textContent = `
-.tsm-mask{position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:9992;display:flex;align-items:center;justify-content:center;padding:16px}
+.tsm-mask{position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px}
 .tsm-dialog{background:#fff;color:#0f172a;border-radius:14px;width:min(1040px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(15,23,42,.28)}
 .tsm-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(90deg,#4c1d95,#0f766e);color:#fff}
 .tsm-head h3{margin:0;font-size:16px}

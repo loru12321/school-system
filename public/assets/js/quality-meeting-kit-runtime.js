@@ -742,7 +742,7 @@ ${imgRels}
         const style = doc.createElement('style');
         style.id = 'qmk-style';
         style.textContent = `
-.qmk-mask{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9990;display:flex;align-items:center;justify-content:center;padding:16px}
+.qmk-mask{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px}
 .qmk-dialog{background:#fff;color:#0f172a;border-radius:14px;width:min(980px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(15,23,42,.25);overflow:hidden}
 .qmk-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#0f172a;color:#fff}
 .qmk-head h3{margin:0;font-size:16px;font-weight:700}
