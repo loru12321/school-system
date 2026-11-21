@@ -114,6 +114,16 @@ export function protectAssetResponse(request, response) {
   if (!cacheControl) return protectedHtml;
   const headers = new Headers(protectedHtml.headers);
   headers.set('Cache-Control', cacheControl);
+  if (cacheControl.startsWith('no-store')) {
+    headers.set('CDN-Cache-Control', 'no-store');
+    headers.set('Cloudflare-CDN-Cache-Control', 'no-store');
+  } else {
+    // Strip no-store CDN directives inherited from public/_headers (/assets/js/*)
+    // so versioned (?v=runtime-<hash>) and content-hashed static assets can be
+    // cached at Cloudflare's edge instead of hitting the Worker on every cold load.
+    headers.delete('CDN-Cache-Control');
+    headers.delete('Cloudflare-CDN-Cache-Control');
+  }
   headers.set('X-Content-Type-Options', 'nosniff');
   return new Response(protectedHtml.body, {
     status: protectedHtml.status,

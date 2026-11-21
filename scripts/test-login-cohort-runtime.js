@@ -118,7 +118,7 @@ spring.select.value = '2024';
 spring.window.polishLoginEntryShell();
 assert.strictEqual(spring.select.value, '2024', 'refreshing the login shell should preserve a manual cohort selection');
 
-const autumn = runLoginRuntime('2026-09-01T00:00:00Z');
+const autumn = runLoginRuntime('2026-09-01T12:00:00Z');
 assert.strictEqual(autumn.select.value, '2023', 'from September, grade 9 should roll forward by one cohort');
 // 在校届别只有 6/7/8/9 四个年级。2026-09 时 9 年级=2023 届，则 6 年级新生=2026 届。
 // 原断言要求出现 2027 届——那一届当时对应「5 年级」、尚未入学，是错的（每年重演：
@@ -130,7 +130,7 @@ assert.strictEqual((autumn.select.innerHTML.match(/届<\/option>/g) || []).lengt
 assert.ok(!autumn.select.innerHTML.includes('2022届'), 'from September, the graduated cohort should leave active login choices');
 assert.ok(autumn.graduateSelect.innerHTML.includes('2022届 · 已毕业'), 'from September, the graduated cohort should move to the graduate archive choices');
 assert.strictEqual(
-    autumn.window.BootCohortLifecycle.getLoginCohortYears(new Date('2026-09-01T00:00:00Z')).join('|'),
+    autumn.window.BootCohortLifecycle.getLoginCohortYears(new Date('2026-09-01T12:00:00Z')).join('|'),
     // 只列在校的四个届别：2023=9年级 / 2024=8 / 2025=7 / 2026=6年级新生。
     // 原期望多了个 2027（当时相当于「5年级」、尚未入学）。
     '2023|2024|2025|2026',

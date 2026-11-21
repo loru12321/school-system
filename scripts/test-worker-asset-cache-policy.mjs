@@ -28,15 +28,19 @@ const NO_STORE = 'no-store, max-age=0, must-revalidate, no-transform';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const SHORT = 'public, max-age=3600, stale-while-revalidate=86400';
 
-function assetResponse(assetPath, contentType = 'application/javascript') {
+function assetResponseFull(assetPath, contentType = 'application/javascript', extraHeaders = {}) {
   const request = new Request(`https://schoolsystem.com.cn${assetPath}`, {
     headers: { accept: '*/*' }
   });
   const response = new Response('ok', {
     status: 200,
-    headers: { 'content-type': contentType }
+    headers: { 'content-type': contentType, ...extraHeaders }
   });
-  return protectAssetResponse(request, response).headers.get('cache-control');
+  return protectAssetResponse(request, response);
+}
+
+function assetResponse(assetPath, contentType = 'application/javascript') {
+  return assetResponseFull(assetPath, contentType).headers.get('cache-control');
 }
 
 function assertCacheControl(assetPath, expected, label, contentType = 'application/javascript') {
@@ -157,6 +161,37 @@ assertCacheControl('/icon.svg', SHORT, 'unversioned static assets should get sho
   const response = new Response('ok', { status: 200, headers: { 'content-type': 'text/plain' } });
   const cacheControl = protectAssetResponse(request, response).headers.get('cache-control');
   assert.strictEqual(cacheControl, null, 'robots.txt should not get a worker cache-control');
+}
+
+// CDN-Cache-Control: no-store inherited from public/_headers (/assets/js/*) must
+// be stripped for versioned/hashed assets so Cloudflare CDN caches them, while
+// remaining no-store for unversioned runtime JS.
+{
+  const inheritedNoStore = {
+    'CDN-Cache-Control': 'no-store',
+    'Cloudflare-CDN-Cache-Control': 'no-store'
+  };
+  const versioned = assetResponseFull(
+    `/assets/js/app.js?v=runtime-${RUNTIME_VERSION}`,
+    'application/javascript',
+    inheritedNoStore
+  );
+  assert.strictEqual(versioned.headers.get('cache-control'), IMMUTABLE);
+  assert.strictEqual(versioned.headers.get('cdn-cache-control'), null,
+    'versioned runtime module must strip inherited CDN-Cache-Control: no-store');
+  assert.strictEqual(versioned.headers.get('cloudflare-cdn-cache-control'), null,
+    'versioned runtime module must strip inherited Cloudflare-CDN-Cache-Control: no-store');
+
+  const unversioned = assetResponseFull(
+    '/assets/js/app.js',
+    'application/javascript',
+    inheritedNoStore
+  );
+  assert.strictEqual(unversioned.headers.get('cache-control'), NO_STORE);
+  assert.strictEqual(unversioned.headers.get('cdn-cache-control'), 'no-store',
+    'unversioned runtime module must keep CDN-Cache-Control: no-store');
+  assert.strictEqual(unversioned.headers.get('cloudflare-cdn-cache-control'), 'no-store',
+    'unversioned runtime module must keep Cloudflare-CDN-Cache-Control: no-store');
 }
 
 console.log(JSON.stringify({

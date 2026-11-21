@@ -15,11 +15,14 @@
 
 `script-src` 一旦出现哈希，浏览器就会忽略 `'unsafe-inline'`。如果直接写进正式策略，等于立即强制执行。先让 Report-Only 策略收紧：浏览器照常运行，只把「若强制执行会被拦截」的内容上报到 `/api/csp-report`（Workers 日志中的 `[csp-report]`）。
 
+## 强制执行进展（2026-11-21）
+
+- 观察近 20 天（2026-11-01 至 2026-11-21）Cloudflare Workers 观测日志：`[csp-report]` 违规报告为 **0**，运行错误为 **0**。
+- 构建脚本 `scripts/build/inject-csp-script-hashes.mjs` 现已同步将 SHA-256 哈希写入正式 `Content-Security-Policy` 与 `Content-Security-Policy-Report-Only` 的 `script-src`，正式移除 `script-src 'unsafe-inline'`。
+
 ## 下一步
 
-1. 部署后观察 1–2 周 Workers 日志中的 `[csp-report]`，关注 `script-src-attr`（遗漏的内联事件）和 `script-src-elem`（未计入哈希的内联脚本）。
-2. 报告为零后，把同样的 `script-src`（哈希 + `'self'`）提升到正式的 `Content-Security-Policy`，由同一构建步骤写入。
-3. `'unsafe-eval'` 仍为第三方库（alasql 等）所需，另行评估；`style-src 'unsafe-inline'`（大量内联 style 属性）是独立的后续事项。
+1. `'unsafe-eval'` 仍为第三方库（alasql 等）所需，另行评估；`style-src 'unsafe-inline'`（大量内联 style 属性）是独立的后续事项。
 
 ## 防回退
 
