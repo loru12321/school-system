@@ -363,7 +363,8 @@ export function parseClientDeviceInfo(payload = {}) {
 
 export function readRequestIp(request) {
   return normalizeText(
-    request.headers.get('CF-Connecting-IP')
+    request.headers.get('Ali-CDN-Real-IP')
+    || request.headers.get('CF-Connecting-IP')
     || request.headers.get('X-Forwarded-For')
     || ''
   ).split(',')[0].trim();

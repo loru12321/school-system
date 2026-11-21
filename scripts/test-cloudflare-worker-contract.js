@@ -52,6 +52,7 @@ const gatewayD1Schema = [
 const systemDataCutoverVerifier = read('scripts/verify-system-data-cloudflare-cutover.js');
 const supabaseMigrator = read('scripts/migrate-supabase-project-data.mjs');
 const wrangler = parseJsonc('wrangler.jsonc');
+assert.strictEqual(wrangler.workers_dev, true, 'workers.dev should remain enabled for the ESA origin');
 const scripts = packageJson.scripts || {};
 
 const requiredWorkerTokens = [

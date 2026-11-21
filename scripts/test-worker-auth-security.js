@@ -70,13 +70,28 @@ async function run() {
       getLoginRateLimit,
       clearLoginRateLimit,
       reserveLoginAttempt,
-      settleSuccessfulLogin
+      settleSuccessfulLogin,
+      readRequestIp
     }, { signLocalSession }] = await Promise.all([
       import(pathToFileURL(path.join(tempDir, 'worker-auth.mjs')).href),
       import(pathToFileURL(path.join(tempDir, 'worker-crypto.mjs')).href)
     ]);
 
     const env = { APP_SESSION_SECRET: 'test-secret' };
+    assert.strictEqual(readRequestIp(new Request('https://schoolsystem.com.cn/api/edu-gateway', {
+      headers: {
+        'Ali-CDN-Real-IP': '203.0.113.20',
+        'CF-Connecting-IP': '198.51.100.20',
+        'X-Forwarded-For': '192.0.2.20'
+      }
+    })), '203.0.113.20', 'ESA real-client-IP should take precedence over the ESA origin IP');
+    assert.strictEqual(readRequestIp(new Request('https://schoolsystem.com.cn/api/edu-gateway', {
+      headers: { 'CF-Connecting-IP': '198.51.100.21', 'X-Forwarded-For': '192.0.2.21' }
+    })), '198.51.100.21', 'Cloudflare client IP should remain authoritative when ESA IP is absent');
+    assert.strictEqual(readRequestIp(new Request('https://schoolsystem.com.cn/api/edu-gateway', {
+      headers: { 'X-Forwarded-For': '192.0.2.22, 192.0.2.23' }
+    })), '192.0.2.22', 'X-Forwarded-For should remain the fallback');
+
     const token = await signLocalSession(env, { username: 'cookie-user', roles: ['teacher'], exp: Math.floor(Date.now() / 1000) + 3600 });
     const cookie = buildSessionCookie(token);
     assert.ok(cookie.includes('__Host-school-session='), 'session cookie should use the host-only cookie name');
