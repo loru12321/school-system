@@ -78,13 +78,16 @@ async function run() {
     ]);
 
     const env = { APP_SESSION_SECRET: 'test-secret' };
-    assert.strictEqual(readRequestIp(new Request('https://schoolsystem.com.cn/api/edu-gateway', {
+    const esaRequest = new Request('https://school-system.hkakjiweu.workers.dev/api/edu-gateway', {
       headers: {
         'Ali-CDN-Real-IP': '203.0.113.20',
         'CF-Connecting-IP': '198.51.100.20',
-        'X-Forwarded-For': '192.0.2.20'
+        'X-Forwarded-For': '192.0.2.20',
+        'X-School-ESA-Origin-Token': 'esa-test-token'
       }
-    })), '203.0.113.20', 'ESA real-client-IP should take precedence over the ESA origin IP');
+    });
+    assert.strictEqual(readRequestIp(esaRequest), '198.51.100.20', 'an unverified ESA real-IP header must not override Cloudflare client IP');
+    assert.strictEqual(readRequestIp(esaRequest, { ESA_ORIGIN_TOKEN: 'esa-test-token' }), '203.0.113.20', 'verified ESA requests should use the ESA real-client-IP header');
     assert.strictEqual(readRequestIp(new Request('https://schoolsystem.com.cn/api/edu-gateway', {
       headers: { 'CF-Connecting-IP': '198.51.100.21', 'X-Forwarded-For': '192.0.2.21' }
     })), '198.51.100.21', 'Cloudflare client IP should remain authoritative when ESA IP is absent');

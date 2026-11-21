@@ -87,9 +87,9 @@ export function clearSessionCookie() {
   return `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Strict`;
 }
 
-function getLoginRateLimitKeys(request, username) {
+function getLoginRateLimitKeys(request, username, env = {}) {
   const normalizedUsername = normalizeText(username).toLowerCase();
-  const ip = readRequestIp(request);
+  const ip = readRequestIp(request, env);
   const keys = normalizedUsername ? [`user:${normalizedUsername}`] : [];
   if (ip) keys.push(`ip:${ip}`);
   return Array.from(new Set(keys));
@@ -132,9 +132,9 @@ export async function ensureLoginRateLimitTable(db) {
   ensuredLoginRateLimitDbs.add(db);
 }
 
-export async function getLoginRateLimit(request, db, username) {
+export async function getLoginRateLimit(request, db, username, env = {}) {
   await ensureLoginRateLimitTable(db);
-  const keys = getLoginRateLimitKeys(request, username);
+  const keys = getLoginRateLimitKeys(request, username, env);
   if (!keys.length) return { locked: false, retryAfterSeconds: 0 };
   const placeholders = keys.map(() => '?').join(', ');
   const rows = await db.prepare(`SELECT scope_key, failed_count, locked_until FROM login_rate_limits WHERE scope_key IN (${placeholders})`)
@@ -174,9 +174,9 @@ function summarizeRateLimitRows(rows, now) {
   };
 }
 
-export async function reserveLoginAttempt(request, db, username) {
+export async function reserveLoginAttempt(request, db, username, env = {}) {
   await ensureLoginRateLimitTable(db);
-  const keys = getLoginRateLimitKeys(request, username);
+  const keys = getLoginRateLimitKeys(request, username, env);
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   const rows = await Promise.all(keys.map(async (scopeKey) => {
@@ -200,17 +200,17 @@ export async function reserveLoginAttempt(request, db, username) {
 }
 
 // Kept for callers/tests that record a failure after the fact.
-export async function recordFailedLogin(request, db, username) {
-  const { locked, retryAfterSeconds } = await reserveLoginAttempt(request, db, username);
+export async function recordFailedLogin(request, db, username, env = {}) {
+  const { locked, retryAfterSeconds } = await reserveLoginAttempt(request, db, username, env);
   return { locked, retryAfterSeconds };
 }
 
 // A correct password returns the attempt that reserveLoginAttempt took from the
 // shared IP budget, so a staff room full of teachers signing in does not add up
 // to an IP lock, and clears the account's own counter.
-export async function settleSuccessfulLogin(request, db, username) {
+export async function settleSuccessfulLogin(request, db, username, env = {}) {
   await clearLoginRateLimit(request, db, username);
-  const ip = readRequestIp(request);
+  const ip = readRequestIp(request, env);
   if (!ip) return;
   await db.prepare(`
     UPDATE login_rate_limits
@@ -361,9 +361,14 @@ export function parseClientDeviceInfo(payload = {}) {
   };
 }
 
-export function readRequestIp(request) {
+export function readRequestIp(request, env = {}) {
+  const configuredToken = normalizeText(env.ESA_ORIGIN_TOKEN);
+  const suppliedToken = normalizeText(request.headers.get('X-School-ESA-Origin-Token'));
+  const trustedEsaIp = configuredToken && suppliedToken === configuredToken
+    ? request.headers.get('Ali-CDN-Real-IP')
+    : '';
   return normalizeText(
-    request.headers.get('Ali-CDN-Real-IP')
+    trustedEsaIp
     || request.headers.get('CF-Connecting-IP')
     || request.headers.get('X-Forwarded-For')
     || ''
@@ -433,7 +438,7 @@ export function normalizeLoginSessionRow(row) {
   };
 }
 
-export async function recordLoginSession(db, request, session, payload) {
+export async function recordLoginSession(db, request, session, payload, env = {}) {
   await ensureLoginSessionsTable(db);
   const now = new Date().toISOString();
   const device = parseClientDeviceInfo(payload);
@@ -459,7 +464,7 @@ export async function recordLoginSession(db, request, session, payload) {
     device.timezone || null,
     device.screen || null,
     device.user_agent || null,
-    readRequestIp(request) || null,
+    readRequestIp(request, env) || null,
     now,
     now,
     session.exp ? new Date(Number(session.exp) * 1000).toISOString() : null,
@@ -933,7 +938,7 @@ export async function performGatewayLogin(request, env, body, ctx) {
     return null;
   }
 
-  const rateLimit = await getLoginRateLimit(request, db, username);
+  const rateLimit = await getLoginRateLimit(request, db, username, env);
   if (rateLimit.locked) {
     return jsonResponse(429, {
       ok: false,
@@ -942,7 +947,7 @@ export async function performGatewayLogin(request, env, body, ctx) {
     }, request, { 'Retry-After': String(rateLimit.retryAfterSeconds) });
   }
 
-  const attempt = await reserveLoginAttempt(request, db, username);
+  const attempt = await reserveLoginAttempt(request, db, username, env);
   if (attempt.rejected) {
     return jsonResponse(429, {
       ok: false,
@@ -963,7 +968,7 @@ export async function performGatewayLogin(request, env, body, ctx) {
   if (!existing.is_active) {
     return forbidden(request, 'Account disabled');
   }
-  await settleSuccessfulLogin(request, db, username);
+  await settleSuccessfulLogin(request, db, username, env);
   const session = buildSessionPayload(existing);
   const token = await signLocalSession(env, session);
   const auditWrite = Promise.all([
@@ -973,7 +978,7 @@ export async function performGatewayLogin(request, env, body, ctx) {
       has_password: true,
       updated_at: new Date().toISOString()
     }),
-    recordLoginSession(db, request, session, body?.payload || {}),
+    recordLoginSession(db, request, session, body?.payload || {}, env),
     pruneLoginHistory(db, env).catch((error) => {
       console.error('[gateway] login history prune failed:', error);
     })
