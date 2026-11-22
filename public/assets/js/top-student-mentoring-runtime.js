@@ -653,8 +653,8 @@ body.dark-mode .tsm-delta-down{color:#f87171}
                                 <span>总分 <strong style="font-size:14.5px;">${s.total}</strong> ${deltaHtml}${s.townRank ? ` <span style="font-size:11.5px;color:#2563eb;font-weight:600;">镇#${s.townRank}</span>` : ''}</span>
                                 <span style="color:#64748b;font-size:11.5px;">${escHtml(gp.majorLabel)} ${s.majorTotal}</span>
                             </div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:#64748b;">
-                                <span>包保：${escHtml(s.mentor || '待指派')}</span>
+                            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11.5px;color:#64748b;">
+                                <span style="white-space:nowrap;">包保：${escHtml(s.mentor || '待指派')}</span>
                                 <div class="tsm-tags">
                                     ${strong ? `<span class="tsm-tag-s">优 ${escHtml(strong.subject)} T${strong.tScore}</span>` : ''}
                                     ${weak ? `<span class="tsm-tag-w">${weakShortTag} ${escHtml(weak.subject)} T${weak.tScore}</span>` : ''}
