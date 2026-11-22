@@ -148,6 +148,11 @@ assert.ok(hb7.sheetNames.includes('7年级三科主科与后三分之一'), 'Gra
   assert.ok(zip.file('ppt/charts/chart1.xml'), 'PPTX must embed native OOXML chart1.xml');
   const chart1Xml = await zip.file('ppt/charts/chart1.xml').async('text');
   assert.ok(chart1Xml.includes('<c:barChart>'), 'chart1.xml must be a valid OOXML barChart');
+  assert.ok(chart1Xml.includes('<c:strLit>') && chart1Xml.includes('<c:numLit>'), 'chart1.xml must use inline literals instead of broken Sheet1 refs');
+  assert.ok(chart1Xml.indexOf('</c:chart>') < chart1Xml.lastIndexOf('<c:spPr><a:noFill/>'), 'chartSpace spPr must appear after </c:chart> per OOXML XSD');
+  const theme1Xml = await zip.file('ppt/theme/theme1.xml').async('text');
+  assert.ok((theme1Xml.match(/<a:effectStyle>/g) || []).length >= 3, 'theme1.xml fmtScheme must have at least 3 effectStyle entries for PowerPoint 16.0');
+  assert.ok(zip.file('docProps/core.xml') && zip.file('docProps/app.xml'), 'PPTX must include docProps/core.xml and docProps/app.xml');
 
   const allSlidesXml = await Promise.all(
     Object.keys(zip.files).filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f)).map((f) => zip.file(f).async('text'))
