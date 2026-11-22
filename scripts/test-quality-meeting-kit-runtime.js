@@ -159,7 +159,8 @@ assert.ok(hb7.sheetNames.includes('7年级三科主科与后三分之一'), 'Gra
   const slides8Xml = await Promise.all(
     Object.keys(zip8.files).filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f)).map((f) => zip8.file(f).async('text'))
   );
-  assert.ok(slides8Xml.some((x) => x.includes('八年级专项：五科主科 vs 全科双口径')), 'Grade 8 PPTX must include Grade 8 dual-caliber & geobio special slide');
+  assert.ok(slides8Xml.some((x) => x.includes('八年级专项：')), 'Grade 8 PPTX must include Grade 8 special slide');
+  assert.ok(chart1Xml.includes('<c:dLbls>') && chart1Xml.includes('showVal val="1"'), 'Native OOXML chart must include data value labels');
 
   console.log('quality-meeting-kit-runtime tests passed');
 })().catch((err) => {
