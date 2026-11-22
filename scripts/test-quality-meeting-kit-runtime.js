@@ -165,7 +165,9 @@ assert.ok(hb7.sheetNames.includes('7年级三科主科与后三分之一'), 'Gra
     Object.keys(zip8.files).filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f)).map((f) => zip8.file(f).async('text'))
   );
   assert.ok(slides8Xml.some((x) => x.includes('八年级专项：')), 'Grade 8 PPTX must include Grade 8 special slide');
+  assert.ok(slides8Xml.every((x) => !x.includes('可视化图表快照')), 'Default PPTX without chartImages must not create a blank snapshot slide');
   assert.ok(chart1Xml.includes('<c:dLbls>') && chart1Xml.includes('showVal val="1"'), 'Native OOXML chart must include data value labels');
+  assert.ok(chart1Xml.includes('<c:formatCode>General</c:formatCode>'), 'Native OOXML chart must use General formatCode without trailing dots');
 
   console.log('quality-meeting-kit-runtime tests passed');
 })().catch((err) => {

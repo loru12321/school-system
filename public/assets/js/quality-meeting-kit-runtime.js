@@ -1063,6 +1063,12 @@
         });
     }
 
+    function formatTeacherBenchName(teacher, classes) {
+        const list = Array.isArray(classes) ? classes : [];
+        if (list.length <= 2) return `${teacher}·${list.join('/')}`;
+        return `${teacher}(${list[0]}等${list.length}班)`;
+    }
+
     function buildTeacherTownshipBenchmark(allRows, mySchool, subject, subjTeachers, threshold, gradeProfile = getGradeAnalysisProfile()) {
         const extMap = new Map();
         (allRows || []).forEach((r) => {
@@ -1077,7 +1083,7 @@
             ...calcGroupMetrics(list, subject, threshold)
         }));
         const teacherEntries = (subjTeachers || []).map((t) => ({
-            name: `${t.teacher}·${t.classes.join('/')}`,
+            name: formatTeacherBenchName(t.teacher, t.classes),
             teacher: t.teacher,
             classesText: t.classes.join('、'),
             kind: 'own-teacher',
@@ -1179,13 +1185,19 @@
     function buildNativeBarChartXml(chartSpec) {
         const categories = Array.isArray(chartSpec?.categories) ? chartSpec.categories : [];
         const seriesList = Array.isArray(chartSpec?.series) ? chartSpec.series : [];
-        const showLabels = seriesList.length <= 2 || categories.length <= 6;
+        const totalBars = categories.length * Math.max(1, seriesList.length);
+        const showLabels = totalBars <= 16;
+        const labelFontSz = totalBars >= 12 ? 700 : 800;
         const serXml = seriesList.map((ser, sIdx) => {
             const color = ser.color || (sIdx === 0 ? '1D4ED8' : (sIdx === 1 ? '0EA5E9' : 'F59E0B'));
             const catPts = categories.map((cat, i) => `<c:pt idx="${i}"><c:v>${escXml(cat)}</c:v></c:pt>`).join('');
-            const valPts = (ser.values || []).map((v, i) => `<c:pt idx="${i}"><c:v>${Number(v) || 0}</c:v></c:pt>`).join('');
+            const valPts = (ser.values || []).map((v, i) => {
+                const n = Number(v) || 0;
+                const rounded = totalBars >= 10 ? Number(n.toFixed(1)) : Number(n.toFixed(2));
+                return `<c:pt idx="${i}"><c:v>${rounded}</c:v></c:pt>`;
+            }).join('');
             const dLblXml = showLabels
-                ? '<c:dLbls><c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>'
+                ? `<c:dLbls><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${labelFontSz}"><a:solidFill><a:srgbClr val="334155"/></a:solidFill><a:latin typeface="Microsoft YaHei"/><a:ea typeface="Microsoft YaHei"/></a:defRPr></a:pPr><a:endParaRPr lang="zh-CN"/></a:p></c:txPr><c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>`
                 : '';
             return `<c:ser><c:idx val="${sIdx}"/><c:order val="${sIdx}"/>
 <c:tx><c:v>${escXml(ser.name || `系列${sIdx + 1}`)}</c:v></c:tx>
@@ -1196,6 +1208,8 @@ ${dLblXml}
 </c:ser>`;
         }).join('');
         const legendXml = seriesList.length > 1 ? '<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>' : '';
+        const gapWidth = totalBars >= 12 ? 95 : 120;
+        const overlap = totalBars >= 12 ? -22 : -15;
         return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <c:date1904 val="0"/>
@@ -1203,7 +1217,7 @@ ${dLblXml}
 <c:roundedCorners val="0"/>
 <c:chart><c:autoTitleDeleted val="1"/>
 <c:plotArea><c:layout/>
-<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:varyColors val="0"/>${serXml}<c:gapWidth val="120"/><c:overlap val="-15"/><c:axId val="110001"/><c:axId val="110002"/></c:barChart>
+<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:varyColors val="0"/>${serXml}<c:gapWidth val="${gapWidth}"/><c:overlap val="${overlap}"/><c:axId val="110001"/><c:axId val="110002"/></c:barChart>
 <c:catAx><c:axId val="110001"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="CBD5E1"/></a:solidFill></a:ln></c:spPr><c:crossAx val="110002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/></c:catAx>
 <c:valAx><c:axId val="110002"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="E2E8F0"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr><c:crossAx val="110001"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx>
 </c:plotArea>${legendXml}<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart>
@@ -1228,10 +1242,21 @@ ${dLblXml}
         const images = [];
         for (const canvas of canvases) {
             if (images.length >= maxCount) break;
-            if (!canvas || !canvas.width || !canvas.height) continue;
+            if (!canvas || !canvas.width || !canvas.height || !canvas.offsetParent) continue;
+            const rect = typeof canvas.getBoundingClientRect === 'function' ? canvas.getBoundingClientRect() : { width: 0, height: 0 };
+            if (rect.width < 120 || rect.height < 80) continue;
             try {
+                const ctx2d = canvas.getContext('2d');
+                if (ctx2d) {
+                    const sample = ctx2d.getImageData(0, 0, Math.min(canvas.width, 64), Math.min(canvas.height, 64)).data;
+                    let nonBlank = 0;
+                    for (let i = 3; i < sample.length; i += 16) {
+                        if (sample[i] > 20) nonBlank += 1;
+                    }
+                    if (nonBlank < 10) continue;
+                }
                 const dataUrl = canvas.toDataURL('image/png');
-                if (dataUrl && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length > 2000) {
+                if (dataUrl && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length > 5000) {
                     images.push({
                         title: String(canvas.getAttribute('aria-label') || canvas.id || `可视化图表 ${images.length + 1}`),
                         base64: dataUrl.slice('data:image/png;base64,'.length)
@@ -1382,7 +1407,7 @@ ${dLblXml}
             classRank: true,
             townBenchmark: true,
             subjects: true,
-            charts: true,
+            charts: Array.isArray(options.chartImages) && options.chartImages.length > 0,
             borderline: true,
             actionPlan: true,
             ...(options.include || {})
@@ -1644,18 +1669,25 @@ ${shapesXml}
 <p:txBody><a:bodyPr wrap="square" lIns="50000" tIns="35000" rIns="50000" bIns="35000"/><a:lstStyle/>${paragraphs}</p:txBody></p:sp>`;
     }
 
-    function pptTable(id, x, y, cx, cy, headers, rows, theme, fontPt = 10) {
+    function pptTable(id, x, y, cx, cy, headers, rows, theme, fontPt = 10, colWeights = null) {
         const colCount = Math.max(1, headers.length);
-        const colW = Math.floor(cx / colCount);
-        const rowH = Math.min(330000, Math.floor(cy / Math.max(2, rows.length + 1)));
-        const gridCols = headers.map(() => `<a:gridCol w="${colW}"/>`).join('');
+        let colWidths;
+        if (Array.isArray(colWeights) && colWeights.length === colCount) {
+            const sumW = colWeights.reduce((a, b) => a + b, 0) || 1;
+            colWidths = colWeights.map((w) => Math.floor((cx * w) / sumW));
+        } else {
+            const eq = Math.floor(cx / colCount);
+            colWidths = headers.map(() => eq);
+        }
+        const rowH = Math.min(320000, Math.floor(cy / Math.max(2, rows.length + 1)));
+        const gridCols = colWidths.map((w) => `<a:gridCol w="${w}"/>`).join('');
         const bodySz = Math.round(fontPt * 100);
         const headSz = Math.round((fontPt + 0.5) * 100);
         const makeRow = (cells, isHeader, rowIdx, isEmph) => {
             const fill = isHeader ? theme.tblHead : (isEmph ? theme.rowTint : (rowIdx % 2 === 1 ? 'F8FAFC' : 'FFFFFF'));
             const txtColor = isHeader ? 'FFFFFF' : '0F172A';
             const bold = (isHeader || isEmph) ? ' b="1"' : '';
-            const tcs = cells.map((cell) => `<a:tc><a:txBody><a:bodyPr anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="zh-CN" sz="${isHeader ? headSz : bodySz}"${bold}><a:solidFill><a:srgbClr val="${txtColor}"/></a:solidFill><a:latin typeface="Microsoft YaHei"/><a:ea typeface="Microsoft YaHei"/></a:rPr><a:t>${escXml(cell)}</a:t></a:r></a:p></a:txBody><a:tcPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></a:tcPr></a:tc>`).join('');
+            const tcs = cells.map((cell) => `<a:tc><a:txBody><a:bodyPr anchor="ctr" lIns="30000" rIns="30000" tIns="20000" bIns="20000"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="zh-CN" sz="${isHeader ? headSz : bodySz}"${bold}><a:solidFill><a:srgbClr val="${txtColor}"/></a:solidFill><a:latin typeface="Microsoft YaHei"/><a:ea typeface="Microsoft YaHei"/></a:rPr><a:t>${escXml(cell)}</a:t></a:r></a:p></a:txBody><a:tcPr><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill></a:tcPr></a:tc>`).join('');
             return `<a:tr h="${rowH}">${tcs}</a:tr>`;
         };
         const trXml = [makeRow(headers, true, 0, false), ...rows.map((r, i) => makeRow(r.cells || r, false, i + 1, !!r.isEmph))].join('');
@@ -1743,12 +1775,12 @@ ${shapesXml}
                         headerBand(s.title, s.subtitle, pageNo) +
                         pptKpiStrip(s.kpis, theme, 1140000, 820000) +
                         pptTextBox(25, 457200, 2060000, 5480000, 260000, `班级 · ${s.subject}均分与及格率对比`, { fontSize: 11.5, bold: true, color: theme.tblHead }) +
-                        pptChartFrame(26, 'rIdChart1', 457200, 2340000, 5480000, 3420000) +
+                        pptChartFrame(26, 'rIdChart1', 457200, 2340000, 5480000, 3380000) +
                         pptTextBox(27, 6160000, 2060000, 5570000, 260000, `同学科教师 · ${s.subject}对比与全镇同台`, { fontSize: 11.5, bold: true, color: theme.tblHead }) +
-                        pptChartFrame(28, 'rIdChart2', 6160000, 2340000, 5570000, 1620000) +
-                        pptTable(29, 6160000, 4040000, 5570000, 1720000, s.headers, s.rows.slice(0, 6), theme, 9.2) +
-                        pptRect(30, 457200, 5880000, 11270000, 520000, theme.soft, 'roundRect', 'CBD5E1') +
-                        pptTextBox(31, 580000, 5920000, 11000000, 440000, s.footerNote, { fontSize: 10.2, color: '334155' })
+                        pptChartFrame(28, 'rIdChart2', 6160000, 2340000, 5570000, 1480000) +
+                        pptTable(29, 6160000, 3900000, 5570000, 1740000, s.headers, s.rows.slice(0, 5), theme, 8.8, [0.11, 0.37, 0.17, 0.16, 0.19]) +
+                        pptRect(30, 457200, 5900000, 11270000, 500000, theme.soft, 'roundRect', 'CBD5E1') +
+                        pptTextBox(31, 580000, 5940000, 11000000, 420000, s.footerNote, { fontSize: 10, color: '334155' })
                     ),
                     images: [],
                     charts: [s.classChart, s.teacherChart]
@@ -1940,15 +1972,42 @@ ${presRels}
         return String(val ?? '').split('').reduce((sum, ch) => sum + (ch.charCodeAt(0) > 255 ? 2 : 1), 0);
     }
 
+    function estimateWrappedLines(val, colW) {
+        const text = String(val ?? '');
+        if (!text) return 1;
+        const effectiveW = Math.max(8, colW - 3);
+        return text.split(/\r?\n/).reduce((total, seg) => (
+            total + Math.max(1, Math.ceil(textWidth(seg) / effectiveW))
+        ), 0);
+    }
+
     function styleHandbookSheet(XLSX, ws, aoa, opts = {}) {
         if (!ws || !ws['!ref'] || !XLSX?.utils) return;
         const range = XLSX.utils.decode_range(ws['!ref']);
         const headers = Array.isArray(aoa?.[0]) ? aoa[0] : [];
+        const isLongTextHeader = (h) => /措施|建议|名单|边缘生|结论|研判|方向|说明/.test(String(h || ''));
+
+        const colWidths = Array.from({ length: range.e.c + 1 }, (_, cIdx) => {
+            if (opts.isCover) return cIdx === 0 ? 22 : 90;
+            const hText = String(headers[cIdx] || '');
+            let maxW = textWidth(hText);
+            for (let rIdx = 1; rIdx <= Math.min(range.e.r, 120); rIdx += 1) {
+                maxW = Math.max(maxW, textWidth(aoa?.[rIdx]?.[cIdx] ?? ''));
+            }
+            if (opts.wideText && cIdx === range.e.c) return Math.max(48, Math.min(maxW + 4, 92));
+            if (isLongTextHeader(hText)) return Math.max(28, Math.min(maxW + 4, 66));
+            if (/任教班|画像|诊断/.test(hText)) return Math.max(14, Math.min(maxW + 4, 24));
+            return Math.max(10, Math.min(maxW + 4, 24));
+        });
+
         for (let R = range.s.r; R <= range.e.r; R += 1) {
             const row = aoa?.[R] || [];
             const isHeader = R === 0 && !opts.isCover;
-            const isOwnRow = R > 0 && row.some((v) => /本校|★|学科标杆|优势领跑/.test(String(v || '')));
-            const isWarnRow = R > 0 && row.some((v) => /重点短板|重点帮扶/.test(String(v || '')));
+            const checkVals = (!opts.noRowTint && !opts.isCover && R > 0)
+                ? row.filter((_, cIdx) => !isLongTextHeader(headers[cIdx]))
+                : [];
+            const isOwnRow = checkVals.some((v) => /本校|★|学科标杆|优势领跑/.test(String(v || '')));
+            const isWarnRow = checkVals.some((v) => /重点短板|重点帮扶/.test(String(v || '')));
             for (let C = range.s.c; C <= range.e.c; C += 1) {
                 const ref = XLSX.utils.encode_cell({ r: R, c: C });
                 const cell = ws[ref];
@@ -1957,7 +2016,7 @@ ${presRels}
                 const isRankCol = /名次|排名|位次/.test(hText);
                 const rankVal = (R > 0 && isRankCol) ? Number(String(cell.v).replace(/[^0-9]/g, '')) : NaN;
                 const isTop3 = Number.isFinite(rankVal) && rankVal >= 1 && rankVal <= 3;
-                const alignLeft = opts.isCover || /措施|建议|名单|结论|研判|说明|任教班/.test(hText) || (C === 0 && opts.leftFirst);
+                const alignLeft = opts.isCover || isLongTextHeader(hText) || /任教班/.test(hText) || (C === 0 && opts.leftFirst);
                 cell.s = {
                     alignment: { horizontal: alignLeft ? 'left' : 'center', vertical: 'center', wrapText: true },
                     font: isHeader
@@ -1981,15 +2040,18 @@ ${presRels}
             }
         }
         if (!opts.isCover) ws['!autofilter'] = { ref: ws['!ref'] };
-        ws['!cols'] = Array.from({ length: range.e.c + 1 }, (_, cIdx) => {
-            if (opts.isCover) return { wch: cIdx === 0 ? 22 : 82 };
-            let maxW = textWidth(headers[cIdx] || '');
-            for (let rIdx = 1; rIdx <= Math.min(range.e.r, 80); rIdx += 1) {
-                maxW = Math.max(maxW, textWidth(aoa?.[rIdx]?.[cIdx] ?? ''));
+        ws['!cols'] = colWidths.map((wch) => ({ wch }));
+        ws['!rows'] = Array.from({ length: range.e.r + 1 }, (_, rIdx) => {
+            if (opts.isCover && rIdx === 1) return { hpt: 34 };
+            if (rIdx === 0 && !opts.isCover) return { hpt: 28 };
+            const row = aoa?.[rIdx] || [];
+            let maxLines = 1;
+            for (let cIdx = 0; cIdx < colWidths.length; cIdx += 1) {
+                const lines = estimateWrappedLines(row[cIdx], colWidths[cIdx]);
+                if (lines > maxLines) maxLines = lines;
             }
-            return { wch: Math.max(10, Math.min(maxW + 4, 52)) };
+            return { hpt: Math.min(180, Math.max(24, Math.ceil(maxLines * 15.5 + 10))) };
         });
-        ws['!rows'] = Array.from({ length: range.e.r + 1 }, (_, rIdx) => ({ hpt: (opts.isCover && rIdx === 1) ? 32 : (rIdx === 0 ? 26 : 22) }));
     }
 
     function appendHandbookSheet(XLSX, wb, name, aoa, opts = {}) {
@@ -2228,7 +2290,7 @@ ${presRels}
             ...diagnostics.map((line, i) => [['总体与镇域定位', '年级专项剖析', '常规行政班诊断', '学科与临界生抓手'][i] || '综合研判', '教导处 / 级部', line]),
             ...actionPlan.actions.map((act) => [act.dimension, act.owner, `${act.summary} 落实步骤：${act.steps.join('；')}`])
         ];
-        appendHandbookSheet(XLSX, wb, '智能解读', smartAoa, { leftFirst: true });
+        appendHandbookSheet(XLSX, wb, '智能解读', smartAoa, { leftFirst: true, wideText: true, noRowTint: true });
 
         const fileName = `教师分析手册_${gradeProfile.shortTag}_${examTitle.replace(/[\\/:*?"<>|]/g, '_')}.xlsx`;
         if (!options.dryRun) XLSX.writeFile(wb, fileName);
@@ -2544,7 +2606,7 @@ body.dark-mode .qmk-tier-weak{color:#f87171}
             presenter: `${mySchool}教务处`,
             theme: 'navy',
             useTownshipLine: true,
-            include: { overview: true, gradeSpecial: true, townPosition: true, classRank: true, townBenchmark: true, subjects: true, charts: true, borderline: true, actionPlan: true },
+            include: { overview: true, gradeSpecial: true, townPosition: true, classRank: true, townBenchmark: true, subjects: true, charts: false, borderline: true, actionPlan: true },
             previewIdx: 0
         };
         const modal = createModalShell('qmk-ppt-modal', '质量分析会 PPT 课件工作室', '');
