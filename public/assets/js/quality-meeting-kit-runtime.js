@@ -2353,9 +2353,11 @@ body.dark-mode .qmk-tier-weak{color:#f87171}
             <div class="qmk-body"></div>
             <div class="qmk-foot"></div>
         </div>`;
-        const close = () => mask.remove();
+        const onEscKey = (e) => { if (e.key === 'Escape') close(); };
+        const close = () => { doc.removeEventListener('keydown', onEscKey); mask.remove(); };
         mask.querySelector('.qmk-close').addEventListener('click', close);
         mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
+        doc.addEventListener('keydown', onEscKey);
         doc.body.appendChild(mask);
         return {
             mask,
@@ -2521,8 +2523,37 @@ body.dark-mode .qmk-tier-weak{color:#f87171}
         };
         const modal = createModalShell('qmk-ppt-modal', '质量分析会 PPT 课件工作室', '');
 
+        // The deck model is expensive (township matrix + teacher handbook rows re-run the
+        // system engines), so it is cached per model-affecting state; slide navigation
+        // reuses the cache and only repaints the stage.
+        let cachedDeck = null;
+        let cachedDeckKey = '';
+        function getDeck() {
+            const key = JSON.stringify([state.grade, state.examTitle, state.presenter, state.theme, state.useTownshipLine, state.include]);
+            if (!cachedDeck || cachedDeckKey !== key) {
+                cachedDeck = buildMeetingDeckModel(state);
+                cachedDeckKey = key;
+            }
+            return cachedDeck;
+        }
+
+        function updatePreview(deck) {
+            const stage = modal.body.querySelector('.qmk-stage');
+            if (!stage) return;
+            stage.innerHTML = renderSlidePreviewHtml(deck.slides[state.previewIdx], deck.theme, state.previewIdx + 1, deck.slides.length);
+            const prevBtn = modal.body.querySelector('#qmk-prev-slide');
+            const nextBtn = modal.body.querySelector('#qmk-next-slide');
+            if (prevBtn) prevBtn.disabled = state.previewIdx <= 0;
+            if (nextBtn) nextBtn.disabled = state.previewIdx >= deck.slides.length - 1;
+            modal.body.querySelectorAll('[data-qmk-page]').forEach((btn) => {
+                const active = Number(btn.dataset.qmkPage) === state.previewIdx;
+                btn.classList.toggle('is-active', active);
+                if (active && typeof btn.scrollIntoView === 'function') btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            });
+        }
+
         function render() {
-            const deck = buildMeetingDeckModel(state);
+            const deck = getDeck();
             const gp = deck.gradeProfile;
             if (state.previewIdx >= deck.slides.length) state.previewIdx = deck.slides.length - 1;
             const currentSlide = deck.slides[state.previewIdx];
@@ -2588,9 +2619,9 @@ body.dark-mode .qmk-tier-weak{color:#f87171}
                 if (el.dataset.qmkSlide === 'classRank') state.include.townBenchmark = el.checked;
                 render();
             }));
-            modal.body.querySelectorAll('[data-qmk-page]').forEach((btn) => btn.addEventListener('click', () => { state.previewIdx = Number(btn.dataset.qmkPage); render(); }));
-            modal.body.querySelector('#qmk-prev-slide').addEventListener('click', () => { if (state.previewIdx > 0) { state.previewIdx -= 1; render(); } });
-            modal.body.querySelector('#qmk-next-slide').addEventListener('click', () => { if (state.previewIdx < deck.slides.length - 1) { state.previewIdx += 1; render(); } });
+            modal.body.querySelectorAll('[data-qmk-page]').forEach((btn) => btn.addEventListener('click', () => { state.previewIdx = Number(btn.dataset.qmkPage); updatePreview(deck); }));
+            modal.body.querySelector('#qmk-prev-slide').addEventListener('click', () => { if (state.previewIdx > 0) { state.previewIdx -= 1; updatePreview(deck); } });
+            modal.body.querySelector('#qmk-next-slide').addEventListener('click', () => { if (state.previewIdx < deck.slides.length - 1) { state.previewIdx += 1; updatePreview(deck); } });
             modal.foot.querySelector('#qmk-btn-handbook').addEventListener('click', () => exportTeacherAnalysisHandbookExcel({ grade: state.grade, useTownshipLine: state.useTownshipLine, examTitle: state.examTitle }));
             modal.foot.querySelector('#qmk-btn-download-ppt').addEventListener('click', async () => {
                 try {
@@ -2637,22 +2668,47 @@ body.dark-mode .qmk-tier-weak{color:#f87171}
             return 'qmk-tier-mid';
         }
 
+        // The township matrix and per-subject diagnosis re-run the system engines, so they are
+        // cached per grade + threshold-line choice; sort / tab / margin / filter interactions reuse it.
+        const analysisCache = new Map();
+        function getAnalysis(gradeProfile) {
+            const key = `${gradeProfile.grade}::${useTownshipLine ? 'town' : 'school'}`;
+            let cached = analysisCache.get(key);
+            if (!cached) {
+                const subjectPolicy = getDisplayAndOfficialSubjects(allRows, gradeProfile);
+                const subjects = subjectPolicy.allSubjects;
+                const thInfo = resolveThresholds(allRows, activeRows, subjects, useTownshipLine);
+                const overallTotal = calcGroupMetrics(activeRows, '总分', thInfo.thresholds['总分']);
+                const classTotalRows = buildClassRows(activeRows, '总分', thInfo.thresholds['总分'], gradeProfile);
+                const townMatrix = buildTownshipSchoolMatrix(allRows, mySchool, subjects, thInfo.thresholds, gradeProfile);
+                const subjectDiag = buildSubjectDiagnosis(townMatrix, activeRows, subjects, thInfo.thresholds, gradeProfile, subjectPolicy.displayOnlySubjects);
+                cached = { subjects, thInfo, overallTotal, classTotalRows, townMatrix, subjectDiag, benchBySubject: new Map() };
+                analysisCache.set(key, cached);
+            }
+            return cached;
+        }
+
         function render() {
             const gradeProfile = getGradeAnalysisProfile(currentGrade, allRows);
             bindHeaderGradeSeg(modal, currentGrade, gradeProfile, (nextGrade) => { currentGrade = nextGrade; render(); });
 
-            const subjectPolicy = getDisplayAndOfficialSubjects(allRows, gradeProfile);
-            const subjects = subjectPolicy.allSubjects;
+            const analysis = getAnalysis(gradeProfile);
+            const { subjects, thInfo, overallTotal, classTotalRows, townMatrix, subjectDiag } = analysis;
             if (currentSubject !== '总分' && !subjects.includes(currentSubject)) currentSubject = '总分';
-            const thInfo = resolveThresholds(allRows, activeRows, subjects, useTownshipLine);
             const th = thInfo.thresholds[currentSubject] || { exc: 0, pass: 0 };
-            const overallTotal = calcGroupMetrics(activeRows, '总分', thInfo.thresholds['总分']);
             const overallSubj = calcGroupMetrics(activeRows, currentSubject, th);
-            const classTotalRows = buildClassRows(activeRows, '总分', thInfo.thresholds['总分'], gradeProfile);
             const totalBorderline = buildBorderlineChips(activeRows, '总分', thInfo.thresholds['总分'], margin);
-            const townMatrix = buildTownshipSchoolMatrix(allRows, mySchool, subjects, thInfo.thresholds, gradeProfile);
-            const subjectDiag = buildSubjectDiagnosis(townMatrix, activeRows, subjects, thInfo.thresholds, gradeProfile, subjectPolicy.displayOnlySubjects);
             const actionPlan = buildActionPlan(townMatrix, subjectDiag, classTotalRows, totalBorderline, overallTotal, gradeProfile);
+            const getBenchRows = () => {
+                let rows = analysis.benchBySubject.get(currentSubject);
+                if (!rows) {
+                    rows = thInfo.hasTownship
+                        ? buildClassTownshipBenchmark(allRows, mySchool, currentSubject, th, gradeProfile)
+                        : buildClassRows(activeRows, currentSubject, th, gradeProfile).map((c) => ({ ...c, kind: 'own-class' }));
+                    analysis.benchBySubject.set(currentSubject, rows);
+                }
+                return rows;
+            };
 
             const navHtml = `<div class="qmk-nav-row">
                 <div class="qmk-nav-pills">
@@ -2719,9 +2775,7 @@ body.dark-mode .qmk-tier-weak{color:#f87171}
                         </div>`).join('')}
                     </div>`;
             } else if (activeTab === 'benchmark') {
-                const rawBench = thInfo.hasTownship
-                    ? buildClassTownshipBenchmark(allRows, mySchool, currentSubject, th, gradeProfile)
-                    : buildClassRows(activeRows, currentSubject, th, gradeProfile).map((c) => ({ ...c, kind: 'own-class' }));
+                const rawBench = getBenchRows();
                 const benchRows = rawBench.slice().sort((a, b) => sortDir * ((Number(a[sortKey]) || 0) - (Number(b[sortKey]) || 0)));
                 const maxAvg = Math.max(...benchRows.map((r) => Number(r.avg) || 0), 1);
                 const sortArrow = (k) => (sortKey === k ? (sortDir < 0 ? ' ↓' : ' ↑') : '');
@@ -2816,10 +2870,7 @@ body.dark-mode .qmk-tier-weak{color:#f87171}
             const expBenchBtn = modal.body.querySelector('#qmk-export-bench');
             if (expBenchBtn) {
                 expBenchBtn.addEventListener('click', () => {
-                    const rawBench = thInfo.hasTownship
-                        ? buildClassTownshipBenchmark(allRows, mySchool, currentSubject, th, gradeProfile)
-                        : buildClassRows(activeRows, currentSubject, th, gradeProfile).map((c) => ({ ...c, kind: 'own-class' }));
-                    exportBenchmarkExcel(rawBench, currentSubject, getExamTitle(), gradeProfile);
+                    exportBenchmarkExcel(getBenchRows(), currentSubject, getExamTitle(), gradeProfile);
                 });
             }
             const clsSel = modal.body.querySelector('#qmk-chip-class');

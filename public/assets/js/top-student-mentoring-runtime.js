@@ -231,18 +231,22 @@
         return { diffs, strengths, weaknesses, weakLabel, allTopTier, advice };
     }
 
-    function collectStudentHistory(student, currentExamLabel) {
+    function sortPrevExamRows() {
+        const prevRows = Array.isArray(root.PREV_DATA) ? root.PREV_DATA : [];
+        return prevRows.slice().sort((a, b) => (Number(b?.total) || 0) - (Number(a?.total) || 0));
+    }
+
+    function collectStudentHistory(student, currentExamLabel, sortedPrev = null) {
         const history = [];
         const name = String(student?.name || '').trim();
         const cls = String(student?.class || '').trim();
-        const prevRows = Array.isArray(root.PREV_DATA) ? root.PREV_DATA : [];
-        if (prevRows.length) {
-            const sortedPrev = prevRows.slice().sort((a, b) => (Number(b?.total) || 0) - (Number(a?.total) || 0));
-            const idx = sortedPrev.findIndex((r) => String(r?.name || '').trim() === name && (!cls || String(r?.class || '').trim() === cls));
+        const prevSorted = Array.isArray(sortedPrev) ? sortedPrev : sortPrevExamRows();
+        if (prevSorted.length) {
+            const idx = prevSorted.findIndex((r) => String(r?.name || '').trim() === name && (!cls || String(r?.class || '').trim() === cls));
             if (idx >= 0) {
                 history.push({
                     exam: '上次考试',
-                    total: Number(Number(sortedPrev[idx].total || 0).toFixed(1)),
+                    total: Number(Number(prevSorted[idx].total || 0).toFixed(1)),
                     rank: idx + 1
                 });
             }
@@ -290,6 +294,7 @@
 
         const majorSortedPool = pool.map((s) => computeMajorTotal(s, presentMajorSubjects)).sort((a, b) => b - a);
         const getMajorGradeRank = (mTotal) => 1 + majorSortedPool.filter((v) => v > mTotal).length;
+        const prevSorted = sortPrevExamRows();
 
         const list = sorted.slice(0, topN).map((student, idx) => {
             const gradeRank = idx + 1;
@@ -315,7 +320,7 @@
             } else {
                 diagnosis.townGoal = gradeProfile.goalTemplate;
             }
-            const history = collectStudentHistory(enriched, examLabel);
+            const history = collectStudentHistory(enriched, examLabel, prevSorted);
             const latestDelta = history.length > 1 ? history[history.length - 1].delta : null;
             return {
                 key,
@@ -571,9 +576,11 @@ body.dark-mode .tsm-delta-down{color:#f87171}
             <div class="tsm-body"></div>
             <div class="tsm-foot"></div>
         </div>`;
-        const close = () => mask.remove();
+        const onEscKey = (e) => { if (e.key === 'Escape') close(); };
+        const close = () => { doc.removeEventListener('keydown', onEscKey); mask.remove(); };
         mask.querySelector('.tsm-close').addEventListener('click', close);
         mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
+        doc.addEventListener('keydown', onEscKey);
         doc.body.appendChild(mask);
 
         const modeChip = mask.querySelector('#tsm-mode-chip');
@@ -609,11 +616,40 @@ body.dark-mode .tsm-delta-down{color:#f87171}
             const sprintCnt = rosterCtx.list.filter((s) => s.tier === '冲刺梯队').length;
             const steadyCnt = rosterCtx.list.filter((s) => s.tier === '稳进梯队').length;
             const assignedCnt = rosterCtx.list.filter((s) => s.mentor).length;
-            const filtered = rosterCtx.list.filter((s) => {
+            const filterList = () => rosterCtx.list.filter((s) => {
                 if (activeTier !== '全部' && s.tier !== activeTier) return false;
                 if (query && !s.name.includes(query) && !s.class.includes(query) && !s.mentor.includes(query)) return false;
                 return true;
             });
+            const buildCardsHtml = (list) => (list.length ? list.map((s) => {
+                const origIdx = rosterCtx.list.indexOf(s);
+                const deltaHtml = s.latestDelta == null ? '' : (s.latestDelta > 0
+                    ? `<span class="tsm-delta tsm-delta-up">↑${s.latestDelta}</span>`
+                    : (s.latestDelta < 0 ? `<span class="tsm-delta tsm-delta-down">↓${Math.abs(s.latestDelta)}</span>` : ''));
+                const weak = s.diagnosis.weaknesses?.[0];
+                const strong = s.diagnosis.strengths?.[0];
+                const weakShortTag = s.diagnosis.allTopTier ? '潜' : '弱';
+                return `<div class="tsm-card" data-tsm-idx="${origIdx}" data-tier="${escHtml(s.tier)}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="tsm-rk ${s.gradeRank <= 3 ? 'tsm-rk-top' : ''}">${s.gradeRank}</span>
+                            <div><strong style="font-size:14px;">${escHtml(s.name)}</strong> <span style="color:#64748b;font-size:12px;">${escHtml(s.class)}</span></div>
+                        </div>
+                        <span class="tsm-badge">${escHtml(s.tier)}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;">
+                        <span>总分 <strong style="font-size:14.5px;">${s.total}</strong> ${deltaHtml}${s.townRank ? ` <span style="font-size:11.5px;color:#2563eb;font-weight:600;">镇#${s.townRank}</span>` : ''}</span>
+                        <span style="color:#64748b;font-size:11.5px;">${escHtml(gp.majorLabel)} ${s.majorTotal}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11.5px;color:#64748b;">
+                        <span style="white-space:nowrap;">包保：${escHtml(s.mentor || '待指派')}</span>
+                        <div class="tsm-tags">
+                            ${strong ? `<span class="tsm-tag-s">优 ${escHtml(strong.subject)} T${strong.tScore}</span>` : ''}
+                            ${weak ? `<span class="tsm-tag-w">${weakShortTag} ${escHtml(weak.subject)} T${weak.tScore}</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('') : '<div style="grid-column:1/-1;text-align:center;padding:26px 0;font-size:12.5px;color:#94a3b8;">当前筛选条件下暂无匹配学生</div>');
             body.innerHTML = `
                 <div class="tsm-kpis">
                     <div class="tsm-kpi" style="border-top-color:#0f172a;"><span>纳入育苗人数</span><strong>${rosterCtx.list.length} 人</strong></div>
@@ -632,48 +668,26 @@ body.dark-mode .tsm-delta-down{color:#f87171}
                         <input type="text" class="tsm-input" id="tsm-search" value="${escHtml(query)}" placeholder="搜索姓名 / 班级 / 包保教师" style="width:190px;">
                     </div>
                 </div>
-                <div class="tsm-grid">
-                    ${filtered.map((s) => {
-                        const origIdx = rosterCtx.list.indexOf(s);
-                        const deltaHtml = s.latestDelta == null ? '' : (s.latestDelta > 0
-                            ? `<span class="tsm-delta tsm-delta-up">↑${s.latestDelta}</span>`
-                            : (s.latestDelta < 0 ? `<span class="tsm-delta tsm-delta-down">↓${Math.abs(s.latestDelta)}</span>` : ''));
-                        const weak = s.diagnosis.weaknesses?.[0];
-                        const strong = s.diagnosis.strengths?.[0];
-                        const weakShortTag = s.diagnosis.allTopTier ? '潜' : '弱';
-                        return `<div class="tsm-card" data-tsm-idx="${origIdx}" data-tier="${escHtml(s.tier)}">
-                            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
-                                <div style="display:flex;align-items:center;gap:8px;">
-                                    <span class="tsm-rk ${s.gradeRank <= 3 ? 'tsm-rk-top' : ''}">${s.gradeRank}</span>
-                                    <div><strong style="font-size:14px;">${escHtml(s.name)}</strong> <span style="color:#64748b;font-size:12px;">${escHtml(s.class)}</span></div>
-                                </div>
-                                <span class="tsm-badge">${escHtml(s.tier)}</span>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;">
-                                <span>总分 <strong style="font-size:14.5px;">${s.total}</strong> ${deltaHtml}${s.townRank ? ` <span style="font-size:11.5px;color:#2563eb;font-weight:600;">镇#${s.townRank}</span>` : ''}</span>
-                                <span style="color:#64748b;font-size:11.5px;">${escHtml(gp.majorLabel)} ${s.majorTotal}</span>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11.5px;color:#64748b;">
-                                <span style="white-space:nowrap;">包保：${escHtml(s.mentor || '待指派')}</span>
-                                <div class="tsm-tags">
-                                    ${strong ? `<span class="tsm-tag-s">优 ${escHtml(strong.subject)} T${strong.tScore}</span>` : ''}
-                                    ${weak ? `<span class="tsm-tag-w">${weakShortTag} ${escHtml(weak.subject)} T${weak.tScore}</span>` : ''}
-                                </div>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                </div>`;
+                <div class="tsm-grid" id="tsm-grid">${buildCardsHtml(filterList())}</div>`;
             foot.innerHTML = `
                 <span style="font-size:12px;color:#64748b;">按本系统标准分（T值）跨分制精准诊断 · 点击学生卡片查看 A4 签字档案</span>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <button type="button" class="tsm-btn-primary" id="tsm-export-ledger">导出育苗台账 (Excel)</button>
                 </div>`;
             foot.querySelector('#tsm-export-ledger').addEventListener('click', () => exportMentoringLedgerExcel(rosterCtx));
-            body.querySelectorAll('[data-tsm-tier]').forEach((btn) => btn.addEventListener('click', () => { activeTier = btn.dataset.tsmTier; renderList(); }));
+            const grid = body.querySelector('#tsm-grid');
+            const bindCards = () => grid.querySelectorAll('[data-tsm-idx]').forEach((card) => card.addEventListener('click', () => { selectedIdx = Number(card.dataset.tsmIdx); renderDetail(); }));
+            const repaintGrid = () => { grid.innerHTML = buildCardsHtml(filterList()); bindCards(); };
+            body.querySelectorAll('[data-tsm-tier]').forEach((btn) => btn.addEventListener('click', () => {
+                activeTier = btn.dataset.tsmTier;
+                body.querySelectorAll('[data-tsm-tier]').forEach((b) => b.classList.toggle('is-active', b === btn));
+                repaintGrid();
+            }));
             body.querySelector('#tsm-topn').addEventListener('change', (e) => { topN = Number(e.target.value) || DEFAULT_TOP_N; refreshData(); renderList(); });
             const searchEl = body.querySelector('#tsm-search');
-            searchEl.addEventListener('input', () => { query = searchEl.value.trim(); renderList(); });
-            body.querySelectorAll('[data-tsm-idx]').forEach((card) => card.addEventListener('click', () => { selectedIdx = Number(card.dataset.tsmIdx); renderDetail(); }));
+            // Repaint only the card grid so the search input keeps focus while typing
+            searchEl.addEventListener('input', () => { query = searchEl.value.trim(); repaintGrid(); });
+            bindCards();
         }
 
         function renderDetail() {
