@@ -1,11 +1,13 @@
 /*
  * 育苗 / 尖子生包保培养档案（top-student-mentoring）按需运行时模块
  *
- * 视觉与交互遵循澄见（school-system）极简克制风格，完整适配浅色与深色模式：
- * 1. 顶部 4 张梯队统计卡（纳入人数 / 冲刺梯队 / 稳进梯队 / 包保覆盖率）与前 20/30/50 名切换。
- * 2. 支持按梯队筛选、姓名/班级/包保教师检索，以及一键「批量导出育苗台账 (Excel)」。
- * 3. 学生卡片内置梯队色条、级部名次徽章、较上次考试进退标签、优势/薄弱学科胶囊。
- * 4. 详情页提供精致 A4 公文质感档案预览（含各科相对级部均分双向柱状条、历次追踪、三方签字栏）、上一份/下一份翻页、直接下载 A4 档案与免弹窗 iframe 打印。
+ * 100% 立足本系统（澄见 school-system）分年级评价体系（6 / 7 / 8 / 9 年级差异化育苗）：
+ * - 9年级模式（毕业班中考冲刺 & 490+高分与指标生包保）：
+ *   围绕「五科总分（语数英物化）+ ≥490分高分段赋分 + 指标生一/二达标」分层定标，冲刺重点高中与指标生名额。
+ * - 8年级模式（五科主科拔尖 + 物理防分化 + 地生小中考双A包保）：
+ *   同步核算「全科总分」与「五科主科总分（语数英物化）」，重点预警物理新开科偏科与地理/生物会考失分。
+ * - 6/7年级模式（语数英三科主科拔尖 + 防早发偏科包保）：
+ *   同步核算「全科总分」与「语数英三科主科总分」，严防尖子生数学/英语早发短板，夯实全镇前30/50名梯队。
  *
  * 零内联 on* 事件，全部通过 addEventListener 绑定，满足严格 CSP。
  */
@@ -14,6 +16,45 @@
 
     const STORAGE_PREFIX = 'TOP_STUDENT_MENTORING_V1:';
     const DEFAULT_TOP_N = 30;
+
+    const GRADE_MENTORING_PROFILES = {
+        '9': {
+            grade: '9',
+            name: '九年级 · 490+高分与指标生冲刺育苗模式',
+            shortTag: '9年级490+与指标生育苗',
+            majorSubjects: ['语文', '数学', '英语', '物理', '化学'],
+            majorLabel: '五科总分(语数英物化)',
+            sprintRuleDesc: '总分 ≥490 分或级部前 1/3（锚定重点高中统招与指标生一达标）',
+            goalTemplate: '冲刺中考 490+ 高分段与指标生一/二达标线，消灭五科短板'
+        },
+        '8': {
+            grade: '8',
+            name: '八年级 · 五科主科拔尖与地生会考双A育苗模式',
+            shortTag: '8年级五科主科+地生双A育苗',
+            majorSubjects: ['语文', '数学', '英语', '物理', '化学'],
+            majorLabel: '五科主科(语数英物)',
+            sprintRuleDesc: '级部前 1/3 且五科主科无偏科（兼顾物理拔尖与地生小中考双A）',
+            goalTemplate: '稳居全镇前 30 名，确保物理不掉队、地理生物会考冲双A'
+        },
+        '7': {
+            grade: '7',
+            name: '七年级 · 语数英三科主科拔尖与防偏科育苗模式',
+            shortTag: '7年级三科主科防偏科育苗',
+            majorSubjects: ['语文', '数学', '英语'],
+            majorLabel: '三科主科(语数英)',
+            sprintRuleDesc: '级部前 1/3 且语数英三科均衡领跑（严防数学/英语早发偏科）',
+            goalTemplate: '稳居全镇前 30 名，筑牢语数英三科主科优势，消除弱科苗头'
+        },
+        '6': {
+            grade: '6',
+            name: '六年级 · 小初衔接三科主科好苗子培育模式',
+            shortTag: '6年级小初衔接三科育苗',
+            majorSubjects: ['语文', '数学', '英语'],
+            majorLabel: '三科主科(语数英)',
+            sprintRuleDesc: '级部前 1/3 且语数英三科习惯优良（小初衔接领跑梯队）',
+            goalTemplate: '养成高效学习习惯，语数英三科总分稳居全镇前列'
+        }
+    };
 
     function escHtml(value) {
         if (typeof root.escapeAppHtml === 'function') return root.escapeAppHtml(value);
@@ -82,6 +123,45 @@
         return Array.from(set);
     }
 
+    function resolveMentoringGrade(overrideGrade = '', rows = []) {
+        const explicit = String(overrideGrade || '').trim().match(/^[6-9]$/);
+        if (explicit) return explicit[0];
+        if (root.QualityMeetingKit && typeof root.QualityMeetingKit.resolveCurrentGradeNumber === 'function') {
+            return root.QualityMeetingKit.resolveCurrentGradeNumber();
+        }
+        if (typeof root.resolveWorkspaceGrade === 'function') {
+            const g = String(root.resolveWorkspaceGrade() || '').trim();
+            if (/^[6-9]$/.test(g)) return g;
+        }
+        const source = `${root.CURRENT_EXAM_ID || ''} ${root.CONFIG?.name || ''}`;
+        const m = source.match(/([6-9])\s*年级/);
+        if (m) return m[1];
+        const subjs = getSubjects(rows);
+        if (subjs.includes('化学')) return '9';
+        if (subjs.includes('物理')) return '8';
+        return '7';
+    }
+
+    function getMentoringGradeProfile(overrideGrade = '', rows = []) {
+        const g = resolveMentoringGrade(overrideGrade, rows);
+        return GRADE_MENTORING_PROFILES[g] || GRADE_MENTORING_PROFILES['9'];
+    }
+
+    function computeMajorTotal(student, majorSubjects) {
+        const list = Array.isArray(majorSubjects) ? majorSubjects : [];
+        if (!list.length) return Number(student?.total || 0);
+        let sum = 0;
+        let hit = 0;
+        list.forEach((s) => {
+            const v = Number(student?.scores?.[s]);
+            if (Number.isFinite(v)) {
+                sum += v;
+                hit += 1;
+            }
+        });
+        return hit ? Number(sum.toFixed(1)) : Number(student?.total || 0);
+    }
+
     function computeGradeSubjectAverages(rows, subjects) {
         const avgs = {};
         (subjects || []).forEach((subj) => {
@@ -95,19 +175,30 @@
         return avgs;
     }
 
-    function diagnoseStudentSubjects(student, subjects, gradeAverages) {
+    function diagnoseStudentSubjects(student, subjects, gradeAverages, gradeProfile = GRADE_MENTORING_PROFILES['9']) {
+        const majorSet = new Set(gradeProfile?.majorSubjects || []);
         const diffs = (subjects || []).map((subj) => {
             const score = Number(student?.scores?.[subj]);
             const avg = Number(gradeAverages?.[subj] || 0);
             if (!Number.isFinite(score)) return null;
-            return { subject: subj, score: Number(score.toFixed(1)), avg, diff: Number((score - avg).toFixed(1)) };
+            return {
+                subject: subj,
+                isMajor: majorSet.has(subj),
+                score: Number(score.toFixed(1)),
+                avg,
+                diff: Number((score - avg).toFixed(1))
+            };
         }).filter(Boolean);
         const sorted = diffs.slice().sort((a, b) => b.diff - a.diff);
         const strengths = sorted.filter((d) => d.diff > 0).slice(0, 2);
         const weaknesses = sorted.slice().reverse().slice(0, 2);
+        const majorWeak = weaknesses.find((w) => w.isMajor && w.diff < 5);
+        const gradeFocus = gradeProfile.grade === '9'
+            ? (Number(student?.total) >= 490 ? '当前已达 490+ 高分段，重点稳固五科压轴题得分率；' : `距 490 高分线差 ${Math.max(0, Number((490 - Number(student?.total || 0)).toFixed(1)))} 分，优先从弱科中档题突破；`)
+            : (majorWeak ? `重点预警核心主科【${majorWeak.subject}】防分化；` : `${gradeProfile.majorLabel}发展较稳，继续保持主科领跑；`);
         const advice = weaknesses.length
-            ? `巩固 ${strengths.map((s) => s.subject).join('、') || '优势学科'}，重点围绕 ${weaknesses.map((w) => `${w.subject}（较级部均分 ${w.diff >= 0 ? '+' : ''}${w.diff}）`).join('、')} 开展面批与专题突破。`
-            : '各科发展较为均衡，建议聚焦压轴题与限时训练，冲刺更高名次。';
+            ? `${gradeFocus}巩固 ${strengths.map((s) => s.subject).join('、') || '优势学科'}，围绕 ${weaknesses.map((w) => `${w.subject}（较级部均分 ${w.diff >= 0 ? '+' : ''}${w.diff}）`).join('、')} 开展导师一对一面批。`
+            : `${gradeFocus}各科发展较为均衡，建议聚焦压轴题与限时训练，冲刺更高名次。`;
         return { diffs, strengths, weaknesses, advice };
     }
 
@@ -141,12 +232,14 @@
     }
 
     function buildTopStudentRoster(allRows, options = {}) {
+        const gradeProfile = getMentoringGradeProfile(options.grade, allRows);
         const mySchool = String(options.mySchool || root.MY_SCHOOL || root.DEFAULT_MY_SCHOOL_NAME || '').trim();
         const filtered = mySchool
             ? (allRows || []).filter((r) => sameSchool(r?.school, mySchool))
             : (allRows || []).slice();
         const pool = filtered.length ? filtered : (allRows || []).slice();
         const subjects = options.subjects || getSubjects(pool);
+        const presentMajorSubjects = (gradeProfile.majorSubjects || []).filter((s) => subjects.includes(s));
         const gradeAverages = computeGradeSubjectAverages(pool, subjects);
         const topN = Math.max(1, Number(options.topN) || DEFAULT_TOP_N);
         const store = options.store || loadMentoringStore(options.cohortKey);
@@ -164,24 +257,33 @@
         const hasTownship = distinctSchools.size > 1;
         const getTownRank = (score) => 1 + townSorted.filter((r) => Number(r.total) > Number(score)).length;
 
+        // Also rank by Major Subject Total
+        const majorSortedPool = pool.map((s) => computeMajorTotal(s, presentMajorSubjects)).sort((a, b) => b - a);
+        const getMajorGradeRank = (mTotal) => 1 + majorSortedPool.filter((v) => v > mTotal).length;
+
         const list = sorted.slice(0, topN).map((student, idx) => {
             const gradeRank = idx + 1;
             const total = Number(Number(student.total).toFixed(1));
+            const majorTotal = computeMajorTotal(student, presentMajorSubjects);
+            const majorRank = getMajorGradeRank(majorTotal);
             const townRank = hasTownship ? getTownRank(total) : null;
-            const tier = (total >= 490 || gradeRank <= Math.ceil(topN / 3))
+            const isSprint = gradeProfile.grade === '9'
+                ? (total >= 490 || gradeRank <= Math.ceil(topN / 3))
+                : (gradeRank <= Math.ceil(topN / 3));
+            const tier = isSprint
                 ? '冲刺梯队'
                 : (gradeRank <= Math.ceil((topN * 2) / 3) ? '稳进梯队' : '提升梯队');
             const key = getStudentKey(student);
             const meta = store[key] || {};
-            const enriched = { ...student, gradeRank, townRank, total };
-            const diagnosis = diagnoseStudentSubjects(enriched, subjects, gradeAverages);
+            const enriched = { ...student, gradeRank, townRank, total, majorTotal, majorRank };
+            const diagnosis = diagnoseStudentSubjects(enriched, subjects, gradeAverages, gradeProfile);
             if (townRank != null) {
                 const nextMilestone = townRank <= 10 ? 5 : (townRank <= 30 ? 20 : (townRank <= 50 ? 30 : (townRank <= 100 ? 50 : 100)));
                 diagnosis.townGoal = townRank <= 5
-                    ? `当前全镇第 ${townRank} 名，已处于全镇顶尖行列，建议保持稳定并冲刺全镇前三。`
-                    : `当前全镇第 ${townRank}/${townSorted.length} 名，下阶段方向：锚定全镇前 ${nextMilestone} 名。`;
+                    ? `当前全镇第 ${townRank} 名，已处于全镇顶尖行列，${gradeProfile.goalTemplate}。`
+                    : `当前全镇第 ${townRank}/${townSorted.length} 名，下阶段方向：锚定全镇前 ${nextMilestone} 名（${gradeProfile.goalTemplate}）。`;
             } else {
-                diagnosis.townGoal = '';
+                diagnosis.townGoal = gradeProfile.goalTemplate;
             }
             const history = collectStudentHistory(enriched, examLabel);
             const latestDelta = history.length > 1 ? history[history.length - 1].delta : null;
@@ -191,6 +293,8 @@
                 class: String(student.class || '').trim(),
                 school: String(student.school || mySchool || '本校').trim(),
                 total,
+                majorTotal,
+                majorRank,
                 gradeRank,
                 townRank,
                 townTotal: hasTownship ? townSorted.length : null,
@@ -204,7 +308,18 @@
                 history
             };
         });
-        return { list, subjects, gradeAverages, examLabel, schoolName: mySchool || (pool[0]?.school || '本校'), totalPool: sorted.length, hasTownship, townTotal: townSorted.length };
+        return {
+            list,
+            gradeProfile,
+            presentMajorSubjects,
+            subjects,
+            gradeAverages,
+            examLabel,
+            schoolName: mySchool || (pool[0]?.school || '本校'),
+            totalPool: sorted.length,
+            hasTownship,
+            townTotal: townSorted.length
+        };
     }
 
     function buildArchiveFileName(student, context) {
@@ -212,7 +327,8 @@
         const exam = safe(context?.examLabel || '考试');
         const cls = safe(student?.class || '');
         const name = safe(student?.name || '学生');
-        return `育苗培养档案_${cls ? `${cls}_` : ''}${name}_${exam}.html`;
+        const gTag = safe(context?.gradeProfile?.shortTag || '');
+        return `育苗培养档案_${gTag ? `${gTag}_` : ''}${cls ? `${cls}_` : ''}${name}_${exam}.html`;
     }
 
     function buildDiffBarHtml(diff, maxAbs) {
@@ -226,11 +342,12 @@
     }
 
     function buildPrintableArchiveHtml(student, context) {
+        const gp = context?.gradeProfile || GRADE_MENTORING_PROFILES['9'];
         const diffs = student.diagnosis?.diffs || [];
         const maxAbs = Math.max(...diffs.map((d) => Math.abs(d.diff)), 10);
         const subjectRows = diffs.map((d) => `
             <tr>
-                <td><strong>${escHtml(d.subject)}</strong></td>
+                <td><strong>${escHtml(d.subject)}</strong>${d.isMajor ? ' <span style="font-size:11px;color:#0284c7;">[主科]</span>' : ''}</td>
                 <td>${d.score}</td>
                 <td>${d.avg}</td>
                 <td>${buildDiffBarHtml(d.diff, maxAbs)}</td>
@@ -248,7 +365,7 @@
 body{font-family:"Microsoft YaHei",system-ui,sans-serif;color:#0f1419;margin:0;padding:16px;background:#fff}
 .sheet{max-width:760px;margin:0 auto;border:1.5px solid #0f1419;padding:26px 30px;border-radius:4px}
 .head{text-align:center;border-bottom:3px double #0f1419;padding-bottom:12px;margin-bottom:16px}
-.head h1{margin:0;font-size:21px;letter-spacing:3px}
+.head h1{margin:0;font-size:21px;letter-spacing:2px}
 .head p{margin:6px 0 0;font-size:12.5px;color:#536471}
 .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;font-size:13px;background:#f8fafc;padding:12px 14px;border:1px solid #cbd5e1;border-radius:6px}
 h2{font-size:14px;color:#0f1419;margin:16px 0 8px;border-left:4px solid #0f1419;padding-left:8px}
@@ -260,21 +377,21 @@ th{background:#f1f5f9;font-weight:600}
 </style></head><body>
 <div class="sheet">
   <div class="head">
-    <h1>尖子生「育苗」包保培养档案</h1>
-    <p>${escHtml(context.schoolName)} · ${escHtml(context.examLabel)} · 生成日期 ${new Date().toISOString().slice(0, 10)}</p>
+    <h1>尖子生「育苗」包保培养档案（${escHtml(gp.shortTag)}）</h1>
+    <p>${escHtml(context.schoolName)} · ${escHtml(context.examLabel)} · ${escHtml(gp.name)} · 生成日期 ${new Date().toISOString().slice(0, 10)}</p>
   </div>
   <div class="meta">
     <div><strong>姓名：</strong>${escHtml(student.name)}</div>
     <div><strong>班级：</strong>${escHtml(student.class)}</div>
     <div><strong>培养梯队：</strong>${escHtml(student.tier)}</div>
-    <div><strong>本次总分：</strong>${student.total} 分</div>
-    <div><strong>级部名次：</strong>第 ${student.gradeRank} 名${student.townRank ? `（全镇第 ${student.townRank} 名）` : ''}</div>
+    <div><strong>本次总分：</strong>${student.total} 分（第 ${student.gradeRank} 名${student.townRank ? `/镇#${student.townRank}` : ''}）</div>
+    <div><strong>${escHtml(gp.majorLabel)}：</strong>${student.majorTotal ?? student.total} 分（校#${student.majorRank || student.gradeRank}）</div>
     <div><strong>包保教师：</strong>${escHtml(student.mentor || '待指派')}</div>
-    <div style="grid-column:span 3;"><strong>家长联系：</strong>${escHtml(student.parentContact || '未填写')} &nbsp;|&nbsp; <strong>阶段目标：</strong>${escHtml(student.targetNote || student.diagnosis?.townGoal || '稳步冲刺前列')}</div>
+    <div style="grid-column:span 3;"><strong>家长联系：</strong>${escHtml(student.parentContact || '未填写')} &nbsp;|&nbsp; <strong>阶段目标：</strong>${escHtml(student.targetNote || student.diagnosis?.townGoal || gp.goalTemplate)}</div>
   </div>
-  <h2>一、本次各科成绩与级部均分对标</h2>
+  <h2>一、本次各科成绩与级部均分对标（标注核心主科）</h2>
   <table><thead><tr><th>学科</th><th>个人得分</th><th>级部均分</th><th>相对均分偏离</th></tr></thead><tbody>${subjectRows}</tbody></table>
-  <h2>二、优势与薄弱学科自动诊断</h2>
+  <h2>二、优势与薄弱学科自动诊断（${escHtml(gp.shortTag)}）</h2>
   <div class="diag">
     <div><strong>优势学科：</strong>${escHtml((student.diagnosis?.strengths || []).map((s) => `${s.subject}(+${s.diff})`).join('、') || '均衡')}</div>
     <div><strong>薄弱学科：</strong>${escHtml((student.diagnosis?.weaknesses || []).map((w) => `${w.subject}(${w.diff >= 0 ? '+' : ''}${w.diff})`).join('、') || '无明显短板')}</div>
@@ -297,20 +414,24 @@ th{background:#f1f5f9;font-weight:600}
             toast('Excel 导出组件未就绪', 'error');
             return false;
         }
+        const gp = rosterCtx.gradeProfile || GRADE_MENTORING_PROFILES['9'];
         const wb = XLSX.utils.book_new();
-        const header = ['级部名次', '梯队', '姓名', '班级', '本次总分', '较上次名次变化', '包保教师', '家长联系', '阶段目标', '优势学科', '薄弱学科', '诊断建议'];
+        const header = ['级部名次', '全镇名次', '梯队', '姓名', '班级', '本次总分', `${gp.majorLabel}`, '主科校排', '较上次名次变化', '包保教师', '家长联系', '阶段目标', '优势学科', '薄弱学科', '诊断建议'];
         const aoa = [
             header,
             ...rosterCtx.list.map((s) => [
                 s.gradeRank,
+                s.townRank || '—',
                 s.tier,
                 s.name,
                 s.class,
                 s.total,
+                s.majorTotal ?? s.total,
+                s.majorRank || s.gradeRank,
                 s.latestDelta == null ? '' : (s.latestDelta > 0 ? `+${s.latestDelta}` : String(s.latestDelta)),
                 s.mentor || '',
                 s.parentContact || '',
-                s.targetNote || '',
+                s.targetNote || s.diagnosis?.townGoal || '',
                 (s.diagnosis?.strengths || []).map((x) => `${x.subject}(+${x.diff})`).join('、'),
                 (s.diagnosis?.weaknesses || []).map((x) => `${x.subject}(${x.diff >= 0 ? '+' : ''}${x.diff})`).join('、'),
                 s.diagnosis?.advice || ''
@@ -320,7 +441,7 @@ th{background:#f1f5f9;font-weight:600}
         if (typeof root.decorateExcelSheet === 'function') root.decorateExcelSheet(ws, header);
         XLSX.utils.book_append_sheet(wb, ws, '育苗包保培养台账');
         const safeExam = String(rosterCtx.examLabel || '考试').replace(/[\\/:*?"<>|]/g, '_');
-        const fileName = `育苗包保培养台账_${safeExam}.xlsx`;
+        const fileName = `育苗包保培养台账_${gp.shortTag}_${safeExam}.xlsx`;
         XLSX.writeFile(wb, fileName);
         toast(`已导出 ${fileName}`, 'success');
         return true;
@@ -333,26 +454,26 @@ th{background:#f1f5f9;font-weight:600}
         style.id = 'tsm-style';
         style.textContent = `
 .tsm-mask{position:fixed;inset:0;background:rgba(15,20,25,.48);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
-.tsm-dialog{background:var(--bg-card,#fff);color:var(--color-data,#0f1419);border:1px solid var(--border,#e5e7eb);border-radius:18px;width:min(1100px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(15,20,25,.18)}
+.tsm-dialog{background:var(--bg-card,#fff);color:var(--color-data,#0f1419);border:1px solid var(--border,#e5e7eb);border-radius:18px;width:min(1120px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(15,20,25,.18)}
 .tsm-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border,#eff3f4);background:var(--bg-card,#fff)}
 .tsm-head-meta{display:grid;gap:2px}
 .tsm-head h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
 .tsm-head p{margin:0;font-size:12.5px;color:var(--secondary,#536471)}
 .tsm-close{width:34px;height:34px;border-radius:999px;border:1px solid var(--border,#e5e7eb);background:transparent;color:var(--secondary,#536471);font-size:18px;cursor:pointer;display:grid;place-items:center}
 .tsm-close:hover{background:var(--primary-light,#eff3f4);color:var(--color-data,#0f1419)}
-.tsm-body{padding:20px 24px;overflow:auto;display:grid;gap:16px;background:var(--bg-body,#f7f9f9)}
+.tsm-body{padding:20px 24px;overflow:auto;display:grid;gap:14px;background:var(--bg-body,#f7f9f9)}
 .tsm-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 @media(max-width:720px){.tsm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .tsm-kpi{background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;padding:14px 16px;display:grid;gap:4px}
 .tsm-kpi span{font-size:12px;color:var(--secondary,#536471)}
-.tsm-kpi strong{font-size:22px;font-weight:700;letter-spacing:-.02em}
-.tsm-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--bg-card,#fff);padding:12px 16px;border-radius:14px;border:1px solid var(--border,#e5e7eb)}
-.tsm-pill{padding:5px 12px;border-radius:999px;border:1px solid var(--border,#d1d5db);background:transparent;color:var(--color-data,#0f1419);cursor:pointer;font-size:12.5px;transition:all .15s}
+.tsm-kpi strong{font-size:21px;font-weight:700;letter-spacing:-.02em}
+.tsm-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--bg-card,#fff);padding:11px 15px;border-radius:14px;border:1px solid var(--border,#e5e7eb)}
+.tsm-pill{padding:5px 12px;border-radius:999px;border:1px solid var(--border,#d1d5db);background:transparent;color:var(--color-data,#0f1419);cursor:pointer;font-size:12px;transition:all .15s}
 .tsm-pill:hover{background:var(--primary-light,#eff3f4)}
 .tsm-pill.is-active{background:var(--primary,#0f1419);color:var(--bg-card,#fff);border-color:var(--primary,#0f1419)}
 .tsm-input{padding:6px 11px;border:1px solid var(--border,#d1d5db);border-radius:10px;background:var(--bg-card,#fff);color:var(--color-data,#0f1419);font-size:13px;outline:none}
 .tsm-input:focus{border-color:#1d9bf0}
-.tsm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.tsm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px}
 .tsm-card{position:relative;border:1px solid var(--border,#e5e7eb);border-left:4px solid #1d9bf0;border-radius:14px;padding:14px 15px;background:var(--bg-card,#fff);display:grid;gap:8px;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}
 .tsm-card:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(15,20,25,.06);border-color:#94a3b8}
 .tsm-card[data-tier="冲刺梯队"]{border-left-color:#f59e0b}
@@ -401,7 +522,7 @@ body.dark-mode .tsm-tag-w,body.dark-mode .tsm-delta-down{color:#f87171}
         mask.className = 'tsm-mask';
         mask.innerHTML = `<div class="tsm-dialog" role="dialog" aria-modal="true">
             <div class="tsm-head">
-                <div class="tsm-head-meta"><h3>育苗 · 尖子生包保培养台账与 A4 档案</h3><p>按成绩自动分梯队、追踪进退与学科偏离，支持批量导出台账 Excel 及单人 A4 签字档案</p></div>
+                <div class="tsm-head-meta"><h3>育苗 · 尖子生包保培养台账与 A4 档案（分年级定制引擎）</h3><p>自动适配 6/7/8/9 年级核心主科与中考 490+ 指标生评价口径，追踪进退并输出 A4 签字档案</p></div>
                 <button type="button" class="tsm-close" aria-label="关闭">&times;</button>
             </div>
             <div class="tsm-body"></div>
@@ -414,17 +535,19 @@ body.dark-mode .tsm-tag-w,body.dark-mode .tsm-delta-down{color:#f87171}
 
         const body = mask.querySelector('.tsm-body');
         const foot = mask.querySelector('.tsm-foot');
+        let currentGrade = resolveMentoringGrade(options.grade, allRows);
         let activeTier = '全部';
         let query = '';
         let topN = Number(options.topN) || DEFAULT_TOP_N;
         let selectedIdx = -1;
-        let rosterCtx = buildTopStudentRoster(allRows, { ...options, topN });
+        let rosterCtx = buildTopStudentRoster(allRows, { ...options, grade: currentGrade, topN });
 
         function refreshData() {
-            rosterCtx = buildTopStudentRoster(allRows, { ...options, topN });
+            rosterCtx = buildTopStudentRoster(allRows, { ...options, grade: currentGrade, topN });
         }
 
         function renderList() {
+            const gp = rosterCtx.gradeProfile;
             const sprintCnt = rosterCtx.list.filter((s) => s.tier === '冲刺梯队').length;
             const steadyCnt = rosterCtx.list.filter((s) => s.tier === '稳进梯队').length;
             const assignedCnt = rosterCtx.list.filter((s) => s.mentor).length;
@@ -434,9 +557,16 @@ body.dark-mode .tsm-tag-w,body.dark-mode .tsm-delta-down{color:#f87171}
                 return true;
             });
             body.innerHTML = `
+                <div class="tsm-toolbar" style="font-size:12px;">
+                    <div><strong style="color:#0284c7;">${escHtml(gp.name)}</strong> <span style="color:var(--secondary,#536471);">· 冲刺梯队标准：${escHtml(gp.sprintRuleDesc)}</span></div>
+                    <div style="display:flex;gap:5px;align-items:center;">
+                        <span style="color:var(--secondary,#536471);">年级模式：</span>
+                        ${['6', '7', '8', '9'].map((g) => `<button type="button" class="tsm-pill ${g === currentGrade ? 'is-active' : ''}" data-tsm-grade="${g}">${g}年级</button>`).join('')}
+                    </div>
+                </div>
                 <div class="tsm-kpis">
                     <div class="tsm-kpi"><span>纳入育苗人数</span><strong>${rosterCtx.list.length} 人</strong></div>
-                    <div class="tsm-kpi"><span>冲刺梯队</span><strong style="color:#f59e0b;">${sprintCnt} 人</strong></div>
+                    <div class="tsm-kpi"><span>冲刺梯队（${escHtml(gp.shortTag.slice(0, 6))}）</span><strong style="color:#f59e0b;">${sprintCnt} 人</strong></div>
                     <div class="tsm-kpi"><span>稳进梯队</span><strong style="color:#1d9bf0;">${steadyCnt} 人</strong></div>
                     <div class="tsm-kpi"><span>已指派包保教师</span><strong style="color:#00ba7c;">${assignedCnt} / ${rosterCtx.list.length}</strong></div>
                 </div>
@@ -467,25 +597,33 @@ body.dark-mode .tsm-tag-w,body.dark-mode .tsm-delta-down{color:#f87171}
                                 </div>
                                 <span class="tsm-badge">${escHtml(s.tier)}</span>
                             </div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
-                                <span>总分 <strong style="font-size:15px;">${s.total}</strong> ${deltaHtml}${s.townRank ? ` <span style="font-size:11.5px;color:#1d9bf0;">全镇#${s.townRank}</span>` : ''}</span>
-                                <span style="font-size:12px;color:var(--secondary,#536471);">包保：${escHtml(s.mentor || '待指派')}</span>
+                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;">
+                                <span>总分 <strong style="font-size:14.5px;">${s.total}</strong> ${deltaHtml}${s.townRank ? ` <span style="font-size:11.5px;color:#1d9bf0;">镇#${s.townRank}</span>` : ''}</span>
+                                <span style="color:var(--secondary,#536471);">主科 ${s.majorTotal}(#${s.majorRank})</span>
                             </div>
-                            <div class="tsm-tags">
-                                ${strong ? `<span class="tsm-tag-s">优 ${escHtml(strong.subject)} +${strong.diff}</span>` : ''}
-                                ${weak ? `<span class="tsm-tag-w">弱 ${escHtml(weak.subject)} ${weak.diff >= 0 ? '+' : ''}${weak.diff}</span>` : ''}
+                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--secondary,#536471);">
+                                <span>包保：${escHtml(s.mentor || '待指派')}</span>
+                                <div class="tsm-tags">
+                                    ${strong ? `<span class="tsm-tag-s">优 ${escHtml(strong.subject)}</span>` : ''}
+                                    ${weak ? `<span class="tsm-tag-w">弱 ${escHtml(weak.subject)}</span>` : ''}
+                                </div>
                             </div>
                         </div>`;
                     }).join('')}
                 </div>`;
             foot.innerHTML = `
-                <span style="font-size:12.5px;color:var(--secondary,#536471);">点击任意学生卡片查看 A4 签字档案并维护包保教师</span>
+                <span style="font-size:12.5px;color:var(--secondary,#536471);">点击任意学生卡片查看 A4 签字档案并维护包保教师（${escHtml(gp.shortTag)}）</span>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <button type="button" class="btn btn-green" id="tsm-export-ledger">导出育苗台账 (Excel)</button>
                     <button type="button" class="btn" id="tsm-close-btn">关闭</button>
                 </div>`;
             foot.querySelector('#tsm-close-btn').addEventListener('click', close);
             foot.querySelector('#tsm-export-ledger').addEventListener('click', () => exportMentoringLedgerExcel(rosterCtx));
+            body.querySelectorAll('[data-tsm-grade]').forEach((btn) => btn.addEventListener('click', () => {
+                currentGrade = btn.dataset.tsmGrade;
+                refreshData();
+                renderList();
+            }));
             body.querySelectorAll('[data-tsm-tier]').forEach((btn) => btn.addEventListener('click', () => { activeTier = btn.dataset.tsmTier; renderList(); }));
             body.querySelector('#tsm-topn').addEventListener('change', (e) => { topN = Number(e.target.value) || DEFAULT_TOP_N; refreshData(); renderList(); });
             const searchEl = body.querySelector('#tsm-search');
@@ -496,6 +634,7 @@ body.dark-mode .tsm-tag-w,body.dark-mode .tsm-delta-down{color:#f87171}
         function renderDetail() {
             const student = rosterCtx.list[selectedIdx];
             if (!student) { renderList(); return; }
+            const gp = rosterCtx.gradeProfile;
             const diffs = student.diagnosis?.diffs || [];
             const maxAbs = Math.max(...diffs.map((d) => Math.abs(d.diff)), 10);
             body.innerHTML = `
@@ -510,24 +649,24 @@ body.dark-mode .tsm-tag-w,body.dark-mode .tsm-delta-down{color:#f87171}
                 <div class="tsm-form">
                     <label>包保教师<input type="text" class="tsm-input" id="tsm-mentor" value="${escHtml(student.mentor)}" placeholder="例如：张老师"></label>
                     <label>家长联系方式<input type="text" class="tsm-input" id="tsm-contact" value="${escHtml(student.parentContact)}" placeholder="家长姓名 / 电话"></label>
-                    <label>阶段培养目标<input type="text" class="tsm-input" id="tsm-target" value="${escHtml(student.targetNote)}" placeholder="例如：稳进年级前10，数学提分10分"></label>
+                    <label>阶段培养目标<input type="text" class="tsm-input" id="tsm-target" value="${escHtml(student.targetNote)}" placeholder="${escHtml(gp.goalTemplate)}"></label>
                 </div>
                 <div class="tsm-a4">
                     <div class="tsm-a4-head">
-                        <h4>尖子生「育苗」包保培养档案</h4>
-                        <p>${escHtml(rosterCtx.schoolName)} · ${escHtml(rosterCtx.examLabel)} · ${new Date().toISOString().slice(0, 10)}</p>
+                        <h4>尖子生「育苗」包保培养档案（${escHtml(gp.shortTag)}）</h4>
+                        <p>${escHtml(rosterCtx.schoolName)} · ${escHtml(rosterCtx.examLabel)} · ${escHtml(gp.name)} · ${new Date().toISOString().slice(0, 10)}</p>
                     </div>
                     <div class="tsm-a4-meta">
                         <div><strong>姓名：</strong>${escHtml(student.name)}</div>
                         <div><strong>班级：</strong>${escHtml(student.class)}</div>
                         <div><strong>培养梯队：</strong>${escHtml(student.tier)}</div>
-                        <div><strong>本次总分：</strong>${student.total} 分</div>
-                        <div><strong>级部名次：</strong>第 ${student.gradeRank} 名</div>
+                        <div><strong>本次总分：</strong>${student.total} 分（校#${student.gradeRank}${student.townRank ? `/镇#${student.townRank}` : ''}）</div>
+                        <div><strong>${escHtml(gp.majorLabel)}：</strong>${student.majorTotal} 分（校#${student.majorRank}）</div>
                         <div><strong>包保教师：</strong>${escHtml(student.mentor || '待指派')}</div>
                     </div>
                     <table class="tsm-table">
                         <thead><tr><th>学科</th><th>个人得分</th><th>级部均分</th><th>相对级部均分偏离</th></tr></thead>
-                        <tbody>${diffs.map((d) => `<tr><td><strong>${escHtml(d.subject)}</strong></td><td>${d.score}</td><td>${d.avg}</td><td>${buildDiffBarHtml(d.diff, maxAbs)}</td></tr>`).join('')}</tbody>
+                        <tbody>${diffs.map((d) => `<tr><td><strong>${escHtml(d.subject)}</strong>${d.isMajor ? ' <span style="font-size:11px;color:#0284c7;">[主科]</span>' : ''}</td><td>${d.score}</td><td>${d.avg}</td><td>${buildDiffBarHtml(d.diff, maxAbs)}</td></tr>`).join('')}</tbody>
                     </table>
                     <div style="font-size:13px;line-height:1.7;background:#f8fafc;padding:12px 14px;border-radius:8px;border:1px solid #e2e8f0;">
                         <div><strong>优势学科：</strong>${escHtml((student.diagnosis.strengths || []).map((s) => `${s.subject}(+${s.diff})`).join('、') || '均衡')} &nbsp;|&nbsp; <strong>薄弱学科：</strong>${escHtml((student.diagnosis.weaknesses || []).map((w) => `${w.subject}(${w.diff >= 0 ? '+' : ''}${w.diff})`).join('、') || '无明显短板')}</div>
@@ -606,6 +745,9 @@ body.dark-mode .tsm-tag-w,body.dark-mode .tsm-delta-down{color:#f87171}
     root.__TOP_STUDENT_MENTORING_PATCHED__ = true;
     root.openTopStudentMentoringModal = openTopStudentMentoringModal;
     root.TopStudentMentoring = {
+        GRADE_MENTORING_PROFILES,
+        resolveMentoringGrade,
+        getMentoringGradeProfile,
         getStorageKey,
         loadMentoringStore,
         saveMentoringStore,
