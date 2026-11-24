@@ -2081,8 +2081,33 @@
         }
     }
 
+    function ensureMobileUxPolishStyle() {
+        if (typeof document === 'undefined' || document.getElementById('apk-ux-polish-2026')) return;
+        const style = document.createElement('style');
+        style.id = 'apk-ux-polish-2026';
+        style.textContent = [
+            '@media screen and (max-width:960px){',
+            'body[data-mobile-architecture="apk-v2"] .btn-sm,body[data-mobile-architecture="apk-v2"] #summary button,body[data-mobile-architecture="apk-v2"] #student-details button,body[data-mobile-architecture="apk-v2"] .section select,body[data-mobile-architecture="apk-v2"] .section input:not([type="checkbox"]):not([type="radio"]){min-height:38px;border-radius:10px}',
+            'body[data-mobile-architecture="apk-v2"] .table-wrap{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}',
+            'body[data-mobile-architecture="apk-v2"] .modal-content{max-width:calc(100vw - 24px)!important;border-radius:18px}',
+            '#apk-mobile-shell .apk-shell-tab{transition:transform .14s ease,background-color .16s ease,color .16s ease}',
+            '#apk-mobile-shell .apk-shell-tab:active{transform:scale(.96)}',
+            '#apk-mobile-shell .apk-shell-tab.is-active{box-shadow:0 6px 16px rgba(37,99,235,.14)}',
+            '}',
+            '@media screen and (max-width:600px){',
+            'body[data-mobile-architecture="apk-v2"] .section input[type="text"],body[data-mobile-architecture="apk-v2"] .section input[type="search"],body[data-mobile-architecture="apk-v2"] .section input[type="number"],body[data-mobile-architecture="apk-v2"] .section select{font-size:16px}',
+            '}',
+            '@media screen and (min-width:601px) and (max-width:960px){',
+            'body[data-mobile-architecture="apk-v2"] #starter-hub .starter-tier--primary,body[data-mobile-architecture="apk-v2"] .teacher-cards-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}',
+            'body[data-mobile-architecture="apk-v2"] .app-main>.section{padding:16px 20px 28px!important}',
+            '}'
+        ].join('');
+        document.head?.appendChild(style);
+    }
+
     // Remove skeleton after mobile architecture is ready
     function init() {
+        ensureMobileUxPolishStyle();
         if (isMobileViewport()) {
             setTimeout(removeMobileSkeleton, 200);
         }

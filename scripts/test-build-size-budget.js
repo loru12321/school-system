@@ -35,8 +35,9 @@ const budgets = {
     distAppCss: 648_000,
     // The offline single-file build embeds the four demand-loaded exam arranger
     // runtimes so folder import and exports remain available without a server.
-    // 2026-11-24: cross-grade TEACHER_MAP auto-refresh in county-analysis adds ~260B.
-    ltHtml: 2_151_000,
+    // 2026-11-24: cross-grade TEACHER_MAP auto-refresh + mobile/tablet touch-target
+    // and iPad portrait 2-column layout polish add ~1.4KB to the offline source map.
+    ltHtml: 2_153_000,
     // Offline lt.html carries inline runtime sources for single-file use; keep a
     // tight cap above the current complete offline bundle.
     // 2026-07-09: raised 335_000 -> 336_000 for the non-grade-9 major-subject

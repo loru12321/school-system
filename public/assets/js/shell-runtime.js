@@ -268,6 +268,9 @@
 
     function resolveShellModeText() {
         try {
+            const examId = String(window.CURRENT_EXAM_ID || window.COHORT_DB?.currentExamId || '').trim();
+            const examGradeMatch = examId.match(/([6-9])年级/);
+            if (examGradeMatch) return `${examGradeMatch[1]}年级`;
             if (typeof window.getExamMetaFromUI === 'function' && typeof window.getEffectiveGrade === 'function') {
                 const grade = String(window.getEffectiveGrade(window.getExamMetaFromUI()) || '').trim();
                 if (grade) return `${grade}年级`;
