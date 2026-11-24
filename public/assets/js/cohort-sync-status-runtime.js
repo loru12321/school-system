@@ -60,7 +60,10 @@
         };
         const source = sourceLabels[meta.source] || '本地';
         const cohort = meta.cohortId ? `${meta.cohortId}届` : '未选届别';
-        const exam = meta.examId ? meta.examId.replace(/^(.{18}).+$/, '$1...') : '未选择考试';
+        const trimmedExam = meta.examId && meta.cohortId
+            ? meta.examId.replace(new RegExp(`^${meta.cohortId}[级届][-·_\\s]*`), '')
+            : meta.examId;
+        const exam = trimmedExam ? trimmedExam.replace(/^(.{22}).+$/, '$1...') : '未选择考试';
         const time = formatTime(meta.updatedAt);
         return time ? `${source} · ${cohort} · ${exam} · ${time}` : `${source} · ${cohort} · ${exam}`;
     }
