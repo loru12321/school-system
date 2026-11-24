@@ -23,6 +23,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_LEGACY_GATEWAY_ORIGIN = '';
+const DEFAULT_SUPABASE_REGION = 'ap-northeast-1';
 export const SYSTEM_DATA_PATH = '/sb/rest/v1/system_data';
 export const SYSTEM_DATA_API_PATH = '/api/system-data';
 // Cold-login bootstrap: one request that batches the workspace row + latest
@@ -887,6 +888,10 @@ async function readNormalizedSystemDataProxyBody(request) {
   return bodyBuffer;
 }
 
+function getSupabaseRegion(env) {
+  return normalizeText(env?.SUPABASE_REGION) || DEFAULT_SUPABASE_REGION;
+}
+
 async function proxySupabaseRestRequest(request, env, url, explicitPath = '', options = {}) {
   const targetUrl = buildSupabaseRestTargetUrl(env, url, explicitPath);
   const apikey = getSupabaseRestApiKey(env);
@@ -895,7 +900,7 @@ async function proxySupabaseRestRequest(request, env, url, explicitPath = '', op
   }
   const bodyBuffer = options.bodyBuffer !== undefined ? options.bodyBuffer : await readRequestBody(request);
   return proxyRequest(url, request, targetUrl, bodyBuffer,
-    Object.assign({ apikey, Authorization: `Bearer ${apikey}` }, options.extraHeaders || {}));
+    Object.assign({ apikey, Authorization: `Bearer ${apikey}`, 'x-region': getSupabaseRegion(env) }, options.extraHeaders || {}));
 }
 
 async function proxySystemDataReadToSupabase(request, env, url, scope = null) {
@@ -914,7 +919,7 @@ async function proxySystemDataReadToSupabase(request, env, url, scope = null) {
 
   const response = await fetchWithTimeout(targetUrl.toString(), {
     method: 'GET',
-    headers: { apikey, Authorization: `Bearer ${apikey}`, Accept: 'application/json' }
+    headers: { apikey, Authorization: `Bearer ${apikey}`, Accept: 'application/json', 'x-region': getSupabaseRegion(env) }
   }, PROXY_TIMEOUT_MS);
 
   if (!response.ok) {

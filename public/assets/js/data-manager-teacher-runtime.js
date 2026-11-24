@@ -315,6 +315,149 @@
         }
     }
 
+    const SPACE_LEDGER_SUBJECT_HINTS = [
+        ['语文', '语文'], ['数学', '数学'], ['英语', '英语'],
+        ['物理', '物理'], ['化学', '化学'], ['道德与法治', '政治'],
+        ['道法', '政治'], ['政治', '政治'], ['历史', '历史'],
+        ['地理', '地理'], ['生物', '生物'], ['科学', '科学']
+    ];
+
+    function normalizeSpaceLedgerHeader(value) {
+        return String(value == null ? '' : value)
+            .normalize('NFKC')
+            .replace(/[（(][^）)]*[）)]/g, '')
+            .trim()
+            .toLowerCase()
+            .replace(/[\s\u3000_./\\\-—:：()（）【】\[\]*＊]/g, '')
+            .replace(/(?:必填|必选|填写|选填|勿改|留空跳过|留空不变)$/g, '');
+    }
+
+    function inferSubjectFromText(rawText, normalizeSubjectFn) {
+        const text = String(rawText || '').trim();
+        if (!text) return '';
+        for (const [token, canonical] of SPACE_LEDGER_SUBJECT_HINTS) {
+            if (text.includes(token)) {
+                return typeof normalizeSubjectFn === 'function' ? normalizeSubjectFn(canonical) : canonical;
+            }
+        }
+        return '';
+    }
+
+    function parseSpaceLedgerRosterRows(rows, options = {}) {
+        const list = Array.isArray(rows) ? rows : [];
+        if (!list.length) return { matched: false, assignments: [], homerooms: {}, skippedWithoutSubject: [] };
+
+        const firstRow = list[0];
+        if (!firstRow || typeof firstRow !== 'object' || Array.isArray(firstRow)) {
+            return { matched: false, assignments: [], homerooms: {}, skippedWithoutSubject: [] };
+        }
+
+        const keyMap = {};
+        Object.keys(firstRow).forEach((rawKey) => {
+            const normKey = normalizeSpaceLedgerHeader(rawKey);
+            if (!normKey) return;
+            if (['姓名', '教师姓名', '老师姓名', 'name', 'displayname'].includes(normKey) && !keyMap.name) keyMap.name = rawKey;
+            else if (['任课班级', '任教班级', '授课班级', 'subjectclasses', 'classes'].includes(normKey) && !keyMap.subjectClasses) keyMap.subjectClasses = rawKey;
+            else if (['班主任班级', '班主任', '负责班级', 'homeroom', 'homeroomclass'].includes(normKey) && !keyMap.homeroomClass) keyMap.homeroomClass = rawKey;
+            else if (['办公室', '办公地点', '所在办公室', 'office', 'officename'].includes(normKey) && !keyMap.office) keyMap.office = rawKey;
+            else if (['学科', '科目', '任教科目', 'subject'].includes(normKey) && !keyMap.subject) keyMap.subject = rawKey;
+            else if (['学校', '所属学校', 'school'].includes(normKey) && !keyMap.school) keyMap.school = rawKey;
+        });
+
+        if (!keyMap.name || !keyMap.subjectClasses) {
+            return { matched: false, assignments: [], homerooms: {}, skippedWithoutSubject: [] };
+        }
+
+        const normalizeClassFn = typeof options.normalizeClass === 'function'
+            ? options.normalizeClass
+            : (typeof root.normalizeClass === 'function' ? root.normalizeClass : (v) => String(v || '').trim());
+        const normalizeSubjectFn = typeof options.normalizeSubject === 'function'
+            ? options.normalizeSubject
+            : (typeof root.normalizeSubject === 'function' ? root.normalizeSubject : (v) => String(v || '').trim());
+        const defaultSchool = String(options.defaultSchool || '').trim();
+
+        const assignments = [];
+        const homerooms = {};
+        const skippedWithoutSubject = [];
+
+        list.forEach((row) => {
+            const teacher = String(row[keyMap.name] || '').trim();
+            if (!teacher) return;
+            const school = String((keyMap.school ? row[keyMap.school] : '') || defaultSchool).trim();
+            const homeroomRaw = keyMap.homeroomClass ? String(row[keyMap.homeroomClass] || '').trim() : '';
+            if (homeroomRaw) {
+                const normHomeroom = normalizeClassFn(homeroomRaw);
+                if (normHomeroom) homerooms[normHomeroom] = teacher;
+            }
+
+            const rawClasses = String(row[keyMap.subjectClasses] || '').trim();
+            if (!rawClasses) return;
+            const classes = rawClasses.split(/[、,，;；/\s]+/).map((c) => normalizeClassFn(c)).filter(Boolean);
+            const rawSubject = keyMap.subject ? String(row[keyMap.subject] || '').trim() : '';
+            const office = keyMap.office ? String(row[keyMap.office] || '').trim() : '';
+            const subject = rawSubject
+                ? normalizeSubjectFn(rawSubject)
+                : inferSubjectFromText(office, normalizeSubjectFn);
+
+            if (!subject) {
+                skippedWithoutSubject.push({ teacher, office, classes });
+                return;
+            }
+
+            classes.forEach((className) => {
+                assignments.push({
+                    key: `${className}_${subject}`,
+                    teacher,
+                    school
+                });
+            });
+        });
+
+        return { matched: true, assignments, homerooms, skippedWithoutSubject };
+    }
+
+    function buildSpaceLedgerRosterExportRows(teacherMap, teacherSchoolMap = {}, options = {}) {
+        const map = asPlainMap(teacherMap);
+        const byTeacher = new Map();
+        const filterSchool = String(options.school || '').trim();
+        const schoolMap = asPlainMap(teacherSchoolMap);
+
+        Object.entries(map).forEach(([key, teacherName]) => {
+            const teacher = String(teacherName || '').trim();
+            if (!teacher) return;
+            const rowSchool = String(schoolMap[key] || '').trim();
+            if (filterSchool && rowSchool && !sameSchoolName(rowSchool, filterSchool)) return;
+            const sep = key.indexOf('_');
+            const className = sep >= 0 ? key.slice(0, sep) : key;
+            const subject = sep >= 0 ? key.slice(sep + 1) : '';
+            if (!byTeacher.has(teacher)) {
+                byTeacher.set(teacher, { teacher, subjects: new Set(), classes: new Set() });
+            }
+            const entry = byTeacher.get(teacher);
+            if (subject) entry.subjects.add(subject);
+            if (className) entry.classes.add(className);
+        });
+
+        const rows = [
+            ['姓名（必填）', '登录邮箱（新教师必填）', '办公室', '班主任班级（不当班主任留空）', '任课班级（顿号分隔）', '学科（澄见扩展）']
+        ];
+        Array.from(byTeacher.values())
+            .sort((a, b) => a.teacher.localeCompare(b.teacher, 'zh-CN'))
+            .forEach((entry) => {
+                const subjectsText = Array.from(entry.subjects).join('、');
+                const classesText = Array.from(entry.classes).sort().join('、');
+                rows.push([
+                    entry.teacher,
+                    '',
+                    subjectsText ? `${subjectsText}组` : '',
+                    '',
+                    classesText,
+                    subjectsText
+                ]);
+            });
+        return rows;
+    }
+
     return {
         switchTeacherTerm,
         syncTeacherHistory,
@@ -324,6 +467,8 @@
         formatTeacherImportConflictMessage,
         formatTeacherSchoolOwnershipConflictMessage,
         parseTeacherTermContext,
-        summarizeTeacherImportContext
+        summarizeTeacherImportContext,
+        parseSpaceLedgerRosterRows,
+        buildSpaceLedgerRosterExportRows
     };
 });

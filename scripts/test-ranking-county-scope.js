@@ -95,4 +95,25 @@ assert.strictEqual(
   'county ranks should remain visible for real county-scope datasets'
 );
 
+assert.strictEqual(
+  rootApi.getCanonicalSchoolName('州城街道第二中学'),
+  '州城中学',
+  'kaowu alias 州城街道第二中学 should normalize to 州城中学'
+);
+assert.strictEqual(
+  rootApi.getCanonicalSchoolName('梯门镇中学'),
+  '梯门中学',
+  'kaowu alias 梯门镇中学 should normalize to 梯门中学'
+);
+assert.strictEqual(
+  rootApi.getCanonicalSchoolName('班店中学'),
+  '斑鸠店镇中',
+  'kaowu alias 班店中学 should normalize to 斑鸠店镇中'
+);
+assert.strictEqual(
+  rootApi.getCanonicalSchoolName('老湖镇中学'),
+  '老湖中学',
+  'kaowu alias 老湖镇中学 should normalize to 老湖中学'
+);
+
 console.log('ranking county scope tests passed');

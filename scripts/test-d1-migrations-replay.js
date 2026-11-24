@@ -23,7 +23,9 @@ const objects = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type IN
 [
   'cloud_system_data', 'system_users', 'login_sessions', 'login_rate_limits', 'issues', 'system_logs',
   'config_alias_rules', 'warning_records', 'rectify_tasks', 'snapshot_versions',
-  'idx_login_sessions_session_id', 'idx_login_rate_limits_locked_until', 'idx_system_logs_school_created'
+  'teacher_change_requests', 'deletion_tombstones', 'email_verification_codes',
+  'idx_login_sessions_session_id', 'idx_login_rate_limits_locked_until', 'idx_system_logs_school_created',
+  'idx_teacher_change_requests_status_school', 'idx_deletion_tombstones_type_key', 'idx_email_verification_codes_email_created'
 ].forEach((name) => assert.ok(objects.has(name), `fresh database should contain ${name}`));
 
 const logColumns = db.prepare('PRAGMA table_info(system_logs)').all().map((row) => row.name);

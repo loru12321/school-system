@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0",
+  "system": "澄见成绩分析系统 (schoolsystem.com.cn)",
+  "roles": [
+    {
+      "id": "homeroom",
+      "title": "班主任使用教程（约 2 分钟）",
+      "chapters": [
+        { "index": 1, "title": "登录并选择当前届别", "module": "login", "narration": "打开 schoolsystem.com.cn，输入班主任账号与密码，选择本班所属届别进入工作台。" },
+        { "index": 2, "title": "查看班级成绩与边缘生", "module": "marginal-push", "narration": "进入边缘生推进模块，按优秀线与及格线快速定位本班临界生名单。" },
+        { "index": 3, "title": "一键生成 A4 培优建档", "module": "summary", "narration": "在班级对标表中点击尖子生培优建档，支持直接导出 A4 档案或无弹窗打印。" }
+      ]
+    },
+    {
+      "id": "teacher",
+      "title": "任课教师使用教程（约 2 分钟）",
+      "chapters": [
+        { "index": 1, "title": "进入教师教学画像", "module": "teacher-analysis", "narration": "登录后打开教师分析模块，查看本人任教各班的均分、优秀率、及格率与乡镇排名。" },
+        { "index": 2, "title": "多期对比与学科均衡", "module": "subject-balance", "narration": "切换到多期对比与学科均衡，排查偏科学生并导出辅导名单。" },
+        { "index": 3, "title": "自助提交任教变更申请", "module": "profile", "narration": "如新学期任教班级或学科调整，可在个人中心提交变更申请，管理员审核通过后自动生效。" }
+      ]
+    },
+    {
+      "id": "admin",
+      "title": "教务管理员使用教程（约 3 分钟）",
+      "chapters": [
+        { "index": 1, "title": "新学年准备与一键建届", "module": "upload", "narration": "每年 8 月至 9 月中旬，导入页自动弹出新学年准备清单，一键创建新生届并核对任课名册。" },
+        { "index": 2, "title": "考务成绩零预处理导入", "module": "upload", "narration": "将考务系统导出的全乡镇归档成绩直接拖入上传区，14 所乡镇校名自动规范化并同步至 D1 云端。" },
+        { "index": 3, "title": "兼容拾修设备簿名册导入", "module": "upload", "narration": "在数据管理中可直接导入拾修设备簿的新学年教师名册 Excel，避免两套系统重复录入。" },
+        { "index": 4, "title": "质量分析会 PPT 与手册导出", "module": "summary", "narration": "点击质量分析会工具包，一键生成 16:9 汇报 PPT 与 10 表分析手册。" }
+      ]
+    }
+  ]
+}

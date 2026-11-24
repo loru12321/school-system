@@ -142,7 +142,7 @@ assert.ok(bootSource.includes('getBootGraduatedCohortYears'), 'boot login path s
 assert.ok(bootSource.includes('LOGIN_GRADUATE_COHORT_TARGET_V1'), 'boot login path should preserve a selected graduate cohort through login');
 assert.ok(bootSource.includes('getBootSelectedLoginCohortYear'), 'app and boot login paths should share the selected cohort resolver');
 assert.ok(bootSource.includes("select.dataset.cohortInitialized = '1'"), 'boot login path should preserve manual selection after initialization');
-assert.ok(htmlSource.includes('<option value="2022" selected>2022届</option>'), 'static login fallback should default to the current grade 9 cohort for this release');
+assert.ok(htmlSource.includes('<option value="2023" selected>2023届</option>'), 'static login fallback should default to the current grade 9 cohort for this release');
 assert.ok(htmlSource.includes('id="login-graduate-cohort-panel"'), 'login page should expose a dedicated graduate cohort panel');
 assert.ok(
     authLoginSource.includes('let sessionCohortRestoreScheduled = false')

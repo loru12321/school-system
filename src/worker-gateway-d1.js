@@ -27,6 +27,17 @@ import {
   resolveIssuesAccess, resolveSystemLogsAccess,
   buildSessionOperatorLabel, mergeWhereWithScope
 } from './worker-rest-policy.js';
+import {
+  handleTeacherChangeSubmit,
+  handleTeacherChangeList,
+  handleTeacherChangeWithdraw,
+  handleTeacherChangeReview,
+  handleTombstoneRecord,
+  handleTombstoneList,
+  handleReviewLogin,
+  handleEmailCodeSend,
+  handleEmailCodeVerify
+} from './worker-governance-d1.js';
 
 const REST_META_KEYS = new Set(['select', 'order', 'limit', 'offset', 'or']);
 
@@ -267,6 +278,9 @@ async function routeGatewayAction(request, env, body, ctx) {
   const payload = body?.payload && typeof body.payload === 'object' ? body.payload : {};
   if (!action) return badRequest(request, 'action is required');
   if (action === 'login') return performGatewayLogin(request, env, body, ctx);
+  if (action === 'auth.review_login') return handleReviewLogin(request, env, body);
+  if (action === 'auth.email_code_send') return handleEmailCodeSend(request, db, env, payload);
+  if (action === 'auth.email_code_verify') return handleEmailCodeVerify(request, db, payload);
   if (action === 'session.logout') {
     // Best effort: revoke the presented session server-side so a copied token
     // stops working immediately, then clear the browser cookie.
@@ -313,6 +327,12 @@ async function routeGatewayAction(request, env, body, ctx) {
     case 'account.upsert_many': return handleAccountUpsertMany(request, db, session, payload);
     case 'account.delete_non_admin': return handleAccountDeleteNonAdmin(request, db, session);
     case 'account.migration_status': return handleAccountMigrationStatus(request, db, session);
+    case 'teacher_change.submit': return handleTeacherChangeSubmit(request, db, session, payload);
+    case 'teacher_change.list': return handleTeacherChangeList(request, db, session, payload);
+    case 'teacher_change.withdraw': return handleTeacherChangeWithdraw(request, db, session, payload);
+    case 'teacher_change.review': return handleTeacherChangeReview(request, db, session, payload);
+    case 'tombstone.record': return handleTombstoneRecord(request, db, session, payload);
+    case 'tombstone.list': return handleTombstoneList(request, db, session, payload);
     default: return null;
   }
 }

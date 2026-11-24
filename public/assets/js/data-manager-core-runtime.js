@@ -1664,6 +1664,24 @@ const DataManager = {
                     if (!json || json.length === 0) return;
                     totalRows += json.length;
 
+                    const teacherRt = requireDataManagerTeacherRuntime();
+                    const slResult = typeof teacherRt.parseSpaceLedgerRosterRows === 'function'
+                        ? teacherRt.parseSpaceLedgerRosterRows(json, {
+                            defaultSchool: (!/^Sheet\d+$/i.test(sheetName) && !/名册|说明|模板/.test(sheetName)) ? sheetName : selectedSchool,
+                            normalizeClass,
+                            normalizeSubject
+                        })
+                        : { matched: false, assignments: [] };
+                    if (slResult.matched) {
+                        slResult.assignments.forEach((item) => teacherAssignments.push(item));
+                        if (slResult.skippedWithoutSubject && slResult.skippedWithoutSubject.length && errors.length < 5) {
+                            slResult.skippedWithoutSubject.slice(0, 5 - errors.length).forEach((s) => {
+                                errors.push(`[${sheetName}] 拾修名册教师「${s.teacher}」缺少学科且办公室「${s.office || '空'}」未含教研组关键词`);
+                            });
+                        }
+                        return;
+                    }
+
                     json.forEach((row, idx) => {
                         const classAlias = ['班级', 'class', 'Class', '班级名称', '行政班', '所属班级', '年级班级', '教学班'];
                         const subjectAlias = ['学科', 'subject', '科目', 'Subject', '任教科目', '考试科目'];

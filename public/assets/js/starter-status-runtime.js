@@ -270,7 +270,123 @@ function updateUploadWorkbenchStatus() {
         msgBox.className = 'upload-message-box';
         msgBox.textContent = noticeText;
     }
+
+    renderNewAcademicYearReadinessBanner();
 }
+
+function evaluateNewAcademicYearReadiness(options = {}) {
+    const now = (options.now && typeof options.now.getFullYear === 'function') ? options.now : new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const inRolloverWindow = month === 8 || (month === 9 && day <= 15);
+    const academicStartYear = month >= 8 ? year : year - 1;
+    const academicYearLabel = `${academicStartYear}-${academicStartYear + 1}`;
+    const incomingCohortYear = String(academicStartYear);
+    const graduatedCohortYear = String(academicStartYear - 4);
+    const existingCohorts = Array.isArray(options.existingCohorts)
+        ? options.existingCohorts.map((item) => String(item || '').trim()).filter(Boolean)
+        : [];
+    const hasIncomingCohort = existingCohorts.includes(incomingCohortYear);
+    const hasTeacherMap = Boolean(options.hasTeacherMap);
+    const dismissed = Boolean(options.dismissed);
+    const isAdminOrDirector = options.isAdminOrDirector !== false;
+
+    const shouldShow = isAdminOrDirector && !dismissed && (inRolloverWindow || !hasIncomingCohort);
+    return {
+        shouldShow,
+        inRolloverWindow,
+        academicYearLabel,
+        incomingCohortYear,
+        graduatedCohortYear,
+        hasIncomingCohort,
+        hasTeacherMap
+    };
+}
+
+function renderNewAcademicYearReadinessBanner() {
+    if (typeof document === 'undefined') return;
+    const anchor = document.getElementById('upload-summary-strip') || document.getElementById('upload-flow-notice');
+    if (!anchor || !anchor.parentNode) return;
+
+    const cohortSelect = document.getElementById('cohort-selector');
+    const existingCohorts = cohortSelect
+        ? Array.from(cohortSelect.options || []).map((opt) => String(opt.value || '').trim()).filter(Boolean)
+        : [];
+    const role = String(window.Auth?.currentUser?.role || '').trim().toLowerCase();
+    const isAdminOrDirector = !role || role === 'admin' || role === 'director';
+    const hasTeacherMap = Boolean(window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0);
+    const now = new Date();
+    const academicStartYear = (now.getMonth() + 1) >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    const dismissKey = `NEW_ACADEMIC_YEAR_BANNER_DISMISSED_${academicStartYear}-${academicStartYear + 1}`;
+    const dismissed = localStorage.getItem(dismissKey) === '1';
+
+    const state = evaluateNewAcademicYearReadiness({
+        now,
+        existingCohorts,
+        hasTeacherMap,
+        dismissed,
+        isAdminOrDirector
+    });
+
+    let banner = document.getElementById('new-academic-year-banner');
+    if (!state.shouldShow) {
+        if (banner) banner.remove();
+        return;
+    }
+
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'new-academic-year-banner';
+        banner.className = 'upload-flow-notice new-academic-year-banner';
+        banner.setAttribute('role', 'region');
+        banner.setAttribute('aria-label', '新学年准备提醒');
+        anchor.parentNode.insertBefore(banner, anchor);
+    }
+
+    const cohortStepStatus = state.hasIncomingCohort
+        ? `已建档（${state.incomingCohortYear}级）`
+        : `待建档（${state.incomingCohortYear}级 · 6年级新生）`;
+    const teacherStepStatus = state.hasTeacherMap ? '当前届别已就绪' : '待导入新学年任课表（兼容拾修设备簿名册）';
+
+    banner.innerHTML = `
+        <div class="new-year-banner-body">
+            <strong>📅 ${state.academicYearLabel} 新学年准备清单</strong>
+            <span>1) 新生届别：${cohortStepStatus} ｜ 2) 毕业归档：${state.graduatedCohortYear}级已转入毕业生档案 ｜ 3) 任课名册：${teacherStepStatus}</span>
+        </div>
+        <div class="new-year-banner-actions">
+            ${state.hasIncomingCohort ? '' : `<button type="button" class="btn btn-sm btn-purple" data-ny-action="create-cohort">一键建档 ${state.incomingCohortYear}级</button>`}
+            <button type="button" class="btn btn-sm btn-gray" data-ny-action="open-teacher">去导入任课名册</button>
+            <button type="button" class="btn btn-sm btn-gray" data-ny-action="dismiss">本学年不再提醒</button>
+        </div>
+    `;
+
+    banner.onclick = (event) => {
+        const btn = event.target && event.target.closest ? event.target.closest('[data-ny-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-ny-action');
+        if (action === 'create-cohort') {
+            const yearInput = document.getElementById('cohort-year');
+            if (yearInput) yearInput.value = state.incomingCohortYear;
+            const addBtn = document.querySelector('[data-ui-action="add-cohort"]');
+            if (addBtn) addBtn.click();
+        } else if (action === 'open-teacher') {
+            if (typeof window.openDataManager === 'function') {
+                window.openDataManager('teacher');
+            } else if (typeof window.switchTab === 'function') {
+                window.switchTab('upload');
+            }
+        } else if (action === 'dismiss') {
+            localStorage.setItem(dismissKey, '1');
+            banner.remove();
+        }
+    };
+}
+
+window.NewAcademicYearReadiness = Object.freeze({
+    evaluateNewAcademicYearReadiness,
+    renderNewAcademicYearReadinessBanner
+});
 
 function setUploadMessage(message, tone = 'neutral') {
     const msgBox = document.getElementById('msg-box');

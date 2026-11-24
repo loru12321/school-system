@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-5a0cef830987.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-5a0cef830987.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-7d5ce1590870.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-7d5ce1590870.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -657,13 +657,12 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                         <div class="login-entry-field login-entry-field--select" data-login-field="cohort">
                             <span class="login-entry-prefix">届别</span>
                             <select id="login-cohort-select" data-login-cohort-select="1">
-                                <option value="2022" selected>2022届</option>
-                                <option value="2023">2023届</option>
+                                <option value="2023" selected>2023届</option>
                                 <option value="2024">2024届</option>
-                                <!-- 静态兜底只列在校的 6-9 年级四个届别（2022=9年级 … 2025=6年级）。
-                                     不要补下一年的届别：那一届尚未入学，列出来会让用户以为已建档。
-                                     启动后由 getBootLoginCohortYears() 按当前学年重新生成。 -->
                                 <option value="2025">2025届</option>
+                                <!-- 静态兜底只列在校的 6-9 年级四个届别（2023=9年级 … 2026=6年级）。
+                                     启动后由 getBootLoginCohortYears() 按当前学年重新生成。 -->
+                                <option value="2026">2026届</option>
                             </select>
                         </div>
                     </div>
@@ -678,6 +677,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                                 <span class="login-entry-prefix">毕业届别</span>
                                 <!-- Keep a visible, usable fallback while the lightweight boot runtime loads archive years. -->
                                 <select id="login-graduate-cohort-select" data-login-graduate-cohort-select="1">
+                                    <option value="2022">2022届 · 已毕业</option>
                                     <option value="2021">2021届 · 已毕业</option>
                                 </select>
                             </div>
@@ -1398,12 +1398,14 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                             </button>
                             <input type="file" id="projectFileInput" accept=".json" hidden
                                 data-ui-change="load-project-snapshot">
-                            <button class="btn btn-danger" id="btn-reset-system" data-ui-action="reset-system"
-                                style="background: #dc2626; color: white;">
+                        </div>
+                        <div class="upload-ops-note">建议在切换届别、导入新考试批次或大批量修改前，先把当前项目保存到文件。</div>
+                        <div class="upload-danger-zone upload-ops-note" data-risk-zone="destructive">
+                            <strong>⚠️ 危险区：</strong>
+                            <button class="btn btn-danger" id="btn-reset-system" data-ui-action="reset-system">
                                 <i class="ti ti-trash"></i> 清空重置
                             </button>
                         </div>
-                        <div class="upload-ops-note">建议在切换届别、导入新考试批次或大批量修改前，先把当前项目保存到文件。</div>
                     </div>
 
                     <div class="control-panel upload-ops-card upload-ops-card--snapshot" id="auto-snapshot-panel"

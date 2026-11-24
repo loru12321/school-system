@@ -6988,14 +6988,31 @@ function resetSystem() {
     if (isArchiveLocked()) {
         return appAlertDialog("⛔ 当前考试已封存，仅支持只读查看", 'warning');
     }
+    const cohortLabel = window.CURRENT_COHORT_ID ? `${window.CURRENT_COHORT_ID}级` : '未选择';
+    const studentCount = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+    const schoolCount = window.SCHOOLS ? Object.keys(window.SCHOOLS).length : 0;
+    const examCount = window.COHORT_DB?.exams ? Object.keys(window.COHORT_DB.exams).length : 0;
+    const lastCloudSync = localStorage.getItem('CLOUD_SYNC_AT') || '尚未同步';
+    const lastManualBackup = localStorage.getItem('MANUAL_BACKUP_AT') || '尚未备份';
+    const impactSummary = [
+        `当前届别：${cohortLabel}（历史考试 ${examCount} 期）`,
+        `影响范围：${studentCount} 名学生 / ${schoolCount} 所学校及本机自动存档`,
+        `最近云端同步：${lastCloudSync}`,
+        `最近文件备份：${lastManualBackup}`,
+        `如确认继续，请在下方输入“清空”二字：`
+    ].join('\n');
+
     Swal.fire({
-        title: '⚠️ 确定要重置系统吗？',
-        text: "此操作将清空当前所有导入的数据、教师设置以及自动存档，且无法撤销！系统将回到初始“模式选择”界面。",
+        title: '⚠️ 危险操作：清空并重置本机数据',
+        text: impactSummary,
         icon: 'warning',
+        input: 'text',
+        inputPlaceholder: '请输入“清空”以确认',
+        inputValidator: (value) => (String(value || '').trim() === '清空' ? null : '请输入“清空”二字以确认操作'),
         showCancelButton: true,
-        confirmButtonColor: '#dc2626', // 红色警示
+        confirmButtonColor: '#dc2626',
         cancelButtonColor: '#6b7280',
-        confirmButtonText: '确定清空重置',
+        confirmButtonText: '确认清空重置',
         cancelButtonText: '取消'
     }).then(async (result) => {
         if (result.isConfirmed) {
