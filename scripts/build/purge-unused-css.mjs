@@ -1,4 +1,5 @@
 import { PurgeCSS } from 'purgecss';
+import { transform as transformCss } from 'lightningcss';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -128,8 +129,13 @@ if (purgeCSSResults.length === 0 || !purgeCSSResults[0].css) {
 }
 
 const result = purgeCSSResults[0];
-const purgedCSS = result.css;
-const newSize = Buffer.byteLength(purgedCSS, 'utf8');
+const minifiedBuffer = transformCss({
+  filename: cssName,
+  code: Buffer.from(result.css, 'utf8'),
+  minify: true
+}).code;
+const purgedCSS = minifiedBuffer.toString('utf8');
+const newSize = minifiedBuffer.length;
 const savings = originalSize - newSize;
 const savingsPercent = ((savings / originalSize) * 100).toFixed(1);
 

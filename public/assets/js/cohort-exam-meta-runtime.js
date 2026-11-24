@@ -1131,7 +1131,7 @@ const CohortManager = {
     addFromUI: function () {
         const year = parseYearFromInput('cohort-year');
         const startGrade = 6;
-        if (!year || year < 2000) return alert('请输入有效的入学年份');
+        if (!year || year < 2000) return (window.UI?.alert ? window.UI.alert('请输入有效的入学年份', { type: 'warning' }) : alert('请输入有效的入学年份'));
         return this.addCohort({ year, startGrade });
     },
 
@@ -1151,7 +1151,7 @@ const CohortManager = {
         if (!cohortId) return;
         const switchOptions = Object.assign({ fastEnter: true }, options || {});
         const meta = this.list.find(c => c.id === cohortId);
-        if (!meta) return alert('未找到该届别');
+        if (!meta) return (window.UI?.alert ? window.UI.alert('未找到该届别', { type: 'warning' }) : alert('未找到该届别'));
         lockRuntimeCohortId(cohortId);
         CURRENT_COHORT_ID = cohortId;
         CURRENT_COHORT_META = meta;
@@ -1237,7 +1237,7 @@ document.addEventListener('visibilitychange', () => {
 async function enterCohortFromMask(options = {}) {
     const year = parseInt(resolveMaskCohortYear(), 10);
     const startGrade = 6;
-    if (!year || year < 2000) return alert('请输入有效的入学年份');
+    if (!year || year < 2000) return (window.UI?.alert ? window.UI.alert('请输入有效的入学年份', { type: 'warning' }) : alert('请输入有效的入学年份'));
     if (!window.__COHORT_MANAGER_READY__) {
         window.setTimeout(() => enterCohortFromMask(), 60);
         return false;
@@ -1667,10 +1667,11 @@ function tryAutoRestoreWorkspaceExam(options = {}) {
 }
 
 function setCurrentExamMeta(silent = false) {
+    const notifyWarn = (msg) => (window.UI?.alert ? window.UI.alert(msg, { type: 'warning' }) : alert(msg));
     const meta = getExamMetaFromUI();
-    if (!meta.cohortId) return alert("请先选择届别");
-    if (!meta.year || !meta.term || !meta.type) return alert("请完整选择学年/学期/考试类型");
-    if (!meta.date) return alert("请填写考试日期");
+    if (!meta.cohortId) return notifyWarn("请先选择届别");
+    if (!meta.year || !meta.term || !meta.type) return notifyWarn("请完整选择学年/学期/考试类型");
+    if (!meta.date) return notifyWarn("请填写考试日期");
     const key = buildExamKey(meta);
     migrateLegacyExamKey(meta, key);
     migrateSameMomentExamKey(meta, key);
@@ -1735,15 +1736,16 @@ function isArchiveLocked() {
 }
 
 async function archiveCurrentExam() {
-    if (!RAW_DATA.length) return alert("当前无成绩数据，无法封存");
-    if (isArchiveLocked()) return alert("当前考试已封存，无需重复操作");
+    const notifyWarn = (msg) => (window.UI?.alert ? window.UI.alert(msg, { type: 'warning' }) : alert(msg));
+    if (!RAW_DATA.length) return notifyWarn("当前无成绩数据，无法封存");
+    if (isArchiveLocked()) return notifyWarn("当前考试已封存，无需重复操作");
     if (!(await UI.confirm("⚠️ 封存后将进入只读模式，避免误改历史数据。确定封存吗？", {
         title: '确认封存考试',
         confirmText: '封存'
     }))) return;
 
     const meta = getExamMetaFromUI();
-    if (!meta.year || !meta.term || !meta.type) return alert("请先设置学年/学期/考试类型");
+    if (!meta.year || !meta.term || !meta.type) return notifyWarn("请先设置学年/学期/考试类型");
     const key = buildExamKey(meta);
     migrateLegacyExamKey(meta, key);
     CURRENT_EXAM_ID = key;
@@ -1765,7 +1767,7 @@ async function archiveCurrentExam() {
 }
 
 async function unlockArchive() {
-    if (!isArchiveLocked()) return alert("当前未封存");
+    if (!isArchiveLocked()) return (window.UI?.alert ? window.UI.alert("当前未封存", { type: 'warning' }) : alert("当前未封存"));
     if (!(await UI.confirm("⚠️ 解除封存将允许编辑历史数据，是否继续？", {
         title: '解除封存',
         confirmText: '解除'

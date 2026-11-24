@@ -217,7 +217,29 @@ async function submitUserPasswordChange() {
     }
 }
 
+const TeacherChangeRequestUI = (() => {
+    let loading = null;
+    const ensure = () => {
+        if (window.TeacherChangeRequestUI?.__loaded) return Promise.resolve(window.TeacherChangeRequestUI);
+        if (!loading) {
+            loading = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = './assets/js/teacher-change-request-runtime.js';
+                s.onload = () => resolve(window.TeacherChangeRequestUI);
+                s.onerror = () => reject(new Error('加载教师变更模块失败'));
+                document.head.appendChild(s);
+            });
+        }
+        return loading;
+    };
+    return {
+        openSubmitDialog: () => ensure().then((m) => m.openSubmitDialog()),
+        openReviewDialog: () => ensure().then((m) => m.openReviewDialog())
+    };
+})();
+
 window.AccountExcel = AccountExcel;
+window.TeacherChangeRequestUI = TeacherChangeRequestUI;
 window.toggleAdminManualInput = toggleAdminManualInput;
 window.changeAdminPass = changeAdminPass;
 window.openUserPasswordModal = openUserPasswordModal;

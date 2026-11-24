@@ -144,7 +144,7 @@ function showMultiCompareDataSourceDiag() {
         return;
     }
 
-    alert(summary);
+    if (window.UI?.alert) window.UI.alert(summary, { title: '多期数据源诊断' }); else alert(summary);
 }
 
 function renderAutoSnapshotsUI() {
@@ -184,7 +184,7 @@ async function restoreAutoSnapshot(index) {
         applySnapshotPayload(db);
         if (window.UI) UI.toast('✅ 已回滚到快照', 'success');
     } catch (e) {
-        alert('回滚失败: ' + e.message);
+        if (window.UI?.alert) window.UI.alert('回滚失败: ' + e.message, { type: 'error' }); else alert('回滚失败: ' + e.message);
     }
 }
 
@@ -592,7 +592,7 @@ function saveProjectSnapshot() {
     const hasConfig = localStorage.getItem('app_skin_config');
 
     if (!hasData && !hasConfig) {
-        return alert("当前系统为空，无需备份！");
+        return (window.UI?.alert ? window.UI.alert("当前系统为空，无需备份！", { type: 'warning' }) : alert("当前系统为空，无需备份！"));
     }
 
     const elInd1 = document.getElementById('ind1');
@@ -650,12 +650,12 @@ function saveProjectSnapshot() {
         UI.toast("✅ 当前项目已保存到文件", "success");
     } catch (e) {
         console.error(e);
-        alert("保存失败：" + e.message);
+        if (window.UI?.alert) window.UI.alert("保存失败：" + e.message, { type: 'error' }); else alert("保存失败：" + e.message);
     }
 }
 
 async function loadProjectSnapshot(input) {
-    if (isArchiveLocked()) return alert("⛔ 当前考试已封存，禁止从文件恢复项目");
+    if (isArchiveLocked()) return (window.UI?.alert ? window.UI.alert("⛔ 当前考试已封存，禁止从文件恢复项目", { type: 'warning' }) : alert("⛔ 当前考试已封存，禁止从文件恢复项目"));
     const file = input && input.files ? input.files[0] : input;
     if (!file) return;
 
@@ -750,7 +750,7 @@ async function loadProjectSnapshot(input) {
     } catch (err) {
         UI.loading(false);
         console.error(err);
-        alert("❌ 恢复失败：所选文件可能已损坏。\nDEBUG: " + err.message);
+        if (window.UI?.alert) window.UI.alert("❌ 恢复失败：所选文件可能已损坏。\nDEBUG: " + err.message, { type: 'error' }); else alert("❌ 恢复失败：所选文件可能已损坏。\nDEBUG: " + err.message);
     } finally {
         if (input && input.value !== undefined) input.value = '';
     }
