@@ -1005,24 +1005,22 @@ var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs 
                 }
             }
 
-            if (!hasTeacherAssignments()
+            const termId = typeof window.getPreferredTeacherTermId === 'function' ? String(window.getPreferredTeacherTermId() || '').trim() : '';
+            const staleMap = hasTeacherAssignments() && termId && window.DataManagerTeacherRuntime?.isTeacherMapCompatibleWithTerm
+                && !window.DataManagerTeacherRuntime.isTeacherMapCompatibleWithTerm(window.TEACHER_MAP, termId);
+
+            if ((!hasTeacherAssignments() || staleMap)
                 && shouldAttemptTeacherCloudLoad()
                 && window.CloudManager
                 && typeof window.CloudManager.loadTeachers === 'function') {
                 try {
                     const loaded = await withTimeout(window.CloudManager.loadTeachers({
-                        background: true,
-                        toast: false,
-                        blocking: false,
-                        schoolName
+                        background: true, toast: false, blocking: false, force: staleMap, preferRemote: staleMap, schoolName
                     }), 10000, false);
                     changed = !!loaded || changed;
-                    if (!hasTeacherAssignments() && schoolName) {
+                    if ((!hasTeacherAssignments() || staleMap) && schoolName) {
                         const fallbackLoaded = await withTimeout(window.CloudManager.loadTeachers({
-                            background: true,
-                            toast: false,
-                            blocking: false,
-                            schoolName: ''
+                            background: true, toast: false, blocking: false, force: staleMap, preferRemote: staleMap, schoolName: ''
                         }), 10000, false);
                         changed = !!fallbackLoaded || changed;
                     }

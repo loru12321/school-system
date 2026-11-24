@@ -73,4 +73,22 @@ assert.ok(zhangRow, 'exported rows should include 张老师');
 assert.strictEqual(zhangRow[2], '语文组');
 assert.strictEqual(zhangRow[4], '8.1、8.2');
 
+// 4. Stale cross-grade TEACHER_MAP (e.g. 7.x classes when current term is 8年级) must trigger cloud reload
+let cloudReloadTriggered = false;
+const staleRt = createTeacherRuntime({
+    TEACHER_MAP: { '7.1_语文': '王旋', '7.3_语文': '郭延美' },
+    getPreferredTeacherTermId() { return '2026-2027_上学期_8年级'; },
+    resolveTeacherHistoryEntry() { return null; },
+    CloudManager: {
+        loadTeachers(opts) {
+            cloudReloadTriggered = Boolean(opts && opts.force && opts.preferRemote);
+            return Promise.resolve(true);
+        }
+    }
+});
+assert.strictEqual(staleRt.isTeacherMapCompatibleWithTerm({ '7.1_语文': '王旋' }, '2026-2027_上学期_8年级'), false);
+assert.strictEqual(staleRt.isTeacherMapCompatibleWithTerm({ '8.1_语文': '郭延美' }, '2026-2027_上学期_8年级'), true);
+assert.strictEqual(staleRt.ensureTeacherMap({}, true), false);
+assert.strictEqual(cloudReloadTriggered, true, 'stale 7.x TEACHER_MAP must trigger cloud loadTeachers for 8年级');
+
 console.log('space-ledger roster interop tests passed');

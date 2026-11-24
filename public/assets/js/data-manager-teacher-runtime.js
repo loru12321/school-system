@@ -265,17 +265,28 @@
         }
     }
 
-    function ensureTeacherMap(_manager, triggerCloud) {
-        const termId = typeof root.getPreferredTeacherTermId === 'function'
-            ? root.getPreferredTeacherTermId()
-            : '';
-        if (!termId) return false;
-        if (root.TEACHER_MAP && Object.keys(root.TEACHER_MAP).length > 0) return true;
+    function isTeacherMapCompatibleWithTerm(teacherMap, termId) {
+        const keys = Object.keys(asPlainMap(teacherMap));
+        if (!keys.length) return false;
+        const g = parseTeacherTermContext(termId).grade;
+        if (!g) return true;
+        let seen = 0, hit = 0;
+        keys.forEach((k) => {
+            const m = String(k || '').split('_')[0].trim().match(/^([6-9])(?:[.\-\s]|\d{2})/);
+            if (!m) return;
+            seen++;
+            if (m[1] === String(g)) hit++;
+        });
+        return !seen || hit > 0;
+    }
 
-        const resolved = typeof root.resolveTeacherHistoryEntry === 'function'
-            ? root.resolveTeacherHistoryEntry(termId)
-            : null;
-        if (resolved) {
+    function ensureTeacherMap(_manager, triggerCloud) {
+        const termId = typeof root.getPreferredTeacherTermId === 'function' ? root.getPreferredTeacherTermId() : '';
+        if (!termId) return false;
+        if (root.TEACHER_MAP && Object.keys(root.TEACHER_MAP).length > 0 && isTeacherMapCompatibleWithTerm(root.TEACHER_MAP, termId)) return true;
+
+        const resolved = typeof root.resolveTeacherHistoryEntry === 'function' ? root.resolveTeacherHistoryEntry(termId) : null;
+        if (resolved && isTeacherMapCompatibleWithTerm(resolved.map, termId)) {
             activeTermId = String(termId || '').trim();
             if (typeof root.syncTeacherTermStorage === 'function') root.syncTeacherTermStorage(resolved.key);
             if (typeof root.setTeacherMap === 'function') root.setTeacherMap(asPlainMap(resolved.map));
@@ -284,7 +295,15 @@
         }
 
         if (triggerCloud && root.CloudManager && typeof root.CloudManager.loadTeachers === 'function') {
-            root.CloudManager.loadTeachers({ background: true, force: true, preferRemote: true });
+            Promise.resolve(root.CloudManager.loadTeachers({ background: true, force: true, preferRemote: true }))
+                .then((ok) => {
+                    if (!ok) return;
+                    refreshTeacherAnalysis();
+                    if (root.document?.getElementById?.('county-teacher-portrait')?.classList?.contains('active')
+                        && typeof root.renderCountyTeacherPortrait === 'function') {
+                        root.renderCountyTeacherPortrait();
+                    }
+                }).catch(() => {});
         }
         return false;
     }
@@ -315,146 +334,67 @@
         }
     }
 
-    const SPACE_LEDGER_SUBJECT_HINTS = [
-        ['语文', '语文'], ['数学', '数学'], ['英语', '英语'],
-        ['物理', '物理'], ['化学', '化学'], ['道德与法治', '政治'],
-        ['道法', '政治'], ['政治', '政治'], ['历史', '历史'],
-        ['地理', '地理'], ['生物', '生物'], ['科学', '科学']
-    ];
-
-    function normalizeSpaceLedgerHeader(value) {
-        return String(value == null ? '' : value)
-            .normalize('NFKC')
-            .replace(/[（(][^）)]*[）)]/g, '')
-            .trim()
-            .toLowerCase()
-            .replace(/[\s\u3000_./\\\-—:：()（）【】\[\]*＊]/g, '')
-            .replace(/(?:必填|必选|填写|选填|勿改|留空跳过|留空不变)$/g, '');
-    }
-
-    function inferSubjectFromText(rawText, normalizeSubjectFn) {
-        const text = String(rawText || '').trim();
-        if (!text) return '';
-        for (const [token, canonical] of SPACE_LEDGER_SUBJECT_HINTS) {
-            if (text.includes(token)) {
-                return typeof normalizeSubjectFn === 'function' ? normalizeSubjectFn(canonical) : canonical;
-            }
-        }
+    const SL_SUBJ = [['语文','语文'],['数学','数学'],['英语','英语'],['物理','物理'],['化学','化学'],['道德与法治','政治'],['道法','政治'],['政治','政治'],['历史','历史'],['地理','地理'],['生物','生物'],['科学','科学']];
+    const normSlKey = (v) => String(v == null ? '' : v).normalize('NFKC').replace(/[（(][^）)]*[）)]/g, '').trim().toLowerCase().replace(/[\s\u3000_./\\\-—:：()（）【】\[\]*＊]/g, '').replace(/(?:必填|必选|填写|选填|勿改|留空跳过|留空不变)$/g, '');
+    function inferSubjectFromText(raw, normSubj) {
+        const s = String(raw || '').trim();
+        for (const [t, c] of SL_SUBJ) if (s.includes(t)) return typeof normSubj === 'function' ? normSubj(c) : c;
         return '';
     }
-
     function parseSpaceLedgerRosterRows(rows, options = {}) {
         const list = Array.isArray(rows) ? rows : [];
-        if (!list.length) return { matched: false, assignments: [], homerooms: {}, skippedWithoutSubject: [] };
-
-        const firstRow = list[0];
-        if (!firstRow || typeof firstRow !== 'object' || Array.isArray(firstRow)) {
-            return { matched: false, assignments: [], homerooms: {}, skippedWithoutSubject: [] };
-        }
-
-        const keyMap = {};
-        Object.keys(firstRow).forEach((rawKey) => {
-            const normKey = normalizeSpaceLedgerHeader(rawKey);
-            if (!normKey) return;
-            if (['姓名', '教师姓名', '老师姓名', 'name', 'displayname'].includes(normKey) && !keyMap.name) keyMap.name = rawKey;
-            else if (['任课班级', '任教班级', '授课班级', 'subjectclasses', 'classes'].includes(normKey) && !keyMap.subjectClasses) keyMap.subjectClasses = rawKey;
-            else if (['班主任班级', '班主任', '负责班级', 'homeroom', 'homeroomclass'].includes(normKey) && !keyMap.homeroomClass) keyMap.homeroomClass = rawKey;
-            else if (['办公室', '办公地点', '所在办公室', 'office', 'officename'].includes(normKey) && !keyMap.office) keyMap.office = rawKey;
-            else if (['学科', '科目', '任教科目', 'subject'].includes(normKey) && !keyMap.subject) keyMap.subject = rawKey;
-            else if (['学校', '所属学校', 'school'].includes(normKey) && !keyMap.school) keyMap.school = rawKey;
+        const first = list[0];
+        if (!first || typeof first !== 'object' || Array.isArray(first)) return { matched: false, assignments: [], homerooms: {}, skippedWithoutSubject: [] };
+        const km = {};
+        Object.keys(first).forEach((rk) => {
+            const nk = normSlKey(rk);
+            if (!nk) return;
+            if (!km.name && ['姓名','教师姓名','老师姓名','name','displayname'].includes(nk)) km.name = rk;
+            else if (!km.subjectClasses && ['任课班级','任教班级','授课班级','subjectclasses','classes'].includes(nk)) km.subjectClasses = rk;
+            else if (!km.homeroomClass && ['班主任班级','班主任','负责班级','homeroom','homeroomclass'].includes(nk)) km.homeroomClass = rk;
+            else if (!km.office && ['办公室','办公地点','所在办公室','office','officename'].includes(nk)) km.office = rk;
+            else if (!km.subject && ['学科','科目','任教科目','subject'].includes(nk)) km.subject = rk;
+            else if (!km.school && ['学校','所属学校','school'].includes(nk)) km.school = rk;
         });
-
-        if (!keyMap.name || !keyMap.subjectClasses) {
-            return { matched: false, assignments: [], homerooms: {}, skippedWithoutSubject: [] };
-        }
-
-        const normalizeClassFn = typeof options.normalizeClass === 'function'
-            ? options.normalizeClass
-            : (typeof root.normalizeClass === 'function' ? root.normalizeClass : (v) => String(v || '').trim());
-        const normalizeSubjectFn = typeof options.normalizeSubject === 'function'
-            ? options.normalizeSubject
-            : (typeof root.normalizeSubject === 'function' ? root.normalizeSubject : (v) => String(v || '').trim());
-        const defaultSchool = String(options.defaultSchool || '').trim();
-
-        const assignments = [];
-        const homerooms = {};
-        const skippedWithoutSubject = [];
-
+        if (!km.name || !km.subjectClasses) return { matched: false, assignments: [], homerooms: {}, skippedWithoutSubject: [] };
+        const nCls = typeof options.normalizeClass === 'function' ? options.normalizeClass : (typeof root.normalizeClass === 'function' ? root.normalizeClass : (v) => String(v || '').trim());
+        const nSub = typeof options.normalizeSubject === 'function' ? options.normalizeSubject : (typeof root.normalizeSubject === 'function' ? root.normalizeSubject : (v) => String(v || '').trim());
+        const defSch = String(options.defaultSchool || '').trim();
+        const assignments = [], homerooms = {}, skippedWithoutSubject = [];
         list.forEach((row) => {
-            const teacher = String(row[keyMap.name] || '').trim();
+            const teacher = String(row[km.name] || '').trim();
             if (!teacher) return;
-            const school = String((keyMap.school ? row[keyMap.school] : '') || defaultSchool).trim();
-            const homeroomRaw = keyMap.homeroomClass ? String(row[keyMap.homeroomClass] || '').trim() : '';
-            if (homeroomRaw) {
-                const normHomeroom = normalizeClassFn(homeroomRaw);
-                if (normHomeroom) homerooms[normHomeroom] = teacher;
-            }
-
-            const rawClasses = String(row[keyMap.subjectClasses] || '').trim();
-            if (!rawClasses) return;
-            const classes = rawClasses.split(/[、,，;；/\s]+/).map((c) => normalizeClassFn(c)).filter(Boolean);
-            const rawSubject = keyMap.subject ? String(row[keyMap.subject] || '').trim() : '';
-            const office = keyMap.office ? String(row[keyMap.office] || '').trim() : '';
-            const subject = rawSubject
-                ? normalizeSubjectFn(rawSubject)
-                : inferSubjectFromText(office, normalizeSubjectFn);
-
-            if (!subject) {
-                skippedWithoutSubject.push({ teacher, office, classes });
-                return;
-            }
-
-            classes.forEach((className) => {
-                assignments.push({
-                    key: `${className}_${subject}`,
-                    teacher,
-                    school
-                });
-            });
+            const school = String((km.school ? row[km.school] : '') || defSch).trim();
+            const hr = km.homeroomClass ? nCls(String(row[km.homeroomClass] || '').trim()) : '';
+            if (hr) homerooms[hr] = teacher;
+            const rawC = String(row[km.subjectClasses] || '').trim();
+            if (!rawC) return;
+            const classes = rawC.split(/[、,，;；/\s]+/).map((c) => nCls(c)).filter(Boolean);
+            const rawS = km.subject ? String(row[km.subject] || '').trim() : '';
+            const office = km.office ? String(row[km.office] || '').trim() : '';
+            const subject = rawS ? nSub(rawS) : inferSubjectFromText(office, nSub);
+            if (!subject) { skippedWithoutSubject.push({ teacher, office, classes }); return; }
+            classes.forEach((c) => assignments.push({ key: `${c}_${subject}`, teacher, school }));
         });
-
         return { matched: true, assignments, homerooms, skippedWithoutSubject };
     }
-
     function buildSpaceLedgerRosterExportRows(teacherMap, teacherSchoolMap = {}, options = {}) {
-        const map = asPlainMap(teacherMap);
-        const byTeacher = new Map();
-        const filterSchool = String(options.school || '').trim();
-        const schoolMap = asPlainMap(teacherSchoolMap);
-
-        Object.entries(map).forEach(([key, teacherName]) => {
-            const teacher = String(teacherName || '').trim();
-            if (!teacher) return;
-            const rowSchool = String(schoolMap[key] || '').trim();
-            if (filterSchool && rowSchool && !sameSchoolName(rowSchool, filterSchool)) return;
-            const sep = key.indexOf('_');
-            const className = sep >= 0 ? key.slice(0, sep) : key;
-            const subject = sep >= 0 ? key.slice(sep + 1) : '';
-            if (!byTeacher.has(teacher)) {
-                byTeacher.set(teacher, { teacher, subjects: new Set(), classes: new Set() });
-            }
-            const entry = byTeacher.get(teacher);
-            if (subject) entry.subjects.add(subject);
-            if (className) entry.classes.add(className);
+        const byT = new Map(), fSch = String(options.school || '').trim(), sMap = asPlainMap(teacherSchoolMap);
+        Object.entries(asPlainMap(teacherMap)).forEach(([k, v]) => {
+            const t = String(v || '').trim();
+            if (!t) return;
+            const rs = String(sMap[k] || '').trim();
+            if (fSch && rs && !sameSchoolName(rs, fSch)) return;
+            const i = k.indexOf('_'), cls = i >= 0 ? k.slice(0, i) : k, sub = i >= 0 ? k.slice(i + 1) : '';
+            if (!byT.has(t)) byT.set(t, { teacher: t, subjects: new Set(), classes: new Set() });
+            if (sub) byT.get(t).subjects.add(sub);
+            if (cls) byT.get(t).classes.add(cls);
         });
-
-        const rows = [
-            ['姓名（必填）', '登录邮箱（新教师必填）', '办公室', '班主任班级（不当班主任留空）', '任课班级（顿号分隔）', '学科（澄见扩展）']
-        ];
-        Array.from(byTeacher.values())
-            .sort((a, b) => a.teacher.localeCompare(b.teacher, 'zh-CN'))
-            .forEach((entry) => {
-                const subjectsText = Array.from(entry.subjects).join('、');
-                const classesText = Array.from(entry.classes).sort().join('、');
-                rows.push([
-                    entry.teacher,
-                    '',
-                    subjectsText ? `${subjectsText}组` : '',
-                    '',
-                    classesText,
-                    subjectsText
-                ]);
-            });
+        const rows = [['姓名（必填）','登录邮箱（新教师必填）','办公室','班主任班级（不当班主任留空）','任课班级（顿号分隔）','学科（澄见扩展）']];
+        Array.from(byT.values()).sort((a, b) => a.teacher.localeCompare(b.teacher, 'zh-CN')).forEach((e) => {
+            const st = Array.from(e.subjects).join('、');
+            rows.push([e.teacher, '', st ? `${st}组` : '', '', Array.from(e.classes).sort().join('、'), st]);
+        });
         return rows;
     }
 
@@ -462,6 +402,7 @@
         switchTeacherTerm,
         syncTeacherHistory,
         ensureTeacherMap,
+        isTeacherMapCompatibleWithTerm,
         refreshTeacherAnalysis,
         buildTeacherImportMaps,
         formatTeacherImportConflictMessage,
