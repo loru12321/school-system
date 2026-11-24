@@ -463,6 +463,7 @@
         scheduleModuleTask('teacher-analysis-render-work', () => {
             if (!isTeacherAnalysisModuleActive(targetModuleId)) return;
             runTeacherAnalysisIfCurrent(token, () => {
+                if (window.DataManager?.ensureTeacherMap) window.DataManager.ensureTeacherMap(true);
                 const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
                 if (!teacherMapReady || typeof window.analyzeTeachers !== 'function') {
                     renderTeacherAnalysisEmptyState();
