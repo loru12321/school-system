@@ -360,10 +360,16 @@ window.resolveWorkspaceGrade = resolveWorkspaceGrade;
 
 function getEffectiveGrade(meta) {
     const cohortMeta = CURRENT_COHORT_META || readWorkspaceCohortMeta() || null;
-    const recalculated = computeCohortGrade(cohortMeta, meta || {});
-    if (recalculated) return String(recalculated);
     const direct = String(meta?.grade || '').trim();
+    if (meta && meta.year) {
+        const recalculated = computeCohortGrade(cohortMeta, meta);
+        if (recalculated) return String(recalculated);
+    }
     if (direct) return direct;
+    if (typeof resolveWorkspaceGrade === 'function') {
+        const resolved = resolveWorkspaceGrade({ meta: meta || {}, cohortMeta, allowCalendarFallback: false });
+        if (resolved) return String(resolved);
+    }
     const fallback = computeCohortGrade(cohortMeta, {});
     return fallback ? String(fallback) : '';
 }
@@ -955,7 +961,9 @@ function normalizeCohortExamSubjectPolicy(db, options = {}) {
         if (processed >= maxExams) { remaining += 1; return; }
         processed += 1;
         const meta = exam.meta && typeof exam.meta === 'object' ? exam.meta : {};
-        const grade = (typeof getEffectiveGrade === 'function' ? getEffectiveGrade(meta) : '') || meta.grade;
+        const grade = (typeof resolveWorkspaceGrade === 'function'
+            ? resolveWorkspaceGrade({ examId, meta, allowCalendarFallback: false })
+            : '') || (typeof getEffectiveGrade === 'function' ? getEffectiveGrade(meta) : '') || meta.grade;
         const mode = getGradeModeConfig(grade);
         const allowed = new Set(mode.analysisSubs);
         const storedSubjects = Array.isArray(exam.subjects) ? exam.subjects.filter(Boolean) : [];

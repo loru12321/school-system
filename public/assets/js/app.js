@@ -2184,7 +2184,14 @@ async function switchCohort(cohortId, options = {}) {
         if (data.FB_CLASSES) setFbClassesState(data.FB_CLASSES);
         if (data.MP_SNAPSHOTS) setMpSnapshotsState(data.MP_SNAPSHOTS);
 
-        const restoredGrade = getEffectiveGrade(getExamMetaFromUI());
+        const restoredExamMeta =
+            (COHORT_DB && CURRENT_EXAM_ID && COHORT_DB.exams && COHORT_DB.exams[CURRENT_EXAM_ID]?.meta)
+            || (typeof readArchiveMeta === 'function' ? readArchiveMeta() : null)
+            || (typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {})
+            || {};
+        const restoredGrade = (typeof resolveWorkspaceGrade === 'function'
+            ? resolveWorkspaceGrade({ examId: CURRENT_EXAM_ID, meta: restoredExamMeta })
+            : '') || getEffectiveGrade(restoredExamMeta);
         if (restoredGrade) applyModeByGrade(restoredGrade);
         updateSchoolSelect();
         updateMySchoolSelect();
@@ -2717,7 +2724,9 @@ async function initializeAppStartup() {
                     (COHORT_DB && CURRENT_EXAM_ID && COHORT_DB.exams && COHORT_DB.exams[CURRENT_EXAM_ID]?.meta)
                     || (typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {})
                     || {};
-                const restoredGrade = getEffectiveGrade(restoredExamMeta);
+                const restoredGrade = (typeof resolveWorkspaceGrade === 'function'
+                    ? resolveWorkspaceGrade({ examId: CURRENT_EXAM_ID, meta: restoredExamMeta })
+                    : '') || getEffectiveGrade(restoredExamMeta);
                 if (restoredGrade) applyModeByGrade(restoredGrade);
 
                 const modeMask = document.getElementById('mode-mask');
@@ -2913,12 +2922,31 @@ function getTotalSubjectsForLabel(config = CONFIG, subjects = SUBJECTS) {
 function applyConfiguredAnalysisSubjects(config = CONFIG) {
     const analysisSubjects = getConfiguredDisplaySubjects(config, { includeExtra: false });
     const current = Array.isArray(SUBJECTS) ? SUBJECTS.filter(Boolean) : [];
-    if (!analysisSubjects || analysisSubjects === 'auto' || !current.length) return { changed: false, removed: [] };
+    if (!analysisSubjects || analysisSubjects === 'auto') return { changed: false, removed: [] };
     const allowed = new Set(analysisSubjects);
     const removed = current.filter(subject => !allowed.has(subject));
-    if (!removed.length) return { changed: false, removed };
-    setSubjects(current.filter(subject => allowed.has(subject)));
-    return { changed: true, removed };
+    const kept = current.filter(subject => allowed.has(subject));
+    const keptSet = new Set(kept);
+    const rows = (typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA))
+        ? RAW_DATA
+        : (Array.isArray(window?.RAW_DATA) ? window.RAW_DATA : []);
+    const restored = [];
+    if (rows.length) {
+        analysisSubjects.forEach((subject) => {
+            if (keptSet.has(subject)) return;
+            if (rows.some((row) => {
+                const v = row?.scores?.[subject];
+                return v !== undefined && v !== null && v !== '' && Number.isFinite(Number(v));
+            })) {
+                kept.push(subject);
+                keptSet.add(subject);
+                restored.push(subject);
+            }
+        });
+    }
+    if (!removed.length && !restored.length) return { changed: false, removed };
+    setSubjects(kept);
+    return { changed: true, removed, restored };
 }
 
 function getTotalSubjectLabel(options = {}) {
