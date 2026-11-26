@@ -808,7 +808,11 @@ var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs 
         if (typeof window.ensureLazySectionLoaded === 'function') {
             window.ensureLazySectionLoaded('teacherModal');
         }
-        return document.getElementById('teacherModal');
+        const modal = document.getElementById('teacherModal');
+        if (modal && document.body && modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+        return modal;
     }
 
     function bindTeacherModalEvents() {

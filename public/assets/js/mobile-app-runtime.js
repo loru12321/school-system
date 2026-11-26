@@ -1472,7 +1472,7 @@
             ${buildSheetHeader(copy.accountTitle, copy.accountCopy)}
             <section class="apk-sheet-section">
                 <div class="apk-account-card">
-                    <div class="apk-account-name">${escapeHtml(user?.name || copy.notLoggedIn)}</div>
+                    <div class="apk-account-name">${escapeHtml(user?.name || user?.teacher_name || user?.username || copy.notLoggedIn)}</div>
                     <div class="apk-account-role">${escapeHtml(humanizeRole())}</div>
                     <div class="apk-account-grid">
                         <div class="apk-account-row">
@@ -1821,12 +1821,12 @@
         }
         if (action === 'teacher-change-submit') {
             setSheetMode('');
-            window.TeacherChangeRequestUI?.openSubmitDialog?.();
+            (window.__openTeacherChangeUi ? window.__openTeacherChangeUi('openSubmitDialog') : window.TeacherChangeRequestUI?.openSubmitDialog?.());
             return;
         }
         if (action === 'teacher-change-review') {
             setSheetMode('');
-            window.TeacherChangeRequestUI?.openReviewDialog?.();
+            (window.__openTeacherChangeUi ? window.__openTeacherChangeUi('openReviewDialog') : window.TeacherChangeRequestUI?.openReviewDialog?.());
             return;
         }
         if (action === 'logout' && window.Auth && typeof window.Auth.logout === 'function') {
@@ -2107,7 +2107,13 @@
             'body[data-mobile-architecture="apk-v2"] .modal,body[data-mobile-architecture="apk-v2"] .modal-overlay,body[data-mobile-architecture="apk-v2"] [id$="-modal"],body[data-mobile-architecture="apk-v2"] [id$="Modal"],body[data-mobile-architecture="apk-v2"] .swal2-container{z-index:20050!important;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px calc(env(safe-area-inset-bottom,0px) + 16px)!important;box-sizing:border-box}',
             'body[data-mobile-architecture="apk-v2"] .modal-content{max-width:calc(100vw - 24px)!important;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 28px)!important;overflow-y:auto!important;border-radius:18px;margin:auto!important}',
             'body[data-mobile-architecture="apk-v2"] .modal-header,body[data-mobile-architecture="apk-v2"] .drill-header{position:sticky;top:0;z-index:5}',
-            'body[data-mobile-architecture="apk-v2"] [data-close-modal],body[data-mobile-architecture="apk-v2"] .modal-close{min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}',
+            'body[data-mobile-architecture="apk-v2"] [data-close-modal],body[data-mobile-architecture="apk-v2"] .modal-close,body[data-mobile-architecture="apk-v2"] .modal-close-btn,body[data-mobile-architecture="apk-v2"] #closeModal{min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}',
+            'body[data-mobile-architecture="apk-v2"] .swal2-popup{max-width:calc(100vw - 24px)!important;box-sizing:border-box}',
+            'body[data-mobile-architecture="apk-v2"] .module-help-btn{min-height:36px!important;padding:6px 12px!important}',
+            'body[data-mobile-architecture="apk-v2"] .section h2 .badge,body[data-mobile-architecture="apk-v2"] .section h3 .badge{white-space:nowrap;flex-shrink:0}',
+            'body[data-mobile-architecture="apk-v2"] .analysis-auxiliary-bar,body[data-mobile-architecture="apk-v2"] .analysis-auxiliary-strip{padding-left:12px!important;padding-right:12px!important}',
+            'body[data-mobile-architecture="apk-v2"] #teacherModal .stat-value{white-space:nowrap}',
+            'body[data-mobile-architecture="apk-v2"] #teacherModal .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}',
             '#apk-mobile-shell .apk-shell-top{gap:6px!important;padding-top:calc(var(--app-safe-top) + 6px)!important}',
             '#apk-mobile-shell .apk-shell-topbar{padding:8px 10px!important;border-radius:18px!important}',
             '#apk-mobile-shell .apk-shell-meta button,#apk-mobile-shell .apk-shell-meta .apk-meta-pill{min-height:34px!important;padding:5px 12px!important}',
@@ -2118,6 +2124,7 @@
             '}',
             '@media screen and (max-width:600px){',
             'body[data-mobile-architecture="apk-v2"] .section input[type="text"],body[data-mobile-architecture="apk-v2"] .section input[type="search"],body[data-mobile-architecture="apk-v2"] .section input[type="number"],body[data-mobile-architecture="apk-v2"] .section select{font-size:16px}',
+            'body[data-mobile-architecture="apk-v2"] #teacherModal .teacher-modal-summary-grid{grid-template-columns:1fr!important;gap:12px!important}',
             '}',
             '@media screen and (min-width:601px) and (max-width:960px){',
             'body[data-mobile-architecture="apk-v2"] #starter-hub .starter-tier--primary,body[data-mobile-architecture="apk-v2"] .teacher-cards-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}',

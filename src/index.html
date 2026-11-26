@@ -240,8 +240,8 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
     <script defer src="./assets/js/gateway-session-runtime.js"></script>
     <script defer src="./assets/js/edge-gateway-runtime.js"></script>
     <script defer src="./assets/js/login-shell-state-runtime.js"></script>
-    <script defer src="./assets/js/boot-runtime-runtime-5e58f555c3a9.js"></script>
-    <script defer src="./assets/js/service-worker-runtime-runtime-5e58f555c3a9.js"></script>
+    <script defer src="./assets/js/boot-runtime-runtime-8b04e73d7c01.js"></script>
+    <script defer src="./assets/js/service-worker-runtime-runtime-8b04e73d7c01.js"></script>
     <script defer src="./assets/js/mobile-skeleton-runtime.js"></script>
     <script defer src="./assets/js/mobile-haptic-runtime.js"></script>
     <script defer src="./assets/js/mobile-table-scroll-runtime.js"></script>
@@ -6372,7 +6372,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 <h3 id="modalTeacherName" style="color:var(--primary);">教师姓名</h3><button id="closeModal" type="button"
                     class="modal-close-btn" aria-label="关闭教师详情弹窗">&times;</button>
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+            <div class="teacher-modal-summary-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
                 <div class="bg-gray-50">
                     <h4 style="margin-bottom:15px; color:#333;">教学概况</h4>
                     <div style="display:flex; justify-content:space-around;">
@@ -6402,6 +6402,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                     </div>
                 </div>
             </div>
+            <div class="table-wrap">
             <table class="subject-table" id="modalSubjectTable">
                 <thead>
                     <tr>
@@ -6416,6 +6417,7 @@ table.analysis-table-dense tbody tr:nth-child(3) td:not(:first-child) {
                 </thead>
                 <tbody></tbody>
             </table>
+            </div>
         </div>
     </div>
 </script>

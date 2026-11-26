@@ -193,6 +193,26 @@ async function downloadCertificate() {
             : callObject(name.slice(0, dot), name.slice(dot + 1), ...args);
     };
 
+    let teacherChangeLoadPromise = null;
+    const openTeacherChangeUi = (method) => {
+        if (window.TeacherChangeRequestUI?.__loaded && typeof window.TeacherChangeRequestUI[method] === 'function') {
+            return window.TeacherChangeRequestUI[method]();
+        }
+        if (!teacherChangeLoadPromise) {
+            teacherChangeLoadPromise = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = './assets/js/teacher-change-request-runtime.js';
+                s.onload = () => resolve(window.TeacherChangeRequestUI);
+                s.onerror = () => { teacherChangeLoadPromise = null; reject(new Error('加载教师变更模块失败')); };
+                document.head.appendChild(s);
+            });
+        }
+        return teacherChangeLoadPromise
+            .then((ui) => ui?.[method]?.())
+            .catch((err) => window.UI?.alert?.(err?.message || '加载教师变更模块失败'));
+    };
+    window.__openTeacherChangeUi = openTeacherChangeUi;
+
     const actionHandlers = {
         call: (target, event) => invokeDeclaredCall(target, event) === false ? false : undefined,
         'show-message': (target) => {
@@ -206,8 +226,8 @@ async function downloadCertificate() {
         },
         'open-starter-guide': () => callGlobal('openStarterGuide'),
         'open-user-password': () => callGlobal('openUserPasswordModal'),
-        'open-teacher-change-submit': () => window.TeacherChangeRequestUI?.openSubmitDialog?.(),
-        'open-teacher-change-review': () => window.TeacherChangeRequestUI?.openReviewDialog?.(),
+        'open-teacher-change-submit': () => openTeacherChangeUi('openSubmitDialog'),
+        'open-teacher-change-review': () => openTeacherChangeUi('openReviewDialog'),
         'toggle-sidebar': () => callGlobal('toggleAppSidebar'),
         'open-spotlight': () => callGlobal('openSpotlight'),
         'open-admin-issues': () => window.IssueManager?.openAdminPanel?.(),
