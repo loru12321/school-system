@@ -2127,7 +2127,7 @@
             'body[data-mobile-architecture="apk-v2"] #teacherModal .teacher-modal-summary-grid{grid-template-columns:1fr!important;gap:12px!important}',
             '}',
             '@media screen and (min-width:601px) and (max-width:960px){',
-            'body[data-mobile-architecture="apk-v2"] #starter-hub .starter-tier--primary,body[data-mobile-architecture="apk-v2"] .teacher-cards-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}',
+            'body[data-mobile-architecture="apk-v2"] #starter-hub .starter-tier--primary,body[data-mobile-architecture="apk-v2"] #teacherCardsContainer,body[data-mobile-architecture="apk-v2"] .teacher-cards-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}',
             'body[data-mobile-architecture="apk-v2"] .app-main>.section{padding:16px 20px 28px!important}',
             '}'
         ].join('');
