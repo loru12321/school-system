@@ -35,7 +35,11 @@
         if (typeof root.ensureLazySectionLoaded === 'function') {
             root.ensureLazySectionLoaded('drill-modal');
         }
-        return root.document.getElementById('drill-modal');
+        const modal = root.document.getElementById('drill-modal');
+        if (modal && root.document.body && modal.parentElement !== root.document.body) {
+            root.document.body.appendChild(modal);
+        }
+        return modal;
     }
 
     function hideModal() {

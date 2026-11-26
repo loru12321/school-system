@@ -2134,9 +2134,19 @@
         document.head?.appendChild(style);
     }
 
+    function portalModalsToBody() {
+        if (typeof document === 'undefined' || !document.body) return;
+        const selector = '.app-main > .modal, .app-main > .modal-overlay, .app-main > [id$="-modal"], .app-main > [id$="Modal"], #app > .modal, #app > .modal-overlay, #app > [id$="-modal"], #app > [id$="Modal"]';
+        document.querySelectorAll(selector).forEach((el) => {
+            if (!el || el.tagName === 'SCRIPT' || el.tagName === 'TEMPLATE' || el.hasAttribute('data-lazy-section-placeholder')) return;
+            if (el.parentElement !== document.body) document.body.appendChild(el);
+        });
+    }
+
     // Remove skeleton after mobile architecture is ready
     function init() {
         ensureMobileUxPolishStyle();
+        portalModalsToBody();
         if (isMobileViewport()) {
             setTimeout(removeMobileSkeleton, 200);
         }
