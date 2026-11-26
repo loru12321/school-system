@@ -1499,6 +1499,11 @@
                     ${buildActionCard('cohorts', copy.cohortsTitle, copy.cohortsCopy, 'ti ti-id-badge-2')}
                     ${buildActionCard('search', copy.searchTitle, copy.searchCopy, 'ti ti-search')}
                     ${buildActionCard('library', copy.allModulesTitle, copy.allModulesCopy, 'ti ti-layout-sidebar-left-expand')}
+                    ${(getCurrentRole() === 'teacher' || getCurrentRole() === 'class_teacher')
+                        ? buildActionCard('teacher-change-submit', '申请变更任课', '自助提交班级或学科调整', 'ti ti-edit')
+                        : ((getCurrentRole() === 'admin' || getCurrentRole() === 'director')
+                            ? buildActionCard('teacher-change-review', '审核教师变更', '查看并审批待处理申请', 'ti ti-checklist')
+                            : '')}
                     ${typeof window.openUserPasswordModal === 'function'
                         ? buildActionCard('password', copy.passwordTitle, copy.passwordCopy, 'ti ti-lock')
                         : ''}
@@ -1812,6 +1817,16 @@
         }
         if (action === 'password') {
             openPasswordModal();
+            return;
+        }
+        if (action === 'teacher-change-submit') {
+            setSheetMode('');
+            window.TeacherChangeRequestUI?.openSubmitDialog?.();
+            return;
+        }
+        if (action === 'teacher-change-review') {
+            setSheetMode('');
+            window.TeacherChangeRequestUI?.openReviewDialog?.();
             return;
         }
         if (action === 'logout' && window.Auth && typeof window.Auth.logout === 'function') {

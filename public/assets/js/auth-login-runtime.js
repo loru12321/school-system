@@ -1045,7 +1045,14 @@ var Auth = {
                 || '用户'
             ).trim() || '用户';
 
+            const roleForChange = this.currentUser?.role || '';
+            const changeActionBtn = (roleForChange === 'teacher' || roleForChange === 'class_teacher')
+                ? `<button class="btn" data-ui-action="open-teacher-change-submit" title="申请变更任课/班级"><i class="ti ti-edit"></i><span>申请变更任课</span></button>`
+                : ((roleForChange === 'admin' || roleForChange === 'director')
+                    ? `<button class="btn" data-ui-action="open-teacher-change-review" title="审核教师变更申请"><i class="ti ti-checklist"></i><span>审核教师变更</span></button>`
+                    : '');
             accountActionsContainer.innerHTML = `
+                ${changeActionBtn}
                 <button class="btn" ${uiDeclaredAttrs('click', 'openUserPasswordModal')} title="修改密码">
                     <i class="ti ti-key"></i><span>修改密码</span>
                 </button>

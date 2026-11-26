@@ -181,14 +181,14 @@ var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs 
         });
 
         const normalizedCurrent = String(currentUserName || '').replace(/\s+/g, '').toLowerCase();
+        const isMineName = (name) => {
+            if (!((currentRole === 'teacher' || currentRole === 'class_teacher') && normalizedCurrent)) return false;
+            const n = String(name || '').replace(/\s+/g, '').toLowerCase();
+            return n === normalizedCurrent || n.startsWith(`${normalizedCurrent}(`) || n.startsWith(`${normalizedCurrent}（`);
+        };
+        list.forEach((item) => { item.isMine = isMineName(item.name); });
         list.sort((left, right) => {
-            if ((currentRole === 'teacher' || currentRole === 'class_teacher') && normalizedCurrent) {
-                const leftName = String(left.name || '').replace(/\s+/g, '').toLowerCase();
-                const rightName = String(right.name || '').replace(/\s+/g, '').toLowerCase();
-                const leftMine = leftName === normalizedCurrent || leftName.startsWith(`${normalizedCurrent}(`) || leftName.startsWith(`${normalizedCurrent}（`);
-                const rightMine = rightName === normalizedCurrent || rightName.startsWith(`${normalizedCurrent}(`) || rightName.startsWith(`${normalizedCurrent}（`);
-                if (leftMine !== rightMine) return leftMine ? -1 : 1;
-            }
+            if (left.isMine !== right.isMine) return left.isMine ? -1 : 1;
             const fairDiff = teacherToNumber(right.fairScore, 0) - teacherToNumber(left.fairScore, 0);
             if (fairDiff !== 0) return fairDiff;
             const leagueDiff = teacherToNumber(right.leagueScore, 0) - teacherToNumber(left.leagueScore, 0);
@@ -202,6 +202,7 @@ var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs 
         const container = document.getElementById('teacherCardsContainer');
         const user = getCurrentUserFn();
         const role = user?.role || 'guest';
+        const isTeacherRole = role === 'teacher' || role === 'class_teacher';
         const stats = getTeacherStats();
         const rankings = window.TEACHER_TOWNSHIP_RANKINGS || {};
         const list = teacherBuildCardList(stats, rankings, user?.name || '', role);
@@ -217,7 +218,16 @@ var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs 
 
         if (!container) return;
         if (!list.length) {
-            container.innerHTML = `
+            container.innerHTML = isTeacherRole
+                ? `
+                <div style="grid-column:1/-1; text-align:center; color:#64748b; padding:24px;">
+                    暂未匹配到您的任课成绩数据，请联系教务同步最新任课表，或自助提交任课变更申请。
+                    <div style="margin-top:12px;">
+                        <button type="button" class="btn btn-primary" data-ui-action="open-teacher-change-submit">申请变更任课</button>
+                    </div>
+                </div>
+            `
+                : `
                 <div style="grid-column:1/-1; text-align:center; color:#999; padding:20px;">
                     暂无教师数据，请先完成任课表同步和成绩导入。
                     <div style="margin-top:10px;">
@@ -244,11 +254,26 @@ var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs 
             return;
         }
 
-        const html = list.map((item) => `
-            <div class="teacher-card">
+        const myItems = isTeacherRole ? list.filter((item) => item.isMine) : [];
+        const myBannerHtml = myItems.length
+            ? `<div style="grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-radius:12px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:13px;">
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+                    <strong>我的执教速览</strong>
+                    <span>${myItems.map((m) => `${teacherEscapeHtml(m.subject)}（${teacherEscapeHtml(m.classes)}班 · 均分${teacherEscapeHtml(m.avg)} · 镇排${teacherEscapeHtml(m.rank)}）`).join(' / ')}</span>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <button type="button" class="btn btn-primary" style="padding:5px 12px;font-size:12px;" ${uiDeclaredAttrs('click', 'showTeacherDetails', myItems[0].name, myItems[0].subject)}>我的详情</button>
+                    <button type="button" class="btn btn-gray" style="padding:5px 12px;font-size:12px;" data-ui-action="switch-tab" data-ui-value="student-details">本班明细</button>
+                    <button type="button" class="btn btn-gray" style="padding:5px 12px;font-size:12px;" data-ui-action="open-teacher-change-submit">申请变更任课</button>
+                </div>
+            </div>`
+            : '';
+
+        const html = myBannerHtml + list.map((item) => `
+            <div class="teacher-card"${item.isMine ? ' style="border:2px solid var(--primary);box-shadow:0 4px 14px rgba(37,99,235,0.12);"' : ''}>
                 <div class="teacher-header">
                     <div>
-                        <div class="teacher-name">${teacherEscapeHtml(item.name)} - ${teacherEscapeHtml(item.subject)}</div>
+                        <div class="teacher-name">${teacherEscapeHtml(item.name)} - ${teacherEscapeHtml(item.subject)}${item.isMine ? ' <span style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:600;vertical-align:middle;">我的任课</span>' : ''}</div>
                         <div class="teacher-classes">${teacherEscapeHtml(item.classes)}班</div>
                     </div>
                     <div class="performance-badge ${teacherEscapeHtml(item.badgeClass)}">${teacherEscapeHtml(item.badgeText)}</div>
@@ -279,7 +304,7 @@ var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs 
                     <span>${teacherEscapeHtml(item.sampleSummary)}</span>
                     <span>${teacherEscapeHtml(item.focusSummary)} · ${teacherEscapeHtml(item.conversionSummary)}</span>
                 </div>
-                <button class="view-details-btn" ${uiDeclaredAttrs('click', 'showTeacherDetails', Number(JSON.stringify(item.name)), Number(JSON.stringify(item.subject)))}>查看详情</button>
+                <button class="view-details-btn" ${uiDeclaredAttrs('click', 'showTeacherDetails', item.name, item.subject)}>查看详情</button>
             </div>
         `).join('');
         teacherUiRenderCache.cardsSignature = signature;

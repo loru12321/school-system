@@ -206,6 +206,8 @@ async function downloadCertificate() {
         },
         'open-starter-guide': () => callGlobal('openStarterGuide'),
         'open-user-password': () => callGlobal('openUserPasswordModal'),
+        'open-teacher-change-submit': () => window.TeacherChangeRequestUI?.openSubmitDialog?.(),
+        'open-teacher-change-review': () => window.TeacherChangeRequestUI?.openReviewDialog?.(),
         'toggle-sidebar': () => callGlobal('toggleAppSidebar'),
         'open-spotlight': () => callGlobal('openSpotlight'),
         'open-admin-issues': () => window.IssueManager?.openAdminPanel?.(),
