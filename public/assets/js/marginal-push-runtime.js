@@ -11,77 +11,17 @@
             "'": '&#39;'
         }[char]));
 
-    function getSchools() {
-        try {
-            if (root.SCHOOLS && typeof root.SCHOOLS === 'object') return root.SCHOOLS;
-            if (typeof SCHOOLS !== 'undefined' && SCHOOLS && typeof SCHOOLS === 'object') return SCHOOLS;
-        } catch (_) {}
-        return {};
-    }
-
-    function getSubjects() {
-        try {
-            if (Array.isArray(root.SUBJECTS)) return root.SUBJECTS;
-            if (typeof SUBJECTS !== 'undefined' && Array.isArray(SUBJECTS)) return SUBJECTS;
-        } catch (_) {}
-        return [];
-    }
-
-    function getThresholds() {
-        try {
-            if (root.THRESHOLDS && typeof root.THRESHOLDS === 'object') return root.THRESHOLDS;
-            if (typeof THRESHOLDS !== 'undefined' && THRESHOLDS && typeof THRESHOLDS === 'object') return THRESHOLDS;
-        } catch (_) {}
-        return {};
-    }
-
-    function getTeacherMap() {
-        try {
-            if (root.TEACHER_MAP && typeof root.TEACHER_MAP === 'object') return root.TEACHER_MAP;
-            if (typeof TEACHER_MAP !== 'undefined' && TEACHER_MAP && typeof TEACHER_MAP === 'object') return TEACHER_MAP;
-        } catch (_) {}
-        return {};
-    }
-
-    function getRollerCoasterStudents() {
-        try {
-            if (Array.isArray(root.ROLLER_COASTER_STUDENTS)) return root.ROLLER_COASTER_STUDENTS;
-            if (typeof ROLLER_COASTER_STUDENTS !== 'undefined' && Array.isArray(ROLLER_COASTER_STUDENTS)) return ROLLER_COASTER_STUDENTS;
-        } catch (_) {}
-        return [];
-    }
-
-    function readMpDataCache() {
-        try {
-            if (typeof MP_DATA_CACHE !== 'undefined' && Array.isArray(MP_DATA_CACHE)) return MP_DATA_CACHE;
-        } catch (_) {}
-        return Array.isArray(root.MP_DATA_CACHE) ? root.MP_DATA_CACHE : [];
-    }
-
-    function writeMpDataCache(rows) {
-        const nextRows = Array.isArray(rows) ? rows : [];
-        try {
-            if (typeof MP_DATA_CACHE !== 'undefined') MP_DATA_CACHE = nextRows;
-        } catch (_) {}
-        root.MP_DATA_CACHE = nextRows;
-        return nextRows;
-    }
-
-    function readMpSnapshots() {
-        try {
-            if (typeof MP_SNAPSHOTS !== 'undefined' && MP_SNAPSHOTS && typeof MP_SNAPSHOTS === 'object') return MP_SNAPSHOTS;
-        } catch (_) {}
-        return root.MP_SNAPSHOTS && typeof root.MP_SNAPSHOTS === 'object' ? root.MP_SNAPSHOTS : {};
-    }
-
-    function writeMpSnapshots(value) {
-        const next = value && typeof value === 'object' ? value : {};
-        try {
-            if (typeof MP_SNAPSHOTS !== 'undefined') MP_SNAPSHOTS = next;
-        } catch (_) {}
-        root.MP_SNAPSHOTS = next;
-        return next;
-    }
+    const getObj = (key) => (root[key] && typeof root[key] === 'object' ? root[key] : {});
+    const getArr = (key) => (Array.isArray(root[key]) ? root[key] : []);
+    const getSchools = () => getObj('SCHOOLS');
+    const getSubjects = () => getArr('SUBJECTS');
+    const getThresholds = () => getObj('THRESHOLDS');
+    const getTeacherMap = () => getObj('TEACHER_MAP');
+    const getRollerCoasterStudents = () => getArr('ROLLER_COASTER_STUDENTS');
+    const readMpDataCache = () => getArr('MP_DATA_CACHE');
+    const writeMpDataCache = (rows) => (root.MP_DATA_CACHE = Array.isArray(rows) ? rows : []);
+    const readMpSnapshots = () => getObj('MP_SNAPSHOTS');
+    const writeMpSnapshots = (value) => (root.MP_SNAPSHOTS = value && typeof value === 'object' ? value : {});
 
     function toFiniteNumber(value) {
         const number = Number(value);
@@ -92,16 +32,29 @@
         return values.slice().sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
     }
 
+    const getScopedUser = () => (typeof root.getCurrentUser === 'function' ? root.getCurrentUser() : root.Auth?.currentUser) || null;
+
+    function getScopedSubjectsForUser() {
+        const all = getSubjects();
+        const user = getScopedUser();
+        if (String(user?.role || '').trim() !== 'teacher') return all;
+        const set = (root.PermissionPolicy?.getTeachingScope?.(user) || root.getTeacherScopeForUser?.(user))?.subjects;
+        if (!(set instanceof Set) || !set.size) return all;
+        const norm = (s) => (typeof root.normalizeSubject === 'function' ? root.normalizeSubject(s) : String(s || '').trim());
+        const allowed = new Set([...set].map(norm).filter(Boolean));
+        const out = all.filter((s) => allowed.has(norm(s)));
+        return out.length ? out : all;
+    }
+
     function getSchoolOptions() {
-        const schools = getSchools();
-        if (typeof root.listAvailableSchoolsForCompare === 'function') {
-            try {
-                return sortChinese(Array.from(new Set(root.listAvailableSchoolsForCompare('all')
-                    .map((name) => String(name || '').trim())
-                    .filter(Boolean))));
-            } catch (_) {}
-        }
-        return sortChinese(Object.keys(schools || {}));
+        let names = [];
+        try {
+            names = sortChinese([...new Set((root.listAvailableSchoolsForCompare?.('all') || []).map((s) => String(s || '').trim()).filter(Boolean))]);
+        } catch (_) {}
+        if (!names.length) names = sortChinese(Object.keys(getSchools() || {}));
+        const user = getScopedUser();
+        const scoped = user && root.PermissionPolicy?.getAccessibleSchoolNames?.(user, names);
+        return scoped?.length ? sortChinese(scoped) : names;
     }
 
     function sameSchoolName(left, right) {
@@ -153,10 +106,11 @@
         const subjectSelect = root.document?.getElementById('mpSubjectSelect');
         if (subjectSelect) {
             const oldSubject = subjectSelect.value;
-            subjectSelect.innerHTML = `<option value="ALL">全部学科</option>${getSubjects()
+            const scopedSubjects = getScopedSubjectsForUser();
+            subjectSelect.innerHTML = `<option value="ALL">全部学科</option>${scopedSubjects
                 .map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`)
                 .join('')}`;
-            if (oldSubject && (oldSubject === 'ALL' || getSubjects().includes(oldSubject))) subjectSelect.value = oldSubject;
+            if (oldSubject && (oldSubject === 'ALL' || scopedSubjects.includes(oldSubject))) subjectSelect.value = oldSubject;
         }
         MP_initSnapshotSelect();
     }
@@ -168,11 +122,15 @@
         const schoolName = String(schoolSelect.value || '').trim();
         const oldClass = classSelect.value;
         const { school } = getSchoolRecord(schoolName);
-        const classes = school
+        let classes = school
             ? sortChinese([...new Set((school.students || []).map((student) => String(student.class || '').trim()).filter(Boolean))])
             : [];
+        const user = getScopedUser();
+        if (user && root.PermissionPolicy && typeof root.PermissionPolicy.getAccessibleClassNames === 'function') {
+            classes = sortChinese(root.PermissionPolicy.getAccessibleClassNames(user, classes, schoolName));
+        }
         setSelectOptions(classSelect, classes, '全部班级', oldClass);
-        if (!oldClass) classSelect.value = '';
+        if (!oldClass) classSelect.value = classes.length === 1 ? classes[0] : '';
     }
 
     function getMarginalConfig() {
@@ -187,10 +145,19 @@
 
     function buildTaskRows(config) {
         const thresholds = getThresholds();
-        const subjects = config.subject === 'ALL' ? getSubjects() : [config.subject];
+        const allowedSubjects = getScopedSubjectsForUser();
+        const subjects = config.subject === 'ALL'
+            ? allowedSubjects
+            : (allowedSubjects.includes(config.subject) ? [config.subject] : []);
         const { key, school } = getSchoolRecord(config.school);
         if (!school) return { rows: [], taskMap: {} };
-        const students = (school.students || []).filter((student) => !config.className || student.class === config.className);
+        const user = getScopedUser();
+        const canFilterByPolicy = !!(user && root.PermissionPolicy && typeof root.PermissionPolicy.canQueryStudent === 'function');
+        const students = (school.students || []).filter((student) => {
+            if (config.className && student.class !== config.className) return false;
+            if (canFilterByPolicy && !root.PermissionPolicy.canQueryStudent(user, student)) return false;
+            return true;
+        });
         const taskMap = {};
         const rows = [];
 

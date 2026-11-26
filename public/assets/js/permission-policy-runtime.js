@@ -1,9 +1,10 @@
+const TEACHER_BASE_MODULES = ['summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking', 'marginal-push', 'progress-analysis', 'report-generator', 'student-details', 'blank-score-audit'];
 const QUERY_MODULE_ACCESS = {
     admin: ['*'],
     director: ['starter-hub', 'upload', 'data-quality', 'summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'county-analysis', 'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'grade-scheduler', 'seat-adjustment', 'mutual-aid', 'student-overview', 'student-details', 'blank-score-audit', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'cohort-growth', 'zhongkao-countdown'],
     grade_director: ['summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking', 'marginal-push', 'progress-analysis', 'report-generator', 'student-overview', 'student-details', 'blank-score-audit', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'cohort-growth', 'zhongkao-countdown'],
-    class_teacher: ['summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking', 'student-details', 'blank-score-audit'],
-    teacher: ['summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking', 'student-details', 'blank-score-audit'],
+    class_teacher: TEACHER_BASE_MODULES,
+    teacher: TEACHER_BASE_MODULES,
     parent: ['report-generator'],
     student: ['report-generator'],
     guest: ['starter-hub']

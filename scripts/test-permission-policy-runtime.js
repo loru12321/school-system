@@ -109,12 +109,13 @@ const studentDiagnosisModuleIds = [
     'correlation-analysis',
     'report-generator'
 ];
+const teacherAllowedStudentDiagnosis = new Set(['student-details', 'marginal-push', 'progress-analysis', 'report-generator']);
 for (const role of ['teacher', 'class_teacher']) {
     studentDiagnosisModuleIds.forEach((moduleId) => {
         assert.strictEqual(
             context.PermissionPolicy.canAccessModule({ role, roles: [role] }, moduleId),
-            moduleId === 'student-details',
-            `${role} should only access student-details inside student diagnosis, not ${moduleId}`
+            teacherAllowedStudentDiagnosis.has(moduleId),
+            `${role} should only access allowed teaching diagnosis modules, mismatch on ${moduleId}`
         );
     });
 }
@@ -131,8 +132,8 @@ assert.strictEqual(
 );
 assert.strictEqual(
     context.PermissionPolicy.canAccessModule({ role: 'class_teacher', roles: ['class_teacher'] }, 'marginal-push'),
-    false,
-    'class teacher should only see student archive query inside student diagnosis'
+    true,
+    'class teacher should access marginal-push inside student diagnosis'
 );
 assert.strictEqual(
     context.PermissionPolicy.canAccessModule({ role: 'class_teacher', roles: ['class_teacher'] }, 'county-school-horizontal'),

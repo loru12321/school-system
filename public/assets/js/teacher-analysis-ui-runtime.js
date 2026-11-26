@@ -255,16 +255,16 @@ var uiDeclaredAttrs = globalThis.uiDeclaredAttrs || (globalThis.uiDeclaredAttrs 
         }
 
         const myItems = isTeacherRole ? list.filter((item) => item.isMine) : [];
+        const bStyle = 'padding:5px 10px;font-size:12px';
         const myBannerHtml = myItems.length
-            ? `<div style="grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-radius:12px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:13px;">
-                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
-                    <strong>我的执教速览</strong>
-                    <span>${myItems.map((m) => `${teacherEscapeHtml(m.subject)}（${teacherEscapeHtml(m.classes)}班 · 均分${teacherEscapeHtml(m.avg)} · 镇排${teacherEscapeHtml(m.rank)}）`).join(' / ')}</span>
-                </div>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                    <button type="button" class="btn btn-primary" style="padding:5px 12px;font-size:12px;" ${uiDeclaredAttrs('click', 'showTeacherDetails', myItems[0].name, myItems[0].subject)}>我的详情</button>
-                    <button type="button" class="btn btn-gray" style="padding:5px 12px;font-size:12px;" data-ui-action="switch-tab" data-ui-value="student-details">本班明细</button>
-                    <button type="button" class="btn btn-gray" style="padding:5px 12px;font-size:12px;" data-ui-action="open-teacher-change-submit">申请变更任课</button>
+            ? `<div style="grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:13px">
+                <div><strong>我的执教速览</strong> ${myItems.map((m) => `${teacherEscapeHtml(m.subject)}（${teacherEscapeHtml(m.classes)}班 · 均分${teacherEscapeHtml(m.avg)} · 镇排${teacherEscapeHtml(m.rank)}）`).join(' / ')}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    <button type="button" class="btn btn-primary" style="${bStyle}" ${uiDeclaredAttrs('click', 'showTeacherDetails', myItems[0].name, myItems[0].subject)}>我的详情</button>
+                    <button type="button" class="btn btn-gray" style="${bStyle}" data-ui-action="switch-tab" data-ui-value="student-details">本班明细</button>
+                    <button type="button" class="btn btn-gray" style="${bStyle}" data-ui-action="switch-tab" data-ui-value="marginal-push">临界生</button>
+                    <button type="button" class="btn btn-gray" style="${bStyle}" data-ui-action="switch-tab" data-ui-value="progress-analysis">进退步</button>
+                    <button type="button" class="btn btn-gray" style="${bStyle}" data-ui-action="open-teacher-change-submit">变更任课</button>
                 </div>
             </div>`
             : '';
